@@ -4,6 +4,8 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(dirname "$script_dir")
+# Cargo discovers package compiler settings from cwd, not from --manifest-path.
+cd "$repo_root/packages/indexer"
 tool_version='0.9.0'
 line_floor='65'
 
@@ -16,7 +18,6 @@ fi
 
 run_coverage() {
   cargo llvm-cov --locked \
-    --manifest-path "$repo_root/packages/indexer/Cargo.toml" \
     --summary-only \
     --fail-under-lines "$line_floor"
 }

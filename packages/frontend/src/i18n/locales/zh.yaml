@@ -3052,7 +3052,7 @@ tournament_page:
   new_item: 新建
   none_excluded: 无
   teams: 队伍
-  bracket: 对阵表
+  bracket: 比赛
   podium: 排名与奖励
   podium_claims: 排名 · {{count}} 项待领取
   your_rewards: 你的奖励
@@ -3086,7 +3086,7 @@ tournament_page:
   action_refund: 将 KARES 退还主办方
   return_fight: 返回战斗
   claim_count: 领取 {{count}} 项奖励
-  show_bracket: 查看对阵表
+  show_bracket: 查看比赛
   show_my_match: 查看我的比赛
   match_number: 第 {{match}} 场
   semifinals: 半决赛
@@ -3100,7 +3100,7 @@ tournament_page:
   advancing: 晋级
   fifth_pending: 等待四分之一决赛结果
   fifth_notice: 因缺席告负的队伍不获得安慰名次。
-  no_matches: 未进行淘汰赛。
+  no_matches: 未进行比赛。
   end_review: 将本场比赛以无胜者结束？双方均无法通过本场晋级。此操作无法撤销。
   match_admission: 入场开放
   match_force_due: 入场已关闭
@@ -3193,7 +3193,7 @@ tournament_page:
   immutable_notice: 创建后，赛制、奖励比例、物品奖励及最晚开赛时间即被固定，无法修改。
   recipient_notice: 货币支付给报名时的所有者。每个符合条件的角色都能获得每项物品的设定数量。
   cancel_event: 取消锦标赛
-  start_review: 开赛会固定满员阵容和奖池总额，随机排列对阵，并开放首轮 60 秒入场期。
+  start_review: 开赛会固定满员阵容和奖池总额，随机配对队伍，并开放首轮 60 秒入场期。
   excluded_teams: 排除的未满员队伍：{{teams}}
   cancel_review: 取消本届锦标赛？所有赞助资金将退还原主办方，不会自动退给各赞助者。
   organizer_address: 原主办方：{{address}}
@@ -3204,7 +3204,7 @@ tournament_page:
   submitted_notice: 操作已提交。再次提交前，请检查当前赛事状态。
   custody_undefined: 托管状态未知
   wagered: 下注竞技
-  complete_notice: 仅满员队伍进入对阵表，其他队伍将在开赛时排除。
+  complete_notice: 仅满员队伍可以参赛，其他队伍将在开赛时排除。
   find_review: 为 {{character}} 寻找队伍并报名该角色？
   joined_count: '{{count}}/{{total}} 已入场'
   versus: 对阵 {{team}}

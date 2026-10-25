@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { stripVTControlCharacters } from 'node:util'
+import { pathToFileURL } from 'node:url'
 
 // Owner-approved exception: Sui's unit store cannot resolve a published upgraded package.
 // The successful native return is exercised by scripts/integration/rewards_upgrade.ts.
@@ -87,7 +88,7 @@ export const assert_rewards_coverage = (summary, bytecode, csv) => {
   )
 }
 
-if (import.meta.main) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const summary = readFileSync(0, 'utf8')
   const bytecode = execFileSync(
     'sui',

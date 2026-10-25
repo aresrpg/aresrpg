@@ -3087,7 +3087,7 @@ tournament_page:
   new_item: Neu
   none_excluded: Keine
   teams: Teams
-  bracket: Turnierbaum
+  bracket: Spiele
   podium: Podium & Preise
   podium_claims: Podium · {{count}} abzuholen
   your_rewards: Deine Belohnungen
@@ -3121,7 +3121,7 @@ tournament_page:
   action_refund: KARES an Veranstalter zurückgeben
   return_fight: Zurück zum Kampf
   claim_count: '{{count}} Belohnungen abholen'
-  show_bracket: Turnierbaum anzeigen
+  show_bracket: Spiele anzeigen
   show_my_match: Mein Match anzeigen
   match_number: Match {{match}}
   semifinals: Halbfinale
@@ -3135,7 +3135,7 @@ tournament_page:
   advancing: Weitergekommen
   fifth_pending: Viertelfinalergebnisse ausstehend
   fifth_notice: Kampflos unterlegene Teams erhalten keine Trostplatzierung.
-  no_matches: Es wurde kein Turnierbaum gespielt.
+  no_matches: Es wurden keine Spiele ausgetragen.
   end_review: Dieses Match ohne Sieger beenden? Keines der beiden Teams kommt dadurch weiter. Das lässt sich nicht rückgängig machen.
   match_admission: Eintritt offen
   match_force_due: Eintritt geschlossen
@@ -3228,7 +3228,7 @@ tournament_page:
   immutable_notice: Die Erstellung legt Format, Preisanteile, Gegenstände und Startfrist fest. Diese Einstellungen können nicht geändert werden.
   recipient_notice: Münzen gehen an die angemeldeten Besitzer. Jeder berechtigte Charakter erhält die festgelegte Menge jedes Gegenstands.
   cancel_event: Turnier absagen
-  start_review: Der Start legt vollständige Teams und Preissummen fest, mischt den Turnierbaum und öffnet die ersten Eintrittsfenster von 60 Sekunden.
+  start_review: Der Start legt vollständige Teams und Preissummen fest, lost die Begegnungen aus und öffnet die ersten Eintrittsfenster von 60 Sekunden.
   excluded_teams: 'Ausgeschlossene unvollständige Teams: {{teams}}'
   cancel_review: Dieses Turnier absagen? Alle Beiträge gehen an den ursprünglichen Veranstalter, nicht automatisch an einzelne Spender.
   organizer_address: 'Ursprünglicher Veranstalter: {{address}}'
@@ -3239,7 +3239,7 @@ tournament_page:
   submitted_notice: Die Aktion wurde gesendet. Prüfe den aktuellen Stand vor einer erneuten Übermittlung.
   custody_undefined: Verwahrung unbekannt
   wagered: Mit Einsatz
-  complete_notice: Nur vollständige Teams kommen in den Turnierbaum. Andere werden beim Start ausgeschlossen.
+  complete_notice: Nur vollständige Teams nehmen am Turnier teil. Andere werden beim Start ausgeschlossen.
   find_review: Ein Team für {{character}} finden und diesen Charakter anmelden?
   joined_count: '{{count}}/{{total}} dabei'
   versus: gegen {{team}}

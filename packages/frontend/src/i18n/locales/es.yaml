@@ -3086,7 +3086,7 @@ tournament_page:
   new_item: Nuevo
   none_excluded: Ninguno
   teams: Equipos
-  bracket: Cuadro
+  bracket: Partidas
   podium: Podio y premios
   podium_claims: Podio · {{count}} por reclamar
   your_rewards: Tus recompensas
@@ -3120,7 +3120,7 @@ tournament_page:
   action_refund: Devolver KARES al organizador
   return_fight: Volver al combate
   claim_count: Reclamar {{count}} recompensas
-  show_bracket: Ver cuadro
+  show_bracket: Ver partidas
   show_my_match: Ver mi combate
   match_number: Combate {{match}}
   semifinals: Semifinales
@@ -3134,7 +3134,7 @@ tournament_page:
   advancing: Clasificado
   fifth_pending: Resultados de cuartos pendientes
   fifth_notice: Las derrotas por ausencia no otorgan puestos de consolación.
-  no_matches: No se jugó ningún cuadro.
+  no_matches: No se jugó ninguna partida.
   end_review: ¿Terminar este combate sin ganador? Ninguno de los dos equipos avanzará por este combate. No se puede deshacer.
   match_admission: Entrada abierta
   match_force_due: Entrada cerrada
@@ -3227,7 +3227,7 @@ tournament_page:
   immutable_notice: La creación fija el formato, los porcentajes, los objetos y el límite de inicio. Estos ajustes no se pueden modificar.
   recipient_notice: Las monedas se pagan a los propietarios inscritos. Cada personaje elegible recibe la cantidad configurada de cada objeto.
   cancel_event: Cancelar torneo
-  start_review: El inicio fija los equipos completos y los fondos, mezcla el cuadro y abre las primeras ventanas de entrada de 60 segundos.
+  start_review: El inicio fija los equipos completos y los fondos, sortea los enfrentamientos y abre las primeras ventanas de entrada de 60 segundos.
   excluded_teams: 'Equipos incompletos excluidos: {{teams}}'
   cancel_review: ¿Cancelar este torneo? Todas las contribuciones vuelven al organizador original, no automáticamente a cada donante.
   organizer_address: 'Organizador original: {{address}}'
@@ -3238,7 +3238,7 @@ tournament_page:
   submitted_notice: La acción se envió. Comprueba el evento actual antes de enviarla de nuevo.
   custody_undefined: Custodia desconocida
   wagered: Con apuesta
-  complete_notice: Solo los equipos completos entran en el cuadro. Los demás quedan excluidos al empezar.
+  complete_notice: Solo los equipos completos participan en el torneo. Los demás quedan excluidos al empezar.
   find_review: ¿Buscar un equipo para {{character}} e inscribir a este personaje?
   joined_count: '{{count}}/{{total}} dentro'
   versus: contra {{team}}

@@ -1,0 +1,4 @@
+# Keep portable C portable even when the host compiler defaults to x86-64-v3.
+# Sui's crypto dependencies dispatch their accelerated assembly at runtime.
+[env]
+CFLAGS_x86_64_unknown_linux_gnu = "-march=x86-64"

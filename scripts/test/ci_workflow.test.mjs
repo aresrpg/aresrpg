@@ -1,14 +1,39 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { execFileSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 import { expect, test } from 'bun:test'
 
 const workflow = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
 const { jobs } = workflow
+
+test('indexer coverage discovers the package compiler configuration', () => {
+  const bin = mkdtempSync(join(tmpdir(), 'ares-cargo-cwd-'))
+  try {
+    writeFileSync(
+      join(bin, 'cargo'),
+      '#!/bin/sh\nif [ "$*" = "llvm-cov --version" ]; then echo "cargo-llvm-cov 0.9.0"; else pwd; fi\n',
+      { mode: 0o755 }
+    )
+    writeFileSync(join(bin, 'rustup'), '#!/bin/sh\necho llvm-tools\n', { mode: 0o755 })
+    const output = execFileSync('sh', [resolve(import.meta.dirname, '../coverage_indexer.sh')], {
+      cwd: tmpdir(),
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: 'utf8',
+    })
+    expect(output.trim()).toBe(resolve(import.meta.dirname, '../../packages/indexer'))
+  } finally {
+    rmSync(bin, { recursive: true, force: true })
+  }
+})
+
+test('the Move sparse checkout includes the coverage checker it executes', () => {
+  const checkout = jobs.tests_move.steps.find((step) => step.uses?.startsWith('actions/checkout@'))
+  expect(checkout.with['sparse-checkout'].trim().split('\n')).toContain('scripts/assert_rewards_coverage.mjs')
+})
 
 test('verification selector executes with only its sparse checkout files', () => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-ci-inputs-'))

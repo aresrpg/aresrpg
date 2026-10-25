@@ -10,13 +10,19 @@ const build = resolve(import.meta.dirname, '../../../../test-results/browser-bui
 const worker_version = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<string>((done) => {
+      new Promise<string | null>((done) => {
+        const worker = navigator.serviceWorker.controller!
         const channel = new MessageChannel()
-        channel.port1.onmessage = (event) => {
+        const replaced = () => finish(null)
+        const finish = (version: string | null) => {
+          navigator.serviceWorker.removeEventListener('controllerchange', replaced)
           channel.port1.close()
-          done(String(event.data))
+          done(version)
         }
-        navigator.serviceWorker.controller!.postMessage('version', [channel.port2])
+        // A retiring worker may never answer. Let expect.poll query its replacement.
+        navigator.serviceWorker.addEventListener('controllerchange', replaced, { once: true })
+        channel.port1.onmessage = (event) => finish(String(event.data))
+        worker.postMessage('version', [channel.port2])
       })
   )
 
@@ -24,15 +30,27 @@ for (const busy of [false, true]) {
   test(`missing startup asset ${busy ? 'preserves an active transaction' : 'loads the activated update once'}`, async ({
     page,
   }) => {
-    let version = 'one'
+    let version: 'one' | 'two' = 'one'
+    let release_update = () => {}
+    const update_requested = new Promise<void>((resolve) => {
+      release_update = resolve
+    })
+    const worker_ready = { one: Promise.resolve(), two: busy ? update_requested : Promise.resolve() }
     const server = createServer((request, response) => {
       void (async () => {
         const path = new URL(request.url!, 'http://localhost').pathname
         response.setHeader('Cache-Control', 'no-store')
+        if (path === '/release-update') {
+          release_update()
+          response.end()
+          return
+        }
         if (path === '/sw.js') {
+          // Reproduce a query to the worker being replaced: it triggers the update but never replies.
+          await worker_ready[version]
           response.setHeader('Content-Type', 'text/javascript')
           response.end(
-            `const version=${JSON.stringify(version)};self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));self.addEventListener('message',event=>event.ports[0].postMessage(version));`
+            `const version=${JSON.stringify(version)};self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));self.addEventListener('message',event=>{if(${busy}&&version==='one'){event.waitUntil(fetch('/release-update'));return}event.ports[0].postMessage(version)});`
           )
           return
         }

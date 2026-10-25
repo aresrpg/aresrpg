@@ -61,7 +61,7 @@ cover_package() {
   printf '%s\n' "$summary"
   if [ "$package_path" = packages/rewards ]; then
     # Validate the sole owner-approved native-return gap; every other instruction must be covered.
-    printf '%s\n' "$summary" | bun scripts/assert_rewards_coverage.mjs
+    printf '%s\n' "$summary" | node scripts/assert_rewards_coverage.mjs
     return
   fi
   # Type-only compatibility packages contain no executable instructions to cover.

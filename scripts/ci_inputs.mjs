@@ -75,7 +75,7 @@ export const ci_checks_required = (paths, manifest_changed, workflow = ALL_CHECK
     paths.some(
       (path) =>
         MOVE_PATHS.some((prefix) => path.startsWith(prefix)) ||
-        ['scripts/coverage_move.sh', 'move-packages.json'].includes(path)
+        ['scripts/coverage_move.sh', 'scripts/assert_rewards_coverage.mjs', 'move-packages.json'].includes(path)
     )
   return {
     browsers:

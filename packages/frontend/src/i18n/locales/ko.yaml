@@ -3052,7 +3052,7 @@ tournament_page:
   new_item: 새로 만들기
   none_excluded: 없음
   teams: 팀
-  bracket: 대진표
+  bracket: 경기
   podium: 순위 및 보상
   podium_claims: 순위 · 받을 보상 {{count}}개
   your_rewards: 내 보상
@@ -3086,7 +3086,7 @@ tournament_page:
   action_refund: KARES를 주최자에게 반환
   return_fight: 전투로 돌아가기
   claim_count: 보상 {{count}}개 받기
-  show_bracket: 대진표 보기
+  show_bracket: 경기 보기
   show_my_match: 내 경기 보기
   match_number: 경기 {{match}}
   semifinals: 준결승
@@ -3100,7 +3100,7 @@ tournament_page:
   advancing: 진출
   fifth_pending: 8강 결과 대기 중
   fifth_notice: 기권패 팀에는 순위 보상이 주어지지 않습니다.
-  no_matches: 대진 경기가 진행되지 않았습니다.
+  no_matches: 경기가 진행되지 않았습니다.
   end_review: 이 경기를 승자 없이 종료할까요? 두 팀 모두 이 경기로는 진출하지 못합니다. 되돌릴 수 없습니다.
   match_admission: 입장 가능
   match_force_due: 입장 마감
@@ -3193,7 +3193,7 @@ tournament_page:
   immutable_notice: 생성 시 형식, 상금 비율, 아이템 보상, 최종 시작 시간이 고정되며 변경할 수 없습니다.
   recipient_notice: 코인은 등록된 소유자에게 지급됩니다. 자격을 갖춘 각 캐릭터는 설정된 수량의 아이템을 받습니다.
   cancel_event: 대회 취소
-  start_review: 시작하면 정원을 채운 팀과 상금 총액이 고정되고 대진이 무작위로 배정되며 첫 60초 입장 시간이 열립니다.
+  start_review: 시작하면 정원을 채운 팀과 상금 총액이 고정되고 상대 팀이 무작위로 배정되며 첫 60초 입장 시간이 열립니다.
   excluded_teams: '제외되는 정원 미달 팀: {{teams}}'
   cancel_review: 대회를 취소할까요? 모든 기부금은 원래 주최자에게 반환되며 각 기부자에게 자동 환불되지 않습니다.
   organizer_address: '원래 주최자: {{address}}'
@@ -3204,7 +3204,7 @@ tournament_page:
   submitted_notice: 작업을 제출했습니다. 다시 제출하기 전에 현재 대회 상태를 확인하세요.
   custody_undefined: 보관 상태 알 수 없음
   wagered: 내기 경기
-  complete_notice: 정원을 채운 팀만 대진에 참가합니다. 나머지는 시작 시 제외됩니다.
+  complete_notice: 정원을 채운 팀만 대회에 참가합니다. 나머지는 시작 시 제외됩니다.
   find_review: '{{character}}의 팀을 찾아 이 캐릭터를 등록할까요?'
   joined_count: 입장 {{count}}/{{total}}
   versus: '상대: {{team}}'

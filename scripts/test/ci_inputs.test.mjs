@@ -87,6 +87,7 @@ for (const path of [
   'packages/kares/sources/staking.move',
   'packages/move-combat/tests/fight.move',
   'scripts/coverage_move.sh',
+  'scripts/assert_rewards_coverage.mjs',
   'move-packages.json',
   '.github/workflows/gate.yml',
 ])

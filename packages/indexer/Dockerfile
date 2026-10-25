@@ -31,6 +31,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /app
+COPY .cargo ./.cargo
 
 # --- 2. planner: capture the dependency recipe -------------------------------
 FROM chef AS planner

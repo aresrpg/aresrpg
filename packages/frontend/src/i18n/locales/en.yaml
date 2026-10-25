@@ -3071,12 +3071,12 @@ tournament_page:
   format: Format
   final: Final
   bronze: Bronze match
-  roster_notice: Only complete teams enter the bracket. Registration authorizes automatic match joining. Stay online; each match gives 60 seconds to join.
+  roster_notice: Only complete teams enter the tournament. Registration authorizes automatic match joining. Stay online; each match gives 60 seconds to join.
   donation_notice: Contributions are final. If cancelled, funds go to the organizer for any manual refunds. Unawarded prizes also go to the organizer.
   refund_pool: Return unused KARES to organizer
   expire: Close expired registration
   teams: Teams
-  bracket: Bracket
+  bracket: Matches
   podium: Podium & prizes
   podium_claims: Podium · {{count}} to claim
   your_rewards: Your rewards
@@ -3112,7 +3112,7 @@ tournament_page:
   action_refund: Return KARES to organizer
   return_fight: Return to fight
   claim_count: Claim {{count}} rewards
-  show_bracket: Show bracket
+  show_bracket: View matches
   show_my_match: Show my match
   match_number: Match {{match}}
   semifinals: Semifinals
@@ -3127,7 +3127,7 @@ tournament_page:
   placement: Placement
   fifth_pending: Quarterfinal results pending
   fifth_notice: Walkovers do not award consolation places.
-  no_matches: No bracket was played.
+  no_matches: No matches were played.
   end_review: End this match without a winner? Neither team advances from this match. This cannot be undone.
   match_waiting: Waiting
   match_admission: Admission open
@@ -3230,7 +3230,7 @@ tournament_page:
   immutable_notice: Creating fixes the format, prize percentages, item rewards, and latest-start deadline. These settings cannot be edited.
   recipient_notice: Coins pay the registered owners. Every eligible character receives each configured item quantity.
   cancel_event: Cancel tournament
-  start_review: Starting freezes complete rosters and prize totals, shuffles the bracket, and opens the first 60-second admission windows.
+  start_review: Starting freezes complete rosters and prize totals, randomly pairs teams, and opens the first 60-second admission windows.
   excluded_teams: 'Excluded incomplete teams: {{teams}}'
   none_excluded: None
   cancel_review: Cancel this tournament? All contributed money returns to the original organizer, not automatically to each donor.
@@ -3242,7 +3242,7 @@ tournament_page:
   submitted_notice: The action was submitted. Check the current event before submitting again.
   custody_undefined: Custody unknown
   wagered: Wagered
-  complete_notice: Only complete teams enter the bracket. Other teams are excluded at start.
+  complete_notice: Only complete teams enter the tournament. Other teams are excluded at start.
   find_review: Find a team for {{character}} and register this character?
   joined_count: '{{count}}/{{total}} joined'
   versus: vs {{team}}

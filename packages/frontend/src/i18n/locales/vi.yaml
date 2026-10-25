@@ -3052,7 +3052,7 @@ tournament_page:
   new_item: Mới
   none_excluded: Không có
   teams: Đội
-  bracket: Sơ đồ đấu
+  bracket: Các trận đấu
   podium: Thứ hạng và phần thưởng
   podium_claims: Thứ hạng · {{count}} phần chưa nhận
   your_rewards: Phần thưởng của bạn
@@ -3086,7 +3086,7 @@ tournament_page:
   action_refund: Trả KARES cho ban tổ chức
   return_fight: Trở lại trận đấu
   claim_count: Nhận {{count}} phần thưởng
-  show_bracket: Xem sơ đồ đấu
+  show_bracket: Xem các trận đấu
   show_my_match: Xem trận của tôi
   match_number: Trận {{match}}
   semifinals: Bán kết
@@ -3100,7 +3100,7 @@ tournament_page:
   advancing: Đi tiếp
   fifth_pending: Đang chờ kết quả tứ kết
   fifth_notice: Đội thua do vắng mặt không được xếp hạng an ủi.
-  no_matches: Chưa có trận nào trong sơ đồ được thi đấu.
+  no_matches: Chưa có trận nào được thi đấu.
   end_review: Kết thúc trận này mà không có đội thắng? Không đội nào đi tiếp từ trận này. Không thể hoàn tác.
   match_admission: Đang nhận người vào
   match_force_due: Đã đóng tiếp nhận
@@ -3193,7 +3193,7 @@ tournament_page:
   immutable_notice: Khi tạo, thể thức, tỷ lệ thưởng, vật phẩm và hạn bắt đầu sẽ được cố định. Không thể sửa các thiết lập này.
   recipient_notice: Tiền được trả cho chủ sở hữu đã đăng ký. Mỗi nhân vật đủ điều kiện nhận số lượng đã đặt của từng vật phẩm.
   cancel_event: Hủy giải đấu
-  start_review: Bắt đầu sẽ cố định đội đủ người và tổng thưởng, xáo trộn sơ đồ đấu và mở các khoảng tiếp nhận 60 giây đầu tiên.
+  start_review: Bắt đầu sẽ cố định đội đủ người và tổng thưởng, ghép cặp các đội ngẫu nhiên và mở các khoảng tiếp nhận 60 giây đầu tiên.
   excluded_teams: 'Đội thiếu người bị loại: {{teams}}'
   cancel_review: Hủy giải đấu này? Mọi khoản đóng góp được trả cho ban tổ chức ban đầu, không tự động hoàn cho từng người đóng góp.
   organizer_address: 'Ban tổ chức ban đầu: {{address}}'
@@ -3204,7 +3204,7 @@ tournament_page:
   submitted_notice: Thao tác đã gửi. Kiểm tra giải đấu hiện tại trước khi gửi lại.
   custody_undefined: Chưa rõ nơi giữ
   wagered: Có cược
-  complete_notice: Chỉ đội đủ người vào sơ đồ đấu. Các đội khác bị loại khi bắt đầu.
+  complete_notice: Chỉ đội đủ người được tham gia giải đấu. Các đội khác bị loại khi bắt đầu.
   find_review: Tìm đội cho {{character}} và đăng ký nhân vật này?
   joined_count: '{{count}}/{{total}} đã vào'
   versus: đấu với {{team}}

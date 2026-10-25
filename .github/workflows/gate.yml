@@ -118,6 +118,7 @@ jobs:
             packages/kares
             packages/rewards
             scripts/coverage_move.sh
+            scripts/assert_rewards_coverage.mjs
             move-packages.json
       - name: sui version pin
         id: sui_version

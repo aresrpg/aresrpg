@@ -3064,7 +3064,7 @@ tournament_page:
   new_item: 新規
   none_excluded: なし
   teams: チーム
-  bracket: 対戦表
+  bracket: 試合
   podium: 順位と報酬
   podium_claims: 順位 · 未受取 {{count}} 件
   your_rewards: あなたの報酬
@@ -3098,7 +3098,7 @@ tournament_page:
   action_refund: KARES を主催者に返す
   return_fight: 戦闘に戻る
   claim_count: 報酬 {{count}} 件を受け取る
-  show_bracket: 対戦表を見る
+  show_bracket: 試合を見る
   show_my_match: 自分の試合を見る
   match_number: 試合 {{match}}
   semifinals: 準決勝
@@ -3112,7 +3112,7 @@ tournament_page:
   advancing: 進出
   fifth_pending: 準々決勝の結果待ち
   fifth_notice: 不戦敗のチームには下位入賞順位が付きません。
-  no_matches: 対戦は行われませんでした。
+  no_matches: 試合は行われませんでした。
   end_review: この試合を勝者なしで終了しますか？両チームともこの試合からは進出できません。取り消せません。
   match_admission: 入場受付中
   match_force_due: 入場受付終了
@@ -3205,7 +3205,7 @@ tournament_page:
   immutable_notice: 作成すると形式、配分率、アイテム報酬、開始期限が固定され、変更できません。
   recipient_notice: 通貨は登録時の所有者に支払われます。対象キャラクターは各アイテムの設定個数を受け取ります。
   cancel_event: 大会を中止
-  start_review: 開始すると定員到達チームと賞金総額が固定され、対戦が抽選され、最初の60秒間の入場受付が始まります。
+  start_review: 開始すると定員到達チームと賞金総額が固定され、対戦相手が抽選され、最初の60秒間の入場受付が始まります。
   excluded_teams: 除外される未充足チーム：{{teams}}
   cancel_review: 大会を中止しますか？寄付金はすべて元の主催者に返却され、寄付者へ自動返金はされません。
   organizer_address: 元の主催者：{{address}}
@@ -3216,7 +3216,7 @@ tournament_page:
   submitted_notice: 操作を送信しました。再送信する前に現在の大会情報を確認してください。
   custody_undefined: 保管状態不明
   wagered: 賭け金あり
-  complete_notice: 定員に達したチームだけが対戦表に入ります。それ以外は開始時に除外されます。
+  complete_notice: 定員に達したチームだけが大会に参加できます。それ以外は開始時に除外されます。
   find_review: '{{character}} のチームを探して、このキャラクターを登録しますか？'
   joined_count: 入場 {{count}}/{{total}}
   versus: 対 {{team}}

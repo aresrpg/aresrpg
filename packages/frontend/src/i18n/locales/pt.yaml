@@ -3049,7 +3049,7 @@ tournament_page:
   new_item: Novo
   none_excluded: Nenhum
   teams: Equipes
-  bracket: Chave
+  bracket: Partidas
   podium: Pódio e prêmios
   podium_claims: Pódio · {{count}} para resgatar
   your_rewards: Suas recompensas
@@ -3083,7 +3083,7 @@ tournament_page:
   action_refund: Devolver KARES ao organizador
   return_fight: Voltar ao combate
   claim_count: Resgatar {{count}} recompensas
-  show_bracket: Ver chave
+  show_bracket: Ver partidas
   show_my_match: Ver minha partida
   match_number: Partida {{match}}
   semifinals: Semifinais
@@ -3097,7 +3097,7 @@ tournament_page:
   advancing: Classificado
   fifth_pending: Resultados das quartas pendentes
   fifth_notice: Derrotas por ausência não dão colocações de consolação.
-  no_matches: Nenhuma chave foi disputada.
+  no_matches: Nenhuma partida foi disputada.
   end_review: Encerrar esta partida sem vencedor? Nenhuma das equipes avançará por esta partida. Isso não pode ser desfeito.
   match_admission: Entrada aberta
   match_force_due: Entrada encerrada
@@ -3190,7 +3190,7 @@ tournament_page:
   immutable_notice: A criação fixa o formato, as porcentagens, os itens e o prazo para iniciar. Essas configurações não podem ser alteradas.
   recipient_notice: As moedas são pagas aos donos inscritos. Cada personagem elegível recebe a quantidade configurada de cada item.
   cancel_event: Cancelar torneio
-  start_review: O início fixa as equipes completas e os totais, embaralha a chave e abre as primeiras janelas de entrada de 60 segundos.
+  start_review: O início fixa as equipes completas e os totais, sorteia os confrontos e abre as primeiras janelas de entrada de 60 segundos.
   excluded_teams: 'Equipes incompletas excluídas: {{teams}}'
   cancel_review: Cancelar este torneio? Todas as contribuições retornam ao organizador original, não automaticamente a cada doador.
   organizer_address: 'Organizador original: {{address}}'
@@ -3201,7 +3201,7 @@ tournament_page:
   submitted_notice: A ação foi enviada. Verifique o evento atual antes de enviar novamente.
   custody_undefined: Custódia desconhecida
   wagered: Com aposta
-  complete_notice: Somente equipes completas entram na chave. As demais são excluídas ao iniciar.
+  complete_notice: Somente equipes completas participam do torneio. As demais são excluídas ao iniciar.
   find_review: Encontrar uma equipe para {{character}} e inscrever este personagem?
   joined_count: '{{count}}/{{total}} presentes'
   versus: contra {{team}}

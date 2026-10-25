@@ -3092,7 +3092,7 @@ tournament_page:
   new_item: Nouveau
   none_excluded: Aucun
   teams: Équipes
-  bracket: Tableau
+  bracket: Matchs
   podium: Podium et récompenses
   podium_claims: Podium · {{count}} à récupérer
   your_rewards: Vos récompenses
@@ -3126,7 +3126,7 @@ tournament_page:
   action_refund: Rendre les KARES à l’organisateur
   return_fight: Revenir au combat
   claim_count: Récupérer {{count}} récompenses
-  show_bracket: Voir le tableau
+  show_bracket: Voir les matchs
   show_my_match: Voir mon match
   match_number: Match {{match}}
   semifinals: Demi-finales
@@ -3140,7 +3140,7 @@ tournament_page:
   advancing: Qualifié
   fifth_pending: Résultats des quarts en attente
   fifth_notice: Les forfaits n’attribuent pas de place de consolation.
-  no_matches: Aucun tableau n’a été joué.
+  no_matches: Aucun match n’a été joué.
   end_review: Terminer ce match sans vainqueur ? Aucune des deux équipes ne se qualifiera par ce match. Cette action est irréversible.
   match_admission: Entrée ouverte
   match_force_due: Entrée fermée
@@ -3233,7 +3233,7 @@ tournament_page:
   immutable_notice: La création fixe le format, les pourcentages, les objets et la limite de démarrage. Ces paramètres ne peuvent plus être modifiés.
   recipient_notice: Les monnaies sont versées aux propriétaires inscrits. Chaque personnage éligible reçoit la quantité prévue de chaque objet.
   cancel_event: Annuler le tournoi
-  start_review: Le démarrage fige les équipes complètes et les cagnottes, mélange le tableau et ouvre les premières fenêtres d’entrée de 60 secondes.
+  start_review: Le démarrage fige les équipes complètes et les cagnottes, tire les rencontres au sort et ouvre les premières fenêtres d’entrée de 60 secondes.
   excluded_teams: 'Équipes incomplètes exclues : {{teams}}'
   cancel_review: Annuler ce tournoi ? Toutes les contributions reviennent à l’organisateur d’origine, pas automatiquement à chaque donateur.
   organizer_address: 'Organisateur d’origine : {{address}}'
@@ -3244,7 +3244,7 @@ tournament_page:
   submitted_notice: L’action a été envoyée. Vérifiez l’événement actuel avant de l’envoyer à nouveau.
   custody_undefined: Emplacement inconnu
   wagered: Avec mise
-  complete_notice: Seules les équipes complètes entrent dans le tableau. Les autres sont exclues au démarrage.
+  complete_notice: Seules les équipes complètes participent au tournoi. Les autres sont exclues au démarrage.
   find_review: Trouver une équipe pour {{character}} et inscrire ce personnage ?
   joined_count: '{{count}}/{{total}} entrés'
   versus: contre {{team}}
