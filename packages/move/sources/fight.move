@@ -371,7 +371,19 @@ public(package) fun end_tournament(fight: &mut Fight, winner: Option<u8>) {
   emit_end_if_needed(fight, false);
 }
 
-public(package) fun tournament_was_played(fight: &Fight): bool { !combat::queue(&fight.combat).is_empty() }
+/// An empty combat has no winner, but a tournament concession advances the opposing roster.
+/// The linked tournament calls this only after proving the fight ended.
+public(package) fun tournament_result(fight: &Fight): (Option<u8>, bool) {
+  let winner = combat::winner(&fight.combat);
+  let played = !combat::queue(&fight.combat).is_empty();
+  if (winner.is_some() || played) return (winner, played);
+  let mut fighter = 0;
+  while (fighter < fight.authorities.length()) {
+    if (!combat::fighter_forfeited(&fight.combat, fighter)) return (winner, played);
+    fighter = fighter + 1;
+  };
+  (option::some(1 - combat::fighter_team(&fight.combat, 0)), false)
+}
 
 public(package) fun ended(fight: &Fight): bool { combat::ended(&fight.combat) }
 public(package) fun winner(fight: &Fight): Option<u8> { combat::winner(&fight.combat) }

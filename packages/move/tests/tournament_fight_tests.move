@@ -12,7 +12,7 @@ use sui::{clock, kiosk, package::Publisher, random, test_scenario, transfer_poli
 
 const A: address = @0xA;
 const B: address = @0xB;
-public enum Mode has copy, drop { Normal, LateRecord, Expired, Walkover, Partial, EarlyCrank, DuplicateClaim, WrongClaim, WrongFight, LateJoin, UnrecordedClose, Stranger, DoubleOpen, ReadyEmpty, ReadyLarge, ReadyLate, LiveSettle, LiveCrank, UnopenedLinked, WrongItemPlace, EarlyItemClaim, BadAccess, Rooted, BatchReady }
+public enum Mode has copy, drop { Normal, LateFinish, LateRecord, Expired, Walkover, Partial, EarlyCrank, DuplicateClaim, WrongClaim, WrongFight, LateJoin, UnrecordedClose, Stranger, DoubleOpen, ReadyEmpty, ReadyLarge, ReadyLate, LiveSettle, LiveCrank, UnopenedLinked, WrongItemPlace, EarlyItemClaim, BadAccess, Rooted, BatchReady }
 
 fun roster(content: &world_content::WorldContent, clock: &clock::Clock, ctx: &mut TxContext): (kiosk::Kiosk, personal_kiosk::PersonalKioskCap, vector<ID>) {
   let (mut kiosk, cap) = kiosk::new(ctx);
@@ -146,6 +146,7 @@ fun exercise(mode: Mode) {
       s.next_tx(B);
       api::settle_tournament_match(&mut t, 0, &mut f, 1, &mut kb, &pb, &policy, &version, &clock, s.ctx());
     } else {
+      if (mode == Mode::LateFinish) clock::increment_for_testing(&mut clock, 1_800_001);
       s.next_tx(B);
       api::forfeit_tournament_match(&mut f, 1, &mut kb, &pb, &policy, &randomness, &version, &clock, s.ctx());
       if (mode == Mode::BatchReady) {
@@ -261,3 +262,5 @@ fun rooted_character_cannot_escape_through_a_tournament() { exercise(Mode::Roote
 fun ready_all_starts_once_after_every_registered_seat_is_present() { exercise(Mode::BatchReady); }
 
 #[test] fun late_recording_preserves_an_already_ended_winner() { exercise(Mode::LateRecord); }
+
+#[test] fun a_fight_can_finish_after_timeout_until_someone_cranks_it() { exercise(Mode::LateFinish); }

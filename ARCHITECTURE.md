@@ -829,11 +829,14 @@ registers once, and one wallet cannot span teams. Open teams allow client-side f
 teams admit only the named character IDs. Reused empty team slots increment their revision.
 
 Admin start freezes complete rosters and shuffles up to 64 teams. Each available match has sixty
-seconds for admission and thirty minutes for completion. Existing Fight custody and combat handle
-partial attendance, readiness, forfeits and settlement. A single represented side wins by walkover;
-neither side or an expired active match produces no winner. Absent losers receive no consolation
-placement. An already ended fight retains its result when recorded late. The tournament records
-results before Fight deletion; settlement and recovery preserve the tournament/match link.
+seconds for admission. After thirty minutes, anyone may crank an unfinished match to end it without
+a winner; until that crank executes, combat may complete normally. Existing Fight custody and combat
+handle partial attendance, readiness, forfeits and settlement. A single represented side wins by walkover;
+neither side attending produces no winner. Forfeiting the last present teammate concedes the match to
+the opposing registered team, even if that team has not joined. A teammate leaving while others remain
+does not end the match. Unplayed losses receive no consolation placement. An already ended fight retains
+its result when recorded late. The tournament records results before Fight deletion; settlement and
+recovery preserve the tournament/match link.
 
 SUI prizes work without a currency binding. An optional KARES pool appears only on its first valid
 contribution. Core privately embeds the rewards package’s currency accounting value in that pool.

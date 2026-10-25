@@ -23,6 +23,7 @@ pub async fn redis_process() -> (RedisProcess, MultiplexedConnection) {
         socket
     };
     let child = std::process::Command::new("redis-server")
+        .env("LC_ALL", "C")
         .args([
             "--port",
             "0",
@@ -38,11 +39,13 @@ pub async fn redis_process() -> (RedisProcess, MultiplexedConnection) {
         .expect("Redis integration tests require redis-server on PATH");
     let process = RedisProcess { child, socket };
     let url = format!("redis+unix://{}", process.socket.display());
+    let mut last_error = None;
     for _ in 0..100 {
-        if let Ok(conn) = crate::store::connect(&url).await {
-            return (process, conn);
+        match crate::store::connect(&url).await {
+            Ok(conn) => return (process, conn),
+            Err(error) => last_error = Some(error),
         }
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
-    panic!("isolated Redis did not start");
+    panic!("isolated Redis did not connect: {last_error:?}");
 }

@@ -271,7 +271,8 @@ public(package) fun record(t: &mut Tournament, index: u64, f: &Fight, clock: &Cl
   assert_fight(t, index, f);
   if (bracket::state(&t.matches[index]) == 2) return;
   running(t); assert!(fight::ended(f), EMatch);
-  resolve(t, index, fight::winner(f), fight::tournament_was_played(f), clock, ctx);
+  let (winner, played) = fight::tournament_result(f);
+  resolve(t, index, winner, played, clock, ctx);
 }
 
 public fun crank_unopened(t: &mut Tournament, index: u64, version: &Version,

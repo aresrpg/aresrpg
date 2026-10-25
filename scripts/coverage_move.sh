@@ -105,4 +105,4 @@ cover_package packages/move-combat 98.10 combat:98.10
 cover_package packages/move 99.27 forgemagie:99.56 zone:98.01 trade:99.29 fight_rewards:100 loot_box:100 gathering:98.01 item:98.65 dungeon:99.47 kolizeum:99.68 \
   protected_policy:100 character:98.94 progression:100 friends:100 party:98.72 \
   equipment:98.58 pet:100 crafting:100 world:100 version:100 \
-  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.44 distribution:100 mastery:100 api:99.51 tournament:99.16
+  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.47 distribution:100 mastery:100 api:99.51 tournament:99.16
