@@ -10,11 +10,6 @@ import type { KaresCopy } from '../kares/copy.ts'
 
 import type { WalletSelection, WalletView } from './model.ts'
 
-const OPEN_WALLET_PICKER = 'external-wallet/open-picker'
-export const open_wallet_dialog = (): void => {
-  globalThis.dispatchEvent(new Event(OPEN_WALLET_PICKER))
-}
-
 const account_key = ({ wallet_name, address }: WalletSelection): string => `${wallet_name}:${address}`
 
 const WalletAccountSelect = ({
@@ -80,11 +75,6 @@ export const WalletControl = ({
   useEffect(() => {
     if (state.accounts.length) set_open(false)
   }, [state.accounts])
-  useEffect(() => {
-    const show = (): void => set_open(true)
-    globalThis.addEventListener(OPEN_WALLET_PICKER, show)
-    return () => globalThis.removeEventListener(OPEN_WALLET_PICKER, show)
-  }, [])
   const busy = locked || state.request !== null
   const error = state.error && (
     <p className="text-[10px] text-rose-300" role="alert">

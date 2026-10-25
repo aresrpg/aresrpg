@@ -262,5 +262,3 @@ export const create_fight_sword_layer = ({
     dispose,
   })
 }
-
-export type FightSwordLayer = ReturnType<typeof create_fight_sword_layer>

@@ -35,3 +35,21 @@ test('small city artifacts load under production CSP in the page and a worker', 
     }
   }
 })
+
+test('city HTTP failures retain a typed missing-asset reason through the worker envelope', async ({ page }) => {
+  await page.route(/\/assets\/failure-\d+\.json$/, (route) => {
+    const status = Number(
+      route
+        .request()
+        .url()
+        .match(/failure-(\d+)/)![1]
+    )
+    return route.fulfill({ status, contentType: 'application/json', body: '{}' })
+  })
+  await page.goto('/e2e/fixtures/city_artifacts.html')
+  await page.waitForFunction(() => typeof window.probe_city_failure === 'function')
+  for (const status of [404, 410, 503, 200]) {
+    const issue = await page.evaluate((status) => window.probe_city_failure(status), status)
+    expect(issue?.code).toBe(status === 404 || status === 410 ? 'asset_missing' : 'terrain_failed')
+  }
+})

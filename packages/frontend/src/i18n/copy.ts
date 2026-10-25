@@ -15,6 +15,8 @@ export type AppCopy = Readonly<{
   title: string
   body: string
   loading_screen: Readonly<{
+    slow: string
+    browser_reload: string
     eyebrow: string
     home_eyebrow: string
     home_title: string
@@ -44,6 +46,7 @@ export type AppCopy = Readonly<{
   world_loading_terrain: string
   world_loading_sky: string
   world_loading_finishing: string
+  engine_graphics_failure: string
   engine_recovery: string
   engine_reload: string
   engine_minimum_title: string
@@ -177,6 +180,7 @@ export type AppCopy = Readonly<{
   allocation_page: Readonly<Record<string, string>>
   leaderboard_page: Readonly<Record<string, string>>
   marketplace_page: Readonly<Record<string, unknown>>
+  tournament_page: Readonly<Record<string, string>>
   kolizeum_page: Readonly<Record<string, string>>
   automation_panel: Readonly<Record<string, string>>
   friends_panel: Readonly<Record<string, string>>

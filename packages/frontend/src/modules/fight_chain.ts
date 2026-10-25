@@ -4,6 +4,7 @@
 // End Turn submits their ordered batch as one atomic PTB and owns the only rollback boundary.
 // Its receipt seeds presentation immediately; the streamed checkpoint remains authoritative.
 
+import type { TournamentLink } from '@aresrpg/protocol'
 import { type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/auth'
@@ -11,6 +12,7 @@ import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/au
 import type { AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
+import { tournament_for_fight } from './tournament.ts'
 import { chain_now } from './chain_clock.ts'
 import { fight_environment } from './fight.ts'
 import { owned_placement_readiness } from './fight_identity.ts'
@@ -142,6 +144,27 @@ const kolizeum_transaction = (
   }
 }
 
+const tournament_transaction = (
+  manager: TournamentLink,
+  fight: string,
+  input: Readonly<FightInput>,
+  wallet: Readonly<Pick<AuthSession, 'fight' | 'tournament'>>,
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
+): Promise<FightTransactionReceipt> | null => {
+  const args = { tournament: manager.id, index: manager.index, fight }
+  switch (input.type) {
+    case 'ready':
+      return wallet.tournament.ready({ ...args, fighter_indices: [input.fighter] })
+    case 'start':
+      return wallet.tournament.crank(args)
+    case 'forfeit':
+      return wallet.tournament.forfeit({ fight, fighter_idx: input.fighter, custody })
+    default:
+      return immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
+  }
+}
+
 const remote_transaction = ({
   fight,
   input,
@@ -150,20 +173,25 @@ const remote_transaction = ({
   custody,
   turn_actions,
   kolizeum,
+  tournament,
 }: Readonly<{
   fight: string
   input: FightInput
-  wallet: Pick<AuthSession, 'fight' | 'dungeon' | 'kolizeum'>
+  wallet: Pick<AuthSession, 'fight' | 'dungeon' | 'kolizeum' | 'tournament'>
   checkpoint: HydratedFightCheckpoint
   custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
   turn_actions: readonly TurnAction[]
   kolizeum: string | null
+  tournament: TournamentLink | null
 }>): Promise<FightTransactionReceipt> | null => {
   if (input.type === 'end_turn') return wallet.fight.commit_turn({ fight, actions: turn_actions })
+  if (tournament) return tournament_transaction(tournament, fight, input, wallet, checkpoint, custody)
   if (kolizeum) return kolizeum_transaction(kolizeum, fight, input, wallet.kolizeum, wallet.fight, checkpoint, custody)
   if (input.type === 'forfeit' && checkpoint.contract.dungeon !== null)
     return wallet.dungeon.give_up_fight({ fight, fighter_idx: input.fighter, custody })
-  return checkpoint.contract.wagered ? null : immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
+  return checkpoint.contract.wagered || checkpoint.contract.world === 'tournament'
+    ? null
+    : immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
 }
 
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
@@ -286,21 +314,31 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (eligible.length === 0) return
     let completed = 0
     const total = eligible.length
-    const transaction = wallet.fight.ready_many({
-      fight,
-      fighter_indices: eligible,
-      on_progress: (progress) => {
-        completed = progress.started ? progress.total : progress.completed
-        dispatch({
-          type: 'fight/ready_all_progress',
-          fight,
-          completed,
-          total: progress.total,
-          status: progress.started || progress.completed === progress.total ? 'complete' : 'running',
-          fighter: progress.fighter_idx,
-        })
-      },
-    })
+    const on_progress: NonNullable<Parameters<AuthSession['fight']['ready_many']>[0]['on_progress']> = (progress) => {
+      completed = progress.started ? progress.total : progress.completed
+      dispatch({
+        type: 'fight/ready_all_progress',
+        fight,
+        completed,
+        total: progress.total,
+        status: progress.started || progress.completed === progress.total ? 'complete' : 'running',
+        fighter: progress.fighter_idx,
+      })
+    }
+    const manager = tournament_for_fight(state, fight)
+    const transaction = manager
+      ? wallet.tournament
+          .ready({ tournament: manager.id, index: manager.index, fight, fighter_indices: eligible })
+          .then((receipt) => {
+            on_progress({
+              completed: total,
+              total,
+              started: receipt.started ?? false,
+              fighter_idx: eligible[eligible.length - 1],
+            })
+            return receipt
+          })
+      : wallet.fight.ready_many({ fight, fighter_indices: eligible, on_progress })
     submit_readiness(fight, checkpoint, transaction, () =>
       dispatch({ type: 'fight/ready_all_progress', fight, completed, total, status: 'failed' })
     )
@@ -341,6 +379,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       custody,
       turn_actions: Object.freeze([...(buffered.get(fight_id)?.actions ?? [])]),
       kolizeum,
+      tournament: tournament_for_fight(state, fight_id),
     })
     if (!transaction) return
     if (input.type === 'ready') {

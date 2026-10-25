@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-//! New rolled gear must reconcile to a winning seat's consumed drop budget.
+//! Confirmed item gains must reconcile to a winning seat's consumed drop budget.
 use anyhow::Result;
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::decode::{self, Field, FighterAuthority, FighterKind, Item, MarkerKey, RolledStats};
 use crate::events;
@@ -16,7 +16,7 @@ use crate::publish::TxView;
 #[derive(Default)]
 struct Claim {
     quantity: u64,
-    mob_types: BTreeSet<String>,
+    sources: BTreeMap<String, u16>,
 }
 type Budget = BTreeMap<String, Claim>;
 
@@ -76,12 +76,19 @@ fn claimed(tx: &TxView<'_>, game: &str) -> Result<Budget> {
             for drop in drops {
                 let claim = budgets.entry(drop.item_type.clone()).or_default();
                 claim.quantity += u64::from(drop.qty);
-                claim.mob_types.extend(
-                    defeated
+                for mob in &defeated {
+                    for entry in mob
+                        .loot
                         .iter()
-                        .filter(|mob| mob.loot.iter().any(|row| row.item_type == drop.item_type))
-                        .map(|mob| mob.mob_type.clone()),
-                );
+                        .filter(|entry| entry.item_type == drop.item_type)
+                    {
+                        claim
+                            .sources
+                            .entry(mob.mob_type.clone())
+                            .and_modify(|chance| *chance = (*chance).max(entry.chance_bp))
+                            .or_insert(entry.chance_bp);
+                    }
+                }
             }
         }
     }
@@ -106,27 +113,41 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
         .iter()
         .filter(|view| game_object(view, game, "item", "Item"))
     {
-        if tx.inputs.iter().any(|input| input.id == view.id) {
+        let mut item: Item = decode::from_bytes(view.bytes)?;
+        let previous = tx
+            .inputs
+            .iter()
+            .find(|input| input.id == view.id)
+            .map(|input| decode::from_bytes::<Item>(input.bytes))
+            .transpose()?;
+        let amount = item
+            .amount
+            .saturating_sub(previous.as_ref().map_or(0, |item| item.amount));
+        if amount == 0 {
             continue;
         }
-        let item: Item = decode::from_bytes(view.bytes)?;
+        item.amount = amount;
         if !budgets.contains_key(&item.item_type) {
             continue;
         }
         if !custody.iter().any(|fact| matches!(fact, Custody::KioskHolds { object, owner: Some(owner), .. } if *object == item.id && *owner == tx.sender)) { continue }
         let key = format!("{game}::item::StatsKey");
-        let Some(field) = tx.outputs.iter().find(|field| {
+        let field = tx.outputs.iter().find(|field| {
             field.owner == OwnerKind::Object(item.id)
                 && field_key(field.type_key) == Some(key.as_str())
-        }) else {
-            continue;
-        };
-        let stats = decode::from_bytes::<Field<MarkerKey, RolledStats>>(field.bytes)?.value;
-        // A forged same-PTB result is not an exceptional natural loot roll.
-        if stats.revision != 0 {
+        });
+        let stats = field
+            .map(|field| decode::from_bytes::<Field<MarkerKey, RolledStats>>(field.bytes))
+            .transpose()?
+            .map(|field| field.value);
+        // Existing rolled gear and forged same-PTB results are not natural loot rolls.
+        if stats
+            .as_ref()
+            .is_some_and(|stats| stats.revision != 0 || previous.is_some())
+        {
             continue;
         }
-        minted.push((item, stats.statistics));
+        minted.push((item, stats.map(|stats| stats.statistics)));
     }
     let mut totals = BTreeMap::<String, u64>::new();
     for (item, _) in &minted {
@@ -139,7 +160,11 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
         if totals[&item.item_type] != claim.quantity {
             continue;
         }
-        let stats = serde_json::to_value(statistics)?
+        let statistics = statistics
+            .map(serde_json::to_value)
+            .transpose()?
+            .unwrap_or(json!({}));
+        let stats = statistics
             .as_object()
             .unwrap()
             .iter()
@@ -148,7 +173,8 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
         notifications.push(json!({ "kind": "loot", "id": format!("{checkpoint}:{}:{}:loot", tx.tx_index, item.id.hex()),
             "address": tx.sender.hex(), "object": item.id.hex(), "item_type": item.item_type,
             "name": item.name, "category": item.category, "level": item.level, "stats": stats,
-            "mob_types": claim.mob_types }));
+            "mob_types": claim.sources.keys().collect::<Vec<_>>(), "amount": item.amount,
+            "sources": claim.sources.iter().map(|(mob_type, chance_bp)| json!({"mob_type": mob_type, "chance_bp": chance_bp})).collect::<Vec<_>>() }));
     }
     Ok(notifications)
 }

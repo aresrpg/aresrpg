@@ -27,6 +27,7 @@ use aresrpg::{
   naked_rule,
   party::{Self, Party},
   trade::{Self, Trade},
+  tournament::{Self, Tournament},
   pet,
   progression,
   protected_policy::AresRPG_TransferPolicy,
@@ -1616,4 +1617,116 @@ public fun prepare_boss_rewards_unfunded(
 ) {
   version.assert_latest();
   fight::prepare_unfunded_rewards(fight_object, fighter_idx, economy, ctx);
+}
+
+// Tournament boundaries reuse core custody, entropy and item delivery.
+public fun create_tournament_team(
+  tournament: &mut Tournament, name: String, allowed: vector<ID>,
+  kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, clock: &Clock, ctx: &TxContext,
+) {
+  version.assert_latest();
+  tournament::create_team(tournament, name, allowed, kiosk.borrow<Character>(cap, character_id), clock, ctx);
+}
+
+public fun join_tournament_team(
+  tournament: &mut Tournament, team: u64, revision: u64, kiosk: &Kiosk, cap: &KioskOwnerCap,
+  character_id: ID, version: &Version, clock: &Clock, ctx: &TxContext,
+) {
+  version.assert_latest();
+  tournament::join_team(tournament, team, revision, kiosk.borrow<Character>(cap, character_id), clock, ctx);
+}
+
+entry fun start_tournament(
+  tournament: &mut Tournament, admin: &aresrpg_control::admin::AdminCap,
+  randomness: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest(); admin.verify(ctx);
+  let mut generator = randomness.new_generator(ctx);
+  tournament::start(tournament, admin, &mut generator, clock, ctx);
+}
+
+fun tournament_character_available(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, clock: &Clock) {
+  let character = kiosk.borrow<Character>(cap, character_id);
+  assert!(!world::is_rooted(character, clock) && !dungeon::has_run(character), EDeleteWhileInDungeon);
+}
+
+entry fun open_tournament_match(
+  tournament: &mut Tournament, index: u64,
+  protected: &AresRPG_TransferPolicy<Character>, kiosk: &mut Kiosk, personal: &PersonalKioskCap,
+  character_id: ID, catalog: &BoardCatalog, randomness: &Random,
+  version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  tournament_character_available(kiosk, cap, character_id, clock);
+  let (side, placement_ms) = tournament::admission(tournament, index, character_id, ctx.sender(), clock);
+  let mut generator = randomness.new_generator(ctx);
+  let fight = fight::tournament_birth(protected, kiosk, cap, character_id, side, object::id(tournament), index,
+    placement_ms, generator.generate_u64(), catalog, clock, ctx);
+  tournament::link_fight(tournament, index, fight);
+}
+
+public fun join_tournament_match(
+  tournament: &Tournament, index: u64, fight_object: &mut Fight,
+  protected: &AresRPG_TransferPolicy<Character>, kiosk: &mut Kiosk, cap: &KioskOwnerCap,
+  character_id: ID, version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest(); tournament::assert_fight(tournament, index, fight_object);
+  tournament_character_available(kiosk, cap, character_id, clock);
+  let (side, _) = tournament::admission(tournament, index, character_id, ctx.sender(), clock);
+  fight::join(fight_object, protected, kiosk, cap, character_id, side, 0, false, clock, ctx);
+}
+
+entry fun ready_tournament_match(
+  tournament: &Tournament, index: u64, fight_object: &mut Fight, fighter_indices: vector<u64>,
+  randomness: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  let mut generator = randomness.new_generator(ctx);
+  tournament::ready(tournament, index, fight_object, fighter_indices, &mut generator, clock, ctx);
+}
+
+entry fun crank_tournament_match(
+  tournament: &mut Tournament, index: u64, fight_object: &mut Fight,
+  randomness: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  let mut generator = randomness.new_generator(ctx);
+  tournament::crank(tournament, index, fight_object, &mut generator, clock, ctx);
+}
+
+public fun settle_tournament_match(
+  tournament: &mut Tournament, index: u64, fight_object: &mut Fight, fighter_idx: u64,
+  kiosk: &mut Kiosk, personal: &PersonalKioskCap, policy: &TransferPolicy<Character>,
+  version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  tournament::record(tournament, index, fight_object, clock, ctx);
+  fight::settle_pvp(fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
+}
+
+entry fun forfeit_tournament_match(
+  fight_object: &mut Fight, fighter_idx: u64, kiosk: &mut Kiosk, personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>, randomness: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  fight::assert_tournament_controlled(fight_object);
+  let mut generator = randomness.new_generator(ctx);
+  fight::forfeit(fight_object, fighter_idx, kiosk, cap, policy, &mut generator, clock, ctx);
+}
+
+public fun close_tournament_match(tournament: &Tournament, index: u64,
+  fight_object: Fight, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  tournament::assert_recorded(tournament, index, &fight_object);
+  fight::close(fight_object, ctx);
+}
+
+entry fun claim_tournament_item(
+  tournament: &mut Tournament, team: u64, seat: u64, reward: u64, plan: PM,
+  kiosk: &mut Kiosk, personal: &PersonalKioskCap, policy: &TransferPolicy<Item>,
+  randomness: &Random, version: &Version, ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  tournament::claim_item(tournament, team, seat, reward, plan, kiosk, cap, policy, &mut generator, ctx);
 }

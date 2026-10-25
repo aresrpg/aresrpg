@@ -156,27 +156,12 @@ export const entity_rows = (domain: SeedDomain, value: unknown): readonly SeedEn
   )
 }
 
-export const entity_rows_from_draft = (
-  domain: SeedDomain,
-  draft: Readonly<{ value: JsonValue }> | undefined
-): readonly SeedEntityRow[] => entity_rows(domain, draft?.value)
-
 export const editable_json_paths = (value: unknown, path: JsonPath = []): readonly string[] => {
   if (value === null || typeof value !== 'object') return [path.join('.')]
   return Object.entries(value).flatMap(([key, child]) =>
     editable_json_paths(child, [...path, Array.isArray(value) ? Number(key) : key])
   )
 }
-
-export const json_value_at_path = (value: JsonValue, path: JsonPath): JsonValue =>
-  path.reduce<JsonValue>((current, segment) => {
-    if (current === null || typeof current !== 'object') throw new TypeError(`Cannot read JSON path ${path.join('.')}`)
-    const next = Array.isArray(current)
-      ? current[Number(segment)]
-      : (current as Readonly<Record<string, JsonValue>>)[String(segment)]
-    if (next === undefined) throw new TypeError(`Unknown JSON path ${path.join('.')}`)
-    return next
-  }, value)
 
 export const replace_json_value = (value: JsonValue, path: JsonPath, replacement: JsonValue): JsonValue => {
   if (path.length === 0) return replacement
@@ -197,24 +182,4 @@ export const replace_json_value = (value: JsonValue, path: JsonPath, replacement
     ...value,
     [key]: replace_json_value((value as Readonly<Record<string, JsonValue>>)[key], rest, replacement),
   })
-}
-
-export const remove_json_value = (value: JsonValue, path: JsonPath): JsonValue => {
-  if (path.length === 0) throw new TypeError('The corpus root cannot be removed')
-  const parent_path = path.slice(0, -1)
-  const leaf = path[path.length - 1]
-  const parent = json_value_at_path(value, parent_path)
-  if (Array.isArray(parent))
-    return replace_json_value(
-      value,
-      parent_path,
-      parent.filter((_, index) => index !== Number(leaf))
-    )
-  const object = as_object(parent)
-  if (!object || !(String(leaf) in object)) throw new TypeError(`Unknown JSON path ${path.join('.')}`)
-  return replace_json_value(
-    value,
-    parent_path,
-    Object.freeze(Object.fromEntries(Object.entries(object).filter(([key]) => key !== String(leaf))))
-  )
 }

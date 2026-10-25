@@ -9,16 +9,18 @@ import type { WalletView } from '../wallet/model.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
 import { WalletPicker } from './WalletPicker.tsx'
-import { short_address, wallet_label } from './view.ts'
+import { short_address, wallet_label, type CardView } from './view.ts'
 
 export const Wallets = ({
   state,
+  cards,
   runtime,
   external,
   text,
   google_label,
 }: Readonly<{
   state: AllocationState
+  cards: readonly CardView[]
   runtime: AllocationRuntime
   external: WalletView
   text: CopyText
@@ -51,27 +53,38 @@ export const Wallets = ({
         </div>
       </div>
       <div className="wallets">
-        {state.status?.wallets.map((wallet) => (
-          <div className="wrow" key={wallet.address} data-allocation-wallet={wallet.address}>
-            <span className="mark">{wallet_label(wallet, state.session).slice(0, 1) || 'W'}</span>
-            <div className="who">
-              <b>{wallet_label(wallet, state.session) || text('wallet')}</b>
-              <span>
-                {text('verified')} · {short_address(wallet.address)}
-              </span>
+        {state.status?.wallets.map((wallet) => {
+          const card = cards.find((card) => card.wallet.address === wallet.address)
+          const allocation = card ? (card.award?.tier ?? 'pending') : 'none'
+          return (
+            <div
+              className="wrow"
+              data-allocation={allocation}
+              key={wallet.address}
+              data-allocation-wallet={wallet.address}
+            >
+              <span className="mark">{wallet_label(wallet, state.session).slice(0, 1) || 'W'}</span>
+              <div className="who">
+                <b>{wallet_label(wallet, state.session) || text('wallet')}</b>
+                <span>
+                  {text('verified')} · {short_address(wallet.address)}
+                </span>
+              </div>
+              {wallet.address !== state.session?.address && (
+                <button
+                  className="btn-icon"
+                  disabled={busy}
+                  aria-label={text('remove_wallet', { wallet: wallet.label })}
+                  onClick={() =>
+                    runtime.dispatch({ type: 'request', task: { kind: 'remove', address: wallet.address } })
+                  }
+                >
+                  ×
+                </button>
+              )}
             </div>
-            {wallet.address !== state.session?.address && (
-              <button
-                className="btn-icon"
-                disabled={busy}
-                aria-label={text('remove_wallet', { wallet: wallet.label })}
-                onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'remove', address: wallet.address } })}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div className="link-buttons">
         <button

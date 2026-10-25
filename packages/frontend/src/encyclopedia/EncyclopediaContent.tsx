@@ -30,7 +30,7 @@ export const ENCYCLOPEDIA_TABS: readonly Readonly<{ id: Tab; label: string }>[] 
   { id: 'jobs', label: 'jobs_tab' },
   { id: 'worlds', label: 'worlds_tab' },
   { id: 'gameplay', label: 'gameplay_tab' },
-  { id: 'kares', label: 'kares' },
+  { id: 'kares', label: 'tokenomics_tab' },
 ])
 
 export const encyclopedia_route_view = (

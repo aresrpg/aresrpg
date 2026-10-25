@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { observe_startup_recovery } from './startup_recovery.ts'
 import { prepare_boot_loading, show_boot_failure } from './boot_loading.ts'
 
 const boot = async (): Promise<void> => {
@@ -7,6 +8,11 @@ const boot = async (): Promise<void> => {
     // The opener owns the OAuth result. Leave this callback passive, including its static shell.
     document.getElementById('root')?.replaceChildren()
     return
+  }
+  try {
+    observe_startup_recovery()
+  } catch (error) {
+    console.warn('Startup update recovery is unavailable.', error)
   }
   prepare_boot_loading()
   if (!document.hidden) {

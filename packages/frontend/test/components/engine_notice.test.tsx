@@ -50,3 +50,24 @@ test('missing WebGPU blocks gameplay; a degraded sky is not a missing renderer',
   ).toBeNull()
   expect(graphics_notice_visible(false, false, false, false, true)).toBe(true)
 })
+
+test('failed WebGPU initialization offers neutral graphics recovery instead of claiming unsupported hardware', async () => {
+  const copy = await load_app_copy('en')
+  const html = renderToStaticMarkup(
+    <EngineNotice
+      copy={copy}
+      status={{ state: 'failed', backend: 'none', issue: { code: 'webgpu_initialization_failed' } }}
+      dismiss={() => undefined}
+      reload={() => undefined}
+    />
+  )
+  expect(html).toContain(copy.engine_graphics_failure)
+  expect(html).toContain(copy.engine_reload)
+  expect(html).not.toContain(copy.engine_recovery)
+})
+
+test('the low-quality initialization retry does not show a terminal GPU notice', () => {
+  expect(
+    engine_notice_kind({ state: 'initializing', backend: 'none', issue: { code: 'webgpu_initialization_failed' } })
+  ).toBeNull()
+})

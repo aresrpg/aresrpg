@@ -18,6 +18,7 @@ export type VisualCard = Readonly<{
   image: string | null
   tone: 'gold' | 'blue'
   summary?: string
+  rare?: boolean
   currency?: boolean
   party: readonly string[]
   stats: readonly Readonly<{ key: string; value: number; label: string }>[]
@@ -117,12 +118,52 @@ const victory_announcement = (
   }
 }
 
+const is_rare_boss_loot = (notification: Loot): boolean =>
+  notification.sources.length > 0 &&
+  notification.sources.every(
+    ({ mob_type, chance_bp }) =>
+      chance_bp > 0 && chance_bp <= 100 && mobs.some((mob) => mob.mob_type === mob_type && mob.role === 'boss')
+  )
+
+const rare_loot_announcement = (
+  copy: Copy,
+  names: Readonly<Record<string, string | null>>,
+  notification: Loot
+): Announcement => {
+  const chance = String(Math.max(...notification.sources.map(({ chance_bp }) => chance_bp)) / 100)
+  const finder = player(names, notification.address)
+  const boss = notification.sources
+    .map(({ mob_type }) => mobs.find((mob) => mob.mob_type === mob_type)!.name)
+    .join(', ')
+  return {
+    content: message(copy.rare_loot, {
+      player: finder,
+      amount: String(notification.amount),
+      item: notification.name,
+      mob: boss,
+      chance,
+    }),
+    visual: {
+      type: copy.rare_loot_title,
+      title: `${notification.amount}× ${notification.name}`,
+      subtitle: boss,
+      image: icon('items', `${notification.item_type}_hd`),
+      tone: 'gold',
+      rare: true,
+      summary: interpolate(copy.drop_chance, { chance }),
+      party: [interpolate(copy.found_by, { player: finder })],
+      stats: [],
+    },
+  }
+}
+
 const loot_announcement = (
   copy: Copy,
   names: Readonly<Record<string, string | null>>,
   notification: Loot
 ): Announcement | null => {
   const template = items.find(({ item_type }) => item_type === notification.item_type)
+  if (!Object.keys(notification.stats).length) return null
   if (!template?.stats) throw new Error(`Missing authored stat ranges: ${notification.item_type}`)
   const quality = roll_quality(template.stats, notification.stats)
   if (!quality?.exceptional) return null
@@ -163,6 +204,8 @@ export const announcement = (
     case 'victory':
       return victory_announcement(copy, names, notification)
     case 'loot':
-      return loot_announcement(copy, names, notification)
+      return is_rare_boss_loot(notification)
+        ? rare_loot_announcement(copy, names, notification)
+        : loot_announcement(copy, names, notification)
   }
 }

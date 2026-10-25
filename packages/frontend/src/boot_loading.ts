@@ -2,9 +2,19 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { select_loading_image } from './components/loading_art.ts'
 
+const bind_reload = (shell: Readonly<HTMLElement>): void => {
+  const reload = shell.querySelector<HTMLButtonElement>('[data-loading-reload]')
+  if (reload) {
+    reload.removeAttribute('disabled')
+    shell.setAttribute('data-boot-recovery-ready', '')
+    reload.addEventListener('click', () => location.reload())
+  }
+}
+
 export const prepare_boot_loading = (): void => {
   const shell = document.querySelector<HTMLElement>('[data-boot-loading]')
   if (!shell) return
+  bind_reload(shell)
   const context = location.pathname.startsWith('/play-demo') || location.pathname.startsWith('/demo') ? 'demo' : 'home'
   const image = select_loading_image(context)
   shell.querySelector('[data-loading-art]')?.setAttribute('src', image)
@@ -29,9 +39,4 @@ export const show_boot_failure = (): void => {
   message?.replaceChildren(label)
   shell.querySelector('[data-loading-step]')?.replaceChildren()
   shell.querySelector('.world-loading-track')?.setAttribute('hidden', '')
-  const reload = shell.querySelector<HTMLButtonElement>('[data-loading-reload]')
-  if (reload) {
-    reload.removeAttribute('hidden')
-    reload.addEventListener('click', () => location.reload(), { once: true })
-  }
 }

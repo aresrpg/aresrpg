@@ -128,9 +128,6 @@ export const decay_intensity = (t_since_splash: number | null | undefined, tau =
   return Math.exp(-t_since_splash / tau)
 }
 
-/** Top-first macro drain-front position (uv; negative = not started ⇒ fully wet). */
-export const film_front_y = (t: number): number => (t - LENS_WATER.drain_start) * LENS_WATER.drain_speed
-
 /** Sheet envelope: 1 through `sheet_hold` (the whole lens is water), then smoothstep → 0 over
  * `sheet_fade` — the "looking through water" beat that recedes as the sheet breaks. */
 export const sheet_envelope = (t: number): number => {
@@ -138,11 +135,6 @@ export const sheet_envelope = (t: number): number => {
   const u = Math.min(1, (t - LENS_WATER.sheet_hold) / LENS_WATER.sheet_fade)
   return 1 - u * u * (3 - 2 * u)
 }
-
-/** The film's distortion amplitude at time t: sheet_amp at the surface moment, receding to the
- * subtle film_amp base. */
-export const film_amp_at = (t: number): number =>
-  LENS_WATER.film_amp + (LENS_WATER.sheet_amp - LENS_WATER.film_amp) * sheet_envelope(t)
 
 /** Wet-region noise ∈ [0,1]: 3-octave 2-axis sin·cos value-noise whose iso-contours are the wet
  * patches' borders — blobby fluid shapes, never a band. The /2.6 maps the measured practical

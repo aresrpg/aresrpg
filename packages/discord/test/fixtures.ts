@@ -26,6 +26,8 @@ export const examples: readonly Notification[] = [
   {
     ...base,
     kind: 'loot',
+    amount: 1,
+    sources: [{ mob_type: 'golden_lorito', chance_bp: 500 }],
     address,
     object: address,
     item_type: 'lorito_hat__golden',

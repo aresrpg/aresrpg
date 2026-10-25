@@ -46,30 +46,6 @@ export function celestial_tod_at(elapsed_ms: number, anchor_tod = 0, cycle_ms = 
 }
 
 /**
- * Whether two external phase samples prove the configured linear wall clock. A minimum one-tolerance phase
- * advance keeps repeated screenshot/demo pins from accidentally starting the clock on a short call interval.
- * @param {number} previous_tod earlier external phase sample
- * @param {number} next_tod later external phase sample
- * @param {number} elapsed_ms monotonic milliseconds between samples
- * @param {number} [tolerance_ms] allowed publisher/callback skew
- * @param {number} [cycle_ms] full cycle duration
- * @returns {boolean}
- */
-export function is_linear_celestial_step(
-  previous_tod: number,
-  next_tod: number,
-  elapsed_ms: number,
-  tolerance_ms = 50,
-  cycle_ms = CELESTIAL_CYCLE_MS
-): boolean {
-  if (!(elapsed_ms > 0) || !(cycle_ms > 0) || !(tolerance_ms >= 0)) return false
-  const observed_delta = wrap01(next_tod - previous_tod)
-  const expected_delta = wrap01(elapsed_ms / cycle_ms)
-  const tolerance = tolerance_ms / cycle_ms
-  return observed_delta > tolerance && Math.abs(observed_delta - expected_delta) <= tolerance
-}
-
-/**
  * Closed constant-speed small-circle orbit. It preserves the configured 3:1 horizon occupancy while avoiding
  * the old unequal day/night keyframes: for equal phase deltas, `dot(dir(t), dir(t+delta))` is position-
  * independent (`1/3 + 2/3*cos(TAU*delta)`), including at the wrap. Sunrise is t=0, noon t=3/8, sunset

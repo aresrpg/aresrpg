@@ -34,3 +34,20 @@ test('long identities and maximum SUI amounts remain bounded', async () => {
   expect(image.width).toBe(1100)
   expect(image.height).toBe(264)
 })
+
+test('rare boss loot gets a larger showcase even without rolled stats', async () => {
+  const loot = examples[3]!
+  if (loot.kind !== 'loot') throw new Error('bad fixture')
+  const card = announcement(
+    await load_copy('en'),
+    {},
+    {
+      ...loot,
+      stats: {},
+      sources: [{ mob_type: 'golden_lorito', chance_bp: 100 }],
+    }
+  )!
+  const image = await loadImage(await (await create_renderer())(card.visual))
+  expect(image.width).toBe(1100)
+  expect(image.height).toBe(728)
+})

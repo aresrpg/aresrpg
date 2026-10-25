@@ -210,6 +210,8 @@ events! {
     // Friends, parties, and trades publish from object writes in publish.rs. Their full
     // objects already carry the state needed to invalidate every relevant projection.
 
+    tournament::TournamentUpdated { tournament: Id }
+        => |_: &TournamentUpdated| "evt:tournament".to_string(),
     // ── kolizeum ──
     kolizeum::KolizeumCreated { kolizeum: Id, fight: Id, pledge: u64, format: u64 }
         => |_: &KolizeumCreated| "evt:kolizeum".to_string(),

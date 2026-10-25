@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+
+.tourney-admin {
+  padding: 16px;
+  overflow: auto;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-admin > summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--aui-orange);
+  min-height: 30px;
+}
+.tourney-admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1fr;
+  gap: 18px;
+  margin-top: 14px;
+}
+.tourney-admin-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.tourney-admin-column h3 {
+  font-size: 16px;
+}
+.tourney-admin .aui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tourney-admin .aui-field input,
+.tourney-admin .aui-field select {
+  width: 100%;
+}
+.tourney-admin-split {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tourney-admin-split th,
+.tourney-admin-split td {
+  padding: 4px;
+  text-align: left;
+}
+.tourney-admin-split input {
+  width: 100%;
+}
+.tourney-allocation {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font:
+    11px/1.5 'Tournament Mono',
+    monospace;
+}
+.tourney-allocation.is-invalid {
+  color: var(--aui-danger);
+}
+.tourney-admin-item {
+  display: grid;
+  grid-template-columns: 1fr 60px 60px auto;
+  align-items: end;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-admin-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--aui-orange) 35%, transparent);
+}
+.tourney-admin-review dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0;
+}
+.tourney-admin-review dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.tourney-admin-events {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.tourney-admin-event {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #ffffff14;
+}
+.tourney-admin-event > div:first-child {
+  flex: 1;
+}

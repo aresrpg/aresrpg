@@ -76,3 +76,5 @@ export { SPELL_EFFECT_CLASSES, spell_effect_timing } from './spell_effect_recipe
 export type { SpellEffectClass, SpellEffectArea, SpellEffectRecipe, SpellEffectTiming } from './spell_effect_recipe.ts'
 export { create_source as create_authored_spell_source } from './generated/claude_spell_source.js'
 export type { ClaudeSpell, ClaudeSoundEvent } from './generated/claude_spell_source.js'
+
+export { terrain_failure } from './asset_error.ts'

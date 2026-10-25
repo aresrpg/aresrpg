@@ -19,7 +19,9 @@
   position: fixed;
   inset: 0;
   z-index: 140;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
   isolation: isolate;
   background: #0c0a13;
   color: #f0ece2;
@@ -55,6 +57,7 @@
     linear-gradient(90deg, #0c0a1250, transparent 70%);
 }
 .loading-header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -84,12 +87,10 @@
   transform: rotate(45deg);
 }
 .loading-story {
-  position: absolute;
-  left: 6vw;
-  right: 6vw;
-  bottom: 176px;
+  flex: none;
+  margin: auto 6vw 32px;
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 9vw;
   align-items: end;
 }
@@ -200,10 +201,8 @@
   background: #9fd4db;
 }
 .loading-progress {
-  position: absolute;
-  left: 6vw;
-  right: 6vw;
-  bottom: 48px;
+  flex: none;
+  margin: 0 6vw 48px;
 }
 .loading-status-row {
   display: flex;
@@ -344,9 +343,7 @@
     line-height: 1.6;
   }
   .loading-story {
-    left: 7vw;
-    right: 7vw;
-    bottom: 168px;
+    margin-inline: 7vw;
     grid-template-columns: 1fr;
     gap: 28px;
   }
@@ -378,9 +375,7 @@
     margin-top: 12px;
   }
   .loading-progress {
-    left: 7vw;
-    right: 7vw;
-    bottom: 34px;
+    margin: 0 7vw 34px;
   }
   .loading-status {
     font-size: 11px;
@@ -404,11 +399,9 @@
     width: 115px;
   }
   .loading-story {
-    left: 5vw;
-    right: 5vw;
-    bottom: 123px;
+    margin: auto 5vw 24px;
     gap: 6vw;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .loading-destination h1 {
     font-size: 32px;
@@ -438,9 +431,7 @@
     display: none;
   }
   .loading-progress {
-    left: 5vw;
-    right: 5vw;
-    bottom: 25px;
+    margin: 0 5vw 25px;
   }
   .loading-status-row {
     margin-bottom: 12px;
@@ -454,7 +445,7 @@
     padding-top: 20px;
   }
   .loading-story {
-    bottom: 140px;
+    margin-bottom: 24px;
     gap: 18px;
   }
   .loading-destination h1 {
@@ -477,7 +468,7 @@
     min-height: 38px;
   }
   .loading-progress {
-    bottom: 24px;
+    margin-bottom: 24px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -488,4 +479,32 @@
     animation: none !important;
     transition: none;
   }
+}
+
+/* Both document boot and mounted worlds keep recovery available without cancelling slow work. */
+.loading-recovery {
+  visibility: hidden;
+  animation: loading-recovery 0s 20s forwards;
+}
+.loading-slow {
+  margin: 12px 0 0;
+  color: #dfbd79;
+}
+[data-world-loading='failed'] .loading-recovery {
+  visibility: visible;
+  animation: none;
+}
+[data-world-loading='failed'] .loading-slow {
+  display: none;
+}
+@keyframes loading-recovery {
+  to {
+    visibility: visible;
+  }
+}
+
+.loading-recovery .loading-reload[disabled],
+[data-boot-recovery-ready] .loading-browser-reload,
+[data-recovery-ready] .loading-browser-reload {
+  display: none;
 }

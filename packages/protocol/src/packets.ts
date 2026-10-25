@@ -14,7 +14,10 @@ import { cosmetic_slots } from '@aresrpg/immutable'
 import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
+import type { TournamentLink, TournamentRow } from './tournament.ts'
 import { valid_allocation_request, type AllocationRequest, type AllocationResult } from './allocation.ts'
+export type { TournamentLink, TournamentRow, TournamentTeam, TournamentSeat, TournamentMatch } from './tournament.ts'
+export { coin_share, tournament_coin_claims } from './tournament.ts'
 export type { AllocationRequest, AllocationResult } from './allocation.ts'
 import { parse_inspection_request, type InspectionQuery, type InspectionResult } from './inspection.ts'
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
@@ -186,6 +189,7 @@ export type ResourcePackRow = {
  *  `placement_ms` is the chain's birth wall-clock (u64 as string): it drives the join-window
  *  clock every surface derives (the sword's sink, join/spectate gating). */
 export type FightRow = {
+  tournament?: string | null
   id: string
   world: string
   x: number
@@ -263,6 +267,7 @@ export type FightStateRow = {
   players: Record<string, FightPlayerSourceRow>
   /** Immutable wager terms stay beside, never inside, the wager-blind fight core. */
   kolizeum: Readonly<{ id: string; pledge_mist: string }> | null
+  tournament?: TournamentLink | null
 }
 
 /** The equipment slots OTHER players can see (owner 2026-08-12) — everything else is
@@ -516,6 +521,7 @@ export type FightResolutionRow = {
   dungeon: string | null
   dungeon_room: number | null
   kolizeum: string | null
+  tournament?: TournamentLink | null
   fighter: number
   character: string
   team: number
@@ -554,7 +560,7 @@ export type KolizeumLobbyRow = Readonly<{
   fighters: readonly KolizeumFighterRow[]
 }>
 
-export type ClosableFightRow = Readonly<{ fight: string; kolizeum: string | null }>
+export type ClosableFightRow = Readonly<{ fight: string; kolizeum: string | null; tournament?: TournamentLink | null }>
 
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
@@ -923,6 +929,8 @@ export type ServerPackets = {
 
   // ── kolizeum live directory ──
   'packet/kolizeums': { lobbies: KolizeumLobbyRow[] }
+  'packet/tournaments': { tournaments: readonly TournamentRow[] }
+  'packet/tournaments_error': { reason: 'unavailable' }
 
   // ── admin ──
   'packet/admin_response':
@@ -1005,7 +1013,7 @@ export const LEADERBOARD_PACKETS = [
   'packet/inspection_error',
 ] as const
 
-export const KOLIZEUM_PACKETS = ['packet/kolizeums'] as const
+export const KOLIZEUM_PACKETS = ['packet/kolizeums', 'packet/tournaments', 'packet/tournaments_error'] as const
 export const FRIEND_PACKETS = ['packet/friends'] as const
 export const PARTY_PACKETS = ['packet/party', 'packet/party_invites'] as const
 export const TRADE_PACKETS = ['packet/trades', 'packet/trade_destroyed'] as const

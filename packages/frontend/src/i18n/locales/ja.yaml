@@ -1,5 +1,6 @@
 title: WebGPU を利用できません
 body: 'ワールドにはWebGPUと安全な接続（HTTPSまたはlocalhost）が必要です。対応ブラウザーで開いてください。'
+engine_graphics_failure: グラフィックスを起動できませんでした。ブラウザーのグラフィックス設定を確認するか、グラフィックスドライバーを更新してから再読み込みしてください。
 engine_recovery: ワールドの読み込みまたは描画が停止しました。再読み込みしてもう一度お試しください。
 engine_reload: 再読み込み
 engine_minimum_title: 'グラフィック設定を低減'
@@ -1152,6 +1153,7 @@ wallet_send_shared:
   transaction: トランザクション
 
 encyclopedia_page:
+  tokenomics_tab: トークノミクス
   world_locations: '場所'
   world_search_places: 'バイオーム・都市・モンスター・資源を検索…'
   world_entry: '入場Lv. {{level}}'
@@ -2749,6 +2751,9 @@ adventure:
   boss_body: '衛兵の先には、Sceatが探す遺物を持ったゴバドックが待っています。負け続けてゴブリン王になれるはずもありません。二人で戦う術は学びましたが、今度の相手は別格です。仲間とともに近づき、新しい絆でどこまで進めるか確かめましょう。'
 
 discord_marketplace:
+  rare_loot_title: 'ボスのレアドロップ'
+  rare_loot: '**{player}**が**{mob}**から**{amount}× {item}**を獲得 — **基本ドロップ率{chance}%**。'
+  drop_chance: '基本ドロップ率 {chance}%'
   title: 'マーケット · 売却'
   sale: '**{seller}** が **{amount}× {item}** を **{price} SUI** で売却しました'
   price_before_fees: '手数料を除く売却価格'
@@ -2820,6 +2825,8 @@ gift_page:
   error_login: 'ログインが完了しませんでした。もう一度お試しください。ウィンドウがブロックされた場合はSafariやChromeで開いてください。'
 
 loading_screen:
+  browser_reload: ブラウザーの再読み込みボタンで、もう一度お試しください。
+  slow: 読み込みに時間がかかっています。そのまま待つか、再読み込みしてください。
   eyebrow: '次の冒険が待っている'
   home_eyebrow: '冒険の前の静かなひととき'
   home_title: '冒険はここから始まる。'
@@ -2986,3 +2993,217 @@ allocation_page:
   error_foreign_post: '接続中のXアカウントが投稿したリンクを使用してください。アカウントかリンクを変更してください。'
   error_missing_post: '一部の投稿が見つかりません。リンクと公開設定を確認してください。'
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
+
+tournament_page:
+  title: トーナメント
+  no_event: 開催予定の大会はありません。
+  open: 参加受付中
+  in_progress: 進行中
+  finished: 終了
+  cancelled: 中止
+  create_team: チームを作成
+  team_name: チーム名
+  restricted: 限定チーム
+  allowed_names: 仲間の名前をカンマで区切る
+  find_team: 仲間を自動で探す
+  join: 参加
+  leave: 脱退
+  donate: 賞金を寄付
+  amount: 金額
+  confirm: 確認
+  cancel: キャンセル
+  waiting: 待機中
+  live: 対戦中
+  no_winner: 勝者なし
+  crank: 試合を進める
+  spectate: 観戦
+  claim: 引き出す
+  items: 参加者ごとのアイテム
+  place: 順位
+  joint_fifth: 同率5位
+  asset: 通貨
+  admin: 大会管理
+  admin_cap: AdminCapオブジェクトID
+  create_event: 大会を作成
+  start: 大会を開始
+  setup_display: Displayの初回設定
+  deadline: 開始期限
+  name: 名前
+  format: 形式
+  final: 決勝
+  bronze: 3位決定戦
+  roster_notice: 参加できるのは定員を満たしたチームのみです。登録すると試合への自動参加を許可します。各試合の参加期限は60秒です。接続を維持してください。
+  donation_notice: 寄付は取り消せません。大会中止時の資金と未授与の賞金は主催者に送られます。返金は主催者が手動で行います。
+  refund_pool: 未授与のKARESを主催者に返す
+  expire: 期限切れの参加登録を終了
+  character: キャラクター
+  action_expire: 期限切れの参加登録を終了
+  placement: 順位
+  match_waiting: 待機中
+  match_live: リアルタイム
+  match_done: 完了
+  match_no_winner: 勝者なし
+  reason_no_winner: 勝者なし
+  loading: 読み込み中…
+  unavailable: 利用不可
+  unclaimed: 空席
+  close: 閉じる
+  new_item: 新規
+  none_excluded: なし
+  teams: チーム
+  bracket: 対戦表
+  podium: 順位と報酬
+  podium_claims: 順位 · 未受取 {{count}} 件
+  your_rewards: あなたの報酬
+  your_team: あなたのチーム
+  event: 大会
+  event_sections: 大会の項目
+  single_elimination: 勝ち抜き戦
+  registered_count: '{{count}} チーム'
+  team_counts: 登録 {{teams}} · 定員到達 {{complete}} · 開始には {{minimum}} チーム必要
+  ready_count: 開始に必要な定員到達チーム：{{complete}} / {{minimum}}
+  open_anyone: 誰でも参加可能
+  named_only: 指定キャラクターのみ
+  reserved_seat: 予約されたキャラクター
+  take_seat: この枠に参加
+  open_seat: 空き枠
+  no_teams: まだチームがありません。作成するか仲間を探してください。
+  not_registered: 未登録
+  leave_character: '{{name}} をチームから外す'
+  leave_review: '{{character}} を {{team}} から外しますか？このキャラクターの登録は解除されます。'
+  join_review: '{{character}} を {{team}} に登録しますか？'
+  consent_notice: 名前の指定は枠の予約です。各所有者が自分のキャラクターを別途登録する必要があります。
+  too_many_names: 自分を含めて最大 {{count}} キャラクターまで指定できます。
+  stay_online: 手数料用の SUI を用意し、オンラインを維持してください。アプリは各試合の60秒間の入場受付中に登録キャラクターの入場を試みます。
+  action_find: チームを探す
+  action_add: 自分のキャラクターを追加
+  action_open: 試合を開く
+  action_join: 試合に参加
+  action_start: 試合を開始
+  action_record: 結果を記録
+  action_end: 勝者なしで終了
+  action_refund: KARES を主催者に返す
+  return_fight: 戦闘に戻る
+  claim_count: 報酬 {{count}} 件を受け取る
+  show_bracket: 対戦表を見る
+  show_my_match: 自分の試合を見る
+  match_number: 試合 {{match}}
+  semifinals: 準決勝
+  quarterfinals: 準々決勝
+  round_of: ベスト{{count}}戦
+  round_counts: 進行中 {{live}} · {{done}}/{{count}}
+  from_winner: M{{match}} の勝者
+  from_loser: M{{match}} の敗者
+  empty_bracket: 参加者なし
+  winner: 勝者
+  advancing: 進出
+  fifth_pending: 準々決勝の結果待ち
+  fifth_notice: 不戦敗のチームには下位入賞順位が付きません。
+  no_matches: 対戦は行われませんでした。
+  end_review: この試合を勝者なしで終了しますか？両チームともこの試合からは進出できません。取り消せません。
+  match_admission: 入場受付中
+  match_force_due: 入場受付終了
+  match_recording: 結果の記録待ち
+  match_timed_out: 制限時間に到達
+  match_walkover: 不戦勝
+  match_bye: シード通過
+  match_clock_unknown: チェーン時刻を待機中
+  reason_registered: 登録済み · オンラインを維持
+  reason_join: このチームに参加
+  reason_add: 自分のキャラクターを追加
+  reason_closed: 登録終了
+  reason_clock: 最新のチェーン時刻を待機中
+  reason_wallet: ゲーム用ウォレットを接続
+  reason_character: キャラクターを選択
+  reason_elsewhere: 別のチームに登録済み
+  reason_full: チームの枠が埋まっています
+  reason_restricted: このキャラクターはチームの指定対象ではありません
+  reason_custody: このキャラクターを自身のキオスクに戻してください
+  reason_waiting: 次の試合を待機中
+  reason_admission: 入場受付中
+  reason_force_due: 試合を開始できます
+  reason_live: 試合進行中
+  reason_recording: 結果の記録を待機中
+  reason_timed_out: 試合の制限時間に到達
+  reason_done: 試合終了
+  reason_walkover: 不戦勝で勝利
+  reason_bye: シードで進出
+  reason_clock_unknown: 最新のチェーン時刻を待機中
+  reason_loading: 大会情報を読み込み中…
+  reason_loaded: 大会情報を読み込みました
+  reason_unavailable: 大会情報を取得できません。既知の結果は表示されます。操作は再接続をお待ちください。
+  reason_none: 大会は発表されていません
+  reason_pending: トランザクションの確定待ち…
+  reason_finished: 受け取れる報酬はありません
+  reason_cancelled: 大会は中止されました
+  reason_cannot_watch: 別の試合を見る前に自分の戦闘を終えてください
+  custody_kiosk: キオスク
+  custody_fight: 戦闘中
+  custody_trade: 取引中
+  latest_start_notice: 主催者はこの期限までの任意の時刻に開始できます。
+  champion: '{{team}} の優勝'
+  prize_pool: 賞金総額
+  frozen_pool: 賞金総額 · 確定
+  token_unavailable: KARES はまだ利用できません
+  items_only: アイテムのみ · 報酬 {{count}} 件
+  item_count: アイテム報酬 {{count}} 件
+  place_number: '{{place}} 位'
+  not_awarded: 該当なし
+  to_be_decided: 未定
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: 各順位の配分は、欠席した仲間も含め、その順位の登録キャラクター全員で分けます。同率5位は一つの配分を共有します。最終順位により各キャラクターの正確な額が決まります。
+  claim_notice: 通貨の受取操作1回で、そのキャラクターの正の額の通貨報酬をすべて受け取ります。アイテムは個別です。戦闘からのキャラクター返却は別の操作です。
+  claimed: 受取済み
+  claim_coins: 通貨を受け取る
+  no_platform_fee: プラットフォーム手数料なし · 通常のネットワーク手数料は必要
+  no_champion: この大会は優勝者なしで終了しました。
+  unknown_item: アイテム詳細を取得できません
+  rolled_items_notice: アイテムはテンプレートから生成されます。ランダム能力値は受取時に決まります。
+  contribution_review: 寄付を確認
+  pool_after: 寄付後の総額：{{amount}} {{asset}}
+  contribution_confirmed: 寄付が確定しました。索引データが届くと総額が更新されます。
+  transaction_confirmed: トランザクションが確定しました。索引データで大会情報が更新されます。
+  cancelled_notice: 大会は中止されました。未使用資金は元の主催者に返却されます。
+  expired_notice: 開始期限を過ぎました。登録を締め切ることはできますが、大会は開始できません。
+  open_event: '{{name}} 大会を開く'
+  open_window: 大会を開く
+  older_claims: 過去 {{count}} 大会に未受取報酬があります
+  result_line: '{{team}} が進出'
+  live_count: '{{count}} 試合進行中'
+  prize_split: 賞金配分
+  invalid_percentage: 割合は小数点以下2桁までで入力してください。
+  allocation_excess: '{{amount}}% 超過'
+  allocation_remaining: 残り {{amount}}%
+  allocation_notice: 各通貨の合計は100%にしてください。資金がなくても両方の配分表が最低チーム数に影響します。
+  reward_place: 報酬 {{number}} の順位
+  reward_quantity: 報酬 {{number}} の個数
+  quantity_short: 個数
+  remove_reward: 報酬 {{number}} を削除
+  add_item: アイテム報酬を追加
+  choose_item: 報酬アイテムを選択
+  search_items: アイテムを検索
+  all_items: すべてのアイテム
+  no_items: 一致するアイテムはありません
+  organizer_event: 主催者と大会
+  timezone: タイムゾーン：{{zone}}
+  minimum_teams: 定員に達したチームが最低 {{count}} チーム必要です。
+  minimum_label: 最低完全チーム数
+  minimum_notice: 通常は2チーム、3位・4位報酬には4チーム、5位報酬には8チーム必要です。両通貨とアイテム報酬が対象です。
+  immutable_notice: 作成すると形式、配分率、アイテム報酬、開始期限が固定され、変更できません。
+  recipient_notice: 通貨は登録時の所有者に支払われます。対象キャラクターは各アイテムの設定個数を受け取ります。
+  cancel_event: 大会を中止
+  start_review: 開始すると定員到達チームと賞金総額が固定され、対戦が抽選され、最初の60秒間の入場受付が始まります。
+  excluded_teams: 除外される未充足チーム：{{teams}}
+  cancel_review: 大会を中止しますか？寄付金はすべて元の主催者に返却され、寄付者へ自動返金はされません。
+  organizer_address: 元の主催者：{{address}}
+  review_changed: 大会情報が変わったか期限を過ぎました。この確認を閉じて現在の状態を確認してください。
+  running_admin_notice: 大会は進行中です。大会画面の試合復旧操作を使用してください。進行中の大会は中止できません。
+  deployment_metadata: デプロイのメタデータ
+  display_notice: 表示メタデータはデプロイごとに一度設定します。大会ごとの設定は不要です。
+  submitted_notice: 操作を送信しました。再送信する前に現在の大会情報を確認してください。
+  custody_undefined: 保管状態不明
+  wagered: 賭け金あり
+  complete_notice: 定員に達したチームだけが対戦表に入ります。それ以外は開始時に除外されます。
+  find_review: '{{character}} のチームを探して、このキャラクターを登録しますか？'
+  joined_count: 入場 {{count}}/{{total}}
+  versus: 対 {{team}}

@@ -91,6 +91,7 @@ export const AllocationPage = ({
         <Hero view={view} state={state} runtime={runtime} text={text} locale={locale} open={open} />
         <div className="steps">
           <Wallets
+            cards={view.cards}
             state={state}
             runtime={runtime}
             external={{ state: external_state, dispatch: external.dispatch }}

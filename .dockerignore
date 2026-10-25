@@ -6,6 +6,8 @@
 *
 !package.json
 !bun.lock
+!patches
+!patches/**
 !packages
 packages/*
 !packages/engine

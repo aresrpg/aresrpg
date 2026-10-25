@@ -12,6 +12,7 @@ import { worn_appearance } from '@aresrpg/immutable'
 
 import { type Graph, type Node } from '../graph.ts'
 
+import { tournament_link } from './tournament_link.ts'
 import { stats_record_of } from './stat_block.ts'
 
 type MachineFighter = {
@@ -78,7 +79,8 @@ export async function get_fight_checkpoint(
   const rows = await graph.read(
     `MATCH (f:Fight {id: $fight_id})
      OPTIONAL MATCH (k:Kolizeum {fight_id: $fight_id})
-     RETURN f AS fight, k AS kolizeum`,
+     OPTIONAL MATCH (tm:TournamentMatch {fight_id: f.id})
+     RETURN tm.tournament AS tournament, tm.index AS tournament_index, f AS fight, k AS kolizeum`,
     { fight_id }
   )
   const [row] = rows
@@ -138,5 +140,6 @@ export async function get_fight_checkpoint(
     contract,
     players,
     kolizeum: kolizeum_of(row.kolizeum as Node),
+    ...tournament_link(row),
   }
 }

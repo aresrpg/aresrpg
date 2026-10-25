@@ -1,0 +1,499 @@
+/* The canonical JetBrains asset is scoped here; other feature typography stays unchanged. */
+@font-face {
+  font-family: 'Tournament Mono';
+  src: url('../../../journal/public/assets/jetbrains-mono.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: swap;
+}
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.tourney-panel,
+.tourney-hud-card,
+.tourney-hud-mobile,
+.tourney-admin {
+  color: var(--aui-ink);
+  font: 400 14px/1.4 var(--aui-font);
+}
+.tourney-panel *,
+.tourney-hud-card * {
+  box-sizing: border-box;
+}
+.tourney-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--aui-surface);
+}
+.aui-arena-port:has(.tourney-panel) {
+  width: min(1320px, calc(100cqw - 32px));
+  height: min(840px, calc(100cqh - 32px));
+}
+.aui-arena-port:has(.tourney-panel) :is(.aui-workspace-main, .aui-live-page-content) {
+  flex: 1;
+  min-height: 0;
+}
+.tourney-mode > .kz-tabs {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 5px 12px;
+}
+.tourney-panel h2,
+.tourney-panel h3,
+.tourney-panel h4,
+.tourney-admin h3 {
+  margin: 0;
+  font-family: var(--aui-font);
+  font-weight: 800;
+}
+.tourney-panel h2 {
+  font-size: 23px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.tourney-panel h3 {
+  font-size: 16px;
+}
+.tourney-panel h4 {
+  font-size: 14px;
+}
+.tourney-panel p,
+.tourney-dialog p,
+.tourney-admin p {
+  margin: 0;
+}
+.tourney-panel small,
+.tourney-admin small {
+  color: var(--aui-muted);
+  font-size: 11px;
+}
+.tourney-panel :is(button, select, input):focus-visible,
+.tourney-bracket-scroll:focus-visible,
+.tourney-hud-card:focus-visible,
+.tourney-hud-mobile:focus-visible {
+  outline: 2px solid var(--aui-blue);
+  outline-offset: -2px;
+}
+.tourney-panel select,
+.tourney-dialog :is(input:not([type='checkbox']), select),
+.tourney-admin :is(input, select) {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 28%, transparent);
+  border-radius: 4px;
+  padding: 6px 9px;
+  background: var(--aui-bg);
+  color: var(--aui-ink);
+  font: inherit;
+}
+.tourney-masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 24px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--aui-muted);
+  font:
+    10px/1.5 'Tournament Mono',
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 4px !important;
+}
+.tourney-status {
+  color: var(--aui-orange);
+}
+.tourney-status.is-in_progress {
+  color: var(--aui-blue);
+}
+.tourney-status:is(.is-finished, .is-cancelled) {
+  color: var(--aui-muted);
+}
+.tourney-event-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 230px;
+  text-align: right;
+}
+.tourney-event-progress > small:first-child,
+.tourney-pool-summary > small {
+  font:
+    10px/1.4 'Tournament Mono',
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.tourney-event-progress > :is(time, strong) {
+  font-size: 21px;
+  font-weight: 800;
+}
+.tourney-event-progress time,
+.tourney-coin,
+.tourney-review-amount {
+  font-family: 'Tournament Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tourney-pool-summary {
+  border: 0;
+  padding: 0;
+  text-align: right;
+  background: transparent;
+  cursor: pointer;
+}
+.tourney-pool-lines {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+}
+.tourney-pool-summary .tourney-pool-lines {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+.tourney-pool-summary .tourney-coin:first-child {
+  color: var(--aui-orange);
+  font-size: 19px;
+}
+.tourney-pool-summary .tourney-coin:not(:first-child) {
+  font-size: 12px;
+  color: var(--aui-muted);
+}
+.tourney-coin {
+  white-space: nowrap;
+}
+.tourney-coin small {
+  color: inherit;
+  font-size: 0.85em;
+}
+.tourney-event-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 20px;
+  font-size: 12px;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-event-selector select {
+  flex: 1;
+}
+.tourney-tabs {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #ffffff12;
+  padding: 0 16px;
+}
+.tourney-tabs > .aui-button {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--aui-muted);
+}
+.tourney-tabs > .aui-button[aria-pressed='true'] {
+  color: var(--aui-ink);
+  border-bottom-color: var(--aui-orange);
+}
+.tourney-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.tourney-content:has(> .tourney-bracket-scroll) {
+  display: flex;
+  overflow: hidden;
+}
+.tourney-notice {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  background: color-mix(in srgb, var(--aui-orange) 8%, transparent);
+  color: var(--aui-orange);
+  font-size: 12px;
+}
+.tourney-empty {
+  padding: 30px 20px;
+  color: var(--aui-muted);
+}
+.tourney-note {
+  color: var(--aui-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.tourney-error {
+  color: var(--aui-danger);
+  font-size: 12px;
+}
+.tourney-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.tourney-section-heading p {
+  color: var(--aui-muted);
+  font:
+    10px/1.5 'Tournament Mono',
+    monospace;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.tourney-teams {
+  padding: 16px 20px;
+}
+.tourney-teams > .tourney-note {
+  margin-bottom: 12px;
+}
+.tourney-team {
+  display: grid;
+  grid-template-columns: minmax(160px, 25%) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-team-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.tourney-team-heading > div {
+  min-width: 0;
+}
+.tourney-team-heading h4 {
+  overflow-wrap: anywhere;
+}
+.tourney-team-heading p {
+  font-size: 11px;
+  color: var(--aui-muted);
+}
+.tourney-team-heading .tourney-access {
+  color: var(--aui-orange);
+}
+.tourney-monogram {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+  background: #ffffff09;
+  color: var(--aui-muted);
+  font-family: 'Tournament Mono', monospace;
+}
+.tourney-seats {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.tourney-seat {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid #ffffff14;
+  border-radius: 3px;
+  background: #ffffff05;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+.tourney-seat > span {
+  overflow-wrap: anywhere;
+}
+.tourney-seat.is-own {
+  color: var(--aui-orange);
+  border-color: color-mix(in srgb, var(--aui-orange) 40%, transparent);
+}
+.tourney-seat.is-reserved {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--aui-muted);
+  background: transparent;
+}
+.tourney-seat.is-empty {
+  border-style: dashed;
+  box-shadow: none;
+}
+.tourney-seat.is-empty:not(:disabled) {
+  color: var(--aui-orange);
+  border-color: color-mix(in srgb, var(--aui-orange) 55%, transparent);
+}
+.tourney-seat.is-empty:disabled {
+  color: var(--aui-muted);
+}
+.tourney-leave.aui-button {
+  min-width: 0;
+  font-size: 11px;
+  padding: 4px;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+}
+.tourney-dock {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 10px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--aui-orange) 26%, transparent);
+  background: color-mix(in srgb, var(--aui-raised) 45%, var(--aui-surface));
+}
+.tourney-character {
+  min-width: 0;
+  width: 190px;
+  flex-shrink: 1;
+}
+.tourney-character select {
+  width: 100%;
+  min-height: 44px;
+}
+.tourney-dock-team {
+  display: flex;
+  flex-direction: column;
+  min-width: 70px;
+  max-width: 180px;
+}
+.tourney-dock-team b {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.tourney-dock-team > small {
+  font:
+    9px/1.6 'Tournament Mono',
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.tourney-dock-context {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 440px;
+}
+.tourney-dock-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+.tourney-dock-actions > .aui-button {
+  min-height: 44px;
+}
+.tourney-action-status {
+  color: var(--aui-muted);
+  font-size: 12px;
+  max-width: 250px;
+}
+.tourney-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tourney-pips i {
+  display: inline-block;
+  width: 7px;
+  height: 9px;
+  border: 1px solid #ffffff35;
+}
+.tourney-pips i.is-filled {
+  background: var(--aui-muted);
+}
+.tourney-pips i.is-joined {
+  background: var(--aui-orange);
+  border-color: var(--aui-orange);
+}
+
+.aui-arena-port:has(.tourney-panel) {
+  position: relative;
+}
+.aui-arena-port .tourney-mode > .kz-tabs {
+  position: absolute;
+  top: 2px;
+  left: 10px;
+  z-index: 1;
+  padding: 0;
+}
+
+.tourney-attendance {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tourney-attendance > small {
+  font:
+    9px/1.4 'Tournament Mono',
+    monospace;
+  white-space: nowrap;
+}
+
+.tourney-dock-match {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.tourney-dock-match > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.tourney-dock-match b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.tourney-dock-match small {
+  font:
+    9px/1.5 'Tournament Mono',
+    monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tourney-show-match.aui-button {
+  flex-shrink: 0;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+.tourney-dock-state {
+  display: flex;
+  gap: 5px;
+}
+.tourney-dock-state > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tourney-dock-state > time {
+  flex-shrink: 0;
+}

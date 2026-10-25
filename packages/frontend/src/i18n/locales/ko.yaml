@@ -3,6 +3,7 @@
 
 title: WebGPU를 사용할 수 없습니다
 body: '월드에는 WebGPU와 보안 연결(HTTPS 또는 localhost)이 필요합니다. 지원되는 브라우저에서 열어 주세요.'
+engine_graphics_failure: 그래픽을 시작하지 못했습니다. 브라우저의 그래픽 설정을 확인하거나 그래픽 드라이버를 업데이트한 후 새로고침하세요.
 engine_recovery: 월드 로딩 또는 렌더링이 중단되었습니다. 새로고침해 다시 시도하세요.
 engine_reload: 새로고침
 engine_minimum_title: '그래픽 설정 낮춤'
@@ -1151,6 +1152,7 @@ wallet_send_shared:
   total: 합계
   transaction: 거래
 encyclopedia_page:
+  tokenomics_tab: 토크노믹스
   world_locations: '장소'
   world_search_places: '생물군계, 도시, 몬스터 또는 자원 검색…'
   world_entry: '입장 레벨 {{level}}'
@@ -2737,6 +2739,9 @@ adventure:
   boss_body: '경비병 너머에는 Sceat가 찾던 유물을 가진 고바독이 기다립니다. 고블린 왕이라는 칭호를 패배로 얻지는 않았을 것입니다. 함께 싸우는 법은 배웠지만 이번 상대는 차원이 다릅니다. 동료와 함께 다가가 새로운 협력이 어디까지 통할지 확인하세요.'
 
 discord_marketplace:
+  rare_loot_title: '희귀 보스 전리품'
+  rare_loot: '**{player}**님이 **{mob}**에게서 **{amount}× {item}** 획득 — **기본 드롭 확률 {chance}%**.'
+  drop_chance: '기본 드롭 확률 {chance}%'
   title: '거래소 · 판매'
   sale: '**{seller}**님이 **{amount}× {item}**을 **{price} SUI**에 판매했습니다'
   price_before_fees: '수수료 제외 판매 가격'
@@ -2808,6 +2813,8 @@ gift_page:
   error_login: '로그인이 완료되지 않았습니다. 다시 시도하세요. 창이 차단되었다면 Safari나 Chrome에서 링크를 여세요.'
 
 loading_screen:
+  browser_reload: 브라우저의 새로고침 버튼을 눌러 다시 시도하세요.
+  slow: 로딩이 예상보다 오래 걸립니다. 기다리거나 새로고침하세요.
   eyebrow: '다음 모험이 기다리고 있어요'
   home_eyebrow: '모험을 앞둔 고요한 순간'
   home_title: '모험은 여기서 시작됩니다.'
@@ -2974,3 +2981,217 @@ allocation_page:
   error_foreign_post: '연결된 X 계정이 작성한 게시물이어야 합니다. 계정이나 링크를 변경하세요.'
   error_missing_post: '일부 게시물을 찾을 수 없습니다. 링크와 공개 설정을 확인하세요.'
   error_x_unavailable: 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요. X 또는 캠페인 서비스가 일시 중단되었을 수 있습니다.
+
+tournament_page:
+  title: 토너먼트
+  no_event: 예정된 대회가 없습니다.
+  open: 참가 접수 중
+  in_progress: 진행 중
+  finished: 종료
+  cancelled: 취소됨
+  create_team: 팀 만들기
+  team_name: 팀 이름
+  restricted: 제한된 팀
+  allowed_names: 쉼표로 구분한 팀원 이름
+  find_team: 팀원 자동 찾기
+  join: 참가
+  leave: 탈퇴
+  donate: 상금 기부
+  amount: 금액
+  confirm: 확인
+  cancel: 취소
+  waiting: 대기 중
+  live: 경기 중
+  no_winner: 승자 없음
+  crank: 경기 진행
+  spectate: 관전
+  claim: 수령
+  items: 참가자별 아이템
+  place: 순위
+  joint_fifth: 공동 5위
+  asset: 통화
+  admin: 대회 관리
+  admin_cap: AdminCap 오브젝트 ID
+  create_event: 대회 만들기
+  start: 대회 시작
+  setup_display: Display 최초 설정
+  deadline: 시작 기한
+  name: 이름
+  format: 형식
+  final: 결승
+  bronze: 3위 결정전
+  roster_notice: 정원이 찬 팀만 참가합니다. 등록하면 경기 자동 참가를 허용합니다. 각 경기 참가 기한은 60초이므로 접속을 유지하세요.
+  donation_notice: 기부는 취소할 수 없습니다. 대회 취소 시 자금과 지급되지 않은 상금은 주최자에게 전달됩니다. 환불은 주최자가 수동으로 진행합니다.
+  refund_pool: 미지급 KARES를 주최자에게 반환
+  expire: 만료된 참가 등록 종료
+  character: 캐릭터
+  action_expire: 만료된 참가 등록 종료
+  placement: 순위
+  match_waiting: 대기 중
+  match_live: 실시간
+  match_done: 완료
+  match_no_winner: 승자 없음
+  reason_no_winner: 승자 없음
+  loading: 불러오는 중…
+  unavailable: 사용 불가
+  unclaimed: 미수령
+  close: 닫기
+  new_item: 새로 만들기
+  none_excluded: 없음
+  teams: 팀
+  bracket: 대진표
+  podium: 순위 및 보상
+  podium_claims: 순위 · 받을 보상 {{count}}개
+  your_rewards: 내 보상
+  your_team: 내 팀
+  event: 대회
+  event_sections: 대회 메뉴
+  single_elimination: 단판 탈락제
+  registered_count: '{{count}}개 팀'
+  team_counts: 등록 {{teams}}팀 · 정원 충족 {{complete}}팀 · 시작에 {{minimum}}팀 필요
+  ready_count: '시작에 필요한 정원 충족 팀: {{complete}} / {{minimum}}'
+  open_anyone: 누구나 참가 가능
+  named_only: 지정된 캐릭터만
+  reserved_seat: 예약된 캐릭터
+  take_seat: 자리 참가
+  open_seat: 빈자리
+  no_teams: 아직 팀이 없습니다. 팀을 만들거나 팀원을 찾으세요.
+  not_registered: 미등록
+  leave_character: 팀에서 {{name}} 제거
+  leave_review: '{{team}}에서 {{character}}을(를) 제거할까요? 이 캐릭터의 등록이 취소됩니다.'
+  join_review: '{{character}}을(를) {{team}}에 등록할까요?'
+  consent_notice: 캐릭터 지정은 자리 예약입니다. 각 소유자가 별도로 등록해야 합니다.
+  too_many_names: 자신의 캐릭터를 포함해 최대 {{count}}명까지 지정하세요.
+  stay_online: 수수료용 SUI를 준비하고 접속을 유지하세요. 앱은 매 경기의 60초 입장 시간 동안 등록된 캐릭터의 입장을 시도합니다.
+  action_find: 팀 찾기
+  action_add: 내 캐릭터 추가
+  action_open: 경기 열기
+  action_join: 경기 참가
+  action_start: 경기 시작
+  action_record: 결과 기록
+  action_end: 승자 없이 종료
+  action_refund: KARES를 주최자에게 반환
+  return_fight: 전투로 돌아가기
+  claim_count: 보상 {{count}}개 받기
+  show_bracket: 대진표 보기
+  show_my_match: 내 경기 보기
+  match_number: 경기 {{match}}
+  semifinals: 준결승
+  quarterfinals: 8강
+  round_of: '{{count}}강'
+  round_counts: 진행 중 {{live}} · {{done}}/{{count}}
+  from_winner: M{{match}} 승자
+  from_loser: M{{match}} 패자
+  empty_bracket: 참가자 없음
+  winner: 승자
+  advancing: 진출
+  fifth_pending: 8강 결과 대기 중
+  fifth_notice: 기권패 팀에는 순위 보상이 주어지지 않습니다.
+  no_matches: 대진 경기가 진행되지 않았습니다.
+  end_review: 이 경기를 승자 없이 종료할까요? 두 팀 모두 이 경기로는 진출하지 못합니다. 되돌릴 수 없습니다.
+  match_admission: 입장 가능
+  match_force_due: 입장 마감
+  match_recording: 결과 기록 필요
+  match_timed_out: 제한 시간 도달
+  match_walkover: 부전승
+  match_bye: 대진 면제
+  match_clock_unknown: 체인 시간 대기 중
+  reason_registered: 등록됨 · 접속 유지
+  reason_join: 이 팀에 참가
+  reason_add: 내 캐릭터 추가
+  reason_closed: 등록 마감
+  reason_clock: 최신 체인 시간 대기 중
+  reason_wallet: 게임 지갑을 연결하세요
+  reason_character: 캐릭터를 선택하세요
+  reason_elsewhere: 다른 팀에 이미 등록됨
+  reason_full: 팀 자리가 모두 찼습니다
+  reason_restricted: 이 캐릭터는 이 팀의 지정 대상이 아닙니다
+  reason_custody: 캐릭터가 자신의 키오스크에 있어야 합니다
+  reason_waiting: 다음 경기 대기 중
+  reason_admission: 입장 가능
+  reason_force_due: 경기를 시작할 수 있습니다
+  reason_live: 경기 진행 중
+  reason_recording: 결과 기록 대기 중
+  reason_timed_out: 경기 제한 시간 도달
+  reason_done: 경기 종료
+  reason_walkover: 상대 불참으로 승리
+  reason_bye: 대진 면제로 진출
+  reason_clock_unknown: 최신 체인 시간 대기 중
+  reason_loading: 대회 상태 불러오는 중…
+  reason_loaded: 대회 상태를 불러왔습니다
+  reason_unavailable: 대회 상태를 불러올 수 없습니다. 확인된 결과는 표시되며, 작업은 재연결 후 가능합니다.
+  reason_none: 발표된 대회 없음
+  reason_pending: 거래 확정 대기 중…
+  reason_finished: 받을 보상이 없습니다
+  reason_cancelled: 대회 취소됨
+  reason_cannot_watch: 다른 경기를 보기 전에 자신의 전투를 끝내세요
+  custody_kiosk: 키오스크
+  custody_fight: 전투 중
+  custody_trade: 거래 중
+  latest_start_notice: 주최자는 이 마감 시간 전에 언제든 시작할 수 있습니다.
+  champion: '{{team}} 우승'
+  prize_pool: 상금 풀
+  frozen_pool: 상금 풀 · 확정
+  token_unavailable: KARES는 아직 이용할 수 없습니다
+  items_only: 아이템만 · 보상 {{count}}개
+  item_count: 아이템 보상 {{count}}개
+  place_number: '{{place}}위'
+  not_awarded: 미수여
+  to_be_decided: 미정
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: 각 순위의 배정액은 불참자를 포함한 해당 순위의 모든 등록 캐릭터가 나눕니다. 공동 5위는 하나의 배정액을 공유합니다. 최종 순위가 캐릭터별 정확한 금액을 결정합니다.
+  claim_notice: 한 번의 코인 수령으로 이 캐릭터의 양수인 모든 통화 보상을 받습니다. 아이템은 별도입니다. 전투 후 캐릭터 반환도 별도 작업입니다.
+  claimed: 수령 완료
+  claim_coins: 코인 받기
+  no_platform_fee: 플랫폼 수수료 없음 · 일반 네트워크 수수료 적용
+  no_champion: 이 대회는 우승자 없이 종료되었습니다.
+  unknown_item: 아이템 정보를 불러올 수 없습니다
+  rolled_items_notice: 아이템은 템플릿에서 생성됩니다. 무작위 능력치는 수령 시 결정됩니다.
+  contribution_review: 기부 확인
+  pool_after: '기부 후 상금 풀: {{amount}} {{asset}}'
+  contribution_confirmed: 기부가 확정되었습니다. 인덱싱된 업데이트가 도착하면 상금 풀이 갱신됩니다.
+  transaction_confirmed: 거래가 확정되었습니다. 인덱싱된 업데이트로 대회 정보가 갱신됩니다.
+  cancelled_notice: 대회가 취소되었습니다. 사용하지 않은 자금은 원래 주최자에게 반환됩니다.
+  expired_notice: 최종 시작 시간이 지났습니다. 등록을 마감할 수 있지만 대회를 시작할 수는 없습니다.
+  open_event: '{{name}} 대회 열기'
+  open_window: 대회 열기
+  older_claims: 이전 대회 {{count}}개에 받을 보상이 있습니다
+  result_line: '{{team}} 진출'
+  live_count: '{{count}}경기 진행 중'
+  prize_split: 상금 배분
+  invalid_percentage: 백분율은 소수점 둘째 자리까지 입력하세요.
+  allocation_excess: '{{amount}}% 초과 배정'
+  allocation_remaining: '{{amount}}% 남음'
+  allocation_notice: 각 통화의 합계는 100%여야 합니다. 자금이 없어도 두 배분표 모두 최소 팀 수에 영향을 줍니다.
+  reward_place: 보상 {{number}}의 순위
+  reward_quantity: 보상 {{number}}의 수량
+  quantity_short: 수량
+  remove_reward: 보상 {{number}} 삭제
+  add_item: 아이템 보상 추가
+  choose_item: 보상 아이템 선택
+  search_items: 아이템 검색
+  all_items: 모든 아이템
+  no_items: 일치하는 아이템 없음
+  organizer_event: 주최자 및 대회
+  timezone: '시간대: {{zone}}'
+  minimum_teams: 정원을 채운 팀이 최소 {{count}}개 필요합니다.
+  minimum_label: 최소 정원 충족 팀 수
+  minimum_notice: 일반적으로 2팀, 3·4위 보상에는 4팀, 5위 보상에는 8팀이 필요합니다. 두 통화와 아이템 보상이 모두 포함됩니다.
+  immutable_notice: 생성 시 형식, 상금 비율, 아이템 보상, 최종 시작 시간이 고정되며 변경할 수 없습니다.
+  recipient_notice: 코인은 등록된 소유자에게 지급됩니다. 자격을 갖춘 각 캐릭터는 설정된 수량의 아이템을 받습니다.
+  cancel_event: 대회 취소
+  start_review: 시작하면 정원을 채운 팀과 상금 총액이 고정되고 대진이 무작위로 배정되며 첫 60초 입장 시간이 열립니다.
+  excluded_teams: '제외되는 정원 미달 팀: {{teams}}'
+  cancel_review: 대회를 취소할까요? 모든 기부금은 원래 주최자에게 반환되며 각 기부자에게 자동 환불되지 않습니다.
+  organizer_address: '원래 주최자: {{address}}'
+  review_changed: 대회가 변경되었거나 마감 시간이 지났습니다. 확인 창을 닫고 현재 상태를 확인하세요.
+  running_admin_notice: 대회가 진행 중입니다. 대회 창의 경기 복구 작업을 이용하세요. 진행 중인 대회는 취소할 수 없습니다.
+  deployment_metadata: 배포 메타데이터
+  display_notice: 표시 메타데이터는 배포마다 한 번 설정합니다. 각 대회마다 설정할 필요는 없습니다.
+  submitted_notice: 작업을 제출했습니다. 다시 제출하기 전에 현재 대회 상태를 확인하세요.
+  custody_undefined: 보관 상태 알 수 없음
+  wagered: 내기 경기
+  complete_notice: 정원을 채운 팀만 대진에 참가합니다. 나머지는 시작 시 제외됩니다.
+  find_review: '{{character}}의 팀을 찾아 이 캐릭터를 등록할까요?'
+  joined_count: 입장 {{count}}/{{total}}
+  versus: '상대: {{team}}'

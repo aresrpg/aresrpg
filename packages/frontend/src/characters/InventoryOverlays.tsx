@@ -403,6 +403,3 @@ export const useInventoryActions = ({
   )
   return { detail_entries, overlays }
 }
-
-export const InventoryActionOverlays = (props: Parameters<typeof useInventoryActions>[0]) =>
-  useInventoryActions(props).overlays

@@ -442,6 +442,38 @@ fn route_kolizeum_writes(
                 })?;
                 Ok(fight.door_policy == 31 && (fight.combat.ended || forfeited))
             })?;
+    let tournament_changed = tx
+        .outputs
+        .iter()
+        .any(|o| is_core(o, game, "tournament", "Tournament"));
+    let structural = tx.events.iter().any(|e| {
+        e.package == game
+            && e.module == "fight"
+            && [
+                "FightStarted",
+                "FightEnded",
+                "FighterJoined",
+                "FighterForfeited",
+            ]
+            .contains(&e.name)
+    });
+    let tournament_fight = if structural {
+        tx.outputs
+            .iter()
+            .filter(|o| is_core(o, game, "fight", "Fight"))
+            .map(|o| decode::from_bytes::<decode::Fight>(o.bytes).map(|f| f.door_policy == 63))
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into_iter()
+            .any(|matched| matched)
+    } else {
+        false
+    };
+    if tournament_changed || tournament_fight {
+        wire.publications.push(Publication {
+            channel: "evt:tournament".to_string(),
+            payload: envelope(ckpt, tx.tx_index, 0, ts_ms, "TournamentChanged", json!({})),
+        });
+    }
     if lobby_changed || fight_changed {
         wire.publications.push(Publication {
             channel: "evt:kolizeum".to_string(),

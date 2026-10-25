@@ -3,6 +3,7 @@
 import type { AppCopy } from '../i18n/copy.ts'
 import type { LoadingProgress } from '../game/core/loading_progress.ts'
 
+import { engine_failure_message } from './EngineNotice.tsx'
 import type { LoadingContext } from './loading_art.ts'
 
 export type LoadingCopy = Pick<
@@ -12,10 +13,29 @@ export type LoadingCopy = Pick<
   | 'world_loading_terrain'
   | 'world_loading_sky'
   | 'world_loading_finishing'
+  | 'body'
+  | 'engine_graphics_failure'
   | 'engine_recovery'
   | 'engine_reload'
   | 'loading_screen'
 >
+
+const LoadingRecovery = ({
+  slow,
+  browser_reload,
+  label,
+  reload,
+}: Readonly<{ slow: string; browser_reload: string; label: string; reload?: () => void }>) => (
+  <div className="loading-recovery" data-recovery-ready={reload ? '' : undefined}>
+    <p className="loading-slow" role="status">
+      {slow}
+    </p>
+    <p className="loading-browser-reload">{browser_reload}</p>
+    <button className="loading-reload" data-loading-reload="" type="button" disabled={!reload} onClick={reload}>
+      {label}
+    </button>
+  </div>
+)
 
 /** Shared markup for the document's first paint and every mounted world. */
 export const LoadingPostcard = ({
@@ -54,7 +74,7 @@ export const LoadingPostcard = ({
     terrain: copy.world_loading_terrain,
     sky: copy.world_loading_sky,
     finishing: copy.world_loading_finishing,
-    failed: copy.engine_recovery,
+    failed: engine_failure_message(progress.issue, copy),
     ready: text.ready,
   }
   const steps = [text.resources, text.graphics, text.world, text.final_checks]
@@ -155,9 +175,12 @@ export const LoadingPostcard = ({
             </span>
           ))}
         </div>
-        <button className="loading-reload" data-loading-reload="" type="button" hidden={!failed} onClick={reload}>
-          {copy.engine_reload}
-        </button>
+        <LoadingRecovery
+          slow={text.slow}
+          browser_reload={text.browser_reload}
+          label={copy.engine_reload}
+          reload={reload}
+        />
       </section>
     </div>
   )

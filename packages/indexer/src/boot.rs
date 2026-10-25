@@ -65,8 +65,8 @@ fn publish_checkpoint_from(data: &Value, original: &str) -> Result<u64> {
 }
 
 /// Resolve every executable package version for activity attribution. A fresh store fetches
-/// the whole chain lineage once; later upgrades append their configured latest id locally, so
-/// ordinary resume keeps the network-free boot law.
+/// the whole chain lineage once and refreshes it on upgrades, including intermediate versions
+/// that introduced types. Ordinary resume at the same version remains network-free.
 pub async fn activity_lineage(
     conn: &mut MultiplexedConnection,
     url: &str,
@@ -86,17 +86,8 @@ pub async fn activity_lineage(
         .transpose()
         .context("decoding activity package lineage")?
         .unwrap_or_default();
-    if fresh {
-        let data = graphql(
-            url,
-            &format!(
-                r#"{{ object(address: "{original}") {{
-                     asMovePackage {{ packageVersionsAfter {{ nodes {{ address }} }} }}
-                   }} }}"#
-            ),
-        )
-        .await?;
-        lineage = lineage_ids(&data, original)?;
+    if fresh || !lineage.iter().any(|id| id == latest) {
+        lineage = complete_lineage(url, original).await?;
         if !lineage.iter().any(|id| id == latest) {
             return Err(anyhow!(
                 "{latest} is not an upgrade of {original} — check the two ids"
@@ -113,6 +104,39 @@ pub async fn activity_lineage(
         .query_async(conn)
         .await
         .context("writing activity package lineage")?;
+    Ok(lineage)
+}
+
+async fn complete_lineage(url: &str, original: &str) -> Result<Vec<String>> {
+    let mut lineage = Vec::new();
+    let mut cursor: Option<String> = None;
+    loop {
+        let after = serde_json::to_string(&cursor)?;
+        let data = graphql(
+            url,
+            &format!(
+                r#"{{ object(address: "{original}") {{ asMovePackage {{
+                packageVersionsAfter(first: 100, after: {after}) {{
+                    nodes {{ address }} pageInfo {{ hasNextPage endCursor }}
+                }}
+            }} }} }}"#
+            ),
+        )
+        .await?;
+        lineage.extend(lineage_ids(&data, original)?);
+        let page = &data["object"]["asMovePackage"]["packageVersionsAfter"]["pageInfo"];
+        if page["hasNextPage"].as_bool() != Some(true) {
+            break;
+        }
+        let next = page["endCursor"]
+            .as_str()
+            .ok_or_else(|| anyhow!("package lineage page lacks a cursor"))?;
+        anyhow::ensure!(
+            cursor.as_deref() != Some(next),
+            "package lineage cursor did not advance"
+        );
+        cursor = Some(next.to_string());
+    }
     Ok(lineage)
 }
 
@@ -204,6 +228,9 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
         "CREATE INDEX FOR (n:Fight) ON (n.id)",
         "CREATE INDEX FOR (n:Party) ON (n.id)",
         "CREATE INDEX FOR (n:Kolizeum) ON (n.id)",
+        "CREATE INDEX FOR (n:Tournament) ON (n.id)",
+        "CREATE INDEX FOR (n:TournamentKaresPool) ON (n.id)",
+        "CREATE INDEX FOR (n:TournamentMatch) ON (n.fight_id)",
         "CREATE INDEX FOR (n:Giftcard) ON (n.id)",
         "CREATE INDEX FOR (n:Zone) ON (n.world, n.zx, n.zz)",
         "CREATE INDEX FOR (n:Market) ON (n.item_type)",

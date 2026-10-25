@@ -57,5 +57,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
-  "license": "SEE LICENSE IN LICENSE"
+  "license": "SEE LICENSE IN LICENSE",
+  "patchedDependencies": {
+    "vite@8.3.0": "patches/vite@8.3.0.patch"
+  }
 }

@@ -33,9 +33,6 @@ export const sample_biome_cell = (value: unknown, column: number, row: number) =
   return Object.freeze({ x, z, ...sample_world_column(world, x, z) })
 }
 
-export const first_biome_land = (biome: WorldRecipe['biomes'][number]) =>
-  biome.landscape.find(({ land }) => land)?.land ?? null
-
 /** Representative biome strata: the authored land state covering the widest ground interval. */
 export const dominant_biome_land = (biome: WorldRecipe['biomes'][number]) => {
   const spans = new Map<string, { width: number; land: NonNullable<(typeof biome.landscape)[number]['land']> }>()

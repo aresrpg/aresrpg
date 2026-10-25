@@ -9,6 +9,7 @@ WORKDIR /app
 # present for the install to resolve; only the bot's dependency closure is
 # copied as source below.
 COPY package.json bun.lock ./
+COPY patches patches
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/

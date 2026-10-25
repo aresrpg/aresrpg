@@ -325,3 +325,25 @@ test('queued stale inputs are refused before signing after recovery, just as aft
   await Promise.all([first, expect(second).rejects.toThrow('NOT submitted')])
   expect({ signatures, executions }).toEqual({ signatures: 1, executions: 1 })
 })
+
+test('reload safety covers queued signing work and retained uncertain submissions', async () => {
+  const persistence = storage()
+  const execution = create_transaction_execution({
+    core: {} as never,
+    key: 'reload-test',
+    storage: persistence,
+    on_receipt: () => {},
+  })
+  expect(execution.is_transaction_idle()).toBe(true)
+  const gate = Promise.withResolvers<void>()
+  const first = execution.enqueue(() => gate.promise)
+  const second = execution.enqueue(async () => {})
+  expect(execution.is_transaction_idle()).toBe(false)
+  gate.resolve()
+  await Promise.all([first, second])
+  expect(execution.is_transaction_idle()).toBe(true)
+  persistence.setItem('reload-test', JSON.stringify({ digest, phase: 'submitted' }))
+  expect(execution.is_transaction_idle()).toBe(false)
+  persistence.removeItem('reload-test')
+  expect(execution.is_transaction_idle()).toBe(true)
+})

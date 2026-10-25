@@ -92,6 +92,7 @@ export const create_transaction_execution = ({
   recovery_timeout_ms?: number
 }>) => {
   let pending: PendingTransaction | null = null
+  let queued = 0
   let execution_tail: Promise<unknown> = Promise.resolve()
   const storage_key = key.toLowerCase()
   const read_pending = (): PendingTransaction | null => {
@@ -132,8 +133,12 @@ export const create_transaction_execution = ({
     return true
   }
   return Object.freeze({
+    is_transaction_idle: (): boolean => queued === 0 && read_pending()?.phase !== 'submitted',
     enqueue: <T>(action: () => Promise<T>): Promise<T> => {
-      const result = execution_tail.then(action, action)
+      queued += 1
+      const result = execution_tail.then(action, action).finally(() => {
+        queued -= 1
+      })
       // Only the queue tail absorbs rejection; the caller retains the original failing promise.
       execution_tail = result.then(
         () => undefined,

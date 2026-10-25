@@ -38,3 +38,13 @@ test('render status preserves its FPS sample but clears a previous failure', () 
   expect(next.issue).toBeUndefined()
   expect(next.frame_rate).toEqual(previous.frame_rate)
 })
+
+test('renderer download failure stays terminal without reducing graphics or restarting the same import', () => {
+  const next = receive_engine_status(initial_engine_state(), {
+    state: 'failed',
+    backend: 'none',
+    issue: { code: 'renderer_load_failed' },
+  })
+  expect(next.state).toBe('failed')
+  expect(next.recovery).toBe('none')
+})

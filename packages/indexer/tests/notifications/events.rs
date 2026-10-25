@@ -213,6 +213,65 @@ fn gear_requires_settlement_budget_new_identity_natural_stats_and_personal_custo
     assert_eq!(rows[0]["stats"]["vitality"], 49);
     assert_eq!(rows[0]["address"], Addr([7; 32]).hex());
     assert_eq!(rows[0]["mob_types"], json!(["golden_lorito"]));
+    assert_eq!(rows[0]["amount"], 1);
+    assert_eq!(
+        rows[0]["sources"],
+        json!([{ "mob_type": "golden_lorito", "chance_bp": 100 }])
+    );
+    // Statless items still reconcile to the consumed drop budget.
+    let plain = &outputs[..3];
+    let rows = crate::notification_loot::extract(
+        12,
+        &TxView {
+            outputs: plain,
+            ..tx.clone()
+        },
+        GAME,
+    )
+    .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["stats"], json!({}));
+    // Depositing loot into an existing stack reports only the confirmed increase.
+    let mut stack = item.clone();
+    stack.amount = 10;
+    let previous_stack = object(item.id, "item", "Item", &stack);
+    stack.amount = 11;
+    let next_stack = object(item.id, "item", "Item", &stack);
+    let mut stack_inputs = inputs.to_vec();
+    stack_inputs.push(ObjView {
+        bytes: &previous_stack.bytes,
+        ..outputs[1].clone()
+    });
+    let mut stack_outputs = plain.to_vec();
+    stack_outputs[1].bytes = &next_stack.bytes;
+    let rows = crate::notification_loot::extract(
+        12,
+        &TxView {
+            inputs: &stack_inputs,
+            outputs: &stack_outputs,
+            ..tx.clone()
+        },
+        GAME,
+    )
+    .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["amount"], 1);
+    // An unrelated same-type gain cannot masquerade as a rare fight drop.
+    stack.amount = 12;
+    let extra_stack = object(item.id, "item", "Item", &stack);
+    stack_outputs[1].bytes = &extra_stack.bytes;
+    assert!(crate::notification_loot::extract(
+        12,
+        &TxView {
+            inputs: &stack_inputs,
+            outputs: &stack_outputs,
+            ..tx.clone()
+        },
+        GAME
+    )
+    .unwrap()
+    .is_empty());
+
     assert!(crate::notification_loot::extract(
         12,
         &TxView {

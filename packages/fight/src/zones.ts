@@ -3,7 +3,6 @@
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { GRID_CELLS, in_zone } from './combat_grid.ts'
-import { effect_seed } from './fight_math.ts'
 import { KINDS, sheet_of } from './fighters.ts'
 import { mix } from './prng.ts'
 import { emit } from './runtime.ts'
@@ -118,5 +117,3 @@ export const tick_board_zones = (runtime: FightRuntime, owner: bigint): void => 
   runtime.contract.zones = kept
   runtime.render_ids.zones = kept_ids
 }
-
-export const placement_seed = effect_seed

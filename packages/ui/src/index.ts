@@ -13,7 +13,13 @@ export {
   Select,
   Slider,
 } from './controls.tsx'
-export { NativeModal, focus_modal, active_modal, observe_window_changes } from './NativeModal.tsx'
+export {
+  NativeModal,
+  focus_modal,
+  active_modal,
+  observe_window_changes,
+  suspend_native_modals,
+} from './NativeModal.tsx'
 export { Panel, GameWindow, ConfirmDialog } from './surfaces.tsx'
 export { CombatHud, ProgressBar, MobDetails, ProgressionCard } from './game.tsx'
 export type { StatView, ItemView } from './game.tsx'

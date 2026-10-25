@@ -555,6 +555,7 @@ export function SDK({
         require_write_transport(sui_client)
         return sponsored(...args)
       }),
+    is_transaction_idle: execution.is_transaction_idle,
     recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
     execute_personal_kiosk,
     read_sui_balance: () => {

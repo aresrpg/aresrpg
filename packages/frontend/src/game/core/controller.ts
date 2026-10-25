@@ -8,7 +8,7 @@
 // preserving momentum, swim-float, auto-step visual smoothing, and mounted glide steering. Pure state + math over
 // `{ solid_at, liquid_at }` oracles. Flight tuning is separate from the established ground controls.
 
-import { CHARACTER_HEIGHT, ground_height_below, resolve_movement, type SolidFn, type Vec3Mut } from './collision.ts'
+import { CHARACTER_HEIGHT, resolve_movement, type SolidFn, type Vec3Mut } from './collision.ts'
 import { accelerate_horizontal, airborne_velocity, AIR_ACCEL } from './air_motion.ts'
 
 // ═══ GAME-FEEL TUNABLES (ported verbatim — the A/B history lives in the legacy source) ═══
@@ -311,20 +311,6 @@ export const classify_anim = (
     return state.speed > (WALK_SPEED + RUN_SPEED) / 2 ? 'RUN' : 'WALK'
   }
   return 'IDLE'
-}
-
-/** Snap the body to stand on the ground directly below (spawn helper). */
-export const ground_controller = (state: ControllerState, env: ControllerEnv, from_y?: number): void => {
-  const [x, , z] = state.position
-  const gy = ground_height_below(env.solid_at, x, from_y ?? state.position[1], z)
-  if (gy !== null) {
-    state.position[1] = gy
-    state.visual_y = gy
-    state.velocity[1] = 0
-    state.on_ground = true
-    state._since_ground = 0
-    state._airborne_seconds = 0
-  }
 }
 
 export const CONTROLLER_CONSTANTS = Object.freeze({

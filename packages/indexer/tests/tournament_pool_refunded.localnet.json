@@ -1,0 +1,21 @@
+{
+  "network": "isolated localnet",
+  "chain": "45556098",
+  "captured": "2026-10-24",
+  "id": "0x865b10200152015095a53f38e491b53ada1c90c65bbc53c5a41e283f25acd347",
+  "version": "72973",
+  "type": "0x8c93afff4f451fd6df01ac04cc47bb8994c95d986c7d4caa58798d3a47b62458::tournament::KaresPool<0x852d98163a1d18f8676e6e4c8927da63742f1945a41daf27a0911c059a746204::token::Token>",
+  "transaction": "7CAC5wqqE1iSNDTRT8NG2sqd3ptjFNsRn6BQh3AgMthQ",
+  "bcs": "865b10200152015095a53f38e491b53ada1c90c65bbc53c5a41e283f25acd3470000000000000000d0070000000000000001",
+  "json": {
+    "funds": {
+      "balance": "0",
+      "claimed": {
+        "contents": []
+      },
+      "paid": "2000",
+      "refunded": true
+    },
+    "id": "0x865b10200152015095a53f38e491b53ada1c90c65bbc53c5a41e283f25acd347"
+  }
+}

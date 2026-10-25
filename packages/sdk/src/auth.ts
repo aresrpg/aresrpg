@@ -9,6 +9,7 @@ import { isValidSuiAddress } from '@mysten/sui/utils'
 import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 
+import { tournament_actions, type TournamentActions } from './tournament.ts'
 import { canonical_suins_name } from './suins.ts'
 import { suins_actions, type SuinsActions } from './suins_actions.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
@@ -71,6 +72,7 @@ export type AuthSession = Readonly<{
   read_sui_balance: () => Promise<bigint>
   read_kares_balance: () => Promise<bigint | null>
   gas_spent_24h: () => bigint
+  is_transaction_idle: ReturnType<typeof SDK>['is_transaction_idle']
   on_transaction: ReturnType<typeof SDK>['on_transaction']
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
@@ -81,6 +83,7 @@ export type AuthSession = Readonly<{
   /** the remote-fight chain hand — duels and PvM share it (local vs remote is the ONLY split) */
   fight: FightActions
   dungeon: DungeonActions
+  tournament: TournamentActions
   kolizeum: KolizeumActions
   friends: FriendsActions
   party: PartyActions
@@ -212,6 +215,7 @@ const create_wallet_session = (
     read_sui_balance: sdk.read_sui_balance,
     read_kares_balance: sdk.read_kares_balance,
     gas_spent_24h: sdk.gas_spent_24h,
+    is_transaction_idle: sdk.is_transaction_idle,
     on_transaction: sdk.on_transaction,
     derive_character_id: (name: string) => character_id(require_registry(), name),
     is_character_name_claimed: async (name: string) => {
@@ -221,6 +225,7 @@ const create_wallet_session = (
     },
     fight: fight_actions(sdk, { kiosk_cap }),
     dungeon: dungeon_actions(sdk, { kiosk_cap }),
+    tournament: tournament_actions(sdk, { kiosk_cap }),
     kolizeum: kolizeum_actions(sdk, { kiosk_cap, address: account.address }),
     friends: friends_actions(sdk, { address: account.address }),
     party: party_actions(sdk, { kiosk_cap }),

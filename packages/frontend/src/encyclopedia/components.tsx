@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { CollectionTile, FloatingWindow, GameWindow } from '@aresrpg/ui'
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useId, type ReactNode } from 'react'
 
 import { useText } from '../i18n/useText.ts'
@@ -133,33 +133,6 @@ export const Fact = ({ label, value, color }: Readonly<{ label: string; value: R
     <span className="text-right text-[10px] text-[#e8e4dc]" style={color ? { color } : undefined}>
       {value}
     </span>
-  </div>
-)
-
-export const LinkChip = ({ children, select }: Readonly<{ children: ReactNode; select: () => void }>) => (
-  <button
-    className="cursor-pointer border border-border bg-white/2 px-2 py-1.5 text-left text-[9px] text-[#e8e4dc] hover:border-[#c8963c]/35 hover:text-[#c8963c]"
-    onClick={select}
-    type="button"
-  >
-    {children}
-  </button>
-)
-
-export const Pager = ({
-  page,
-  pages,
-  previous,
-  next,
-}: Readonly<{ page: number; pages: number; previous: () => void; next: () => void }>) => (
-  <div className="flex h-9 items-center justify-between border-t border-white/8 px-2 text-[8px] tracking-[0.14em] text-[#777b86]">
-    <button className="p-2 disabled:opacity-20" disabled={page === 0} onClick={previous} type="button">
-      <ChevronLeft size={13} />
-    </button>
-    <span>{pages === 0 ? '0 / 0' : `${page + 1} / ${pages}`}</span>
-    <button className="p-2 disabled:opacity-20" disabled={page + 1 >= pages} onClick={next} type="button">
-      <ChevronRight size={13} />
-    </button>
   </div>
 )
 

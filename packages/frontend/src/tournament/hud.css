@@ -1,0 +1,140 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+.tourney-hud-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ffffff25;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--aui-surface) 94%, transparent);
+  box-shadow: var(--aui-shadow);
+  cursor: pointer;
+  text-align: left;
+}
+.tourney-hud-card.is-admission {
+  border-color: var(--aui-orange);
+}
+.tourney-hud-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--aui-orange);
+  font:
+    9px/1.4 'Tournament Mono',
+    monospace;
+  text-transform: uppercase;
+}
+.tourney-hud-eyebrow > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.tourney-hud-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tourney-hud-heading strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.tourney-hud-heading time {
+  font:
+    20px/1.2 'Tournament Mono',
+    monospace;
+}
+.tourney-hud-pool {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--aui-muted);
+  font-size: 11px;
+}
+.tourney-hud-rosters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tourney-hud-card small {
+  color: var(--aui-muted);
+  font-size: 11px;
+}
+.tourney-hud-opponents {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+.tourney-hud-opponents > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tourney-hud-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.tourney-hud-footer b {
+  padding: 6px 9px;
+  border-radius: 3px;
+  background: var(--aui-orange);
+  color: var(--aui-bg);
+  font-size: 11px;
+}
+.tourney-admission-track {
+  height: 3px;
+  background: #ffffff10;
+}
+.tourney-admission-track > span {
+  display: block;
+  height: 100%;
+  background: var(--aui-orange);
+  transition: width 1s linear;
+}
+.tourney-mini-bracket {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  height: 28px;
+}
+.tourney-mini-bracket > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 2px;
+}
+.tourney-mini-bracket i {
+  height: 4px;
+  border: 1px solid #ffffff30;
+}
+.tourney-mini-bracket i.is-own {
+  border-color: var(--aui-orange);
+}
+.tourney-mini-bracket i.is-live {
+  background: var(--aui-blue);
+  animation: tourney-live 2s ease-in-out infinite alternate;
+}
+.tourney-hud-mobile {
+  display: none;
+}
+@keyframes tourney-live {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.tourney-hud-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.tourney-hud-clock small {
+  font-size: 9px;
+}

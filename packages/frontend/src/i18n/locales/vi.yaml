@@ -3,6 +3,7 @@
 
 title: WebGPU không khả dụng
 body: 'Thế giới cần WebGPU và kết nối an toàn (HTTPS hoặc localhost). Hãy mở bằng trình duyệt hỗ trợ.'
+engine_graphics_failure: Không thể khởi động đồ họa. Kiểm tra cài đặt đồ họa của trình duyệt hoặc cập nhật trình điều khiển đồ họa rồi tải lại.
 engine_recovery: Thế giới đã ngừng tải hoặc hiển thị. Hãy tải lại để thử tiếp.
 engine_reload: Tải lại
 engine_minimum_title: 'Đã giảm đồ họa'
@@ -1151,6 +1152,7 @@ wallet_send_shared:
   total: Tổng
   transaction: Giao dịch
 encyclopedia_page:
+  tokenomics_tab: Kinh tế token
   world_locations: 'Địa điểm'
   world_search_places: 'Tìm quần xã, thành phố, quái vật hoặc tài nguyên…'
   world_entry: 'Cấp vào cửa {{level}}'
@@ -2737,6 +2739,9 @@ adventure:
   boss_body: 'Sau lính gác là Gobadoc, đang giữ di vật mà Sceat tìm kiếm. Vua goblin không giành được danh hiệu ấy bằng những thất bại. Hai người đã học cách chiến đấu cùng nhau, nhưng đối thủ này hoàn toàn khác. Hãy cùng đồng đội tiến đến và xem mối hợp tác mới có thể đưa bạn đi xa đến đâu.'
 
 discord_marketplace:
+  rare_loot_title: 'Chiến lợi phẩm trùm hiếm'
+  rare_loot: '**{player}** nhận được **{amount}× {item}** từ **{mob}** — **tỉ lệ rơi cơ bản {chance}%**.'
+  drop_chance: 'Tỉ lệ rơi cơ bản {chance}%'
   title: 'CHỢ · GIAO DỊCH'
   sale: '**{seller}** vừa bán **{amount}× {item}** với giá **{price} SUI**'
   price_before_fees: 'Giá bán chưa gồm phí'
@@ -2808,6 +2813,8 @@ gift_page:
   error_login: 'Đăng nhập chưa hoàn tất. Hãy thử lại. Nếu cửa sổ bị chặn, mở liên kết bằng Safari hoặc Chrome.'
 
 loading_screen:
+  browser_reload: Dùng nút Tải lại của trình duyệt để thử lại.
+  slow: Tải lâu hơn dự kiến. Bạn có thể chờ hoặc tải lại.
   eyebrow: 'Cuộc phiêu lưu tiếp theo đang chờ bạn'
   home_eyebrow: 'Một khoảnh khắc yên bình trước chuyến đi'
   home_title: 'Cuộc phiêu lưu bắt đầu từ đây.'
@@ -2974,3 +2981,217 @@ allocation_page:
   error_foreign_post: 'Bài đăng phải do tài khoản X đang kết nối viết. Hãy đổi tài khoản hoặc liên kết.'
   error_missing_post: 'Không tìm thấy một số bài đăng. Kiểm tra liên kết và đảm bảo bài đăng công khai.'
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
+
+tournament_page:
+  title: Giải đấu
+  no_event: Chưa có giải đấu được công bố.
+  open: Đang mở đăng ký
+  in_progress: Đang diễn ra
+  finished: Đã kết thúc
+  cancelled: Đã hủy
+  create_team: Tạo đội
+  team_name: Tên đội
+  restricted: Đội giới hạn
+  allowed_names: Tên đồng đội, ngăn cách bằng dấu phẩy
+  find_team: Tự động tìm đồng đội
+  join: Tham gia
+  leave: Rời đội
+  donate: Đóng góp
+  amount: Số tiền
+  confirm: Xác nhận
+  cancel: Hủy
+  waiting: Đang chờ
+  live: Đang đấu
+  no_winner: Không có người thắng
+  crank: Tiếp tục trận
+  spectate: Xem
+  claim: Nhận
+  items: Vật phẩm cho mỗi người
+  place: Hạng
+  joint_fifth: Đồng hạng năm
+  asset: Tiền tệ
+  admin: Quản lý giải đấu
+  admin_cap: ID đối tượng AdminCap
+  create_event: Tạo giải đấu
+  start: Bắt đầu giải đấu
+  setup_display: Thiết lập Display lần đầu
+  deadline: Hạn bắt đầu
+  name: Tên
+  format: Thể thức
+  final: Chung kết
+  bronze: Trận tranh hạng ba
+  roster_notice: 'Chỉ đội đủ người mới được tham gia. Đăng ký cho phép tự động vào trận. Hãy luôn trực tuyến: mỗi trận có 60 giây để tham gia.'
+  donation_notice: Không thể rút lại đóng góp. Khi giải bị hủy, tiền được chuyển cho ban tổ chức để hoàn trả thủ công nếu có. Giải thưởng chưa trao cũng thuộc ban tổ chức.
+  refund_pool: Trả KARES chưa trao cho ban tổ chức
+  expire: Đóng đăng ký đã hết hạn
+  character: Nhân vật
+  action_expire: Đóng đăng ký đã hết hạn
+  placement: Thứ hạng
+  match_waiting: Đang chờ
+  match_live: Trực tiếp
+  match_done: Hoàn thành
+  match_no_winner: Không có người thắng
+  reason_no_winner: Không có người thắng
+  loading: Đang tải…
+  unavailable: Không khả dụng
+  unclaimed: Chưa nhận
+  close: Đóng
+  new_item: Mới
+  none_excluded: Không có
+  teams: Đội
+  bracket: Sơ đồ đấu
+  podium: Thứ hạng và phần thưởng
+  podium_claims: Thứ hạng · {{count}} phần chưa nhận
+  your_rewards: Phần thưởng của bạn
+  your_team: Đội của bạn
+  event: Giải đấu
+  event_sections: Các mục giải đấu
+  single_elimination: Loại trực tiếp
+  registered_count: '{{count}} đội'
+  team_counts: '{{teams}} đội đăng ký · {{complete}} đội đủ người · cần {{minimum}} đội đủ người để bắt đầu'
+  ready_count: 'Đội đủ người để bắt đầu: {{complete}} / {{minimum}}'
+  open_anyone: Mở cho mọi người
+  named_only: Chỉ nhân vật được chỉ định
+  reserved_seat: Nhân vật được giữ chỗ
+  take_seat: Tham gia vị trí này
+  open_seat: Chỗ trống
+  no_teams: Chưa có đội nào. Hãy tạo đội hoặc tìm đồng đội.
+  not_registered: Chưa đăng ký
+  leave_character: Xóa {{name}} khỏi đội
+  leave_review: Xóa {{character}} khỏi {{team}}? Nhân vật này sẽ không còn được đăng ký.
+  join_review: Đăng ký {{character}} vào {{team}}?
+  consent_notice: Chỉ định tên chỉ giữ chỗ. Chủ sở hữu vẫn phải tự đăng ký từng nhân vật.
+  too_many_names: Chỉ định tối đa {{count}} nhân vật, kể cả nhân vật của bạn.
+  stay_online: Duy trì kết nối và đủ SUI trả phí. Ứng dụng sẽ thử cho các nhân vật đã đăng ký vào trận trong mỗi khoảng tiếp nhận 60 giây.
+  action_find: Tìm đội
+  action_add: Thêm nhân vật của bạn
+  action_open: Mở trận
+  action_join: Vào trận
+  action_start: Bắt đầu trận
+  action_record: Ghi kết quả
+  action_end: Kết thúc không có đội thắng
+  action_refund: Trả KARES cho ban tổ chức
+  return_fight: Trở lại trận đấu
+  claim_count: Nhận {{count}} phần thưởng
+  show_bracket: Xem sơ đồ đấu
+  show_my_match: Xem trận của tôi
+  match_number: Trận {{match}}
+  semifinals: Bán kết
+  quarterfinals: Tứ kết
+  round_of: Vòng {{count}} đội
+  round_counts: '{{live}} trận đang đấu · {{done}}/{{count}}'
+  from_winner: Đội thắng M{{match}}
+  from_loser: Đội thua M{{match}}
+  empty_bracket: Không có đội tham gia
+  winner: Đội thắng
+  advancing: Đi tiếp
+  fifth_pending: Đang chờ kết quả tứ kết
+  fifth_notice: Đội thua do vắng mặt không được xếp hạng an ủi.
+  no_matches: Chưa có trận nào trong sơ đồ được thi đấu.
+  end_review: Kết thúc trận này mà không có đội thắng? Không đội nào đi tiếp từ trận này. Không thể hoàn tác.
+  match_admission: Đang nhận người vào
+  match_force_due: Đã đóng tiếp nhận
+  match_recording: Kết quả cần ghi
+  match_timed_out: Đã hết thời gian
+  match_walkover: Thắng do đối thủ vắng mặt
+  match_bye: Miễn đấu
+  match_clock_unknown: Đang chờ giờ trên chuỗi
+  reason_registered: Đã đăng ký · hãy giữ kết nối
+  reason_join: Tham gia đội này
+  reason_add: Thêm nhân vật của bạn
+  reason_closed: Đã đóng đăng ký
+  reason_clock: Đang chờ giờ trên chuỗi mới nhất
+  reason_wallet: Kết nối ví trò chơi
+  reason_character: Chọn nhân vật
+  reason_elsewhere: Đã đăng ký với đội khác
+  reason_full: Các vị trí trong đội đã đầy
+  reason_restricted: Nhân vật này không có tên trong danh sách đội
+  reason_custody: Nhân vật phải ở trong kiosk của mình
+  reason_waiting: Đang chờ trận tiếp theo
+  reason_admission: Đang nhận người vào
+  reason_force_due: Có thể bắt đầu trận
+  reason_live: Trận đang diễn ra
+  reason_recording: Kết quả đang chờ được ghi
+  reason_timed_out: Đã hết thời gian của trận
+  reason_done: Trận đã kết thúc
+  reason_walkover: Thắng do đối thủ vắng mặt
+  reason_bye: Đi tiếp do được miễn đấu
+  reason_clock_unknown: Đang chờ giờ trên chuỗi mới nhất
+  reason_loading: Đang tải trạng thái giải đấu…
+  reason_loaded: Đã tải trạng thái giải đấu
+  reason_unavailable: Không lấy được trạng thái giải đấu. Kết quả đã biết vẫn hiển thị; các thao tác chờ kết nối lại.
+  reason_none: Chưa công bố giải đấu
+  reason_pending: Đang chờ xác nhận giao dịch…
+  reason_finished: Không có phần thưởng để nhận
+  reason_cancelled: Giải đấu đã hủy
+  reason_cannot_watch: Hãy kết thúc trận của bạn trước khi xem trận khác
+  custody_kiosk: Kiosk
+  custody_fight: Đang chiến đấu
+  custody_trade: Đang trao đổi
+  latest_start_notice: Ban tổ chức có thể bắt đầu bất cứ lúc nào trước hạn này.
+  champion: '{{team}} vô địch'
+  prize_pool: Quỹ thưởng
+  frozen_pool: Quỹ thưởng · đã cố định
+  token_unavailable: KARES chưa khả dụng
+  items_only: Chỉ vật phẩm · {{count}} phần thưởng
+  item_count: '{{count}} phần thưởng vật phẩm'
+  place_number: Hạng {{place}}
+  not_awarded: Không trao
+  to_be_decided: Chưa xác định
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: Phần của mỗi thứ hạng được chia cho mọi nhân vật đã đăng ký ở hạng đó, kể cả đồng đội vắng mặt. Các đội đồng hạng năm chia chung một phần. Xếp hạng cuối cùng quyết định số tiền chính xác cho từng nhân vật.
+  claim_notice: Một lần nhận tiền sẽ lấy mọi khoản tiền thưởng dương của nhân vật này. Vật phẩm được nhận riêng. Việc trả nhân vật sau trận đấu là thao tác khác.
+  claimed: Đã nhận
+  claim_coins: Nhận tiền thưởng
+  no_platform_fee: Không phí nền tảng · vẫn có phí mạng thông thường
+  no_champion: Giải đấu kết thúc mà không có nhà vô địch.
+  unknown_item: Không có thông tin vật phẩm
+  rolled_items_notice: Vật phẩm được tạo từ mẫu. Chỉ số ngẫu nhiên được xác định khi nhận.
+  contribution_review: Xem lại đóng góp
+  pool_after: 'Quỹ sau đóng góp này: {{amount}} {{asset}}'
+  contribution_confirmed: Đóng góp đã được xác nhận. Quỹ sẽ cập nhật khi dữ liệu chỉ mục đến.
+  transaction_confirmed: Giao dịch đã được xác nhận. Giải đấu sẽ cập nhật theo dữ liệu chỉ mục.
+  cancelled_notice: Giải đấu đã hủy. Tiền chưa sử dụng được trả cho ban tổ chức ban đầu.
+  expired_notice: Đã qua hạn bắt đầu. Có thể đóng đăng ký nhưng không thể bắt đầu giải đấu.
+  open_event: Mở giải đấu {{name}}
+  open_window: Mở giải đấu
+  older_claims: '{{count}} giải trước còn phần thưởng chưa nhận'
+  result_line: '{{team}} đi tiếp'
+  live_count: '{{count}} trận đang đấu'
+  prize_split: Phân bổ phần thưởng
+  invalid_percentage: Nhập tỷ lệ phần trăm với tối đa hai chữ số thập phân.
+  allocation_excess: Phân bổ thừa {{amount}}%
+  allocation_remaining: Còn {{amount}}%
+  allocation_notice: Mỗi loại tiền phải có tổng 100%. Cả hai bảng đều ảnh hưởng đến số đội tối thiểu, kể cả khi chưa có đóng góp.
+  reward_place: Thứ hạng cho phần thưởng {{number}}
+  reward_quantity: Số lượng phần thưởng {{number}}
+  quantity_short: SL
+  remove_reward: Xóa phần thưởng {{number}}
+  add_item: Thêm phần thưởng vật phẩm
+  choose_item: Chọn vật phẩm thưởng
+  search_items: Tìm vật phẩm
+  all_items: Tất cả vật phẩm
+  no_items: Không có vật phẩm phù hợp
+  organizer_event: Ban tổ chức và giải đấu
+  timezone: 'Múi giờ: {{zone}}'
+  minimum_teams: Cần ít nhất {{count}} đội đủ người.
+  minimum_label: Số đội đủ người tối thiểu
+  minimum_notice: Thông thường cần hai đội; cần bốn đội nếu có thưởng hạng ba/tư và tám đội nếu có thưởng hạng năm. Cả hai loại tiền và vật phẩm đều được tính.
+  immutable_notice: Khi tạo, thể thức, tỷ lệ thưởng, vật phẩm và hạn bắt đầu sẽ được cố định. Không thể sửa các thiết lập này.
+  recipient_notice: Tiền được trả cho chủ sở hữu đã đăng ký. Mỗi nhân vật đủ điều kiện nhận số lượng đã đặt của từng vật phẩm.
+  cancel_event: Hủy giải đấu
+  start_review: Bắt đầu sẽ cố định đội đủ người và tổng thưởng, xáo trộn sơ đồ đấu và mở các khoảng tiếp nhận 60 giây đầu tiên.
+  excluded_teams: 'Đội thiếu người bị loại: {{teams}}'
+  cancel_review: Hủy giải đấu này? Mọi khoản đóng góp được trả cho ban tổ chức ban đầu, không tự động hoàn cho từng người đóng góp.
+  organizer_address: 'Ban tổ chức ban đầu: {{address}}'
+  review_changed: Giải đấu đã thay đổi hoặc quá hạn. Đóng cửa sổ này và kiểm tra trạng thái hiện tại.
+  running_admin_notice: Giải đấu đang diễn ra. Dùng các thao tác khôi phục trận trong cửa sổ giải đấu; không thể hủy giải đã bắt đầu.
+  deployment_metadata: Siêu dữ liệu triển khai
+  display_notice: Siêu dữ liệu hiển thị được thiết lập một lần cho mỗi lần triển khai, không cần cho từng giải đấu.
+  submitted_notice: Thao tác đã gửi. Kiểm tra giải đấu hiện tại trước khi gửi lại.
+  custody_undefined: Chưa rõ nơi giữ
+  wagered: Có cược
+  complete_notice: Chỉ đội đủ người vào sơ đồ đấu. Các đội khác bị loại khi bắt đầu.
+  find_review: Tìm đội cho {{character}} và đăng ký nhân vật này?
+  joined_count: '{{count}}/{{total}} đã vào'
+  versus: đấu với {{team}}

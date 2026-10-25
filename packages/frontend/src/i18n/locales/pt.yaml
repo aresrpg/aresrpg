@@ -1,5 +1,6 @@
 title: WebGPU indisponível
 body: 'O mundo requer WebGPU e uma conexão segura (HTTPS ou localhost). Abra-o em um navegador compatível.'
+engine_graphics_failure: Não foi possível iniciar os gráficos. Verifique as configurações gráficas do navegador ou atualize o driver gráfico e recarregue.
 engine_recovery: O mundo parou de carregar ou renderizar. Recarregue para tentar novamente.
 engine_reload: Recarregar
 engine_minimum_title: 'Gráficos reduzidos'
@@ -1148,6 +1149,7 @@ wallet_send_shared:
   total: Total
   transaction: Transação
 encyclopedia_page:
+  tokenomics_tab: Tokenomia
   world_locations: Locais
   world_search_places: Encontre um bioma, cidade, monstro ou recurso…
   world_entry: Entrada nv. {{level}}
@@ -2734,6 +2736,9 @@ adventure:
   boss_body: 'Depois dos guardas espera Gobadoc, com a relíquia que Sceat procura. O rei goblin não ganhou seu título perdendo lutas. Vocês aprenderam a lutar juntos, mas este adversário é diferente. Aproxime-se com seu companheiro e descubra até onde essa nova parceria pode levar vocês.'
 
 discord_marketplace:
+  rare_loot_title: 'Saque raro de chefe'
+  rare_loot: '**{player}** obteve **{amount}× {item}** de **{mob}** — **{chance}% de chance base**.'
+  drop_chance: '{chance}% de chance base'
   title: 'MERCADO · VENDA'
   sale: '**{seller}** acabou de vender **{amount}× {item}** por **{price} SUI**'
   price_before_fees: 'Preço de venda antes das taxas'
@@ -2805,6 +2810,8 @@ gift_page:
   error_login: 'O login não foi concluído. Tente novamente. Se a janela foi bloqueada, abra o link no Safari ou Chrome.'
 
 loading_screen:
+  browser_reload: Use o botão Recarregar do navegador para tentar novamente.
+  slow: O carregamento está demorando mais que o esperado. Você pode esperar ou recarregar.
   eyebrow: 'Sua próxima aventura espera por você'
   home_eyebrow: 'Um momento de calma antes da aventura'
   home_title: 'Sua aventura começa aqui.'
@@ -2971,3 +2978,217 @@ allocation_page:
   error_foreign_post: 'As publicações devem ser da conta do X conectada. Troque a conta ou os links.'
   error_missing_post: 'Algumas publicações não foram encontradas. Confira os links e se elas são públicas.'
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
+
+tournament_page:
+  title: Torneio
+  no_event: Nenhum torneio anunciado.
+  open: Inscrições abertas
+  in_progress: Em andamento
+  finished: Finalizado
+  cancelled: Cancelado
+  create_team: Criar equipe
+  team_name: Nome da equipe
+  restricted: Equipe restrita
+  allowed_names: Nomes dos colegas separados por vírgulas
+  find_team: Encontrar colegas
+  join: Entrar
+  leave: Sair
+  donate: Contribuir
+  amount: Valor
+  confirm: Confirmar
+  cancel: Cancelar
+  waiting: Aguardando
+  live: Ao vivo
+  no_winner: Sem vencedor
+  crank: Avançar partida
+  spectate: Assistir
+  claim: Resgatar
+  items: Itens por participante
+  place: Posição
+  joint_fifth: Quinto lugar compartilhado
+  asset: Moeda
+  admin: Administração do torneio
+  admin_cap: ID do objeto AdminCap
+  create_event: Criar torneio
+  start: Iniciar torneio
+  setup_display: Configurar Display uma vez
+  deadline: Prazo para iniciar
+  name: Nome
+  format: Formato
+  final: Final
+  bronze: Disputa pelo bronze
+  roster_notice: 'Apenas equipes completas participam. A inscrição autoriza a entrada automática em combate. Fique conectado: há 60 segundos para entrar em cada partida.'
+  donation_notice: As contribuições são definitivas. Em caso de cancelamento, os fundos vão ao organizador para eventuais reembolsos manuais. Prêmios não atribuídos também vão ao organizador.
+  refund_pool: Devolver KARES não atribuídos ao organizador
+  expire: Encerrar inscrições expiradas
+  character: Personagem
+  action_expire: Encerrar inscrições expiradas
+  placement: Classificação
+  match_waiting: Aguardando
+  match_live: Ao vivo
+  match_done: Concluído
+  match_no_winner: Sem vencedor
+  reason_no_winner: Sem vencedor
+  loading: Carregando…
+  unavailable: Indisponível
+  unclaimed: Não resgatado
+  close: Fechar
+  new_item: Novo
+  none_excluded: Nenhum
+  teams: Equipes
+  bracket: Chave
+  podium: Pódio e prêmios
+  podium_claims: Pódio · {{count}} para resgatar
+  your_rewards: Suas recompensas
+  your_team: Sua equipe
+  event: Evento
+  event_sections: Seções do torneio
+  single_elimination: Eliminação simples
+  registered_count: '{{count}} equipes'
+  team_counts: '{{teams}} inscritas · {{complete}} completas · {{minimum}} completas para começar'
+  ready_count: '{{complete}} / {{minimum}} equipes completas para começar'
+  open_anyone: Aberta a todos
+  named_only: Apenas personagens indicados
+  reserved_seat: Personagem reservado
+  take_seat: Ocupar vaga
+  open_seat: Vaga livre
+  no_teams: Ainda não há equipes. Crie uma ou encontre parceiros.
+  not_registered: Não inscrito
+  leave_character: Remover {{name}} da equipe
+  leave_review: Remover {{character}} de {{team}}? Esse personagem deixará de estar inscrito.
+  join_review: Inscrever {{character}} em {{team}}?
+  consent_notice: Personagens indicados reservam vagas. Seus donos precisam inscrevê-los separadamente.
+  too_many_names: Inclua no máximo {{count}} personagens, contando o seu.
+  stay_online: Fique conectado com SUI para as taxas. O aplicativo tenta inserir seus personagens inscritos em cada janela de entrada de 60 segundos.
+  action_find: Encontrar equipe
+  action_add: Adicionar seu personagem
+  action_open: Abrir partida
+  action_join: Entrar na partida
+  action_start: Iniciar partida
+  action_record: Registrar resultado
+  action_end: Encerrar sem vencedor
+  action_refund: Devolver KARES ao organizador
+  return_fight: Voltar ao combate
+  claim_count: Resgatar {{count}} recompensas
+  show_bracket: Ver chave
+  show_my_match: Ver minha partida
+  match_number: Partida {{match}}
+  semifinals: Semifinais
+  quarterfinals: Quartas de final
+  round_of: Rodada de {{count}}
+  round_counts: '{{live}} em andamento · {{done}}/{{count}}'
+  from_winner: Vencedor de M{{match}}
+  from_loser: Perdedor de M{{match}}
+  empty_bracket: Sem participante
+  winner: Vencedor
+  advancing: Classificado
+  fifth_pending: Resultados das quartas pendentes
+  fifth_notice: Derrotas por ausência não dão colocações de consolação.
+  no_matches: Nenhuma chave foi disputada.
+  end_review: Encerrar esta partida sem vencedor? Nenhuma das equipes avançará por esta partida. Isso não pode ser desfeito.
+  match_admission: Entrada aberta
+  match_force_due: Entrada encerrada
+  match_recording: Resultado a registrar
+  match_timed_out: Limite de tempo atingido
+  match_walkover: Vitória por ausência
+  match_bye: Avanço sem adversário
+  match_clock_unknown: Aguardando horário da blockchain
+  reason_registered: Inscrito · permaneça conectado
+  reason_join: Entrar nesta equipe
+  reason_add: Adicionar seu personagem
+  reason_closed: Inscrições encerradas
+  reason_clock: Aguardando horário atualizado da blockchain
+  reason_wallet: Conecte sua carteira de jogo
+  reason_character: Selecione um personagem
+  reason_elsewhere: Já inscrito em outra equipe
+  reason_full: Todas as vagas estão ocupadas
+  reason_restricted: Este personagem não está indicado nesta equipe
+  reason_custody: Este personagem precisa estar em seu quiosque
+  reason_waiting: Aguardando a próxima partida
+  reason_admission: Entrada aberta
+  reason_force_due: A partida pode começar
+  reason_live: Partida em andamento
+  reason_recording: Resultado aguardando registro
+  reason_timed_out: Limite de tempo da partida atingido
+  reason_done: Partida encerrada
+  reason_walkover: Venceu por ausência
+  reason_bye: Avançou sem adversário
+  reason_clock_unknown: Aguardando horário atualizado da blockchain
+  reason_loading: Carregando estado do torneio…
+  reason_loaded: Estado do torneio carregado
+  reason_unavailable: Estado do torneio indisponível. Os resultados conhecidos continuam visíveis; as ações aguardam a reconexão.
+  reason_none: Nenhum torneio anunciado
+  reason_pending: Aguardando confirmação da transação…
+  reason_finished: Nenhuma recompensa para resgatar
+  reason_cancelled: Torneio cancelado
+  reason_cannot_watch: Termine seu combate antes de assistir a outro
+  custody_kiosk: Quiosque
+  custody_fight: Em combate
+  custody_trade: Em troca
+  latest_start_notice: O organizador pode iniciar a qualquer momento antes deste prazo.
+  champion: '{{team}} vence'
+  prize_pool: Fundo de prêmios
+  frozen_pool: Fundo de prêmios · fixado
+  token_unavailable: KARES ainda não está disponível
+  items_only: Apenas itens · {{count}} recompensas
+  item_count: '{{count}} recompensas de itens'
+  place_number: Posição {{place}}
+  not_awarded: Não concedida
+  to_be_decided: A definir
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: Cada posição divide sua alocação entre todos os personagens inscritos nela, incluindo os ausentes. Os quintos colocados empatados dividem uma única alocação. A classificação final determina os valores exatos por personagem.
+  claim_notice: Um resgate de moedas coleta todos os valores positivos deste personagem. Os itens são independentes. A devolução do personagem após o combate é outra operação.
+  claimed: Resgatado
+  claim_coins: Resgatar moedas
+  no_platform_fee: Sem taxa de plataforma · taxas de rede normais
+  no_champion: Este torneio terminou sem campeão.
+  unknown_item: Detalhes do item indisponíveis
+  rolled_items_notice: Os itens são criados a partir dos modelos. Os atributos aleatórios são definidos no resgate.
+  contribution_review: Revisar contribuição
+  pool_after: 'Fundo após esta contribuição: {{amount}} {{asset}}'
+  contribution_confirmed: Contribuição confirmada. O fundo será atualizado quando chegarem os dados indexados.
+  transaction_confirmed: Transação confirmada. O evento será atualizado com os dados indexados.
+  cancelled_notice: Torneio cancelado. O dinheiro não utilizado retorna ao organizador original.
+  expired_notice: O prazo para iniciar passou. As inscrições podem ser encerradas; o torneio não pode mais começar.
+  open_event: Abrir torneio {{name}}
+  open_window: Abrir torneio
+  older_claims: '{{count}} eventos anteriores têm recompensas pendentes'
+  result_line: '{{team}} avançou'
+  live_count: '{{count}} em andamento'
+  prize_split: Distribuição de prêmios
+  invalid_percentage: Informe porcentagens com no máximo duas casas decimais.
+  allocation_excess: '{{amount}}% alocado a mais'
+  allocation_remaining: '{{amount}}% restante'
+  allocation_notice: Cada moeda deve somar 100%. Ambas as tabelas determinam o mínimo de equipes, mesmo antes do financiamento.
+  reward_place: Posição da recompensa {{number}}
+  reward_quantity: Quantidade da recompensa {{number}}
+  quantity_short: Qtd.
+  remove_reward: Remover recompensa {{number}}
+  add_item: Adicionar item de recompensa
+  choose_item: Escolher item de recompensa
+  search_items: Buscar itens
+  all_items: Todos os itens
+  no_items: Nenhum item correspondente
+  organizer_event: Organizador e evento
+  timezone: 'Fuso horário: {{zone}}'
+  minimum_teams: São necessárias pelo menos {{count}} equipes completas.
+  minimum_label: Mínimo de equipes completas
+  minimum_notice: Normalmente são necessárias duas equipes; quatro para prêmios de terceiro/quarto lugar e oito para quinto. Ambas as moedas e os itens contam.
+  immutable_notice: A criação fixa o formato, as porcentagens, os itens e o prazo para iniciar. Essas configurações não podem ser alteradas.
+  recipient_notice: As moedas são pagas aos donos inscritos. Cada personagem elegível recebe a quantidade configurada de cada item.
+  cancel_event: Cancelar torneio
+  start_review: O início fixa as equipes completas e os totais, embaralha a chave e abre as primeiras janelas de entrada de 60 segundos.
+  excluded_teams: 'Equipes incompletas excluídas: {{teams}}'
+  cancel_review: Cancelar este torneio? Todas as contribuições retornam ao organizador original, não automaticamente a cada doador.
+  organizer_address: 'Organizador original: {{address}}'
+  review_changed: O evento mudou ou o prazo passou. Feche esta revisão e verifique o estado atual.
+  running_admin_notice: O torneio está em andamento. Use as ações de recuperação das partidas; eventos em andamento não podem ser cancelados.
+  deployment_metadata: Metadados da implantação
+  display_notice: Os metadados de exibição são configurados uma vez por implantação, não para cada torneio.
+  submitted_notice: A ação foi enviada. Verifique o evento atual antes de enviar novamente.
+  custody_undefined: Custódia desconhecida
+  wagered: Com aposta
+  complete_notice: Somente equipes completas entram na chave. As demais são excluídas ao iniciar.
+  find_review: Encontrar uma equipe para {{character}} e inscrever este personagem?
+  joined_count: '{{count}}/{{total}} presentes'
+  versus: contra {{team}}

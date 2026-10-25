@@ -411,7 +411,7 @@
     font-size: 11px;
     letter-spacing: 0.1em;
   }
-  .gw-tab :is(.chr-btn, .chr-bagtab, .sb__btn-compact, .jobs__craft-btn),
+  .gw-tab :is(.chr-btn, .chr-bagtab, .jobs__craft-btn),
   .gw-tab .chr-forge button,
   .gw-tab .jobs__craft-amount :is(input, button) {
     min-height: 44px;

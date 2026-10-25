@@ -3,6 +3,7 @@
 
 title: WebGPU不可用
 body: '世界需要 WebGPU 和安全连接（HTTPS 或 localhost）。请使用支持的浏览器打开。'
+engine_graphics_failure: 图形系统无法启动。请检查浏览器的图形设置或更新显卡驱动，然后重新加载。
 engine_recovery: 世界已停止加载或渲染。请重新加载后再试。
 engine_reload: 重新加载
 engine_minimum_title: '已降低画质'
@@ -1151,6 +1152,7 @@ wallet_send_shared:
   total: 总计
   transaction: 交易
 encyclopedia_page:
+  tokenomics_tab: 代币经济
   world_locations: '地点'
   world_search_places: '搜索生态区、城市、怪物或资源…'
   world_entry: '进入等级 {{level}}'
@@ -2737,6 +2739,9 @@ adventure:
   boss_body: '卫兵后方，戈巴多克正守着Sceat寻找的遗物。哥布林王可不是靠输掉战斗赢得这个称号的。你们已经学会并肩作战，但眼前的对手非同寻常。带上伙伴靠近他，看看这份新结成的同盟究竟能走多远。'
 
 discord_marketplace:
+  rare_loot_title: '稀有首领掉落'
+  rare_loot: '**{player}**从**{mob}**获得了**{amount}× {item}** — **基础掉落概率 {chance}%**。'
+  drop_chance: '基础掉落概率 {chance}%'
   title: '市场 · 成交'
   sale: '**{seller}** 刚以 **{price} SUI** 售出 **{amount}× {item}**'
   price_before_fees: '成交价不含手续费'
@@ -2808,6 +2813,8 @@ gift_page:
   error_login: '登录未完成，请重试。如果弹窗被拦截，请在 Safari 或 Chrome 中打开链接。'
 
 loading_screen:
+  browser_reload: 请使用浏览器的刷新按钮重试。
+  slow: 加载时间比预期长。你可以继续等待或重新加载。
   eyebrow: '下一场冒险正等待着你'
   home_eyebrow: '冒险前的片刻宁静'
   home_title: '你的冒险，从这里开始。'
@@ -2974,3 +2981,217 @@ allocation_page:
   error_foreign_post: '帖子必须由已连接的 X 账户发布。请更换账户或链接。'
   error_missing_post: '找不到部分帖子。请检查链接，并确认帖子为公开状态。'
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
+
+tournament_page:
+  title: 锦标赛
+  no_event: 暂无已公布的赛事。
+  open: 报名开放
+  in_progress: 进行中
+  finished: 已结束
+  cancelled: 已取消
+  create_team: 创建队伍
+  team_name: 队伍名称
+  restricted: 限定队伍
+  allowed_names: 用逗号分隔队友角色名
+  find_team: 自动寻找队友
+  join: 加入
+  leave: 退出
+  donate: 捐赠奖金
+  amount: 金额
+  confirm: 确认
+  cancel: 取消
+  waiting: 等待中
+  live: 对战中
+  no_winner: 无获胜者
+  crank: 推进比赛
+  spectate: 观战
+  claim: 领取
+  items: 每位参赛者的物品
+  place: 名次
+  joint_fifth: 并列第五
+  asset: 货币
+  admin: 赛事管理
+  admin_cap: AdminCap 对象 ID
+  create_event: 创建赛事
+  start: 开始赛事
+  setup_display: 首次配置 Display
+  deadline: 最晚开始时间
+  name: 名称
+  format: 赛制
+  final: 决赛
+  bronze: 季军赛
+  roster_notice: 只有满员队伍才能参赛。报名即授权自动加入比赛。每场比赛有60秒的加入时间，请保持在线。
+  donation_notice: 捐赠不可撤销。赛事取消后，资金将转给主办方，由其决定手动退款。未分配的奖金也将转给主办方。
+  refund_pool: 将未分配的 KARES 退还主办方
+  expire: 关闭已过期的报名
+  character: 角色
+  action_expire: 关闭已过期的报名
+  placement: 名次
+  match_waiting: 等待中
+  match_live: 实时
+  match_done: 已完成
+  match_no_winner: 无获胜者
+  reason_no_winner: 无获胜者
+  loading: 正在加载…
+  unavailable: 不可用
+  unclaimed: 未领取
+  close: 关闭
+  new_item: 新建
+  none_excluded: 无
+  teams: 队伍
+  bracket: 对阵表
+  podium: 排名与奖励
+  podium_claims: 排名 · {{count}} 项待领取
+  your_rewards: 你的奖励
+  your_team: 你的队伍
+  event: 赛事
+  event_sections: 锦标赛栏目
+  single_elimination: 单败淘汰
+  registered_count: '{{count}} 支队伍'
+  team_counts: '{{teams}} 支已报名 · {{complete}} 支满员 · 开赛需 {{minimum}} 支满员队伍'
+  ready_count: 开赛所需满员队伍：{{complete}} / {{minimum}}
+  open_anyone: 所有人均可加入
+  named_only: 仅限指定角色
+  reserved_seat: 预留角色
+  take_seat: 加入此席位
+  open_seat: 空闲席位
+  no_teams: 尚无队伍。创建队伍或寻找队友。
+  not_registered: 未报名
+  leave_character: 将 {{name}} 移出队伍
+  leave_review: 将 {{character}} 移出 {{team}}？该角色将取消报名。
+  join_review: 让 {{character}} 报名加入 {{team}}？
+  consent_notice: 指定角色仅预留席位。各角色的所有者仍需分别报名。
+  too_many_names: 最多填写 {{count}} 个角色，包括你自己的角色。
+  stay_online: 请保持在线并备足手续费所需的 SUI。应用会在每场比赛的 60 秒入场期内尝试让已报名角色入场。
+  action_find: 寻找队伍
+  action_add: 添加你的角色
+  action_open: 创建对局
+  action_join: 进入比赛
+  action_start: 开始比赛
+  action_record: 记录结果
+  action_end: 以无胜者结束
+  action_refund: 将 KARES 退还主办方
+  return_fight: 返回战斗
+  claim_count: 领取 {{count}} 项奖励
+  show_bracket: 查看对阵表
+  show_my_match: 查看我的比赛
+  match_number: 第 {{match}} 场
+  semifinals: 半决赛
+  quarterfinals: 四分之一决赛
+  round_of: '{{count}} 强赛'
+  round_counts: '{{live}} 场进行中 · {{done}}/{{count}}'
+  from_winner: M{{match}} 的胜者
+  from_loser: M{{match}} 的败者
+  empty_bracket: 无参赛者
+  winner: 胜者
+  advancing: 晋级
+  fifth_pending: 等待四分之一决赛结果
+  fifth_notice: 因缺席告负的队伍不获得安慰名次。
+  no_matches: 未进行淘汰赛。
+  end_review: 将本场比赛以无胜者结束？双方均无法通过本场晋级。此操作无法撤销。
+  match_admission: 入场开放
+  match_force_due: 入场已关闭
+  match_recording: 结果待记录
+  match_timed_out: 已达时间上限
+  match_walkover: 不战而胜
+  match_bye: 轮空
+  match_clock_unknown: 等待链上时间
+  reason_registered: 已报名 · 请保持在线
+  reason_join: 加入此队伍
+  reason_add: 添加你的角色
+  reason_closed: 报名已关闭
+  reason_clock: 等待最新链上时间
+  reason_wallet: 请连接游戏钱包
+  reason_character: 请选择角色
+  reason_elsewhere: 已报名其他队伍
+  reason_full: 队伍席位已满
+  reason_restricted: 此角色不在该队伍的指定名单中
+  reason_custody: 此角色必须位于自己的 Kiosk 中
+  reason_waiting: 等待下一场比赛
+  reason_admission: 入场开放
+  reason_force_due: 比赛可以开始
+  reason_live: 比赛进行中
+  reason_recording: 等待记录比赛结果
+  reason_timed_out: 比赛已达时间上限
+  reason_done: 比赛已结束
+  reason_walkover: 对手缺席获胜
+  reason_bye: 轮空晋级
+  reason_clock_unknown: 等待最新链上时间
+  reason_loading: 正在加载锦标赛状态…
+  reason_loaded: 锦标赛状态已加载
+  reason_unavailable: 锦标赛状态暂不可用。已知结果仍可查看，操作需等待重新连接。
+  reason_none: 尚未公布锦标赛
+  reason_pending: 等待交易确认…
+  reason_finished: 所有可领取奖励均已领取
+  reason_cancelled: 锦标赛已取消
+  reason_cannot_watch: 请先结束自己的战斗，再观看其他比赛
+  custody_kiosk: Kiosk
+  custody_fight: 战斗中
+  custody_trade: 交易中
+  latest_start_notice: 主办方可在此截止时间前随时开赛。
+  champion: '{{team}} 获胜'
+  prize_pool: 奖池
+  frozen_pool: 奖池 · 已冻结
+  token_unavailable: KARES 暂未开放
+  items_only: 仅物品 · {{count}} 项奖励
+  item_count: '{{count}} 项物品奖励'
+  place_number: 第 {{place}} 名
+  not_awarded: 未授予
+  to_be_decided: 待定
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: 每个名次的份额由该名次的所有已报名角色共享，包括缺席队友。并列第五名共享一份分配。最终排名确定每个角色的准确金额。
+  claim_notice: 一次货币领取会收取该角色所有金额大于零的币种奖励。物品分别领取。战斗结束后的角色归还另行处理。
+  claimed: 已领取
+  claim_coins: 领取货币
+  no_platform_fee: 无平台费 · 仍需常规网络手续费
+  no_champion: 本届锦标赛结束，无冠军。
+  unknown_item: 物品详情暂不可用
+  rolled_items_notice: 物品根据模板铸造，随机属性在领取时生成。
+  contribution_review: 确认赞助
+  pool_after: 本次赞助后的奖池：{{amount}} {{asset}}
+  contribution_confirmed: 赞助已确认。索引更新到达后奖池将刷新。
+  transaction_confirmed: 交易已确认。索引更新到达后赛事将刷新。
+  cancelled_notice: 锦标赛已取消。未使用资金将退还原主办方。
+  expired_notice: 最晚开赛时间已过。可以关闭报名，但无法再开始锦标赛。
+  open_event: 打开 {{name}} 锦标赛
+  open_window: 打开锦标赛
+  older_claims: '{{count}} 场往届赛事仍有奖励待领取'
+  result_line: '{{team}} 已晋级'
+  live_count: '{{count}} 场进行中'
+  prize_split: 奖励分配
+  invalid_percentage: 请输入最多两位小数的百分比。
+  allocation_excess: 超出 {{amount}}%
+  allocation_remaining: 剩余 {{amount}}%
+  allocation_notice: 每个币种的分配总和必须为 100%。两张分配表都会影响最低队伍数量，即使尚未注资。
+  reward_place: 奖励 {{number}} 的名次
+  reward_quantity: 奖励 {{number}} 的数量
+  quantity_short: 数量
+  remove_reward: 删除奖励 {{number}}
+  add_item: 添加物品奖励
+  choose_item: 选择奖励物品
+  search_items: 搜索物品
+  all_items: 全部物品
+  no_items: 没有匹配的物品
+  organizer_event: 主办方与赛事
+  timezone: 时区：{{zone}}
+  minimum_teams: 至少需要 {{count}} 支满员队伍。
+  minimum_label: 最低满员队伍数
+  minimum_notice: 通常需要两支队伍；设置第三或第四名奖励需四支；设置第五名奖励需八支。两个币种和物品奖励均计入。
+  immutable_notice: 创建后，赛制、奖励比例、物品奖励及最晚开赛时间即被固定，无法修改。
+  recipient_notice: 货币支付给报名时的所有者。每个符合条件的角色都能获得每项物品的设定数量。
+  cancel_event: 取消锦标赛
+  start_review: 开赛会固定满员阵容和奖池总额，随机排列对阵，并开放首轮 60 秒入场期。
+  excluded_teams: 排除的未满员队伍：{{teams}}
+  cancel_review: 取消本届锦标赛？所有赞助资金将退还原主办方，不会自动退给各赞助者。
+  organizer_address: 原主办方：{{address}}
+  review_changed: 赛事已变化或截止时间已过。请关闭确认窗口并检查当前状态。
+  running_admin_notice: 赛事正在进行。请在锦标赛窗口使用比赛恢复操作；进行中的赛事无法取消。
+  deployment_metadata: 部署元数据
+  display_notice: 显示元数据每次部署仅需配置一次，无需为每届锦标赛单独配置。
+  submitted_notice: 操作已提交。再次提交前，请检查当前赛事状态。
+  custody_undefined: 托管状态未知
+  wagered: 下注竞技
+  complete_notice: 仅满员队伍进入对阵表，其他队伍将在开赛时排除。
+  find_review: 为 {{character}} 寻找队伍并报名该角色？
+  joined_count: '{{count}}/{{total}} 已入场'
+  versus: 对阵 {{team}}

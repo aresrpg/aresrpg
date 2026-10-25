@@ -453,6 +453,77 @@ fn emit_object(
         );
         return Ok(());
     }
+    if is_game(t, game, "tournament", "KaresPool") {
+        let pool = decode::from_bytes::<decode::TournamentKaresPool>(o.bytes)
+            .map_err(|e| drift("tournament::KaresPool", o.id, e))?;
+        let claims = pool
+            .funds
+            .claimed
+            .contents
+            .iter()
+            .map(|id| id.hex())
+            .collect::<Vec<_>>();
+        merge_set(
+            cypher,
+            "TournamentKaresPool",
+            &pool.id,
+            ckpt,
+            &[
+                format!("v.balance = {}", q(&pool.funds.balance.value.to_string())),
+                format!(
+                    "v.total = {}",
+                    q(&(pool.funds.balance.value + pool.funds.paid).to_string())
+                ),
+                format!("v.claimed = {}", serde_json::to_string(&claims)?),
+                format!("v.refunded = {}", pool.funds.refunded),
+                format!("v.version = {}", q(&o.version.to_string())),
+            ],
+        );
+        return Ok(());
+    }
+    if is_game(t, game, "tournament", "Tournament") {
+        let tournament = decode::from_bytes::<decode::Tournament>(o.bytes)
+            .map_err(|e| drift("tournament::Tournament", o.id, e))?;
+        anyhow::ensure!(
+            tournament.matches.len() == tournament.fights.len(),
+            "tournament match links differ"
+        );
+        let row = crate::tournament::row(&tournament, o.version);
+        merge_set(
+            cypher,
+            "Tournament",
+            &tournament.id,
+            ckpt,
+            &[
+                format!("v.status = {}", q(&tournament.status)),
+                format!(
+                    "v.kares_pool = {}",
+                    tournament
+                        .kares_pool
+                        .map(|id| q_id(&id))
+                        .unwrap_or_else(|| "NULL".into())
+                ),
+                format!("v.data = {}", q(&row.to_string())),
+                format!("v.created_ckpt = coalesce(v.created_ckpt, {ckpt})"),
+            ],
+        );
+        cypher.push(format!(
+            "MATCH (t:Tournament {{id: {}}})-[r:REGISTERED]->() DELETE r",
+            q_id(&tournament.id)
+        ));
+        for (team, roster) in tournament.teams.iter().enumerate() {
+            for (seat, member) in roster.seats.iter().enumerate() {
+                cypher.push(format!("MATCH (t:Tournament {{id: {}}}) MERGE (u:User {{address: {}}}) CREATE (t)-[:REGISTERED {{pending: {}, eligible: {}, character: {}}}]->(u)",
+                    q_id(&tournament.id), q(&member.owner.hex()), crate::tournament::pending(&tournament, team, seat), roster.place > 0, q_id(&member.character)));
+            }
+        }
+        for (index, fight) in tournament.fights.iter().enumerate() {
+            if let Some(fight) = fight {
+                cypher.push(format!("MERGE (m:TournamentMatch {{fight_id: {}}}) SET m.tournament = {}, m.index = {index}", q_id(fight), q_id(&tournament.id)));
+            }
+        }
+        return Ok(());
+    }
     if is_game(t, game, "kolizeum", "Kolizeum") {
         let k = decode::from_bytes::<decode::Kolizeum>(o.bytes)
             .map_err(|e| drift("kolizeum::Kolizeum", o.id, e))?;
@@ -1411,6 +1482,8 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         ("fight", "Fight", "Fight"),
         ("party", "Party", "Party"),
         ("kolizeum", "Kolizeum", "Kolizeum"),
+        ("tournament", "Tournament", "Tournament"),
+        ("tournament", "KaresPool", "TournamentKaresPool"),
         ("distribution", "Giftcard", "Giftcard"),
         ("loot_box", "BoxClaim", "BoxClaim"),
         ("forgemagie", "CrushClaim", "CrushClaim"),

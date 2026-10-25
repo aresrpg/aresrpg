@@ -62,17 +62,3 @@ export const action_points = (character: Readonly<CharacterRow>): number =>
 
 export const movement_points = (character: Readonly<CharacterRow>): number =>
   BASE_MP + equipment_bonus(character, 'movement')
-
-/** Total of one allocatable characteristic: allocated base + centered gear bonus. */
-export const total_stat = (character: Readonly<CharacterRow>, stat: StatName): number => {
-  const base =
-    stat === 'vitality' ||
-    stat === 'wisdom' ||
-    stat === 'strength' ||
-    stat === 'intelligence' ||
-    stat === 'chance' ||
-    stat === 'agility'
-      ? character[stat]
-      : 0
-  return base + equipment_bonus(character, stat)
-}

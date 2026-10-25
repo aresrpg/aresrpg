@@ -1,0 +1,271 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+@media (max-width: 1023px), (pointer: coarse) {
+  .aui-arena-port:has(.tourney-panel) {
+    width: 100cqw;
+    height: 100cqh;
+    max-height: 100cqh;
+    border-radius: 0;
+  }
+  .tourney-mode > .kz-tabs {
+    padding: 0 8px;
+  }
+  .tourney-mode > .kz-tabs .aui-button {
+    min-height: 40px;
+  }
+  .tourney-masthead {
+    padding: 10px 12px;
+    gap: 14px;
+  }
+  .tourney-panel h2 {
+    font-size: 18px;
+  }
+  .tourney-eyebrow {
+    font-size: 9px;
+    gap: 8px;
+  }
+  .tourney-eyebrow > span:last-child {
+    display: none;
+  }
+  .tourney-event-progress {
+    max-width: 150px;
+  }
+  .tourney-event-progress > small:last-child:not(:first-child) {
+    display: none;
+  }
+  .tourney-event-progress > :is(time, strong) {
+    font-size: 16px;
+  }
+  .tourney-pool-summary .tourney-coin:first-child {
+    font-size: 16px;
+  }
+  .tourney-pool-summary .tourney-pool-lines > :not(:first-child) {
+    display: none;
+  }
+  .tourney-tabs {
+    padding: 0 10px;
+  }
+  .tourney-tabs > .aui-button {
+    min-height: 44px;
+    padding: 6px 10px;
+  }
+  .tourney-teams,
+  .tourney-podium {
+    padding: 12px;
+  }
+  .tourney-team {
+    gap: 10px;
+    padding: 8px 0;
+    grid-template-columns: minmax(140px, 24%) minmax(0, 1fr);
+  }
+  .tourney-seat {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .tourney-leave.aui-button {
+    min-height: 44px;
+  }
+  .tourney-seats:has(> :nth-child(6)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .tourney-team-heading .tourney-monogram {
+    display: none;
+  }
+  .tourney-team-heading p {
+    font-size: 10px;
+  }
+  .tourney-section-heading {
+    gap: 10px;
+  }
+  .tourney-section-heading .aui-button {
+    min-height: 44px;
+  }
+  .tourney-dock {
+    min-height: 60px;
+    padding: 7px 10px;
+    gap: 10px;
+  }
+  .tourney-character {
+    width: 150px;
+  }
+  .tourney-dock-team {
+    max-width: 115px;
+  }
+  .tourney-dock-context > small {
+    display: none;
+  }
+  .tourney-dock-context {
+    flex: 1;
+    max-width: none;
+  }
+  .tourney-dock-team .tourney-attendance {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .tourney-dock-context .aui-button {
+    min-height: 44px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .tourney-dock-actions {
+    gap: 6px;
+  }
+  .tourney-dock-actions .aui-button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  .tourney-action-status {
+    font-size: 11px;
+    max-width: 170px;
+  }
+  .tourney-match-action .aui-button {
+    min-height: 44px;
+  }
+  .tourney-tree {
+    --tourney-card-height: 158px;
+  }
+  .tourney-tree.is-dense {
+    --tourney-card-height: 150px;
+  }
+  .tourney-bracket-scroll {
+    padding: 10px 16px;
+  }
+  .tourney-pedestal {
+    min-height: 120px;
+    padding: 10px;
+  }
+  .tourney-pedestal.is-place-1 {
+    min-height: 140px;
+  }
+  .tourney-reward.aui-button,
+  .tourney-personal-seat .aui-button {
+    min-height: 44px;
+  }
+  .tourney-personal-seat {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .tourney-contribution {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .tourney-contribution-fields :is(select, input, .aui-button) {
+    min-height: 44px;
+  }
+  .tourney-admin-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tourney-admin-column:last-child {
+    grid-column: 1 / -1;
+  }
+  .tourney-admin :is(input, select, .aui-button) {
+    min-height: 44px;
+  }
+  .tourney-hud-desktop {
+    display: none;
+  }
+  .tourney-hud-mobile {
+    display: inline-flex;
+    position: absolute;
+    left: calc(100% + 8px);
+    bottom: 0;
+    gap: 7px;
+    align-items: center;
+    justify-content: center;
+    width: max-content;
+    min-height: 44px;
+    max-width: 180px;
+    padding: 7px 10px;
+    border: 1px solid #ffffff25;
+    border-radius: 4px;
+    color: var(--aui-orange);
+    background: var(--aui-surface);
+    font-size: 12px;
+    box-shadow: var(--aui-shadow);
+  }
+  .tourney-hud-mobile.is-admission {
+    border-color: var(--aui-orange);
+  }
+  .gw-worldchat:has(.chat:not([data-collapsed='true'])) .tourney-hud-mobile {
+    left: auto;
+    right: 0;
+    bottom: calc(100% + 6px);
+  }
+}
+@media (max-width: 700px) {
+  .tourney-masthead {
+    gap: 10px;
+  }
+  .tourney-pool-summary {
+    max-width: 130px;
+  }
+  .tourney-event-progress {
+    max-width: 115px;
+  }
+  .tourney-pool-summary > small,
+  .tourney-event-progress > small:first-child {
+    font-size: 8px;
+  }
+  .tourney-pool-summary .tourney-coin:first-child {
+    font-size: 13px;
+  }
+  .tourney-dock-actions > .aui-button:not(.aui-button--primary) {
+    display: none;
+  }
+  .tourney-character {
+    width: 140px;
+  }
+  .tourney-dock-team {
+    max-width: 90px;
+    min-width: 55px;
+  }
+  .tourney-pedestals {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .tourney-pedestal h3 {
+    font-size: 14px;
+  }
+  .tourney-personal-coins {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tourney-mini-bracket i.is-live {
+    animation: none;
+  }
+  .tourney-admission-track > span {
+    transition: none;
+  }
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .aui-native-modal.aui-modal-scrim:has(> .aui-arena-port .tourney-panel) {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .aui-arena-port:has(.tourney-panel) {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+  .aui-arena-port .tourney-mode > .kz-tabs {
+    top: 0;
+    left: 6px;
+  }
+  .aui-arena-port .tourney-mode > .kz-tabs .aui-button {
+    min-height: 44px;
+    padding: 6px 9px;
+  }
+  .tourney-teams > .tourney-note {
+    margin-bottom: 5px;
+    font-size: 11px;
+  }
+  .tourney-section-heading {
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .tourney-dialog :is(input:not([type='checkbox']), select) {
+    min-height: 44px;
+  }
+}

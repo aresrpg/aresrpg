@@ -14,9 +14,13 @@ const settings = Object.freeze({
   render_distance: null,
 } as const)
 const create_state = () => initial_app_state(settings)
+const unsupported = async (): Promise<never> => {
+  throw new Error('Unused tournament action')
+}
 const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
     address,
+    is_transaction_idle: () => true,
     on_transaction: () => () => {},
     suins: {
       snapshot: async () => ({ default_name: null, names: [] }),
@@ -36,6 +40,24 @@ const auth_session = (address = '0xowner'): AuthSession =>
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
     dungeon: {} as never,
+    tournament: {
+      create_team: unsupported,
+      join_team: unsupported,
+      leave_team: unsupported,
+      donate: unsupported,
+      open: unsupported,
+      join: unsupported,
+      ready: unsupported,
+      crank: unsupported,
+      crank_unopened: unsupported,
+      settle: unsupported,
+      forfeit: unsupported,
+      close: unsupported,
+      claim_coins: unsupported,
+      refund_kares: unsupported,
+      claim_item: unsupported,
+      expire: unsupported,
+    },
     kolizeum: {} as never,
     friends: {} as never,
     party: {} as never,

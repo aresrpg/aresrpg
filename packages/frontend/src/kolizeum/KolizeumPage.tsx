@@ -6,6 +6,7 @@ import { Loader2, Plus, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
 
+import { TournamentPanel } from '../tournament/TournamentPanel.tsx'
 import { Text } from '../i18n/Text.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
@@ -167,9 +168,12 @@ const JoinConfirmation = ({
   )
 }
 
-export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
-  const localized_numbers = useNumbers()
-  const t = copy_text(copy.kolizeum_page)
+export default function KolizeumPage({
+  copy,
+  fight_mounted = false,
+}: Readonly<{ copy: AppCopy; fight_mounted?: boolean }>) {
+  const [tournaments, set_tournaments] = useState(true)
+  const tournament_mode = tournaments || fight_mounted
   const lobbies = useAppStore((state) => state.kolizeum.lobbies)
   const address = useAppStore((state) => state.session.wallet?.address ?? null)
   const characters = useAppStore((state) => state.session.characters)
@@ -177,16 +181,34 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const pending = useAppStore(selected_kolizeum_pending)
   const has_friends = useAppStore((state) => state.friends.rows.length > 0)
   return (
-    <KolizeumView
-      copy={copy}
-      lobbies={lobbies}
-      address={address}
-      characters={characters}
-      selected_character_id={selected_character_id}
-      pending={pending}
-      has_friends={has_friends}
-      dispatch={dispatch_app}
-    />
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden${tournament_mode ? ' tourney-mode' : ''}`}>
+      <nav className="kz-tabs">
+        <Button className={tournament_mode ? 'is-active' : ''} onClick={() => set_tournaments(true)}>
+          {copy_text(copy.tournament_page)('title')}
+        </Button>
+        <Button
+          disabled={fight_mounted}
+          className={!tournament_mode ? 'is-active' : ''}
+          onClick={() => set_tournaments(false)}
+        >
+          {copy_text(copy.tournament_page)('wagered')}
+        </Button>
+      </nav>
+      {tournament_mode ? (
+        <TournamentPanel />
+      ) : (
+        <KolizeumView
+          copy={copy}
+          lobbies={lobbies}
+          address={address}
+          characters={characters}
+          selected_character_id={selected_character_id}
+          pending={pending}
+          has_friends={has_friends}
+          dispatch={dispatch_app}
+        />
+      )}
+    </div>
   )
 }
 export const KolizeumView = ({

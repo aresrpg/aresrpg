@@ -18,6 +18,8 @@ export type ParsedDoor = {
 }
 
 export const API_MOVE_PATH: string
+export const TOURNAMENT_MOVE_PATH: string
+export const TOURNAMENT_BRACKET_PATH: string
 export const TRADE_MOVE_PATH: string
 export const DOORS_OUT_PATH: string
 export const CHARACTER_MOVE_PATH: string
@@ -30,5 +32,12 @@ export function generate_projected_doors(
   options?: Readonly<{ source?: string; description?: string }>
 ): Promise<string>
 export function generate(move_source: string): Promise<string>
-export function generate_game_doors(api_source: string, trade_source: string): Promise<string>
+export function generate_game_doors(
+  api_source: string,
+  trade_source: string,
+  tournament_source: string
+): Promise<string>
 export function generate_character_price(move_source: string): Promise<string>
+
+export const TOURNAMENT_RULES_OUT_PATH: string
+export const generate_tournament_rules: (source: string, bracket_source: string) => Promise<string>

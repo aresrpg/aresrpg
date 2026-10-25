@@ -5,6 +5,7 @@
 import {
   compile_runtime_world_recipe,
   create_engine,
+  terrain_failure,
   create_terrain_planner,
   parse_world_recipe,
   type EngineRenderState,
@@ -148,12 +149,10 @@ export const create_world = ({
     initial_quality: quality,
     initial_render_distance: render_distance,
     plan_layers: terrain_planner.plan,
-    on_failure: (error) => engine.fail({ code: 'terrain_failed', detail: error.message }),
+    on_failure: (error) => engine.fail(terrain_failure(error)),
   })
 
-  const collision = create_world_collision(compiled, (error) =>
-    engine.fail({ code: 'terrain_failed', detail: String(error) })
-  )
+  const collision = create_world_collision(compiled, (error) => engine.fail(terrain_failure(error)))
   const {
     solid_at,
     liquid_at,

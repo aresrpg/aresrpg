@@ -1,5 +1,6 @@
 title: WebGPU is unavailable
 body: 'The world requires WebGPU and a secure connection (HTTPS or localhost). Open it in a supported browser.'
+engine_graphics_failure: Graphics could not start. Check your browser’s graphics settings or update your graphics driver, then reload.
 engine_recovery: The world stopped loading or rendering. Reload to try again.
 engine_reload: Reload
 engine_minimum_title: 'Graphics reduced'
@@ -1173,6 +1174,7 @@ wallet_send_shared:
   transaction: Transaction
 
 encyclopedia_page:
+  tokenomics_tab: Tokenomics
   world_locations: 'Locations'
   world_search_places: 'Find a biome, city, mob or resource…'
   world_entry: 'Entry Lv. {{level}}'
@@ -2775,6 +2777,9 @@ adventure:
   boss_body: 'Beyond the guards waits Gobadoc himself, with the relic Sceat came looking for. The Goblin King did not earn that title by losing arguments. You have learned to fight together, but this is a very different opponent. Approach him with your companion and see how far your new partnership can take you.'
 
 discord_marketplace:
+  rare_loot_title: 'Rare boss loot'
+  rare_loot: '**{player}** found **{amount}× {item}** on **{mob}** — **{chance}% base drop chance**.'
+  drop_chance: '{chance}% base drop chance'
   title: 'MARKETPLACE · SALE'
   sale: '**{seller}** just sold **{amount}× {item}** for **{price} SUI**'
   price_before_fees: 'Sale price before fees'
@@ -2846,6 +2851,8 @@ gift_page:
   error_login: 'Sign-in wasn’t completed. Try again. If the window was blocked, open this link in Safari or Chrome.'
 
 loading_screen:
+  browser_reload: Use your browser’s Reload button to try again.
+  slow: Loading is taking longer than expected. You can wait or reload.
   eyebrow: 'Your next adventure awaits'
   home_eyebrow: 'A quiet moment before the adventure'
   home_title: 'Your adventure starts here.'
@@ -3012,3 +3019,217 @@ allocation_page:
   error_foreign_post: 'These posts must be authored by your connected X account. Change the account or the links.'
   error_missing_post: 'One or more posts could not be found. Check that they are public and the links are correct.'
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
+
+tournament_page:
+  title: Tournament
+  no_event: No tournament announced.
+  open: Registration open
+  in_progress: In progress
+  finished: Finished
+  cancelled: Cancelled
+  create_team: Create team
+  team_name: Team name
+  restricted: Restricted team
+  allowed_names: Teammate names, separated by commas
+  find_team: Find a team
+  join: Join
+  leave: Leave
+  donate: Contribute
+  amount: Amount
+  confirm: Confirm
+  cancel: Cancel
+  waiting: Waiting
+  live: Live
+  no_winner: No winner
+  crank: Advance match
+  spectate: Watch
+  claim: Claim
+  items: Items per participant
+  place: Place
+  joint_fifth: Joint fifth
+  asset: Currency
+  admin: Tournament administration
+  admin_cap: AdminCap object ID
+  create_event: Create tournament
+  start: Start tournament
+  setup_display: Set up Display once
+  deadline: Latest start
+  name: Name
+  format: Format
+  final: Final
+  bronze: Bronze match
+  roster_notice: Only complete teams enter the bracket. Registration authorizes automatic match joining. Stay online; each match gives 60 seconds to join.
+  donation_notice: Contributions are final. If cancelled, funds go to the organizer for any manual refunds. Unawarded prizes also go to the organizer.
+  refund_pool: Return unused KARES to organizer
+  expire: Close expired registration
+  teams: Teams
+  bracket: Bracket
+  podium: Podium & prizes
+  podium_claims: Podium · {{count}} to claim
+  your_rewards: Your rewards
+  your_team: Your team
+  character: Character
+  event: Event
+  event_sections: Tournament sections
+  single_elimination: Single elimination
+  registered_count: '{{count}} teams'
+  team_counts: '{{teams}} registered · {{complete}} complete · {{minimum}} complete needed to start'
+  ready_count: '{{complete}} / {{minimum}} complete teams to start'
+  open_anyone: Open to anyone
+  named_only: Named characters only
+  reserved_seat: Reserved character
+  take_seat: Take seat
+  open_seat: Open seat
+  no_teams: No teams yet. Create one or find teammates.
+  not_registered: Not registered
+  leave_character: Remove {{name}} from the team
+  leave_review: Remove {{character}} from {{team}}? This character will no longer be registered.
+  join_review: Register {{character}} with {{team}}?
+  consent_notice: Named characters reserve seats. Their owners must register them separately.
+  too_many_names: Include no more than {{count}} characters, including yours.
+  stay_online: Stay online with gas available. The app attempts entry for your registered characters during each 60-second admission window.
+  action_find: Find a team
+  action_add: Add your character
+  action_open: Open match
+  action_join: Join match
+  action_start: Start match
+  action_record: Record result
+  action_end: End without winner
+  action_expire: Close expired registration
+  action_refund: Return KARES to organizer
+  return_fight: Return to fight
+  claim_count: Claim {{count}} rewards
+  show_bracket: Show bracket
+  show_my_match: Show my match
+  match_number: Match {{match}}
+  semifinals: Semifinals
+  quarterfinals: Quarterfinals
+  round_of: Round of {{count}}
+  round_counts: '{{live}} live · {{done}}/{{count}}'
+  from_winner: Winner of M{{match}}
+  from_loser: Loser of M{{match}}
+  empty_bracket: No entrant
+  winner: Winner
+  advancing: Advancing
+  placement: Placement
+  fifth_pending: Quarterfinal results pending
+  fifth_notice: Walkovers do not award consolation places.
+  no_matches: No bracket was played.
+  end_review: End this match without a winner? Neither team advances from this match. This cannot be undone.
+  match_waiting: Waiting
+  match_admission: Admission open
+  match_force_due: Admission closed
+  match_live: Live
+  match_recording: Result to record
+  match_timed_out: Time limit reached
+  match_done: Completed
+  match_walkover: Walkover
+  match_bye: Bye
+  match_no_winner: No winner
+  match_clock_unknown: Waiting for chain time
+  reason_registered: Registered · stay online
+  reason_join: Join this team
+  reason_add: Add your character
+  reason_closed: Registration closed
+  reason_clock: Waiting for a fresh chain clock
+  reason_wallet: Connect your game wallet
+  reason_character: Select a character
+  reason_elsewhere: Already registered with another team
+  reason_full: Team slots are full
+  reason_restricted: This character is not named on this team
+  reason_custody: This character must be in its kiosk
+  reason_waiting: Waiting for the next match
+  reason_admission: Admission open
+  reason_force_due: Match can start
+  reason_live: Match in progress
+  reason_recording: Result awaits recording
+  reason_timed_out: Match time limit reached
+  reason_done: Match completed
+  reason_walkover: Won by walkover
+  reason_bye: Advanced by bye
+  reason_no_winner: No winner
+  reason_clock_unknown: Waiting for a fresh chain clock
+  reason_loading: Loading tournament state…
+  reason_loaded: Tournament state loaded
+  reason_unavailable: Tournament state is unavailable. Known results remain visible; actions wait for reconnection.
+  reason_none: No tournament announced
+  reason_pending: Waiting for transaction confirmation…
+  reason_finished: No rewards to claim
+  reason_cancelled: Tournament cancelled
+  reason_cannot_watch: Finish your owned fight before watching another
+  loading: Loading…
+  unavailable: Unavailable
+  custody_kiosk: Kiosk
+  custody_fight: In combat
+  custody_trade: In trade
+  latest_start_notice: The organizer may start any time before this deadline.
+  champion: '{{team}} win'
+  prize_pool: Prize pool
+  frozen_pool: Prize pool · frozen
+  token_unavailable: KARES is not available yet
+  items_only: Items only · {{count}} rewards
+  item_count: '{{count}} item rewards'
+  place_number: Place {{place}}
+  not_awarded: Not awarded
+  to_be_decided: To be decided
+  allocation_percent: SUI {{sui}}% · KARES {{kares}}%
+  split_notice: Each place shares its allocation across all registered seats at that place, including absent teammates. Joint fifth shares one allocation. Final standings determine exact per-character amounts.
+  claim_notice: One coin claim collects every positive currency payout for this character. Items are independent. Fight custody settlement is separate.
+  claimed: Claimed
+  unclaimed: Unclaimed
+  claim_coins: Claim coins
+  no_platform_fee: No platform fee · normal gas applies
+  no_champion: This tournament ended without a champion.
+  unknown_item: Item details unavailable
+  rolled_items_notice: Items are minted from their templates. Random statistics are rolled when claimed.
+  contribution_review: Review contribution
+  pool_after: 'Pool after this contribution: {{amount}} {{asset}}'
+  contribution_confirmed: Contribution confirmed. The pool refreshes when the indexed update arrives.
+  close: Close
+  transaction_confirmed: Transaction confirmed. The event refreshes with the indexed update.
+  cancelled_notice: Tournament cancelled. Unused money returns to the original organizer.
+  expired_notice: The latest-start deadline has passed. Registration can be closed; the tournament cannot start.
+  open_event: Open {{name}} tournament
+  open_window: Open tournament
+  older_claims: '{{count}} older events have rewards to claim'
+  result_line: '{{team}} advanced'
+  live_count: '{{count}} live'
+  prize_split: Prize allocation
+  invalid_percentage: Enter percentages with at most two decimals.
+  allocation_excess: '{{amount}}% over allocated'
+  allocation_remaining: '{{amount}}% remaining'
+  allocation_notice: Each currency must total 100%. Both tables affect the minimum team count, even before funding.
+  reward_place: Place for reward {{number}}
+  reward_quantity: Quantity for reward {{number}}
+  quantity_short: Qty
+  remove_reward: Remove reward {{number}}
+  add_item: Add item reward
+  choose_item: Choose reward item
+  search_items: Search items
+  all_items: All items
+  no_items: No matching items
+  new_item: New
+  organizer_event: Organizer & event
+  timezone: 'Timezone: {{zone}}'
+  minimum_teams: At least {{count}} complete teams are required.
+  minimum_label: Minimum complete teams
+  minimum_notice: Two teams are needed normally, four for third/fourth prizes, and eight for fifth-place prizes. Both currencies and item rewards count.
+  immutable_notice: Creating fixes the format, prize percentages, item rewards, and latest-start deadline. These settings cannot be edited.
+  recipient_notice: Coins pay the registered owners. Every eligible character receives each configured item quantity.
+  cancel_event: Cancel tournament
+  start_review: Starting freezes complete rosters and prize totals, shuffles the bracket, and opens the first 60-second admission windows.
+  excluded_teams: 'Excluded incomplete teams: {{teams}}'
+  none_excluded: None
+  cancel_review: Cancel this tournament? All contributed money returns to the original organizer, not automatically to each donor.
+  organizer_address: 'Original organizer: {{address}}'
+  review_changed: The event changed or the deadline passed. Close this review and inspect the current state.
+  running_admin_notice: The event is running. Use match recovery in the tournament window; running events cannot be cancelled.
+  deployment_metadata: Deployment metadata
+  display_notice: Display metadata is configured once per deployment. It is not required for each tournament.
+  submitted_notice: The action was submitted. Check the current event before submitting again.
+  custody_undefined: Custody unknown
+  wagered: Wagered
+  complete_notice: Only complete teams enter the bracket. Other teams are excluded at start.
+  find_review: Find a team for {{character}} and register this character?
+  joined_count: '{{count}}/{{total}} joined'
+  versus: vs {{team}}

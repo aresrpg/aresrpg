@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { createRoot } from 'react-dom/client'
 
+import { finish_startup_recovery } from '../startup_recovery.ts'
 import { load_app_copy } from '../i18n/copy.ts'
 import { load_locale } from '../i18n/locale.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
@@ -16,6 +17,7 @@ export const boot_allocation = async (): Promise<void> => {
   set_master_audio_volume(master_volume_from(load_game_settings('medium').master_volume))
   const locale = load_locale()
   const copy = await load_app_copy(locale)
+  finish_startup_recovery()
   const runtime = create_allocation_runtime()
   createRoot(document.getElementById('root')!, react_error_handlers).render(
     <LocaleScope locale={locale}>

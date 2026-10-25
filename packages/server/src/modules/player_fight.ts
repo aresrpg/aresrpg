@@ -206,15 +206,15 @@ export default {
           if (observation_versions.get(observation_key) !== version) return
           const current = get_state()
           const latest = current.characters[action.character_id]
-          if (!latest || (latest.fight && latest.fight !== action.fight)) return
+          if (!latest || !fight || (latest.fight && latest.fight !== action.fight)) return
           const already_watched = fights_of(current).has(action.fight!)
           const character = latest.presence
-          const nearby =
-            fight &&
-            fight.world === character.world &&
-            Math.abs(zone_of(fight.x, fight.z).zx - zone_of(character.x, character.z).zx) <= SPECTATE_RADIUS &&
-            Math.abs(zone_of(fight.x, fight.z).zz - zone_of(character.x, character.z).zz) <= SPECTATE_RADIUS
-          if (!nearby) {
+          const nearby = [
+            fight.world === character.world,
+            Math.abs(zone_of(fight.x, fight.z).zx - zone_of(character.x, character.z).zx) <= SPECTATE_RADIUS,
+            Math.abs(zone_of(fight.x, fight.z).zz - zone_of(character.x, character.z).zz) <= SPECTATE_RADIUS,
+          ].every(Boolean)
+          if (!nearby && !fight.tournament) {
             send({ type: 'packet/error', reason: 'fight not nearby' })
             return
           }

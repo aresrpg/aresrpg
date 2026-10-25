@@ -64,8 +64,11 @@ describe('allocation conservation and ranking', () => {
   test('rejects duplicate or overbooked reserved addresses', () => {
     const row: Award = { address: '0x1', tier: 'veteran', source: 'community', evidence: 'Chinese community' }
     expect(() => validate_reserved([row, { ...row, address: address(1) }])).toThrow('duplicate_address')
+    expect(
+      validate_reserved(Array.from({ length: 5 }, (_, index) => ({ ...row, address: address(index + 1) })))
+    ).toHaveLength(5)
     expect(() =>
-      validate_reserved(Array.from({ length: 4 }, (_, index) => ({ ...row, address: address(index + 1) })))
+      validate_reserved(Array.from({ length: 6 }, (_, index) => ({ ...row, address: address(index + 1) })))
     ).toThrow('reserved_quota_exceeded')
   })
   test('rejects foreign, missing and duplicate posts instead of awarding fabricated zero scores', () => {

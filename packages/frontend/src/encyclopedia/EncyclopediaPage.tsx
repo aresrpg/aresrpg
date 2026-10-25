@@ -31,7 +31,7 @@ export const EncyclopediaPage = ({
         on_change={(tab) => navigate(encyclopedia_route(tab))}
         options={ENCYCLOPEDIA_TABS.map((tab) => ({
           value: tab.id,
-          label: tab.id === 'kares' ? copy.kares : text(tab.label),
+          label: text(tab.label),
         }))}
       />
       <EncyclopediaContent copy={copy} navigate={navigate} pathname={pathname} />

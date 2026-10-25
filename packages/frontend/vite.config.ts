@@ -26,6 +26,7 @@ import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
 import { gift_dev_plugin } from './gift_dev.ts'
+import { deployment_build_config } from './deployment_assets.ts'
 import { public_pages_plugin } from './public_pages.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
@@ -78,6 +79,7 @@ const yaml_plugin = (): Plugin => ({
 export default defineConfig(({ mode, command }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
   const loaded_env = loadEnv(mode, frontend_dir, '')
+  const deployment = deployment_build_config(loaded_env)
   if (mode === 'production') require_reporting_dsn(loaded_env)
   const env = resolve_env(loaded_env)
   const manifest: Partial<ManifestOptions> = {
@@ -119,7 +121,9 @@ export default defineConfig(({ mode, command }) => {
       'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(loaded_env.VERCEL_ENV ?? 'local'),
       'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
     },
+    experimental: deployment.experimental,
     plugins: [
+      ...deployment.plugins,
       public_pages_plugin(),
       gift_dev_plugin(loaded_env),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
@@ -157,6 +161,7 @@ export default defineConfig(({ mode, command }) => {
         injectRegister: false,
         manifest,
         workbox: {
+          manifestTransforms: deployment.precache_transforms,
           clientsClaim: true,
           cleanupOutdatedCaches: true,
           skipWaiting: true,

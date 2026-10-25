@@ -100,6 +100,7 @@ test('local recovery still guards backend, SDK, engine, content, and dependency 
     'packages/engine/src/worldgen.ts',
     'seed/content/items.json',
     'bun.lock',
+    'patches/vite@8.3.0.patch',
     'packages/frontend/package.json',
     'packages/frontend/src/i18n/locales/en.yaml',
   ]) {

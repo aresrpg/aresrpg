@@ -4,7 +4,7 @@ import type { GreedyMeshData } from './greedy_mesher.ts'
 import type { ScatterMeshData } from './scatter_mesh.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
 import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
-import type { WorkerReply } from './worker_reply.ts'
+import { read_worker_error, type WorkerReply } from './worker_reply.ts'
 
 export type MeshResult = Readonly<{
   chunk: RenderedChunk
@@ -80,7 +80,7 @@ export const create_mesh_pool = (
       if (!job || job.id !== data.id) return
       active.delete(worker)
       idle.push(worker)
-      if ('error' in data) job.reject(new Error(data.error))
+      if ('error' in data) job.reject(read_worker_error(data))
       else job.resolve(data.result)
       drain()
     })

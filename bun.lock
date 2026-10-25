@@ -212,6 +212,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "vite@8.3.0": "patches/vite@8.3.0.patch",
+  },
   "overrides": {
     "react": "19.3.0",
     "react-dom": "19.3.0",

@@ -14,7 +14,6 @@ import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } fr
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { city_map_overlays, type CompiledWorld } from '@aresrpg/engine'
 
-import './world_map.css'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'

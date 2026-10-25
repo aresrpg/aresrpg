@@ -26,6 +26,8 @@ overruled row.
 - Model data before logic. Prefer a rule that removes a special case over another branch.
 - Write one premortem: `this fails if ...`; mitigate the likely answer first.
 - New surfaces need an explicit design pass. A fix inside an established owner does not.
+- Disclose every new limit to the owner before implementing it, including its value, rationale,
+  and impact. Distinguish measured technical constraints from product choices; never silently add a cap.
 - Dependencies are permanent commitments. Prefer a small local implementation for a small need.
 
 ## Implementation law

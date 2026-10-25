@@ -10,11 +10,12 @@
 
 import { IconButton } from '@aresrpg/ui'
 import { character_equipment_slots } from '@aresrpg/immutable'
-import { useMemo, useState } from 'react'
+import { cloneElement, useMemo, useState } from 'react'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
 import { character_render_source } from '../game/character_entities.ts'
+import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { titleize } from '../content/catalog.ts'
@@ -146,6 +147,7 @@ export default function EquipmentTab({
             set_selected_ids([])
           }}
           slot_state={(slot) => {
+            const worn = equipment[slot]
             const dragged = dragging_id ? bag.find(({ id }) => id === dragging_id) : null
             const valid =
               !!dragged &&
@@ -157,6 +159,11 @@ export default function EquipmentTab({
                 listed_ids: encumbered_ids,
               })
             return {
+              hover: worn
+                ? (content) => (
+                    <ItemDetailHover item={worn}>{cloneElement(content, { title: undefined })}</ItemDetailHover>
+                  )
+                : undefined,
               valid,
               staged: changes.to_equip.some((change) => change.slot === slot),
               on_double_click: () => {

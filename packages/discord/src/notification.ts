@@ -23,6 +23,8 @@ export type Victory = Base &
 export type Loot = Base &
   Readonly<{
     kind: 'loot'
+    amount: number
+    sources: readonly Readonly<{ mob_type: string; chance_bp: number }>[]
     address: string
     object: string
     item_type: string
@@ -76,6 +78,14 @@ const parse_stats = (value: unknown): Readonly<Record<string, number>> => {
     })
   )
 }
+const parse_sources = (value: unknown): Loot['sources'] => {
+  if (!Array.isArray(value) || !value.length || value.length > 32) throw new Error('Invalid loot sources')
+  return value.map((row: Record<string, unknown>) => {
+    const chance_bp = integer(row.chance_bp)
+    if (chance_bp > 10000) throw new Error('Invalid drop chance')
+    return { mob_type: slug(row.mob_type), chance_bp }
+  })
+}
 export const parse_notification = (value: unknown): Notification => {
   if (!value || typeof value !== 'object') throw new Error('Invalid notification')
   const row = value as Record<string, unknown>
@@ -108,6 +118,8 @@ export const parse_notification = (value: unknown): Notification => {
       return {
         ...base,
         kind: 'loot',
+        amount: integer(row.amount),
+        sources: parse_sources(row.sources),
         address: address(row.address),
         object: address(row.object),
         item_type: slug(row.item_type),

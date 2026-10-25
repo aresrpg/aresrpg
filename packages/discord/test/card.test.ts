@@ -52,3 +52,22 @@ test('every supported locale renders the same sale fields without missing placeh
     expect(model.content).not.toMatch(/\{\w+\}/)
   }
 })
+
+test('loot feed validates snapshot chances and all locales describe rare drops', async () => {
+  const { examples } = await import('./fixtures.ts')
+  const loot = examples[3]!
+  if (loot.kind !== 'loot') throw new Error('bad fixture')
+  const rare = { ...loot, sources: [{ mob_type: 'golden_lorito', chance_bp: 100 }], stats: {} }
+  expect(parse_notification(rare)).toEqual(rare)
+  for (const chance_bp of [-1, 10001, 0.1]) {
+    expect(() => parse_notification({ ...rare, sources: [{ mob_type: 'golden_lorito', chance_bp }] })).toThrow()
+  }
+  const glob = new Bun.Glob('*.yaml')
+  const directory = new URL('../../frontend/src/i18n/locales/', import.meta.url).pathname
+  for await (const file of glob.scan(directory)) {
+    const model = announcement(await load_copy(file.replace('.yaml', '')), {}, rare)!
+    expect(model.content).toContain('1%')
+    expect(model.content).not.toMatch(/\{\w+\}/)
+    expect(model.visual.rare).toBe(true)
+  }
+})

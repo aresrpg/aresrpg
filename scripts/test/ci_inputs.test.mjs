@@ -35,6 +35,8 @@ for (const path of [
   'packages/frontend/e2e/playwright.config.ts',
   'seed/models/body.glb',
   'bun.lock',
+  'patches/vite@8.3.0.patch',
+  'scripts/pin_vercel_deployment.ts',
   'scripts/prepare_browser.mjs',
   '.github/workflows/gate.yml',
   'scripts/ci_inputs.mjs',

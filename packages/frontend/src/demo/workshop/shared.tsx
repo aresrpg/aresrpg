@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Button, type ItemView, type WorkspaceHeader } from '@aresrpg/ui'
+import { Button, type WorkspaceHeader } from '@aresrpg/ui'
 import { useState, useMemo, useContext, createContext, type ReactNode } from 'react'
 
 import { ItemCraftSessionContext } from '../../components/ItemCrafting.tsx'
 import { adventure_character } from '../../adventure/character.ts'
 import { adventure_character_row } from '../../adventure/projection.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
-import { character_icon, item_icon } from '../../content/assets.ts'
-import { content_catalog, type SeedItem } from '../../content/catalog.ts'
+import { character_icon } from '../../content/assets.ts'
 
 export const WorkshopCloseContext = createContext<(() => void) | undefined>(undefined)
 
@@ -47,18 +46,6 @@ export const WorkshopSurface = ({
     </ItemCraftSessionContext.Provider>
   )
 }
-
-export const item_view = (item: Readonly<SeedItem>, quantity?: number): ItemView => ({
-  id: item.item_type,
-  label: item.name,
-  image: item_icon(item.item_type) ?? undefined,
-  quantity,
-})
-export const preview_items = (category: string, count = 12): readonly ItemView[] =>
-  content_catalog.items
-    .filter((item) => item.category === category)
-    .slice(0, count)
-    .map((item) => item_view(item))
 
 type PreviewPerson = Readonly<{
   id: string

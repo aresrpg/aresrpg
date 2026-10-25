@@ -1,0 +1,71 @@
+{
+  "network": "isolated localnet",
+  "chain": "45556098",
+  "captured": "2026-10-24",
+  "id": "0x481f8cc2ab4b185f8d4777e26d62db1c352388a53e13d0f28bff62e77934cf7c",
+  "version": "71562",
+  "type": "0x8c93afff4f451fd6df01ac04cc47bb8994c95d986c7d4caa58798d3a47b62458::tournament::Tournament",
+  "transaction": "7SSr33PNWYm34AYcY4XZ27Aq1E4zQ1ZePHd2NHb7ptir",
+  "bcs": "481f8cc2ab4b185f8d4777e26d62db1c352388a53e13d0f28bff62e77934cf7c0c4361707475726564206375700866696e6973686564eb400e6d157882936b636a9da4ba5bae08e2039ba740e8b5807b7df3bd2fc4a00100000000000000244a0d6da1010000057017000000000000a00f00000000000000000000000000000000000000000000000000000000000005102700000000000000000000000000000000000000000000000000000000000000000000000000000101abfc16e03836e9a706aef5f28c2db725ef30af5d44bb54822d7a2a3f85ef2a6602000000000000000000000001943577000000000002065465616d2030000000000000000000012b2d34e8de91c5e7a1e47355169949a8d0221720e1751458235cb29be2c84668eb400e6d157882936b636a9da4ba5bae08e2039ba740e8b5807b7df3bd2fc4a001010000000000000001065465616d203100000000000000000001276392ae8463b2b89c21caabf96b8e8ab9ee54cf494e5bd7d6b5933d40a85dc02c9c8a9aaaccd6b9f2b468da5cd70712effcc5deab8c6d7f0fcb4f69f661b3ce00000000000000000000010101000000000000000100000000000000001675d86ca10100000201000000000000000000010163d24b6611e0ffb60ffdf0dccae42e25d46e0bcc3ffa46d59b071df0e87181b7",
+  "json": {
+    "fights": ["0x63d24b6611e0ffb60ffdf0dccae42e25d46e0bcc3ffa46d59b071df0e87181b7"],
+    "format": "1",
+    "id": "0x481f8cc2ab4b185f8d4777e26d62db1c352388a53e13d0f28bff62e77934cf7c",
+    "kares_pool": null,
+    "matches": [
+      {
+        "a": "1",
+        "available_ms": "1792827487510",
+        "b": "0",
+        "loser": null,
+        "state": 2,
+        "winner": "0"
+      }
+    ],
+    "name": "Captured cup",
+    "organizer": "0xeb400e6d157882936b636a9da4ba5bae08e2039ba740e8b5807b7df3bd2fc4a0",
+    "rewards": [
+      {
+        "amount": 2,
+        "place": 1,
+        "template": "0xabfc16e03836e9a706aef5f28c2db725ef30af5d44bb54822d7a2a3f85ef2a66"
+      }
+    ],
+    "start_before_ms": "1792830949924",
+    "status": "finished",
+    "sui": "0",
+    "sui_bps": ["6000", "4000", "0", "0", "0"],
+    "sui_total": "2000000001",
+    "teams": [
+      {
+        "allowed": [],
+        "name": "Team 0",
+        "place": 1,
+        "revision": "0",
+        "seats": [
+          {
+            "character": "0x2b2d34e8de91c5e7a1e47355169949a8d0221720e1751458235cb29be2c84668",
+            "items_claimed": "1",
+            "owner": "0xeb400e6d157882936b636a9da4ba5bae08e2039ba740e8b5807b7df3bd2fc4a0",
+            "sui_claimed": true
+          }
+        ]
+      },
+      {
+        "allowed": [],
+        "name": "Team 1",
+        "place": 0,
+        "revision": "0",
+        "seats": [
+          {
+            "character": "0x276392ae8463b2b89c21caabf96b8e8ab9ee54cf494e5bd7d6b5933d40a85dc0",
+            "items_claimed": "0",
+            "owner": "0x2c9c8a9aaaccd6b9f2b468da5cd70712effcc5deab8c6d7f0fcb4f69f661b3ce",
+            "sui_claimed": false
+          }
+        ]
+      }
+    ],
+    "token_bps": ["10000", "0", "0", "0", "0"]
+  }
+}

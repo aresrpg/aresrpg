@@ -1504,7 +1504,7 @@
         9
       ],
       "observe > observe_fight > get_fight(graph, { fight_id: action.fight }) .then[0]([fight])": [
-        10
+        9
       ],
       "observe > project_authority": [
         9
@@ -2221,6 +2221,47 @@
     "packages/frontend/src/allocation/client.ts": {
       "create_allocation_client > start > dispatch": [
         10
+      ]
+    },
+    "packages/frontend/src/modules/tournament.ts": {
+      "reduce": [
+        9
+      ]
+    },
+    "packages/frontend/src/modules/tournament_selectors.ts": {
+      "tournament_review_available": [
+        11
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentBracket.tsx": {
+      "BracketSide": [
+        10
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentPanel.tsx": {
+      "TournamentEvent": [
+        10
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentControls.tsx": {
+      "TournamentActionButton > activate": [
+        9
+      ],
+      "TournamentIntentReview": [
+        9
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentTeams.tsx": {
+      "CreateTournamentTeam": [
+        11
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentHud.tsx": {
+      "HudBody": [
+        9
+      ],
+      "HudEvent": [
+        9
       ]
     }
   }

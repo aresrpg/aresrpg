@@ -177,6 +177,40 @@ const hero = (ctx: SKRSContext2D, card: VisualCard, palette: Palette, accent: st
   line(ctx, card.subtitle, TEXT_X, 86, TEXT_WIDTH)
 }
 
+const rare_hero = (ctx: SKRSContext2D, card: VisualCard, palette: Palette, accent: string, image: Image) => {
+  ctx.save()
+  ctx.translate(WIDTH / 2, 124)
+  ctx.strokeStyle = `${accent}55`
+  ctx.lineWidth = 1
+  for (const size of [79, 88]) {
+    ctx.beginPath()
+    ctx.moveTo(0, -size)
+    ctx.lineTo(size, 0)
+    ctx.lineTo(0, size)
+    ctx.lineTo(-size, 0)
+    ctx.closePath()
+    ctx.stroke()
+  }
+  ctx.restore()
+  picture(ctx, image, WIDTH / 2 - 70, 54, 140)
+  ctx.textAlign = 'center'
+  font(ctx, 12, 800)
+  ctx.letterSpacing = '2px'
+  ctx.fillStyle = accent
+  line(ctx, card.type.toUpperCase(), WIDTH / 2, 20, WIDTH - PAD * 2)
+  ctx.letterSpacing = '0px'
+  font(ctx, 27, 800)
+  ctx.fillStyle = palette.ink
+  line(ctx, card.title, WIDTH / 2, 218, WIDTH - PAD * 2)
+  font(ctx, 15)
+  ctx.fillStyle = palette.muted
+  line(ctx, card.subtitle, WIDTH / 2, 254, WIDTH - PAD * 2)
+  font(ctx, 16, 800)
+  ctx.fillStyle = accent
+  line(ctx, card.summary ?? '', WIDTH / 2, 282, WIDTH - PAD * 2)
+  ctx.textAlign = 'left'
+}
+
 export const create_renderer = async (warn: (message: string) => void = console.warn) => {
   const css = await readFile(ui_file('base.css'), 'utf8')
   const palette = Object.fromEntries(
@@ -209,24 +243,26 @@ export const create_renderer = async (warn: (message: string) => void = console.
     font(measure, 14)
     const party = wrap(measure, card.party.join('  ·  '), WIDTH - PAD * 2)
     const stat_height = card.stats.length ? 20 + Math.ceil(card.stats.length / 2) * STAT_ROW : 0
-    const height = HERO + stat_height + (party.length ? 24 + party.length * PARTY_ROW : 0)
+    const hero_height = card.rare ? 320 : HERO
+    const height = hero_height + stat_height + (party.length ? 24 + party.length * PARTY_ROW : 0)
     canvas.height = height * SCALE
     const ctx = canvas.getContext('2d')
     ctx.scale(SCALE, SCALE)
     const accent = card.tone === 'gold' ? palette.orange : palette.blue
     surface(ctx, height, palette, accent, grain)
-    hero(ctx, card, palette, accent, await artwork(card.image))
-    if (height > HERO) {
+    const paint_hero = card.rare ? rare_hero : hero
+    paint_hero(ctx, card, palette, accent, await artwork(card.image))
+    if (height > hero_height) {
       const rule = ctx.createLinearGradient(PAD, 0, WIDTH - PAD, 0)
       rule.addColorStop(0, '#ffffff1f')
       rule.addColorStop(1, '#ffffff00')
       ctx.fillStyle = rule
-      ctx.fillRect(PAD, HERO - 1, WIDTH - PAD * 2, 1)
+      ctx.fillRect(PAD, hero_height - 1, WIDTH - PAD * 2, 1)
     }
     font(ctx, 14, 700)
     ctx.fillStyle = palette.ink
-    party.forEach((row, index) => line(ctx, row, PAD, HERO + 12 + index * PARTY_ROW, WIDTH - PAD * 2))
-    await stat_rows(ctx, card, palette, HERO + 10)
+    party.forEach((row, index) => line(ctx, row, PAD, hero_height + 12 + index * PARTY_ROW, WIDTH - PAD * 2))
+    await stat_rows(ctx, card, palette, hero_height + 10)
     frame(ctx, height, accent)
     return canvas.encode('png')
   }

@@ -11,7 +11,6 @@ import { get_fight_checkpoint } from './reads/get_fight_checkpoint.ts'
 import { get_zones } from './reads/get_zones.ts'
 import { mob_groups, resource_packs, world_population } from './zone_spawns.ts'
 
-export const zone_identity = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
 const zone_coordinates = (key: string) => {
   const [world = '', zx = '0', zz = '0'] = key.split(':')
   return { world, zx: Number(zx), zz: Number(zz) }

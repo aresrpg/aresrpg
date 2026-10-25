@@ -16,11 +16,8 @@ import { useVocabulary } from '../../i18n/useVocabulary.ts'
 import { WorldQuickslots } from './WorldQuickslots.tsx'
 import { gathering_job } from './gather_progress.ts'
 
-import { ActionSlots } from './ActionSlots.tsx'
 import { VitalsDisplay } from './VitalsDisplay.tsx'
 import '../fight/fight_hud.css'
-
-export const EmptyActionCells = () => <ActionSlots />
 
 export const ExperienceBar = ({ experience, job }: Readonly<{ experience: string; job?: JobSlug | null }>) => {
   const numbers = useNumbers()

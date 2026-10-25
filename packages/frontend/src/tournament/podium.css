@@ -1,0 +1,202 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+.tourney-podium {
+  padding: 18px 20px;
+}
+.tourney-podium > .tourney-section-heading .tourney-coin {
+  font-size: 20px;
+}
+.tourney-pedestals {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  align-items: end;
+  gap: 10px;
+  margin: 14px 0;
+}
+.tourney-pedestal {
+  padding: 14px;
+  min-height: 145px;
+  border: 1px solid #ffffff12;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ffffff04, transparent);
+}
+.tourney-pedestal > small {
+  font:
+    10px/1.5 'Tournament Mono',
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tourney-pedestal h3 {
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+.tourney-pedestal.is-place-1 {
+  min-height: 175px;
+  border-color: color-mix(in srgb, var(--aui-orange) 40%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aui-orange) 7%, transparent), transparent);
+}
+.tourney-pedestal.is-place-1 > small {
+  color: var(--aui-orange);
+}
+.tourney-pedestal.is-place-4 {
+  min-height: 100px;
+}
+.tourney-pedestal.is-place-5 {
+  grid-column: 2 / 4;
+  min-height: 100px;
+}
+.tourney-tier-coins {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+.tourney-tier-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.tourney-reward.aui-button {
+  min-height: 36px;
+  padding: 3px 5px;
+  font-size: 11px;
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  text-align: left;
+}
+.tourney-reward img {
+  width: 28px;
+  height: 28px;
+}
+.tourney-personal-rewards {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff12;
+}
+.tourney-personal-seat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.tourney-personal-seat > b {
+  min-width: 90px;
+}
+.tourney-personal-coins,
+.tourney-personal-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tourney-personal-coins {
+  flex-wrap: wrap;
+}
+.tourney-personal-coins > span {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.tourney-personal-rewards > .tourney-note {
+  margin-top: 8px;
+}
+.tourney-contribution {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff12;
+}
+.tourney-contribution p {
+  color: var(--aui-muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+.tourney-contribution-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.tourney-contribution-fields input {
+  width: 150px;
+}
+.tourney-dialog {
+  width: min(560px, calc(100cqw - 24px));
+  max-height: calc(100cqh - 24px);
+}
+.tourney-dialog-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  gap: 14px;
+  padding: 18px;
+}
+.tourney-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+.tourney-dialog-actions .aui-button {
+  min-height: 44px;
+}
+.tourney-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.tourney-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--aui-orange);
+}
+.tourney-review-amount {
+  font-size: 22px;
+  color: var(--aui-orange);
+}
+
+.tourney-coin-button.aui-button {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  anchor-name: var(--tourney-price-anchor);
+}
+.tourney-exact-amount[popover] {
+  position: fixed;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--aui-orange);
+  border-radius: 4px;
+  background: var(--aui-bg);
+  color: var(--aui-ink);
+  font:
+    13px/1.4 'Tournament Mono',
+    monospace;
+}
+@supports (anchor-name: --amount) {
+  .tourney-exact-amount[popover] {
+    position-anchor: var(--tourney-price-anchor);
+    inset: auto;
+    bottom: anchor(top);
+    left: anchor(center);
+    transform: translateX(-50%);
+    position-try-fallbacks: flip-block, flip-inline;
+  }
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .tourney-coin-button.aui-button {
+    min-height: 44px;
+  }
+}

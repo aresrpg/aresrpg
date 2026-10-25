@@ -157,15 +157,6 @@ export function sky_irradiance(sun_dir: Rgb): Rgb {
 }
 
 /**
- * The MOON direction = the antipode of the sun (a full moon opposite the sun: above the horizon at midnight,
- * below the horizon by day). Unit-in ⇒ unit-out. This is the "moon replacing the sun" orbit — no extra
- * ephemeris, one source with the sun. @param {number[]} sun_dir unit [x,y,z] @returns {number[]} unit moon dir
- */
-export function moon_dir_of(sun_dir: Rgb): Rgb {
-  return [-sun_dir[0], -sun_dir[1], -sun_dir[2]]
-}
-
-/**
  * The BACK-FILL direction: the bounce light that gives the key's shaded side its form. It is derived
  * from the KEY (sun by day, moon by night) — opposite in azimuth and low in the sky, because that is
  * where ground bounce and the bright side of the sky come from. It is never a fixed world direction:

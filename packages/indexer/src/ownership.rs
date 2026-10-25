@@ -47,7 +47,7 @@ pub enum OwnerKind {
 /// fully-qualified inner types for generics (`Field<K, V>` → `[K, V]`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeKey {
-    /// Defining package, canonical `0x…` (the ORIGINAL id — Sui type identity).
+    /// Canonical package identity. Certified game defining IDs normalize to their lineage original.
     pub package: String,
     pub module: String,
     pub name: String,

@@ -33,8 +33,9 @@ export const initial_engine_state = (): EngineState => ({
 export const next_engine_recovery = (current: EngineState, status: EngineStatus): EngineState['recovery'] => {
   if (
     status.state !== 'failed' ||
-    status.issue?.code === 'world_unavailable' ||
-    status.issue?.code === 'webgpu_unavailable'
+    ['world_unavailable', 'webgpu_unavailable', 'renderer_load_failed', 'asset_missing'].includes(
+      String(status.issue?.code)
+    )
   )
     return current.recovery
   return 'minimum'

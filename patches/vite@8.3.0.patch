@@ -1,0 +1,13 @@
+diff --git a/dist/node/chunks/node.js b/dist/node/chunks/node.js
+index 156ecf04fdd966d1d61b633503309f72ac86e3a9..15406d6f83c3c614610dc89202a14d9a4d270409 100644
+--- a/dist/node/chunks/node.js
++++ b/dist/node/chunks/node.js
+@@ -26419,7 +26419,7 @@ function preload(baseModule, deps, importerUrl) {
+ 			dep = importMetaResolve(dep);
+ 			if (dep in seen) return;
+ 			seen[dep] = true;
+-			const isCss = dep.endsWith(".css");
++			const isCss = new URL(dep).pathname.endsWith(".css");
+ 			for (let i = links.length - 1; i >= 0; i--) {
+ 				const link = links[i];
+ 				if (link.href === dep && (!isCss || link.rel === "stylesheet")) return;

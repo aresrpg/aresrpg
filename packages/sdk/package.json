@@ -17,6 +17,8 @@
     "./seed-doors": "./src/seed_doors.gen.ts",
     "./ptb": "./src/ptb.ts",
     "./cache": "./src/cache.ts",
+    "./tournament": "./src/tournament.ts",
+    "./tournament-admin": "./src/tournament_admin.ts",
     "./kolizeum": "./src/kolizeum.ts",
     "./friends": "./src/friends.ts",
     "./party": "./src/party.ts",

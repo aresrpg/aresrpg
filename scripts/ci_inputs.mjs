@@ -16,6 +16,7 @@ const BROWSER_FILES = [
   '.github/workflows/gate.yml',
   'scripts/ci_inputs.mjs',
   'scripts/browser_pins.ts',
+  'scripts/pin_vercel_deployment.ts',
   'scripts/prepare_browser.mjs',
 ]
 const runtime_manifest = (source) => {
@@ -32,7 +33,7 @@ export const browser_checks_required = (paths, manifest_changed) =>
     return (
       BROWSER_FILES.includes(path) ||
       BROWSER_PACKAGES.some((name) => path.startsWith(`packages/${name}/`)) ||
-      ['seed/models/', 'seed/icons/', 'seed/structures/', 'seed/scenes/', 'music/'].some((prefix) =>
+      ['patches/', 'seed/models/', 'seed/icons/', 'seed/structures/', 'seed/scenes/', 'music/'].some((prefix) =>
         path.startsWith(prefix)
       ) ||
       /^(?:vite|vercel)\.config\./.test(path)

@@ -34,7 +34,7 @@ import { selected_character } from '../modules/session.ts'
 import { owned_character_position } from '../game/core/owned_character_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { BlastSaleCard } from '../kares/BlastSaleCard.tsx'
+import { TournamentHud } from '../tournament/TournamentHud.tsx'
 
 import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
 import { ContextMenu } from './ContextMenu.tsx'
@@ -408,9 +408,7 @@ export const WorldChat = (properties: Parameters<typeof Chat>[0]) => {
       ref={drag.root}
       style={{ transform: `translate(${drag.offset.x}px, ${drag.offset.y}px)` }}
     >
-      <aside className="blast-sale-hud">
-        <BlastSaleCard copy={properties.copy} />
-      </aside>
+      <TournamentHud copy={properties.copy} />
       <Chat {...properties} collapsible drag_handle={drag.header} />
       <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />
     </section>

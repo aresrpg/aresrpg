@@ -4,6 +4,11 @@
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
+import tournament, {
+  initial_tournament_state,
+  type TournamentInput,
+  type TournamentState,
+} from './modules/tournament.ts'
 import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
 import { initial_analytics_state } from './analytics/state.ts'
 import adventure, { initial_adventure_state, type AdventureState, type AdventureInput } from './modules/adventure.ts'
@@ -102,6 +107,7 @@ export type AppState = Readonly<{
   marketplace: MarketplaceState
   leaderboards: LeaderboardsState
   dungeon: DungeonState
+  tournament: TournamentState
   kolizeum: KolizeumState
   friends: FriendsState
   party: PartyState
@@ -137,6 +143,7 @@ export type AppInput =
   | MarketplaceInput
   | LeaderboardsInput
   | DungeonInput
+  | TournamentInput
   | KolizeumInput
   | FriendsInput
   | PartyInput
@@ -198,6 +205,7 @@ const MODULE_REGISTRY = [
   [leaderboards, 'player'],
   [dungeon, 'player'],
   [kolizeum, 'player'],
+  [tournament, 'player'],
   [friends, 'player'],
   [party, 'player'],
   // Arrival consumers read the accepted target before run-to releases it.
@@ -256,6 +264,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     leaderboards: initial_leaderboards_state(),
     dungeon: initial_dungeon_state(),
     kolizeum: initial_kolizeum_state(),
+    tournament: initial_tournament_state(),
     friends: initial_friends_state(),
     party: initial_party_state(),
     run_to: initial_run_to_state(),

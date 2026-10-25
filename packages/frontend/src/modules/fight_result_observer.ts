@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { TournamentLink } from '@aresrpg/protocol'
+
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { mastery_dungeon_slug } from '../mastery/model.ts'
@@ -88,7 +90,9 @@ const observe_with_wait = (
     dispatch({ type: 'fight_result/gas_updated', fight, gas_spent_mist: wallet.fight.gas_spent(fight) })
   }
   let release_lease: (() => void) | null = null
-  const close_once = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
+  const close_once = (
+    row: Readonly<{ fight: string; kolizeum: string | null; tournament?: TournamentLink | null }>
+  ): void => {
     const { fight } = row
     const { wallet } = get_state().session
     if (!settlement_owner || !wallet || closing.has(fight)) return
@@ -96,7 +100,11 @@ const observe_with_wait = (
     close_notices.get(fight)?.()
     close_notices.delete(fight)
     const transaction = () =>
-      row.kolizeum ? wallet.kolizeum.close({ kolizeum: row.kolizeum, fight }) : wallet.fight.close({ fight })
+      row.tournament
+        ? wallet.tournament.close({ tournament: row.tournament.id, index: row.tournament.index, fight })
+        : row.kolizeum
+          ? wallet.kolizeum.close({ kolizeum: row.kolizeum, fight })
+          : wallet.fight.close({ fight })
     void retry_close_after_projection_lag(() => retry_after_version_race(transaction, wait), wait)
       .then(() => dispatch({ type: 'fight_result/close_succeeded', fight }))
       .catch((error: unknown) => {
@@ -106,7 +114,9 @@ const observe_with_wait = (
       })
       .finally(() => update_gas(fight, wallet))
   }
-  const offer_close = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
+  const offer_close = (
+    row: Readonly<{ fight: string; kolizeum: string | null; tournament?: TournamentLink | null }>
+  ): void => {
     const { fight } = row
     if (closing.has(fight) || close_notices.has(fight)) return
     const copy = get_state().copy?.fight_hud
@@ -135,6 +145,7 @@ const observe_with_wait = (
               loot_types: result.loot_types,
               dungeon: result.dungeon,
               kolizeum: result.kolizeum,
+              tournament: result.tournament,
               won: result.winner !== null && result.winner === own.team,
             }),
           ]
@@ -149,6 +160,7 @@ const observe_with_wait = (
         loot_types: row.loot_types,
         dungeon: fight_resolution_dungeon(row),
         kolizeum: row.kolizeum,
+        tournament: row.tournament,
         won: row.winner !== null && row.winner === row.team,
       })
     )
@@ -167,8 +179,7 @@ const observe_with_wait = (
     const batch = pending_rows.filter((candidate) => {
       const character = characters.find(({ id }) => id === candidate.character)
       return (
-        !first.kolizeum &&
-        !candidate.kolizeum &&
+        [first, candidate].every(({ tournament, kolizeum }) => !tournament && !kolizeum) &&
         candidate.fight === first.fight &&
         candidate.dungeon?.dungeon === first.dungeon?.dungeon &&
         character?.kiosk === first_character.kiosk
@@ -191,31 +202,40 @@ const observe_with_wait = (
     const mastery = mastery_completion(state, first.dungeon, pending)
     const final_settlement = settlement_batch_is_final(state, first.character, settlements)
     const transaction = () =>
-      first.kolizeum
-        ? wallet.kolizeum.settle({
-            kolizeum: first.kolizeum,
+      first.tournament
+        ? wallet.tournament.settle({
+            tournament: first.tournament.id,
+            index: first.tournament.index,
             fight: first.fight,
             fighter_idx: BigInt(first.fighter),
             custody,
             last: final_settlement,
           })
-        : first.dungeon
-          ? wallet.dungeon.settle({
+        : first.kolizeum
+          ? wallet.kolizeum.settle({
+              kolizeum: first.kolizeum,
               fight: first.fight,
-              dungeon: first.dungeon.dungeon,
-              settlements,
-              custody,
-              mastery,
-              boss_rewards: first.boss_rewards,
-              last: final_settlement,
-            })
-          : wallet.fight.settle({
-              fight: first.fight,
-              settlements,
+              fighter_idx: BigInt(first.fighter),
               custody,
               last: final_settlement,
-              boss_rewards: first.boss_rewards,
             })
+          : first.dungeon
+            ? wallet.dungeon.settle({
+                fight: first.fight,
+                dungeon: first.dungeon.dungeon,
+                settlements,
+                custody,
+                mastery,
+                boss_rewards: first.boss_rewards,
+                last: final_settlement,
+              })
+            : wallet.fight.settle({
+                fight: first.fight,
+                settlements,
+                custody,
+                last: final_settlement,
+                boss_rewards: first.boss_rewards,
+              })
     void retry_after_version_race(transaction, wait)
       .then((receipt) => {
         const mastery_row = typeof receipt === 'object' && receipt !== null ? Reflect.get(receipt, 'mastery') : null
@@ -231,7 +251,8 @@ const observe_with_wait = (
             item_ids: 'item_ids' in receipt ? receipt.item_ids : [],
           })
         })
-        if (settlement_needs_close(receipt)) close_once({ fight: first.fight, kolizeum: first.kolizeum })
+        if (settlement_needs_close(receipt))
+          close_once({ fight: first.fight, kolizeum: first.kolizeum, tournament: first.tournament })
         return true
       })
       .catch((error: unknown) => {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { worker_error } from './worker_reply.ts'
 import { surface_chunk_layers } from './terrain_generator.ts'
 import { load_generated_city_artifacts_for } from './cities/generated_city.ts'
 import { structure_placements } from './structure_placement.ts'
@@ -38,6 +39,6 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
     })
     // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- the failure is returned through its exact worker request ID.
     .catch((error: unknown) => {
-      self.postMessage({ id: data.id, error: error instanceof Error ? error.message : String(error) })
+      self.postMessage({ id: data.id, ...worker_error(error) })
     })
 })

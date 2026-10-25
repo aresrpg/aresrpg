@@ -162,6 +162,10 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     schedule_initial_route()
+    if (state.fight.mounted && !previous.fight.mounted && state.navigation.page === 'kolizeum') {
+      dispatch({ type: 'page/open', page: 'world' })
+      return
+    }
     const next_pathname = state.navigation.pathname
     if (
       next_pathname === previous.navigation.pathname ||

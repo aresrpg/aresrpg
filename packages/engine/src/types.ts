@@ -144,11 +144,13 @@ export type RenderChunkRequest = Readonly<{
 export type ChunkRenderOutcome = 'rendered' | 'failed' | 'removed'
 export type EngineIssueCode =
   | 'webgpu_unavailable'
+  | 'renderer_load_failed'
   | 'webgpu_initialization_failed'
   | 'advanced_sky_failed'
   | 'graphics_unavailable'
   | 'world_unavailable'
   | 'webgpu_device_lost'
+  | 'asset_missing'
   | 'terrain_failed'
 export type EngineIssue = Readonly<{
   code: EngineIssueCode

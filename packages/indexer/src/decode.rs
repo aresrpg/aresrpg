@@ -1040,3 +1040,66 @@ mod tests {
         assert!(from_bytes::<Hp>(&bytes).is_err());
     }
 }
+
+/// SUI custody is native; an optional separate pool holds Economy-bound KARES.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tournament {
+    pub id: Id,
+    pub name: String,
+    pub status: String,
+    pub organizer: Addr,
+    pub format: u64,
+    pub start_before_ms: u64,
+    pub sui_bps: Vec<u64>,
+    pub token_bps: Vec<u64>,
+    pub rewards: Vec<TournamentReward>,
+    pub sui: Balance,
+    pub sui_total: u64,
+    pub kares_pool: Option<Id>,
+    pub teams: Vec<TournamentTeam>,
+    pub matches: Vec<TournamentMatch>,
+    pub fights: Vec<Option<Id>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentReward {
+    pub place: u8,
+    pub template: Id,
+    pub amount: u32,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentSeat {
+    pub character: Id,
+    pub owner: Addr,
+    pub sui_claimed: bool,
+    pub items_claimed: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentTeam {
+    pub name: String,
+    pub revision: u64,
+    pub allowed: Vec<Id>,
+    pub seats: Vec<TournamentSeat>,
+    pub place: u8,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentMatch {
+    pub a: Option<u64>,
+    pub b: Option<u64>,
+    pub available_ms: u64,
+    pub state: u8,
+    pub winner: Option<u64>,
+    pub loser: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentKaresPool {
+    pub id: Id,
+    pub funds: TournamentFunds,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentFunds {
+    pub balance: Balance,
+    pub paid: u64,
+    pub claimed: VecSet<Id>,
+    pub refunded: bool,
+}

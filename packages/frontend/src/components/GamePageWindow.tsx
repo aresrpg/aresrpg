@@ -60,7 +60,7 @@ export const RoutedPage = memo(
       settings: <SettingsPage copy={copy} settings={settings} />,
       characters: <CharactersPage copy={copy} />,
       marketplace: <MarketplacePage copy={copy} locale={locale} />,
-      kolizeum: fight_mounted ? <></> : <KolizeumPage copy={copy} />,
+      kolizeum: <KolizeumPage copy={copy} fight_mounted={fight_mounted} />,
     }
     return <Suspense fallback={<PageFallback label={copy.loading_universe} />}>{views[page]}</Suspense>
   }
@@ -72,7 +72,7 @@ export const GamePageWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const session = useAppStore((state) => state.session)
   const settings = useAppStore((state) => state.settings)
   const fight_mounted = useAppStore((state) => state.fight.mounted)
-  if (page === 'world' || (page === 'kolizeum' && fight_mounted)) return null
+  if (page === 'world') return null
   const close = () => dispatch_app({ type: 'page/open', page: 'world' })
   const content = (
     <RoutedPage

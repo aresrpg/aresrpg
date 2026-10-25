@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import Modal from '@mui/material/Modal'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { suspend_native_modals } from '@aresrpg/ui'
 
 // LI.FI and WalletConnect portal dialogs into body. A native top-layer dialog makes them inert.
 // Share their modal stack only inside this funding surface; MUI retains focus and restores it on close.
@@ -15,6 +16,7 @@ export default function FundingDialog({
   close: () => void
   label: string
 }>) {
+  useEffect(() => suspend_native_modals(document), [])
   return (
     <Modal open onClose={close} sx={(theme) => ({ zIndex: theme.zIndex.drawer - 1 })}>
       <div

@@ -77,17 +77,17 @@ cover_package() {
 
 cover_package packages/control 98.01
 cover_package packages/kares 100
-cover_package packages/rewards 100 amounts:100 economy:100 community:100 combat_rewards:100 staking:100
+cover_package packages/rewards 100 amounts:100 economy:100 community:100 combat_rewards:100 staking:100 tournament_rewards:100
 cover_package packages/seed 98.01 \
   registry:98.01 board_catalog:98.01 dungeon_content:98.01 item_rows:98.01 \
   mob_rows:98.01 recipe_rows:98.01 spell_rows:98.01 world_content:98.01
-cover_package packages/move-math 99.44 \
+cover_package packages/move-math 99.47 \
   aresrpg:100 characteristic_costs:98.01 prng:98.01 job_xp:98.01 dungeon_data:98.01 \
   item_damages:100 consumable_effect:100 experience:100 loot_table:100 \
   item_stats:100 trade_state:100 world_map:100 recipe_data:100 craft_batch:98.51 \
   mob_scaling:100 spell_effect:98.96 combat_grid:98.88 \
   content_rules:99.44 city_map:100 fight_math:100 rune_catalog:100 forge:100 \
-  mob_data:100 weapon:100 zone_math:99.32
+  mob_data:100 weapon:100 zone_math:99.32 tournament_bracket:100
 # Identical input states must consume equal VM gas for every seeded forging outcome.
 forge_work=$(sui move test --path packages/move-math fixed_work_seed_ --statistics csv)
 printf '%s\n' "$forge_work"
@@ -101,8 +101,8 @@ printf '%s\n' "$forge_work" | awk -F, '
 '
 # Check the potentially nonterminating cases under a finite budget before broad coverage.
 sui move test --path packages/move-combat mob_work_bounds_tests --gas-limit 200000000
-cover_package packages/move-combat 98.09 combat:98.09
+cover_package packages/move-combat 98.10 combat:98.10
 cover_package packages/move 99.27 forgemagie:99.56 zone:98.01 trade:99.29 fight_rewards:100 loot_box:100 gathering:98.01 item:98.65 dungeon:99.47 kolizeum:99.68 \
   protected_policy:100 character:98.94 progression:100 friends:100 party:98.72 \
   equipment:98.58 pet:100 crafting:100 world:100 version:100 \
-  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.39 distribution:100 mastery:100 api:99.42
+  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.44 distribution:100 mastery:100 api:99.51 tournament:99.16

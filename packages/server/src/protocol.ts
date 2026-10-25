@@ -2,10 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE SERVER-SIDE WIRE MIRRORS — what this process speaks with the INDEXER (the client never
 // sees any of this; the client↔server contract lives in @aresrpg/protocol):
-//   1. the pub/sub channels + envelope the Rust indexer publishes
-//      (mirror of packages/indexer/src/events.rs; a change there lands here, same commit),
-//   2. the graph schema the indexer writes (mirror of graph.rs).
-// Modules never invent a channel or label — they import it from here.
+// Pub/sub channels and envelopes mirror packages/indexer/src/events.rs.
+// Modules import channel builders from here; graph schema belongs to the indexer.
 
 // ╔════════════════ [ 1. The indexer wire ] ═══════════════════════════════════ ]
 
@@ -33,6 +31,7 @@ export const channels = {
   party: (id: string) => `evt:party:${id}`,
   social: (address: string) => `evt:social:${address}`,
   kolizeum: 'evt:kolizeum',
+  tournament: 'evt:tournament',
   economy: 'evt:economy',
   content: 'evt:content',
   /** shared Version object transitions (version 0 = frozen) */
@@ -95,42 +94,6 @@ export type ChatFact = {
 export type FightActionFact =
   | { kind: 'action'; address: string; action: import('@aresrpg/protocol').FightWireAction }
   | { kind: 'resync'; address: string }
-
-// ╔════════════════ [ 2. The graph schema (indexer-written, read-only here) ] ═ ]
-
-/** Node labels the indexer writes (graph.rs `merge_set` census). */
-export const labels = [
-  'User',
-  'Kiosk',
-  'Character',
-  'Item',
-  'Fight',
-  'Party',
-  'FriendList',
-  'Kolizeum',
-  'Market',
-  'Zone',
-  'Trade',
-  'Giftcard',
-  'Sale',
-  'Meta',
-] as const
-
-/** Relations the indexer writes — `(from)-[REL {props}]->(to)`. */
-export const relations = {
-  OWNS: ['User', 'Kiosk'], // custody root
-  HOLDS: ['Kiosk', 'Item|Character'], // kiosk-held (severed while fighting/equipped)
-  EQUIPS: ['Character', 'Item'], // props: { slot }
-  FIGHTER: ['Fight', 'Character'], // props: { seat, team }
-  RESULT_FOR: ['Fight', 'User'], // props: durable unsettled seat / unclaimed drops
-  CLOSABLE_FOR: ['Fight', 'User'], // participants allowed an explicit reconnect close retry
-  MEMBER_OF: ['Character', 'Party'], // props: { order }
-  FRIEND: ['User', 'User'],
-  INVITED: ['Party', 'Character'],
-  LISTED_IN: ['Item|Character', 'Kiosk'], // props: { price, exclusive, at_ms }
-  HOLDS_CLAIM: ['User', 'CrushClaim|BoxClaim'],
-  HOLDS_VOUCHER: ['User', 'Giftcard'],
-} as const
 
 /** Process-local dispatch keys, never Redis subscriptions or published channels. */
 export const movement_listener_channel = (zone_channel: string, character_id: string): string =>

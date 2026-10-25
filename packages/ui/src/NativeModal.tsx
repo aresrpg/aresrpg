@@ -69,6 +69,32 @@ const mark_front = (element: Readonly<HTMLElement>): void =>
     String(Number(front_window(element.ownerDocument)?.dataset.windowOrder ?? 0) + 1)
   )
 
+/** Vendor DOM modals cannot receive input underneath a native top-layer modal. Keep the
+ * React windows mounted while lending modality, then restore surviving windows below any
+ * newer native dialog. The DOM remains the window registry; no application state is copied. */
+export const suspend_native_modals = (document: Readonly<Document>): (() => void) => {
+  const suspended = [...open_dialogs(document)].sort(
+    (a, b) => Number(a.dataset.windowOrder) - Number(b.dataset.windowOrder)
+  )
+  const previous_focus = document.activeElement
+  ;[...suspended].reverse().forEach((element) => element.close())
+  sync_modal_backdrops(document)
+  return () => {
+    const active = [...open_dialogs(document)].sort(
+      (a, b) => Number(a.dataset.windowOrder) - Number(b.dataset.windowOrder)
+    )
+    const focus = active.length ? document.activeElement : previous_focus
+    const restore = [...suspended.filter((element) => element.isConnected && !element.open), ...active]
+    ;[...active].reverse().forEach((element) => element.close())
+    restore.forEach((element) => {
+      mark_front(element)
+      element.showModal()
+    })
+    sync_modal_backdrops(document)
+    if (focus instanceof HTMLElement && restore.at(-1)?.contains(focus)) focus.focus({ preventScroll: true })
+  }
+}
+
 export const show_floating_window = (element: Readonly<HTMLElement>): void => {
   if (element.matches(':popover-open')) element.hidePopover()
   mark_front(element)

@@ -4,7 +4,7 @@
 // authoring AND the live characters page (drag-drop staging rides the optional slot_state).
 
 import { slot_art } from '@aresrpg/ui/art'
-import type { DragEvent, ReactNode } from 'react'
+import type { DragEvent, ReactElement, ReactNode } from 'react'
 import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
 /** The anatomical body order — DOM reading order IS the layout (the .inv__rig auto-flow
@@ -35,6 +35,7 @@ export type DollItem = Readonly<{ name: string; item_type: string; level: number
 
 /** Optional live-page interactivity per slot: drop targets, drag-over highlight, staged mark. */
 export type DollSlotState = Readonly<{
+  hover?: (content: Readonly<ReactElement<{ title?: string }>>) => ReactNode
   valid?: boolean
   staged?: boolean
   on_double_click?: () => void
@@ -61,15 +62,20 @@ const EquipmentSlot = ({
   const label = slot_label(slot, category_name)
   const placeholder = slot_art[slot] ?? slot_art.relic
   const click = useItemClick(() => open(slot), !!state.on_double_click)
-  return (
+  const { hover = (content) => content } = state
+  const accessible_label = item?.name ?? label
+  const button = (
     <button
       className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
       data-equipment-slot={slot}
       onClick={click}
       onDoubleClick={state.on_double_click}
-      onDragOver={state.on_drop ? (event) => event.preventDefault() : undefined}
+      onDragOver={(event) => {
+        if (state.on_drop) event.preventDefault()
+      }}
       onDrop={state.on_drop}
-      title={item?.name ?? label}
+      aria-label={accessible_label}
+      title={accessible_label}
       type="button"
     >
       {item ? (
@@ -89,6 +95,7 @@ const EquipmentSlot = ({
       )}
     </button>
   )
+  return hover(button)
 }
 
 export const EquipmentDoll = ({

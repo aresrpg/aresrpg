@@ -8,6 +8,9 @@ export type Copy = Readonly<{
   gather: string
   victory_title: string
   victory: string
+  rare_loot_title: string
+  rare_loot: string
+  drop_chance: string
   loot_title: string
   loot: string
   sold_by: string
@@ -32,6 +35,9 @@ export const load_copy = async (locale: string): Promise<Copy> => {
     'gather',
     'victory_title',
     'victory',
+    'rare_loot_title',
+    'rare_loot',
+    'drop_chance',
     'loot_title',
     'loot',
     'sold_by',

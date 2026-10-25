@@ -197,13 +197,3 @@ export function resolve_sky_tier(tier: 'low' | 'medium' | 'high' | SkyTier = 'hi
   if (tier && typeof tier === 'object') return tier
   return SKY_TIERS[/** @type {'low'|'medium'|'high'} */ tier] ?? SKY_TIERS.high
 }
-
-/**
- * Ozone tent density at altitude h (km) — the cheap, load-bearing horizon-blue term: a linear tent
- * peaking at ozone_center_km, reaching 0 at ±ozone_width_km. Pure JS twin of the TSL expression
- * (physics.js) so the shape is unit-testable.
- * @param {number} h_km @param {number} center_km @param {number} width_km @returns {number}
- */
-export function ozone_density(h_km: number, center_km: number, width_km: number): number {
-  return Math.max(0, 1 - Math.abs(h_km - center_km) / width_km)
-}

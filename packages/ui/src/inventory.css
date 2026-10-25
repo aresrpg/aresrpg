@@ -451,37 +451,38 @@
   border-color: #4b3924;
 }
 
-.game-character-body .inv__rig > [data-equipment-slot='hat'] {
+/* Hover wrappers use display: contents; grid placement belongs to the slot button. */
+.game-character-body .inv__rig [data-equipment-slot='hat'] {
   grid-area: 1/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='cloak'] {
+.game-character-body .inv__rig [data-equipment-slot='cloak'] {
   grid-area: 2/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='weapon'] {
+.game-character-body .inv__rig [data-equipment-slot='weapon'] {
   grid-area: 4/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='tool'] {
+.game-character-body .inv__rig [data-equipment-slot='tool'] {
   grid-area: 5/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='title'] {
+.game-character-body .inv__rig [data-equipment-slot='title'] {
   grid-area: 6/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='pet'] {
+.game-character-body .inv__rig [data-equipment-slot='pet'] {
   grid-area: 7/1;
 }
-.game-character-body .inv__rig > [data-equipment-slot='amulet'] {
+.game-character-body .inv__rig [data-equipment-slot='amulet'] {
   grid-area: 1/2;
 }
-.game-character-body .inv__rig > [data-equipment-slot='left_ring'] {
+.game-character-body .inv__rig [data-equipment-slot='left_ring'] {
   grid-area: 2/2;
 }
-.game-character-body .inv__rig > [data-equipment-slot='right_ring'] {
+.game-character-body .inv__rig [data-equipment-slot='right_ring'] {
   grid-area: 3/2;
 }
-.game-character-body .inv__rig > [data-equipment-slot='belt'] {
+.game-character-body .inv__rig [data-equipment-slot='belt'] {
   grid-area: 4/2;
 }
-.game-character-body .inv__rig > [data-equipment-slot='boots'] {
+.game-character-body .inv__rig [data-equipment-slot='boots'] {
   grid-area: 5/2;
 }
 /* Cosmetic slots belong to the same equipment grid, with a warm material. */

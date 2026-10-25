@@ -21,20 +21,6 @@
   right: 10px;
   width: var(--world-map-size);
 }
-[data-world-frame] .gw-minimap__frame {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-}
-[data-world-frame] .gw-minimap__readout,
-[data-world-frame] .gw-minimap__coords {
-  flex-wrap: wrap;
-}
-[data-world-frame] .gw-minimap__biome,
-[data-world-frame] .gw-minimap__coords {
-  font-size: clamp(8px, 1cqw, 10px);
-  letter-spacing: 0.04em;
-}
 :is([data-world-frame], [data-chat-viewport]) .gw-worldchat {
   width: var(--world-chat-width);
   height: var(--world-chat-height);
@@ -127,11 +113,6 @@
   font-size: 9px;
 }
 
-[data-world-frame] .gw-minimap__coords {
-  min-width: 0;
-  flex-shrink: 1;
-  max-width: 100%;
-}
 @container world-viewport (max-height: 400px) {
   [data-world-frame] .gw-compass__band {
     height: 30px;

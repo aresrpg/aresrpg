@@ -35,3 +35,22 @@ test('ordinary gear is filtered before rendering or delivery', () => {
   if (loot.kind !== 'loot') throw new Error('bad fixture')
   expect(announcement(copy, {}, { ...loot, stats: { vitality: 20, intelligence: 1, critical: 1 } })).toBeNull()
 })
+
+test('boss drops at or below 1% ignore category and quality, without exaggerating ambiguous sources', () => {
+  const loot = examples[3]!
+  if (loot.kind !== 'loot') throw new Error('bad fixture')
+  for (const chance_bp of [1, 100]) {
+    for (const category of ['resource', 'pet', 'hat']) {
+      const rare = { ...loot, category, stats: {}, amount: 2, sources: [{ mob_type: 'golden_lorito', chance_bp }] }
+      const model = announcement(copy, {}, rare)
+      expect(model?.visual.rare).toBe(true)
+      expect(model?.visual.title).toBe('2× Golden Lorito Hood')
+      expect(model?.content).toContain(`${chance_bp / 100}%`)
+      expect(announcement(copy, {}, { ...rare, sources: [{ mob_type: 'golden_lorito', chance_bp: 101 }] })).toBeNull()
+      expect(announcement(copy, {}, { ...rare, sources: [{ mob_type: 'nook', chance_bp: 100 }] })).toBeNull()
+      expect(
+        announcement(copy, {}, { ...rare, sources: [...rare.sources, { mob_type: 'nook', chance_bp: 5000 }] })
+      ).toBeNull()
+    }
+  }
+})

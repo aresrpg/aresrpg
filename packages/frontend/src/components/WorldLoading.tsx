@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } fro
 import { createPortal } from 'react-dom'
 import type { EngineQuality, EngineStatus } from '@aresrpg/engine'
 
+import { finish_startup_recovery, recover_missing_asset } from '../startup_recovery.ts'
 import { useAppStore } from '../store.ts'
 import {
   loading_progress,
@@ -98,13 +99,17 @@ export const WorldLoading = ({
       const next: LoadingProgress =
         progress.stage === 'ready' && !is_assets_ready() ? { stage: 'finishing', fraction: null } : progress
       dispatch({ type: 'sample', identity, progress: next })
-      if (state) on_progress?.(next, state.engine)
-      if (next.stage === 'ready')
+      if (state) {
+        on_progress?.(next, state.engine)
+        recover_missing_asset(state.engine)
+      }
+      if (next.stage === 'ready') {
+        finish_startup_recovery()
         timer = window.setTimeout(
           () => dispatch({ type: 'dismiss', identity }),
           matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 300
         )
-      else if (next.stage !== 'failed') timer = window.setTimeout(sample, 100)
+      } else if (next.stage !== 'failed') timer = window.setTimeout(sample, 100)
     }
     frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(sample)

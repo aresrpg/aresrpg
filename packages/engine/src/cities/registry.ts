@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { missing_asset_error } from '../asset_error.ts'
 import { validate_height_grid } from '../height_grid.ts'
 
 import the_ruins_map_source from './generated/the_ruins_map.json'
@@ -55,7 +56,10 @@ export const read_city_artifact = async <T extends Pick<GeneratedCityMapArtifact
   url: URL
 ): Promise<T> => {
   const response = typeof Bun !== 'undefined' ? Bun.file(url) : await fetch(url)
-  if ('ok' in response && !response.ok) throw new Error(`Generated city artifact failed to load: ${response.status}`)
+  if ('ok' in response && !response.ok) {
+    const message = `Generated city artifact failed to load: ${response.status}`
+    throw [404, 410].includes(response.status) ? missing_asset_error(message) : new Error(message)
+  }
   const artifact = (await response.json()) as T
   if (
     artifact.version !== CITY_ARTIFACT_VERSION ||

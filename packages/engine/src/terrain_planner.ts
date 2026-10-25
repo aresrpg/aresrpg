@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
-import type { WorkerReply } from './worker_reply.ts'
+import { read_worker_error, type WorkerReply } from './worker_reply.ts'
 
 export type TerrainColumnCoordinate = Readonly<{ x: number; z: number }>
 export type TerrainColumnPlan = TerrainColumnCoordinate & Readonly<{ layers: readonly number[] }>
@@ -50,7 +50,7 @@ export const create_terrain_planner = (
     const request = active
     if (!request || request.id !== data.id) return
     active = null
-    if ('error' in data) request.reject(new Error(data.error))
+    if ('error' in data) request.reject(read_worker_error(data))
     else request.resolve(data.result)
     const next = queued
     queued = null

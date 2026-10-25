@@ -12,8 +12,10 @@ const CRITICAL_TESTS = [
   'allocation_entries',
   'add_funds',
   'box_batch',
+  'boot_recovery',
   'character_delete',
   'city_artifacts',
+  'deployment_assets',
   'character_progression',
   'fight_placement_race',
   'fight_touch',
@@ -23,6 +25,7 @@ const CRITICAL_TESTS = [
   'mastery_shop',
   'pwa_update',
   'staking',
+  'startup_update',
   'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)
 const PERFORMANCE_TESTS = ['**/performance.pw.ts', '**/spell_performance.pw.ts']

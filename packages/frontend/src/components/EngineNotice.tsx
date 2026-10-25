@@ -1,14 +1,27 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { EngineStatus } from '@aresrpg/engine'
+import type { EngineIssue, EngineStatus } from '@aresrpg/engine'
 
 import type { AppCopy } from '../i18n/copy.ts'
 
+export const engine_failure_message = (
+  issue: EngineIssue | undefined,
+  copy: Pick<AppCopy, 'body' | 'engine_recovery' | 'engine_graphics_failure'>
+): string => {
+  switch (issue?.code) {
+    case 'webgpu_unavailable':
+      return copy.body
+    case 'webgpu_initialization_failed':
+      return copy.engine_graphics_failure
+    default:
+      return copy.engine_recovery
+  }
+}
+
 export const engine_notice_kind = (status: EngineStatus, minimum_graphics = false) => {
   if (status.issue?.code === 'world_unavailable') return 'world'
-  if (status.issue?.code === 'webgpu_unavailable') return 'unsupported'
-  if (status.state === 'failed') return 'failed'
+  if (status.state === 'failed') return status.issue?.code === 'webgpu_unavailable' ? 'unsupported' : 'failed'
   return minimum_graphics ? 'minimum' : null
 }
 
@@ -38,7 +51,7 @@ export const EngineNotice = ({
     world: { title: copy.world_unavailable_title, body: copy.world_unavailable, hint: null, action: continue_action },
     failed: {
       title: copy.world_unavailable_title,
-      body: copy.engine_recovery,
+      body: engine_failure_message(status.issue, copy),
       hint: null,
       action: { label: copy.engine_reload, run: reload },
     },

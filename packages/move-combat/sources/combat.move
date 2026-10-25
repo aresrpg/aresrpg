@@ -719,6 +719,16 @@ public fun take_matching_drops(state: &mut State, fighter: u64, item_type: &Stri
   quantity
 }
 
+/// The object-owning coordinator authenticates managed termination. A resolved outcome is immutable.
+public fun finish_managed(state: &mut State, winner: Option<u8>) {
+  assert!(!state.ended, ENotEnded);
+  if (winner.is_some()) assert!(*winner.borrow() <= 1, EBadCell);
+  state.ended = true;
+  state.winner = winner;
+}
+
+public fun placement_duration_ms(): u64 { PLACEMENT_FORCE_MS }
+
 public fun placement_force_ready(placement_started_ms: u64, now_ms: u64): bool {
   placement_started_ms != 0 && now_ms >= placement_started_ms + PLACEMENT_FORCE_MS
 }

@@ -325,27 +325,6 @@ export function night_gate_js(sun_y: number): number {
   return 1 - smoothf(NIGHT_GATE_LO, NIGHT_GATE_HI, sun_y)
 }
 
-/** Broad moon sky illumination shape (tint/intensity excluded) — boundary-free inverse-power falloff.
- *  @param {number} cos_vm view·moon @returns {number} in (0,1] */
-export function moon_sky_glow_js(cos_vm: number): number {
-  return 1 / (1 + MOON_SKY_GLOW_K * (1 - clampf(cos_vm, -1, 1))) ** MOON_SKY_GLOW_P
-}
-
-/** Near-disc halo shape (tint excluded) — rational spike + pow tail, boundary-free.
- *  @param {number} cos_vm view·moon @returns {number} */
-export function moon_halo_js(cos_vm: number): number {
-  const v = clampf(cos_vm, 0, 1)
-  const v4 = v * v * v * v
-  const spike = MOON_HALO_VIS / (1 - (1 - MOON_HALO_VIS) * v4) - MOON_HALO_VIS
-  return spike * MOON_HALO_SPIKE_GAIN + v ** MOON_HALO_POW * MOON_HALO_TAIL_GAIN
-}
-
-/** Star visibility multiplier near the moon: 1 far away → (1−STAR_MOON_SUPPRESS) at the moon.
- *  @param {number} cos_vm @param {number} moon_up @returns {number} */
-export function star_moon_fade_js(cos_vm: number, moon_up: number): number {
-  return 1 - STAR_MOON_SUPPRESS * moon_sky_glow_js(cos_vm) * clampf(moon_up, 0, 1)
-}
-
 /** Horizon extinction ramp (pure twin of the TSL term in `create_night_sky_node`) — 0 at/below `end_deg`
  *  elevation, 1 at/above `start_deg`, smooth between. Takes the view direction's y component directly
  *  (≈ sin(elevation)) to match the file's sine-space convention (NIGHT_GATE_HI/LO, STAR_HORIZON_FADE) — the

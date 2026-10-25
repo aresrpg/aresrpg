@@ -10,6 +10,15 @@ import type { FightRow } from '@aresrpg/protocol'
 import { type Graph, type Node } from '../graph.ts'
 
 export async function get_fight(graph: Graph, { fight_id }: { fight_id: string }): Promise<FightRow[]> {
-  const rows = await graph.read(`MATCH (f:Fight {id: $fight_id}) RETURN f AS fight`, { fight_id })
-  return rows.map(({ fight }) => (fight as Exclude<Node, null | undefined>).properties as unknown as FightRow)
+  const rows = await graph.read(
+    `MATCH (f:Fight {id: $fight_id}) OPTIONAL MATCH (m:TournamentMatch {fight_id: f.id}) RETURN f AS fight, m.tournament AS tournament`,
+    { fight_id }
+  )
+  return rows.map(
+    ({ fight, tournament }) =>
+      ({
+        ...(fight as Exclude<Node, null | undefined>).properties,
+        ...(typeof tournament === 'string' ? { tournament } : {}),
+      }) as unknown as FightRow
+  )
 }

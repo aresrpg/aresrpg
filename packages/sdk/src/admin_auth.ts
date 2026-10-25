@@ -10,6 +10,7 @@ import { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress, normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 import { ZkSendClient } from '@mysten/zksend'
 
+import { tournament_admin_actions } from './tournament_admin.ts'
 import { admin_wallet_context, type AuthSession } from './auth.ts'
 import { receipt_digest, type Receipt } from './cache.ts'
 import { SDK, sui_transport } from './client.ts'
@@ -34,6 +35,7 @@ import {
 
 export type AdminAuthSession = AuthSession &
   Readonly<{
+    tournaments: ReturnType<typeof tournament_admin_actions>
     authorize_temp_admin: (to: string, mist: bigint) => Promise<Receipt>
     publish_contract: (artifact: ContractArtifact) => Promise<Readonly<{ receipt: Receipt }>>
     upgrade_contract: (
@@ -168,6 +170,7 @@ export const as_admin_session = (session: AuthSession): AdminAuthSession => {
 
   return Object.freeze({
     ...session,
+    tournaments: tournament_admin_actions(context.sdk, context.account.address, context.resolution_client),
     authorize_temp_admin: (to, mist) => delegate(context.sdk, to, mist),
     publish_contract: async (artifact) => {
       const receipt = await context.sdk.execute(

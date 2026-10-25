@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { reload_after_update } from './startup_recovery.ts'
+
 /** Check visible games frequently and check again when the player returns or reconnects.
  * The existing autoUpdate worker installs the new assets before reloading the app. */
 const UPDATE_CHECK_MS = 15_000
@@ -34,6 +36,7 @@ export async function register_service_worker(): Promise<void> {
   const { registerSW } = await import('virtual:pwa-register')
   registerSW({
     immediate: true,
+    onNeedReload: () => reload_after_update(),
     onRegisteredSW: (_url, registration) => {
       if (!registration) return
       observe_service_worker_updates(registration)

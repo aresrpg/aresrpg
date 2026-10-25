@@ -5,7 +5,11 @@
 import type { AuthStorage } from '../auth_storage.ts'
 
 /** An unavailable store disables automation for this observer's lifetime. */
-export const create_claim_attempts = (storage: AuthStorage | null, network: string, kind: 'giftcard' | 'claim') => {
+export const create_claim_attempts = (
+  storage: AuthStorage | null,
+  network: string,
+  kind: 'giftcard' | 'claim' | 'tournament'
+) => {
   let available = storage
   const key = (address: string, giftcard: string): string =>
     `aresrpg:${kind}-attempt:${network}:${address.toLowerCase()}:${giftcard.toLowerCase()}`

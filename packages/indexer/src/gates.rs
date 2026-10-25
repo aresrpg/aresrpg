@@ -50,6 +50,12 @@ mod tests {
         ("mastery", "Mastery"),
         ("mastery", "MasteryOffer"),
         ("kolizeum", "Kolizeum"),
+        ("tournament", "Tournament"),
+        ("tournament", "KaresPool"),
+        ("tournament", "Team"),
+        ("tournament", "Seat"),
+        ("tournament", "Reward"),
+        ("tournament", "TournamentUpdated"),
         ("distribution", "Giftcard"),
         ("loot_box", "BoxClaim"),
         ("forgemagie", "CrushClaim"),
@@ -144,6 +150,8 @@ mod tests {
         ("registry", "ContentWritten"),
     ];
 
+    const REWARDS: &[(&str, &str)] = &[("tournament_rewards", "Funds")];
+
     const MATH: &[(&str, &str)] = &[
         ("item_stats", "ItemStatistics"),
         ("item_damages", "ItemDamages"),
@@ -153,6 +161,7 @@ mod tests {
         ("mob_data", "LootEntry"),
         ("trade_state", "TradePhase"),
         ("trade_state", "TradeState"),
+        ("tournament_bracket", "Match"),
     ];
 
     /// Events the projection DELIBERATELY does not route — each entry needs a
@@ -477,6 +486,8 @@ mod tests {
         let math =
             load_modules(&root.join("packages/move-math/build/aresrpg_math/bytecode_modules"));
         let seed = load_modules(&root.join("packages/seed/build/aresrpg_seed/bytecode_modules"));
+        let rewards =
+            load_modules(&root.join("packages/rewards/build/aresrpg_rewards/bytecode_modules"));
 
         let mut snapshot = String::from(
             "# Move layout snapshot — REGENERATE DELIBERATELY with `UPDATE_LAYOUTS=1 cargo test`\n\
@@ -490,6 +501,9 @@ mod tests {
         }
         for (module, datatype) in MATH {
             writeln!(snapshot, "{}", layout_line(&math, module, datatype)).unwrap();
+        }
+        for (module, datatype) in REWARDS {
+            writeln!(snapshot, "{}", layout_line(&rewards, module, datatype)).unwrap();
         }
         for (module, datatype) in SEED {
             writeln!(snapshot, "{}", layout_line(&seed, module, datatype)).unwrap();

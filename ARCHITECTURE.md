@@ -144,6 +144,22 @@ Deployment headers give content-hashed `/assets/` files immutable browser cachin
 names, HTML and the service worker retain revalidation.
 Page navigations bypass the service-worker cache so reloads fetch the current app shell and its
 matching asset URLs. The worker precaches scripts and styles, never HTML; PWA installation remains.
+Prebuilt deployments give Vite asset URLs, JS imports and service-worker precache entries the same
+custom deployment ID as Vercel's output manifest. The platform serves pinned assets from their
+original retained deployment; full-page navigation selects the current release.
+The shared loading postcard reveals recovery after 20 seconds in both the document shell and mounted
+worlds, using CSS without declaring a slow request failed or cancelling it. The bootstrap binds Reload to the complete current URL; before
+JavaScript runs, browser-reload instructions preserve claim fragments. Rejected imports reveal
+recovery immediately. Renderer-module failures remain resource failures and do not trigger a graphics
+quality retry. Missing WebGPU receives compatibility guidance; other graphics initialization failures
+receive neutral recovery guidance at the existing engine failure boundary.
+City 404/410 failures retain a typed missing-asset flag through worker replies and engine status.
+Before the first world becomes ready, confirmed missing JS/CSS or city artifacts may request one
+service-worker update. A different activated worker permits one automatic reload per failed release
+in that tab; automatic recovery waits at most ten seconds. The SDK execution owner exposes transaction idleness,
+and connected sessions veto automatic reload during queued work, signing or unresolved submission.
+Recovery never deletes caches or wallet/session storage. Allocation and gift entries end this startup
+recovery lifetime before activating their interactive flows.
 
 `@aresrpg/ui` owns the shared visual system and browser modal lifecycle. Its components consume
 presentation props and emit callbacks; they import neither application stores nor game services.
@@ -221,7 +237,7 @@ camera focus is inside its cell and return when inspecting the surrounding kit. 
 list, per-asset scene loader or second camera controller.
 Authoring stays in seed/code. Banners, ropes and chain links are static baked geometry; plants retain
 rooted wind. Campfire assets place bounded GPU flame/smoke batches under the existing scenery lifecycle.
-The canonical test command checks the single workshop artifact. City-specific compilers remain the
+`validate:assets` checks the single workshop artifact. City-specific compilers remain the
 owners of production cities; the module workshop does not introduce another runtime generation path.
 
 The public adventure owns its local hero, recruited companion, selection, dialogue and combat progress in
@@ -379,7 +395,9 @@ character checkpoint for run-to, and an item hover in chat or trades may read th
 rolled-stat and pet-feed fields through a session-bounded LRU. Linked pet tooltips derive current bonuses
 through the same power scaling as equipment. The external-wallet giftcard import explicitly inspects only that
 wallet's canonical vouchers through the SDK, on connection or manual refresh. Game-wallet holdings
-remain indexed and pushed. Package type identity uses original package IDs;
+remain indexed and pushed. Existing package types retain their defining IDs; types introduced by an upgrade use that upgrade’s ID.
+The indexer normalizes certified game-lineage origins to the original projection identity.
+SDK operations requiring explicit new type tags read the deployed datatype’s defining ID.
 Move-call targets use latest package IDs.
 
 ## Projection law
@@ -451,12 +469,17 @@ history days; the UI marks a total as a lower bound until its full window is cov
 
 The indexer publishes confirmed sale, rare-gathering, dungeon-victory and fight-loot facts through
 its existing Redis pub/sub writer on `evt:notifications:<game-original>`. Fight gear must match a
-winning seat's consumed drop budget, natural stat revision and personal-kiosk custody. A boss
+winning seat's consumed drop budget, natural stat revision and personal-kiosk custody. Statless
+item gains include confirmed increases to existing stacks. Loot facts retain quantity and each
+possible source mob's snapshotted drop chance; ambiguous extra gains are not attributed to loot. A boss
 FightEnded produces one party event, independent of later per-character settlement.
 
 `packages/discord` runs from its own `ghcr.io/aresrpg/discord` image and one-replica Helm release.
 It only forwards events received by its live Redis subscription. It filters gear using the exact
-unweighted mean of normalized variable rolls, strictly above 90%, excluding fixed stats. It resolves
+unweighted mean of normalized variable rolls, strictly above 90%, excluding fixed stats. Independently,
+boss loot with a positive base chance at most 100 basis points receives a larger gold showcase,
+regardless of category or roll quality. Every possible source must qualify; the largest source
+chance is displayed, before player chance bonuses. It resolves
 verified SuiNS names. Failed name reads fall back once to the official network RPC, with a two-second
 deadline per provider; missing or mismatched names do not trigger fallback. It shortens self-subnames
 to their handle and renders double-density PNG attachments at Discord's full image width, without an embed frame. Cards use canonical seed artwork,
@@ -598,6 +621,8 @@ locked, URL defaults are disabled, and transfer history is scoped to the receivi
 LI.FI completion requests an ordinary wallet refresh; only the existing SDK balance read updates
 the session. The funding surface shares the vendor's focus-managed DOM modal stack so wallet and
 WalletConnect portals remain interactive; game dialogs retain their native top-layer shell.
+Its lifetime suspends existing native windows without unmounting their forms. Closing funding
+restores surviving windows below any newer native dialog; retired windows never reopen.
 Testnet funding exposes only the faucet. Mainnet bridge quotes request a 1% integrator fee for
 the registered `aresrpg` integration. LI.FI routes that fee to its configured fee wallets and shows
 the AresRPG name and percentage in the fee breakdown. No LI.FI API key or game-wallet signer is passed to the bridge.
@@ -794,6 +819,46 @@ character if the player still controls a participant and still owns the return c
 wallet-scoped gas ledger supplies every seat's result total; each settlement and final cleanup refreshes
 all results for that fight, including storage rebates. Results disclose the ledger's 24-hour window.
 
+### Tournaments
+
+Core owns each tournament’s fixed rosters, deadlines, linked fights and prize entitlements.
+The existing math package owns its bounded single-elimination bracket, byes, bronze match and
+joint fifth places. Admin creation fixes the organizer, 1/3/6-seat format, five-place asset splits,
+item templates and registration expiry. Owners consent to each character’s registration. A character
+registers once, and one wallet cannot span teams. Open teams allow client-side filling; restricted
+teams admit only the named character IDs. Reused empty team slots increment their revision.
+
+Admin start freezes complete rosters and shuffles up to 64 teams. Each available match has sixty
+seconds for admission and thirty minutes for completion. Existing Fight custody and combat handle
+partial attendance, readiness, forfeits and settlement. A single represented side wins by walkover;
+neither side or an expired active match produces no winner. Absent losers receive no consolation
+placement. An already ended fight retains its result when recorded late. The tournament records
+results before Fight deletion; settlement and recovery preserve the tournament/match link.
+
+SUI prizes work without a currency binding. An optional KARES pool appears only on its first valid
+contribution. Core privately embeds the rewards package’s currency accounting value in that pool.
+Contributions close at start. Immutable totals determine per-seat payouts, including deterministic
+integer remainders. Coins pay registered owners; item claims use existing kiosk delivery. Claims
+are replay-protected independently per asset and item reward. Cancellation, unawarded places and
+rounding dust return to the original organizer. Tournaments charge no platform fee.
+
+The indexer projects tournament and optional pool versions independently. The server pushes active
+events, the latest event and outstanding recovery claims. Frontend actions use the SDK; automatic
+admission and claims retain wallet-scoped attempts. A submitted action is never automatically
+retried after a digest. The tournament panel remains accessible during fights for timeout recovery.
+Feed availability and automatic-entry failures belong to that reducer. Failed reads preserve known
+rows while marking them unavailable; successful writes and current snapshots retire obsolete entry
+errors. Pure selectors derive the shared next action, bracket, registration and podium views.
+Reserved names reuse the existing Character projection lookup; missing names remain unknown.
+A known active event or outstanding claim occupies the chat's Blast-card seat, with a compact button on touch layouts.
+Until a relevant event is known, Blast remains the default even while the tournament feed is loading or unavailable.
+Known events remain visible during reconnects; feed readiness gates their actions.
+Both open the same Kolizeum window. Its bracket scrolls independently of the persistent action dock;
+the podium owns contributions and per-character claims. Registration and destructive recovery use
+reviewed intents, rechecking current eligibility without replacing the reviewed character or roster revision.
+The tournament reducer retains the latest operation outcome for confirmation dialogs; only certified
+execution establishes confirmation, while indexed rows remain the owner of displayed game state.
+
 ### Sound presentation
 
 `seed/sounds/` owns the file-backed effects; `seed/content/audio.json` assigns semantic cues and
@@ -947,8 +1012,8 @@ and its terrain, water and material consumers. Character collision initializes a
 focus. Rendering layers do not recompile recipes. Each worker
 compiles its transported terrain projection once within its isolated lifetime. Material palette IDs
 are invariant under structure-compilation options. Height-grid validation is shared by world recipes,
-city compilation and imported city maps; malformed grids fail before terrain sampling. The canonical
-test command checks menu artifact freshness alongside generated cities. Scene compiler files belong
+city compilation and imported city maps; malformed grids fail before terrain sampling. `validate:assets`
+checks menu artifact freshness alongside generated cities. Scene compiler files belong
 to the shared browser-check and frontend-release input classification.
 
 World materials may author bounded `emission` radiance (0–8), independent of AO and illumination.

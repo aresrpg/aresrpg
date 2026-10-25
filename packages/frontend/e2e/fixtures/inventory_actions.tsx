@@ -18,6 +18,10 @@ import '../../src/characters/characters.css'
 import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
+// Window-only styles must not change the frameless inventory fixtures.
+const CharacterWindow = new URLSearchParams(location.search).has('window')
+  ? (await import('../../src/game/hud/CharacterWindow.tsx')).CharacterWindow
+  : null
 const owned_pet = new URLSearchParams(location.search).has('owned-pet')
 const seed = content_catalog.items.find(({ category }) => category === (owned_pet ? 'pet' : 'hat'))!
 const items: ItemRow[] = [1, 2, 3].map((index) => ({
@@ -143,7 +147,9 @@ createRoot(document.getElementById('root')!).render(
     className="gw-tab market-page flex min-h-0 min-w-0 flex-1"
     style={{ containerType: 'inline-size', containerName: 'app-content' }}
   >
-    {new URLSearchParams(location.search).has('trade') ? (
+    {CharacterWindow ? (
+      <CharacterWindow tab="equipment" character={character} copy={copy} close={() => undefined} />
+    ) : new URLSearchParams(location.search).has('trade') ? (
       <TradeDialog copy={copy} active={trade} address="owner" />
     ) : sell ? (
       <SellPanel text={copy_text(copy.marketplace_page)} />

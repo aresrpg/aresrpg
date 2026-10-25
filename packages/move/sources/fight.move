@@ -74,6 +74,8 @@ const DOOR_FORFEIT: u64 = 8;
 const DOOR_CLOSE: u64 = 16;
 const DUNGEON_DOOR_POLICY: u64 = DOOR_JOIN | DOOR_SETTLE | DOOR_FORFEIT;
 const KOLIZEUM_DOOR_POLICY: u64 = DOOR_JOIN | DOOR_START | DOOR_SETTLE | DOOR_FORFEIT | DOOR_CLOSE;
+// The extra marker distinguishes tournament custody from wagered Kolizeum custody.
+const TOURNAMENT_DOOR_POLICY: u64 = KOLIZEUM_DOOR_POLICY | 32;
 
 public struct Fight has key {
   id: UID,
@@ -250,7 +252,7 @@ public(package) fun launch(
   let _ = share_new_fight(
     world, x, z, board, access, ACCESS_UNSET,
     option::some(character::id(&character)), option::none(), authorities, fighters,
-    character, dungeon, door_policy, entropy.generate_u64(), rewards, clock, ctx,
+    character, dungeon, door_policy, entropy.generate_u64(), rewards, clock.timestamp_ms(), ctx,
   );
 }
 
@@ -270,10 +272,9 @@ fun share_new_fight(
   door_policy: u64,
   next_turn_entropy: u64,
   rewards: FightRewards,
-  clock: &Clock,
+  placement_ms: u64,
   ctx: &mut TxContext,
 ): ID {
-  let placement_ms = if (door_policy & DOOR_START != 0) 0 else clock.timestamp_ms();
   let mut fight = Fight {
     id: object::new(ctx), world, x, z, access_a, access_b, opener_a, opener_b, authorities,
     combat: combat::new_state(board, fighters, placement_ms), dungeon, door_policy,
@@ -313,7 +314,7 @@ public(package) fun challenge(
   let _ = share_new_fight(
     world, x, z, board, access, ACCESS_INVITED,
     option::some(character_id), option::some(target), vector[authority], vector[fighter],
-    character, option::none(), 0, entropy.generate_u64(), fight_rewards::new(), clock, ctx,
+    character, option::none(), 0, entropy.generate_u64(), fight_rewards::new(), clock.timestamp_ms(), ctx,
   );
 }
 
@@ -338,9 +339,43 @@ public(package) fun kolizeum_birth(
   share_new_fight(
     b"kolizeum".to_string(), 0, 0, board, access, ACCESS_UNSET,
     option::some(character_id), option::none(), vector[authority], vector[fighter], character,
-    option::none(), KOLIZEUM_DOOR_POLICY, next_turn_entropy, fight_rewards::new(), clock, ctx,
+    option::none(), KOLIZEUM_DOOR_POLICY, next_turn_entropy, fight_rewards::new(), 0, ctx,
   )
 }
+
+/// A tournament board derives from its immutable match identity, independently of the opener.
+public(package) fun tournament_birth(
+  protected: &AresRPG_TransferPolicy<Character>, kiosk: &mut Kiosk, cap: &KioskOwnerCap,
+  character_id: ID, side: u8, tournament: ID, index: u64, placement_ms: u64,
+  next_turn_entropy: u64, catalog: &BoardCatalog, clock: &Clock, ctx: &mut TxContext,
+): ID {
+  let mut character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let board = board_catalog::pick(catalog, prng::mix(id_seed(tournament), index));
+  let cell = if (side == 0) board.start_cells_a()[0] else board.start_cells_b()[0];
+  let (authority, fighter) = player_fighter(&mut character, ctx.sender(), side, cell, clock);
+  share_new_fight(
+    b"tournament".to_string(), 0, 0, board, ACCESS_PUBLIC, ACCESS_PUBLIC,
+    option::none(), option::none(), vector[authority], vector[fighter], character,
+    option::none(), TOURNAMENT_DOOR_POLICY, next_turn_entropy, fight_rewards::new(), placement_ms, ctx,
+  )
+}
+
+public(package) fun assert_tournament_controlled(fight: &Fight) {
+  assert!(fight.door_policy == TOURNAMENT_DOOR_POLICY, EWrongDoor);
+}
+
+/// Only the linked tournament coordinator may select a walkover or an expired no-winner result.
+public(package) fun end_tournament(fight: &mut Fight, winner: Option<u8>) {
+  assert_tournament_controlled(fight);
+  combat::finish_managed(&mut fight.combat, winner);
+  emit_end_if_needed(fight, false);
+}
+
+public(package) fun tournament_was_played(fight: &Fight): bool { !combat::queue(&fight.combat).is_empty() }
+
+public(package) fun ended(fight: &Fight): bool { combat::ended(&fight.combat) }
+public(package) fun winner(fight: &Fight): Option<u8> { combat::winner(&fight.combat) }
+public(package) fun placement_duration_ms(): u64 { combat::placement_duration_ms() }
 
 public(package) fun ambush(
   protected: &AresRPG_TransferPolicy<Character>,
@@ -370,7 +405,7 @@ public(package) fun ambush(
   let _ = share_new_fight(
     world, x, z, board, ACCESS_UNSET, ACCESS_UNSET, option::none(), option::none(),
     vector[authority, FighterAuthority::Mob], vector[fighter, mob], character,
-    option::none(), 0, prng::mix(board_seed, 0xA8B057), rewards, clock, ctx,
+    option::none(), 0, prng::mix(board_seed, 0xA8B057), rewards, clock.timestamp_ms(), ctx,
   );
 }
 

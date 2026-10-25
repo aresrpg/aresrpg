@@ -262,12 +262,15 @@ export const create_engine = ({
       report_failure({ code: 'webgpu_unavailable' })
       return
     }
+    let failure_code: EngineIssue['code'] = 'renderer_load_failed'
     try {
       const { create_webgpu_backend } = await import('./webgpu_backend.ts')
+      failure_code = 'webgpu_initialization_failed'
       let sky_issue: EngineIssue | undefined
       const report_issue = (issue?: EngineIssue): void => {
         if (disposed || status.state === 'failed') return
-        if (issue && ['webgpu_device_lost', 'graphics_unavailable'].includes(issue.code)) return report_failure(issue)
+        if (issue && ['webgpu_device_lost', 'graphics_unavailable', 'asset_missing'].includes(issue.code))
+          return report_failure(issue)
         sky_issue = issue
         if (backend?.kind === 'webgpu')
           publish_status(
@@ -278,7 +281,7 @@ export const create_engine = ({
       return
     } catch (error) {
       const issue = {
-        code: 'webgpu_initialization_failed' as const,
+        code: failure_code,
         detail: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       }

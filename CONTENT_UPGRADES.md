@@ -60,7 +60,9 @@ snapshots.
    hardcoded pins to `edge` before versioning.
 8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level).
    Dispatch preparation CI on that exact tag. Wait for changed backend images and the staged
-   production Vercel build.
+   production Vercel build. CI gives the frontend build and prebuilt output one custom deployment ID;
+   `scripts/pin_vercel_deployment.ts` must run after `vercel build` and before upload. This keeps
+   retained deployments accessible to their already-open pages.
 9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL. Unchanged images retain the previous certified digest;
    deployment configuration consumes those digests, never mutable semver aliases.

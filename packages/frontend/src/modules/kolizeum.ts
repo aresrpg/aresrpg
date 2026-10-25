@@ -28,9 +28,6 @@ export type KolizeumInput =
 export const initial_kolizeum_state = (): KolizeumState =>
   Object.freeze({ lobbies: Object.freeze([]), pending_by_character: Object.freeze({}) })
 
-export const kolizeum_for_fight = (state: Readonly<KolizeumState>, fight: string) =>
-  state.lobbies.find((lobby) => lobby.fight === fight) ?? null
-
 export const selected_kolizeum_pending = (state: Readonly<AppState>): string | null => {
   const character_id = state.session.selected_character_id
   return character_id ? (state.kolizeum.pending_by_character[character_id] ?? null) : null

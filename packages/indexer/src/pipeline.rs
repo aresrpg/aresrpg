@@ -93,16 +93,10 @@ pub struct AresHandler {
     /// The seed (living-content) package's original id — the SECOND origin:
     /// content events (ContentWritten, template creations) are typed by it.
     seed_original: String,
-    /// Original package id — the type origin every game type matches against
-    /// (Sui type identity pins to the DEFINING package; one publish = one id).
+    /// Canonical lineage identity used by the projection. New types may originate in any
+    /// certified upgrade; raw defining IDs are normalized at checkpoint extraction.
     package_original: String,
-    /// Latest upgrade id, used for lineage validation only.
-    /// Invariant: upgrades must not introduce indexed object or event types;
-    /// supporting those requires matching every package id that introduced a type.
-    #[allow(dead_code)]
-    package_latest: String,
-    /// Every configured game call target known to this deployment. Original types still
-    /// identify objects; activity follows executable package versions.
+    /// Every certified version is both an activity target and a possible defining type origin.
     game_packages: std::collections::HashSet<String>,
 }
 
@@ -115,11 +109,18 @@ impl AresHandler {
     ) -> Result<Self> {
         let package_original = canonical(package_original)?;
         let package_latest = canonical(package_latest)?;
+        let game_packages: std::collections::HashSet<String> = game_packages
+            .iter()
+            .map(|id| canonical(id))
+            .collect::<Result<_>>()?;
+        ensure!(
+            game_packages.contains(&package_original) && game_packages.contains(&package_latest),
+            "game lineage is missing a configured package"
+        );
         Ok(Self {
-            game_packages: game_packages.iter().cloned().collect(),
+            game_packages,
             package_original,
             seed_original: canonical(seed_original)?,
-            package_latest,
         })
     }
 }
@@ -180,9 +181,35 @@ fn addr32(bytes: &[u8]) -> [u8; 32] {
     out
 }
 
-fn owned(obj: &Object) -> Option<OwnedObj> {
+/// A type keeps its defining ID on-chain. Projection identity follows only certified game
+/// versions, recursively including keys and values embedded in framework dynamic fields.
+fn game_type(
+    mut tag: TypeTag,
+    original: &str,
+    versions: &std::collections::HashSet<String>,
+) -> TypeTag {
+    match &mut tag {
+        TypeTag::Struct(tag) => {
+            if versions.contains(&tag.address.to_canonical_string(true)) {
+                tag.address = original.parse().expect("validated canonical game package");
+            }
+            for parameter in &mut tag.type_params {
+                *parameter = game_type(parameter.clone(), original, versions);
+            }
+        }
+        TypeTag::Vector(inner) => **inner = game_type((**inner).clone(), original, versions),
+        _ => {}
+    }
+    tag
+}
+
+fn owned(
+    obj: &Object,
+    game: &str,
+    versions: &std::collections::HashSet<String>,
+) -> Option<OwnedObj> {
     let mv = obj.data.try_as_move()?;
-    let TypeTag::Struct(tag) = TypeTag::from(mv.type_().clone()) else {
+    let TypeTag::Struct(tag) = game_type(TypeTag::from(mv.type_().clone()), game, versions) else {
         return None;
     };
     let owner = match obj.owner() {
@@ -343,7 +370,11 @@ fn character_facts(txs: &[OwnedTx], checkpoint: u64, ts_ms: u64, game: &str) -> 
         .collect()
 }
 
-fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
+fn lift(
+    checkpoint: &Checkpoint,
+    game: &str,
+    versions: &std::collections::HashSet<String>,
+) -> Vec<OwnedTx> {
     let mut event_ordinal = 0u64;
     checkpoint
         .transactions
@@ -351,11 +382,11 @@ fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
         .map(|tx| {
             let inputs: Vec<OwnedObj> = tx
                 .input_objects(&checkpoint.object_set)
-                .filter_map(owned)
+                .filter_map(|object| owned(object, game, versions))
                 .collect();
             let outputs: Vec<OwnedObj> = tx
                 .output_objects(&checkpoint.object_set)
-                .filter_map(owned)
+                .filter_map(|object| owned(object, game, versions))
                 .collect();
             // deleted ids resolve to their PRE-STATE input views (law 2)
             let deleted: Vec<OwnedObj> = tx
@@ -372,12 +403,18 @@ fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
                 .iter()
                 .flat_map(|events| &events.data)
                 .map(|event| {
+                    let TypeTag::Struct(tag) = game_type(
+                        TypeTag::Struct(Box::new(event.type_.clone())),
+                        game,
+                        versions,
+                    ) else {
+                        unreachable!("event tags are structs")
+                    };
                     let row = OwnedEvent {
-                        package: event.type_.address.to_canonical_string(true),
-                        module: event.type_.module.to_string(),
-                        name: event.type_.name.to_string(),
-                        type_params: event
-                            .type_
+                        package: tag.address.to_canonical_string(true),
+                        module: tag.module.to_string(),
+                        name: tag.name.to_string(),
+                        type_params: tag
                             .type_params
                             .iter()
                             .map(|tp| tp.to_canonical_string(true))
@@ -431,7 +468,7 @@ impl Processor for AresHandler {
         let ts_ms = summary.timestamp_ms;
         let game = self.package_original.as_str();
 
-        let txs = lift(checkpoint);
+        let txs = lift(checkpoint, game, &self.game_packages);
 
         // the wire: per-tx event views borrowing the owned stage
         let event_views: Vec<Vec<EventView<'_>>> = txs
@@ -929,3 +966,7 @@ mod tests {
         assert_eq!(facts[1].delta, -1);
     }
 }
+
+#[cfg(test)]
+#[path = "../test/type_origins.rs"]
+mod type_origin_tests;

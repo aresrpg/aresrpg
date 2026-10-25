@@ -125,4 +125,18 @@ assert.equal(failed_boot.status().issue?.code, 'webgpu_initialization_failed')
 assert.equal(failed_boot.status().issue?.detail, initialization_error.message)
 assert.equal(failed_boot.status().issue?.stack, initialization_error.stack)
 failed_boot.dispose()
+initialization_error = null
+const missing_asset = create_engine({
+  canvas: {} as never,
+  world: compile_runtime_world_recipe(world_terrain('nauvis')),
+})
+await new Promise<void>((resolve) => {
+  missing_asset.subscribe_status((status) => {
+    if (status.state !== 'initializing') resolve()
+  })
+})
+report({ code: 'asset_missing', detail: 'missing city details' })
+assert.equal(missing_asset.status().state, 'failed')
+assert.equal(missing_asset.status().issue?.code, 'asset_missing')
+missing_asset.dispose()
 console.log('renderer terminal failure passed')

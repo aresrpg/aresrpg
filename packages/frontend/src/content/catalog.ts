@@ -19,7 +19,6 @@ import {
   type JobSlug,
   type AcquisitionContent,
   type RecipeProgressRecommendation,
-  type StatName,
 } from '@aresrpg/immutable'
 import type {
   SeedConsumable as ConsumableEffect,
@@ -49,8 +48,6 @@ type MasterySource = Readonly<{
 }>
 
 const authored_mastery = mastery_source as unknown as MasterySource
-
-export type StatBlock = Readonly<Record<StatName, number>>
 
 export type { ConsumableEffect, SeedItem, SeedMob, SeedRecipe, SeedSpell, SpellEffect, SpellLevel }
 export type LootRow = SeedMob['loot'][number]

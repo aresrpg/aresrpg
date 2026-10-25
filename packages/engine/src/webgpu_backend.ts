@@ -42,6 +42,7 @@ import { create_frame_renderer } from './frame_renderer.ts'
 import { create_speed_wind } from './speed_wind.ts'
 import { create_pet_wing_layer } from './pet_wing_layer.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
+import { is_missing_asset_error, terrain_failure } from './asset_error.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
 import { load_city_details } from './cities/city_details.ts'
 import { create_lantern } from './lantern.ts'
@@ -713,6 +714,7 @@ export const create_webgpu_backend = async (
           if (disposed || revisions.get(chunk.key) !== revision) return
           failed_chunks.add(chunk.key)
           settle_chunk(chunk.key, revision, 'failed')
+          if (is_missing_asset_error(error)) report_issue(terrain_failure(error))
           console.error(`Failed to build chunk ${chunk.key}.`, error)
         })
     }

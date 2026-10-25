@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { TournamentLink } from '@aresrpg/protocol'
 import type { ClosableFightRow, FightResolutionRow, ServerPacket } from '@aresrpg/protocol'
 import { player_max_hp, xp_award_of, type Fighter, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { level_from_xp } from '@aresrpg/immutable'
@@ -7,6 +8,7 @@ import { level_from_xp } from '@aresrpg/immutable'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
+import { tournament_for_fight } from './tournament.ts'
 import { observe_fight_results } from './fight_result_observer.ts'
 import {
   aggregate_result_loot,
@@ -61,6 +63,7 @@ export type FightResult = Readonly<{
   boss_weight: number
   dungeon: Readonly<{ dungeon: string; room: number }> | null
   kolizeum: string | null
+  tournament?: TournamentLink | null
   /** Immutable stake plus certified gross payout; absent for non-Kolizeum and recovery without terms. */
   kolizeum_wager: Readonly<{ stake_mist: bigint; payout_mist: bigint | null }> | null
   winner: number | null
@@ -222,17 +225,11 @@ const result_kolizeum = (
   kolizeum: string | null
   kolizeum_wager: FightResult['kolizeum_wager']
 }> => {
-  const retained_kolizeum = existing ? existing.kolizeum : null
-  const retained_wager = existing ? existing.kolizeum_wager : null
-  if (!manager)
-    return Object.freeze({
-      kolizeum: retained_kolizeum,
-      kolizeum_wager: retained_wager,
-    })
-  if (retained_wager) return Object.freeze({ kolizeum: manager.id, kolizeum_wager: retained_wager })
   return Object.freeze({
-    kolizeum: manager.id,
-    kolizeum_wager: Object.freeze({ stake_mist: manager.pledge_mist, payout_mist: forfeited ? 0n : null }),
+    kolizeum: manager ? manager.id : (existing?.kolizeum ?? null),
+    kolizeum_wager:
+      existing?.kolizeum_wager ??
+      (manager ? Object.freeze({ stake_mist: manager.pledge_mist, payout_mist: forfeited ? 0n : null }) : null),
   })
 }
 
@@ -267,6 +264,7 @@ export const merge_checkpoint = (
     boss_weight: Number(checkpoint.contract.boss_weight),
     dungeon: projected_dungeon(checkpoint),
     ...kolizeum_result,
+    tournament: tournament_for_fight(state, checkpoint.contract.id),
     winner: checkpoint.contract.winner === null ? null : Number(checkpoint.contract.winner),
     ...result_accounting(
       checkpoint.contract.started_ms,
@@ -325,6 +323,7 @@ const recover_result = (state: AppState, row: Readonly<FightResolutionRow>): Fig
     boss_weight: row.boss_weight,
     dungeon: fight_resolution_dungeon(row),
     kolizeum: row.kolizeum,
+    tournament: row.tournament,
     kolizeum_wager: null,
     winner: row.winner,
     duration_ms: null,

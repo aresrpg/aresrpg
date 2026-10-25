@@ -38,8 +38,11 @@ import prettier from 'prettier'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const API_MOVE_PATH = join(root, '../move/sources/api.move')
+export const TOURNAMENT_MOVE_PATH = join(root, '../move/sources/tournament.move')
+export const TOURNAMENT_BRACKET_PATH = join(root, '../move-math/sources/tournament_bracket.move')
 export const TRADE_MOVE_PATH = join(root, '../move/sources/trade.move')
 export const DOORS_OUT_PATH = join(root, 'src/doors.gen.ts')
+export const TOURNAMENT_RULES_OUT_PATH = join(root, 'src/tournament_rules.gen.ts')
 export const CHARACTER_MOVE_PATH = join(root, '../move/sources/character.move')
 export const CHARACTER_PRICE_OUT_PATH = join(root, 'src/character_price.ts')
 
@@ -81,6 +84,7 @@ const TYPE_MAP = {
   String: { kind: 'pure', helper: 'string' },
   'Option<ID>': { kind: 'pure_option', helper: 'id' },
   'vector<ID>': { kind: 'pure_vector', helper: 'id' },
+  'vector<Reward>': { kind: 'move_value', type: 'Reward' },
   'vector<u8>': { kind: 'pure_vector', helper: 'u8' },
   'vector<u16>': { kind: 'pure_vector', helper: 'u16' },
   'vector<u32>': { kind: 'pure_vector', helper: 'u32' },
@@ -329,7 +333,7 @@ const TRADE_DOORS = Object.freeze({
   close_token: 'trade_close_token',
 })
 
-export const generate_game_doors = async (api_source, trade_source) => {
+export const generate_game_doors = async (api_source, trade_source, tournament_source) => {
   const names = new Set([...Object.keys(TRADE_DOORS), 'end_request'])
   const trade = parse_doors(trade_source, names).flatMap((door) => {
     const projected = { ...door, module: 'trade' }
@@ -343,15 +347,46 @@ export const generate_game_doors = async (api_source, trade_source) => {
   const active = parse_doors(api_source).filter(
     ({ name }) => !['redeem_mastery_offer_kares', 'prepare_boss_rewards'].includes(name)
   )
-  const raw = emit_doors([...active, ...trade], {
-    source: 'packages/move/sources/{api,trade}.move',
+  const tournament = parse_doors(
+    tournament_source,
+    new Set([
+      'rewards',
+      'add_reward',
+      'create',
+      'donate_sui',
+      'create_kares_pool',
+      'donate_kares',
+      'claim_kares',
+      'refund_kares',
+      'leave_team',
+      'crank_unopened',
+      'claim_sui',
+      'cancel',
+      'expire',
+    ])
+  ).map((door) => ({ ...door, module: 'tournament', export_name: `tournament_${door.name}` }))
+  const raw = emit_doors([...active, ...trade, ...tournament], {
+    source: 'packages/move/sources/{api,trade,tournament}.move',
     description: 'public game doors',
   })
   const config = await prettier.resolveConfig(DOORS_OUT_PATH)
   return prettier.format(raw, { ...config, parser: 'typescript' })
 }
 
-/** Project the fixed character mint price without giving it a second authored home. */
+/** Project tournament limits from their Move owners. */
+export const generate_tournament_rules = async (source, bracket_source) => {
+  const match = /const MATCH_MS: u64 = ([\d_]+);/.exec(source)
+  const teams = /const MAX_TEAMS: u64 = ([\d_]+);/.exec(bracket_source)
+  if (!match || !teams) throw new Error('Tournament limits are missing')
+  return prettier.format(
+    `// Generated from tournament.move and tournament_bracket.move. Do not edit.\nexport const TOURNAMENT_MATCH_MS = ${match[1].replaceAll('_', '')}\nexport const TOURNAMENT_MAX_TEAMS = ${teams[1].replaceAll('_', '')}\n`,
+    {
+      ...(await prettier.resolveConfig(DOORS_OUT_PATH)),
+      parser: 'typescript',
+    }
+  )
+}
+
 export const generate_character_price = async (move_source) => {
   const match = move_source.match(/const PRICE: u64 = ([\d_]+);/)
   if (!match) throw new Error('generate_doors: character.move has no `const PRICE: u64`')
@@ -376,8 +411,19 @@ export const generate_projected_doors = async (doors, output_path, options = {})
 
 const invoked_directly = import.meta.main ?? (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1])
 if (invoked_directly) {
-  const out = await generate_game_doors(readFileSync(API_MOVE_PATH, 'utf8'), readFileSync(TRADE_MOVE_PATH, 'utf8'))
+  const out = await generate_game_doors(
+    readFileSync(API_MOVE_PATH, 'utf8'),
+    readFileSync(TRADE_MOVE_PATH, 'utf8'),
+    readFileSync(TOURNAMENT_MOVE_PATH, 'utf8')
+  )
   writeFileSync(DOORS_OUT_PATH, out)
+  writeFileSync(
+    TOURNAMENT_RULES_OUT_PATH,
+    await generate_tournament_rules(
+      readFileSync(TOURNAMENT_MOVE_PATH, 'utf8'),
+      readFileSync(TOURNAMENT_BRACKET_PATH, 'utf8')
+    )
+  )
   writeFileSync(CHARACTER_PRICE_OUT_PATH, await generate_character_price(readFileSync(CHARACTER_MOVE_PATH, 'utf8')))
   const count = (out.match(/^export const /gm) || []).length
   console.log(`doors.gen.ts written — ${count - 1} doors; character_price.ts written`)

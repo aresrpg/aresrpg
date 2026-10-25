@@ -102,6 +102,7 @@ jobs:
     env:
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
+      ARES_DEPLOYMENT_ID: ares-${{ github.run_id }}-${{ github.run_attempt }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ github.token }}
       VITE_NETWORK: mainnet
@@ -149,6 +150,8 @@ jobs:
         run: bun run vercel pull --yes --environment=production --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
         run: bun run vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
+      - name: pin prebuilt deployment assets
+        run: bun scripts/pin_vercel_deployment.ts
       - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
         id: deploy
         run: echo "url=$(bun run vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"

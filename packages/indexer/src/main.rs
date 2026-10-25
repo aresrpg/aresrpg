@@ -32,6 +32,7 @@ mod personal_kiosk;
 mod pipeline;
 mod publish;
 mod store;
+mod tournament;
 mod trade_tokens;
 
 use anyhow::{Context, Result};

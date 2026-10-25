@@ -23,8 +23,6 @@ const loaders = Object.freeze(
   )
 ) as Readonly<Record<string, () => Promise<string>>>
 
-export const pet_model_types = Object.freeze(Object.keys(loaders))
-
 export const load_pet_model_url = async (item_type: string): Promise<string | null> => loaders[item_type]?.() ?? null
 
 /** The ONE pet-companion loader — demo lab and player app resolve the SAME shape from the

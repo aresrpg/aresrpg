@@ -18,7 +18,6 @@ import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { content_catalog } from '../content/catalog.ts'
-import { mob_level_from_scalar } from '../content/mob_levels.ts'
 import { useNametags } from '../game/core/nametag_feed.ts'
 import { dispatch_app, useAppStore, type AppState } from '../store.ts'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -50,9 +49,6 @@ export const nearest_interaction_id = (
         .filter(({ distance }) => distance <= range)
         .toSorted((left, right) => left.distance - right.distance || left.id.localeCompare(right.id))[0]?.id ?? null)
     : null
-
-/** The chain's own scalar → level arithmetic (fight.move::mf, mirrored in @aresrpg/fight). */
-export const member_level = mob_level_from_scalar
 
 /** The closest tagged pack to the player — E's one target. Ties break on the id so the choice
  *  is stable frame to frame rather than flickering between two equidistant packs. */

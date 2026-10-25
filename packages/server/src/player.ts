@@ -49,6 +49,7 @@ import player_leaderboards from './modules/player_leaderboards.ts'
 import type { ResolveName } from './suins.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
+import player_tournament from './modules/player_tournament.ts'
 import player_friends from './modules/player_friends.ts'
 import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
@@ -195,6 +196,7 @@ const MODULES: PlayerModule[] = [
   player_items,
   player_trade,
   player_kolizeum,
+  player_tournament,
   player_requests,
   player_allocation,
   player_inspection,

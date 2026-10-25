@@ -1,0 +1,13 @@
+{
+  "tool": "OpenAI built-in image_gen",
+  "status": "Draft for owner visual review",
+  "references": [
+    "Previous banner draft v2 (removed after v3 approval)",
+    "seed/models/characters/yajin_male.glb",
+    "seed/models/characters/yajin_male_hair.glb",
+    "seed/models/mobs/araknomath.glb"
+  ],
+  "preparation": "Blender renders of Yajin with canonical hood attachment and Araknomath supplied as direct model references. Profile portraits are not generation inputs.",
+  "master": "x-banner-v3.png",
+  "export": "x-banner-v3-1500x500.png"
+}

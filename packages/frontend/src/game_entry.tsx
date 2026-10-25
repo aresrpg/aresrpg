@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 
 import {
   dispatch_app,
+  read_app_state,
   initialize_app_store,
   observe_app,
   ADVENTURE_APP_MODULES,
@@ -18,6 +19,7 @@ import { load_locale, type Locale } from './i18n/locale.ts'
 import { env } from './env.ts'
 import { capture_demo_boot_failure } from './analytics.ts'
 import { load_game_settings } from './game/core/settings.ts'
+import { RELOAD_CHECK } from './startup_recovery.ts'
 import { register_service_worker } from './pwa.ts'
 import { react_error_handlers, report_error } from './reporting.ts'
 import { MOBILE_VIEWPORT_QUERY, uses_mobile_overlays } from './player_layout.ts'
@@ -64,6 +66,20 @@ const load_surface = async (
 export const boot_game = (): void => {
   const requested_quality = import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
   initialize_app_store(load_game_settings(env.engine_quality, requested_quality))
+  addEventListener(RELOAD_CHECK, (event) => {
+    const { session, external_wallet } = read_app_state()
+    try {
+      if (
+        session.auth_request ||
+        external_wallet.request ||
+        [session.wallet, external_wallet.session].some((wallet) => wallet && !wallet.is_transaction_idle())
+      )
+        event.preventDefault()
+    } catch (error) {
+      event.preventDefault()
+      console.warn('App reload safety check failed.', error)
+    }
+  })
   const locale = load_locale()
   dispatch_app({ type: 'locale/changed', locale })
   const root = createRoot(document.getElementById('root')!, react_error_handlers)
