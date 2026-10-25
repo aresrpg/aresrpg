@@ -116,7 +116,7 @@ async fn complete_lineage(url: &str, original: &str) -> Result<Vec<String>> {
             url,
             &format!(
                 r#"{{ object(address: "{original}") {{ asMovePackage {{
-                packageVersionsAfter(first: 100, after: {after}) {{
+                packageVersionsAfter(after: {after}) {{
                     nodes {{ address }} pageInfo {{ hasNextPage endCursor }}
                 }}
             }} }} }}"#
@@ -252,6 +252,10 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
     info!(count = indexes.len(), "graph indexes declared");
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "../test/boot.rs"]
+mod lineage_tests;
 
 #[cfg(test)]
 mod tests {
