@@ -11,15 +11,12 @@ import { SearchPickerModal, type PickerCopy, type PickerItem } from '../componen
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
-import type { AppCopy } from '../i18n/copy.ts'
+import { format_text, type AppCopy } from '../i18n/copy.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import type { SimulatorCharacter } from '../modules/simulator.ts'
 import { dispatch_app } from '../store.ts'
 
 import { simulator_loadout_items } from './loadout.ts'
-
-const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
-  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
 export const LoadoutSection = ({
   copy,
@@ -44,7 +41,7 @@ export const LoadoutSection = ({
             id: item.item_type,
             label: item.name,
             category: item.category,
-            sublabel: template(text.level, { level: item.level }),
+            sublabel: format_text(text.level, { level: item.level }),
             icon: item_icon(item.item_type),
           })
         )
@@ -54,11 +51,11 @@ export const LoadoutSection = ({
   const picker_copy = useMemo<PickerCopy>(
     () =>
       Object.freeze({
-        search: (title: string) => template(text.picker_search, { title }),
+        search: (title: string) => format_text(text.picker_search, { title }),
         all: text.picker_all,
         no_results: text.picker_no_results,
-        results: (filtered: number, total: number) => template(text.picker_results, { filtered, total }),
-        selected: (label: string) => template(text.picker_selected, { label }),
+        results: (filtered: number, total: number) => format_text(text.picker_results, { filtered, total }),
+        selected: (label: string) => format_text(text.picker_selected, { label }),
         new_label: text.picker_new,
       }),
     [text]

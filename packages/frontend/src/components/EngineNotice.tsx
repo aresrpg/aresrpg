@@ -5,6 +5,8 @@ import type { EngineIssue, EngineStatus } from '@aresrpg/engine'
 
 import type { AppCopy } from '../i18n/copy.ts'
 
+import { browser_user_agent, graphics_help } from './graphics_help.ts'
+
 export const engine_failure_message = (
   issue: EngineIssue | undefined,
   copy: Pick<AppCopy, 'body' | 'engine_recovery' | 'engine_graphics_failure'>
@@ -41,6 +43,7 @@ export const EngineNotice = ({
   const kind = engine_notice_kind(status, minimum_graphics)
   if (!kind) return null
   const continue_action = { label: copy.engine_continue, run: dismiss }
+  const help = graphics_help(status.issue, copy, browser_user_agent())
   const view = {
     minimum: {
       title: copy.engine_minimum_title,
@@ -52,13 +55,13 @@ export const EngineNotice = ({
     failed: {
       title: copy.world_unavailable_title,
       body: engine_failure_message(status.issue, copy),
-      hint: null,
+      hint: help,
       action: { label: copy.engine_reload, run: reload },
     },
     unsupported: {
       title: copy.title,
       body: copy.body,
-      hint: null,
+      hint: help,
       action: { label: copy.engine_reload, run: reload },
     },
   }[kind]

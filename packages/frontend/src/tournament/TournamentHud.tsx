@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Trophy } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { TournamentRow } from '@aresrpg/protocol'
 
@@ -11,9 +12,20 @@ import { player_error_text } from '../i18n/player_error.ts'
 import { tournament_owned_match, tournament_registration, tournament_rounds } from '../modules/tournament_selectors.ts'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
-import { action_label, countdown, match_label, own_team } from './presentation.ts'
+import { action_label, countdown, match_label, own_team, tournament_name } from './presentation.ts'
 import { TeamPips, TournamentPool } from './TournamentControls.tsx'
+import { tournament_path } from './navigation.ts'
+import { useHudPlacement } from './useHudPlacement.ts'
 import './tournament.css'
+
+const HudCards = ({ children }: Readonly<{ children: ReactNode }>) => {
+  const root = useHudPlacement()
+  return (
+    <aside ref={root} className="blast-sale-hud tourney-hud-desktop tourney-hud-stack">
+      {children}
+    </aside>
+  )
+}
 
 const MiniBracket = ({ row, view }: Readonly<{ row: TournamentRow; view: TournamentView }>) => {
   const own = own_team(row, view.viewer.address)
@@ -56,7 +68,7 @@ const HudBody = ({ row, view, t }: Readonly<{ row: TournamentRow; view: Tourname
     <>
       {team >= 0 && (
         <strong>
-          {row.teams[team].name}
+          <bdi>{tournament_name(row.teams[team].name)}</bdi>
           {match && ` → ${match_label(row, index, t)}`}
           {row.teams[team].place > 0 && <small> · {t('place_number', { place: row.teams[team].place })}</small>}
         </strong>
@@ -65,7 +77,7 @@ const HudBody = ({ row, view, t }: Readonly<{ row: TournamentRow; view: Tourname
         <span className="tourney-hud-opponents">
           {[match.a, match.b].map((side, ordinal) => (
             <span key={ordinal}>
-              {side === null ? t('waiting') : row.teams[side].name}
+              {side === null ? t('waiting') : <bdi>{tournament_name(row.teams[side].name)}</bdi>}
               {side !== null && (
                 <TeamPips
                   t={t}
@@ -80,9 +92,43 @@ const HudBody = ({ row, view, t }: Readonly<{ row: TournamentRow; view: Tourname
       )}
       {row.status === 'in_progress' && <MiniBracket row={row} view={view} />}
       {result && (
-        <small className="tourney-result-line">{t('result_line', { team: row.teams[result.winner!].name })}</small>
+        <small className="tourney-result-line">
+          {t('result_line', { team: tournament_name(row.teams[result.winner!].name) })}
+        </small>
       )}
     </>
+  )
+}
+
+const TournamentResultsCard = ({ row, t }: Readonly<{ row: TournamentRow | null; t: CopyText }>) => {
+  if (!row) return null
+  const winners = row.teams
+    .filter((team) => team.place === 1)
+    .map((team) => tournament_name(team.name))
+    .join(', ')
+  return (
+    <button
+      type="button"
+      className="tourney-hud-card tourney-results-card"
+      aria-label={t('open_results', { name: tournament_name(row.name) })}
+      onClick={() => dispatch_app({ type: 'tournament/podium_opened', id: row.id })}
+    >
+      <span className="tourney-hud-eyebrow">
+        <span>
+          <Trophy size={14} aria-hidden="true" />
+          {t('results')}
+        </span>
+      </span>
+      <span className="tourney-hud-heading">
+        <strong>
+          <bdi>{tournament_name(row.name)}</bdi>
+        </strong>
+      </span>
+      <small>{winners ? t('champion', { team: winners }) : t('no_champion')}</small>
+      <span className="tourney-hud-footer">
+        <b>{t('podium')}</b>
+      </span>
+    </button>
   )
 }
 
@@ -92,7 +138,7 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
   const emphasis = admission ? ' is-admission' : ''
   const timer = countdown(deadline, view.viewer.now_ms)
   const live = row.matches.filter((entry) => entry.state === 1 && entry.phase === 'active').length
-  const open = (): void => dispatch_app({ type: 'page/open', page: 'kolizeum' })
+  const open = (): void => dispatch_app({ type: 'path/open', pathname: tournament_path(row.id) })
   const labels = {
     open: timer,
     in_progress: t('live_count', { count: live }),
@@ -102,12 +148,13 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
   const mobile_label = admission ? `${t('join')} ${timer}` : labels[row.status]
   return (
     <>
-      <aside className="blast-sale-hud tourney-hud-desktop">
+      <HudCards>
+        <TournamentResultsCard row={view.results} t={t} />
         <button
           type="button"
           className={`tourney-hud-card${emphasis}`}
           onClick={open}
-          aria-label={t('open_event', { name: row.name })}
+          aria-label={t('open_event', { name: tournament_name(row.name) })}
         >
           <span className="tourney-hud-eyebrow">
             <span>
@@ -117,7 +164,9 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
             <span>{t(row.status)}</span>
           </span>
           <span className="tourney-hud-heading">
-            <strong>{row.name}</strong>
+            <strong>
+              <bdi>{tournament_name(row.name)}</bdi>
+            </strong>
             {(row.status === 'open' || admission) && (
               <span className="tourney-hud-clock">
                 <time>{timer}</time>
@@ -148,12 +197,12 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
             <b>{action_label(view.primary, t)}</b>
           </span>
         </button>
-      </aside>
+      </HudCards>
       <button
         type="button"
         className={`tourney-hud-mobile${emphasis}`}
         onClick={open}
-        aria-label={t('open_event', { name: row.name })}
+        aria-label={t('open_event', { name: tournament_name(row.name) })}
       >
         <Trophy size={18} aria-hidden="true" />
         <span>{mobile_label}</span>
@@ -164,11 +213,27 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
 
 export const TournamentHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const view = useTournamentView()
+  const t = copy_text(copy.tournament_page)
+  const results = view.wallet ? view.results : null
   return view.wallet && view.card === 'event' && view.row ? (
     <HudEvent row={view.row} view={view} copy={copy} />
   ) : (
-    <aside className="blast-sale-hud">
-      <BlastSaleCard copy={copy} />
-    </aside>
+    <>
+      <HudCards>
+        <TournamentResultsCard row={results} t={t} />
+        <BlastSaleCard copy={copy} />
+      </HudCards>
+      {results && (
+        <button
+          type="button"
+          className="tourney-hud-mobile"
+          aria-label={t('open_results', { name: tournament_name(results.name) })}
+          onClick={() => dispatch_app({ type: 'tournament/podium_opened', id: results.id })}
+        >
+          <Trophy size={18} aria-hidden="true" />
+          <span>{t('results')}</span>
+        </button>
+      )}
+    </>
   )
 }

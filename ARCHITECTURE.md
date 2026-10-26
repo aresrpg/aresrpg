@@ -152,7 +152,8 @@ worlds, using CSS without declaring a slow request failed or cancelling it. The 
 JavaScript runs, browser-reload instructions preserve claim fragments. Rejected imports reveal
 recovery immediately. Renderer-module failures remain resource failures and do not trigger a graphics
 quality retry. Missing WebGPU receives compatibility guidance; other graphics initialization failures
-receive neutral recovery guidance at the existing engine failure boundary.
+receive neutral recovery guidance at the existing engine failure boundary. Both WebGPU failures add one
+browser-specific setup line derived from the user agent (`components/graphics_help.ts`) on the postcard and notice.
 City 404/410 failures retain a typed missing-asset flag through worker replies and engine status.
 Before the first world becomes ready, confirmed missing JS/CSS or city artifacts may request one
 service-worker update. A different activated worker permits one automatic reload per failed release
@@ -846,14 +847,21 @@ are replay-protected independently per asset and item reward. Cancellation, unaw
 rounding dust return to the original organizer. Tournaments charge no platform fee.
 
 The indexer projects tournament and optional pool versions independently. The server pushes active
-events, the latest event and outstanding recovery claims. Frontend actions use the SDK; automatic
+events, results completed within the last twenty-four hours, the latest event and outstanding recovery claims.
+The indexer records completion from the checkpoint that changes a known running tournament to finished;
+later claims and replay never restart that clock. Legacy finished projections without that timestamp
+remain available through the latest-event and claim paths without an invented completion date.
+Frontend actions use the SDK; automatic
 admission and claims retain wallet-scoped attempts. A submitted action is never automatically
 retried after a digest. The tournament panel remains accessible during fights for timeout recovery.
 Feed availability and automatic-entry failures belong to that reducer. Failed reads preserve known
 rows while marking them unavailable; successful writes and current snapshots retire obsolete entry
 errors. Pure selectors derive the shared next action, bracket, registration and podium views.
 Reserved names reuse the existing Character projection lookup; missing names remain unknown.
-A known active event or outstanding claim occupies the chat's Blast-card seat, with a compact button on touch layouts.
+A known active event replaces the Blast card, with a compact button on touch layouts.
+The desktop card stack uses the viewport's bottom-right corner when its measured bounds clear chat,
+the social dock, action controls and notifications; otherwise it retains the anchor above chat.
+Recent results and outstanding claims retain a separate results card above the event or Blast card, including after collection.
 Until a relevant event is known, Blast remains the default even while the tournament feed is loading or unavailable.
 Known events remain visible during reconnects; feed readiness gates their actions.
 Both open the same Kolizeum window. Its bracket scrolls independently of the persistent action dock;
@@ -861,6 +869,11 @@ the podium owns contributions and per-character claims. Registration and destruc
 reviewed intents, rechecking current eligibility without replacing the reviewed character or roster revision.
 The tournament reducer retains the latest operation outcome for confirmation dialogs; only certified
 execution establishes confirmation, while indexed rows remain the owner of displayed game state.
+An observed completion opens a participant's podium once, after combat and fight-result dialogs close.
+Certified successful claims retain an exact, wallet-scoped collection summary. One presentation reveals its
+SUI, KARES and item totals with the shared artwork and audio; failed claims, replayed outcomes and restored
+snapshots never celebrate. Dismissal acknowledges only the displayed receipts, preserving later collections.
+Confirmed admission to an owned fight ends spectating and selects its participant before combat begins.
 
 Tournament practice boots `/practice` with only the shared local observers and its own reducer.
 The open-event action passes an unsigned character snapshot through browser history; the practice

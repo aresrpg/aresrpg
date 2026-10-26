@@ -5,7 +5,7 @@ import { Button } from '@aresrpg/ui'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
-import type { AppCopy } from '../i18n/copy.ts'
+import { format_text, type AppCopy } from '../i18n/copy.ts'
 
 import { DigestLink } from './SendModalShell.tsx'
 
@@ -20,12 +20,6 @@ export type WalletTransferState = Readonly<{
   error?: string
 }>
 
-const template = (value: string, variables?: Readonly<Record<string, string>>): string =>
-  Object.entries(variables ?? {}).reduce(
-    (text, [key, replacement]) => text.replaceAll(`{{${key}}}`, replacement),
-    value
-  )
-
 const send_dictionary = (copy: AppCopy): Readonly<Record<string, unknown>> => {
   const value = copy.wallet_legacy.send
   return typeof value === 'object' && value !== null ? (value as Readonly<Record<string, unknown>>) : Object.freeze({})
@@ -33,14 +27,14 @@ const send_dictionary = (copy: AppCopy): Readonly<Record<string, unknown>> => {
 
 export const send_text = (copy: AppCopy, key: string, variables?: Readonly<Record<string, string>>): string => {
   const value = send_dictionary(copy)[key]
-  return template(typeof value === 'string' ? value : key, variables)
+  return format_text(typeof value === 'string' ? value : key, variables)
 }
 
 export const send_error_text = (copy: AppCopy, key: string, variables?: Readonly<Record<string, string>>): string => {
   const errors = send_dictionary(copy).err
   const value =
     typeof errors === 'object' && errors !== null ? (errors as Readonly<Record<string, unknown>>)[key] : null
-  return template(typeof value === 'string' ? value : key, variables)
+  return format_text(typeof value === 'string' ? value : key, variables)
 }
 
 export const truncate_address = (address: string): string => `${address.slice(0, 8)}…${address.slice(-6)}`

@@ -15,7 +15,7 @@ import {
 
 import { BracketCard, BracketTeam, BracketTree } from './BracketView.tsx'
 import { TeamPips, TournamentActionButton } from './TournamentControls.tsx'
-import { countdown, own_team, round_label } from './presentation.ts'
+import { countdown, own_team, round_label, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type MatchView = ReturnType<typeof tournament_rounds>['rounds'][number]['matches'][number]
@@ -155,7 +155,11 @@ export const TournamentBracket = ({
               <section className="tourney-fifth">
                 <h4>{t('joint_fifth')}</h4>
                 {fifth.length ? (
-                  fifth.map((team, index) => <p key={index}>{team.name}</p>)
+                  fifth.map((team, index) => (
+                    <p key={index}>
+                      <bdi>{tournament_name(team.name)}</bdi>
+                    </p>
+                  ))
                 ) : (
                   <p>{t('fifth_pending')}</p>
                 )}

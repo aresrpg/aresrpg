@@ -17,7 +17,7 @@ import { action_key, type TournamentAction } from '../modules/tournament.ts'
 import { toast } from '../toast.ts'
 
 import { TournamentConfirm, TournamentDialog, TournamentOperationNotice } from './TournamentControls.tsx'
-import { character_label, team_initial, tournament_act, operation_status } from './presentation.ts'
+import { character_label, team_initial, tournament_act, operation_status, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type SeatIntent = Readonly<{
@@ -103,13 +103,14 @@ export const TournamentTeams = ({
             })}
           </p>
         </div>
-        <Button disabled={!view.can_create_team} onClick={create}>
+        <Button disabled={!view.can_open_team_creation} onClick={create}>
           <Plus size={14} aria-hidden="true" />
           {t('create_team')}
         </Button>
       </header>
       <p className="tourney-note">{t('complete_notice')}</p>
       {row.teams.map((team, index) => {
+        if (team.seats.length === 0) return null
         const access = team_access(row, index, viewer)
         const joinable = open && ['join', 'add'].includes(access)
         return (
@@ -119,7 +120,9 @@ export const TournamentTeams = ({
                 {team_initial(team.name)}
               </span>
               <div>
-                <h4>{team.name}</h4>
+                <h4>
+                  <bdi>{tournament_name(team.name)}</bdi>
+                </h4>
                 <p>
                   {t(team.allowed.length ? 'named_only' : 'open_anyone')} · {team.seats.length}/{row.format}
                 </p>
@@ -143,14 +146,14 @@ export const TournamentTeams = ({
                     set_intent({
                       action: { kind: 'leave', team: index, character: registered.character },
                       character: character_label(registered.name, registered.character),
-                      team: team.name,
+                      team: tournament_name(team.name),
                     })
                   }
                   join={() =>
                     set_intent({
                       action: { kind: 'join', team: index, revision: team.revision, character: viewer.character!.id },
                       character: viewer.character!.name,
-                      team: team.name,
+                      team: tournament_name(team.name),
                     })
                   }
                 />
@@ -159,7 +162,7 @@ export const TournamentTeams = ({
           </article>
         )
       })}
-      {!row.teams.length && <p className="tourney-empty">{t('no_teams')}</p>}
+      {registration.teams === 0 && <p className="tourney-empty">{t('no_teams')}</p>}
       {intent && (
         <TournamentConfirm
           title={t(SEAT_REVIEW[intent.action.kind].title)}
@@ -202,6 +205,15 @@ export const CreateTournamentTeam = ({
   const [names, set_names] = useState('')
   const { wallet, viewer } = view
   const { character } = viewer
+  if (view.team_creation_blocker)
+    return (
+      <TournamentDialog title={t('create_team')} close={close} t={t}>
+        <p role="alert">{t(`reason_${view.team_creation_blocker}`)}</p>
+        <footer className="tourney-dialog-actions">
+          <Button onClick={close}>{t('close')}</Button>
+        </footer>
+      </TournamentDialog>
+    )
   if (!wallet || !character) return null
   const status = operation_status(
     view.tournament,
@@ -216,8 +228,8 @@ export const CreateTournamentTeam = ({
     .filter(Boolean)
   const allowed_count = new Set([character.name, ...member_names].map((value) => value.toLowerCase())).size
   const ready = [
-    view.can_create_team,
-    !submitted || status.phase === 'failed',
+    view.can_open_team_creation,
+    !locked,
     name.trim().length > 0,
     new TextEncoder().encode(name.trim()).length <= 40,
     !restricted || allowed_count <= row.format,

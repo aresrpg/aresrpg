@@ -2223,11 +2223,6 @@
         10
       ]
     },
-    "packages/frontend/src/modules/tournament.ts": {
-      "reduce": [
-        9
-      ]
-    },
     "packages/frontend/src/modules/tournament_selectors.ts": {
       "tournament_review_available": [
         11

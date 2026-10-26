@@ -18,10 +18,12 @@ import { DesktopWorldHud } from '../../src/components/DesktopWorldHud.tsx'
 import { DesktopWorldStatus } from '../../src/components/DesktopWorldStatus.tsx'
 import { GamePageWindow } from '../../src/components/GamePageWindow.tsx'
 import { publish_pose, read_pose } from '../../src/game/core/pose_feed.ts'
+
 import '../../src/tailwind.css'
 import '@aresrpg/ui/styles.css'
 import '../../src/components/app_layout.css'
 import '../../src/game/hud/world_responsive.css'
+import { NOW, tournament_scenario } from './tournament_scenarios.ts'
 
 // Synthetic reducer inputs; no wallet connection or transaction execution. Public read-only widgets keep their normal lifecycle.
 const mobile = new URLSearchParams(location.search).has('mobile')
@@ -50,8 +52,8 @@ dispatch_app({
     online: 6,
     indexing_lag: 0,
     current_epoch: '1',
-    chain_timestamp_ms: null,
-    chain_sample_age_ms: null,
+    chain_timestamp_ms: NOW,
+    chain_sample_age_ms: 0,
   },
 })
 dispatch_app({
@@ -107,6 +109,12 @@ for (const [index, distance] of [12, 45].entries())
     },
   })
 dispatch_app({ type: 'dialog/open', dialog: null })
+const tournament = new URLSearchParams(location.search).get('tournament')
+if (tournament)
+  dispatch_app({
+    type: 'server/packet',
+    packet: { type: 'packet/tournaments', tournaments: tournament_scenario(tournament).rows },
+  })
 if (new URLSearchParams(location.search).has('arena'))
   dispatch_app({
     type: 'server/packet',

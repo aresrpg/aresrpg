@@ -4,6 +4,14 @@
 title: WebGPU không khả dụng
 body: 'Thế giới cần WebGPU và kết nối an toàn (HTTPS hoặc localhost). Hãy mở bằng trình duyệt hỗ trợ.'
 engine_graphics_failure: Không thể khởi động đồ họa. Kiểm tra cài đặt đồ họa của trình duyệt hoặc cập nhật trình điều khiển đồ họa rồi tải lại.
+graphics_help:
+  firefox_update: 'Bạn đang dùng Firefox {version}. WebGPU cần Firefox {required} trở lên: mở menu, chọn Trợ giúp → Về Firefox để cập nhật, rồi tải lại.'
+  firefox_unsupported: 'Firefox chưa hỗ trợ WebGPU trên hệ thống này. Hãy mở trò chơi bằng Chrome hoặc Edge.'
+  firefox_settings: 'Trong Firefox, vào Cài đặt → Tổng quát → Hiệu suất, bỏ chọn “Sử dụng cài đặt hiệu suất được đề xuất” và bật “Sử dụng tăng tốc phần cứng khi có sẵn”, rồi khởi động lại Firefox. Máy Mac dùng Intel chưa được hỗ trợ: hãy dùng Chrome hoặc Safari 26.'
+  safari: 'WebGPU cần Safari 26 trở lên. Hãy cập nhật lên macOS 26, iOS 26 hoặc iPadOS 26, rồi tải lại.'
+  chromium: 'Bật Cài đặt → Hệ thống → “Sử dụng tính năng tăng tốc đồ họa khi có sẵn”, rồi khởi động lại trình duyệt. Trang chrome://gpu phải hiển thị WebGPU được tăng tốc phần cứng.'
+  chromium_linux: 'Trên Linux, bật “Unsafe WebGPU Support” và “Vulkan” trong chrome://flags, bật Cài đặt → Hệ thống → “Sử dụng tính năng tăng tốc đồ họa khi có sẵn”, rồi khởi động lại trình duyệt.'
+  other: 'Hãy mở trò chơi bằng Chrome, Edge hoặc Safari 26 mới nhất với tăng tốc đồ họa được bật.'
 engine_recovery: Thế giới đã ngừng tải hoặc hiển thị. Hãy tải lại để thử tiếp.
 engine_reload: Tải lại
 engine_minimum_title: 'Đã giảm đồ họa'
@@ -2983,6 +2991,13 @@ allocation_page:
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
 
 tournament_page:
+  results: 'Kết quả giải đấu'
+  open_results: 'Xem kết quả giải đấu {{name}}'
+  rewards_collected: 'Đã nhận phần thưởng'
+  rewards_arrived: 'Phần thưởng của bạn đã đến.'
+  rewards_revealed: 'Đã hiện {{shown}} / {{total}}'
+  reveal_all: 'Hiện tất cả'
+  reward_continue: 'Tiếp tục'
   manage_event: 'Quản lý giải đấu'
   practice_hint: 'Chơi giải đấu 1 đấu 1 miễn phí với bot.'
   contribution_title: 'Tăng tổng giải thưởng'
@@ -3004,6 +3019,8 @@ tournament_page:
   finished: Đã kết thúc
   cancelled: Đã hủy
   create_team: Tạo đội
+  reason_fight: Hãy kết thúc trận đấu và nhận phần thưởng trước khi tạo đội.
+  reason_syncing: Đang chờ trạng thái nhân vật. Hãy thử lại sau khi trạng thái được cập nhật.
   team_name: Tên đội
   restricted: Đội giới hạn
   allowed_names: Tên đồng đội, ngăn cách bằng dấu phẩy
@@ -3119,7 +3136,7 @@ tournament_page:
   reason_elsewhere: Đã đăng ký với đội khác
   reason_full: Các vị trí trong đội đã đầy
   reason_restricted: Nhân vật này không có tên trong danh sách đội
-  reason_custody: Nhân vật phải ở trong kiosk của mình
+  reason_custody: Nhân vật này hiện chưa sẵn sàng.
   reason_waiting: Đang chờ trận tiếp theo
   reason_admission: Đang nhận người vào
   reason_force_due: Có thể bắt đầu trận

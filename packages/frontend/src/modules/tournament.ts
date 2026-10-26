@@ -10,10 +10,16 @@ import { browser_auth_storage } from '../auth_storage.ts'
 import { env } from '../env.ts'
 import { toast } from '../toast.ts'
 import { error_message } from '../i18n/error_text.ts'
+import { tournament_path } from '../tournament/navigation.ts'
 
 import { character_custody } from './session.ts'
 import { chain_now } from './chain_clock.ts'
 import { create_claim_attempts } from './giftcard_attempts.ts'
+import {
+  collected_tournament_rewards,
+  pending_tournament_presentation,
+  type TournamentCollection,
+} from './tournament_rewards.ts'
 
 export type TournamentState = Readonly<{
   rows: readonly TournamentRow[]
@@ -22,6 +28,9 @@ export type TournamentState = Readonly<{
   feed_status: 'loading' | 'loaded' | 'unavailable'
   entry_failures: Readonly<Record<string, TournamentEntryFailure>>
   outcome: Readonly<{ key: string; reason: string | null }> | null
+  pending_podium: string | null
+  collections: readonly TournamentCollection[]
+  reward_reveal: readonly string[]
 }>
 export type TournamentEntryFailure = Readonly<{
   id: string
@@ -50,7 +59,15 @@ export type TournamentInput =
   | Readonly<{ type: 'tournament/admin'; action: TournamentAdminAction }>
   | Readonly<{ type: 'tournament/action'; id: string; action: TournamentAction }>
   | Readonly<{ type: 'tournament/pending'; key: string | null }>
-  | Readonly<{ type: 'tournament/outcome'; key: string; reason: string | null }>
+  | Readonly<{
+      type: 'tournament/outcome'
+      key: string
+      reason: string | null
+      collection?: TournamentCollection | null
+    }>
+  | Readonly<{ type: 'tournament/podium_opened'; id: string }>
+  | Readonly<{ type: 'tournament/rewards_opened' }>
+  | Readonly<{ type: 'tournament/rewards_closed' }>
   | Readonly<{
       type: 'tournament/entry_result'
       key: string
@@ -64,6 +81,9 @@ export const initial_tournament_state = (): TournamentState => ({
   feed_status: 'loading',
   entry_failures: {},
   outcome: null,
+  pending_podium: null,
+  collections: [],
+  reward_reveal: [],
 })
 export const tournament_for_fight = (state: AppState, fight: string): TournamentLink | null =>
   state.tournament.links[fight] ?? null
@@ -108,18 +128,63 @@ const FEED_STATUS: Readonly<Partial<Record<AppInput['type'], TournamentState['fe
   'link/replaced': 'unavailable',
 }
 
-const reduce = (state: AppState, input: AppInput): AppState => {
-  if (['auth/disconnected', 'auth/rejected'].includes(input.type))
-    return { ...state, tournament: initial_tournament_state() }
-  if (input.type === 'tournament/pending')
+type TournamentUpdate = Extract<
+  AppInput,
+  {
+    type:
+      | 'auth/disconnected'
+      | 'auth/rejected'
+      | 'tournament/pending'
+      | 'tournament/outcome'
+      | 'tournament/podium_opened'
+      | 'tournament/rewards_opened'
+      | 'tournament/rewards_closed'
+  }
+>
+const UPDATES: {
+  readonly [Kind in TournamentUpdate['type']]: (
+    state: TournamentState,
+    input: Extract<TournamentUpdate, { type: Kind }>
+  ) => TournamentState
+} = {
+  'auth/disconnected': initial_tournament_state,
+  'auth/rejected': initial_tournament_state,
+  'tournament/pending': (state, input) => ({ ...state, pending: input.key, outcome: input.key ? null : state.outcome }),
+  'tournament/outcome': (state, input) => {
+    if (state.pending !== input.key) return state
+    const collection = input.reason === null ? input.collection : null
+    const fresh = collection && !state.collections.some((row) => row.digest === collection.digest)
     return {
       ...state,
-      tournament: { ...state.tournament, pending: input.key, outcome: input.key ? null : state.tournament.outcome },
+      outcome: { key: input.key, reason: input.reason },
+      collections: fresh ? [...state.collections, collection] : state.collections,
     }
-  if (input.type === 'tournament/outcome')
-    return state.tournament.pending === input.key
-      ? { ...state, tournament: { ...state.tournament, outcome: { key: input.key, reason: input.reason } } }
-      : state
+  },
+  'tournament/podium_opened': (state, input) =>
+    state.pending_podium === input.id ? { ...state, pending_podium: null } : state,
+  'tournament/rewards_opened': (state) =>
+    state.reward_reveal.length
+      ? state
+      : {
+          ...state,
+          reward_reveal: state.collections.filter((row) => !row.acknowledged).map((row) => row.digest),
+        },
+  'tournament/rewards_closed': (state) => ({
+    ...state,
+    collections: state.collections.map((row) =>
+      state.reward_reveal.includes(row.digest) ? { ...row, acknowledged: true } : row
+    ),
+    reward_reveal: [],
+  }),
+}
+
+const reduce = (state: AppState, input: AppInput): AppState => {
+  const update = UPDATES[input.type as TournamentUpdate['type']]
+  if (update) {
+    // The same discriminant selects the state transform and its input payload.
+    const tournament = update(state.tournament, input as never)
+    return tournament === state.tournament ? state : { ...state, tournament }
+  }
   if (input.type === 'tournament/entry_result') return entry_result(state, input)
   const feed_status = FEED_STATUS[input.type]
   if (feed_status) return { ...state, tournament: { ...state.tournament, feed_status } }
@@ -145,6 +210,12 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
       ? old
       : row
   })
+  const finished = rows.find(
+    (row) =>
+      row.status === 'finished' &&
+      previous.get(row.id)?.status === 'in_progress' &&
+      row.teams.some((team) => team.seats.some((seat) => seat.owner === state.session.wallet?.address))
+  )
   const links = Object.fromEntries(
     rows.flatMap((row) =>
       row.matches.flatMap((match, index) => (match.fight ? [[match.fight, { id: row.id, index }] as const] : []))
@@ -158,6 +229,7 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
     tournament: {
       ...state.tournament,
       rows,
+      pending_podium: finished?.id ?? state.tournament.pending_podium,
       feed_status: 'loaded',
       entry_failures,
       links: { ...state.tournament.links, ...links },
@@ -316,9 +388,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const key = action_key(t, action)
     attempts.remember(wallet.address, key)
     dispatch({ type: 'tournament/pending', key })
-    const finished = (reason: string | null): void => {
+    const finished = (reason: string | null, collection?: TournamentCollection | null): void => {
       if (!signal.aborted && get_state().session.wallet === wallet)
-        dispatch({ type: 'tournament/outcome', key, reason })
+        dispatch({ type: 'tournament/outcome', key, reason, collection })
     }
     const entry_finished = (reason: string | null): void => {
       if (action.kind !== 'enter' || signal.aborted || get_state().session.wallet !== wallet) return
@@ -331,9 +403,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     }
     void Promise.resolve()
       .then(() => execute(state, wallet, t, action))
-      .then(() => {
+      .then((result) => {
         entry_finished(null)
-        finished(null)
+        finished(null, collected_tournament_rewards(t, action, result, wallet.address))
       })
       .catch((error: unknown) => {
         finished(error_message(error))
@@ -379,21 +451,30 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       })
   })
   events.on('tournament/action', ({ id, action }) => run(id, action))
+  events.on('tournament/podium_opened', ({ id }) =>
+    dispatch({ type: 'path/open', pathname: tournament_path(id, 'podium') })
+  )
   events.on('STATE_UPDATED', (state) => {
     if (
-      active ||
-      state.session.link_status !== 'ready' ||
-      state.tournament.feed_status !== 'loaded' ||
-      !state.session.wallet
+      ![
+        !active,
+        state.session.link_status === 'ready',
+        state.tournament.feed_status === 'loaded',
+        state.session.wallet !== null,
+      ].every(Boolean)
     )
       return
     const now = chain_now(state.chain_clock, performance.now())
     if (now === null) return
-    const { address } = state.session.wallet
+    const { address } = state.session.wallet!
     const next = automatic_actions(state, now)
       .map(({ id, action }) => ({ t: state.tournament.rows.find((row) => row.id === id)!, action }))
       .find(({ t, action }) => !attempts.has(address, action_key(t, action)))
     if (next && attempts.remember(address, action_key(next.t, next.action))) run(next.t.id, next.action, true)
+    if (!next) {
+      const presentation = pending_tournament_presentation(state)
+      if (presentation) dispatch(presentation)
+    }
   })
 }
 export default { name: 'tournament', reduce, observe } satisfies AppModule

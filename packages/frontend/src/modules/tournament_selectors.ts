@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { coin_share, type CharacterRow, type TournamentMatch, type TournamentRow } from '@aresrpg/protocol'
+import {
+  coin_share,
+  recent_tournament_result,
+  type CharacterRow,
+  type TournamentMatch,
+  type TournamentRow,
+} from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import { TOURNAMENT_MATCH_MS, TOURNAMENT_MAX_TEAMS } from '@aresrpg/sdk/tournament'
 
@@ -445,22 +451,31 @@ export const select_tournament_view = (state: TournamentViewSource, selected: st
       const actions = tournament_claims(t, address)
       return actions.length ? [{ row: t, actions }] : []
     })
-  const visible = rows.some(
-    (t) => ['open', 'in_progress'].includes(t.status) || tournament_claims(t, address).length > 0
-  )
+  const results =
+    rows
+      .filter((t) => recent_tournament_result(t, now_ms) || tournament_claims(t, address).length > 0)
+      .toSorted((a, b) => (b.finished_at_ms ?? 0) - (a.finished_at_ms ?? 0))[0] ?? null
+  const visible = rows.some((t) => ['open', 'in_progress'].includes(t.status))
   return {
     row,
     viewer,
     primary,
     recovery,
+    results,
     ...tournament_controls(row, viewer, state.tournament),
     ...tournament_attendance(row, viewer),
     entry_failure: entry_failure(state.tournament, row, primary),
-    card: visible ? ('event' as const) : ('hidden' as const),
+    card: visible ? ('event' as const) : results ? ('results' as const) : ('hidden' as const),
   }
 }
 
 const t_ready = (state: TournamentState): boolean => state.feed_status === 'loaded' && state.pending === null
+
+const team_creation_blocker = ({ character }: TournamentViewer): 'character' | 'fight' | 'syncing' | null => {
+  if (!character) return 'character'
+  if (character.custody === 'fight' || character.active_fight) return 'fight'
+  return character.custody === 'kiosk' ? null : 'syncing'
+}
 
 const tournament_controls = (row: TournamentRow | null, viewer: TournamentViewer, state: TournamentState) => {
   const ready = t_ready(state)
@@ -472,7 +487,8 @@ const tournament_controls = (row: TournamentRow | null, viewer: TournamentViewer
       registration_open: false,
       registration_expired: false,
       can_register: false,
-      can_create_team: false,
+      can_open_team_creation: false,
+      team_creation_blocker: team_creation_blocker(viewer),
     }
   const registration_open = [
     row.status === 'open',
@@ -487,12 +503,8 @@ const tournament_controls = (row: TournamentRow | null, viewer: TournamentViewer
     registration_open,
     can_register,
     registration_expired: [row.status === 'open', (viewer.now_ms ?? -Infinity) >= row.start_before_ms].every(Boolean),
-    can_create_team: [
-      can_register,
-      !registered,
-      tournament_registration(row).can_create,
-      viewer.character?.custody === 'kiosk',
-    ].every(Boolean),
+    can_open_team_creation: [can_register, !registered, tournament_registration(row).can_create].every(Boolean),
+    team_creation_blocker: team_creation_blocker(viewer),
   }
 }
 

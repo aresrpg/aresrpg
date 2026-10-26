@@ -10,7 +10,7 @@ import { Swords, Flag } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { content_catalog } from '../../content/catalog.ts'
-import { spell_name, type AppCopy } from '../../i18n/copy.ts'
+import { format_text, spell_name, type AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore, type AppInput } from '../../store.ts'
 import { owned_placement_readiness } from '../../modules/fight_identity.ts'
 import { chain_deadline_reached, chain_now } from '../../modules/chain_clock.ts'
@@ -37,9 +37,6 @@ import { WorldChat } from '../../components/Chat.tsx'
 import './fight_hud.css'
 
 const LazyFightSpell = lazy(() => import('./FightSpell.tsx').then(({ FightSpell }) => ({ default: FightSpell })))
-
-const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
-  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
 const submit_end_turn = (fight: string | null, fighter: bigint): void =>
   dispatch_app({
@@ -469,7 +466,7 @@ export const FightHud = ({
         <FightTurnCard
           fighter={displayed_turn_card.fighter}
           key={displayed_turn_card.key}
-          level_label={template(copy.simulator_page.level, { level: displayed_turn_card.fighter.level.toString() })}
+          level_label={format_text(copy.simulator_page.level, { level: displayed_turn_card.fighter.level.toString() })}
           mob_icon_for={mob_icon_for}
         />
       )}
@@ -571,8 +568,8 @@ export const FightHud = ({
           {forfeit_open && (
             <ConfirmDialog
               danger
-              title={template(copy.fight_hud.forfeit_title, { name: selected.name })}
-              description={template(copy.fight_hud.forfeit_body, { name: selected.name })}
+              title={format_text(copy.fight_hud.forfeit_title, { name: selected.name })}
+              description={format_text(copy.fight_hud.forfeit_body, { name: selected.name })}
               close_label={copy.dismiss}
               cancel_label={copy.cancel}
               confirm_label={copy.fight_hud.confirm_forfeit}

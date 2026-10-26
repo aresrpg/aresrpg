@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { tournament_coin_claims, type TournamentRow, type TournamentTeam, type TournamentSeat } from '@aresrpg/protocol'
+import {
+  tournament_coin_claims,
+  recent_tournament_result,
+  TOURNAMENT_RESULTS_MS,
+  type TournamentRow,
+  type TournamentTeam,
+  type TournamentSeat,
+} from '@aresrpg/protocol'
 
 import type { Graph, Node } from '../graph.ts'
 
@@ -38,25 +45,36 @@ const pending_prizes = (t: TournamentRow, address: string): boolean =>
     })
   )
 
-export const get_tournaments = async (graph: Graph, address: string): Promise<readonly TournamentRow[]> => {
-  // The current event plus this wallet's outstanding prizes. Finished history does not grow the public feed.
+export const get_tournaments = async (
+  graph: Graph,
+  address: string,
+  now_ms = Date.now()
+): Promise<readonly TournamentRow[]> => {
+  // Active events, one day of results, and durable claim recovery; no unbounded finished-history feed.
   const rows = await graph.read(
     `MATCH (t:Tournament) WHERE t.status IN ['open', 'in_progress'] RETURN t AS tournament
+    UNION MATCH (t:Tournament) WHERE t.status = 'finished' AND t.finished_at_ms > $results_since RETURN t AS tournament
     UNION MATCH (t:Tournament)-[r:REGISTERED]->(:User {address: $address})
     OPTIONAL MATCH (p:TournamentKaresPool {id: t.kares_pool})
     WITH t, r, p WHERE t.status = 'finished' AND r.eligible AND (r.pending OR (p IS NOT NULL AND p.balance <> '0' AND NOT r.character IN p.claimed)) RETURN DISTINCT t AS tournament
     UNION MATCH (t:Tournament), (p:TournamentKaresPool {id: t.kares_pool})
     WHERE t.status IN ['finished', 'cancelled'] AND NOT p.refunded RETURN t AS tournament
     UNION MATCH (t:Tournament) WITH t ORDER BY t.created_ckpt DESC LIMIT 1 RETURN t AS tournament`,
-    { address }
+    { address, results_since: now_ms - TOURNAMENT_RESULTS_MS }
   )
   const ordered = [...rows].sort(
     (a, b) =>
       Number((b.tournament as Node)!.properties.created_ckpt) - Number((a.tournament as Node)!.properties.created_ckpt)
   )
-  const tournaments = ordered.map(
-    ({ tournament }) => JSON.parse(String((tournament as Node)!.properties.data)) as RawTournament
-  )
+  const tournaments = ordered.map(({ tournament }) => {
+    const { properties } = (tournament as Node)!
+    const row = JSON.parse(String(properties.data)) as RawTournament
+    if (properties.finished_at_ms == null) return row
+    const finished_at_ms = Number(properties.finished_at_ms)
+    if (!Number.isSafeInteger(finished_at_ms) || finished_at_ms <= 0)
+      throw new Error('Invalid indexed tournament completion time')
+    return { ...row, finished_at_ms }
+  })
   const fights = tournaments.flatMap((t) => t.matches.flatMap((m) => (m.fight ? [m.fight] : [])))
   const characters = [
     ...new Set(
@@ -137,6 +155,7 @@ export const get_tournaments = async (graph: Graph, address: string): Promise<re
       index === 0 ||
       t.status === 'open' ||
       t.status === 'in_progress' ||
+      recent_tournament_result(t, now_ms) ||
       !t.token_refunded ||
       pending_prizes(t, address)
   )

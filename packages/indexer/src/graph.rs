@@ -489,6 +489,14 @@ fn emit_object(
             "tournament match links differ"
         );
         let row = crate::tournament::row(&tournament, o.version);
+        if tournament.status == "finished" {
+            // Claims also write Tournament. Only the actual terminal transition owns this clock;
+            // an already-finished legacy projection must not acquire a fabricated completion time.
+            cypher.push(format!(
+                "MATCH (v:Tournament {{id: {}}}) WHERE v.status = 'in_progress' AND v.finished_at_ms IS NULL SET v.finished_at_ms = {}",
+                q_id(&tournament.id), view.ts_ms
+            ));
+        }
         merge_set(
             cypher,
             "Tournament",

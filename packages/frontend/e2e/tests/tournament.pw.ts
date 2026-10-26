@@ -2,19 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test, type Page } from '@playwright/test'
 
-const visit = (page: Page, query = '') => page.goto(`/e2e/fixtures/tournament.html${query}`)
-const calls = async (page: Page): Promise<unknown[]> =>
-  JSON.parse((await page.locator('body').getAttribute('data-calls')) ?? '[]')
-const fixture = async (page: Page, method: string, ...args: unknown[]) => {
-  await page.waitForFunction(() => 'tournament_fixture' in window)
-  return page.evaluate(
-    ({ method, args }) => {
-      const runtime = window as unknown as { tournament_fixture: Record<string, (...values: unknown[]) => unknown> }
-      return runtime.tournament_fixture[method](...args)
-    },
-    { method, args }
-  )
-}
+import { visit, calls, fixture } from '../fixtures/tournament_driver.ts'
+
 const podium = (page: Page) =>
   page
     .getByRole('navigation', { name: 'Tournament sections' })
@@ -211,7 +200,7 @@ test('item-only events never offer an empty coin claim and amounts truncate rath
 
 test('timeout recovery remains available in an owned mounted fight and requires confirmation', async ({ page }) => {
   await visit(page, '?scenario=timeout')
-  await expect.poll(() => fixture(page, 'state')).toEqual({ page: 'kolizeum', fight_mounted: true })
+  await expect.poll(() => fixture(page, 'state')).toMatchObject({ page: 'kolizeum', fight_mounted: true })
   await expect(page.getByRole('button', { name: 'Wagered', exact: true })).toBeDisabled()
   await page.locator('.tourney-dock').getByRole('button', { name: 'End without winner', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'End without winner', exact: true })
@@ -330,7 +319,10 @@ test('finished results survive deleted fight objects and no-winner events promis
   page,
 }) => {
   await visit(page, '?scenario=finished')
-  await page.getByRole('button', { name: 'Bracket', exact: true }).click()
+  await page
+    .getByRole('navigation', { name: 'Tournament sections' })
+    .getByRole('button', { name: 'Matches', exact: true })
+    .click()
   await expect(page.locator('.tourney-match.is-done')).toHaveCount(8)
   await expect(page.getByRole('button', { name: 'Watch', exact: true })).toHaveCount(0)
   await visit(page, '?scenario=no_champion')

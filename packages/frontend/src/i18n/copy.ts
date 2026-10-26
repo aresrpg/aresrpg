@@ -47,6 +47,15 @@ export type AppCopy = Readonly<{
   world_loading_sky: string
   world_loading_finishing: string
   engine_graphics_failure: string
+  graphics_help: Readonly<{
+    firefox_update: string
+    firefox_unsupported: string
+    firefox_settings: string
+    safari: string
+    chromium: string
+    chromium_linux: string
+    other: string
+  }>
   engine_recovery: string
   engine_reload: string
   engine_minimum_title: string
@@ -196,6 +205,16 @@ export type AppCopy = Readonly<{
 export type CopyNode = Readonly<Record<string, unknown>>
 export type CopyText = (key: string, values?: Readonly<Record<string, string | number>>) => string
 
+/** Replace only the authored placeholders. Inserted values are literal text, never templates. */
+export const format_text = (source: string, values: Readonly<Record<string, string | number>> = {}): string =>
+  source.replace(
+    /\{\{(\w+)\}\}|\{(\w+)\}/g,
+    (match: string, double: string | undefined, single: string | undefined) => {
+      const key = (double ?? single)!
+      return Object.hasOwn(values, key) ? String(values[key]) : match
+    }
+  )
+
 export const copy_text =
   (copy: CopyNode): CopyText =>
   (key, values = {}) => {
@@ -206,10 +225,7 @@ export const copy_text =
         copy
       )
     if (typeof value !== 'string') return key
-    return Object.entries(values).reduce(
-      (rendered, [name, replacement]) => rendered.replaceAll(`{{${name}}}`, String(replacement)),
-      value
-    )
+    return format_text(value, values)
   }
 
 export const stat_name = (copy: AppCopy, stat: StatName): string => copy.simulator_page[`stat_${stat}`] ?? stat

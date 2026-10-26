@@ -172,8 +172,8 @@ export default function KolizeumPage({
   copy,
   fight_mounted = false,
 }: Readonly<{ copy: AppCopy; fight_mounted?: boolean }>) {
-  const [tournaments, set_tournaments] = useState(true)
-  const tournament_mode = tournaments || fight_mounted
+  const pathname = useAppStore((state) => state.navigation.pathname)
+  const tournament_mode = pathname !== '/kolizeum/wagered' || fight_mounted
   const lobbies = useAppStore((state) => state.kolizeum.lobbies)
   const address = useAppStore((state) => state.session.wallet?.address ?? null)
   const characters = useAppStore((state) => state.session.characters)
@@ -183,13 +183,16 @@ export default function KolizeumPage({
   return (
     <div className={`flex min-h-0 flex-1 flex-col overflow-hidden${tournament_mode ? ' tourney-mode' : ''}`}>
       <nav className="kz-tabs">
-        <Button className={tournament_mode ? 'is-active' : ''} onClick={() => set_tournaments(true)}>
+        <Button
+          className={tournament_mode ? 'is-active' : ''}
+          onClick={() => dispatch_app({ type: 'path/open', pathname: '/kolizeum' })}
+        >
           {copy_text(copy.tournament_page)('title')}
         </Button>
         <Button
           disabled={fight_mounted}
           className={!tournament_mode ? 'is-active' : ''}
-          onClick={() => set_tournaments(false)}
+          onClick={() => dispatch_app({ type: 'path/open', pathname: '/kolizeum/wagered' })}
         >
           {copy_text(copy.tournament_page)('wagered')}
         </Button>

@@ -4,7 +4,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 
 import type { CopyText } from '../i18n/copy.ts'
 
-import { team_initial } from './presentation.ts'
+import { team_initial, tournament_name } from './presentation.ts'
 
 export const BracketTeam = ({
   name,
@@ -29,7 +29,9 @@ export const BracketTeam = ({
     <span className="tourney-monogram" aria-hidden="true">
       {unresolved ? '—' : team_initial(name)}
     </span>
-    <span title={name}>{name}</span>
+    <span title={tournament_name(name)}>
+      <bdi>{tournament_name(name)}</bdi>
+    </span>
     {won && <span aria-label={t('winner')}>✓</span>}
     {children}
   </div>

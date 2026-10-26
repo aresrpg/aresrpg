@@ -34,7 +34,7 @@ const tournament = {
 const graph_for = (
   pool: Record<string, unknown> | null,
   with_pool = true,
-  rows: readonly (typeof tournament)[] = [tournament]
+  rows: readonly (typeof tournament & { finished_at_ms?: number })[] = [tournament]
 ): Graph =>
   ({
     read: async (query: string) => {
@@ -43,6 +43,7 @@ const graph_for = (
           tournament: {
             properties: {
               created_ckpt: rows.length - index,
+              finished_at_ms: row.finished_at_ms,
               data: JSON.stringify({ ...row, kares_pool: with_pool ? 'pool' : null }),
             },
           },
@@ -51,6 +52,25 @@ const graph_for = (
       return [{ id: 'hero', name: 'Hero' }]
     },
   }) as unknown as Graph
+
+test('recent results remain in the feed after claims and expire independently of newer events', async () => {
+  const now = 100_000_000
+  const latest = { ...tournament, id: 'latest', status: 'open' }
+  const finished = { ...tournament, id: 'finished', finished_at_ms: now - 1000 }
+  const rows = await get_tournaments(graph_for(null, false, [latest, finished]), 'spectator', now)
+  expect(rows.map((row) => row.id)).toEqual(['latest', 'finished'])
+  expect(rows[1].finished_at_ms).toBe(now - 1000)
+  const expired = await get_tournaments(graph_for(null, false, [latest, finished]), 'spectator', now + 86_400_000)
+  expect(expired.map((row) => row.id)).toEqual(['latest'])
+  const legacy = await get_tournaments(graph_for(null, false, [latest, tournament]), 'spectator', now)
+  expect(legacy.map((row) => row.id)).toEqual(['latest'])
+})
+
+test('malformed completion timestamps fail instead of silently hiding or extending results', async () => {
+  await expect(
+    get_tournaments(graph_for(null, false, [{ ...tournament, finished_at_ms: Number.NaN }]), 'owner')
+  ).rejects.toThrow('Invalid indexed tournament completion time')
+})
 
 test('SUI-only recovery requires no currency projection and preserves exact funded totals', async () => {
   const [row] = await get_tournaments(graph_for(null, false), 'owner')

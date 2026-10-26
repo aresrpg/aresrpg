@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { basis_points } from '@aresrpg/immutable'
 
+export const TOURNAMENT_RESULTS_MS = 24 * 60 * 60 * 1000
+
 export type TournamentLink = Readonly<{ id: string; index: number }>
 export type TournamentSeat = Readonly<{
   character: string
@@ -37,6 +39,8 @@ export type TournamentRow = Readonly<{
   version: string
   name: string
   status: 'open' | 'in_progress' | 'finished' | 'cancelled'
+  /** Checkpoint time of the indexed in-progress → finished transition; absent for legacy projections. */
+  finished_at_ms?: number
   organizer: string
   format: 1 | 3 | 6
   start_before_ms: number
@@ -53,6 +57,14 @@ export type TournamentRow = Readonly<{
   teams: readonly TournamentTeam[]
   matches: readonly TournamentMatch[]
 }>
+
+export const recent_tournament_result = (
+  row: Pick<TournamentRow, 'status' | 'finished_at_ms'>,
+  now_ms: number | null
+): boolean =>
+  row.status === 'finished' &&
+  row.finished_at_ms !== undefined &&
+  (now_ms === null || now_ms < row.finished_at_ms + TOURNAMENT_RESULTS_MS)
 
 export const coin_share = (total: string, bps: number, seats: number, ordinal: number): bigint => {
   const allocation = (BigInt(total) * BigInt(bps)) / BigInt(basis_points)

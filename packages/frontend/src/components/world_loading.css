@@ -59,10 +59,27 @@
 .loading-header {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 48px 6vw;
+}
+.loading-brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+}
+.loading-version {
+  padding: 4px 8px;
+  border: 1px solid #dfbd794d;
+  border-radius: 3px;
+  background: #0c0a1280;
+  color: #dfbd79;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .loading-wordmark {
   width: 192px;
@@ -233,6 +250,13 @@
   font-size: 10px;
   letter-spacing: 0.05em;
   flex: none;
+}
+.loading-graphics-help {
+  max-width: 78ch;
+  margin: -8px 0 20px 26px;
+  color: #dfbd79;
+  font-size: 12px;
+  line-height: 1.7;
 }
 .world-loading-track {
   display: flex;

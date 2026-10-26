@@ -4,6 +4,14 @@
 title: WebGPU不可用
 body: '世界需要 WebGPU 和安全连接（HTTPS 或 localhost）。请使用支持的浏览器打开。'
 engine_graphics_failure: 图形系统无法启动。请检查浏览器的图形设置或更新显卡驱动，然后重新加载。
+graphics_help:
+  firefox_update: '你正在使用 Firefox {version}。WebGPU 需要 Firefox {required} 或更高版本：打开菜单，选择“帮助 → 关于 Firefox”进行更新，然后重新加载。'
+  firefox_unsupported: '此系统上的 Firefox 尚不支持 WebGPU。请在 Chrome 或 Edge 中打开游戏。'
+  firefox_settings: '在 Firefox 的“设置 → 常规 → 性能”中，取消勾选“使用推荐的性能设置”，并开启“自动启用硬件加速”，然后重启 Firefox。尚不支持 Intel Mac：请使用 Chrome 或 Safari 26。'
+  safari: 'WebGPU 需要 Safari 26 或更高版本。请更新到 macOS 26、iOS 26 或 iPadOS 26，然后重新加载。'
+  chromium: '开启“设置 → 系统 → 使用图形加速（如可用）”，然后重启浏览器。chrome://gpu 中的 WebGPU 应显示为硬件加速。'
+  chromium_linux: '在 Linux 上，于 chrome://flags 中启用“Unsafe WebGPU Support”和“Vulkan”，开启“设置 → 系统 → 使用图形加速（如可用）”，然后重启浏览器。'
+  other: '请在开启图形加速的最新版 Chrome、Edge 或 Safari 26 中打开游戏。'
 engine_recovery: 世界已停止加载或渲染。请重新加载后再试。
 engine_reload: 重新加载
 engine_minimum_title: '已降低画质'
@@ -2983,6 +2991,13 @@ allocation_page:
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
 
 tournament_page:
+  results: '锦标赛结果'
+  open_results: '查看{{name}}锦标赛结果'
+  rewards_collected: '奖励已领取'
+  rewards_arrived: '你的奖品已送达。'
+  rewards_revealed: '已揭晓 {{shown}} / {{total}}'
+  reveal_all: '全部揭晓'
+  reward_continue: '继续'
   manage_event: '管理锦标赛'
   practice_hint: '免费参加与机器人的1对1练习赛。'
   contribution_title: '增加总奖池'
@@ -3004,6 +3019,8 @@ tournament_page:
   finished: 已结束
   cancelled: 已取消
   create_team: 创建队伍
+  reason_fight: 请先结束战斗并领取奖励，再创建队伍。
+  reason_syncing: 正在等待角色状态更新。更新后请重试。
   team_name: 队伍名称
   restricted: 限定队伍
   allowed_names: 用逗号分隔队友角色名
@@ -3119,7 +3136,7 @@ tournament_page:
   reason_elsewhere: 已报名其他队伍
   reason_full: 队伍席位已满
   reason_restricted: 此角色不在该队伍的指定名单中
-  reason_custody: 此角色必须位于自己的 Kiosk 中
+  reason_custody: 此角色暂时不可用。
   reason_waiting: 等待下一场比赛
   reason_admission: 入场开放
   reason_force_due: 比赛可以开始

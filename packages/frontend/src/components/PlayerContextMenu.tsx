@@ -8,7 +8,7 @@ import { character_checkpoint, CHAT_MAX_LENGTH, expand_chat_message, type ChatMe
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
-import { copy_text } from '../i18n/copy.ts'
+import { copy_text, format_text } from '../i18n/copy.ts'
 import { party_invite_allowed, selected_party } from '../modules/party.ts'
 import { character_chat_context } from '../modules/chat.ts'
 import { selected_character } from '../modules/session.ts'
@@ -99,7 +99,7 @@ const WhisperModal = ({
     })
     close()
   }
-  const title = copy.world_hud.message_title.replace('{{name}}', recipient.name)
+  const title = format_text(copy.world_hud.message_title, { name: recipient.name })
   return (
     <ModalFrame close={close} close_label={copy.world_hud.message_cancel} label={title} max_width="max-w-sm" soft>
       <form className="grid gap-4 p-6" onSubmit={send}>

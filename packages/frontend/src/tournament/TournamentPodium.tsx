@@ -10,7 +10,7 @@ import { tournament_podium, tournament_refund_available } from '../modules/tourn
 import { TournamentCoin, TournamentPool } from './TournamentControls.tsx'
 import { TournamentReward } from './TournamentReward.tsx'
 import { TournamentContribution } from './TournamentContribution.tsx'
-import { character_label, tournament_act } from './presentation.ts'
+import { character_label, tournament_act, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type Tier = ReturnType<typeof tournament_podium>[number]
@@ -31,7 +31,7 @@ const PodiumTier = ({ row, tier, t }: Readonly<{ row: TournamentRow; tier: Tier;
       </header>
       <h3 data-awarded={tier.teams.length > 0}>
         {tier.teams.length
-          ? tier.teams.map((index) => row.teams[index].name).join(', ')
+          ? tier.teams.map((index) => tournament_name(row.teams[index].name)).join(', ')
           : t(tier.final ? 'not_awarded' : 'to_be_decided')}
       </h3>
       <div className="tourney-tier-coins">

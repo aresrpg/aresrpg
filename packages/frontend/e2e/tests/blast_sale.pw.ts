@@ -5,7 +5,8 @@ import { expect, test } from '@playwright/test'
 test('Blast cards show honest stages and bounded progress without wallet or sale actions', async ({ page }) => {
   await page.goto('/e2e/fixtures/blast_sale.html')
   await expect(page.getByRole('link')).toHaveCount(4)
-  await expect(page.locator('[data-card="0"]')).toContainText('Token sale soon on Blast')
+  await expect(page.locator('[data-card="0"]')).toContainText('Check your whitelist spot')
+  await expect(page.locator('[data-card="0"] a')).toHaveAttribute('href', '/allocation')
   await expect(page.locator('[data-card="0"]').getByRole('progressbar')).toHaveCount(0)
   await expect(page.locator('[data-card="1"]').getByRole('progressbar')).toHaveAttribute('aria-valuenow', '75')
   await expect(page.locator('[data-card="2"]')).toContainText('Sale funded')

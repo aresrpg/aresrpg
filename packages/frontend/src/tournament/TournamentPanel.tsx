@@ -14,14 +14,14 @@ import { tournament_claims, type TournamentAction } from '../modules/tournament.
 import { PracticeButton } from '../practice/PracticeButton.tsx'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
-import { countdown, match_label, match_opponent, round_label } from './presentation.ts'
+import { countdown, match_label, match_opponent, round_label, tournament_name } from './presentation.ts'
 import { TeamPips, TournamentActionButton, TournamentIntentReview, TournamentPool } from './TournamentControls.tsx'
 import { CreateTournamentTeam, TournamentTeams } from './TournamentTeams.tsx'
 import { TournamentBracket } from './TournamentBracket.tsx'
 import { TournamentPodium } from './TournamentPodium.tsx'
+import { tournament_path, tournament_route, type TournamentTab as Tab } from './navigation.ts'
 import './tournament.css'
 
-type Tab = 'main' | 'podium'
 const DEFAULT_TAB: Readonly<Record<TournamentRow['status'], Tab>> = {
   open: 'main',
   in_progress: 'main',
@@ -54,7 +54,9 @@ const EventHeading = ({
             {t('registered_count', { count: registration.teams })}
           </span>
         </p>
-        <h2>{row.name}</h2>
+        <h2>
+          <bdi>{tournament_name(row.name)}</bdi>
+        </h2>
       </div>
       <div className="tourney-event-progress">
         <small>{t(row.status === 'open' ? 'deadline' : row.status)}</small>
@@ -66,7 +68,7 @@ const EventHeading = ({
         )}
         {row.status === 'in_progress' && <strong>{current ? round_label(current.depth, t) : t('waiting')}</strong>}
         {row.status === 'finished' && (
-          <strong>{champion ? t('champion', { team: champion.name }) : t('no_champion')}</strong>
+          <strong>{champion ? t('champion', { team: tournament_name(champion.name) }) : t('no_champion')}</strong>
         )}
       </div>
       <button type="button" className="tourney-pool-summary" onClick={podium} aria-label={t('podium')}>
@@ -156,7 +158,7 @@ const ActionDock = ({
       </label>
       <div className="tourney-dock-team">
         <small>{t('your_team')}</small>
-        <b>{team ? team.name : t('not_registered')}</b>
+        <b>{team ? <bdi>{tournament_name(team.name)}</bdi> : t('not_registered')}</b>
         {team && <TeamPips t={t} seats={team.seats} format={row.format} joined={match?.joined} />}
       </div>
       <div className="tourney-dock-context">
@@ -169,7 +171,7 @@ const ActionDock = ({
       </div>
       <div className="tourney-dock-actions">
         <PracticeButton open={row.status === 'open'} t={t} />
-        {view.can_create_team && (
+        {view.can_open_team_creation && (
           <Button disabled={disabled} onClick={create}>
             {t('create_team')}
           </Button>
@@ -188,9 +190,10 @@ const ActionDock = ({
 }
 
 const TournamentEvent = ({ row, view, t }: Readonly<{ row: TournamentRow; view: TournamentView; t: CopyText }>) => {
-  const [selection, set_selection] = useState<Readonly<{ status: TournamentRow['status']; tab: Tab }> | null>(null)
-  const tab = selection?.status === row.status ? selection.tab : DEFAULT_TAB[row.status]
-  const navigate = (next: Tab): void => set_selection({ status: row.status, tab: next })
+  const pathname = useAppStore((state) => state.navigation.pathname)
+  const route = tournament_route(pathname)
+  const tab = route.id === row.id ? (route.tab ?? DEFAULT_TAB[row.status]) : DEFAULT_TAB[row.status]
+  const navigate = (next: Tab): void => dispatch_app({ type: 'path/open', pathname: tournament_path(row.id, next) })
   const [creating, set_creating] = useState(false)
   const [confirmation, set_confirmation] = useState<TournamentAction | null>(null)
   const claims = tournament_claims(row, view.viewer.address).length
@@ -240,7 +243,8 @@ const TournamentEvent = ({ row, view, t }: Readonly<{ row: TournamentRow; view: 
 
 export const TournamentPanel = () => {
   const copy = useAppStore((state) => state.copy)
-  const [selected, set_selected] = useState<string | null>(null)
+  const pathname = useAppStore((state) => state.navigation.pathname)
+  const selected = tournament_route(pathname).id
   const view = useTournamentView(selected)
   if (!copy) return null
   const t = copy_text(copy.tournament_page)
@@ -249,10 +253,13 @@ export const TournamentPanel = () => {
       {view.tournament.rows.length > 1 && (
         <label className="tourney-event-selector">
           {t('event')}
-          <select value={view.row?.id ?? ''} onChange={(event) => set_selected(event.target.value)}>
+          <select
+            value={view.row?.id ?? ''}
+            onChange={(event) => dispatch_app({ type: 'path/open', pathname: tournament_path(event.target.value) })}
+          >
             {view.tournament.rows.map((row) => (
               <option value={row.id} key={row.id}>
-                {row.name}
+                {tournament_name(row.name)}
                 {tournament_claims(row, view.viewer.address).length ? ` · ${t('your_rewards')}` : ''}
               </option>
             ))}

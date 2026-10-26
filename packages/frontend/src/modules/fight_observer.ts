@@ -63,6 +63,13 @@ export const automatic_turn_character = (state: Readonly<AppState>, previous: Re
   return active === previous_active ? null : active
 }
 
+const spectating_interruption = (state: Readonly<AppState>): string | null => {
+  const selected = state.session.selected_character_id
+  if (!selected || !state.fight.spectating_by_character[selected]) return null
+  const seated = state.session.characters.filter((character) => character.active_fight)
+  return seated.find((character) => character.id === selected)?.id ?? seated[0]?.id ?? null
+}
+
 export const returning_fight_character = (state: Readonly<AppState>, previous: Readonly<AppState>): string | null => {
   if (state.session.wallet !== previous.session.wallet) return null
   const before = previous.fight
@@ -418,6 +425,15 @@ export const observe_fights = ({
       local_session?.simulate_turn()
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    const participant = spectating_interruption(state)
+    if (participant) {
+      const selected = state.session.selected_character_id!
+      // Retire the visible request first: nested state observations must not repeat the handoff.
+      const viewers = [selected, ...Object.keys(state.fight.spectating_by_character).filter((id) => id !== selected)]
+      viewers.forEach((character_id) => dispatch({ type: 'fight/spectating', character_id, fight: null }))
+      dispatch({ type: 'character/select', character_id: participant })
+      return
+    }
     const character_id = returning_fight_character(state, previous) ?? automatic_turn_character(state, previous)
     if (character_id) dispatch({ type: 'character/select', character_id })
   })

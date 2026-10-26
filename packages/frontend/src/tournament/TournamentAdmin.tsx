@@ -15,7 +15,7 @@ import { TournamentDialog, TournamentOperationNotice } from './TournamentControl
 import { TournamentReward } from './TournamentReward.tsx'
 import { initial_tournament_draft, TournamentSettingsForm } from './TournamentSettingsForm.tsx'
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
-import { operation_status } from './presentation.ts'
+import { operation_status, tournament_name } from './presentation.ts'
 import './tournament.css'
 
 type Review = Readonly<{ action: TournamentAdminAction; row: TournamentRow | null; submitted: boolean }>
@@ -35,12 +35,16 @@ const ReviewDetails = ({ review, t }: Readonly<{ review: Review; t: CopyText }>)
     const excluded = row.teams.filter((team) => team.seats.length > 0 && team.seats.length < row.format)
     return (
       <>
-        <h3>{row.name}</h3>
+        <h3>{tournament_name(row.name)}</h3>
         {action.kind === 'start' && (
           <>
             <p>{t('team_counts', { teams: counts.teams, complete: counts.complete, minimum: counts.minimum })}</p>
             <p>{t('start_review')}</p>
-            <p>{t('excluded_teams', { teams: excluded.map((team) => team.name).join(', ') || t('none_excluded') })}</p>
+            <p>
+              {t('excluded_teams', {
+                teams: excluded.map((team) => tournament_name(team.name)).join(', ') || t('none_excluded'),
+              })}
+            </p>
           </>
         )}
         {action.kind === 'cancel' && <p>{t('cancel_review')}</p>}
@@ -51,7 +55,7 @@ const ReviewDetails = ({ review, t }: Readonly<{ review: Review; t: CopyText }>)
   const { settings } = action
   return (
     <div className="tourney-admin-review">
-      <h3>{settings.name}</h3>
+      <h3>{tournament_name(settings.name)}</h3>
       <dl>
         <dt>{t('format')}</dt>
         <dd>
@@ -178,7 +182,7 @@ const AdminEvent = ({
     <article className="tourney-admin-event">
       <div>
         <h3>
-          {row.name} · {t(row.status)}
+          {tournament_name(row.name)} · {t(row.status)}
         </h3>
         <p>{t('team_counts', { teams: counts.teams, complete: counts.complete, minimum: counts.minimum })}</p>
       </div>

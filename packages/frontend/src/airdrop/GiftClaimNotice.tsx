@@ -31,7 +31,7 @@ export const gift_funding_text = (copy: AppCopy, distribution: DistributionState
   const rewards = group_giftcards(held)
     .map((card) => `${card.amount} × ${reward_item(card)?.name ?? t('reward_item')}`)
     .join(', ')
-  return `${t('reward_received').replace('{items}', rewards)} ${t('reward_needs_sui')}`
+  return `${t('reward_received', { items: rewards })} ${t('reward_needs_sui')}`
 }
 
 const notice_status = (distribution: DistributionState, session: SessionState) => {

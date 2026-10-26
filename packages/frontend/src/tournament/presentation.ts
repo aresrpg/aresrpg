@@ -37,7 +37,13 @@ export const countdown = (deadline: number, now: number | null): string => {
     : `${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-export const team_initial = (name: string): string => Array.from(name)[0]?.toLocaleUpperCase() ?? '—'
+/** Presentation only: reveal layout controls; preserve stored identity, Unicode letters and emoji joiners. */
+export const tournament_name = (name: string): string => {
+  const visible = name.replace(/[\p{Cc}\p{Bidi_Control}\u2028\u2029]/gu, '�')
+  return /^[\p{White_Space}\p{Default_Ignorable_Code_Point}]*$/u.test(visible) ? '—' : visible
+}
+
+export const team_initial = (name: string): string => Array.from(tournament_name(name))[0]?.toLocaleUpperCase() ?? '—'
 export const character_label = (name: string | null | undefined, id: string): string =>
   name ?? `${id.slice(0, 6)}…${id.slice(-4)}`
 export const round_label = (depth: number, t: CopyText): string =>
@@ -48,7 +54,7 @@ export const own_team = (row: TournamentRow, address: string | null): number =>
   row.teams.findIndex((team) => team.seats.some((seat) => seat.owner === address))
 
 export const bracket_side_label = (row: TournamentRow, side: AdvancingSide, t: CopyText): string => {
-  if ('team' in side) return row.teams[side.team].name
+  if ('team' in side) return tournament_name(row.teams[side.team].name)
   return side.kind === 'pending' ? t(`from_${side.via}`, { match: side.match + 1 }) : t('empty_bracket')
 }
 

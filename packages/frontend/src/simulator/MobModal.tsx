@@ -11,13 +11,10 @@ import { encyclopedia_catalog } from '../content/catalog.ts'
 import { EntityIcon } from '../encyclopedia/components.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
-import type { AppCopy } from '../i18n/copy.ts'
+import { format_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { MobPicker } from './MobPicker.tsx'
-
-const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
-  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
 export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: () => void; copy: AppCopy }>) => {
   const placement = useAppStore(({ simulator }) => simulator.mob_placements[Number(cell)])
@@ -58,14 +55,14 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
           <EntityIcon label={mob.name} size="size-12" src={mob_icon(mob.mob_type)} />
           <div className="min-w-0 flex-1">
             <p className="mt-1 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
-              {template(text.level_range, { min: mob.level_min, max: mob.level_max })}
+              {format_text(text.level_range, { min: mob.level_min, max: mob.level_max })}
             </p>
           </div>
         </header>
         <div className="h-px bg-white/6" />
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
-            {template(text.level, { level: placement.level })}
+            {format_text(text.level, { level: placement.level })}
             <select
               className="mt-2 block h-9 w-24 border border-white/10 bg-bg px-2 text-[10px] text-[#e8e4dc]"
               onChange={(event) =>

@@ -15,7 +15,7 @@ import { parse_kolizeum_pledge } from '../modules/kolizeum.ts'
 import { action_key } from '../modules/tournament.ts'
 
 import { TournamentDialog, TournamentOperationNotice } from './TournamentControls.tsx'
-import { tournament_act, operation_status } from './presentation.ts'
+import { tournament_act, operation_status, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type Contribution = Readonly<{ asset: 'sui' | 'kares'; amount: bigint; submitted: boolean }>
@@ -44,7 +44,7 @@ const ContributionReview = ({
   const pool = BigInt(review.asset === 'sui' ? row.sui_pool : row.token_pool)
   return (
     <TournamentDialog title={t('contribution_review')} close={close} t={t}>
-      <h3>{row.name}</h3>
+      <h3>{tournament_name(row.name)}</h3>
       <strong className="tourney-review-amount">
         {numbers.sui(review.amount, 9)} {review.asset.toUpperCase()}
       </strong>

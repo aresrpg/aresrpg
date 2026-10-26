@@ -1,6 +1,14 @@
 title: WebGPU no está disponible
 body: 'El mundo requiere WebGPU y una conexión segura (HTTPS o localhost). Ábrelo en un navegador compatible.'
 engine_graphics_failure: No se pudieron iniciar los gráficos. Revisa la configuración gráfica del navegador o actualiza el controlador gráfico y recarga.
+graphics_help:
+  firefox_update: 'Usas Firefox {version}. WebGPU necesita Firefox {required} o posterior: abre el menú, luego Ayuda → Acerca de Firefox para actualizar, y recarga.'
+  firefox_unsupported: 'Firefox aún no admite WebGPU en este sistema. Abre el juego en Chrome o Edge.'
+  firefox_settings: 'En Firefox, ve a Ajustes → General → Rendimiento, desmarca «Usar la configuración de rendimiento recomendada» y activa «Usar aceleración por hardware cuando esté disponible». Luego reinicia Firefox. Los Mac con Intel aún no son compatibles: usa Chrome o Safari 26.'
+  safari: 'WebGPU necesita Safari 26 o posterior. Actualiza a macOS 26, iOS 26 o iPadOS 26 y recarga.'
+  chromium: 'Activa Configuración → Sistema → «Usar aceleración gráfica cuando esté disponible» y reinicia el navegador. En chrome://gpu, WebGPU debería aparecer acelerado por hardware.'
+  chromium_linux: 'En Linux, activa «Unsafe WebGPU Support» y «Vulkan» en chrome://flags, activa Configuración → Sistema → «Usar aceleración gráfica cuando esté disponible» y reinicia el navegador.'
+  other: 'Abre el juego en la última versión de Chrome, Edge o Safari 26 con la aceleración gráfica activada.'
 engine_recovery: El mundo dejó de cargarse o mostrarse. Recarga para intentarlo de nuevo.
 engine_reload: Recargar
 engine_minimum_title: 'Gráficos reducidos'
@@ -3017,6 +3025,13 @@ allocation_page:
   error_x_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.
 
 tournament_page:
+  results: 'Resultados del torneo'
+  open_results: 'Ver los resultados del torneo {{name}}'
+  rewards_collected: 'Recompensas recogidas'
+  rewards_arrived: 'Tus premios han llegado.'
+  rewards_revealed: '{{shown}} / {{total}} reveladas'
+  reveal_all: 'Revelar todo'
+  reward_continue: 'Continuar'
   manage_event: 'Gestionar torneo'
   practice_hint: 'Juega gratis un torneo 1 contra 1 frente a bots.'
   contribution_title: 'Aumenta el premio total'
@@ -3038,6 +3053,8 @@ tournament_page:
   finished: Finalizado
   cancelled: Cancelado
   create_team: Crear equipo
+  reason_fight: Termina tu combate y recoge sus recompensas antes de crear un equipo.
+  reason_syncing: Esperando el estado de tu personaje. Inténtalo de nuevo cuando se actualice.
   team_name: Nombre del equipo
   restricted: Equipo restringido
   allowed_names: Nombres de compañeros separados por comas
@@ -3153,7 +3170,7 @@ tournament_page:
   reason_elsewhere: Ya inscrito en otro equipo
   reason_full: Todas las plazas están ocupadas
   reason_restricted: Este personaje no está designado en este equipo
-  reason_custody: Este personaje debe estar en su quiosco
+  reason_custody: Este personaje aún no está disponible.
   reason_waiting: Esperando el próximo combate
   reason_admission: Entrada abierta
   reason_force_due: El combate puede empezar

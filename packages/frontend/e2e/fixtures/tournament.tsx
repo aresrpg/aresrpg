@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { create_character_source, create_fight } from '@aresrpg/fight'
 import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 import type { AuthSession } from '@aresrpg/sdk/auth'
-import type { TournamentRow } from '@aresrpg/protocol'
+import type { CharacterRow, TournamentRow } from '@aresrpg/protocol'
 
 import AdminControls from '../../src/admin/AdminControls.tsx'
 import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
@@ -17,6 +17,8 @@ import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
 import type { Locale } from '../../src/i18n/locale.ts'
 import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
 import { action_key } from '../../src/modules/tournament.ts'
+import { TournamentRewards } from '../../src/tournament/TournamentRewards.tsx'
+import { audio_playback_revision } from '../../src/game/audio/audio_registry.ts'
 import '../../src/tailwind.css'
 import '../../src/game/hud/world_responsive.css'
 import '@aresrpg/ui/styles.css'
@@ -39,15 +41,21 @@ const record = (kind: string, args: unknown) => {
   document.body.dataset.calls = JSON.stringify(calls, (_, value) =>
     typeof value === 'bigint' ? value.toString() : value
   )
+  const receipt = params.has('rewards')
+    ? {
+        $kind: 'Transaction',
+        Transaction: { digest: `fixture-${calls.length}`, effects: { status: { success: true } } },
+      }
+    : {}
   if (params.has('failure'))
     return Promise.reject(
       new Error(params.has('funding') ? 'gas selection: insufficient SUI balance' : 'Insufficient gas balance')
     )
   if (params.has('pending'))
     return new Promise((resolve) => {
-      complete = () => resolve({})
+      complete = () => resolve(receipt)
     })
-  return Promise.resolve({})
+  return Promise.resolve(receipt)
 }
 const wallet = {
   address: 'owner',
@@ -145,7 +153,48 @@ Object.assign(window, {
     close_feature: () => dispatch_app({ type: 'page/open', page: 'world' }),
     close_funding: () => dispatch_app({ type: 'dialog/open', dialog: null }),
     urgent: () => window.dispatchEvent(new Event('tournament-urgent')),
-    state: () => ({ page: read_app_state().navigation.page, fight_mounted: read_app_state().fight.mounted }),
+    state: () => ({
+      page: read_app_state().navigation.page,
+      pathname: read_app_state().navigation.pathname,
+      fight_mounted: read_app_state().fight.mounted,
+      pending: read_app_state().tournament.pending,
+      collections: read_app_state().tournament.collections.length,
+      audio: audio_playback_revision(),
+    }),
+    finish: () => {
+      rows = [
+        {
+          ...tournament_scenario('finished').rows[0]!,
+          version: String(BigInt(rows[0]!.version) + 1n),
+          finished_at_ms: NOW,
+        },
+      ]
+      publish()
+    },
+    claimed: () => {
+      rows = rows.map((row) => ({
+        ...row,
+        version: String(BigInt(row.version) + 1n),
+        teams: row.teams.map((team) => ({
+          ...team,
+          seats: team.seats.map((seat) => ({ ...seat, sui_claimed: true, token_claimed: true, items_claimed: '1023' })),
+        })),
+      }))
+      publish()
+    },
+    busy: (busy: boolean) => dispatch_app({ type: 'dialog/open', dialog: busy ? 'travel' : null }),
+    character: (patch: Partial<CharacterRow>) => {
+      const { session } = read_app_state()
+      dispatch_app({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/characters',
+          characters: session.characters.map((row) =>
+            row.id === session.selected_character_id ? { ...row, ...patch } : row
+          ),
+        },
+      })
+    },
     update: (patch: Partial<TournamentRow>) => {
       rows = [{ ...rows[0], ...patch }, ...rows.slice(1)]
       publish()
@@ -220,6 +269,7 @@ createRoot(document.getElementById('root')!).render(
         <GamePageWindow copy={copy} />
       )}
       {params.has('funding') && <FundingProbe />}
+      <TournamentRewards />
     </main>
   </LocaleScope>
 )

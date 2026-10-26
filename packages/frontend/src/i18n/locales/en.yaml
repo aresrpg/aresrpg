@@ -1,6 +1,14 @@
 title: WebGPU is unavailable
 body: 'The world requires WebGPU and a secure connection (HTTPS or localhost). Open it in a supported browser.'
 engine_graphics_failure: Graphics could not start. Check your browser’s graphics settings or update your graphics driver, then reload.
+graphics_help:
+  firefox_update: 'You are using Firefox {version}. WebGPU needs Firefox {required} or later: open the menu, then Help → About Firefox to update, and reload.'
+  firefox_unsupported: 'Firefox does not support WebGPU on this system yet. Open the game in Chrome or Edge.'
+  firefox_settings: 'In Firefox Settings → General → Performance, clear “Use recommended performance settings” and turn on “Use hardware acceleration when available”, then restart Firefox. Intel Macs are not supported yet: use Chrome or Safari 26.'
+  safari: 'WebGPU needs Safari 26 or later. Update to macOS 26, iOS 26 or iPadOS 26, then reload.'
+  chromium: 'Turn on Settings → System → “Use graphics acceleration when available”, then relaunch the browser. chrome://gpu should list WebGPU as hardware accelerated.'
+  chromium_linux: 'On Linux, enable “Unsafe WebGPU Support” and “Vulkan” in chrome://flags, turn on Settings → System → “Use graphics acceleration when available”, then relaunch the browser.'
+  other: 'Open the game in the latest Chrome, Edge or Safari 26 with graphics acceleration turned on.'
 engine_recovery: The world stopped loading or rendering. Reload to try again.
 engine_reload: Reload
 engine_minimum_title: 'Graphics reduced'
@@ -3021,6 +3029,13 @@ allocation_page:
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
 
 tournament_page:
+  results: 'Tournament results'
+  open_results: 'View {{name}} tournament results'
+  rewards_collected: 'Rewards collected'
+  rewards_arrived: 'Your prizes have arrived.'
+  rewards_revealed: '{{shown}} / {{total}} revealed'
+  reveal_all: 'Reveal all'
+  reward_continue: 'Continue'
   manage_event: 'Manage tournament'
   practice_hint: 'Play a free 1v1 tournament against bots.'
   contribution_title: 'Grow the prize pool'
@@ -3042,6 +3057,8 @@ tournament_page:
   finished: Finished
   cancelled: Cancelled
   create_team: Create team
+  reason_fight: Finish your fight and collect its rewards before creating a team.
+  reason_syncing: Waiting for your character’s status. Try again after it updates.
   team_name: Team name
   restricted: Restricted team
   allowed_names: Teammate names, separated by commas
@@ -3150,7 +3167,7 @@ tournament_page:
   reason_elsewhere: Already registered with another team
   reason_full: Team slots are full
   reason_restricted: This character is not named on this team
-  reason_custody: This character must be in its kiosk
+  reason_custody: This character is not available yet.
   reason_waiting: Waiting for the next match
   reason_admission: Admission open
   reason_force_due: Match can start

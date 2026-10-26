@@ -3,7 +3,16 @@
 import { expect, test } from 'bun:test'
 
 import { initial_tournament_state } from '../../src/modules/tournament.ts'
-import { operation_status, countdown } from '../../src/tournament/presentation.ts'
+import { operation_status, countdown, team_initial, tournament_name } from '../../src/tournament/presentation.ts'
+
+test('tournament labels expose formatting controls without rejecting ordinary Unicode names', () => {
+  expect(tournament_name('Owls\u202e\u2069\n')).toBe('Owls���')
+  expect(tournament_name('\u200b\u200d\ufe0f ')).toBe('—')
+  expect(tournament_name('夜の梟 👩‍👩‍👧‍👦')).toBe('夜の梟 👩‍👩‍👧‍👦')
+  expect(tournament_name('البوم')).toBe('البوم')
+  expect(tournament_name('<img src=x> $& {{team}}')).toBe('<img src=x> $& {{team}}')
+  expect(team_initial('\u202eOwls')).toBe('�')
+})
 
 test('submission display never turns a superseded result or missing receipt into success', () => {
   const state = initial_tournament_state()

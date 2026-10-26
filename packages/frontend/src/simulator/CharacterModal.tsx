@@ -19,7 +19,7 @@ import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
-import { copy_text, spell_name, stat_name, type AppCopy, type CopyText } from '../i18n/copy.ts'
+import { copy_text, format_text, spell_name, stat_name, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
   CHARACTER_STATS,
@@ -47,9 +47,6 @@ const damaging_effects = new Set(
     EFFECT_KINDS.steal,
   ].map(Number)
 )
-
-const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
-  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
 const class_display = titleize
 
@@ -130,7 +127,7 @@ function BudgetHeader({
       <Label text={title} />
       <div className="flex items-center gap-2">
         <span className={micro} style={{ color: left > 0 ? GOLD : '#6b7280' }}>
-          {template(copy.simulator_page.points_left, { left, total })}
+          {format_text(copy.simulator_page.points_left, { left, total })}
         </span>
         <button
           type="button"
@@ -286,7 +283,7 @@ function SpellEditor({ character, copy }: Readonly<{ character: SimulatorCharact
                 right={
                   <select
                     className="template-input w-24 cursor-pointer"
-                    aria-label={template(text.spell_level, { name: spell_name(copy, spell.name) })}
+                    aria-label={format_text(text.spell_level, { name: spell_name(copy, spell.name) })}
                     value={level}
                     onChange={(event) =>
                       dispatch_app({
@@ -302,7 +299,7 @@ function SpellEditor({ character, copy }: Readonly<{ character: SimulatorCharact
                       const option = index + 1
                       return (
                         <option disabled={spell_point_cost(option) > available} key={option} value={option}>
-                          {template(text.spell_level_option, { level: option, cost: spell_point_cost(option) })}
+                          {format_text(text.spell_level_option, { level: option, cost: spell_point_cost(option) })}
                         </option>
                       )
                     })}

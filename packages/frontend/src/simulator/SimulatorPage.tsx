@@ -6,7 +6,7 @@ import type { FightBlobShape } from '@aresrpg/engine'
 import { Dices, Droplets, Play, Plus, Swords } from 'lucide-react'
 import { useState } from 'react'
 
-import type { AppCopy } from '../i18n/copy.ts'
+import { format_text, type AppCopy } from '../i18n/copy.ts'
 import { can_start_simulator_fight } from '../modules/simulator.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import type { SceneHandle } from '../game/core/scene_feed.ts'
@@ -15,9 +15,6 @@ import { SimulatorBoardPane } from './BoardPane.tsx'
 import { CharacterRow } from './CharacterRow.tsx'
 import { simulator_fight_setup } from './fight_setup.ts'
 import { CharacterModal } from './CharacterModal.tsx'
-
-const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
-  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
 const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const simulator = useAppStore((state) => state.simulator)
@@ -40,7 +37,7 @@ const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHa
           <p className="mt-0.5 text-[8px] tracking-[0.14em] text-[#6b7280] uppercase">{text.local_only}</p>
         </div>
         <span className="text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
-          {template(text.board_seed, { seed: simulator.seed.toString() })}
+          {format_text(text.board_seed, { seed: simulator.seed.toString() })}
         </span>
         <button
           className="flex cursor-pointer items-center gap-2 border border-white/10 px-3 py-2 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase hover:border-[#c8963c]/40 hover:text-[#c8963c]"
@@ -83,7 +80,7 @@ const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHa
                     <CharacterRow
                       active={placement !== undefined}
                       character={character}
-                      level_label={template(text.level, { level: character.level })}
+                      level_label={format_text(text.level, { level: character.level })}
                     />
                   </button>
                 )

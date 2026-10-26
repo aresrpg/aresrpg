@@ -1,4 +1,12 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+.tourney-hud-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tourney-results-card {
+  border-color: color-mix(in srgb, var(--aui-orange) 45%, var(--aui-border));
+}
 .tourney-hud-card {
   display: flex;
   flex-direction: column;

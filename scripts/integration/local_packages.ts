@@ -38,9 +38,10 @@ export const shared_of = (receipt: Receipt, suffix: string) => {
 }
 export type Publication = Readonly<{ package: string; original: string; cap: string; version: string; path: string }>
 
-export const local_packages = async () => {
-  assert.equal(new URL(RPC).hostname, '127.0.0.1')
-  const client = new SuiGrpcClient({ network: 'testnet', baseUrl: RPC })
+export const local_packages = async ({ rpc_url, faucet_url } = { rpc_url: RPC, faucet_url: FAUCET }) => {
+  assert.equal(new URL(rpc_url).hostname, '127.0.0.1')
+  assert.equal(new URL(faucet_url).hostname, '127.0.0.1')
+  const client = new SuiGrpcClient({ network: 'testnet', baseUrl: rpc_url })
   const { chainIdentifier: identifier } = await client.core.getChainIdentifier()
   const chain_id = Buffer.from(fromBase58(identifier)).subarray(0, 4).toString('hex')
   const workspace = await mkdtemp(join(tmpdir(), 'ares-upgrade-rehearsal-'))
@@ -51,15 +52,15 @@ export const local_packages = async () => {
     cli_config,
     JSON.stringify({
       keystore: { File: empty_keystore },
-      envs: [{ alias: 'localnet', rpc: RPC }],
+      envs: [{ alias: 'localnet', rpc: rpc_url }],
       active_env: 'localnet',
       active_address: null,
     })
   )
   const owner = Ed25519Keypair.generate()
-  await requestSuiFromFaucetV2({ host: FAUCET, recipient: owner.toSuiAddress() })
+  await requestSuiFromFaucetV2({ host: faucet_url, recipient: owner.toSuiAddress() })
   const sdk_for = (signer: Ed25519Keypair, pins: Pins = {}) =>
-    SDK({ signer, rpc_url: RPC, network: 'testnet', pins, gas_budget: 'estimate', transaction_storage: null })
+    SDK({ signer, rpc_url, network: 'testnet', pins, gas_budget: 'estimate', transaction_storage: null })
   const sdk = sdk_for(owner)
   const receipts: { label: string; digest: string }[] = []
   const send = async (label: string, transaction: Transaction, actor = sdk): Promise<Receipt> => {
@@ -213,6 +214,8 @@ export const local_packages = async () => {
   }
   return {
     workspace,
+    rpc_url,
+    faucet_url,
     client,
     owner,
     sdk,

@@ -52,6 +52,7 @@ import type { PlayerShellProps } from './player_presentation.ts'
 import { dispatch_app, useAppStore } from './store.ts'
 import { toast } from './toast.ts'
 import { TutorialHost } from './tutorial/TutorialHost.tsx'
+import { TournamentRewards } from './tournament/TournamentRewards.tsx'
 
 const city_arrival_active = (in_app: boolean, page: Page, fight_active: boolean, dungeon_active: boolean): boolean =>
   in_app && page === 'world' && !fight_active && !dungeon_active
@@ -297,6 +298,7 @@ export function PlayerRuntime({
           </>
         )}
         <GiftClaimNotice copy={copy} />
+        <TournamentRewards />
       </main>
     </LocaleScope>
   )

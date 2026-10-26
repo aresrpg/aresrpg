@@ -1,6 +1,14 @@
 title: WebGPU を利用できません
 body: 'ワールドにはWebGPUと安全な接続（HTTPSまたはlocalhost）が必要です。対応ブラウザーで開いてください。'
 engine_graphics_failure: グラフィックスを起動できませんでした。ブラウザーのグラフィックス設定を確認するか、グラフィックスドライバーを更新してから再読み込みしてください。
+graphics_help:
+  firefox_update: 'Firefox {version} を使用中です。WebGPU には Firefox {required} 以降が必要です。メニューから「ヘルプ → Firefox について」を開いて更新し、再読み込みしてください。'
+  firefox_unsupported: 'このシステムの Firefox はまだ WebGPU に対応していません。Chrome または Edge でゲームを開いてください。'
+  firefox_settings: 'Firefox の「設定 → 一般 → パフォーマンス」で「推奨のパフォーマンス設定を使用する」をオフにし、「ハードウェアアクセラレーションを使用する (可能な場合)」をオンにしてから Firefox を再起動してください。Intel Mac はまだ非対応です。Chrome または Safari 26 を使用してください。'
+  safari: 'WebGPU には Safari 26 以降が必要です。macOS 26、iOS 26、または iPadOS 26 に更新してから再読み込みしてください。'
+  chromium: '「設定 → システム → グラフィック アクセラレーションが使用可能な場合は使用する」をオンにして、ブラウザーを再起動してください。chrome://gpu で WebGPU がハードウェアアクセラレーション有効と表示されるはずです。'
+  chromium_linux: 'Linux では chrome://flags で「Unsafe WebGPU Support」と「Vulkan」を有効にし、「設定 → システム → グラフィック アクセラレーションが使用可能な場合は使用する」をオンにしてから、ブラウザーを再起動してください。'
+  other: 'グラフィック アクセラレーションを有効にした最新の Chrome、Edge、または Safari 26 でゲームを開いてください。'
 engine_recovery: ワールドの読み込みまたは描画が停止しました。再読み込みしてもう一度お試しください。
 engine_reload: 再読み込み
 engine_minimum_title: 'グラフィック設定を低減'
@@ -2995,6 +3003,13 @@ allocation_page:
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
 
 tournament_page:
+  results: 'トーナメント結果'
+  open_results: '{{name}}のトーナメント結果を見る'
+  rewards_collected: '報酬を獲得'
+  rewards_arrived: '賞品が届きました。'
+  rewards_revealed: '{{shown}} / {{total}} 公開済み'
+  reveal_all: 'すべて表示'
+  reward_continue: '続ける'
   manage_event: '大会を管理'
   practice_hint: 'ボットとの1対1の大会を無料で練習できます。'
   contribution_title: '賞金総額を増やす'
@@ -3016,6 +3031,8 @@ tournament_page:
   finished: 終了
   cancelled: 中止
   create_team: チームを作成
+  reason_fight: チームを作成する前に、戦闘を終えて報酬を受け取ってください。
+  reason_syncing: キャラクターの状態を確認しています。更新後にもう一度お試しください。
   team_name: チーム名
   restricted: 限定チーム
   allowed_names: 仲間の名前をカンマで区切る
@@ -3131,7 +3148,7 @@ tournament_page:
   reason_elsewhere: 別のチームに登録済み
   reason_full: チームの枠が埋まっています
   reason_restricted: このキャラクターはチームの指定対象ではありません
-  reason_custody: このキャラクターを自身のキオスクに戻してください
+  reason_custody: このキャラクターはまだ利用できません。
   reason_waiting: 次の試合を待機中
   reason_admission: 入場受付中
   reason_force_due: 試合を開始できます

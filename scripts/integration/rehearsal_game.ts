@@ -16,7 +16,7 @@ import { seed_sdk, board_value } from '../../packages/sdk/src/seed.ts'
 import { kares_payment } from '../../packages/sdk/src/kares_ptb.ts'
 import boards from '../../seed/content/fight_boards.json'
 
-import { FAUCET, local_packages, object_of, shared_of } from './local_packages.ts'
+import { local_packages, object_of, shared_of } from './local_packages.ts'
 
 type Environment = Awaited<ReturnType<typeof local_packages>>
 export const prepare_game = async (env: Environment, economy: { id: string; shared_version: string }) => {
@@ -81,8 +81,9 @@ export const prepare_game = async (env: Environment, economy: { id: string; shar
     board: board_value(seed, add_board, boards.boards[0]!),
   })
   await env.send('seed tournament board', add_board, seed)
-  const create_player = async (signer: Ed25519Keypair, name: string) => {
-    if (signer !== env.owner) await requestSuiFromFaucetV2({ host: FAUCET, recipient: signer.toSuiAddress() })
+  const create_player = async (signer: Ed25519Keypair, name: string, { fund = true } = {}) => {
+    if (fund && signer !== env.owner)
+      await requestSuiFromFaucetV2({ host: env.faucet_url, recipient: signer.toSuiAddress() })
     const sdk = env.sdk_for(signer, pins)
     await sdk.hydrate([
       world,
@@ -115,7 +116,7 @@ export const prepare_game = async (env: Environment, economy: { id: string; shar
     await create_player(Ed25519Keypair.generate(), 'rehearsalbeta'),
   ]
   await sdk.hydrate([admin])
-  return { sdk, pins, admin, catalog, players }
+  return { sdk, pins, admin, catalog, players, create_player }
 }
 export type RehearsalGame = Awaited<ReturnType<typeof prepare_game>>
 

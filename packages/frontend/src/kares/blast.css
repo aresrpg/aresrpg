@@ -101,7 +101,9 @@
 }
 .blast-sale-hud {
   position: absolute;
-  inset: auto 0 calc(100% + 8px);
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: min(340px, calc(100cqw - 20px));
   pointer-events: auto;
 }
 @media (max-width: 1023px), (pointer: coarse) {

@@ -22,6 +22,7 @@ import { player_error_text } from '../i18n/player_error.ts'
 
 import {
   action_label,
+  tournament_name,
   bracket_side_label,
   character_label,
   match_label,
@@ -210,7 +211,10 @@ export const TournamentIntentReview = ({
     find: { title: t('find_team'), body: t('find_review', { character: name }) },
     join: {
       title: t('take_seat'),
-      body: t('join_review', { character: name, team: action.kind === 'join' ? row.teams[action.team].name : '' }),
+      body: t('join_review', {
+        character: name,
+        team: action.kind === 'join' ? tournament_name(row.teams[action.team].name) : '',
+      }),
     },
     crank: { title: t('action_end'), body: t('end_review') },
   }

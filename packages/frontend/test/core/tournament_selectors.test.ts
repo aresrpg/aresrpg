@@ -61,6 +61,48 @@ const state_for = (rows: readonly TournamentRow[]): AppState => {
     chain_clock: { chain_ms: 2000, received_ms: 0 },
   }
 }
+
+test('completed results remain after every claim for one day and can sit above a newer active event', () => {
+  const finished = {
+    ...tournament_fixture(),
+    id: 'finished',
+    status: 'finished' as const,
+    teams: [],
+    finished_at_ms: 1000,
+  }
+  const state = state_for([finished])
+  expect(select_tournament_view(state, null, 0)).toMatchObject({ card: 'results', results: { id: 'finished' } })
+  const later = { ...state, chain_clock: { chain_ms: 86_401_000, received_ms: 0 } }
+  expect(select_tournament_view(later, null, 0)).toMatchObject({ card: 'hidden', results: null })
+  const active = { ...tournament_fixture(), id: 'active', status: 'open' as const }
+  expect(select_tournament_view(state_for([active, finished]), null, 0)).toMatchObject({
+    card: 'event',
+    row: { id: 'active' },
+    results: { id: 'finished' },
+  })
+})
+
+test('team creation remains discoverable while character custody explains why it cannot submit', () => {
+  const state = state_for([{ ...tournament_fixture(), status: 'open', teams: [] }])
+  const view = (custody: 'kiosk' | 'fight' | undefined) =>
+    select_tournament_view(
+      {
+        ...state,
+        session: { ...state.session, characters: state.session.characters.map((row) => ({ ...row, custody })) },
+      },
+      null,
+      0
+    )
+  expect(view('fight')).toMatchObject({ can_open_team_creation: true, team_creation_blocker: 'fight' })
+  expect(view(undefined)).toMatchObject({ can_open_team_creation: true, team_creation_blocker: 'syncing' })
+  expect(view('kiosk')).toMatchObject({ can_open_team_creation: true, team_creation_blocker: null })
+  expect(
+    select_tournament_view({ ...state, session: { ...state.session, selected_character_id: null } }, null, 0)
+  ).toMatchObject({ can_open_team_creation: true, team_creation_blocker: 'character' })
+  expect(
+    select_tournament_view({ ...state, tournament: { ...state.tournament, pending: 'write' } }, null, 0)
+  ).toMatchObject({ can_open_team_creation: false })
+})
 const bracket_fixture = (): TournamentRow => {
   const row = tournament_fixture()
   const teams = ['a', 'b', 'c', 'd'].map((id, index) => ({
@@ -343,12 +385,12 @@ test('card and action projections distinguish unknown feeds, empty feeds, and ol
   const state = state_for([{ ...row, status: 'cancelled' }, winner])
   expect(select_tournament_view(state, null, 0)).toMatchObject({
     row: { id: 'old' },
-    card: 'event',
+    card: 'results',
     primary: { kind: 'claims' },
   })
   expect(
     select_tournament_view({ ...state, tournament: { ...state.tournament, feed_status: 'unavailable' } }, null, 0)
-  ).toMatchObject({ card: 'event', primary: { reason: 'unavailable' } })
+  ).toMatchObject({ card: 'results', primary: { reason: 'unavailable' } })
   const live = state_for([row])
   const key = action_key(row, { kind: 'enter', index: 0, character: 'a' })
   const failed = {

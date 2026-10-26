@@ -297,3 +297,104 @@ async fn final_relations_survive_transaction_order_and_partial_replay() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+#[ignore = "requires an isolated local FalkorDB"]
+async fn tournament_completion_clock_survives_claims_replay_and_legacy_rows() {
+    let url = std::env::var("FALKOR_TEST_URL").expect("set isolated local FALKOR_TEST_URL");
+    assert!(url.starts_with("redis://127.0.0.1:"));
+    let mut connection = crate::store::connect(&url).await.unwrap();
+    let graph = format!("tournament_clock_{}", std::process::id());
+    // Captured local-chain Tournament; the fixture records object/version/transaction/date provenance.
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../tournament_finished.localnet.json")).unwrap();
+    let bytes = hex::decode(fixture["bcs"].as_str().unwrap()).unwrap();
+    let tournament: decode::Tournament = decode::from_bytes(&bytes).unwrap();
+    let ty = TypeKey {
+        package: GAME.into(),
+        module: "tournament".into(),
+        name: "Tournament".into(),
+        type_params: vec![],
+    };
+    let outputs = [ObjView {
+        id: tournament.id,
+        version: 100,
+        owner: OwnerKind::Shared,
+        type_key: &ty,
+        bytes: &bytes,
+    }];
+    let project_at = |ts_ms| {
+        project(
+            &CheckpointView {
+                lamport_version: 100,
+                ckpt: 9,
+                ts_ms,
+                outputs: &outputs,
+                deleted: &[],
+                custody: &[],
+                market: &[],
+                fight_lifecycle: &[],
+            },
+            GAME,
+        )
+        .unwrap()
+    };
+    query(
+        &mut connection,
+        &graph,
+        &format!(
+            "CREATE (:Tournament {{id: '{}', status: 'in_progress'}})",
+            tournament.id.hex()
+        ),
+    )
+    .await;
+    apply(&mut connection, &graph, &project_at(100)).await;
+    assert_eq!(
+        scalar(
+            query(
+                &mut connection,
+                &graph,
+                "MATCH (t:Tournament) RETURN t.finished_at_ms"
+            )
+            .await
+        ),
+        redis::Value::Int(100)
+    );
+    // Replayed completion and subsequent claim writes cannot extend the result-card lifetime.
+    apply(&mut connection, &graph, &project_at(200)).await;
+    assert_eq!(
+        scalar(
+            query(
+                &mut connection,
+                &graph,
+                "MATCH (t:Tournament) RETURN t.finished_at_ms"
+            )
+            .await
+        ),
+        redis::Value::Int(100)
+    );
+    // An existing finished row without provenance must remain unknown, not acquire the claim's time.
+    query(
+        &mut connection,
+        &graph,
+        "MATCH (t:Tournament) REMOVE t.finished_at_ms",
+    )
+    .await;
+    apply(&mut connection, &graph, &project_at(300)).await;
+    assert_eq!(
+        scalar(
+            query(
+                &mut connection,
+                &graph,
+                "MATCH (t:Tournament) RETURN count(t.finished_at_ms)"
+            )
+            .await
+        ),
+        redis::Value::Int(0)
+    );
+    let _: redis::Value = redis::cmd("GRAPH.DELETE")
+        .arg(graph)
+        .query_async(&mut connection)
+        .await
+        .unwrap();
+}

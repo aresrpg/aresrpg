@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import package_info from '../../../../package.json' with { type: 'json' }
 import type { AppCopy } from '../i18n/copy.ts'
 import type { LoadingProgress } from '../game/core/loading_progress.ts'
 
 import { engine_failure_message } from './EngineNotice.tsx'
+import { browser_user_agent, graphics_help } from './graphics_help.ts'
 import type { LoadingContext } from './loading_art.ts'
 
 export type LoadingCopy = Pick<
@@ -15,6 +17,7 @@ export type LoadingCopy = Pick<
   | 'world_loading_finishing'
   | 'body'
   | 'engine_graphics_failure'
+  | 'graphics_help'
   | 'engine_recovery'
   | 'engine_reload'
   | 'loading_screen'
@@ -36,6 +39,18 @@ const LoadingRecovery = ({
     </button>
   </div>
 )
+
+/** Browser-specific setup steps under a failed WebGPU start. */
+const GraphicsHelp = ({ copy, progress }: Readonly<{ copy: LoadingCopy; progress: LoadingProgress }>) => {
+  const help = progress.stage === 'failed' ? graphics_help(progress.issue, copy, browser_user_agent()) : null
+  return (
+    help && (
+      <p className="loading-graphics-help" data-graphics-help="">
+        {help}
+      </p>
+    )
+  )
+}
 
 /** Shared markup for the document's first paint and every mounted world. */
 export const LoadingPostcard = ({
@@ -106,7 +121,10 @@ export const LoadingPostcard = ({
       />
       <div className="loading-shade" />
       <header className="loading-header">
-        <img src={wordmark} alt="AresRPG" className="loading-wordmark" width="192" height="65" />
+        <div className="loading-brand">
+          <img src={wordmark} alt="AresRPG" className="loading-wordmark" width="192" height="65" />
+          <span className="loading-version">v{package_info.version}</span>
+        </div>
         <span className="loading-tagline">{text.eyebrow}</span>
       </header>
       <section className="loading-story">
@@ -148,6 +166,7 @@ export const LoadingPostcard = ({
             {failed ? '' : step}
           </span>
         </div>
+        <GraphicsHelp copy={copy} progress={progress} />
         <div
           className="world-loading-track"
           role="progressbar"

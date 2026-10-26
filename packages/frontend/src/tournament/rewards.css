@@ -1,0 +1,242 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+.tourney-reveal-modal {
+  padding: 0;
+  overflow: hidden;
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+}
+.tourney-reveal-surface {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 35%, #b47a2838, transparent 65%), #0e1119f5;
+  isolation: isolate;
+}
+.tourney-reveal-surface::before {
+  content: '';
+  position: absolute;
+  width: 150vmax;
+  height: 150vmax;
+  z-index: -1;
+  background: repeating-conic-gradient(from 0deg, #f2c36e0b 0deg 10deg, transparent 10deg 30deg);
+  animation: tourney-reward-rays 45s linear infinite;
+  pointer-events: none;
+}
+.tourney-reveal-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+  border: 1px solid #e9ac5870;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #30323b, var(--aui-surface) 45%);
+  box-shadow:
+    0 30px 100px #000b,
+    0 0 70px #e9ac5815,
+    inset 0 1px #ffe4ac33;
+  animation: tourney-reward-arrive 400ms ease-out both;
+}
+.tourney-reveal-heading {
+  position: relative;
+  flex: none;
+  padding: 24px 24px 18px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0, #e9ac5833, transparent 70%);
+}
+.tourney-reveal-emblem {
+  display: inline-grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 1px solid #e9ac5855;
+  border-radius: 50%;
+  color: var(--aui-orange);
+  background: #e9ac5810;
+  box-shadow: 0 0 30px #e9ac5826;
+}
+.tourney-reveal-heading p {
+  margin: 10px 0 5px;
+  color: var(--aui-orange);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.tourney-reveal-heading h2 {
+  margin: 0 0 8px;
+  font-size: clamp(23px, 4vw, 34px);
+  font-weight: 800;
+  color: #ffe3a5;
+  text-shadow: 0 2px 0 #0005;
+}
+.tourney-reveal-heading > span:last-child {
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.tourney-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  padding: 12px 24px 24px;
+  margin: 0;
+  overflow: auto;
+  min-height: 0;
+  list-style: none;
+}
+.tourney-reveal-reward {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 190px;
+  padding: 20px 12px;
+  border: 1px solid #e9ac5845;
+  border-radius: 6px;
+  overflow: hidden;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 15%, #e9ac5826, transparent 70%), #14191f;
+  box-shadow:
+    inset 0 1px #fff1,
+    0 6px 16px #0004;
+}
+.tourney-reveal-reward[data-asset='sui'] {
+  border-color: #8abde166;
+  background: radial-gradient(ellipse at 50% 15%, #8abde12e, transparent 70%), #14191f;
+}
+.tourney-reveal-reward[data-visible='false'] {
+  visibility: hidden;
+}
+.tourney-reveal-reward[data-visible='true'] {
+  animation: tourney-reward-pop 650ms cubic-bezier(0.2, 0.8, 0.25, 1.2) both;
+}
+.tourney-reveal-reward[data-visible='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, #fff3 50%, transparent 70%);
+  animation: tourney-reward-shine 850ms ease-out both;
+  pointer-events: none;
+}
+.tourney-reveal-check {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  color: #a7dca5;
+}
+.tourney-reveal-art {
+  display: grid;
+  place-items: center;
+  width: 90px;
+  height: 90px;
+  filter: drop-shadow(0 0 13px #f7c47535);
+}
+.tourney-reveal-art img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.tourney-reveal-reward strong {
+  font-size: clamp(17px, 2.5vw, 25px);
+  color: #ffe3a5;
+  overflow-wrap: anywhere;
+}
+.tourney-reveal-reward > span:last-child {
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.tourney-reveal-footer {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #ffffff12;
+  background: #11151b;
+}
+@media (max-width: 450px) {
+  .tourney-reveal-footer > span {
+    min-width: 100%;
+  }
+}
+.tourney-reveal-footer > span {
+  flex: 1;
+  font-size: 12px;
+  color: var(--aui-muted);
+}
+@keyframes tourney-reward-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes tourney-reward-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+@keyframes tourney-reward-pop {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.78);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.03);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes tourney-reward-shine {
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(130%);
+  }
+}
+@media (max-height: 500px) {
+  .tourney-reveal-heading {
+    padding: 12px;
+  }
+  .tourney-reveal-emblem {
+    display: none;
+  }
+  .tourney-reveal-heading p {
+    margin-top: 0;
+  }
+  .tourney-reveal-heading h2 {
+    font-size: 23px;
+  }
+  .tourney-reveal-grid {
+    padding: 8px 16px 16px;
+    gap: 10px;
+  }
+  .tourney-reveal-reward {
+    min-height: 150px;
+    padding: 12px;
+  }
+  .tourney-reveal-art {
+    width: 60px;
+    height: 60px;
+  }
+  .tourney-reveal-footer {
+    padding: 10px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tourney-reveal-surface::before,
+  .tourney-reveal-panel,
+  .tourney-reveal-reward[data-visible='true'],
+  .tourney-reveal-reward[data-visible='true']::after {
+    animation: none;
+  }
+}

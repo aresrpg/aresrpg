@@ -151,7 +151,8 @@ const placed = (row: TournamentRow): TournamentRow => {
   ])
   return { ...row, teams: row.teams.map((team, index) => ({ ...team, place: places.get(index) ?? 0 })) }
 }
-const finished = () => placed(own({ ...base(), status: 'finished', teams: teams(8), matches: bracket(8, true) }))
+const finished = () =>
+  placed(own({ ...base(), status: 'finished', finished_at_ms: NOW - 1000, teams: teams(8), matches: bracket(8, true) }))
 const live = (count: number, format: 1 | 3 | 6 = 3) =>
   own({ ...base(), status: 'in_progress', format, teams: teams(count, true, format), matches: bracket(count) })
 const match_state = (patch: Partial<TournamentMatch>): TournamentRow => {
