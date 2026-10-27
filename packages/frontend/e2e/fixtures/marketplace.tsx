@@ -171,9 +171,9 @@ const Fixture = () => {
           kiosk_versions: { '0xkiosk': '2' },
         },
       })
-    if (new URLSearchParams(location.search).has('delayed')) {
-      const timer = setTimeout(send_slice, 350)
-      return () => clearTimeout(timer)
+    if (new URLSearchParams(location.search).has('manual-slices')) {
+      window.addEventListener('market-fixture-release-slice', send_slice, { once: true })
+      return () => window.removeEventListener('market-fixture-release-slice', send_slice)
     }
     send_slice()
   }, [market_observed])
