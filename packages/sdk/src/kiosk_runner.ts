@@ -10,8 +10,8 @@
 //     object, keeping the Random door the last command of its transaction.
 //
 // CUSTODY IDENTITY IS WIRE TRUTH: the server names the kiosk and PersonalKioskCap. Their exact
-// mutable ref is transaction-building state, so the SDK refreshes that one cap before composing;
-// another tab may have advanced it without this session receiving its receipt.
+// mutable ref is transaction-building state. Receipts advance it; a proven stale-ref refusal
+// refreshes that exact object before rebuilding, rather than repeating an ownership listing.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import type { TransactionObjectArgument } from '@mysten/sui/transactions'

@@ -448,6 +448,7 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  add_funds: '入金'
   filter_all: 'すべてのカテゴリ'
   filter_empty: '該当なし。フィルターや検索語を変更してください。'
   lot_price: 'セットの合計価格'
@@ -1042,10 +1043,63 @@ fight_hud:
   level_up_allocate: ポイントを割り振る
   level_up_later: あとで
 wallet_legacy:
+  funding_available: 'ゲーム残高'
+  funding_minimum: '快適にプレイするための目安：{{amount}}。'
+  funding_purchase_minimum: 'この購入とネットワーク手数料の目安：{{amount}}。'
+  funding_amount: '追加する金額'
+  funding_method_card: 'クレジットカード'
+  funding_balances_loading: 'ウォレット残高を読み込み中…'
+  funding_balances_failed: '一部の残高を読み込めませんでした。更新して再試行してください。'
+  funding_no_assets: 'このウォレットには残高のある対応トークンがありません。'
+  funding_balances_refresh: '残高を更新'
+  funding_pay_with: '支払い資産'
+  funding_you_pay: '支払額'
+  funding_you_receive: '受取額'
+  funding_arrival: '到着予想'
+  funding_source_fee: 'ブリッジ手数料を含みます。送金元ウォレットのネットワーク手数料は確認前に別途表示されます。'
+  funding_review: '支払いを確認'
+  funding_pay: '{{amount}} を支払う'
+  funding_deposit_address: '入金アドレス'
+  funding_transaction: 'トランザクション'
+  funding_explorer: '送金エクスプローラーを開く'
+  funding_same_wallet: 'ゲームウォレットへの入金には別のウォレットを選んでください。'
+  funding_status_quoting: '見積もりを取得中…'
+  funding_status_preparing: '残高とネットワーク手数料を確認中…'
+  funding_status_signing: '{{wallet}} で承認してください'
+  funding_status_pending: '{{chain}} で支払いを確認中'
+  funding_status_success: '{{amount}} SUI が届きました'
+  funding_status_refunded: '送金は返金されました。送金元ウォレットを確認してください。ネットワーク手数料はかかる場合があります。'
+  funding_status_failed: '入金を完了できませんでした。'
+  funding_status_unknown: '送信結果が不明です。再度支払う前にウォレットまたはエクスプローラーを確認してください。'
+  funding_status_bridging: 'Sui へブリッジ中'
+  funding_delivered_hint: 'ゲーム内のアクションを再試行できます。'
+  funding_adding: 'ゲームウォレットに追加中'
+  funding_from: '{{chain}} の {{amount}} から'
+  funding_step_deposit: '入金'
+  funding_step_bridge: 'ブリッジ'
+  funding_step_delivered: '完了'
+  funding_time_left: '残り約 {{seconds}} 秒'
+  funding_almost: 'まもなく完了'
+  funding_back: 'ゲームに戻る'
+  funding_more: 'さらに追加'
+  funding_retry: '再試行'
+  funding_source: '送金元'
+  funding_change: '変更'
+  funding_invalid_response: '無効な見積もりが返されました。再取得してください。'
+  funding_invalid_address: 'ウォレットアドレスが無効です。'
+  funding_route_unavailable: 'この経路は利用できません。別の資産またはネットワークを試してください。'
+  funding_rate_limited: 'サービスが混雑しています。後でもう一度お試しください。'
+  funding_source_changed: '送金元ウォレットが変更されました。支払いを再確認してください。'
+  funding_source_gas: '送金元ウォレットのネットワーク手数料用ネイティブトークンが不足しています。'
+  funding_source_balance: '送金元ウォレットの資産残高が不足しています。'
+  funding_quote_expired: '見積もりの期限が切れました。支払い前に再取得してください。'
+  funding_connection_cancelled: 'ウォレットの接続をキャンセルしました。'
+  funding_failed: '入金を完了できませんでした。'
+  funding_pending: '送金処理中です。再度支払わないでください。'
   sui: SUI
   how_to_get: SUIの入手方法
-  your_address: ウォレットアドレス
-  send_sui: このアドレスにSUIを送金してください。クリックでコピー。
+  your_address: 'SUIアドレス'
+  send_sui: 'SuiネットワークでSUIを送金してください。クリックしてコピー。'
   buy_directly: 直接購入
   buy_with_card: クレジットカードでSUIを購入。ウォレットに直接届きます。
   buy_on_exchange: 取引所で購入
@@ -1074,28 +1128,16 @@ wallet_legacy:
   add_funds_desc: ご希望のお支払い方法をお選びください。SUIは直接ウォレットに届きます。
   method_paypal: PayPal
   method_paypal_desc: PayPalアカウントでお支払い
-  method_card: 'カード / PayPal'
-  method_card_desc: '決済サービスで SUI を購入'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Face ID / Touch IDでお支払い
   method_google_pay: Google Pay
   method_google_pay_desc: Googleアカウントでお支払い
   method_bank: 銀行振込
   method_bank_desc: SEPA（EU）またはACH（米国）
-  method_have_sui: '直接入金'
-  method_have_sui_desc: 別のウォレットまたは取引所から送金
   paypal_note: MoonPay経由で米国、英国、ヨーロッパの大半で利用可能
   card_note: 以下のプロバイダーをお選びください。どちらもVisaとMastercardに対応
   bank_note: 最低手数料（約1%）。ヨーロッパはSEPA、米国はACH。
   steps_paypal: 1. 下のリンクをクリック  2. PayPalを支払い方法として選択  3. 金額を入力。SUIがウォレットに届きます
-  steps_card: 'サービスを開き、SUI を選択して下のゲームウォレットアドレスを指定してください。支払い方法は国とサービスによって異なります。'
-  method_swap: 'ブリッジ入金'
-  method_swap_desc: '他のチェーンの暗号資産を SUI に交換'
-  bridge_loading: 'ブリッジを読み込み中…'
-  bridge_error: 'ブリッジを読み込めませんでした。ゲームウォレットへの直接入金は引き続き利用できます。'
-  bridge_retry: '再試行'
-  swap_note: 'LI.FI 提供。送金は即時ではありません。ブリッジ入金を再度開き、履歴から中断した送金を確認・再開できます。'
-  steps_swap: '送金元ウォレットを接続してください。送金先は下のゲームウォレットで、受取通貨はネイティブ SUI です。署名前に金額、手数料、到着予定時間を確認してください。'
   steps_wallet: 下記のウォレットアドレスにSUIを送金してください。数秒で届きます。
   advanced_exchange: 上級者向け：取引所で購入
   age_notice: すべての決済プロバイダーは18歳以上であることが必要です。
@@ -2300,6 +2342,8 @@ item_categories:
 
 kares: 'ステーキング'
 kares_page:
+  other_networks: '他のネットワーク · EVM / Solana'
+  sui_wallet_required: 'この機能には Sui ウォレットを選択してください。'
   blast_soon: 'トークン販売がまもなくBlastで開始'
   blast_live: 'KARES販売中'
   blast_closing: '販売終了・精算待ち'
@@ -3003,6 +3047,8 @@ allocation_page:
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
 
 tournament_page:
+  victory_title: '優勝しました！'
+  placing_title: '{{place}}位に入賞しました'
   results: 'トーナメント結果'
   open_results: '{{name}}のトーナメント結果を見る'
   rewards_collected: '報酬を獲得'

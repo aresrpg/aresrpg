@@ -448,6 +448,7 @@ demo_page:
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
 marketplace_page:
+  add_funds: 'Ajouter des fonds'
   filter_all: 'Toutes les catégories'
   filter_empty: 'Aucun résultat. Essayez un autre filtre ou une autre recherche.'
   lot_price: 'Prix total du lot'
@@ -1042,10 +1043,63 @@ fight_hud:
   level_up_allocate: Attribuer les points
   level_up_later: Plus tard
 wallet_legacy:
+  funding_available: 'Solde de jeu'
+  funding_minimum: 'Pour jouer confortablement : {{amount}}.'
+  funding_purchase_minimum: 'Pour cet achat et les frais réseau : {{amount}}.'
+  funding_amount: 'Montant à ajouter'
+  funding_method_card: 'Carte bancaire'
+  funding_balances_loading: 'Chargement des soldes…'
+  funding_balances_failed: 'Certains soldes n’ont pas pu être chargés. Actualisez pour réessayer.'
+  funding_no_assets: 'Aucun jeton pris en charge avec un solde positif dans ce portefeuille.'
+  funding_balances_refresh: 'Actualiser les soldes'
+  funding_pay_with: 'Payer avec'
+  funding_you_pay: 'Vous payez'
+  funding_you_receive: 'Vous recevez'
+  funding_arrival: 'Arrivée estimée'
+  funding_source_fee: 'Les frais du pont sont inclus. Votre portefeuille source facture aussi des frais réseau, affichés avant confirmation.'
+  funding_review: 'Vérifier le paiement'
+  funding_pay: 'Payer {{amount}}'
+  funding_deposit_address: 'Adresse de dépôt'
+  funding_transaction: 'Transaction'
+  funding_explorer: 'Ouvrir l’explorateur de transferts'
+  funding_same_wallet: 'Choisissez un autre portefeuille pour alimenter celui du jeu.'
+  funding_status_quoting: 'Recherche d’un devis…'
+  funding_status_preparing: 'Vérification des fonds et des frais réseau…'
+  funding_status_signing: 'Approuvez dans {{wallet}}'
+  funding_status_pending: 'Confirmation de votre paiement sur {{chain}}'
+  funding_status_success: '{{amount}} SUI livrés'
+  funding_status_refunded: 'Le transfert a été remboursé. Vérifiez votre portefeuille source ; des frais réseau peuvent rester dus.'
+  funding_status_failed: 'Le financement n’a pas abouti.'
+  funding_status_unknown: 'Le résultat de l’envoi est inconnu. Vérifiez votre portefeuille ou l’explorateur avant de payer à nouveau.'
+  funding_status_bridging: 'Transfert vers Sui'
+  funding_delivered_hint: 'Vous pouvez maintenant relancer votre action en jeu.'
+  funding_adding: 'Ajout au portefeuille de jeu'
+  funding_from: 'depuis {{amount}} sur {{chain}}'
+  funding_step_deposit: 'Dépôt'
+  funding_step_bridge: 'Pont'
+  funding_step_delivered: 'Livré'
+  funding_time_left: 'encore ~{{seconds}} s'
+  funding_almost: 'Presque fini'
+  funding_back: 'Retour au jeu'
+  funding_more: 'Ajouter plus'
+  funding_retry: 'Réessayer'
+  funding_source: 'Depuis'
+  funding_change: 'Changer'
+  funding_invalid_response: 'Le prestataire a renvoyé un devis invalide. Demandez-en un autre.'
+  funding_invalid_address: 'L’adresse du portefeuille est invalide.'
+  funding_route_unavailable: 'Cette route est indisponible. Essayez un autre actif ou réseau.'
+  funding_rate_limited: 'Le prestataire est occupé. Réessayez plus tard.'
+  funding_source_changed: 'Le portefeuille source a changé. Vérifiez à nouveau le paiement.'
+  funding_source_gas: 'Votre portefeuille source manque de jetons natifs pour les frais réseau.'
+  funding_source_balance: 'Votre portefeuille source ne contient pas assez de cet actif.'
+  funding_quote_expired: 'Ce devis a expiré. Demandez-en un autre avant de payer.'
+  funding_connection_cancelled: 'Connexion au portefeuille annulée.'
+  funding_failed: 'Le financement n’a pas abouti.'
+  funding_pending: 'Transfert en cours. N’envoyez pas un autre paiement.'
   sui: SUI
   how_to_get: Comment obtenir du SUI
-  your_address: Votre Adresse de Portefeuille
-  send_sui: Envoyez du SUI à cette adresse. Cliquez pour copier.
+  your_address: 'Adresse SUI'
+  send_sui: 'Envoyez des SUI sur le réseau Sui. Cliquez pour copier.'
   buy_directly: Acheter Directement
   buy_with_card: Achetez du SUI par carte bancaire. Livré directement dans votre portefeuille.
   buy_on_exchange: Acheter sur un Exchange
@@ -1095,30 +1149,18 @@ wallet_legacy:
     dans ton portefeuille.
   method_paypal: PayPal
   method_paypal_desc: Payer avec ton compte PayPal
-  method_card: 'Carte / PayPal'
-  method_card_desc: 'Achetez du SUI auprès d’un prestataire'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Payer avec Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Payer avec ton compte Google
   method_bank: Virement bancaire
   method_bank_desc: SEPA (Europe) ou ACH (US)
-  method_have_sui: 'Dépôt direct'
-  method_have_sui_desc: Envoyer depuis un autre portefeuille ou un exchange
   paypal_note: Disponible aux États-Unis, au Royaume-Uni et dans la plupart de l'Europe
     via MoonPay
   card_note: Choisis un fournisseur ci-dessous. Tous acceptent Visa et Mastercard
   bank_note: Frais les plus bas (~1%). SEPA pour l'Europe, ACH pour les États-Unis.
   steps_paypal: 1. Clique sur le lien ci-dessous  2. Sélectionne PayPal comme paiement  3.
     Saisis le montant. Le SUI arrive dans ton portefeuille
-  steps_card: 'Ouvrez un prestataire, choisissez SUI et indiquez l’adresse de jeu ci-dessous. Les moyens de paiement dépendent du pays et du prestataire.'
-  method_swap: 'Dépôt par bridge'
-  method_swap_desc: 'Transférez vos cryptos d’une autre chaîne en SUI'
-  bridge_loading: 'Chargement du bridge…'
-  bridge_error: 'Impossible de charger le bridge. Votre portefeuille de jeu reste disponible pour les dépôts directs.'
-  bridge_retry: 'Réessayer'
-  swap_note: 'Propulsé par LI.FI. Les transferts ne sont pas instantanés. Rouvrez le dépôt par bridge et consultez son historique pour vérifier ou reprendre un transfert interrompu.'
-  steps_swap: 'Connectez votre portefeuille source. La destination est du SUI natif dans le portefeuille de jeu ci-dessous. Vérifiez le montant, les frais et le délai estimé avant de signer.'
   steps_wallet: Envoie du SUI à ton adresse de portefeuille ci-dessous. Il arrive
     en quelques secondes.
   advanced_exchange: 'Avancé : Acheter sur un Exchange'
@@ -2328,6 +2370,8 @@ item_categories:
 
 kares: 'Staking'
 kares_page:
+  other_networks: 'Autres réseaux · EVM / Solana'
+  sui_wallet_required: 'Sélectionnez un portefeuille Sui pour utiliser cette fonction.'
   blast_soon: 'La vente arrive sur Blast'
   blast_live: 'La vente KARES est ouverte'
   blast_closing: 'Vente terminée · règlement en attente'
@@ -3031,6 +3075,8 @@ allocation_page:
   error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
 
 tournament_page:
+  victory_title: 'Vous avez remporté la 1re place !'
+  placing_title: 'Vous avez terminé à la place {{place}}'
   results: 'Résultats du tournoi'
   open_results: 'Voir les résultats du tournoi {{name}}'
   rewards_collected: 'Récompenses récupérées'

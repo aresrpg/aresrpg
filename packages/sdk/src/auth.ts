@@ -8,6 +8,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { isValidSuiAddress } from '@mysten/sui/utils'
 import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
+import { registerSlushWallet, SLUSH_WALLET_NAME } from '@mysten/slush-wallet'
 
 import { tournament_actions, type TournamentActions } from './tournament.ts'
 import { canonical_suins_name } from './suins.ts'
@@ -57,10 +58,9 @@ export type { SuinsActions, SuinsSnapshot, SuinsSelection } from './suins_action
 const select_personal_kiosk = (caps: readonly KioskOwnerCap[], kiosk_id?: string): KioskOwnerCap | null =>
   (kiosk_id ? caps.find(({ kioskId }) => kioskId === kiosk_id) : caps[0]) ?? null
 
-const receipt_fresh_kiosk_cap = (sdk: ReturnType<typeof SDK>, cap: KioskOwnerCap, fresh: boolean): KioskOwnerCap => {
-  if (fresh) return cap
+const receipt_fresh_kiosk_cap = (sdk: ReturnType<typeof SDK>, cap: KioskOwnerCap): KioskOwnerCap => {
   const current = sdk.ref(cap.objectId)
-  return current ? Object.freeze({ ...cap, ...current }) : cap
+  return current && BigInt(current.version) > BigInt(cap.version) ? Object.freeze({ ...cap, ...current }) : cap
 }
 
 export type AuthSession = Readonly<{
@@ -183,7 +183,7 @@ const create_wallet_session = (
   const registry_pin = (sdk.pins.name_registry as { id?: string | null } | undefined)?.id
   let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
   const kiosk_cap = async (kiosk_id?: string, fresh = false) => {
-    const request = fresh || !kiosk_caps ? sdk.get_owned_kiosks(account.address) : kiosk_caps
+    const request = kiosk_caps ?? sdk.get_owned_kiosks(account.address)
     kiosk_caps = request
     try {
       const { kioskOwnerCaps } = await request
@@ -195,7 +195,8 @@ const create_wallet_session = (
         kiosk_caps = null
         return null
       }
-      return receipt_fresh_kiosk_cap(sdk, cap, fresh)
+      if (fresh) await sdk.hydrate([cap.objectId])
+      return receipt_fresh_kiosk_cap(sdk, cap)
     } catch (error) {
       kiosk_caps = null
       throw error
@@ -371,6 +372,8 @@ export const create_browser_auth = (options: BrowserAuthOptions) => {
 }
 
 export const create_wallet_auth = (options: WalletAuthOptions) => {
+  if (typeof window !== 'undefined' && !installed_wallets().some((wallet) => wallet.name === SLUSH_WALLET_NAME))
+    registerSlushWallet('AresRPG')
   const client = new SuiGraphQLClient({ network: options.network, url: options.graphql_url })
   const resolution_client = new SuiGrpcClient({
     network: options.network,

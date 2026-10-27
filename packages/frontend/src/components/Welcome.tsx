@@ -3,10 +3,9 @@
 
 import { Button } from '@aresrpg/ui'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
-import { GAS_BUDGET_MIST } from '@aresrpg/sdk/gas-budget'
 import { ArrowRight } from 'lucide-react'
 
-import { character_creation_insufficient } from '../character_creation_funding.ts'
+import { FUNDING_CUSHION_MIST } from '../funding/near.ts'
 import { env, type Network } from '../env.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -36,7 +35,6 @@ export const Welcome = ({
     })
     return `${sui} (≈${usd})`
   }
-  const funded = session.sui_balance_mist !== null && !character_creation_insufficient(session.sui_balance_mist)
   return (
     <section className="absolute inset-0 z-[140] flex items-center justify-center bg-bg/50 p-3 backdrop-blur-sm sm:p-5">
       <div
@@ -64,16 +62,15 @@ export const Welcome = ({
         >
           {copy.welcome_need_sui
             .replaceAll('{{price}}', amount(CHARACTER_PRICE_MIST, 0))
-            .replaceAll('{{fee}}', amount(GAS_BUDGET_MIST, 2))}
+            .replaceAll('{{fee}}', amount(FUNDING_CUSHION_MIST, 2))}
         </p>
         <WalletCard
           copy={copy}
           session={session}
-          network={network}
           embedded
           disconnect={() => dispatch_app({ type: 'auth/disconnected' })}
         />
-        <Button tone="primary" disabled={!funded} onClick={create}>
+        <Button tone="primary" onClick={create}>
           {copy.create_character}
           <ArrowRight size={16} aria-hidden="true" />
         </Button>

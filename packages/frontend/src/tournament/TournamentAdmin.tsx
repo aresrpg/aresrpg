@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 import { useState } from 'react'
 import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
 
+import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'
@@ -211,7 +213,7 @@ const AdminEvent = ({
 
 export const TournamentAdmin = () => {
   const copy = useAppStore((state) => state.copy)
-  const connected = useAppStore((state) => !!state.external_wallet.session)
+  const connected = useAppStore((state) => !!sui_session(state.external_wallet.session))
   const view = useTournamentView()
   const admin = String(resolve_pins(env.network).admin_cap ?? '')
   const [open, set_open] = useState(false)

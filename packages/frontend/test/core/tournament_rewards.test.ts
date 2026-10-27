@@ -47,7 +47,10 @@ const collection = (digest = 'confirmed') =>
   collected_tournament_rewards(row(), { kind: 'coins', team: 0, seat: 0 }, receipt(digest), 'owner')!
 const initial = (): AppState => {
   const state = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
-  return { ...state, session: { ...state.session, wallet: { address: 'owner' } as never } }
+  return {
+    ...state,
+    session: { ...state.session, selected_character_id: 'hero', wallet: { address: 'owner' } as never },
+  }
 }
 
 test('only certified successful owned claims produce exact rewards, independently of remaining pool and gas', () => {
@@ -156,7 +159,7 @@ test('podium opening observes completion once, waits for fight results, and neve
       ...finished,
       fight_result: {
         ...finished.fight_result,
-        current_by_character: { hero: { result_open: true, level_up_open: false } as never },
+        current_by_character: { hero: { fight: 'final', result_open: true, level_up_open: false } as never },
       },
     })
   ).toBeNull()
@@ -178,5 +181,50 @@ test('podium opening observes completion once, waits for fight results, and neve
   expect(
     publish({ ...running, session: { ...running.session, wallet: { address: 'spectator' } as never } }, row())
       .tournament.pending_podium
+  ).toBeNull()
+})
+
+test('hidden teammate results cannot block the selected character’s tournament presentation', () => {
+  const base = initial()
+  const state = {
+    ...base,
+    tournament: { ...base.tournament, pending_podium: 'cup' },
+    fight_result: {
+      ...base.fight_result,
+      current_by_character: {
+        teammate: { fight: 'final', result_open: true, level_up_open: true, participants: [], own_seat: null } as never,
+      },
+    },
+  }
+  expect(pending_tournament_presentation(state)).toEqual({ type: 'tournament/podium_opened', id: 'cup' })
+})
+
+test('known completion presents without a fresh chain clock or a live connection', () => {
+  const base = initial()
+  const state = {
+    ...base,
+    tournament: { ...base.tournament, pending_podium: 'cup', feed_status: 'unavailable' as const },
+  }
+  const listeners = new Map<string, (state: AppState) => void>()
+  const inputs: AppInput[] = []
+  tournament_module.observe?.({
+    events: { on: (name: string, listener: (state: AppState) => void) => listeners.set(name, listener) },
+    signal: new AbortController().signal,
+    get_state: () => state,
+    dispatch: (input: AppInput) => inputs.push(input),
+  } as never)
+  listeners.get('STATE_UPDATED')!(state)
+  expect(inputs).toEqual([{ type: 'tournament/podium_opened', id: 'cup' }])
+})
+
+test('a pending prize claim does not hide the known podium or prematurely reveal collection', () => {
+  const base = initial()
+  const state = {
+    ...base,
+    tournament: { ...base.tournament, pending: 'claim', pending_podium: 'cup', collections: [collection()] },
+  }
+  expect(pending_tournament_presentation(state)).toEqual({ type: 'tournament/podium_opened', id: 'cup' })
+  expect(
+    pending_tournament_presentation({ ...state, tournament: { ...state.tournament, pending_podium: null } })
   ).toBeNull()
 })

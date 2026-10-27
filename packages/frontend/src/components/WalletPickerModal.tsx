@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Button } from '@aresrpg/ui'
-import { Loader2, WalletCards } from 'lucide-react'
+import { Loader2, WalletCards, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { ModalFrame } from './ModalFrame.tsx'
@@ -31,6 +31,81 @@ export const WalletConnectButton = ({
   </Button>
 )
 
+type WalletRowText = Readonly<{ name: string; detail?: string }>
+
+const WalletRowContent = ({ name, detail, children }: WalletRowText & Readonly<{ children: ReactNode }>) => (
+  <>
+    <span className="aui-wallet-row-icon">
+      <WalletCards size={20} aria-hidden="true" />
+    </span>
+    <span className="aui-wallet-row-text">
+      <strong>{name}</strong>
+      {detail && <small>{detail}</small>}
+    </span>
+    {children}
+  </>
+)
+
+/** A wallet that is already chosen; its own action (change, disconnect) is the child. */
+export const WalletRow = ({
+  selected,
+  children,
+  ...text
+}: WalletRowText & Readonly<{ selected?: boolean; children: ReactNode }>) => (
+  <div className="aui-wallet-row" data-selected={selected || undefined}>
+    <WalletRowContent {...text}>{children}</WalletRowContent>
+  </div>
+)
+
+/** A wallet the player can pick, named by its full identity; a saved account may also be removed. */
+export const WalletRowButton = ({
+  label,
+  identity,
+  busy = false,
+  disabled,
+  onClick,
+  remove,
+  ...text
+}: WalletRowText &
+  Readonly<{
+    label: string
+    identity?: string
+    busy?: boolean
+    disabled: boolean
+    onClick: () => void
+    remove?: Readonly<{ label: string; run: () => void }>
+  }>) => (
+  <div className="aui-wallet-row">
+    <button
+      className="aui-wallet-row-pick"
+      type="button"
+      aria-label={identity ?? text.name}
+      title={identity ?? text.name}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <WalletRowContent {...text}>
+        <span className="aui-wallet-row-action">
+          {busy && <Loader2 className="animate-spin" size={14} aria-hidden="true" />}
+          {label}
+        </span>
+      </WalletRowContent>
+    </button>
+    {remove && (
+      <button
+        className="aui-wallet-row-remove"
+        type="button"
+        aria-label={remove.label}
+        title={remove.label}
+        disabled={disabled}
+        onClick={remove.run}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
+    )}
+  </div>
+)
+
 export const WalletChoices = ({
   choices,
   busy,
@@ -38,34 +113,24 @@ export const WalletChoices = ({
   empty_label,
   select_label,
 }: Readonly<{
-  choices: readonly string[]
+  choices: readonly WalletRowText[]
   busy: boolean
   select: (choice: string) => void
   empty_label: string
   select_label: string
 }>) =>
   choices.length === 0 ? (
-    <div className="border border-border bg-black/25 px-4 py-3 text-center text-[9px] tracking-[0.12em] text-muted uppercase">
-      {empty_label}
-    </div>
+    <p className="rounded border border-border bg-black/25 px-4 py-3 text-center text-xs text-muted">{empty_label}</p>
   ) : (
-    <div className="flex flex-col gap-2" data-wallet-choices="">
+    <div className="flex flex-col gap-2.5" data-wallet-choices="">
       {choices.map((choice) => (
-        <Button
-          className="w-full justify-start"
-          aria-label={choice}
+        <WalletRowButton
+          {...choice}
+          key={choice.name}
+          label={select_label}
           disabled={busy}
-          key={choice}
-          onClick={() => select(choice)}
-          type="button"
-          title={choice}
-        >
-          <WalletCards className="shrink-0 text-cyan" size={14} />
-          <span className="min-w-0 flex-1 truncate text-[10px] font-semibold tracking-[0.08em] text-text">
-            {choice}
-          </span>
-          <span className="text-[8px] tracking-[0.16em] text-cyan/75 uppercase">{select_label}</span>
-        </Button>
+          onClick={() => select(choice.name)}
+        />
       ))}
     </div>
   )
@@ -84,13 +149,8 @@ export const WalletPickerModal = ({
   children: ReactNode
 }>) => (
   <ModalFrame close={close} close_label={close_label} label={title} max_width="max-w-sm" soft>
-    <div className="flex flex-col gap-5 p-6 font-mono text-text" data-wallet-picker="">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <div className="grid size-11 place-items-center border border-cyan/30 bg-cyan/6 text-cyan shadow-[0_0_24px_rgba(72,207,207,0.08)]">
-          <WalletCards size={19} />
-        </div>
-        {subtitle && <p className="max-w-xs text-[9px] leading-5 tracking-[0.06em] text-muted">{subtitle}</p>}
-      </div>
+    <div className="flex flex-col gap-5 p-6 text-text" data-wallet-picker="">
+      {subtitle && <p className="text-[13px] leading-relaxed text-muted">{subtitle}</p>}
       {children}
     </div>
   </ModalFrame>

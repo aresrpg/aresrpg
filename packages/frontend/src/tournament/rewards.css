@@ -204,6 +204,18 @@
   }
 }
 @media (max-height: 500px) {
+  .tourney-reveal-heading .tourney-standing {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .tourney-reveal-heading > p {
+    display: none;
+  }
+  .tourney-reveal-heading .tourney-standing p {
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
   .tourney-reveal-heading {
     padding: 12px;
   }

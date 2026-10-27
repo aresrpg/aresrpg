@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { sui_session } from '../wallet/external_session.ts'
 import { character_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -12,7 +14,7 @@ import { crew, crew_dialogue, crew_item_type } from './crew_campaign.ts'
 export const CrewDialogue = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const t = copy_text(copy.airdrop_page)
   const distribution = useAppStore((state) => state.distribution)
-  const holder = useAppStore((state) => state.external_wallet.session)
+  const holder = useAppStore((state) => sui_session(state.external_wallet.session))
   const session = useAppStore((state) => state.session)
   const sale = useBlastSale()
   const is_helmet = (template: string) => rolled_item_types().get(template) === crew_item_type

@@ -8,6 +8,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { tournament_podium, tournament_refund_available } from '../modules/tournament_selectors.ts'
 
 import { TournamentCoin, TournamentPool } from './TournamentControls.tsx'
+import { TournamentStanding } from './TournamentStanding.tsx'
 import { TournamentReward } from './TournamentReward.tsx'
 import { TournamentContribution } from './TournamentContribution.tsx'
 import { character_label, tournament_act, tournament_name } from './presentation.ts'
@@ -135,6 +136,7 @@ export const TournamentPodium = ({
   const open = row.status === 'open' && !view.registration_expired
   return (
     <section className="tourney-podium">
+      <TournamentStanding row={row} address={view.viewer.address} t={t} />
       <header className="tourney-section-heading">
         <div>
           <small>{t(row.status === 'open' ? 'prize_pool' : 'frozen_pool')}</small>
@@ -145,13 +147,13 @@ export const TournamentPodium = ({
       {row.status !== 'cancelled' && (
         <>
           {row.status === 'finished' && !tiers[0].teams.length && <p className="tourney-notice">{t('no_champion')}</p>}
+          <PersonalRewards row={row} tiers={tiers} view={view} t={t} />
           <div className="tourney-pedestals">
             {[1, 0, 2, 3, 4].map((index) => (
               <PodiumTier key={index} row={row} tier={tiers[index]} t={t} />
             ))}
           </div>
           <p className="tourney-note">{t('split_notice')}</p>
-          <PersonalRewards row={row} tiers={tiers} view={view} t={t} />
         </>
       )}
       {tournament_refund_available(row) && (

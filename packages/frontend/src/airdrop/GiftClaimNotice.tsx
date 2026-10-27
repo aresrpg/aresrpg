@@ -22,11 +22,15 @@ const reward_item = ({ template }: GiftcardGroup) => {
   return item_type ? content_catalog.item(item_type)?.item : null
 }
 
-export const gift_funding_text = (copy: AppCopy, distribution: DistributionState, session: SessionState): string => {
+export const gift_funding_text = (
+  copy: AppCopy,
+  distribution: DistributionState,
+  session: SessionState
+): string | undefined => {
   const { notice, error } = distribution
-  if (notice?.kind !== 'received' || !gas_empty_error(error)) return copy.out_of_sui_body
+  if (notice?.kind !== 'received' || !gas_empty_error(error)) return undefined
   const held = notice.giftcards.filter((card) => session.giftcards.some(({ id }) => id === card.id))
-  if (!held.length) return copy.out_of_sui_body
+  if (!held.length) return undefined
   const t = copy_text(copy.airdrop_page)
   const rewards = group_giftcards(held)
     .map((card) => `${card.amount} × ${reward_item(card)?.name ?? t('reward_item')}`)

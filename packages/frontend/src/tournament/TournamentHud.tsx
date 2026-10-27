@@ -149,7 +149,6 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
   return (
     <>
       <HudCards>
-        <TournamentResultsCard row={view.results} t={t} />
         <button
           type="button"
           className={`tourney-hud-card${emphasis}`}

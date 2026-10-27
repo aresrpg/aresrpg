@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Button, NativeModal } from '@aresrpg/ui'
 import { Check, Sparkles, Trophy } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
@@ -16,6 +16,7 @@ import {
   type CollectedReward,
 } from '../modules/tournament_rewards.ts'
 
+import { TournamentStanding } from './TournamentStanding.tsx'
 import { tournament_item } from './TournamentReward.tsx'
 import { useRewardReveal } from './useRewardReveal.ts'
 import './rewards.css'
@@ -23,7 +24,7 @@ import './rewards.css'
 const RewardCard = ({ reward, visible, t }: Readonly<{ reward: CollectedReward; visible: boolean; t: CopyText }>) => {
   const numbers = useNumbers()
   const item = reward.asset === 'item' ? tournament_item(reward.template) : null
-  const amount = reward.asset === 'item' ? numbers.number(reward.amount) : numbers.sui(reward.amount, 9)
+  const amount = reward.asset === 'item' ? numbers.number(reward.amount) : numbers.sui(reward.amount)
   const icon = item ? item_detail_icon(item.item_type) : null
   const visual = {
     sui: { name: 'SUI', art: <SuiLogo size={64} /> },
@@ -44,9 +45,15 @@ const RewardCard = ({ reward, visible, t }: Readonly<{ reward: CollectedReward; 
 
 const RewardReveal = ({
   rewards,
+  standings,
   active,
   t,
-}: Readonly<{ rewards: readonly CollectedReward[]; active: boolean; t: CopyText }>) => {
+}: Readonly<{
+  rewards: readonly CollectedReward[]
+  standings: readonly ReactNode[]
+  active: boolean
+  t: CopyText
+}>) => {
   const { visible, reveal_all } = useRewardReveal(rewards.length, active)
   const grid = useRef<HTMLOListElement>(null)
   useEffect(() => {
@@ -64,7 +71,7 @@ const RewardReveal = ({
               <Trophy size={36} />
             </span>
             <p>{t('results')}</p>
-            <h2>{t('rewards_collected')}</h2>
+            {standings.length ? standings : <h2>{t('rewards_collected')}</h2>}
             <span>{t('rewards_arrived')}</span>
           </header>
           <ol className="tourney-reveal-grid" ref={grid}>
@@ -97,10 +104,17 @@ const RewardReveal = ({
 
 export const TournamentRewards = () => {
   const copy = useAppStore((state) => state.copy)
+  const rows = useAppStore((state) => state.tournament.rows)
+  const address = useAppStore((state) => state.session.wallet?.address ?? null)
   const collections = useAppStore((state) => state.tournament.collections)
   const reveal = useAppStore((state) => state.tournament.reward_reveal)
   const active = useAppStore(tournament_presentation_available)
   if (!copy || reveal.length === 0) return null
-  const rewards = combined_tournament_rewards(collections.filter((row) => reveal.includes(row.digest)))
-  return <RewardReveal key={reveal.join(':')} rewards={rewards} active={active} t={copy_text(copy.tournament_page)} />
+  const selected = collections.filter((row) => reveal.includes(row.digest))
+  const rewards = combined_tournament_rewards(selected)
+  const t = copy_text(copy.tournament_page)
+  const standings = rows
+    .filter((row) => selected.some((collection) => collection.tournament === row.id))
+    .map((row) => <TournamentStanding key={row.id} row={row} address={address} t={t} />)
+  return <RewardReveal key={reveal.join(':')} rewards={rewards} standings={standings} active={active} t={t} />
 }

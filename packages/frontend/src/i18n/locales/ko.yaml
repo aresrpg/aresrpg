@@ -451,6 +451,7 @@ demo_page:
   control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
   back: 앱으로 돌아가기
 marketplace_page:
+  add_funds: '충전'
   filter_all: '모든 카테고리'
   filter_empty: '검색 결과가 없습니다. 다른 필터나 검색어를 사용하세요.'
   lot_price: '묶음 총가격'
@@ -1043,10 +1044,63 @@ fight_hud:
   level_up_allocate: 포인트 배분
   level_up_later: 나중에
 wallet_legacy:
+  funding_available: '게임 잔액'
+  funding_minimum: '편안한 플레이를 위한 권장 잔액: {{amount}}.'
+  funding_purchase_minimum: '이번 구매와 네트워크 수수료에 필요한 금액: {{amount}}.'
+  funding_amount: '충전 금액'
+  funding_method_card: '신용카드'
+  funding_balances_loading: '지갑 잔액 불러오는 중…'
+  funding_balances_failed: '일부 잔액을 불러오지 못했습니다. 새로고침하여 다시 시도하세요.'
+  funding_no_assets: '이 지갑에는 잔액이 있는 지원 토큰이 없습니다.'
+  funding_balances_refresh: '잔액 새로고침'
+  funding_pay_with: '결제 자산'
+  funding_you_pay: '결제 금액'
+  funding_you_receive: '받는 금액'
+  funding_arrival: '예상 도착 시간'
+  funding_source_fee: '브리지 수수료가 포함됩니다. 출금 지갑의 네트워크 수수료는 확인 전에 별도로 표시됩니다.'
+  funding_review: '결제 검토'
+  funding_pay: '{{amount}} 결제'
+  funding_deposit_address: '입금 주소'
+  funding_transaction: '트랜잭션'
+  funding_explorer: '송금 탐색기 열기'
+  funding_same_wallet: '게임 지갑을 충전할 다른 지갑을 선택하세요.'
+  funding_status_quoting: '견적을 가져오는 중…'
+  funding_status_preparing: '잔액과 네트워크 수수료 확인 중…'
+  funding_status_signing: '{{wallet}}에서 승인하세요'
+  funding_status_pending: '{{chain}}에서 결제 확인 중'
+  funding_status_success: '{{amount}} SUI 도착'
+  funding_status_refunded: '송금이 환불되었습니다. 출금 지갑을 확인하세요. 네트워크 수수료는 부과될 수 있습니다.'
+  funding_status_failed: '충전을 완료하지 못했습니다.'
+  funding_status_unknown: '전송 결과를 알 수 없습니다. 다시 결제하기 전에 지갑이나 탐색기를 확인하세요.'
+  funding_status_bridging: 'Sui로 브리지 중'
+  funding_delivered_hint: '이제 게임 동작을 다시 시도할 수 있습니다.'
+  funding_adding: '게임 지갑에 추가 중'
+  funding_from: '{{chain}}의 {{amount}}에서'
+  funding_step_deposit: '입금'
+  funding_step_bridge: '브리지'
+  funding_step_delivered: '완료'
+  funding_time_left: '약 {{seconds}}초 남음'
+  funding_almost: '거의 완료'
+  funding_back: '게임으로 돌아가기'
+  funding_more: '더 추가'
+  funding_retry: '다시 시도'
+  funding_source: '보내는 지갑'
+  funding_change: '변경'
+  funding_invalid_response: '제공업체가 잘못된 견적을 반환했습니다. 새 견적을 요청하세요.'
+  funding_invalid_address: '지갑 주소가 올바르지 않습니다.'
+  funding_route_unavailable: '이 경로를 사용할 수 없습니다. 다른 자산이나 네트워크를 시도하세요.'
+  funding_rate_limited: '서비스가 혼잡합니다. 나중에 다시 시도하세요.'
+  funding_source_changed: '출금 지갑이 변경되었습니다. 결제를 다시 검토하세요.'
+  funding_source_gas: '출금 지갑에 네트워크 수수료를 낼 기본 토큰이 부족합니다.'
+  funding_source_balance: '출금 지갑에 해당 자산이 부족합니다.'
+  funding_quote_expired: '견적이 만료되었습니다. 결제 전에 새 견적을 요청하세요.'
+  funding_connection_cancelled: '지갑 연결이 취소되었습니다.'
+  funding_failed: '충전을 완료하지 못했습니다.'
+  funding_pending: '송금 진행 중입니다. 다시 결제하지 마세요.'
   sui: SUI
   how_to_get: SUI를 얻는 방법
-  your_address: 내 지갑 주소
-  send_sui: 이 주소로 SUI를 보내세요. 클릭하면 복사됩니다.
+  your_address: 'SUI 주소'
+  send_sui: 'Sui 네트워크로 SUI를 보내세요. 클릭하여 복사하세요.'
   buy_directly: 직접 구매
   buy_with_card: 신용카드로 SUI를 구매하면 지갑으로 바로 받습니다.
   buy_on_exchange: 거래소에서 구매
@@ -1075,28 +1129,16 @@ wallet_legacy:
   add_funds_desc: 결제 방법을 선택하세요. SUI가 지갑으로 바로 전송됩니다.
   method_paypal: PayPal
   method_paypal_desc: PayPal 계정으로 결제
-  method_card: '카드 / PayPal'
-  method_card_desc: '결제 업체를 통해 SUI 구매'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Face ID / Touch ID로 결제
   method_google_pay: Google Pay
   method_google_pay_desc: Google 계정으로 결제
   method_bank: 계좌 이체
   method_bank_desc: SEPA(EU) 또는 ACH(미국)
-  method_have_sui: '직접 입금'
-  method_have_sui_desc: 다른 지갑이나 거래소에서 전송
   paypal_note: MoonPay를 통해 미국, 영국 및 대부분의 유럽에서 이용 가능
   card_note: 아래 제공업체를 선택하세요. 모두 Visa와 Mastercard를 지원합니다
   bank_note: 수수료가 가장 낮습니다(약 1%). 유럽은 SEPA, 미국은 ACH를 사용합니다.
   steps_paypal: 1. 아래 링크 클릭  2. PayPal 선택  3. 금액 입력. SUI가 지갑에 도착합니다
-  steps_card: '업체를 열고 SUI를 선택한 뒤 아래 게임 지갑 주소를 사용하세요. 결제 수단은 국가와 업체에 따라 다릅니다.'
-  method_swap: '브리지 입금'
-  method_swap_desc: '다른 체인의 암호화폐를 SUI로 전환'
-  bridge_loading: '브리지 불러오는 중…'
-  bridge_error: '브리지를 불러올 수 없습니다. 게임 지갑으로 직접 입금은 계속 가능합니다.'
-  bridge_retry: '다시 시도'
-  swap_note: 'LI.FI 제공. 전송은 즉시 완료되지 않습니다. 브리지 입금을 다시 열고 기록에서 중단된 전송을 확인하거나 재개하세요.'
-  steps_swap: '출발 지갑을 연결하세요. 도착지는 아래 게임 지갑이며 수령 자산은 네이티브 SUI입니다. 서명 전 금액, 수수료, 예상 시간을 확인하세요.'
   steps_wallet: 아래 지갑 주소로 SUI를 보내세요. 몇 초 안에 도착합니다.
   advanced_exchange: '고급: 거래소에서 구매'
   age_notice: 모든 결제 제공업체는 만 18세 이상만 이용할 수 있습니다.
@@ -2297,6 +2339,8 @@ item_categories:
   relic_slot: 유물 {{number}}
 kares: 스테이킹
 kares_page:
+  other_networks: '다른 네트워크 · EVM / Solana'
+  sui_wallet_required: '이 기능을 사용하려면 Sui 지갑을 선택하세요.'
   blast_soon: '곧 Blast에서 토큰 판매 시작'
   blast_live: 'KARES 판매 진행 중'
   blast_closing: '판매 종료 · 정산 대기'
@@ -2991,6 +3035,8 @@ allocation_page:
   error_x_unavailable: 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요. X 또는 캠페인 서비스가 일시 중단되었을 수 있습니다.
 
 tournament_page:
+  victory_title: '1위를 차지했습니다!'
+  placing_title: '{{place}}위를 차지했습니다'
   results: '토너먼트 결과'
   open_results: '{{name}} 토너먼트 결과 보기'
   rewards_collected: '보상 수령 완료'

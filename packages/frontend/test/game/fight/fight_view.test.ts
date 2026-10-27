@@ -3,9 +3,11 @@
 
 import { create_character_source, create_fight, reachable_fight_cells } from '@aresrpg/fight'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import * as React from 'react'
 import { createElement } from 'react'
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 
+import * as store from '../../../src/store.ts'
 import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
 import {
   fight_fighter_name,
@@ -15,7 +17,7 @@ import {
   turn_elapsed_percent,
   turn_seconds_remaining,
 } from '../../../src/game/fight/fight_projection.ts'
-import { crank_prompt_hidden, end_turn_intent, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
+import { FightHud, crank_prompt_hidden, end_turn_intent, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
 import { ready_all_progress_label } from '../../../src/game/fight/FightPlacementBanner.tsx'
 import { fight_cell_selection } from '../../../src/game/fight/fight_cell_selection.ts'
 import { fight_portrait_source, FightTimeline } from '../../../src/game/fight/FightTimeline.tsx'
@@ -93,6 +95,46 @@ const started_checkpoint = () => {
 }
 
 describe('generic fight view', () => {
+  test('a heartbeat between timer ticks keeps the expired turn banner visible', async () => {
+    const base = store.initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
+    const checkpoint = started_checkpoint()
+    const state = {
+      ...base,
+      session: { ...base.session, wallet: { address: 'other' } as never, selected_character_id: 'theirs' },
+      fight: { ...base.fight, mode: 'remote' as const, checkpoint },
+      chain_clock: { chain_ms: 100_000, received_ms: 1_500 },
+    }
+    const select = spyOn(store, 'useAppStore').mockImplementation(<T>(selector: (value: store.AppState) => T): T =>
+      selector(state)
+    )
+    const real_use_state = React.useState
+    // Retain the previous interval tick while a newer heartbeat triggers a render.
+    const retained_tick = spyOn(React, 'useState').mockImplementation(((initial: unknown) => {
+      const value = typeof initial === 'function' ? initial() : initial
+      return real_use_state(typeof value === 'number' ? 1_000 : value)
+    }) as typeof React.useState)
+    const now = spyOn(performance, 'now').mockReturnValue(1_600)
+    try {
+      const html = renderToStaticMarkup(
+        createElement(FightHud, {
+          copy: await load_app_copy('en'),
+          focus_fighter: () => undefined,
+          target_fighter: () => undefined,
+          targetable_fighter_cells: [],
+          selected_action: null,
+          select_action: () => undefined,
+          actions_locked: false,
+          mob_icon_for: () => null,
+        })
+      )
+      expect(html).toContain('The current player is not ending their turn.')
+      expect(html).toContain('aui-progress')
+    } finally {
+      now.mockRestore()
+      retained_tick.mockRestore()
+      select.mockRestore()
+    }
+  })
   test('ready all reports running, completed, and interrupted transaction counts', () => {
     const text = {
       placement_ready_all_progress: 'Ready all · {completed}/{total}',

@@ -9,6 +9,7 @@ describe('frontend environment', () => {
   test('a bare build has complete public defaults', () => {
     const env = resolve_env({})
 
+    expect(env.privy_app_id).toBe('cmvpm31db00nk0gimsyylhwzk')
     expect(env.app_url).toBe('https://aresrpg.world/')
     expect(env.network).toBe('mainnet')
     expect(env.engine_quality).toBe('medium')

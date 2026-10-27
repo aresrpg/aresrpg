@@ -226,11 +226,13 @@ export function PlayerRuntime({
         )}
         <PlayerContextMenu copy={copy} />
         <JourneyHost copy={copy} />
-        {in_app && wallet && navigation.dialog === 'top_up' && (
+        {in_app && wallet && navigation.funding_cost_mist !== null && (
           <AddFundsModal
+            key={wallet.address}
             address={wallet.address}
             copy={copy}
-            on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
+            cost_mist={navigation.funding_cost_mist}
+            on_close={() => dispatch_app({ type: 'funding/close' })}
             warning={gift_funding_text(copy, distribution, session)}
           />
         )}

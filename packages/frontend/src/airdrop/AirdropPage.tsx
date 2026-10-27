@@ -5,6 +5,8 @@ import { Button } from '@aresrpg/ui'
 import type { ReactNode, ComponentProps } from 'react'
 import { Gift, Info, WalletCards } from 'lucide-react'
 
+import { sui_session } from '../wallet/external_session.ts'
+import { external_wallet_view } from '../wallet/view.ts'
 import './airdrop.css'
 import { SuiLogo } from '../components/SuiLogo.tsx'
 import { player_error_text } from '../i18n/player_error.ts'
@@ -171,9 +173,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   const external_wallet = useAppStore((state) => state.external_wallet)
   const busy = distribution.pending
   const cards = [...(distribution.holder_giftcards ?? []), ...session.giftcards]
-  const wallet_control = (
-    <HolderWalletConnect wallet={{ state: external_wallet, dispatch: dispatch_app }} copy={copy} t={t} />
-  )
+  const wallet_control = <HolderWalletConnect wallet={external_wallet_view(external_wallet)} copy={copy} t={t} />
 
   if (crew_dialogue)
     return (
@@ -194,7 +194,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
         cards,
         busy,
         loaded: session.roster_loaded,
-        connected: !!external_wallet.session,
+        connected: !!sui_session(external_wallet.session),
         gift_ready: distribution.gift_link_ready,
         error: distribution.error ? player_error_text(copy, distribution.error) : null,
         wallet_control,

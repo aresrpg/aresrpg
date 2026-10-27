@@ -4,9 +4,14 @@
 import type { Fighter, HydratedFightCheckpoint } from '@aresrpg/fight'
 import { experience_progress, item_is_stackable } from '@aresrpg/immutable'
 
+import type { AppState } from '../store.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 
 import type { FightResult, ResultParticipant, ResultLoot } from './fight_result.ts'
+
+/** The result surface belongs to the selected character; other owned seats remain background state. */
+export const selected_fight_result = (state: Pick<AppState, 'session' | 'fight_result'>): FightResult | null =>
+  state.fight_result.current_by_character[state.session.selected_character_id ?? ''] ?? null
 
 export type FightSettlementProgress = Readonly<{
   completed: number

@@ -5,6 +5,7 @@ import { receipt_digest, type Receipt } from '@aresrpg/sdk/cache'
 
 import type { AppInput, AppState } from '../store.ts'
 
+import { selected_fight_result, fight_level_up_visible, fight_result_available } from './fight_result_view.ts'
 import type { TournamentAction } from './tournament.ts'
 
 export type CollectedReward = Readonly<
@@ -61,15 +62,21 @@ export const combined_tournament_rewards = (
 }
 
 export const tournament_presentation_available = (
-  state: Pick<AppState, 'fight' | 'fight_result' | 'navigation'>
-): boolean =>
-  !state.fight.mounted &&
-  state.navigation.dialog === null &&
-  !Object.values(state.fight_result.current_by_character).some((result) => result.result_open || result.level_up_open)
+  state: Pick<AppState, 'fight' | 'fight_result' | 'navigation' | 'session'>
+): boolean => {
+  const result = selected_fight_result(state)
+  if (state.fight.mounted || state.navigation.dialog !== null) return false
+  return (
+    !result ||
+    !fight_result_available(state.fight, result.fight) ||
+    !(result.result_open || fight_level_up_visible(result))
+  )
+}
 
 export const pending_tournament_presentation = (state: AppState): AppInput | null => {
-  if (!tournament_presentation_available(state) || state.tournament.pending !== null) return null
+  if (!tournament_presentation_available(state)) return null
   if (state.tournament.pending_podium) return { type: 'tournament/podium_opened', id: state.tournament.pending_podium }
+  if (state.tournament.pending !== null) return null
   return state.tournament.collections.some((row) => !row.acknowledged) && state.tournament.reward_reveal.length === 0
     ? { type: 'tournament/rewards_opened' }
     : null

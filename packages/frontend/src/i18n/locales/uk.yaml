@@ -448,6 +448,7 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
+  add_funds: 'Поповнити'
   filter_all: 'Усі категорії'
   filter_empty: 'Нічого не знайдено. Змініть фільтр або запит.'
   lot_price: 'Загальна ціна лота'
@@ -1042,10 +1043,63 @@ fight_hud:
   level_up_allocate: Розподілити очки
   level_up_later: Пізніше
 wallet_legacy:
+  funding_available: 'Ігровий баланс'
+  funding_minimum: 'Для комфортної гри: {{amount}}.'
+  funding_purchase_minimum: 'Для цієї покупки та комісії мережі: {{amount}}.'
+  funding_amount: 'Сума поповнення'
+  funding_method_card: 'Банківська картка'
+  funding_balances_loading: 'Завантаження балансів гаманця…'
+  funding_balances_failed: 'Не вдалося завантажити деякі баланси. Оновіть, щоб спробувати ще раз.'
+  funding_no_assets: 'У цьому гаманці немає підтримуваних токенів із додатним балансом.'
+  funding_balances_refresh: 'Оновити баланси'
+  funding_pay_with: 'Сплатити з'
+  funding_you_pay: 'Ви сплачуєте'
+  funding_you_receive: 'Ви отримуєте'
+  funding_arrival: 'Очікуваний час'
+  funding_source_fee: 'Комісії мосту включено. Гаманець-джерело також сплачує мережеву комісію, показану перед підтвердженням.'
+  funding_review: 'Перевірити платіж'
+  funding_pay: 'Сплатити {{amount}}'
+  funding_deposit_address: 'Адреса депозиту'
+  funding_transaction: 'Транзакція'
+  funding_explorer: 'Відкрити оглядач переказів'
+  funding_same_wallet: 'Виберіть інший гаманець для поповнення ігрового.'
+  funding_status_quoting: 'Отримання пропозиції…'
+  funding_status_preparing: 'Перевірка коштів і мережевих комісій…'
+  funding_status_signing: 'Підтвердьте в {{wallet}}'
+  funding_status_pending: 'Підтверджуємо платіж у мережі {{chain}}'
+  funding_status_success: '{{amount}} SUI зараховано'
+  funding_status_refunded: 'Переказ повернуто. Перевірте гаманець-джерело; мережеві комісії можуть зберігатися.'
+  funding_status_failed: 'Не вдалося завершити поповнення.'
+  funding_status_unknown: 'Результат надсилання невідомий. Перевірте гаманець або оглядач перед повторною оплатою.'
+  funding_status_bridging: 'Переказ у Sui'
+  funding_delivered_hint: 'Тепер можна повторити ігрову дію.'
+  funding_adding: 'Поповнення ігрового гаманця'
+  funding_from: 'з {{amount}} у мережі {{chain}}'
+  funding_step_deposit: 'Депозит'
+  funding_step_bridge: 'Міст'
+  funding_step_delivered: 'Зараховано'
+  funding_time_left: 'залишилось ~{{seconds}} с'
+  funding_almost: 'Майже готово'
+  funding_back: 'Повернутися до гри'
+  funding_more: 'Додати ще'
+  funding_retry: 'Спробувати знову'
+  funding_source: 'Звідки'
+  funding_change: 'Змінити'
+  funding_invalid_response: 'Постачальник повернув недійсну пропозицію. Запитайте нову.'
+  funding_invalid_address: 'Недійсна адреса гаманця.'
+  funding_route_unavailable: 'Цей маршрут недоступний. Спробуйте інший актив або мережу.'
+  funding_rate_limited: 'Постачальник зайнятий. Спробуйте пізніше.'
+  funding_source_changed: 'Гаманець-джерело змінився. Перевірте платіж ще раз.'
+  funding_source_gas: 'Гаманцю-джерелу бракує нативних токенів для мережевої комісії.'
+  funding_source_balance: 'У гаманці-джерелі недостатньо цього активу.'
+  funding_quote_expired: 'Термін пропозиції минув. Запитайте нову перед оплатою.'
+  funding_connection_cancelled: 'Підключення гаманця скасовано.'
+  funding_failed: 'Не вдалося завершити поповнення.'
+  funding_pending: 'Переказ триває. Не надсилайте інший платіж.'
   sui: SUI
   how_to_get: Як отримати SUI
-  your_address: Адреса вашого гаманця
-  send_sui: Надішліть SUI на цю адресу. Натисніть, щоб скопіювати.
+  your_address: 'Адреса SUI'
+  send_sui: 'Надсилайте SUI через мережу Sui. Натисніть, щоб скопіювати.'
   buy_directly: Купити напряму
   buy_with_card: Купіть SUI кредитною карткою. Доставка прямо на ваш гаманець.
   buy_on_exchange: Купити на біржі
@@ -1092,29 +1146,17 @@ wallet_legacy:
   add_funds_desc: Обери зручний спосіб оплати. SUI надходить прямо на твій гаманець.
   method_paypal: PayPal
   method_paypal_desc: Оплатити через PayPal-акаунт
-  method_card: 'Картка / PayPal'
-  method_card_desc: 'Купуйте SUI через платіжного провайдера'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Оплатити через Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Оплатити через Google-акаунт
   method_bank: Банківський переказ
   method_bank_desc: SEPA (Європа) або ACH (США)
-  method_have_sui: 'Пряме поповнення'
-  method_have_sui_desc: Надіслати з іншого гаманця або біржі
   paypal_note: Доступно в США, Великій Британії та більшості Європи через MoonPay
   card_note: Обери провайдера нижче. Усі приймають Visa та Mastercard
   bank_note: Найнижчі комісії (~1%). SEPA для Європи, ACH для США.
   steps_paypal: 1. Натисни посилання нижче  2. Вибери PayPal як спосіб оплати  3.
     Введи суму. SUI надійде на твій гаманець
-  steps_card: 'Відкрийте провайдера, виберіть SUI та вкажіть адресу ігрового гаманця нижче. Способи оплати залежать від країни та провайдера.'
-  method_swap: 'Поповнення через міст'
-  method_swap_desc: 'Обмінюйте криптовалюту з іншої мережі на SUI'
-  bridge_loading: 'Завантаження мосту…'
-  bridge_error: 'Не вдалося завантажити міст. Пряме поповнення ігрового гаманця залишається доступним.'
-  bridge_retry: 'Спробувати ще раз'
-  swap_note: 'На базі LI.FI. Перекази не миттєві. Знову відкрийте поповнення через міст та його історію, щоб перевірити або продовжити перерваний переказ.'
-  steps_swap: 'Підключіть гаманець джерела. Одержувач — ігровий гаманець нижче, валюта — нативний SUI. Перед підписанням перевірте суму, комісії та очікуваний час.'
   steps_wallet: Надішли SUI на адресу гаманця нижче. Кошти надходять за кілька секунд.
   advanced_exchange: 'Для досвідчених: купити на біржі'
   age_notice: Всі платіжні провайдери вимагають, щоб ти мав(ла) не менше 18 років.
@@ -2321,6 +2363,8 @@ item_categories:
 
 kares: 'Стейкінг'
 kares_page:
+  other_networks: 'Інші мережі · EVM / Solana'
+  sui_wallet_required: 'Виберіть гаманець Sui для цієї функції.'
   blast_soon: 'Продаж токенів незабаром на Blast'
   blast_live: 'Продаж KARES відкрито'
   blast_closing: 'Продаж завершено · очікується розрахунок'
@@ -3024,6 +3068,8 @@ allocation_page:
   error_x_unavailable: Не вдалося виконати запит. Перевірте з’єднання й повторіть. X або сервіс кампанії може бути недоступний.
 
 tournament_page:
+  victory_title: 'Ви посіли 1-ше місце!'
+  placing_title: 'Ви посіли {{place}}-те місце'
   results: 'Результати турніру'
   open_results: 'Переглянути результати турніру {{name}}'
   rewards_collected: 'Нагороди отримано'

@@ -90,7 +90,7 @@ test('wallet selection shows each authorized account explicitly', async () => {
   const accounts = await wallet.authorize()
   const html = renderToStaticMarkup(
     <WalletChoices
-      choices={accounts}
+      choices={accounts.map((name) => ({ name }))}
       busy={false}
       select={() => undefined}
       empty_label={copy.no_wallet}
@@ -133,7 +133,7 @@ test('multiple wallet accounts use the shared picker rows with full accessible a
   const accounts = await wallet.authorize()
   const html = renderToStaticMarkup(
     <WalletChoices
-      choices={accounts}
+      choices={accounts.map((name) => ({ name }))}
       busy={false}
       select={() => undefined}
       empty_label={copy.no_wallet}

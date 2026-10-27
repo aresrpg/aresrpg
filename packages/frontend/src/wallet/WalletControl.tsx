@@ -4,11 +4,19 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, WalletCards } from 'lucide-react'
 
-import { WalletChoices, WalletConnectButton, WalletPickerModal } from '../components/WalletPickerModal.tsx'
+import {
+  WalletChoices,
+  WalletConnectButton,
+  WalletPickerModal,
+  WalletRowButton,
+} from '../components/WalletPickerModal.tsx'
 import { error_text } from '../i18n/error_text.ts'
 import type { KaresCopy } from '../kares/copy.ts'
 
 import type { WalletSelection, WalletView } from './model.ts'
+
+/** Network names are proper nouns, identical in every locale. */
+export const WALLET_NETWORK = { sui: 'Sui', evm: 'EVM', solana: 'Solana' } as const
 
 const account_key = ({ wallet_name, address }: WalletSelection): string => `${wallet_name}:${address}`
 
@@ -21,12 +29,12 @@ const WalletAccountSelect = ({
   wallet: WalletView
   copy: KaresCopy
   busy: boolean
-  connect: () => void
+  connect?: () => void
 }>) => {
   const { state, dispatch } = wallet
   const providers = [...new Set(state.accounts.map(({ wallet_name }) => wallet_name))].toSorted()
   const select = (value: string): void => {
-    if (value === 'connect') return connect()
+    if (value === 'connect') return connect?.()
     if (value === 'disconnect') return dispatch({ type: 'external_wallet/disconnect' })
     const account = state.accounts.find((entry) => account_key(entry) === value)
     if (account) dispatch({ type: 'external_wallet/select', ...account })
@@ -56,7 +64,7 @@ const WalletAccountSelect = ({
               ))}
           </optgroup>
         ))}
-        <option value="connect">＋ {copy.connect}</option>
+        {connect && <option value="connect">＋ {copy.connect}</option>}
         {state.session && <option value="disconnect">{copy.disconnect}</option>}
       </select>
       <ChevronDown className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2" size={14} />
@@ -64,18 +72,47 @@ const WalletAccountSelect = ({
   )
 }
 
+const WalletConnectionOptions = ({
+  wallet,
+  copy,
+  busy,
+  close,
+}: Readonly<{ wallet: WalletView; copy: KaresCopy; busy: boolean; close: () => void }>) => (
+  <>
+    <WalletChoices
+      choices={wallet.state.wallets.map(({ name, family }) => ({ name, detail: WALLET_NETWORK[family ?? 'sui'] }))}
+      busy={busy}
+      select={(wallet_name) => wallet.dispatch({ type: 'external_wallet/authorize', wallet_name })}
+      empty_label={wallet.state.loaded ? copy.no_wallet : copy.loading}
+      select_label={copy.connect}
+    />
+    {wallet.connect_other && (
+      <WalletRowButton
+        name={copy.other_networks}
+        label={copy.connect}
+        disabled={busy}
+        onClick={() => {
+          close()
+          wallet.connect_other!()
+        }}
+      />
+    )}
+  </>
+)
+
 export const WalletControl = ({
   wallet,
   copy,
   subtitle,
   locked = false,
-}: Readonly<{ wallet: WalletView; copy: KaresCopy; subtitle?: string; locked?: boolean }>) => {
+  require_sui = true,
+}: Readonly<{ wallet: WalletView; copy: KaresCopy; subtitle?: string; locked?: boolean; require_sui?: boolean }>) => {
   const [open, set_open] = useState(false)
   const { state, dispatch } = wallet
   useEffect(() => {
     if (state.accounts.length) set_open(false)
   }, [state.accounts])
-  const busy = locked || state.request !== null
+  const busy = locked || (wallet.busy ?? state.request !== null)
   const error = state.error && (
     <p className="text-[10px] text-rose-300" role="alert">
       {error_text(copy, state.error)}
@@ -83,6 +120,7 @@ export const WalletControl = ({
   )
   return (
     <div className="flex min-w-0 flex-col gap-2" data-wallet-menu="">
+      {require_sui && state.session?.family && <p className="text-xs text-muted">{copy.sui_wallet_required}</p>}
       {state.accounts.length ? (
         <WalletAccountSelect wallet={wallet} copy={copy} busy={busy} connect={() => set_open(true)} />
       ) : (
@@ -98,13 +136,7 @@ export const WalletControl = ({
             dispatch({ type: 'external_wallet/cancel' })
           }}
         >
-          <WalletChoices
-            choices={state.wallets.map(({ name }) => name)}
-            busy={busy}
-            select={(wallet_name) => dispatch({ type: 'external_wallet/authorize', wallet_name })}
-            empty_label={state.loaded ? copy.no_wallet : copy.loading}
-            select_label={copy.connect}
-          />
+          <WalletConnectionOptions wallet={wallet} copy={copy} busy={busy} close={() => set_open(false)} />
           {error}
         </WalletPickerModal>
       ) : (

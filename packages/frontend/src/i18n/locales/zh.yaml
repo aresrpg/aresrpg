@@ -451,6 +451,7 @@ demo_page:
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
+  add_funds: '充值'
   filter_all: '所有分类'
   filter_empty: '没有匹配结果，请尝试其他筛选条件或搜索词。'
   lot_price: '整组总价'
@@ -1043,10 +1044,63 @@ fight_hud:
   level_up_allocate: 分配点数
   level_up_later: 稍后
 wallet_legacy:
+  funding_available: '游戏余额'
+  funding_minimum: '畅玩建议余额：{{amount}}。'
+  funding_purchase_minimum: '本次购买及网络手续费所需余额：{{amount}}。'
+  funding_amount: '充值金额'
+  funding_method_card: '信用卡'
+  funding_balances_loading: '正在加载钱包余额…'
+  funding_balances_failed: '部分余额加载失败。请刷新重试。'
+  funding_no_assets: '此钱包中没有余额大于零的受支持代币。'
+  funding_balances_refresh: '刷新余额'
+  funding_pay_with: '支付资产'
+  funding_you_pay: '您支付'
+  funding_you_receive: '您收到'
+  funding_arrival: '预计到账时间'
+  funding_source_fee: '已包含跨链费用。来源钱包还需支付网络手续费，确认前会显示。'
+  funding_review: '核对付款'
+  funding_pay: '支付 {{amount}}'
+  funding_deposit_address: '充值地址'
+  funding_transaction: '交易'
+  funding_explorer: '打开转账浏览器'
+  funding_same_wallet: '请选择另一个钱包为游戏钱包充值。'
+  funding_status_quoting: '正在获取报价…'
+  funding_status_preparing: '正在检查余额和网络手续费…'
+  funding_status_signing: '请在 {{wallet}} 中批准'
+  funding_status_pending: '正在 {{chain}} 上确认付款'
+  funding_status_success: '{{amount}} SUI 已到账'
+  funding_status_refunded: '转账已退款。请检查来源钱包；仍可能收取网络手续费。'
+  funding_status_failed: '充值未能完成。'
+  funding_status_unknown: '发送结果未知。再次付款前，请检查钱包或转账浏览器。'
+  funding_status_bridging: '正在跨链至 Sui'
+  funding_delivered_hint: '现在可以重试游戏操作。'
+  funding_adding: '正在充值到游戏钱包'
+  funding_from: '来自 {{chain}} 上的 {{amount}}'
+  funding_step_deposit: '充值'
+  funding_step_bridge: '跨链'
+  funding_step_delivered: '到账'
+  funding_time_left: '剩余约 {{seconds}} 秒'
+  funding_almost: '即将完成'
+  funding_back: '返回游戏'
+  funding_more: '继续充值'
+  funding_retry: '重试'
+  funding_source: '来源'
+  funding_change: '更换'
+  funding_invalid_response: '服务商返回了无效报价。请重新获取。'
+  funding_invalid_address: '钱包地址无效。'
+  funding_route_unavailable: '此路线不可用。请尝试其他资产或网络。'
+  funding_rate_limited: '服务商繁忙。请稍后重试。'
+  funding_source_changed: '来源钱包已更改。请重新核对付款。'
+  funding_source_gas: '来源钱包的原生代币不足，无法支付网络手续费。'
+  funding_source_balance: '来源钱包中此资产的余额不足。'
+  funding_quote_expired: '报价已过期。付款前请重新获取报价。'
+  funding_connection_cancelled: '已取消钱包连接。'
+  funding_failed: '充值未能完成。'
+  funding_pending: '转账处理中。请勿再次付款。'
   sui: SUI
   how_to_get: 如何获取SUI
-  your_address: 你的钱包地址
-  send_sui: 向此地址发送SUI。点击复制。
+  your_address: 'SUI 地址'
+  send_sui: '请通过 Sui 网络发送 SUI。点击复制。'
   buy_directly: 直接购买
   buy_with_card: 用信用卡购买SUI，直接发送到钱包。
   buy_on_exchange: 在交易所购买
@@ -1075,28 +1129,16 @@ wallet_legacy:
   add_funds_desc: 选择支付方式，SUI将直接发送到钱包。
   method_paypal: PayPal
   method_paypal_desc: 使用PayPal账户支付
-  method_card: '银行卡 / PayPal'
-  method_card_desc: '通过支付服务商购买 SUI'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: 使用Face ID/Touch ID支付
   method_google_pay: Google Pay
   method_google_pay_desc: 使用Google账户支付
   method_bank: 银行转账
   method_bank_desc: SEPA（欧盟）或ACH（美国）
-  method_have_sui: '直接充值'
-  method_have_sui_desc: 从其他钱包或交易所发送
   paypal_note: 通过MoonPay支持美国、英国和欧洲大部分地区
   card_note: 选择下方提供商，均支持Visa和Mastercard
   bank_note: 费用最低（约1%）。欧洲使用SEPA，美国使用ACH。
   steps_paypal: 1. 点击下方链接  2. 选择PayPal支付  3. 输入金额，SUI将进入钱包
-  steps_card: '打开服务商，选择 SUI 并使用下方的游戏钱包地址。支付方式取决于所在国家和服务商。'
-  method_swap: '跨链充值'
-  method_swap_desc: '将其他链的加密资产兑换为 SUI'
-  bridge_loading: '正在加载跨链功能…'
-  bridge_error: '无法加载跨链功能。您仍可直接向游戏钱包充值。'
-  bridge_retry: '重试'
-  swap_note: '由 LI.FI 提供支持。转账并非即时完成。重新打开跨链充值，通过历史记录查看或继续中断的转账。'
-  steps_swap: '连接来源钱包。收款目标为下方游戏钱包中的原生 SUI。签名前请核对金额、费用和预计到账时间。'
   steps_wallet: 向下方钱包地址发送SUI，几秒后即可到账。
   advanced_exchange: 高级：在交易所购买
   age_notice: 所有支付提供商均要求年满18岁。
@@ -2297,6 +2339,8 @@ item_categories:
   relic_slot: 遗物{{number}}
 kares: 质押
 kares_page:
+  other_networks: '其他网络 · EVM / Solana'
+  sui_wallet_required: '请选择 Sui 钱包以使用此功能。'
   blast_soon: '代币即将在 Blast 发售'
   blast_live: 'KARES 正在发售'
   blast_closing: '销售结束 · 等待结算'
@@ -2991,6 +3035,8 @@ allocation_page:
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
 
 tournament_page:
+  victory_title: '你获得了第一名！'
+  placing_title: '你获得了第 {{place}} 名'
   results: '锦标赛结果'
   open_results: '查看{{name}}锦标赛结果'
   rewards_collected: '奖励已领取'

@@ -26,6 +26,7 @@ const CRITICAL_TESTS = [
   'pwa_update',
   'staking',
   'startup_update',
+  'tournament_results',
   'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)
 const PERFORMANCE_TESTS = ['**/performance.pw.ts', '**/spell_performance.pw.ts']

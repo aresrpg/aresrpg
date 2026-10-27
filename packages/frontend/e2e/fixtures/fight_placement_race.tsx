@@ -13,11 +13,13 @@ import { FightLayer } from '../../src/game/fight/FightLayer.tsx'
 import type { SceneHandle } from '../../src/game/core/scene_feed.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { dispatch_app, observe_app, useAppStore, type AppInput } from '../../src/store.ts'
+import { tournament_fixture } from '../../test/helpers/tournament.ts'
 import '../../src/tailwind.css'
 
 // Real fight reducers, observers and React UI; GPU presentation and chain execution are isolated.
 const params = new URLSearchParams(location.search)
 const spell_probe = params.has('spell')
+const walkover = params.has('walkover')
 const phase = (value: string): void => {
   document.body.dataset.preparation = value
 }
@@ -89,7 +91,11 @@ const push = (checkpoint: HydratedFightCheckpoint): void =>
     packet: {
       type: 'packet/fight_state',
       fight: checkpoint.contract.id,
-      state: { contract: checkpoint.contract, players: checkpoint.sources.players },
+      state: {
+        contract: checkpoint.contract,
+        players: checkpoint.sources.players,
+        ...(walkover ? { tournament: { id: 'cup', index: 0 } } : {}),
+      },
       seat: 0,
     },
   } as unknown as AppInput)
@@ -123,7 +129,7 @@ const boot = async (): Promise<void> => {
     seed: 17n,
     setup: {
       fight_id: 'placement-race',
-      world: 'nauvis',
+      world: walkover ? 'tournament' : 'nauvis',
       board_seed: 17n,
       spells: { ...catalog_spell_sources() },
       players: [
@@ -143,7 +149,7 @@ const boot = async (): Promise<void> => {
           ready: spell_probe,
           source: character_source('Enemy'),
         },
-      ],
+      ].filter((player) => !walkover || player.team === 0n),
       mobs: [],
     },
   })
@@ -152,6 +158,13 @@ const boot = async (): Promise<void> => {
   let refuse = (_error: Error): void => {}
   const wallet = {
     address: 'owner',
+    tournament: {
+      crank: async () => {
+        document.body.dataset.crank_calls = String(Number(document.body.dataset.crank_calls ?? 0) + 1)
+        await new Promise<void>((resolve) => window.addEventListener('release-crank', () => resolve(), { once: true }))
+        return { digest: 'walkover' }
+      },
+    },
     fight: {
       place: () =>
         new Promise((_resolve, reject) => {
@@ -167,10 +180,24 @@ const boot = async (): Promise<void> => {
     packet: { type: 'packet/characters', characters: [row('alice', 'Alice'), row('ally', 'Ally')] },
   })
   dispatch_app({ type: 'character/select', character_id: 'alice' })
-  observe_app(['fight', 'fight_chain'])
+  observe_app(['fight', 'fight_chain', 'tournament'])
   const initial = spell_probe ? chain.apply({ type: 'start', observed_ms: 60_000n }).state : chain.state()
   if (spell_probe) picking.cell = Number(initial.contract.fighters[0]!.cell)
-  push(initial)
+  push(walkover ? { ...initial, contract: { ...initial.contract, placement_ms: 1000n } } : initial)
+  if (walkover) {
+    const tournament = tournament_fixture()
+    dispatch_app({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/tournaments',
+        tournaments: [{ ...tournament, matches: [{ ...tournament.matches[0]!, fight: 'placement-race' }] }],
+      },
+    })
+    dispatch_app({ type: 'clock/observed', chain_ms: 60_999, received_ms: performance.now() })
+    window.addEventListener('placement-expired', () =>
+      dispatch_app({ type: 'clock/observed', chain_ms: 61_000, received_ms: performance.now() })
+    )
+  }
   const place_and_join = (): void => {
     picking.cell = Number(chain.state().contract.board.start_cells_a[1]!)
     dispatch_app({

@@ -7,7 +7,7 @@
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 import { Button, CombatHud, ConfirmDialog } from '@aresrpg/ui'
 import { Swords, Flag } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 
 import { content_catalog } from '../../content/catalog.ts'
 import { format_text, spell_name, type AppCopy } from '../../i18n/copy.ts'
@@ -254,12 +254,14 @@ export const FightHud = ({
 }>) => {
   const fight = useAppStore((state) => state.fight)
   const session = useAppStore((state) => state.session)
+  const tournament = useAppStore((state) => state.tournament)
   const simulator = useAppStore((state) => state.simulator)
   const [forfeit_open, set_forfeit_open] = useState(false)
   const end_turn_button = useRef<HTMLButtonElement>(null)
   const [crank_attempt, set_crank_attempt] = useState<CrankAttempt | null>(null)
   const clock = useAppStore((state) => state.chain_clock)
-  const [monotonic_ms, set_monotonic_ms] = useState(() => performance.now())
+  const [, refresh_clock] = useReducer((tick: number) => tick + 1, 0)
+  const monotonic_ms = performance.now()
   const now = chain_now(clock, monotonic_ms)
   const names = useMemo(
     () =>
@@ -314,7 +316,7 @@ export const FightHud = ({
 
   useEffect(() => {
     if (!view?.can_end_turn || min_turn_ready) return undefined
-    const timer = setInterval(() => set_monotonic_ms(performance.now()), 100)
+    const timer = setInterval(refresh_clock, 100)
     return () => clearInterval(timer)
   }, [min_turn_ready, view?.can_end_turn])
 
@@ -323,7 +325,7 @@ export const FightHud = ({
   const watching_stall = watching_turn_clock && !view?.can_end_turn
   useEffect(() => {
     if (!watching_turn_clock) return undefined
-    const timer = setInterval(() => set_monotonic_ms(performance.now()), 1_000)
+    const timer = setInterval(refresh_clock, 1_000)
     return () => clearInterval(timer)
   }, [watching_turn_clock])
 
@@ -368,6 +370,7 @@ export const FightHud = ({
 
   if (!view || !fight.checkpoint) return null
   const fight_id = fight.checkpoint.contract.id
+  const match = tournament.links[fight_id]
   const command_fight = fight.mode === 'remote' ? fight_id : null
   const chat_names = Object.freeze(Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name])))
   const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />
@@ -381,7 +384,7 @@ export const FightHud = ({
     )
     const own_ready =
       own_seat !== undefined
-        ? (fight.checkpoint.contract.fighters[Number(own_seat)]?.ready ?? false) ||
+        ? fight.checkpoint.contract.fighters[Number(own_seat)]!.ready ||
           fight.ready_submitted_seats.includes(Number(own_seat))
         : null
     // the `--fh-*` palette, the mono face and the card's own chrome are all declared on
@@ -390,14 +393,17 @@ export const FightHud = ({
       <div className="fight-hud" data-chat-viewport="">
         <FightPlacementBanner
           can_forfeit={view.can_forfeit}
+          can_walkover={!!match}
           deadline={view.placement_deadline_ms}
           on_force_start={(observed_ms) =>
-            dispatch_app({
-              type: 'fight/input',
-              fight: command_fight,
-              origin: 'local',
-              input: { type: 'start', observed_ms },
-            })
+            match
+              ? dispatch_app({ type: 'tournament/action', id: match.id, action: { kind: 'crank', index: match.index } })
+              : dispatch_app({
+                  type: 'fight/input',
+                  fight: command_fight,
+                  origin: 'local',
+                  input: { type: 'start', observed_ms },
+                })
           }
           on_forfeit={() =>
             own_seat !== undefined &&
@@ -424,8 +430,8 @@ export const FightHud = ({
           ready_all={readiness.show_all}
           ready_all_disabled={readiness.unready_seats.length === 0}
           ready_all_progress={fight.ready_all_progress}
-          starting={Boolean(own_ready && view.ready_starts_fight)}
-          locked={actions_locked}
+          starting={view.ready_starts_fight}
+          locked={actions_locked || (!!match && tournament.pending !== null)}
           sides_manned={view.sides_manned}
           text={copy.fight_hud}
         />

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { basis_points, marketplace_lot_sizes, marketplace_royalty_bps } from '@aresrpg/immutable'
+import { marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
-import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
+
+export { buyer_total } from './price.ts'
 
 import { SuiLogo } from '../components/SuiLogo.tsx'
 import { useLocale } from '../i18n/LocaleScope.tsx'
@@ -13,6 +14,8 @@ import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
+
+import { buyer_total, market_needs_funding } from './price.ts'
 
 export const listing_item = (listing: Readonly<Pick<ListingRow, 'item_type'>>) =>
   listing.item_type ? (content_catalog.items.find(({ item_type }) => item_type === listing.item_type) ?? null) : null
@@ -92,11 +95,6 @@ export const MarketVolumeBadge = ({
   )
 }
 
-export const buyer_total = (ask: bigint): bigint => {
-  const royalty = (ask * BigInt(marketplace_royalty_bps)) / BigInt(basis_points)
-  return ask + (royalty > ROYALTY_FLOOR_MIST ? royalty : ROYALTY_FLOOR_MIST)
-}
-
 export const legal_lot = (listing: Readonly<Pick<ListingRow, 'category' | 'amount'>>): boolean =>
   !['resource', 'consumable', 'rune'].includes(listing.category ?? '') ||
   marketplace_lot_sizes.includes(listing.amount as (typeof marketplace_lot_sizes)[number])
@@ -110,6 +108,7 @@ export const offer_purchase = (
 ) => {
   if (!listing) return { total: null, label: null, enabled: false }
   const total = buyer_total(BigInt(listing.price_mist))
-  const label = listing.seller === address ? 'yours' : balance !== null && balance < total ? 'insufficient' : 'buy'
-  return { total, label, enabled: label === 'buy' && pending === null }
+  const label =
+    listing.seller === address ? 'yours' : market_needs_funding(listing.price_mist, balance) ? 'add_funds' : 'buy'
+  return { total, label, enabled: label !== 'yours' && pending === null }
 }

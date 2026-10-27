@@ -18,6 +18,7 @@ import {
   type ServerPacket,
 } from '@aresrpg/protocol'
 
+import { buyer_total, market_needs_funding } from '../marketplace/price.ts'
 import {
   current_offer,
   market_query_key,
@@ -372,11 +373,13 @@ const reduce_selection = (market: MarketplaceState, input: AppInput): Marketplac
 const LISTING_REQUESTS = ['market/list_requested', 'market/delist_requested', 'market/buy_requested'] as const
 const accepted_listing_request = (
   market: MarketplaceState,
-  input: AppInput
+  input: AppInput,
+  balance: bigint | null
 ): input is Extract<AppInput, { type: (typeof LISTING_REQUESTS)[number] }> =>
   LISTING_REQUESTS.some((type) => type === input.type) &&
   'listing' in input &&
-  (input.type !== 'market/buy_requested' || current_offer(market, input.listing))
+  (input.type !== 'market/buy_requested' ||
+    (current_offer(market, input.listing) && !market_needs_funding(input.listing.price_mist, balance)))
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   const market = state.marketplace
@@ -393,7 +396,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const selected = reduce_selection(market, input)
   if (selected !== market) return Object.freeze({ ...state, marketplace: selected })
 
-  if (accepted_listing_request(market, input))
+  if (accepted_listing_request(market, input, state.session.sui_balance_mist))
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: input.listing.id }) })
   if (input.type === 'market/collect_requested')
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: 'collect' }) })
@@ -505,6 +508,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       return dispatch({ type: 'market/write_failed', error: reason })
     }
     if (!current_offer(state.marketplace, listing)) return
+    if (market_needs_funding(listing.price_mist, state.session.sui_balance_mist))
+      return dispatch({ type: 'funding/open', cost_mist: buyer_total(BigInt(listing.price_mist)) })
     const action = state.session.wallet?.marketplace.buy
     if (action) execute('buy', listing, action)
   })

@@ -1,9 +1,9 @@
 {
   "version": 1,
   "cognitive": {
-    "packages/frontend/src/modules/automation.ts": {
-      "movement_outcome": [
-        11
+    "scripts/main_menu_landmarks.mjs": {
+      "dress_harbor": [
+        13
       ]
     },
     "scripts/validate_seed.mjs": {
@@ -114,6 +114,11 @@
         11
       ]
     },
+    "packages/frontend/seed_dev_server.ts": {
+      "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [
+        12
+      ]
+    },
     "packages/frontend/src/game/fight/fight_cues.ts": {
       "cast_style": [
         15
@@ -165,6 +170,11 @@
     "packages/frontend/src/game/fight/FightLayer.tsx": {
       "FightLayer": [
         17
+      ]
+    },
+    "packages/frontend/src/game/core/walking_route.ts": {
+      "advance_walking_search": [
+        12
       ]
     },
     "packages/frontend/src/game/core/cameras.ts": {
@@ -282,6 +292,11 @@
         14
       ]
     },
+    "packages/frontend/src/characters/pet_feeding.ts": {
+      "reduce_feeding": [
+        11
+      ]
+    },
     "packages/frontend/src/modules/editor.ts": {
       "reduce": [
         34
@@ -300,6 +315,11 @@
         27
       ],
       "observe_fights > events.on[1](state,previous)": [
+        11
+      ]
+    },
+    "packages/frontend/src/modules/craft_character_lock.ts": {
+      "reduce_craft_character_selection": [
         11
       ]
     },
@@ -328,6 +348,11 @@
     },
     "packages/frontend/src/modules/fight_result.ts": {
       "reduce": [
+        11
+      ]
+    },
+    "packages/frontend/src/modules/automation.ts": {
+      "movement_outcome": [
         11
       ]
     },
@@ -373,9 +398,41 @@
         12
       ]
     },
+    "packages/frontend/src/funding/checkout_state.ts": {
+      "edit_checkout": [
+        11
+      ]
+    },
+    "packages/frontend/src/allocation/runtime.ts": {
+      "create_allocation_runtime > observe > run": [
+        11
+      ],
+      "reduce_allocation": [
+        12
+      ]
+    },
+    "packages/server/test/helpers/world_wire.ts": {
+      "wire > read": [
+        24
+      ]
+    },
     "packages/server/test/helpers/stream_wire.ts": {
       "wire > read": [
         20
+      ]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
+        24
+      ],
+      "observe > track": [
+        12
+      ],
+      "observe > unmount": [
+        14
+      ],
+      "reduce": [
+        13
       ]
     },
     "packages/server/src/modules/player_fight.ts": {
@@ -386,6 +443,11 @@
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [
         18
+      ]
+    },
+    "packages/protocol/src/packets.ts": {
+      "parse_client_packet": [
+        29
       ]
     },
     "packages/sdk/src/marketplace.ts": {
@@ -465,6 +527,11 @@
         25
       ]
     },
+    "packages/engine/src/upload_queue.ts": {
+      "create_upload_queue > drain": [
+        12
+      ]
+    },
     "packages/engine/src/material_presets.ts": {
       "seamless[0](x: number,y: number)": [
         14
@@ -484,73 +551,11 @@
       "emit_direction": [
         62
       ]
-    },
-    "packages/frontend/src/characters/pet_feeding.ts": {
-      "reduce_feeding": [
-        11
-      ]
-    },
-    "packages/server/test/helpers/world_wire.ts": {
-      "wire > read": [
-        24
-      ]
-    },
-    "packages/server/src/modules/player_world.ts": {
-      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
-        24
-      ],
-      "observe > track": [
-        12
-      ],
-      "observe > unmount": [
-        14
-      ],
-      "reduce": [
-        13
-      ]
-    },
-    "packages/protocol/src/packets.ts": {
-      "parse_client_packet": [
-        29
-      ]
-    },
-    "packages/frontend/seed_dev_server.ts": {
-      "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [
-        12
-      ]
-    },
-    "packages/frontend/src/game/core/walking_route.ts": {
-      "advance_walking_search": [
-        12
-      ]
-    },
-    "packages/frontend/src/modules/craft_character_lock.ts": {
-      "reduce_craft_character_selection": [
-        11
-      ]
-    },
-    "scripts/main_menu_landmarks.mjs": {
-      "dress_harbor": [
-        13
-      ]
-    },
-    "packages/engine/src/upload_queue.ts": {
-      "create_upload_queue > drain": [
-        12
-      ]
-    },
-    "packages/frontend/src/allocation/runtime.ts": {
-      "create_allocation_runtime > observe > run": [
-        11
-      ],
-      "reduce_allocation": [
-        12
-      ]
     }
   },
   "cyclomatic": {
-    "packages/frontend/src/modules/journey.ts": {
-      "reduce_journey": [
+    "scripts/main_menu_landmarks.mjs": {
+      "dress_harbor": [
         10
       ]
     },
@@ -621,6 +626,11 @@
     "scripts/snapshot_sui_holders.mjs": {
       "parse_snapshot_args": [
         10
+      ]
+    },
+    "packages/ui/src/SelectionGrid.tsx": {
+      "SelectionGrid > move": [
+        9
       ]
     },
     "packages/fight/test/spell_turn_projection.test.ts": {
@@ -766,6 +776,24 @@
         15
       ]
     },
+    "packages/frontend/e2e/fixtures/engine_lifecycle.ts": {
+      "window.run_terrain_route": [
+        10
+      ]
+    },
+    "packages/frontend/e2e/fixtures/add_funds.tsx": {
+      "Fixture": [
+        9
+      ],
+      "Fixture > useEffect[0]()": [
+        9
+      ]
+    },
+    "packages/frontend/src/demo/workshop/MarketplaceExample.tsx": {
+      "preview_reduce": [
+        12
+      ]
+    },
     "packages/frontend/src/demo/DemoPage.tsx": {
       "WorldLab": [
         10
@@ -776,6 +804,11 @@
         18
       ]
     },
+    "packages/frontend/src/tutorial/TutorialHost.tsx": {
+      "useTutorialTarget > useEffect[0]() > sample": [
+        10
+      ]
+    },
     "packages/frontend/src/mastery/MasteryPage.tsx": {
       "MasteryPage": [
         9
@@ -784,8 +817,64 @@
         10
       ]
     },
+    "packages/frontend/src/mastery/MasteryKaresPurchase.tsx": {
+      "MasteryKaresPurchase": [
+        11
+      ]
+    },
+    "packages/frontend/src/mastery/MasteryShop.tsx": {
+      "MasteryShop > offers.map[0]({ state, item })": [
+        11
+      ]
+    },
+    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
+      "BrowsePanel": [
+        14
+      ]
+    },
+    "packages/frontend/src/marketplace/useMarketSell.ts": {
+      "useMarketSell": [
+        10
+      ]
+    },
+    "packages/frontend/src/marketplace/useMarketBrowse.ts": {
+      "useMarketBrowse": [
+        10
+      ]
+    },
     "packages/frontend/src/server_link.ts": {
       "connect_server > open > next.addEventListener[1]({ data })": [
+        10
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentPanel.tsx": {
+      "TournamentEvent": [
+        10
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentHud.tsx": {
+      "HudBody": [
+        9
+      ],
+      "HudEvent": [
+        9
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentControls.tsx": {
+      "TournamentActionButton > activate": [
+        9
+      ],
+      "TournamentIntentReview": [
+        9
+      ]
+    },
+    "packages/frontend/src/tournament/TournamentTeams.tsx": {
+      "CreateTournamentTeam": [
+        11
+      ]
+    },
+    "packages/frontend/src/game/fight/spell_effect_context.ts": {
+      "resolve_zone_effect": [
         10
       ]
     },
@@ -812,7 +901,7 @@
     },
     "packages/frontend/src/game/fight/FightHud.tsx": {
       "FightHud": [
-        40
+        39
       ],
       "FightHud > useEffect[0]() > keydown": [
         17
@@ -864,6 +953,11 @@
         11
       ]
     },
+    "packages/frontend/src/game/core/party_follow_feed.ts": {
+      "step_follower": [
+        9
+      ]
+    },
     "packages/frontend/src/game/core/cameras.ts": {
       "create_follow_addon > frame": [
         21
@@ -872,6 +966,11 @@
     "packages/frontend/src/game/core/settings.ts": {
       "load_game_settings": [
         15
+      ]
+    },
+    "packages/frontend/src/game/core/loading_progress.ts": {
+      "loading_progress": [
+        11
       ]
     },
     "packages/frontend/src/game/core/position_store.ts": {
@@ -923,6 +1022,11 @@
         11
       ]
     },
+    "packages/frontend/src/game/gather_target.ts": {
+      "resource_at": [
+        12
+      ]
+    },
     "packages/frontend/src/game/presence_entities.ts": {
       "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [
         15
@@ -957,9 +1061,44 @@
         13
       ]
     },
+    "packages/frontend/src/game/hud/RunToProgress.tsx": {
+      "RunToProgress": [
+        9
+      ]
+    },
     "packages/frontend/src/game/hud/CompassStrip.tsx": {
       "CompassStrip": [
         19
+      ]
+    },
+    "packages/frontend/src/game/hud/gather_progress.ts": {
+      "gather_progress_view": [
+        12
+      ]
+    },
+    "packages/frontend/src/game/hud/GatherProgress.tsx": {
+      "GatherProgress": [
+        9
+      ]
+    },
+    "packages/frontend/src/adventure/actors.ts": {
+      "create_adventure_actors > update": [
+        11
+      ]
+    },
+    "packages/frontend/src/adventure/AdventurePage.tsx": {
+      "AdventurePage > useEffect[0]()": [
+        9
+      ]
+    },
+    "packages/frontend/src/adventure/CompanionInteraction.tsx": {
+      "CompanionInteraction": [
+        9
+      ]
+    },
+    "packages/frontend/src/adventure/AdventureHud.tsx": {
+      "AdventureHud": [
+        10
       ]
     },
     "packages/frontend/src/encyclopedia/ClassesTab.tsx": {
@@ -970,6 +1109,11 @@
     "packages/frontend/src/encyclopedia/SpellCard.tsx": {
       "SpellCard": [
         13
+      ]
+    },
+    "packages/frontend/src/encyclopedia/MobsTab.tsx": {
+      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [
+        10
       ]
     },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
@@ -991,9 +1135,30 @@
         9
       ]
     },
+    "packages/frontend/src/PlayerRuntime.tsx": {
+      "PlayerRuntime": [
+        20
+      ],
+      "PlayerRuntime > useCallback[0](character: CharacterCreateInput)": [
+        10
+      ]
+    },
+    "packages/frontend/src/components/WorldLoading.tsx": {
+      "WorldLoading": [
+        9
+      ],
+      "WorldLoading > useEffect[0]() > sample": [
+        12
+      ]
+    },
     "packages/frontend/src/components/TravelModal.tsx": {
       "TravelModal > world_card_rows().map[0](world)": [
         11
+      ]
+    },
+    "packages/frontend/src/components/WalletCard.tsx": {
+      "WalletCard": [
+        10
       ]
     },
     "packages/frontend/src/components/FightPrompt.tsx": {
@@ -1010,6 +1175,11 @@
     "packages/frontend/src/components/MobCoreStats.tsx": {
       "MobCoreStats > mob_stat_identities .filter(({ key, derived }) => !derived || typeof values[key] === 'number') .map[0]({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint })": [
         10
+      ]
+    },
+    "packages/frontend/src/components/Login.tsx": {
+      "Login": [
+        9
       ]
     },
     "packages/frontend/src/components/TradeDialog.tsx": {
@@ -1036,6 +1206,11 @@
         12
       ]
     },
+    "packages/frontend/src/components/LoadingPostcard.tsx": {
+      "LoadingPostcard": [
+        11
+      ]
+    },
     "packages/frontend/src/components/DungeonPortalPrompt.tsx": {
       "DungeonPortalPrompt": [
         10
@@ -1046,12 +1221,25 @@
         11
       ]
     },
+    "packages/frontend/src/components/ItemDetailBody.tsx": {
+      "ItemDetailBody": [
+        18
+      ],
+      "StatLine": [
+        10
+      ]
+    },
     "packages/frontend/src/components/EquipmentDoll.tsx": {
       "EquipmentDoll": [
         9
       ],
       "EquipmentSlot": [
         11
+      ]
+    },
+    "packages/frontend/src/components/ItemCrafting.tsx": {
+      "ItemCrafting": [
+        9
       ]
     },
     "packages/frontend/src/components/SearchPickerModal.tsx": {
@@ -1065,6 +1253,11 @@
         17
       ]
     },
+    "packages/frontend/src/components/CharacterCreateModal.tsx": {
+      "CharacterCreateModal": [
+        9
+      ]
+    },
     "packages/frontend/src/components/EffectLine.tsx": {
       "EffectLine": [
         9
@@ -1073,6 +1266,11 @@
     "packages/frontend/src/components/SuiTransferResult.tsx": {
       "failure_key": [
         9
+      ]
+    },
+    "packages/frontend/src/components/ChatResizeHandle.tsx": {
+      "ChatResizeHandle > useLayoutEffect[0]() > measure": [
+        10
       ]
     },
     "packages/frontend/src/simulator/MobModal.tsx": {
@@ -1094,8 +1292,13 @@
       ]
     },
     "packages/frontend/src/wallet/selection.ts": {
-      "wallet_selection > read": [
-        10
+      "decode_selection": [
+        9
+      ]
+    },
+    "packages/frontend/src/wallet/WalletControl.tsx": {
+      "WalletControl": [
+        11
       ]
     },
     "packages/frontend/src/wallet/observer.ts": {
@@ -1111,14 +1314,14 @@
         14
       ]
     },
+    "packages/frontend/src/characters/useStats.ts": {
+      "useStats": [
+        9
+      ]
+    },
     "packages/frontend/src/characters/CraftControls.tsx": {
       "CraftControls": [
         12
-      ]
-    },
-    "packages/frontend/src/components/ItemCrafting.tsx": {
-      "ItemCrafting": [
-        9
       ]
     },
     "packages/frontend/src/characters/InventoryOverlays.tsx": {
@@ -1126,9 +1329,14 @@
         9
       ]
     },
-    "packages/ui/src/SelectionGrid.tsx": {
-      "SelectionGrid > move": [
-        9
+    "packages/frontend/src/characters/FeedPetModal.tsx": {
+      "FeedingControls": [
+        12
+      ]
+    },
+    "packages/frontend/src/characters/useRuneforge.ts": {
+      "useRuneforge": [
+        10
       ]
     },
     "packages/frontend/src/characters/StatsTab.tsx": {
@@ -1146,6 +1354,26 @@
         16
       ]
     },
+    "packages/frontend/src/characters/pet_feeding.ts": {
+      "reduce_feeding": [
+        9
+      ]
+    },
+    "packages/frontend/src/characters/BoxReveal.tsx": {
+      "BoxReveal": [
+        11
+      ]
+    },
+    "packages/frontend/src/practice/PracticePage.tsx": {
+      "PracticePage": [
+        12
+      ]
+    },
+    "packages/frontend/src/practice/policy.ts": {
+      "practice_bot_input": [
+        12
+      ]
+    },
     "packages/frontend/src/modules/party.ts": {
       "observe: NonNullable<AppModule['observe']> > answer": [
         9
@@ -1155,6 +1383,11 @@
       ],
       "reduce": [
         10
+      ]
+    },
+    "packages/frontend/src/modules/tournament_selectors.ts": {
+      "tournament_review_available": [
+        11
       ]
     },
     "packages/frontend/src/modules/world_gather.ts": {
@@ -1189,6 +1422,19 @@
         10
       ]
     },
+    "packages/frontend/src/modules/audio.ts": {
+      "audio_snapshot": [
+        10
+      ],
+      "game_audio_cues": [
+        11
+      ]
+    },
+    "packages/frontend/src/modules/external_wallet.ts": {
+      "reduce": [
+        11
+      ]
+    },
     "packages/frontend/src/modules/simulator.ts": {
       "decode_simulator_character": [
         12
@@ -1217,6 +1463,32 @@
         10
       ]
     },
+    "packages/frontend/src/modules/marketplace.ts": {
+      "observe > events.on[1]({ listing })": [
+        9
+      ],
+      "observe > execute": [
+        12
+      ],
+      "reduce": [
+        14
+      ]
+    },
+    "packages/frontend/src/modules/craft_character_lock.ts": {
+      "reduce_craft_character_selection": [
+        11
+      ]
+    },
+    "packages/frontend/src/modules/character_folds.ts": {
+      "fold_character_receipt": [
+        10
+      ]
+    },
+    "packages/frontend/src/modules/journey.ts": {
+      "reduce_journey": [
+        10
+      ]
+    },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [
         26
@@ -1240,6 +1512,11 @@
       ],
       "reduce": [
         12
+      ]
+    },
+    "packages/frontend/src/modules/run_to.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1](input)": [
+        10
       ]
     },
     "packages/frontend/src/modules/session.ts": {
@@ -1317,9 +1594,45 @@
         10
       ]
     },
+    "packages/frontend/src/modules/adventure.ts": {
+      "transition": [
+        9
+      ]
+    },
     "packages/frontend/src/modules/duel.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [
         10
+      ]
+    },
+    "packages/frontend/src/modules/automation.ts": {
+      "automation_wake_delay": [
+        10
+      ],
+      "gather_outcome": [
+        11
+      ],
+      "movement_outcome": [
+        9
+      ],
+      "protector_outcome": [
+        9
+      ]
+    },
+    "packages/frontend/src/modules/automation_step.ts": {
+      "advance_world_step": [
+        9
+      ],
+      "gather_step": [
+        10
+      ],
+      "inspect_target": [
+        11
+      ],
+      "plan": [
+        11
+      ],
+      "protector_step": [
+        11
       ]
     },
     "packages/frontend/src/modules/engine_selection.ts": {
@@ -1330,6 +1643,11 @@
     "packages/frontend/src/modules/friends.ts": {
       "reduce": [
         11
+      ]
+    },
+    "packages/frontend/src/modules/nearby_fight.ts": {
+      "nearby_fight": [
+        9
       ]
     },
     "packages/frontend/src/modules/world.ts": {
@@ -1347,6 +1665,36 @@
       ],
       "searchable_zone": [
         18
+      ]
+    },
+    "packages/frontend/src/modules/automation_route.ts": {
+      "candidate_zone": [
+        9
+      ]
+    },
+    "packages/frontend/src/boot_loading.ts": {
+      "prepare_boot_loading": [
+        10
+      ]
+    },
+    "packages/frontend/src/airdrop/gift_state.ts": {
+      "checked": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/gift_runtime.ts": {
+      "create_gift_runtime > observe > check": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/AirdropPage.tsx": {
+      "AirdropCollection": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/GiftScene.tsx": {
+      "GiftScene": [
+        9
       ]
     },
     "packages/frontend/src/editor/ItemReferencePicker.tsx": {
@@ -1449,9 +1797,83 @@
         17
       ]
     },
+    "packages/frontend/src/analytics/errors.ts": {
+      "error_analytics": [
+        9
+      ]
+    },
+    "packages/frontend/src/analytics/fights.ts": {
+      "fight_events > Object.entries(state.analytics.fights).flatMap[0]([id, next])": [
+        11
+      ],
+      "observe_fight": [
+        11
+      ]
+    },
+    "packages/frontend/src/analytics/gameplay.ts": {
+      "gathering_events > Object.values(state.world.gathering).flatMap[0](gathering)": [
+        11
+      ]
+    },
+    "packages/frontend/src/funding/checkout_state.ts": {
+      "edit_checkout": [
+        11
+      ],
+      "reduce_checkout": [
+        9
+      ]
+    },
+    "packages/frontend/src/funding/near.ts": {
+      "decode_quote": [
+        9
+      ]
+    },
+    "packages/frontend/src/funding/useFundingCheckout.ts": {
+      "useFundingCheckout": [
+        9
+      ],
+      "useFundingCheckout > send": [
+        11
+      ]
+    },
+    "packages/frontend/src/allocation/AllocationPage.tsx": {
+      "AllocationPage": [
+        9
+      ]
+    },
+    "packages/frontend/src/allocation/runtime.ts": {
+      "create_allocation_runtime > observe > authenticate": [
+        10
+      ],
+      "create_allocation_runtime > observe > bind": [
+        9
+      ],
+      "create_allocation_runtime > observe > run": [
+        11
+      ],
+      "operate": [
+        9
+      ],
+      "reduce_allocation": [
+        12
+      ]
+    },
+    "packages/frontend/src/allocation/client.ts": {
+      "create_allocation_client > start > dispatch": [
+        10
+      ]
+    },
     "packages/server/test/player.test.ts": {
       "wire > read": [
         10
+      ]
+    },
+    "packages/server/test/helpers/world_wire.ts": {
+      "wire": [
+        9
+      ],
+      "wire > read": [
+        24
       ]
     },
     "packages/server/test/helpers/stream_wire.ts": {
@@ -1484,6 +1906,11 @@
         10
       ]
     },
+    "packages/server/src/reads/get_market_slice.ts": {
+      "get_market_slice": [
+        10
+      ]
+    },
     "packages/server/src/reads/get_owned_character.ts": {
       "get_owned_character": [
         12
@@ -1497,6 +1924,20 @@
     "packages/server/src/index.ts": {
       "fetch": [
         13
+      ]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
+        22
+      ],
+      "observe > track": [
+        11
+      ],
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet — nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, gliding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position — a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+        12
+      ],
+      "reduce": [
+        10
       ]
     },
     "packages/server/src/modules/player_fight.ts": {
@@ -1523,8 +1964,36 @@
         9
       ]
     },
+    "packages/server/src/allocation/service.ts": {
+      "allocation_request": [
+        9
+      ]
+    },
+    "packages/server/src/allocation/preview.ts": {
+      "share_preview": [
+        11
+      ]
+    },
+    "packages/protocol/src/packets.ts": {
+      "assert_bounded_json": [
+        9
+      ],
+      "parse_client_packet": [
+        29
+      ]
+    },
+    "packages/protocol/src/marketplace.ts": {
+      "parse_market_observation": [
+        9
+      ]
+    },
     "packages/sdk/scripts/generate_doors.mjs": {
       "arg_expr": [
+        11
+      ]
+    },
+    "packages/sdk/src/kares_economy.ts": {
+      "read_rewards_economy": [
         11
       ]
     },
@@ -1534,6 +2003,11 @@
       ],
       "verify_receipt": [
         12
+      ]
+    },
+    "packages/sdk/src/suins_actions.ts": {
+      "registration_name": [
+        10
       ]
     },
     "packages/sdk/src/seed_admin.ts": {
@@ -1547,6 +2021,28 @@
         10
       ]
     },
+    "packages/sdk/src/gift_gateway.ts": {
+      "authorize": [
+        9
+      ],
+      "bounded_json": [
+        9
+      ],
+      "create_gift_gateway > anonymous(request: Request)": [
+        10
+      ],
+      "prepare": [
+        10
+      ]
+    },
+    "packages/sdk/src/gift_contract.ts": {
+      "decode_gift_proof": [
+        11
+      ],
+      "decode_gift_status": [
+        11
+      ]
+    },
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [
         22
@@ -1555,6 +2051,14 @@
     "packages/sdk/src/seed.ts": {
       "validate_biome_maps": [
         12
+      ]
+    },
+    "packages/sdk/src/gift_provenance.ts": {
+      "gift_collection": [
+        9
+      ],
+      "gift_opening": [
+        11
       ]
     },
     "packages/sdk/src/cache.ts": {
@@ -1608,6 +2112,17 @@
     "packages/engine/test/greedy_mesher.test.ts": {
       "describe[1]() > test[1]()": [
         11
+      ]
+    },
+    "packages/engine/src/caption_layer.ts": {
+      "create_caption_layer > allocate": [
+        10
+      ],
+      "create_caption_layer > render": [
+        9
+      ],
+      "create_caption_layer > set": [
+        12
       ]
     },
     "packages/engine/src/far_worker.ts": {
@@ -1709,6 +2224,11 @@
         20
       ]
     },
+    "packages/engine/src/upload_queue.ts": {
+      "create_upload_queue > drain": [
+        10
+      ]
+    },
     "packages/engine/src/world_recipe.ts": {
       "validate_landscape > value.flatMap[0](candidate,index)": [
         13
@@ -1733,14 +2253,37 @@
         11
       ]
     },
+    "packages/engine/src/detail_artifact.ts": {
+      "validate_cell_metadata": [
+        12
+      ],
+      "validate_detail_metadata": [
+        9
+      ]
+    },
     "packages/engine/src/fight_vfx_geometry.ts": {
       "fight_vfx_appearance": [
         11
       ]
     },
+    "packages/engine/src/height_grid.ts": {
+      "validate_height_grid": [
+        12
+      ]
+    },
     "packages/engine/src/fight_board_surface.ts": {
       "bake_fight_board_surface": [
         51
+      ]
+    },
+    "packages/engine/src/resource_nodes.ts": {
+      "resource_visual": [
+        10
+      ]
+    },
+    "packages/engine/src/fight_swords.ts": {
+      "create_fight_sword_layer > set_markers": [
+        10
       ]
     },
     "packages/engine/src/greedy_mesher.ts": {
@@ -1756,512 +2299,6 @@
     "packages/engine/src/character_model.ts": {
       "compose_pixels": [
         10
-      ]
-    },
-    "packages/frontend/src/characters/FeedPetModal.tsx": {
-      "FeedingControls": [
-        12
-      ]
-    },
-    "packages/frontend/src/characters/pet_feeding.ts": {
-      "reduce_feeding": [
-        9
-      ]
-    },
-    "packages/server/test/helpers/world_wire.ts": {
-      "wire": [
-        9
-      ],
-      "wire > read": [
-        24
-      ]
-    },
-    "packages/sdk/src/suins_actions.ts": {
-      "registration_name": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/run_to.ts": {
-      "observe: NonNullable<AppModule['observe']> > events.on[1](input)": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/automation.ts": {
-      "automation_wake_delay": [
-        10
-      ],
-      "gather_outcome": [
-        11
-      ],
-      "movement_outcome": [
-        9
-      ],
-      "protector_outcome": [
-        9
-      ]
-    },
-    "packages/frontend/src/modules/automation_step.ts": {
-      "advance_world_step": [
-        9
-      ],
-      "gather_step": [
-        10
-      ],
-      "inspect_target": [
-        11
-      ],
-      "plan": [
-        11
-      ],
-      "protector_step": [
-        11
-      ]
-    },
-    "packages/frontend/src/modules/automation_route.ts": {
-      "candidate_zone": [
-        9
-      ]
-    },
-    "packages/server/src/modules/player_world.ts": {
-      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
-        22
-      ],
-      "observe > track": [
-        11
-      ],
-      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, gliding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
-        12
-      ],
-      "reduce": [
-        10
-      ]
-    },
-    "packages/server/src/reads/get_market_slice.ts": {
-      "get_market_slice": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/marketplace.ts": {
-      "observe > execute": [
-        12
-      ],
-      "reduce": [
-        14
-      ]
-    },
-    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "BrowsePanel": [
-        14
-      ]
-    },
-    "packages/protocol/src/packets.ts": {
-      "assert_bounded_json": [
-        9
-      ],
-      "parse_client_packet": [
-        29
-      ]
-    },
-    "packages/protocol/src/marketplace.ts": {
-      "parse_market_observation": [
-        9
-      ]
-    },
-    "packages/engine/src/caption_layer.ts": {
-      "create_caption_layer > allocate": [
-        10
-      ],
-      "create_caption_layer > render": [
-        9
-      ],
-      "create_caption_layer > set": [
-        12
-      ]
-    },
-    "packages/frontend/src/game/gather_target.ts": {
-      "resource_at": [
-        12
-      ]
-    },
-    "packages/frontend/src/game/hud/GatherProgress.tsx": {
-      "GatherProgress": [
-        9
-      ]
-    },
-    "packages/frontend/src/game/hud/gather_progress.ts": {
-      "gather_progress_view": [
-        12
-      ]
-    },
-    "packages/frontend/src/PlayerRuntime.tsx": {
-      "PlayerRuntime": [
-        20
-      ],
-      "PlayerRuntime > useCallback[0](character: CharacterCreateInput)": [
-        10
-      ]
-    },
-    "packages/frontend/src/characters/useRuneforge.ts": {
-      "useRuneforge": [
-        10
-      ]
-    },
-    "packages/frontend/src/characters/useStats.ts": {
-      "useStats": [
-        9
-      ]
-    },
-    "packages/frontend/src/marketplace/useMarketSell.ts": {
-      "useMarketSell": [
-        10
-      ]
-    },
-    "packages/frontend/src/components/Login.tsx": {
-      "Login": [
-        9
-      ]
-    },
-    "packages/frontend/src/components/AddFundsModal.tsx": {
-      "AddFundsModal": [
-        9
-      ]
-    },
-    "packages/frontend/src/demo/workshop/MarketplaceExample.tsx": {
-      "preview_reduce": [
-        12
-      ]
-    },
-    "packages/frontend/src/marketplace/useMarketBrowse.ts": {
-      "useMarketBrowse": [
-        10
-      ]
-    },
-    "packages/frontend/src/components/ItemDetailBody.tsx": {
-      "ItemDetailBody": [
-        18
-      ],
-      "StatLine": [
-        10
-      ]
-    },
-    "packages/frontend/src/encyclopedia/MobsTab.tsx": {
-      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [
-        10
-      ]
-    },
-    "packages/frontend/src/components/ChatResizeHandle.tsx": {
-      "ChatResizeHandle > useLayoutEffect[0]() > measure": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/audio.ts": {
-      "audio_snapshot": [
-        10
-      ],
-      "game_audio_cues": [
-        11
-      ]
-    },
-    "packages/frontend/src/modules/character_folds.ts": {
-      "fold_character_receipt": [
-        10
-      ]
-    },
-    "packages/engine/src/detail_artifact.ts": {
-      "validate_cell_metadata": [
-        12
-      ],
-      "validate_detail_metadata": [
-        9
-      ]
-    },
-    "packages/frontend/e2e/fixtures/engine_lifecycle.ts": {
-      "window.run_terrain_route": [
-        10
-      ]
-    },
-    "packages/frontend/src/adventure/CompanionInteraction.tsx": {
-      "CompanionInteraction": [
-        9
-      ]
-    },
-    "packages/frontend/src/adventure/actors.ts": {
-      "create_adventure_actors > update": [
-        11
-      ]
-    },
-    "packages/frontend/src/airdrop/AirdropPage.tsx": {
-      "AirdropCollection": [
-        9
-      ]
-    },
-    "packages/frontend/src/components/WorldLoading.tsx": {
-      "WorldLoading": [
-        9
-      ],
-      "WorldLoading > useEffect[0]() > sample": [
-        12
-      ]
-    },
-    "packages/frontend/src/game/core/loading_progress.ts": {
-      "loading_progress": [
-        11
-      ]
-    },
-    "packages/frontend/src/game/core/party_follow_feed.ts": {
-      "step_follower": [
-        9
-      ]
-    },
-    "packages/frontend/src/game/hud/RunToProgress.tsx": {
-      "RunToProgress": [
-        9
-      ]
-    },
-    "packages/frontend/src/modules/craft_character_lock.ts": {
-      "reduce_craft_character_selection": [
-        11
-      ]
-    },
-    "packages/frontend/src/tutorial/TutorialHost.tsx": {
-      "useTutorialTarget > useEffect[0]() > sample": [
-        10
-      ]
-    },
-    "scripts/main_menu_landmarks.mjs": {
-      "dress_harbor": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/adventure.ts": {
-      "transition": [
-        9
-      ]
-    },
-    "packages/engine/src/height_grid.ts": {
-      "validate_height_grid": [
-        12
-      ]
-    },
-    "packages/engine/src/upload_queue.ts": {
-      "create_upload_queue > drain": [
-        10
-      ]
-    },
-    "packages/engine/src/resource_nodes.ts": {
-      "resource_visual": [
-        10
-      ]
-    },
-    "packages/engine/src/fight_swords.ts": {
-      "create_fight_sword_layer > set_markers": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/nearby_fight.ts": {
-      "nearby_fight": [
-        9
-      ]
-    },
-    "packages/frontend/src/adventure/AdventurePage.tsx": {
-      "AdventurePage > useEffect[0]()": [
-        9
-      ]
-    },
-    "packages/frontend/src/adventure/AdventureHud.tsx": {
-      "AdventureHud": [
-        10
-      ]
-    },
-    "packages/frontend/src/components/WalletCard.tsx": {
-      "WalletCard": [
-        11
-      ]
-    },
-    "packages/frontend/src/funding/useSuiUsd.ts": {
-      "read_sui_usd": [
-        10
-      ]
-    },
-    "packages/frontend/src/mastery/MasteryKaresPurchase.tsx": {
-      "MasteryKaresPurchase": [
-        11
-      ]
-    },
-    "packages/frontend/src/mastery/MasteryShop.tsx": {
-      "MasteryShop > offers.map[0]({ state, item })": [
-        11
-      ]
-    },
-    "packages/sdk/src/kares_economy.ts": {
-      "read_rewards_economy": [
-        11
-      ]
-    },
-    "packages/frontend/src/airdrop/GiftScene.tsx": {
-      "GiftScene": [
-        9
-      ]
-    },
-    "packages/frontend/src/airdrop/gift_runtime.ts": {
-      "create_gift_runtime > observe > check": [
-        9
-      ]
-    },
-    "packages/frontend/src/airdrop/gift_state.ts": {
-      "checked": [
-        9
-      ]
-    },
-    "packages/frontend/src/characters/BoxReveal.tsx": {
-      "BoxReveal": [
-        11
-      ]
-    },
-    "packages/sdk/src/gift_contract.ts": {
-      "decode_gift_proof": [
-        11
-      ],
-      "decode_gift_status": [
-        11
-      ]
-    },
-    "packages/sdk/src/gift_gateway.ts": {
-      "authorize": [
-        9
-      ],
-      "bounded_json": [
-        9
-      ],
-      "create_gift_gateway > anonymous(request: Request)": [
-        10
-      ],
-      "prepare": [
-        10
-      ]
-    },
-    "packages/sdk/src/gift_provenance.ts": {
-      "gift_collection": [
-        9
-      ],
-      "gift_opening": [
-        11
-      ]
-    },
-    "packages/frontend/src/analytics/errors.ts": {
-      "error_analytics": [
-        9
-      ]
-    },
-    "packages/frontend/src/analytics/fights.ts": {
-      "fight_events > Object.entries(state.analytics.fights).flatMap[0]([id, next])": [
-        11
-      ],
-      "observe_fight": [
-        11
-      ]
-    },
-    "packages/frontend/src/analytics/gameplay.ts": {
-      "gathering_events > Object.values(state.world.gathering).flatMap[0](gathering)": [
-        11
-      ]
-    },
-    "packages/engine/src/claude_spell_actor_mask.ts": {
-      "create_spell_actor_mask > get_buffers": [
-        11
-      ]
-    },
-    "packages/frontend/src/game/fight/spell_effect_context.ts": {
-      "resolve_zone_effect": [
-        10
-      ]
-    },
-    "packages/frontend/src/components/LoadingPostcard.tsx": {
-      "LoadingPostcard": [
-        11
-      ]
-    },
-    "packages/frontend/src/boot_loading.ts": {
-      "prepare_boot_loading": [
-        10
-      ]
-    },
-    "packages/frontend/src/allocation/runtime.ts": {
-      "create_allocation_runtime > observe > authenticate": [
-        10
-      ],
-      "create_allocation_runtime > observe > bind": [
-        9
-      ],
-      "create_allocation_runtime > observe > run": [
-        11
-      ],
-      "operate": [
-        9
-      ],
-      "reduce_allocation": [
-        12
-      ]
-    },
-    "packages/server/src/allocation/preview.ts": {
-      "share_preview": [
-        11
-      ]
-    },
-    "packages/server/src/allocation/service.ts": {
-      "allocation_request": [
-        9
-      ]
-    },
-    "packages/frontend/src/allocation/AllocationPage.tsx": {
-      "AllocationPage": [
-        9
-      ]
-    },
-    "packages/frontend/src/allocation/client.ts": {
-      "create_allocation_client > start > dispatch": [
-        10
-      ]
-    },
-    "packages/frontend/src/modules/tournament_selectors.ts": {
-      "tournament_review_available": [
-        11
-      ]
-    },
-    "packages/frontend/src/tournament/TournamentPanel.tsx": {
-      "TournamentEvent": [
-        10
-      ]
-    },
-    "packages/frontend/src/tournament/TournamentControls.tsx": {
-      "TournamentActionButton > activate": [
-        9
-      ],
-      "TournamentIntentReview": [
-        9
-      ]
-    },
-    "packages/frontend/src/tournament/TournamentTeams.tsx": {
-      "CreateTournamentTeam": [
-        11
-      ]
-    },
-    "packages/frontend/src/tournament/TournamentHud.tsx": {
-      "HudBody": [
-        9
-      ],
-      "HudEvent": [
-        9
-      ]
-    },
-    "packages/frontend/src/practice/PracticePage.tsx": {
-      "PracticePage": [
-        12
-      ]
-    },
-    "packages/frontend/src/practice/policy.ts": {
-      "practice_bot_input": [
-        12
       ]
     }
   }

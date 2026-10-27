@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { character_creation_funding_text } from '../character_creation_funding.ts'
+import { dispatch_app } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { CharacterPreviewCanvas } from './CharacterPreviewCanvas.tsx'
@@ -222,10 +223,22 @@ export const CharacterCreateModal = ({
           </button>
           <button
             className="h-10 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/8 px-5 text-[9px] tracking-[0.16em] text-[#d9af57] uppercase hover:border-[#c8963c]/75 disabled:cursor-not-allowed disabled:border-[#c8963c]/20 disabled:bg-[#c8963c]/5 disabled:text-[#c8963c]/45"
-            disabled={!valid || submitting || insufficient}
+            disabled={!valid || submitting}
+            onClick={
+              insufficient
+                ? (event) => {
+                    event.preventDefault()
+                    dispatch_app({ type: 'funding/open', cost_mist: CHARACTER_PRICE_MIST })
+                  }
+                : undefined
+            }
             type="submit"
           >
-            {submitting ? copy.creating_character : copy.create_and_play}
+            {submitting
+              ? copy.creating_character
+              : insufficient
+                ? copy.wallet_send_shared.add_funds
+                : copy.create_and_play}
           </button>
         </div>
       </form>

@@ -4,6 +4,7 @@
 import { expect, spyOn, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
+import * as store from '../../../src/store.ts'
 import { FightPlacementBanner } from '../../../src/game/fight/FightPlacementBanner.tsx'
 
 test('an ahead-of-time device cannot expose Force start before a chain clock sample arrives', () => {
@@ -73,4 +74,47 @@ test('ready all exposes confirmed transaction progress in its button and progres
   expect(html).toContain('aria-valuenow="1"')
   expect(html).toContain('aria-valuemax="3"')
   expect(html).toContain('width:33.33333333333333%')
+})
+
+test('an unattended tournament exposes Force start only after its observed admission deadline', () => {
+  const base = store.initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
+  for (const scenario of [
+    { walkover: true, chain_ms: 60_999, ready: false, locked: false, visible: false },
+    { walkover: true, chain_ms: 61_000, ready: false, locked: false, visible: true },
+    { walkover: true, chain_ms: 61_000, ready: false, locked: true, visible: true },
+    { walkover: false, chain_ms: 61_000, ready: false, locked: false, visible: false },
+    { walkover: true, chain_ms: 61_000, ready: null, locked: false, visible: false },
+  ]) {
+    const state = { ...base, chain_clock: { chain_ms: scenario.chain_ms, received_ms: performance.now() } }
+    const select = spyOn(store, 'useAppStore').mockImplementation(<T,>(selector: (value: store.AppState) => T): T =>
+      selector(state)
+    )
+    try {
+      const html = renderToStaticMarkup(
+        <FightPlacementBanner
+          can_forfeit
+          can_walkover={scenario.walkover}
+          deadline={61_000n}
+          locked={scenario.locked}
+          on_force_start={() => undefined}
+          on_forfeit={() => undefined}
+          on_ready={() => undefined}
+          on_ready_all={() => undefined}
+          ready={scenario.ready}
+          ready_all={false}
+          ready_all_disabled={false}
+          ready_all_progress={null}
+          sides_manned={false}
+          starting={false}
+          text={{ placement_no_opponent: 'No opponent', placement_force_button: 'Force start', forfeit: 'Forfeit' }}
+        />
+      )
+      expect(html.includes('Force start')).toBe(scenario.visible)
+      expect(html).toContain('No opponent')
+      expect(html).toContain('Forfeit')
+      if (scenario.visible && scenario.locked) expect(html).toMatch(/disabled=""[^>]*>Force start/)
+    } finally {
+      select.mockRestore()
+    }
+  }
 })

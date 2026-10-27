@@ -126,7 +126,7 @@ export const TournamentTeams = ({
                 <p>
                   {t(team.allowed.length ? 'named_only' : 'open_anyone')} · {team.seats.length}/{row.format}
                 </p>
-                {!['join', 'add', 'registered'].includes(access) && (
+                {!['join', 'add', 'registered', 'elsewhere'].includes(access) && (
                   <p className="tourney-access">{t(`reason_${access}`)}</p>
                 )}
               </div>

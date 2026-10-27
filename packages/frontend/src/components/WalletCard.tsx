@@ -10,9 +10,7 @@ import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import type { Network } from '../env.ts'
 
-import { AddFundsModal } from './AddFundsModal.tsx'
 import { SendSuiModal } from './SendSuiModal.tsx'
 import { SuiLogo } from './SuiLogo.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
@@ -29,20 +27,18 @@ export const WalletCard = ({
   disconnect,
   session,
   embedded = false,
-  network,
 }: Readonly<{
   copy: AppCopy
   disconnect: () => void
   session: SessionState
   embedded?: boolean
-  network?: Network
 }>) => {
   const localized_numbers = useNumbers()
   const default_name = useAppStore((state) => state.suins.snapshot?.default_name ?? null)
   const menu_id = useId()
   const menu = useRef<HTMLElement>(null)
   const [copied, set_copied] = useState(false)
-  const [modal, set_modal] = useState<'funds' | 'send' | null>(null)
+  const [send_open, set_send_open] = useState(false)
   const { wallet } = session
   const resolve_character = useCallback(
     (name: string): Promise<Readonly<{ address: string; name: string }>> =>
@@ -60,7 +56,8 @@ export const WalletCard = ({
   }
   const open_modal = (next: 'funds' | 'send'): void => {
     close_menu()
-    set_modal(next)
+    if (next === 'funds') dispatch_app({ type: 'dialog/open', dialog: 'top_up' })
+    else set_send_open(true)
   }
 
   const copy_address = (): void => {
@@ -143,16 +140,13 @@ export const WalletCard = ({
 
       {wallet && (
         <>
-          {modal === 'funds' && (
-            <AddFundsModal address={wallet.address} copy={copy} network={network} on_close={() => set_modal(null)} />
-          )}
-          {modal === 'send' && (
+          {send_open && (
             <SendSuiModal
               balance_mist={session.sui_balance_mist}
-              close={() => set_modal(null)}
+              close={() => set_send_open(false)}
               copy={copy}
               on_sent={() => dispatch_app({ type: 'wallet/refresh' })}
-              open_funds={() => set_modal('funds')}
+              open_funds={() => dispatch_app({ type: 'dialog/open', dialog: 'top_up' })}
               resolve_character={resolve_character}
               wallet={wallet}
             />

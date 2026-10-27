@@ -448,6 +448,7 @@ demo_page:
   control_hint: Clique na tela · WASD para mover · Espaço para pular · Mouse para olhar
   back: Voltar ao aplicativo
 marketplace_page:
+  add_funds: 'Adicionar fundos'
   filter_all: 'Todas as categorias'
   filter_empty: 'Nenhum resultado. Tente outro filtro ou pesquisa.'
   lot_price: 'Preço total do lote'
@@ -1040,10 +1041,63 @@ fight_hud:
   level_up_allocate: Distribuir pontos
   level_up_later: Depois
 wallet_legacy:
+  funding_available: 'Saldo do jogo'
+  funding_minimum: 'Para jogar com conforto: {{amount}}.'
+  funding_purchase_minimum: 'Para esta compra e as taxas de rede: {{amount}}.'
+  funding_amount: 'Valor a adicionar'
+  funding_method_card: 'Cartão de crédito'
+  funding_balances_loading: 'Carregando saldos da carteira…'
+  funding_balances_failed: 'Não foi possível carregar alguns saldos. Atualize para tentar novamente.'
+  funding_no_assets: 'Esta carteira não tem tokens compatíveis com saldo positivo.'
+  funding_balances_refresh: 'Atualizar saldos'
+  funding_pay_with: 'Pagar com'
+  funding_you_pay: 'Você paga'
+  funding_you_receive: 'Você recebe'
+  funding_arrival: 'Chegada estimada'
+  funding_source_fee: 'As taxas da ponte estão incluídas. Sua carteira de origem também cobra uma taxa de rede, exibida antes da confirmação.'
+  funding_review: 'Revisar pagamento'
+  funding_pay: 'Pagar {{amount}}'
+  funding_deposit_address: 'Endereço de depósito'
+  funding_transaction: 'Transação'
+  funding_explorer: 'Abrir explorador de transferências'
+  funding_same_wallet: 'Escolha outra carteira para adicionar fundos à carteira do jogo.'
+  funding_status_quoting: 'Obtendo cotação…'
+  funding_status_preparing: 'Verificando saldo e taxas de rede…'
+  funding_status_signing: 'Aprove em {{wallet}}'
+  funding_status_pending: 'Confirmando seu pagamento em {{chain}}'
+  funding_status_success: '{{amount}} SUI entregues'
+  funding_status_refunded: 'A transferência foi reembolsada. Confira sua carteira de origem; taxas de rede ainda podem ser cobradas.'
+  funding_status_failed: 'Não foi possível concluir o depósito.'
+  funding_status_unknown: 'O resultado do envio é desconhecido. Confira sua carteira ou o explorador antes de pagar novamente.'
+  funding_status_bridging: 'Transferindo para Sui'
+  funding_delivered_hint: 'Agora você pode tentar sua ação no jogo de novo.'
+  funding_adding: 'Adicionando à carteira do jogo'
+  funding_from: 'de {{amount}} em {{chain}}'
+  funding_step_deposit: 'Depósito'
+  funding_step_bridge: 'Ponte'
+  funding_step_delivered: 'Entregue'
+  funding_time_left: 'faltam ~{{seconds}} s'
+  funding_almost: 'Quase lá'
+  funding_back: 'Voltar ao jogo'
+  funding_more: 'Adicionar mais'
+  funding_retry: 'Tentar novamente'
+  funding_source: 'De'
+  funding_change: 'Trocar'
+  funding_invalid_response: 'O provedor retornou uma cotação inválida. Solicite outra.'
+  funding_invalid_address: 'O endereço da carteira é inválido.'
+  funding_route_unavailable: 'Esta rota está indisponível. Tente outro ativo ou rede.'
+  funding_rate_limited: 'O provedor está ocupado. Tente novamente mais tarde.'
+  funding_source_changed: 'A carteira de origem mudou. Revise o pagamento novamente.'
+  funding_source_gas: 'Sua carteira de origem precisa de mais tokens nativos para pagar a taxa de rede.'
+  funding_source_balance: 'Sua carteira de origem não tem saldo suficiente deste ativo.'
+  funding_quote_expired: 'Esta cotação expirou. Solicite outra antes de pagar.'
+  funding_connection_cancelled: 'Conexão da carteira cancelada.'
+  funding_failed: 'Não foi possível concluir o depósito.'
+  funding_pending: 'Transferência em andamento. Não envie outro pagamento.'
   sui: SUI
   how_to_get: Como obter SUI
-  your_address: Endereço da sua carteira
-  send_sui: Envie SUI para este endereço. Clique para copiar.
+  your_address: 'Endereço SUI'
+  send_sui: 'Envie SUI pela rede Sui. Clique para copiar.'
   buy_directly: Comprar diretamente
   buy_with_card: Compre SUI com cartão de crédito. Entrega direta na sua carteira.
   buy_on_exchange: Comprar em uma corretora
@@ -1072,28 +1126,16 @@ wallet_legacy:
   add_funds_desc: Escolha seu meio de pagamento preferido. O SUI é entregue diretamente na sua carteira.
   method_paypal: PayPal
   method_paypal_desc: Pague com sua conta PayPal
-  method_card: 'Cartão / PayPal'
-  method_card_desc: 'Compre SUI por um provedor de pagamentos'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Pague com Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Pague com sua conta Google
   method_bank: Transferência bancária
   method_bank_desc: SEPA (UE) ou ACH (EUA)
-  method_have_sui: 'Depósito direto'
-  method_have_sui_desc: Enviar de outra carteira ou corretora
   paypal_note: Disponível nos EUA, Reino Unido e grande parte da Europa via MoonPay
   card_note: Escolha um provedor abaixo. Todos aceitam Visa e Mastercard
   bank_note: Taxas menores (~1%). SEPA na Europa, ACH nos EUA.
   steps_paypal: 1. Clique no link abaixo  2. Selecione PayPal como pagamento  3. Digite a quantidade. O SUI chega à sua carteira
-  steps_card: 'Abra um provedor, escolha SUI e use o endereço da carteira do jogo abaixo. Os métodos de pagamento dependem do país e do provedor.'
-  method_swap: 'Depósito via ponte'
-  method_swap_desc: 'Converta cripto de outra rede em SUI'
-  bridge_loading: 'Carregando ponte…'
-  bridge_error: 'Não foi possível carregar a ponte. Sua carteira do jogo continua disponível para depósitos diretos.'
-  bridge_retry: 'Tentar novamente'
-  swap_note: 'Powered by LI.FI. As transferências não são instantâneas. Reabra o depósito via ponte e use o histórico para conferir ou retomar uma transferência interrompida.'
-  steps_swap: 'Conecte sua carteira de origem. O destino é SUI nativo na carteira do jogo abaixo. Confira o valor, as taxas e o prazo estimado antes de assinar.'
   steps_wallet: Envie SUI para o endereço da sua carteira abaixo. Chega em segundos.
   advanced_exchange: 'Avançado: comprar em uma corretora'
   age_notice: Todos os provedores de pagamento exigem idade mínima de 18 anos.
@@ -2294,6 +2336,8 @@ item_categories:
   relic_slot: Relíquia {{number}}
 kares: Staking
 kares_page:
+  other_networks: 'Outras redes · EVM / Solana'
+  sui_wallet_required: 'Selecione uma carteira Sui para usar este recurso.'
   blast_soon: 'Venda de tokens em breve na Blast'
   blast_live: 'A venda de KARES está aberta'
   blast_closing: 'Venda encerrada · liquidação pendente'
@@ -2988,6 +3032,8 @@ allocation_page:
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
 
 tournament_page:
+  victory_title: 'Você conquistou o 1º lugar!'
+  placing_title: 'Você ficou em {{place}}º lugar'
   results: 'Resultados do torneio'
   open_results: 'Ver os resultados do torneio {{name}}'
   rewards_collected: 'Recompensas recebidas'

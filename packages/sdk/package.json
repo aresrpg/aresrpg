@@ -2,7 +2,7 @@
   "name": "@aresrpg/sdk",
   "version": "6.0.0",
   "private": true,
-  "description": "AresRPG write SDK \u2014 a generated projection of the Move contract (one PTB builder per api.move door) plus a receipt-fed object-version cache",
+  "description": "AresRPG write SDK — a generated projection of the Move contract (one PTB builder per api.move door) plus a receipt-fed object-version cache",
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
@@ -54,6 +54,7 @@
     "@aresrpg/protocol": "workspace:*",
     "@mysten/enoki": "^1.2.24",
     "@mysten/kiosk": "1.4.13",
+    "@mysten/slush-wallet": "1.2.5",
     "@mysten/sui": "2.31.3",
     "@mysten/suins": "2.0.9",
     "@mysten/wallet-standard": "^0.21.27",

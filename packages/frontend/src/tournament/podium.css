@@ -352,3 +352,23 @@
     min-height: 44px;
   }
 }
+
+.tourney-standing {
+  padding: 20px;
+  border: 1px solid #e9ac5860;
+  border-radius: 6px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0, #e9ac5828, transparent 75%);
+}
+.tourney-standing p {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--aui-muted);
+}
+.tourney-standing h2 {
+  margin: 0;
+  color: #ffe3a5;
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 800;
+  text-transform: uppercase;
+}

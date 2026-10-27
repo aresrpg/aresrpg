@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 
-import { create_wallet_auth } from '../src/auth.ts'
+import { admin_wallet_context, create_wallet_auth } from '../src/auth.ts'
 
 const account = (address: string): WalletAccount =>
   Object.freeze({
@@ -117,4 +117,67 @@ describe('admin wallet selection', () => {
     expect(await selectable.authorize(true)).toEqual(['0xfirst'])
     expect(connect_options).toEqual({ silent: true })
   })
+})
+
+test('a stale personal cap refreshes the exact object even when the ownership listing lags', async () => {
+  const selected = account(`0x${'11'.repeat(32)}`)
+  const cap = {
+    objectId: `0x${'22'.repeat(32)}`,
+    kioskId: `0x${'33'.repeat(32)}`,
+    isPersonal: true,
+    version: '1062474302',
+    digest: '11111111111111111111111111111111',
+  }
+  const wallet = {
+    version: '1.0.0',
+    name: 'Cap Refresh Test',
+    icon: 'data:image/svg+xml,<svg/>',
+    chains: ['sui:testnet'],
+    accounts: [selected],
+    features: {
+      'standard:connect': { version: '1.0.0', connect: async () => ({ accounts: [selected] }) },
+      'standard:events': { version: '1.0.0', on: () => () => undefined },
+      'sui:signPersonalMessage': { version: '1.1.0', signPersonalMessage: async () => ({ bytes: '', signature: '' }) },
+      'sui:signTransaction': { version: '2.0.0', signTransaction: async () => ({ bytes: '', signature: '' }) },
+    },
+  } as unknown as Wallet
+  const unregister = getWallets().register(wallet)
+  try {
+    const auth = create_wallet_auth({ graphql_url: 'https://example.invalid/graphql', network: 'testnet', pins: {} })
+    const connector = auth.wallets().find(({ name }) => name === wallet.name)!
+    await connector.authorize()
+    const session = await connector.connect(selected.address)
+    const { sdk } = admin_wallet_context(session)
+    let current: typeof cap | undefined
+    const listing = spyOn(sdk, 'get_owned_kiosks').mockResolvedValue({
+      kioskOwnerCaps: [cap],
+      kioskIds: [cap.kioskId],
+      hasNextPage: false,
+      nextCursor: null,
+    })
+    spyOn(sdk, 'ref').mockImplementation(() => current)
+    const refresh = spyOn(sdk, 'hydrate').mockImplementation(async () => {
+      current = { ...cap, version: '1062474303' }
+      return {} as never
+    })
+    spyOn(sdk, 'hydrate_unknown').mockResolvedValue({} as never)
+    const versions: string[] = []
+    spyOn(sdk, 'with_owner_kiosk').mockImplementation((_tx, personal) => {
+      versions.push(personal!.version)
+      return undefined as never
+    })
+    spyOn(sdk, 'execute').mockImplementation(async () => {
+      if (versions.at(-1) !== '1062474303')
+        throw new Error(
+          "[sdk] transaction resolution failed — NOT submitted: provided version doesn't match for object 0x6135, provided: 1062474302 actual: 0x3f54123f"
+        )
+      return { Transaction: { digest: 'joined' } }
+    })
+    await session.tournament.create_team({ tournament: 'cup', name: 'Team', allowed: [], character_id: 'a' })
+    expect(versions).toEqual(['1062474302', '1062474303'])
+    expect(refresh).toHaveBeenCalledWith([cap.objectId])
+    expect(listing).toHaveBeenCalledTimes(1)
+  } finally {
+    unregister()
+  }
 })

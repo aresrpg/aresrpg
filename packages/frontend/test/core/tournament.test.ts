@@ -3,7 +3,12 @@
 import { expect, test } from 'bun:test'
 
 import { tournament_fixture } from '../helpers/tournament.ts'
-import { automatic_actions, open_team, initial_tournament_state } from '../../src/modules/tournament.ts'
+import {
+  automatic_actions,
+  open_team,
+  initial_tournament_state,
+  tournament_opened_elsewhere,
+} from '../../src/modules/tournament.ts'
 import { create_app, initial_app_state, reduce_app_state, type AppState } from '../../src/store.ts'
 
 const state_for = (row = tournament_fixture()): AppState => {
@@ -131,7 +136,9 @@ test('lost opening races admit every owned character to the confirmed fight once
     tournament: {
       open: async ({ character_id }: { character_id: string }) => {
         calls.push(`open:${character_id}`)
-        throw new Error('Another participant opened first; the failed opening must not be retried')
+        throw new Error(
+          '[sdk] transaction resolution failed — NOT submitted: MoveAbort in 2nd command, abort code: 3204, in 0xc133::tournament::link_fight (instruction 10)'
+        )
       },
       join: async ({ character_id }: { character_id: string }) => {
         calls.push(`join:${character_id}`)
@@ -159,25 +166,25 @@ test('lost opening races admit every owned character to the confirmed fight once
   try {
     first.app.dispatch({ type: 'server/packet', packet: { type: 'packet/tournaments', tournaments: [own] } })
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(calls).toEqual(['open:a', 'open:b'])
+    expect(calls).toEqual(['open:a'])
     expect(Object.values(first.app.store.getState().tournament.entry_failures).map((entry) => entry.character)).toEqual(
-      ['a', 'b']
+      []
     )
     first.stop()
     second = load()
     second.app.dispatch({ type: 'server/packet', packet: { type: 'packet/tournaments', tournaments: [own] } })
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(calls).toEqual(['open:a', 'open:b'])
+    expect(calls).toEqual(['open:a'])
     const linked = { ...own, version: '6', matches: [{ ...own.matches[0], fight: 'confirmed-fight', joined: ['c'] }] }
     second.app.dispatch({ type: 'server/packet', packet: { type: 'packet/tournaments', tournaments: [linked] } })
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(calls).toEqual(['open:a', 'open:b', 'join:a', 'join:b'])
+    expect(calls).toEqual(['open:a', 'join:a', 'join:b'])
     second.app.dispatch({
       type: 'server/packet',
       packet: { type: 'packet/tournaments', tournaments: [{ ...linked, version: '7' }] },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(calls).toHaveLength(4)
+    expect(calls).toHaveLength(3)
   } finally {
     first.stop()
     second?.stop()
@@ -229,4 +236,41 @@ test('manual coin recovery submits only positive unclaimed assets and ignores em
   } finally {
     stop()
   }
+})
+
+test('only the unsigned tournament link collision is treated as an opening race', () => {
+  const collision = 'MoveAbort in 2nd command, abort code: 3204, in 0xc133::tournament::link_fight (instruction 10)'
+  expect(
+    tournament_opened_elsewhere(new Error(`[sdk] transaction resolution failed — NOT submitted: ${collision}`))
+  ).toBe(true)
+  expect(tournament_opened_elsewhere(new Error(`[sdk] transaction digest failed on-chain: ${collision}`))).toBe(false)
+  expect(
+    tournament_opened_elsewhere(
+      new Error(`[sdk] transaction resolution failed — NOT submitted: ${collision.replace('link_fight', 'ready')}`)
+    )
+  ).toBe(false)
+  expect(tournament_opened_elsewhere(new Error('Connection failed'))).toBe(false)
+})
+
+test('the opening seat is chosen from characters currently available in their kiosks', () => {
+  const row = tournament_fixture()
+  const state = state_for({
+    ...row,
+    teams: [{ ...row.teams[0], seats: row.teams[0].seats.map((seat) => ({ ...seat, owner: 'owner' })) }, row.teams[1]],
+  })
+  expect(
+    automatic_actions(
+      {
+        ...state,
+        session: {
+          ...state.session,
+          characters: [
+            { id: 'a', custody: 'fight' },
+            { id: 'b', custody: 'kiosk' },
+          ] as never,
+        },
+      },
+      2000
+    )
+  ).toEqual([{ id: 'cup', action: { kind: 'enter', index: 0, character: 'b' } }])
 })

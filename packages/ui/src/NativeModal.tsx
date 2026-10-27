@@ -166,6 +166,7 @@ export const NativeModal = ({
   identity,
   onClick,
   onKeyDown,
+  onClose,
   ...attributes
 }: Readonly<
   Omit<ComponentProps<'dialog'>, 'ref' | 'open' | 'onCancel'> & { close: CloseDoor; label: string; identity?: string }
@@ -178,7 +179,16 @@ export const NativeModal = ({
       aria-label={label}
       data-modal-identity={identity}
       data-preview-dialog={embedded || undefined}
-      onKeyDown={onKeyDown}
+      onClose={(event) => {
+        // React bubbles native close through portals, including lifecycle cleanup. Parent dialogs must not dismiss.
+        event.stopPropagation()
+        onClose?.(event)
+      }}
+      onKeyDown={(event) => {
+        // Native cancel owns Escape. Portal parents and underlying game shortcuts must not handle it too.
+        if (event.key === 'Escape') event.stopPropagation()
+        onKeyDown?.(event)
+      }}
       className={`aui-native-modal ${className}`}
       onCancel={(event) => {
         // React propagates cancel through portal parents; only the top dialog owns it.

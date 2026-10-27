@@ -451,6 +451,7 @@ demo_page:
   control_hint: Нажмите на холст · WASD — движение · Пробел — прыжок · Мышь — обзор
   back: Вернуться в приложение
 marketplace_page:
+  add_funds: 'Пополнить'
   filter_all: 'Все категории'
   filter_empty: 'Ничего не найдено. Измените фильтр или запрос.'
   lot_price: 'Общая цена лота'
@@ -1043,10 +1044,63 @@ fight_hud:
   level_up_allocate: Распределить очки
   level_up_later: Позже
 wallet_legacy:
+  funding_available: 'Игровой баланс'
+  funding_minimum: 'Для комфортной игры: {{amount}}.'
+  funding_purchase_minimum: 'Для этой покупки и комиссии сети: {{amount}}.'
+  funding_amount: 'Сумма пополнения'
+  funding_method_card: 'Банковская карта'
+  funding_balances_loading: 'Загрузка балансов кошелька…'
+  funding_balances_failed: 'Некоторые балансы не удалось загрузить. Обновите, чтобы повторить попытку.'
+  funding_no_assets: 'В этом кошельке нет поддерживаемых токенов с положительным балансом.'
+  funding_balances_refresh: 'Обновить балансы'
+  funding_pay_with: 'Оплатить из'
+  funding_you_pay: 'Вы платите'
+  funding_you_receive: 'Вы получаете'
+  funding_arrival: 'Ожидаемое время'
+  funding_source_fee: 'Комиссии моста включены. Исходный кошелёк также платит комиссию сети, показанную перед подтверждением.'
+  funding_review: 'Проверить платёж'
+  funding_pay: 'Оплатить {{amount}}'
+  funding_deposit_address: 'Адрес депозита'
+  funding_transaction: 'Транзакция'
+  funding_explorer: 'Открыть обозреватель переводов'
+  funding_same_wallet: 'Выберите другой кошелёк для пополнения игрового.'
+  funding_status_quoting: 'Получение предложения…'
+  funding_status_preparing: 'Проверка средств и комиссий сети…'
+  funding_status_signing: 'Подтвердите в {{wallet}}'
+  funding_status_pending: 'Подтверждаем платёж в сети {{chain}}'
+  funding_status_success: '{{amount}} SUI зачислено'
+  funding_status_refunded: 'Перевод возвращён. Проверьте исходный кошелёк; комиссии сети могут сохраняться.'
+  funding_status_failed: 'Не удалось завершить пополнение.'
+  funding_status_unknown: 'Результат отправки неизвестен. Проверьте кошелёк или обозреватель перед повторной оплатой.'
+  funding_status_bridging: 'Перевод в Sui'
+  funding_delivered_hint: 'Теперь можно повторить игровое действие.'
+  funding_adding: 'Пополнение игрового кошелька'
+  funding_from: 'из {{amount}} в сети {{chain}}'
+  funding_step_deposit: 'Депозит'
+  funding_step_bridge: 'Мост'
+  funding_step_delivered: 'Зачислено'
+  funding_time_left: 'осталось ~{{seconds}} с'
+  funding_almost: 'Почти готово'
+  funding_back: 'Вернуться в игру'
+  funding_more: 'Добавить ещё'
+  funding_retry: 'Повторить'
+  funding_source: 'Откуда'
+  funding_change: 'Сменить'
+  funding_invalid_response: 'Провайдер вернул недействительное предложение. Запросите новое.'
+  funding_invalid_address: 'Недействительный адрес кошелька.'
+  funding_route_unavailable: 'Этот маршрут недоступен. Попробуйте другой актив или сеть.'
+  funding_rate_limited: 'Провайдер занят. Повторите попытку позже.'
+  funding_source_changed: 'Исходный кошелёк изменился. Проверьте платёж ещё раз.'
+  funding_source_gas: 'В исходном кошельке не хватает нативных токенов для комиссии сети.'
+  funding_source_balance: 'В исходном кошельке недостаточно этого актива.'
+  funding_quote_expired: 'Срок предложения истёк. Запросите новое перед оплатой.'
+  funding_connection_cancelled: 'Подключение кошелька отменено.'
+  funding_failed: 'Не удалось завершить пополнение.'
+  funding_pending: 'Перевод выполняется. Не отправляйте ещё один платёж.'
   sui: SUI
   how_to_get: Как получить SUI
-  your_address: Адрес вашего кошелька
-  send_sui: Отправьте SUI на этот адрес. Нажмите, чтобы скопировать.
+  your_address: 'Адрес SUI'
+  send_sui: 'Отправляйте SUI через сеть Sui. Нажмите, чтобы скопировать.'
   buy_directly: Купить напрямую
   buy_with_card: Купите SUI картой с доставкой прямо в кошелёк.
   buy_on_exchange: Купить на бирже
@@ -1075,28 +1129,16 @@ wallet_legacy:
   add_funds_desc: Выберите способ оплаты. SUI поступят прямо в кошелёк.
   method_paypal: PayPal
   method_paypal_desc: Оплата аккаунтом PayPal
-  method_card: 'Карта / PayPal'
-  method_card_desc: 'Купите SUI через платёжного провайдера'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Оплата с Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Оплата аккаунтом Google
   method_bank: Банковский перевод
   method_bank_desc: SEPA (ЕС) или ACH (США)
-  method_have_sui: 'Прямое пополнение'
-  method_have_sui_desc: Отправить из другого кошелька или биржи
   paypal_note: Доступно в США, Великобритании и большей части Европы через MoonPay
   card_note: Выберите провайдера ниже. Все принимают Visa и Mastercard
   bank_note: Минимальные комиссии (около 1%). SEPA для Европы, ACH для США.
   steps_paypal: 1. Откройте ссылку ниже  2. Выберите PayPal  3. Укажите сумму. SUI поступят в кошелёк
-  steps_card: 'Откройте провайдера, выберите SUI и укажите адрес игрового кошелька ниже. Способы оплаты зависят от страны и провайдера.'
-  method_swap: 'Пополнение через мост'
-  method_swap_desc: 'Обменяйте криптовалюту другой сети на SUI'
-  bridge_loading: 'Загрузка моста…'
-  bridge_error: 'Не удалось загрузить мост. Прямое пополнение игрового кошелька по-прежнему доступно.'
-  bridge_retry: 'Повторить'
-  swap_note: 'На базе LI.FI. Переводы не мгновенны. Снова откройте пополнение через мост и его историю, чтобы проверить или продолжить прерванный перевод.'
-  steps_swap: 'Подключите исходный кошелёк. Получатель — игровой кошелёк ниже, валюта — нативный SUI. Перед подписанием проверьте сумму, комиссии и ожидаемое время.'
   steps_wallet: Отправьте SUI на адрес ниже. Они поступят за несколько секунд.
   advanced_exchange: 'Для опытных: купить на бирже'
   age_notice: Все платёжные провайдеры требуют возраста от 18 лет.
@@ -2297,6 +2339,8 @@ item_categories:
   relic_slot: Реликвия {{number}}
 kares: Стейкинг
 kares_page:
+  other_networks: 'Другие сети · EVM / Solana'
+  sui_wallet_required: 'Выберите кошелёк Sui для этой функции.'
   blast_soon: 'Продажа токенов скоро на Blast'
   blast_live: 'Продажа KARES открыта'
   blast_closing: 'Продажа завершена · ожидается расчёт'
@@ -2991,6 +3035,8 @@ allocation_page:
   error_x_unavailable: Не удалось выполнить запрос. Проверьте соединение и повторите. X или сервис кампании может быть недоступен.
 
 tournament_page:
+  victory_title: 'Вы заняли 1-е место!'
+  placing_title: 'Вы заняли {{place}}-е место'
   results: 'Результаты турнира'
   open_results: 'Посмотреть результаты турнира {{name}}'
   rewards_collected: 'Награды получены'

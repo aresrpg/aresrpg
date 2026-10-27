@@ -105,6 +105,7 @@ export const FightPlacementBanner = ({
   locked,
   sides_manned,
   can_forfeit,
+  can_walkover,
   on_ready,
   on_ready_all,
   on_force_start,
@@ -120,17 +121,18 @@ export const FightPlacementBanner = ({
   locked: boolean
   sides_manned: boolean
   can_forfeit: boolean
+  can_walkover?: boolean
   on_ready: () => void
   on_ready_all: () => void
   on_force_start: (observed_ms: bigint) => void
   on_forfeit: () => void
 }>) => {
   const { seconds, force_ready, observed_ms } = usePlacementClock(deadline)
-  const stalled = sides_manned && ready !== null && force_ready
+  const stalled = (sides_manned || !!can_walkover) && ready !== null && force_ready
   return (
     <div className="fight-hud__placement" role="status">
       <span>{text.placement_title}</span>
-      {seconds !== null && sides_manned && (
+      {seconds !== null && (
         <strong className={seconds <= 10 ? 'urgent' : ''}>0:{String(seconds).padStart(2, '0')}</strong>
       )}
       <small>{placement_prompt(text, sides_manned, stalled)}</small>

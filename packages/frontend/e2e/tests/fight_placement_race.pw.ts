@@ -37,3 +37,22 @@ test('real fight models and audio finish preparation', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Ready', exact: true })).toBeEnabled()
   expect(failures).toEqual([])
 })
+
+test('an unattended tournament can be force-started through its existing crank action', async ({ page }) => {
+  const failures: string[] = []
+  page.on('pageerror', (error) => failures.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') failures.push(message.text())
+  })
+  await page.goto('/e2e/fixtures/fight_placement_race.html?walkover')
+  await expect(page.getByText('Nobody accepted the challenge')).toBeVisible()
+  const force = page.getByRole('button', { name: 'Force start', exact: true })
+  await expect(force).toHaveCount(0)
+  await page.evaluate(() => window.dispatchEvent(new Event('placement-expired')))
+  await expect(force).toBeEnabled()
+  await force.click()
+  await expect(page.locator('body')).toHaveAttribute('data-crank_calls', '1')
+  await expect(force).toBeDisabled()
+  await page.evaluate(() => window.dispatchEvent(new Event('release-crank')))
+  expect(failures).toEqual([])
+})

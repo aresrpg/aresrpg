@@ -5,6 +5,7 @@ import type { MarketplaceRoyalty } from '@aresrpg/sdk/marketplace-admin'
 import type { create_admin_overview as CreateAdminOverview } from '@aresrpg/sdk/admin-overview'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
 import { useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -43,7 +44,7 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
   const { state: finance } = useFinance({ network: env.network, rpc_url: env.sui_rpc_url })
   const claim_blocked = finance.snapshot?.pool.active !== true
   const wallet = useAppStore((state) => state.external_wallet)
-  const { session } = wallet
+  const session = sui_session(wallet.session)
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])
   const [treasury_mist, set_treasury] = useState<bigint | null>(null)
   const [reading, set_reading] = useState(false)

@@ -13,9 +13,12 @@ test('public directory URLs serve their static index instead of the game shell',
     configFile: false,
     root: resolve(import.meta.dir, '..'),
     plugins: [public_pages_plugin()],
+    // This HTML-only server must not overwrite a running app's optimized dependency cache.
+    optimizeDeps: { noDiscovery: true },
     server: { host: '127.0.0.1', port: 0, watch: null },
   })
   try {
+    expect(server.environments.client.depsOptimizer).toBeUndefined()
     await server.listen()
     const origin = server.resolvedUrls!.local[0]!
     for (const page of ['links', 'agents']) {

@@ -3,22 +3,16 @@
 
 import { useEffect, useReducer } from 'react'
 
-import { FUNDING_SUI_CHAIN, FUNDING_SUI_TOKEN } from './chains.ts'
+import { decode_assets, NATIVE_SUI_ASSET } from './near.ts'
 
 export const read_sui_usd = async (signal: Readonly<AbortSignal>, send = fetch): Promise<number> => {
-  const query = new URLSearchParams({ chain: String(FUNDING_SUI_CHAIN), token: FUNDING_SUI_TOKEN })
-  const response = await send(`https://li.quest/v1/token?${query}`, {
+  const response = await send('https://1click.chaindefuser.com/v0/tokens', {
     signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
     credentials: 'omit',
   })
   if (!response.ok) throw new Error('SUI price is unavailable')
-  const token: unknown = await response.json()
-  if (!token || typeof token !== 'object') throw new Error('Invalid SUI price response')
-  const { chainId: chain_id, address, priceUSD: price_usd } = token as Readonly<Record<string, unknown>>
-  if (chain_id !== FUNDING_SUI_CHAIN || address !== FUNDING_SUI_TOKEN || typeof price_usd !== 'string')
-    throw new Error('Invalid SUI price response')
-  const price = Number(price_usd)
-  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid SUI price')
+  const price = decode_assets(await response.json()).find((asset) => asset.asset_id === NATIVE_SUI_ASSET)?.price
+  if (!price) throw new Error('SUI price is unavailable')
   return price
 }
 

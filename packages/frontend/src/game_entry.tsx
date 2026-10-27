@@ -4,6 +4,7 @@
 import { lazy, StrictMode, type ComponentType } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { ExternalWalletHost } from './wallet/ExternalWalletHost.tsx'
 import {
   dispatch_app,
   read_app_state,
@@ -95,6 +96,7 @@ export const boot_game = (): void => {
       observe_app(modules)
       root.render(
         <StrictMode>
+          <ExternalWalletHost />
           <Surface />
         </StrictMode>
       )

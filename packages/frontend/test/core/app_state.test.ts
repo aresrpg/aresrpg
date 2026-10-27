@@ -291,7 +291,7 @@ describe('app state', () => {
     expect(rejected.session.wallet).toBeNull()
     expect(rejected.session.auth_status).toBe('idle')
     expect(rejected.session.auth_error).toBe('Session expired')
-    expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null })
+    expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null, funding_cost_mist: null })
   })
   test('all external surfaces share an explicitly selected provider and account', () => {
     const session = auth_session('0xadmin')

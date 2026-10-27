@@ -62,7 +62,7 @@ const state_for = (rows: readonly TournamentRow[]): AppState => {
   }
 }
 
-test('completed results remain after every claim for one day and can sit above a newer active event', () => {
+test('completed results remain for one day but yield to an open or running event', () => {
   const finished = {
     ...tournament_fixture(),
     id: 'finished',
@@ -74,12 +74,14 @@ test('completed results remain after every claim for one day and can sit above a
   expect(select_tournament_view(state, null, 0)).toMatchObject({ card: 'results', results: { id: 'finished' } })
   const later = { ...state, chain_clock: { chain_ms: 86_401_000, received_ms: 0 } }
   expect(select_tournament_view(later, null, 0)).toMatchObject({ card: 'hidden', results: null })
-  const active = { ...tournament_fixture(), id: 'active', status: 'open' as const }
-  expect(select_tournament_view(state_for([active, finished]), null, 0)).toMatchObject({
-    card: 'event',
-    row: { id: 'active' },
-    results: { id: 'finished' },
-  })
+  for (const status of ['open', 'in_progress'] as const) {
+    const active = { ...tournament_fixture(), id: 'active', status }
+    expect(select_tournament_view(state_for([active, finished]), null, 0)).toMatchObject({
+      card: 'event',
+      row: { id: 'active' },
+      results: null,
+    })
+  }
 })
 
 test('team creation remains discoverable while character custody explains why it cannot submit', () => {

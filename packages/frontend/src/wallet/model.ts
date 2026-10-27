@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export type WalletSession = Readonly<{
+  family?: 'evm' | 'solana'
   address: string
   wallet_name: string
   disconnect: () => Promise<void>
@@ -9,12 +10,13 @@ export type WalletSession = Readonly<{
   on_invalidated?: (listener: () => void) => () => void
 }>
 export type WalletChoice<S extends WalletSession = WalletSession> = Readonly<{
+  family?: 'evm' | 'solana'
   name: string
   authorize: (silent?: boolean) => Promise<readonly string[]>
   connect: (address: string) => Promise<S>
   disconnect: () => Promise<void>
 }>
-export type WalletSelection = Readonly<{ wallet_name: string; address: string }>
+export type WalletSelection = Readonly<{ wallet_name: string; address: string; family?: 'evm' | 'solana' }>
 export type WalletRequest<S extends WalletSession> =
   | Readonly<{ kind: 'authorize'; wallet: WalletChoice<S> }>
   | Readonly<{ kind: 'connect' | 'restore'; wallet: WalletChoice<S>; address: string }>
@@ -34,6 +36,7 @@ export type WalletUiInput =
   | Readonly<{ type: 'external_wallet/authorize'; wallet_name: string }>
   | Readonly<{ type: 'external_wallet/select'; wallet_name: string; address: string }>
   | Readonly<{ type: 'external_wallet/disconnect' }>
+  | Readonly<{ type: 'external_wallet/forget'; wallet_name: string; address: string }>
   | Readonly<{ type: 'external_wallet/cancel' }>
 export type WalletInput<S extends WalletSession> =
   | WalletUiInput
@@ -44,7 +47,12 @@ export type WalletInput<S extends WalletSession> =
   | Readonly<{ type: 'external_wallet/finished'; sequence: number }>
   | Readonly<{ type: 'external_wallet/failed'; sequence: number; error: string }>
   | Readonly<{ type: 'external_wallet/invalidated'; session: S }>
-export type WalletView = Readonly<{ state: WalletState; dispatch: (input: WalletUiInput) => void }>
+export type WalletView = Readonly<{
+  state: WalletState
+  dispatch: (input: WalletUiInput) => void
+  connect_other?: () => void
+  busy?: boolean
+}>
 
 export const initial_wallet_state = <S extends WalletSession>(): WalletState<S> => ({
   loaded: false,
@@ -76,18 +84,37 @@ const restore_when_available = <S extends WalletSession>(state: WalletState<S>):
     : state
 }
 
+const disconnect_session = <S extends WalletSession>(state: WalletState<S>): WalletState<S> =>
+  request_wallet(
+    {
+      ...state,
+      session: null,
+      remembered: null,
+      accounts: state.accounts.filter(({ wallet_name }) => wallet_name !== state.session?.wallet_name),
+      selected_wallet: null,
+    },
+    { kind: 'disconnect', session: state.session, wallet: state.selected_wallet }
+  )
+
+type AccountKey = Readonly<{ wallet_name: string; address: string }>
+const same_account = (account: AccountKey | null, target: AccountKey): boolean =>
+  account?.wallet_name === target.wallet_name && account.address === target.address
+
+/** Forgetting the selected account disconnects its session; the last account of a provider revokes that provider. */
+const forget_account = <S extends WalletSession>(state: WalletState<S>, target: AccountKey): WalletState<S> => {
+  if (state.request) return state
+  if (same_account(state.session, target)) return disconnect_session(state)
+  const accounts = state.accounts.filter((account) => !same_account(account, target))
+  if (accounts.length === state.accounts.length) return state
+  const forgotten = { ...state, accounts, remembered: same_account(state.remembered, target) ? null : state.remembered }
+  const wallet = state.wallets.find(({ name }) => name === target.wallet_name)
+  return wallet && !accounts.some(({ wallet_name }) => wallet_name === target.wallet_name)
+    ? request_wallet(forgotten, { kind: 'disconnect', session: null, wallet })
+    : forgotten
+}
+
 const choose_wallet = <S extends WalletSession>(state: WalletState<S>, input: WalletUiInput): WalletState<S> => {
-  if (input.type === 'external_wallet/disconnect')
-    return request_wallet(
-      {
-        ...state,
-        session: null,
-        remembered: null,
-        accounts: state.accounts.filter(({ wallet_name }) => wallet_name !== state.session?.wallet_name),
-        selected_wallet: null,
-      },
-      { kind: 'disconnect', session: state.session, wallet: state.selected_wallet }
-    )
+  if (input.type === 'external_wallet/disconnect') return disconnect_session(state)
   if (input.type === 'external_wallet/cancel')
     return {
       ...state,
@@ -119,10 +146,10 @@ const finish_wallet = <S extends WalletSession>(
   if (input.sequence !== state.sequence) return state
   switch (input.type) {
     case 'external_wallet/accounts': {
-      const wallet_name = state.selected_wallet!.name
+      const { name: wallet_name, family } = state.selected_wallet!
       const accounts = [
         ...state.accounts.filter((account) => account.wallet_name !== wallet_name),
-        ...[...new Set(input.accounts)].map((address) => ({ wallet_name, address })),
+        ...[...new Set(input.accounts)].map((address) => ({ wallet_name, address, family })),
       ]
       const ready = { ...state, accounts, request: null }
       return input.accounts.length === 1 && !state.session
@@ -139,7 +166,11 @@ const finish_wallet = <S extends WalletSession>(
           ...state.accounts.filter(
             ({ wallet_name, address }) => wallet_name !== input.session.wallet_name || address !== input.session.address
           ),
-          { wallet_name: input.session.wallet_name, address: input.session.address },
+          {
+            wallet_name: input.session.wallet_name,
+            address: input.session.address,
+            family: input.session.family,
+          },
         ],
         request: null,
         error: null,
@@ -177,5 +208,6 @@ export const reduce_wallet = <S extends WalletSession>(
           accounts: state.accounts.filter(({ wallet_name }) => wallet_name !== input.session.wallet_name),
         }
       : state
+  if (input.type === 'external_wallet/forget') return forget_account(state, input)
   return choose_wallet(state, input)
 }

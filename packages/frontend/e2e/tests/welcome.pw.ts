@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 
-import { FUNDING_SUI_CHAIN, FUNDING_SUI_TOKEN } from '../../src/funding/chains.ts'
+const sui_price = [{ assetId: 'nep141:sui.omft.near', blockchain: 'sui', symbol: 'SUI', decimals: 9, price: 1.2 }]
 
 for (const viewport of [
   { width: 1280, height: 800 },
@@ -12,20 +12,20 @@ for (const viewport of [
 ])
   test(`welcome funding and USD estimates at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await page.route('https://li.quest/v1/token?**', (route) =>
+    await page.route('https://1click.chaindefuser.com/v0/tokens', (route) =>
       route.fulfill({
-        json: { chainId: FUNDING_SUI_CHAIN, address: FUNDING_SUI_TOKEN, priceUSD: '1.20' },
+        json: sui_price,
       })
     )
     await page.goto('/e2e/fixtures/welcome.html')
     await expect(page.locator('[data-welcome-cost]')).toContainText('1 SUI (≈$1.20)')
-    await expect(page.locator('[data-welcome-cost]')).toContainText('0.05 SUI (≈$0.06)')
+    await expect(page.locator('[data-welcome-cost]')).toContainText('0.20 SUI (≈$0.24)')
     const create = page.getByRole('button', { name: 'Create character', exact: true })
-    await expect(create).toBeDisabled()
+    await expect(create).toBeEnabled()
     await expect(create).toBeInViewport()
     await expect(page.getByRole('button', { name: 'Add funds', exact: true })).toBeInViewport()
     await page.locator('[data-empty]').evaluate((button: HTMLButtonElement) => button.click())
-    await expect(create).toBeDisabled()
+    await expect(create).toBeEnabled()
     await page.screenshot({ path: test.info().outputPath('welcome.png') })
     expect(
       await page.locator('[data-welcome]').evaluate((element) => element.scrollWidth - element.clientWidth)
@@ -33,6 +33,7 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Add funds', exact: true }).click()
     const funding = page.getByRole('dialog', { name: 'Add Funds', exact: true })
     await expect(funding).toBeVisible()
+    await page.getByRole('button', { name: 'Transfer manually' }).click()
     await expect(funding).toContainText(`0x${'11'.repeat(32)}`)
     await page.getByRole('button', { name: 'Close', exact: true }).click()
     await expect(page.locator('[data-welcome]')).toBeVisible()
@@ -43,7 +44,9 @@ for (const viewport of [
   })
 
 test('a failed price lookup leaves SUI costs and funding usable', async ({ page }) => {
-  await page.route('https://li.quest/v1/token?**', (route) => route.fulfill({ status: 503, body: 'Unavailable' }))
+  await page.route('https://1click.chaindefuser.com/v0/tokens', (route) =>
+    route.fulfill({ status: 503, body: 'Unavailable' })
+  )
   await page.goto('/e2e/fixtures/welcome.html')
   await expect(page.locator('[data-welcome-cost]')).toContainText('1 SUI')
   await expect(page.locator('[data-welcome-cost]')).not.toContainText('$')
@@ -63,7 +66,7 @@ test('the existing wallet popover still closes before opening funding', async ({
 test('testnet welcome never attaches dollar estimates to free test tokens', async ({ page }) => {
   const price_requests: string[] = []
   page.on('request', (request) => {
-    if (request.url().startsWith('https://li.quest/v1/token')) price_requests.push(request.url())
+    if (request.url().startsWith('https://1click.chaindefuser.com/v0/tokens')) price_requests.push(request.url())
   })
   await page.goto('/e2e/fixtures/welcome.html?testnet')
   await expect(page.locator('[data-welcome-cost]')).not.toContainText('$')
@@ -75,11 +78,9 @@ test('testnet welcome never attaches dollar estimates to free test tokens', asyn
 test('a failed refresh removes the old USD estimate', async ({ page }) => {
   await page.clock.install()
   let calls = 0
-  await page.route('https://li.quest/v1/token?**', (route) => {
+  await page.route('https://1click.chaindefuser.com/v0/tokens', (route) => {
     calls += 1
-    return calls === 1
-      ? route.fulfill({ json: { chainId: FUNDING_SUI_CHAIN, address: FUNDING_SUI_TOKEN, priceUSD: '1.20' } })
-      : route.fulfill({ status: 503, body: 'Unavailable' })
+    return calls === 1 ? route.fulfill({ json: sui_price }) : route.fulfill({ status: 503, body: 'Unavailable' })
   })
   await page.goto('/e2e/fixtures/welcome.html')
   await expect(page.locator('[data-welcome-cost]')).toContainText('≈$1.20')

@@ -5,6 +5,21 @@ import type { WalletSelection } from './model.ts'
 
 export type WalletStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
+const address_patterns: Readonly<Record<string, RegExp>> = {
+  sui: /^0x[0-9a-f]{1,64}$/i,
+  evm: /^0x[0-9a-f]{40}$/i,
+  solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+}
+
+const decode_selection = (value: unknown): WalletSelection | null => {
+  if (typeof value !== 'object' || value === null) return null
+  const { wallet_name, address, family } = value as Record<string, unknown>
+  const pattern = address_patterns[String(family ?? 'sui')]
+  if (typeof wallet_name !== 'string' || !wallet_name || typeof address !== 'string' || !pattern?.test(address))
+    return null
+  return { wallet_name, address, family: family as WalletSelection['family'] }
+}
+
 /** A public account selection, never credentials, signatures or transaction bytes. */
 export const wallet_selection = (storage: WalletStorage | null, network: string) => {
   const key = `aresrpg:external-wallet:${network}`
@@ -13,15 +28,7 @@ export const wallet_selection = (storage: WalletStorage | null, network: string)
       try {
         const raw = storage?.getItem(key)
         if (!raw) return null
-        const value: unknown = JSON.parse(raw)
-        if (typeof value !== 'object' || value === null) return null
-        const { wallet_name, address } = value as Record<string, unknown>
-        return typeof wallet_name === 'string' &&
-          wallet_name.length > 0 &&
-          typeof address === 'string' &&
-          /^0x[0-9a-f]{1,64}$/i.test(address)
-          ? { wallet_name, address }
-          : null
+        return decode_selection(JSON.parse(raw))
       } catch (error) {
         console.warn('Saved external wallet selection could not be read.', error)
         return null
@@ -29,7 +36,10 @@ export const wallet_selection = (storage: WalletStorage | null, network: string)
     },
     write: (selection: WalletSelection | null): void => {
       if (selection)
-        storage?.setItem(key, JSON.stringify({ wallet_name: selection.wallet_name, address: selection.address }))
+        storage?.setItem(
+          key,
+          JSON.stringify({ wallet_name: selection.wallet_name, address: selection.address, family: selection.family })
+        )
       else storage?.removeItem(key)
     },
   }

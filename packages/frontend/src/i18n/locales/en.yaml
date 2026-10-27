@@ -448,6 +448,7 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  add_funds: 'Add funds'
   filter_all: 'All categories'
   filter_empty: 'No matches. Try another filter or search.'
   lot_price: 'Total price for the lot'
@@ -1042,10 +1043,63 @@ fight_hud:
   level_up_allocate: Allocate points
   level_up_later: Later
 wallet_legacy:
+  funding_available: 'Game balance'
+  funding_minimum: 'For comfortable play: {{amount}}.'
+  funding_purchase_minimum: 'For this purchase and network fees: {{amount}}.'
+  funding_amount: 'Amount to add'
+  funding_method_card: 'Credit card'
+  funding_balances_loading: 'Loading wallet balances…'
+  funding_balances_failed: 'Some balances could not be loaded. Refresh to try again.'
+  funding_no_assets: 'No supported tokens with a positive balance in this wallet.'
+  funding_balances_refresh: 'Refresh balances'
+  funding_pay_with: 'Pay with'
+  funding_you_pay: 'You pay'
+  funding_you_receive: 'You receive'
+  funding_arrival: 'Estimated arrival'
+  funding_source_fee: 'Bridge fees are included. Your source wallet also charges a network fee, shown before confirmation.'
+  funding_review: 'Review payment'
+  funding_pay: 'Pay {{amount}}'
+  funding_deposit_address: 'Deposit address'
+  funding_transaction: 'Transaction'
+  funding_explorer: 'Open transfer explorer'
+  funding_same_wallet: 'Choose a different wallet to fund your game wallet.'
+  funding_status_quoting: 'Getting a quote…'
+  funding_status_preparing: 'Checking funds and network fees…'
+  funding_status_signing: 'Approve in {{wallet}}'
+  funding_status_pending: 'Confirming your payment on {{chain}}'
+  funding_status_success: '{{amount}} SUI delivered'
+  funding_status_refunded: 'The transfer was refunded. Check your source wallet; network fees may still apply.'
+  funding_status_failed: 'Funding could not complete.'
+  funding_status_unknown: 'The submission result is unknown. Check your wallet or the transfer explorer before paying again.'
+  funding_status_bridging: 'Bridging to Sui'
+  funding_delivered_hint: 'You can retry your game action now.'
+  funding_adding: 'Adding to game wallet'
+  funding_from: 'from {{amount}} on {{chain}}'
+  funding_step_deposit: 'Deposit'
+  funding_step_bridge: 'Bridge'
+  funding_step_delivered: 'Delivered'
+  funding_time_left: '~{{seconds}} s left'
+  funding_almost: 'Almost there'
+  funding_back: 'Back to game'
+  funding_more: 'Add more'
+  funding_retry: 'Try again'
+  funding_source: 'From'
+  funding_change: 'Change'
+  funding_invalid_response: 'The provider returned an invalid quote. Request a new one.'
+  funding_invalid_address: 'The wallet address is invalid.'
+  funding_route_unavailable: 'This route is unavailable. Try another asset or network.'
+  funding_rate_limited: 'The provider is busy. Please try again later.'
+  funding_source_changed: 'The source wallet changed. Review the payment again.'
+  funding_source_gas: 'Your source wallet needs more native tokens to pay its network fee.'
+  funding_source_balance: 'Your source wallet does not have enough of this asset.'
+  funding_quote_expired: 'This quote expired. Request a new quote before paying.'
+  funding_connection_cancelled: 'Wallet connection cancelled.'
+  funding_failed: 'Funding could not complete.'
+  funding_pending: 'Transfer in progress. Do not send another payment.'
   sui: SUI
   how_to_get: How to get SUI
-  your_address: Your Wallet Address
-  send_sui: Send SUI to this address. Click to copy.
+  your_address: 'SUI address'
+  send_sui: 'Send SUI on the Sui network. Click to copy.'
   buy_directly: Buy Directly
   buy_with_card: Buy SUI with a credit card. Delivered straight to your wallet.
   buy_on_exchange: Buy on an Exchange
@@ -1092,29 +1146,17 @@ wallet_legacy:
     to your wallet.
   method_paypal: PayPal
   method_paypal_desc: Pay with your PayPal account
-  method_card: 'Card / PayPal'
-  method_card_desc: 'Buy SUI through a payment provider'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Pay with Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Pay with your Google account
   method_bank: Bank Transfer
   method_bank_desc: SEPA (EU) or ACH (US)
-  method_have_sui: 'Direct deposit'
-  method_have_sui_desc: Send from another wallet or exchange
   paypal_note: Available in US, UK, and most of Europe via MoonPay
   card_note: Choose a provider below. All accept Visa and Mastercard
   bank_note: Lowest fees (~1%). SEPA for Europe, ACH for US.
   steps_paypal: 1. Click the link below  2. Select PayPal as payment  3. Enter the
     amount. SUI arrives in your wallet
-  steps_card: 'Open a provider, choose SUI, and use the game wallet address below. Payment methods depend on your country and provider.'
-  method_swap: 'Bridge deposit'
-  method_swap_desc: 'Move crypto from another chain into SUI'
-  bridge_loading: 'Loading bridge…'
-  bridge_error: 'The bridge could not load. Your game wallet remains available for direct deposits.'
-  bridge_retry: 'Try again'
-  swap_note: 'Powered by LI.FI. Transfers are not instant. Reopen Bridge deposit and use its history to check or resume an interrupted transfer.'
-  steps_swap: 'Connect your source wallet. The destination is native SUI in the game wallet shown below. Review the amount, fees, and estimated arrival before signing.'
   steps_wallet: Send SUI to your wallet address below. It arrives in seconds.
   advanced_exchange: 'Advanced: Buy on an Exchange'
   age_notice: All payment providers require you to be 18 or older.
@@ -2326,6 +2368,8 @@ item_categories:
 
 kares: 'Staking'
 kares_page:
+  other_networks: 'Other networks · EVM / Solana'
+  sui_wallet_required: 'Select a Sui wallet to use this feature.'
   blast_soon: 'Token sale soon on Blast'
   blast_live: 'The KARES sale is live'
   blast_closing: 'Sale ended · awaiting settlement'
@@ -3029,6 +3073,8 @@ allocation_page:
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
 
 tournament_page:
+  victory_title: 'You won 1st place!'
+  placing_title: 'You placed #{{place}}'
   results: 'Tournament results'
   open_results: 'View {{name}} tournament results'
   rewards_collected: 'Rewards collected'

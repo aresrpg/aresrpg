@@ -4,6 +4,8 @@
 import { useEffect } from 'react'
 import { WalletCards } from 'lucide-react'
 
+import { external_wallet_view } from '../wallet/view.ts'
+import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -30,7 +32,7 @@ export const KaresPageView = ({
   account_balance: bigint | null
 }>) => {
   const same_account = wallet.state.session?.address === account.state.address
-  const connected = !!wallet.state.session && !same_account
+  const connected = external.state.address !== null && !same_account
   const wallet_control = (
     <WalletControl copy={copy.kares_page} wallet={wallet} locked={external.state.request?.kind === 'execute'} />
   )
@@ -62,7 +64,7 @@ export const KaresPageView = ({
               <div className="staking-wallet-placeholder">
                 <WalletCards size={28} />
                 <h3>{copy.kares_page.external_wallet}</h3>
-                <p>{wallet.state.session ? copy.kares_page.same_account : copy.kares_page.external_wallet_hint}</p>
+                <p>{same_account ? copy.kares_page.same_account : copy.kares_page.external_wallet_hint}</p>
                 {wallet_control}
               </div>
             )
@@ -84,7 +86,8 @@ export default function KaresPage({
     copy.kares_page.confirmed
   )
   const wallet_state = useAppStore((state) => state.external_wallet)
-  const external_session = wallet_state.session?.address === initial_session?.address ? null : wallet_state.session
+  const selected_sui = sui_session(wallet_state.session)
+  const external_session = selected_sui?.address === initial_session?.address ? null : selected_sui
   const external = useFinance(
     { network: env.network, rpc_url: env.sui_rpc_url },
     external_session,
@@ -99,7 +102,7 @@ export default function KaresPage({
       copy={copy}
       account={account}
       external={external}
-      wallet={{ state: wallet_state, dispatch: dispatch_app }}
+      wallet={external_wallet_view(wallet_state)}
       account_balance={balance}
     />
   )

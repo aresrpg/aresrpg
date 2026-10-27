@@ -27,6 +27,7 @@ import {
 import { fight_result_error_text } from '../../modules/fight_result_error.ts'
 import {
   fight_level_up_visible,
+  selected_fight_result,
   fight_settlement_progress,
   type FightSettlementProgress,
 } from '../../modules/fight_result_view.ts'
@@ -40,8 +41,7 @@ import './fight_result.css'
 const text_of = (copy: AppCopy, key: string): string => copy.fight_hud[key] ?? key
 const selected_result = (state: AppState, supplied?: FightResult | null) => {
   if (supplied !== undefined) return supplied
-  const character_id = state.session.selected_character_id
-  return character_id ? (state.fight_result.current_by_character[character_id] ?? null) : null
+  return selected_fight_result(state)
 }
 
 const WAGER_PREFIX = Object.freeze({ won: '+', lost: '-', even: '' })

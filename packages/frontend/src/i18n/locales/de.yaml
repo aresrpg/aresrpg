@@ -448,6 +448,7 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  add_funds: 'Guthaben hinzufügen'
   filter_all: 'Alle Kategorien'
   filter_empty: 'Keine Treffer. Versuche einen anderen Filter oder Suchbegriff.'
   lot_price: 'Gesamtpreis des Pakets'
@@ -1042,10 +1043,63 @@ fight_hud:
   level_up_allocate: Punkte verteilen
   level_up_later: Später
 wallet_legacy:
+  funding_available: 'Spielguthaben'
+  funding_minimum: 'Für entspanntes Spielen: {{amount}}.'
+  funding_purchase_minimum: 'Für diesen Kauf und Netzwerkgebühren: {{amount}}.'
+  funding_amount: 'Einzahlungsbetrag'
+  funding_method_card: 'Kreditkarte'
+  funding_balances_loading: 'Wallet-Guthaben werden geladen…'
+  funding_balances_failed: 'Einige Guthaben konnten nicht geladen werden. Aktualisiere, um es erneut zu versuchen.'
+  funding_no_assets: 'Diese Wallet enthält keine unterstützten Token mit positivem Guthaben.'
+  funding_balances_refresh: 'Guthaben aktualisieren'
+  funding_pay_with: 'Bezahlen mit'
+  funding_you_pay: 'Du zahlst'
+  funding_you_receive: 'Du erhältst'
+  funding_arrival: 'Geschätzte Ankunft'
+  funding_source_fee: 'Bridge-Gebühren sind enthalten. Dein Quellwallet berechnet zusätzlich eine Netzwerkgebühr, die vor der Bestätigung angezeigt wird.'
+  funding_review: 'Zahlung prüfen'
+  funding_pay: '{{amount}} bezahlen'
+  funding_deposit_address: 'Einzahlungsadresse'
+  funding_transaction: 'Transaktion'
+  funding_explorer: 'Transfer-Explorer öffnen'
+  funding_same_wallet: 'Wähle ein anderes Wallet, um dein Spielwallet aufzuladen.'
+  funding_status_quoting: 'Angebot wird geladen…'
+  funding_status_preparing: 'Guthaben und Netzwerkgebühren werden geprüft…'
+  funding_status_signing: 'In {{wallet}} bestätigen'
+  funding_status_pending: 'Zahlung auf {{chain}} wird bestätigt'
+  funding_status_success: '{{amount}} SUI zugestellt'
+  funding_status_refunded: 'Der Transfer wurde erstattet. Prüfe dein Quellwallet; Netzwerkgebühren können dennoch anfallen.'
+  funding_status_failed: 'Die Einzahlung konnte nicht abgeschlossen werden.'
+  funding_status_unknown: 'Das Sendeergebnis ist unbekannt. Prüfe dein Wallet oder den Explorer, bevor du erneut zahlst.'
+  funding_status_bridging: 'Übertragung zu Sui'
+  funding_delivered_hint: 'Du kannst deine Spielaktion jetzt erneut versuchen.'
+  funding_adding: 'Gutschrift auf dein Spielwallet'
+  funding_from: 'aus {{amount}} auf {{chain}}'
+  funding_step_deposit: 'Einzahlung'
+  funding_step_bridge: 'Bridge'
+  funding_step_delivered: 'Zugestellt'
+  funding_time_left: 'noch ~{{seconds}} s'
+  funding_almost: 'Fast geschafft'
+  funding_back: 'Zurück zum Spiel'
+  funding_more: 'Mehr hinzufügen'
+  funding_retry: 'Erneut versuchen'
+  funding_source: 'Von'
+  funding_change: 'Ändern'
+  funding_invalid_response: 'Der Anbieter lieferte ein ungültiges Angebot. Fordere ein neues an.'
+  funding_invalid_address: 'Die Wallet-Adresse ist ungültig.'
+  funding_route_unavailable: 'Diese Route ist nicht verfügbar. Versuche einen anderen Token oder ein anderes Netzwerk.'
+  funding_rate_limited: 'Der Anbieter ist ausgelastet. Versuche es später erneut.'
+  funding_source_changed: 'Das Quellwallet hat sich geändert. Prüfe die Zahlung erneut.'
+  funding_source_gas: 'Dein Quellwallet benötigt mehr native Tokens für die Netzwerkgebühr.'
+  funding_source_balance: 'Dein Quellwallet enthält nicht genug von diesem Token.'
+  funding_quote_expired: 'Dieses Angebot ist abgelaufen. Fordere vor der Zahlung ein neues an.'
+  funding_connection_cancelled: 'Wallet-Verbindung abgebrochen.'
+  funding_failed: 'Die Einzahlung konnte nicht abgeschlossen werden.'
+  funding_pending: 'Transfer läuft. Sende keine weitere Zahlung.'
   sui: SUI
   how_to_get: Wie man SUI bekommt
-  your_address: Deine Wallet-Adresse
-  send_sui: Sende SUI an diese Adresse. Klicken zum Kopieren.
+  your_address: 'SUI-Adresse'
+  send_sui: 'SUI über das Sui-Netzwerk senden. Zum Kopieren klicken.'
   buy_directly: Direkt kaufen
   buy_with_card: Kaufe SUI mit Kreditkarte. Direkt in dein Wallet geliefert.
   buy_on_exchange: Auf einer Börse kaufen
@@ -1093,29 +1147,17 @@ wallet_legacy:
     Wallet geliefert.
   method_paypal: PayPal
   method_paypal_desc: Mit deinem PayPal-Konto bezahlen
-  method_card: 'Karte / PayPal'
-  method_card_desc: 'SUI über einen Zahlungsanbieter kaufen'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Mit Face ID / Touch ID bezahlen
   method_google_pay: Google Pay
   method_google_pay_desc: Mit deinem Google-Konto bezahlen
   method_bank: Banküberweisung
   method_bank_desc: SEPA (EU) oder ACH (US)
-  method_have_sui: 'Direkte Einzahlung'
-  method_have_sui_desc: Von einem anderen Wallet oder Exchange senden
   paypal_note: In den USA, UK und den meisten europäischen Ländern über MoonPay verfügbar
   card_note: Wähle einen Anbieter unten. Alle akzeptieren Visa und Mastercard
   bank_note: Niedrigste Gebühren (~1%). SEPA für Europa, ACH für die USA.
   steps_paypal: 1. Klicke auf den Link unten  2. Wähle PayPal als Zahlung  3. Gib
     den Betrag ein. SUI landet in deinem Wallet
-  steps_card: 'Öffne einen Anbieter, wähle SUI und nutze die unten angegebene Spiel-Wallet-Adresse. Zahlungsarten hängen von Land und Anbieter ab.'
-  method_swap: 'Bridge-Einzahlung'
-  method_swap_desc: 'Krypto von einer anderen Chain in SUI umwandeln'
-  bridge_loading: 'Bridge wird geladen…'
-  bridge_error: 'Die Bridge konnte nicht geladen werden. Direkte Einzahlungen in deine Spiel-Wallet sind weiterhin möglich.'
-  bridge_retry: 'Erneut versuchen'
-  swap_note: 'Bereitgestellt von LI.FI. Transfers sind nicht sofort abgeschlossen. Öffne die Bridge-Einzahlung erneut und prüfe oder setze unter Verlauf einen unterbrochenen Transfer fort.'
-  steps_swap: 'Verbinde deine Quell-Wallet. Das Ziel ist natives SUI in der unten angezeigten Spiel-Wallet. Prüfe Betrag, Gebühren und geschätzte Ankunft vor dem Signieren.'
   steps_wallet: Sende SUI an deine Wallet-Adresse unten. Es kommt in Sekunden an.
   advanced_exchange: 'Erweitert: Auf einer Börse kaufen'
   age_notice: Alle Zahlungsanbieter verlangen, dass du mindestens 18 Jahre alt bist.
@@ -2323,6 +2365,8 @@ item_categories:
 
 kares: 'Staking'
 kares_page:
+  other_networks: 'Andere Netzwerke · EVM / Solana'
+  sui_wallet_required: 'Wähle für diese Funktion ein Sui-Wallet.'
   blast_soon: 'Tokenverkauf bald auf Blast'
   blast_live: 'Der KARES-Verkauf ist eröffnet'
   blast_closing: 'Verkauf beendet · Abwicklung ausstehend'
@@ -3026,6 +3070,8 @@ allocation_page:
   error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
 
 tournament_page:
+  victory_title: 'Du hast den 1. Platz gewonnen!'
+  placing_title: 'Du hast Platz {{place}} erreicht'
   results: 'Turnierergebnisse'
   open_results: 'Ergebnisse von {{name}} ansehen'
   rewards_collected: 'Belohnungen erhalten'

@@ -451,6 +451,7 @@ demo_page:
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
+  add_funds: 'Nạp tiền'
   filter_all: 'Tất cả danh mục'
   filter_empty: 'Không có kết quả. Thử bộ lọc hoặc từ khóa khác.'
   lot_price: 'Tổng giá cho lô'
@@ -1043,10 +1044,63 @@ fight_hud:
   level_up_allocate: Phân bổ điểm
   level_up_later: Để sau
 wallet_legacy:
+  funding_available: 'Số dư trò chơi'
+  funding_minimum: 'Để chơi thoải mái: {{amount}}.'
+  funding_purchase_minimum: 'Cho giao dịch mua này và phí mạng: {{amount}}.'
+  funding_amount: 'Số tiền cần nạp'
+  funding_method_card: 'Thẻ tín dụng'
+  funding_balances_loading: 'Đang tải số dư ví…'
+  funding_balances_failed: 'Không tải được một số số dư. Hãy làm mới để thử lại.'
+  funding_no_assets: 'Ví này không có token được hỗ trợ với số dư dương.'
+  funding_balances_refresh: 'Làm mới số dư'
+  funding_pay_with: 'Thanh toán bằng'
+  funding_you_pay: 'Bạn trả'
+  funding_you_receive: 'Bạn nhận'
+  funding_arrival: 'Thời gian dự kiến'
+  funding_source_fee: 'Đã gồm phí cầu nối. Ví nguồn còn phải trả phí mạng, được hiển thị trước khi xác nhận.'
+  funding_review: 'Kiểm tra thanh toán'
+  funding_pay: 'Thanh toán {{amount}}'
+  funding_deposit_address: 'Địa chỉ nạp'
+  funding_transaction: 'Giao dịch'
+  funding_explorer: 'Mở trình xem chuyển tiền'
+  funding_same_wallet: 'Chọn ví khác để nạp vào ví trò chơi.'
+  funding_status_quoting: 'Đang lấy báo giá…'
+  funding_status_preparing: 'Đang kiểm tra số dư và phí mạng…'
+  funding_status_signing: 'Phê duyệt trong {{wallet}}'
+  funding_status_pending: 'Đang xác nhận thanh toán trên {{chain}}'
+  funding_status_success: 'Đã nhận {{amount}} SUI'
+  funding_status_refunded: 'Giao dịch đã được hoàn tiền. Kiểm tra ví nguồn; phí mạng vẫn có thể áp dụng.'
+  funding_status_failed: 'Không thể hoàn tất nạp tiền.'
+  funding_status_unknown: 'Chưa rõ kết quả gửi. Kiểm tra ví hoặc trình xem giao dịch trước khi thanh toán lại.'
+  funding_status_bridging: 'Đang chuyển sang Sui'
+  funding_delivered_hint: 'Bạn có thể thử lại thao tác trong game ngay bây giờ.'
+  funding_adding: 'Đang nạp vào ví game'
+  funding_from: 'từ {{amount}} trên {{chain}}'
+  funding_step_deposit: 'Nạp'
+  funding_step_bridge: 'Cầu nối'
+  funding_step_delivered: 'Hoàn tất'
+  funding_time_left: 'còn ~{{seconds}} giây'
+  funding_almost: 'Sắp xong'
+  funding_back: 'Quay lại game'
+  funding_more: 'Nạp thêm'
+  funding_retry: 'Thử lại'
+  funding_source: 'Từ'
+  funding_change: 'Đổi'
+  funding_invalid_response: 'Nhà cung cấp trả về báo giá không hợp lệ. Hãy yêu cầu báo giá mới.'
+  funding_invalid_address: 'Địa chỉ ví không hợp lệ.'
+  funding_route_unavailable: 'Tuyến này không khả dụng. Thử tài sản hoặc mạng khác.'
+  funding_rate_limited: 'Nhà cung cấp đang bận. Vui lòng thử lại sau.'
+  funding_source_changed: 'Ví nguồn đã thay đổi. Kiểm tra lại thanh toán.'
+  funding_source_gas: 'Ví nguồn cần thêm token gốc để trả phí mạng.'
+  funding_source_balance: 'Ví nguồn không đủ tài sản này.'
+  funding_quote_expired: 'Báo giá đã hết hạn. Yêu cầu báo giá mới trước khi thanh toán.'
+  funding_connection_cancelled: 'Đã hủy kết nối ví.'
+  funding_failed: 'Không thể hoàn tất nạp tiền.'
+  funding_pending: 'Đang chuyển tiền. Không gửi thêm khoản thanh toán.'
   sui: SUI
   how_to_get: Cách nhận SUI
-  your_address: Địa chỉ ví của bạn
-  send_sui: Gửi SUI tới địa chỉ này. Nhấp để sao chép.
+  your_address: 'Địa chỉ SUI'
+  send_sui: 'Gửi SUI qua mạng Sui. Nhấp để sao chép.'
   buy_directly: Mua trực tiếp
   buy_with_card: Mua SUI bằng thẻ tín dụng, nhận thẳng vào ví.
   buy_on_exchange: Mua trên sàn
@@ -1075,28 +1129,16 @@ wallet_legacy:
   add_funds_desc: Chọn cách thanh toán. SUI được gửi thẳng vào ví.
   method_paypal: PayPal
   method_paypal_desc: Trả bằng tài khoản PayPal
-  method_card: 'Thẻ / PayPal'
-  method_card_desc: 'Mua SUI qua nhà cung cấp thanh toán'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Trả bằng Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Trả bằng tài khoản Google
   method_bank: Chuyển khoản ngân hàng
   method_bank_desc: SEPA (EU) hoặc ACH (Mỹ)
-  method_have_sui: 'Nạp trực tiếp'
-  method_have_sui_desc: Gửi từ ví khác hoặc sàn
   paypal_note: Có tại Mỹ, Anh và phần lớn châu Âu qua MoonPay
   card_note: Chọn nhà cung cấp bên dưới. Tất cả nhận Visa và Mastercard
   bank_note: Phí thấp nhất, khoảng 1%. SEPA cho châu Âu, ACH cho Mỹ.
   steps_paypal: 1. Nhấp liên kết dưới  2. Chọn PayPal  3. Nhập số tiền. SUI sẽ vào ví
-  steps_card: 'Mở nhà cung cấp, chọn SUI và dùng địa chỉ ví trò chơi bên dưới. Phương thức thanh toán tùy thuộc quốc gia và nhà cung cấp.'
-  method_swap: 'Nạp qua cầu nối'
-  method_swap_desc: 'Chuyển tiền mã hóa từ mạng khác sang SUI'
-  bridge_loading: 'Đang tải cầu nối…'
-  bridge_error: 'Không thể tải cầu nối. Bạn vẫn có thể nạp trực tiếp vào ví trò chơi.'
-  bridge_retry: 'Thử lại'
-  swap_note: 'Cung cấp bởi LI.FI. Giao dịch không hoàn tất tức thì. Mở lại mục nạp qua cầu nối và xem lịch sử để kiểm tra hoặc tiếp tục giao dịch bị gián đoạn.'
-  steps_swap: 'Kết nối ví nguồn. Đích nhận là SUI gốc trong ví trò chơi bên dưới. Kiểm tra số tiền, phí và thời gian dự kiến trước khi ký.'
   steps_wallet: Gửi SUI tới địa chỉ ví bên dưới. Sẽ nhận được sau vài giây.
   advanced_exchange: 'Nâng cao: mua trên sàn'
   age_notice: Mọi nhà cung cấp thanh toán đều yêu cầu từ 18 tuổi.
@@ -2297,6 +2339,8 @@ item_categories:
   relic_slot: Di vật {{number}}
 kares: Staking
 kares_page:
+  other_networks: 'Mạng khác · EVM / Solana'
+  sui_wallet_required: 'Chọn ví Sui để sử dụng tính năng này.'
   blast_soon: 'Sắp mở bán token trên Blast'
   blast_live: 'Đợt bán KARES đang diễn ra'
   blast_closing: 'Đã kết thúc · chờ quyết toán'
@@ -2991,6 +3035,8 @@ allocation_page:
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
 
 tournament_page:
+  victory_title: 'Bạn đã giành hạng nhất!'
+  placing_title: 'Bạn đạt hạng {{place}}'
   results: 'Kết quả giải đấu'
   open_results: 'Xem kết quả giải đấu {{name}}'
   rewards_collected: 'Đã nhận phần thưởng'

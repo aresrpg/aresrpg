@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // Two-wallet distribution: an external holder pays to send a voucher to the authenticated game
 // wallet; the game wallet pays to redeem it. A failed second leg stays recoverable as a held card.
 
 import type { GiftcardRow } from '@aresrpg/protocol'
 import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/auth'
 
+import { sui_session } from '../wallet/external_session.ts'
 import type { AuthSession } from '../auth.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -161,7 +163,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const holder_pending = holder_operation(state.distribution.pending)
   if (
     input.type.startsWith('external_wallet/') &&
-    !state.external_wallet.session &&
+    !sui_session(state.external_wallet.session) &&
     (state.distribution.holder_giftcards !== null || holder_pending)
   )
     return with_distribution(state, {
@@ -257,7 +259,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
   const refresh_holder = (): void => {
     const { pending } = get_state().distribution
-    const holder = get_state().external_wallet.session
+    const holder = sui_session(get_state().external_wallet.session)
     if (!holder || pending) return
     const current = current_operation(true)
     dispatch({ type: 'distribution/pending', operation: 'load' })
@@ -285,7 +287,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
   events.on('distribution/import', () => {
     const { distribution, session, external_wallet } = get_state()
-    const holder = external_wallet.session
+    const holder = sui_session(external_wallet.session)
     const recipient = session.wallet
     const giftcards = (distribution.holder_giftcards ?? []).slice(0, MAX_GIFTCARDS_PER_TRANSACTION)
     if (!holder || !recipient || distribution.pending || !giftcards.length) return

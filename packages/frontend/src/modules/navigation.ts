@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { ServerPacket } from '@aresrpg/protocol'
+import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
 import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
@@ -34,12 +35,15 @@ export type AppDialog =
   | `fight:${string}`
 
 export type NavigationState = Readonly<{
+  funding_cost_mist: bigint | null
   page: Page
   pathname: string
   dialog: AppDialog | null
 }>
 
 export type NavigationInput =
+  | Readonly<{ type: 'funding/open'; cost_mist: bigint }>
+  | Readonly<{ type: 'funding/close' }>
   | Readonly<{ type: 'page/open'; page: Page }>
   | Readonly<{ type: 'path/open'; pathname: string }>
   | Readonly<{ type: 'route/changed'; pathname: string }>
@@ -49,7 +53,7 @@ export type NavigationInput =
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
 
 export const initial_navigation_state = (): NavigationState =>
-  Object.freeze({ page: 'world', pathname: '/', dialog: null })
+  Object.freeze({ page: 'world', pathname: '/', dialog: null, funding_cost_mist: null })
 
 export const normalize_pathname = (pathname: string): string => {
   const normalized = `/${pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean).join('/') ?? ''}`
@@ -92,6 +96,14 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
 }
 
 const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
+  if (dialog === 'top_up')
+    return {
+      ...state,
+      navigation: {
+        ...state.navigation,
+        funding_cost_mist: state.session.characters.length === 0 ? CHARACTER_PRICE_MIST : 0n,
+      },
+    }
   const host = dialog === 'character_create' ? open_page(state, 'world') : state
   return Object.freeze({ ...host, navigation: Object.freeze({ ...host.navigation, dialog }) })
 }
@@ -131,12 +143,26 @@ const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): App
   return state
 }
 
+const reduce_window = (state: AppState, input: AppInput): AppState | null => {
+  switch (input.type) {
+    case 'funding/open':
+      return { ...state, navigation: { ...state.navigation, funding_cost_mist: input.cost_mist } }
+    case 'funding/close':
+      return { ...state, navigation: { ...state.navigation, funding_cost_mist: null } }
+    case 'dialog/open':
+      return open_dialog(state, input.dialog)
+    default:
+      return null
+  }
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'run_to/stopped') return arrived_fight(state, input.reason)
   if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
   if (input.type === 'page/open') return open_page(state, input.page)
   if (input.type === 'path/open' || input.type === 'route/changed') return open_path(state, input.pathname)
-  if (input.type === 'dialog/open') return open_dialog(state, input.dialog)
+  const window = reduce_window(state, input)
+  if (window) return window
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
     return Object.freeze({ ...state, navigation: logged_out_navigation(state) })
   if (input.type === 'server/packet') return packet_navigation(state, input.packet)

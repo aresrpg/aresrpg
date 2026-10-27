@@ -65,7 +65,7 @@ export const Login = ({
                     close={() => set_show_wallets(false)}
                   >
                     <WalletChoices
-                      choices={wallets}
+                      choices={wallets.map((name) => ({ name }))}
                       busy={loading}
                       select={(name) => {
                         set_show_wallets(false)

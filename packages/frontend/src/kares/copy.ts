@@ -3,6 +3,8 @@
 import type { ErrorCopy } from '../i18n/error_text.ts'
 export type KaresCopy = ErrorCopy &
   Readonly<{
+    other_networks: string
+    sui_wallet_required: string
     upgradeability_note: string
     blast_soon: string
     blast_live: string

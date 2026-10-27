@@ -275,12 +275,16 @@ and provider; cancellation stays in the modal and permits retry. Only an authent
 can hand off to the real player runtime. Local adventure progress never becomes live character data.
 
 The `/kares` staking route uses the same app entry, navigation reducer and shared feature-window host as
-other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,
-staking, and gift import. It retains authorized accounts grouped by provider for live switching, with one active signing session.
-Switching disposes the previous SDK session without disconnecting its provider, and claim transfers or
-redemptions block user-requested wallet changes. It persists only the selected provider name and exact public address per
-network and origin, restores through silent authorization, and forgets the selection on disconnect
-or provider invalidation. Connecting it never replaces the game account. Finance runtimes bind a
+other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one optional selected wallet shared by funding, admin royalties,
+staking, tournament administration, and gift import. Sui Wallet Standard, including Slush's web wallet,
+provides Sui sessions; Privy connects existing EVM and Solana wallets without authenticating the game or
+creating embedded wallets. Privy’s wallet picker owns the Ethereum and Solana selection. Disconnect waits for the Solana provider to finish and clears remembered selection.
+Sui-only features derive their signing capability from the selected session;
+a foreign-chain source cannot supply a Sui signer. Authorized accounts remain grouped by provider.
+Switching releases the previous session without replacing the Google game account. Gift transfers and
+redemptions block source changes. Only public provider, chain-family and account selection persist per
+network and origin. Silent restoration must recover that exact account. Disconnect or provider
+invalidation clears it before further signing. Finance runtimes bind a
 session for their lifetime and own only disposable read projections and pending actions. The SDK projects the pool’s next-24-hour funded emissions across schedule boundaries. Staking
 presentation derives current rewards and proposed-stake gains from each account’s changing pool
 share. The session reducer alone owns game-wallet SUI and KARES balances; staking and Mastery
@@ -314,7 +318,7 @@ Demo fight entry retains the historical `demo_fight_started` event at placement;
 observes that same fight advancing from placement into its first turn. Completion retains the encounter
 number and outcome. Quest completion uses authored quest
 IDs and real progress deltas, including the confirmed equipment quest; restored journey progress emits
-nothing. Funding captures modal opens, method views, successful address copies and deduplicated bridge
+nothing. Funding captures modal opens, method views, successful address copies and deduplicated funding
 execution transitions. Viewing direct deposit is not a payment; a balance change cannot infer its source.
 The first-character funding welcome and creation form have separate events. Shared telemetry metadata
 marks the tutorial revision so the equipment-quest funnel can be compared with earlier cohorts.
@@ -615,26 +619,64 @@ state from chain—the app becomes ready only after the server's indexed snapsho
 
 ### Funding
 
-Mainnet funding offers direct SUI deposits, external card/PayPal providers, and a lazily loaded LI.FI
-widget. The bridge owns its external EVM/Solana source-wallet connections and route execution;
-the game wallet is only the fixed native-SUI recipient. Destination chain, token and address are
-locked, URL defaults are disabled, and transfer history is scoped to the receiving game address.
-LI.FI completion requests an ordinary wallet refresh; only the existing SDK balance read updates
-the session. The funding surface shares the vendor's focus-managed DOM modal stack so wallet and
-WalletConnect portals remain interactive; game dialogs retain their native top-layer shell.
-Its lifetime suspends existing native windows without unmounting their forms. Closing funding
-restores surviving windows below any newer native dialog; retired windows never reopen.
-Testnet funding exposes only the faucet. Mainnet bridge quotes request a 1% integrator fee for
-the registered `aresrpg` integration. LI.FI routes that fee to its configured fee wallets and shows
-the AresRPG name and percentage in the fee breakdown. No LI.FI API key or game-wallet signer is passed to the bridge.
-Solana funding reads use a same-origin, read-only Vercel function. Its `SOLANA_RPC_URL` credential
-stays server-side. The relay restricts methods, origin, request and response sizes, and upstream
-time; provider failures never expose credentials. Successful response bytes retain exact u64
-values. LI.FI broadcasts signed Solana transactions through its separate public write RPC.
-Vite serves the same handler locally; no second wallet-balance state or chain writer exists.
-The first-character welcome embeds the same wallet card and funding controls as the HUD.
-Its mainnet character cost and fee reserve include optional, minute-refreshed LI.FI USD estimates;
-unavailable quotes hide those estimates. Only the canonical SUI amounts and wallet balance gate creation.
+The Google zkLogin wallet remains the only production game identity and gameplay signer. Mainnet
+funding uses one address-first checkout above the existing game windows. The shared external-wallet
+owner supplies its optional source. A Sui source sends native SUI directly through the existing SDK
+transfer executor. EVM and Solana sources request a NEAR Intents 1Click exact-output quote whose
+recipient is the Google wallet, output is native SUI, and refund address is the selected source account.
+Source adapters construct only that deposit transfer, check source balance and network gas, and ask the
+wallet to submit once. EVM chains use canonical EIP-155 definitions; Solana reads use the existing
+same-origin read-only RPC relay. The Solana adapter uses browser-native instruction and transaction codecs without Node globals.
+Wallet providers submit foreign-chain transactions. The relay never
+accepts writes or exposes its server-only RPC credential.
+
+Quotes use zero input slippage and a ten-minute payment deadline. Source network fees remain additional
+and are confirmed by the wallet. The provider owns route availability, minimums and bridge fees; the
+app adds no integrator surcharge. Connecting a source never changes authentication. Privy loads lazily
+when first requested or when restoring a saved foreign-chain source; its public app ID defaults to the
+AresRPG app and can be overridden through `VITE_PRIVY_APP_ID`. An explicit empty override disables
+Privy; Sui and manual funding remain available. This client-only connector needs no Privy app secret.
+Provider discovery publishes only provider/account changes; fresh SDK wrappers cannot replay discovery
+into a render loop.
+
+The checkout shows the copyable SUI destination first, the game balance with USD, and styled wallet/card
+actions: Sui providers (including Slush) and Privy open directly as the shared wallet rows, with card-provider
+links below. A selected source collapses to one row; Change lists authorized accounts and providers again, and
+forgetting a provider's last account revokes that provider. Wallet connection precedes amount entry; there is
+no intermediate picker or method-tab state. The asset rows contain only supported assets with positive observed
+balances, shown to six significant digits. Modal-local snapshots bind to the selected
+source session; loading, empty holdings and failed reads remain distinct, with explicit refresh. Solana
+reads native SOL and legacy SPL holdings in bulk through the configured relay; EVM reads use public RPC
+multicalls without switching the connected wallet. Partial EVM failures retain known holdings and show
+an incomplete-read notice. Execution still rechecks the selected asset balance and source gas. A balance below the pending purchase cost plus a
+0.2 SUI cushion shows that recommended target with USD; sufficient balances show no recommendation.
+Connected sources may deposit any positive amount their observed holding covers. A Sui source lists its native SUI
+balance as its single asset row, and execution rereads that balance before any gas simulation, so an
+unaffordable transfer is refused instead of failing resolution. The initial suggestion covers the shortfall, so an
+empty wallet creating its first character suggests 1.2 SUI. The cushion is neither a mandatory gameplay
+balance nor the SDK gas budget. Marketplace funding includes its canonical buyer total. Existing action
+affordability and simulation remain authoritative.
+
+One modal-local reducer owns quote and submission progress. Input changes invalidate unsigned quotes.
+From signing onward a transfer card replaces the form. 1Click status maps deposit states to `pending` and
+`PROCESSING` to `bridging`; the deposit/bridge/delivery steps advance only on those observations, never
+backward. The quoted estimate drives a countdown and a live-step creep capped at 90%. Confirmed delivery shows
+the delivered amount and closes the modal after five seconds unless the player adds more.
+The reviewed amount stays fixed during payment. An ambiguous submission cannot be sent again from that
+checkout; pending, uncertain and refunded states expose recovery references directly and observe provider status. There is no persistent funding
+attempt journal or automatic gameplay continuation. Closing or reloading ends the modal lifetime;
+players inspect their wallet or provider explorer and explicitly retry their game action. The existing
+SDK's Sui transaction recovery is unchanged. Provider settlement and session balance are separate facts:
+completion requests an ordinary balance refresh, and only the SDK balance read establishes spendability.
+
+Funding has its own navigation overlay, so opening it preserves the underlying character form or
+marketplace selection. It suspends native dialogs while wallet portals are active and restores surviving
+windows afterward. Native dialog lifecycle close events stop at their own React portal boundary, so
+cleanup cannot dismiss a parent funding modal. The same source-wallet controls appear in funding and other wallet-backed routes.
+External card providers and manual SUI deposits remain available in that checkout; testnet exposes only
+the faucet. Optional USD estimates use the 1Click native-SUI catalogue price and never authorize spending.
+The old LI.FI widget, fee, route configuration and price reader are removed. Existing browser-owned LI.FI
+history is not deleted or rewritten.
 
 ### Equipment
 
@@ -832,7 +874,7 @@ teams admit only the named character IDs. Reused empty team slots increment thei
 Admin start freezes complete rosters and shuffles up to 64 teams. Each available match has sixty
 seconds for admission. After thirty minutes, anyone may crank an unfinished match to end it without
 a winner; until that crank executes, combat may complete normally. Existing Fight custody and combat
-handle partial attendance, readiness, forfeits and settlement. A single represented side wins by walkover;
+handle partial attendance, readiness, forfeits and settlement. The placement banner exposes the existing tournament crank after the observed admission deadline, including with an empty opposing side. A single represented side wins by walkover;
 neither side attending produces no winner. Forfeiting the last present teammate concedes the match to
 the opposing registered team, even if that team has not joined. A teammate leaving while others remain
 does not end the match. Unplayed losses receive no consolation placement. An already ended fight retains
@@ -852,7 +894,9 @@ The indexer records completion from the checkpoint that changes a known running 
 later claims and replay never restart that clock. Legacy finished projections without that timestamp
 remain available through the latest-event and claim paths without an invented completion date.
 Frontend actions use the SDK; automatic
-admission and claims retain wallet-scoped attempts. A submitted action is never automatically
+admission and claims retain wallet-scoped attempts. Only one owned seat attempts to open an unlinked match;
+other seats wait for its confirmed fight. An unsigned opening collision waits for that same projection,
+then admission uses the join door. A submitted action is never automatically
 retried after a digest. The tournament panel remains accessible during fights for timeout recovery.
 Feed availability and automatic-entry failures belong to that reducer. Failed reads preserve known
 rows while marking them unavailable; successful writes and current snapshots retire obsolete entry
@@ -861,7 +905,8 @@ Reserved names reuse the existing Character projection lookup; missing names rem
 A known active event replaces the Blast card, with a compact button on touch layouts.
 The desktop card stack uses the viewport's bottom-right corner when its measured bounds clear chat,
 the social dock, action controls and notifications; otherwise it retains the anchor above chat.
-Recent results and outstanding claims retain a separate results card above the event or Blast card, including after collection.
+Recent results and outstanding claims retain a results card above the Blast card, including after collection.
+An open or running tournament hides that card; older prizes remain available through recovery claims.
 Until a relevant event is known, Blast remains the default even while the tournament feed is loading or unavailable.
 Known events remain visible during reconnects; feed readiness gates their actions.
 Both open the same Kolizeum window. Its bracket scrolls independently of the persistent action dock;
@@ -869,7 +914,7 @@ the podium owns contributions and per-character claims. Registration and destruc
 reviewed intents, rechecking current eligibility without replacing the reviewed character or roster revision.
 The tournament reducer retains the latest operation outcome for confirmation dialogs; only certified
 execution establishes confirmation, while indexed rows remain the owner of displayed game state.
-An observed completion opens a participant's podium once, after combat and fight-result dialogs close.
+An observed completion opens a participant's podium once, after combat and the selected character's visible fight-result dialogs close. Background teammate results cannot block it. Known results present without a fresh chain clock or connection; those gates apply only to writes. The podium and collected-reward reveal show the participant's placing, with personal prizes ahead of the full podium.
 Certified successful claims retain an exact, wallet-scoped collection summary. One presentation reveals its
 SUI, KARES and item totals with the shared artwork and audio; failed claims, replayed outcomes and restored
 snapshots never celebrate. Dismissal acknowledges only the displayed receipts, preserving later collections.

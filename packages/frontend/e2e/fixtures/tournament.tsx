@@ -17,6 +17,7 @@ import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
 import type { Locale } from '../../src/i18n/locale.ts'
 import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
 import { action_key } from '../../src/modules/tournament.ts'
+import { FightResultCard } from '../../src/game/fight/FightResultCard.tsx'
 import { TournamentRewards } from '../../src/tournament/TournamentRewards.tsx'
 import { audio_playback_revision } from '../../src/game/audio/audio_registry.ts'
 import '../../src/tailwind.css'
@@ -144,6 +145,37 @@ window.addEventListener(
 )
 Object.assign(window, {
   tournament_fixture: {
+    combat_results: () => {
+      const checkpoint = create_fight({
+        mode: 'local',
+        seed: 17n,
+        setup: {
+          fight_id: 'final-fight',
+          world: 'tournament',
+          board_seed: 17n,
+          mobs: [],
+          players: ['hero', 'teammate', 'enemy'].map((character, index) => ({
+            character,
+            owner: index < 2 ? 'owner' : 'other',
+            team: index < 2 ? 0n : 1n,
+            hp: 55n,
+            source: create_character_source({ name: character, classe: 'senshi', level: 1n }),
+          })),
+        },
+      }).state()
+      const ended = { ...checkpoint, contract: { ...checkpoint.contract, ended: true, winner: 0n } }
+      dispatch_app({ type: 'character/select', character_id: 'hero' })
+      for (const character_id of ['hero', 'teammate']) {
+        dispatch_app({
+          type: 'fight_result/checkpoint',
+          character_id,
+          checkpoint: ended,
+          observed_at_ms: NOW,
+          gas_spent_mist: 0n,
+        })
+        dispatch_app({ type: 'fight_result/settled', character_id, fight: 'final-fight', paid_mist: null })
+      }
+    },
     complete: () => complete?.(),
     publish,
     empty: () => {
@@ -269,6 +301,7 @@ createRoot(document.getElementById('root')!).render(
         <GamePageWindow copy={copy} />
       )}
       {params.has('funding') && <FundingProbe />}
+      <FightResultCard copy={copy} />
       <TournamentRewards />
     </main>
   </LocaleScope>

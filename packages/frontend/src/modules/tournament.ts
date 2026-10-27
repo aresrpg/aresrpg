@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 import type { TournamentSettings } from '@aresrpg/sdk/tournament-admin'
 import { tournament_coin_claims, type TournamentLink, type TournamentRow, type ServerPacket } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession } from '@aresrpg/sdk/auth'
+import { pre_submission_failure, readable_transaction_error } from '@aresrpg/sdk/transaction-error'
 
+import { sui_session } from '../wallet/external_session.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
 import { env } from '../env.ts'
@@ -87,6 +90,10 @@ export const initial_tournament_state = (): TournamentState => ({
 })
 export const tournament_for_fight = (state: AppState, fight: string): TournamentLink | null =>
   state.tournament.links[fight] ?? null
+export const tournament_opened_elsewhere = (error: unknown): boolean =>
+  pre_submission_failure(error) &&
+  /abort code:\s*3204\b[^]*?::tournament::link_fight/.test(readable_transaction_error(error))
+
 export const action_key = (t: TournamentRow, action: TournamentAction): string =>
   `${t.id}:${action.kind}:${'index' in action ? action.index : ''}:${'character' in action ? action.character : ''}:${'team' in action ? action.team : ''}:${'seat' in action ? action.seat : ''}:${'reward' in action ? action.reward : ''}${action.kind === 'enter' ? `:${t.matches[action.index].fight ?? 'opening'}` : ''}`
 
@@ -366,12 +373,13 @@ export const automatic_actions = (
       if (!owned.length) return []
       if (match.phase === 'ended') return [{ id: t.id, action: { kind: 'crank', index } as TournamentAction }]
       if (now >= match.available_ms + Number(CONTRACT_CONSTANTS.placement_force_ms)) return []
-      return owned.flatMap((seat) => {
+      const entries = owned.flatMap((seat) => {
         const character = state.session.characters.find(({ id }) => id === seat.character)
         return character?.custody === 'kiosk' && !match.joined?.includes(seat.character)
           ? [{ id: t.id, action: { kind: 'enter', index, character: seat.character } as TournamentAction }]
           : []
       })
+      return match.fight ? entries : entries.slice(0, 1)
     })
   })
 }
@@ -408,6 +416,11 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         finished(null, collected_tournament_rewards(t, action, result, wallet.address))
       })
       .catch((error: unknown) => {
+        if (action.kind === 'enter' && tournament_opened_elsewhere(error)) {
+          entry_finished(null)
+          finished(null)
+          return
+        }
         finished(error_message(error))
         if (automatic) entry_finished(error_message(error))
         toast.add(error)
@@ -419,7 +432,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       })
   }
   events.on('tournament/admin', ({ action }) => {
-    const { session } = get_state().external_wallet
+    const session = sui_session(get_state().external_wallet.session)
     if (active || !session) return
     active = true
     dispatch({ type: 'tournament/pending', key: 'admin' })
@@ -455,21 +468,20 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     dispatch({ type: 'path/open', pathname: tournament_path(id, 'podium') })
   )
   events.on('STATE_UPDATED', (state) => {
-    if (
-      ![
-        !active,
-        state.session.link_status === 'ready',
-        state.tournament.feed_status === 'loaded',
-        state.session.wallet !== null,
-      ].every(Boolean)
-    )
-      return
     const now = chain_now(state.chain_clock, performance.now())
-    if (now === null) return
-    const { address } = state.session.wallet!
-    const next = automatic_actions(state, now)
-      .map(({ id, action }) => ({ t: state.tournament.rows.find((row) => row.id === id)!, action }))
-      .find(({ t, action }) => !attempts.has(address, action_key(t, action)))
+    const address = state.session.wallet?.address ?? ''
+    const can_write = [
+      !active,
+      state.session.link_status === 'ready',
+      state.tournament.feed_status === 'loaded',
+      state.session.wallet !== null,
+      now !== null,
+    ].every(Boolean)
+    const next = can_write
+      ? automatic_actions(state, now!)
+          .map(({ id, action }) => ({ t: state.tournament.rows.find((row) => row.id === id)!, action }))
+          .find(({ t, action }) => !attempts.has(address, action_key(t, action)))
+      : undefined
     if (next && attempts.remember(address, action_key(next.t, next.action))) run(next.t.id, next.action, true)
     if (!next) {
       const presentation = pending_tournament_presentation(state)

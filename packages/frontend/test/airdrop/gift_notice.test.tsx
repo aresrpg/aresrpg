@@ -16,6 +16,13 @@ const distribution = { ...initial_distribution_state(), notice: { kind: 'receive
 const session = { ...initial_session_state(), giftcards: [card] }
 const noop = () => undefined
 
+test('manual funding does not claim that a funded wallet ran out of SUI', async () => {
+  const copy = await load_app_copy('en')
+  expect(
+    gift_funding_text(copy, initial_distribution_state(), { ...session, sui_balance_mist: 30_040_000_000n })
+  ).toBeUndefined()
+})
+
 test('confirmed redemption retains the reward artwork and inventory confirmation', async () => {
   const copy = await load_app_copy('en')
   const html = renderToStaticMarkup(
@@ -45,7 +52,7 @@ test('gas failure celebrates the held gift and provides funding plus explicit cl
   expect(html).toContain(copy.wallet_add_funds)
   expect(html).toContain('Claim rewards')
   expect(gift_funding_text(copy, failed, session)).toContain('You got 1 × Sui Crate!')
-  expect(gift_funding_text(copy, failed, { ...session, giftcards: [] })).toBe(copy.out_of_sui_body)
+  expect(gift_funding_text(copy, failed, { ...session, giftcards: [] })).toBeUndefined()
 })
 
 test('used cards explain one-time redemption without presenting a new reward', async () => {

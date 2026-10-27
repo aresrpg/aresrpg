@@ -5,31 +5,24 @@ import { expect, test } from 'bun:test'
 
 import { read_sui_usd } from '../../src/funding/useSuiUsd.ts'
 
-// Captured 2026-10-01 from LI.FI GET /v1/token?chain=9270000000000000&token=0x2::sui::SUI.
-// Mainnet native SUI price response; unrelated metadata omitted.
-const captured = {
-  address: '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
-  chainId: 9270000000000000,
-  symbol: 'SUI',
-  decimals: 9,
-  priceUSD: '1.17',
-}
+// Captured 2026-10-25 from https://1click.chaindefuser.com/v0/tokens, native SUI catalogue row.
+const captured = { assetId: 'nep141:sui.omft.near', blockchain: 'sui', symbol: 'SUI', decimals: 9, price: 0.90794 }
 const signal = () => new AbortController().signal
 const respond = (body: unknown, status = 200) =>
   (async () => Response.json(body, { status })) as unknown as typeof fetch
 
 test('the SUI estimate decodes a captured quote from the existing funding provider', async () => {
-  expect(await read_sui_usd(signal(), respond(captured))).toBe(1.17)
+  expect(await read_sui_usd(signal(), respond([captured]))).toBe(0.90794)
 })
 
-test('missing, invalid, and foreign-token quotes never become dollar estimates', async () => {
+test('invalid or foreign asset prices never become dollar estimates', async () => {
   for (const body of [
     null,
     {},
-    { ...captured, chainId: 1 },
-    { ...captured, address: '0x2::other::OTHER' },
-    ...['', '0', '-1', 'NaN', 'Infinity', null, 1.17].map((price_usd) => ({ ...captured, priceUSD: price_usd })),
+    [],
+    [{ ...captured, assetId: 'nep141:eth.omft.near' }],
+    ...[0, -1, '0.9', null].map((price) => [{ ...captured, price }]),
   ])
-    await expect(read_sui_usd(signal(), respond(body))).rejects.toThrow('Invalid SUI price')
-  await expect(read_sui_usd(signal(), respond(captured, 503))).rejects.toThrow('unavailable')
+    await expect(read_sui_usd(signal(), respond(body))).rejects.toThrow()
+  await expect(read_sui_usd(signal(), respond([captured], 503))).rejects.toThrow('unavailable')
 })

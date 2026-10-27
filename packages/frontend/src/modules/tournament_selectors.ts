@@ -451,11 +451,11 @@ export const select_tournament_view = (state: TournamentViewSource, selected: st
       const actions = tournament_claims(t, address)
       return actions.length ? [{ row: t, actions }] : []
     })
+  const visible = rows.some((t) => ['open', 'in_progress'].includes(t.status))
   const results =
     rows
-      .filter((t) => recent_tournament_result(t, now_ms) || tournament_claims(t, address).length > 0)
+      .filter((t) => !visible && (recent_tournament_result(t, now_ms) || tournament_claims(t, address).length > 0))
       .toSorted((a, b) => (b.finished_at_ms ?? 0) - (a.finished_at_ms ?? 0))[0] ?? null
-  const visible = rows.some((t) => ['open', 'in_progress'].includes(t.status))
   return {
     row,
     viewer,

@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { ADD_FUNDS_PAYMENT_METHODS, SUI_FAUCET_URL, add_funds_surface } from '../../src/components/AddFundsModal.tsx'
+import { SUI_FAUCET_URL, add_funds_surface } from '../../src/components/AddFundsModal.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 
 describe('add funds methods', () => {
@@ -13,11 +13,9 @@ describe('add funds methods', () => {
     expect(SUI_FAUCET_URL).toBe('https://faucet.sui.io/')
   })
 
-  test('funding has three choices with an embedded LI.FI bridge', async () => {
+  test('funding uses game balance and explains manual retry', async () => {
     const copy = await load_app_copy('en')
-
-    expect(ADD_FUNDS_PAYMENT_METHODS.map(({ key }) => key)).toEqual(['direct', 'bridge', 'card'])
-    expect(copy.wallet_legacy.method_swap).toBe('Bridge deposit')
-    expect(copy.wallet_legacy.swap_note).toContain('LI.FI')
+    expect(copy.wallet_legacy.funding_available).toBe('Game balance')
+    expect(copy.wallet_legacy.funding_delivered_hint).toContain('retry your game action')
   })
 })
