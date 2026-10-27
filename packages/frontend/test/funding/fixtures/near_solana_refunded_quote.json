@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-10-27T08:09:49.314Z",
+  "signature": "ed25519:5QEgFrwhyU53eAsz9iNcPUKwSwYgGME1orb6MwKT8Gf8pFTKa3K5k9xrcZDhKZXagDRXHpdMzCDekAYKLT4zC7YA",
+  "quoteRequest": {
+    "dry": false,
+    "swapType": "EXACT_OUTPUT",
+    "depositMode": "SIMPLE",
+    "slippageTolerance": 0,
+    "originAsset": "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near",
+    "depositType": "ORIGIN_CHAIN",
+    "destinationAsset": "nep141:sui.omft.near",
+    "amount": "1000000000",
+    "refundTo": "GCo2j8x47bhUVcoQ6f8vTQt2jfYq542JWv6RejGo9whc",
+    "refundType": "ORIGIN_CHAIN",
+    "recipient": "0x3d1342fb7de99c69ce821183bcfc5b6374d81453bf5ca9bf7e383e75b3722983",
+    "recipientType": "DESTINATION_CHAIN",
+    "deadline": "2026-10-27T08:19:48.799Z",
+    "appFees": [
+      {
+        "limitOrderId": null,
+        "recipient": "5880ad2b362620fadf759cbceb1cd5737ce8c6ed7fb8e9942881e6731f9247dd",
+        "fee": 20
+      }
+    ],
+    "virtualChainRecipient": null,
+    "virtualChainRefundRecipient": null,
+    "referral": null,
+    "confidentiality": "public"
+  },
+  "quote": {
+    "amountIn": "915736",
+    "amountInFormatted": "0.915736",
+    "amountInUsd": "0.915118793936",
+    "minAmountIn": "915736",
+    "amountOut": "1000000000",
+    "amountOutFormatted": "1.0",
+    "amountOutUsd": "0.910540000000",
+    "minAmountOut": "1000000000",
+    "timeWhenInactive": "2026-10-30T08:19:48.799Z",
+    "depositAddress": "9mCnWU6jensiLcGeUrQnUDhCkVPj9MjQXnQS4ZtXFNc9",
+    "deadline": "2026-10-30T08:19:48.799Z",
+    "timeEstimate": 35,
+    "refundFee": "10007",
+    "withdrawFee": "5000000"
+  }
+}

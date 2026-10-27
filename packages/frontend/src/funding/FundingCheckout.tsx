@@ -15,6 +15,7 @@ import { useCopy } from '../components/useCopy.ts'
 import { truncate_address } from '../components/SuiTransferResult.tsx'
 
 import type { FundingQuote } from './near.ts'
+import { FUNDING_SLIPPAGE_BPS } from './near.ts'
 import { useFundingCheckout } from './useFundingCheckout.ts'
 import {
   TRANSFER_STEPS,
@@ -177,7 +178,9 @@ const QuoteReview = ({
         </div>
       )}
     </dl>
-    <p className="text-[11px] leading-relaxed text-muted">{text('funding_source_fee')}</p>
+    <p className="text-[11px] leading-relaxed text-muted">
+      {text('funding_source_fee', { slippage: FUNDING_SLIPPAGE_BPS / 100 })}
+    </p>
   </div>
 )
 

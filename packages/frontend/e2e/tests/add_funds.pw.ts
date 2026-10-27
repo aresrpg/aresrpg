@@ -136,8 +136,10 @@ test('cross-chain quote fixes native SUI and the Google recipient under producti
     recipient,
     destinationAsset: 'nep141:sui.omft.near',
     amount: '1200000000',
-    slippageTolerance: 0,
+    slippageTolerance: 100,
   })
+  await expect(page.getByText('Maximum swap payment')).toBeVisible()
+  await expect(page.getByText(/Includes a 1% price buffer/)).toBeVisible()
   await page.getByRole('button', { name: 'Pay 1.3 USDC' }).click()
   await expect(page.getByRole('status')).toContainText('1.2 SUI delivered')
   await expect(page.getByRole('progressbar')).not.toHaveAttribute('aria-valuetext')

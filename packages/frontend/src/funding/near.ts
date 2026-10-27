@@ -6,6 +6,7 @@ import type { FundingAsset } from '../wallet/external_session.ts'
 const API = 'https://1click.chaindefuser.com/v0'
 export const NATIVE_SUI_ASSET = 'nep141:sui.omft.near'
 export const FUNDING_CUSHION_MIST = 200_000_000n
+export const FUNDING_SLIPPAGE_BPS = 100
 const PAYMENT_DEADLINE_MS = 10 * 60 * 1000
 
 export const funding_shortfall = (cost: bigint, balance: bigint): bigint => {
@@ -82,6 +83,7 @@ export const decode_quote = (value: unknown, expected: QuoteRequest): FundingQuo
     recipientType: 'DESTINATION_CHAIN',
     refundType: 'ORIGIN_CHAIN',
     swapType: 'EXACT_OUTPUT',
+    slippageTolerance: FUNDING_SLIPPAGE_BPS,
   }
   const matches = Object.entries(expected_intent).every(([key, value]) => intent[key] === value)
   const amounts =
@@ -89,7 +91,7 @@ export const decode_quote = (value: unknown, expected: QuoteRequest): FundingQuo
     units(quoted.minAmountOut) >= expected.amount &&
     units(quoted.amountIn) > 0n
   if (!matches || !amounts) throw new Error('funding_invalid_response')
-  const deadline = Date.parse(text(quoted.deadline ?? intent.deadline))
+  const deadline = Math.min(Date.parse(text(intent.deadline)), Date.parse(text(quoted.deadline ?? intent.deadline)))
   if (!Number.isFinite(deadline)) throw new Error('funding_invalid_response')
   return {
     source: expected.source,
@@ -109,7 +111,8 @@ export const funding_quote = async (input: QuoteRequest, signal: Readonly<AbortS
     await request('quote', signal, {
       dry: false,
       swapType: 'EXACT_OUTPUT',
-      slippageTolerance: 0,
+      // EXACT_OUTPUT amountIn already includes this allowance; never add a second buffer before sending.
+      slippageTolerance: FUNDING_SLIPPAGE_BPS,
       originAsset: input.source.asset_id,
       destinationAsset: NATIVE_SUI_ASSET,
       amount: input.amount.toString(),

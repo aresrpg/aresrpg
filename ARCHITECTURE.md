@@ -630,7 +630,10 @@ same-origin read-only RPC relay. The Solana adapter uses browser-native instruct
 Wallet providers submit foreign-chain transactions. The relay never
 accepts writes or exposes its server-only RPC credential.
 
-Quotes use zero input slippage and a ten-minute payment deadline. Source network fees remain additional
+Quotes use 1% input slippage with exact SUI output and a ten-minute payment deadline. The provider’s
+`amountIn` includes the allowance; the checkout displays that maximum and sends it once without adding
+another buffer. Unused input is refunded, subject to provider fees. The echoed slippage must match
+the requested policy, and a longer provider address lifetime cannot extend the payment deadline. Source network fees remain additional
 and are confirmed by the wallet. The provider owns route availability, minimums and bridge fees; the
 app adds no integrator surcharge. Connecting a source never changes authentication. Privy loads lazily
 when first requested or when restoring a saved foreign-chain source; its public app ID defaults to the
