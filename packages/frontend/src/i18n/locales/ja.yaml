@@ -199,27 +199,30 @@ trade_panel:
   decline: 拒否
   cancel_request: 招待を取り消す
   trades: 取引
-  your_offer: あなたの提示
-  their_offer: 相手の提示
   accepted: 承認済み
   reviewing: 確認中
+  you_give: 'あなたが渡す'
+  they_give: '{{name}}が渡す'
+  editing: '編集中'
+  not_accepted: '未承認'
+  cancelled: 'キャンセル済み'
+  amount_owned: '所持数 {{count}}'
+  amount_half: '半分'
+  amount_all: 'すべて'
+  amount_offer: '{{count}}個を出す'
+  confirm_resets: '確定すると両者の承認がリセットされます。'
+  waiting_for: '{{name}}を待っています'
   remove_item: 提示から外す
-  drop_items: ここにアイテムをドロップ
-  empty_offer: 提示アイテムなし
   offer_item_unavailable: 追加予定のアイテムが利用できなくなりました。提示内容を確認して、もう一度お試しください。
   sui: 提示SUI
   inventory: 所持品
-  drag_hint: ドラッグまたはダブルクリックで追加
   amount_title: 数量を選択
-  amount_for: '{{name}} の数量'
   amount_add: オファーに追加
-  amount_cancel: キャンセル
   confirm_changes: 変更を確定
   discard_changes: 変更を破棄
   empty_inventory: 取引可能な資産なし
   accept: 提示を承認
   cancel: 取引を中止
-  accept_notice: 承認すると最終取引を許可します。受取資産{{count}}個のロイヤリティは{{amount}} SUIとガスです。
   settle: 取引を完了
   recover: 提示を回収
   settle_notice: 残りの資産とSUIを1回の取引で受け取ります。

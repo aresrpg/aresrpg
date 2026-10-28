@@ -33,6 +33,7 @@ const SILENT_PACKETS: ReadonlySet<string> = new Set([
 ])
 
 const log_packet = (direction: keyof typeof PACKET_COLORS, packet: Readonly<ClientPacket> | object): void => {
+  if (!import.meta.env.DEV) return
   if ('type' in packet && typeof packet.type === 'string' && SILENT_PACKETS.has(packet.type)) return
   const visible =
     'type' in packet && packet.type === 'packet/signature_response'

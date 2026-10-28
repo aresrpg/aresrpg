@@ -199,27 +199,30 @@ trade_panel:
   decline: Decline
   cancel_request: Cancel request
   trades: Trades
-  your_offer: Your offer
-  their_offer: Their offer
   accepted: Accepted
   reviewing: Reviewing
+  you_give: 'You give'
+  they_give: '{{name}} gives'
+  editing: 'Editing'
+  not_accepted: 'Not accepted'
+  cancelled: 'Cancelled'
+  amount_owned: '{{count}} owned'
+  amount_half: 'Half'
+  amount_all: 'All'
+  amount_offer: 'Offer {{count}}'
+  confirm_resets: 'Confirming resets both acceptances.'
+  waiting_for: 'Waiting for {{name}}'
   remove_item: Remove from offer
-  drop_items: Drop items here
-  empty_offer: No items offered
   offer_item_unavailable: One staged item is no longer available. Review your offer and try again.
   sui: Offered SUI
   inventory: Your inventory
-  drag_hint: Drag or double-click to add
   amount_title: Choose amount
-  amount_for: 'Amount of {{name}}'
   amount_add: Add to offer
-  amount_cancel: Cancel
   confirm_changes: Confirm changes
   discard_changes: Discard changes
   empty_inventory: No tradable assets
   accept: Accept offer
   cancel: Cancel trade
-  accept_notice: Accepting authorizes one settlement transaction. {{count}} incoming assets cost {{amount}} SUI in royalties, plus gas.
   settle: Complete exchange
   recover: Recover offer
   settle_notice: Receive every remaining asset and SUI in one wallet transaction.

@@ -199,27 +199,30 @@ trade_panel:
   decline: Recusar
   cancel_request: Cancelar solicitação
   trades: Trocas
-  your_offer: Sua oferta
-  their_offer: Oferta recebida
   accepted: Aceito
   reviewing: Em revisão
+  you_give: 'Você dá'
+  they_give: '{{name}} dá'
+  editing: 'Editando'
+  not_accepted: 'Não aceito'
+  cancelled: 'Cancelado'
+  amount_owned: '{{count}} em posse'
+  amount_half: 'Metade'
+  amount_all: 'Tudo'
+  amount_offer: 'Oferecer {{count}}'
+  confirm_resets: 'Confirmar redefine as duas aceitações.'
+  waiting_for: 'Aguardando {{name}}'
   remove_item: Remover da oferta
-  drop_items: Solte os itens aqui
-  empty_offer: Nenhum item oferecido
   offer_item_unavailable: Um item preparado não está mais disponível. Revise sua oferta e tente novamente.
   sui: SUI oferecido
   inventory: Seu inventário
-  drag_hint: Arraste ou clique duas vezes para adicionar
   amount_title: Escolher quantidade
-  amount_for: Quantidade de {{name}}
   amount_add: Adicionar à oferta
-  amount_cancel: Cancelar
   confirm_changes: Confirmar alterações
   discard_changes: Descartar alterações
   empty_inventory: Nenhum ativo negociável
   accept: Aceitar oferta
   cancel: Cancelar troca
-  accept_notice: Aceitar autoriza uma transação de liquidação. Os {{count}} ativos recebidos custam {{amount}} SUI em royalties, além do gas.
   settle: Concluir troca
   recover: Recuperar oferta
   settle_notice: Receba todos os ativos e SUI restantes em uma única transação da carteira.

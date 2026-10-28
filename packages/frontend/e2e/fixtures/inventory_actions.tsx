@@ -12,7 +12,7 @@ import { CrushResultModal } from '../../src/characters/CrushResultModal.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
-import { dispatch_app, observe_app, read_app_state } from '../../src/store.ts'
+import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
 import '../../src/characters/characters.css'
 import '../../src/marketplace/marketplace.css'
@@ -36,6 +36,17 @@ const items: ItemRow[] = [1, 2, 3].map((index) => ({
   damages: [{ element: 'fire', from: index * 3, to: index * 7, damage_type: 'damage' }],
   ...(owned_pet ? { pet_power: 30, pet_last_day: 20000 } : {}),
 }))
+const trading = new URLSearchParams(location.search).has('trade')
+const resource = content_catalog.items.find(({ category }) => category === 'resource')!
+const stack: ItemRow = {
+  id: 'stack-1',
+  name: 'Test Wool',
+  item_type: resource.item_type,
+  category: resource.category,
+  level: 1,
+  amount: 20,
+  kiosk: 'kiosk',
+}
 const character: CharacterRow = {
   id: 'character',
   name: 'Fixture',
@@ -92,11 +103,28 @@ dispatch_app({
         return { digest: 'fixture', claim_id: 'claim' }
       },
     },
+    trade: (row: { offer_revision: number }) => ({
+      commit_offer: async (offer: {
+        additions: readonly { item: { id: string }; amount: number }[]
+        sui: bigint
+        kares: bigint
+      }) => {
+        document.body.dataset.tradeCommit = JSON.stringify({
+          additions: offer.additions.map(({ item, amount }) => [item.id, amount]),
+          sui: String(offer.sui),
+          kares: String(offer.kares),
+        })
+        return { offer_revision: row.offer_revision + 1 }
+      },
+    }),
   } as never,
 })
 dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character] } })
 dispatch_app({ type: 'character/select', character_id: character.id })
-dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
+dispatch_app({
+  type: 'server/packet',
+  packet: { type: 'packet/inventory', items: trading ? [...items, stack] : items },
+})
 window.addEventListener('fixture-item-departs', () =>
   dispatch_app({
     type: 'server/packet',
@@ -116,6 +144,7 @@ window.addEventListener('fixture-item-stats', () =>
 )
 const sell = new URLSearchParams(location.search).has('sell')
 if (sell) observe_app(['marketplace'])
+if (trading) observe_app(['trade'])
 const trade = {
   id: 'trade',
   a: 'owner',
@@ -131,8 +160,22 @@ const trade = {
   caps_a: [{ ...items[0]!, object: items[0]!.id }],
   caps_b: [{ ...items[0]!, object: 'other-item' }],
 }
-if (new URLSearchParams(location.search).has('trade'))
-  dispatch_app({ type: 'server/packet', packet: { type: 'packet/trades', trades: [trade] } })
+if (trading) dispatch_app({ type: 'server/packet', packet: { type: 'packet/trades', trades: [trade] } })
+window.addEventListener('fixture-trade-currency-confirmed', () => {
+  const row = read_app_state().trade.rows.find(({ id }) => id === trade.id)!
+  const { sui, kares } = JSON.parse(document.body.dataset.tradeCommit!) as { sui: string; kares: string }
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/trades',
+      trades: [{ ...row, offer_revision: row.offer_revision + 1, sui_a: sui, kares_a: kares }],
+    },
+  })
+})
+const TradeFixture = () => {
+  const row = useAppStore((state) => state.trade.rows.find(({ id }) => id === trade.id))
+  return row ? <TradeDialog copy={copy} active={row} address="owner" /> : null
+}
 if (new URLSearchParams(location.search).has('listed'))
   dispatch_app({
     type: 'server/packet',
@@ -149,8 +192,8 @@ createRoot(document.getElementById('root')!).render(
   >
     {CharacterWindow ? (
       <CharacterWindow tab="equipment" character={character} copy={copy} close={() => undefined} />
-    ) : new URLSearchParams(location.search).has('trade') ? (
-      <TradeDialog copy={copy} active={trade} address="owner" />
+    ) : trading ? (
+      <TradeFixture />
     ) : sell ? (
       <SellPanel text={copy_text(copy.marketplace_page)} />
     ) : (

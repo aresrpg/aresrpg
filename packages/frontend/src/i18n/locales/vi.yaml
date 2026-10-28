@@ -202,27 +202,30 @@ trade_panel:
   decline: Từ chối
   cancel_request: Hủy yêu cầu
   trades: Trao đổi
-  your_offer: Đề nghị của bạn
-  their_offer: Đề nghị của họ
   accepted: Đã chấp nhận
   reviewing: Đang xem xét
+  you_give: 'Bạn đưa'
+  they_give: '{{name}} đưa'
+  editing: 'Đang sửa'
+  not_accepted: 'Chưa chấp nhận'
+  cancelled: 'Đã hủy'
+  amount_owned: 'Đang có {{count}}'
+  amount_half: 'Một nửa'
+  amount_all: 'Tất cả'
+  amount_offer: 'Đưa ra {{count}}'
+  confirm_resets: 'Xác nhận sẽ đặt lại chấp nhận của cả hai bên.'
+  waiting_for: 'Đang chờ {{name}}'
   remove_item: Bỏ khỏi đề nghị
-  drop_items: Thả vật phẩm vào đây
-  empty_offer: Chưa đề nghị vật phẩm
   offer_item_unavailable: Một vật phẩm đã chọn không còn khả dụng. Kiểm tra đề nghị rồi thử lại.
   sui: SUI đề nghị
   inventory: Túi đồ của bạn
-  drag_hint: Kéo hoặc nhấp đúp để thêm
   amount_title: Chọn số lượng
-  amount_for: Số lượng {{name}}
   amount_add: Thêm vào đề nghị
-  amount_cancel: Hủy
   confirm_changes: Xác nhận thay đổi
   discard_changes: Bỏ thay đổi
   empty_inventory: Không có tài sản trao đổi được
   accept: Chấp nhận đề nghị
   cancel: Hủy trao đổi
-  accept_notice: Chấp nhận sẽ cho phép một giao dịch thanh toán. {{count}} tài sản nhận vào chịu {{amount}} SUI tiền bản quyền, cộng gas.
   settle: Hoàn tất trao đổi
   recover: Thu hồi đề nghị
   settle_notice: Nhận toàn bộ tài sản và SUI còn lại trong một giao dịch ví.

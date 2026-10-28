@@ -82,3 +82,106 @@ test('equipped slots show the same local item card and retain double-click unequ
   await expect(slot).not.toHaveClass(/is-filled/)
   await expect(tooltip).toHaveCount(0)
 })
+
+test('a stack picked in the trade inventory reaches the confirmed offer at the chosen amount', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?trade')
+  const dialog = page.getByRole('dialog', { name: 'Player trade' })
+  const own = dialog.locator('.trade-offer[data-own]')
+  await expect(own.getByRole('button', { name: 'Test Hat 1', exact: true })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Accept offer', exact: true })).toBeEnabled()
+  await expect(dialog).not.toContainText(/gas|royalt/i)
+  await dialog.getByRole('button', { name: /^Resources/ }).click()
+  await dialog.getByRole('button', { name: 'Add to offer Test Wool', exact: true }).click()
+  const picker = dialog.getByRole('form', { name: 'Choose amount' })
+  await expect(picker.getByRole('spinbutton', { name: 'Choose amount' })).toHaveValue('10')
+  await picker.getByRole('button', { name: '1', exact: true }).click()
+  await picker.getByRole('spinbutton', { name: 'Choose amount' }).fill('7')
+  await picker.getByRole('button', { name: 'Offer 7', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await expect(own.getByRole('button', { name: 'Test Wool', exact: true })).toContainText('×7')
+  await expect(own.locator('.trade-status')).toHaveText('Editing')
+  await expect(dialog.getByRole('button', { name: 'Accept offer', exact: true })).toHaveCount(0)
+  await expect(dialog).toContainText('Confirming resets both acceptances.')
+  await dialog.getByRole('button', { name: 'Confirm changes', exact: true }).click()
+  await expect(page.locator('body')).toHaveAttribute(
+    'data-trade-commit',
+    JSON.stringify({ additions: [['stack-1', 7]], sui: '0', kares: '0' })
+  )
+})
+
+test('discarding a trade draft restores the confirmed offer and the accept action', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?trade')
+  const dialog = page.getByRole('dialog', { name: 'Player trade' })
+  const own = dialog.locator('.trade-offer[data-own]')
+  await dialog.getByRole('button', { name: 'Add to offer Test Hat 2', exact: true }).click()
+  await own.getByRole('textbox', { name: 'Offered SUI' }).fill('1.5')
+  await expect(own.getByRole('button', { name: 'Test Hat 2', exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Discard changes', exact: true }).click()
+  await expect(own.getByRole('button', { name: 'Test Hat 2', exact: true })).toHaveCount(0)
+  await expect(own.getByRole('textbox', { name: 'Offered SUI' })).toHaveValue('0')
+  await expect(own.locator('.trade-status')).toHaveText('Not accepted')
+  await expect(dialog.getByRole('button', { name: 'Accept offer', exact: true })).toBeEnabled()
+  await expect(page.locator('body')).not.toHaveAttribute('data-trade-commit')
+})
+
+test('a pending trade confirmation locks the stack picker until its projection arrives', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?trade')
+  const dialog = page.getByRole('dialog', { name: 'Player trade' })
+  const own = dialog.locator('.trade-offer[data-own]')
+  await dialog.getByRole('button', { name: /^Resources/ }).click()
+  await dialog.getByRole('button', { name: 'Add to offer Test Wool', exact: true }).click()
+  const picker = dialog.getByRole('form', { name: 'Choose amount' })
+  const amount = picker.getByRole('spinbutton', { name: 'Choose amount' })
+  await amount.fill('7')
+  await own.getByRole('textbox', { name: 'Offered SUI' }).fill('1')
+  await dialog.getByRole('button', { name: 'Confirm changes', exact: true }).click()
+  await expect(page.locator('body')).toHaveAttribute(
+    'data-trade-commit',
+    JSON.stringify({ additions: [], sui: '1000000000', kares: '0' })
+  )
+  await expect(amount).toBeDisabled()
+  await expect(picker.locator('input[type="range"]')).toBeDisabled()
+  await expect(picker.getByRole('button', { name: 'All', exact: true })).toBeDisabled()
+  await expect(picker.getByRole('button', { name: 'Offer 7', exact: true })).toBeDisabled()
+  await picker.evaluate((form: HTMLFormElement) => form.requestSubmit())
+  await expect(own.getByRole('button', { name: 'Test Wool', exact: true })).toHaveCount(0)
+  await page.evaluate(() => window.dispatchEvent(new Event('fixture-trade-currency-confirmed')))
+  await expect(amount).toBeEnabled()
+  await expect(amount).toHaveValue('7')
+  await picker.getByRole('button', { name: 'Offer 7', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Confirm changes', exact: true }).click()
+  await expect(page.locator('body')).toHaveAttribute(
+    'data-trade-commit',
+    JSON.stringify({ additions: [['stack-1', 7]], sui: '1000000000', kares: '0' })
+  )
+})
+
+for (const width of [844, 667])
+  test(`trade controls remain usable on a ${width}px landscape phone`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 375 })
+    await page.goto('/e2e/fixtures/inventory_actions.html?trade')
+    const dialog = page.getByRole('dialog', { name: 'Player trade' })
+    const window = dialog.locator('.aui-trade-window')
+    await expect(window).toBeVisible()
+    const box = (await window.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.y).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(width)
+    expect(box.y + box.height).toBeLessThanOrEqual(375)
+    const own = dialog.locator('.trade-offer[data-own]')
+    const own_box = (await own.boundingBox())!
+    for (const name of ['Offered SUI', 'KARES offered']) {
+      const input = own.getByRole('textbox', { name })
+      const input_box = (await input.boundingBox())!
+      expect(input_box.x + input_box.width).toBeLessThanOrEqual(own_box.x + own_box.width)
+      await input.click()
+      await expect(input).toBeFocused()
+    }
+    await expect(dialog.getByRole('button', { name: 'Accept offer', exact: true })).toBeInViewport()
+    await expect(dialog.locator('.trade-offer[data-own] .trade-slot:visible')).toHaveCount(24)
+    await dialog.getByRole('button', { name: /^Resources/ }).click()
+    await dialog.getByRole('button', { name: 'Add to offer Test Wool', exact: true }).click()
+    const offer = (await dialog.getByRole('button', { name: 'Offer 10', exact: true }).boundingBox())!
+    const panel = (await dialog.locator('.trade-inventory').boundingBox())!
+    expect(offer.y + offer.height).toBeLessThanOrEqual(panel.y + panel.height)
+  })

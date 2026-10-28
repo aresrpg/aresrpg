@@ -202,27 +202,30 @@ trade_panel:
   decline: 거절
   cancel_request: 요청 취소
   trades: 거래
-  your_offer: 내 제안
-  their_offer: 상대 제안
   accepted: 수락됨
   reviewing: 검토 중
+  you_give: '내가 주는 것'
+  they_give: '{{name}}님이 주는 것'
+  editing: '수정 중'
+  not_accepted: '미수락'
+  cancelled: '취소됨'
+  amount_owned: '{{count}}개 보유'
+  amount_half: '절반'
+  amount_all: '전부'
+  amount_offer: '{{count}}개 제시'
+  confirm_resets: '확정하면 양쪽 수락이 초기화됩니다.'
+  waiting_for: '{{name}}님을 기다리는 중'
   remove_item: 제안에서 제거
-  drop_items: 아이템을 여기에 놓으세요
-  empty_offer: 제시한 아이템이 없습니다
   offer_item_unavailable: 선택한 아이템 중 하나를 더 이상 사용할 수 없습니다. 제안을 확인한 뒤 다시 시도하세요.
   sui: 제시한 SUI
   inventory: 내 가방
-  drag_hint: 드래그하거나 두 번 클릭해 추가
   amount_title: 수량 선택
-  amount_for: '{{name}} 수량'
   amount_add: 제안에 추가
-  amount_cancel: 취소
   confirm_changes: 변경 확인
   discard_changes: 변경 취소
   empty_inventory: 거래할 수 있는 자산이 없습니다
   accept: 제안 수락
   cancel: 거래 취소
-  accept_notice: 수락하면 정산 거래 한 건을 승인합니다. 받는 자산 {{count}}개의 로열티는 {{amount}} SUI이며 가스비가 추가됩니다.
   settle: 교환 완료
   recover: 제안 회수
   settle_notice: 지갑 거래 한 번으로 남은 자산과 SUI를 모두 받습니다.

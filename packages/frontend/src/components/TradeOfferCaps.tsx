@@ -16,6 +16,26 @@ import { trade_cap_action } from './trade_view.ts'
 
 type TradeCapCellProps = Readonly<{ cap: TradeCapRow; remove?: () => void; remove_label: string }>
 
+/** Every offer shows this many slots, so an empty side still reads as a place to fill; phone CSS keeps 24. */
+const OFFER_SLOTS = 33
+
+export const TradeSlotFace = ({
+  item_type,
+  name,
+  level,
+  amount,
+}: Readonly<{ item_type: string; name: string; level: number; amount: number }>) => (
+  <>
+    {item_icon(item_type) ? (
+      <img alt="" draggable={false} src={item_icon(item_type)!} />
+    ) : (
+      <span>{name.slice(0, 1).toUpperCase()}</span>
+    )}
+    <i>{level}</i>
+    {amount > 1 && <small>×{amount}</small>}
+  </>
+)
+
 const TradeCapCellView = ({
   cap,
   detail,
@@ -31,24 +51,18 @@ const TradeCapCellView = ({
     mouse_enter?: MouseEventHandler<HTMLDivElement>
     mouse_leave?: MouseEventHandler<HTMLDivElement>
   }>) => (
-  <div className="trade-cap" onMouseEnter={mouse_enter} onMouseLeave={mouse_leave} title={cap.name}>
+  <div className="trade-slot" onMouseEnter={mouse_enter} onMouseLeave={mouse_leave} title={cap.name}>
     <button
-      className="trade-cap-inspect"
+      className="trade-slot-inspect"
       type="button"
       aria-label={cap.name}
       onClick={(event) => inspect?.(event.currentTarget)}
     >
-      {item_icon(cap.item_type) ? (
-        <img alt="" draggable={false} src={item_icon(cap.item_type)!} />
-      ) : (
-        <span>{cap.name.slice(0, 1).toUpperCase()}</span>
-      )}
+      <TradeSlotFace amount={cap.amount} item_type={cap.item_type} level={cap.level} name={cap.name} />
     </button>
-    <span>{cap.name}</span>
-    {cap.amount > 1 && <small>×{cap.amount}</small>}
     {remove && (
-      <button aria-label={remove_label} onClick={remove} type="button">
-        <X size={11} />
+      <button aria-label={remove_label} className="trade-slot-remove" onClick={remove} type="button">
+        <X size={10} strokeWidth={3} />
       </button>
     )}
     {detail}
@@ -168,7 +182,9 @@ export const OfferCaps = ({
           remove_label={text('remove_item')}
         />
       ))}
-      {caps.length === 0 && <p>{own ? text('drop_items') : text('empty_offer')}</p>}
+      {Array.from({ length: Math.max(0, OFFER_SLOTS - caps.length) }, (_, index) => (
+        <span aria-hidden="true" className="trade-slot is-empty" key={index} />
+      ))}
     </div>
   )
 }

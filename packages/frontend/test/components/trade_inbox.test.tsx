@@ -15,8 +15,10 @@ import {
 import {
   stage_trade_addition,
   stage_trade_offer_addition,
+  trade_amount_presets,
   trade_offer_draft_key,
   trade_draft_inventory,
+  trade_side_status,
 } from '../../src/components/trade_view.ts'
 
 const cap = {
@@ -64,6 +66,39 @@ test('the opponent offer can be inspected but never withdrawn in any phase', () 
     <OfferCaps caps={[cap]} own pending={false} text={text} trade={trade('negotiating')} />
   )
   expect(own).toContain(`aria-label="${text('remove_item')}"`)
+})
+
+test('an offer always shows its slots, filled first, without an empty-state sentence', () => {
+  const markup = renderToStaticMarkup(
+    <OfferCaps caps={[cap]} own pending={false} text={text} trade={trade('negotiating')} />
+  )
+  expect(markup.match(/trade-slot is-empty/g)).toHaveLength(32)
+  expect(markup.indexOf(`aria-label="${cap.name}"`)).toBeLessThan(markup.indexOf('is-empty'))
+  expect(markup).toContain('×10')
+})
+
+test('side status follows the escrow row; only the own draft marks editing', () => {
+  const row = trade('negotiating')
+  expect(trade_side_status(row, 'a', true, false)).toBe('not_accepted')
+  expect(trade_side_status(row, 'b', false, false)).toBe('reviewing')
+  expect(trade_side_status({ ...row, accept_b: true }, 'b', false, true)).toBe('accepted')
+  expect(trade_side_status({ ...row, accept_a: true }, 'a', true, true)).toBe('editing')
+  expect(trade_side_status(trade('settling'), 'b', false, false)).toBe('accepted')
+  expect(trade_side_status(trade('cancelled'), 'a', true, true)).toBe('cancelled')
+})
+
+test('amount presets stay ascending and never repeat an amount', () => {
+  expect(trade_amount_presets(98)).toEqual([
+    { amount: 1, label: null },
+    { amount: 10, label: null },
+    { amount: 49, label: 'amount_half' },
+    { amount: 98, label: 'amount_all' },
+  ])
+  expect(trade_amount_presets(12).map(({ amount }) => amount)).toEqual([1, 6, 10, 12])
+  expect(trade_amount_presets(2)).toEqual([
+    { amount: 1, label: 'amount_half' },
+    { amount: 2, label: 'amount_all' },
+  ])
 })
 
 test('negotiations stay visible while drained terminal rows close', () => {

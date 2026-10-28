@@ -9,6 +9,7 @@ import { Search, Store } from 'lucide-react'
 import { ItemDetailContext } from '../components/ItemDetailContext.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { ItemSnapshotTooltip, useItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
+import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 import { Text } from '../i18n/Text.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
@@ -266,7 +267,12 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                                 level={item.level}
                                 name={item.name}
                                 stats={item.stats}
-                              />
+                              >
+                                <ConsumableEffectSection
+                                  consumable={item.consumable}
+                                  text={(key, values) => ui(`encyclopedia_page.${key}`, values)}
+                                />
+                              </ItemDetailView>
                             </div>
                             <MarketCapitalization item_type={item.item_type} text={text} />
                           </div>

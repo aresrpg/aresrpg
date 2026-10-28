@@ -10,6 +10,21 @@ import {
   is_terminal_auth_close,
 } from '../src/server_link.ts'
 
+for (const development of [false, true])
+  test(`${development ? 'development' : 'production'} build keeps packet tracing development-only`, async () => {
+    const result = await Bun.build({
+      entrypoints: [new URL('../src/server_link.ts', import.meta.url).pathname],
+      target: 'browser',
+      define: { 'import.meta.env.DEV': String(development) },
+      minify: true,
+    })
+    expect(result.success).toBeTrue()
+    const code = await result.outputs[0]!.text()
+    expect(code.includes('%c WS')).toBe(development)
+    expect(code).toContain('Malformed server frame ignored.')
+    expect(code).toContain('Server connection failed; retrying.')
+  })
+
 describe('server authentication link', () => {
   test('signs the server challenge on the socket that issued it', async () => {
     const response = await create_login_response(

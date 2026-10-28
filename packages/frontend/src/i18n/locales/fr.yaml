@@ -198,28 +198,31 @@ trade_panel:
   decline: Refuser
   cancel_request: Annuler la demande
   trades: Échanges
-  your_offer: Votre offre
-  their_offer: Leur offre
   accepted: Accepté
   reviewing: En révision
+  you_give: 'Vous donnez'
+  they_give: '{{name}} donne'
+  editing: 'Modification'
+  not_accepted: 'Non accepté'
+  cancelled: 'Annulé'
+  amount_owned: '{{count}} possédés'
+  amount_half: 'Moitié'
+  amount_all: 'Tout'
+  amount_offer: 'Proposer {{count}}'
+  confirm_resets: 'Confirmer annule les deux acceptations.'
+  waiting_for: 'En attente de {{name}}'
   remove_item: Retirer de l'offre
-  drop_items: Déposez les objets ici
-  empty_offer: Aucun objet proposé
   offer_item_unavailable: Un objet préparé n’est plus disponible. Vérifiez votre offre et réessayez.
   sui: SUI
   kares: 'KARES proposés'
   inventory: Votre inventaire
-  drag_hint: Glissez ou double-cliquez pour ajouter
   amount_title: Choisir la quantité
-  amount_for: 'Quantité de {{name}}'
   amount_add: Ajouter à l’offre
-  amount_cancel: Annuler
   confirm_changes: Confirmer les changements
   discard_changes: Annuler les changements
   empty_inventory: Aucun bien échangeable
   accept: Accepter l'offre
   cancel: Annuler l'échange
-  accept_notice: Accepter autorise une transaction finale. {{count}} biens entrants coûtent {{amount}} SUI de redevances, plus le gaz.
   settle: Terminer l'échange
   recover: Récupérer l'offre
   settle_notice: Recevez tous les biens et SUI restants en une transaction.

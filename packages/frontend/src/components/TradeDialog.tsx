@@ -3,154 +3,128 @@
 
 import { item_is_stackable } from '@aresrpg/immutable'
 import type { ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
-import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
 import { trade_incoming, trade_own_offer, trade_offer_has_value } from '@aresrpg/sdk/trade'
-import { Check, Handshake, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, Handshake } from 'lucide-react'
+import { useEffect, useState, type DragEvent } from 'react'
 import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
 
-import { useNumbers } from '../i18n/useNumbers.ts'
-import { item_icon } from '../content/assets.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, trade_stack_targets } from '../inventory_stacks.ts'
-import { SuiUnit } from '../marketplace/marketplace_model.tsx'
 import { visible_trade_rows } from '../modules/trade.ts'
 import { parse_amount } from '../kares/model.ts'
 
 import { useTradeData, useTradeDispatch } from './TradeSource.tsx'
 import { TradeInventory } from './TradeInventory.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
-import { ModalFrame } from './ModalFrame.tsx'
+import { SuiLogo } from './SuiLogo.tsx'
 import { OfferCaps } from './TradeOfferCaps.tsx'
 import {
   input_sui,
   stage_trade_offer_addition,
-  TRADE_INVENTORY_CATEGORIES,
   trade_display_name,
   trade_offer_draft_key,
-  trade_inventory_category,
   trade_draft_inventory,
+  trade_side_status,
   type TradeDraftAddition,
-  type TradeInventoryCategory,
 } from './trade_view.ts'
 
-const OfferHeader = ({
-  accepted,
-  name,
-  own,
-  text,
-}: Readonly<{ accepted: boolean; name: string; own: boolean; text: CopyText }>) => (
-  <header>
-    <div>
-      <b>{own ? text('your_offer') : text('their_offer')}</b>
-      <small>{name}</small>
-    </div>
-    {accepted && (
-      <span className="is-accepted">
-        <Check size={11} />
-        {text('accepted')}
-      </span>
-    )}
-  </header>
-)
-
-type TradeCurrency = 'sui' | 'kares'
+const CURRENCIES = ['sui', 'kares'] as const
+type TradeCurrency = (typeof CURRENCIES)[number]
 type CurrencyDraft = Readonly<Record<TradeCurrency, string>>
+type CurrencyInput = Readonly<{ value: string; disabled: boolean; change: (value: string) => void; commit: () => void }>
 
+/** The own side edits each currency in place; the other side shows only currencies it actually offers. */
 const OfferCurrency = ({
   currency,
   amount,
-  editable,
-  pending,
-  value,
-  set_amount,
-  normalize_amount,
+  input,
   text,
-}: Readonly<{
-  currency: TradeCurrency
-  amount: bigint
-  editable: boolean
-  pending: boolean
-  value: string
-  set_amount: (value: string) => void
-  normalize_amount: () => void
-  text: CopyText
-}>) => (
-  <label className="trade-sui" data-currency={currency}>
-    {currency === 'sui' ? (
-      <SuiUnit size={12} />
-    ) : (
-      <>
-        <KaresLogo size={12} />
-        <span>KARES</span>
-      </>
-    )}
-    {editable ? (
+}: Readonly<{ currency: TradeCurrency; amount: bigint; input?: CurrencyInput; text: CopyText }>) => {
+  if (!input && amount === 0n) return null
+  const mark = currency === 'sui' ? <SuiLogo size={14} /> : <KaresLogo size={14} />
+  const ticker = <small>{currency.toUpperCase()}</small>
+  return input ? (
+    <label className="trade-currency" data-currency={currency}>
+      {mark}
       <input
         aria-label={text(currency)}
-        disabled={pending}
+        disabled={input.disabled}
         inputMode="decimal"
-        onBlur={normalize_amount}
-        onChange={(event) => set_amount(event.target.value)}
+        onBlur={input.commit}
+        onChange={(event) => input.change(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur()
         }}
-        value={value}
+        value={input.value}
       />
-    ) : (
-      <strong>{input_sui(amount)}</strong>
-    )}
-  </label>
-)
+      {ticker}
+    </label>
+  ) : (
+    <span className="trade-currency is-static" data-currency={currency}>
+      {mark}
+      <b>{input_sui(amount)}</b>
+      {ticker}
+    </span>
+  )
+}
 
 const OfferPanel = ({
   trade,
   side,
   own,
+  label,
+  status,
   pending,
-  currencies,
-  set_currency,
-  commit_currency,
-  add_asset,
-  name,
-  text,
   caps,
-  copy,
+  currencies,
+  add_asset,
   remove_cap,
-  draft_actions,
+  copy,
+  text,
 }: Readonly<{
   trade: TradeRow
   side: 'a' | 'b'
   own: boolean
+  label: string
+  status: string
   pending: boolean
-  currencies: CurrencyDraft
-  set_currency: (asset: TradeCurrency, value: string) => void
-  commit_currency: (asset: TradeCurrency) => void
-  add_asset: (id: string) => void
-  name: string
-  text: CopyText
   caps?: readonly TradeCapRow[]
-  copy: AppCopy
+  currencies?: Readonly<Record<TradeCurrency, CurrencyInput>>
+  add_asset?: (id: string) => void
   remove_cap?: (cap: Readonly<TradeCapRow>) => void
-  draft_actions?: Readonly<{ visible: boolean; confirm: () => void; discard: () => void }>
+  copy: AppCopy
+  text: CopyText
 }>) => {
-  const accepted = trade.phase === 'settling' || trade[`accept_${side}`]
-  const displayed_caps = caps ?? trade[`caps_${side}`]
-  const can_edit = own && trade.phase === 'negotiating' && !pending
+  const droppable = !!add_asset && trade.phase === 'negotiating' && !pending
+  const drop = (event: Readonly<DragEvent>): void => {
+    if (!droppable) return
+    event.preventDefault()
+    add_asset(event.dataTransfer.getData('text/plain'))
+  }
   return (
     <section
-      className={`trade-side${own ? ' is-own' : ''}${accepted ? ' is-accepted' : ''}`}
-      onDragOver={(event) => can_edit && event.preventDefault()}
-      onDrop={(event) => {
-        if (!can_edit) return
-        event.preventDefault()
-        add_asset(event.dataTransfer.getData('text/plain'))
-      }}
+      className="trade-offer"
+      data-own={own || undefined}
+      data-status={status}
+      onDragOver={(event) => droppable && event.preventDefault()}
+      onDrop={drop}
     >
-      <OfferHeader accepted={accepted} name={name} own={own} text={text} />
+      <header>
+        <b>{label}</b>
+        <span className="trade-status">{text(status)}</span>
+        {CURRENCIES.map((currency) => (
+          <OfferCurrency
+            amount={BigInt(trade[`${currency}_${side}`])}
+            currency={currency}
+            input={currencies?.[currency]}
+            key={currency}
+            text={text}
+          />
+        ))}
+      </header>
       <OfferCaps
-        caps={displayed_caps}
+        caps={caps ?? trade[`caps_${side}`]}
         copy={copy}
         own={own}
         pending={pending}
@@ -158,43 +132,9 @@ const OfferPanel = ({
         text={text}
         trade={trade}
       />
-      {(['sui', 'kares'] as const).map((asset) => (
-        <OfferCurrency
-          amount={BigInt(trade[`${asset}_${side}`])}
-          normalize_amount={() => commit_currency(asset)}
-          currency={asset}
-          editable={own && trade.phase === 'negotiating'}
-          key={asset}
-          pending={pending}
-          set_amount={(value) => set_currency(asset, value)}
-          value={currencies[asset]}
-          text={text}
-        />
-      ))}
-      <OfferDraftActions actions={draft_actions} pending={pending} text={text} />
     </section>
   )
 }
-
-const OfferDraftActions = ({
-  actions,
-  pending,
-  text,
-}: Readonly<{
-  actions?: Readonly<{ visible: boolean; confirm: () => void; discard: () => void }>
-  pending: boolean
-  text: CopyText
-}>) =>
-  actions?.visible ? (
-    <div className="trade-offer-actions">
-      <Button disabled={pending} onClick={actions.discard} type="button">
-        {text('discard_changes')}
-      </Button>
-      <Button tone="primary" disabled={pending} onClick={actions.confirm} type="button">
-        {text('confirm_changes')}
-      </Button>
-    </div>
-  ) : null
 
 const TerminalFooter = ({
   trade,
@@ -211,12 +151,10 @@ const TerminalFooter = ({
       <p>{text(actionable ? `${operation}_notice` : 'waiting_counterparty')}</p>
       {actionable && (
         <Button
-          tone="primary"
-          disabled={pending}
+          busy={pending}
           onClick={() => dispatch_app({ type: `trade/${operation}`, trade: trade.id })}
-          type="button"
+          tone="primary"
         >
-          {pending ? <Loader2 className="animate-spin" size={12} /> : <Check size={12} />}
           {text(pending ? 'finalizing' : operation)}
         </Button>
       )}
@@ -226,88 +164,57 @@ const TerminalFooter = ({
 
 const NegotiatingFooter = ({
   trade,
-  own_side,
-  address,
+  accepted,
+  counterparty,
   pending,
-  text,
   dirty,
+  discard,
+  confirm,
+  text,
 }: Readonly<{
   trade: TradeRow
-  own_side: 'a' | 'b'
-  address: string
+  accepted: boolean
+  counterparty: string
   pending: boolean
-  text: CopyText
   dirty: boolean
+  discard: () => void
+  confirm: () => void
+  text: CopyText
 }>) => {
   const dispatch_app = useTradeDispatch()
-  const accepted = trade[`accept_${own_side}`]
-  const incoming_count = trade_incoming(trade, address).caps.length
-  const fee = ROYALTY_FLOOR_MIST * BigInt(incoming_count)
-  const notice = text('accept_notice', { count: incoming_count, amount: input_sui(fee) })
+  const notice = dirty ? text('confirm_resets') : accepted ? text('waiting_for', { name: counterparty }) : ''
   return (
     <footer>
-      <Button
-        tone="neutral"
+      <button
+        className="trade-quiet is-danger"
         disabled={pending}
         onClick={() => dispatch_app({ type: 'trade/cancel', trade: trade.id })}
         type="button"
       >
         {text('cancel')}
-      </Button>
-      <Button
-        tone={accepted ? 'neutral' : 'primary'}
-        disabled={pending || accepted || dirty}
-        onClick={() => dispatch_app({ type: 'trade/accept', trade: trade.id })}
-        title={notice}
-        type="button"
-      >
-        {accepted ? <Check size={12} /> : null}
-        {text(accepted ? 'accepted' : 'accept')}
-      </Button>
+      </button>
+      <p>{notice}</p>
+      {dirty ? (
+        <>
+          <button className="trade-quiet" disabled={pending} onClick={discard} type="button">
+            {text('discard_changes')}
+          </button>
+          <Button busy={pending} onClick={confirm} tone="primary">
+            {text('confirm_changes')}
+          </Button>
+        </>
+      ) : (
+        <Button
+          busy={pending}
+          disabled={accepted}
+          onClick={() => dispatch_app({ type: 'trade/accept', trade: trade.id })}
+          tone="primary"
+        >
+          {accepted && <Check size={14} />}
+          {text(accepted ? 'accepted' : 'accept')}
+        </Button>
+      )}
     </footer>
-  )
-}
-
-const TradeAmountModal = ({
-  item,
-  close,
-  choose,
-  text,
-}: Readonly<{ item: Readonly<ItemRow>; close: () => void; choose: (amount: number) => void; text: CopyText }>) => {
-  const [amount, set_amount] = useState(item.amount)
-  return (
-    <ModalFrame
-      close={close}
-      close_label={text('amount_cancel')}
-      label={text('amount_title')}
-      max_width="max-w-xs"
-      soft
-    >
-      <form
-        className="grid gap-4 p-5"
-        onSubmit={(event) => {
-          event.preventDefault()
-          choose(amount)
-        }}
-      >
-        <header className="pr-8 font-mono text-xs tracking-[0.12em] text-[#e0b86b] uppercase">
-          {text('amount_for', { name: item.name })}
-        </header>
-        <input
-          autoFocus
-          className="border border-white/15 bg-black/25 p-3 font-mono text-sm text-white outline-none focus:border-[#c8963c]/70"
-          inputMode="numeric"
-          max={item.amount}
-          min={1}
-          onChange={(event) => set_amount(Math.max(1, Math.min(item.amount, Number(event.target.value) || 1)))}
-          type="number"
-          value={amount}
-        />
-        <button className="btn-gold trade-amount-submit" type="submit">
-          {text('amount_add')}
-        </button>
-      </form>
-    </ModalFrame>
   )
 }
 
@@ -338,14 +245,16 @@ export const TradeDialog = ({
   const own_amounts = { sui: BigInt(active[`sui_${own_side}`]), kares: BigInt(active[`kares_${own_side}`]) }
   const own_offer_key = trade_offer_draft_key(active, own_side)
   const pending = !!pending_operation
+  const negotiating = active.phase === 'negotiating'
   const [currencies, set_currencies] = useState<CurrencyDraft>({ sui: '0', kares: '0' })
   const set_currency = (asset: TradeCurrency, value: string): void =>
     set_currencies((current) => ({ ...current, [asset]: value }))
   const [kept_caps, set_kept_caps] = useState<readonly TradeCapRow[]>(own_caps)
   const [additions, set_additions] = useState<readonly TradeDraftAddition[]>([])
-  const [amount_item, set_amount_item] = useState<Readonly<ItemRow> | null>(null)
+  const [picking, set_picking] = useState<Readonly<ItemRow> | null>(null)
   const display_name = (player_address: string): string =>
     trade_display_name(player_address, address, own_name, players)
+  const counterparty = display_name(active[other_side])
 
   useEffect(() => {
     set_currencies({ sui: input_sui(own_amounts.sui), kares: input_sui(own_amounts.kares) })
@@ -371,7 +280,7 @@ export const TradeDialog = ({
   })
   const removals = removal_caps.map((cap) => Object.freeze({ cap, target: removal_targets[cap.object] }))
   const available_items = trade_draft_inventory(inventory, encumbered, additions, removals)
-  const can_edit = active.phase === 'negotiating' && !pending
+  const can_edit = negotiating && !pending
   const displayed_caps = Object.freeze([...kept_caps, ...additions.map(draft_cap)])
   const parse_currency = (asset: TradeCurrency): bigint | null =>
     currencies[asset].trim() === '0' ? 0n : parse_amount(currencies[asset])
@@ -384,21 +293,26 @@ export const TradeDialog = ({
     parsed_kares !== own_amounts.kares,
   ].some(Boolean)
   const stage_asset = (item: Readonly<ItemRow>, amount: number): void => {
+    if (!can_edit) return
     const draft = stage_trade_offer_addition(additions, kept_caps, item, amount)
     set_additions(draft.additions)
     set_kept_caps(draft.kept_caps)
-    set_amount_item(null)
+    set_picking(null)
   }
   const add_asset = (id: string): void => {
-    if (!can_edit || !id) return
-    const item = available_items.find((row) => row.id === id)
+    const item = can_edit && id ? available_items.find((row) => row.id === id) : undefined
     if (!item) return
-    item_is_stackable(item.category) && item.amount > 1 ? set_amount_item(item) : stage_asset(item, item.amount)
+    if (item_is_stackable(item.category) && item.amount > 1) set_picking(item)
+    else stage_asset(item, item.amount)
   }
-  const commit_currency = (asset: TradeCurrency): void => {
-    if (parse_currency(asset) === null || pending || active.phase !== 'negotiating')
-      set_currency(asset, input_sui(own_amounts[asset]))
-  }
+  const currency_input = (asset: TradeCurrency): CurrencyInput => ({
+    value: currencies[asset],
+    disabled: !can_edit,
+    change: (value) => set_currency(asset, value),
+    commit: () => {
+      if (parse_currency(asset) === null) set_currency(asset, input_sui(own_amounts[asset]))
+    },
+  })
   const discard = (): void => {
     set_kept_caps(own_caps)
     set_additions([])
@@ -420,16 +334,13 @@ export const TradeDialog = ({
     if (added) set_additions((current) => Object.freeze(current.filter(({ item }) => item.id !== cap.object)))
     else set_kept_caps((current) => Object.freeze(current.filter(({ object }) => object !== cap.object)))
   }
+  const close = (): void => dispatch_app({ type: 'trade/open', trade: null })
   return (
-    <NativeModal
-      close={() => dispatch_app({ type: 'trade/open', trade: null })}
-      label={text('title')}
-      className="aui-modal-scrim"
-    >
+    <NativeModal close={close} label={text('title')} className="aui-modal-scrim">
       <GameWindow
         title={text('title')}
         icon={<Handshake />}
-        close={() => dispatch_app({ type: 'trade/open', trade: null })}
+        close={close}
         close_label={text('close')}
         className="aui-trade-window"
       >
@@ -438,7 +349,7 @@ export const TradeDialog = ({
             <nav className="trade-switcher">
               {center_rows.map((row) => (
                 <button
-                  className={row.id === active.id ? 'is-active' : ''}
+                  aria-pressed={row.id === active.id}
                   key={row.id}
                   onClick={() => dispatch_app({ type: 'trade/open', trade: row.id })}
                   type="button"
@@ -448,53 +359,55 @@ export const TradeDialog = ({
               ))}
             </nav>
           )}
-          <div className={`trade-workspace${active.phase === 'negotiating' ? '' : ' is-terminal'}`}>
-            <OfferPanel
-              add_asset={add_asset}
-              caps={displayed_caps}
-              commit_currency={commit_currency}
-              copy={copy}
-              draft_actions={Object.freeze({ confirm, discard, visible: dirty })}
-              name={display_name(active[own_side])}
-              own
-              pending={pending}
-              remove_cap={remove_cap}
-              set_currency={set_currency}
-              side={own_side}
-              currencies={currencies}
-              text={text}
-              trade={active}
-            />
-            <OfferPanel
-              add_asset={add_asset}
-              commit_currency={commit_currency}
-              copy={copy}
-              name={display_name(active[other_side])}
-              own={false}
-              pending={pending}
-              set_currency={set_currency}
-              side={other_side}
-              currencies={currencies}
-              text={text}
-              trade={active}
-            />
-            {active.phase === 'negotiating' && (
-              <TradeInventory
+          <div className="trade-workspace">
+            <div className="trade-offers">
+              <OfferPanel
+                add_asset={add_asset}
+                caps={displayed_caps}
                 copy={copy}
+                currencies={negotiating ? { sui: currency_input('sui'), kares: currency_input('kares') } : undefined}
+                label={text('you_give')}
+                own
+                pending={pending}
+                remove_cap={remove_cap}
+                side={own_side}
+                status={trade_side_status(active, own_side, true, dirty)}
+                text={text}
+                trade={active}
+              />
+              <OfferPanel
+                copy={copy}
+                label={text('they_give', { name: counterparty })}
+                own={false}
+                pending={pending}
+                side={other_side}
+                status={trade_side_status(active, other_side, false, dirty)}
+                text={text}
+                trade={active}
+              />
+            </div>
+            {negotiating && (
+              <TradeInventory
                 add_asset={add_asset}
                 balance={balance}
                 can_edit={can_edit}
                 category_text={category_text}
+                choose_amount={(amount) => picking && stage_asset(picking, amount)}
+                close_amount={() => set_picking(null)}
+                copy={copy}
                 items={available_items}
+                picking={picking}
                 text={text}
               />
             )}
           </div>
-          {active.phase === 'negotiating' ? (
+          {negotiating ? (
             <NegotiatingFooter
-              address={address}
+              accepted={active[`accept_${own_side}`]}
+              confirm={confirm}
+              counterparty={counterparty}
               dirty={dirty}
-              own_side={own_side}
+              discard={discard}
               pending={pending}
               text={text}
               trade={active}
@@ -503,14 +416,6 @@ export const TradeDialog = ({
             <TerminalFooter address={address} pending={pending} text={text} trade={active} />
           )}
         </section>
-        {amount_item && (
-          <TradeAmountModal
-            choose={(amount) => stage_asset(amount_item, amount)}
-            close={() => set_amount_item(null)}
-            item={amount_item}
-            text={text}
-          />
-        )}
       </GameWindow>
     </NativeModal>
   )

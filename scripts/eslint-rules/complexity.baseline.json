@@ -1182,11 +1182,6 @@
         9
       ]
     },
-    "packages/frontend/src/components/TradeDialog.tsx": {
-      "TradeDialog": [
-        9
-      ]
-    },
     "packages/frontend/src/components/DungeonLobby.tsx": {
       "DungeonLobby": [
         15

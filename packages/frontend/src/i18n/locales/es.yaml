@@ -198,28 +198,31 @@ trade_panel:
   decline: Rechazar
   cancel_request: Cancelar solicitud
   trades: Intercambios
-  your_offer: Tu oferta
-  their_offer: Su oferta
   accepted: Aceptado
   reviewing: Revisando
+  you_give: 'Das'
+  they_give: '{{name}} da'
+  editing: 'Editando'
+  not_accepted: 'Sin aceptar'
+  cancelled: 'Cancelado'
+  amount_owned: '{{count}} en posesión'
+  amount_half: 'Mitad'
+  amount_all: 'Todo'
+  amount_offer: 'Ofrecer {{count}}'
+  confirm_resets: 'Confirmar reinicia ambas aceptaciones.'
+  waiting_for: 'Esperando a {{name}}'
   remove_item: Quitar de la oferta
-  drop_items: Suelta objetos aquí
-  empty_offer: No hay objetos ofrecidos
   offer_item_unavailable: Uno de los objetos preparados ya no está disponible. Revisa tu oferta e inténtalo de nuevo.
   sui: SUI
   kares: 'KARES ofrecidos'
   inventory: Tu inventario
-  drag_hint: Arrastra o haz doble clic para añadir
   amount_title: Elegir cantidad
-  amount_for: 'Cantidad de {{name}}'
   amount_add: Añadir a la oferta
-  amount_cancel: Cancelar
   confirm_changes: Confirmar cambios
   discard_changes: Descartar cambios
   empty_inventory: No hay bienes intercambiables
   accept: Aceptar oferta
   cancel: Cancelar intercambio
-  accept_notice: Aceptar autoriza una transacción final. {{count}} bienes entrantes cuestan {{amount}} SUI en regalías, más gas.
   settle: Completar intercambio
   recover: Recuperar oferta
   settle_notice: Recibe todos los bienes y SUI restantes en una transacción.

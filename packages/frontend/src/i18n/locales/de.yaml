@@ -199,27 +199,30 @@ trade_panel:
   decline: Ablehnen
   cancel_request: Anfrage abbrechen
   trades: Handel
-  your_offer: Dein Angebot
-  their_offer: Gegenangebot
   accepted: Akzeptiert
   reviewing: Prüft
+  you_give: 'Du gibst'
+  they_give: '{{name}} gibt'
+  editing: 'Bearbeitung'
+  not_accepted: 'Nicht angenommen'
+  cancelled: 'Abgebrochen'
+  amount_owned: '{{count}} im Besitz'
+  amount_half: 'Hälfte'
+  amount_all: 'Alle'
+  amount_offer: '{{count}} anbieten'
+  confirm_resets: 'Bestätigen setzt beide Zusagen zurück.'
+  waiting_for: 'Warte auf {{name}}'
   remove_item: Aus Angebot entfernen
-  drop_items: Gegenstände hier ablegen
-  empty_offer: Keine Gegenstände angeboten
   offer_item_unavailable: Ein vorgemerktes Item ist nicht mehr verfügbar. Prüfe dein Angebot und versuche es erneut.
   sui: Angebotene SUI
   inventory: Dein Inventar
-  drag_hint: Ziehen oder doppelklicken
   amount_title: Menge wählen
-  amount_for: 'Menge von {{name}}'
   amount_add: Zum Angebot hinzufügen
-  amount_cancel: Abbrechen
   confirm_changes: Änderungen bestätigen
   discard_changes: Änderungen verwerfen
   empty_inventory: Keine handelbaren Werte
   accept: Angebot annehmen
   cancel: Handel abbrechen
-  accept_notice: Die Annahme autorisiert eine Abschluss-Transaktion. {{count}} eingehende Werte kosten {{amount}} SUI Lizenzgebühr plus Gas.
   settle: Handel abschließen
   recover: Angebot zurückholen
   settle_notice: Erhalte alle verbleibenden Werte und SUI in einer Transaktion.

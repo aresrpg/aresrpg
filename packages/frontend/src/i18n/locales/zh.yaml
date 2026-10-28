@@ -202,27 +202,30 @@ trade_panel:
   decline: 拒绝
   cancel_request: 取消请求
   trades: 交易
-  your_offer: 你的出价
-  their_offer: 对方出价
   accepted: 已接受
   reviewing: 确认中
+  you_give: '你给出'
+  they_give: '{{name}} 给出'
+  editing: '编辑中'
+  not_accepted: '未接受'
+  cancelled: '已取消'
+  amount_owned: '持有 {{count}}'
+  amount_half: '一半'
+  amount_all: '全部'
+  amount_offer: '放入 {{count}}'
+  confirm_resets: '确认后双方的接受都会重置。'
+  waiting_for: '等待 {{name}}'
   remove_item: 从出价中移除
-  drop_items: 将物品拖到这里
-  empty_offer: 未提供物品
   offer_item_unavailable: 一件待交易物品已不可用。请检查出价后重试。
   sui: 提供的SUI
   inventory: 你的背包
-  drag_hint: 拖动或双击添加
   amount_title: 选择数量
-  amount_for: '{{name}}的数量'
   amount_add: 加入出价
-  amount_cancel: 取消
   confirm_changes: 确认更改
   discard_changes: 放弃更改
   empty_inventory: 没有可交易资产
   accept: 接受出价
   cancel: 取消交易
-  accept_notice: 接受即授权一笔结算交易。收到{{count}}件资产需支付{{amount}} SUI版税，另加Gas费用。
   settle: 完成交换
   recover: 取回出价
   settle_notice: 通过一笔钱包交易接收所有剩余资产和SUI。

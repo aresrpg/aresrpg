@@ -114,3 +114,37 @@ export const trade_modal_visible = (trade: Readonly<TradeRow>): boolean =>
 
 export const trade_cap_action = ({ phase, own }: Readonly<{ phase: TradePhase; own: boolean }>): 'withdraw' | null =>
   phase === 'negotiating' && own ? 'withdraw' : null
+
+export type TradeSideStatus = 'accepted' | 'editing' | 'not_accepted' | 'reviewing' | 'cancelled'
+
+/** The escrow row proves each side's commitment; an unconfirmed local draft marks only the own side as editing. */
+export const trade_side_status = (
+  trade: Readonly<TradeRow>,
+  side: 'a' | 'b',
+  own: boolean,
+  dirty: boolean
+): TradeSideStatus => {
+  if (trade.phase === 'cancelled') return 'cancelled'
+  if (own && dirty) return 'editing'
+  if (trade.phase === 'settling' || trade[`accept_${side}`]) return 'accepted'
+  return own ? 'not_accepted' : 'reviewing'
+}
+
+export type TradeAmountPreset = Readonly<{ amount: number; label: 'amount_half' | 'amount_all' | null }>
+
+/** Quick amounts for one stack, ascending; a named preset wins when two land on the same amount. */
+export const trade_amount_presets = (max: number): readonly TradeAmountPreset[] => {
+  const presets: readonly TradeAmountPreset[] = [
+    { amount: 1, label: null },
+    { amount: 10, label: null },
+    { amount: Math.ceil(max / 2), label: 'amount_half' },
+    { amount: max, label: 'amount_all' },
+  ]
+  return Object.freeze(
+    presets
+      .filter(
+        ({ amount }, index) => amount <= max && !presets.slice(index + 1).some((later) => later.amount === amount)
+      )
+      .toSorted((left, right) => left.amount - right.amount)
+  )
+}

@@ -202,27 +202,30 @@ trade_panel:
   decline: Отклонить
   cancel_request: Отменить запрос
   trades: Обмены
-  your_offer: Ваше предложение
-  their_offer: Предложение партнёра
   accepted: Принято
   reviewing: Проверка
+  you_give: 'Вы отдаёте'
+  they_give: '{{name}} отдаёт'
+  editing: 'Изменяется'
+  not_accepted: 'Не принято'
+  cancelled: 'Отменено'
+  amount_owned: 'В наличии: {{count}}'
+  amount_half: 'Половина'
+  amount_all: 'Все'
+  amount_offer: 'Предложить {{count}}'
+  confirm_resets: 'Подтверждение сбросит оба согласия.'
+  waiting_for: 'Ждём {{name}}'
   remove_item: Убрать из предложения
-  drop_items: Перетащите предметы сюда
-  empty_offer: Предметы не предложены
   offer_item_unavailable: Один из выбранных предметов больше недоступен. Проверьте предложение и повторите попытку.
   sui: Предлагаемые SUI
   inventory: Ваш инвентарь
-  drag_hint: Перетащите или нажмите дважды
   amount_title: Выбрать количество
-  amount_for: 'Количество: {{name}}'
   amount_add: Добавить в предложение
-  amount_cancel: Отмена
   confirm_changes: Подтвердить изменения
   discard_changes: Отменить изменения
   empty_inventory: Нет активов для обмена
   accept: Принять предложение
   cancel: Отменить обмен
-  accept_notice: Принятие разрешает одну транзакцию расчёта. Роялти за {{count}} получаемых активов составят {{amount}} SUI, плюс газ.
   settle: Завершить обмен
   recover: Вернуть предложение
   settle_notice: Получите все оставшиеся активы и SUI одной транзакцией кошелька.
