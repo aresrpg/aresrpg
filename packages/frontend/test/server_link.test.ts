@@ -12,14 +12,24 @@ import {
 
 for (const development of [false, true])
   test(`${development ? 'development' : 'production'} build keeps packet tracing development-only`, async () => {
-    const result = await Bun.build({
-      entrypoints: [new URL('../src/server_link.ts', import.meta.url).pathname],
-      target: 'browser',
-      define: { 'import.meta.env.DEV': String(development) },
-      minify: true,
-    })
-    expect(result.success).toBeTrue()
-    const code = await result.outputs[0]!.text()
+    // Bun 1.3.5 fails on repeated in-process builds of already-loaded workspace imports.
+    const build = Bun.spawn(
+      [
+        process.execPath,
+        'build',
+        '--target=browser',
+        '--minify',
+        `--define=import.meta.env.DEV=${development}`,
+        new URL('../src/server_link.ts', import.meta.url).pathname,
+      ],
+      { stdout: 'pipe', stderr: 'pipe' }
+    )
+    const [code, errors, exit_code] = await Promise.all([
+      new Response(build.stdout).text(),
+      new Response(build.stderr).text(),
+      build.exited,
+    ])
+    expect(exit_code, errors).toBe(0)
     expect(code.includes('%c WS')).toBe(development)
     expect(code).toContain('Malformed server frame ignored.')
     expect(code).toContain('Server connection failed; retrying.')
