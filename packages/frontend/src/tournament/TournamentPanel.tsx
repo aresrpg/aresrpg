@@ -71,10 +71,10 @@ const EventHeading = ({
           <strong>{champion ? t('champion', { team: tournament_name(champion.name) }) : t('no_champion')}</strong>
         )}
       </div>
-      <button type="button" className="tourney-pool-summary" onClick={podium} aria-label={t('podium')}>
+      <Button className="tourney-pool-summary" onClick={podium} aria-label={t('podium')}>
         <small>{t(row.status === 'open' ? 'prize_pool' : 'frozen_pool')}</small>
         <TournamentPool row={row} t={t} />
-      </button>
+      </Button>
     </header>
   )
 }

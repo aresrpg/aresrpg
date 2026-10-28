@@ -144,11 +144,14 @@
   font-family: 'Tournament Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
-.tourney-pool-summary {
+.tourney-pool-summary.aui-button {
+  display: block;
   border: 0;
   padding: 0;
   text-align: right;
   background: transparent;
+  box-shadow: none;
+  color: inherit;
   cursor: pointer;
 }
 .tourney-pool-lines {

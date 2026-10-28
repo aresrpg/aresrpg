@@ -183,7 +183,7 @@ Object.assign(window, {
       publish()
     },
     close_feature: () => dispatch_app({ type: 'page/open', page: 'world' }),
-    close_funding: () => dispatch_app({ type: 'dialog/open', dialog: null }),
+    close_funding: () => dispatch_app({ type: 'funding/close' }),
     urgent: () => window.dispatchEvent(new Event('tournament-urgent')),
     state: () => ({
       page: read_app_state().navigation.page,
@@ -240,7 +240,7 @@ Object.assign(window, {
 })
 if (params.has('funding')) on_gas_empty(() => dispatch_app({ type: 'dialog/open', dialog: 'top_up' }))
 const FundingProbe = () => {
-  const open = useAppStore((state) => state.navigation.dialog === 'top_up')
+  const open = useAppStore((state) => state.navigation.funding_cost_mist !== null)
   const [urgent, set_urgent] = useState(false)
   useEffect(() => {
     const show = () => set_urgent(true)
@@ -254,7 +254,7 @@ const FundingProbe = () => {
           copy={copy}
           address="0x1"
           network="mainnet"
-          on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
+          on_close={() => dispatch_app({ type: 'funding/close' })}
         />
       )}
       {urgent && (

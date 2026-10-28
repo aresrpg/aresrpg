@@ -5,7 +5,7 @@ import type { TournamentRow } from '@aresrpg/protocol'
 import type { CopyText } from '../i18n/copy.ts'
 
 import { own_team, tournament_name } from './presentation.ts'
-import './podium.css'
+import './standing.css'
 
 export const TournamentStanding = ({
   row,

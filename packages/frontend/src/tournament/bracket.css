@@ -43,6 +43,7 @@
 }
 .tourney-round-matches {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(var(--tourney-leaves), var(--tourney-card-height));
 }
 .tourney-match-slot {

@@ -1,5 +1,19 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 @media (max-width: 1023px), (pointer: coarse) {
+  :is(.aui-arena-port:has(.tourney-panel), .tourney-dialog, .tourney-admin-window) > .aui-window-header {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  :is(.aui-arena-port:has(.tourney-panel), .tourney-dialog, .tourney-admin-window)
+    > .aui-window-header
+    > .aui-icon-button {
+    top: 0;
+    right: 0;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
   .aui-arena-port:has(.tourney-panel) {
     width: 100cqw;
     height: 100cqh;
@@ -38,6 +52,10 @@
   .tourney-pool-summary .tourney-coin:first-child {
     font-size: 16px;
   }
+  .tourney-pool-summary {
+    min-width: 44px;
+    min-height: 44px;
+  }
   .tourney-pool-summary .tourney-pool-lines > :not(:first-child) {
     display: none;
   }
@@ -62,7 +80,9 @@
     font-size: 12px;
   }
   .tourney-leave.aui-button {
+    min-width: 44px;
     min-height: 44px;
+    flex-shrink: 0;
   }
   .tourney-seats:has(> :nth-child(6)) {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -166,6 +186,7 @@
   }
   .tourney-reward.aui-button,
   .tourney-personal-seat .aui-button {
+    min-width: 44px;
     min-height: 44px;
   }
   .tourney-personal-seat {
