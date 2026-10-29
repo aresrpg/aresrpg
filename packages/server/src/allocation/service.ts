@@ -3,16 +3,19 @@
 import type { Redis } from 'ioredis'
 import type { AllocationRequest, AllocationResult } from '@aresrpg/protocol'
 import {
+  blast_rows,
   campaign,
   normalize_address,
   public_award,
   submitted_posts,
   type AllocationStatus,
+  type Award,
   type Submission,
 } from '@aresrpg/immutable/allocation'
 
 import { verify_wallet_message } from '../auth.ts'
 
+import { blast_allowlist } from './blast_allowlist.ts'
 import { predict_leaderboards, type create_campaign_boards } from './leaderboards.ts'
 import {
   verified_wallets,
@@ -53,15 +56,25 @@ export const allocation_status = async (
             return []
           })
       : []
+  const awards = current.awards.filter(({ address }) => requested.has(address))
   return {
     predictions,
     wallets,
     phase: current.phase,
     submissions_open: current.phase === 'registration' && Date.now() < deadline(options),
-    awards: current.awards.filter(({ address }) => requested.has(address)).map(public_award),
+    awards: awards.map(public_award),
     user,
     submission: submission ? (JSON.parse(submission) as Submission) : null,
+    ...(current.phase === 'final' && awards.length ? { proofs: spot_proofs(current.awards, awards) } : {}),
   }
+}
+/** Proofs come from the complete final list, in the exact order handed to Blast. */
+const spot_proofs = (all: readonly Award[], own: readonly Award[]) => {
+  const allowlist = blast_allowlist(blast_rows(all))
+  return own.flatMap(({ address }) => {
+    const proof = allowlist.proof(normalize_address(address))
+    return proof ? [{ address, proof }] : []
+  })
 }
 const submit = async (
   redis: Redis,

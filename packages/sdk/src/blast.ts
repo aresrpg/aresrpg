@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { SuiClientTypes } from '@mysten/sui/client'
+import { bcs } from '@mysten/sui/bcs'
+import { ObjectError, type SuiClientTypes } from '@mysten/sui/client'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { isValidSuiObjectId, normalizeStructTag, normalizeSuiObjectId, SUI_TYPE_ARG } from '@mysten/sui/utils'
 
@@ -25,7 +26,12 @@ export type BlastSnapshot = Readonly<{
   committed: bigint
   target: bigint
   progress_bps: number
+  start_ms: bigint
+  end_ms: bigint
+  token_allocation: bigint
 }>
+/** One wallet's live commitment. Blast deletes it when the wallet claims. */
+export type BlastCommitment = Readonly<{ quote: bigint; wallet_cap: bigint }>
 export type BlastConfig = Readonly<{ id: string; package_original: string; url: string; coin_type: string }>
 export const BLAST_URL = 'https://www.blast.fun/'
 
@@ -68,6 +74,7 @@ export type BlastPresale = Readonly<{
   raise_target: bigint
   start_ms: bigint
   end_ms: bigint
+  token_allocation: bigint
 }>
 export const project_blast_presale = (sale: BlastPresale, clock_ms: bigint, version: string): BlastSnapshot => {
   if (sale.raise_target <= 0n) throw new Error('Blast presale has no funding target')
@@ -86,6 +93,26 @@ export const project_blast_presale = (sale: BlastPresale, clock_ms: bigint, vers
     committed: sale.total_commitments,
     target: sale.raise_target,
     progress_bps: Number((raised * 10_000n) / sale.raise_target),
+    start_ms: sale.start_ms,
+    end_ms: sale.end_ms,
+    token_allocation: sale.token_allocation,
+  }
+}
+
+/** Tokens before oversubscription: every buyer pays raise_target / token_allocation. */
+export const blast_tokens_for = (sale: BlastSnapshot, quote: bigint): bigint =>
+  (sale.token_allocation * quote) / sale.target
+
+/** Blast's claim formulas. The last claimant also receives sub-unit rounding remainders. */
+export const blast_claim_preview = (
+  sale: BlastSnapshot,
+  quote: bigint
+): Readonly<{ tokens: bigint; refund: bigint }> | null => {
+  if (sale.phase === 'cancelled') return { tokens: 0n, refund: quote }
+  if (sale.phase !== 'complete' || sale.committed === 0n) return null
+  return {
+    tokens: (sale.token_allocation * quote) / sale.committed,
+    refund: ((sale.committed - sale.target) * quote) / sale.committed,
   }
 }
 
@@ -100,7 +127,15 @@ export const decode_blast_presale = (json: Readonly<Record<string, unknown>>): B
     raise_target: u64(json.raise_target),
     start_ms: u64(json.start_ms),
     end_ms: u64((u64(json.start_ms) + u64(json.duration_ms)).toString()),
+    token_allocation: u64(json.token_allocation),
   }
+}
+
+// Layout owner: blast-v2-contracts sui/presale/sources/blast_presale.move, `Commitment`.
+const COMMITMENT = bcs.struct('Commitment', { quote: bcs.u64(), wallet_cap: bcs.u64() })
+export const decode_blast_commitment = (bytes: Uint8Array): BlastCommitment => {
+  const { quote, wallet_cap } = COMMITMENT.parse(bytes)
+  return { quote: BigInt(quote), wallet_cap: BigInt(wallet_cap) }
 }
 
 const canonical_json = (
@@ -145,6 +180,23 @@ export const create_blast_reader = (
       const sale = canonical_json(objects[0], config.id, type)
       const clock = canonical_json(objects[1], normalizeSuiObjectId('0x6'), '0x2::clock::Clock')
       return project_blast_presale(decode_blast_presale(sale.json), u64(clock.json.timestamp_ms), sale.version)
+    },
+    /** Null means no live commitment: never committed, or already claimed after the sale ended. */
+    commitment: async (address: string): Promise<BlastCommitment | null> => {
+      if (!config) return null
+      try {
+        const { dynamicField } = await client.core.getDynamicField({
+          parentId: config.id,
+          name: {
+            type: `${config.package_original}::blast_presale::CommitmentKey`,
+            bcs: bcs.Address.serialize(address).toBytes(),
+          },
+        })
+        return decode_blast_commitment(dynamicField.value.bcs)
+      } catch (error) {
+        if (error instanceof ObjectError && error.reason === 'notFound') return null
+        throw error
+      }
     },
   }
 }

@@ -5,7 +5,7 @@ import { Transaction, coinWithBalance } from '@mysten/sui/transactions'
 import { isValidSuiObjectId, normalizeSuiObjectId, SUI_TYPE_ARG } from '@mysten/sui/utils'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
-import { blast_config, create_blast_reader, type BlastConfig } from './blast.ts'
+import { blast_config, create_blast_reader, type BlastConfig, type BlastPhase } from './blast.ts'
 import { receipt_digest } from './cache.ts'
 import type { Pins, Sdk } from './client.ts'
 import { gas_mist_from_receipt } from './gas.ts'
@@ -55,6 +55,18 @@ export const create_blast_purchase_transaction = (
   return tx
 }
 
+/** Blast pays the participant, never the sender; this game only claims for its own signer. */
+export const create_blast_claim_transaction = (config: BlastPurchaseConfig, sender: string): Transaction => {
+  const tx = new Transaction()
+  tx.setSender(object_id(sender))
+  tx.moveCall({
+    target: `${config.package}::blast_presale::claim`,
+    typeArguments: [config.coin_type, SUI_TYPE_ARG],
+    arguments: [tx.object(config.id), tx.object(config.package_version), tx.pure.address(sender), kares_clock(tx)],
+  })
+  return tx
+}
+
 const verify_version = async (client: SuiGrpcClient, config: BlastPurchaseConfig): Promise<void> => {
   const { object } = await client.core.getObject({ objectId: config.package_version })
   if (
@@ -69,15 +81,17 @@ export const blast_purchase_actions = ({
   client,
   address,
 }: Readonly<{ sdk: Sdk; client: SuiGrpcClient; address: string }>) => {
-  const prepare = async (purchase: BlastPurchase): Promise<Transaction> => {
+  const verified_config = async (phases: readonly BlastPhase[], refusal: string): Promise<BlastPurchaseConfig> => {
     const config = blast_purchase_config(sdk.pins)
     const { network } = sdk.pins
     if (!network) throw new Error('Blast purchase network is not configured')
     const snapshot = await create_blast_reader({ network, pins: sdk.pins }, client).read()
-    if (snapshot?.phase !== 'live') throw new Error('Blast sale is not open')
+    if (!snapshot || !phases.includes(snapshot.phase)) throw new Error(refusal)
     await verify_version(client, config)
-    return create_blast_purchase_transaction(config, address, purchase)
+    return config
   }
+  const prepare = async (purchase: BlastPurchase): Promise<Transaction> =>
+    create_blast_purchase_transaction(await verified_config(['live'], 'Blast sale is not open'), address, purchase)
   return Object.freeze({
     configured: (): boolean => {
       const pin = sdk.pins.blast_presale as Partial<BlastPurchaseConfig> | null | undefined
@@ -94,6 +108,11 @@ export const blast_purchase_actions = ({
     purchase: async (purchase: BlastPurchase) => {
       // The common SDK re-simulates before signing and owns single submission and uncertain-receipt recovery.
       const receipt = await sdk.execute(await prepare(purchase))
+      return { digest: receipt_digest(receipt), receipt }
+    },
+    claim: async () => {
+      const config = await verified_config(['complete', 'cancelled'], 'Blast claims are not open')
+      const receipt = await sdk.execute(create_blast_claim_transaction(config, address))
       return { digest: receipt_digest(receipt), receipt }
     },
   })

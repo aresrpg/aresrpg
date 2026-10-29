@@ -161,19 +161,22 @@ suite. Share PNGs render on the server through the existing workspace Canvas lib
 
 ## Purchase integration boundary
 
-Wallet sessions expose `blast.simulate` and `blast.purchase` through the existing SDK
-executor. No purchase UI is enabled by this campaign yet. The actual KARES currency
-and presale do not exist at the time of preparation. Before enabling purchases,
-verify the sale's published terms and its complete `blast_presale` pin: `id`,
-`package_original`, `package` (reviewed call target), `package_version` (shared
-version guard), and Blast `url`, plus the root `kares_coin_type`.
+Wallet sessions expose `blast.simulate`, `blast.purchase` and `blast.claim` through the existing
+SDK executor. `/allocation` switches to buying once the release pins the complete `blast_presale`
+entry: `id`, `package_original`, `package` (reviewed call target), `package_version` (shared
+version guard) and Blast `url`, plus the root `kares_coin_type`.
 
-The prepared builder targets the versioned Blast ABI. An older deployment without
-`PackageVersion` is not silently accepted. Allowlisted purchases also need the
-exact leaf index, cap in MIST and hexadecimal sibling hashes for Blast's published
-root. A CSV row alone is not a Merkle proof; confirm Blast's proof delivery or
-tree construction before wiring this UI. Chain simulation remains the authority
-on eligibility, caps, available SUI and lifecycle.
+Final status returns an allowlist proof for each of the account's verified, awarded wallets. The
+server derives it from the complete final award list in the exact Blast CSV order, using Blast's
+leaf format (`0x00 "blast-presale-v1" index wallet cap`) and self-paired odd nodes. Wallet caps
+are MIST. Before pinning, check the sale's on-chain root against the handoff file:
+
+```sh
+bun scripts/allocation_campaign.ts allowlist /private/path/blast.csv
+```
+
+A different root means Blast built the tree from another order or list; every proof would fail.
+Chain simulation remains the authority on eligibility, caps, available SUI and lifecycle.
 
 Unsigned rehearsal against an **existing, already migrated Blast test sale**:
 

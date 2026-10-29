@@ -62,9 +62,15 @@ type DealInput = {
   cause: string
 }
 
-export const deal = ({ runtime, caster, sheet, target, element, base, cast_level, cause }: DealInput): bigint => {
+/** Shield the resolved amount without repeating amplification or elemental resistance. */
+export const reduce_damage = (
+  runtime: FightRuntime,
+  source: bigint,
+  target: bigint,
+  element: string,
+  raw_damage: bigint
+): bigint => {
   if (runtime.contract.ended || runtime.contract.fighters[Number(target)].dead) return 0n
-  const raw_damage = full_damage(runtime, sheet, target, element, base)
   const shield_rows = runtime.contract.fighters[Number(target)].effects
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => row.kind === KINDS.reduce && (row.element === '' || row.element === element))
@@ -72,13 +78,19 @@ export const deal = ({ runtime, caster, sheet, target, element, base, cast_level
   const damage = raw_damage > shield ? raw_damage - shield : 0n
   if (shield > 0n) {
     emit(runtime, 'damage_reduced', {
-      source: caster,
+      source,
       target,
       prevented: raw_damage - damage,
       remaining: damage,
       effect_ids: shield_rows.map(({ index }) => effect_id_at(runtime, target, index)),
     })
   }
+  return damage
+}
+
+export const deal = ({ runtime, caster, sheet, target, element, base, cast_level, cause }: DealInput): bigint => {
+  if (runtime.contract.ended || runtime.contract.fighters[Number(target)].dead) return 0n
+  const damage = reduce_damage(runtime, caster, target, element, full_damage(runtime, sheet, target, element, base))
   if (damage === 0n) return 0n
   let final_target = target
   const redirect = redirect_source(runtime, target)

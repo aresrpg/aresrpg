@@ -10,19 +10,22 @@ import { copy_text } from '../i18n/copy.ts'
 import { create_wallet_runtime } from '../wallet/runtime.ts'
 import type { AuthSession } from '../auth.ts'
 import { env } from '../env.ts'
+import { useBlastSale } from '../kares/useBlastSale.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
-import { allocation_view } from './view.ts'
+import { allocation_view, campaign_phase } from './view.ts'
 import { Wallets } from './Wallets.tsx'
 import { Entries } from './Entries.tsx'
 import { Hero } from './Hero.tsx'
 import { Results } from './Results.tsx'
-import { useCampaignClosed, useCampaignRefresh } from './clock.tsx'
+import { useCampaignClosed, useCampaignRefresh, useMinuteClock } from './clock.tsx'
 import { useWalletFeedback } from './wallet_feedback.ts'
 import { Notices } from './Notices.tsx'
 import { helmet } from './assets.ts'
+import { useSaleSpots } from './SaleSpots.tsx'
 import './allocation.css'
 import './layout.css'
+import './sale.css'
 
 const CampaignStatus = ({
   state,
@@ -66,6 +69,21 @@ export const AllocationPage = ({
   const external_state = useStore(external.store)
   const view = allocation_view(state.status, closed ? Date.parse(campaign.submissions_close_at) : 0, state.session)
   const open = !closed && (state.status?.submissions_open ?? true)
+  // A pinned sale snapshot switches the page to buying; without one the campaign page is unchanged.
+  const sale = useBlastSale().snapshot
+  const now = useMinuteClock()
+  const wallet = { state: external_state, dispatch: external.dispatch }
+  const { spot, overlays } = useSaleSpots({
+    sale,
+    cards: view.cards,
+    state,
+    runtime,
+    external: wallet,
+    copy,
+    text,
+    locale,
+    now,
+  })
   useEffect(() => runtime.observe(), [runtime])
   useEffect(() => external.start(), [external])
   return (
@@ -75,7 +93,11 @@ export const AllocationPage = ({
           <img src={helmet} alt="" />
           AresRPG <span>{text('title')}</span>
         </a>
-        <CampaignStatus state={state} phase={view.final ? 'final' : open ? 'registration' : 'closed'} text={text} />
+        <CampaignStatus
+          state={state}
+          phase={sale ? `sale_${sale.phase}` : campaign_phase(view.final, open)}
+          text={text}
+        />
         {state.session && (
           <button
             className="btn btn-small"
@@ -88,13 +110,24 @@ export const AllocationPage = ({
       </header>
       <main className="page">
         <Notices state={state} runtime={runtime} copy={copy} text={text} />
-        <Hero view={view} state={state} runtime={runtime} text={text} locale={locale} open={open} />
+        <Hero
+          view={view}
+          state={state}
+          runtime={runtime}
+          text={text}
+          locale={locale}
+          open={open}
+          sale={sale}
+          now={now}
+          kares={copy.kares_page}
+          spot={spot}
+        />
         <div className="steps">
           <Wallets
             cards={view.cards}
             state={state}
             runtime={runtime}
-            external={{ state: external_state, dispatch: external.dispatch }}
+            external={wallet}
             google_label={copy.continue_google}
             text={text}
           />
@@ -103,6 +136,7 @@ export const AllocationPage = ({
         </div>
         <p className="fine">{text('footer')}</p>
       </main>
+      {overlays}
     </div>
   )
 }

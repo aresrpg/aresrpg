@@ -907,7 +907,8 @@ errors. Pure selectors derive the shared next action, bracket, registration and 
 Reserved names reuse the existing Character projection lookup; missing names remain unknown.
 A known active event replaces the Blast card, with a compact button on touch layouts.
 The desktop card stack uses the viewport's bottom-right corner when its measured bounds clear chat,
-the social dock, action controls and notifications; otherwise it retains the anchor above chat.
+the social dock and action controls; otherwise it retains the anchor above chat.
+Toasts render over the cards without changing their placement.
 Recent results and outstanding claims retain a results card above the Blast card, including after collection.
 An open or running tournament hides that card; older prizes remain available through recovery claims.
 Until a relevant event is known, Blast remains the default even while the tournament feed is loading or unavailable.
@@ -1422,11 +1423,14 @@ unknown saved set after a failed read.
 
 ### Combat effect duration
 
-Timed fighter effects count down at the affected fighter’s turn end and remain active at zero
+Periodic HP effects count remaining ticks at the affected fighter’s turn start; casting and ending
+that same turn consumes no tick. Other timed fighter effects count down at turn end. Zero rows remain
 until that fighter’s next start. Expiration precedes AP/MP modifier application, poison/regeneration
 ticks, and glyph refresh. Inactive AP/MP pool estimates exclude zero rows. Glyph zone lifetimes and
 spell cooldowns retain their independent clocks. The HUD distinguishes pending expiration from
 remaining usable turns; both combat implementations emit the same resulting state.
+Poison ticks apply the same current elemental and universal shields as direct hits, without
+recalculating their snapshotted damage. Blocked ticks still consume duration; protection never dispels poison.
 
 ### Forging
 
@@ -1497,7 +1501,7 @@ The 30 million team allocation is separate from reward funding. The remaining 56
 and external market arrangements belong to the issuer's presale terms.
 
 Blast owns issuance and its standalone presale. The game creates no offering and cannot start,
-settle or accept presale contributions. A compact pink Blast card above the game chat links to the
+settle or receive presale contributions; Blast's contract does. A compact pink Blast card above the game chat links to the
 reviewed Blast page. Its SDK reader fetches only the pinned standalone Presale and native Clock,
 verifies the package and KARES/SUI type pair, and projects authoritative lifecycle and funding progress.
 Without a presale pin it shows an upcoming sale and performs no network request. Failed reads hide
@@ -1506,6 +1510,14 @@ The card's reducer rejects older object versions; its observer stops polling on 
 sale state. Before the sale it links to the allocation campaign. The encyclopedia owns tokenomics.
 Token art lives in seed and the game's public metadata
 asset uses that same image; there is no separate token website.
+
+Whitelisted wallets buy on `/allocation`, because a zkLogin address is bound to the app that issued it.
+Once a presale pin exists, the same Blast reader switches each awarded card to a spot panel: the
+wallet's commitment read from the presale's `CommitmentKey` field, its SUI balance and one next
+action. The connected signer commits through the SDK's allowlisted call with a proof that the server
+derives from the complete final award list in the Blast CSV order; after launch or cancellation it
+claims with Blast's permissionless `claim`. Max keeps the funding gas cushion, and a short wallet
+opens the shared funding window instead of signing.
 
 The temporary `/allocation` campaign uses a canvas-free entry with normal Google or Wallet Standard
 sign-in from one wallet chooser on the full campaign page. The chooser always offers Google alongside

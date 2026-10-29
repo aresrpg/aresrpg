@@ -17,6 +17,10 @@ const render = (session: AuthSession | null) =>
       text={(key) => key}
       locale="en"
       open
+      sale={null}
+      now={0}
+      kares={{} as never}
+      spot={() => null}
     />
   )
 

@@ -72,7 +72,7 @@
     },
     "packages/fight/src/damage.ts": {
       "deal": [
-        14
+        12
       ]
     },
     "packages/fight/src/turns.ts": {
@@ -685,7 +685,7 @@
     },
     "packages/fight/src/damage.ts": {
       "deal": [
-        15
+        13
       ]
     },
     "packages/fight/src/turns.ts": {
@@ -1829,11 +1829,6 @@
       ],
       "useFundingCheckout > send": [
         11
-      ]
-    },
-    "packages/frontend/src/allocation/AllocationPage.tsx": {
-      "AllocationPage": [
-        9
       ]
     },
     "packages/frontend/src/allocation/runtime.ts": {

@@ -106,7 +106,7 @@ printf '%s\n' "$forge_work" | awk -F, '
 '
 # Check the potentially nonterminating cases under a finite budget before broad coverage.
 sui move test --path packages/move-combat mob_work_bounds_tests --gas-limit 200000000
-cover_package packages/move-combat 98.10 combat:98.10
+cover_package packages/move-combat 98.11 combat:98.11
 cover_package packages/move 99.27 forgemagie:99.56 zone:98.01 trade:99.29 fight_rewards:100 loot_box:100 gathering:98.01 item:98.65 dungeon:99.47 kolizeum:99.68 \
   protected_policy:100 character:98.94 progression:100 friends:100 party:98.72 \
   equipment:98.58 pet:100 crafting:100 world:100 version:100 \

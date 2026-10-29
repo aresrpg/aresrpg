@@ -18,6 +18,7 @@ import {
 import { LEADERBOARD_METRICS } from '../packages/protocol/src/leaderboards.ts'
 import { connect_redis, key, read_json, read_submissions } from '../packages/server/src/allocation/store.ts'
 import { fetch_posts } from '../packages/server/src/allocation/x.ts'
+import { blast_allowlist } from '../packages/server/src/allocation/blast_allowlist.ts'
 
 type Snapshot = Readonly<{
   campaign: typeof campaign
@@ -195,6 +196,17 @@ const initialize = async (): Promise<void> => {
     redis.disconnect()
   }
 }
+/** Reads the exact CSV handed to Blast; its row order is the leaf order. No network access. */
+const allowlist = async (path: string): Promise<void> => {
+  const [header, ...lines] = (await readFile(path, 'utf8')).trimEnd().split('\n')
+  if (header !== 'address,cap_sui,cap_mist') throw new Error('Not a Blast allowlist CSV')
+  const rows = lines.map((line) => {
+    const [address, , cap] = line.split(',')
+    return { address: normalize_address(address ?? ''), cap_mist: BigInt(cap ?? '') }
+  })
+  const { root, leaf_count } = blast_allowlist(rows)
+  console.log(JSON.stringify({ root, leaf_count }))
+}
 const main = async (): Promise<void> => {
   const [command, ...args] = process.argv.slice(2)
   const commands = new Map<string, Readonly<{ min: number; max: number; run: () => Promise<void> }>>([
@@ -203,11 +215,12 @@ const main = async (): Promise<void> => {
     ['snapshot', { min: 1, max: 1, run: () => capture(args[0]) }],
     ['rank', { min: 2, max: 3, run: () => rank(args[0], args[1], args[2]) }],
     ['finalize', { min: 3, max: 3, run: () => finalize(args[0], args[1], args[2]) }],
+    ['allowlist', { min: 1, max: 1, run: () => allowlist(args[0]) }],
   ])
   const selected = commands.get(command)
   if (!selected || args.length < selected.min || args.length > selected.max)
     throw new Error(
-      'Usage: bun scripts/allocation_campaign.ts init | import reserved.json | snapshot snapshot.json | rank snapshot.json results.json [excluded-user-ids.json] | finalize results.json snapshot.json blast.csv'
+      'Usage: bun scripts/allocation_campaign.ts init | import reserved.json | snapshot snapshot.json | rank snapshot.json results.json [excluded-user-ids.json] | finalize results.json snapshot.json blast.csv | allowlist blast.csv'
     )
   await selected.run()
 }

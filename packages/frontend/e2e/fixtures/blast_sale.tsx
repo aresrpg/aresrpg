@@ -17,6 +17,9 @@ const live = {
   committed: 75_000_000_000_000n,
   target: 100_000_000_000_000n,
   progress_bps: 7500,
+  start_ms: 0n,
+  end_ms: 200n,
+  token_allocation: 400_000_000_000_000_000n,
 }
 const states = [
   base,

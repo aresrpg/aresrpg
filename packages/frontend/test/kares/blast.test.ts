@@ -11,6 +11,9 @@ const snapshot = {
   committed: 75n,
   target: 100n,
   progress_bps: 7500,
+  start_ms: 0n,
+  end_ms: 200n,
+  token_allocation: 1000n,
 }
 
 test('failed reads hide stale progress and never pretend that a configured sale is upcoming', () => {

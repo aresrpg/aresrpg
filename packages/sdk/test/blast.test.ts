@@ -2,8 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import { normalizeStructTag } from '@mysten/sui/utils'
+import { ObjectError } from '@mysten/sui/client'
 
-import { blast_url, create_blast_reader, decode_blast_presale, project_blast_presale } from '../src/blast.ts'
+import {
+  blast_claim_preview,
+  blast_tokens_for,
+  blast_url,
+  create_blast_reader,
+  decode_blast_commitment,
+  decode_blast_presale,
+  project_blast_presale,
+} from '../src/blast.ts'
 
 import { id } from './helpers/transport.ts'
 import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
@@ -13,6 +22,7 @@ test('deployed Blast derives its commitment window from start and duration', () 
   const fields = captured.objects[0].json
   const sale = decode_blast_presale(fields)
   expect(sale.end_ms).toBe(1792535060924n)
+  expect(sale.token_allocation).toBe(495000000000000n)
   const scheduled = { ...sale, lifecycle: 'Open' as const }
   expect(project_blast_presale(scheduled, 1792535046201n, '1056407653').phase).toBe('soon')
   expect(project_blast_presale(scheduled, 1792535046202n, '1056407653').phase).toBe('live')
@@ -27,6 +37,7 @@ const fields = {
   raise_target: '100',
   start_ms: '0',
   duration_ms: '200',
+  token_allocation: '1000',
 }
 
 test('presale stages follow certified lifecycle, with an explicit wait after the clock expires', () => {
@@ -109,4 +120,56 @@ test('only the pinned standalone presale for the selected currency and SUI can s
   sale.type = normalizeStructTag(`${id(9)}::blast_presale::Presale<${coin_type},0x2::sui::SUI>`)
   await expect(reader.read()).rejects.toThrow('Unexpected Blast presale')
   expect(() => create_blast_reader({ network: 'mainnet', pins })).toThrow('testnet')
+})
+
+// Blast's published worked example: A = 10,001 tokens, R = 1,000, Alice 1,000 of T = 4,000.
+test('estimates and claim previews follow Blast economics', () => {
+  const base = project_blast_presale(
+    {
+      lifecycle: 'Migrated',
+      total_commitments: 4000n,
+      raise_target: 1000n,
+      start_ms: 0n,
+      end_ms: 1n,
+      token_allocation: 10001n,
+    },
+    2n,
+    '7'
+  )
+  expect(blast_tokens_for(base, 100n)).toBe(1000n)
+  expect(blast_claim_preview(base, 1000n)).toEqual({ tokens: 2500n, refund: 750n })
+  expect(blast_claim_preview({ ...base, phase: 'cancelled' }, 1000n)).toEqual({ tokens: 0n, refund: 1000n })
+  expect(blast_claim_preview({ ...base, phase: 'funded' }, 1000n)).toBeNull()
+})
+
+test('a commitment is two little-endian u64 values and a missing field means nothing to claim', async () => {
+  const bytes = new Uint8Array(16)
+  bytes.set([0x00, 0xe8, 0x76, 0x48, 0x17], 0)
+  bytes.set([0x00, 0x74, 0x3b, 0xa4, 0x0b], 8)
+  expect(decode_blast_commitment(bytes)).toEqual({ quote: 100000000000n, wallet_cap: 50000000000n })
+  const coin_type = `${id(3)}::token::TOKEN`
+  const pins = {
+    network: 'testnet' as const,
+    kares_coin_type: coin_type,
+    blast_presale: { id: id(1), package_original: id(2), url: 'https://www.blast.fun/' },
+  }
+  const names: unknown[] = []
+  let failure: Error | null = null
+  const transport = {
+    network: 'testnet',
+    core: {
+      getDynamicField: async (input: { parentId: string; name: unknown }) => {
+        names.push(input)
+        if (failure) throw failure
+        return { dynamicField: { value: { bcs: bytes } } }
+      },
+    },
+  }
+  const reader = create_blast_reader({ network: 'testnet', pins }, transport as never)
+  expect(await reader.commitment(id(5))).toEqual({ quote: 100000000000n, wallet_cap: 50000000000n })
+  expect(names[0]).toMatchObject({ parentId: id(1), name: { type: `${id(2)}::blast_presale::CommitmentKey` } })
+  failure = new ObjectError('notExists', 'missing', { reason: 'notFound' })
+  expect(await reader.commitment(id(5))).toBeNull()
+  failure = new Error('rpc down')
+  await expect(reader.commitment(id(5))).rejects.toThrow('rpc down')
 })

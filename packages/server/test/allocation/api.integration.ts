@@ -7,9 +7,10 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, test, spyOn } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { Redis } from 'ioredis'
-import { MAX_ALLOCATION_WALLETS, normalize_address } from '@aresrpg/immutable/allocation'
+import { MAX_ALLOCATION_WALLETS, blast_rows, normalize_address } from '@aresrpg/immutable/allocation'
 
 import { serve_allocation } from '../../src/allocation/api.ts'
+import { blast_allowlist } from '../../src/allocation/blast_allowlist.ts'
 import { allocation_request, allocation_status } from '../../src/allocation/service.ts'
 import { link_x, linked_user, complete_x } from '../../src/allocation/x.ts'
 import { wallet_challenge, verify_wallet, verified_wallets, share_wallet } from '../../src/allocation/wallets.ts'
@@ -99,6 +100,20 @@ describe('campaign integration', () => {
     )
     expect(unavailable.predictions).toEqual([])
     expect(unavailable.wallets.map((row) => row.address)).toEqual([owner])
+  })
+  test("final status carries Blast proofs only for the account's own awarded wallets", async () => {
+    const awards = [
+      { address: other, tier: 'member', source: 'social', evidence: '7' },
+      { address: owner, tier: 'veteran', source: 'community', evidence: 'PRIVATE' },
+    ]
+    await redis.set(key('reserved'), JSON.stringify(awards))
+    expect((await allocation_status(redis, options, owner)).proofs).toBeUndefined()
+    await redis.mset(key('phase'), 'final', key('awards'), JSON.stringify(awards))
+    const { proofs } = await allocation_status(redis, options, owner)
+    const expected = blast_allowlist(blast_rows(awards as never)).proof(owner)
+    expect(proofs).toEqual([{ address: owner, proof: expected! }])
+    expect(expected).toMatchObject({ index: '0', cap_mist: '125000000000' })
+    expect(JSON.stringify(proofs)).not.toContain(other.slice(2))
   })
   test('cards are returned only after a real signature verifies and replay is refused', async () => {
     const signer = new Ed25519Keypair()

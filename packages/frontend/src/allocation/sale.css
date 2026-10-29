@@ -1,0 +1,289 @@
+/* The KARES sale: a spot panel under each card and one buy dialog, on the campaign's paper tokens. */
+.sale-hero {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+}
+.sale-progress {
+  display: grid;
+  gap: 8px;
+  width: min(560px, 100%);
+  margin-top: 6px;
+}
+.sale-progress p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: var(--ink-soft);
+  font: 500 12px/1.4 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.sale-progress b {
+  color: var(--ink);
+}
+.sale-track {
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #30283c14;
+}
+.sale-track > span {
+  display: block;
+  max-width: 100%;
+  height: 100%;
+  background: var(--vet);
+}
+.sale-track.is-blast {
+  height: 4px;
+}
+.sale-track.is-blast > span {
+  background: var(--blast);
+}
+
+.sale-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  text-align: left;
+}
+.sale-panel header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.sale-panel header b {
+  overflow: hidden;
+  font: 800 14px/1.2 var(--game);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sale-panel header span {
+  flex: none;
+  color: var(--ink-soft);
+  font: 500 11px/1 var(--mono);
+}
+.sale-panel header span.is-signed {
+  color: var(--vet);
+}
+.sale-bought {
+  display: grid;
+  gap: 6px;
+}
+.sale-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink);
+  font: 500 13px/1.3 var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sale-row > span:first-child {
+  color: var(--ink-soft);
+}
+.sale-row i {
+  flex: 1;
+  min-width: 12px;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, #cfc7d2 0 2px, transparent 2px 6px);
+  transform: translateY(-3px);
+}
+.sale-action.btn {
+  width: 100%;
+  min-height: 46px;
+  font-size: 15px;
+}
+.sale-action.is-blast {
+  border-color: var(--blast-deep);
+  background: var(--blast-deep);
+  color: #fff;
+}
+.sale-action.is-ink {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.sale-note {
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  color: var(--ink-soft);
+  font: 500 12.5px/1.3 var(--mono);
+  text-align: center;
+}
+.sale-outcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--vet-soft);
+  color: #0f3d29;
+  font: 500 12px/1.3 var(--mono);
+}
+.sale-outcome span {
+  flex: 1;
+}
+.sale-outcome a {
+  color: inherit;
+}
+.sale-outcome.is-error {
+  background: #f8e6e4;
+  color: var(--bad);
+}
+
+.sale-buy.wallet-picker {
+  width: min(440px, calc(100% - 32px));
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 30px 70px -30px #140a1e99;
+}
+.sale-buy header {
+  margin: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.sale-buy header > div {
+  flex: 1;
+  min-width: 0;
+}
+.sale-buy h2 {
+  margin: 0;
+  font: 800 17px/1.2 var(--game);
+}
+.sale-buy header p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font: 500 12px/1.3 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sale-buy-card {
+  flex: none;
+  width: 56px;
+  height: 35px;
+  border-radius: 4px;
+  background: center / cover;
+}
+.sale-buy form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 20px;
+}
+.sale-amount {
+  display: grid;
+  gap: 8px;
+}
+.sale-amount > span:first-child {
+  color: var(--ink-soft);
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.sale-amount > span:last-child {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  background: #fff;
+}
+.sale-amount[data-invalid] > span:last-child {
+  border-color: var(--bad);
+}
+.sale-amount input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 700 32px/1.1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.sale-amount small {
+  color: var(--ink-soft);
+  font: 500 15px/1 var(--mono);
+}
+.sale-presets {
+  display: flex;
+  gap: 8px;
+}
+.sale-presets button {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font: 500 13px/1 var(--mono);
+  cursor: pointer;
+}
+.sale-presets button[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.sale-presets button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sale-rows {
+  display: grid;
+  gap: 10px;
+}
+.sale-terms {
+  margin: 0;
+  color: var(--ink-soft);
+  font: 13px/1.5 var(--serif);
+}
+.sale-error {
+  margin: 0;
+  color: var(--bad);
+  font: 500 12px/1.4 var(--mono);
+}
+.sale-amount input:focus-visible {
+  outline: 0;
+}
+.sale-amount > span:last-child:focus-within {
+  box-shadow: 0 0 0 3px #dea85580;
+}
+.sale-presets button:focus-visible {
+  outline: 3px solid #dea855;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .sale-buy.wallet-picker {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    margin: 0;
+    border-radius: 10px 10px 0 0;
+  }
+  .sale-buy form {
+    padding: 16px 16px 28px;
+  }
+}

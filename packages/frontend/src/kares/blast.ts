@@ -41,14 +41,16 @@ export const blast_phase = (state: BlastState) =>
 /** One mounted public card owns one disposable reader; callbacks only dispatch reducer inputs. */
 export const create_blast_runtime = (
   options: Parameters<typeof create_blast_reader>[0],
-  factory: typeof create_blast_reader = create_blast_reader
+  factory: (
+    options: Parameters<typeof create_blast_reader>[0]
+  ) => Pick<ReturnType<typeof create_blast_reader>, 'url' | 'configured' | 'read'> = create_blast_reader
 ) => {
   const store = createStore<BlastState>(initial_blast_state)
   const dispatch = (input: BlastInput): void => store.setState((state) => reduce_blast(state, input), true)
   const begin = (): (() => void) => {
     let stopped = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    let reader: ReturnType<typeof create_blast_reader>
+    let reader: ReturnType<typeof factory>
     try {
       reader = factory(options)
     } catch (error) {

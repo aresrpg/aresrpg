@@ -55,3 +55,13 @@ export const useCampaignRefresh = (
     }
   }, [runtime, enabled])
 }
+
+/** Minute-resolution clock for sale countdowns; chain lifecycle remains the phase authority. */
+export const useMinuteClock = (): number => {
+  const [now, set_now] = useState(Date.now)
+  useEffect(() => {
+    const timer = setInterval(() => set_now(Date.now()), 30_000)
+    return () => clearInterval(timer)
+  }, [])
+  return now
+}

@@ -100,14 +100,14 @@ describe('fight turn effects', () => {
 
     expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
-    expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([2n, 2n, 2n, 2n, 2n])
+    expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n, 2n, 2n, 2n])
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows)
     tick_turn_end(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n, 1n, 1n, 1n])
 
     expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
-    expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n, 1n, 1n, 1n])
+    expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([0n, 0n, 1n, 1n, 1n])
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows)
     tick_turn_end(runtime, 0n)
     expire_turn_effects(runtime, 0n)
@@ -115,7 +115,7 @@ describe('fight turn effects', () => {
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows - 7n)
     expect(runtime.render_actions.filter(({ type }) => type === 'damage_number')).toHaveLength(3)
     expect(runtime.render_actions.filter(({ type }) => type === 'heal_number')).toHaveLength(2)
-    expect(runtime.render_actions.filter(({ type }) => type === 'damage_reduced')).toHaveLength(1)
+    expect(runtime.render_actions.filter(({ type }) => type === 'damage_reduced')).toHaveLength(3)
   })
 
   test('a glyph fires at the victim turn start and expires only on its owner turns', () => {

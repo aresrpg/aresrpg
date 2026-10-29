@@ -10,6 +10,7 @@ const mobile_viewport = process.env.PERF_VIEWPORT === 'mobile'
 const CRITICAL_TESTS = [
   'auth_callback',
   'allocation_entries',
+  'allocation_sale',
   'add_funds',
   'box_batch',
   'boot_recovery',

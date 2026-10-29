@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { PointerEvent } from 'react'
+import type { PointerEvent, ReactNode } from 'react'
 import { campaign, nominal_tokens, cap_mist, sui_amount } from '@aresrpg/immutable/allocation'
 
 import type { CopyText } from '../i18n/copy.ts'
@@ -58,7 +58,16 @@ export const TierCard = ({
   locale,
   runtime,
   busy,
-}: Readonly<{ card: CardView; text: CopyText; locale: Locale; runtime: AllocationRuntime; busy: boolean }>) => {
+  children,
+}: Readonly<{
+  card: CardView
+  text: CopyText
+  locale: Locale
+  runtime: AllocationRuntime
+  busy: boolean
+  /** The sale panel replaces sharing once a sale is configured. */
+  children?: ReactNode
+}>) => {
   const { wallet } = card
   const description = describe_card(card, text, locale)
   const backgrounds: Readonly<Record<string, string>> = {
@@ -121,25 +130,27 @@ export const TierCard = ({
           <p>{text('pending_note')}</p>
         </div>
       )}
-      <div className="slot-actions">
-        <button
-          className="btn btn-small"
-          disabled={busy}
-          onClick={() =>
-            runtime.dispatch({
-              type: 'request',
-              task: {
-                kind: 'share',
-                address: wallet.address,
-                locale,
-                text: card.award ? text('share_post', { tier: text(card.award.tier) }) : text('share_pending'),
-              },
-            })
-          }
-        >
-          {text('share')}
-        </button>
-      </div>
+      {children ?? (
+        <div className="slot-actions">
+          <button
+            className="btn btn-small"
+            disabled={busy}
+            onClick={() =>
+              runtime.dispatch({
+                type: 'request',
+                task: {
+                  kind: 'share',
+                  address: wallet.address,
+                  locale,
+                  text: card.award ? text('share_post', { tier: text(card.award.tier) }) : text('share_pending'),
+                },
+              })
+            }
+          >
+            {text('share')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -54,6 +54,8 @@ export type AllocationStatus = Readonly<{
   predictions?: readonly LeaderboardPrediction[]
   user: Readonly<{ id: string; username: string }> | null
   submission: Submission | null
+  /** Final phase only: allowlist proofs for this account's verified, awarded wallets. */
+  proofs?: readonly Readonly<{ address: string; proof: SpotProof }>[]
 }>
 
 export const normalize_address = (value: string): string => {
@@ -205,19 +207,23 @@ export const select_awards = (
   }, players)
 }
 
-/** Blast handoff stays address/cap only. The audit export retains tiers and sources separately. */
-export const blast_csv = (awards: readonly Award[]): string => {
+export type BlastRow = Readonly<{ address: string; cap_mist: bigint }>
+/** The one Blast allowlist order: CSV rows and Merkle leaf indexes both follow it. */
+export const blast_rows = (awards: readonly Award[]): readonly BlastRow[] => {
   if (new Set(awards.map(({ address }) => normalize_address(address))).size !== awards.length)
     throw new Error('duplicate_address')
-  return (
-    [
-      'address,cap_sui,cap_mist',
-      ...[...awards]
-        .sort((a, b) => a.address.localeCompare(b.address))
-        .map(({ address, tier }) => `${normalize_address(address)},${sui_amount(cap_mist(tier))},${cap_mist(tier)}`),
-    ].join('\n') + '\n'
-  )
+  return [...awards]
+    .sort((a, b) => a.address.localeCompare(b.address))
+    .map(({ address, tier }) => ({ address: normalize_address(address), cap_mist: cap_mist(tier) }))
 }
+/** Blast handoff stays address/cap only. The audit export retains tiers and sources separately. */
+export const blast_csv = (awards: readonly Award[]): string =>
+  [
+    'address,cap_sui,cap_mist',
+    ...blast_rows(awards).map(({ address, cap_mist }) => `${address},${sui_amount(cap_mist)},${cap_mist}`),
+  ].join('\n') + '\n'
+/** A wallet's position in the Blast allowlist tree. Strings keep u64 values exact over JSON. */
+export type SpotProof = Readonly<{ index: string; cap_mist: string; siblings: readonly string[] }>
 
 /** A newly revealed tier or changed cap must not reuse a cached pending social preview. */
 export const share_version = (phase: CampaignPhase, award?: Pick<Award, 'tier'>): string =>

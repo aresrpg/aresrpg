@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useLayoutEffect, useRef } from 'react'
 
-const OBSTACLES =
-  '.world-social-dock, .fight-hud__bottom > *, .gw-worldchat, [data-toasts], .mobile-jump, .mobile-joystick'
+const OBSTACLES = '.world-social-dock, .fight-hud__bottom > *, .gw-worldchat, .mobile-jump, .mobile-joystick'
 
 /** Keep the existing chat anchor unless the entire card stack fits in the opposite corner. */
 export const useHudPlacement = () => {
@@ -24,10 +23,7 @@ export const useHudPlacement = () => {
       const bottom = bounds.bottom - 10
       const left = right - size.width
       const top = bottom - size.height
-      const blocked = [
-        ...scope.querySelectorAll<HTMLElement>(OBSTACLES),
-        ...document.querySelectorAll('[data-toasts]'),
-      ].some((element) => {
+      const blocked = [...scope.querySelectorAll<HTMLElement>(OBSTACLES)].some((element) => {
         const rect = element.getBoundingClientRect()
         return (
           rect.width > 0 &&
@@ -48,14 +44,7 @@ export const useHudPlacement = () => {
     const sizes = new ResizeObserver(schedule)
     const observe = (): void => {
       sizes.disconnect()
-      for (const element of [
-        frame,
-        chat,
-        cards,
-        ...scope.querySelectorAll(OBSTACLES),
-        ...document.querySelectorAll('[data-toasts]'),
-      ])
-        sizes.observe(element)
+      for (const element of [frame, chat, cards, ...scope.querySelectorAll(OBSTACLES)]) sizes.observe(element)
       schedule()
     }
     // Content changes can add/remove blockers; resizing and dragging also change the available space.

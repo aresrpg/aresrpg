@@ -230,7 +230,9 @@ Mainnet publication, funding, upgrades and permanent freeze require explicit own
    burn-only supply. Blast accepts `burnable`; it must be true. Nine decimals are not guaranteed
    by its standalone presale. Verify the reviewed one-billion-token issuance.
 4. Record the full coin type, shared Currency reference and existing treasury. Optionally record
-   `blast_presale: { id, package_original, url }`. Require an HTTPS URL on Blast's domain.
+   `blast_presale: { id, package_original, package, package_version, url }`. Require an HTTPS URL on
+   Blast's domain. `package` and `package_version` enable allowlisted purchases on `/allocation`;
+   first compare `bun scripts/allocation_campaign.ts allowlist blast.csv` with the sale's on-chain root.
    These are verified external facts, not locally published objects.
 5. Ensure external migration delivered at least 410 million spendable tokens to the treasury.
    Escrowed or vested tokens cannot fund reserves. The treasury must sign funding and own both Setup and UpgradeCap.

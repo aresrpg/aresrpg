@@ -883,14 +883,24 @@ fun advance_to_player(
   used
 }
 
+fun is_periodic_hp(effect: &ActiveEffect): bool {
+  effect.stat == STAT_HP && (effect.kind == K_ADD || effect.kind == K_REMOVE || effect.kind == K_STEAL)
+}
+
 fun tick_turn_start(state: &mut State, fighter: u64) {
   let effects = state.fighters[fighter].effects;
   let mut index = 0;
   while (index < effects.length()) {
     let effect = &effects[index];
-    if (effect.stat == STAT_HP && (effect.kind == K_REMOVE || effect.kind == K_STEAL))
-      hit(state, fighter, effect.value, effect.source);
-    if (effect.stat == STAT_HP && effect.kind == K_ADD) heal(state, fighter, effect.value);
+    if (is_periodic_hp(effect) && effect.turns_left > 0) {
+      // Consume an actual tick, never the casting turn's end. Newly applied glyph rows wait.
+      state.fighters[fighter].effects[index].turns_left = effect.turns_left - 1;
+      if (effect.kind == K_ADD) heal(state, fighter, effect.value)
+      else {
+        let damage = reduce_damage(state, fighter, &effect.element, effect.value);
+        hit(state, fighter, damage, effect.source);
+      };
+    };
     index = index + 1;
   };
   if (!state.ended) fire_glyphs_under(state, fighter);
@@ -903,7 +913,7 @@ fun tick_turn_end(state: &mut State, fighter: u64) {
   let mut index = 0;
   while (index < effects.length()) {
     let mut effect = effects[index];
-    if (effect.turns_left > 0) effect.turns_left = effect.turns_left - 1;
+    if (!is_periodic_hp(&effect) && effect.turns_left > 0) effect.turns_left = effect.turns_left - 1;
     kept.push_back(effect);
     index = index + 1;
   };
@@ -1737,6 +1747,21 @@ fun apply_to_fighter(
   };
 }
 
+// Shield the resolved amount without repeating amplification or elemental resistance.
+fun reduce_damage(state: &State, target: u64, element: &String, damage: u64): u64 {
+  if (state.ended || state.fighters[target].dead) return 0;
+  let target_effects = &state.fighters[target].effects;
+  let mut shield = 0;
+  let mut effect_index = 0;
+  while (effect_index < target_effects.length()) {
+    let effect = &target_effects[effect_index];
+    if (effect.kind == K_REDUCE && (effect.element.is_empty() || effect.element == *element))
+      shield = shield + effect.value;
+    effect_index = effect_index + 1;
+  };
+  fight_math::sat_sub(damage, shield)
+}
+
 fun deal_damage(
   state: &mut State,
   caster: u64,
@@ -1747,7 +1772,7 @@ fun deal_damage(
   learned_level: u64,
 ): u64 {
   if (state.ended || state.fighters[target].dead) return 0;
-  let mut damage = fight_math::resolved_damage(
+  let raw_damage = fight_math::resolved_damage(
     base,
     fight_math::primary_stat(
       element, sheet.strength, sheet.intelligence, sheet.chance, sheet.agility,
@@ -1756,21 +1781,13 @@ fun deal_damage(
     resistance(state, target, element),
     item_stats::shift() as u64,
   );
-  let target_effects = &state.fighters[target].effects;
-  let mut shield = 0;
-  let mut effect_index = 0;
-  while (effect_index < target_effects.length()) {
-    let effect = &target_effects[effect_index];
-    if (effect.kind == K_REDUCE && (effect.element.is_empty() || effect.element == *element))
-      shield = shield + effect.value;
-    effect_index = effect_index + 1;
-  };
-  damage = fight_math::sat_sub(damage, shield);
+  let damage = reduce_damage(state, target, element, raw_damage);
   if (damage == 0) return 0;
 
+  let target_effects = &state.fighters[target].effects;
   let mut final_target = target;
   let mut redirect = option::none();
-  effect_index = 0;
+  let mut effect_index = 0;
   while (effect_index < target_effects.length() && redirect.is_none()) {
     let effect = &target_effects[effect_index];
     if (effect.kind == K_REDIRECT && !state.fighters[effect.source].dead)

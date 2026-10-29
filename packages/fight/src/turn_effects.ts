@@ -3,6 +3,7 @@
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { KINDS, STATS, add_ap, add_mp, heal_seat, hit, spend_ap, spend_mp } from './fighters.ts'
+import { reduce_damage } from './damage.ts'
 import { effect_id_at, emit } from './runtime.ts'
 import { fire_glyphs_under, tick_board_zones } from './zones.ts'
 import { resolve_rows } from './effects.ts'
@@ -10,6 +11,9 @@ import type { ActiveEffect, FightRuntime } from './types.ts'
 
 const removes_points = (kind: bigint): boolean =>
   kind === KINDS.remove || kind === KINDS.steal || kind === KINDS.fixed_remove
+
+const is_periodic_hp = (row: Readonly<ActiveEffect>): boolean =>
+  row.stat === STATS.hp && (row.kind === KINDS.add || row.kind === KINDS.remove || row.kind === KINDS.steal)
 
 export const apply_pool_effects = (runtime: FightRuntime, fighter: bigint): void => {
   const rows = [...runtime.contract.fighters[Number(fighter)].effects]
@@ -27,22 +31,24 @@ export const apply_pool_effects = (runtime: FightRuntime, fighter: bigint): void
 export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void => {
   const target = runtime.contract.fighters[Number(fighter)]
   const rows = [...target.effects]
-  rows.forEach((row) => {
-    if (row.stat === STATS.hp && (row.kind === KINDS.remove || row.kind === KINDS.steal)) {
-      hit(runtime, {
-        target: fighter,
-        amount: row.value,
-        source: row.source,
-        cause: 'damage_over_time',
-        element: row.element,
-      })
-    }
-    if (row.stat === STATS.hp && row.kind === KINDS.add) {
+  rows.forEach((row, index) => {
+    if (!is_periodic_hp(row) || row.turns_left === 0n) return
+    // Consume an actual tick, never the casting turn's end. Newly applied glyph rows wait.
+    target.effects[index] = { ...row, turns_left: row.turns_left - 1n }
+    if (row.kind === KINDS.add) {
       heal_seat(runtime, {
         target: fighter,
         amount: row.value,
         source: row.source,
         cause: 'regeneration',
+      })
+    } else {
+      hit(runtime, {
+        target: fighter,
+        amount: reduce_damage(runtime, row.source, fighter, row.element, row.value),
+        source: row.source,
+        cause: 'damage_over_time',
+        element: row.element,
       })
     }
   })
@@ -50,10 +56,12 @@ export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void =>
   tick_board_zones(runtime, fighter)
 }
 
-/** Count completed usable turns; final rows remain active until the next start. */
+/** Ordinary buffs count usable turns; periodic HP rows count their start-of-turn ticks. */
 export const tick_turn_end = (runtime: FightRuntime, fighter: bigint): void => {
   const target = runtime.contract.fighters[Number(fighter)]
-  target.effects = target.effects.map((row) => ({ ...row, turns_left: row.turns_left > 0n ? row.turns_left - 1n : 0n }))
+  target.effects = target.effects.map((row) =>
+    is_periodic_hp(row) ? row : { ...row, turns_left: row.turns_left > 0n ? row.turns_left - 1n : 0n }
+  )
 }
 
 /** Expire before pool refill, periodic ticks, glyph refresh, and the incoming turn cue. */

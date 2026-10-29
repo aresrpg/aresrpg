@@ -15,6 +15,8 @@ import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { WalletSources } from '../wallet/WalletSources.tsx'
 import { external_wallet_view } from '../wallet/view.ts'
+import type { WalletView } from '../wallet/model.ts'
+import type { ExternalSession } from '../wallet/external_session.ts'
 import { useAppStore } from '../store.ts'
 import { capture_analytics } from '../analytics.ts'
 import { useFundingCheckout } from '../funding/useFundingCheckout.ts'
@@ -117,20 +119,21 @@ const FundingForm = ({
   balance,
   checkout,
   close,
+  wallet,
 }: FundingProps &
   Readonly<{
     cost: bigint
     balance: bigint | null
     checkout: ReturnType<typeof useFundingCheckout>
     close: () => void
+    wallet: WalletView
   }>) => {
   const { locked } = checkout
-  const wallet = useAppStore((state) => state.external_wallet)
   const price = useSuiUsd(true)
   const locale = useLocale()
   const minimum = cost + FUNDING_CUSHION_MIST
   const delivered = checkout.state.stage === 'success'
-  useFundingAnalytics(wallet.session ? 'bridge' : 'direct', env.network)
+  useFundingAnalytics(wallet.state.session ? 'bridge' : 'direct', env.network)
   return (
     <>
       <WalletAddressBlock address={address} copy={copy} method="direct" />
@@ -158,7 +161,7 @@ const FundingForm = ({
           )}
         </p>
       )}
-      <WalletSources wallet={external_wallet_view(wallet)} copy={copy} locked={locked} />
+      <WalletSources wallet={wallet} copy={copy} locked={locked} />
       <Suspense fallback={<p className="text-xs text-muted">{copy.kares_page.loading}</p>}>
         <FundingCheckout address={address} copy={copy} checkout={checkout} price_usd={price} close={close} />
       </Suspense>
@@ -167,24 +170,27 @@ const FundingForm = ({
   )
 }
 
-export const AddFundsModal = ({
-  address,
-  copy,
-  network = env.network,
-  on_close,
-  warning,
-  cost_mist = 0n,
-}: Readonly<{
+type FundingModalProps = Readonly<{
   address: string | null
   copy: AppCopy
   network?: Network
   on_close: () => void
   warning?: string
   cost_mist?: bigint
-}>) => {
+}>
+type FundingSource = Readonly<{ wallet: WalletView; source: ExternalSession | null; balance: bigint | null }>
+
+/** The funding window for any page: the caller owns its wallet sources and the recipient's balance. */
+export const FundingModal = ({
+  address,
+  copy,
+  network = env.network,
+  on_close,
+  warning,
+  cost_mist = 0n,
+  funding: { wallet, source, balance },
+}: FundingModalProps & Readonly<{ funding: FundingSource }>) => {
   const testnet = network === 'testnet'
-  const source = useAppStore((state) => state.external_wallet.session)
-  const balance = useAppStore((state) => state.session.sui_balance_mist)
   const recipient = address ?? ''
   const checkout = useFundingCheckout(source, recipient, cost_mist, balance, !testnet)
   const close = on_close
@@ -214,6 +220,7 @@ export const AddFundsModal = ({
             balance={balance}
             checkout={checkout}
             close={close}
+            wallet={wallet}
           />
         )}
       </div>
@@ -243,4 +250,11 @@ export const AddFundsModal = ({
       )}
     </FundingErrorBoundary>
   )
+}
+
+/** The game's funding window reads its wallet sources from the app store. */
+export const AddFundsModal = (props: FundingModalProps) => {
+  const wallet = useAppStore((state) => state.external_wallet)
+  const balance = useAppStore((state) => state.session.sui_balance_mist)
+  return <FundingModal {...props} funding={{ wallet: external_wallet_view(wallet), source: wallet.session, balance }} />
 }

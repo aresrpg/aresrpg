@@ -6,6 +6,7 @@ import { normalizeStructTag, SUI_TYPE_ARG } from '@mysten/sui/utils'
 import {
   blast_purchase_config,
   blast_purchase_actions,
+  create_blast_claim_transaction,
   create_blast_purchase_transaction,
   type BlastPurchaseConfig,
 } from '../src/blast_purchase.ts'
@@ -119,4 +120,50 @@ test('simulation never executes; purchase uses the common executor exactly once'
   sale.json.lifecycle = { '@variant': 'Migrated' }
   await expect(actions.purchase({ method: 'open', amount: 10n })).rejects.toThrow('not open')
   expect(executions).toBe(1)
+})
+
+test('a claim pays the signer as participant and refuses before the sale ends', async () => {
+  const tx = create_blast_claim_transaction(config, id(5))
+  const call = tx.getData().commands.find((command) => command.$kind === 'MoveCall')!.MoveCall!
+  expect(call.function).toBe('claim')
+  expect(call.arguments).toHaveLength(4)
+  expect(tx.getData().commands).toHaveLength(1)
+  const sale = {
+    ...captured.objects[0],
+    objectId: config.id,
+    type: normalizeStructTag(`${config.package_original}::blast_presale::Presale<${config.coin_type},${SUI_TYPE_ARG}>`),
+    json: { ...captured.objects[0].json, lifecycle: { '@variant': 'Open' }, start_ms: '0', duration_ms: '10000' },
+  }
+  const client = {
+    network: 'mainnet',
+    core: {
+      getObjects: async () => ({
+        objects: [
+          sale,
+          { objectId: id(6), owner: { $kind: 'Shared' }, type: '0x2::clock::Clock', json: { timestamp_ms: '1' } },
+        ],
+      }),
+      getObject: async () => ({
+        object: {
+          owner: { $kind: 'Shared' },
+          type: `${config.package_original}::blast_presale_package::PackageVersion`,
+        },
+      }),
+    },
+  }
+  let executions = 0
+  const sdk = {
+    pins,
+    execute: async () => {
+      executions++
+      return { $kind: 'Transaction', Transaction: { digest: 'claim-digest' } }
+    },
+  }
+  const actions = blast_purchase_actions({ sdk, client, address: id(5) } as never)
+  await expect(actions.claim()).rejects.toThrow('claims are not open')
+  for (const lifecycle of ['Migrated', 'Cancelled']) {
+    sale.json.lifecycle = { '@variant': lifecycle }
+    expect((await actions.claim()).digest).toBe('claim-digest')
+  }
+  expect(executions).toBe(2)
 })
