@@ -14,8 +14,9 @@ export const WING_SHAPES = [
   'fronds',
   'slats',
   'shadow',
+  'candles',
 ] as const
-export const WING_TRAILS = ['dashes', 'smoke', 'ribbon', 'wisps', 'streaks'] as const
+export const WING_TRAILS = ['dashes', 'smoke', 'ribbon', 'wisps', 'streaks', 'embers'] as const
 
 export type PetWingStyle = Readonly<{
   shape: (typeof WING_SHAPES)[number]

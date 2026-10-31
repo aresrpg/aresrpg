@@ -130,6 +130,38 @@ fn wing_slats(p: vec2f, x: f32, gate: f32, style: WingStyle) -> vec4f {
   return vec4f(mix(style.primary, style.secondary, wing_smooth(height * .6, height, y)) * intensity + style.shade * rail * .6,
     intensity * .5 + rail * .4);
 }
+// Candle k opens at price k and closes at price k + 1, so the chart is one continuous series.
+fn wing_candle_price(k: f32) -> f32 {
+  return (wing_noise(vec2f(k * .18, 5.)) - .5) * .34 + (wing_hash(vec2f(k, 9.)) - .5) * .1;
+}
+// A haunted chart: candles are born at the hinge, slide to the tip and dissolve. Primary rises, secondary falls.
+// Each wing trades its own series on its own clock, so the pair never mirrors.
+fn wing_candles(p: vec2f, x: f32, gate: f32, style: WingStyle) -> vec4f {
+  let count = 22.; let scroll = style.clock * .9 + style.side * .25; let c = x * count - fract(scroll);
+  let cell = floor(c); let fx = fract(c); let k = cell - floor(scroll) + style.side * 97.;
+  let y = (p.y - .09 * p.x) / (1. - .5 * clamp((cell + .5) / count, 0., 1.));
+  let grow = clamp(cell + fract(scroll), 0., 1.);
+  // The live candle ticks around its path to the close and stretches its wicks to the extremes it touched.
+  let open = wing_candle_price(k);
+  let tick = (wing_noise(vec2f(style.clock * 7., k * 5.)) - .5) * .09 * sin(WING_PI * grow);
+  let close = mix(open, wing_candle_price(k + 1.), grow) + tick;
+  let up = step(open, close); let tint = mix(style.secondary, style.primary, up);
+  let low_body = min(open, close); let high_body = max(open, close) + .006;
+  let high = high_body + (.006 + .035 * wing_hash(vec2f(k, 1.))) * grow + max(tick, 0.) * .5;
+  let low = low_body - (.006 + .035 * wing_hash(vec2f(k, 2.))) * grow + min(tick, 0.) * .5;
+  let span = step(0., cell) * step(cell, count - 1.) * gate * wing_smooth(0., .15, grow);
+  // Distance outside the body and wick, in cell widths horizontally and chart units vertically.
+  let body_x = abs(fx - .5) - .36; let body_y = abs(y - (low_body + high_body) * .5) - (high_body - low_body) * .5;
+  let body = wing_smooth(.03, 0., body_x) * wing_smooth(.003, 0., body_y);
+  let wick = wing_smooth(.05, .03, abs(fx - .5)) * wing_smooth(.003, 0., abs(y - (low + high) * .5) - (high - low) * .5);
+  // A neon haunt glows around each candle and the live one flares while it trades.
+  let halo = exp(-max(body_x, 0.) * 9. - max(body_y, 0.) * 60.) * (1. - body) * .35;
+  let live = 1. + .7 * (1. - grow) * step(cell, 1.);
+  let dissolve = 1. - wing_smooth(.6, 1., x) * (.4 + .6 * wing_fbm(p * 22. - vec2f(style.clock, 0.)));
+  let shape = max(body, wick * .9) * live * span * dissolve; let glow = halo * span * dissolve;
+  let color = tint * (shape * (.8 + .2 * up) + glow) + style.shade * body * span * .3;
+  return vec4f(color, clamp(shape * .7 + glow * .2, 0., 1.));
+}
 fn wing_fan(p: vec2f, deployed: f32, family: f32, style: WingStyle) -> vec4f {
   var intensity = 0.; var packet = 0.; var core = 0.;
   for (var i = 0; i < 5; i++) {
@@ -187,6 +219,7 @@ fn wing_pattern(point: vec2f, deployed: f32, family: f32, style: WingStyle) -> v
     case 6: { result = wing_fin(p, deployed, gate, style); }
     case 7: { result = wing_shards(p, x, gate, style); }
     case 9: { result = wing_slats(p, x, gate, style); }
+    case 11: { result = wing_candles(p, x, gate, style); }
     default: { result = wing_fan(p, deployed, family, style); }
   }
   let q = vec2f(p.x * 26. - style.clock * 1.6, p.y * 26. + style.clock * .5); let f = fract(q) - vec2f(.5);

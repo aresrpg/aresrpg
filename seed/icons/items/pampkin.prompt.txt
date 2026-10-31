@@ -1,0 +1,7 @@
+Mode: built-in image generation, native transparent RGBA.
+Subject reference: Blender render of seed/models/pets/pampkin.glb.
+Style references: oeuftermath_hd.png and zot_hd.png.
+Master: pampkin_hd.png (512 × 512); runtime: pampkin.png (64 × 64).
+Both sizes derived with Pillow LANCZOS from the generated RGBA source.
+
+Use case: stylized-concept. Asset: AresRPG inventory pet icon, one subject on a transparent background. Image 1 is the UPDATED exact subject reference: Pampkin is now a genuinely voxel-built squat orange jack-o-lantern: every surface has square block steps, broad vertical orange rind ridges, sharply evil stepped glowing gold eye sockets and a block-carved glowing grin, a crooked blocky green stalk and one stepped leaf. Two wings each consist of four red and green financial trading candlesticks, with thin high/low wicks. Preserve the new reference geometry and block silhouette; do not smooth the pumpkin into a sphere. No bat membranes, arms or legs. Images 2 and 3 are style references only. Polished hand-painted 3D-cartoon inventory icon, crisp near-black outline, chunky voxel forms, broad warm highlights, deep orange cavity shading and restrained cool rim light, readable at 64px. Frontal three-quarter view, whole candle-wing span, complete silhouette occupies 88 percent of the square. No text, frame, badge, scenery, floor, cast shadow, watermark, background color, photorealism. Voxel 3D model style, not flat pixel art. Actual transparent background.

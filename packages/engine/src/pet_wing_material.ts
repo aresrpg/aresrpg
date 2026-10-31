@@ -36,13 +36,14 @@ fn pet_wing_color(uv: vec2f, motion: vec4f, profile: vec4f, primary: vec3f, seco
   let deployed = motion.x * motion.x * (3. - 2. * motion.x);
   if (deployed < .01) { return vec4f(0.); }
   let p = vec2f(uv.x * 1.65, uv.y * 2. - 1.);
-  let style = WingStyle(clock, profile.z, primary, secondary, shade);
+  let style = WingStyle(clock, profile.z, primary, secondary, shade, motion.y);
   let main = wing_pattern(p, deployed, profile.x, style);
   let radius = length(p); let pulse = .5 + .5 * sin(radius * 14. - clock * 5.);
   var color = main.rgb * (.85 + .5 * pulse * pulse); var alpha = main.a;
-  if (profile.w > .5) {
+  // The echo tints toward primary; candles encode direction in hue, so an echo would forge false candles.
+  if (profile.w > .5 && profile.x != 11.) {
     let ghost = wing_pattern(p / 1.28 + vec2f(0., .015), deployed, profile.x,
-      WingStyle(clock - .3, profile.z, primary, secondary, shade));
+      WingStyle(clock - .3, profile.z, primary, secondary, shade, motion.y));
     let flame = wing_fbm(vec2f(p.x * 7. - clock * 2.5, p.y * 12. - clock * 1.2));
     let behind = 1. - clamp(main.a * 1.5, 0., 1.);
     color += (ghost.rgb * .35 + primary * ghost.a * .5) * (.35 + .9 * flame) * behind;
@@ -91,6 +92,15 @@ fn pet_trail_color(uv: vec2f, motion: vec4f, profile: vec4f, primary: vec3f, sec
       let noise = wing_fbm(vec2f(along * 2.5 - clock * 2.4, fi * 4.)); let width = (.02 + .12 * noise) * (1. - u * .6);
       let mask = (1. - wing_smooth(width * .4, width, distance)) * fade;
       color = mix(secondary, primary, wing_smooth(width * .2, width * .6, distance)) * mask; alpha = mask * .3;
+    }
+    case 5: {
+      // A candle-wide thread of red and green leaves the chart, then billows into ghost smoke.
+      let hot = 1. - wing_smooth(0., .3, u);
+      let noise = wing_fbm(vec2f(along * 2.2 - clock * 2.2, fi * 4.));
+      let width = .02 + (.04 + .07 * noise) * wing_smooth(0., .6, u);
+      let mask = (1. - wing_smooth(width * .5, width, distance)) * pow(max(1. - u, 0.), 1.2);
+      let ember = mix(secondary, primary, step(.5, wing_hash(vec2f(floor(along * 7. - clock * 4.), fi))));
+      color = mix(primary * .45, ember, hot) * mask; alpha = mask * mix(.3, .6, hot);
     }
     default: {
       let width = .05 * (1. - u * .5);

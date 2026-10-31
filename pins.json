@@ -6541,10 +6541,10 @@
       }
     },
     "0x99959fa5f7160f6690e1ef8d76595e088bd14fd5eee7852b5110adf4ac0fcc64": {
-      "hash": "397bf31984fb8c07",
+      "hash": "7891baf6b3e1474b",
       "label": "spell Toxic Knowledge",
       "revisions": {
-        "0x99959fa5f7160f6690e1ef8d76595e088bd14fd5eee7852b5110adf4ac0fcc64": "855011994:AXUMFKrWkHZHaHM86vQJmqoSxTabFgDxEZFgxiXKTojF"
+        "0x99959fa5f7160f6690e1ef8d76595e088bd14fd5eee7852b5110adf4ac0fcc64": "1065347068:FgPpA8EUhGgnSna6E2zYU7vuoqLj74HHwZRZBfcyU41J"
       },
       "domain": "spell",
       "spell": {
@@ -6721,10 +6721,10 @@
       }
     },
     "0x3288ca58cd46b9f0fdc21fee706a65ff9eba0183b3acacd0db7cb7606ec8df70": {
-      "hash": "5557b2cc104dc7ad",
+      "hash": "51933ada13b94808",
       "label": "spell Dolly Sacrifice",
       "revisions": {
-        "0x3288ca58cd46b9f0fdc21fee706a65ff9eba0183b3acacd0db7cb7606ec8df70": "855011995:9hSquoNb9eGTeyCxQRqzuxDAm9JDYM3akezwnENfKWuR"
+        "0x3288ca58cd46b9f0fdc21fee706a65ff9eba0183b3acacd0db7cb7606ec8df70": "1065347068:FuDhrV2PrrXmAJ8peQupfSQd2NXAoHJW7H7tE1tJDmy9"
       },
       "domain": "spell",
       "spell": {
@@ -7633,10 +7633,10 @@
       }
     },
     "0xbd520c97580cb802876d503586dd6db25be67d4a85056196da873ad1498dd23e": {
-      "hash": "52486fcd35714300",
+      "hash": "ce19837ab73194cc",
       "label": "spell Bush Fire",
       "revisions": {
-        "0xbd520c97580cb802876d503586dd6db25be67d4a85056196da873ad1498dd23e": "855011998:2R4sk95eQoPrQxfQq4dohY3Qrg18g9QQe23sEJctt5mr"
+        "0xbd520c97580cb802876d503586dd6db25be67d4a85056196da873ad1498dd23e": "1065347068:6xjXSDjCqDAXGnfjBFsjsiAmwqbHccsH4jdcZRHRFKGM"
       },
       "domain": "spell",
       "spell": {
@@ -49595,6 +49595,11 @@
       "item": {
         "category": "cosmetic_hat"
       }
+    },
+    "board:50": {
+      "hash": "facddb1d0b5af40e",
+      "label": "board #50",
+      "domain": "board"
     }
   },
   "kares_rewards_package": "0xcde6b7a1883db75f0c6d802a2a507cf6996775cfad92e303345a80fce6288ba5",

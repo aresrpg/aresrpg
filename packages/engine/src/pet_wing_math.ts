@@ -3,7 +3,7 @@
 
 // Shared by the wing fragment and ribbon vertex programs. Coordinates are normalized hinge-to-tip.
 export const WING_MATH = /* wgsl */ `
-struct WingStyle { clock: f32, variant: f32, primary: vec3f, secondary: vec3f, shade: vec3f }
+struct WingStyle { clock: f32, variant: f32, primary: vec3f, secondary: vec3f, shade: vec3f, side: f32 }
 const WING_PI: f32 = 3.14159265;
 fn wing_sq(a: f32) -> f32 { return a * a; }
 // The prototype deliberately reverses many smoothstep edges. WGSL leaves that undefined.
@@ -67,6 +67,8 @@ fn wing_tip(fi: f32, deployed: f32, family: f32, clock: f32) -> vec2f {
   let k = fi / 4.; var blade = vec3f(wing_feather(fi, deployed, clock), 0.);
   if (family == 10.) { blade = wing_scythe(k, deployed, clock); }
   else if (family == 3.) { blade = vec3f(mix(-.3, .22, k), mix(.55, 1., k) * wing_stagger(k, deployed), .12); }
+  // Candle smoke leaves the chart's own baseline where its candles dissolve near the tip.
+  else if (family == 11.) { return vec2f(1., .09) * mix(.7, 1., k) * deployed * wing_stagger(k, deployed); }
   return blade.y * vec2f(cos(blade.x), sin(blade.x)) + vec2f(sin(blade.x), -cos(blade.x)) * blade.z * blade.y;
 }
 `

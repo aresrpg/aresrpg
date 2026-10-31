@@ -5,8 +5,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { expect, test } from 'bun:test'
+import { item_stat_center } from '@aresrpg/immutable'
 
 import items_source from '../../../../seed/content/items.json'
+import { item_stat_offset } from '../../src/game/character_stats.ts'
 
 const seed = (...parts: readonly string[]) => resolve(import.meta.dir, '../../../../seed', ...parts)
 
@@ -37,6 +39,23 @@ const glb_json = (path: string): GlbJson => {
 
 const glb_animations = (path: string): readonly string[] =>
   Object.freeze((glb_json(path).animations ?? []).flatMap(({ name }) => (name ? [name] : [])))
+
+test('Pampkin grows to exactly 40 wisdom and 60 vitality through ordinary feeding', () => {
+  const pet = items_source.find(({ item_type }) => item_type === 'pampkin')!
+  expect(pet.pet_movement).toBe('fly')
+  expect(pet.pet_foods).toEqual(['bloodnight_pet_food'])
+  expect(pet.stats!.min).toEqual(pet.stats!.max)
+  for (const [stat, endpoint] of [
+    ['wisdom', 40],
+    ['vitality', 60],
+  ] as const) {
+    expect(pet.stats!.max[stat]).toBe(endpoint)
+    const stats = { [stat]: item_stat_center + pet.stats!.max[stat] }
+    for (const pet_power of [0, 30, 60]) {
+      expect(item_stat_offset({ category: 'pet', stats, pet_power }, stat)).toBe((endpoint * pet_power) / 60)
+    }
+  }
+})
 
 test('every authored pet owns its model and canonical icon pair', () => {
   const pets = items_source.filter(({ category }) => category === 'pet')

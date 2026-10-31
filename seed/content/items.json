@@ -8126,6 +8126,50 @@
     "pet_foods": ["genesis_duskheart_pet_food"]
   },
   {
+    "item_type": "pampkin",
+    "name": "Pampkin",
+    "category": "pet",
+    "level": 1,
+    "pet_movement": "fly",
+    "pet_foods": ["bloodnight_pet_food"],
+    "stats": {
+      "min": {
+        "vitality": 60,
+        "wisdom": 40,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 60,
+        "wisdom": 40,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
     "item_type": "venomwool",
     "name": "Venomwool",
     "category": "resource",
