@@ -16,6 +16,7 @@ import {
   tournament_rounds,
   tournament_seats,
   tournament_review_available,
+  tournament_start_soon,
   type TournamentViewer,
   type MatchKind,
 } from '../../src/modules/tournament_selectors.ts'
@@ -27,6 +28,18 @@ const viewer = (): TournamentViewer => ({
   characters: [{ id: 'a', name: 'A', level: 1, custody: 'kiosk' }],
   now_ms: 2000,
   observed_ms: 2000,
+})
+
+test('registered players see the stay-online reminder only in the final ten minutes', () => {
+  const row = { ...tournament_fixture(), status: 'open' as const, start_before_ms: 1_000_000 }
+  const registered = { ...viewer(), now_ms: 399_999, observed_ms: 399_999 }
+  expect(tournament_next_action(row, registered)).toEqual({ kind: 'status', reason: 'registered' })
+  expect(tournament_next_action(row, { ...registered, now_ms: 400_000, observed_ms: 400_000 })).toEqual({
+    kind: 'status',
+    reason: 'registered_soon',
+  })
+  expect(tournament_start_soon(row, null)).toBe(false)
+  expect(tournament_start_soon(row, row.start_before_ms)).toBe(true)
 })
 
 test('reviewed registration and no-winner actions recheck character, roster revision and fresh chain time', () => {
@@ -261,7 +274,7 @@ test('one primary registration rule chooses only an eligible owned character and
   })
   expect(tournament_next_action({ ...row, teams: [{ ...row.teams[0], allowed: ['a', 'b'] }] }, v)).toEqual({
     kind: 'status',
-    reason: 'registered',
+    reason: 'registered_soon',
   })
   expect(tournament_next_action(row, { ...v, now_ms: 10000, observed_ms: 9999 })).toEqual({
     kind: 'status',

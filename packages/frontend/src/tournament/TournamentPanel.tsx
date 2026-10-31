@@ -9,7 +9,12 @@ import { TOURNAMENT_MATCH_MS } from '@aresrpg/sdk/tournament'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
-import { match_kind, tournament_registration, tournament_rounds } from '../modules/tournament_selectors.ts'
+import {
+  match_kind,
+  tournament_registration,
+  tournament_rounds,
+  tournament_start_soon,
+} from '../modules/tournament_selectors.ts'
 import { tournament_claims, type TournamentAction } from '../modules/tournament.ts'
 import { PracticeButton } from '../practice/PracticeButton.tsx'
 
@@ -63,7 +68,9 @@ const EventHeading = ({
         </p>
         <h2>
           <bdi>{tournament_name(row.name)}</bdi>
+          <TournamentLevelLimit level={row.max_level} t={t} />
         </h2>
+        <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
       </div>
       <div className="tourney-event-progress">
         <small>{t(row.status === 'open' ? 'deadline' : row.status)}</small>
@@ -98,7 +105,12 @@ const DockMatch = ({
   show: () => void
 }>) => {
   const { match, match_index: index, viewer } = view
-  if (!match) return <small>{t(row.status === 'open' ? 'stay_online' : row.status)}</small>
+  if (!match)
+    return (
+      <small>
+        {t(row.status === 'open' && tournament_start_soon(row, viewer.now_ms) ? 'stay_online' : row.status)}
+      </small>
+    )
   const kind = match_kind(match, viewer.now_ms)
   const opponent = match_opponent(row, index, viewer.address, t)
   const deadline =
@@ -209,8 +221,6 @@ const TournamentEvent = ({ row, view, t }: Readonly<{ row: TournamentRow; view: 
     <>
       <EventHeading row={row} view={view} podium={() => navigate('podium')} t={t} />
       {row.status === 'cancelled' && <p className="tourney-notice">{t('cancelled_notice')}</p>}
-      <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
-      <TournamentLevelLimit level={row.max_level} t={t} />
       {expired && <p className="tourney-notice">{t('expired_notice')}</p>}
       <nav className="tourney-tabs" aria-label={t('event_sections')}>
         <Button aria-pressed={tab === 'main'} onClick={() => navigate('main')}>

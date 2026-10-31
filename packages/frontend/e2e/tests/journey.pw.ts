@@ -3,6 +3,20 @@
 
 import { expect, test } from '@playwright/test'
 
+test('the journey tracker remembers collapse and expansion across reloads', async ({ page }) => {
+  await page.goto('/e2e/fixtures/journey.html')
+  const tracker = page.locator('.journey-tracker')
+  await tracker.getByRole('button', { name: 'Collapse quests', exact: true }).click()
+  await expect(tracker.locator('.journey-launcher')).toBeVisible()
+  await page.reload()
+  await expect(tracker.locator('.journey-launcher')).toBeVisible()
+  await tracker.locator('.journey-launcher').click()
+  await expect(tracker.getByRole('button', { name: 'Collapse quests', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(tracker.getByRole('button', { name: 'Collapse quests', exact: true })).toBeVisible()
+  await expect(tracker.locator('.journey-launcher')).toHaveCount(0)
+})
+
 test('real IndexedDB completion survives reload, ignores purchases for harvesting, and resets from Settings', async ({
   page,
 }) => {
@@ -10,7 +24,7 @@ test('real IndexedDB completion survives reload, ignores purchases for harvestin
   await page.getByRole('button', { name: 'Start my first quest' }).click()
   const journal = page.getByRole('dialog')
   await journal.getByRole('button', { name: 'Start my first quest' }).click()
-  await expect(journal.locator('h3')).toHaveText('We all need a hoe.')
+  await expect(journal.locator('h3')).toHaveText('Find your way')
   await expect
     .poll(() =>
       journal
@@ -22,8 +36,8 @@ test('real IndexedDB completion survives reload, ignores purchases for harvestin
         )
     )
     .toBe(true)
-  await expect(journal.locator('.journey-objective')).toContainText('Own Scrap Hoe')
-  await expect(journal.locator('.journey-progress-caption')).toContainText('0 / 10')
+  await expect(journal.locator('.journey-objective')).toContainText('Use the map to reach a nearby destination')
+  await expect(journal.locator('.journey-progress-caption')).toContainText('0 / 14')
   await journal.getByRole('button', { name: 'Close journal' }).click()
   await page.getByRole('button', { name: 'Receive hoe' }).click()
   await expect(page.locator('.journey-complete')).toContainText('Quest complete!')

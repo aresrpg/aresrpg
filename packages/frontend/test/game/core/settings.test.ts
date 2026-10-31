@@ -16,6 +16,16 @@ const memory_storage = (initial: string | null = null) => {
 }
 
 describe('game settings', () => {
+  test('journey collapse survives reload and expanding replaces the saved preference', () => {
+    const storage = memory_storage()
+    const settings = load_game_settings('medium', null, storage)
+    save_game_settings({ ...settings, journey_collapsed: true }, storage)
+    const restored = load_game_settings('medium', null, storage)
+    expect(restored.journey_collapsed).toBe(true)
+    save_game_settings({ ...restored, journey_collapsed: false }, storage)
+    expect(load_game_settings('medium', null, storage).journey_collapsed).toBe(false)
+  })
+
   test('malformed storage falls back to the supplied quality', () => {
     expect(load_game_settings('medium', null, memory_storage('{'))).toEqual({
       quality: 'medium',
@@ -33,6 +43,7 @@ describe('game settings', () => {
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
       marketplace_disclaimer_acknowledged: false,
+      journey_collapsed: false,
       render_distance: null,
       fight_access: 0,
     })
@@ -78,6 +89,7 @@ describe('game settings', () => {
       always_craft_from_character_id: '0xcrafter',
       placement_gas_warning_disabled: true,
       marketplace_disclaimer_acknowledged: false,
+      journey_collapsed: false,
       render_distance: 8,
       fight_access: 1,
     })
@@ -102,6 +114,7 @@ describe('game settings', () => {
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
       marketplace_disclaimer_acknowledged: false,
+      journey_collapsed: false,
       render_distance: null,
       fight_access: 0,
     })

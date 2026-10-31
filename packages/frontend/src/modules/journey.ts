@@ -29,7 +29,6 @@ export type JourneyInput =
   | Readonly<{ type: 'journey/reset' }>
   | Readonly<{ type: 'journey/acknowledged' }>
   | Readonly<{ type: 'journey/journal'; open: boolean }>
-  | Readonly<{ type: 'journey/collapse'; collapsed: boolean }>
 
 const reduce_journey = (state: JourneyState, input: JourneyInput): JourneyState => {
   switch (input.type) {
@@ -55,8 +54,6 @@ const reduce_journey = (state: JourneyState, input: JourneyInput): JourneyState 
       return { ...state, celebrations: state.celebrations.slice(1), journal_open: true }
     case 'journey/journal':
       return { ...state, journal_open: input.open }
-    case 'journey/collapse':
-      return { ...state, collapsed: input.collapsed }
   }
 }
 

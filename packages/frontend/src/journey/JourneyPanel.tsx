@@ -325,7 +325,7 @@ export const JourneyTracker = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   if (!journey.ready || !journey.identity || !available) return null
   return (
     <aside className="journey-tracker">
-      {journey.collapsed ? (
+      {source.collapsed ? (
         <button className="journey-launcher" onClick={() => source.collapse(false)} type="button">
           <BookOpen size={17} />
           <span>{text('title')}</span>

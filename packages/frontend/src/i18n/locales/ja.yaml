@@ -3103,12 +3103,12 @@ tournament_page:
   level_limit_label: '登録時のレベル上限'
   level_unrestricted: '制限なし'
   level_limit_notice: '任意。登録時のみ確認します。その後のレベルアップは参加資格に影響しません。'
-  level_limit_amount: '登録時のレベル上限：{{level}}'
-  reason_level: 'このキャラクターは登録時のレベル上限を超えています。'
+  level_limit_badge: '上限 Lv.{{level}}'
+  level_limit_hint: 'レベル上限は登録時に適用されます。登録後はレベルを上げても参加できます。'
+  reason_level: 'この大会のレベル上限は{{level}}です。'
   entry_fee_label: 'キャラクターごとの参加費（SUI）'
   entry_fee_setting: '任意で、作成時に確定します。0なら参加登録は無料です。'
   entry_fee_amount: 'キャラクターごとの参加費：{{amount}} SUI'
-  entry_fee_notice: '脱退や中止の場合も返金されません。半分は賞金プール、半分は国庫へ入り、端数は賞金プールに入ります。中止時の賞金プールは主催者に渡ります。'
   victory_title: '優勝しました！'
   placing_title: '{{place}}位に入賞しました'
   results: 'トーナメント結果'
@@ -3170,7 +3170,6 @@ tournament_page:
   format: 形式
   final: 決勝
   bronze: 3位決定戦
-  roster_notice: 参加できるのは定員を満たしたチームのみです。登録すると試合への自動参加を許可します。各試合の参加期限は60秒です。接続を維持してください。
   donation_notice: 寄付は取り消せません。大会中止時の資金と未授与の賞金は主催者に送られます。返金は主催者が手動で行います。
   refund_pool: 未授与のKARESを主催者に返す
   expire: 'キャンセル：人数の揃ったチームが不足'
@@ -3210,7 +3209,6 @@ tournament_page:
   leave_character: '{{name}} をチームから外す'
   leave_review: '{{character}} を {{team}} から外しますか？このキャラクターの登録は解除されます。'
   join_review: '{{character}} を {{team}} に登録しますか？'
-  consent_notice: 名前の指定は枠の予約です。各所有者が自分のキャラクターを別途登録する必要があります。
   too_many_names: 自分を含めて最大 {{count}} キャラクターまで指定できます。
   stay_online: 手数料用の SUI を用意し、オンラインを維持してください。アプリは各試合の60秒間の入場受付中に登録キャラクターの入場を試みます。
   action_find: チームを探す
@@ -3247,7 +3245,8 @@ tournament_page:
   match_walkover: 不戦勝
   match_bye: シード通過
   match_clock_unknown: チェーン時刻を待機中
-  reason_registered: 登録済み · オンラインを維持
+  reason_registered: 登録済み
+  reason_registered_soon: 登録済み · オンラインを維持
   reason_join: このチームに参加
   reason_add: 自分のキャラクターを追加
   reason_closed: 登録終了
@@ -3299,7 +3298,6 @@ tournament_page:
   unknown_item: アイテム詳細を取得できません
   rolled_items_notice: アイテムはテンプレートから生成されます。ランダム能力値は受取時に決まります。
   contribution_review: 寄付を確認
-  pool_after: 寄付後の総額：{{amount}} {{asset}}
   contribution_confirmed: 寄付が確定しました。索引データが届くと総額が更新されます。
   transaction_confirmed: トランザクションが確定しました。索引データで大会情報が更新されます。
   cancelled_notice: 大会は中止されました。未使用資金は元の主催者に返却されます。

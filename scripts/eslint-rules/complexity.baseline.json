@@ -870,7 +870,7 @@
     },
     "packages/frontend/src/tournament/TournamentTeams.tsx": {
       "CreateTournamentTeam": [
-        11
+        10
       ]
     },
     "packages/frontend/src/game/fight/spell_effect_context.ts": {
@@ -1481,7 +1481,7 @@
     },
     "packages/frontend/src/modules/journey.ts": {
       "reduce_journey": [
-        10
+        9
       ]
     },
     "packages/frontend/src/modules/engine.ts": {

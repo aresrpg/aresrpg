@@ -3129,12 +3129,12 @@ tournament_page:
   level_limit_label: 'Maximum registration level'
   level_unrestricted: 'Unrestricted'
   level_limit_notice: 'Optional. Checked only when registering; leveling afterward does not affect eligibility.'
-  level_limit_amount: 'Maximum level at registration: {{level}}'
-  reason_level: 'This character exceeds the registration level limit.'
+  level_limit_badge: 'Max lvl. {{level}}'
+  level_limit_hint: 'The level limit applies at registration. You can level up afterward.'
+  reason_level: 'The maximum level for this tournament is {{level}}.'
   entry_fee_label: 'Entry fee per character (SUI)'
   entry_fee_setting: 'Optional, fixed at creation. Enter 0 for free registration.'
   entry_fee_amount: 'Entry fee per character: {{amount}} SUI'
-  entry_fee_notice: 'Non-refundable, including withdrawal or cancellation. Half goes to the prize pool and half to the treasury; any rounding remainder goes to the pool. On cancellation, the pool goes to the organizer.'
   victory_title: 'You won 1st place!'
   placing_title: 'You placed #{{place}}'
   results: 'Tournament results'
@@ -3196,7 +3196,6 @@ tournament_page:
   format: Format
   final: Final
   bronze: Bronze match
-  roster_notice: Only complete teams enter the tournament. Registration authorizes automatic match joining. Stay online; each match gives 60 seconds to join.
   donation_notice: Contributions are final. If cancelled, funds go to the organizer for any manual refunds. Unawarded prizes also go to the organizer.
   refund_pool: Return unused KARES to organizer
   expire: 'Cancel: too few complete teams'
@@ -3223,7 +3222,6 @@ tournament_page:
   leave_character: Remove {{name}} from the team
   leave_review: Remove {{character}} from {{team}}? This character will no longer be registered.
   join_review: Register {{character}} with {{team}}?
-  consent_notice: Named characters reserve seats. Their owners must register them separately.
   too_many_names: Include no more than {{count}} characters, including yours.
   stay_online: Stay online with gas available. The app attempts entry for your registered characters during each 60-second admission window.
   action_find: Find a team
@@ -3266,7 +3264,8 @@ tournament_page:
   match_bye: Bye
   match_no_winner: No winner
   match_clock_unknown: Waiting for chain time
-  reason_registered: Registered · stay online
+  reason_registered: Registered
+  reason_registered_soon: Registered · stay online
   reason_join: Join this team
   reason_add: Add your character
   reason_closed: Registration closed
@@ -3322,7 +3321,6 @@ tournament_page:
   unknown_item: Item details unavailable
   rolled_items_notice: Items are minted from their templates. Random statistics are rolled when claimed.
   contribution_review: Review contribution
-  pool_after: 'Pool after this contribution: {{amount}} {{asset}}'
   contribution_confirmed: Contribution confirmed. The pool refreshes when the indexed update arrives.
   close: Close
   transaction_confirmed: Transaction confirmed. The event refreshes with the indexed update.

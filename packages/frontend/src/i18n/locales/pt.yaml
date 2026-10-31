@@ -3088,12 +3088,12 @@ tournament_page:
   level_limit_label: 'Nível máximo na inscrição'
   level_unrestricted: 'Sem limite'
   level_limit_notice: 'Opcional. Verificado apenas na inscrição; subir de nível depois não afeta a participação.'
-  level_limit_amount: 'Nível máximo na inscrição: {{level}}'
-  reason_level: 'Este personagem excede o nível máximo de inscrição.'
+  level_limit_badge: 'Nív. máx. {{level}}'
+  level_limit_hint: 'O limite de nível se aplica na inscrição. Você pode subir de nível depois.'
+  reason_level: 'O nível máximo para este torneio é {{level}}.'
   entry_fee_label: 'Taxa por personagem (SUI)'
   entry_fee_setting: 'Opcional e fixada na criação. Digite 0 para inscrição gratuita.'
   entry_fee_amount: 'Taxa por personagem: {{amount}} SUI'
-  entry_fee_notice: 'Não reembolsável, mesmo em caso de saída ou cancelamento. Metade vai para os prêmios e metade para o tesouro; o resto do arredondamento vai para os prêmios. No cancelamento, os prêmios vão para o organizador.'
   victory_title: 'Você conquistou o 1º lugar!'
   placing_title: 'Você ficou em {{place}}º lugar'
   results: 'Resultados do torneio'
@@ -3155,7 +3155,6 @@ tournament_page:
   format: Formato
   final: Final
   bronze: Disputa pelo bronze
-  roster_notice: 'Apenas equipes completas participam. A inscrição autoriza a entrada automática em combate. Fique conectado: há 60 segundos para entrar em cada partida.'
   donation_notice: As contribuições são definitivas. Em caso de cancelamento, os fundos vão ao organizador para eventuais reembolsos manuais. Prêmios não atribuídos também vão ao organizador.
   refund_pool: Devolver KARES não atribuídos ao organizador
   expire: 'Cancelar: poucas equipes completas'
@@ -3195,7 +3194,6 @@ tournament_page:
   leave_character: Remover {{name}} da equipe
   leave_review: Remover {{character}} de {{team}}? Esse personagem deixará de estar inscrito.
   join_review: Inscrever {{character}} em {{team}}?
-  consent_notice: Personagens indicados reservam vagas. Seus donos precisam inscrevê-los separadamente.
   too_many_names: Inclua no máximo {{count}} personagens, contando o seu.
   stay_online: Fique conectado com SUI para as taxas. O aplicativo tenta inserir seus personagens inscritos em cada janela de entrada de 60 segundos.
   action_find: Encontrar equipe
@@ -3232,7 +3230,8 @@ tournament_page:
   match_walkover: Vitória por ausência
   match_bye: Avanço sem adversário
   match_clock_unknown: Aguardando horário da blockchain
-  reason_registered: Inscrito · permaneça conectado
+  reason_registered: Inscrito
+  reason_registered_soon: Inscrito · permaneça conectado
   reason_join: Entrar nesta equipe
   reason_add: Adicionar seu personagem
   reason_closed: Inscrições encerradas
@@ -3284,7 +3283,6 @@ tournament_page:
   unknown_item: Detalhes do item indisponíveis
   rolled_items_notice: Os itens são criados a partir dos modelos. Os atributos aleatórios são definidos no resgate.
   contribution_review: Revisar contribuição
-  pool_after: 'Fundo após esta contribuição: {{amount}} {{asset}}'
   contribution_confirmed: Contribuição confirmada. O fundo será atualizado quando chegarem os dados indexados.
   transaction_confirmed: Transação confirmada. O evento será atualizado com os dados indexados.
   cancelled_notice: Torneio cancelado. O dinheiro não utilizado retorna ao organizador original.

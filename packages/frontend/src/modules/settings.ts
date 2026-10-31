@@ -33,9 +33,12 @@ export const audible_settings_signature = (settings: GameSettings): string =>
       Object.entries(settings)
         .filter(
           ([key]) =>
-            !['completed_tutorials', 'placement_gas_warning_disabled', 'marketplace_disclaimer_acknowledged'].includes(
-              key
-            )
+            ![
+              'completed_tutorials',
+              'placement_gas_warning_disabled',
+              'marketplace_disclaimer_acknowledged',
+              'journey_collapsed',
+            ].includes(key)
         )
         .sort(([a], [b]) => a.localeCompare(b))
     )

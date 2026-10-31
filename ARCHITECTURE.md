@@ -1436,6 +1436,7 @@ reveals an automation reward card and unlocks gathering controls without startin
 The controls collapse to a compact status and Stop action; collapsing never stops automation.
 IndexedDB stores only completed quest IDs per network, original game package, and account. The next
 quest and progress derive from those IDs; journal visibility and celebration queues remain in memory.
+The tracker’s collapsed state belongs to the existing localStorage game settings and survives reloads.
 Settings can reset the local completion set. Completion celebrations wait for the local write;
 loading saved completion never replays them. Storage failures remain visible and never overwrite an
 unknown saved set after a failed read.

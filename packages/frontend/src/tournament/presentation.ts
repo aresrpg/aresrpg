@@ -11,10 +11,10 @@ import type { TournamentAction, TournamentState } from '../modules/tournament.ts
 export const tournament_act = (id: string, action: TournamentAction): void =>
   dispatch_app({ type: 'tournament/action', id, action })
 
-export const action_label = (action: TournamentNextAction, t: CopyText): string => {
+export const action_label = (action: TournamentNextAction, t: CopyText, max_level: number | null): string => {
   switch (action.kind) {
     case 'status':
-      return t(`reason_${action.reason}`)
+      return t(`reason_${action.reason}`, { level: String(max_level) })
     case 'write':
       return t(`action_${action.name}`)
     case 'watch':

@@ -19,7 +19,9 @@ const review_contribution = async (page: Page, amount = '1.250000001') => {
 test('contribution review preserves exact amounts and waits for certified completion', async ({ page }) => {
   await visit(page, '?pending')
   const dialog = await review_contribution(page)
-  await expect(dialog.getByText('1.250000001 SUI', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('1.25 SUI', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('Original organizer:', { exact: false })).toHaveCount(0)
+  await expect(dialog.getByText('Pool after this contribution:', { exact: false })).toHaveCount(0)
   await expect(dialog.getByText('Contributions are final.', { exact: false })).toBeVisible()
   expect(await calls(page)).toEqual([])
   await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
@@ -37,7 +39,7 @@ test('gas refusal retains the reviewed contribution and offers explicit recovery
   const dialog = await review_contribution(page)
   await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(dialog.getByRole('alert')).toBeVisible()
-  await expect(dialog.getByText('1.250000001 SUI', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('1.25 SUI', { exact: true })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Confirm', exact: true })).toBeEnabled()
   await page.waitForTimeout(300)
   expect(await calls(page)).toHaveLength(1)
@@ -50,7 +52,7 @@ test('mainnet gas recovery opens funding above the review and restores the enter
   const funding = page.getByRole('dialog', { name: 'Add Funds', exact: true })
   await funding.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(review).toBeVisible()
-  await expect(review.getByText('1.250000001 SUI', { exact: true })).toBeVisible()
+  await expect(review.getByText('1.25 SUI', { exact: true })).toBeVisible()
   await expect(review.getByRole('button', { name: 'Confirm', exact: true })).toBeEnabled()
   expect(await calls(page)).toHaveLength(1)
 })
@@ -77,15 +79,15 @@ test('a newer native dialog stays above restored tournament windows', async ({ p
   await fixture(page, 'close_funding')
   await page.getByRole('button', { name: 'Close newer dialog', exact: true }).click()
   await expect(review).toBeVisible()
-  await expect(review.getByText('1.250000001 SUI', { exact: true })).toBeVisible()
+  await expect(review.getByText('1.25 SUI', { exact: true })).toBeVisible()
 })
 
-test('finding a team explains automatic entry before registering the selected character', async ({ page }) => {
+test('finding a team reviews the selected character before registration', async ({ page }) => {
   await visit(page)
   await page.locator('.tourney-dock').getByRole('button', { name: 'Find a team', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Find a team', exact: true })
   await expect(dialog.getByText('Find a team for Nox and register this character?')).toBeVisible()
-  await expect(dialog.getByText('Stay online;', { exact: false })).toBeVisible()
+  await expect(dialog.getByText('Stay online;', { exact: false })).toHaveCount(0)
   expect(await calls(page)).toEqual([])
   await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect.poll(() => calls(page)).toHaveLength(1)
@@ -380,7 +382,9 @@ test('admin reviews exact percentages and rejects excess precision', async ({ pa
     .click()
   const dialog = page.getByRole('dialog', { name: 'Confirm · Create tournament', exact: true })
   await expect(dialog.getByText('29.51', { exact: true })).toBeVisible()
-  await expect(dialog.getByText('These settings cannot be edited.', { exact: false })).toBeVisible()
+  await expect(
+    dialog.getByText('All tournament settings are fixed at creation and cannot be edited.', { exact: true })
+  ).toBeVisible()
 })
 
 test('admin selects a canonical item and cannot mint multiple copies of unstackable gear per reward', async ({

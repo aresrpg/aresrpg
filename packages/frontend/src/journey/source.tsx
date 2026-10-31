@@ -18,6 +18,7 @@ export type JourneySource = Readonly<{
   state: JourneyState
   quests: readonly JourneyQuest[]
   available: boolean
+  collapsed: boolean
   text: CopyText
   icon: (item: string) => string | null
   name: (item: string) => string
@@ -35,6 +36,7 @@ export const JourneySourceContext = createContext<JourneySource | null>(null)
 export const useJourneySource = (copy: AppCopy): JourneySource => {
   const supplied = useContext(JourneySourceContext)
   const state = useAppStore((app) => app.journey)
+  const settings = useAppStore((app) => app.settings)
   const inventory = useAppStore((app) => app.session.inventory)
   const character = useAppStore(crafting_character)
   const listings = useAppStore((app) => app.marketplace.own_listings)
@@ -45,13 +47,15 @@ export const useJourneySource = (copy: AppCopy): JourneySource => {
     supplied ?? {
       state,
       available,
+      collapsed: settings.journey_collapsed === true,
       quests: relevant_quests(state.completed),
       ingredients: (output) => journey_ingredients(output, inventory, encumbered, character?.kiosk ?? null),
       text: copy_text(copy.journey),
       icon: item_detail_icon,
       name: (item) => content_catalog.item(item)?.item.name ?? '',
       journal: (open) => dispatch_app({ type: 'journey/journal', open }),
-      collapse: (collapsed) => dispatch_app({ type: 'journey/collapse', collapsed }),
+      collapse: (collapsed) =>
+        dispatch_app({ type: 'settings/changed', settings: { ...settings, journey_collapsed: collapsed } }),
       acknowledge: () => dispatch_app({ type: 'journey/acknowledged' }),
     }
   )

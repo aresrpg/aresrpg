@@ -49600,6 +49600,17 @@
       "hash": "facddb1d0b5af40e",
       "label": "board #50",
       "domain": "board"
+    },
+    "0x0542bfee873e2187cf8bae6e8956d003bf0769bc333a74add378629803e3ed30": {
+      "hash": "a21dc942e42aba77",
+      "label": "item pampkin",
+      "revisions": {
+        "0x0542bfee873e2187cf8bae6e8956d003bf0769bc333a74add378629803e3ed30": "1065347073:71CaixKsqX24CxiJoDBNs2vh7g5yDinXwhvS31PyMcdo"
+      },
+      "domain": "item",
+      "item": {
+        "category": "pet"
+      }
     }
   },
   "kares_rewards_package": "0xcde6b7a1883db75f0c6d802a2a507cf6996775cfad92e303345a80fce6288ba5",

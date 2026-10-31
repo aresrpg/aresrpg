@@ -66,7 +66,10 @@ const ReviewDetails = ({ review, t }: Readonly<{ review: Review; t: CopyText }>)
   const { settings } = action
   return (
     <div className="tourney-admin-review">
-      <h3>{tournament_name(settings.name)}</h3>
+      <h3>
+        {tournament_name(settings.name)}
+        <TournamentLevelLimit level={settings.max_level} t={t} />
+      </h3>
       <dl>
         <dt>{t('format')}</dt>
         <dd>
@@ -103,8 +106,7 @@ const ReviewDetails = ({ review, t }: Readonly<{ review: Review; t: CopyText }>)
           <TournamentReward template={reward.template} amount={reward.amount} />
         </div>
       ))}
-      <TournamentEntryFee amount={settings.entry_fee_mist} t={t} />
-      <TournamentLevelLimit level={settings.max_level} t={t} />
+      <TournamentEntryFee amount={settings.entry_fee_mist} t={t} decimals={9} />
       <p>{t('immutable_notice')}</p>
       <p>{t('minimum_notice')}</p>
       <p>{t('recipient_notice')}</p>

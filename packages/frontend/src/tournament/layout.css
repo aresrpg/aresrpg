@@ -113,6 +113,29 @@
 .tourney-status {
   color: var(--aui-orange);
 }
+.tourney-level-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  border: 1px solid color-mix(in srgb, var(--aui-orange) 40%, transparent);
+  border-radius: 3px;
+  padding: 3px 6px;
+  background: color-mix(in srgb, var(--aui-orange) 12%, var(--aui-surface));
+  color: var(--aui-orange);
+  font:
+    600 11px/1.4 'Tournament Mono',
+    monospace;
+  text-decoration: none;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+}
+.tourney-entry-fee {
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.tourney-identity > .tourney-entry-fee {
+  margin-top: 6px;
+}
 .tourney-status.is-in_progress {
   color: var(--aui-blue);
 }

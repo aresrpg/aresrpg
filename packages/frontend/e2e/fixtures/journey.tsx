@@ -12,8 +12,11 @@ import { JourneyTracker } from '../../src/journey/JourneyPanel.tsx'
 import { JourneySettings } from '../../src/journey/JourneySettings.tsx'
 import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
-import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
+import { dispatch_app, initialize_app_store, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
+import { load_game_settings } from '../../src/game/core/settings.ts'
 import '../../src/tailwind.css'
+
+initialize_app_store(load_game_settings('medium'))
 
 const character: CharacterRow = {
   id: 'hero',
@@ -143,7 +146,7 @@ void load_app_copy(locale)
       settings: { ...read_app_state().settings, completed_tutorials: [] },
     })
     // Arm before login, as game_entry does; only the session owns account selection.
-    observe_app(['journey'])
+    observe_app(['journey', 'settings'])
     dispatch_app({ type: 'auth/connecting' })
     dispatch_app({
       type: 'auth/connected',

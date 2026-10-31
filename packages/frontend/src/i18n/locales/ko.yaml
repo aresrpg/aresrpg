@@ -3091,12 +3091,12 @@ tournament_page:
   level_limit_label: '등록 시 최대 레벨'
   level_unrestricted: '제한 없음'
   level_limit_notice: '선택 사항입니다. 등록할 때만 확인하며, 이후 레벨이 올라가도 참가 자격은 유지됩니다.'
-  level_limit_amount: '등록 시 최대 레벨: {{level}}'
-  reason_level: '이 캐릭터는 등록 레벨 제한을 초과합니다.'
+  level_limit_badge: '최대 레벨 {{level}}'
+  level_limit_hint: '레벨 제한은 등록할 때만 적용됩니다. 등록 후에는 레벨을 올려도 됩니다.'
+  reason_level: '이 토너먼트의 최대 레벨은 {{level}}입니다.'
   entry_fee_label: '캐릭터당 참가비 (SUI)'
   entry_fee_setting: '선택 사항이며 생성 시 확정됩니다. 0이면 무료 등록입니다.'
   entry_fee_amount: '캐릭터당 참가비: {{amount}} SUI'
-  entry_fee_notice: '탈퇴나 대회 취소 시에도 환불되지 않습니다. 절반은 상금 풀, 절반은 국고로 가며 반올림 잔액은 상금 풀에 추가됩니다. 취소 시 상금 풀은 주최자에게 돌아갑니다.'
   victory_title: '1위를 차지했습니다!'
   placing_title: '{{place}}위를 차지했습니다'
   results: '토너먼트 결과'
@@ -3158,7 +3158,6 @@ tournament_page:
   format: 형식
   final: 결승
   bronze: 3위 결정전
-  roster_notice: 정원이 찬 팀만 참가합니다. 등록하면 경기 자동 참가를 허용합니다. 각 경기 참가 기한은 60초이므로 접속을 유지하세요.
   donation_notice: 기부는 취소할 수 없습니다. 대회 취소 시 자금과 지급되지 않은 상금은 주최자에게 전달됩니다. 환불은 주최자가 수동으로 진행합니다.
   refund_pool: 미지급 KARES를 주최자에게 반환
   expire: '취소: 인원이 찬 팀 부족'
@@ -3198,7 +3197,6 @@ tournament_page:
   leave_character: 팀에서 {{name}} 제거
   leave_review: '{{team}}에서 {{character}}을(를) 제거할까요? 이 캐릭터의 등록이 취소됩니다.'
   join_review: '{{character}}을(를) {{team}}에 등록할까요?'
-  consent_notice: 캐릭터 지정은 자리 예약입니다. 각 소유자가 별도로 등록해야 합니다.
   too_many_names: 자신의 캐릭터를 포함해 최대 {{count}}명까지 지정하세요.
   stay_online: 수수료용 SUI를 준비하고 접속을 유지하세요. 앱은 매 경기의 60초 입장 시간 동안 등록된 캐릭터의 입장을 시도합니다.
   action_find: 팀 찾기
@@ -3235,7 +3233,8 @@ tournament_page:
   match_walkover: 부전승
   match_bye: 대진 면제
   match_clock_unknown: 체인 시간 대기 중
-  reason_registered: 등록됨 · 접속 유지
+  reason_registered: 등록 완료
+  reason_registered_soon: 등록됨 · 접속 유지
   reason_join: 이 팀에 참가
   reason_add: 내 캐릭터 추가
   reason_closed: 등록 마감
@@ -3287,7 +3286,6 @@ tournament_page:
   unknown_item: 아이템 정보를 불러올 수 없습니다
   rolled_items_notice: 아이템은 템플릿에서 생성됩니다. 무작위 능력치는 수령 시 결정됩니다.
   contribution_review: 기부 확인
-  pool_after: '기부 후 상금 풀: {{amount}} {{asset}}'
   contribution_confirmed: 기부가 확정되었습니다. 인덱싱된 업데이트가 도착하면 상금 풀이 갱신됩니다.
   transaction_confirmed: 거래가 확정되었습니다. 인덱싱된 업데이트로 대회 정보가 갱신됩니다.
   cancelled_notice: 대회가 취소되었습니다. 사용하지 않은 자금은 원래 주최자에게 반환됩니다.

@@ -2,8 +2,23 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
+import en from '../../src/i18n/locales/en.yaml'
+import { copy_text } from '../../src/i18n/copy.ts'
 import { initial_tournament_state } from '../../src/modules/tournament.ts'
-import { operation_status, countdown, team_initial, tournament_name } from '../../src/tournament/presentation.ts'
+import {
+  action_label,
+  operation_status,
+  countdown,
+  team_initial,
+  tournament_name,
+} from '../../src/tournament/presentation.ts'
+
+test('registration refusal tells the player the tournament maximum level', () => {
+  const t = copy_text(en.tournament_page)
+  expect(action_label({ kind: 'status', reason: 'level' }, t, 10)).toBe('The maximum level for this tournament is 10.')
+  expect(action_label({ kind: 'status', reason: 'level' }, t, 50)).toBe('The maximum level for this tournament is 50.')
+  expect(action_label({ kind: 'status', reason: 'clock' }, t, null)).toBe(t('reason_clock'))
+})
 
 test('tournament labels expose formatting controls without rejecting ordinary Unicode names', () => {
   expect(tournament_name('Owls\u202e\u2069\n')).toBe('Owls���')

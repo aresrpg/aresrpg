@@ -289,6 +289,7 @@ const Journals = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <JourneySourceContext
       value={{
         state: { ...initial_journey_state('workshop'), ready: true, journal_open: open, completed },
+        collapsed: false,
         quests: JOURNAL_QUESTS,
         ingredients: (output) => journey_ingredients(output, [], new Set(), null),
         available: true,

@@ -3091,12 +3091,12 @@ tournament_page:
   level_limit_label: '报名等级上限'
   level_unrestricted: '不限'
   level_limit_notice: '可选。仅在报名时检查，之后升级不影响参赛资格。'
-  level_limit_amount: '报名等级上限：{{level}}'
-  reason_level: '该角色超过了报名等级上限。'
+  level_limit_badge: '最高{{level}}级'
+  level_limit_hint: '等级限制仅在报名时生效。报名后可以继续升级。'
+  reason_level: '本次锦标赛的最高等级为{{level}}级。'
   entry_fee_label: '每个角色的报名费（SUI）'
   entry_fee_setting: '可选，创建后固定。输入 0 即可免费报名。'
   entry_fee_amount: '每个角色的报名费：{{amount}} SUI'
-  entry_fee_notice: '报名费不予退还，包括退出或取消比赛。50% 进入奖池，50% 进入国库；舍入余数进入奖池。比赛取消时，奖池归组织者。'
   victory_title: '你获得了第一名！'
   placing_title: '你获得了第 {{place}} 名'
   results: '锦标赛结果'
@@ -3158,7 +3158,6 @@ tournament_page:
   format: 赛制
   final: 决赛
   bronze: 季军赛
-  roster_notice: 只有满员队伍才能参赛。报名即授权自动加入比赛。每场比赛有60秒的加入时间，请保持在线。
   donation_notice: 捐赠不可撤销。赛事取消后，资金将转给主办方，由其决定手动退款。未分配的奖金也将转给主办方。
   refund_pool: 将未分配的 KARES 退还主办方
   expire: '取消：完整队伍不足'
@@ -3198,7 +3197,6 @@ tournament_page:
   leave_character: 将 {{name}} 移出队伍
   leave_review: 将 {{character}} 移出 {{team}}？该角色将取消报名。
   join_review: 让 {{character}} 报名加入 {{team}}？
-  consent_notice: 指定角色仅预留席位。各角色的所有者仍需分别报名。
   too_many_names: 最多填写 {{count}} 个角色，包括你自己的角色。
   stay_online: 请保持在线并备足手续费所需的 SUI。应用会在每场比赛的 60 秒入场期内尝试让已报名角色入场。
   action_find: 寻找队伍
@@ -3235,7 +3233,8 @@ tournament_page:
   match_walkover: 不战而胜
   match_bye: 轮空
   match_clock_unknown: 等待链上时间
-  reason_registered: 已报名 · 请保持在线
+  reason_registered: 已报名
+  reason_registered_soon: 已报名 · 请保持在线
   reason_join: 加入此队伍
   reason_add: 添加你的角色
   reason_closed: 报名已关闭
@@ -3287,7 +3286,6 @@ tournament_page:
   unknown_item: 物品详情暂不可用
   rolled_items_notice: 物品根据模板铸造，随机属性在领取时生成。
   contribution_review: 确认赞助
-  pool_after: 本次赞助后的奖池：{{amount}} {{asset}}
   contribution_confirmed: 赞助已确认。索引更新到达后奖池将刷新。
   transaction_confirmed: 交易已确认。索引更新到达后赛事将刷新。
   cancelled_notice: 锦标赛已取消。未使用资金将退还原主办方。

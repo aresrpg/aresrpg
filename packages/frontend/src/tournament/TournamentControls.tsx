@@ -177,25 +177,30 @@ export const TournamentActionButton = ({
   }
   return action.kind === 'status' ? (
     <span className="tourney-action-status" role="status">
-      {action_label(action, t)}
+      {action_label(action, t, row.max_level)}
     </span>
   ) : (
     <Button tone="primary" disabled={disabled} onClick={activate}>
-      {action_label(action, t)}
+      {action_label(action, t, row.max_level)}
     </Button>
   )
 }
 
 export const TournamentLevelLimit = ({ level, t }: Readonly<{ level: number | null; t: CopyText }>) =>
-  level === null ? null : <p className="tourney-note">{t('level_limit_amount', { level })}</p>
+  level === null ? null : (
+    <abbr className="tourney-level-badge" title={t('level_limit_hint')}>
+      {t('level_limit_badge', { level })}
+    </abbr>
+  )
 
-export const TournamentEntryFee = ({ amount, t }: Readonly<{ amount: bigint; t: CopyText }>) => {
+export const TournamentEntryFee = ({
+  amount,
+  t,
+  decimals = 2,
+}: Readonly<{ amount: bigint; t: CopyText; decimals?: number }>) => {
   const numbers = useNumbers()
-  return (
-    <div className="tourney-note">
-      <p>{t('entry_fee_amount', { amount: numbers.sui(amount, 9) })}</p>
-      {amount > 0n && <p>{t('entry_fee_notice')}</p>}
-    </div>
+  return amount === 0n ? null : (
+    <p className="tourney-entry-fee">{t('entry_fee_amount', { amount: numbers.sui(amount, decimals) })}</p>
   )
 }
 
@@ -255,13 +260,7 @@ export const TournamentIntentReview = ({
             .join(' — ')}
         </p>
       )}
-      {action.kind !== 'crank' && (
-        <>
-          <p className="tourney-note">{t('roster_notice')}</p>
-          <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
-          <TournamentLevelLimit level={row.max_level} t={t} />
-        </>
-      )}
+      {action.kind !== 'crank' && <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />}
     </TournamentConfirm>
   )
 }

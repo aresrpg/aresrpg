@@ -41,18 +41,13 @@ const ContributionReview = ({
   const status = operation_status(view.tournament, key, review.submitted)
   const confirmed = status.phase === 'confirmed'
   const can_confirm = [view.can_register, !review.submitted || status.phase === 'failed'].every(Boolean)
-  const pool = BigInt(review.asset === 'sui' ? row.sui_pool : row.token_pool)
   return (
     <TournamentDialog title={t('contribution_review')} close={close} t={t}>
       <h3>{tournament_name(row.name)}</h3>
       <strong className="tourney-review-amount">
-        {numbers.sui(review.amount, 9)} {review.asset.toUpperCase()}
+        {numbers.sui(review.amount)} {review.asset.toUpperCase()}
       </strong>
-      {!review.submitted && (
-        <p>{t('pool_after', { amount: numbers.sui(pool + review.amount, 9), asset: review.asset.toUpperCase() })}</p>
-      )}
       <p>{t('donation_notice')}</p>
-      <p className="tourney-note">{t('organizer_address', { address: row.organizer })}</p>
       <TournamentOperationNotice status={status} t={t} confirmed="contribution_confirmed" />
       {view.registration_expired && <p role="status">{t('reason_closed')}</p>}
       <footer className="tourney-dialog-actions">

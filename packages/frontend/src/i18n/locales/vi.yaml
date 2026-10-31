@@ -3091,12 +3091,12 @@ tournament_page:
   level_limit_label: 'Cấp tối đa khi đăng ký'
   level_unrestricted: 'Không giới hạn'
   level_limit_notice: 'Tùy chọn. Chỉ kiểm tra khi đăng ký; tăng cấp sau đó không ảnh hưởng đến quyền tham gia.'
-  level_limit_amount: 'Cấp tối đa khi đăng ký: {{level}}'
-  reason_level: 'Nhân vật này vượt quá giới hạn cấp đăng ký.'
+  level_limit_badge: 'Cấp tối đa {{level}}'
+  level_limit_hint: 'Giới hạn cấp áp dụng lúc đăng ký. Bạn có thể lên cấp sau đó.'
+  reason_level: 'Cấp tối đa của giải đấu này là {{level}}.'
   entry_fee_label: 'Phí mỗi nhân vật (SUI)'
   entry_fee_setting: 'Tùy chọn, cố định khi tạo. Nhập 0 để đăng ký miễn phí.'
   entry_fee_amount: 'Phí mỗi nhân vật: {{amount}} SUI'
-  entry_fee_notice: 'Không hoàn lại, kể cả khi rút lui hoặc hủy. Một nửa vào quỹ giải thưởng, một nửa vào ngân khố; phần dư làm tròn vào quỹ giải thưởng. Khi hủy, quỹ thuộc về người tổ chức.'
   victory_title: 'Bạn đã giành hạng nhất!'
   placing_title: 'Bạn đạt hạng {{place}}'
   results: 'Kết quả giải đấu'
@@ -3158,7 +3158,6 @@ tournament_page:
   format: Thể thức
   final: Chung kết
   bronze: Trận tranh hạng ba
-  roster_notice: 'Chỉ đội đủ người mới được tham gia. Đăng ký cho phép tự động vào trận. Hãy luôn trực tuyến: mỗi trận có 60 giây để tham gia.'
   donation_notice: Không thể rút lại đóng góp. Khi giải bị hủy, tiền được chuyển cho ban tổ chức để hoàn trả thủ công nếu có. Giải thưởng chưa trao cũng thuộc ban tổ chức.
   refund_pool: Trả KARES chưa trao cho ban tổ chức
   expire: 'Hủy: không đủ đội hoàn chỉnh'
@@ -3198,7 +3197,6 @@ tournament_page:
   leave_character: Xóa {{name}} khỏi đội
   leave_review: Xóa {{character}} khỏi {{team}}? Nhân vật này sẽ không còn được đăng ký.
   join_review: Đăng ký {{character}} vào {{team}}?
-  consent_notice: Chỉ định tên chỉ giữ chỗ. Chủ sở hữu vẫn phải tự đăng ký từng nhân vật.
   too_many_names: Chỉ định tối đa {{count}} nhân vật, kể cả nhân vật của bạn.
   stay_online: Duy trì kết nối và đủ SUI trả phí. Ứng dụng sẽ thử cho các nhân vật đã đăng ký vào trận trong mỗi khoảng tiếp nhận 60 giây.
   action_find: Tìm đội
@@ -3235,7 +3233,8 @@ tournament_page:
   match_walkover: Thắng do đối thủ vắng mặt
   match_bye: Miễn đấu
   match_clock_unknown: Đang chờ giờ trên chuỗi
-  reason_registered: Đã đăng ký · hãy giữ kết nối
+  reason_registered: Đã đăng ký
+  reason_registered_soon: Đã đăng ký · hãy giữ kết nối
   reason_join: Tham gia đội này
   reason_add: Thêm nhân vật của bạn
   reason_closed: Đã đóng đăng ký
@@ -3287,7 +3286,6 @@ tournament_page:
   unknown_item: Không có thông tin vật phẩm
   rolled_items_notice: Vật phẩm được tạo từ mẫu. Chỉ số ngẫu nhiên được xác định khi nhận.
   contribution_review: Xem lại đóng góp
-  pool_after: 'Quỹ sau đóng góp này: {{amount}} {{asset}}'
   contribution_confirmed: Đóng góp đã được xác nhận. Quỹ sẽ cập nhật khi dữ liệu chỉ mục đến.
   transaction_confirmed: Giao dịch đã được xác nhận. Giải đấu sẽ cập nhật theo dữ liệu chỉ mục.
   cancelled_notice: Giải đấu đã hủy. Tiền chưa sử dụng được trả cho ban tổ chức ban đầu.

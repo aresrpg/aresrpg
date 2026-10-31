@@ -14,6 +14,10 @@ import { chain_now, type ChainClock } from './chain_clock.ts'
 import { action_key, open_team, tournament_claims, type TournamentAction, type TournamentState } from './tournament.ts'
 
 const ADMISSION_MS = Number(CONTRACT_CONSTANTS.placement_force_ms)
+const START_REMINDER_MS = 10 * 60 * 1000
+
+export const tournament_start_soon = (row: Pick<TournamentRow, 'start_before_ms'>, now_ms: number | null): boolean =>
+  now_ms !== null && row.start_before_ms - now_ms <= START_REMINDER_MS
 type Character = Readonly<Pick<CharacterRow, 'id' | 'name' | 'custody' | 'active_fight' | 'level'>>
 export type TournamentViewSource = Readonly<{
   tournament: TournamentState
@@ -236,6 +240,7 @@ type ActionReason =
   | 'finished'
   | 'cancelled'
   | 'cannot_watch'
+  | 'registered_soon'
 export type TournamentNextAction =
   | Readonly<{ kind: 'status'; reason: ActionReason }>
   | Readonly<{ kind: 'write'; name: WriteName; action: TournamentAction; confirm: boolean }>
@@ -280,7 +285,7 @@ const registration_action = (row: TournamentRow, viewer: TournamentViewer): Tour
   )
   return eligible
     ? write('add', { kind: 'join', team: own, revision: row.teams[own].revision, character: eligible.id })
-    : status('registered')
+    : status(tournament_start_soon(row, viewer.now_ms) ? 'registered_soon' : 'registered')
 }
 
 export const tournament_owned_match = (row: TournamentRow, viewer: TournamentViewer): number => {

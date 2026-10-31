@@ -13,7 +13,7 @@ import { tournament_owned_match, tournament_registration, tournament_rounds } fr
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
 import { action_label, countdown, match_label, own_team, tournament_name } from './presentation.ts'
-import { TeamPips, TournamentPool } from './TournamentControls.tsx'
+import { TeamPips, TournamentPool, TournamentLevelLimit } from './TournamentControls.tsx'
 import { tournament_path } from './navigation.ts'
 import { useHudPlacement } from './useHudPlacement.ts'
 import './tournament.css'
@@ -122,6 +122,7 @@ const TournamentResultsCard = ({ row, t }: Readonly<{ row: TournamentRow | null;
       <span className="tourney-hud-heading">
         <strong>
           <bdi>{tournament_name(row.name)}</bdi>
+          <TournamentLevelLimit level={row.max_level} t={t} />
         </strong>
       </span>
       <small>{winners ? t('champion', { team: winners }) : t('no_champion')}</small>
@@ -138,7 +139,9 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
   const emphasis = admission ? ' is-admission' : ''
   const timer = countdown(deadline, view.viewer.now_ms)
   const open = (): void => dispatch_app({ type: 'path/open', pathname: tournament_path(row.id) })
-  const mobile_label = [view.registration_open, admission].some(Boolean) ? timer : action_label(view.primary, t)
+  const mobile_label = [view.registration_open, admission].some(Boolean)
+    ? timer
+    : action_label(view.primary, t, row.max_level)
   return (
     <>
       <HudCards>
@@ -159,6 +162,7 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
           <span className="tourney-hud-heading">
             <strong>
               <bdi>{tournament_name(row.name)}</bdi>
+              <TournamentLevelLimit level={row.max_level} t={t} />
             </strong>
             {(view.registration_open || admission) && (
               <span className="tourney-hud-clock">
@@ -187,7 +191,7 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
             <small>
               {view.recovery.length ? t('older_claims', { count: view.recovery.length }) : t('open_window')}
             </small>
-            <b>{action_label(view.primary, t)}</b>
+            <b>{action_label(view.primary, t, row.max_level)}</b>
           </span>
         </button>
       </HudCards>

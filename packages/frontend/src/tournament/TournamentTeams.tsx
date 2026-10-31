@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { LockKeyhole, Plus, UserPlus } from 'lucide-react'
 import type { TournamentRow } from '@aresrpg/protocol'
@@ -21,7 +21,6 @@ import {
   TournamentDialog,
   TournamentOperationNotice,
   TournamentEntryFee,
-  TournamentLevelLimit,
 } from './TournamentControls.tsx'
 import { character_label, team_initial, tournament_act, operation_status, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
@@ -133,7 +132,7 @@ export const TournamentTeams = ({
                   {t(team.allowed.length ? 'named_only' : 'open_anyone')} · {team.seats.length}/{row.format}
                 </p>
                 {!['join', 'add', 'registered', 'elsewhere'].includes(access) && (
-                  <p className="tourney-access">{t(`reason_${access}`)}</p>
+                  <p className="tourney-access">{t(`reason_${access}`, { level: String(row.max_level) })}</p>
                 )}
               </div>
             </div>
@@ -187,13 +186,7 @@ export const TournamentTeams = ({
             set_intent(null)
           }}
         >
-          {intent.action.kind === 'join' && (
-            <>
-              <p className="tourney-note">{t('roster_notice')}</p>
-              <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
-              <TournamentLevelLimit level={row.max_level} t={t} />
-            </>
-          )}
+          {intent.action.kind === 'join' && <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />}
         </TournamentConfirm>
       )}
     </section>
@@ -212,28 +205,26 @@ export const CreateTournamentTeam = ({
   const copy = useAppStore((state) => state.copy)!
   const t = copy_text(copy.tournament_page)
   const [name, set_name] = useState('')
-  const [submitted, set_submitted] = useState(false)
+  const [submitted_key, set_submitted_key] = useState<string | null>(null)
   const [restricted, set_restricted] = useState(false)
   const [names, set_names] = useState('')
   const { wallet, viewer } = view
   const { character } = viewer
+  const status = operation_status(view.tournament, submitted_key ?? '', submitted_key !== null)
+  useEffect(() => {
+    if (status.phase === 'confirmed') close()
+  }, [status.phase, close])
   if (view.team_creation_blocker)
     return (
       <TournamentDialog title={t('create_team')} close={close} t={t}>
-        <p role="alert">{t(`reason_${view.team_creation_blocker}`)}</p>
+        <p role="alert">{t(`reason_${view.team_creation_blocker}`, { level: String(row.max_level) })}</p>
         <footer className="tourney-dialog-actions">
           <Button onClick={close}>{t('close')}</Button>
         </footer>
       </TournamentDialog>
     )
   if (!wallet || !character) return null
-  const status = operation_status(
-    view.tournament,
-    action_key(row, { kind: 'create', name, allowed: [], character: character.id }),
-    submitted
-  )
-  const confirmed = status.phase === 'confirmed'
-  const locked = submitted && status.phase !== 'failed'
+  const locked = submitted_key !== null && status.phase !== 'failed'
   const member_names = names
     .split(',')
     .map((value) => value.trim())
@@ -250,15 +241,15 @@ export const CreateTournamentTeam = ({
     if (!ready) return
     try {
       const allowed = restricted ? [...new Set([character.id, ...member_names.map(wallet.derive_character_id)])] : []
-      set_submitted(true)
-      tournament_act(row.id, { kind: 'create', name: name.trim(), allowed, character: character.id })
+      const action = { kind: 'create' as const, name: name.trim(), allowed, character: character.id }
+      set_submitted_key(action_key(row, action))
+      tournament_act(row.id, action)
     } catch (error) {
       toast.add(error)
     }
   }
   return (
     <TournamentDialog title={t('create_team')} close={close} t={t}>
-      <p>{character.name}</p>
       <TournamentOperationNotice status={status} t={t} confirmed="transaction_confirmed" />
       <label className="aui-field">
         {t('team_name')}
@@ -281,16 +272,11 @@ export const CreateTournamentTeam = ({
       )}
       {restricted && allowed_count > row.format && <p role="alert">{t('too_many_names', { count: row.format })}</p>}
       <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
-      <TournamentLevelLimit level={row.max_level} t={t} />
-      <p className="tourney-note">{t('consent_notice')}</p>
-      <p className="tourney-note">{t('roster_notice')}</p>
       <footer className="tourney-dialog-actions">
-        <Button onClick={close}>{t(confirmed ? 'close' : 'cancel')}</Button>
-        {!confirmed && (
-          <Button tone="primary" disabled={!ready} onClick={create}>
-            {t('create_team')}
-          </Button>
-        )}
+        <Button onClick={close}>{t('cancel')}</Button>
+        <Button tone="primary" disabled={!ready} onClick={create}>
+          {t('create_team')}
+        </Button>
       </footer>
     </TournamentDialog>
   )

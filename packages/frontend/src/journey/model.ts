@@ -38,7 +38,6 @@ export type JourneyState = Readonly<{
   completed: readonly string[]
   celebrations: readonly string[]
   journal_open: boolean
-  collapsed: boolean
   storage_failed: boolean
 }>
 
@@ -51,7 +50,6 @@ export const initial_journey_state = (identity: string | null = null, generation
     completed: [],
     celebrations: [],
     journal_open: false,
-    collapsed: false,
     storage_failed: false,
   })
 

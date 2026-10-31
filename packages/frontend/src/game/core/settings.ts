@@ -45,6 +45,7 @@ export type GameSettings = Readonly<{
   always_craft_from_character_id?: string | null
   placement_gas_warning_disabled?: boolean
   marketplace_disclaimer_acknowledged?: boolean
+  journey_collapsed?: boolean
   render_distance: number | null
   fight_access?: 0 | 1
 }>
@@ -90,6 +91,7 @@ export const load_game_settings = (
     always_craft_from_character_id: null,
     placement_gas_warning_disabled: false,
     marketplace_disclaimer_acknowledged: false,
+    journey_collapsed: false,
     render_distance: null,
     fight_access: 0 as const,
   })
@@ -138,6 +140,7 @@ export const load_game_settings = (
       always_craft_from_character_id,
       placement_gas_warning_disabled,
       marketplace_disclaimer_acknowledged,
+      journey_collapsed: Reflect.get(record, 'journey_collapsed') === true,
       render_distance,
       fight_access,
     })
