@@ -43969,6 +43969,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 1,
+            "value_max": 1,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44007,6 +44019,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 1,
+            "value_max": 1,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       },
@@ -44058,6 +44082,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 2,
+            "value_max": 2,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44096,6 +44132,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 2,
+            "value_max": 2,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       },
@@ -44147,6 +44195,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 3,
+            "value_max": 3,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44185,6 +44245,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 3,
+            "value_max": 3,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       },
@@ -44236,6 +44308,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 4,
+            "value_max": 4,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44274,6 +44358,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 4,
+            "value_max": 4,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       },
@@ -44325,6 +44421,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 5,
+            "value_max": 5,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44363,6 +44471,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 5,
+            "value_max": 5,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       },
@@ -44414,6 +44534,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 10,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ],
         "crit_effects": [
@@ -44452,6 +44584,18 @@
             "chance_bp": 10000,
             "turns": 1,
             "stat": 7
+          },
+          {
+            "kind": 4,
+            "element": "",
+            "value": 10,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 1,
+            "stat": 9
           }
         ]
       }
@@ -49338,8 +49482,8 @@
           {
             "kind": 6,
             "element": "air",
-            "value": 31,
-            "value_max": 35,
+            "value": 35,
+            "value_max": 40,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 1,
@@ -49359,7 +49503,7 @@
         "free_cell": false,
         "casts_per_turn": 0,
         "casts_per_target": 0,
-        "cooldown_turns": 1,
+        "cooldown_turns": 2,
         "crit_1_in": 50,
         "effects": [
           {
