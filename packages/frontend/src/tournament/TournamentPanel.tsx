@@ -71,6 +71,9 @@ const EventHeading = ({
           <TournamentLevelLimit level={row.max_level} t={t} />
         </h2>
         <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
+        <p className="tourney-note" hidden={row.max_level === null}>
+          {t('level_limit_hint')}
+        </p>
       </div>
       <div className="tourney-event-progress">
         <small>{t(row.status === 'open' ? 'deadline' : row.status)}</small>

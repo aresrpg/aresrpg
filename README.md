@@ -52,8 +52,15 @@ architecture argue the model first; implementation composes the approved owners 
 This is **source-available** software, developed in the open — not open-source. See
 [LICENSE](./LICENSE) for the binding text; the honest summary:
 
-**You may:** read everything · build and run the game locally · modify it for yourself ·
-contribute improvements back (a [CLA](./CLA.md) signature rides your first PR).
-**You may not:** redistribute the software or your modified version · re-host the game ·
-use it commercially. All commercial rights stay with the author. The AresRPG name and logo
-are not licensed.
+**You may:** copy, modify, publish, host, and sell clients, game remakes, fan tools, and services.
+Commercial businesses and profit-making automation or bots are welcome. Use the official deployment
+identified by our published `pins.json` for AresRPG on-chain gameplay and economic operations.
+
+**You may not:** deploy or republish our smart contracts or derivatives on any blockchain network, or substitute
+another deployment. Contract changes are limited to bug and security fixes; preparing a fix does not
+grant permission to deploy it. Compilation and unit tests without deployment are allowed.
+
+Keep the license and copyright notices when redistributing. The AresRPG name and logo are not
+licensed for branding your own product. Contributions back require the [CLA](./CLA.md).
+WebSocket presence is encouraged so bots appear and participate on the shared map, but it is optional;
+performance-focused clients can interact directly with the chain. See [the agent playbook](https://aresrpg.world/llms.txt).

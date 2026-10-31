@@ -1,70 +1,97 @@
 # AresRPG Source-Available License
 
-**Version 1.0 — 2026**
+**Version 2.0 — 2026**
 **SPDX identifier: `LicenseRef-AresRPG-Source-Available`**
 
-Copyright © 2026 **Sceat**. All rights reserved.
+Copyright © 2026 **Sceat**. All rights reserved except as expressly granted below.
 
 ## Acceptance
 
-By viewing, downloading, cloning, modifying, running, or contributing to the Software, you agree to
-all of the terms and conditions below. If you do not agree to them, you must not do any of those
-things.
+By exercising rights granted by this license, You accept its terms. This license grants only rights
+that the Licensor owns or is authorized to grant. Separately licensed third-party materials remain
+subject to their own licenses.
 
 ## Copyright License
 
-The Licensor grants you a non-exclusive, worldwide, royalty-free, non-transferable, non-sublicensable
-license to:
+Subject to the conditions below, the Licensor grants You a perpetual, non-exclusive, worldwide, royalty-free
+license to use, reproduce, modify, prepare derivative works of, publicly display, publicly perform,
+distribute, and sell the Software in source or compiled form, and to host and operate it for others.
+These permissions cover both commercial and noncommercial purposes.
 
-1. **View** the source code of the Software for any purpose.
-2. **Modify** the Software and create derivative works, for your own personal, noncommercial use only.
-3. **Run** the Software and any permitted modified version, locally, for your own personal,
-   noncommercial use only.
-4. **Contribute** — submit Contributions (as defined below) back to the canonical AresRPG repository,
-   subject to and conditioned on your acceptance of the separate Contributor License Agreement
-   (`CLA.md`).
+In particular, You may publish and operate Your own game remake or modified client, fan tools,
+websites, servers, indexers, automation, and bots. You may build a business around them, charge for
+access or services, and use automation or bots to earn profits through the Canonical Deployment.
+This license requires no revenue share and no publication of Your modifications. Ordinary network
+fees and the rules enforced by the Canonical Deployment still apply.
 
-No other rights are granted. In particular, nothing in this license grants you any right to operate a
-hosted, networked, or otherwise publicly-accessible instance of the Software or a derivative of it.
+The permissions concerning Smart Contracts are narrower: You may inspect, reproduce, compile, and
+test them without creating a deployment. You may modify them only to investigate or correct bugs or
+security vulnerabilities in their intended operation, and may distribute those fixes for review or
+submit them to the Licensor. This permission does not cover new contract features or changes to
+intended gameplay, economic, fee, ownership, or access-control rules. No permission to publish or
+deploy Smart Contracts on a blockchain is granted.
 
-## Restrictions
+Contributions submitted for inclusion in the canonical AresRPG repository remain subject to the
+separate Contributor License Agreement (`CLA.md`). The CLA is not required merely to use, modify,
+distribute, or operate the Software within this license.
 
-1. **No redistribution.** You may not distribute, publish, sell, rent, lease, sublicense, or otherwise
-   make available the Software or any modified version of it — in source or compiled form, in whole or
-   in part — to any third party, through any channel, by any means. The single exception is submitting
-   a Contribution back to the canonical repository under the CLA, which is not "distribution" for the
-   purposes of this license.
-2. **No commercial use.** You may not use the Software, or any modified version of it, for a commercial
-   purpose. "Commercial purpose" includes, without limitation: operating a competing or derivative game
-   service (whether or not it charges players directly), running the Software as a hosted or networked
-   service for any third party, generating advertising or subscription revenue from a deployment of the
-   Software, or using the Software in the course of any business activity.
-3. **All commercial rights are reserved exclusively to the Licensor.** Nothing in this license transfers
-   or waives any commercial right the Licensor holds in the Software.
-4. You must retain this license text and all copyright notices in every copy of the Software or a
-   substantial portion of it that you keep.
+## Canonical Deployment and Smart Contracts
+
+1. **Use the official deployment.** Games, remakes, services, tools, and bots based on the Software
+   must use the Canonical Deployment for AresRPG on-chain game state, assets, and economic operations.
+   You may run Your own off-chain infrastructure and choose Your own RPC or data providers for that
+   deployment. A tool with no on-chain operations does not need to open a blockchain connection.
+2. **No on-chain contract publication or republication.** You may not publish, republish, deploy, redeploy,
+   migrate, or port the Smart Contracts to a blockchain deployment, in whole or in part, whether
+   unchanged or modified. This prohibition applies on any blockchain network, including mainnet, public testnets, private
+   chains, and local development networks, and whether done directly or through another person or
+   service. Renaming, extracting, translating, or embedding contract code does not remove this
+   restriction. Compilation and unit tests that create no blockchain deployment are permitted.
+3. **No substitute deployment.** You may not redirect the Software's AresRPG game state, assets, or
+   economic operations to an independently deployed copy or derivative of the Smart Contracts.
+   Editing, replacing, or retaining the filename of a local `pins.json` does not authorize a different
+   deployment. Only the Licensor may designate the official deployment or authorize a successor.
+4. **Fixes do not grant deployment authority.** Permission to investigate, prepare, distribute, or
+   contribute a bug or security fix does not authorize publishing it on-chain, upgrading an existing
+   deployment, or exercising administrative capabilities. Those actions require separate written
+   permission from the Licensor.
+
+These conditions do not prohibit ordinary gameplay transactions against the Canonical Deployment,
+off-chain clients or simulations, or independently authored integrations that use the Canonical
+Deployment without copying, republishing, or substituting the Smart Contracts. Connecting to the
+AresRPG WebSocket for online presence is encouraged, but is not a condition of this license.
+
+## Distribution and Notices
+
+You must retain this license and the applicable copyright notices when distributing the Software or
+substantial portions of it. For compiled distributions, include them in the accompanying materials.
+Every recipient receives the applicable permissions directly from the Licensor under this license.
+You may apply Your own terms to Your original additions, but You may not remove these conditions or
+grant rights to the covered Software that this license does not grant.
 
 ## No Trademark License
 
-This license does not grant any right to use the Licensor's trade names, trademarks, service marks, or
-product names (including "AresRPG" and any associated logo), except as required for reasonable and
-customary use in describing the origin of the Software. See `TRADEMARK.md`.
+This license does not grant rights to the Licensor's trade names, trademarks, service marks, product
+names, or logos, including "AresRPG", except for reasonable and customary use to describe the origin
+of the Software or compatibility with AresRPG. It does not authorize claims of official status,
+affiliation, or endorsement.
 
 ## Patents
 
-The Licensor grants you a license, under any patent claims the Licensor can license, to make, have
-made, use, and run copies of the Software that you are otherwise permitted to make and run under this
-license, in each case subject to the Restrictions above. This patent license does not extend to any
-claim arising from modifications you make to the Software, and it terminates automatically if you (or
-anyone acting on your behalf) bring a patent infringement claim against the Licensor relating to the
-Software.
+The Licensor grants You a license under patent claims the Licensor can license that are necessarily
+infringed by the unmodified Software, to make, use, offer for sale, sell, import, distribute, and
+operate the Software as otherwise permitted by this license. No patent permission expands the
+Smart Contract or deployment permissions above. This patent license does not extend to claims
+arising solely from Your modifications. It terminates if You, or anyone acting on Your behalf,
+bring a patent infringement claim against the Licensor relating to the Software.
 
 ## Termination
 
-This license terminates automatically if you violate any of its terms. Following termination, you must
-cease all use, running, and modification of the Software, and destroy all copies in your possession. The
-Licensor may, at its sole discretion, reinstate your rights if you cure the violation within thirty (30)
-days of becoming aware of it; absent reinstatement, termination is permanent.
+This license terminates automatically if You violate its terms. Following termination, You must
+cease exercising the rights granted by this license and destroy copies of the Software in Your
+possession or control. The Licensor may reinstate Your rights if You cure the violation within thirty
+(30) days of becoming aware of it. Termination of Your rights does not terminate the rights of
+recipients who remain in compliance with this license.
 
 ## No Warranty
 
@@ -77,30 +104,35 @@ NON-INFRINGEMENT. THIS DISCLAIMER APPLIES TO THE MAXIMUM EXTENT PERMITTED BY APP
 IN NO EVENT WILL THE LICENSOR BE LIABLE FOR ANY DAMAGES OF ANY KIND ARISING FROM OR RELATED TO YOUR USE
 OF THE SOFTWARE, INCLUDING BUT NOT LIMITED TO DIRECT, INDIRECT, SPECIAL, INCIDENTAL, CONSEQUENTIAL, OR
 PUNITIVE DAMAGES, EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, AND EVEN IF
-THE REMEDIES PROVIDED IN THIS LICENSE FAIL OF THEIR ESSENTIAL PURPOSE.
+THE REMEDIES PROVIDED IN THIS LICENSE FAIL OF THEIR ESSENTIAL PURPOSE. THIS LIMITATION APPLIES TO THE
+MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
 
 ## Definitions
 
 - **"Software"** means the AresRPG source code and associated files made available under this license
-  in the canonical public repository, and any modified or derivative version of it.
-- **"Licensor"** means **Sceat**, the holder of the copyright in the
-  Software.
-- **"You"** means the individual or entity exercising the rights granted by this license.
-- **"Contribution"** means any original work of authorship, including any modification or addition to
-  the Software, that you intentionally submit to the Licensor for inclusion in the Software.
-- **"Commercial purpose"** has the meaning given in the Restrictions section above.
+  in the canonical public repository, including covered portions of modified or derivative works.
+- **"Smart Contracts"** means the AresRPG-authored code intended for execution on a blockchain,
+  including the contract packages identified by `move-packages.json`, their bytecode, and their
+  blockchain-deployable derivatives. Separately licensed third-party contracts are not relicensed
+  by this definition.
+- **"Canonical Deployment"** means the official AresRPG blockchain deployment identified by the
+  network, package identities, and shared-object references in the Licensor-published `pins.json`
+  for the corresponding AresRPG release, including upgrades or successors expressly designated by
+  the Licensor. The canonical repository is `https://github.com/aresrpg/aresrpg`. Your own copy,
+  edited manifest, new package, or new registry cannot designate a Canonical Deployment.
+- **"Licensor"** means **Sceat**.
+- **"You"** means the individual or entity exercising rights granted by this license.
+- **"Contribution"** means an original work of authorship, including a modification or addition to
+  the Software, intentionally submitted to the Licensor for inclusion in the Software.
 
 ## General
 
-This license is governed by the laws of **France**, without regard to
-its conflict-of-law provisions. If any provision of this license is held unenforceable, the remaining
-provisions remain in full effect, and the unenforceable provision is replaced with an enforceable one
-that most closely reflects its original intent. This license constitutes the entire agreement between
-you and the Licensor regarding the Software, and supersedes any prior agreements.
+This license is governed by the laws of **France**, without regard to its conflict-of-law provisions.
+If a provision is held unenforceable, the remaining provisions remain in effect to the extent
+permitted by applicable law. This license is the entire agreement concerning the permissions it
+grants; a separate written agreement with the Licensor may grant additional permissions.
+This version applies to Software made available under it and does not revoke rights already granted
+under an earlier license.
 
-## A note on GitHub hosting (informational, not a license term)
-
-Hosting this repository publicly on GitHub grants other GitHub users certain on-platform view/fork
-rights under GitHub's own Terms of Service (§D.5), independent of this license. This license's
-no-redistribution term governs everything _beyond_ that platform default — it cannot and does not
-purport to override GitHub's ToS for on-platform interactions.
+This is a custom source-available license, not an open-source license. Summaries in the README,
+`llms.txt`, or other guides do not replace this license.

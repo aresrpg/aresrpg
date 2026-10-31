@@ -124,10 +124,8 @@
   font:
     600 11px/1.4 'Tournament Mono',
     monospace;
-  text-decoration: none;
   vertical-align: middle;
   white-space: nowrap;
-  cursor: help;
 }
 .tourney-entry-fee {
   color: var(--aui-muted);

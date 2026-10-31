@@ -187,11 +187,7 @@ export const TournamentActionButton = ({
 }
 
 export const TournamentLevelLimit = ({ level, t }: Readonly<{ level: number | null; t: CopyText }>) =>
-  level === null ? null : (
-    <abbr className="tourney-level-badge" title={t('level_limit_hint')}>
-      {t('level_limit_badge', { level })}
-    </abbr>
-  )
+  level === null ? null : <span className="tourney-level-badge">{t('level_limit_badge', { level })}</span>
 
 export const TournamentEntryFee = ({
   amount,

@@ -78,12 +78,14 @@ test('over-level characters cannot submit a registration', async ({ page }) => {
   expect(await calls(page)).toEqual([])
 })
 
-test('the level badge explains later leveling and free team creation has no price or policy wall', async ({ page }) => {
+test('level guidance stays visible and free team creation has no price or policy wall', async ({ page }) => {
   await visit(page)
   await fixture(page, 'update', { version: '8', max_level: 20 })
   const badge = page.locator('.tourney-masthead h2 .tourney-level-badge')
   await expect(badge).toHaveText('Max lvl. 20')
-  await expect(badge).toHaveAttribute('title', 'The level limit applies at registration. You can level up afterward.')
+  await expect(
+    page.locator('.tourney-identity').getByText('The level limit applies at registration. You can level up afterward.')
+  ).toBeVisible()
   await expect(page.locator('.tourney-entry-fee')).toHaveCount(0)
   await page.locator('.tourney-teams').getByRole('button', { name: 'Create team', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Create team', exact: true })

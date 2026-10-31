@@ -1,6 +1,6 @@
 # Optional AresRPG indexing and WebSocket integration
 
-Choose this path when indexed inventory, market discovery/history, leaderboard rankings, live fight rows, or social presence justify a persistent authenticated connection. It is a separate, more involved integration, not a prerequisite for on-chain play. Start with [the two-path comparison](https://aresrpg.world/agents/protocol.txt); both paths submit gameplay transactions directly through the SDK.
+We encourage bots that play in the world to connect and participate visibly on the map. Other players can see their movement and share an active world with them. The connection also supplies indexed inventory, market discovery/history, leaderboard rankings, and live fight rows. Performance-focused bots and clients may use the chain directly without this connection, or keep their chain-native reader and add the WebSocket for presence. Start with [the two-path comparison](https://aresrpg.world/agents/protocol.txt); all these integrations submit gameplay transactions directly through the SDK. Presence is encouraged, not required by the license.
 
 Sui GraphQL is a Sui data service. The AresRPG indexer is the game's checkpoint-to-graph projection behind its realtime server. They are different services. The indexer is not a public GraphQL endpoint and the WebSocket is not a transaction relay.
 
@@ -88,7 +88,15 @@ Send an explicit null observation when finished; repeat for each active observat
 
 Use monotonically increasing request identities and ignore replies for superseded selections. Do not invent generic REST endpoints such as `/api/inventory` or `/api/market`. The SDK has narrow direct-read exceptions, not a broad player-state reader. Independent chain-native agents build their own bounded Sui GraphQL read adapter; that does not add a second read path to the browser app.
 
-World presence uses `packet/position` with the character ID, exact `character_checkpoint` string, chain-space pose, and required boolean `riding` and `gliding` states. `gliding` reports an active mounted descent, not held jump input. A new chain checkpoint invalidates old movement provenance. Publish physically plausible movement within the protocol rate/speed limits. For headless world traversal, adapt the existing server-link/world behavior; a transaction script alone is not a navigation client.
+## Put your bot on the map
+
+After authentication and the roster-ready barrier, publish live positions for characters the server tracks for your account. A socket connection alone does not animate a bot's travel. Use the existing navigation and movement rules to show where the bot is actually moving; do not invent activity or teleport between transaction targets.
+
+World presence uses `packet/position` with `character_id`, `checkpoint`, chain-space `x`, `y`, `z`, and boolean `riding` and `gliding` states. Derive `checkpoint` with the protocol's `character_checkpoint(character)` helper. `gliding` reports an active mounted descent, not held jump input. A new chain checkpoint invalidates old movement provenance. The server ignores untracked characters and mismatched checkpoints and rejects impossible speed.
+
+Follow the existing position publisher's cadence and change detection rather than flooding identical positions. Adapt the [client position publisher](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/game/core/position_publication.ts) and [checkpoint helper](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/protocol/src/position.ts). Stop overworld position publication while the character is in a fight or dungeon. Respect the shared one-connection-per-address rule when a player also uses the browser.
+
+You can retain direct chain reads and SDK writes while using the socket for presence and social traffic. Track the socket's baseline and roster even in this mode. Presence packets are off-chain presentation: they neither execute gameplay actions nor update the character's on-chain travel checkpoint. Continue to prove travel and other game rules in ordinary transactions. A visible bot should be a participant in the shared map, not just an invisible transaction loop.
 
 ## Indexed freshness and service limits
 

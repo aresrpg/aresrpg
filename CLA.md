@@ -4,20 +4,20 @@
 
 - **You keep your copyright.** Your contribution stays yours.
 - **You grant Sceat the right to use it commercially, forever** — including selling the game it improves.
-- **The game stays his to sell.** Contributing never gives anyone else commercial rights.
+- **Project ownership stays separate.** Public commercial use is governed by `LICENSE`; contributing
+  does not grant contract publication or administrative authority.
 - Sign by adding `Signed-off-by:` to your commits after reading the full text below.
 
 **Version 1.0 — 2026**
 
 ## Why this exists
 
-`LICENSE` grants the public **noncommercial, no-redistribution** rights only — it
-does not let anyone, including the Licensor, sell or commercially exploit the Software. Without this
-agreement, a community Contribution would arrive under that same restrictive license and the Licensor
-could not lawfully ship it as part of the commercial game. Signing this CLA is what makes a
-Contribution _safe to merge_: you keep authorship and copyright; the Licensor gets the broad grant
-needed to run AresRPG as a commercial product, including your change. A DCO sign-off alone (below) is
-not sufficient by itself — it proves who wrote the code, it does not grant any rights.
+`LICENSE` permits public commercial clients, remakes, tools, and bots using the Canonical Deployment,
+while reserving Smart Contract publication and restricting contract changes to bug and security fixes.
+This CLA gives the Licensor the broader rights needed to maintain and publish the official contracts
+and to distribute or relicense Contributions as part of AresRPG. You keep authorship and copyright.
+The copyright and patent grants below are separate from the public license. A DCO sign-off alone
+proves provenance; it does not replace those grants.
 
 ## 1. Definitions
 

@@ -1,6 +1,6 @@
 # State, timing, and transaction discipline
 
-Move owns game truth. Agents can read that truth from Sui GraphQL (itself an indexed chain service) and submit direct SDK transactions without connecting to the AresRPG server. Alternatively, opt into AresRPG's indexer-backed WebSocket for prepared gameplay projections and realtime services. Choose with the player; start chain-native for a bounded task whose required state you can decode reliably.
+Move owns game truth. Performance-focused bots and clients can read that truth from Sui GraphQL (itself an indexed chain service) and submit direct SDK transactions without connecting to the AresRPG server. We encourage bots playing in the world to also connect to AresRPG's WebSocket and publish valid map presence, so other players can see them participating. The socket can supply prepared gameplay projections and realtime services, or complement an existing chain-native reader with presence. Choose with the player; the WebSocket is optional and is not a transaction relay.
 
 ## Choose a read path
 
@@ -12,6 +12,8 @@ Move owns game truth. Agents can read that truth from Sui GraphQL (itself an ind
 | Freshness and latency | Provider/checkpoint visibility and polling cadence; wait until reads include your certified writes | Push updates avoid repeated scans, but projection lag is extra; reconcile receipts before late packets |
 | Limits and cost | Provider-specific quotas, page/query limits and pricing; pagination and polling consume requests | Server message/connection limits plus bounded observations; one live connection per address can replace the browser |
 | Scope | On-chain actions; no realtime presence/chat or courtesy fight relays | Indexed convenience plus off-chain presence/chat and courtesy relays |
+
+These choices can be combined: use direct chain reads for gameplay decisions and an authenticated WebSocket for map presence. That presence connection still requires its normal baseline, roster tracking, checkpoint provenance, and session/rate discipline. See [online presence](https://aresrpg.world/agents/indexing.txt) for the implementation. Direct chain access is supported, but visible bots make the game more interesting for the people sharing its world.
 
 Neither path promises a latency or quota SLA. Check the chosen provider's current limits, back off on throttling, paginate completely where completeness matters, and cache only with version/freshness checks. Use bounded polling of the objects needed for the next action instead of repeatedly scanning the whole chain. A missing page or unavailable query is unknown state, not an empty inventory. For exact server constraints and login details, see [optional indexing](https://aresrpg.world/agents/indexing.txt).
 

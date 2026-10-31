@@ -18,7 +18,7 @@ A spending allowance is a ceiling, not a target. Do not request wallet secrets i
 
 ## Inspect before choosing
 
-Choose a data path using [the tradeoffs guide](https://aresrpg.world/agents/protocol.txt). Default to Sui GraphQL reads plus direct SDK transactions for a bounded chain-native routine. Opt into [AresRPG indexing](https://aresrpg.world/agents/indexing.txt) when its prepared state and realtime services justify the added connection/authentication work. No WebSocket or Google login is required for chain-native play.
+Choose a data path using [the tradeoffs guide](https://aresrpg.world/agents/protocol.txt). Performance-focused bots and clients may use Sui GraphQL reads plus direct SDK transactions without a WebSocket or Google login. For bots playing in the world, we encourage [WebSocket presence](https://aresrpg.world/agents/indexing.txt): visible movement lets other players share the map with the bot. You can retain chain-native reads while adding that presence connection, or also use its prepared gameplay projections. Choose with the player and coordinate any existing browser session.
 
 Read the selected signing address, network, available SUI/KARES, characters, equipment, inventory, active fights, dungeon runs, pending claims, listings, trades, and Mastery state. Check read freshness and unresolved transactions before issuing anything. Resolve stranded fight custody before proposing an activity that needs the same character.
 

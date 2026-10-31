@@ -2,11 +2,17 @@
 
 > AresRPG is a persistent voxel MMORPG on Sui. Help your player build characters, master tactical combat, explore worlds, develop professions, trade, and complete dungeons within their chosen budget and playstyle.
 
-Start with the player guide, then load the relevant specialist guides. These documents are a gameplay skill: use them to plan, explain choices, and operate the game through Sui GraphQL reads and direct public-source SDK transactions by default. Optional AresRPG indexing/WebSocket integration is a separate path with different setup and tradeoffs; choose it deliberately with the player. They do not grant wallet access or spending permission. Agree on an objective, SUI budget, risk tolerance, and allowed actions with the player; then act within that agreement without requesting approval for every routine step.
+Start with the player guide, then load the relevant specialist guides. These documents are a gameplay skill: use them to plan, explain choices, and operate the game through Sui GraphQL reads and direct public-source SDK transactions. Performance-focused bots and clients can use the chain directly without an AresRPG WebSocket. For bots playing in the world, we encourage an authenticated WebSocket connection and live map presence: visible bots make the shared world more active and interesting for other players. Your reads and transactions can remain chain-native while the socket carries presence. Choose the integration deliberately with the player. These guides do not grant wallet access or spending permission. Agree on an objective, SUI budget, risk tolerance, and allowed actions; then act within that agreement without requesting approval for every routine step.
 
 Game state and certified transaction receipts outrank this guide. Content, prices, custody, and availability change. Read fresh state before acting. Never invent an SDK method, object ID, recipe, market price, or successful transaction. A failed or uncertain submission stops the action loop; recover its exact digest before considering another write.
 
-The public SDK lives in the source repository. Use a matching repository checkout and its pinned dependencies; do not assume an independently published npm release. Mainnet and testnet are separate economies. Confirm the network, deployment pins, signing address, and Sui endpoints. SDK writes require gRPC for complete receipts; GraphQL is the read path. Chain-native play needs no AresRPG WebSocket or Google login. Only the optional indexed path has a one-live-game-connection-per-address constraint; coordinate browser and agent sessions if choosing it.
+The public SDK lives in the source repository. Use a matching repository checkout and its pinned dependencies; do not assume an independently published npm release. Mainnet and testnet are separate economies. Confirm the network, deployment pins, signing address, and Sui endpoints. SDK writes require gRPC for complete receipts; GraphQL is the read path. Chain-native play needs no AresRPG WebSocket or Google login. The WebSocket allows one live game connection per address; coordinate browser and agent sessions before connecting.
+
+## Commercial use and the shared game
+
+The [AresRPG license](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/LICENSE) permits publishing and operating commercial clients, game remakes, fan tools, services, automation, and profit-making bots. Use the official deployment identified by the project's published pins for AresRPG on-chain game state, assets, and economic operations. Do not deploy or republish the game's smart contracts or derivatives on any blockchain network. Contract modifications are limited to bug and security fixes; preparing or contributing a fix does not authorize deployment. Keep the license and copyright notices when redistributing. The license is the binding text; it does not grant branding rights to the AresRPG name or logo.
+
+WebSocket presence is a recommendation, not a licensing requirement. Follow the [presence and authentication guide](https://aresrpg.world/agents/indexing.txt) to put your bot on the map. Connecting alone is not a movement client: publish valid live positions for your controlled characters, using the accepted roster and checkpoint provenance. Presence never replaces an on-chain transaction.
 
 ## Playbook
 
@@ -26,7 +32,7 @@ The public SDK lives in the source repository. Use a matching repository checkou
 
 ## Optional
 
-- [AresRPG indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt): Prepared projections, direct-wallet versus Google authentication, subscriptions, rate/session limits, and additional complexity. Not required for chain-native play.
+- [AresRPG indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt): Recommended for visible bots on the map; presence, prepared projections, wallet authentication, subscriptions, and rate/session limits. Optional for chain-native play.
 
 - [Architecture](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/ARCHITECTURE.md): Ownership and system boundaries for advanced integrations.
 - [Game](https://aresrpg.world/): Browser gameplay, account login, encyclopedia, inventory, market, and social tools.

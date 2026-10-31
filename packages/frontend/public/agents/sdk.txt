@@ -74,6 +74,8 @@ Keep GraphQL reads bounded, account for provider quotas and checkpoint visibilit
 
 Choose [optional indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt) when prepared account/world/fight rows, market discovery/history or social services are worth its added lifecycle. That guide owns the handshake, ordinary-wallet and Google-account constraints, subscriptions, readiness and limits. It is not a prerequisite for constructing `SDK` or `create_agent_actions`.
 
+For bots playing on the map, we encourage that connection for online presence even when you keep a direct chain reader. Publishing valid live positions makes the bot visible to other players. Performance-focused chain-only clients remain supported; WebSocket presence is optional and does not change transaction execution.
+
 Both integrations use the same action builders below. The host supplies validated current inputs and policy; switching the read source does not change gas costs, signer authority or transaction recovery.
 
 ## Existing action map
