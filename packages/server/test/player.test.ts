@@ -257,22 +257,29 @@ describe('the player harness (push model)', () => {
     })
   })
 
-  test('all correlated requests share the injected global limiter', async () => {
-    const { sent, ws, graph, pubsub } = wire()
+  test('floor lookup shares the read budget across reconnects and cannot reach the graph when refused', async () => {
     const request_limiter = create_request_limiter({ capacity: 1 })
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub, request_limiter })
+    const first = wire()
+    const player = create_player({ ...first, address: '0xme', admin: false, request_limiter })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 10, character_id: '0xabc' }))
-    player.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 11, character_id: '0xdef' }))
+    player.on_message(JSON.stringify({ type: 'packet/market_floor_request', id: 20, item_type: 'wheat' }))
     await flush()
-    expect(sent.find((packet) => 'id' in packet && packet.id === 11)).toEqual({
-      type: 'packet/error',
-      id: 11,
-      reason: 'rate limited',
-    })
+    expect(first.sent).toContainEqual({ type: 'packet/market_floor', id: 20, prices: {} })
+    expect(first.queries.filter(({ params }) => params?.item_type === 'wheat')).toHaveLength(1)
+    player.on_close()
+    const second = wire()
+    const reconnected = create_player({ ...second, address: '0xme', admin: false, request_limiter })
+    await flush()
+    reconnected.on_message(JSON.stringify({ type: 'packet/market_floor_request', id: 21, item_type: 'wheat' }))
+    reconnected.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 22, character_id: '0xabc' }))
+    await flush()
+    expect(second.sent).toContainEqual({ type: 'packet/error', id: 21, reason: 'rate limited' })
+    expect(second.sent).toContainEqual({ type: 'packet/error', id: 22, reason: 'rate limited' })
+    expect(second.queries.filter(({ params }) => params?.item_type === 'wheat')).toHaveLength(0)
+    reconnected.on_close()
   })
 
-  test('inspection cancellation bypasses an exhausted read budget and suppresses pending delivery', async () => {
+  test('subscription cancellations bypass an exhausted read budget and suppress pending delivery', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const pending = Promise.withResolvers<Record<string, unknown>[]>()
     const player = create_player({
@@ -280,7 +287,7 @@ describe('the player harness (push model)', () => {
       address: '0xme',
       admin: false,
       pubsub,
-      request_limiter: create_request_limiter({ capacity: 1 }),
+      request_limiter: create_request_limiter({ capacity: 2 }),
       graph: {
         ...graph,
         read: (query, params) =>
@@ -288,12 +295,18 @@ describe('the player harness (push model)', () => {
       },
     })
     await flush()
+    player.on_message(JSON.stringify({ type: 'packet/market_observe', observation: { kind: 'overview', request: 1 } }))
     const query = { kind: 'equipment', address: `0x${'a'.repeat(64)}`, character_id: `0x${'b'.repeat(64)}` }
     player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 1, query }))
     player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 2, query }))
     player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 3, query: null }))
+    for (const type of ['packet/market_observe', 'packet/market_prices_observe', 'packet/leaderboard_observe'])
+      player.on_message(JSON.stringify({ type, observation: null }))
+    for (const type of ['packet/spectate', 'packet/fight_preview', 'packet/fight_nearby'])
+      player.on_message(JSON.stringify({ type, fight: null, character_id: '0xabc' }))
     pending.resolve([{ slot: null, item: null }])
     await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/error' && packet.reason === 'rate limited')).toEqual([])
     player.on_close()
     expect(sent.filter((packet) => packet.type.startsWith('packet/inspection'))).toEqual([
       { type: 'packet/inspection_error', id: 2 },

@@ -11,9 +11,18 @@ import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'
 import type { TournamentAdminAction } from '../modules/tournament.ts'
-import { minimum_tournament_teams, tournament_registration } from '../modules/tournament_selectors.ts'
+import {
+  minimum_tournament_teams,
+  tournament_registration,
+  tournament_next_action,
+} from '../modules/tournament_selectors.ts'
 
-import { TournamentDialog, TournamentOperationNotice } from './TournamentControls.tsx'
+import {
+  TournamentDialog,
+  TournamentOperationNotice,
+  TournamentEntryFee,
+  TournamentLevelLimit,
+} from './TournamentControls.tsx'
 import { TournamentReward } from './TournamentReward.tsx'
 import { initial_tournament_draft, TournamentSettingsForm } from './TournamentSettingsForm.tsx'
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
@@ -94,6 +103,8 @@ const ReviewDetails = ({ review, t }: Readonly<{ review: Review; t: CopyText }>)
           <TournamentReward template={reward.template} amount={reward.amount} />
         </div>
       ))}
+      <TournamentEntryFee amount={settings.entry_fee_mist} t={t} />
+      <TournamentLevelLimit level={settings.max_level} t={t} />
       <p>{t('immutable_notice')}</p>
       <p>{t('minimum_notice')}</p>
       <p>{t('recipient_notice')}</p>
@@ -110,13 +121,9 @@ const reviewed_action_available = (review: Review, view: TournamentView): boolea
   const current = view.tournament.rows.find((row) => row.id === id)
   if (!current) return false
   const unchanged = [current.version === review.row?.version, current.status === 'open'].every(Boolean)
-  const counts = tournament_registration(current)
-  const before_start = [
-    now !== null,
-    (now ?? Infinity) < current.start_before_ms,
-    counts.complete >= counts.minimum,
-  ].every(Boolean)
-  return [unchanged, review.action.kind === 'cancel' || before_start].every(Boolean)
+  const next = tournament_next_action(current, view.viewer)
+  const can_start = next.kind === 'write' && next.action.kind === 'start'
+  return [unchanged, review.action.kind === 'cancel' || can_start].every(Boolean)
 }
 
 const AdminReview = ({
@@ -178,8 +185,8 @@ const AdminEvent = ({
   t: CopyText
 }>) => {
   const counts = tournament_registration(row)
-  const can_start =
-    view.viewer.now_ms !== null && view.viewer.now_ms < row.start_before_ms && counts.complete >= counts.minimum
+  const next = tournament_next_action(row, view.viewer)
+  const can_start = next.kind === 'write' && next.action.kind === 'start'
   return (
     <article className="tourney-admin-event">
       <div>
@@ -193,7 +200,7 @@ const AdminEvent = ({
           <Button
             tone="primary"
             disabled={disabled || !can_start}
-            onClick={() => review({ action: { kind: 'start', id: row.id, admin }, row, submitted: false })}
+            onClick={() => review({ action: { kind: 'start', id: row.id }, row, submitted: false })}
           >
             {t('start')}
           </Button>

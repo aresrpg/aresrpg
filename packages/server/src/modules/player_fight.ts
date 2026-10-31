@@ -67,7 +67,7 @@ export default {
     const { pubsub, graph, public_world, events, send, address, dispatch, get_state, signal } = context
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const fight_tails = new Map<string, Promise<void>>()
-    const observation_versions = new Map<string, number>()
+    const pending_observations = new Map<string, Readonly<{ character_id: string }>>()
     const enqueue_fight = (fight: string, work: () => Promise<void>): void => {
       const next = (fight_tails.get(fight) ?? Promise.resolve()).then(() => {
         if (!signal.aborted && fights_of(get_state()).has(fight)) return work()
@@ -189,21 +189,25 @@ export default {
       state_action: 'action/spectate' | 'action/fight_preview'
     ): void => {
       const observation_key = `${state_action}:${action.character_id}`
-      const version = (observation_versions.get(observation_key) ?? 0) + 1
-      observation_versions.set(observation_key, version)
+      pending_observations.delete(observation_key)
+      const state = get_state()
       if (action.fight === null) {
-        dispatch({ type: state_action, character_id: action.character_id, fight: null })
+        const observations = state_action === 'action/spectate' ? state.spectating : state.fight_previews
+        if (observations[action.character_id])
+          dispatch({ type: state_action, character_id: action.character_id, fight: null })
         return
       }
-      const tracked = get_state().characters[action.character_id]
+      const tracked = state.characters[action.character_id]
       if (!tracked) return
       if (tracked.fight && tracked.fight !== action.fight) {
         send({ type: 'packet/error', reason: 'already watching a fight' })
         return
       }
+      const token = Object.freeze({ character_id: action.character_id })
+      pending_observations.set(observation_key, token)
       void get_fight(graph, { fight_id: action.fight })
         .then(([fight]) => {
-          if (observation_versions.get(observation_key) !== version) return
+          if (pending_observations.get(observation_key) !== token) return
           const current = get_state()
           const latest = current.characters[action.character_id]
           if (!latest || !fight || (latest.fight && latest.fight !== action.fight)) return
@@ -222,6 +226,9 @@ export default {
           if (already_watched) void push_state(action.fight!)
         })
         .catch((error: Error) => log.warn({ fight: action.fight, error: error.message }, 'spectate read failed'))
+        .finally(() => {
+          if (pending_observations.get(observation_key) === token) pending_observations.delete(observation_key)
+        })
     }
     let nearby_version = 0
     let nearby_expiry: ReturnType<typeof setTimeout> | undefined
@@ -264,6 +271,9 @@ export default {
         .catch((error: Error) => log.warn({ fight, error: error.message }, 'nearby fight read failed'))
     })
     events.on('STATE_UPDATED', (state) => {
+      pending_observations.forEach(({ character_id }, key) => {
+        if (!state.characters[character_id]) pending_observations.delete(key)
+      })
       if (state.nearby_fight && !nearby_in_range(state.nearby_fight)) {
         nearby_version++
         clearTimeout(nearby_expiry)
@@ -335,6 +345,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
+      pending_observations.clear()
       nearby_version++
       clearTimeout(nearby_expiry)
       for (const channel of watched()) unwatch(channel)

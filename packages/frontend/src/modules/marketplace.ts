@@ -18,6 +18,7 @@ import {
   type ServerPacket,
 } from '@aresrpg/protocol'
 
+import { reduce_market_floor, type MarketFloor, type MarketFloorInput } from '../marketplace/floor_state.ts'
 import { buyer_total, market_needs_funding } from '../marketplace/price.ts'
 import {
   current_offer,
@@ -56,6 +57,7 @@ const MARKET_CATEGORIES: Readonly<Record<MarketGroup, readonly ItemCategory[]>> 
 export const market_categories = (group: MarketGroup): readonly ItemCategory[] => MARKET_CATEGORIES[group]
 
 export type MarketplaceState = Readonly<{
+  floor: MarketFloor | null
   prices: PriceHistoryState
   group: MarketGroup
   types: readonly MarketType[]
@@ -78,6 +80,7 @@ export type MarketplaceState = Readonly<{
 }>
 
 export type MarketplaceInput =
+  | MarketFloorInput
   | PriceHistoryInput
   | Readonly<{ type: 'market/opened' }>
   | Readonly<{ type: 'market/group_selected'; group: MarketGroup; category?: ItemCategory; item_type?: string }>
@@ -103,6 +106,7 @@ export type MarketplaceInput =
 
 export const initial_marketplace_state = (): MarketplaceState =>
   Object.freeze({
+    floor: null,
     prices: initial_price_history(),
     group: 'EQUIPMENT',
     types: [],
@@ -549,6 +553,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
 export default Object.freeze({
   name: 'marketplace',
-  reduce: (state, input) => reduce_market_prices(reduce(state, input), input),
+  reduce: (state, input) => reduce_market_floor(reduce_market_prices(reduce(state, input), input), input),
   observe,
 }) satisfies AppModule

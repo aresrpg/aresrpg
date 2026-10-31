@@ -12,7 +12,7 @@ use sui::{clock, kiosk, package::Publisher, random, test_scenario, transfer_poli
 
 const A: address = @0xA;
 const B: address = @0xB;
-public enum Mode has copy, drop { Normal, LateFinish, LateRecord, Expired, Walkover, Partial, EarlyCrank, DuplicateClaim, WrongClaim, WrongFight, LateJoin, UnrecordedClose, Stranger, DoubleOpen, ReadyEmpty, ReadyLarge, ReadyLate, LiveSettle, LiveCrank, UnopenedLinked, WrongItemPlace, EarlyItemClaim, BadAccess, Rooted, BatchReady }
+public enum Mode has copy, drop { Normal, Levelled, LateFinish, LateRecord, Expired, Walkover, Partial, EarlyCrank, DuplicateClaim, WrongClaim, WrongFight, LateJoin, UnrecordedClose, Stranger, DoubleOpen, ReadyEmpty, ReadyLarge, ReadyLate, LiveSettle, LiveCrank, UnopenedLinked, WrongItemPlace, EarlyItemClaim, BadAccess, Rooted, BatchReady }
 
 fun roster(content: &world_content::WorldContent, clock: &clock::Clock, ctx: &mut TxContext): (kiosk::Kiosk, personal_kiosk::PersonalKioskCap, vector<ID>) {
   let (mut kiosk, cap) = kiosk::new(ctx);
@@ -51,9 +51,9 @@ fun exercise(mode: Mode) {
   let template = item_rows::template_for_testing(b"tournament_prize".to_string(), b"resource".to_string(), s.ctx());
   let version = s.take_shared<version::Version>();
   let format = if (mode == Mode::Partial || mode == Mode::BatchReady) 3 else 1;
-  tournament::create(&admin, b"Cup".to_string(), format, 100_000,
+  tournament::create_with_rules(&admin, b"Cup".to_string(), format, 100_000,
     vector[5000, 5000, 0, 0, 0], vector[10_000, 0, 0, 0, 0],
-    tournament::add_reward(tournament::rewards(), &template, 1, 2), &version, &clock, s.ctx());
+    tournament::add_reward(tournament::rewards(), &template, 1, 2), 0, option::some(1), &version, &clock, s.ctx());
   let (mut ka, pa, ca) = roster(&content, &clock, s.ctx());
   world_content::share(content);
   board_catalog::share_for_testing(catalog);
@@ -75,8 +75,14 @@ fun exercise(mode: Mode) {
     api::join_tournament_team(&mut t, 1, 0, &ka, personal_kiosk::borrow(&pa), ca[i], &version, &clock, s.ctx());
     i = i + 1;
   };
+  if (mode == Mode::Levelled) {
+    character::add_experience(ka.borrow_mut(personal_kiosk::borrow(&pa), ca[0]), 1_000);
+    character::add_experience(kb.borrow_mut(personal_kiosk::borrow(&pb), cb[0]), 1_000);
+    assert!(ka.borrow<character::Character>(personal_kiosk::borrow(&pa), ca[0]).level() > 1, 900);
+  };
   let randomness = s.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+  clock::increment_for_testing(&mut clock, 99_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
   if (mode == Mode::EarlyItemClaim) {
     api::claim_tournament_item(&mut t, 1, 0, 0, item::prepare_plan(&template, option::none()), &mut ka, &pa, &item_policy, &randomness, &version, s.ctx()); abort 999
   };
@@ -264,3 +270,6 @@ fun ready_all_starts_once_after_every_registered_seat_is_present() { exercise(Mo
 #[test] fun late_recording_preserves_an_already_ended_winner() { exercise(Mode::LateRecord); }
 
 #[test] fun a_fight_can_finish_after_timeout_until_someone_cranks_it() { exercise(Mode::LateFinish); }
+
+#[test]
+fun levelling_after_registration_does_not_block_opening_or_joining_a_match() { exercise(Mode::Levelled); }

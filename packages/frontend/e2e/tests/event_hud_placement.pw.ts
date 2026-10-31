@@ -61,3 +61,23 @@ test('event cards stay beneath notifications and yield only to persistent HUD ob
   await expect(cards).toBeHidden()
   await expect(page.locator('.tourney-hud-mobile')).toBeVisible()
 })
+
+test('an open event glows for a player without a team until registration closes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/e2e/fixtures/ui_world_hud.html?tournament=open&clock')
+  const card = page.locator('.tourney-hud-card')
+  await expect(card).toHaveAttribute('data-invite', 'true')
+  await expect(card).toHaveCSS('animation-name', 'tourney-invite')
+  const box = (await card.boundingBox())!
+  await page.screenshot({
+    path: test.info().outputPath('event-invite.png'),
+    clip: { x: box.x - 24, y: box.y - 24, width: box.width + 48, height: box.height + 48 },
+  })
+  await page.setViewportSize({ width: 844, height: 390 })
+  await expect(page.locator('.tourney-hud-mobile')).toHaveAttribute('data-invite', 'true')
+  await page.screenshot({ path: test.info().outputPath('event-invite-phone.png') })
+  await page.goto('/e2e/fixtures/ui_world_hud.html?tournament=expired&clock')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.locator('.tourney-hud-card')).toHaveAttribute('data-invite', 'false')
+  await expect(page.locator('.tourney-hud-card')).toHaveCSS('animation-name', 'none')
+})

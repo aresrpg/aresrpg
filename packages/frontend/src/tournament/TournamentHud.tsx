@@ -137,21 +137,15 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
   const { admission, deadline } = view
   const emphasis = admission ? ' is-admission' : ''
   const timer = countdown(deadline, view.viewer.now_ms)
-  const live = row.matches.filter((entry) => entry.state === 1 && entry.phase === 'active').length
   const open = (): void => dispatch_app({ type: 'path/open', pathname: tournament_path(row.id) })
-  const labels = {
-    open: timer,
-    in_progress: t('live_count', { count: live }),
-    finished: t('claim'),
-    cancelled: t('cancelled'),
-  }
-  const mobile_label = admission ? `${t('join')} ${timer}` : labels[row.status]
+  const mobile_label = [view.registration_open, admission].some(Boolean) ? timer : action_label(view.primary, t)
   return (
     <>
       <HudCards>
         <button
           type="button"
           className={`tourney-hud-card${emphasis}`}
+          data-invite={view.registration_invite}
           onClick={open}
           aria-label={t('open_event', { name: tournament_name(row.name) })}
         >
@@ -166,7 +160,7 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
             <strong>
               <bdi>{tournament_name(row.name)}</bdi>
             </strong>
-            {(row.status === 'open' || admission) && (
+            {(view.registration_open || admission) && (
               <span className="tourney-hud-clock">
                 <time>{timer}</time>
                 <small>{t(admission ? 'match_admission' : 'deadline')}</small>
@@ -200,6 +194,7 @@ const HudEvent = ({ row, view, copy }: Readonly<{ row: TournamentRow; view: Tour
       <button
         type="button"
         className={`tourney-hud-mobile${emphasis}`}
+        data-invite={view.registration_invite}
         onClick={open}
         aria-label={t('open_event', { name: tournament_name(row.name) })}
       >

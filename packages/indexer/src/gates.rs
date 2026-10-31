@@ -51,6 +51,8 @@ mod tests {
         ("mastery", "MasteryOffer"),
         ("kolizeum", "Kolizeum"),
         ("tournament", "Tournament"),
+        ("tournament", "RulesKey"),
+        ("tournament", "Rules"),
         ("tournament", "KaresPool"),
         ("tournament", "Team"),
         ("tournament", "Seat"),

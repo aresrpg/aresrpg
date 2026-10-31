@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// Bounded single-elimination competition. Fight owns combat and custody; this object owns
-/// consenting rosters, the bracket, deadlines and prizes. No wager or platform fee applies.
+/// consenting rosters, the bracket, deadlines and prizes. An optional registration fee splits between the prize pool and treasury.
 module aresrpg::tournament;
 
 use aresrpg::{character::Character, fight::{Self, Fight}, item::{Self, Item, PM}, version::Version};
@@ -10,7 +10,7 @@ use aresrpg_math::tournament_bracket::{Self as bracket, Match};
 use aresrpg_rewards::{economy::{Self, Economy}, tournament_rewards::{Self as funds, Funds}};
 use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use std::string::String;
-use sui::{balance::{Self, Balance}, clock::Clock, coin::Coin, event, kiosk::{Kiosk, KioskOwnerCap},
+use sui::{balance::{Self, Balance}, clock::Clock, coin::Coin, dynamic_field as df, event, kiosk::{Kiosk, KioskOwnerCap},
   random::RandomGenerator, sui::SUI, transfer_policy::TransferPolicy};
 
 const ESettings: u64 = 3201;
@@ -47,6 +47,8 @@ public struct Team has copy, drop, store {
   name: String, revision: u64, allowed: vector<ID>, seats: vector<Seat>, place: u8,
 }
 public struct TournamentUpdated has copy, drop { tournament: ID }
+public struct RulesKey has copy, drop, store {}
+public struct Rules has copy, drop, store { entry_fee_mist: u64, max_level: Option<u16> }
 
 public(package) fun reward(template: &ItemTemplate, place: u8, amount: u32): Reward {
   assert!(place >= 1 && place <= 5 && amount > 0 && amount <= 10, ESettings);
@@ -66,24 +68,40 @@ public fun create(
   sui_bps: vector<u64>, token_bps: vector<u64>, rewards: vector<Reward>,
   version: &Version, clock: &Clock, ctx: &mut TxContext,
 ) {
-  version.assert_latest();
-  admin.verify(ctx);
-  let tournament = new(name, format, start_before_ms, sui_bps, token_bps, rewards, clock, ctx);
+  create_with_rules(admin, name, format, start_before_ms, sui_bps, token_bps, rewards, 0, option::none(), version, clock, ctx);
+}
+
+public fun create_with_rules(
+  admin: &AdminCap, name: String, format: u64, start_before_ms: u64,
+  sui_bps: vector<u64>, token_bps: vector<u64>, rewards: vector<Reward>, entry_fee_mist: u64, max_level: Option<u16>,
+  version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest(); admin.verify(ctx);
+  assert!(bracket::valid_settings(format, name.length(), rewards.length(), start_before_ms, clock.timestamp_ms(), &max_level), ESettings);
+  bracket::validate_bps(&sui_bps);
+  bracket::validate_bps(&token_bps);
+  let mut tournament = Tournament { id: object::new(ctx), name, status: b"open".to_string(), organizer: ctx.sender(),
+    format, start_before_ms, sui_bps, token_bps, rewards, sui: balance::zero(),
+    sui_total: 0, kares_pool: option::none(), teams: vector[], matches: bracket::empty(), fights: vector[] };
+  df::add(&mut tournament.id, RulesKey {}, Rules { entry_fee_mist, max_level });
   changed(&tournament);
   transfer::share_object(tournament);
 }
 
-fun new(name: String, format: u64, start_before_ms: u64, sui_bps: vector<u64>,
-  token_bps: vector<u64>, rewards: vector<Reward>, clock: &Clock, ctx: &mut TxContext): Tournament {
-  assert!(format == 1 || format == 3 || format == 6, ESettings);
-  assert!(name.length() > 0 && name.length() <= 80 && rewards.length() <= 10, ESettings);
-  assert!(start_before_ms > clock.timestamp_ms(), ESettings);
-  bracket::validate_bps(&sui_bps);
-  bracket::validate_bps(&token_bps);
-  Tournament { id: object::new(ctx), name, status: b"open".to_string(), organizer: ctx.sender(),
-    format, start_before_ms, sui_bps, token_bps, rewards, sui: balance::zero(),
-    sui_total: 0, kares_pool: option::none(), teams: vector[], matches: bracket::empty(), fights: vector[] }
+fun rules(t: &Tournament): Rules {
+  if (df::exists(&t.id, RulesKey {})) *df::borrow(&t.id, RulesKey {})
+  else Rules { entry_fee_mist: 0, max_level: option::none() }
 }
+
+public(package) fun assert_free_registration(t: &Tournament) {
+  assert!(rules(t).entry_fee_mist == 0, ESettings);
+}
+
+public(package) fun pay_entry(t: &mut Tournament, payment: Coin<SUI>, ctx: &mut TxContext) {
+  let amount = rules(t).entry_fee_mist;
+  funds::pay_entry(&mut t.sui, payment, amount, @treasury, ctx);
+}
+
 
 
 public fun donate_sui(t: &mut Tournament, payment: Coin<SUI>, version: &Version, clock: &Clock) {
@@ -130,7 +148,7 @@ public fun claim_kares<Token>(t: &Tournament, pool: &mut KaresPool<Token>, team:
   let place = t.teams[team].place;
   assert!(place > 0, EClaim);
   let (count, preceding) = placement_seats(t, place, team);
-  let amount = share(portion(funds::total(&pool.funds), t.token_bps[(place - 1) as u64]), count, preceding + seat);
+  let amount = funds::share(funds::portion(funds::total(&pool.funds), t.token_bps[(place - 1) as u64]), count, preceding + seat);
   let member = &t.teams[team].seats[seat];
   funds::claim(&mut pool.funds, member.character, member.owner, amount, ctx); changed(t);
 }
@@ -152,6 +170,8 @@ public(package) fun create_team(t: &mut Tournament, name: String, allowed: vecto
 public(package) fun join_team(t: &mut Tournament, team: u64, revision: u64, character: &Character,
   clock: &Clock, ctx: &TxContext) {
   open(t, clock);
+  let limit = rules(t).max_level;
+  assert!(limit.is_none() || character.level() <= *limit.borrow(), ESettings);
   let id = object::id(character);
   let owner = ctx.sender();
   let mut i = 0;
@@ -182,20 +202,29 @@ public fun leave_team(t: &mut Tournament, team: u64, character: ID,
   changed(t);
 }
 
-public(package) fun start(t: &mut Tournament, admin: &AdminCap,
-  generator: &mut RandomGenerator, clock: &Clock, ctx: &TxContext) {
-  admin.verify(ctx);
-  open(t, clock);
+fun entrants(t: &Tournament): vector<u64> {
   let mut entrants = vector[];
   let mut i = 0;
   while (i < t.teams.length()) {
     if (t.teams[i].seats.length() == t.format) entrants.push_back(i);
     i = i + 1;
   };
+  entrants
+}
+
+fun minimum_teams(t: &Tournament): u64 {
+  bracket::minimum_teams(&t.sui_bps, &t.token_bps, t.rewards.map_ref!(|reward| reward.place))
+}
+
+public(package) fun start(t: &mut Tournament,
+  generator: &mut RandomGenerator, clock: &Clock) {
+  assert!(t.status == b"open".to_string(), EPhase);
+  assert!(clock.timestamp_ms() >= t.start_before_ms, ETooEarly);
+  let mut entrants = entrants(t);
   let n = entrants.length();
-  assert!(n >= bracket::minimum_teams(&t.sui_bps, &t.token_bps, t.rewards.map_ref!(|reward| reward.place)), ESettings);
+  assert!(n >= minimum_teams(t), ESettings);
   // Fixed-work Fisher-Yates: gas usage does not depend on which teams receive byes.
-  i = n;
+  let mut i = n;
   while (i > 1) { i = i - 1; let j = generator.generate_u64_in_range(0, i); entrants.swap(i, j); };
   t.matches = bracket::new(entrants, clock.timestamp_ms());
   i = 0;
@@ -306,13 +335,13 @@ fun unawarded(t: &Tournament, bps: &vector<u64>, total: u64): u64 {
   let mut place = 1u8;
   while (place <= 5) {
     let (count, _) = placement_seats(t, place, 0);
-    if (count > 0) allocated = allocated + portion(total, bps[(place - 1) as u64]);
+    if (count > 0) allocated = allocated + funds::portion(total, bps[(place - 1) as u64]);
     place = place + 1;
   };
   total - allocated
 }
 
-fun portion(total: u64, bps: u64): u64 { ((total as u128) * (bps as u128) / 10_000) as u64 }
+
 
 /// Total seats at a placement and the seats preceding this team. Rosters are frozen at start.
 fun placement_seats(t: &Tournament, place: u8, team: u64): (u64, u64) {
@@ -328,9 +357,7 @@ fun placement_seats(t: &Tournament, place: u8, team: u64): (u64, u64) {
   (count, preceding)
 }
 
-fun share(amount: u64, count: u64, ordinal: u64): u64 {
-  amount / count + if (ordinal < amount % count) 1 else 0
-}
+
 
 public fun claim_sui(t: &mut Tournament, team: u64, seat: u64,
   version: &Version, ctx: &mut TxContext) {
@@ -338,7 +365,7 @@ public fun claim_sui(t: &mut Tournament, team: u64, seat: u64,
   let place = t.teams[team].place;
   assert!(place > 0, EClaim);
   let (count, preceding) = placement_seats(t, place, team);
-  let sui = share(portion(t.sui_total, t.sui_bps[(place - 1) as u64]), count, preceding + seat);
+  let sui = funds::share(funds::portion(t.sui_total, t.sui_bps[(place - 1) as u64]), count, preceding + seat);
   let member = &mut t.teams[team].seats[seat];
   assert!(!member.sui_claimed, EClaim);
   member.sui_claimed = true;
@@ -365,7 +392,10 @@ public fun cancel(t: &mut Tournament, admin: &AdminCap, version: &Version, ctx: 
 }
 
 public fun expire(t: &mut Tournament, version: &Version, clock: &Clock, ctx: &mut TxContext) {
-  version.assert_latest(); assert!(clock.timestamp_ms() >= t.start_before_ms, ETooEarly); cancel_open(t, ctx);
+  version.assert_latest();
+  assert!(clock.timestamp_ms() >= t.start_before_ms, ETooEarly);
+  assert!(entrants(t).length() < minimum_teams(t), ESettings);
+  cancel_open(t, ctx);
 }
 
 fun cancel_open(t: &mut Tournament, ctx: &mut TxContext) {
@@ -401,7 +431,8 @@ public(package) fun sui_balance_for_testing(t: &Tournament): u64 { t.sui.value()
 public(package) fun resolve_for_testing(t: &mut Tournament, index: u64, side: Option<u8>,
   played: bool, clock: &Clock, ctx: &mut TxContext) { resolve(t, index, side, played, clock, ctx) }
 #[test_only]
-public(package) fun destroy_for_testing(t: Tournament) {
+public(package) fun destroy_for_testing(mut t: Tournament) {
+  if (df::exists(&t.id, RulesKey {})) remove_rules_for_testing(&mut t);
   let Tournament { id, sui, .. } = t;
   sui.destroy_zero(); id.delete();
 }
@@ -412,3 +443,8 @@ public(package) fun destroy_pool_for_testing<Token>(pool: KaresPool<Token>) {
 }
 #[test_only]
 public(package) fun pool_balance_for_testing<Token>(pool: &KaresPool<Token>): u64 { funds::balance(&pool.funds) }
+
+#[test_only]
+public(package) fun remove_rules_for_testing(t: &mut Tournament) {
+  let _: Rules = df::remove(&mut t.id, RulesKey {});
+}

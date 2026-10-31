@@ -2495,16 +2495,58 @@ export const join_tournament_team = (
   })
 
 /**
+ * `api::register_tournament`
+ * @arg tournament — &mut Tournament
+ * @arg team — Option<u64>
+ * @arg revision — u64
+ * @arg name — String
+ * @arg allowed — vector<ID>
+ * @arg payment — Coin<SUI>
+ * @arg kiosk — &Kiosk
+ * @arg cap — &KioskOwnerCap
+ * @arg character_id — ID
+ */
+export const register_tournament = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    tournament: Resolvable
+    team: bigint | number | string | null | undefined
+    revision: bigint | number | string
+    name: string
+    allowed: readonly string[]
+    payment: Resolvable
+    kiosk: Resolvable
+    cap: Resolvable
+    character_id: string
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::register_tournament`,
+    arguments: [
+      ctx.obj(tx, args.tournament, true),
+      ctx.pure.option(tx, 'u64', args.team ?? null),
+      ctx.pure.u64(tx, args.revision),
+      ctx.pure.string(tx, args.name),
+      ctx.pure.vector(tx, 'id', args.allowed),
+      ctx.obj(tx, args.payment, true),
+      ctx.obj(tx, args.kiosk, false),
+      ctx.obj(tx, args.cap, false),
+      ctx.pure.id(tx, args.character_id),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::start_tournament` — TERMINAL (&Random): last command of its transaction.
  * @arg tournament — &mut Tournament
- * @arg admin — &aresrpg_control::admin::AdminCap
  */
-export const start_tournament = (tx: Transaction, ctx: DoorCtx, args: { tournament: Resolvable; admin: Resolvable }) =>
+export const start_tournament = (tx: Transaction, ctx: DoorCtx, args: { tournament: Resolvable }) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::start_tournament`,
     arguments: [
       ctx.obj(tx, args.tournament, true),
-      ctx.obj(tx, args.admin, false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
       tx.object.clock(),
@@ -3066,6 +3108,50 @@ export const tournament_create = (
   })
 
 /**
+ * `tournament::create_with_rules`
+ * @arg admin — &AdminCap
+ * @arg name — String
+ * @arg format — u64
+ * @arg start_before_ms — u64
+ * @arg sui_bps — vector<u64>
+ * @arg token_bps — vector<u64>
+ * @arg rewards — vector<Reward>
+ * @arg entry_fee_mist — u64
+ * @arg max_level — Option<u16>
+ */
+export const tournament_create_with_rules = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    admin: Resolvable
+    name: string
+    format: bigint | number | string
+    start_before_ms: bigint | number | string
+    sui_bps: readonly (bigint | number | string)[]
+    token_bps: readonly (bigint | number | string)[]
+    rewards: TransactionObjectArgument
+    entry_fee_mist: bigint | number | string
+    max_level: number | null | undefined
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::tournament::create_with_rules`,
+    arguments: [
+      ctx.obj(tx, args.admin, false),
+      ctx.pure.string(tx, args.name),
+      ctx.pure.u64(tx, args.format),
+      ctx.pure.u64(tx, args.start_before_ms),
+      ctx.pure.vector(tx, 'u64', args.sui_bps),
+      ctx.pure.vector(tx, 'u64', args.token_bps),
+      args.rewards,
+      ctx.pure.u64(tx, args.entry_fee_mist),
+      ctx.pure.option(tx, 'u16', args.max_level ?? null),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `tournament::donate_sui`
  * @arg t — &mut Tournament
  * @arg payment — Coin<SUI>
@@ -3460,7 +3546,11 @@ export const DOORS = {
     terminal: false,
   },
   join_tournament_team: { params: ['tournament', 'team', 'revision', 'kiosk', 'cap', 'character_id'], terminal: false },
-  start_tournament: { params: ['tournament', 'admin'], terminal: true },
+  register_tournament: {
+    params: ['tournament', 'team', 'revision', 'name', 'allowed', 'payment', 'kiosk', 'cap', 'character_id'],
+    terminal: false,
+  },
+  start_tournament: { params: ['tournament'], terminal: true },
   open_tournament_match: {
     params: ['tournament', 'index', 'kiosk', 'personal', 'character_id', 'catalog'],
     terminal: true,
@@ -3501,6 +3591,20 @@ export const DOORS = {
   tournament_add_reward: { params: ['rewards', 'template', 'place', 'amount'], terminal: false },
   tournament_create: {
     params: ['admin', 'name', 'format', 'start_before_ms', 'sui_bps', 'token_bps', 'rewards'],
+    terminal: false,
+  },
+  tournament_create_with_rules: {
+    params: [
+      'admin',
+      'name',
+      'format',
+      'start_before_ms',
+      'sui_bps',
+      'token_bps',
+      'rewards',
+      'entry_fee_mist',
+      'max_level',
+    ],
     terminal: false,
   },
   tournament_donate_sui: { params: ['t', 'payment'], terminal: false },

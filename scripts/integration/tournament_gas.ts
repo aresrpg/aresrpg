@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Run against a dedicated local node. Real receipts, unmodified game sources, disposable keys.
-// bun scripts/integration/tournament_gas.ts <new-output-directory>
+// bun scripts/integration/tournament_gas.ts <new-output-directory> <registration-window-ms>
+// Each scenario waits for this window; choose enough time to register its full roster.
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
@@ -113,14 +114,15 @@ const register = async (
   audit: Audit,
   players: readonly (readonly Player[])[],
   teams: number,
-  format: number
+  format: number,
+  registration_window_ms: bigint
 ) => {
   const tx = new Transaction()
   game.sdk.doors.tournament_create(tx, {
     admin: game.admin,
     name: 'Gas audit',
     format,
-    start_before_ms: BigInt(Date.now() + 3_600_000),
+    start_before_ms: BigInt(String((await env.json('0x6')).timestamp_ms)) + registration_window_ms,
     sui_bps: [10000, 0, 0, 0, 0],
     token_bps: [10000, 0, 0, 0, 0],
     rewards: game.sdk.doors.tournament_rewards(tx, {}),
@@ -160,8 +162,10 @@ const register = async (
     }
   }
   await audit.snapshot(scenario, 'registered')
+  const scheduled_start = Number((await env.json(tournament)).start_before_ms)
+  while (Number((await env.json('0x6')).timestamp_ms) < scheduled_start) await Bun.sleep(500)
   const start = new Transaction()
-  game.sdk.doors.start_tournament(start, { tournament, admin: game.admin })
+  game.sdk.doors.start_tournament(start, { tournament })
   await audit.measure(scenario, 'start', start, game.sdk)
   return scenario
 }
@@ -296,6 +300,9 @@ const finish = async (
 
 const main = async () => {
   assert.ok(process.argv[2], 'Pass a new output directory for the audit evidence')
+  assert.ok(process.argv[3], 'Pass a registration window in milliseconds for each scenario')
+  const registration_window_ms = BigInt(process.argv[3])
+  assert.ok(registration_window_ms > 0n, 'The registration window must be positive')
   const output = resolve(process.argv[2])
   await mkdir(output)
   await mkdir(join(output, 'receipts'))
@@ -316,6 +323,7 @@ const main = async () => {
         protocol,
         service,
         sources: await source_hashes(),
+        registration_window_ms,
         matrix: { teams: [8, 16, 64], formats: [1, 3, 6] },
         assumptions:
           'Level-one unequipped Senshi; fixed authored board; one played match, remaining first-round matches no-show; SUI-only winner-takes-all prizes. No gas-price bidding or contention.',
@@ -338,7 +346,7 @@ const main = async () => {
     const scenarios: Awaited<ReturnType<typeof play>>[] = []
     for (const format of [1, 3, 6]) {
       for (const teams of [8, 16, 64]) {
-        const scenario = await register(env, game, audit, players, teams, format)
+        const scenario = await register(env, game, audit, players, teams, format, registration_window_ms)
         scenarios.push(await play(env, game, audit, players, scenario))
       }
     }

@@ -83,3 +83,29 @@ test('corrupt, partial, or failed reads cannot masquerade as no trading', async 
     ).rejects.toThrow()
   }
 })
+
+test('OHLC is optional for legacy records and validates exact positive sale ratios and ranges', () => {
+  const price = (mist: string, units = '1000') => ({ mist, units })
+  const ohlc = { open: price('3'), high: price('4'), low: price('1'), close: price('2') }
+  expect(parse_price_bucket(JSON.stringify(total), 0)).toEqual({ at_ms: 0, ...total })
+  expect(parse_price_bucket(JSON.stringify({ ...total, ohlc }), 0)?.ohlc).toEqual(ohlc)
+  for (const invalid of [
+    null,
+    {},
+    { ...ohlc, close: price('0') },
+    { ...ohlc, low: price('1', '0') },
+    { ...ohlc, high: price(String(1n << 64n)) },
+    { ...ohlc, open: price('5') },
+    { ...ohlc, low: price('5') },
+    { ...ohlc, close: price('5') },
+    { ...ohlc, open: { mist: 3, units: '1' } },
+  ])
+    expect(() => parse_price_bucket(JSON.stringify({ ...total, ohlc: invalid }), 0)).toThrow()
+  const almost = {
+    open: price('9007199254740992', '1'),
+    high: price('9007199254740992', '1'),
+    low: price('9007199254740992', '1'),
+    close: price('9007199254740993', '1'),
+  }
+  expect(() => parse_price_bucket(JSON.stringify({ ...total, ohlc: almost }), 0)).toThrow()
+})

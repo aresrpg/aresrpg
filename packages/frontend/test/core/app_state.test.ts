@@ -41,6 +41,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     fight: {} as never,
     dungeon: {} as never,
     tournament: {
+      start: unsupported,
       create_team: unsupported,
       join_team: unsupported,
       leave_team: unsupported,

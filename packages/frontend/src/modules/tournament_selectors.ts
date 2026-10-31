@@ -14,7 +14,7 @@ import { chain_now, type ChainClock } from './chain_clock.ts'
 import { action_key, open_team, tournament_claims, type TournamentAction, type TournamentState } from './tournament.ts'
 
 const ADMISSION_MS = Number(CONTRACT_CONSTANTS.placement_force_ms)
-type Character = Readonly<Pick<CharacterRow, 'id' | 'name' | 'custody' | 'active_fight'>>
+type Character = Readonly<Pick<CharacterRow, 'id' | 'name' | 'custody' | 'active_fight' | 'level'>>
 export type TournamentViewSource = Readonly<{
   tournament: TournamentState
   chain_clock: ChainClock
@@ -114,6 +114,9 @@ export const tournament_rounds = (row: TournamentRow, now_ms: number | null) => 
   }
 }
 
+const within_level_limit = (row: TournamentRow | null, character: Character | null): boolean =>
+  (character?.level ?? Infinity) <= (row?.max_level ?? Infinity)
+
 export type TeamAccess =
   | 'registered'
   | 'join'
@@ -126,6 +129,9 @@ export type TeamAccess =
   | 'full'
   | 'restricted'
   | 'custody'
+  | 'level'
+  | 'fight'
+  | 'syncing'
 export const team_access = (row: TournamentRow, team: number, viewer: TournamentViewer): TeamAccess => {
   const { character } = viewer
   const own = row.teams.findIndex((t) => t.seats.some((seat) => seat.owner === viewer.address))
@@ -140,6 +146,7 @@ export const team_access = (row: TournamentRow, team: number, viewer: Tournament
     [character === null, 'character'],
     [registered === team && own === team, 'registered'],
     [registered >= 0, 'elsewhere'],
+    [!within_level_limit(row, character), 'level'],
     [own >= 0 && own !== team, 'elsewhere'],
     [roster.seats.length >= row.format, 'full'],
     [!allowed, 'restricted'],
@@ -219,7 +226,7 @@ export const tournament_podium = (row: TournamentRow) => {
   })
 }
 
-type WriteName = 'find' | 'add' | 'open' | 'join' | 'start' | 'record' | 'end' | 'expire' | 'refund'
+type WriteName = 'find' | 'add' | 'open' | 'join' | 'start' | 'record' | 'end' | 'start_event' | 'expire' | 'refund'
 type ActionReason =
   | TeamAccess
   | MatchKind
@@ -261,11 +268,12 @@ const watch = (row: TournamentRow, index: number, viewer: TournamentViewer): Tou
 const registration_action = (row: TournamentRow, viewer: TournamentViewer): TournamentNextAction => {
   const own = row.teams.findIndex((team) => team.seats.some((seat) => seat.owner === viewer.address))
   if (own < 0) {
-    if (!viewer.character) return status('character')
-    if (viewer.character.custody !== 'kiosk') return status('custody')
+    const blocker = team_creation_blocker(viewer, row)
+    if (blocker) return status(blocker)
+    const character = viewer.character!
     const { can_create } = tournament_registration(row)
-    if (!can_create && open_team(row, viewer.character.id, viewer.address!) < 0) return status('full')
-    return write('find', { kind: 'find', character: viewer.character.id })
+    if (!can_create && open_team(row, character.id, viewer.address!) < 0) return status('full')
+    return write('find', { kind: 'find', character: character.id })
   }
   const eligible = [viewer.character, ...viewer.characters].find(
     (character) => character && team_access(row, own, { ...viewer, character }) === 'add'
@@ -363,9 +371,9 @@ const running_action = (row: TournamentRow, viewer: TournamentViewer): Tournamen
 const open_action = (row: TournamentRow, viewer: TournamentViewer): TournamentNextAction => {
   if (viewer.now_ms === null) return status('clock')
   if (viewer.now_ms < row.start_before_ms) return registration_action(row, viewer)
-  return (viewer.observed_ms ?? -Infinity) >= row.start_before_ms
-    ? write('expire', { kind: 'expire' })
-    : status('clock')
+  if ((viewer.observed_ms ?? -Infinity) < row.start_before_ms) return status('clock')
+  const { complete, minimum } = tournament_registration(row)
+  return complete >= minimum ? write('start_event', { kind: 'start' }) : write('expire', { kind: 'expire' })
 }
 
 const PHASE_ACTIONS: Readonly<
@@ -471,9 +479,13 @@ export const select_tournament_view = (state: TournamentViewSource, selected: st
 
 const t_ready = (state: TournamentState): boolean => state.feed_status === 'loaded' && state.pending === null
 
-const team_creation_blocker = ({ character }: TournamentViewer): 'character' | 'fight' | 'syncing' | null => {
+const team_creation_blocker = (
+  { character }: TournamentViewer,
+  row: TournamentRow | null
+): 'character' | 'fight' | 'syncing' | 'level' | null => {
   if (!character) return 'character'
   if (character.custody === 'fight' || character.active_fight) return 'fight'
+  if (!within_level_limit(row, character)) return 'level'
   return character.custody === 'kiosk' ? null : 'syncing'
 }
 
@@ -485,10 +497,11 @@ const tournament_controls = (row: TournamentRow | null, viewer: TournamentViewer
       ready,
       can_write,
       registration_open: false,
+      registration_invite: false,
       registration_expired: false,
       can_register: false,
       can_open_team_creation: false,
-      team_creation_blocker: team_creation_blocker(viewer),
+      team_creation_blocker: team_creation_blocker(viewer, row),
     }
   const registration_open = [
     row.status === 'open',
@@ -501,10 +514,11 @@ const tournament_controls = (row: TournamentRow | null, viewer: TournamentViewer
     ready,
     can_write,
     registration_open,
+    registration_invite: [registration_open, !registered].every(Boolean),
     can_register,
     registration_expired: [row.status === 'open', (viewer.now_ms ?? -Infinity) >= row.start_before_ms].every(Boolean),
     can_open_team_creation: [can_register, !registered, tournament_registration(row).can_create].every(Boolean),
-    team_creation_blocker: team_creation_blocker(viewer),
+    team_creation_blocker: team_creation_blocker(viewer, row),
   }
 }
 

@@ -293,6 +293,12 @@
   .tourney-mini-bracket i.is-live {
     animation: none;
   }
+  :is(.tourney-hud-card, .tourney-hud-mobile)[data-invite='true'] {
+    animation: none;
+    box-shadow:
+      var(--aui-shadow),
+      0 0 12px color-mix(in srgb, var(--aui-orange) 40%, transparent);
+  }
   .tourney-admission-track > span {
     transition: none;
   }

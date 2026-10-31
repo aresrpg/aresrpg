@@ -4,12 +4,16 @@
 export const MARKET_PRICE_RETENTION_DAYS = 365
 export const MARKET_PRICE_DAY_MS = 86_400_000
 export type MarketPriceObservation = Readonly<{ item_type: string; id: number }>
+export type MarketUnitPrice = Readonly<{ mist: string; units: string }>
+export type MarketOhlc = Readonly<Record<'open' | 'high' | 'low' | 'close', MarketUnitPrice>>
 export type MarketPriceBucket = Readonly<{
   at_ms: number
   total_mist: string
   units: string
   sales: string
   checkpoint: number
+  /** Absent on legacy average-only days, including a day begun before OHLC collection. */
+  ohlc?: MarketOhlc
 }>
 export type MarketPriceHistory = Readonly<{
   first_timestamp_ms: number

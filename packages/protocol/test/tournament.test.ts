@@ -25,6 +25,8 @@ const fixture = (): TournamentRow => ({
   organizer: 'owner',
   format: 3,
   start_before_ms: 1,
+  entry_fee_mist: '0',
+  max_level: null,
   sui_bps: [9500, 0, 0, 0, 500],
   token_bps: [10000, 0, 0, 0, 0],
   sui_pool: '20020',

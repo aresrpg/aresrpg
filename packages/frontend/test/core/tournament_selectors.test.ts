@@ -23,15 +23,15 @@ import { tournament_fixture } from '../helpers/tournament.ts'
 
 const viewer = (): TournamentViewer => ({
   address: 'owner',
-  character: { id: 'a', name: 'A', custody: 'kiosk' },
-  characters: [{ id: 'a', name: 'A', custody: 'kiosk' }],
+  character: { id: 'a', name: 'A', level: 1, custody: 'kiosk' },
+  characters: [{ id: 'a', name: 'A', level: 1, custody: 'kiosk' }],
   now_ms: 2000,
   observed_ms: 2000,
 })
 
 test('reviewed registration and no-winner actions recheck character, roster revision and fresh chain time', () => {
   const row = { ...tournament_fixture(), status: 'open' as const }
-  const alt = { id: 'alt', name: 'Alt', custody: 'kiosk' as const }
+  const alt = { id: 'alt', name: 'Alt', level: 1, custody: 'kiosk' as const }
   const context = { ...viewer(), characters: [...viewer().characters, alt] }
   const join = { kind: 'join' as const, team: 0, revision: '0', character: 'alt' }
   expect(tournament_review_available(row, join, context)).toBe(true)
@@ -104,6 +104,16 @@ test('team creation remains discoverable while character custody explains why it
   expect(
     select_tournament_view({ ...state, tournament: { ...state.tournament, pending: 'write' } }, null, 0)
   ).toMatchObject({ can_open_team_creation: false })
+})
+test('an open event invites only a player without a team, until registration closes', () => {
+  const open = { ...tournament_fixture(), status: 'open' as const }
+  const view = (row: TournamentRow, chain_ms = 2000) =>
+    select_tournament_view({ ...state_for([row]), chain_clock: { chain_ms, received_ms: 0 } }, null, 0)
+  expect(view(open)).toMatchObject({ registration_invite: false })
+  const stranger = { ...open, teams: open.teams.filter((team) => team.seats.every((seat) => seat.owner !== 'owner')) }
+  expect(view(stranger)).toMatchObject({ registration_invite: true })
+  expect(view(stranger, 10_000)).toMatchObject({ registration_invite: false })
+  expect(view({ ...stranger, status: 'in_progress' })).toMatchObject({ registration_invite: false })
 })
 const bracket_fixture = (): TournamentRow => {
   const row = tournament_fixture()
@@ -181,7 +191,7 @@ test('round grouping handles empty, two-team, and 64-team brackets with one sepa
 test('team access applies restrictions to additional owned characters and preserves consent', () => {
   const row = { ...tournament_fixture(), status: 'open' as const }
   expect(team_access(row, 0, viewer())).toBe('registered')
-  const extra = { ...viewer(), character: { id: 'extra', name: 'Extra', custody: 'kiosk' as const } }
+  const extra = { ...viewer(), character: { id: 'extra', name: 'Extra', level: 1, custody: 'kiosk' as const } }
   expect(team_access(row, 0, extra)).toBe('add')
   expect(team_access(row, 1, extra)).toBe('elsewhere')
   expect(team_access({ ...row, teams: [{ ...row.teams[0], allowed: ['a', 'b'] }] }, 0, extra)).toBe('restricted')
@@ -242,7 +252,7 @@ test('reserved seats use character IDs, deduplicate reservations, and leave unkn
 
 test('one primary registration rule chooses only an eligible owned character and the shown revision', () => {
   const row = { ...tournament_fixture(), status: 'open' as const }
-  const extra = { id: 'extra', name: 'Extra', custody: 'kiosk' as const }
+  const extra = { id: 'extra', name: 'Extra', level: 1, custody: 'kiosk' as const }
   const v = { ...viewer(), characters: [...viewer().characters, extra] }
   expect(tournament_next_action(row, v)).toMatchObject({
     kind: 'write',
@@ -265,7 +275,7 @@ test('one primary registration rule chooses only an eligible owned character and
 
 test('admission never uses an unrelated selected character, and an unopened no-show ends without a winner', () => {
   const row = tournament_fixture()
-  const unrelated = { id: 'unregistered', name: 'Other', custody: 'kiosk' as const }
+  const unrelated = { id: 'unregistered', name: 'Other', level: 1, custody: 'kiosk' as const }
   expect(
     tournament_next_action(row, { ...viewer(), character: unrelated, characters: [unrelated, ...viewer().characters] })
   ).toMatchObject({ name: 'open', action: { kind: 'enter', character: 'a' } })
@@ -283,7 +293,7 @@ test('admission never uses an unrelated selected character, and an unopened no-s
 test('waiting for an opponent exposes recovery before spectating, and any owned fight blocks Watch', () => {
   const row = bracket_fixture()
   expect(tournament_next_action(row, viewer())).toEqual({ kind: 'watch', index: 2, fight: 'semi', character: 'a' })
-  const busy = { ...viewer(), characters: [{ id: 'elsewhere', name: 'Busy', custody: 'fight' as const }] }
+  const busy = { ...viewer(), characters: [{ id: 'elsewhere', name: 'Busy', level: 1, custody: 'fight' as const }] }
   expect(tournament_next_action(row, busy)).toEqual({ kind: 'status', reason: 'cannot_watch' })
   const ended = { ...row, matches: row.matches.map((m, i) => (i === 2 ? { ...m, phase: 'ended' as const } : m)) }
   expect(tournament_next_action(ended, { ...viewer(), now_ms: 2_000_000, observed_ms: 2_000_000 })).toMatchObject({
@@ -340,7 +350,7 @@ test('returning to a fight requires actual owned custody, including placement wi
   const row = tournament_fixture()
   const linked = { ...row, matches: [{ ...row.matches[0], fight: 'fight', phase: 'active' as const }] }
   expect(tournament_next_action(linked, viewer())).toMatchObject({ kind: 'watch' })
-  const seated = { id: 'a', name: 'A', custody: 'fight' as const, active_fight: { id: 'fight', seat: 0 } }
+  const seated = { id: 'a', name: 'A', level: 1, custody: 'fight' as const, active_fight: { id: 'fight', seat: 0 } }
   const v = { ...viewer(), character: seated, characters: [seated], now_ms: null, observed_ms: null }
   expect(tournament_next_action(linked, v)).toEqual({ kind: 'return', fight: 'fight', character: 'a' })
   expect(tournament_next_action({ ...linked, matches: [{ ...linked.matches[0], phase: 'placement' }] }, v)).toEqual({
@@ -430,4 +440,49 @@ test('the HUD keeps Blast until a relevant tournament is received and retains kn
   })
   expect(view(empty).card).toBe('hidden')
   expect(view(reduce_app_state(known, { type: 'auth/disconnected' })).card).toBe('hidden')
+})
+
+test('scheduled events expose public start only after observed chain time and with enough complete teams', () => {
+  const base = tournament_fixture()
+  const row = {
+    ...base,
+    status: 'open' as const,
+    format: 1 as const,
+    sui_bps: [10000, 0, 0, 0, 0],
+    token_bps: [10000, 0, 0, 0, 0],
+    rewards: [],
+    teams: base.teams.slice(0, 2).map((team) => ({ ...team, seats: team.seats.slice(0, 1) })),
+  }
+  const at_start = { ...viewer(), now_ms: row.start_before_ms, observed_ms: row.start_before_ms }
+  expect(tournament_next_action(row, at_start)).toMatchObject({
+    kind: 'write',
+    name: 'start_event',
+    action: { kind: 'start' },
+  })
+  expect(tournament_next_action(row, { ...at_start, observed_ms: row.start_before_ms - 1 })).toEqual({
+    kind: 'status',
+    reason: 'clock',
+  })
+  expect(tournament_next_action({ ...row, teams: row.teams.slice(0, 1) }, at_start)).toMatchObject({
+    action: { kind: 'expire' },
+  })
+})
+
+test('the level ceiling blocks new registration but never revisits existing match eligibility', () => {
+  const base = tournament_fixture()
+  const row = { ...base, status: 'open' as const, max_level: 10, teams: [] }
+  const character = { ...viewer().character!, level: 11 }
+  const high = { ...viewer(), character, characters: [character] }
+  expect(tournament_next_action(row, high)).toEqual({ kind: 'status', reason: 'level' })
+  const state = state_for([row])
+  expect(
+    select_tournament_view({ ...state, session: { ...state.session, characters: [character] as never } }, null, 0)
+  ).toMatchObject({ team_creation_blocker: 'level' })
+  expect(tournament_next_action(row, { ...high, character: { ...character, level: 10 } })).toMatchObject({
+    action: { kind: 'find' },
+  })
+  expect(team_access({ ...base, status: 'open', max_level: 10 }, 0, high)).toBe('registered')
+  expect(tournament_next_action({ ...base, max_level: 10 }, high)).toMatchObject({
+    action: { kind: 'enter', character: 'a' },
+  })
 })

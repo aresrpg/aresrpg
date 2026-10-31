@@ -75,7 +75,8 @@ fun resolve_departures(opener_a: bool, format: u64, timeout: bool) {
     i = i + 1;
   };
   let randomness = s.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+  clock::increment_for_testing(&mut clock, 99_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
   let opener = if (opener_a) A else B;
   let opponent = if (opener_a) B else A;
   let loser_team = if (opener_a) 1 else 0;
@@ -95,7 +96,7 @@ fun resolve_departures(opener_a: bool, format: u64, timeout: bool) {
       api::join_tournament_match(&t, 0, &mut f, &protected, &mut kb, personal_kiosk::borrow(&pb), cb[1], &version, &clock, s.ctx());
   };
   // Registration and kiosk custody are real; these calls require no admin authority.
-  assert!(clock.timestamp_ms() == 1_000, 901);
+  assert!(clock.timestamp_ms() == 100_000, 901);
   assert!(fight::in_placement(&f), 902);
   if (opener_a)
     api::forfeit_tournament_match(&mut f, 0, &mut ka, &pa, &policy, &randomness, &version, &clock, s.ctx())

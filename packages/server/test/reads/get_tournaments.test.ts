@@ -167,3 +167,27 @@ test('reserved character names share the existing Character lookup and missing n
   expect(queries[1]).toContain('reserved')
   expect(row.teams[0].allowed_names).toEqual({ reserved: 'Reserved hero' })
 })
+
+test('the immutable fee child survives parent projection updates and legacy events remain free', async () => {
+  const base = graph_for(null, false)
+  const graph: Graph = {
+    ...base,
+    read: async (query, params) => {
+      const rows = await base.read(query, params)
+      if (!query.startsWith('MATCH (t:Tournament)')) return rows
+      return rows.map((row) => ({
+        ...row,
+        tournament: {
+          properties: {
+            ...(row.tournament as { properties: Record<string, unknown> }).properties,
+            entry_fee_mist: '9007199254740993',
+            max_level: 50,
+          },
+        },
+      }))
+    },
+  }
+  expect((await get_tournaments(graph, 'owner'))[0].entry_fee_mist).toBe('9007199254740993')
+  expect((await get_tournaments(graph, 'owner'))[0].max_level).toBe(50)
+  expect((await get_tournaments(base, 'owner'))[0]).toMatchObject({ entry_fee_mist: '0', max_level: null })
+})

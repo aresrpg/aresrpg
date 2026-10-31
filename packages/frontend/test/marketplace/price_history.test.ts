@@ -8,12 +8,7 @@ import {
   initial_price_history,
   market_price_subscription,
 } from '../../src/marketplace/price_history_state.ts'
-import {
-  format_unit_price,
-  market_capitalization,
-  price_points,
-  unit_price_sui,
-} from '../../src/marketplace/price_history_model.ts'
+import { format_unit_price, market_capitalization, price_points } from '../../src/marketplace/price_history_model.ts'
 import type { AppState } from '../../src/store.ts'
 
 const history: MarketPriceHistory = {
@@ -28,13 +23,31 @@ const history: MarketPriceHistory = {
   })),
 }
 
-test('tiny averages stay nonzero and missing days remain unpriced without fabricated prices', () => {
-  expect(unit_price_sui(history.buckets[0]!)).toBe(1e-12)
-  expect(format_unit_price(1e-12, 'en')).toBe('0.000000000001')
-  const points = price_points(history, 7)
-  expect(points.map(({ value }) => value)).toEqual([1e-12, 1e-12, null, 1e-12, null, null, null])
-  expect(price_points({ ...history, buckets: [] }, 30).every(({ value }) => value === null)).toBe(true)
+test('candles preserve tiny unit prices; missing and average-only days remain blank', () => {
+  const ratio = { mist: '1', units: '1000' }
+  const candle = { ...history.buckets[0]!, ohlc: { open: ratio, high: ratio, low: ratio, close: ratio } }
+  const points = price_points({ ...history, buckets: [candle, ...history.buckets.slice(1)] }, 7)
+  expect(points[0]!.candle).toEqual({ open: 1e-12, high: 1e-12, low: 1e-12, close: 1e-12 })
+  expect(format_unit_price(points[0]!.candle!.open, 'en')).toBe('0.000000000001')
+  expect(points.slice(1).every(({ candle }) => candle === null)).toBe(true)
+  expect(points[1]!.bucket).not.toBeNull() // legacy totals remain available, without invented candles
+  expect(points[2]!.bucket).toBeNull()
+  expect(price_points({ ...history, buckets: [] }, 30).every(({ candle }) => candle === null)).toBe(true)
   expect(price_points(history, 365)).toHaveLength(365)
+})
+
+test('candle prices come from sale ratios rather than the unit-weighted daily average', () => {
+  const candle = {
+    ...history.buckets[0]!,
+    ohlc: {
+      open: { mist: '1000000000', units: '10' },
+      high: { mist: '3000000000', units: '10' },
+      low: { mist: '2000000000', units: '100' },
+      close: { mist: '2500000000', units: '10' },
+    },
+  }
+  const points = price_points({ ...history, buckets: [candle] }, 7)
+  expect(points[0]!.candle).toEqual({ open: 0.1, high: 0.3, low: 0.02, close: 0.25 })
 })
 
 test('late packets cannot replace another item, an earlier selection, or newer history', () => {

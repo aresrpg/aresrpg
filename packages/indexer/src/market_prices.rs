@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-//! Exact daily public-sale totals. Each value owns its checkpoint, so partial batch retries skip applied rows.
+//! Exact daily public-sale totals and per-unit OHLC. Each value owns its checkpoint, so partial batch retries skip applied rows.
 
 use std::collections::BTreeMap;
 
@@ -20,6 +20,28 @@ pub struct Sale {
     pub units: u64,
 }
 
+// Each endpoint retains the actual sale ratio: sub-MIST prices must not round before presentation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct UnitPrice {
+    mist: String,
+    units: String,
+}
+
+fn price_below(left: &UnitPrice, right: &UnitPrice) -> Result<bool> {
+    Ok(
+        u128::from(left.mist.parse::<u64>()?) * u128::from(right.units.parse::<u64>()?)
+            < u128::from(right.mist.parse::<u64>()?) * u128::from(left.units.parse::<u64>()?),
+    )
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Ohlc {
+    open: UnitPrice,
+    high: UnitPrice,
+    low: UnitPrice,
+    close: UnitPrice,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Totals {
     // Strings preserve u128 exactly across Redis JSON and JavaScript consumers.
@@ -27,6 +49,8 @@ struct Totals {
     units: String,
     sales: String,
     checkpoint: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ohlc: Option<Ohlc>,
 }
 
 fn add(previous: Option<&str>, checkpoint: u64, sales: &[&Sale]) -> Result<Totals> {
@@ -38,6 +62,7 @@ fn add(previous: Option<&str>, checkpoint: u64, sales: &[&Sale]) -> Result<Total
             units: "0".into(),
             sales: "0".into(),
             checkpoint: 0,
+            ohlc: None,
         });
     if previous.checkpoint >= checkpoint {
         return Ok(previous);
@@ -45,8 +70,30 @@ fn add(previous: Option<&str>, checkpoint: u64, sales: &[&Sale]) -> Result<Total
     let mut mist = previous.total_mist.parse::<u128>()?;
     let mut units = previous.units.parse::<u128>()?;
     let mut count = previous.sales.parse::<u128>()?;
+    let mut ohlc = previous.ohlc;
     for sale in sales {
         anyhow::ensure!(sale.mist > 0 && sale.units > 0, "invalid sale totals");
+        let price = UnitPrice {
+            mist: sale.mist.to_string(),
+            units: sale.units.to_string(),
+        };
+        // Existing average-only days stay average-only: their missing extremes cannot be reconstructed.
+        if count == 0 {
+            ohlc = Some(Ohlc {
+                open: price.clone(),
+                high: price.clone(),
+                low: price.clone(),
+                close: price,
+            });
+        } else if let Some(candle) = &mut ohlc {
+            if price_below(&price, &candle.low)? {
+                candle.low = price.clone();
+            }
+            if price_below(&candle.high, &price)? {
+                candle.high = price.clone();
+            }
+            candle.close = price;
+        }
         mist = mist
             .checked_add(sale.mist.into())
             .context("market price overflow")?;
@@ -60,6 +107,7 @@ fn add(previous: Option<&str>, checkpoint: u64, sales: &[&Sale]) -> Result<Total
         units: units.to_string(),
         sales: count.to_string(),
         checkpoint,
+        ohlc,
     })
 }
 

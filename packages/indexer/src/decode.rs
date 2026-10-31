@@ -1061,6 +1061,11 @@ pub struct Tournament {
     pub fights: Vec<Option<Id>>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentRules {
+    pub entry_fee_mist: u64,
+    pub max_level: Option<u16>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentReward {
     pub place: u8,
     pub template: Id,

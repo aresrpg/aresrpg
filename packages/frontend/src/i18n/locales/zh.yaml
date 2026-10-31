@@ -454,6 +454,12 @@ demo_page:
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
+  prices_legacy: '旧日期仅记录了均价，因此显示为空白。蜡烛图从新记录的交易日开始显示。'
+  prices_ohlc: '开盘 {{open}} · 最高 {{high}} · 最低 {{low}} · 收盘 {{close}}'
+  floor_price: '当前最低挂牌价（×{{amount}}）'
+  floor_loading: '正在查询挂单…'
+  floor_empty: '暂无此数量的公开挂单'
+  floor_unavailable: '无法获取挂牌价'
   add_funds: '充值'
   filter_all: '所有分类'
   filter_empty: '没有匹配结果，请尝试其他筛选条件或搜索词。'
@@ -461,7 +467,7 @@ marketplace_page:
   type_count_hint: '公开上架的不同物品类型数量'
   total_units: '总数量'
   market_cap: '总市值'
-  market_cap_basis: '现存总数量 × 图表最近成交日的平均单价，不含手续费。'
+  market_cap_basis: '现有总数量 × 最近交易日的平均单价，不含手续费。'
   previous_page: 上一页
   next_page: 下一页
   prices_title: 价格历史
@@ -3082,6 +3088,15 @@ allocation_page:
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
 
 tournament_page:
+  level_limit_label: '报名等级上限'
+  level_unrestricted: '不限'
+  level_limit_notice: '可选。仅在报名时检查，之后升级不影响参赛资格。'
+  level_limit_amount: '报名等级上限：{{level}}'
+  reason_level: '该角色超过了报名等级上限。'
+  entry_fee_label: '每个角色的报名费（SUI）'
+  entry_fee_setting: '可选，创建后固定。输入 0 即可免费报名。'
+  entry_fee_amount: '每个角色的报名费：{{amount}} SUI'
+  entry_fee_notice: '报名费不予退还，包括退出或取消比赛。50% 进入奖池，50% 进入国库；舍入余数进入奖池。比赛取消时，奖池归组织者。'
   victory_title: '你获得了第一名！'
   placing_title: '你获得了第 {{place}} 名'
   results: '锦标赛结果'
@@ -3138,7 +3153,7 @@ tournament_page:
   create_event: 创建赛事
   start: 开始赛事
   setup_display: 首次配置 Display
-  deadline: 最晚开始时间
+  deadline: '预定开始时间'
   name: 名称
   format: 赛制
   final: 决赛
@@ -3146,9 +3161,9 @@ tournament_page:
   roster_notice: 只有满员队伍才能参赛。报名即授权自动加入比赛。每场比赛有60秒的加入时间，请保持在线。
   donation_notice: 捐赠不可撤销。赛事取消后，资金将转给主办方，由其决定手动退款。未分配的奖金也将转给主办方。
   refund_pool: 将未分配的 KARES 退还主办方
-  expire: 关闭已过期的报名
+  expire: '取消：完整队伍不足'
   character: 角色
-  action_expire: 关闭已过期的报名
+  action_expire: '取消：完整队伍不足'
   placement: 名次
   match_waiting: 等待中
   match_live: 实时
@@ -3191,6 +3206,7 @@ tournament_page:
   action_open: 创建对局
   action_join: 进入比赛
   action_start: 开始比赛
+  action_start_event: '开始锦标赛'
   action_record: 记录结果
   action_end: 以无胜者结束
   action_refund: 将 KARES 退还主办方
@@ -3251,7 +3267,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: 战斗中
   custody_trade: 交易中
-  latest_start_notice: 主办方可在此截止时间前随时开赛。
+  latest_start_notice: '到达此时间后，任何人都可以启动比赛。管理员也必须等待。'
   champion: '{{team}} 获胜'
   prize_pool: 奖池
   frozen_pool: 奖池 · 已冻结
@@ -3275,7 +3291,7 @@ tournament_page:
   contribution_confirmed: 赞助已确认。索引更新到达后奖池将刷新。
   transaction_confirmed: 交易已确认。索引更新到达后赛事将刷新。
   cancelled_notice: 锦标赛已取消。未使用资金将退还原主办方。
-  expired_notice: 最晚开赛时间已过。可以关闭报名，但无法再开始锦标赛。
+  expired_notice: '报名已关闭。完整队伍足够时可启动比赛，否则可取消。'
   open_event: 打开 {{name}} 锦标赛
   open_window: 打开锦标赛
   older_claims: '{{count}} 场往届赛事仍有奖励待领取'
@@ -3300,7 +3316,7 @@ tournament_page:
   minimum_teams: 至少需要 {{count}} 支满员队伍。
   minimum_label: 最低满员队伍数
   minimum_notice: 通常需要两支队伍；设置第三或第四名奖励需四支；设置第五名奖励需八支。两个币种和物品奖励均计入。
-  immutable_notice: 创建后，赛制、奖励比例、物品奖励及最晚开赛时间即被固定，无法修改。
+  immutable_notice: '所有锦标赛设置在创建时固定，之后不可修改。'
   recipient_notice: 货币支付给报名时的所有者。每个符合条件的角色都能获得每项物品的设定数量。
   cancel_event: 取消锦标赛
   start_review: 开赛会固定满员阵容和奖池总额，随机配对队伍，并开放首轮 60 秒入场期。

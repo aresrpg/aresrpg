@@ -37,7 +37,8 @@ fun refusal(which: Failure) {
   };
   if (which == Failure::StartEmpty) {
     let mut entropy = random::new_generator_from_seed_for_testing(b"start");
-    tournament::start(&mut t, &admin, &mut entropy, &clock, s.ctx()); abort 999
+    clock::increment_for_testing(&mut clock, 999_000);
+    tournament::start(&mut t, &mut entropy, &clock); abort 999
   };
   let mut rewards = vector[];
   if (which == Failure::RewardsLarge) {
@@ -65,7 +66,8 @@ fun refusal(which: Failure) {
   };
   if (which == Failure::StartIncomplete) {
     let mut entropy = random::new_generator_from_seed_for_testing(b"start");
-    tournament::start(&mut t, &admin, &mut entropy, &clock, s.ctx()); abort 999
+    clock::increment_for_testing(&mut clock, 999_000);
+    tournament::start(&mut t, &mut entropy, &clock); abort 999
   };
   clock::increment_for_testing(&mut clock, 1_000_000);
   if (which == Failure::LateDonation) tournament::donate_sui(&mut t, coin::mint_for_testing<SUI>(1, s.ctx()), &version, &clock);
@@ -94,14 +96,15 @@ fun leave_reuses_empty_slots_without_reserving_strangers() {
 
 #[test]
 fun maximum_roster_starts_with_bounded_work() {
-  let (mut s, mut t, admin, version, clock) = fixture::setup(6, vector[10_000,0,0,0,0]);
+  let (mut s, mut t, admin, version, mut clock) = fixture::setup(6, vector[10_000,0,0,0,0]);
   test_scenario::return_shared(version);
   let mut team = 0;
   while (team < 64) { fixture::register(&mut t, team, 6, &clock, &mut s); team = team + 1; };
   s.next_tx(@0xA);
   let version = s.take_shared<version::Version>();
   let randomness = s.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+  clock::increment_for_testing(&mut clock, 999_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
   assert!(tournament::matches_for_testing(&t).length() == 64, 0);
   test_scenario::return_shared(randomness);
   fixture::cleanup(t, admin, version, clock, s);
@@ -206,14 +209,15 @@ fun team_capacity_is_a_real_bound() {
 
 #[test]
 fun bronze_prizes_require_four_teams_and_unresolved_rounds_stay_pending() {
-  let (mut s, mut t, admin, version, clock) = fixture::setup(1, vector[9000,0,1000,0,0]);
+  let (mut s, mut t, admin, version, mut clock) = fixture::setup(1, vector[9000,0,1000,0,0]);
   test_scenario::return_shared(version);
   let mut team = 0;
   while (team < 4) { fixture::register(&mut t, team, 1, &clock, &mut s); team = team + 1; };
   s.next_tx(@0xA);
   let version = s.take_shared<version::Version>();
   let randomness = s.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+  clock::increment_for_testing(&mut clock, 999_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
   assert!(aresrpg_math::tournament_bracket::state(&tournament::matches_for_testing(&t)[0]) == 0, 0);
   test_scenario::return_shared(randomness);
   fixture::cleanup(t, admin, version, clock, s);

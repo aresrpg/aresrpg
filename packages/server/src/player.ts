@@ -207,6 +207,7 @@ const MODULES: PlayerModule[] = [
  *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
+  'packet/market_floor_request',
   'packet/allocation_request',
   'packet/spectate',
   'packet/fight_preview',
@@ -220,9 +221,25 @@ const READ_PACKETS = new Set<string>([
   'packet/admin_request',
 ])
 
-// Retiring an inspection starts no graph work and must remain possible after the read budget is spent.
+// Only the declared cancellation shape of each packet may bypass the graph-read allowance.
+const cancels_read = (packet: Readonly<ClientPacket>): boolean => {
+  switch (packet.type) {
+    case 'packet/market_observe':
+    case 'packet/market_prices_observe':
+    case 'packet/leaderboard_observe':
+      return packet.observation === null
+    case 'packet/spectate':
+    case 'packet/fight_preview':
+    case 'packet/fight_nearby':
+      return packet.fight === null
+    case 'packet/inspection_request':
+      return packet.query === null
+    default:
+      return false
+  }
+}
 const requests_graph = (packet: Readonly<ClientPacket>): boolean =>
-  READ_PACKETS.has(packet.type) && !(packet.type === 'packet/inspection_request' && packet.query === null)
+  READ_PACKETS.has(packet.type) && !cancels_read(packet)
 
 const INITIAL_STATE = (): PlayerState => ({
   characters: {},

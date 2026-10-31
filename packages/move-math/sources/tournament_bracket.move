@@ -144,3 +144,7 @@ public fun minimum_teams(sui_bps: &vector<u64>, token_bps: &vector<u64>, reward_
   while (i < reward_places.length()) { place = std::u64::max(place, reward_places[i] as u64); i = i + 1; };
   if (place >= 5) 8 else if (place >= 3) 4 else 2
 }
+
+public fun valid_settings(format: u64, name_bytes: u64, reward_count: u64, start_ms: u64, now_ms: u64, max_level: &Option<u16>): bool {
+  (format == 1 || format == 3 || format == 6) && name_bytes > 0 && name_bytes <= 80 && reward_count <= 10 && start_ms > now_ms && max_level.get_with_default(1) > 0 && (max_level.get_with_default(1) as u64) <= aresrpg_math::experience::max_level()
+}

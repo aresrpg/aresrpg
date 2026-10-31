@@ -13,6 +13,7 @@ import {
   type MarketplaceInput,
   type MarketplaceState,
 } from '../../src/modules/marketplace.ts'
+import { fold_market_floor } from '../../src/marketplace/floor_state.ts'
 import { MarketSourceContext } from '../../src/marketplace/MarketSource.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
 import { item_listing } from '../../src/marketplace/useMarketSell.ts'
@@ -27,6 +28,20 @@ const inventory = adventure_inventory(
   amount: index === 1 ? 125 : 1,
   stats: index === 0 ? { strength: item_stat_center + 27 } : row.stats,
 }))
+const character = {
+  ...adventure_character_row(adventure_character()),
+  id: '0xmarket-hero',
+  name: 'Market Hero',
+  level: 30,
+  equipment: [],
+}
+const characters = new URLSearchParams(location.search).has('characters')
+  ? [
+      character,
+      { ...character, id: '0xyoung', name: 'Too Young', level: 29 },
+      { ...character, id: '0xequipped', name: 'Still Equipped', equipment: [{ ...inventory[0]!, slot: 'hat' }] },
+    ]
+  : []
 const initial = (): MarketplaceState => ({
   ...initial_marketplace_state(),
   own_listings: inventory.slice(0, 3).flatMap((row) => {
@@ -41,6 +56,20 @@ const initial = (): MarketplaceState => ({
   }),
 })
 const reduce = (state: MarketplaceState, input: MarketplaceInput): MarketplaceState => {
+  if (input.type === 'market/floor_selected') {
+    const floor = fold_market_floor(state.floor, input)
+    const params = new URLSearchParams(location.search)
+    return {
+      ...state,
+      floor: floor
+        ? {
+            ...floor,
+            status: params.has('floor-unavailable') ? 'unavailable' : 'ready',
+            prices: { 1: '1', 100: '123456789' },
+          }
+        : null,
+    }
+  }
   if (input.type === 'market/list_requested')
     return { ...state, own_listings: [...state.own_listings, { ...input.listing, version: '2' }] }
   if (input.type === 'market/delist_requested')
@@ -54,11 +83,11 @@ export const SellFixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       value={{
         market,
         dispatch,
-        account: { inventory, characters: [], wallet: { address: 'seller' }, sui_balance_mist: 10000000000n },
+        account: { inventory, characters, wallet: { address: 'seller' }, sui_balance_mist: 10000000000n },
         craft_session: { character: adventure_character_row(adventure_character()), inventory },
       }}
     >
-      <div className="aui-market-port flex h-full min-h-0 flex-1">
+      <div className="aui-market-port flex h-full min-h-0 flex-1" data-floor-item={market.floor?.item_type ?? ''}>
         <SellPanel text={copy_text(copy.marketplace_page)} />
       </div>
     </MarketSourceContext.Provider>

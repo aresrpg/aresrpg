@@ -113,6 +113,8 @@ const base = (): TournamentRow => ({
   status: 'open',
   organizer: 'organizer',
   format: 3,
+  entry_fee_mist: '0',
+  max_level: null,
   start_before_ms: NOW + 8_040_000,
   kares_pool: 'pool',
   token_version: '7',
@@ -207,9 +209,16 @@ const SCENARIOS: Readonly<Record<string, () => TournamentRow>> = {
       matches: row.matches.map((match) => ({ ...match, winner: null, loser: null })),
     }
   },
+  level_limited: () => ({ ...base(), max_level: 1 }),
+  paid: () => ({ ...base(), entry_fee_mist: '123456789' }),
   expired: () => ({ ...base(), start_before_ms: NOW - 1 }),
   cancelled: () => ({ ...base(), status: 'cancelled' }),
-  admin_start: () => ({ ...base(), teams: [...teams(8), { ...teams(1)[0], name: 'Incomplete', seats: [seat(8, 0)] }] }),
+  public_start: () => ({ ...base(), start_before_ms: NOW - 1, teams: teams(8) }),
+  admin_start: () => ({
+    ...base(),
+    start_before_ms: NOW - 1,
+    teams: [...teams(8), { ...teams(1)[0], name: 'Incomplete', seats: [seat(8, 0)] }],
+  }),
 }
 export const tournament_scenario = (
   scenario: string

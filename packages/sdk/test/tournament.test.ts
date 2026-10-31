@@ -18,6 +18,8 @@ const fixture = () => {
   let executions = 0
   const doors = Object.fromEntries(
     [
+      'start_tournament',
+      'register_tournament',
       'create_tournament_team',
       'join_tournament_team',
       'tournament_leave_team',
@@ -58,8 +60,18 @@ test('registration preserves the reviewed team revision and exact character iden
   const { actions, calls } = fixture()
   await actions.join_team({ tournament: 'cup', team: 2, revision: '7', character_id: 'chosen' })
   expect(calls[0]).toEqual({
-    name: 'join_tournament_team',
-    args: { tournament: 'cup', team: 2, revision: '7', character_id: 'chosen', kiosk: 'kiosk', cap: 'cap' },
+    name: 'register_tournament',
+    args: {
+      tournament: 'cup',
+      team: 2,
+      revision: '7',
+      character_id: 'chosen',
+      name: '',
+      allowed: [],
+      payment: 0n,
+      kiosk: 'kiosk',
+      cap: 'cap',
+    },
   })
 })
 
@@ -135,4 +147,27 @@ test('Display uses the datatype defining ID even when the package origin table i
   }
   await tournament_admin_actions(sdk as never, 'owner', client as never).setup_display()
   expect(new Set(types)).toEqual(new Set(['introducing-upgrade::tournament::Tournament']))
+})
+
+test('public start needs only the tournament and submits exactly once', async () => {
+  const { actions, calls, executions } = fixture()
+  await actions.start('cup')
+  expect(calls).toEqual([{ name: 'start_tournament', args: { tournament: 'cup' } }])
+  expect(executions()).toBe(1)
+})
+
+test('paid registration composes the exact reviewed fee with the chosen character in one execution', async () => {
+  const { actions, calls, executions } = fixture()
+  await actions.create_team({
+    tournament: 'cup',
+    name: 'Team',
+    allowed: [],
+    character_id: 'chosen',
+    entry_fee_mist: 123456789n,
+  })
+  expect(calls[0]).toMatchObject({
+    name: 'register_tournament',
+    args: { team: null, character_id: 'chosen', payment: 123456789n },
+  })
+  expect(executions()).toBe(1)
 })

@@ -23,6 +23,23 @@
 .tourney-hud-card.is-admission {
   border-color: var(--aui-orange);
 }
+/* Registration is open and this player has no team yet. */
+:is(.tourney-hud-card, .tourney-hud-mobile)[data-invite='true'] {
+  border-color: var(--aui-orange);
+  animation: tourney-invite 2.6s ease-in-out infinite alternate;
+}
+@keyframes tourney-invite {
+  from {
+    box-shadow:
+      var(--aui-shadow),
+      0 0 6px color-mix(in srgb, var(--aui-orange) 25%, transparent);
+  }
+  to {
+    box-shadow:
+      var(--aui-shadow),
+      0 0 16px color-mix(in srgb, var(--aui-orange) 55%, transparent);
+  }
+}
 .tourney-hud-eyebrow {
   display: flex;
   align-items: center;

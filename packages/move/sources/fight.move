@@ -233,7 +233,7 @@ public(package) fun add_mob(mut build: FightBuild, template: &MobTemplate): Figh
   assert!(member.member_type() == mob_data::mob_type(template.data()), EWrongMob);
   let cell = build.board.start_cells_b()[build.fighters.length() - 1];
   build.authorities.push_back(FighterAuthority::Mob);
-  let fighter = mob_fighter(template, member.member_level_scalar() as u64, cell);
+  let fighter = mob_fighter!(template, member.member_level_scalar() as u64, cell);
   fight_rewards::add_mob(&mut build.rewards, template, &fighter);
   build.fighters.push_back(fighter);
   build
@@ -306,7 +306,7 @@ public(package) fun challenge(
   let world = world::prove_move(&mut character, x, z, clock);
   // The board must survive a gas-aborted retry unchanged. The invited opponent sees it before
   // accepting, so deterministic match identity is fairer than filterable same-tx randomness.
-  let board_seed = duel_board_seed(character_id, target, x, z);
+  let board_seed = duel_board_seed!(character_id, target, x, z);
   let board = board_catalog::pick(catalog, board_seed);
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
@@ -331,7 +331,7 @@ public(package) fun kolizeum_birth(
 ): ID {
   assert!(access <= ACCESS_GROUP, EBadTeam);
   let mut character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
-  let board_seed = arena_board_seed(character_id, ctx.epoch());
+  let board_seed = arena_board_seed!(character_id, ctx.epoch());
   let board = board_catalog::pick(catalog, board_seed);
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
@@ -411,7 +411,7 @@ public(package) fun ambush(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
   fighter = combat::cap_fighter_hp(fighter, hp_cap);
-  let mob = mob_fighter(template, level_scalar, board.start_cells_b()[0]);
+  let mob = mob_fighter!(template, level_scalar, board.start_cells_b()[0]);
   let mut rewards = fight_rewards::new();
   fight_rewards::add_mob(&mut rewards, template, &mob);
   let _ = share_new_fight(
@@ -448,7 +448,11 @@ fun player_stats(character: &Character): FighterStats {
   )
 }
 
-fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
+macro fun mob_fighter($template: &MobTemplate, $scalar: u64, $cell: u64): Fighter {
+  let template = $template;
+  let scalar = $scalar;
+  let cell = $cell;
+
   combat::scaled_mob_fighter(template.data(), scalar, cell)
 }
 
@@ -518,7 +522,7 @@ fun join_gate(fight: &Fight, team: u8) {
   assert!(team <= 1, EBadTeam);
   let mut fighter = 0;
   while (fighter < fight.authorities.length()) {
-    assert!(!(combat::fighter_team(&fight.combat, fighter) == team && is_mob_authority(
+    assert!(!(combat::fighter_team(&fight.combat, fighter) == team && is_mob_authority!(
       &fight.authorities[fighter],
     )), EBadTeam);
     fighter = fighter + 1;
@@ -560,7 +564,9 @@ fun admit(
   event::emit(FighterJoined { fight: fight.id.to_inner(), character: character_id, team });
 }
 
-fun is_mob_authority(authority: &FighterAuthority): bool {
+macro fun is_mob_authority($authority: &FighterAuthority): bool {
+  let authority = $authority;
+
   match (authority) { FighterAuthority::Mob => true, FighterAuthority::Player { .. } => false }
 }
 
@@ -696,7 +702,7 @@ fun emit_turn_seeds(fight: &Fight, used: &vector<aresrpg_combat::combat::TurnSee
 }
 
 fun committed_turn_seeds(fight: &Fight): vector<u64> {
-  turn_seeds_from(fight.next_turn_entropy, 2 * fight.authorities.length() + 1)
+  prng::draw_many(fight.next_turn_entropy, 2 * fight.authorities.length() + 1)
 }
 
 fun commit_next_entropy(fight: &mut Fight, entropy: &mut RandomGenerator) {
@@ -710,38 +716,28 @@ fun seal_end(fight: &mut Fight, entropy: &mut RandomGenerator) {
   commit_next_entropy(fight, entropy);
 }
 
-fun turn_seeds_from(entropy: u64, count: u64): vector<u64> {
-  let mut seeds = vector[];
-  let mut remaining = count;
-  let mut entropy = entropy;
-  while (remaining > 0) {
-    seeds.push_back(prng::draw(&mut entropy));
-    remaining = remaining - 1;
-  };
-  seeds
-}
 
-fun duel_board_seed(character: ID, target: ID, x: u32, z: u32): u64 {
+
+macro fun duel_board_seed($character: ID, $target: ID, $x: u32, $z: u32): u64 {
+  let character = $character;
+  let target = $target;
+  let x = $x;
+  let z = $z;
+
   prng::mix(
     prng::mix(id_seed(character), id_seed(target)),
     prng::mix(x as u64, z as u64),
   )
 }
 
-fun arena_board_seed(character: ID, epoch: u64): u64 {
+macro fun arena_board_seed($character: ID, $epoch: u64): u64 {
+  let character = $character;
+  let epoch = $epoch;
+
   prng::mix(id_seed(character), epoch)
 }
 
-fun id_seed(id: ID): u64 {
-  let bytes = id.to_bytes();
-  let mut seed = 0;
-  let mut index = 0;
-  while (index < bytes.length()) {
-    seed = prng::mix(seed, bytes[index] as u64);
-    index = index + 1;
-  };
-  seed
-}
+fun id_seed(id: ID): u64 { prng::mix_bytes(&id.to_bytes()) }
 
 fun emit_end_if_needed(fight: &Fight, ended_before: bool) {
   if (!ended_before && combat::ended(&fight.combat)) event::emit(FightEnded {
@@ -884,7 +880,7 @@ public(package) fun settle(
   if (combat::fighter_won(&fight.combat, fighter) && !fight.drops_rolled) {
     assert!(fight.loot_entropy_ready && fight_rewards::ready(&fight.rewards), EWrongDoor);
     let winning_team = combat::fighter_team(&fight.combat, fighter);
-    let random_draws = turn_seeds_from(
+    let random_draws = prng::draw_many(
       fight.next_turn_entropy,
       combat::loot_random_draw_count(&fight.combat, winning_team),
     );

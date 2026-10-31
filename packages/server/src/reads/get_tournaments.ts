@@ -11,7 +11,10 @@ import {
 
 import type { Graph, Node } from '../graph.ts'
 
-type RawTournament = Omit<TournamentRow, 'token_pool' | 'token_total' | 'token_version' | 'token_refunded' | 'teams'> &
+type RawTournament = Omit<
+  TournamentRow,
+  'token_pool' | 'token_total' | 'token_version' | 'token_refunded' | 'teams' | 'entry_fee_mist' | 'max_level'
+> &
   Readonly<{
     teams: readonly (Omit<TournamentTeam, 'seats'> &
       Readonly<{ seats: readonly Omit<TournamentSeat, 'token_claimed'>[] }>)[]
@@ -68,7 +71,11 @@ export const get_tournaments = async (
   )
   const tournaments = ordered.map(({ tournament }) => {
     const { properties } = (tournament as Node)!
-    const row = JSON.parse(String(properties.data)) as RawTournament
+    const row = {
+      ...(JSON.parse(String(properties.data)) as RawTournament),
+      entry_fee_mist: String(properties.entry_fee_mist ?? '0'),
+      max_level: properties.max_level == null ? null : Number(properties.max_level),
+    }
     if (properties.finished_at_ms == null) return row
     const finished_at_ms = Number(properties.finished_at_ms)
     if (!Number.isSafeInteger(finished_at_ms) || finished_at_ms <= 0)

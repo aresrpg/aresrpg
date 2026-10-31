@@ -60,3 +60,24 @@ public fun scramble(seed: u64): u64 {
 public fun mix(acc: u64, x: u64): u64 {
   scramble(((acc & MASK32) + (x & MASK32)) & MASK32)
 }
+
+public fun draw_many(entropy: u64, count: u64): vector<u64> {
+  let mut seeds = vector[];
+  let mut remaining = count;
+  let mut entropy = entropy;
+  while (remaining > 0) {
+    seeds.push_back(draw(&mut entropy));
+    remaining = remaining - 1;
+  };
+  seeds
+}
+
+public fun mix_bytes(bytes: &vector<u8>): u64 {
+  let mut seed = 0;
+  let mut index = 0;
+  while (index < bytes.length()) {
+    seed = mix(seed, bytes[index] as u64);
+    index = index + 1;
+  };
+  seed
+}

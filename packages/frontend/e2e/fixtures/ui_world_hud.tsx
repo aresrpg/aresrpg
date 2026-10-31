@@ -115,6 +115,8 @@ if (tournament)
     type: 'server/packet',
     packet: { type: 'packet/tournaments', tournaments: tournament_scenario(tournament).rows },
   })
+if (new URLSearchParams(location.search).has('clock'))
+  dispatch_app({ type: 'clock/observed', chain_ms: NOW, received_ms: performance.now() })
 if (new URLSearchParams(location.search).has('arena'))
   dispatch_app({
     type: 'server/packet',

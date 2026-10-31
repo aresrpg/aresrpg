@@ -15,7 +15,14 @@ import { PracticeButton } from '../practice/PracticeButton.tsx'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
 import { countdown, match_label, match_opponent, round_label, tournament_name } from './presentation.ts'
-import { TeamPips, TournamentActionButton, TournamentIntentReview, TournamentPool } from './TournamentControls.tsx'
+import {
+  TeamPips,
+  TournamentActionButton,
+  TournamentIntentReview,
+  TournamentPool,
+  TournamentEntryFee,
+  TournamentLevelLimit,
+} from './TournamentControls.tsx'
 import { CreateTournamentTeam, TournamentTeams } from './TournamentTeams.tsx'
 import { TournamentBracket } from './TournamentBracket.tsx'
 import { TournamentPodium } from './TournamentPodium.tsx'
@@ -60,7 +67,7 @@ const EventHeading = ({
       </div>
       <div className="tourney-event-progress">
         <small>{t(row.status === 'open' ? 'deadline' : row.status)}</small>
-        {row.status === 'open' && (
+        {view.registration_open && (
           <>
             <time>{countdown(row.start_before_ms, view.viewer.now_ms)}</time>
             <small>{t('latest_start_notice')}</small>
@@ -202,6 +209,8 @@ const TournamentEvent = ({ row, view, t }: Readonly<{ row: TournamentRow; view: 
     <>
       <EventHeading row={row} view={view} podium={() => navigate('podium')} t={t} />
       {row.status === 'cancelled' && <p className="tourney-notice">{t('cancelled_notice')}</p>}
+      <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
+      <TournamentLevelLimit level={row.max_level} t={t} />
       {expired && <p className="tourney-notice">{t('expired_notice')}</p>}
       <nav className="tourney-tabs" aria-label={t('event_sections')}>
         <Button aria-pressed={tab === 'main'} onClick={() => navigate('main')}>

@@ -164,6 +164,7 @@ describe('the wire contract', () => {
       /unknown packet type/
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
+      'packet/market_floor_request',
       'packet/allocation_request',
       'packet/signature_response',
       'packet/track_character',
@@ -373,4 +374,17 @@ test('captured browser gliding preserves the flight state and checkpoint on the 
     riding: true,
     gliding: true,
   })
+})
+
+test('market floor requests validate identity and canonical item type', () => {
+  const packet = { type: 'packet/market_floor_request', id: 3, item_type: 'wheat' } as const
+  expect(parse_client_packet(JSON.stringify(packet))).toEqual(packet)
+  for (const invalid of [
+    { id: -1 },
+    { id: 1.5 },
+    { item_type: "wheat'" },
+    { item_type: '' },
+    { item_type: 'a'.repeat(129) },
+  ])
+    expect(() => parse_client_packet(JSON.stringify({ ...packet, ...invalid }))).toThrow()
 })

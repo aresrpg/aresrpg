@@ -131,7 +131,7 @@ export const play_tournament = async (
     admin,
     name: kares ? 'KARES rehearsal' : 'SUI rehearsal',
     format: 1,
-    start_before_ms: BigInt(Date.now() + 1_800_000),
+    start_before_ms: BigInt(String((await env.json('0x6')).timestamp_ms)) + 60_000n,
     sui_bps: [10000, 0, 0, 0, 0],
     token_bps: [10000, 0, 0, 0, 0],
     rewards: sdk.doors.tournament_rewards(tx, {}),
@@ -162,8 +162,10 @@ export const play_tournament = async (
     )
     await env.send(`register team ${index}`, join, player.sdk)
   }
+  const scheduled_start = Number((await env.json(tournament)).start_before_ms)
+  while (Number((await env.json('0x6')).timestamp_ms) < scheduled_start) await Bun.sleep(500)
   const start = new Transaction()
-  sdk.doors.start_tournament(start, { tournament, admin })
+  sdk.doors.start_tournament(start, { tournament })
   await env.send('start tournament', start, sdk)
   const first = players[0]!
   await first.sdk.hydrate([catalog, (game.pins.character_protected_policy as { id: string }).id])

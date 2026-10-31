@@ -454,6 +454,12 @@ demo_page:
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
+  prices_legacy: 'Các ngày cũ chỉ có giá trung bình nên được để trống. Nến bắt đầu từ các ngày giao dịch mới được ghi nhận.'
+  prices_ohlc: 'Mở {{open}} · Cao {{high}} · Thấp {{low}} · Đóng {{close}}'
+  floor_price: 'Giá niêm yết thấp nhất (×{{amount}})'
+  floor_loading: 'Đang kiểm tra tin bán…'
+  floor_empty: 'Không có tin bán công khai cho lô này'
+  floor_unavailable: 'Không thể tải giá niêm yết'
   add_funds: 'Nạp tiền'
   filter_all: 'Tất cả danh mục'
   filter_empty: 'Không có kết quả. Thử bộ lọc hoặc từ khóa khác.'
@@ -461,7 +467,7 @@ marketplace_page:
   type_count_hint: 'Các loại vật phẩm khác nhau đang được rao bán công khai'
   total_units: 'Tổng số lượng'
   market_cap: 'Vốn hóa'
-  market_cap_basis: 'Tổng số đơn vị hiện có × giá trung bình mỗi đơn vị của ngày giao dịch gần nhất trên biểu đồ, không gồm phí.'
+  market_cap_basis: 'Tổng số lượng hiện có × giá trung bình mỗi đơn vị trong ngày giao dịch gần nhất, chưa gồm phí.'
   previous_page: Trước
   next_page: Tiếp
   prices_title: Lịch sử giá
@@ -3082,6 +3088,15 @@ allocation_page:
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
 
 tournament_page:
+  level_limit_label: 'Cấp tối đa khi đăng ký'
+  level_unrestricted: 'Không giới hạn'
+  level_limit_notice: 'Tùy chọn. Chỉ kiểm tra khi đăng ký; tăng cấp sau đó không ảnh hưởng đến quyền tham gia.'
+  level_limit_amount: 'Cấp tối đa khi đăng ký: {{level}}'
+  reason_level: 'Nhân vật này vượt quá giới hạn cấp đăng ký.'
+  entry_fee_label: 'Phí mỗi nhân vật (SUI)'
+  entry_fee_setting: 'Tùy chọn, cố định khi tạo. Nhập 0 để đăng ký miễn phí.'
+  entry_fee_amount: 'Phí mỗi nhân vật: {{amount}} SUI'
+  entry_fee_notice: 'Không hoàn lại, kể cả khi rút lui hoặc hủy. Một nửa vào quỹ giải thưởng, một nửa vào ngân khố; phần dư làm tròn vào quỹ giải thưởng. Khi hủy, quỹ thuộc về người tổ chức.'
   victory_title: 'Bạn đã giành hạng nhất!'
   placing_title: 'Bạn đạt hạng {{place}}'
   results: 'Kết quả giải đấu'
@@ -3138,7 +3153,7 @@ tournament_page:
   create_event: Tạo giải đấu
   start: Bắt đầu giải đấu
   setup_display: Thiết lập Display lần đầu
-  deadline: Hạn bắt đầu
+  deadline: 'Giờ bắt đầu dự kiến'
   name: Tên
   format: Thể thức
   final: Chung kết
@@ -3146,9 +3161,9 @@ tournament_page:
   roster_notice: 'Chỉ đội đủ người mới được tham gia. Đăng ký cho phép tự động vào trận. Hãy luôn trực tuyến: mỗi trận có 60 giây để tham gia.'
   donation_notice: Không thể rút lại đóng góp. Khi giải bị hủy, tiền được chuyển cho ban tổ chức để hoàn trả thủ công nếu có. Giải thưởng chưa trao cũng thuộc ban tổ chức.
   refund_pool: Trả KARES chưa trao cho ban tổ chức
-  expire: Đóng đăng ký đã hết hạn
+  expire: 'Hủy: không đủ đội hoàn chỉnh'
   character: Nhân vật
-  action_expire: Đóng đăng ký đã hết hạn
+  action_expire: 'Hủy: không đủ đội hoàn chỉnh'
   placement: Thứ hạng
   match_waiting: Đang chờ
   match_live: Trực tiếp
@@ -3191,6 +3206,7 @@ tournament_page:
   action_open: Mở trận
   action_join: Vào trận
   action_start: Bắt đầu trận
+  action_start_event: 'Bắt đầu giải đấu'
   action_record: Ghi kết quả
   action_end: Kết thúc không có đội thắng
   action_refund: Trả KARES cho ban tổ chức
@@ -3251,7 +3267,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: Đang chiến đấu
   custody_trade: Đang trao đổi
-  latest_start_notice: Ban tổ chức có thể bắt đầu bất cứ lúc nào trước hạn này.
+  latest_start_notice: 'Bất kỳ ai cũng có thể bắt đầu từ thời điểm này. Quản trị viên cũng phải chờ.'
   champion: '{{team}} vô địch'
   prize_pool: Quỹ thưởng
   frozen_pool: Quỹ thưởng · đã cố định
@@ -3275,7 +3291,7 @@ tournament_page:
   contribution_confirmed: Đóng góp đã được xác nhận. Quỹ sẽ cập nhật khi dữ liệu chỉ mục đến.
   transaction_confirmed: Giao dịch đã được xác nhận. Giải đấu sẽ cập nhật theo dữ liệu chỉ mục.
   cancelled_notice: Giải đấu đã hủy. Tiền chưa sử dụng được trả cho ban tổ chức ban đầu.
-  expired_notice: Đã qua hạn bắt đầu. Có thể đóng đăng ký nhưng không thể bắt đầu giải đấu.
+  expired_notice: 'Đã đóng đăng ký. Bắt đầu nếu có đủ đội hoàn chỉnh; nếu không, hãy hủy.'
   open_event: Mở giải đấu {{name}}
   open_window: Mở giải đấu
   older_claims: '{{count}} giải trước còn phần thưởng chưa nhận'
@@ -3300,7 +3316,7 @@ tournament_page:
   minimum_teams: Cần ít nhất {{count}} đội đủ người.
   minimum_label: Số đội đủ người tối thiểu
   minimum_notice: Thông thường cần hai đội; cần bốn đội nếu có thưởng hạng ba/tư và tám đội nếu có thưởng hạng năm. Cả hai loại tiền và vật phẩm đều được tính.
-  immutable_notice: Khi tạo, thể thức, tỷ lệ thưởng, vật phẩm và hạn bắt đầu sẽ được cố định. Không thể sửa các thiết lập này.
+  immutable_notice: 'Mọi thiết lập giải đấu được cố định khi tạo và không thể chỉnh sửa.'
   recipient_notice: Tiền được trả cho chủ sở hữu đã đăng ký. Mỗi nhân vật đủ điều kiện nhận số lượng đã đặt của từng vật phẩm.
   cancel_event: Hủy giải đấu
   start_review: Bắt đầu sẽ cố định đội đủ người và tổng thưởng, ghép cặp các đội ngẫu nhiên và mở các khoảng tiếp nhận 60 giây đầu tiên.

@@ -119,3 +119,72 @@ fn captured_optional_currency_pool_preserves_total_after_refund() {
     assert!(after.funds.refunded);
     assert!(after.funds.claimed.contents.is_empty());
 }
+
+#[test]
+fn captured_rules_keep_registration_limits_and_are_parent_guarded() {
+    use crate::decode::{Field, Id, MarkerKey, TournamentRules};
+    use crate::graph::{project, CheckpointView};
+    use crate::ownership::{ObjView, OwnerKind, TypeKey, SUI_FRAMEWORK};
+    // Real Rules child captured after a compatible localnet upgrade on 2026-10-29.
+    // Object 0x63b06676b2d9203bdb0ef3d709f2e7180f16d35b6ca4837b7067a16d27264615, version 6272.
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../tests/tournament_rules.localnet.json")).unwrap();
+    let bytes = hex::decode(fixture["bcs"].as_str().unwrap()).unwrap();
+    let field: Field<MarkerKey, TournamentRules> = decode::from_bytes(&bytes).unwrap();
+    assert!(!field.name);
+    assert_eq!(field.value.entry_fee_mist, 5);
+    assert_eq!(field.value.max_level, Some(1));
+    assert!(
+        decode::from_bytes::<Field<MarkerKey, TournamentRules>>(&bytes[..bytes.len() - 1]).is_err()
+    );
+    let game = fixture["type"]
+        .as_str()
+        .unwrap()
+        .split('<')
+        .nth(1)
+        .unwrap()
+        .split("::")
+        .next()
+        .unwrap();
+    let ty = TypeKey {
+        package: SUI_FRAMEWORK.into(),
+        module: "dynamic_field".into(),
+        name: "Field".into(),
+        type_params: vec![
+            format!("{game}::tournament::RulesKey"),
+            format!("{game}::tournament::Rules"),
+        ],
+    };
+    let parent = Id(
+        hex::decode(fixture["parent"].as_str().unwrap().trim_start_matches("0x"))
+            .unwrap()
+            .try_into()
+            .unwrap(),
+    );
+    let output = ObjView {
+        id: field.id,
+        version: 6272,
+        owner: OwnerKind::Object(parent),
+        type_key: &ty,
+        bytes: &bytes,
+    };
+    let statements = project(
+        &CheckpointView {
+            lamport_version: 6272,
+            ckpt: 1,
+            ts_ms: 1,
+            outputs: &[output],
+            deleted: &[],
+            custody: &[],
+            market: &[],
+            fight_lifecycle: &[],
+        },
+        game,
+    )
+    .unwrap();
+    assert_eq!(statements.len(), 1);
+    assert!(statements[0].starts_with("MATCH (v:Tournament"));
+    assert!(statements[0].contains("v.entry_fee_mist = '5'"));
+    assert!(statements[0].contains("v.max_level = 1"));
+    assert!(!statements[0].contains("v.data"));
+}

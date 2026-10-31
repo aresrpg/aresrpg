@@ -274,3 +274,9 @@ test('the opening seat is chosen from characters currently available in their ki
     )
   ).toEqual([{ id: 'cup', action: { kind: 'enter', index: 0, character: 'b' } }])
 })
+
+test('reaching the scheduled start never automatically submits a start transaction', () => {
+  const row = { ...tournament_fixture(), status: 'open' as const }
+  expect(automatic_actions(state_for(row), row.start_before_ms)).toEqual([])
+  expect(automatic_actions(state_for(row), row.start_before_ms + 600_000)).toEqual([])
+})

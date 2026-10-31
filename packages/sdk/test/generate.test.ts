@@ -107,3 +107,8 @@ describe('the regen-clean tooth (same-commit law)', () => {
     )
   })
 })
+
+test('optional tournament team indexes are encoded as optional u64 values, never object references', () => {
+  const door = parse_doors(api_source).find(({ name }) => name === 'register_tournament')!
+  expect(door.params.find(({ name }) => name === 'team')?.strategy).toEqual({ kind: 'pure_option', helper: 'u64' })
+})

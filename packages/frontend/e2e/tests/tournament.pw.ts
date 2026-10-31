@@ -102,7 +102,14 @@ test('adding another owned character names the actual character before consent',
     .toEqual([
       {
         kind: 'join',
-        args: { tournament: 'cup', team: 0, revision: '3', character_id: 'third', custody: { kiosk: 'third-kiosk' } },
+        args: {
+          tournament: 'cup',
+          team: 0,
+          revision: '3',
+          character_id: 'third',
+          entry_fee_mist: '0',
+          custody: { kiosk: 'third-kiosk' },
+        },
       },
     ])
 })
@@ -131,7 +138,14 @@ test('each seat requests consent and preserves its reviewed team revision and ch
     .toEqual([
       {
         kind: 'join',
-        args: { tournament: 'cup', team: 0, revision: '3', character_id: 'hero', custody: { kiosk: 'kiosk' } },
+        args: {
+          tournament: 'cup',
+          team: 0,
+          revision: '3',
+          character_id: 'hero',
+          entry_fee_mist: '0',
+          custody: { kiosk: 'kiosk' },
+        },
       },
     ])
 })
@@ -269,7 +283,7 @@ test('expired registration exposes permissionless closure and hides contribution
   await visit(page, '?scenario=expired')
   await podium(page)
   await expect(page.getByRole('button', { name: 'Contribute', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Close expired registration', exact: true }).click()
+  await page.getByRole('button', { name: 'Cancel: too few complete teams', exact: true }).click()
   await expect.poll(() => calls(page)).toEqual([{ kind: 'expire', args: { id: 'cup', pool: 'pool' } }])
 })
 
@@ -345,7 +359,7 @@ test('admin reviews exact percentages and rejects excess precision', async ({ pa
   await expect(page.getByLabel('AdminCap object ID', { exact: true })).toHaveCount(0)
   await expect(page.locator('.tourney-admin [data-wallet-menu]')).toHaveCount(0)
   await page.getByLabel('Name', { exact: true }).fill('Exact cup')
-  await page.getByLabel('Latest start', { exact: true }).fill('2027-01-01T12:00')
+  await page.getByLabel('Scheduled start', { exact: true }).fill('2027-01-01T12:00')
   const values = ['0.14', '12.34', '23.45', '34.56', '29.51']
   for (const [index, value] of values.entries()) await page.getByLabel(`SUI ${index + 1}`, { exact: true }).fill(value)
   await expect(
@@ -377,7 +391,7 @@ test('admin selects a canonical item and cannot mint multiple copies of unstacka
   await expect(page.getByLabel('AdminCap object ID', { exact: true })).toHaveCount(0)
   await expect(page.locator('.tourney-admin [data-wallet-menu]')).toHaveCount(0)
   await page.getByLabel('Name', { exact: true }).fill('Equipment cup')
-  await page.getByLabel('Latest start', { exact: true }).fill('2027-01-01T12:00')
+  await page.getByLabel('Scheduled start', { exact: true }).fill('2027-01-01T12:00')
   await page.getByRole('button', { name: 'Add item reward', exact: true }).click()
   const picker = page.getByRole('dialog', { name: 'Choose reward item', exact: true })
   await picker.getByPlaceholder('Search items').fill('Golden Lorito Amulet')

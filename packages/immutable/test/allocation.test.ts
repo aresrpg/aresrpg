@@ -59,7 +59,7 @@ describe('allocation conservation and ranking', () => {
     expect(awards.filter(({ tier, source }) => tier === 'veteran' && source === 'leaderboard')).toHaveLength(10)
     expect(awards.filter(({ tier, source }) => tier === 'member' && source === 'leaderboard')).toHaveLength(56)
     expect(awards.filter(({ tier, source }) => tier === 'veteran' && source === 'social')).toHaveLength(7)
-    expect(awards.filter(({ tier, source }) => tier === 'member' && source === 'social')).toHaveLength(57)
+    expect(awards.filter(({ tier, source }) => tier === 'member' && source === 'social')).toHaveLength(51)
   })
   test('rejects duplicate or overbooked reserved addresses', () => {
     const row: Award = { address: '0x1', tier: 'veteran', source: 'community', evidence: 'Chinese community' }
@@ -115,7 +115,7 @@ describe('allocation conservation and ranking', () => {
       address(4),
     ])
     expect(result.filter(({ source, tier }) => source === 'social' && tier === 'veteran')).toHaveLength(14)
-    expect(result.filter(({ source, tier }) => source === 'social' && tier === 'member')).toHaveLength(113)
+    expect(result.filter(({ source, tier }) => source === 'social' && tier === 'member')).toHaveLength(107)
     expect(new Set(result.map(({ address: value }) => value)).size).toBe(result.length)
     expect(reserved).toHaveLength(1)
   })

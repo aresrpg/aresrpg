@@ -44,6 +44,8 @@ export type TournamentRow = Readonly<{
   organizer: string
   format: 1 | 3 | 6
   start_before_ms: number
+  entry_fee_mist: string
+  max_level: number | null
   sui_bps: readonly number[]
   token_bps: readonly number[]
   sui_pool: string

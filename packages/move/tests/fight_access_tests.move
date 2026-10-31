@@ -84,3 +84,13 @@ fun a_group_side_refuses_the_plain_door() {
     fight::side_admission_for_testing(ACCESS_GROUP, option::none(), true, joiner, ctx);
     abort 0
 }
+
+#[test]
+#[expected_failure(abort_code = EGroupOnly, location = aresrpg::fight)]
+fun a_reserved_side_without_an_opener_fails_closed() {
+    let mut scenario = test_scenario::begin(@0x1);
+    fight::side_admission_for_testing(
+        ACCESS_INVITED, option::none(), false, object::id_from_address(@0xb0b), scenario.ctx(),
+    );
+    abort 0
+}

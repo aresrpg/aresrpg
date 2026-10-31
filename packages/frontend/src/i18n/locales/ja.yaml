@@ -451,6 +451,12 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  prices_legacy: '過去の日付は平均価格のみが記録されているため空白になります。ローソク足は新しく記録される取引日から表示されます。'
+  prices_ohlc: '始値 {{open}} · 高値 {{high}} · 安値 {{low}} · 終値 {{close}}'
+  floor_price: '出品中の最安値（×{{amount}}）'
+  floor_loading: '出品を確認中…'
+  floor_empty: 'この数量の公開出品はありません'
+  floor_unavailable: '出品価格を取得できません'
   add_funds: '入金'
   filter_all: 'すべてのカテゴリ'
   filter_empty: '該当なし。フィルターや検索語を変更してください。'
@@ -458,7 +464,7 @@ marketplace_page:
   type_count_hint: '公開出品されているアイテムの種類数'
   total_units: '総数量'
   market_cap: '時価総額'
-  market_cap_basis: '現存する総数量 × チャートの直近取引日の平均単価（手数料を除く）。'
+  market_cap_basis: '既存の総数量 × 最後に取引があった日の平均単価（手数料を除く）。'
   previous_page: 前へ
   next_page: 次へ
   prices_title: '価格履歴'
@@ -3094,6 +3100,15 @@ allocation_page:
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
 
 tournament_page:
+  level_limit_label: '登録時のレベル上限'
+  level_unrestricted: '制限なし'
+  level_limit_notice: '任意。登録時のみ確認します。その後のレベルアップは参加資格に影響しません。'
+  level_limit_amount: '登録時のレベル上限：{{level}}'
+  reason_level: 'このキャラクターは登録時のレベル上限を超えています。'
+  entry_fee_label: 'キャラクターごとの参加費（SUI）'
+  entry_fee_setting: '任意で、作成時に確定します。0なら参加登録は無料です。'
+  entry_fee_amount: 'キャラクターごとの参加費：{{amount}} SUI'
+  entry_fee_notice: '脱退や中止の場合も返金されません。半分は賞金プール、半分は国庫へ入り、端数は賞金プールに入ります。中止時の賞金プールは主催者に渡ります。'
   victory_title: '優勝しました！'
   placing_title: '{{place}}位に入賞しました'
   results: 'トーナメント結果'
@@ -3150,7 +3165,7 @@ tournament_page:
   create_event: 大会を作成
   start: 大会を開始
   setup_display: Displayの初回設定
-  deadline: 開始期限
+  deadline: '開始予定時刻'
   name: 名前
   format: 形式
   final: 決勝
@@ -3158,9 +3173,9 @@ tournament_page:
   roster_notice: 参加できるのは定員を満たしたチームのみです。登録すると試合への自動参加を許可します。各試合の参加期限は60秒です。接続を維持してください。
   donation_notice: 寄付は取り消せません。大会中止時の資金と未授与の賞金は主催者に送られます。返金は主催者が手動で行います。
   refund_pool: 未授与のKARESを主催者に返す
-  expire: 期限切れの参加登録を終了
+  expire: 'キャンセル：人数の揃ったチームが不足'
   character: キャラクター
-  action_expire: 期限切れの参加登録を終了
+  action_expire: 'キャンセル：人数の揃ったチームが不足'
   placement: 順位
   match_waiting: 待機中
   match_live: リアルタイム
@@ -3203,6 +3218,7 @@ tournament_page:
   action_open: 試合を開く
   action_join: 試合に参加
   action_start: 試合を開始
+  action_start_event: '大会を開始'
   action_record: 結果を記録
   action_end: 勝者なしで終了
   action_refund: KARES を主催者に返す
@@ -3263,7 +3279,7 @@ tournament_page:
   custody_kiosk: キオスク
   custody_fight: 戦闘中
   custody_trade: 取引中
-  latest_start_notice: 主催者はこの期限までの任意の時刻に開始できます。
+  latest_start_notice: 'この時刻以降は誰でも開始できます。管理者も待つ必要があります。'
   champion: '{{team}} の優勝'
   prize_pool: 賞金総額
   frozen_pool: 賞金総額 · 確定
@@ -3287,7 +3303,7 @@ tournament_page:
   contribution_confirmed: 寄付が確定しました。索引データが届くと総額が更新されます。
   transaction_confirmed: トランザクションが確定しました。索引データで大会情報が更新されます。
   cancelled_notice: 大会は中止されました。未使用資金は元の主催者に返却されます。
-  expired_notice: 開始期限を過ぎました。登録を締め切ることはできますが、大会は開始できません。
+  expired_notice: '参加登録は終了しました。人数の揃ったチームが十分なら開始し、不足ならキャンセルしてください。'
   open_event: '{{name}} 大会を開く'
   open_window: 大会を開く
   older_claims: 過去 {{count}} 大会に未受取報酬があります
@@ -3312,7 +3328,7 @@ tournament_page:
   minimum_teams: 定員に達したチームが最低 {{count}} チーム必要です。
   minimum_label: 最低完全チーム数
   minimum_notice: 通常は2チーム、3位・4位報酬には4チーム、5位報酬には8チーム必要です。両通貨とアイテム報酬が対象です。
-  immutable_notice: 作成すると形式、配分率、アイテム報酬、開始期限が固定され、変更できません。
+  immutable_notice: '大会のすべての設定は作成時に確定し、変更できません。'
   recipient_notice: 通貨は登録時の所有者に支払われます。対象キャラクターは各アイテムの設定個数を受け取ります。
   cancel_event: 大会を中止
   start_review: 開始すると定員到達チームと賞金総額が固定され、対戦相手が抽選され、最初の60秒間の入場受付が始まります。

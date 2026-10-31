@@ -9,6 +9,8 @@ export const tournament_fixture = (): TournamentRow => ({
   status: 'in_progress',
   organizer: 'admin',
   format: 3,
+  entry_fee_mist: '0',
+  max_level: null,
   start_before_ms: 10_000,
   sui_bps: [6000, 2500, 1000, 500, 0],
   token_bps: [6000, 2500, 1000, 500, 0],

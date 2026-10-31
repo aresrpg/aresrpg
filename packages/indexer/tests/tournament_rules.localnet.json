@@ -1,0 +1,20 @@
+{
+  "network": "isolated localnet",
+  "captured_at": "2026-10-29T16:40:11.359Z",
+  "object_id": "0x63b06676b2d9203bdb0ef3d709f2e7180f16d35b6ca4837b7067a16d27264615",
+  "version": "6272",
+  "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0515970ba18218ecca6ad7fb525f5315ccda2cc765bd055258f857b3305eb497::tournament::RulesKey,0x0515970ba18218ecca6ad7fb525f5315ccda2cc765bd055258f857b3305eb497::tournament::Rules>",
+  "digest": "GYqJMiY5bhyYjH64Nwd1ussHxi2Fz8m8T7Y7Ewdc8i3Q",
+  "parent": "0x076c1efd8546659bd9c878a5ff041ebd4272a072168ba4cbd5719bda518990e3",
+  "json": {
+    "id": "0x63b06676b2d9203bdb0ef3d709f2e7180f16d35b6ca4837b7067a16d27264615",
+    "name": {
+      "dummy_field": false
+    },
+    "value": {
+      "entry_fee_mist": "5",
+      "max_level": 1
+    }
+  },
+  "bcs": "63b06676b2d9203bdb0ef3d709f2e7180f16d35b6ca4837b7067a16d27264615000500000000000000010100"
+}

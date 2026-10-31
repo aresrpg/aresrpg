@@ -451,6 +451,12 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  prices_legacy: 'Older days contain averages only and appear blank. Candles start with newly recorded trading days.'
+  prices_ohlc: 'Open {{open}} · High {{high}} · Low {{low}} · Close {{close}}'
+  floor_price: 'Lowest listed price (×{{amount}})'
+  floor_loading: 'Checking listings…'
+  floor_empty: 'No public listing for this lot'
+  floor_unavailable: 'Listing price unavailable'
   add_funds: 'Add funds'
   filter_all: 'All categories'
   filter_empty: 'No matches. Try another filter or search.'
@@ -458,7 +464,7 @@ marketplace_page:
   type_count_hint: 'Distinct item types with public listings'
   total_units: 'Total units'
   market_cap: 'Market cap'
-  market_cap_basis: 'Total existing units × the chart’s latest traded-day average unit price, excluding fees.'
+  market_cap_basis: 'Total existing units × the latest traded-day average unit price, excluding fees.'
   previous_page: Previous
   next_page: Next
   prices_title: 'Price history'
@@ -3120,6 +3126,15 @@ allocation_page:
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
 
 tournament_page:
+  level_limit_label: 'Maximum registration level'
+  level_unrestricted: 'Unrestricted'
+  level_limit_notice: 'Optional. Checked only when registering; leveling afterward does not affect eligibility.'
+  level_limit_amount: 'Maximum level at registration: {{level}}'
+  reason_level: 'This character exceeds the registration level limit.'
+  entry_fee_label: 'Entry fee per character (SUI)'
+  entry_fee_setting: 'Optional, fixed at creation. Enter 0 for free registration.'
+  entry_fee_amount: 'Entry fee per character: {{amount}} SUI'
+  entry_fee_notice: 'Non-refundable, including withdrawal or cancellation. Half goes to the prize pool and half to the treasury; any rounding remainder goes to the pool. On cancellation, the pool goes to the organizer.'
   victory_title: 'You won 1st place!'
   placing_title: 'You placed #{{place}}'
   results: 'Tournament results'
@@ -3176,7 +3191,7 @@ tournament_page:
   create_event: Create tournament
   start: Start tournament
   setup_display: Set up Display once
-  deadline: Latest start
+  deadline: 'Scheduled start'
   name: Name
   format: Format
   final: Final
@@ -3184,7 +3199,7 @@ tournament_page:
   roster_notice: Only complete teams enter the tournament. Registration authorizes automatic match joining. Stay online; each match gives 60 seconds to join.
   donation_notice: Contributions are final. If cancelled, funds go to the organizer for any manual refunds. Unawarded prizes also go to the organizer.
   refund_pool: Return unused KARES to organizer
-  expire: Close expired registration
+  expire: 'Cancel: too few complete teams'
   teams: Teams
   bracket: Matches
   podium: Podium & prizes
@@ -3216,9 +3231,10 @@ tournament_page:
   action_open: Open match
   action_join: Join match
   action_start: Start match
+  action_start_event: 'Start the tournament'
   action_record: Record result
   action_end: End without winner
-  action_expire: Close expired registration
+  action_expire: 'Cancel: too few complete teams'
   action_refund: Return KARES to organizer
   return_fight: Return to fight
   claim_count: Claim {{count}} rewards
@@ -3285,7 +3301,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: In combat
   custody_trade: In trade
-  latest_start_notice: The organizer may start any time before this deadline.
+  latest_start_notice: 'Anyone can start at or after this time. Admins must also wait.'
   champion: '{{team}} win'
   prize_pool: Prize pool
   frozen_pool: Prize pool · frozen
@@ -3311,7 +3327,7 @@ tournament_page:
   close: Close
   transaction_confirmed: Transaction confirmed. The event refreshes with the indexed update.
   cancelled_notice: Tournament cancelled. Unused money returns to the original organizer.
-  expired_notice: The latest-start deadline has passed. Registration can be closed; the tournament cannot start.
+  expired_notice: 'Registration is closed. Start if enough teams are complete; otherwise cancel.'
   open_event: Open {{name}} tournament
   open_window: Open tournament
   older_claims: '{{count}} older events have rewards to claim'
@@ -3337,7 +3353,7 @@ tournament_page:
   minimum_teams: At least {{count}} complete teams are required.
   minimum_label: Minimum complete teams
   minimum_notice: Two teams are needed normally, four for third/fourth prizes, and eight for fifth-place prizes. Both currencies and item rewards count.
-  immutable_notice: Creating fixes the format, prize percentages, item rewards, and latest-start deadline. These settings cannot be edited.
+  immutable_notice: 'All tournament settings are fixed at creation and cannot be edited.'
   recipient_notice: Coins pay the registered owners. Every eligible character receives each configured item quantity.
   cancel_event: Cancel tournament
   start_review: Starting freezes complete rosters and prize totals, randomly pairs teams, and opens the first 60-second admission windows.

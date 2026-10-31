@@ -11,6 +11,8 @@ export type TournamentSettings = Readonly<{
   name: string
   format: 1 | 3 | 6
   start_before_ms: number
+  entry_fee_mist: bigint
+  max_level: number | null
   sui_bps: readonly number[]
   token_bps: readonly number[]
   rewards: readonly Readonly<{ template: string; place: number; amount: number }>[]
@@ -66,16 +68,16 @@ export const tournament_admin_actions = (
         (list, reward) => sdk.doors.tournament_add_reward(tx, { ...reward, rewards: list }),
         sdk.doors.tournament_rewards(tx, {})
       )
-      sdk.doors.tournament_create(tx, { ...settings, rewards })
+      sdk.doors.tournament_create_with_rules(tx, { ...settings, rewards })
       const receipt = await sdk.execute(tx)
       const event = receipt_event(receipt, '::tournament::TournamentUpdated')
       if (typeof event?.tournament !== 'string') throw new Error('Tournament creation receipt lacks its identity.')
       return Object.freeze({ digest: receipt_digest(receipt), tournament: event.tournament })
     },
-    start: async (tournament: string, admin: string) => {
-      await sdk.hydrate_unknown([tournament, admin])
+    start: async (tournament: string) => {
+      await sdk.hydrate_unknown([tournament])
       const tx = sdk.tx()
-      sdk.doors.start_tournament(tx, { tournament, admin })
+      sdk.doors.start_tournament(tx, { tournament })
       return sdk.execute(tx)
     },
     cancel: async (t: string, admin: string, pool?: string | null) => {

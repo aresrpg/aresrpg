@@ -63,6 +63,7 @@ const wallet = {
   is_transaction_idle: () => true,
   derive_character_id: (name: string) => `character-${name}`,
   tournament: {
+    start: (id: string) => record('start', { id }),
     donate: (id: string, asset: string, amount: bigint) => record('donate', { id, asset, amount }),
     join_team: (args: unknown) => record('join', args),
     create_team: (args: unknown) => record('create', args),

@@ -4,7 +4,7 @@
 // TradingView Lightweight Charts™ — Copyright (с) 2025 TradingView, Inc. https://www.tradingview.com/
 
 import { useEffect, useRef, useState } from 'react'
-import { ColorType, CrosshairMode, LineSeries, LineType, createChart } from 'lightweight-charts'
+import { ColorType, CrosshairMode, CandlestickSeries, createChart } from 'lightweight-charts'
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
 
 import type { CopyText } from '../i18n/copy.ts'
@@ -15,7 +15,7 @@ import { format_unit_price, price_date, type PricePoint } from './price_history_
 export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readonly PricePoint[]; text: CopyText }>) => {
   const element = useRef<HTMLDivElement>(null)
   const chart_ref = useRef<IChartApi | null>(null)
-  const series_ref = useRef<ISeriesApi<'Line'> | null>(null)
+  const series_ref = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const fitted_count = useRef(0)
   const [hovered_at, set_hovered] = useState<number | null>(null)
   const hovered = points.find(({ at_ms }) => at_ms === hovered_at) ?? null
@@ -50,18 +50,19 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
       },
       localization: { locale, priceFormatter: (value: number) => format_unit_price(value, locale) },
     })
-    const line = chart.addSeries(LineSeries, {
-      color: color('cyan'),
-      lineWidth: 2,
-      lineType: LineType.Curved,
-      pointMarkersVisible: false,
-      crosshairMarkerVisible: false,
+    const down_color = style.getPropertyValue('--aui-danger').trim()
+    const series = chart.addSeries(CandlestickSeries, {
+      upColor: color('cyan'),
+      downColor: down_color,
+      wickUpColor: color('cyan'),
+      wickDownColor: down_color,
+      borderVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
       priceFormat: { type: 'custom', minMove: 1e-12, formatter: (value: number) => format_unit_price(value, locale) },
     })
     chart_ref.current = chart
-    series_ref.current = line
+    series_ref.current = series
     fitted_count.current = 0
     const hover = ({ time }: Readonly<{ time?: unknown }>): void => {
       set_hovered(typeof time === 'number' ? time * 1000 : null)
@@ -76,12 +77,12 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
   }, [locale])
   useEffect(() => {
     const chart = chart_ref.current
-    const line = series_ref.current
-    if (!chart || !line) return
-    line.setData(
-      points.map(({ at_ms, value }) => {
+    const series = series_ref.current
+    if (!chart || !series) return
+    series.setData(
+      points.map(({ at_ms, candle }) => {
         const time = (at_ms / 1000) as UTCTimestamp
-        return value === null ? { time } : { time, value }
+        return candle === null ? { time } : { time, ...candle }
       })
     )
     // A new period fits once; incoming prices preserve the player's current zoom and scroll.
@@ -109,9 +110,14 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
         {hovered ? (
           <>
             {price_date(hovered.at_ms, locale)} ·{' '}
-            {hovered.value === null
-              ? text('prices_empty_day')
-              : `${format_unit_price(hovered.value, locale)} SUI · ${text('prices_units', { units: BigInt(hovered.bucket!.units).toLocaleString(locale) })}`}
+            {hovered.candle === null
+              ? text(hovered.bucket ? 'prices_legacy' : 'prices_empty_day')
+              : `${text('prices_ohlc', {
+                  open: format_unit_price(hovered.candle.open, locale),
+                  high: format_unit_price(hovered.candle.high, locale),
+                  low: format_unit_price(hovered.candle.low, locale),
+                  close: format_unit_price(hovered.candle.close, locale),
+                })} SUI · ${text('prices_units', { units: BigInt(hovered.bucket!.units).toLocaleString(locale) })}`}
           </>
         ) : null}
       </div>

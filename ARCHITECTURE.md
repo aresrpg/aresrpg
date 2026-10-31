@@ -496,20 +496,24 @@ are respected, while other failures are logged without replay. Bot image updates
 independent of the realtime server. Production images come from GHCR and cluster updates use Helmfile.
 
 Stackable price history folds completed public item sales into daily hashes in the same private Redis.
-Each item/day value retains exact decimal MIST, units and sale counts with its checkpoint in one
-atomic replacement; interrupted batches skip already-applied contributions. Absolute expiry retains
+Each item/day value retains exact decimal MIST, units, sale counts and per-unit OHLC with its checkpoint
+in one atomic replacement; interrupted batches skip already-applied contributions. OHLC endpoints retain
+exact sale MIST/unit ratios; checkpoint, transaction and event order define open and close.
+The optional OHLC field is absent on legacy average-only days. Those days remain readable and retain
+all totals, including further sales on an existing legacy day, without inventing missing extremes.
+Fresh daily records collect candles; no migration, second store or backfill is required. Absolute expiry retains
 365 days plus boundary-day padding. Existing indexers begin at their next processed checkpoint,
 recording their collection start without moving ingestion cursors or requesting a backfill. The server
 reads at most 366 fields in one pipeline for the selected item, pushes refreshed snapshots and marks
 uninitialized history unavailable. Server-local five-second samples share each selected item’s history
-read across viewers; periodic client observations refresh these samples only while items are viewed. The marketplace reducer owns selection and response identity;
-TradingView Lightweight Charts presents unit-weighted daily prices excluding fees in the existing
-purple palette. Listings and history occupy two columns when the detail pane fits, stacking below
-that width. The price line connects recorded daily averages across untraded dates; those dates remain unpriced
-in hover details, without fabricated sales or prices.
+read across viewers; server refreshes keep these samples current only while items are viewed. The marketplace reducer owns selection and response identity;
+TradingView Lightweight Charts presents daily per-unit candlesticks excluding fees in the existing
+palette. Listings and history occupy two columns when the detail pane fits, stacking below that width.
+Days without OHLC remain blank, whether untraded or legacy average-only records. Localized copy explains
+legacy gaps; hover details expose open, high, low, close and traded units without fabricated prices.
 The selected stackable item’s response carries price history and total existing indexed units across all custody independently.
 A bounded server-local cache shares supply reads for thirty seconds. Its header derives estimated market
-capitalization from that supply and the chart’s latest recorded daily average. Missing supply does not hide the chart,
+capitalization from that supply and the latest recorded unit-weighted daily average. Missing supply does not hide the chart,
 and missing price history does not hide known supply.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
@@ -557,7 +561,10 @@ departure and probes retain their zone broadcast. Listener retirement is synchro
 and world-window removal; it adds no Redis channels or retained presence roster. A failed shared snapshot
 closes affected sessions so normal reconnect rebuilds their subscriptions. Unverified transports and verifiers share one finite admission budget; a claimed
 address grants no capacity exemption. After readiness, graph events and narrow reads push deltas. The server validates identity, locality, rate,
-and relay voice, but it never becomes game authority.
+and relay voice, but it never becomes game authority. Read-budget exemptions match explicit cancellation packet types;
+unrelated client-supplied fields never grant an exemption. Fight observation reads retain only pending,
+identity-tokened requests for tracked characters. Cancellation, character removal and connection closure
+retire those tokens; late results cannot restore a released or replacement observation.
 The existing server-info heartbeat carries the fullnode's latest checkpoint timestamp and the
 elapsed server time since that read. The frontend clock reducer reconstructs the sample's monotonic
 observation time, so cache reuse does not make time run several seconds behind. Automated world
@@ -870,12 +877,19 @@ all results for that fight, including storage rebates. Results disclose the ledg
 Core owns each tournament’s fixed rosters, deadlines, linked fights and prize entitlements.
 The existing math package owns its bounded single-elimination bracket, byes, bronze match and
 joint fifth places. Admin creation fixes the organizer, 1/3/6-seat format, five-place asset splits,
-item templates and registration expiry. Owners consent to each character’s registration. A character
+item templates and the scheduled start timestamp (stored as `start_before_ms`).
+One immutable tournament-owned Rules child fixes the optional SUI fee per character and maximum
+registration level. A missing child means free, unrestricted registration for existing events.
+The level limit is checked only when registering; later progression never blocks match admission. Owners consent to each character’s registration. A character
 registers once, and one wallet cannot span teams. Open teams allow client-side filling; restricted
 teams admit only the named character IDs. Reused empty team slots increment their revision.
 
-Admin start freezes complete rosters and shuffles up to 64 teams. Each available match has sixty
-seconds for admission. After thirty minutes, anyone may crank an unfinished match to end it without
+Registration and contributions close at that timestamp. Nobody, including admins, can start earlier.
+At or after it, anyone may explicitly crank start when enough complete teams qualify. The crank
+freezes complete rosters and shuffles up to 64 teams. Public expiry may cancel only when too few
+complete teams qualify; admin cancellation remains available while open. Each available match has
+sixty seconds for admission, measured from its availability transaction, never the scheduled start.
+Characters must leave dungeon runs and settle or forfeit other fights before admission. After thirty minutes, anyone may crank an unfinished match to end it without
 a winner; until that crank executes, combat may complete normally. Existing Fight custody and combat
 handle partial attendance, readiness, forfeits and settlement. The placement banner exposes the existing tournament crank after the observed admission deadline, including with an empty opposing side. A single represented side wins by walkover;
 neither side attending produces no winner. Forfeiting the last present teammate concedes the match to
@@ -886,12 +900,17 @@ recovery preserve the tournament/match link.
 
 SUI prizes work without a currency binding. An optional KARES pool appears only on its first valid
 contribution. Core privately embeds the rewards package’s currency accounting value in that pool.
-Contributions close at start. Immutable totals determine per-seat payouts, including deterministic
+Contributions close at the scheduled start. Immutable totals determine per-seat payouts, including deterministic
 integer remainders. Coins pay registered owners; item claims use existing kiosk delivery. Claims
 are replay-protected independently per asset and item reward. Cancellation, unawarded places and
-rounding dust return to the original organizer. Tournaments charge no platform fee.
+rounding dust return to the original organizer. Successful registration pays its exact optional SUI
+fee atomically: half goes to the existing treasury and the rest, including odd-MIST rounding,
+joins the prize pool. Fees are non-refundable on withdrawal or cancellation; cancellation sends
+the pool share to the organizer under the same prize rule. Rewards owns shared integer prize
+arithmetic and the fee split; core owns the settings, eligibility, custody and claim authority.
 
-The indexer projects tournament and optional pool versions independently. The server pushes active
+The indexer projects the immutable Rules child onto its typed tournament parent without replacing
+parent-owned data. Tournament and optional pool versions are projected independently. The server pushes active
 events, results completed within the last twenty-four hours, the latest event and outstanding recovery claims.
 The indexer records completion from the checkpoint that changes a known running tournament to finished;
 later claims and replay never restart that clock. Legacy finished projections without that timestamp
@@ -1457,6 +1476,12 @@ and revisions match. Older-than-certified reads fail instead of authorizing repe
 `CONTENT_UPGRADES.md` for the operational ceremony.
 
 ### Marketplace
+
+Opening an item sale dialog requests one indexed snapshot of the lowest public asking price for each
+existing paid lot size. Own public listings contribute; private offers do not. Exact lot totals compare
+within the item type, independently of equipment rolls. The ordinary authenticated graph-read gate
+admits this correlated request. The marketplace reducer retains only the active dialog's snapshot;
+quantity changes select locally, and closing or replacing the dialog retires late replies.
 
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
 history. Category selection observes its shared listed-type projection. Category badges count distinct publicly

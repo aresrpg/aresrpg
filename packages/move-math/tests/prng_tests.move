@@ -52,3 +52,19 @@ fun scramble_and_mix_are_deterministic() {
 fun mix_masks_degenerate_u64_before_add() {
   assert!(mix(1, 18_446_744_073_709_551_615) == 1144304738, 0);
 }
+
+#[test]
+fun extracted_seed_stream_retains_the_reference_draw_order() {
+  assert!(aresrpg_math::prng::draw_many(0, 0).is_empty(), 0);
+  assert!(aresrpg_math::prng::draw_many(0, 4) == vector[1144304738, 1416247, 958946056, 627933444], 1);
+}
+
+#[test]
+fun byte_mixing_preserves_the_typescript_identity_seed_vectors() {
+  // Captured from packages/fight/src/prng.ts mix on 2026-10-29.
+  assert!(aresrpg_math::prng::mix_bytes(&vector[]) == 0, 0);
+  assert!(aresrpg_math::prng::mix_bytes(&vector[0]) == 1144304738, 1);
+  assert!(aresrpg_math::prng::mix_bytes(&vector[1,2,255]) == 3356188343, 2);
+  let bytes = vector::tabulate!(32, |i| i as u8);
+  assert!(aresrpg_math::prng::mix_bytes(&bytes) == 603632844, 3);
+}

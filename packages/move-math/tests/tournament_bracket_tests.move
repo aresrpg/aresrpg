@@ -141,3 +141,17 @@ fun availability_requires_chain_time() { let _ = bracket::new(entrants(2), 0); }
 fun unfinished_brackets_cannot_assign_prizes() { let m = bracket::new(entrants(2), 1); let _ = bracket::placement(&m, 0); }
 #[test, expected_failure(abort_code = 3301, location = aresrpg_math::tournament_bracket)]
 fun a_match_has_only_two_sides() { let m = bracket::new(entrants(2), 1); let _ = bracket::team(&m[0], 2); }
+
+#[test]
+fun immutable_settings_accept_supported_formats_and_optional_registration_levels() {
+  assert!(bracket::valid_settings(1, 1, 0, 2, 1, &option::none()), 0);
+  assert!(bracket::valid_settings(3, 80, 10, 2, 1, &option::some(1)), 1);
+  assert!(bracket::valid_settings(6, 80, 10, 2, 1, &option::some(200)), 2);
+  assert!(!bracket::valid_settings(2, 1, 0, 2, 1, &option::none()), 3);
+  assert!(!bracket::valid_settings(1, 0, 0, 2, 1, &option::none()), 4);
+  assert!(!bracket::valid_settings(1, 81, 0, 2, 1, &option::none()), 5);
+  assert!(!bracket::valid_settings(1, 1, 11, 2, 1, &option::none()), 6);
+  assert!(!bracket::valid_settings(1, 1, 0, 1, 1, &option::none()), 7);
+  assert!(!bracket::valid_settings(1, 1, 0, 2, 1, &option::some(0)), 8);
+  assert!(!bracket::valid_settings(1, 1, 0, 2, 1, &option::some(201)), 9);
+}

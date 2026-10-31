@@ -18,6 +18,7 @@ import { env } from '../env.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
+import { send_market_floor_request } from '../marketplace/floor_state.ts'
 import { market_price_subscription } from '../marketplace/price_history_state.ts'
 
 import { leaderboard_subscription, inspection_subscription } from './leaderboards.ts'
@@ -535,6 +536,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       link = connect_server({ session: state.session.wallet, dispatch })
       dispatch({ type: 'wallet/refresh' })
     }
+    send_market_floor_request({ state, link, dispatch, next_id })
     send_admin_dashboard_requests({
       state,
       previous,

@@ -16,7 +16,13 @@ import {
 import { action_key, type TournamentAction } from '../modules/tournament.ts'
 import { toast } from '../toast.ts'
 
-import { TournamentConfirm, TournamentDialog, TournamentOperationNotice } from './TournamentControls.tsx'
+import {
+  TournamentConfirm,
+  TournamentDialog,
+  TournamentOperationNotice,
+  TournamentEntryFee,
+  TournamentLevelLimit,
+} from './TournamentControls.tsx'
 import { character_label, team_initial, tournament_act, operation_status, tournament_name } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
@@ -181,7 +187,13 @@ export const TournamentTeams = ({
             set_intent(null)
           }}
         >
-          {intent.action.kind === 'join' && <p className="tourney-note">{t('roster_notice')}</p>}
+          {intent.action.kind === 'join' && (
+            <>
+              <p className="tourney-note">{t('roster_notice')}</p>
+              <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
+              <TournamentLevelLimit level={row.max_level} t={t} />
+            </>
+          )}
         </TournamentConfirm>
       )}
     </section>
@@ -268,6 +280,8 @@ export const CreateTournamentTeam = ({
         </label>
       )}
       {restricted && allowed_count > row.format && <p role="alert">{t('too_many_names', { count: row.format })}</p>}
+      <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
+      <TournamentLevelLimit level={row.max_level} t={t} />
       <p className="tourney-note">{t('consent_notice')}</p>
       <p className="tourney-note">{t('roster_notice')}</p>
       <footer className="tourney-dialog-actions">

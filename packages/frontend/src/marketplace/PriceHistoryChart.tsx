@@ -20,8 +20,14 @@ export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: str
   const current = prices.observation?.item_type === item_type
   const history = current ? prices.history : null
   const points = useMemo(() => (history ? price_points(history, days) : []), [history, days])
-  const available = points.some(({ value }) => value !== null)
+  const available = points.some(({ candle }) => candle !== null)
+  const legacy = points.some(({ bucket }) => bucket && !bucket.ohlc)
   const status = current ? prices.status : 'loading'
+  const empty_text = {
+    loading: 'prices_loading',
+    unavailable: 'prices_unavailable',
+    ready: legacy ? 'prices_legacy' : 'prices_empty',
+  }[status]
   return (
     <section
       aria-label={text('prices_title')}
@@ -45,13 +51,12 @@ export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: str
         </div>
       </div>
       <p className="mt-2 mb-5 text-[10px] tracking-wide text-muted uppercase">{text('prices_subtitle')}</p>
+      {available && legacy && <p className="mb-3 text-[10px] text-muted">{text('prices_legacy')}</p>}
       {available ? (
         <TradingViewPricePlot points={points} text={text} />
       ) : (
         <div className="flex min-h-64 items-center justify-center px-4 text-center text-xs text-muted" role="status">
-          {text(
-            status === 'loading' ? 'prices_loading' : status === 'unavailable' ? 'prices_unavailable' : 'prices_empty'
-          )}
+          {text(empty_text)}
         </div>
       )}
     </section>

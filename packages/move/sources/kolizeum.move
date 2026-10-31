@@ -146,7 +146,7 @@ public(package) fun join(
 
   lobby.pot.join(pledge_coin.into_balance());
   fight::join(fight, protected, kiosk, cap, character_id, side, 0, false, clock, ctx);
-  let placement_ms = placement_clock(
+  let placement_ms = placement_clock!(
     lobby.format,
     fight::side_players(fight, 0),
     fight::side_players(fight, 1),
@@ -240,7 +240,11 @@ fun destroy_empty(lobby: Kolizeum) {
   id.delete();
 }
 
-fun placement_clock(format: u64, side_a: u64, side_b: u64, now: u64): u64 {
+macro fun placement_clock($format: u64, $side_a: u64, $side_b: u64, $now: u64): u64 {
+  let format = $format;
+  let side_a = $side_a;
+  let side_b = $side_b;
+  let now = $now;
   if (side_a == format && side_b == format) now else 0
 }
 

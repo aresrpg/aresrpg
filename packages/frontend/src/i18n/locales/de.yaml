@@ -451,6 +451,12 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  prices_legacy: 'Ältere Tage enthalten nur Durchschnittswerte und bleiben leer. Kerzen beginnen mit neu erfassten Handelstagen.'
+  prices_ohlc: 'Eröffnung {{open}} · Hoch {{high}} · Tief {{low}} · Schluss {{close}}'
+  floor_price: 'Niedrigster Angebotspreis (×{{amount}})'
+  floor_loading: 'Angebote werden geprüft…'
+  floor_empty: 'Kein öffentliches Angebot für diese Menge'
+  floor_unavailable: 'Angebotspreis nicht verfügbar'
   add_funds: 'Guthaben hinzufügen'
   filter_all: 'Alle Kategorien'
   filter_empty: 'Keine Treffer. Versuche einen anderen Filter oder Suchbegriff.'
@@ -458,7 +464,7 @@ marketplace_page:
   type_count_hint: 'Verschiedene Gegenstandstypen mit öffentlichen Angeboten'
   total_units: 'Gesamte Einheiten'
   market_cap: 'Marktkapitalisierung'
-  market_cap_basis: 'Alle vorhandenen Einheiten × durchschnittlicher Stückpreis des letzten Handelstags im Diagramm, ohne Gebühren.'
+  market_cap_basis: 'Gesamte vorhandene Menge × durchschnittlicher Stückpreis des letzten Handelstags, ohne Gebühren.'
   previous_page: Zurück
   next_page: Weiter
   prices_title: 'Preisverlauf'
@@ -3117,6 +3123,15 @@ allocation_page:
   error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
 
 tournament_page:
+  level_limit_label: 'Höchstlevel bei Anmeldung'
+  level_unrestricted: 'Unbegrenzt'
+  level_limit_notice: 'Optional. Wird nur bei der Anmeldung geprüft; spätere Levelaufstiege ändern die Teilnahmeberechtigung nicht.'
+  level_limit_amount: 'Höchstlevel bei Anmeldung: {{level}}'
+  reason_level: 'Dieser Charakter überschreitet das Höchstlevel für die Anmeldung.'
+  entry_fee_label: 'Startgebühr je Charakter (SUI)'
+  entry_fee_setting: 'Optional, bei Erstellung festgelegt. 0 bedeutet kostenlose Anmeldung.'
+  entry_fee_amount: 'Startgebühr je Charakter: {{amount}} SUI'
+  entry_fee_notice: 'Nicht erstattbar, auch bei Austritt oder Absage. Je die Hälfte geht an den Preistopf und die Schatzkammer; Rundungsreste an den Preistopf. Bei Absage erhält der Veranstalter den Preistopf.'
   victory_title: 'Du hast den 1. Platz gewonnen!'
   placing_title: 'Du hast Platz {{place}} erreicht'
   results: 'Turnierergebnisse'
@@ -3173,7 +3188,7 @@ tournament_page:
   create_event: Turnier erstellen
   start: Turnier starten
   setup_display: Display einmal einrichten
-  deadline: Spätester Start
+  deadline: 'Geplanter Start'
   name: Name
   format: Format
   final: Finale
@@ -3181,9 +3196,9 @@ tournament_page:
   roster_notice: 'Nur vollständige Teams nehmen teil. Die Anmeldung erlaubt den automatischen Kampfbeitritt. Bleibe online: Für jeden Beitritt bleiben 60 Sekunden.'
   donation_notice: Beiträge sind endgültig. Bei Absage gehen Gelder für mögliche manuelle Erstattungen an den Veranstalter. Nicht vergebene Preise erhält ebenfalls der Veranstalter.
   refund_pool: Nicht vergebene KARES an den Veranstalter zurückgeben
-  expire: Abgelaufene Anmeldung schließen
+  expire: 'Absagen: zu wenige vollständige Teams'
   character: Charakter
-  action_expire: Abgelaufene Anmeldung schließen
+  action_expire: 'Absagen: zu wenige vollständige Teams'
   placement: Platzierung
   match_waiting: Wartet
   match_live: Live
@@ -3226,6 +3241,7 @@ tournament_page:
   action_open: Match öffnen
   action_join: Match beitreten
   action_start: Match starten
+  action_start_event: 'Turnier starten'
   action_record: Ergebnis eintragen
   action_end: Ohne Sieger beenden
   action_refund: KARES an Veranstalter zurückgeben
@@ -3286,7 +3302,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: Im Kampf
   custody_trade: Im Handel
-  latest_start_notice: Der Veranstalter kann jederzeit vor dieser Frist starten.
+  latest_start_notice: 'Ab diesem Zeitpunkt kann jeder starten. Auch Admins müssen warten.'
   champion: '{{team}} gewinnt'
   prize_pool: Preispool
   frozen_pool: Preispool · festgelegt
@@ -3310,7 +3326,7 @@ tournament_page:
   contribution_confirmed: Beitrag bestätigt. Der Pool aktualisiert sich mit den indexierten Daten.
   transaction_confirmed: Transaktion bestätigt. Die Veranstaltung aktualisiert sich mit den indexierten Daten.
   cancelled_notice: Turnier abgesagt. Nicht genutztes Geld geht an den ursprünglichen Veranstalter zurück.
-  expired_notice: Die Startfrist ist abgelaufen. Die Anmeldung kann geschlossen werden; das Turnier kann nicht mehr starten.
+  expired_notice: 'Die Anmeldung ist geschlossen. Bei genügend vollständigen Teams starten, sonst absagen.'
   open_event: Turnier {{name}} öffnen
   open_window: Turnier öffnen
   older_claims: In {{count}} älteren Veranstaltungen warten Belohnungen
@@ -3335,7 +3351,7 @@ tournament_page:
   minimum_teams: Mindestens {{count}} vollständige Teams erforderlich.
   minimum_label: Mindestzahl vollständiger Teams
   minimum_notice: Normalerweise sind zwei Teams nötig, vier für Preise auf Platz drei/vier und acht für Platz fünf. Beide Währungen und Gegenstände zählen.
-  immutable_notice: Die Erstellung legt Format, Preisanteile, Gegenstände und Startfrist fest. Diese Einstellungen können nicht geändert werden.
+  immutable_notice: 'Alle Turniereinstellungen werden bei der Erstellung festgelegt und können nicht geändert werden.'
   recipient_notice: Münzen gehen an die angemeldeten Besitzer. Jeder berechtigte Charakter erhält die festgelegte Menge jedes Gegenstands.
   cancel_event: Turnier absagen
   start_review: Der Start legt vollständige Teams und Preissummen fest, lost die Begegnungen aus und öffnet die ersten Eintrittsfenster von 60 Sekunden.

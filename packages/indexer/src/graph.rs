@@ -681,6 +681,37 @@ fn emit_field(
     let ckpt = view.ckpt;
     let outputs = view.outputs;
 
+    if key == game_key(game, "tournament::RulesKey") {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "tournament", "Tournament")
+        else {
+            return Ok(());
+        };
+        let field = decode::from_bytes::<Field<MarkerKey, decode::TournamentRules>>(o.bytes)
+            .map_err(|error| drift(key, o.id, error))?;
+        child_set(
+            cypher,
+            co_present,
+            "Tournament",
+            &parent,
+            ckpt,
+            &[
+                format!(
+                    "v.entry_fee_mist = {}",
+                    q(&field.value.entry_fee_mist.to_string())
+                ),
+                format!(
+                    "v.max_level = {}",
+                    field
+                        .value
+                        .max_level
+                        .map(|level| level.to_string())
+                        .unwrap_or_else(|| "NULL".into())
+                ),
+            ],
+        );
+        return Ok(());
+    }
+
     // ── Character DFs ──
     if key == game_key(game, "progression::HpKey") {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")

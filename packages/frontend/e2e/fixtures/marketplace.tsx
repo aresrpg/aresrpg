@@ -127,6 +127,11 @@ window.addEventListener('market-price-fixture-update', () => {
   })
 })
 
+const fixture_ohlc = (index: number, tiny: boolean) => {
+  const price = (delta: number) => ({ mist: tiny ? '1' : String(8_000_000 + index * 100_000 + delta), units: '1000' })
+  return { open: price(0), high: price(300_000), low: price(-200_000), close: price(index % 2 ? -100_000 : 200_000) }
+}
+
 const Fixture = () => {
   const pending = useAppStore(({ marketplace }) => marketplace.pending)
   const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
@@ -190,6 +195,9 @@ const Fixture = () => {
           units: '1000',
           sales: '1',
           checkpoint: index + 1,
+          ...(query.has('legacy') || (query.has('mixed-history') && index < 15)
+            ? {}
+            : { ohlc: fixture_ohlc(index, query.has('tiny')) }),
         })).filter((_, index) => (query.has('sparse') ? [10, 20].includes(index) : index !== 10 && index !== 11))
     dispatch_app({
       type: 'server/packet',

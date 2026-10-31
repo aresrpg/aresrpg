@@ -213,7 +213,7 @@ public(package) fun complete_if_eligible(
   if (
     mastery.quest_completed ||
     mastery.quest_epoch != ctx.epoch() ||
-    !completion_started_after_assignment(
+    !completion_started_after_assignment!(
       mastery.quest_started_ms,
       &mastery.quest_world,
       fight::placement_started_ms(fight_object),
@@ -289,12 +289,16 @@ fun assert_owner(mastery: &Mastery, ctx: &TxContext) {
   assert!(mastery.owner == ctx.sender(), ENotOwner);
 }
 
-fun completion_started_after_assignment(
-  quest_started_ms: u64,
-  quest_world: &String,
-  fight_started_ms: u64,
-  fight_world: &String,
+macro fun completion_started_after_assignment(
+  $quest_started_ms: u64,
+  $quest_world: &String,
+  $fight_started_ms: u64,
+  $fight_world: &String,
 ): bool {
+  let quest_started_ms = $quest_started_ms;
+  let quest_world = $quest_world;
+  let fight_started_ms = $fight_started_ms;
+  let fight_world = $fight_world;
   fight_started_ms > quest_started_ms && fight_world == quest_world
 }
 
@@ -328,7 +332,7 @@ public fun completion_scope_for_testing(
   fight_started_ms: u64,
   fight_world: String,
 ): bool {
-  completion_started_after_assignment(quest_started_ms, &quest_world, fight_started_ms, &fight_world)
+  completion_started_after_assignment!(quest_started_ms, &quest_world, fight_started_ms, &fight_world)
 }
 
 #[test_only]

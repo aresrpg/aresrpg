@@ -451,6 +451,12 @@ demo_page:
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
 marketplace_page:
+  prices_legacy: 'Les anciens jours ne contiennent que des moyennes et restent vides. Les bougies commencent avec les nouveaux jours de transactions.'
+  prices_ohlc: 'Ouverture {{open}} · Haut {{high}} · Bas {{low}} · Clôture {{close}}'
+  floor_price: 'Prix minimum proposé (×{{amount}})'
+  floor_loading: 'Recherche des offres…'
+  floor_empty: 'Aucune offre publique pour ce lot'
+  floor_unavailable: 'Prix indisponible'
   add_funds: 'Ajouter des fonds'
   filter_all: 'Toutes les catégories'
   filter_empty: 'Aucun résultat. Essayez un autre filtre ou une autre recherche.'
@@ -458,7 +464,7 @@ marketplace_page:
   type_count_hint: 'Types d’objets distincts en vente publique'
   total_units: 'Unités totales'
   market_cap: 'Capitalisation'
-  market_cap_basis: 'Total des unités existantes × prix unitaire moyen du dernier jour échangé sur le graphique, hors frais.'
+  market_cap_basis: 'Quantité totale existante × prix unitaire moyen du dernier jour de transactions, hors frais.'
   previous_page: Précédent
   next_page: Suivant
   prices_title: 'Historique des prix'
@@ -3122,6 +3128,15 @@ allocation_page:
   error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
 
 tournament_page:
+  level_limit_label: 'Niveau maximal à l’inscription'
+  level_unrestricted: 'Sans limite'
+  level_limit_notice: 'Facultatif. Vérifié uniquement à l’inscription ; gagner des niveaux ensuite ne change pas l’éligibilité.'
+  level_limit_amount: 'Niveau maximal à l’inscription : {{level}}'
+  reason_level: 'Ce personnage dépasse le niveau maximal d’inscription.'
+  entry_fee_label: 'Frais par personnage (SUI)'
+  entry_fee_setting: 'Facultatifs et fixés à la création. Saisissez 0 pour une inscription gratuite.'
+  entry_fee_amount: 'Frais par personnage : {{amount}} SUI'
+  entry_fee_notice: 'Non remboursables, même en cas de retrait ou d’annulation. La moitié va aux prix, l’autre au trésor ; le reliquat d’arrondi va aux prix. En cas d’annulation, les prix reviennent à l’organisateur.'
   victory_title: 'Vous avez remporté la 1re place !'
   placing_title: 'Vous avez terminé à la place {{place}}'
   results: 'Résultats du tournoi'
@@ -3178,7 +3193,7 @@ tournament_page:
   create_event: Créer un tournoi
   start: Démarrer le tournoi
   setup_display: Configurer Display une fois
-  deadline: Date limite de lancement
+  deadline: 'Début prévu'
   name: Nom
   format: Format
   final: Finale
@@ -3186,9 +3201,9 @@ tournament_page:
   roster_notice: 'Seules les équipes complètes participent. L’inscription autorise l’entrée automatique en combat. Restez connecté : chaque match laisse 60 secondes pour rejoindre.'
   donation_notice: Les contributions sont définitives. En cas d’annulation, les fonds reviennent à l’organisateur pour tout remboursement manuel. Les prix non attribués lui reviennent aussi.
   refund_pool: Rendre les KARES non attribués à l’organisateur
-  expire: Clore les inscriptions expirées
+  expire: 'Annuler : trop peu d’équipes complètes'
   character: Personnage
-  action_expire: Clore les inscriptions expirées
+  action_expire: 'Annuler : trop peu d’équipes complètes'
   placement: Classement
   match_waiting: En attente
   match_live: Direct
@@ -3231,6 +3246,7 @@ tournament_page:
   action_open: Ouvrir le match
   action_join: Rejoindre le match
   action_start: Démarrer le match
+  action_start_event: 'Démarrer le tournoi'
   action_record: Enregistrer le résultat
   action_end: Terminer sans vainqueur
   action_refund: Rendre les KARES à l’organisateur
@@ -3291,7 +3307,7 @@ tournament_page:
   custody_kiosk: Kiosque
   custody_fight: En combat
   custody_trade: En échange
-  latest_start_notice: L’organisateur peut démarrer à tout moment avant cette limite.
+  latest_start_notice: 'Tout le monde peut démarrer à partir de cette heure. Les admins doivent aussi attendre.'
   champion: Victoire de {{team}}
   prize_pool: Cagnotte
   frozen_pool: Cagnotte · figée
@@ -3315,7 +3331,7 @@ tournament_page:
   contribution_confirmed: Contribution confirmée. La cagnotte sera actualisée à l’arrivée de la mise à jour indexée.
   transaction_confirmed: Transaction confirmée. L’événement sera actualisé avec la mise à jour indexée.
   cancelled_notice: Tournoi annulé. L’argent inutilisé revient à l’organisateur d’origine.
-  expired_notice: La limite de démarrage est dépassée. Les inscriptions peuvent être closes ; le tournoi ne peut plus démarrer.
+  expired_notice: 'Les inscriptions sont closes. Démarrez si assez d’équipes sont complètes ; sinon, annulez.'
   open_event: Ouvrir le tournoi {{name}}
   open_window: Ouvrir le tournoi
   older_claims: '{{count}} anciens événements ont des récompenses à récupérer'
@@ -3340,7 +3356,7 @@ tournament_page:
   minimum_teams: Au moins {{count}} équipes complètes sont requises.
   minimum_label: Minimum d’équipes complètes
   minimum_notice: Deux équipes sont requises normalement, quatre pour les prix de troisième/quatrième place et huit pour la cinquième. Les deux monnaies et les objets comptent.
-  immutable_notice: La création fixe le format, les pourcentages, les objets et la limite de démarrage. Ces paramètres ne peuvent plus être modifiés.
+  immutable_notice: 'Tous les paramètres du tournoi sont fixés à la création et ne peuvent pas être modifiés.'
   recipient_notice: Les monnaies sont versées aux propriétaires inscrits. Chaque personnage éligible reçoit la quantité prévue de chaque objet.
   cancel_event: Annuler le tournoi
   start_review: Le démarrage fige les équipes complètes et les cagnottes, tire les rencontres au sort et ouvre les premières fenêtres d’entrée de 60 secondes.

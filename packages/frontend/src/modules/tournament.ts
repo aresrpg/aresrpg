@@ -52,11 +52,13 @@ export type TournamentAction =
   | Readonly<{ kind: 'donate'; asset: 'sui' | 'kares'; amount: bigint }>
   | Readonly<{ kind: 'coins'; team: number; seat: number }>
   | Readonly<{ kind: 'item'; team: number; seat: number; reward: number }>
+  | Readonly<{ kind: 'start' }>
   | Readonly<{ kind: 'expire' }>
   | Readonly<{ kind: 'refund' }>
 export type TournamentAdminAction =
   | Readonly<{ kind: 'create'; settings: TournamentSettings }>
-  | Readonly<{ kind: 'start' | 'cancel'; id: string; admin: string }>
+  | Readonly<{ kind: 'start'; id: string }>
+  | Readonly<{ kind: 'cancel'; id: string; admin: string }>
   | Readonly<{ kind: 'display' }>
 export type TournamentInput =
   | Readonly<{ type: 'tournament/admin'; action: TournamentAdminAction }>
@@ -266,6 +268,7 @@ const execute = (
   const character =
     'character' in action ? state.session.characters.find(({ id }) => id === action.character) : undefined
   const custody = character ? character_custody(character) : undefined
+  const entry_fee_mist = BigInt(t.entry_fee_mist)
   const sdk = wallet.tournament
   const handlers: {
     [Kind in TournamentAction['kind']]: (input: Extract<TournamentAction, { kind: Kind }>) => Promise<unknown>
@@ -277,6 +280,7 @@ const execute = (
         allowed: input.allowed,
         character_id: input.character,
         custody,
+        entry_fee_mist,
       }),
     join: (input) =>
       sdk.join_team({
@@ -285,6 +289,7 @@ const execute = (
         revision: input.revision,
         character_id: input.character,
         custody,
+        entry_fee_mist,
       }),
     find: (input) => {
       const team = open_team(t, input.character, wallet.address)
@@ -295,6 +300,7 @@ const execute = (
             revision: t.teams[team].revision,
             character_id: input.character,
             custody,
+            entry_fee_mist,
           })
         : sdk.create_team({
             tournament: t.id,
@@ -302,6 +308,7 @@ const execute = (
             allowed: [],
             character_id: input.character,
             custody,
+            entry_fee_mist,
           })
     },
     leave: (input) => sdk.leave_team(t.id, input.team, input.character),
@@ -331,6 +338,7 @@ const execute = (
         reward: input.reward,
         template: t.rewards[input.reward].template,
       }),
+    start: () => sdk.start(t.id),
     expire: () => sdk.expire(t.id, t.kares_pool),
     refund: () => (t.kares_pool ? sdk.refund_kares(t.id, t.kares_pool) : Promise.resolve()),
   }
@@ -442,7 +450,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         if (action.kind === 'display') return sdk.setup_display()
         if (action.kind === 'create') return sdk.create(action.settings)
         return action.kind === 'start'
-          ? sdk.start(action.id, action.admin)
+          ? sdk.start(action.id)
           : sdk.cancel(
               action.id,
               action.admin,

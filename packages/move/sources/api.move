@@ -1625,6 +1625,7 @@ public fun create_tournament_team(
   kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, clock: &Clock, ctx: &TxContext,
 ) {
   version.assert_latest();
+  tournament::assert_free_registration(tournament);
   tournament::create_team(tournament, name, allowed, kiosk.borrow<Character>(cap, character_id), clock, ctx);
 }
 
@@ -1633,16 +1634,30 @@ public fun join_tournament_team(
   character_id: ID, version: &Version, clock: &Clock, ctx: &TxContext,
 ) {
   version.assert_latest();
+  tournament::assert_free_registration(tournament);
   tournament::join_team(tournament, team, revision, kiosk.borrow<Character>(cap, character_id), clock, ctx);
 }
 
+/// Registration and its exact optional fee succeed or roll back together.
+public fun register_tournament(
+  tournament: &mut Tournament, team: Option<u64>, revision: u64, name: String, allowed: vector<ID>,
+  payment: Coin<SUI>, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID,
+  version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  tournament::pay_entry(tournament, payment, ctx);
+  let character = kiosk.borrow<Character>(cap, character_id);
+  if (team.is_some()) tournament::join_team(tournament, team.destroy_some(), revision, character, clock, ctx)
+  else tournament::create_team(tournament, name, allowed, character, clock, ctx);
+}
+
 entry fun start_tournament(
-  tournament: &mut Tournament, admin: &aresrpg_control::admin::AdminCap,
+  tournament: &mut Tournament,
   randomness: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext,
 ) {
-  version.assert_latest(); admin.verify(ctx);
+  version.assert_latest();
   let mut generator = randomness.new_generator(ctx);
-  tournament::start(tournament, admin, &mut generator, clock, ctx);
+  tournament::start(tournament, &mut generator, clock);
 }
 
 fun tournament_character_available(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, clock: &Clock) {

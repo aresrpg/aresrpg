@@ -67,3 +67,49 @@ fun the_same_character_cannot_collect_twice() {
   funds::claim(&mut pool, @0x1.to_id(), @0xA, 1, &mut ctx);
   funds::claim(&mut pool, @0x1.to_id(), @0xA, 1, &mut ctx); abort 999
 }
+
+
+#[test]
+fun free_and_one_mist_entries_do_not_create_zero_treasury_coins() {
+  let mut s = test_scenario::begin(@0xA);
+  let mut prizes = sui::balance::zero<SUI>();
+  funds::pay_entry(&mut prizes, coin::zero<SUI>(s.ctx()), 0, @0xB, s.ctx());
+  funds::pay_entry(&mut prizes, coin::mint_for_testing<SUI>(1, s.ctx()), 1, @0xB, s.ctx());
+  assert!(prizes.value() == 1, 1);
+  s.next_tx(@0xA);
+  assert!(!test_scenario::has_most_recent_for_address<coin::Coin<SUI>>(@0xB), 2);
+  coin::burn_for_testing(prizes.into_coin(s.ctx()));
+  s.end();
+}
+
+#[test, expected_failure(abort_code = 3, location = aresrpg_rewards::tournament_rewards)]
+fun entry_fee_rejects_a_mismatched_payment() {
+  let mut ctx = tx_context::dummy();
+  let mut prizes = sui::balance::zero<SUI>();
+  funds::pay_entry(&mut prizes, coin::mint_for_testing<SUI>(9, &mut ctx), 10, @0xB, &mut ctx);
+  abort 999
+}
+
+#[test]
+fun an_even_entry_fee_pays_exactly_half_to_each_recipient() {
+  let mut s = test_scenario::begin(@0xA);
+  let mut prizes = sui::balance::zero<SUI>();
+  funds::pay_entry(&mut prizes, coin::mint_for_testing<SUI>(10, s.ctx()), 10, @0xB, s.ctx());
+  assert!(prizes.value() == 5, 0);
+  s.next_tx(@0xA);
+  let cut = s.take_from_address<coin::Coin<SUI>>(@0xB);
+  assert!(cut.value() == 5, 1);
+  coin::burn_for_testing(cut);
+  coin::burn_for_testing(prizes.into_coin(s.ctx()));
+  s.end();
+}
+
+#[test]
+fun prize_calculations_conserve_rounding_and_accept_the_full_u64_range() {
+  let total = 18_446_744_073_709_551_615;
+  assert!(funds::portion(total, 10000) == total, 0);
+  assert!(funds::portion(total, 5000) == total / 2, 1);
+  assert!(funds::portion(1007, 5000) == 503, 2);
+  assert!(funds::share(5, 3, 0) == 2 && funds::share(5, 3, 1) == 2 && funds::share(5, 3, 2) == 1, 3);
+  assert!(funds::share(0, 3, 0) == 0, 4);
+}

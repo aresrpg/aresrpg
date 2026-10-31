@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useEffect } from 'react'
 import { Button } from '@aresrpg/ui'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
@@ -9,7 +10,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { Text } from '../i18n/Text.tsx'
 import { useAppStore } from '../store.ts'
 
-import { useMarketCraftSession } from './MarketSource.tsx'
+import { useMarketCraftSession, useMarketDispatch, useMarketState } from './MarketSource.tsx'
 import { item_listing, character_listing, type Selection, type useMarketSell } from './useMarketSell.ts'
 import { CategoryName, listing_name, ListingIcon, SuiUnit } from './marketplace_model.tsx'
 
@@ -30,6 +31,9 @@ export const SaleDialog = ({
       <div className="aui-market-port market-sale-form min-h-0 overflow-y-auto p-4" data-sale-scroll>
         <div className="rounded-[5px] border border-border bg-surface-high p-4">
           <SelectedCard selected={selected} />
+          {selected.kind === 'item' && (
+            <LowestPrice item_type={selected.row.item_type} amount={stackable ? lot : 1} sale={sale} text={text} />
+          )}
           <label
             htmlFor="market-sale-price"
             className="mt-4 block text-[8px] tracking-[0.18em] text-[#6b7280] uppercase"
@@ -123,5 +127,40 @@ const SelectedCard = ({ selected }: Readonly<{ selected: Selection }>) => {
         </p>
       </div>
     </div>
+  )
+}
+
+const LowestPrice = ({
+  item_type,
+  amount,
+  sale,
+  text,
+}: Readonly<{
+  item_type: string
+  amount: number
+  sale: ReturnType<typeof useMarketSell>
+  text: CopyText
+}>) => {
+  const dispatch = useMarketDispatch()
+  const { floor } = useMarketState()
+  useEffect(() => {
+    dispatch({ type: 'market/floor_selected', item_type })
+    return () => dispatch({ type: 'market/floor_selected', item_type: null })
+  }, [dispatch, item_type])
+  const current = floor?.item_type === item_type ? floor : null
+  const price = current?.prices[String(amount)]
+  const message =
+    !current || current.status === 'loading'
+      ? text('floor_loading')
+      : current.status === 'unavailable'
+        ? text('floor_unavailable')
+        : price === undefined
+          ? text('floor_empty')
+          : `${sale.localized_numbers.sui(BigInt(price), 9)} SUI`
+  return (
+    <p className="mt-3 flex flex-wrap justify-between gap-2 text-[10px] text-muted" role="status">
+      <span>{text('floor_price', { amount })}</span>
+      <span className="text-[#67adff]">{message}</span>
+    </p>
   )
 }

@@ -451,6 +451,12 @@ demo_page:
   control_hint: Clique na tela · WASD para mover · Espaço para pular · Mouse para olhar
   back: Voltar ao aplicativo
 marketplace_page:
+  prices_legacy: 'Os dias antigos contêm apenas médias e ficam em branco. As velas começam nos novos dias de negociação registrados.'
+  prices_ohlc: 'Abertura {{open}} · Máxima {{high}} · Mínima {{low}} · Fechamento {{close}}'
+  floor_price: 'Menor preço anunciado (×{{amount}})'
+  floor_loading: 'Consultando ofertas…'
+  floor_empty: 'Nenhuma oferta pública para este lote'
+  floor_unavailable: 'Preço indisponível'
   add_funds: 'Adicionar fundos'
   filter_all: 'Todas as categorias'
   filter_empty: 'Nenhum resultado. Tente outro filtro ou pesquisa.'
@@ -458,7 +464,7 @@ marketplace_page:
   type_count_hint: 'Tipos de itens distintos com ofertas públicas'
   total_units: 'Unidades totais'
   market_cap: 'Capitalização'
-  market_cap_basis: 'Total de unidades existentes × preço unitário médio do último dia com vendas no gráfico, sem taxas.'
+  market_cap_basis: 'Total de unidades existentes × preço médio por unidade do último dia de negociação, sem taxas.'
   previous_page: Anterior
   next_page: Seguinte
   prices_title: Histórico de preços
@@ -3079,6 +3085,15 @@ allocation_page:
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
 
 tournament_page:
+  level_limit_label: 'Nível máximo na inscrição'
+  level_unrestricted: 'Sem limite'
+  level_limit_notice: 'Opcional. Verificado apenas na inscrição; subir de nível depois não afeta a participação.'
+  level_limit_amount: 'Nível máximo na inscrição: {{level}}'
+  reason_level: 'Este personagem excede o nível máximo de inscrição.'
+  entry_fee_label: 'Taxa por personagem (SUI)'
+  entry_fee_setting: 'Opcional e fixada na criação. Digite 0 para inscrição gratuita.'
+  entry_fee_amount: 'Taxa por personagem: {{amount}} SUI'
+  entry_fee_notice: 'Não reembolsável, mesmo em caso de saída ou cancelamento. Metade vai para os prêmios e metade para o tesouro; o resto do arredondamento vai para os prêmios. No cancelamento, os prêmios vão para o organizador.'
   victory_title: 'Você conquistou o 1º lugar!'
   placing_title: 'Você ficou em {{place}}º lugar'
   results: 'Resultados do torneio'
@@ -3135,7 +3150,7 @@ tournament_page:
   create_event: Criar torneio
   start: Iniciar torneio
   setup_display: Configurar Display uma vez
-  deadline: Prazo para iniciar
+  deadline: 'Início agendado'
   name: Nome
   format: Formato
   final: Final
@@ -3143,9 +3158,9 @@ tournament_page:
   roster_notice: 'Apenas equipes completas participam. A inscrição autoriza a entrada automática em combate. Fique conectado: há 60 segundos para entrar em cada partida.'
   donation_notice: As contribuições são definitivas. Em caso de cancelamento, os fundos vão ao organizador para eventuais reembolsos manuais. Prêmios não atribuídos também vão ao organizador.
   refund_pool: Devolver KARES não atribuídos ao organizador
-  expire: Encerrar inscrições expiradas
+  expire: 'Cancelar: poucas equipes completas'
   character: Personagem
-  action_expire: Encerrar inscrições expiradas
+  action_expire: 'Cancelar: poucas equipes completas'
   placement: Classificação
   match_waiting: Aguardando
   match_live: Ao vivo
@@ -3188,6 +3203,7 @@ tournament_page:
   action_open: Abrir partida
   action_join: Entrar na partida
   action_start: Iniciar partida
+  action_start_event: 'Iniciar torneio'
   action_record: Registrar resultado
   action_end: Encerrar sem vencedor
   action_refund: Devolver KARES ao organizador
@@ -3248,7 +3264,7 @@ tournament_page:
   custody_kiosk: Quiosque
   custody_fight: Em combate
   custody_trade: Em troca
-  latest_start_notice: O organizador pode iniciar a qualquer momento antes deste prazo.
+  latest_start_notice: 'Qualquer pessoa pode iniciar a partir deste horário. Administradores também devem esperar.'
   champion: '{{team}} vence'
   prize_pool: Fundo de prêmios
   frozen_pool: Fundo de prêmios · fixado
@@ -3272,7 +3288,7 @@ tournament_page:
   contribution_confirmed: Contribuição confirmada. O fundo será atualizado quando chegarem os dados indexados.
   transaction_confirmed: Transação confirmada. O evento será atualizado com os dados indexados.
   cancelled_notice: Torneio cancelado. O dinheiro não utilizado retorna ao organizador original.
-  expired_notice: O prazo para iniciar passou. As inscrições podem ser encerradas; o torneio não pode mais começar.
+  expired_notice: 'As inscrições estão encerradas. Inicie se houver equipes completas suficientes; caso contrário, cancele.'
   open_event: Abrir torneio {{name}}
   open_window: Abrir torneio
   older_claims: '{{count}} eventos anteriores têm recompensas pendentes'
@@ -3297,7 +3313,7 @@ tournament_page:
   minimum_teams: São necessárias pelo menos {{count}} equipes completas.
   minimum_label: Mínimo de equipes completas
   minimum_notice: Normalmente são necessárias duas equipes; quatro para prêmios de terceiro/quarto lugar e oito para quinto. Ambas as moedas e os itens contam.
-  immutable_notice: A criação fixa o formato, as porcentagens, os itens e o prazo para iniciar. Essas configurações não podem ser alteradas.
+  immutable_notice: 'Todas as configurações do torneio são fixadas na criação e não podem ser alteradas.'
   recipient_notice: As moedas são pagas aos donos inscritos. Cada personagem elegível recebe a quantidade configurada de cada item.
   cancel_event: Cancelar torneio
   start_review: O início fixa as equipes completas e os totais, sorteia os confrontos e abre as primeiras janelas de entrada de 60 segundos.

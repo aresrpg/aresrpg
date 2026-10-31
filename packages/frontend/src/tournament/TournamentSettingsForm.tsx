@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useMemo, useState } from 'react'
 import { Button } from '@aresrpg/ui'
-import { item_is_stackable } from '@aresrpg/immutable'
+import { item_is_stackable, max_level as MAX_LEVEL } from '@aresrpg/immutable'
 import type { TournamentSettings } from '@aresrpg/sdk/tournament-admin'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -10,8 +10,10 @@ import { item_icon } from '../content/assets.ts'
 import { SearchPickerModal } from '../components/SearchPickerModal.tsx'
 import { rolled_item_types } from '../modules/claims.ts'
 import type { CopyText } from '../i18n/copy.ts'
+import { parse_kolizeum_pledge } from '../modules/kolizeum.ts'
 import { minimum_tournament_teams } from '../modules/tournament_selectors.ts'
 
+import { TournamentEntryFee } from './TournamentControls.tsx'
 import { parse_prize_percentages, prize_percentage_balance } from './percentages.ts'
 import { tournament_item, TournamentReward } from './TournamentReward.tsx'
 
@@ -21,6 +23,8 @@ export type TournamentDraft = Readonly<{
   name: string
   format: 1 | 3 | 6
   deadline: string
+  entry_fee: string
+  level_limit: string
   sui: readonly string[]
   kares: readonly string[]
   rewards: readonly Reward[]
@@ -30,10 +34,18 @@ export const initial_tournament_draft = (): TournamentDraft => ({
   name: '',
   format: 3,
   deadline: '',
+  entry_fee: '0',
+  level_limit: '',
   sui: ['60', '25', '10', '5', '0'],
   kares: ['60', '25', '10', '5', '0'],
   rewards: [],
 })
+
+export const parse_level_limit = (value: string): number | null | undefined => {
+  if (value.trim() === '') return null
+  const level = Number(value)
+  return [Number.isInteger(level), level >= 1, level <= MAX_LEVEL].every(Boolean) ? level : undefined
+}
 
 const AllocationBalance = ({
   values,
@@ -229,10 +241,12 @@ export const TournamentSettingsForm = ({
   review: (settings: TournamentSettings) => void
   t: CopyText
 }>) => {
-  const { name, format, deadline, sui, kares, rewards } = draft
+  const { name, format, deadline, entry_fee, level_limit, sui, kares, rewards } = draft
   const sui_bps = parse_prize_percentages(sui)
   const token_bps = parse_prize_percentages(kares)
   const start_before_ms = Date.parse(deadline)
+  const entry_fee_mist = parse_kolizeum_pledge(entry_fee)
+  const max_level = parse_level_limit(level_limit)
   const valid = [
     name.trim().length > 0,
     new TextEncoder().encode(name.trim()).length <= 80,
@@ -241,6 +255,9 @@ export const TournamentSettingsForm = ({
     sui_bps !== null,
     token_bps !== null,
     valid_tournament_rewards(rewards),
+    entry_fee_mist !== null,
+    max_level !== undefined,
+    (entry_fee_mist ?? 0n) < 1n << 64n,
     /^0x[\da-f]{1,64}$/i.test(admin),
   ].every(Boolean)
   const minimum = sui_bps && token_bps ? minimum_tournament_teams({ sui_bps, token_bps, rewards }) : null
@@ -273,6 +290,28 @@ export const TournamentSettingsForm = ({
           </label>
           <small>{t('timezone', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</small>
           <p className="tourney-note">{t('latest_start_notice')}</p>
+          <label className="aui-field">
+            {t('entry_fee_label')}
+            <input
+              inputMode="decimal"
+              value={entry_fee}
+              onChange={(event) => change({ ...draft, entry_fee: event.target.value })}
+            />
+          </label>
+          <p className="tourney-note">{t('entry_fee_setting')}</p>
+          <label className="aui-field">
+            {t('level_limit_label')}
+            <input
+              type="number"
+              min={1}
+              max={MAX_LEVEL}
+              step={1}
+              placeholder={t('level_unrestricted')}
+              value={level_limit}
+              onChange={(event) => change({ ...draft, level_limit: event.target.value })}
+            />
+          </label>
+          <p className="tourney-note">{t('level_limit_notice')}</p>
         </section>
         <PrizeSplit
           sui={sui}
@@ -284,6 +323,7 @@ export const TournamentSettingsForm = ({
         <RewardSettings rewards={rewards} change={(rewards) => change({ ...draft, rewards })} t={t} />
       </div>
       <div className="tourney-admin-review tourney-create-summary">
+        {entry_fee_mist !== null && <TournamentEntryFee amount={entry_fee_mist} t={t} />}
         <p>{minimum === null ? t('invalid_percentage') : t('minimum_teams', { count: minimum })}</p>
         <p className="tourney-note">{t('minimum_notice')}</p>
         <p className="tourney-note">{t('immutable_notice')}</p>
@@ -292,7 +332,17 @@ export const TournamentSettingsForm = ({
           disabled={disabled || !valid}
           onClick={() => {
             if (valid && sui_bps && token_bps)
-              review({ admin, name: name.trim(), format, start_before_ms, sui_bps, token_bps, rewards })
+              review({
+                admin,
+                name: name.trim(),
+                format,
+                start_before_ms,
+                entry_fee_mist: entry_fee_mist!,
+                max_level: max_level!,
+                sui_bps,
+                token_bps,
+                rewards,
+              })
           }}
         >
           {t('create_event')}

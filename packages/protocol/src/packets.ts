@@ -759,6 +759,7 @@ export type ClientPackets = {
   /** Browse intent — folds the observed category into state; the server pushes the slice and
    *  streams its deltas while observed. Null stops observing. Not a query: state, then push. */
   'packet/leaderboard_observe': { observation: LeaderboardObservation | null }
+  'packet/market_floor_request': { id: number; item_type: string }
   'packet/market_prices_observe': { observation: MarketPriceObservation | null }
   'packet/market_observe': { observation: MarketObservation | null }
   /** Commit this character as a spectator of one nearby fight. */
@@ -914,6 +915,7 @@ export type ServerPackets = {
   'packet/inspection_error': { id: number }
   'packet/leaderboard': { snapshot: LeaderboardSnapshot }
   'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
+  'packet/market_floor': { id: number; prices: Readonly<Record<string, string>> }
   'packet/market_slice': MarketPage & { observation: MarketObservation }
   'packet/market_counts': { observation: MarketObservation; counts: MarketTypeCounts | null }
   'packet/market_types': { observation: MarketObservation; items: readonly MarketType[] }
@@ -997,6 +999,7 @@ export const FIGHT_PACKETS = [
 ] as const
 
 export const MARKET_PACKETS = [
+  'packet/market_floor',
   'packet/listings',
   'packet/market_slice',
   'packet/market_counts',
@@ -1071,6 +1074,7 @@ void UNROUTED_SERVER_PACKETS
 
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
+  'packet/market_floor_request',
   'packet/allocation_request',
   'packet/signature_response',
   'packet/track_character',
@@ -1275,6 +1279,13 @@ const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<stri
 ])
 
 const REQUEST_PARSERS = new Map<string, (packet: Record<string, unknown>) => ClientPacket>([
+  [
+    'packet/market_floor_request',
+    (packet) => {
+      const query = parse_market_price_observation({ id: packet.id, item_type: packet.item_type })!
+      return { type: 'packet/market_floor_request', ...query }
+    },
+  ],
   ['packet/character_owner_request', parse_character_owner_request],
   ['packet/admin_request', parse_admin_request_packet],
   [

@@ -79,7 +79,8 @@ fun prizes_conserve_both_assets_and_include_all_registered_seats() {
   scenario.next_tx(ADMIN);
   let version = scenario.take_shared<version::Version>();
   let randomness = scenario.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, scenario.ctx());
+  clock::increment_for_testing(&mut clock, 999_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, scenario.ctx());
   test_scenario::return_shared(randomness);
   let mut matches = tournament::matches_for_testing(&t);
   while (!bracket::done(&matches)) {
@@ -131,7 +132,8 @@ fun unopened_matches_expire_without_a_fight_or_admin() {
   scenario.next_tx(ADMIN);
   let version = scenario.take_shared<version::Version>();
   let randomness = scenario.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, scenario.ctx());
+  clock::increment_for_testing(&mut clock, 999_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, scenario.ctx());
   test_scenario::return_shared(randomness);
   clock::increment_for_testing(&mut clock, 60_000);
   scenario.next_tx(@0x999);
@@ -158,14 +160,15 @@ fun cancellation_returns_donations_to_the_original_organizer() {
 }
 
 fun coin_refusal(no_winner: bool, early: bool) {
-  let (mut s, mut t, admin, version, mut clock) = setup(1, vector[10_000,0,0,0,0]);
+  let (mut s, mut t, _admin, version, mut clock) = setup(1, vector[10_000,0,0,0,0]);
   test_scenario::return_shared(version);
   register(&mut t, 0, 1, &clock, &mut s);
   register(&mut t, 1, 1, &clock, &mut s);
   s.next_tx(ADMIN);
   let version = s.take_shared<version::Version>();
   let randomness = s.take_shared<random::Random>();
-  api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+  clock::increment_for_testing(&mut clock, 999_000);
+  api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
   if (early) { tournament::crank_unopened(&mut t, 0, &version, &clock, s.ctx()); abort 999 };
   clock::increment_for_testing(&mut clock, 60_000);
   if (no_winner) {
@@ -239,7 +242,8 @@ fun refuse_pool(mode: PoolRefusal) {
       s.next_tx(ADMIN);
       let version = s.take_shared<version::Version>();
       let randomness = s.take_shared<random::Random>();
-      api::start_tournament(&mut t, &admin, &randomness, &version, &clock, s.ctx());
+      clock::increment_for_testing(&mut clock, 999_000);
+      api::start_tournament(&mut t, &randomness, &version, &clock, s.ctx());
       clock::increment_for_testing(&mut clock, 60000);
       tournament::crank_unopened(&mut t, 0, &version, &clock, s.ctx());
       tournament::claim_kares(&t, &mut pool, 0, 0, &version, s.ctx());

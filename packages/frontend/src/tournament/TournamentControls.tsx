@@ -186,6 +186,19 @@ export const TournamentActionButton = ({
   )
 }
 
+export const TournamentLevelLimit = ({ level, t }: Readonly<{ level: number | null; t: CopyText }>) =>
+  level === null ? null : <p className="tourney-note">{t('level_limit_amount', { level })}</p>
+
+export const TournamentEntryFee = ({ amount, t }: Readonly<{ amount: bigint; t: CopyText }>) => {
+  const numbers = useNumbers()
+  return (
+    <div className="tourney-note">
+      <p>{t('entry_fee_amount', { amount: numbers.sui(amount, 9) })}</p>
+      {amount > 0n && <p>{t('entry_fee_notice')}</p>}
+    </div>
+  )
+}
+
 export const TournamentIntentReview = ({
   row,
   action,
@@ -242,7 +255,13 @@ export const TournamentIntentReview = ({
             .join(' — ')}
         </p>
       )}
-      {action.kind !== 'crank' && <p className="tourney-note">{t('roster_notice')}</p>}
+      {action.kind !== 'crank' && (
+        <>
+          <p className="tourney-note">{t('roster_notice')}</p>
+          <TournamentEntryFee amount={BigInt(row.entry_fee_mist)} t={t} />
+          <TournamentLevelLimit level={row.max_level} t={t} />
+        </>
+      )}
     </TournamentConfirm>
   )
 }

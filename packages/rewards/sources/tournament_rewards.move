@@ -4,11 +4,12 @@
 /// only that owning module can supply this mutable reference. No new capability or global state.
 module aresrpg_rewards::tournament_rewards;
 
-use sui::{balance::Balance, coin::Coin, vec_set::{Self, VecSet}};
+use sui::{balance::Balance, coin::Coin, sui::SUI, vec_set::{Self, VecSet}};
 
 const EPhase: u64 = 0;
 const EClaimed: u64 = 1;
 const EEmpty: u64 = 2;
+const EEntryFee: u64 = 3;
 
 public struct Funds<phantom Token> has store {
   balance: Balance<Token>,
@@ -58,4 +59,21 @@ fun pay<Token>(funds: &mut Funds<Token>, amount: u64, recipient: address, ctx: &
 public fun destroy_for_testing<Token>(funds: Funds<Token>) {
   let Funds { balance, .. } = funds;
   balance.destroy_zero();
+}
+
+
+/// Only successful registration retains this immediate 50/50 split; its caller owns roster validation.
+public fun pay_entry(prizes: &mut Balance<SUI>,
+  payment: Coin<SUI>, expected: u64, treasury: address, ctx: &mut TxContext) {
+  let amount = payment.value();
+  assert!(amount == expected, EEntryFee);
+  prizes.join(payment.into_balance());
+  let cut = amount / 2;
+  if (cut > 0) transfer::public_transfer(prizes.split(cut).into_coin(ctx), treasury);
+}
+
+public fun portion(total: u64, bps: u64): u64 { ((total as u128) * (bps as u128) / 10_000) as u64 }
+
+public fun share(amount: u64, count: u64, ordinal: u64): u64 {
+  amount / count + if (ordinal < amount % count) 1 else 0
 }

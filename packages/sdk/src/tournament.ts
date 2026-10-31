@@ -20,20 +20,33 @@ export const tournament_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk
     return sdk.execute(tx, { gas_scope: `tournament:${ids[0]}` })
   }
   return Object.freeze({
+    start: (tournament: string) => submit([tournament], (tx) => sdk.doors.start_tournament(tx, { tournament })),
     create_team: async (
       args: Readonly<{
         tournament: string
         name: string
         allowed: readonly string[]
         character_id: string
+        entry_fee_mist?: bigint
         custody?: KioskCustody
       }>
     ) => {
       await sdk.hydrate_unknown([args.tournament])
-      return with_kiosk((tx, kiosk, cap) => sdk.doors.create_tournament_team(tx, { ...args, kiosk, cap }), {
-        custody: args.custody,
-        gas_scope: `tournament:${args.tournament}`,
-      })
+      return with_kiosk(
+        (tx, kiosk, cap) =>
+          sdk.doors.register_tournament(tx, {
+            ...args,
+            team: null,
+            revision: 0,
+            payment: sdk.coin_of(tx, args.entry_fee_mist ?? 0n),
+            kiosk,
+            cap,
+          }),
+        {
+          custody: args.custody,
+          gas_scope: `tournament:${args.tournament}`,
+        }
+      )
     },
     join_team: async (
       args: Readonly<{
@@ -41,14 +54,26 @@ export const tournament_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk
         team: number
         revision: string
         character_id: string
+        entry_fee_mist?: bigint
         custody?: KioskCustody
       }>
     ) => {
       await sdk.hydrate_unknown([args.tournament])
-      return with_kiosk((tx, kiosk, cap) => sdk.doors.join_tournament_team(tx, { ...args, kiosk, cap }), {
-        custody: args.custody,
-        gas_scope: `tournament:${args.tournament}`,
-      })
+      return with_kiosk(
+        (tx, kiosk, cap) =>
+          sdk.doors.register_tournament(tx, {
+            ...args,
+            name: '',
+            allowed: [],
+            payment: sdk.coin_of(tx, args.entry_fee_mist ?? 0n),
+            kiosk,
+            cap,
+          }),
+        {
+          custody: args.custody,
+          gas_scope: `tournament:${args.tournament}`,
+        }
+      )
     },
     leave_team: (t: string, team: number, character: string) =>
       submit([t], (tx) => sdk.doors.tournament_leave_team(tx, { t, team, character })),
