@@ -1983,6 +1983,11 @@ characters_page:
     tx_pending: 'Assigning…'
     point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Stat points assigned'
+    sheet_label: 'Character sheet'
+    skills: 'Skills'
+    crafter_self: '{{name}} is your crafting character: every craft levels these jobs.'
+    crafter_other: 'You craft as {{crafter}}. {{name}}’s crafting jobs only grow when {{name}} crafts.'
+    skills_no_crafter: 'Each character levels its own jobs by gathering and crafting.'
   spells:
     range_modifiable: 'Modifiable range'
     no_character: 'No character selected'

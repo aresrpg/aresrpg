@@ -1956,6 +1956,11 @@ characters_page:
     tx_pending: 배분 중…
     point_cost: '{{cost}}포인트 → +{{gain}}'
     tx_success: 능력치 포인트 배분 완료
+    sheet_label: '캐릭터 시트'
+    skills: '스킬'
+    crafter_self: '{{name}}은(는) 제작 담당 캐릭터입니다: 제작할 때마다 이 직업들이 성장합니다.'
+    crafter_other: '{{crafter}}(으)로 제작 중입니다. {{name}}의 제작 직업은 {{name}}이(가) 제작할 때만 성장합니다.'
+    skills_no_crafter: '각 캐릭터는 채집과 제작으로 자신의 직업을 성장시킵니다.'
   spells:
     range_modifiable: 사거리 변경 가능
     no_character: 선택한 캐릭터가 없습니다

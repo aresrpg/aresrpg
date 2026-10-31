@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { CharacteristicValues } from '@aresrpg/immutable'
-import type { ItemRow } from '@aresrpg/protocol'
+import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import type { EquipmentMap } from './equipment_stage.ts'
 
@@ -13,4 +13,6 @@ export type CharacterSession = Readonly<{
   inventory: readonly ItemRow[]
   commit: (equipment: EquipmentMap) => void
   raise_stats: (spending: CharacteristicValues) => void
+  roster?: readonly CharacterRow[]
+  crafter_id?: string | null
 }>

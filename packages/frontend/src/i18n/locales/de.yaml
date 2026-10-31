@@ -1980,6 +1980,11 @@ characters_page:
     tx_pending: 'Verteilen…'
     point_cost: '{{cost}} Pkt. → +{{gain}}'
     tx_success: 'Stat-Punkte verteilt'
+    sheet_label: 'Charakterbogen'
+    skills: 'Fertigkeiten'
+    crafter_self: '{{name}} ist dein Handwerkscharakter: Jede Herstellung levelt diese Berufe.'
+    crafter_other: 'Du stellst als {{crafter}} her. Die Handwerksberufe von {{name}} steigen nur, wenn {{name}} herstellt.'
+    skills_no_crafter: 'Jeder Charakter levelt seine eigenen Berufe durch Sammeln und Herstellen.'
   spells:
     range_modifiable: 'Veränderbare Reichweite'
     no_character: 'Kein Charakter ausgewählt'

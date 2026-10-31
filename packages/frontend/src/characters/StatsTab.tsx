@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import {
-  characteristic_allocation_quote,
-  characteristic_cost_step,
-  characteristic_names,
-  type CharacteristicValues,
-} from '@aresrpg/immutable'
+import { characteristic_allocation_quote, characteristic_cost_step, characteristic_names } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
-import { Button, ProgressBar, vital_art } from '@aresrpg/ui'
+import { Button, ProgressBar, SegmentedControl, vital_art } from '@aresrpg/ui'
+import { useState } from 'react'
 
 import { character_icon } from '../content/assets.ts'
 import { titleize } from '../content/catalog.ts'
@@ -16,17 +12,22 @@ import { action_points, equipment_bonus, movement_points } from '../game/charact
 import type { AppCopy } from '../i18n/copy.ts'
 import { stat_identities } from '../visual_identity.ts'
 
+import type { CharacterSession } from './character_session.ts'
+import { SkillsNote, SkillsPanel } from './SkillsPanel.tsx'
+import { useSkillsNote } from './useSkillsNote.ts'
 import { useStats } from './useStats.ts'
 
 export default function StatsTab({
   character,
   copy,
-  raise_stats,
+  session,
 }: Readonly<{
   character: Readonly<CharacterRow>
   copy: AppCopy
-  raise_stats?: (spending: CharacteristicValues) => void
+  session?: CharacterSession
 }>) {
+  const [sheet, set_sheet] = useState<'characteristics' | 'skills'>('characteristics')
+  const note = useSkillsNote(character, session)
   const {
     t,
     numbers,
@@ -47,9 +48,9 @@ export default function StatsTab({
     into,
     span,
     percent,
-  } = useStats({ character, copy, raise_stats })
+  } = useStats({ character, copy, raise_stats: session?.raise_stats })
   return (
-    <section className="aui-character-sheet" data-tutorial-target="character_stats">
+    <section className="aui-character-sheet" data-sheet={sheet} data-tutorial-target="character_stats">
       <header className="aui-character-identity">
         <span className="aui-character-portrait">
           <img src={character_icon(character.classe, character.sex) ?? undefined} alt="" />
@@ -94,84 +95,104 @@ export default function StatsTab({
         />
       </div>
       <div className="aui-character-statistics">
-        <h3>{t('stats.characteristics')}</h3>
-        <div className="aui-attribute-list">
-          {characteristic_names.map((stat) => {
-            const label = t(`stat.${stat}`)
-            const gain = quote?.gains[stat] ?? 0
-            const bonus = equipment_bonus(character, stat)
-            const { step, next } = classe
-              ? {
-                  step: characteristic_cost_step(classe, stat, character[stat] + gain),
-                  next: characteristic_allocation_quote(classe, current, { ...alloc, [stat]: alloc[stat] + 1 }),
-                }
-              : { step: null, next: null }
-            return (
-              <div className="aui-attribute-row" key={stat} data-stat={stat}>
-                <img src={stat_identities[stat].icon} alt="" />
-                <div className="aui-attribute-copy">
-                  <div className="aui-attribute-title">
-                    <strong>{label}</strong>
-                    <small>{step && t('stats.point_cost', { cost: step.cost, gain: step.gain })}</small>
+        <header className="chr-sheet-tabs">
+          <SegmentedControl
+            label={t('stats.sheet_label')}
+            value={sheet}
+            on_change={set_sheet}
+            options={[
+              { value: 'characteristics', label: t('stats.characteristics') },
+              { value: 'skills', label: t('stats.skills') },
+            ]}
+          />
+        </header>
+        {sheet === 'skills' ? (
+          <SkillsPanel character={character} copy={copy} />
+        ) : (
+          <div className="aui-attribute-list">
+            {characteristic_names.map((stat) => {
+              const label = t(`stat.${stat}`)
+              const gain = quote?.gains[stat] ?? 0
+              const bonus = equipment_bonus(character, stat)
+              const { step, next } = classe
+                ? {
+                    step: characteristic_cost_step(classe, stat, character[stat] + gain),
+                    next: characteristic_allocation_quote(classe, current, { ...alloc, [stat]: alloc[stat] + 1 }),
+                  }
+                : { step: null, next: null }
+              return (
+                <div className="aui-attribute-row" key={stat} data-stat={stat}>
+                  <img src={stat_identities[stat].icon} alt="" />
+                  <div className="aui-attribute-copy">
+                    <div className="aui-attribute-title">
+                      <strong>{label}</strong>
+                      <small>{step && t('stats.point_cost', { cost: step.cost, gain: step.gain })}</small>
+                    </div>
+                    <p>{t(`stats.description.${stat}`)}</p>
                   </div>
-                  <p>{t(`stats.description.${stat}`)}</p>
-                </div>
-                <strong className="aui-attribute-value">
-                  <span>{character[stat] + gain}</span>
-                  <small className="aui-attribute-bonus">
-                    {bonus === 0 ? null : ` (${numbers.number(bonus, { signDisplay: 'always' })})`}
-                  </small>
-                </strong>
-                <div className="aui-attribute-actions">
-                  <div>
-                    <Button
-                      aria-label={t('stats.remove_point', { stat: label })}
-                      disabled={alloc[stat] <= 0 || locked}
-                      onClick={() => set_alloc({ ...alloc, [stat]: Math.max(0, alloc[stat] - 1) })}
-                    >
-                      −
-                    </Button>
-                    <Button
-                      aria-label={t('stats.add_point', { stat: label })}
-                      disabled={!next || next.cost > character.available_points || locked}
-                      onClick={() => set_alloc({ ...alloc, [stat]: alloc[stat] + 1 })}
-                    >
-                      +
-                    </Button>
+                  <strong className="aui-attribute-value">
+                    <span>{character[stat] + gain}</span>
+                    <small className="aui-attribute-bonus">
+                      {bonus === 0 ? null : ` (${numbers.number(bonus, { signDisplay: 'always' })})`}
+                    </small>
+                  </strong>
+                  <div className="aui-attribute-actions">
+                    <div>
+                      <Button
+                        aria-label={t('stats.remove_point', { stat: label })}
+                        disabled={alloc[stat] <= 0 || locked}
+                        onClick={() => set_alloc({ ...alloc, [stat]: Math.max(0, alloc[stat] - 1) })}
+                      >
+                        −
+                      </Button>
+                      <Button
+                        aria-label={t('stats.add_point', { stat: label })}
+                        disabled={!next || next.cost > character.available_points || locked}
+                        onClick={() => set_alloc({ ...alloc, [stat]: alloc[stat] + 1 })}
+                      >
+                        +
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
-      <div className="aui-character-defenses">
-        {(['fire', 'water', 'earth', 'air'] as const).map((element) => (
-          <span key={element}>
-            {t(`stats.element.${element}`)}
-            <strong>{equipment_bonus(character, `${element}_resistance`)}%</strong>
-          </span>
-        ))}
-        <span>
-          {t('stat.critical_hit')}
-          <strong>{equipment_bonus(character, 'critical')}</strong>
-        </span>
-        <span>
-          {t('stat.raw_damage')}
-          <strong>{equipment_bonus(character, 'raw_damage')}</strong>
-        </span>
-      </div>
-      <footer className="aui-character-points">
-        <span>
-          <strong>{remaining}</strong> {t('stats.points_to_assign')}
-        </span>
-        <Button onClick={reset} disabled={!has_pending || locked}>
-          {t('stats.reset')}
-        </Button>
-        <Button tone="primary" onClick={confirm} busy={pending_tx} disabled={!can_confirm}>
-          {t('common.confirm')}
-        </Button>
-      </footer>
+      {sheet === 'skills' ? (
+        <SkillsNote character={character} note={note} copy={copy} />
+      ) : (
+        <>
+          <div className="aui-character-defenses">
+            {(['fire', 'water', 'earth', 'air'] as const).map((element) => (
+              <span key={element}>
+                {t(`stats.element.${element}`)}
+                <strong>{equipment_bonus(character, `${element}_resistance`)}%</strong>
+              </span>
+            ))}
+            <span>
+              {t('stat.critical_hit')}
+              <strong>{equipment_bonus(character, 'critical')}</strong>
+            </span>
+            <span>
+              {t('stat.raw_damage')}
+              <strong>{equipment_bonus(character, 'raw_damage')}</strong>
+            </span>
+          </div>
+          <footer className="aui-character-points">
+            <span>
+              <strong>{remaining}</strong> {t('stats.points_to_assign')}
+            </span>
+            <Button onClick={reset} disabled={!has_pending || locked}>
+              {t('stats.reset')}
+            </Button>
+            <Button tone="primary" onClick={confirm} busy={pending_tx} disabled={!can_confirm}>
+              {t('common.confirm')}
+            </Button>
+          </footer>
+        </>
+      )}
     </section>
   )
 }

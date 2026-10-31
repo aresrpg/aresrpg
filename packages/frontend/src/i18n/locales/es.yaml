@@ -1979,6 +1979,11 @@ characters_page:
     tx_pending: 'Asignando…'
     point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Puntos de características asignados'
+    sheet_label: 'Ficha del personaje'
+    skills: 'Habilidades'
+    crafter_self: '{{name}} es tu personaje de artesanía: cada fabricación sube de nivel estos oficios.'
+    crafter_other: 'Fabricas como {{crafter}}. Los oficios de artesanía de {{name}} solo suben cuando {{name}} fabrica.'
+    skills_no_crafter: 'Cada personaje sube sus propios oficios recolectando y fabricando.'
   spells:
     range_modifiable: 'Alcance modificable'
     no_character: 'Ningún personaje seleccionado'

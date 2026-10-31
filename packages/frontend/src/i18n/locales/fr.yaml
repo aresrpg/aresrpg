@@ -1985,6 +1985,11 @@ characters_page:
     tx_pending: 'Attribution…'
     point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Points de caractéristiques attribués'
+    sheet_label: 'Fiche du personnage'
+    skills: 'Compétences'
+    crafter_self: '{{name}} est votre personnage d’artisanat : chaque fabrication fait progresser ces métiers.'
+    crafter_other: 'Vous fabriquez avec {{crafter}}. Les métiers d’artisanat de {{name}} ne progressent que si {{name}} fabrique.'
+    skills_no_crafter: 'Chaque personnage fait progresser ses propres métiers en récoltant et en fabriquant.'
   spells:
     range_modifiable: 'Portée modifiable'
     no_character: 'Aucun personnage sélectionné'

@@ -1953,6 +1953,11 @@ characters_page:
     tx_pending: Distribuindo…
     point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: Pontos de atributo distribuídos
+    sheet_label: 'Ficha do personagem'
+    skills: 'Habilidades'
+    crafter_self: '{{name}} é seu personagem de criação: cada criação evolui estas profissões.'
+    crafter_other: 'Você cria como {{crafter}}. As profissões de criação de {{name}} só evoluem quando {{name}} cria.'
+    skills_no_crafter: 'Cada personagem evolui as próprias profissões coletando e criando.'
   spells:
     range_modifiable: Alcance modificável
     no_character: Nenhum personagem selecionado

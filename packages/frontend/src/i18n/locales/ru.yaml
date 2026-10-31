@@ -1956,6 +1956,11 @@ characters_page:
     tx_pending: Распределение…
     point_cost: '{{cost}} очк. → +{{gain}}'
     tx_success: Очки характеристик распределены
+    sheet_label: 'Лист персонажа'
+    skills: 'Навыки'
+    crafter_self: '{{name}} — ваш персонаж для крафта: каждое изготовление повышает эти профессии.'
+    crafter_other: 'Вы крафтите за {{crafter}}. Ремесленные профессии {{name}} растут, только когда крафтит {{name}}.'
+    skills_no_crafter: 'Каждый персонаж повышает свои профессии сбором и крафтом.'
   spells:
     range_modifiable: Изменяемая дальность
     no_character: Персонаж не выбран

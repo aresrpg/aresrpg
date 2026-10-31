@@ -1956,6 +1956,11 @@ characters_page:
     tx_pending: 正在分配…
     point_cost: '{{cost}}点 → +{{gain}}'
     tx_success: 属性点已分配
+    sheet_label: '角色面板'
+    skills: '技能'
+    crafter_self: '{{name}} 是你的制作角色：每次制作都会提升这些职业。'
+    crafter_other: '你正在以 {{crafter}} 制作。{{name}} 的制作职业只有在 {{name}} 制作时才会提升。'
+    skills_no_crafter: '每个角色通过采集和制作提升自己的职业。'
   spells:
     range_modifiable: 可调整射程
     no_character: 未选择角色

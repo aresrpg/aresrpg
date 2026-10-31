@@ -1957,6 +1957,11 @@ characters_page:
     tx_pending: '割り振り中…'
     point_cost: '{{cost}} pt → +{{gain}}'
     tx_success: 'ステータスポイントを割り振りました'
+    sheet_label: 'キャラクターシート'
+    skills: 'スキル'
+    crafter_self: '{{name}}が製作担当です。製作するたびにこれらの職業が上がります。'
+    crafter_other: '{{crafter}}で製作しています。{{name}}の製作職業は{{name}}が製作したときだけ上がります。'
+    skills_no_crafter: '各キャラクターは採集と製作で自分の職業を上げます。'
   spells:
     range_modifiable: '射程変更可'
     no_character: 'キャラクターが選択されていません'
