@@ -21,7 +21,7 @@
     "@aresrpg/sdk": "workspace:*",
     "@aresrpg/ui": "workspace:*",
     "@privy-io/react-auth": "3.51.0",
-    "@sentry/react": "^10.75.0",
+    "@sentry/react": "^11.9.0",
     "@solana-program/memo": "0.8.0",
     "@solana-program/system": "0.8.0",
     "@solana-program/token": "0.6.0",
