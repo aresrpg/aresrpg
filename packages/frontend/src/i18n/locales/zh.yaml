@@ -1924,6 +1924,7 @@ characters_page:
     earth_resistance: 地系抗性
     air_resistance: 风系抗性
   stats:
+    professions: '生活职业'
     no_character: 未选择角色
     unavailable: 属性不可用
     level: 等级{{level}}
@@ -3266,7 +3267,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: 战斗中
   custody_trade: 交易中
-  latest_start_notice: '到达此时间后，任何人都可以启动比赛。管理员也必须等待。'
+  latest_start_notice: '任何人都可以在此时间或之后启动锦标赛。'
   champion: '{{team}} 获胜'
   prize_pool: 奖池
   frozen_pool: 奖池 · 已冻结

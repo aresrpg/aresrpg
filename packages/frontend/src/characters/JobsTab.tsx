@@ -9,8 +9,6 @@ import {
   gather_xp,
   job_groups,
   job_level_from_xp,
-  job_max_level,
-  job_xp_for_level,
   type JobKind,
   type JobSlug,
 } from '@aresrpg/immutable'
@@ -31,6 +29,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { GatheringTime } from './GatheringTime.tsx'
 import { job_from_path, job_path } from './job_navigation.ts'
 import { JobEmblem } from './JobEmblem.tsx'
+import { job_progress } from './job_progress.ts'
 import { JobItemIcon } from './JobItemIcon.tsx'
 
 import './jobs.css'
@@ -180,13 +179,7 @@ export default function JobsTab({
     : null
 
   const detail = encyclopedia_catalog.job(selected_job)
-  const level = level_of(selected_job)
-  const xp = xp_of(selected_job)
-  const floor = job_xp_for_level(level) ?? 0
-  const ceiling = level >= job_max_level ? floor : (job_xp_for_level(level + 1) ?? floor)
-  const span = Math.max(0, ceiling - floor)
-  const into = Math.max(0, xp - floor)
-  const pct = span > 0 ? Math.max(0, Math.min(100, (into / span) * 100)) : 100
+  const { level, into, span, percent: pct } = job_progress(xp_of(selected_job))
   const is_gathering = kind_of(selected_job) === 'gathering'
 
   const { unlocked, locked } = useMemo(() => {

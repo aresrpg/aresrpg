@@ -1946,6 +1946,7 @@ characters_page:
     earth_resistance: 'Землестійкість'
     air_resistance: 'Повітростійкість'
   stats:
+    professions: 'Професії'
     no_character: 'Персонажа не вибрано'
     unavailable: 'Характеристики недоступні'
     level: 'Рів. {{level}}'
@@ -3299,7 +3300,7 @@ tournament_page:
   custody_kiosk: Кіоск
   custody_fight: У бою
   custody_trade: В обміні
-  latest_start_notice: 'Від цього часу будь-хто може почати турнір. Адміністратори теж мають чекати.'
+  latest_start_notice: 'Будь-хто може розпочати турнір із цього часу.'
   champion: Перемагає {{team}}
   prize_pool: Призовий фонд
   frozen_pool: Призовий фонд · зафіксовано

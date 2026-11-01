@@ -1947,6 +1947,7 @@ characters_page:
     earth_resistance: 'Resistencia a la Tierra'
     air_resistance: 'Resistencia al Aire'
   stats:
+    professions: 'Profesiones'
     no_character: 'Ningún personaje seleccionado'
     unavailable: 'Estadísticas no disponibles'
     level: 'Nv. {{level}}'
@@ -3300,7 +3301,7 @@ tournament_page:
   custody_kiosk: Quiosco
   custody_fight: En combate
   custody_trade: En intercambio
-  latest_start_notice: 'Cualquiera puede iniciar a partir de esta hora. Los administradores también deben esperar.'
+  latest_start_notice: 'Cualquiera puede iniciar el torneo a partir de esta hora.'
   champion: '{{team}} gana'
   prize_pool: Fondo de premios
   frozen_pool: Fondo de premios · fijado

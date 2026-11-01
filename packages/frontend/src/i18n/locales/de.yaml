@@ -1948,6 +1948,7 @@ characters_page:
     earth_resistance: 'Erdwiderstand'
     air_resistance: 'Luftwiderstand'
   stats:
+    professions: 'Berufe'
     no_character: 'Kein Charakter ausgewählt'
     unavailable: 'Werte nicht verfügbar'
     level: 'Lv. {{level}}'
@@ -3301,7 +3302,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: Im Kampf
   custody_trade: Im Handel
-  latest_start_notice: 'Ab diesem Zeitpunkt kann jeder starten. Auch Admins müssen warten.'
+  latest_start_notice: 'Ab diesem Zeitpunkt kann jeder das Turnier starten.'
   champion: '{{team}} gewinnt'
   prize_pool: Preispool
   frozen_pool: Preispool · festgelegt

@@ -312,9 +312,6 @@
   font-size: 11px;
   color: var(--aui-muted);
 }
-.tourney-team-heading .tourney-access {
-  color: var(--aui-orange);
-}
 .tourney-monogram {
   display: inline-grid;
   place-items: center;

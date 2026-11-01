@@ -1953,6 +1953,7 @@ characters_page:
     earth_resistance: 'Résistance Terre'
     air_resistance: 'Résistance Air'
   stats:
+    professions: 'Métiers'
     no_character: 'Aucun personnage sélectionné'
     unavailable: 'Caractéristiques indisponibles'
     level: 'Nv. {{level}}'
@@ -3306,7 +3307,7 @@ tournament_page:
   custody_kiosk: Kiosque
   custody_fight: En combat
   custody_trade: En échange
-  latest_start_notice: 'Tout le monde peut démarrer à partir de cette heure. Les admins doivent aussi attendre.'
+  latest_start_notice: 'Tout le monde peut lancer le tournoi à partir de cette heure.'
   champion: Victoire de {{team}}
   prize_pool: Cagnotte
   frozen_pool: Cagnotte · figée

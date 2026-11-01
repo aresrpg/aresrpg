@@ -131,9 +131,6 @@ export const TournamentTeams = ({
                 <p>
                   {t(team.allowed.length ? 'named_only' : 'open_anyone')} · {team.seats.length}/{row.format}
                 </p>
-                {!['join', 'add', 'registered', 'elsewhere'].includes(access) && (
-                  <p className="tourney-access">{t(`reason_${access}`, { level: String(row.max_level) })}</p>
-                )}
               </div>
             </div>
             <div className="tourney-seats" style={{ gridTemplateColumns: `repeat(${row.format}, minmax(0, 1fr))` }}>

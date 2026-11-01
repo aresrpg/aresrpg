@@ -4,12 +4,13 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { CharacterRow } from '@aresrpg/protocol'
+import { job_xp_for_level } from '@aresrpg/immutable'
 
 import type { AuthSession } from '../../src/auth.ts'
 import StatsTab from '../../src/characters/StatsTab.tsx'
 import SpellsTab from '../../src/characters/SpellsTab.tsx'
 import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../../src/store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
 
 const character: CharacterRow = {
@@ -31,7 +32,7 @@ const character: CharacterRow = {
   available_points: 12,
   spells: {},
   available_spell_points: 9,
-  jobs: {},
+  jobs: { MINER: String(job_xp_for_level(5)) },
   kiosk: '0xkiosk',
   custody: 'kiosk',
   equipment: [],
@@ -41,6 +42,13 @@ const character: CharacterRow = {
   z: 50000,
   at_ms: 0,
 }
+const crafter: CharacterRow = {
+  ...character,
+  id: '0xcrafter',
+  name: 'Crafter',
+  jobs: { MINER: String(job_xp_for_level(90)) },
+}
+
 const set_activity = (activity: string): void => {
   const changes: Readonly<Record<string, Partial<CharacterRow>>> = {
     fight: { custody: 'fight' },
@@ -52,7 +60,7 @@ const set_activity = (activity: string): void => {
   dispatch_app({ type: 'world/gather_failed', character_id: character.id, attempt_id: 'probe' })
   dispatch_app({
     type: 'server/packet',
-    packet: { type: 'packet/characters', characters: [{ ...character, ...changes[activity] }] },
+    packet: { type: 'packet/characters', characters: [{ ...character, ...changes[activity] }, crafter] },
   })
   if (activity === 'gather')
     dispatch_app({
@@ -75,7 +83,10 @@ const set_activity = (activity: string): void => {
 const Fixture = () => {
   const [copy, set_copy] = useState<AppCopy | null>(null)
   const [calls, set_calls] = useState(0)
-  const row = useAppStore(({ session }) => session.characters[0])
+  const row = useAppStore(
+    ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id) ?? session.characters[0]
+  )
+  const craft_lock = useAppStore(({ settings }) => settings.always_craft_from_character_id)
   useEffect(() => {
     const record = async () => {
       set_calls((count) => count + 1)
@@ -89,6 +100,11 @@ const Fixture = () => {
       } as unknown as AuthSession,
     })
     set_activity(new URLSearchParams(location.search).get('state') ?? 'idle')
+    if (new URLSearchParams(location.search).has('craft_lock'))
+      dispatch_app({
+        type: 'settings/changed',
+        settings: { ...read_app_state().settings, always_craft_from_character_id: crafter.id },
+      })
     void load_app_copy('en').then(set_copy).catch(console.error)
   }, [])
   if (!copy || !row) return null
@@ -107,6 +123,11 @@ const Fixture = () => {
         >
           Fight on next click
         </button>
+        <button onClick={() => dispatch_app({ type: 'character/select', character_id: character.id })}>View Nox</button>
+        <button onClick={() => dispatch_app({ type: 'character/select', character_id: crafter.id })}>
+          View crafter
+        </button>
+        <output data-craft-lock="">{craft_lock}</output>
         <output data-calls="">{calls}</output>
       </div>
       <div className="grid grid-cols-2 gap-4">

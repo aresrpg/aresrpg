@@ -1951,6 +1951,7 @@ characters_page:
     earth_resistance: 'Earth Resistance'
     air_resistance: 'Air Resistance'
   stats:
+    professions: 'Professions'
     no_character: 'No character selected'
     unavailable: 'Stats unavailable'
     level: 'Lv. {{level}}'
@@ -3300,7 +3301,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: In combat
   custody_trade: In trade
-  latest_start_notice: 'Anyone can start at or after this time. Admins must also wait.'
+  latest_start_notice: 'Anyone can start at or after this time.'
   champion: '{{team}} win'
   prize_pool: Prize pool
   frozen_pool: Prize pool · frozen

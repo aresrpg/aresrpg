@@ -15,7 +15,13 @@ import {
   Toggle,
   GameWindow,
 } from '@aresrpg/ui'
-import { characteristic_names, characteristic_spending_quote, type CharacteristicValues } from '@aresrpg/immutable'
+import {
+  characteristic_names,
+  characteristic_spending_quote,
+  job_slugs,
+  job_xp_for_level,
+  type CharacteristicValues,
+} from '@aresrpg/immutable'
 
 import { CharacterLevelUpView } from '../game/fight/CharacterLevelUpView.tsx'
 import { JobLevelUpView } from '../game/jobs/JobLevelUpView.tsx'
@@ -150,6 +156,15 @@ const WORKSHOP_INVENTORY = [
   ),
 ]
 
+const WORKSHOP_JOB_LEVELS = [54, 38, 72, 21, 12, 40, 9, 27, 1, 100, 16] as const
+const WORKSHOP_JOB_XP = Object.fromEntries(
+  job_slugs.map((job, index) => {
+    const floor = job_xp_for_level(WORKSHOP_JOB_LEVELS[index]!)!
+    const ceiling = job_xp_for_level(WORKSHOP_JOB_LEVELS[index]! + 1) ?? floor
+    return [job, String(floor + Math.floor((ceiling - floor) * 0.4))]
+  })
+)
+
 /** These examples use the same controller and stat-cost rules as the live character panels. */
 const useWorkshopCharacter = () => {
   const [source, set_source] = useState(() => ({
@@ -172,7 +187,7 @@ const useWorkshopCharacter = () => {
       ),
     })
   return {
-    character: adventure_character_row(source, WORKSHOP_INVENTORY),
+    character: { ...adventure_character_row(source, WORKSHOP_INVENTORY), jobs: WORKSHOP_JOB_XP },
     session: {
       inventory: WORKSHOP_INVENTORY,
       commit,

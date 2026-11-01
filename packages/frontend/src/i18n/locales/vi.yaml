@@ -1924,6 +1924,7 @@ characters_page:
     earth_resistance: Kháng đất
     air_resistance: Kháng gió
   stats:
+    professions: 'Nghề nghiệp'
     no_character: Chưa chọn nhân vật
     unavailable: Thuộc tính không khả dụng
     level: Cấp {{level}}
@@ -3266,7 +3267,7 @@ tournament_page:
   custody_kiosk: Kiosk
   custody_fight: Đang chiến đấu
   custody_trade: Đang trao đổi
-  latest_start_notice: 'Bất kỳ ai cũng có thể bắt đầu từ thời điểm này. Quản trị viên cũng phải chờ.'
+  latest_start_notice: 'Bất kỳ ai cũng có thể bắt đầu giải đấu từ thời điểm này.'
   champion: '{{team}} vô địch'
   prize_pool: Quỹ thưởng
   frozen_pool: Quỹ thưởng · đã cố định

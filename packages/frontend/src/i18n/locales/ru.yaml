@@ -1924,6 +1924,7 @@ characters_page:
     earth_resistance: Сопротивление земле
     air_resistance: Сопротивление воздуху
   stats:
+    professions: 'Профессии'
     no_character: Персонаж не выбран
     unavailable: Характеристики недоступны
     level: Ур. {{level}}
@@ -3266,7 +3267,7 @@ tournament_page:
   custody_kiosk: Киоск
   custody_fight: В бою
   custody_trade: В обмене
-  latest_start_notice: 'С этого момента любой может начать турнир. Администраторы тоже должны ждать.'
+  latest_start_notice: 'Начиная с этого времени любой может запустить турнир.'
   champion: Побеждает {{team}}
   prize_pool: Призовой фонд
   frozen_pool: Призовой фонд · зафиксирован

@@ -1925,6 +1925,7 @@ characters_page:
     earth_resistance: '土耐性'
     air_resistance: '風耐性'
   stats:
+    professions: '生産職'
     no_character: 'キャラクターが選択されていません'
     unavailable: 'ステータスを取得できません'
     level: 'Lv. {{level}}'
@@ -3278,7 +3279,7 @@ tournament_page:
   custody_kiosk: キオスク
   custody_fight: 戦闘中
   custody_trade: 取引中
-  latest_start_notice: 'この時刻以降は誰でも開始できます。管理者も待つ必要があります。'
+  latest_start_notice: 'この時刻以降は誰でも大会を開始できます。'
   champion: '{{team}} の優勝'
   prize_pool: 賞金総額
   frozen_pool: 賞金総額 · 確定
