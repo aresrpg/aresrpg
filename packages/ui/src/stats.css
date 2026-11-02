@@ -29,12 +29,9 @@
   flex: none;
 }
 .aui-character-portrait > img {
-  position: absolute;
-  width: 200%;
-  max-width: none;
-  height: auto;
-  left: -50%;
-  top: -8%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   mix-blend-mode: lighten;
 }
 .aui-character-identity h2 {
