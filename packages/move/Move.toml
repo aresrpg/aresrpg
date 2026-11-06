@@ -7,7 +7,7 @@ authors = ["Sceat"]
 [dependencies]
 # Personal kiosk + royalty/lock rules (the kiosk-lock constitution). MVR (@mysten/kiosk) once
 # the mvr resolver is installed; until then the corpus's verified pin.
-Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "a1cd20107340bf8f6e6913ed20b9fafe92fe3d03" }
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "c3134426983be5298a52ae7184336f930661453c" }
 # The immutable static layer (curves, grids, formulas, prng, spell algebra) — published
 # first, pinned at publish; pure functions only, the client twin mirrors it byte for byte.
 aresrpg_math = { local = "../move-math" }
