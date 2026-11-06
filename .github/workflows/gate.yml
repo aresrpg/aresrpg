@@ -96,6 +96,9 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
+      - name: install Redis for agent pairing tests
+        if: matrix.check == 'test'
+        run: sudo apt-get update && sudo apt-get install -y redis-server
       - name: verify
         run: bun run "${{ matrix.check }}"
   tests_move:
