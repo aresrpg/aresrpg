@@ -3429,6 +3429,8 @@ tournament_page:
   versus: '상대: {{team}}'
 
 landing_page:
+  sound_on: '음악 켜기'
+  sound_off: '음악 끄기'
   new_tab: ' (opens a new tab)'
   sign_alt: AresRPG
   nav_label: Resources

@@ -8,6 +8,8 @@ export type LandingCopy = Readonly<{
   new_tab: string
   sign_alt: string
   nav_label: string
+  sound_on: string
+  sound_off: string
   nav: Readonly<{ encyclopedia: string; journal: string; discord: string }>
   kares: Readonly<{ trigger: string; trigger_detail: string; modal_label: string; close: string }>
   hero: Readonly<{ title: readonly [string, string, string]; lede: string; play: string; let_ai_play: string }>

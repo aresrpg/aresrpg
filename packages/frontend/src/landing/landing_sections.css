@@ -2,6 +2,10 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
 /* ---------- Hero, sign, resource links and the top-right $KARES trigger ---------- */
+.landing {
+  --header-top: max(15px, env(safe-area-inset-top, 0px));
+  --header-control-height: 44px;
+}
 .landing .hero {
   position: relative;
   text-align: center;
@@ -26,11 +30,12 @@
 }
 .landing .topnav {
   position: absolute;
-  top: 22px;
+  top: var(--header-top);
   right: clamp(20px, 3.2vw, 60px);
   z-index: 2;
   display: flex;
-  gap: 28px;
+  gap: 20px;
+  align-items: center;
   font-size: 16px;
   font-weight: 800;
 }
@@ -52,6 +57,10 @@
 }
 @media (max-width: 899px) {
   .landing .topnav {
+    top: 76px;
+    right: var(--nav-r);
+  }
+  .landing .topnav a {
     display: none;
   }
 }
@@ -130,14 +139,14 @@
 .landing .kares-dock {
   position: fixed;
   z-index: 40;
-  top: max(15px, env(safe-area-inset-top, 0px));
+  top: var(--header-top);
   right: max(var(--nav-r), env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: var(--dock-w);
-  height: 40px;
+  height: var(--header-control-height);
   padding: 0 14px 0 12px;
   border: 0;
   color: var(--ink);
@@ -220,7 +229,7 @@
     top: max(12px, env(safe-area-inset-top, 0px));
     right: max(12px, env(safe-area-inset-right, 0px));
     width: auto;
-    height: 36px;
+    height: var(--header-control-height);
     padding: 0 12px 0 10px;
     gap: 7px;
   }
@@ -235,7 +244,7 @@
 }
 @media (max-width: 359px) {
   .landing .kares-dock {
-    height: 34px;
+    height: var(--header-control-height);
     padding: 0 10px 0 9px;
     gap: 6px;
   }
@@ -394,4 +403,21 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
+}
+
+/* A 44px sound target remains available when resource links hide on phones. */
+.landing .landing-sound {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: var(--header-control-height);
+  padding: 0;
+  border: 1px solid rgb(235 225 205 / 0.28);
+  border-radius: 6px;
+  background: rgb(9 11 16 / 0.45);
+  color: var(--ink-hi);
+}
+.landing .landing-sound:hover {
+  border-color: var(--gold);
+  color: var(--gold);
 }

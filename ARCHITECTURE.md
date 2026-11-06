@@ -154,6 +154,14 @@ matching asset URLs. The worker precaches scripts and styles, never HTML; PWA in
 Prebuilt deployments give Vite asset URLs, JS imports and service-worker precache entries the same
 custom deployment ID as Vercel's output manifest. The platform serves pinned assets from their
 original retained deployment; full-page navigation selects the current release.
+The root document paints the shared landing presentation before asynchronous application startup.
+Build-time markup and the interactive landing use the same presentation, artwork and links. A small
+parser-blocking entry selects inert landing or game-loader templates; the OAuth callback stays empty.
+Play and failed startup restore the document-owned game loader, while a no-JavaScript document
+retains browser-reload guidance. Root landing visits do not import the game renderer.
+The landing owns one looping HTML audio element and a persistent landing-only sound preference.
+Its navbar control stays available on mobile. Browser gesture retries respect that preference;
+leaving the landing releases the player before game boot. The website soundtrack lives in frontend public assets.
 The shared loading postcard reveals recovery after 20 seconds in both the document shell and mounted
 worlds, using CSS without declaring a slow request failed or cancelling it. The bootstrap binds Reload to the complete current URL; before
 JavaScript runs, browser-reload instructions preserve claim fragments. Rejected imports reveal

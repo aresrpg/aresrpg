@@ -14,8 +14,9 @@ const boot = async (): Promise<void> => {
   } catch (error) {
     console.warn('Startup update recovery is unavailable.', error)
   }
-  prepare_boot_loading()
-  if (!document.hidden) {
+  const game_loading = Boolean(document.querySelector('[data-boot-loading]'))
+  if (game_loading) prepare_boot_loading()
+  if (game_loading && !document.hidden) {
     await new Promise(requestAnimationFrame)
     await new Promise(requestAnimationFrame)
   }

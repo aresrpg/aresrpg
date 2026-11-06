@@ -4,6 +4,7 @@
 // Presentation only: markup and class names match the accepted page; motion lives in landing_motion.ts.
 import type { CSSProperties, ReactNode } from 'react'
 
+import { LandingMusic } from './LandingMusic.tsx'
 import type { LandingAssets, LandingCopy, LandingLinks } from './landing_types.ts'
 
 type Copy = Readonly<{ copy: LandingCopy }>
@@ -75,6 +76,7 @@ export const LandingHero = ({
       <External copy={copy} href={links.discord}>
         {copy.nav.discord}
       </External>
+      <LandingMusic enable_label={copy.sound_on} mute_label={copy.sound_off} />
     </nav>
     {kares_trigger}
     <div className="hero-copy text">

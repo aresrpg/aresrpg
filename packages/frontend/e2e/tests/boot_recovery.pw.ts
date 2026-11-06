@@ -51,7 +51,10 @@ test('the document offers browser reload instructions without JavaScript or losi
   const page = await context.newPage()
   try {
     await page.goto('/claim?source=test#test-claim-key')
-    await expect(page.getByText('Use your browser’s Reload button to try again.')).toBeVisible({ timeout: 25000 })
+    // Text selectors omit noscript descendants; assert the rendered recovery element itself.
+    const recovery = page.locator('noscript .loading-browser-reload')
+    await expect(recovery).toHaveText('Use your browser’s Reload button to try again.')
+    await expect(recovery).toBeVisible({ timeout: 25000 })
     await expect(page.getByRole('button', { name: 'Reload', exact: true })).toHaveCount(0)
     expect(page.url()).toContain('/claim?source=test#test-claim-key')
   } finally {

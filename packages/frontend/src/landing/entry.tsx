@@ -6,7 +6,7 @@ import { useEffect, useReducer, type ComponentType } from 'react'
 import '@aresrpg/ui/styles.css'
 
 import { agent_connect_url } from '../agents/entry_intent.ts'
-import { prepare_boot_loading, show_boot_failure } from '../boot_loading.ts'
+import { show_boot_loading, show_boot_failure } from '../boot_loading.ts'
 import { env } from '../env.ts'
 import { load_app_copy, type AppCopy } from '../i18n/copy.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
@@ -17,7 +17,8 @@ import { finish_startup_recovery, observe_startup_recovery } from '../startup_re
 
 import { Landing } from './Landing.tsx'
 import { landing_assets } from './assets.ts'
-import type { LandingCopy, LandingLinks } from './landing_types.ts'
+import { landing_links } from './presentation.ts'
+import type { LandingCopy } from './landing_types.ts'
 
 type TokenomicsView = ComponentType<Readonly<{ copy: KaresCopy }>>
 type Resource = Readonly<{ kind: 'loading' } | { kind: 'ready'; View: TokenomicsView } | { kind: 'failed' }>
@@ -62,25 +63,17 @@ type LandingAppCopy = AppCopy & Readonly<{ landing_page?: LandingCopy }>
 export const boot_landing = async (): Promise<void> => {
   const host = document.getElementById('root')
   if (!host) throw new Error('Application root is missing')
-  const loading_nodes = [...host.childNodes].map((node) => node.cloneNode(true))
   const locale = load_locale()
   const copy = (await load_app_copy(locale)) as LandingAppCopy
   const landing_copy = copy.landing_page ?? ((await load_app_copy('en')) as LandingAppCopy).landing_page
   if (!landing_copy) throw new Error('Canonical landing copy is missing')
-  const links: LandingLinks = {
-    encyclopedia: new URL('/encyclopedia/items', location.origin).href,
-    journal: 'https://journal.aresrpg.world',
-    discord: env.discord_url,
-    telegram: 'https://t.me/aresrpg',
-    x: 'https://x.com/AresRPG',
-  }
+  const links = landing_links(location.origin, env.discord_url)
   const root = createRoot(host, react_error_handlers)
   let entering = false
   let ready_frame = 0
   const enter_game = async (): Promise<void> => {
     root.unmount()
-    host.replaceChildren(...loading_nodes)
-    prepare_boot_loading()
+    show_boot_loading()
     observe_startup_recovery()
     const { boot_game } = await import('../game_entry.tsx')
     boot_game()

@@ -3450,6 +3450,8 @@ tournament_page:
   versus: contra {{team}}
 
 landing_page:
+  sound_on: 'Ativar música'
+  sound_off: 'Silenciar música'
   new_tab: ' (opens a new tab)'
   sign_alt: AresRPG
   nav_label: Resources

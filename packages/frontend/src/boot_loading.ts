@@ -28,8 +28,18 @@ export const prepare_boot_loading = (): void => {
   }
 }
 
+/** Restore the document-owned postcard when leaving the landing or recovering a failed import. */
+export const show_boot_loading = (): void => {
+  const host = document.getElementById('root')
+  const template = document.getElementById('boot-game') as HTMLTemplateElement | null
+  if (!host || !template) throw new Error('Game loading shell is missing')
+  host.replaceChildren(template.content.cloneNode(true))
+  prepare_boot_loading()
+}
+
 /** The document owns recovery until React can mount; a failed chunk cannot render a React fallback. */
 export const show_boot_failure = (): void => {
+  if (!document.querySelector('[data-boot-loading]')) show_boot_loading()
   const shell = document.querySelector<HTMLElement>('[data-boot-loading]')
   if (!shell) return
   shell.setAttribute('data-world-loading', 'failed')

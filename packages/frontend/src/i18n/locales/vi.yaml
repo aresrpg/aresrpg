@@ -3429,6 +3429,8 @@ tournament_page:
   versus: đấu với {{team}}
 
 landing_page:
+  sound_on: 'Bật nhạc'
+  sound_off: 'Tắt nhạc'
   new_tab: ' (opens a new tab)'
   sign_alt: AresRPG
   nav_label: Resources

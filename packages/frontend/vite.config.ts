@@ -15,6 +15,9 @@ import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
+import { create_landing_assets, landing_links } from './src/landing/presentation.ts'
+import { LandingPage } from './src/landing/LandingPage.tsx'
+import type { LandingCopy } from './src/landing/landing_types.ts'
 import { LoadingPostcard, type LoadingCopy } from './src/components/LoadingPostcard.tsx'
 import { asset_inline_limit } from './asset_inline.ts'
 import { locale_manifest_plugin } from './locale_assets.ts'
@@ -34,7 +37,9 @@ const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
 
 const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
-  const copy = parse(readFileSync(resolve(frontend_dir, 'src/i18n/locales/en.yaml'), 'utf8')) as LoadingCopy
+  const copy = parse(readFileSync(resolve(frontend_dir, 'src/i18n/locales/en.yaml'), 'utf8')) as LoadingCopy & {
+    landing_page: LandingCopy
+  }
   const asset_root = development ? `/@fs/${repo_dir}/seed/icons/loading` : '../../seed/icons/loading'
   const loading = renderToStaticMarkup(
     createElement(LoadingPostcard, {
@@ -46,6 +51,21 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
       phase: 0,
       fraction: null,
       boot: true,
+    })
+  )
+  const icon_root = development ? `/@fs/${repo_dir}/seed/icons` : '../../seed/icons'
+  const landing = renderToStaticMarkup(
+    createElement(LandingPage, {
+      copy: copy.landing_page,
+      assets: create_landing_assets({
+        portrait: `${icon_root}/characters/senshi_male_hd.png`,
+        item_key: `${icon_root}/items/key_of_ivory_rampart_hd.png`,
+        item_horn: `${icon_root}/items/tidal_horn_core_hd.png`,
+        item_bow: `${icon_root}/items/amberwood_recurve_hd.png`,
+      }),
+      links: landing_links(env.app_url, env.discord_url),
+      agent_connect_url: new URL('/connect-agent?intent=connect-agent', env.app_url).href,
+      on_play: () => {},
     })
   )
   const loading_css = readFileSync(resolve(frontend_dir, 'src/components/world_loading.css'), 'utf8')
@@ -65,7 +85,10 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
       handler: (html) =>
         Object.entries(values).reduce(
           (rendered, [name, value]) => rendered.replaceAll(`{{${name}}}`, escape_html(value)),
-          html.replace('{{LOADING_SCREEN}}', loading).replace('{{LOADING_STYLES}}', loading_css)
+          html
+            .replaceAll('{{LOADING_SCREEN}}', loading)
+            .replace('{{LANDING_SCREEN}}', landing)
+            .replace('{{LOADING_STYLES}}', loading_css)
         ),
     },
   }

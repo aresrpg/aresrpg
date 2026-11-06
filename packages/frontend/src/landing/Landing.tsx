@@ -10,8 +10,7 @@ import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 
 import { KaresLogo } from '../components/KaresLogo.tsx'
 
 import { start_landing_motion } from './landing_motion.ts'
-import { LandingAgent, LandingEarn, LandingEnd, LandingHero, LandingWorld } from './LandingSections.tsx'
-import { LandingSurface } from './LandingSurface.tsx'
+import { LandingPage } from './LandingPage.tsx'
 import type { LandingProps } from './landing_types.ts'
 
 import './landing.css'
@@ -70,24 +69,15 @@ export const Landing = ({ copy, assets, links, on_play, agent_connect_url, token
   )
 
   return (
-    <div className="landing" ref={root}>
-      <LandingSurface assets={assets} />
-      <div className="landing-flow" data-landing="flow">
-        <LandingHero
-          agent_connect_url={agent_connect_url}
-          assets={assets}
-          copy={copy}
-          kares_trigger={kares_trigger}
-          links={links}
-          on_play={on_play}
-        />
-        <main>
-          <LandingEarn assets={assets} copy={copy} links={links} />
-          <LandingWorld assets={assets} copy={copy} />
-          <LandingAgent assets={assets} copy={copy} />
-          <LandingEnd copy={copy} links={links} on_play={on_play} />
-        </main>
-      </div>
+    <LandingPage
+      copy={copy}
+      assets={assets}
+      links={links}
+      on_play={on_play}
+      agent_connect_url={agent_connect_url}
+      root_ref={root}
+      kares_trigger={kares_trigger}
+    >
       {open && (
         <NativeModal
           className="landing-modal"
@@ -118,6 +108,6 @@ export const Landing = ({ copy, assets, links, on_play, agent_connect_url, token
           {tokenomics}
         </NativeModal>
       )}
-    </div>
+    </LandingPage>
   )
 }

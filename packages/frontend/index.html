@@ -41,12 +41,18 @@
     <meta name="twitter:image:alt" content="AresRPG voxel world" />
 
     <title>{{META_TITLE}}</title>
+    <link rel="stylesheet" href="/src/landing/landing.css" />
+    <link rel="stylesheet" href="../ui/src/base.css" />
     <style>
       {{LOADING_STYLES}}
     </style>
   </head>
   <body>
-    <div id="root">{{LOADING_SCREEN}}</div>
+    <template id="boot-game">{{LOADING_SCREEN}}</template>
+    <template id="boot-landing">{{LANDING_SCREEN}}</template>
+    <div id="root"></div>
+    <script src="/landing/initial_shell.js"></script>
+    <noscript>{{LOADING_SCREEN}}</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
