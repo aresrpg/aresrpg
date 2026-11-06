@@ -397,6 +397,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   let active = false
   const run = (id: string, action: TournamentAction, automatic = false): void => {
     const state = get_state()
+    if (state.session.agent_view.request) return
     const { wallet } = state.session
     const t = state.tournament.rows.find((row) => row.id === id)
     if (active || !wallet || !t) return

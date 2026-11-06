@@ -1,0 +1,397 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+/* ---------- Hero, sign, resource links and the top-right $KARES trigger ---------- */
+.landing .hero {
+  position: relative;
+  text-align: center;
+  padding: 0 0 clamp(70px, 12vh, 130px);
+}
+.landing .sign {
+  position: absolute;
+  top: 0;
+  left: clamp(10px, 2.6vw, 52px);
+  z-index: 2;
+  width: clamp(196px, 22vw, 340px);
+  margin: 0;
+  transform-origin: 50% 0;
+}
+.landing .sign a {
+  display: block;
+}
+.landing .sign img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 0 #07090c) drop-shadow(0 14px 18px rgb(0 0 0 / 0.8));
+}
+.landing .topnav {
+  position: absolute;
+  top: 22px;
+  right: clamp(20px, 3.2vw, 60px);
+  z-index: 2;
+  display: flex;
+  gap: 28px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.landing .topnav a {
+  color: var(--ink-hi);
+  text-decoration: none;
+  text-shadow: var(--halo);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1.5px;
+}
+.landing .topnav a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+}
+@media (min-width: 900px) {
+  .landing .topnav {
+    right: calc(var(--nav-r) + var(--dock-w) + 24px);
+  }
+}
+@media (max-width: 899px) {
+  .landing .topnav {
+    display: none;
+  }
+}
+.landing .hero-copy {
+  padding-top: clamp(150px, 30vh, 280px);
+}
+.landing .display {
+  font-weight: 800;
+  font-size: clamp(38px, 5vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+  color: var(--ink-hi);
+  text-shadow: var(--carve);
+}
+.landing .display span {
+  display: block;
+  padding-block: 0.02em;
+}
+.landing .lede {
+  max-width: 50ch;
+  margin: clamp(18px, 2.6vh, 26px) auto 0;
+  color: var(--ink-hi);
+  font-size: clamp(17px, 1.25vw, 20px);
+  text-shadow: var(--halo);
+}
+.landing .hero .ctas {
+  margin-top: clamp(26px, 4vh, 38px);
+}
+.landing[data-motion='on'] .sign {
+  animation: landing-hang 1.05s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+@keyframes landing-hang {
+  0% {
+    transform: translateY(-60%) rotate(-5deg);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(2%) rotate(2.2deg);
+  }
+  75% {
+    transform: rotate(-0.9deg);
+  }
+  90% {
+    transform: rotate(0.3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+.landing[data-motion='on'] .display span {
+  animation: landing-chisel 0.7s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+.landing[data-motion='on'] .display span:nth-child(1) {
+  animation-delay: 0.42s;
+}
+.landing[data-motion='on'] .display span:nth-child(2) {
+  animation-delay: 0.54s;
+}
+.landing[data-motion='on'] .display span:nth-child(3) {
+  animation-delay: 0.66s;
+}
+@keyframes landing-chisel {
+  from {
+    clip-path: inset(-10% 100% -10% 0);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: inset(-10% 0 -10% 0);
+    opacity: 1;
+  }
+}
+/* Wooden rune plaque: fixed top-right, vertically centred on the resource links; slides away while reading down. */
+.landing .kares-dock {
+  position: fixed;
+  z-index: 40;
+  top: max(15px, env(safe-area-inset-top, 0px));
+  right: max(var(--nav-r), env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: var(--dock-w);
+  height: 40px;
+  padding: 0 14px 0 12px;
+  border: 0;
+  color: var(--ink);
+  background:
+    repeating-linear-gradient(180deg, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, #7d525b 0%, #5e3d46 55%, #47303a 100%);
+  box-shadow:
+    inset 5px 0 0 #565b66,
+    inset 6px 0 0 #7a808b,
+    inset -5px 0 0 #565b66,
+    inset 0 2px 0 #9a6c74,
+    inset 0 -3px 0 #2a1a20,
+    0 0 0 2px #1a1014;
+  filter: drop-shadow(0 3px 0 #07090c) drop-shadow(0 8px 12px rgb(0 0 0 / 0.55));
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease,
+    visibility 0.22s;
+}
+.landing .kares-dock::before,
+.landing .kares-dock::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin-top: -1px;
+  background: #a9aeb7;
+  pointer-events: none;
+}
+.landing .kares-dock::before {
+  left: 1px;
+}
+.landing .kares-dock::after {
+  right: 1px;
+}
+.landing .kares-dock:hover {
+  filter: drop-shadow(0 3px 0 #07090c) drop-shadow(0 8px 12px rgb(0 0 0 / 0.55)) brightness(1.12);
+}
+.landing .kares-dock:focus-visible {
+  outline: 3px solid var(--rune);
+  outline-offset: 4px;
+}
+.landing .kares-dock.away {
+  transform: translateY(calc(-100% - 24px));
+  opacity: 0;
+  visibility: hidden;
+}
+/* KaresLogo renders the canonical seed/icons/currency/kares.png; shown as-is (contain, normal sampling). */
+.landing .kares-dock [data-kares-logo] {
+  flex: none;
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 0 #2a1a20);
+}
+.landing .dock-name {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: #c9ecff;
+  text-shadow:
+    0 0 6px rgb(118 200 255 / 0.75),
+    0 2px 0 #1d1418;
+}
+.landing .dock-sub {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (max-width: 899px) {
+  .landing .kares-dock {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    width: auto;
+    height: 36px;
+    padding: 0 12px 0 10px;
+    gap: 7px;
+  }
+  .landing .kares-dock [data-kares-logo] {
+    width: 20px;
+    height: 20px;
+  }
+  .landing .kares-dock .dock-name {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+}
+@media (max-width: 359px) {
+  .landing .kares-dock {
+    height: 34px;
+    padding: 0 10px 0 9px;
+    gap: 6px;
+  }
+  .landing .kares-dock [data-kares-logo] {
+    width: 18px;
+    height: 18px;
+  }
+  .landing .kares-dock .dock-name {
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* ---------- Earn: a carved market stall with its counter ---------- */
+.landing .earn {
+  position: relative;
+  padding: clamp(40px, 6vh, 70px) 0 clamp(90px, 14vh, 160px);
+}
+.landing .stall {
+  --h: clamp(180px, 18vw, 262px);
+  position: relative;
+  height: var(--h);
+  background: linear-gradient(180deg, #5b6472 0%, #3b4350 40%, #2a313c 100%);
+}
+.landing .stall-in {
+  position: absolute;
+  inset: 12px 12px 0;
+  --a: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: linear-gradient(180deg, #070910 0%, #0f131b 62%, #181e28 100%);
+}
+.landing .bay {
+  position: relative;
+  min-width: 0;
+  background: radial-gradient(70% 62% at 50% 14%, rgb(242 181 82 / 0.26), transparent 72%);
+}
+.landing .bay + .bay {
+  box-shadow:
+    inset 10px 0 0 #2b323e,
+    inset 12px 0 0 #4b5462;
+}
+.landing .item {
+  position: absolute;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 10px rgb(0 0 0 / 0.75));
+}
+.landing .bay .item {
+  left: 16%;
+  top: 10%;
+  width: 68%;
+  height: 66%;
+}
+.landing .bay .key {
+  transform: rotate(-9deg);
+}
+.landing .pair {
+  position: absolute;
+  inset: 12% 10% 26%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6%;
+}
+.landing .pair .item {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+}
+.landing .crest {
+  position: absolute;
+  left: 28%;
+  top: 14%;
+  width: 44%;
+  height: 58%;
+  filter: drop-shadow(0 12px 8px rgb(0 0 0 / 0.75));
+}
+.landing .bay-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7%;
+  padding-inline: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink-faint);
+  text-align: center;
+}
+.landing .ledge {
+  position: relative;
+  z-index: 1;
+  height: 16px;
+  margin-inline: -2%;
+  background: linear-gradient(180deg, #68717e 0, #48505c 3px, #373e49 9px, #1c2129 16px);
+  --s: 5px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% 100%,
+    0 100%,
+    0 var(--s),
+    var(--s) var(--s)
+  );
+}
+.landing .counter {
+  --s: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(22px, 3vw, 40px);
+  padding: 28px clamp(20px, 2.6vw, 32px) 30px;
+  background: linear-gradient(180deg, #1a1f28, #11151c);
+  box-shadow:
+    inset 0 0 0 1px #2c333f,
+    inset 0 -6px 0 #090b10;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s))
+  );
+}
+.landing .counter > li {
+  min-width: 0;
+}
+.landing .counter p {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  font-size: 17px;
+  max-width: 40ch;
+}
+.landing .counter a {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--gold);
+}
+@media (max-width: 899px) {
+  .landing .stall {
+    --h: clamp(150px, 40vw, 210px);
+  }
+  .landing .bay-name {
+    font-size: 12px;
+  }
+  .landing .counter {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+}

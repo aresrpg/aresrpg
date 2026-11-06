@@ -4,7 +4,7 @@ import type { SuiClientTypes } from '@mysten/sui/client'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
-import { decode_rewards_economy } from './kares_economy.ts'
+import { decode_rewards_economy, read_rewards_economy } from './kares_economy.ts'
 import { resolve_pins } from './pins.ts'
 import type { Pins, SdkNetwork } from './client.ts'
 import { absorb_object, absorb_receipt, type Receipt, type ResolutionCache } from './cache.ts'
@@ -67,6 +67,7 @@ export type KaresStakingSnapshot = Readonly<{
   }>
   positions: readonly KaresPositionSnapshot[]
   total_supply: bigint
+  coin_type: string
 }>
 
 export type KaresBalances = Readonly<{ kares_balance: bigint; sui_balance: bigint }>
@@ -214,6 +215,7 @@ const decode_snapshot = (
       authorized: normalizeStructTag(combat.authorized.name),
     }),
     total_supply: currency.supply!.BurnOnly!,
+    coin_type: pins.coin_type,
     positions: Object.freeze(positions),
     community: Object.freeze({
       id: community.id,
@@ -346,6 +348,20 @@ export const create_kares_snapshot_reader = (
     return { snapshot, balances }
   }
   return Object.freeze({
+    /** Null proves an unfunded canonical Economy, never zero supply or missing configuration. */
+    public_snapshot: async (): Promise<KaresStakingSnapshot | null> => {
+      if (client.network !== network) throw new Error('KARES reader belongs to a different network')
+      const economy = await read_rewards_economy({ pins: raw_pins, sui_client: client })
+      const older = [floors.get(economy.id), cache_floor(cache, economy.id)].some(
+        (known) => known && economy.version < known.version
+      )
+      if (older) throw new KaresSnapshotPending('KARES economy is behind the previous reading')
+      if (!economy.coin_type) {
+        floors.set(economy.id, { version: BigInt(economy.version), deleted: false, owner: null })
+        return null
+      }
+      return (await read_snapshot(undefined, false)).snapshot
+    },
     snapshot: async (address?: string): Promise<KaresSnapshot> => {
       const { snapshot, balances } = await read_snapshot(address, true)
       return Object.freeze({ ...snapshot, ...balances! })

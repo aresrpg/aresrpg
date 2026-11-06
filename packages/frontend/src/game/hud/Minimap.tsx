@@ -19,12 +19,13 @@ import {
 } from '@aresrpg/engine'
 
 import './minimap.css'
+import { displayed_character } from '../../agents/observation.ts'
 import { titleize } from '../../content/catalog.ts'
 import { city_at_position, world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../../store.ts'
-import { useWorldPose } from '../core/pose_feed.ts'
+import { useDisplayedWorldPose } from '../core/pose_feed.ts'
 
 import { camera_heading } from './compass_math.ts'
 import {
@@ -53,13 +54,15 @@ export const toggles_world_map = (event: Readonly<Pick<KeyboardEvent, 'code' | '
   )
 }
 
-export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: AppCopy; terrain?: unknown }>) => {
-  const pose = useWorldPose()
+export const Minimap = ({
+  copy,
+  terrain: supplied_terrain,
+  read_only = false,
+}: Readonly<{ copy: AppCopy; terrain?: unknown; read_only?: boolean }>) => {
+  const pose = useDisplayedWorldPose()
   const players = useMapPlayers()
   const world_state = useAppStore(({ world }) => world)
-  const world_name = useAppStore(
-    ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
-  )
+  const world_name = useAppStore(({ session }) => displayed_character(session)?.world ?? null)
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
   const [resource_icons] = useState(create_map_resource_icons)
   const map_open = useAppStore(({ navigation }) => navigation.dialog === 'world_map')
@@ -67,6 +70,7 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
   const text = copy_text(copy.world_hud)
 
   useEffect(() => {
+    if (read_only) return
     const toggle = (event: Readonly<KeyboardEvent>): void => {
       if (!toggles_world_map(event)) return
       event.preventDefault()
@@ -77,7 +81,7 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
     }
     globalThis.addEventListener('keydown', toggle)
     return () => globalThis.removeEventListener('keydown', toggle)
-  }, [])
+  }, [read_only])
 
   const compiled: CompiledWorld | null = useMemo(() => {
     const terrain = supplied_terrain ?? world_terrain(world_name)
@@ -126,20 +130,22 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
 
   return (
     <div className="gw-minimap" data-minimap="">
-      <IconButton
-        className="world-map-trigger world-utility-button"
-        label={text('world_map')}
-        onClick={() => set_map_open(true)}
-        icon={<Map size={22} />}
-      />
+      {!read_only && (
+        <IconButton
+          className="world-map-trigger world-utility-button"
+          label={text('world_map')}
+          onClick={() => set_map_open(true)}
+          icon={<Map size={22} />}
+        />
+      )}
       <MinimapView
         title={location_name}
         coordinates={`${coords.x}, ${coords.z}`}
         open_label={text('world_map')}
-        open={() => set_map_open(true)}
+        open={read_only ? null : () => set_map_open(true)}
         map={<canvas height={SIZE} ref={canvas_ref} width={SIZE} />}
       />
-      {map_open && (
+      {!read_only && map_open && (
         <WorldMap
           compiled={compiled}
           copy={copy}

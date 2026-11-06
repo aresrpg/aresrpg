@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { placement_plan } from '@aresrpg/fight'
+
 import type { AppInput, AppState } from '../store.ts'
 
 import type { FightEnvironment } from './fight.ts'
@@ -55,17 +57,24 @@ const ready_progress_latch = (input: AppInput): FightLatch | null => {
   })
 }
 
-const single_latch = (input: AppInput): FightLatch | null => {
+const single_latch = (state: Readonly<AppState>, input: AppInput): FightLatch | null => {
   if (input.type !== 'fight/input' || input.origin !== 'local' || !input.fight) return null
   const { fight } = input
   if (input.input.type === 'place') {
-    const fighter = Number(input.input.fighter)
+    const checkpoint = state.fight.cached[fight]
+    const plan = checkpoint
+      ? placement_plan(checkpoint.contract, input.input.fighter, input.input.cell)
+      : 'not_placement'
+    const moved = typeof plan === 'string' ? [Number(input.input.fighter)] : plan.map(({ fighter }) => Number(fighter))
     return Object.freeze({
       fight,
       update: (environment) =>
         Object.freeze({
           ...environment,
-          placement_changed_seats: Object.freeze({ ...environment.placement_changed_seats, [fighter]: true }),
+          placement_changed_seats: Object.freeze({
+            ...environment.placement_changed_seats,
+            ...Object.fromEntries(moved.map((fighter) => [fighter, true as const])),
+          }),
         }),
     })
   }
@@ -79,4 +88,6 @@ const single_latch = (input: AppInput): FightLatch | null => {
 }
 
 export const fight_latch = (state: Readonly<AppState>, input: AppInput): FightLatch | null =>
-  ready_all_latch(state, input) ?? ready_progress_latch(input) ?? single_latch(input)
+  state.session.agent_view.request
+    ? null
+    : (ready_all_latch(state, input) ?? ready_progress_latch(input) ?? single_latch(state, input))

@@ -18,7 +18,7 @@ import {
   selected_world_action_lock,
   selected_world_ambush,
 } from '../../src/modules/world_gather.ts'
-import { initial_app_state } from '../../src/store.ts'
+import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 import type { GameSettings } from '../../src/game/core/settings.ts'
 
 const settings: GameSettings = Object.freeze({
@@ -145,7 +145,7 @@ test('gathering stays locked through its receipt and adopts the chain checkpoint
   })
   expect(state.world.gathering['0xc']).toMatchObject({ confirmed: true, ends_at_ms: 14_500, authoritative: false })
 
-  state = world.reduce!(state, {
+  state = reduce_app_state(state, {
     type: 'server/packet',
     packet: { type: 'packet/characters', characters: [{ id: '0xc', at_ms: 13_420 }] } as never,
   })
@@ -185,7 +185,7 @@ test('an ambush receipt replaces gathering animation and automatically resolves 
       quantity: null,
     },
   })
-  state = world.reduce!(state, {
+  state = reduce_app_state(state, {
     type: 'server/packet',
     packet: {
       type: 'packet/characters',

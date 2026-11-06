@@ -492,6 +492,7 @@ describe('market + self stream + heartbeat', () => {
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/server_info')).toEqual({
       type: 'packet/server_info',
+      online_characters: 12,
       online: 7,
       indexing_lag: 42,
       current_epoch: '9',

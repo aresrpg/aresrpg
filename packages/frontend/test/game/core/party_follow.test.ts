@@ -3,6 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
+import { initial_session_state } from '../../../src/modules/session.ts'
 import {
   party_follower_target,
   read_party_follow,
@@ -99,6 +100,7 @@ test('switching to a follower preserves follow mode while excluding the controll
       },
     },
     session: {
+      ...initial_session_state(),
       selected_character_id: '0xb',
       characters: [
         { id: '0xa', world: 'nauvis' },
@@ -219,6 +221,7 @@ test('nearby followers join incrementally while distant followers keep approachi
       },
     },
     session: {
+      ...initial_session_state(),
       selected_character_id: '0xa',
       characters: [
         { id: '0xa', world: 'nauvis' },
@@ -292,6 +295,7 @@ test.each([
       },
     },
     session: {
+      ...initial_session_state(),
       link_status: 'ready',
       selected_character_id: controlled,
       characters: [

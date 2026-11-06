@@ -14,6 +14,9 @@ export const sync_world_activity = (world: Readonly<WorldActivity> | null, state
   const world_page = is_world_page(state.navigation.page)
   const background = state.automation.run !== null || state.run_to.run?.status === 'running'
   world.set_active(true, background)
-  world.set_interactive(world_page && state.navigation.dialog === null && !!state.session.wallet)
+  world.set_interactive(
+    world_page && state.navigation.dialog === null && !!state.session.wallet,
+    !state.session.agent_view.request
+  )
   world.set_action_lock(selected_world_action_lock(state))
 }

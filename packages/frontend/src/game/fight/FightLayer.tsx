@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable complexity -- the fight layer explicitly composes mutually exclusive interaction states. */
-
 import type { FightPresentationCue } from '@aresrpg/engine'
 import {
   movement_points_of,
@@ -17,7 +16,6 @@ import {
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { FightSimulatorExit } from './FightSimulatorExit.tsx'
 import { useEffect, useMemo, useState, useReducer } from 'react'
-
 import { encyclopedia_catalog } from '../../content/catalog.ts'
 import { mob_icon } from '../../content/assets.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
@@ -25,7 +23,6 @@ import { fight_render_state } from '../../modules/nearby_fight.ts'
 import { fight_placement_changes } from '../../modules/fight.ts'
 import type { SceneHandle } from '../core/scene_feed.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../../store.ts'
-
 import { useFightResources, type FightResourceLoader } from './fight_resources.ts'
 import { create_fight_audio_observer, play_fight_turn_start } from '../audio/fight_audio.ts'
 import { character_render_source } from '../character_entities.ts'
@@ -53,6 +50,8 @@ import { TouchFightConfirmation } from './TouchFightConfirmation.tsx'
 import { initial_fight_interaction, reduce_fight_interaction, reviewed_cell } from './fight_interaction.ts'
 import { resolve_fight_hover, type FightHover } from './fight_hover.ts'
 import { FightViewport } from './FightViewport.tsx'
+import { agent_watching } from '../../agents/observation.ts'
+import { FightVitals } from './FightVitals.tsx'
 import { FightHud } from './FightHud.tsx'
 import { FightSpectatorExit, selected_spectator } from './FightSpectatorExit.tsx'
 import { fight_fighter_name, fight_turn_key, type FightActionSelection } from './fight_projection.ts'
@@ -185,7 +184,13 @@ export const FightLayer = ({
     [appearances, character_roster_key, fight_id, viewer_team]
   )
   const resources = useFightResources(checkpoint, scene, ambient, character_appearance_sources, resource_loader)
-  const actions_locked = presentation_pending || fight.transaction_pending || resources.status !== 'ready'
+  const observing = agent_watching(session)
+  const actions_locked = [
+    observing,
+    presentation_pending,
+    fight.transaction_pending,
+    resources.status !== 'ready',
+  ].includes(true)
   const placement = usePlacementGasWarning({
     actions_locked,
     cancel: copy.cancel,
@@ -549,39 +554,44 @@ export const FightLayer = ({
           )}
           <FightTargetPreviews scene={scene} critical={spell_preview?.critical ?? false} targets={preview_targets} />
           {crit_serial > 0 && <div aria-hidden className="fight-crit-vignette" key={crit_serial} />}
-          <FightHud
-            confirmation={
-              <TouchFightConfirmation
-                key={String(hovered_cell)}
-                visible={reviewed_cell(interaction, checkpoint, actions_locked) !== null}
+          <FightVitals display_fighters={display_fighters} />
+          {!observing && (
+            <>
+              <FightHud
+                confirmation={
+                  <TouchFightConfirmation
+                    key={String(hovered_cell)}
+                    visible={reviewed_cell(interaction, checkpoint, actions_locked) !== null}
+                    copy={copy}
+                    cancel={() => interact({ type: 'cancel' })}
+                    confirm={() => {
+                      const cell = reviewed_cell(interaction, read_app_state().fight.checkpoint, actions_locked)
+                      interact({ type: 'cancel' })
+                      if (cell !== null) select_cell(cell)
+                    }}
+                  />
+                }
+                actions_locked={actions_locked}
                 copy={copy}
-                cancel={() => interact({ type: 'cancel' })}
-                confirm={() => {
-                  const cell = reviewed_cell(interaction, read_app_state().fight.checkpoint, actions_locked)
-                  interact({ type: 'cancel' })
-                  if (cell !== null) select_cell(cell)
-                }}
+                display_fighters={display_fighters}
+                focus_fighter={(fighter) =>
+                  set_hover(fighter ? { fight: checkpoint.contract.id, type: 'fighter', seat: fighter.seat } : null)
+                }
+                mob_icon_for={mob_icon}
+                names={names}
+                presentation_queued={presentation_queued}
+                presented_turn_seat={presented_turn_seat}
+                turn_announcement={turn_announcement}
+                select_action={set_selected_action}
+                selected_action={selected_action}
+                target_fighter={({ cell }, pointer_type) => target_cell(cell, pointer_type)}
+                targetable_fighter_cells={timeline_targetable_cells(selected_spell, spell_cells?.targetable)}
               />
-            }
-            actions_locked={actions_locked}
-            copy={copy}
-            display_fighters={display_fighters}
-            focus_fighter={(fighter) =>
-              set_hover(fighter ? { fight: checkpoint.contract.id, type: 'fighter', seat: fighter.seat } : null)
-            }
-            mob_icon_for={mob_icon}
-            names={names}
-            presentation_queued={presentation_queued}
-            presented_turn_seat={presented_turn_seat}
-            turn_announcement={turn_announcement}
-            select_action={set_selected_action}
-            selected_action={selected_action}
-            target_fighter={({ cell }, pointer_type) => target_cell(cell, pointer_type)}
-            targetable_fighter_cells={timeline_targetable_cells(selected_spell, spell_cells?.targetable)}
-          />
-          {placement.warning}
-          <FightSimulatorExit copy={copy} visible={fight.mode === 'local'} label={exit_label} />
-          <FightSpectatorExit character_id={selected_spectator({ fight, session })} copy={copy} />
+              {placement.warning}
+              <FightSimulatorExit copy={copy} visible={fight.mode === 'local'} label={exit_label} />
+              <FightSpectatorExit character_id={selected_spectator({ fight, session })} copy={copy} />
+            </>
+          )}
         </>
       )}
     </section>

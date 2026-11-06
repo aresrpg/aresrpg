@@ -49,6 +49,7 @@ dispatch_app({
   type: 'server/packet',
   packet: {
     type: 'packet/server_info',
+    online_characters: 12,
     online: 6,
     indexing_lag: 0,
     current_epoch: '1',

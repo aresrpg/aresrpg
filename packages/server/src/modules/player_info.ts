@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The cluster heartbeat, player-facing half (legacy server_info): every 5s, whoever is
-// connected hears the network-wide unique-player count — a flat cadence, deliberately decorrelated
+// connected hears the network-wide authenticated-account and tracked-character counts — a flat cadence, deliberately decorrelated
 // from user activity. Pod address snapshots and the player_connect eviction beacon live in index.ts.
 
 import logger from '../logger.ts'
@@ -25,7 +25,7 @@ export default {
           return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null })
         }),
       ])
-        .then(async ([online, health]) => {
+        .then(async ([population, health]) => {
           const observed = get_state().market_observation !== null
           const volume = observed
             ? ((await pubsub.graph.market_volume?.(Date.now()).catch((error: Error) => {
@@ -35,7 +35,7 @@ export default {
             : null
           send({
             type: 'packet/server_info',
-            online,
+            ...population,
             indexing_lag: health.lag,
             current_epoch: health.epoch,
             chain_timestamp_ms: health.chain_timestamp_ms,

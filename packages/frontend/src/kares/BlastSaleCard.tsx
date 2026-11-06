@@ -3,15 +3,16 @@
 
 import { ArrowUpRight } from 'lucide-react'
 
-import pilot from '../../../../seed/icons/branding/blast/pilot.png'
-import helmet from '../../../../seed/icons/branding/blast/helmet.svg'
-import wordmark from '../../../../seed/icons/branding/blast/wordmark.svg'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 
 import { blast_phase, type BlastState } from './blast.ts'
 import { useBlastSale } from './useBlastSale.ts'
 import './blast.css'
+
+const pilot = '/branding/blast/pilot.png'
+const helmet = '/branding/blast/helmet.svg'
+const wordmark = '/branding/blast/wordmark.svg'
 
 export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; state: BlastState }>) => {
   const phase = blast_phase(state)

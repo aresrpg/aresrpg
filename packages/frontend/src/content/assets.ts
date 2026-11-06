@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One icon index shared by every frontend feature.
 
+import { portrait_url, type PortraitColors } from '@aresrpg/immutable/portrait'
+
 import { indexed_asset_key, spell_asset_basename, spell_asset_key } from './asset_keys.ts'
 import { character_model_basenames } from './character_model_catalog.ts'
 
@@ -81,5 +83,7 @@ export const spell_icon = (classe: string, name: string): string | null =>
       ? `${DEV_SEED_ICON_ROOT}spells/${encodeURIComponent(spell_asset_basename(classe, name))}.webp`
       : (spell_assets[spell_asset_key(classe, name)] ?? null)
 
-export const character_icon = (classe: string, sex: string): string | null =>
-  character_assets[character_model_basenames(classe, sex === 'male').body] ?? null
+export const character_icon = (classe: string, sex: string, colors?: PortraitColors): string | null =>
+  (colors ? portrait_url({ classe, sex, ...colors }) : null) ??
+  character_assets[character_model_basenames(classe, sex === 'male').body] ??
+  null

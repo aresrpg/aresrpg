@@ -36,6 +36,9 @@ const log = logger(import.meta)
 
 /** The slice of an ioredis connection the buses consume — injected, so tests never connect. */
 export type BusRedis = {
+  multi: (commands: (string | number)[][]) => {
+    exec: () => Promise<[Error | null, unknown][] | null>
+  }
   pipeline?: () => {
     hget: (key: string, field: string) => unknown
     exec: () => Promise<[Error | null, unknown][] | null>
@@ -96,11 +99,14 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
 }
 
+export type OnlinePopulation = Readonly<{ online: number; online_characters: number | null }>
+type OnlineSnapshot = Readonly<{ addresses: readonly string[]; characters: readonly string[] }>
+
 export type MeshBus = Bus & {
-  /** This pod's cluster-presence key holds its authenticated addresses for 20 seconds. */
-  heartbeat: (server_id: string, addresses: readonly string[]) => Promise<void>
-  /** Cluster-wide unique authenticated addresses across every live pod snapshot (cached 4s). */
-  cluster_online: () => Promise<number>
+  /** This pod's authenticated addresses and tracked character IDs, with a 20-second TTL. */
+  heartbeat: (server_id: string, snapshot: OnlineSnapshot) => Promise<void>
+  /** Cluster-wide identity unions across live pod snapshots (cached 4s). */
+  cluster_online: () => Promise<OnlinePopulation>
   record_online?: (online: number, at_ms: number) => Promise<void>
   online_samples?: (keys: readonly string[]) => Promise<readonly (readonly number[])[]>
 }
@@ -120,24 +126,32 @@ const online_sample_values = (values: readonly string[]): readonly number[] => {
   return samples
 }
 
-const parse_online_heartbeat = (raw: string): unknown => {
-  try {
-    return JSON.parse(raw) as unknown
-  } catch {
-    throw new Error('online heartbeat has an invalid shape')
-  }
+const string_ids = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) && value.every((id) => typeof id === 'string')
+
+const character_union_count = (values: readonly (string | null)[]): number | null => {
+  if (values.includes(null)) return null
+  const identities = values.flatMap((raw) => {
+    const ids: unknown = JSON.parse(raw!)
+    if (!string_ids(ids)) throw new Error('character heartbeat has an invalid shape')
+    return ids
+  })
+  return new Set(identities).size
 }
 
-/** Rolling compatibility: once any address snapshot exists, old numeric pod counts can only
- * raise the temporary floor. Summing both schemas would preserve the rollout inflation bug. */
-export const cluster_online_count = (values: readonly (string | null)[]): number => {
+/** Old pods retain the address-only schema. Missing companion snapshots mean unknown characters.
+ * Legacy numeric counts remain only a maximum floor alongside identity snapshots. */
+export const cluster_online_count = (
+  values: readonly (string | null)[],
+  character_values: readonly (string | null)[] = []
+): OnlinePopulation => {
   const addresses = new Set<string>()
   const legacy: number[] = []
   let has_snapshots = false
   values.forEach((raw) => {
     if (raw === null) return
-    const value = parse_online_heartbeat(raw)
-    if (Array.isArray(value) && value.every((address) => typeof address === 'string')) {
+    const value: unknown = JSON.parse(raw)
+    if (string_ids(value)) {
       has_snapshots = true
       value.forEach((address) => addresses.add(address))
       return
@@ -145,12 +159,10 @@ export const cluster_online_count = (values: readonly (string | null)[]): number
     if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error('online heartbeat has an invalid shape')
     legacy.push(Number(value))
   })
-  if (has_snapshots) return Math.max(addresses.size, 0, ...legacy)
-  return legacy.reduce((total, count) => {
-    const next = total + count
-    if (!Number.isSafeInteger(next)) throw new Error('online heartbeat count exceeds the safe integer range')
-    return next
-  }, 0)
+  const online = has_snapshots ? Math.max(addresses.size, 0, ...legacy) : legacy.reduce((a, b) => a + b, 0)
+  if (!Number.isSafeInteger(online)) throw new Error('online heartbeat count exceeds the safe integer range')
+  const live_characters = values.flatMap((raw, index) => (raw === null ? [] : [character_values[index] ?? null]))
+  return { online, online_characters: character_union_count(live_characters) }
 }
 
 const create_bus = ({
@@ -325,8 +337,12 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
     local_channel: mesh_event_channel,
   })
   /** one SCAN per pod per window, whatever the connection count */
-  const online_cache = { value: 0, at_ms: 0, pending: null as Promise<number> | null }
-  const read_online = async (): Promise<number> => {
+  const online_cache = {
+    value: { online: 0, online_characters: null } as OnlinePopulation,
+    at_ms: 0,
+    pending: null as Promise<OnlinePopulation> | null,
+  }
+  const read_online = async (): Promise<OnlinePopulation> => {
     const keys: string[] = []
     for (let cursor = '0'; ;) {
       const [next, found] = await publisher.scan(cursor, 'MATCH', 'server:*', 'COUNT', 100)
@@ -334,15 +350,30 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
       if (next === '0') break
       cursor = next
     }
-    const snapshots = keys.length ? await publisher.mget(keys) : []
-    online_cache.value = cluster_online_count(snapshots)
+    // One atomic read pairs each legacy membership key with its character-only companion.
+    const snapshots = keys.length
+      ? await publisher.mget(keys.flatMap((key) => [key, key.replace('server:', 'server-characters:')]))
+      : []
+    online_cache.value = cluster_online_count(
+      snapshots.filter((_, index) => index % 2 === 0),
+      snapshots.filter((_, index) => index % 2 === 1)
+    )
     online_cache.at_ms = Date.now()
     return online_cache.value
   }
   return {
     ...doors,
-    heartbeat: async (server_id, addresses) => {
-      await publisher.setex(`server:${server_id}`, 20, JSON.stringify(addresses))
+    heartbeat: async (server_id, snapshot) => {
+      // Keep server:* readable by existing binaries throughout a rolling update.
+      const result = await publisher
+        .multi([
+          ['setex', `server:${server_id}`, 20, JSON.stringify(snapshot.addresses)],
+          ['setex', `server-characters:${server_id}`, 20, JSON.stringify(snapshot.characters)],
+        ])
+        .exec()
+      if (!result) throw new Error('heartbeat transaction was aborted')
+      const failed = result.find(([error]) => error)
+      if (failed) throw failed[0]
     },
     cluster_online: async () => {
       if (Date.now() - online_cache.at_ms < 4_000) return online_cache.value

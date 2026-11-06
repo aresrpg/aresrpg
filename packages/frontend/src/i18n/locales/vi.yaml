@@ -62,7 +62,9 @@ session_replaced_body: Tài khoản đã mở trò chơi ở nơi khác nên c�
 session_replaced_reconnect: Kết nối lại tại đây
 latency_unit: ms
 indexing_health: Trạng thái lập chỉ mục
-online_players: Người chơi trực tuyến
+online_accounts: Tài khoản trực tuyến
+online_characters: Nhân vật trực tuyến
+online_characters_body: Trên mọi thế giới, kể cả chiến đấu và hầm ngục.
 indexing_lag_warning: Thao tác trong game có thể bị trễ
 indexing_block_title: Đang đồng bộ thế giới
 indexing_block_body: Lịch sử chuỗi vẫn đang được lập chỉ mục. Trò chơi sẽ tự mở khi máy chủ bắt kịp vùng dữ liệu trực tiếp an toàn.
@@ -810,6 +812,7 @@ admin_page:
   character_royalties: Bản quyền nhân vật
   character_creation_revenue: Tạo nhân vật
   kolizeum_revenue: Phí đấu trường
+  tournament_revenue: Phí giải đấu đã ghi nhận
   game_transactions: Giao dịch trò chơi
   game_gas_fees: Phí gas trò chơi
   all_time: Toàn thời gian
@@ -2349,6 +2352,40 @@ item_categories:
   relic_slot: Di vật {{number}}
 kares: Staking
 kares_page:
+  ledger_intro: 'Token cho phần thưởng, staking và rương của AresRPG. Chỉ phát hành một lần; mỗi lần đốt đều giảm nguồn cung.'
+  buy_aftermath: 'Mua trên Aftermath'
+  swap_note: 'Mở Aftermath trong thẻ mới. Kiểm tra loại token trước khi giao dịch.'
+  read_at: 'Đọc từ Sui lúc {{time}}.'
+  supply_heading: 'Nguồn cung'
+  supply_cap: 'Giới hạn {{cap}} KARES. Mỗi lần đốt đều giảm nguồn cung.'
+  burned: 'Đã đốt'
+  pools_heading: 'Quỹ phần thưởng'
+  staking_summary: 'Chia cho người stake trong 1.825 ngày hoạt động. Đồng hồ dừng khi không ai stake.'
+  boss_summary: 'Thưởng boss chia đều cho các nhân vật chiến thắng.'
+  uses_heading: 'Dùng KARES'
+  compete: 'Thi đấu'
+  compete_note: 'Giành thưởng boss, giải đấu PvP và bảng xếp hạng theo mùa.'
+  token_type: 'Loại token'
+  token_pending: 'Đang chờ xác minh'
+  copy_token: 'Sao chép'
+  token_copied: 'Đã sao chép loại token.'
+  token_hint: 'Có thể sao chép sau khi xác minh token và liên kết quỹ dự trữ.'
+  figures_unfunded: 'Quỹ phần thưởng chưa được cấp vốn. Nguồn cung vẫn chưa xác định.'
+  figures_stale: 'Dữ liệu có thể đã cũ. Làm mới để kiểm tra.'
+  figures_unconfigured: 'Mạng này chưa cấu hình số liệu trực tiếp. Điều đó không có nghĩa nguồn cung hay quỹ dự trữ bằng không.'
+  figures_unavailable: 'Không có số liệu trực tiếp. Hãy làm mới để thử lại.'
+  figures_ready: 'Dữ liệu trên chuỗi'
+  current_supply: 'Tổng cung hiện tại'
+  circulating_supply: 'Nguồn cung lưu hành'
+  circulating_unknown: 'Chưa có: chưa có số liệu lưu hành được xác minh.'
+  total_staked: 'Tổng đã stake'
+  pool_held: 'Số dư trong quỹ'
+  pool_held_note: 'Gồm phần thưởng đã kiếm nhưng chưa nhận; không gồm vốn stake.'
+  pool_forecast: 'Dự báo · 24 giờ hoạt động tới'
+  pool_forecast_note: 'Khoản phân phối đã được cấp vốn cho toàn quỹ, không phải chi trả trước đây hay lợi nhuận cá nhân. Đồng hồ hoạt động dừng khi không ai stake.'
+  treasury_claimable: 'Ngân quỹ có thể nhận'
+  daily_cap: 'Giới hạn mỗi ngày'
+  daily_cap_note: 'Mức chi trả thưởng boss tối đa mỗi ngày tính từ lúc thiết lập, không phải lượng thực trả. Hạn mức chưa dùng không được cộng dồn.'
   other_networks: 'Mạng khác · EVM / Solana'
   sui_wallet_required: 'Chọn ví Sui để sử dụng tính năng này.'
   blast_soon: 'Sắp mở bán token trên Blast'
@@ -2410,8 +2447,8 @@ kares_page:
   community: 'Thi đấu PvP và bảng xếp hạng theo mùa'
   team: Phân bổ đội ngũ
   five_years: Thưởng staking cộng đồng
-  mastery_title: Chơi để nhận thưởng. Hoặc đốt KARES.
-  mastery_note: 'Mỗi điểm giá Tinh thông tương đương 1.000 KARES. KARES thanh toán được đốt vĩnh viễn.'
+  mastery_title: 'Rương'
+  mastery_note: 'Mua rương bằng KARES trong trò chơi. KARES thanh toán bị đốt vĩnh viễn khi mua, không phải khi mở rương.'
   rewards_note: 'Phần thưởng được phân phối trong 1.825 ngày hoạt động. Ai cũng có thể đóng góp KARES hoặc SUI: bắt đầu ở mốc ngày hoạt động tiếp theo và kéo dài 30 ngày hoạt động, không kéo dài lịch cũ. Khoản đóng góp không thể rút lại. Đồng hồ dừng khi không ai staking; phần thưởng đã kiếm được vẫn có thể nhận.'
   revenue_note: 20% tiền bản quyền chợ đã thu dùng thưởng SUI cho staking. Thưởng tùy doanh thu và lượng stake tham gia.
   points: Điểm Tinh thông
@@ -2657,6 +2694,63 @@ spell_effects:
   short_stat: 'CHỈ SỐ'
   expires_next_turn: 'Đến lượt tiếp theo'
 ui:
+  add_funds_agent: 'Nạp tiền cho tác nhân'
+  agent_funding_unverified: 'Không thể xác minh người nhận. Hãy làm mới mục thu hồi trước khi nạp tiền.'
+  agent_entry_intro: 'Kết nối trợ lý, chọn nhân vật và quản lý túi đồ tại đây.'
+  agent_entry_play: 'Chơi trò chơi'
+  agent_watch: 'Theo dõi tác nhân'
+  agent_watching: 'Đang theo dõi tác nhân'
+  agent_watch_empty: 'Không có nhân vật nào để theo dõi.'
+  agent_watch_failed: 'Không thể theo dõi tác nhân này. Vui lòng thử lại.'
+  portrait_share: 'Chia sẻ chân dung'
+  portrait_download: 'Tải PNG'
+  portrait_copy: 'Sao chép liên kết ảnh'
+  portrait_copied: 'Đã sao chép liên kết'
+  portrait_failed: 'Không thể tải chân dung hoặc sao chép liên kết. Bạn có thể chọn liên kết bên dưới.'
+  portrait_close: 'Đóng'
+  portrait_preview: 'Chân dung nhân vật'
+  agent_recall_steps: 'Ký hai bước: cho phép thu hồi bằng thành viên Google của ví đa chữ ký, rồi nhận nhân vật cùng trang bị trong danh sách trả về. Giao dịch nhận chuyển và mặc lại toàn bộ trang bị cùng lúc. Vật phẩm khác giữ nguyên. Ví đa chữ ký trả phí thu hồi; ví của bạn trả phí nhận. Hãy rời trận trước. Hủy sẽ để trang bị đã tháo trong kiosk nguồn.'
+  agent_asset_proceeds: 'Doanh thu kiosk'
+  agent_asset_collect: 'Thu về ví đa chữ ký'
+  agent_asset_delist: 'Hủy bán'
+  agent_asset_reserved: 'Đề nghị riêng · cần PurchaseCap'
+  agent_asset_unconfigured: 'Chưa được cấu hình cho bản triển khai này'
+  agent_asset_fee_budget: 'Ngân sách gas tối đa'
+  agent_inventory: 'Túi đồ của tác nhân'
+  agent_asset_refresh: 'Làm mới túi đồ'
+  agent_asset_available: 'Có sẵn'
+  agent_asset_listed: 'Đang bán · hãy hủy bán trước'
+  agent_asset_equipped: 'Đang trang bị'
+  agent_asset_sui: 'Số lượng SUI'
+  agent_asset_kares: 'Số lượng KARES'
+  agent_asset_reserve: 'SUI giữ lại sau phí'
+  agent_asset_positions: 'KARES đang stake'
+  agent_asset_unstake: 'Rút về ví đa chữ ký'
+  agent_asset_owned: 'Đối tượng sở hữu khác (chỉ xem)'
+  agent_asset_incoming: 'Vật phẩm chờ nhận'
+  agent_asset_claim: 'Nhận vật phẩm đã chọn'
+  agent_asset_cancel: 'Hủy trả vật phẩm đã chọn'
+  agent_asset_scope: 'Chọn vật phẩm và số lượng chính xác. Chồng vật phẩm được chuyển toàn bộ. Trang bị được tháo trước; phải hủy bán trước khi chuyển. Rút KARES đang stake rồi làm mới trước khi chọn số lượng. Giữ SUI cho các bước thu hồi sau. Loại đối tượng khác chỉ xem; phải kết thúc trận trước.'
+  agent_setup_prompt: 'Thiết lập tác nhân AresRPG theo {guide} bằng liên kết tạm thời riêng tư này: {url}. Tự động gửi bằng chứng công khai. Thiết lập này không cho phép chuyển tài sản hay chơi game.'
+  agent_cancel: 'Hủy'
+  agent_pair_connect: 'Kết nối'
+  agent_pair_pending: 'Đang chờ trợ lý của bạn…'
+  agent_pair_failed: 'Thiết lập đã hết hạn hoặc không thể hoàn tất. Hãy kết nối lại.'
+  agent_pair_verified: 'Đã xác minh khóa tác nhân. Điều này không xác nhận đăng nhập máy chủ hay quyền giữ nhân vật.'
+  agent_environment: 'Chọn trợ lý có môi trường tác nhân duy trì lâu dài, như ChatGPT dots hoặc Grok Bot.'
+  agent_pair_ephemeral: 'Chỉ xác minh khóa công khai. Khóa tạm thời này sẽ mất khi tiến trình tác nhân kết thúc. Không bao giờ gửi tài sản đến danh tính này.'
+  agent_pair_instructions: 'Gửi yêu cầu này cho trợ lý. Kết quả sẽ tự động xuất hiện ở đây.'
+  agent_pair_blocked: 'Ví này không cung cấp định danh công khai Google để ghép nối. Kết nối bằng Google để tạo yêu cầu công khai.'
+  agent_copy_request: 'Sao chép yêu cầu thiết lập'
+  agent_paste_request: 'Dán yêu cầu này vào tác nhân. Sao chép không kết nối tài khoản.'
+  agent_copy_failed: 'Sao chép thất bại. Hãy chọn và sao chép thủ công yêu cầu ở trên.'
+  agent_handoff_request: 'Chuẩn bị {{provider}} cho Connect Your Agent theo {{url}}. Báo cáo cấu hình ký còn thiếu và yêu cầu liên kết tạm thời nếu cần. Yêu cầu này không cho phép tạo thông tin xác thực, chuyển tài sản hay chơi game.'
+  agent_connect_your: 'Kết nối tác nhân của bạn'
+  agent_bootstrap: 'Mở hướng dẫn thiết lập'
+  agent_choose: 'Chọn tác nhân của bạn'
+  agent_unavailable: 'Chưa hỗ trợ ghép nối. Chưa có tác nhân nào được kết nối.'
+  agent_setup: 'Thiết lập tác nhân'
+  agent_send: 'Gửi cho tác nhân'
   feedback_question: 'Điều gì khiến bạn khó tiếp tục?'
   feedback_unclear: 'Không biết phải làm gì'
   feedback_controls: 'Cách điều khiển'
@@ -3333,3 +3427,116 @@ tournament_page:
   find_review: Tìm đội cho {{character}} và đăng ký nhân vật này?
   joined_count: '{{count}}/{{total}} đã vào'
   versus: đấu với {{team}}
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

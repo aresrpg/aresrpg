@@ -1,0 +1,526 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Accepted landing ledger. All presentation belongs to this component, not its hosts. */
+.kares-ledger {
+  --ink: #efe8dc;
+  --ink-soft: #d6d0c4;
+  --ink-faint: #b2aea5;
+  --rune: #76c8ff;
+  --plate: #ecd19c;
+  --gold: #f2b552;
+  font-family: 'Ares UI', Nunito, sans-serif;
+  color: var(--ink);
+  line-height: 1.55;
+  width: 100%;
+  box-sizing: border-box;
+}
+.kares-ledger * {
+  box-sizing: border-box;
+}
+.kares-ledger :is(h2, h3, h4, p, dl, dd, ul) {
+  margin: 0;
+}
+.kares-ledger ul {
+  list-style: none;
+  padding: 0;
+}
+.kares-ledger button {
+  cursor: pointer;
+  font-family: inherit;
+}
+.kares-ledger button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.kares-ledger :focus-visible {
+  outline: 3px solid var(--rune);
+  outline-offset: 3px;
+}
+.kares-ledger .n {
+  --s: 6px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+}
+.kares-ledger .slab {
+  display: inline-flex;
+  position: relative;
+  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 12px 18px rgb(0 0 0 / 0.55));
+}
+.kares-ledger .btn {
+  --s: 6px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 2px 30px 6px;
+  border: 0;
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+.kares-ledger .btn-rune {
+  color: var(--ink);
+  background: linear-gradient(180deg, #38424f 0%, #242b36 100%);
+  box-shadow:
+    inset 0 2px 0 #56606e,
+    inset 0 -6px 0 #13171e;
+}
+.kares-ledger .btn-rune::before {
+  content: '';
+  position: absolute;
+  inset: 5px 5px 9px;
+  --s: 4px;
+  border: 1.5px solid rgb(118 200 255 / 0.62);
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+  pointer-events: none;
+}
+.kares-ledger .btn-sm {
+  min-height: 52px;
+  padding-inline: 22px;
+  font-size: 17px;
+}
+.kares-ledger {
+  position: relative;
+  isolation: isolate;
+  padding: 12px;
+}
+.kares-ledger::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  --s: 12px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+  background: linear-gradient(180deg, #5b6472 0%, #3a4250 22%, #252b35 100%);
+  box-shadow: inset 0 2px 0 #7a8390;
+}
+.kares-ledger .ledger-in {
+  --s: 6px;
+  padding: clamp(20px, 2.6vw, 32px);
+  background: linear-gradient(180deg, #141921, #0d1016);
+}
+.kares-ledger .tk-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+}
+.kares-ledger .tk-coin {
+  grid-column: 1;
+  grid-row: 1/3;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 0 #05070c) drop-shadow(0 0 12px rgb(118 200 255 / 0.22));
+}
+.kares-ledger .tk-head h2 {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--plate);
+  text-shadow: 0 2px 0 #05070c;
+}
+.kares-ledger .tk-head p {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 52ch;
+}
+.kares-ledger .tk-head .buy {
+  grid-column: 3;
+  grid-row: 1/3;
+  align-self: start;
+}
+.kares-ledger .tk-head .buy small {
+  max-width: 24ch;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 599px) {
+  .kares-ledger .tk-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .kares-ledger .tk-coin,
+  .kares-ledger .tk-head h2 {
+    grid-row: 1;
+  }
+  .kares-ledger .tk-head .buy {
+    grid-column: 1/-1;
+    grid-row: 2;
+    justify-items: end;
+    text-align: right;
+    margin-top: 12px;
+  }
+  .kares-ledger .tk-head .buy small {
+    max-width: 32ch;
+  }
+  .kares-ledger .tk-head p {
+    grid-column: 1/-1;
+    grid-row: 3;
+    max-width: none;
+    margin-top: 14px;
+  }
+}
+.kares-ledger .tk-status {
+  --sc: #7c8594;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  background: #0a0d13;
+  box-shadow:
+    inset 3px 0 0 var(--sc),
+    inset 0 0 0 1px #232a35;
+}
+.kares-ledger .tk-status b {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.kares-ledger .tk-status b::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--sc);
+}
+.kares-ledger .tk-status[data-state='loading'] {
+  --sc: var(--gold);
+}
+.kares-ledger .tk-status[data-state='ready'] {
+  --sc: var(--rune);
+}
+.kares-ledger .tk-status[data-state='stale'],
+.kares-ledger .tk-status[data-state='error'] {
+  --sc: #e3907c;
+}
+.kares-ledger .tk-status[data-state='pre_funding'] {
+  --sc: #b395dd;
+}
+.kares-ledger .tk-retry {
+  --s: 3px;
+  margin-left: auto;
+  min-height: 34px;
+  padding: 3px 12px 5px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  background: linear-gradient(180deg, #38424f, #242b36);
+  box-shadow:
+    inset 0 1px 0 #56606e,
+    inset 0 -3px 0 #13171e;
+}
+.kares-ledger .tk-h {
+  margin: 26px 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+.kares-ledger .metric b,
+.kares-ledger .pool dd {
+  font-variant-numeric: tabular-nums;
+}
+.kares-ledger .supply-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.kares-ledger .metric {
+  --s: 5px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 14px 16px 15px;
+  background: linear-gradient(180deg, #181d26, #11151c);
+  box-shadow:
+    inset 0 0 0 1px #262d38,
+    inset 0 2px 0 #2e3542;
+}
+.kares-ledger .metric > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.kares-ledger .metric b {
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.kares-ledger .metric b[data-empty] {
+  color: #8f949c;
+}
+.kares-ledger .metric b small,
+.kares-ledger .pool dd small {
+  font-size: max(12px, 0.5em);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--plate);
+  margin-left: 0.3em;
+}
+.kares-ledger .metric small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+.kares-ledger .pools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.kares-ledger .pool {
+  --s: 5px;
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  background: linear-gradient(180deg, #181d26, #11151c);
+  box-shadow:
+    inset 0 3px 0 var(--c),
+    inset 0 0 0 1px #262d38;
+}
+.kares-ledger .pool h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.kares-ledger .pool h4 svg {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.kares-ledger .pool > p {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.kares-ledger .pool dl {
+  display: grid;
+  gap: 0;
+  margin: 2px 0 0;
+}
+.kares-ledger .pool dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 8px 0;
+  border-top: 1px solid #222934;
+}
+.kares-ledger .pool dt {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink-faint);
+}
+.kares-ledger .pool dt small {
+  display: block;
+  font-weight: 400;
+}
+.kares-ledger .pool dd {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: right;
+}
+.kares-ledger .pool dd[data-empty] {
+  color: #8f949c;
+}
+.kares-ledger .uses {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.kares-ledger .uses li {
+  --s: 5px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: start;
+  padding: 14px 16px;
+  background: #0f1319;
+  box-shadow: inset 0 0 0 1px #232a35;
+}
+.kares-ledger .uses svg {
+  grid-row: 1/3;
+  width: 28px;
+  height: 28px;
+}
+.kares-ledger .uses b {
+  font-size: 15px;
+  color: var(--ink);
+}
+.kares-ledger .uses span {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.kares-ledger .token {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 28px;
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid #262d38;
+}
+.kares-ledger .token-id {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.kares-ledger .token-id > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.kares-ledger .token-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.kares-ledger .token-row output {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--plate);
+  overflow-wrap: anywhere;
+}
+.kares-ledger .copy {
+  --s: 3px;
+  min-height: 36px;
+  padding: 4px 14px 6px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  background: linear-gradient(180deg, #38424f, #242b36);
+  box-shadow:
+    inset 0 1px 0 #56606e,
+    inset 0 -3px 0 #13171e;
+}
+.kares-ledger .copy:disabled {
+  cursor: not-allowed;
+  color: #9a978f;
+  background: #1d222b;
+  box-shadow: inset 0 0 0 1px #2c333f;
+}
+.kares-ledger .token-id small {
+  font-size: 14px;
+  color: var(--ink-faint);
+  max-width: 52ch;
+}
+.kares-ledger .buy {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  text-align: right;
+}
+.kares-ledger .buy small {
+  color: var(--ink-faint);
+}
+.kares-ledger .pool-staking {
+  --c: #4a9eff;
+}
+.kares-ledger .pool-community {
+  --c: #b395dd;
+}
+.kares-ledger .pool-boss {
+  --c: #bd795c;
+}
+.kares-ledger .pool dd {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.kares-ledger .pool dl > div {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+@media (max-width: 899px) {
+  .kares-ledger .pools,
+  .kares-ledger .uses {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 599px) {
+  .kares-ledger .supply-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kares-ledger .pool dd small {
+  white-space: nowrap;
+}
+.kares-ledger .pool dt {
+  overflow-wrap: anywhere;
+}
+
+.kares-ledger .pool dd.pool-note {
+  grid-column: 1 / -1;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--ink-faint);
+}

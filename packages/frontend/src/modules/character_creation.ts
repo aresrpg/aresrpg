@@ -31,9 +31,10 @@ export const fold_character_creation = (session: SessionState, input: AppInput):
 
 /** The renderer and analytics observe the same visible creation surface. */
 export const character_creation_surface = (
-  session: Pick<SessionState, 'wallet' | 'characters'>,
+  session: Pick<SessionState, 'wallet' | 'characters'> & Partial<Pick<SessionState, 'agent_view'>>,
   navigation: Pick<NavigationState, 'page' | 'dialog'>
 ): 'welcome' | 'character_create' | null => {
+  if (session.agent_view?.request) return null
   if (!session.wallet || navigation.page !== 'world') return null
   if (navigation.dialog === 'welcome') return 'welcome'
   if (navigation.dialog === 'character_create' && session.characters.length < MAX_TRACKED_CHARACTERS)

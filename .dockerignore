@@ -47,6 +47,10 @@ packages/protocol/*
 !packages/sdk
 packages/sdk/*
 !packages/sdk/package.json
+!packages/sdk/src
+packages/sdk/src/*
+!packages/sdk/src/agent_pairing.ts
+!packages/sdk/src/agent_multisig.ts
 !packages/discord
 packages/discord/*
 !packages/discord/package.json
@@ -59,7 +63,6 @@ packages/server/*
 !seed
 seed/*
 !seed/content
-seed/content/journal
 !seed/structures
 !seed/icons
 seed/icons/*
@@ -72,15 +75,15 @@ seed/icons/mobs/*_hd.*
 !seed/icons/currency
 seed/icons/currency/*
 !seed/icons/currency/kares.png
-!seed/icons/journal
-seed/icons/journal/*
-!seed/icons/journal/helmet-favicon.png
 
-!seed/icons/branding
-seed/icons/branding/*
-!seed/icons/branding/kares
-seed/icons/branding/kares/*
-!seed/icons/branding/kares/*.webp
+!packages/frontend/public
+packages/frontend/public/*
+!packages/frontend/public/branding
+packages/frontend/public/branding/*
+!packages/frontend/public/branding/helmet-favicon.png
+!packages/frontend/public/branding/kares
+packages/frontend/public/branding/kares/*
+!packages/frontend/public/branding/kares/*.webp
 
 # Never, whatever the ladder above re-admits.
 **/node_modules

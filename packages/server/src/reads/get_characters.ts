@@ -5,7 +5,7 @@
 // are equally his: the roster is what the client selects and embodies from, so a character
 // missing here is a character its owner cannot reach at all.
 
-import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
+import type { CharacterRow } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -97,5 +97,7 @@ export async function get_characters(graph: Graph, { address }: { address: strin
     ...held.map((row) => shape_row(row, 'kiosk')),
     ...seated.map((row) => shape_row(row, 'fight')),
   ] as CharacterRow[]
-  return [...rows].sort((left, right) => left.id.localeCompare(right.id)).slice(0, MAX_TRACKED_CHARACTERS)
+  // The queries can straddle a custody transition. Prefer the seated projection when both
+  // contain the same ID; deduplication does not establish version ordering.
+  return [...new Map(rows.map((row) => [row.id, row])).values()].sort((left, right) => left.id.localeCompare(right.id))
 }

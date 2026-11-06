@@ -46,6 +46,19 @@ const content = Object.freeze({
 }) satisfies AcquisitionContent
 
 describe('content acquisition estimates', () => {
+  test('rare loot estimates use the integer basis points resolved by Move', () => {
+    const rare_content = {
+      ...content,
+      mobs: [{ ...content.mobs[0]!, hp: 1, loot: [{ item_type: 'fang', chance_bp: 2, min_qty: 1, max_qty: 1 }] }],
+    }
+    // fight_math::mob_loot_chance_scaled resolves 2 bp to 1/2 bp at the band endpoints.
+    // This low-HP fixture takes one 20-second fight for five independent drops.
+    expect(item_acquisition(rare_content, 'fang').best).toEqual({
+      minimum_seconds: 20_000,
+      maximum_seconds: 40_000,
+    })
+  })
+
   test('folds five-mob drops, quantities and craft failure through the recipe graph', () => {
     const estimates = acquisition_catalog(content)
     const fang = estimates.fang?.best

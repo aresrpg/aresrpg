@@ -6,8 +6,6 @@ import { useEffect, type ReactNode } from 'react'
 import { version } from '../../../../package.json'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { music } from '../../../../seed/scenes/main_menu.recipe.json'
-import blast_helmet from '../../../../seed/icons/branding/blast/helmet.svg'
-import blast_wordmark from '../../../../seed/icons/branding/blast/wordmark.svg'
 import title_logo from '../../../../seed/scenes/aresrpg_text_logo.png'
 import { MusicBed } from '../game/audio/MusicBed.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -15,6 +13,9 @@ import { dispatch_app, useAppStore } from '../store.ts'
 
 import { MenuScene } from './MenuScene.tsx'
 import './main_menu.css'
+
+const blast_helmet = '/branding/blast/helmet.svg'
+const blast_wordmark = '/branding/blast/wordmark.svg'
 
 export const MainMenu = ({
   copy,

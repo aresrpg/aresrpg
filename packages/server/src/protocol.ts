@@ -50,6 +50,7 @@ export const is_indexer_channel = (channel: string): boolean => channel.startsWi
  *  the indexer's evt:* channels above. */
 export const mesh = {
   /** one zone's presence facts */
+  presence_owner: (address: string) => `presence:owner:${address}`,
   presence_reply: (session: string) => `presence:reply:${session}`,
   pos: (world: string, zx: number, zz: number) => `pos:${world}:${zx}:${zz}`,
   /** one world's chat — everyone standing there hears it (owner 2026-08-12) */
@@ -79,7 +80,16 @@ export type MeshFact =
       gliding: boolean
     }
   | { kind: 'leave'; character_id: string; address: string }
-  | { kind: 'who'; address: string; world: string; zx: number; zz: number; reply_to: string; request: string }
+  | {
+      kind: 'who'
+      character_id?: string
+      address: string
+      world: string
+      zx: number
+      zz: number
+      reply_to: string
+      request: string
+    }
   | { kind: 'reply'; address: string; player: import('@aresrpg/protocol').PresenceRow; request: string }
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */

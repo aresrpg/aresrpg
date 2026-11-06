@@ -38,6 +38,8 @@ COPY packages/discord/package.json packages/discord/
 # --ignore-scripts: the root "prepare" hook arms git hooks — meaningless in an image.
 RUN bun install --filter @aresrpg/server --frozen-lockfile --production --ignore-scripts
 
+# Pure pairing verification is shared with the SDK; no wallet/session code is copied.
+COPY packages/sdk/src/agent_pairing.ts packages/sdk/src/agent_multisig.ts packages/sdk/src/
 COPY packages/server packages/server
 COPY packages/protocol packages/protocol
 COPY packages/fight packages/fight
@@ -49,8 +51,8 @@ COPY seed/content seed/content
 COPY seed/structures seed/structures
 COPY packages/ui/src/assets/font packages/ui/src/assets/font
 COPY seed/icons/currency/kares.png seed/icons/currency/kares.png
-COPY seed/icons/journal/helmet-favicon.png seed/icons/journal/helmet-favicon.png
-COPY seed/icons/branding/kares/*.webp seed/icons/branding/kares/
+COPY packages/frontend/public/branding/helmet-favicon.png packages/frontend/public/branding/helmet-favicon.png
+COPY packages/frontend/public/branding/kares/*.webp packages/frontend/public/branding/kares/
 USER bun
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

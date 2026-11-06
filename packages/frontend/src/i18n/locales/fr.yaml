@@ -59,7 +59,9 @@ session_replaced_body: Votre compte a ouvert le jeu ailleurs, cette fenêtre a d
 session_replaced_reconnect: Se reconnecter ici
 latency_unit: ms
 indexing_health: Santé de l’indexation
-online_players: Joueurs en ligne
+online_accounts: Comptes en ligne
+online_characters: Personnages en ligne
+online_characters_body: Dans tous les mondes, combats et donjons compris.
 indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
 indexing_block_title: Synchronisation du monde
 indexing_block_body: L’historique de la chaîne est encore en cours d’indexation. Le jeu se déverrouillera automatiquement lorsque le serveur atteindra la fenêtre active sûre.
@@ -809,6 +811,7 @@ admin_page:
   character_royalties: Redevances des personnages
   character_creation_revenue: Création de personnages
   kolizeum_revenue: Frais du Kolizéum
+  tournament_revenue: Frais de tournoi enregistrés
   game_transactions: Transactions du jeu
   game_gas_fees: Frais de gas du jeu
   all_time: Depuis toujours
@@ -2380,6 +2383,40 @@ item_categories:
 
 kares: 'Staking'
 kares_page:
+  ledger_intro: 'Le jeton des récompenses, du staking et des caisses d’AresRPG. Émis une seule fois : chaque destruction réduit l’offre.'
+  buy_aftermath: 'Acheter sur Aftermath'
+  swap_note: 'Ouvre Aftermath dans un nouvel onglet. Vérifiez le type du jeton avant tout échange.'
+  read_at: 'Lu sur Sui le {{time}}.'
+  supply_heading: 'Offre'
+  supply_cap: 'Plafonnée à {{cap}} KARES. Chaque destruction la réduit.'
+  burned: 'Détruits'
+  pools_heading: 'Réserves de récompenses'
+  staking_summary: 'Partagées entre les stakers sur 1 825 jours actifs. Le temps s’arrête sans stakers.'
+  boss_summary: 'Les primes de boss sont partagées à parts égales entre les personnages gagnants.'
+  uses_heading: 'Utiliser KARES'
+  compete: 'Participer'
+  compete_note: 'Gagnez des primes de boss et des prix de compétitions PvP et de classements saisonniers.'
+  token_type: 'Type du jeton'
+  token_pending: 'En attente de vérification'
+  copy_token: 'Copier'
+  token_copied: 'Type du jeton copié.'
+  token_hint: 'La copie est disponible après vérification du jeton et des liens des réserves.'
+  figures_unfunded: 'Les réserves de récompenses ne sont pas encore financées. L’offre reste inconnue.'
+  figures_stale: 'Les données peuvent être anciennes. Actualisez pour vérifier.'
+  figures_unconfigured: 'Les données en direct ne sont pas configurées pour ce réseau. Cela ne signifie pas que l’offre ou les réserves sont nulles.'
+  figures_unavailable: 'Données en direct indisponibles. Actualisez pour réessayer.'
+  figures_ready: 'Lecture sur la blockchain'
+  current_supply: 'Offre totale actuelle'
+  circulating_supply: 'Offre en circulation'
+  circulating_unknown: 'Indisponible : aucun décompte vérifié de la circulation.'
+  total_staked: 'Total staké'
+  pool_held: 'Détenu dans la réserve'
+  pool_held_note: 'Comprend les récompenses acquises non réclamées ; exclut le capital staké.'
+  pool_forecast: 'Prévision · prochaines 24 heures actives'
+  pool_forecast_note: 'Versements financés pour toute la réserve, pas les paiements passés ni votre rendement personnel. Le temps actif s’arrête sans stakers.'
+  treasury_claimable: 'Réclamable par la trésorerie'
+  daily_cap: 'Plafond quotidien'
+  daily_cap_note: 'Maximum des primes de boss par jour depuis le financement, pas les émissions réelles. Le quota inutilisé n’est pas reporté.'
   other_networks: 'Autres réseaux · EVM / Solana'
   sui_wallet_required: 'Sélectionnez un portefeuille Sui pour utiliser cette fonction.'
   blast_soon: 'La vente arrive sur Blast'
@@ -2441,8 +2478,8 @@ kares_page:
   community: 'Compétitions PvP et classements saisonniers'
   team: 'Allocation de l’équipe'
   five_years: 'Récompenses de staking communautaires'
-  mastery_title: 'Jouez pour gagner. Ou brûlez des KARES.'
-  mastery_note: 'Chaque point de prix de Maîtrise équivaut à 1 000 KARES. Les KARES dépensés sont brûlés définitivement.'
+  mastery_title: 'Caisses'
+  mastery_note: 'Achetez des caisses avec des KARES en jeu. Les KARES sont détruits définitivement à l’achat, pas à l’ouverture.'
   rewards_note: 'Les récompenses sortent sur 1 825 jours actifs. Chacun peut donner des KARES ou SUI : les dons commencent au prochain jour actif et sont répartis sur 30 jours actifs, sans prolonger les anciens calendriers. Ils ne sont pas récupérables. L’horloge s’arrête sans participants ; les gains acquis restent réclamables.'
   revenue_note: '20 % des royalties du marché collectées vont aux récompenses de staking en SUI. Les gains dépendent des revenus et du stake participant.'
   points: 'Points de maîtrise'
@@ -2697,6 +2734,87 @@ spell_effects:
   expires_next_turn: 'Jusqu’au prochain tour'
 
 ui:
+  add_funds_agent: 'Ajouter des fonds à l’agent'
+  agent_funding_unverified: 'Le destinataire ne peut pas être vérifié. Actualisez le rappel avant d’ajouter des fonds.'
+  agent_entry_intro: 'Connectez votre assistant, choisissez un personnage et gérez son inventaire ici.'
+  agent_entry_play: 'Jouer'
+  agent_watch: 'Observer l’agent'
+  agent_watching: 'Observation de l’agent'
+  agent_watch_empty: 'Aucun personnage à observer.'
+  agent_watch_failed: 'Impossible d’observer cet agent. Réessayez.'
+  portrait_share: 'Partager le portrait'
+  portrait_download: 'Télécharger le PNG'
+  portrait_copy: 'Copier le lien de l’image'
+  portrait_copied: 'Lien copié'
+  portrait_failed: 'Impossible de charger le portrait ou de copier son lien. Vous pouvez sélectionner le lien ci-dessous.'
+  portrait_close: 'Fermer'
+  portrait_preview: 'Portrait du personnage'
+  agent_pair_no_assets: 'L’association seule ne déplace aucun actif.'
+  agent_signer_persistent: 'Votre assistant déclare disposer d’un signataire de transactions persistant.'
+  agent_saved_recovery: 'Récupération d’un agent enregistré'
+  agent_return_cancel: 'Annuler le retour en attente'
+  agent_cancel_handover: 'Annuler un transfert non récupéré'
+  agent_recall: 'Rappeler'
+  agent_return_check: 'Vérifier les retours de personnages'
+  agent_return_failed: 'Les retours n’ont pas pu être vérifiés. Actualisez.'
+  agent_return_empty: 'Aucun retour gratuit de personnage provenant de cet agent n’est disponible.'
+  agent_verify_address: 'J’ai comparé cette adresse complète avec celle annoncée indépendamment par mon assistant.'
+  agent_verify_mismatch: 'Si les adresses diffèrent, annulez et créez une nouvelle demande.'
+  agent_return_character: 'Récupérer le personnage'
+  agent_return_from: 'Adresse de l’agent'
+  agent_transfer_review: 'Vérification du transfert'
+  agent_transfer_recipient: 'Destinataire'
+  agent_transfer_check: 'Vérifier la transaction'
+  agent_transfer_gas: 'Gaz estimé'
+  agent_transfer_step: 'Cette vérification concerne uniquement cette transaction. La réception et le retour nécessitent des transactions, du gaz et des frais distincts.'
+  agent_transfer_confirm: 'Confirmer la transaction'
+  agent_transfer_signer_missing: 'L’envoi nécessite une connexion à un signataire persistant ; cette association est temporaire.'
+  agent_transfer_failed: 'La vérification ou l’envoi a échoué. Vérifiez le portefeuille et la chaîne avant de réessayer.'
+  agent_transfer_receipt: 'Reçu de transaction'
+  agent_transfer_character: 'Choisir un personnage'
+  agent_transfer_unavailable: 'Déséquipez ce personnage et terminez son combat avant le transfert.'
+  agent_recall_steps: 'Signez les deux étapes : autorisez le rappel avec votre membre Google du multisig, puis recherchez le retour et récupérez le personnage avec son équipement. La récupération transfère et rééquipe le tout ensemble. Les autres objets restent sur place. Le multisig paie le rappel ; votre portefeuille paie la récupération. Sortez d’abord du combat. Une annulation laisse l’équipement retiré dans le kiosque source.'
+  agent_asset_proceeds: 'Recettes des kiosques'
+  agent_asset_collect: 'Collecter vers le multisig'
+  agent_asset_delist: 'Annuler l’annonce'
+  agent_asset_reserved: 'Offre exclusive · PurchaseCap requis'
+  agent_asset_unconfigured: 'Non configuré pour ce déploiement'
+  agent_asset_fee_budget: 'Budget de gas maximal'
+  agent_inventory: 'Inventaire de l’agent'
+  agent_asset_refresh: 'Actualiser l’inventaire'
+  agent_asset_available: 'Disponible'
+  agent_asset_listed: 'En vente · annulez d’abord l’annonce'
+  agent_asset_equipped: 'Équipé'
+  agent_asset_sui: 'Montant en SUI'
+  agent_asset_kares: 'Montant en KARES'
+  agent_asset_reserve: 'SUI à conserver après les frais'
+  agent_asset_positions: 'KARES en staking'
+  agent_asset_unstake: 'Retirer vers le multisig'
+  agent_asset_owned: 'Autres objets détenus (lecture seule)'
+  agent_asset_incoming: 'Retours d’objets entrants'
+  agent_asset_claim: 'Récupérer les objets sélectionnés'
+  agent_asset_cancel: 'Annuler les retours sélectionnés'
+  agent_asset_scope: 'Choisissez les objets et montants exacts. Les piles sélectionnées sont transférées en entier. L’équipement est retiré d’abord ; annulez les annonces avant tout transfert. Retirez les KARES en staking puis actualisez avant de choisir un montant. Gardez des SUI pour les étapes suivantes. Les autres types sont en lecture seule ; les combats doivent être réglés avant le retour.'
+  agent_setup_prompt: 'Configure mon agent AresRPG en suivant {guide} avec ce lien temporaire privé : {url}. Renvoie automatiquement la preuve publique. Cette configuration ne permet aucun transfert d’actifs ni jeu.'
+  agent_cancel: 'Annuler'
+  agent_pair_connect: 'Connecter'
+  agent_pair_pending: 'En attente de votre assistant…'
+  agent_pair_failed: 'La configuration a expiré ou a échoué. Reconnectez-vous.'
+  agent_pair_verified: 'Clé de l’agent vérifiée. Cela ne prouve ni l’authentification au serveur ni la possession d’un personnage.'
+  agent_environment: 'Choisissez un assistant disposant d’un environnement d’agent persistant, comme ChatGPT dots ou Grok Bot.'
+  agent_pair_ephemeral: 'Vérification de clé publique uniquement. Cette clé temporaire est perdue à l’arrêt du processus de l’agent. N’envoyez jamais d’actifs à cette identité.'
+  agent_pair_instructions: 'Envoyez cette demande à votre assistant. Le résultat apparaîtra ici automatiquement.'
+  agent_pair_blocked: 'Ce portefeuille ne fournit pas d’identifiant public Google pour l’association. Connectez-vous avec Google pour créer une demande publique.'
+  agent_copy_request: 'Copier la demande de configuration'
+  agent_paste_request: 'Collez cette demande dans votre agent. La copier ne connecte aucun compte.'
+  agent_copy_failed: 'Échec de la copie. Sélectionnez et copiez manuellement la demande ci-dessus.'
+  agent_handoff_request: 'Prépare {{provider}} pour Connect Your Agent en suivant {{url}}. Signale toute configuration de signature manquante et demande le lien temporaire si nécessaire. Cette demande ne permet ni création d’identifiants, ni transfert d’actifs, ni jeu.'
+  agent_connect_your: 'Connecter votre agent'
+  agent_bootstrap: 'Ouvrir les instructions'
+  agent_choose: 'Choisissez votre agent'
+  agent_unavailable: 'L’association n’est pas encore disponible. Aucun agent n’est connecté.'
+  agent_setup: 'Configurer un agent'
+  agent_send: 'Envoyer à un agent'
   feedback_question: 'Qu’est-ce qui vous empêche d’avancer ?'
   feedback_unclear: 'Je ne sais pas quoi faire'
   feedback_controls: 'Commandes'
@@ -3373,3 +3491,116 @@ tournament_page:
   find_review: Trouver une équipe pour {{character}} et inscrire ce personnage ?
   joined_count: '{{count}}/{{total}} entrés'
   versus: contre {{team}}
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

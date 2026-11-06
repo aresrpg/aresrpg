@@ -62,7 +62,9 @@ session_replaced_body: Игра открыта с вашим аккаунтом 
 session_replaced_reconnect: Подключиться здесь
 latency_unit: мс
 indexing_health: Состояние индексации
-online_players: Игроков в сети
+online_accounts: Аккаунты в сети
+online_characters: Персонажи в сети
+online_characters_body: Во всех мирах, включая бои и подземелья.
 indexing_lag_warning: Игровые действия могут задерживаться
 indexing_block_title: Синхронизация мира
 indexing_block_body: История блокчейна ещё индексируется. Игра откроется автоматически, когда сервер достаточно приблизится к актуальному состоянию.
@@ -810,6 +812,7 @@ admin_page:
   character_royalties: Роялти персонажей
   character_creation_revenue: Создание персонажей
   kolizeum_revenue: Комиссии Колизея
+  tournament_revenue: Учтённые комиссии турниров
   game_transactions: Игровые транзакции
   game_gas_fees: Комиссии газа игры
   all_time: За всё время
@@ -2349,6 +2352,40 @@ item_categories:
   relic_slot: Реликвия {{number}}
 kares: Стейкинг
 kares_page:
+  ledger_intro: 'Токен наград, стейкинга и ящиков AresRPG. Выпущен один раз: каждое сжигание уменьшает предложение.'
+  buy_aftermath: 'Купить на Aftermath'
+  swap_note: 'Открывает Aftermath в новой вкладке. Проверьте тип токена перед обменом.'
+  read_at: 'Прочитано из Sui: {{time}}.'
+  supply_heading: 'Предложение'
+  supply_cap: 'Ограничено {{cap}} KARES. Каждое сжигание его уменьшает.'
+  burned: 'Сожжено'
+  pools_heading: 'Пулы наград'
+  staking_summary: 'Распределение между участниками стейкинга в течение 1 825 активных дней. Без участников отсчёт останавливается.'
+  boss_summary: 'Награды за боссов делятся поровну между победившими персонажами.'
+  uses_heading: 'Использовать KARES'
+  compete: 'Соревноваться'
+  compete_note: 'Получайте награды за боссов, PvP-соревнования и сезонные рейтинги.'
+  token_type: 'Тип токена'
+  token_pending: 'Ожидает проверки'
+  copy_token: 'Копировать'
+  token_copied: 'Тип токена скопирован.'
+  token_hint: 'Копирование доступно после проверки токена и связей резервов.'
+  figures_unfunded: 'Пулы наград ещё не профинансированы. Предложение остаётся неизвестным.'
+  figures_stale: 'Данные могут быть устаревшими. Обновите для проверки.'
+  figures_unconfigured: 'Текущие данные для этой сети не настроены. Это не означает нулевое предложение или резервы.'
+  figures_unavailable: 'Текущие данные недоступны. Обновите, чтобы повторить попытку.'
+  figures_ready: 'Данные блокчейна'
+  current_supply: 'Текущее общее предложение'
+  circulating_supply: 'Предложение в обращении'
+  circulating_unknown: 'Недоступно: проверенного учёта обращения нет.'
+  total_staked: 'Всего в стейкинге'
+  pool_held: 'Остаток в пуле'
+  pool_held_note: 'Включает заработанные, но ещё не полученные награды; без внесённого капитала.'
+  pool_forecast: 'Прогноз · следующие 24 активных часа'
+  pool_forecast_note: 'Обеспеченные выплаты для всего пула, не прошлые выплаты или ваш личный доход. Активное время останавливается без участников стейкинга.'
+  treasury_claimable: 'Доступно казначейству'
+  daily_cap: 'Суточный предел'
+  daily_cap_note: 'Максимальные выплаты за боссов за сутки с момента настройки, не фактическая эмиссия. Неиспользованный лимит не переносится.'
   other_networks: 'Другие сети · EVM / Solana'
   sui_wallet_required: 'Выберите кошелёк Sui для этой функции.'
   blast_soon: 'Продажа токенов скоро на Blast'
@@ -2410,8 +2447,8 @@ kares_page:
   community: 'PvP-соревнования и сезонные рейтинги'
   team: Доля команды
   five_years: Награды стейкинга сообщества
-  mastery_title: Играйте ради наград. Или сжигайте KARES.
-  mastery_note: 'Каждое очко цены Мастерства равно 1 000 KARES. Потраченные KARES сжигаются навсегда.'
+  mastery_title: 'Ящики'
+  mastery_note: 'Покупайте ящики за KARES в игре. KARES навсегда сжигаются при покупке, а не при открытии ящика.'
   rewards_note: 'Награды выдаются в течение 1 825 активных дней. Любой может пожертвовать KARES или SUI: распределение начинается со следующих активных суток и длится 30 активных дней, не продлевая прежние графики. Пожертвования нельзя забрать. Без ставок часы останавливаются; заработанные награды остаются доступными.'
   revenue_note: 20% собранных роялти рынка поступает в награды SUI. Награды зависят от выручки и объёма стейкинга.
   points: Очки мастерства
@@ -2657,6 +2694,63 @@ spell_effects:
   short_stat: 'ХАР'
   expires_next_turn: 'До следующего хода'
 ui:
+  add_funds_agent: 'Пополнить счёт агента'
+  agent_funding_unverified: 'Не удалось проверить получателя. Обновите возврат, прежде чем пополнять баланс.'
+  agent_entry_intro: 'Подключите помощника, выберите персонажа и управляйте его инвентарём здесь.'
+  agent_entry_play: 'Играть'
+  agent_watch: 'Наблюдать за агентом'
+  agent_watching: 'Наблюдение за агентом'
+  agent_watch_empty: 'Нет персонажей для наблюдения.'
+  agent_watch_failed: 'Не удалось подключиться к наблюдению за агентом. Попробуйте ещё раз.'
+  portrait_share: 'Поделиться портретом'
+  portrait_download: 'Скачать PNG'
+  portrait_copy: 'Копировать ссылку на изображение'
+  portrait_copied: 'Ссылка скопирована'
+  portrait_failed: 'Не удалось загрузить портрет или скопировать ссылку. Вы можете выделить ссылку ниже.'
+  portrait_close: 'Закрыть'
+  portrait_preview: 'Портрет персонажа'
+  agent_recall_steps: 'Подпишите два шага: одобрите возврат своим Google-участником мультиподписи, затем получите персонажа со снаряжением в списке возвратов. Получение переносит и надевает весь комплект одной транзакцией. Другие вещи остаются на месте. Мультиподпись оплачивает возврат, ваш кошелёк — получение. Сначала выйдите из боя. Отмена оставляет снятое снаряжение в исходном киоске.'
+  agent_asset_proceeds: 'Доход киосков'
+  agent_asset_collect: 'Собрать в мультиподпись'
+  agent_asset_delist: 'Отменить продажу'
+  agent_asset_reserved: 'Эксклюзивное предложение · нужен PurchaseCap'
+  agent_asset_unconfigured: 'Не настроено для этого развёртывания'
+  agent_asset_fee_budget: 'Максимальный бюджет газа'
+  agent_inventory: 'Инвентарь агента'
+  agent_asset_refresh: 'Обновить инвентарь'
+  agent_asset_available: 'Доступно'
+  agent_asset_listed: 'Выставлено · сначала отмените продажу'
+  agent_asset_equipped: 'Надето'
+  agent_asset_sui: 'Количество SUI'
+  agent_asset_kares: 'Количество KARES'
+  agent_asset_reserve: 'Оставить SUI после комиссий'
+  agent_asset_positions: 'KARES в стейкинге'
+  agent_asset_unstake: 'Вывести в мультиподпись'
+  agent_asset_owned: 'Прочие собственные объекты (просмотр)'
+  agent_asset_incoming: 'Входящие возвраты предметов'
+  agent_asset_claim: 'Получить выбранные предметы'
+  agent_asset_cancel: 'Отменить выбранные возвраты'
+  agent_asset_scope: 'Выберите предметы и точные суммы. Стопки переносятся целиком. Снаряжение сначала снимается, продажи нужно отменить. Выведите KARES из стейкинга и обновите данные перед переводом. Оставьте SUI для следующих шагов. Другие типы объектов доступны только для просмотра; сначала завершите бой.'
+  agent_setup_prompt: 'Настрой моего агента AresRPG по руководству {guide} с приватной временной ссылкой: {url}. Автоматически отправь публичное подтверждение. Настройка не разрешает перевод активов или игру.'
+  agent_cancel: 'Отмена'
+  agent_pair_connect: 'Подключить'
+  agent_pair_pending: 'Ожидание помощника…'
+  agent_pair_failed: 'Срок настройки истёк или её не удалось завершить. Подключитесь снова.'
+  agent_pair_verified: 'Ключ агента проверен. Это не подтверждает вход на сервер или владение персонажем.'
+  agent_environment: 'Выберите помощника с постоянной средой для агента, например ChatGPT dots или Grok Bot.'
+  agent_pair_ephemeral: 'Только проверка открытого ключа. Этот временный ключ теряется при завершении процесса агента. Никогда не отправляйте активы на этот адрес.'
+  agent_pair_instructions: 'Отправьте этот запрос помощнику. Результат появится здесь автоматически.'
+  agent_pair_blocked: 'Этот кошелёк не предоставляет публичный идентификатор Google для сопряжения. Подключитесь через Google, чтобы создать публичный запрос.'
+  agent_copy_request: 'Скопировать запрос настройки'
+  agent_paste_request: 'Вставьте запрос в своего агента. Копирование не подключает аккаунт.'
+  agent_copy_failed: 'Не удалось скопировать. Выделите и скопируйте запрос выше вручную.'
+  agent_handoff_request: 'Подготовь {{provider}} к Connect Your Agent по {{url}}. Сообщи о недостающей настройке подписи и при необходимости запроси временную ссылку. Запрос не разрешает создание учётных данных, перевод активов или игру.'
+  agent_connect_your: 'Подключить своего агента'
+  agent_bootstrap: 'Открыть инструкции'
+  agent_choose: 'Выберите агента'
+  agent_unavailable: 'Сопряжение пока недоступно. Агент не подключён.'
+  agent_setup: 'Настроить агента'
+  agent_send: 'Передать агенту'
   feedback_question: 'Что мешает вам продолжить?'
   feedback_unclear: 'Не знаю, что делать'
   feedback_controls: 'Управление'
@@ -3333,3 +3427,116 @@ tournament_page:
   find_review: Найти команду для {{character}} и зарегистрировать этого персонажа?
   joined_count: '{{count}}/{{total}} вошли'
   versus: против {{team}}
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

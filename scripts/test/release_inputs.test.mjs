@@ -36,7 +36,11 @@ test('engine is frontend-owned and server/indexer releases stay independent', ()
 })
 
 test('journal prose and artwork do not invalidate game artifacts', () => {
-  const paths = ['seed/content/journal/article.md', 'seed/icons/journal/cover.png', 'packages/journal/src/pages.tsx']
+  const paths = [
+    'packages/journal/content/article.md',
+    'packages/journal/artwork/cover.png',
+    'packages/journal/src/pages.tsx',
+  ]
   expect(classify_release(paths)).toEqual({ frontend: false, server: false, indexer: false, discord: false })
   expect(
     fingerprint_runtime_files(
@@ -166,16 +170,16 @@ test('notification implementation changes rebuild only the independently deploye
 })
 
 test('allocation preview copy and artwork invalidate the server image', () => {
-  expect(classify_release(['seed/icons/journal/helmet-favicon.png']).frontend).toBe(true)
+  expect(classify_release(['packages/frontend/public/branding/helmet-favicon.png']).frontend).toBe(true)
   expect(classify_release(['packages/journal/public/assets/jetbrains-mono.woff2']).frontend).toBe(true)
   for (const path of [
     'packages/frontend/src/i18n/locales/en.yaml',
     'packages/ui/src/assets/font/nunito-800.ttf',
-    'seed/icons/branding/kares/card-relief.webp',
-    'seed/icons/branding/kares/card-veteran.webp',
-    'seed/icons/branding/kares/card-member.webp',
+    'packages/frontend/public/branding/kares/card-relief.webp',
+    'packages/frontend/public/branding/kares/card-veteran.webp',
+    'packages/frontend/public/branding/kares/card-member.webp',
     'seed/icons/currency/kares.png',
-    'seed/icons/journal/helmet-favicon.png',
+    'packages/frontend/public/branding/helmet-favicon.png',
   ]) {
     expect(classify_release([path]).server).toBe(true)
     expect(fingerprint_runtime_files([[path, 'before']], '{}').server).not.toBe(

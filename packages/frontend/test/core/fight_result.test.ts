@@ -13,7 +13,6 @@ import {
   fight_experience_after,
   format_fight_duration,
   merge_result_loot,
-  next_fight_resolution_step,
   type FightResult,
   type FightResultState,
 } from '../../src/modules/fight_result.ts'
@@ -83,15 +82,6 @@ test('the result receipt aggregates declarations once and never shrinks when cla
 test('a settled fighter source already includes its certified XP award', () => {
   expect(fight_experience_after(800, 577, false)).toBe(1_377)
   expect(fight_experience_after(1_377, 577, true)).toBe(1_377)
-})
-test('durable recovery collects settlement and every loot type through one transaction', () => {
-  const row = {
-    settled: false,
-    loot_types: ['silk', 'fang'],
-    drops: [{ item_type: 'silk', qty: 3 }],
-  } as unknown as FightResultState['resolutions'][number]
-  expect(next_fight_resolution_step(row)).toEqual({ type: 'settle' })
-  expect(next_fight_resolution_step({ ...row, settled: true })).toEqual({ type: 'settle' })
 })
 test('an ordinary resolution with pre-migration dungeon fields never enters dungeon settlement', () => {
   expect(fight_resolution_dungeon({ dungeon: undefined, dungeon_room: undefined })).toBeNull()

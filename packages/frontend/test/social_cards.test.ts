@@ -16,7 +16,7 @@ import { resolve_env } from '../src/env.ts'
 
 const frontend_dir = resolve(import.meta.dir, '..')
 const repo_dir = resolve(frontend_dir, '../..')
-const cards_dir = resolve(repo_dir, 'seed/icons/social')
+const cards_dir = resolve(repo_dir, 'packages/frontend/public/social')
 const catalog = await social_catalog({
   content_dir: resolve(repo_dir, 'seed/content'),
   copy_path: resolve(frontend_dir, 'src/i18n/locales/en.yaml'),

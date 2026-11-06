@@ -4,7 +4,6 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
-  allocate_stack_amount,
   available_inventory_items,
   available_item_stacks,
   coalesced_stack_groups,
@@ -40,14 +39,6 @@ describe('inventory stack selection', () => {
   test('a transaction targets only stacks inside its selected kiosk', () => {
     const inventory = [stack('other', 100, 'resource', '0xother'), stack('mine', 2, 'resource', '0xmine')]
     expect(stack_merge_target(inventory, new Set(), 'wool', '0xmine')).toBe('mine')
-  })
-
-  test('recipe burns cover one requirement across several unlocked stacks exactly', () => {
-    expect(allocate_stack_amount([stack('a', 3), stack('b', 5)], 6)).toEqual([
-      { item_id: 'a', amount: 3 },
-      { item_id: 'b', amount: 3 },
-    ])
-    expect(allocate_stack_amount([stack('a', 3)], 4)).toBeNull()
   })
 
   test('split fragments present as one merge plan per item type and kiosk', () => {

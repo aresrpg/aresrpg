@@ -7,6 +7,7 @@ import {
   VIOLATION_DROP_REASONS,
   type ClientPacket,
 } from '@aresrpg/protocol'
+import { create_login_response } from '@aresrpg/sdk/login-proof'
 
 import type { AuthSession } from './auth.ts'
 import { env } from './env.ts'
@@ -27,6 +28,8 @@ const SILENT_PACKETS: ReadonlySet<string> = new Set([
   'packet/position',
   'packet/allocation_request',
   'packet/allocation_response',
+  'packet/agent_setup_request',
+  'packet/agent_setup_response',
   'packet/players_moved',
   'packet/ping',
   'packet/pong',
@@ -64,13 +67,7 @@ export const application_packet_sendable = (accepted: boolean, ready_state: numb
 export const is_session_takeover_close = (code: number, reason: string): boolean =>
   TAKEOVER_DROP_REASONS.has(reason) && (code === 1000 || code === 1008)
 
-export const create_login_response = async (
-  session: Pick<AuthSession, 'sign_personal_message'>,
-  challenge: string
-): Promise<Extract<ClientPacket, { type: 'packet/signature_response' }>> => {
-  const proof = await session.sign_personal_message(new TextEncoder().encode(`aresrpg::${challenge}`))
-  return Object.freeze({ type: 'packet/signature_response', ...proof })
-}
+export { create_login_response }
 
 export const connect_server = ({ session, dispatch }: ServerLinkOptions): ServerLink => {
   let socket: WebSocket | null = null

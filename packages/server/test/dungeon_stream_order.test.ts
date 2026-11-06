@@ -56,7 +56,7 @@ const bus_pair = (subscribe: (channel: string) => Promise<void>) => {
       ...common(mesh_emitter),
       publish: async () => {},
       heartbeat: async () => {},
-      cluster_online: async () => 1,
+      cluster_online: async () => ({ online: 1, online_characters: 12 }),
     },
   }
 }

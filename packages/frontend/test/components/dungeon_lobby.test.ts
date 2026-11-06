@@ -3,6 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
+import { initial_session_state } from '../../src/modules/session.ts'
 import {
   current_dungeon_room_players,
   dungeon_fight_joinable,
@@ -62,14 +63,17 @@ test('dungeon writes remain pending until the roster proves their state transiti
 test('an entering character sees the expedition immediately while chain custody catches up', () => {
   const optimistic = { dungeon: 'tangled_aftermath', room: 1 }
   const state = {
-    session: { selected_character_id: '0xc', characters: [{ id: '0xc' }] },
+    session: { ...initial_session_state(), selected_character_id: '0xc', characters: [{ id: '0xc' }] },
     dungeon: { optimistic_runs: { '0xc': optimistic } },
   }
   expect(selected_dungeon_run(state as never)).toEqual(optimistic)
   expect(
     selected_dungeon_run({
       ...state,
-      session: { ...state.session, characters: [{ id: '0xc', dungeon_run: { ...optimistic, room: 2 } }] },
+      session: {
+        ...state.session,
+        characters: [{ id: '0xc', dungeon_run: { ...optimistic, room: 2 } }],
+      },
     } as never)
   ).toEqual({ ...optimistic, room: 2 })
 })
@@ -86,6 +90,7 @@ test('the portal entry control exists only while an unlocked matching key is ava
   }
   const state = {
     session: {
+      ...initial_session_state(),
       selected_character_id: '0xc',
       characters: [{ id: '0xc', kiosk: '0xkiosk' }],
       inventory: [key],

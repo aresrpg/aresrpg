@@ -6,7 +6,7 @@ import './game/hud/world_responsive.css'
 import { useSyncExternalStore } from 'react'
 import { MAX_TRACKED_CHARACTERS } from '@aresrpg/protocol'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
-import { useCallback, useRef, useState, type ComponentType } from 'react'
+import { useCallback, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
 import { read_scene, subscribe_scene } from './game/core/scene_feed.ts'
@@ -16,6 +16,7 @@ import { OnboardingFeedback } from './analytics/OnboardingFeedback.tsx'
 import { selected_world as selected_world_name } from './modules/engine_selection.ts'
 import { character_creation_failure_message, character_creation_insufficient } from './character_creation_funding.ts'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
+import { AgentSetupDialog } from './agents/AgentSetup.tsx'
 import { Login } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
@@ -56,6 +57,9 @@ import { TournamentRewards } from './tournament/TournamentRewards.tsx'
 
 const city_arrival_active = (in_app: boolean, page: Page, fight_active: boolean, dungeon_active: boolean): boolean =>
   in_app && page === 'world' && !fight_active && !dungeon_active
+
+const OwnedGameplay = ({ children }: Readonly<{ children: ReactNode }>) =>
+  useAppStore((state) => state.session.agent_view.request) ? null : <>{children}</>
 
 export function PlayerRuntime({
   Shell,
@@ -163,10 +167,12 @@ export function PlayerRuntime({
               className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} app-world-frame rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]`}
             >
               <BiomeMusic />
-              <CityArrivalBanner
-                active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
-                copy={copy}
-              />
+              <OwnedGameplay>
+                <CityArrivalBanner
+                  active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
+                  copy={copy}
+                />
+              </OwnedGameplay>
               <canvas
                 key={engine_status.recovery}
                 ref={attach_canvas}
@@ -180,16 +186,18 @@ export function PlayerRuntime({
                 on_progress={on_loading_progress}
               />
 
-              {!fight_active && !dungeon_active && (
-                <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-                  <WorldHud copy={copy} />
-                </div>
-              )}
-              {dungeon_lobby_open && (
-                <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-                  <DungeonLobby key={session.selected_character_id} copy={copy} />
-                </div>
-              )}
+              <OwnedGameplay>
+                {!fight_active && !dungeon_active && (
+                  <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+                    <WorldHud copy={copy} />
+                  </div>
+                )}
+                {dungeon_lobby_open && (
+                  <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+                    <DungeonLobby key={session.selected_character_id} copy={copy} />
+                  </div>
+                )}
+              </OwnedGameplay>
               {WorldStatus && (
                 <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
                   <WorldStatus copy={copy} />
@@ -210,32 +218,32 @@ export function PlayerRuntime({
                   session={session}
                 />
               )}
-              {
-                <>
-                  <FightResultCard copy={copy} />
-                  <FightLevelUpCard copy={copy} />
-                </>
-              }
-              <JobLevelUpCard copy={copy} />
-              <MobInspectionOverlay copy={copy} />
+              <OwnedGameplay>
+                <FightResultCard copy={copy} />
+                <FightLevelUpCard copy={copy} />
+                <JobLevelUpCard copy={copy} />
+                <MobInspectionOverlay copy={copy} />
+              </OwnedGameplay>
             </div>
             {
               <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
             }
           </>
         )}
-        <PlayerContextMenu copy={copy} />
-        <JourneyHost copy={copy} />
-        {in_app && wallet && navigation.funding_cost_mist !== null && (
-          <AddFundsModal
-            key={wallet.address}
-            address={wallet.address}
-            copy={copy}
-            cost_mist={navigation.funding_cost_mist}
-            on_close={() => dispatch_app({ type: 'funding/close' })}
-            warning={gift_funding_text(copy, distribution, session)}
-          />
-        )}
+        <OwnedGameplay>
+          <PlayerContextMenu copy={copy} />
+          <JourneyHost copy={copy} />
+          {in_app && wallet && navigation.funding_cost_mist !== null && (
+            <AddFundsModal
+              key={wallet.address}
+              address={wallet.address}
+              copy={copy}
+              cost_mist={navigation.funding_cost_mist}
+              on_close={() => dispatch_app({ type: 'funding/close' })}
+              warning={gift_funding_text(copy, distribution, session)}
+            />
+          )}
+        </OwnedGameplay>
         {creation_surface === 'character_create' && (
           <CharacterCreateModal
             cancel={() =>
@@ -249,11 +257,14 @@ export function PlayerRuntime({
             }}
           />
         )}
-        {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
+        <OwnedGameplay>{in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}</OwnedGameplay>
+        <AgentSetupDialog copy={copy} />
         <Toasts />
-        <OnboardingFeedback />
-        <BackgroundGatherProgress copy={copy} />
-        <CrushResultModal copy={copy} />
+        <OwnedGameplay>
+          <OnboardingFeedback />
+          <BackgroundGatherProgress copy={copy} />
+          <CrushResultModal copy={copy} />
+        </OwnedGameplay>
         <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
 
         {show_graphics_notice && (
@@ -296,11 +307,15 @@ export function PlayerRuntime({
               session={session}
               settings={settings}
             />
-            <TutorialHost blocked={show_graphics_notice} copy={copy} />
+            <OwnedGameplay>
+              <TutorialHost blocked={show_graphics_notice} copy={copy} />
+            </OwnedGameplay>
           </>
         )}
-        <GiftClaimNotice copy={copy} />
-        <TournamentRewards />
+        <OwnedGameplay>
+          <GiftClaimNotice copy={copy} />
+          <TournamentRewards />
+        </OwnedGameplay>
       </main>
     </LocaleScope>
   )

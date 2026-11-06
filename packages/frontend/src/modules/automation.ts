@@ -196,6 +196,7 @@ const movement_outcome = (state: AppState, run: AutomationRun, input: AppInput):
 }
 
 export const reduce_automation = (state: AppState, input: AppInput): AppState => {
+  if (state.session.agent_view.request) return stop_automation(state, 'stopped')
   if (!automation_access(state)) return stop_automation(state, 'stopped')
   const command = fold_command(state, input)
   if (command) return command

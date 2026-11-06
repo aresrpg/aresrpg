@@ -1,0 +1,13 @@
+[
+  {
+    "slug": "when-the-world-keeps-its-own-rules",
+    "title": "Building open worlds on Sui: Proof of Discovery",
+    "description": "What makes a game truly onchain? How far can Sui take it?",
+    "series": "Foundations",
+    "chapter": 1,
+    "status": "published",
+    "published_on": "2026-09-19",
+    "cover": "scalable-open-world.png",
+    "cover_alt": "Close ferns frame a broad green-and-blue world with adventurers farming, gathering, meeting, and exploring connected regions."
+  }
+]

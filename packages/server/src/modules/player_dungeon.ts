@@ -10,14 +10,16 @@ import logger from '../logger.ts'
 import type { EventEnvelope } from '../protocol.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 
+import { observed_character } from './player_agent_observation.ts'
+
 const log = logger(import.meta)
 
 const lobby_key = ({ dungeon }: Readonly<{ dungeon: string }>): string => dungeon
 
 const runs_of = (state: PlayerState) =>
   new Map(
-    Object.values(state.characters).flatMap(({ dungeon_run }) =>
-      dungeon_run ? [[lobby_key(dungeon_run), dungeon_run] as const] : []
+    [...Object.values(state.characters), { dungeon_run: observed_character(state)?.dungeon_run }].flatMap(
+      ({ dungeon_run }) => (dungeon_run ? [[lobby_key(dungeon_run), dungeon_run] as const] : [])
     )
   )
 

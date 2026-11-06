@@ -32,7 +32,7 @@ test('authored scenery accepts the demo and refuses unbounded or malformed effec
 test('scenery stays within four draws and reuses GPU buffers across quality changes', () => {
   const scene = new Scene()
 
-  const layer = create_scenery({ scene, scenery })
+  const layer = create_scenery({ flora_data: null, scene, scenery })
   const meshes = [...scene.children] as Mesh[]
   expect(meshes).toHaveLength(4)
   expect(meshes.every(({ visible }) => !visible)).toBeTrue()
@@ -58,7 +58,7 @@ test('scenery stays within four draws and reuses GPU buffers across quality chan
 
 test('worlds without authored scenery allocate no scenery resources', () => {
   const scene = new Scene()
-  const layer = create_scenery({ scene })
+  const layer = create_scenery({ flora_data: null, scene })
   layer.set_visible(true)
   layer.set_quality('high')
   layer.dispose()
@@ -82,7 +82,7 @@ test('seasonal effects keep bounded buffers and dispose with the world', () => {
   ])
     expect(validate_scenery(invalid).length).toBeGreaterThan(0)
   const scene = new Scene()
-  const layer = create_scenery({ scene, scenery: seasonal })
+  const layer = create_scenery({ flora_data: null, scene, scenery: seasonal })
   const meshes = scene.children as Mesh[]
   const snow = meshes.at(-2)!
   const { geometry } = snow

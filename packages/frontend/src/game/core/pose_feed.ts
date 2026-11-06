@@ -32,9 +32,19 @@ type Feed = {
   pose: WorldPose | null
   last_ms: number
   listeners: Set<() => void>
+  observed: WorldPose | null
+  observed_ms: number
+  display_listeners: Set<() => void>
 }
 
-const feed: Feed = { pose: null, last_ms: 0, listeners: new Set() }
+const feed: Feed = {
+  pose: null,
+  last_ms: 0,
+  listeners: new Set(),
+  observed: null,
+  observed_ms: 0,
+  display_listeners: new Set(),
+}
 
 export const publish_pose = (pose: WorldPose | null): void => {
   const now = performance.now()
@@ -42,6 +52,7 @@ export const publish_pose = (pose: WorldPose | null): void => {
   feed.pose = pose
   feed.last_ms = now
   for (const listener of feed.listeners) listener()
+  for (const listener of feed.display_listeners) listener()
 }
 
 export const subscribe_pose = (listener: () => void): (() => void) => {
@@ -55,3 +66,20 @@ export const pose_matches_character = (pose: WorldPose | null, character_id: str
   pose !== null && character_id !== null && pose.character_id === character_id
 
 export const useWorldPose = (): WorldPose | null => useSyncExternalStore(subscribe_pose, read_pose, () => null)
+
+/** Camera presentation only. This never reaches controlled-pose subscribers or movement publication. */
+export const publish_observed_pose = (pose: WorldPose | null): void => {
+  if (pose === feed.observed) return
+  const now = performance.now()
+  if (pose !== null && feed.observed !== null && now - feed.observed_ms < PUBLISH_MS) return
+  feed.observed = pose
+  feed.observed_ms = now
+  for (const listener of feed.display_listeners) listener()
+}
+export const read_displayed_pose = (): WorldPose | null => feed.observed ?? feed.pose
+export const subscribe_displayed_pose = (listener: () => void): (() => void) => {
+  feed.display_listeners.add(listener)
+  return () => void feed.display_listeners.delete(listener)
+}
+export const useDisplayedWorldPose = (): WorldPose | null =>
+  useSyncExternalStore(subscribe_displayed_pose, read_displayed_pose, () => null)

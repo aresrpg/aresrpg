@@ -39,13 +39,13 @@
 .character-tab[aria-pressed='true'] .character-tab-name {
   color: #ecd19c;
 }
-.character-tabs .character-tab > .character-tab-portrait {
+.character-tabs .character-tab .character-tab-portrait {
   width: 36px;
   height: 36px;
   object-fit: contain;
   opacity: 0.7;
 }
-.character-tab[aria-pressed='true'] > .character-tab-portrait {
+.character-tab[aria-pressed='true'] .character-tab-portrait {
   opacity: 1;
 }
 
@@ -82,4 +82,49 @@
   .character-switcher .character-tab {
     width: 100%;
   }
+}
+
+.character-tab-avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+.character-tab-bot {
+  position: absolute;
+  right: -2px;
+  bottom: 0;
+  color: #8fb9cf;
+  background: #191e25;
+  border-radius: 2px;
+}
+/* Approved option 2: claude.ai/artifact/7hEXb24TFa5BTTTKGdYuKQ */
+.character-tab[data-delegated] {
+  position: relative;
+}
+.character-tab[data-delegated]::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  inset: 0 0 0 44px;
+  border-radius: 0 3px 3px 0;
+  opacity: 0.55;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='44'%3E%3Cg fill='none' stroke='%238fb9cf' stroke-width='1'%3E%3Cpath d='M0 40.5H22l4-4H58'/%3E%3Cpath d='M96 3.5H74l-5 5H54'/%3E%3Cpath d='M96 40.5H82'/%3E%3C/g%3E%3Cg fill='%230b0e12' stroke='%238fb9cf'%3E%3Ccircle cx='58.5' cy='36.5' r='1.8'/%3E%3Ccircle cx='54' cy='8.5' r='1.8'/%3E%3Ccircle cx='82' cy='40.5' r='1.8'/%3E%3C/g%3E%3C/svg%3E")
+    right center/96px 44px no-repeat;
+}
+.character-tab[data-delegated]::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px #ffffff12,
+    inset 0 -1px #0007;
+}
+.character-tab[data-delegated='recall']::before {
+  filter: sepia(1) saturate(1.6) hue-rotate(-15deg);
+}
+.character-tab[data-delegated='recall'] .character-tab-bot {
+  color: #d9b07a;
 }

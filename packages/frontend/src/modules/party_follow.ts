@@ -58,6 +58,7 @@ const follow_leader = (state: Readonly<AppState>, party: Readonly<PartyRow>): Ch
 export const active_party_follow = (
   state: Readonly<AppState>
 ): Readonly<{ party: PartyRow; leader: CharacterRow; followers: readonly CharacterRow[] }> | null => {
+  if (state.session.agent_view.request) return null
   const party = state.settings.follow_leader === true ? selected_party(state) : null
   if (!party) return null
   const leader = follow_leader(state, party)

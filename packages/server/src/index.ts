@@ -4,20 +4,31 @@
 // challenge, and becomes a player only after its signature verifies on that exact socket.
 
 import type { ServerWebSocket } from 'bun'
+import { AGENT_SETUP_PATH } from '@aresrpg/protocol'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
 import { create_campaign_boards } from './allocation/leaderboards.ts'
 import { create_allocation } from './allocation/runtime.ts'
+import { create_pairing_exchange } from './agent_pairing.ts'
+import { serve_agent_setup } from './agent_setup_http.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
-import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID, ALLOCATION_OPTIONS } from './env.ts'
+import {
+  PORT,
+  ADMIN_ADDRESSES,
+  ALLOWED_ORIGINS,
+  MAX_PLAYERS,
+  SERVER_ID,
+  ALLOCATION_OPTIONS,
+  SUI_NETWORK,
+} from './env.ts'
 import { BANNABLE_REASONS, create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
 import { create_game_state } from './game_state.ts'
 import { create_indexing_health } from './indexing_health.ts'
-import { pubsub } from './pubsub.ts'
+import { pubsub, mesh_redis } from './pubsub.ts'
 import { mesh } from './protocol.ts'
 import { MAX_BUFFERED_BYTES } from './player_output.ts'
 import { create_player, type Player } from './player.ts'
@@ -43,7 +54,8 @@ const allocation = create_allocation({
   ...ALLOCATION_OPTIONS,
   boards: create_campaign_boards((observation, address) => pubsub.graph.leaderboard!(observation, address)),
 })
-const allocation_http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
+const agent_pairing = SUI_NETWORK === 'mainnet' ? create_pairing_exchange(mesh_redis) : undefined
+const http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
 const indexing_health = create_indexing_health({
@@ -59,9 +71,12 @@ const resolve_name = create_suins_resolver({ client: sui_client })
 const HEARTBEAT_MS = 5_000
 setInterval(() => {
   void pubsub.mesh
-    .heartbeat(SERVER_ID, [...connections.keys()])
+    .heartbeat(SERVER_ID, {
+      addresses: [...connections.keys()],
+      characters: [...connections.values()].flatMap(({ player }) => player.online_characters()),
+    })
     .then(() => pubsub.mesh.cluster_online())
-    .then((online) => pubsub.mesh.record_online?.(online, Date.now()))
+    .then(({ online }) => pubsub.mesh.record_online?.(online, Date.now()))
     .catch((error: Error) => log.warn({ error: error.message }, 'heartbeat failed'))
 }, HEARTBEAT_MS)
 
@@ -78,10 +93,19 @@ const http_routes = new Map<
 >([
   ['/health', () => new Response('ok')],
   [
+    AGENT_SETUP_PATH,
+    (request, server) => {
+      const peer = server.requestIP(request)?.address ?? 'unknown'
+      if (!http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
+      if (!agent_pairing) return new Response(null, { status: 503 })
+      return serve_agent_setup(request, agent_pairing)
+    },
+  ],
+  [
     '/api/allocation',
     (request, server) => {
       const peer = server.requestIP(request)?.address ?? 'unknown'
-      if (!allocation_http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
+      if (!http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
       return allocation.http(request)
     },
   ],
@@ -89,6 +113,7 @@ const http_routes = new Map<
 
 const server = Bun.serve<ConnectionData>({
   port: PORT,
+  maxRequestBodySize: 64 * 1024,
   async fetch(request, bun_server) {
     const url = new URL(request.url)
     const route = http_routes.get(url.pathname)
@@ -132,6 +157,7 @@ const server = Bun.serve<ConnectionData>({
             const player = create_player({
               ws,
               allocation,
+              agent_pairing,
               address,
               admin: ADMIN_ADDRESSES.has(address),
               graph,

@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test'
 
 for (const viewport of [{ width: 844, height: 390 }]) {
-  test(`HUD placement and single Friends/Admin controls at ${viewport.width}`, async ({ page }) => {
+  test(`HUD placement and single Agent/Admin controls at ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await page.goto(`/e2e/fixtures/ui_world_hud.html?hud-layout${viewport.width < 900 ? '&mobile' : ''}`)
     const chat = page.locator('.gw-worldchat'),
@@ -30,11 +30,11 @@ for (const viewport of [{ width: 844, height: 390 }]) {
     const notification_box = (await notification.locator('xpath=../..').boundingBox())!
     expect(notification_box.y + notification_box.height).toBeGreaterThan(viewport.height - 30)
     expect(notification_box.x + notification_box.width).toBeGreaterThan(viewport.width - 30)
-    await page.locator('[data-friends-card]').click()
-    const friends = page.getByRole('dialog', { name: 'Friends', exact: true })
-    await expect(friends).toHaveCount(1)
-    await expect(friends.locator('.aui-window-header')).toHaveCount(1)
-    await expect(friends.getByRole('button', { name: 'Add friend', exact: true })).toBeDisabled()
+    await page.locator('[data-agent-setup-button]').click()
+    const setup = page.getByRole('dialog').filter({ has: page.locator('[data-agent-setup]') })
+    await expect(setup).toHaveCount(1)
+    await expect(setup.getByRole('button', { name: 'ChatGPT', exact: true })).toBeVisible()
+    await expect(setup.getByRole('button', { name: 'Grok Bot', exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Admin', exact: true }).click()
     const header = page.locator('.aui-admin-port > .aui-window-header')

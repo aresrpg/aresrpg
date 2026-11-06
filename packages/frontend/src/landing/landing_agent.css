@@ -1,0 +1,545 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+/* ---------- Agent livestream ---------- */
+.landing .agent {
+  position: relative;
+  overflow-x: clip;
+  padding: clamp(70px, 11vh, 130px) 0 clamp(110px, 15vh, 170px);
+}
+.landing .broadcast {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+.landing .broadcast::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  --s: 12px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+  background: linear-gradient(180deg, #5b6472 0%, #3a4250 22%, #252b35 100%);
+  box-shadow: inset 0 2px 0 #7a8390;
+}
+@media (min-width: 1100px) {
+  .landing .broadcast {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  }
+}
+.landing .cell {
+  --vt: clamp(104px, 25%, 270px);
+  position: relative;
+  min-width: 0;
+}
+.landing .screen {
+  --s: 6px;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: #04060a;
+  container-type: inline-size;
+}
+.landing .screen::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%;
+}
+.landing .screen .cap,
+.landing .cap-combat,
+.landing .cap-combat img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.landing .screen .cap {
+  transition: filter 1.4s ease;
+}
+.landing .cap-combat {
+  overflow: hidden;
+  clip-path: inset(0);
+  transition: clip-path 1.3s steps(8, end);
+}
+.landing[data-motion='on'] .agent.s6 .cap-combat img {
+  animation: landing-drift 24s ease-in-out infinite alternate;
+}
+@keyframes landing-drift {
+  from {
+    transform: scale(1.06) translate(1%, 0.6%);
+  }
+  to {
+    transform: scale(1.06) translate(-1%, -1%);
+  }
+}
+.landing .screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(4 6 10 / 0.45), transparent 22%, transparent 62%, rgb(4 6 10 / 0.55));
+}
+.landing .hud {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  transition: opacity 0.6s ease;
+}
+.landing .hud-l {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.landing .status {
+  --s: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px 6px;
+  font-size: clamp(12px, 1.5cqw, 14px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+  background: rgb(10 13 19 / 0.9);
+}
+.landing .status i {
+  width: 8px;
+  height: 8px;
+  background: var(--rune);
+  box-shadow: 0 0 8px var(--rune);
+}
+.landing .ctab {
+  --s: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 11px 3px 3px;
+  font-size: clamp(12px, 1.5cqw, 14px);
+  font-weight: 800;
+  color: var(--plate);
+  background: rgb(10 13 19 / 0.9);
+  box-shadow: inset 0 0 0 1px rgb(236 209 156 / 0.4);
+}
+.landing .ctab img {
+  width: clamp(22px, 3.4cqw, 32px);
+  height: auto;
+  background: radial-gradient(80% 70% at 50% 100%, rgb(200 150 60 / 0.35), transparent 70%), #1b2029;
+}
+.landing .stop {
+  --s: 3px;
+  padding: 6px 12px 7px;
+  font-size: clamp(12px, 1.5cqw, 14px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+  background: linear-gradient(180deg, #3a4350, #252c37);
+  box-shadow:
+    inset 0 1px 0 #5a6370,
+    inset 0 -3px 0 #11151c;
+}
+@media (max-width: 559px) {
+  .landing .ctab {
+    display: none;
+  }
+}
+.landing .orb {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: clamp(6px, 1.4cqw, 14px);
+  padding: 16px 8%;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.6s ease,
+    visibility 0.6s,
+    transform 0.6s ease;
+  transform: scale(0.97);
+}
+.landing .orb .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(12px, 1.6cqw, 15px);
+  font-weight: 800;
+  color: var(--gold);
+}
+.landing .wave {
+  display: flex;
+  align-items: center;
+  gap: clamp(2px, 0.4cqw, 4px);
+  height: clamp(22px, 5cqw, 54px);
+  color: var(--gold);
+}
+.landing .wave i {
+  flex: 0 0 clamp(3px, 0.5cqw, 5px);
+  height: calc(var(--h) * 100%);
+  background: currentColor;
+  transform: scaleY(0.18);
+  transform-origin: 50% 50%;
+  transition: transform 0.35s ease;
+}
+.landing .say {
+  max-width: 24ch;
+  font-size: clamp(16px, 3.1cqw, 32px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+  text-shadow: 0 2px 10px #000;
+}
+.landing .say .w {
+  transition: opacity 0.25s ease;
+}
+.landing .bubble {
+  position: absolute;
+  z-index: 3;
+  left: calc(var(--vt) * 0.94);
+  bottom: clamp(10px, 4.5%, 26px);
+  display: grid;
+  max-width: min(30em, calc(97% - var(--vt)));
+}
+.landing .bubble p {
+  grid-area: 1/1;
+  align-self: end;
+  position: relative;
+  isolation: isolate;
+  padding: 0.5em 0.9em 0.6em;
+  font-size: clamp(13px, 1.9cqw, 19px);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  transition:
+    opacity 0.4s ease,
+    clip-path 0.9s steps(16, end);
+}
+.landing .bubble p::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  --s: 5px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+  background: rgb(8 18 32 / 0.93);
+  box-shadow:
+    inset 0 0 0 2px rgb(118 200 255 / 0.7),
+    inset 0 0 18px rgb(118 200 255 / 0.18);
+}
+.landing .vtuber {
+  position: absolute;
+  z-index: 4;
+  left: calc(var(--vt) * -0.12);
+  bottom: clamp(-50px, -3.4vw, -18px);
+  width: var(--vt);
+  pointer-events: none;
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.landing .vtuber::before {
+  content: '';
+  position: absolute;
+  inset: 8% 4% 10%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(200 150 60 / 0.38), transparent);
+}
+.landing .vtuber img {
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 8px 12px rgb(0 0 0 / 0.75));
+}
+.landing .nameplate {
+  --s: 3px;
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px 5px;
+  font-size: clamp(12px, 1.3vw, 15px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--plate);
+  background: rgb(10 13 19 / 0.94);
+  box-shadow: inset 0 0 0 1px rgb(236 209 156 / 0.35);
+  white-space: nowrap;
+}
+.landing .nameplate i {
+  width: 7px;
+  height: 7px;
+  background: #4b5462;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.landing[data-motion='on'] .vtuber img {
+  animation: landing-idle 6.4s ease-in-out infinite;
+}
+@keyframes landing-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+.landing[data-motion='on'] .agent.talk-ai .vtuber img {
+  animation: landing-chatter 0.26s ease-in-out infinite alternate;
+}
+@keyframes landing-chatter {
+  from {
+    transform: translateY(0) rotate(0);
+  }
+  to {
+    transform: translateY(-3.5%) rotate(-0.8deg);
+  }
+}
+.landing .agent.talk-ai .nameplate i {
+  background: var(--rune);
+  box-shadow: 0 0 8px var(--rune);
+}
+@media (max-width: 1099px) {
+  .landing .vtuber {
+    bottom: -8px;
+  }
+}
+.landing .call {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: linear-gradient(180deg, #121720, #0a0d13);
+  box-shadow: inset 0 0 0 1px #232a35;
+}
+.landing .call-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #222934;
+}
+.landing .call-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+}
+.landing .call-head span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.landing .log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.landing .msg {
+  display: grid;
+  gap: 1px;
+  font-size: 15px;
+  line-height: 1.4;
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+.landing .msg b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--gold);
+}
+.landing .msg b::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+}
+.landing .msg.ai b {
+  color: var(--rune);
+}
+.landing .msg p {
+  color: var(--ink-soft);
+}
+.landing .msg.you p {
+  color: var(--ink);
+  font-weight: 700;
+}
+.landing .mic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #222934;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.landing .mic svg {
+  flex: none;
+  color: var(--gold);
+}
+.landing .mic .wave {
+  height: 20px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.landing .mic .wave i {
+  flex-basis: 3px;
+}
+.landing .replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.landing .replay:hover {
+  color: var(--ink);
+}
+.landing .stream-note {
+  margin-top: clamp(40px, 6vh, 64px);
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink-hi);
+  text-shadow: var(--halo);
+}
+.landing .bubble .b1,
+.landing .bubble .b2 {
+  opacity: 0;
+  visibility: hidden;
+}
+.landing .agent.armed .bubble p {
+  opacity: 0;
+  visibility: hidden;
+  clip-path: inset(0 100% 0 0);
+}
+.landing .agent.armed.s2:not(.s4) .bubble .b1,
+.landing .agent.armed.s5:not(.s6) .bubble .b2,
+.landing .agent.armed.s6 .bubble .b3 {
+  opacity: 1;
+  visibility: visible;
+  clip-path: inset(0);
+}
+.landing .agent.armed:not(.s4) .screen .cap {
+  filter: grayscale(0.85) brightness(0.32);
+}
+.landing .agent.armed:not(.s6) .cap-combat {
+  clip-path: inset(100% 0 0 0);
+}
+.landing .agent.armed:not(.s3) .orb {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.landing .agent.armed .say .w {
+  opacity: 0.22;
+}
+.landing .agent.armed.s1 .say .w {
+  opacity: 1;
+  transition-delay: calc(var(--i) * 230ms);
+}
+.landing .agent.talk-you .wave i {
+  animation: landing-talk 0.5s ease-in-out infinite alternate;
+}
+.landing .wave i:nth-child(3n) {
+  animation-delay: -0.2s;
+}
+.landing .wave i:nth-child(3n + 1) {
+  animation-delay: -0.35s;
+}
+.landing .wave i:nth-child(4n) {
+  animation-delay: -0.1s;
+}
+@keyframes landing-talk {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.landing .agent.armed:not(.s2) .vtuber {
+  opacity: 0;
+  transform: translateY(24%);
+}
+.landing .agent.armed:not(.s3) .hud {
+  opacity: 0;
+}
+.landing .agent.armed:not(.s4) .hud .ctab,
+.landing .agent.armed:not(.s4) .hud .stop {
+  opacity: 0;
+}
+.landing .agent.armed:not(.s4) .status i {
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+}
+.landing .agent.armed .msg {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.landing .agent.armed.s2 .m1,
+.landing .agent.armed.s2 .m2,
+.landing .agent.armed.s4 .m3,
+.landing .agent.armed.s5 .m4,
+.landing .agent.armed.s6 .m5 {
+  opacity: 1;
+  transform: none;
+}
+.landing .agent.armed.s2 .m2 {
+  transition-delay: 0.5s;
+}

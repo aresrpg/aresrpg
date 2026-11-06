@@ -4,6 +4,8 @@
 
 import { fight_discoverable, zone_of, type CharacterRow, type FightRow, type ServerPacket } from '@aresrpg/protocol'
 
+import type { AppInput, AppState } from '../store.ts'
+
 import type { ChainClock } from './chain_clock.ts'
 import type { WorldState } from './world.ts'
 
@@ -156,3 +158,11 @@ export const fold_cached_world = (
     character
   )
 }
+
+export const changes_viewed_world = (input: AppInput, state: AppState): boolean =>
+  input.type === 'agent/watch' ||
+  (input.type === 'server/packet' && input.packet.type === 'packet/agent_observed') ||
+  input.type === 'character/select' ||
+  (input.type === 'character/world_joined' &&
+    input.character_id === state.session.selected_character_id &&
+    state.session.characters.some(({ id }) => id === input.character_id))

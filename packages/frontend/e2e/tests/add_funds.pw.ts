@@ -315,3 +315,22 @@ test('disconnecting Solana waits for the provider before reopening Privy', async
   await privy.click()
   await expect(page.locator('[data-selected-family]')).toHaveAttribute('data-selected-family', 'evm')
 })
+
+for (const event of ['change-agent', 'disconnect-player']) {
+  test(`agent checkout refuses deferred signing after ${event}`, async ({ page }) => {
+    await page.goto('/e2e/fixtures/add_funds.html?connected&slow&agent')
+    await page.getByRole('button', { name: 'Pay 1.2 SUI' }).click()
+    await expect(page.getByRole('status')).toContainText('Checking funds')
+    await page.evaluate((event) => window.dispatchEvent(new Event(event)), event)
+    await page.evaluate(() => window.dispatchEvent(new Event('release-estimate')))
+    await expect(page.locator('html')).toHaveAttribute('data-preflight', 'finished')
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.locator('html')).not.toHaveAttribute('data-payment')
+  })
+}
+test('agent checkout uses the selected paired destination with the existing Sui path', async ({ page }) => {
+  await page.goto('/e2e/fixtures/add_funds.html?connected&agent')
+  await page.getByRole('button', { name: 'Pay 1.2 SUI' }).click()
+  await expect(page.getByRole('status')).toContainText('1.2 SUI delivered')
+  expect(JSON.parse((await page.locator('html').getAttribute('data-payment'))!).address).toBe(`0x${'22'.repeat(32)}`)
+})

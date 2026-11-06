@@ -11,6 +11,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { Button, CarvedIcon, ProgressBar, vital_art } from '@aresrpg/ui'
 import { useState } from 'react'
 
+import { PortraitShareButton } from '../components/PortraitShare.tsx'
 import { character_icon } from '../content/assets.ts'
 import { titleize } from '../content/catalog.ts'
 import { action_points, equipment_bonus, movement_points } from '../game/character_stats.ts'
@@ -76,7 +77,7 @@ export default function StatsTab({
       <section className="aui-character-sheet" data-sheet={sheet} data-tutorial-target="character_stats">
         <header className="aui-character-identity">
           <span className="aui-character-portrait">
-            <img src={character_icon(character.classe, character.sex) ?? undefined} alt="" />
+            <img src={character_icon(character.classe, character.sex, character) ?? undefined} alt="" />
           </span>
           <div>
             <h2>{character.name}</h2>
@@ -84,6 +85,7 @@ export default function StatsTab({
               {titleize(character.classe)} · {t('stats.level', { level: character.level })}
             </p>
           </div>
+          <PortraitShareButton appearance={character} copy={copy} />
         </header>
         <div className="aui-character-vitals">
           <div>

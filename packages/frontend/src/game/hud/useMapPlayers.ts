@@ -3,6 +3,7 @@
 
 import { useSyncExternalStore } from 'react'
 
+import { displayed_character } from '../../agents/observation.ts'
 import { selected_party } from '../../modules/party.ts'
 import { useAppStore } from '../../store.ts'
 import {
@@ -19,7 +20,7 @@ export const useMapPlayers = () => {
   const party = useAppStore(selected_party)
   // Reuse the world renderer's live feed and checkpoint-validated owned presence projection.
   useSyncExternalStore(subscribe_owned_character_positions, read_owned_character_positions)
-  const world = session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
+  const world = displayed_character(session)?.world ?? null
   return map_players(
     remote,
     owned_character_presence_rows(session.characters, session.wallet?.address ?? '', world, () => 0),

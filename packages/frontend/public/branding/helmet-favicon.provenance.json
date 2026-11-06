@@ -1,0 +1,5 @@
+{
+  "tool": "built-in image generation",
+  "reference": "packages/frontend/public/logo.png",
+  "prompt": "Favicon-ready pixel-art derivative of the actual AresRPG helmet on true transparent alpha. Preserve gold/bronze armor, charcoal eye openings, cheek guards, nose guard, and cyan-purple forehead gem. Simplify for 32px display with coarse crisp pixel clusters, limited palette, and clear silhouette. No letters, frame, shadow outside helmet, background tile, gradients, or realistic texture."
+}

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import campaign from '../../../seed/content/allocation_campaign.json' with { type: 'json' }
-
+import campaign from './allocation_campaign.json' with { type: 'json' }
 import { LEADERBOARD_METRICS } from './leaderboards.ts'
 
 export { campaign }

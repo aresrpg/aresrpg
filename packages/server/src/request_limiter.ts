@@ -12,11 +12,12 @@ export const create_request_limiter = ({
   max_entries = 8_192,
   now = Date.now,
 }: Readonly<{
-  capacity?: number
+  capacity?: number | (() => number)
   window_ms?: number
   max_entries?: number
   now?: () => number
 }> = {}) => {
+  const budget = typeof capacity === 'number' ? () => capacity : capacity
   const buckets = new Map<string, Bucket>()
   return Object.freeze({
     take: (raw_key: string): boolean => {
@@ -40,7 +41,7 @@ export const create_request_limiter = ({
         buckets.set(key, Object.freeze({ count: 1, started_at_ms: at_ms }))
         return true
       }
-      if (current.count >= capacity) return false
+      if (current.count >= budget()) return false
       buckets.set(key, Object.freeze({ ...current, count: current.count + 1 }))
       return true
     },

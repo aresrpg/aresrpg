@@ -25,6 +25,7 @@ test('forfeits return a character without reopening a fully admitted side', () =
 
 test('placement uses living occupancy and cannot move a forfeited seat', () => {
   const { checkpoint } = create_fixture()
+  checkpoint.contract.fighters[0]!.ready = false
   const game = create_fight({ state: checkpoint })
   const joined = game.apply({
     type: 'join',

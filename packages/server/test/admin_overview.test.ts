@@ -24,6 +24,7 @@ test('overview derives exact active and money totals from the selected tier', as
             character_royalty_mist: '30',
             character_creation_mist: '40',
             kolizeum_mist: '50',
+            tournament_mist: '7',
           }
         if (key === `analytics:totals:15m:${now_ms}`) return { ...ZERO_TOTALS, transactions: '5', gas_mist: '25000000' }
         if (key === `analytics:totals:day:${now_ms}`)
@@ -35,6 +36,7 @@ test('overview derives exact active and money totals from the selected tier', as
             character_royalty_mist: '8',
             character_creation_mist: '1000',
             kolizeum_mist: '20',
+            tournament_mist: '3',
           }
         return ZERO_TOTALS
       }),
@@ -48,7 +50,7 @@ test('overview derives exact active and money totals from the selected tier', as
     online_samples: async (keys: readonly string[]) => keys.map(() => [8, 12]),
     cluster_online: async () => {
       live_reads += 1
-      return 11
+      return { online: 11, online_characters: 12 }
     },
   }
   const result = await get_admin_overview(graph as never, bus as never, mesh as never, {
@@ -73,9 +75,11 @@ test('overview derives exact active and money totals from the selected tier', as
   expect(result.transactions.gas_all_time_mist).toBe('250000000')
   expect(result.revenue.character_creation_mist).toBe('1000')
   expect(result.revenue.kolizeum_mist).toBe('20')
-  expect(result.revenue.all_time_revenue_mist).toBe('9007199254741113')
-  expect(result.revenue.last_30d_revenue_mist).toBe('1058')
-  expect(result.revenue.month_to_date_revenue_mist).toBe('1058')
+  expect(result.revenue.tournament_mist).toBe('3')
+  expect(result.revenue.money.at(-1)?.tournament_mist).toBe('3')
+  expect(result.revenue.all_time_revenue_mist).toBe('9007199254741120')
+  expect(result.revenue.last_30d_revenue_mist).toBe('1061')
+  expect(result.revenue.month_to_date_revenue_mist).toBe('1061')
   expect(result.online).not.toHaveProperty('online_now')
   expect(live_reads).toBe(0)
   expect(result.online.online_peak).toBe(12)
@@ -101,7 +105,10 @@ test('ranges use compacted hourly, weekly, and monthly buckets', async () => {
     analytics_sets: async (keys: readonly string[]) => keys.map(() => []),
     indexed_checkpoint: async () => 40,
   }
-  const mesh = { online_samples: async (keys: readonly string[]) => keys.map(() => []), cluster_online: async () => 0 }
+  const mesh = {
+    online_samples: async (keys: readonly string[]) => keys.map(() => []),
+    cluster_online: async () => ({ online: 0, online_characters: 12 }),
+  }
   const overview = await get_admin_overview(graph as never, bus as never, mesh as never, {
     revenue_days: 7,
     players_days: 30,

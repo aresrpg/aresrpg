@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { FloraMeshData } from './scenery_flora_mesh.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import type { ScatterMeshData } from './scatter_mesh.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
@@ -21,6 +22,7 @@ type Job = Readonly<{
 }>
 
 export type MeshPool = Readonly<{
+  prepare_flora: () => Promise<FloraMeshData | null>
   mesh: (chunk: RenderChunkRequest, priority: number) => Promise<MeshResult>
   cancel: (key: string) => void
   state: () => Readonly<{ queued: number; active: number }>
@@ -47,8 +49,15 @@ export const create_mesh_pool = (
   let next_id = 1
   let disposed = false
   let worker_error: Error | null = null
+  let flora: Promise<FloraMeshData | null> | null = null
+  let flora_request: Readonly<{
+    resolve: (data: FloraMeshData | null) => void
+    reject: (error: Error) => void
+  }> | null = null
 
   const stop = (error: Error): void => {
+    flora_request?.reject(error)
+    flora_request = null
     queued.splice(0).forEach(({ reject }) => reject(error))
     active.forEach(({ reject }) => reject(error))
     active.clear()
@@ -75,15 +84,24 @@ export const create_mesh_pool = (
   }
 
   workers.forEach((worker) => {
-    worker.addEventListener('message', ({ data }: MessageEvent<WorkerReply<MeshResult>>) => {
-      const job = active.get(worker)
-      if (!job || job.id !== data.id) return
-      active.delete(worker)
-      idle.push(worker)
-      if ('error' in data) job.reject(read_worker_error(data))
-      else job.resolve(data.result)
-      drain()
-    })
+    worker.addEventListener(
+      'message',
+      ({ data }: MessageEvent<WorkerReply<MeshResult> | (WorkerReply<FloraMeshData | null> & { type: 'flora' })>) => {
+        if ('type' in data) {
+          if ('error' in data) flora_request?.reject(read_worker_error(data))
+          else flora_request?.resolve(data.result)
+          flora_request = null
+          return
+        }
+        const job = active.get(worker)
+        if (!job || job.id !== data.id) return
+        active.delete(worker)
+        idle.push(worker)
+        if ('error' in data) job.reject(read_worker_error(data))
+        else job.resolve(data.result)
+        drain()
+      }
+    )
     worker.addEventListener('error', (event) => report_failure(new Error(event.message)))
     worker.addEventListener('messageerror', () => report_failure(new Error('mesh worker reply could not be decoded')))
   })
@@ -94,6 +112,14 @@ export const create_mesh_pool = (
   }
 
   return Object.freeze({
+    prepare_flora: () => {
+      if (disposed || worker_error) return Promise.reject(worker_error ?? new Error('mesh pool is disposed'))
+      flora ??= new Promise<FloraMeshData | null>((resolve, reject) => {
+        flora_request = { resolve, reject }
+        workers[0]!.postMessage({ type: 'flora', rows: world.scenery?.plants ?? [] })
+      })
+      return flora
+    },
     mesh: (chunk: RenderChunkRequest, priority: number) =>
       new Promise<MeshResult>((resolve, reject) => {
         if (disposed || worker_error) {

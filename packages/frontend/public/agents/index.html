@@ -119,10 +119,10 @@
         operate the game through the public source SDK, inside the objective, budget and risk limits its player sets.
       </p>
       <p>
-        Performance-focused bots and clients can use Sui GraphQL reads and direct SDK transactions without a game
-        connection. For bots playing in the world, we encourage WebSocket presence so other players can see them on the
-        map. Keep your direct chain reader or use the server's prepared projections. Ordinary wallets work without
-        Google login; the guides explain authentication, movement and service limits.
+        Start with <a href="/agents/client.txt">Connect Your Agent</a>, the single official supported bot onboarding
+        flow. Pair the bot, review character handover, then build its strategy from the existing SDK primitives. The
+        human can initiate Recall with their Google multisig member. Direct chain reads and game-server projections are
+        implementation inputs after pairing, not parallel onboarding recommendations.
       </p>
       <p>
         Commercial remakes, fan tools, services and profit-making bots are welcome on the official deployment. Do not
@@ -131,6 +131,11 @@
       </p>
       <p>Point your agent at <a href="/llms.txt">llms.txt</a>, or open a guide directly.</p>
       <ul>
+        <li>
+          <a href="/agents/client.txt"
+            ><b>Connect Your Agent</b><span>Official pairing, SDK signer setup, handover and human Recall.</span></a
+          >
+        </li>
         <li>
           <a href="/agents/play.txt"
             ><b>play.txt</b
@@ -167,7 +172,7 @@
         </li>
         <li>
           <a href="/agents/indexing.txt"
-            ><b>indexing.txt (optional)</b
+            ><b>indexing.txt</b
             ><span
               >Recommended map presence for bots, indexed projections, wallet authentication and service limits.</span
             ></a

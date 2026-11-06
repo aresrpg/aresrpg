@@ -593,7 +593,4 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-export const next_fight_resolution_step = (_row: Readonly<FightResolutionRow>): Readonly<{ type: 'settle' }> =>
-  Object.freeze({ type: 'settle' })
-
 export default Object.freeze({ name: 'fight_result', reduce, observe: observe_fight_results }) satisfies AppModule

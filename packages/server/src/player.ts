@@ -38,6 +38,7 @@ import type { Pubsub } from './pubsub_bus.ts'
 import player_load, { type AccountDomain } from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
+import player_agent_observation, { type AgentWatch } from './modules/player_agent_observation.ts'
 import player_world from './modules/player_world.ts'
 import player_dungeon from './modules/player_dungeon.ts'
 import player_chat from './modules/player_chat.ts'
@@ -55,12 +56,16 @@ import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
 import player_allocation from './modules/player_allocation.ts'
+import player_agent_setup from './modules/player_agent_setup.ts'
+import type { create_pairing_exchange } from './agent_pairing.ts'
 import type { Allocation } from './allocation/runtime.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
-// Six independently moving characters plus control packets and normal timer jitter.
-const REALTIME_PACKETS_PER_SECOND = Math.ceil(1_000 / POSITION_INTERVAL_MS) * MAX_TRACKED_CHARACTERS + 30
+// Preserve the six-character traffic floor; larger authenticated tracking sets receive
+// the same cadence and control headroom without resetting spent requests.
+const realtime_budget = (tracked: number) =>
+  Math.ceil(1_000 / POSITION_INTERVAL_MS) * Math.max(MAX_TRACKED_CHARACTERS, tracked) + 30
 
 /** The embodied presence — a PresenceRow pinned to the world it walks in. */
 export type Embodied = PresenceRow & { world: string }
@@ -79,6 +84,8 @@ export type TrackedCharacter = Readonly<{
 /** Actions the reducers fold: client packets + validated internal actions + lifecycle marks. */
 export type PlayerAction =
   | ClientPacket
+  | { type: 'action/agent_watch'; watch: AgentWatch | null }
+  | { type: 'action/agent_rows'; request: AgentWatch['request']; characters: readonly CharacterRow[] }
   | {
       type: 'action/track_character'
       character: Embodied
@@ -120,9 +127,11 @@ export type PlayerAction =
   | { type: 'close' }
 
 export type PlayerState = {
+  /** Read-only; never grants presence, relay or transaction authority. */
+  agent_watch?: AgentWatch | null
   /** Every owned character tracked by this connection, keyed by explicit wire identity. */
   characters: Readonly<Record<string, TrackedCharacter>>
-  /** The capped server roster; it is also the complete server-managed tracking set. */
+  /** The authenticated indexed roster; it is also the complete server-managed tracking set. */
   allowed_characters: ReadonlySet<string>
   /** Chain-anchor signatures decide which server-managed track needs refreshing. */
   character_signatures: Readonly<Record<string, string>>
@@ -140,6 +149,7 @@ export type PlayerState = {
 }
 
 export type PlayerContext = {
+  agent_pairing?: ReturnType<typeof create_pairing_exchange>
   allocation?: Allocation
   public_world: PublicWorld
   public_market: PublicMarket
@@ -176,6 +186,8 @@ export type PlayerModule = {
 }
 
 export type Player = {
+  /** Live tracked identities, including fights/dungeons; never the full ownership catalogue. */
+  online_characters: () => readonly string[]
   dispatch: (action: PlayerAction) => void
   on_message: (raw: string | Buffer) => void
   on_close: () => void
@@ -186,6 +198,7 @@ const MODULES: PlayerModule[] = [
   player_info,
   player_events,
   player_friends,
+  player_agent_observation,
   player_world,
   player_dungeon,
   player_chat,
@@ -199,6 +212,7 @@ const MODULES: PlayerModule[] = [
   player_tournament,
   player_requests,
   player_allocation,
+  player_agent_setup,
   player_inspection,
   player_admin,
 ]
@@ -207,8 +221,10 @@ const MODULES: PlayerModule[] = [
  *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
+  'packet/agent_observe',
   'packet/market_floor_request',
   'packet/allocation_request',
+  'packet/agent_setup_request',
   'packet/spectate',
   'packet/fight_preview',
   'packet/fight_nearby',
@@ -223,11 +239,19 @@ const READ_PACKETS = new Set<string>([
 
 // Only the declared cancellation shape of each packet may bypass the graph-read allowance.
 const cancels_read = (packet: Readonly<ClientPacket>): boolean => {
+  if (
+    'observation' in packet &&
+    [
+      'packet/agent_observe',
+      'packet/market_observe',
+      'packet/market_prices_observe',
+      'packet/leaderboard_observe',
+    ].includes(packet.type)
+  )
+    return packet.observation === null
   switch (packet.type) {
-    case 'packet/market_observe':
-    case 'packet/market_prices_observe':
-    case 'packet/leaderboard_observe':
-      return packet.observation === null
+    case 'packet/agent_setup_request':
+      return packet.request.action === 'cancel'
     case 'packet/spectate':
     case 'packet/fight_preview':
     case 'packet/fight_nearby':
@@ -260,6 +284,7 @@ type PlayerWires = Pick<
   PlayerContext,
   'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name' | 'public_world' | 'public_market'
 > & {
+  agent_pairing?: ReturnType<typeof create_pairing_exchange>
   allocation?: Allocation
   game_state?: GameState
   indexing_health?: () => Promise<IndexingHealth>
@@ -278,6 +303,7 @@ const UNKNOWN_GAME_STATE: GameState = Object.freeze({
 export function create_player({
   ws,
   allocation,
+  agent_pairing,
   address,
   resolve_name,
   admin,
@@ -289,9 +315,15 @@ export function create_player({
   indexing_health = async () =>
     Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }),
   request_limiter = create_request_limiter(),
-  realtime_limiter = create_request_limiter({ capacity: REALTIME_PACKETS_PER_SECOND, window_ms: 1_000 }),
+  realtime_limiter,
 }: PlayerWires): Player {
   let state = INITIAL_STATE()
+  const realtime =
+    realtime_limiter ??
+    create_request_limiter({
+      capacity: () => realtime_budget(Object.keys(state.characters).length),
+      window_ms: 1_000,
+    })
   let closed = false
   const controller = new AbortController()
   const { send, position: send_position } = create_player_output(ws, controller.signal)
@@ -301,6 +333,7 @@ export function create_player({
   events.setMaxListeners(0)
   const context: PlayerContext = {
     allocation,
+    agent_pairing,
     address,
     resolve_name,
     admin,
@@ -335,10 +368,11 @@ export function create_player({
   for (const module of MODULES) module.observe?.(context)
 
   return {
+    online_characters: () => Object.keys(state.characters),
     dispatch: (action) => context.dispatch(action),
     on_message: (raw) => {
       if (closed) return
-      if (!realtime_limiter.take(address)) return drop('RATE_LIMIT')
+      if (!realtime.take(address)) return drop('RATE_LIMIT')
       try {
         const packet = parse_client_packet(raw)
         if (requests_graph(packet) && !request_limiter.take(address)) {

@@ -189,11 +189,7 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
     delist: async ({ kind, id, kiosk, existing }) => {
       const receipt = await runner.with_kiosk(
         (tx, owned_kiosk, owner_cap) => {
-          tx.moveCall({
-            target: '0x2::kiosk::delist',
-            typeArguments: [asset_type(sdk, kind)],
-            arguments: [owned_kiosk, owner_cap, tx.pure.id(id)],
-          })
+          delist_asset_ptb(sdk, tx, kind, id, owned_kiosk, owner_cap)
           if (kind === 'item' && existing)
             merge_stacks_ptb(sdk, tx, { kiosk: owned_kiosk, cap: owner_cap }, { target_id: existing, source_id: id })
         },
@@ -234,21 +230,43 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
     collect: async (kiosks) => {
       if (kiosks.length === 0) throw new Error('No marketplace proceeds are available.')
       const receipt = await retry_stale_kiosk_ref(async (fresh) => {
-        const owners = await Promise.all(kiosks.map((kiosk) => resolve_kiosk_cap(kiosk_cap, { kiosk }, fresh)))
-        const tx = sdk.tx()
-        owners.forEach((owner, index) => {
-          if (!owner) throw new Error(`No personal kiosk cap is available for ${kiosks[index]}.`)
-          sdk.with_owner_kiosk(tx, owner, (owned_kiosk, owner_cap) => {
-            const coin = tx.moveCall({
-              target: '0x2::kiosk::withdraw',
-              arguments: [owned_kiosk, owner_cap, tx.pure.option('u64', null)],
-            })
-            tx.transferObjects([coin], address)
-          })
-        })
+        const tx = await collect_marketplace_ptb(sdk, address, kiosks, kiosk_cap, fresh)
         return sdk.execute(tx)
       })
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
   })
+}
+
+export const delist_asset_ptb = (
+  sdk: Sdk,
+  tx: Transaction,
+  kind: MarketplaceAsset['kind'],
+  id: string,
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument
+): void => {
+  tx.moveCall({
+    target: '0x2::kiosk::delist',
+    typeArguments: [asset_type(sdk, kind)],
+    arguments: [kiosk, cap, tx.pure.id(id)],
+  })
+}
+export const collect_marketplace_ptb = async (
+  sdk: Sdk,
+  address: string,
+  kiosks: readonly string[],
+  kiosk_cap: KioskCapLoader,
+  fresh = true
+) => {
+  const owners = await Promise.all(kiosks.map((kiosk) => resolve_kiosk_cap(kiosk_cap, { kiosk }, fresh)))
+  const tx = sdk.tx()
+  owners.forEach((owner, index) => {
+    if (!owner) throw new Error(`No personal kiosk cap is available for ${kiosks[index]}.`)
+    sdk.with_owner_kiosk(tx, owner, (kiosk, cap) => {
+      const coin = tx.moveCall({ target: '0x2::kiosk::withdraw', arguments: [kiosk, cap, tx.pure.option('u64', null)] })
+      tx.transferObjects([coin], address)
+    })
+  })
+  return tx
 }

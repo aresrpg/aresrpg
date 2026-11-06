@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Button, IconButton, NavigationRow } from '@aresrpg/ui'
+import { Button, IconButton } from '@aresrpg/ui'
 import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 import { Plus, UsersRound } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 
-import { character_icon } from '../content/assets.ts'
+import { AgentSetup } from '../agents/AgentSetup.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { crafting_lock_id } from '../modules/craft_character_lock.ts'
 import { owned_party_invite_view } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { CharacterTab } from './CharacterTab.tsx'
 import { CharacterDeleteModal } from './CharacterDeleteModal.tsx'
 import './character_tabs.css'
 import { ContextMenu } from './ContextMenu.tsx'
@@ -39,6 +40,27 @@ const CreateCharacterTab = ({
       <Plus aria-hidden="true" size={11} />
     </Button>
   )
+}
+
+type CharacterTabDialogState = Readonly<{ kind: 'agent' } | { kind: 'delete'; character_id: string }> | null
+
+const CharacterTabDialog = ({
+  dialog,
+  copy,
+  close,
+}: Readonly<{
+  dialog: CharacterTabDialogState
+  copy: AppCopy
+  close: () => void
+}>) => {
+  switch (dialog?.kind) {
+    case 'agent':
+      return <AgentSetup copy={copy} close={close} />
+    case 'delete':
+      return <CharacterDeleteModal character_id={dialog.character_id} copy={copy} close={close} />
+    case undefined:
+      return null
+  }
 }
 
 /** The app-wide character selector: one tab per owned character, plus a create tab. Selecting
@@ -81,8 +103,8 @@ export const CharacterTabs = ({
   }, [expanded])
   const locked_character = useAppStore(crafting_lock_id)
   const wallet = useAppStore((state) => state.session.wallet)
-  const [delete_target, set_delete_target] = useState<string | null>(null)
-  useEffect(() => set_delete_target(null), [wallet])
+  const [dialog, set_dialog] = useState<CharacterTabDialogState>(null)
+  useEffect(() => set_dialog(null), [wallet])
   const party_by_character = useAppStore((state) => state.party.party_by_character)
   const parties = useAppStore((state) => state.party.by_id)
   const pending_by_character = useAppStore((state) => state.party.pending_by_character)
@@ -137,10 +159,9 @@ export const CharacterTabs = ({
             const active = character.id === selected_character_id
             const locked = !!locked_character && character.id !== locked_character
             return (
-              <NavigationRow
+              <CharacterTab
+                character={character}
                 selected={active}
-                className="character-tab"
-                data-character-tab={character.id}
                 disabled={locked}
                 key={character.id}
                 onClick={() => {
@@ -154,15 +175,7 @@ export const CharacterTabs = ({
                 }}
                 title={locked ? copy.settings_page.always_craft_from_hint : undefined}
                 type="button"
-              >
-                <img
-                  className="character-tab-portrait"
-                  src={character_icon(character.classe, character.sex) ?? undefined}
-                  alt=""
-                />
-                <span className="character-tab-name">{character.name}</span>
-                <small className="character-tab-level">{character.level}</small>
-              </NavigationRow>
+              />
             )
           })}
           <CreateCharacterTab copy={copy} create={create_character} count={characters.length} />
@@ -171,6 +184,26 @@ export const CharacterTabs = ({
       {menu && (
         <ContextMenu x={menu.x} y={menu.y}>
           <div data-character-tab-menu="">
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
+              onClick={() => {
+                set_menu(null)
+                set_dialog({ kind: 'agent' })
+              }}
+            >
+              {copy.ui.agent_setup}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled
+              title={copy.ui.agent_unavailable}
+              className="w-full rounded-[5px] px-3 py-2 text-left text-muted opacity-40"
+            >
+              {copy.ui.agent_send}
+            </button>
             <button
               className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
               disabled={!can_invite || !!pending}
@@ -188,7 +221,7 @@ export const CharacterTabs = ({
             <button
               className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
               onClick={() => {
-                set_delete_target(menu.character_id)
+                set_dialog({ kind: 'delete', character_id: menu.character_id })
                 set_menu(null)
               }}
               role="menuitem"
@@ -199,7 +232,7 @@ export const CharacterTabs = ({
           </div>
         </ContextMenu>
       )}
-      <CharacterDeleteModal character_id={delete_target} close={() => set_delete_target(null)} copy={copy} />
+      <CharacterTabDialog dialog={dialog} close={() => set_dialog(null)} copy={copy} />
     </>
   )
 }

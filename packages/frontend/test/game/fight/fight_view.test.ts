@@ -6,6 +6,7 @@ import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import * as React from 'react'
 import { createElement } from 'react'
 import { describe, expect, spyOn, test } from 'bun:test'
+import { portrait_url } from '@aresrpg/immutable/portrait'
 
 import * as store from '../../../src/store.ts'
 import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
@@ -214,10 +215,14 @@ describe('generic fight view', () => {
   test('character cards resolve class and sex from the checkpoint, independent of their display name', () => {
     const checkpoint = started_checkpoint()
     checkpoint.sources.players.mine_a!.sex = 'female'
+    checkpoint.sources.players.mine_a!.color_1 = 123456
+    checkpoint.sources.players.mine_a!.color_2 = 654321
+    checkpoint.sources.players.mine_a!.color_3 = 0
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: { mine_a: 'Custom Name' } })
     const character = view.timeline.find(({ character_id }) => character_id === 'mine_a')!
     const lookup = (classe: string, sex: string) => `/characters/${classe}_${sex}.png`
     expect(fight_portrait_source(character, () => null, lookup)).toBe('/characters/senshi_female.png')
+    expect(fight_portrait_source(character, () => null)).toBe(portrait_url(checkpoint.sources.players.mine_a!))
     expect(fight_portrait_source({ ...character, character_portrait: null }, () => null, lookup)).toBeNull()
   })
 
@@ -234,7 +239,7 @@ describe('generic fight view', () => {
     expect(mob.mob_type).toBe('aragne__fire')
     const icon_for = (mob_type: string) => `/mob/${mob_type}.png`
     expect(fight_portrait_source(mob, icon_for)).toBe('/mob/aragne__fire.png')
-    expect(fight_portrait_source(view.timeline[0]!, icon_for)).toBeNull()
+    expect(fight_portrait_source(view.timeline[0]!, icon_for)).toContain('/api/portrait?')
     const html = renderToStaticMarkup(
       createElement(FightTimeline, {
         collapse_label: 'Collapse turn order',
@@ -343,7 +348,7 @@ describe('generic fight view', () => {
       renderToStaticMarkup(
         FightTurnCard({ fighter: character!.fighter, level_label: 'Level 1', mob_icon_for: () => null })
       )
-    ).toContain('data-character-placeholder=""')
+    ).toContain('/api/portrait?')
   })
 
   test('the same logical turn does not replay its card when chain time replaces predicted time', () => {

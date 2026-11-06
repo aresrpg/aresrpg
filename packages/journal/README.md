@@ -13,8 +13,8 @@ The local server uses http://127.0.0.1:4175. Rebuild after editing content.
 
 ## Writing and publication
 
-Write Markdown under `seed/content/journal/`. `articles.json` owns titles, descriptions, chapter order,
-publication status, dates, and cover references. Put original cover artwork in `seed/icons/journal/`.
+Write Markdown under `packages/journal/content/`. `articles.json` owns titles, descriptions, chapter order,
+publication status, dates, and cover references. Put original cover artwork in `packages/journal/artwork/`.
 Editorial prose is English; it is separate from the game's localized interface catalogue.
 Unwritten drafts may retain an empty Markdown file; their titles remain in the catalogue.
 

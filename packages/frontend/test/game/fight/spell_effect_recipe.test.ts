@@ -9,12 +9,13 @@ import {
   type FightEvent,
   type SpellLevel,
 } from '@aresrpg/fight'
-import { spell_effect_timing } from '@aresrpg/engine'
+import { create_authored_spell_source, spell_effect_timing } from '@aresrpg/engine'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import catalog from '../../../../engine/src/generated/claude_spell_catalog.json'
 import spells from '../../../../../seed/content/spells.json'
 import { resolve_spell_effect } from '../../../src/game/fight/spell_effect_recipe.ts'
+import { spell_effect_audio_plan } from '../../../src/game/audio/spell_effect_audio.ts'
 
 const level_of = (name: string): SpellLevel => {
   const source = spells.find((spell) => spell.name === name)!.levels[0]!
@@ -72,6 +73,49 @@ test('all 240 exact source presets resolve; weapons retain the fallback', () => 
       expect(resolve_spell_effect(state, { ...event, payload: { ...event.payload, weapon: true } })).toBeNull()
     }
   }
+})
+
+test.each([
+  [1, 1, 1, 2],
+  [2, 1, 1, 2],
+  [3, 1, 2, 2],
+  [4, 1, 2, 2],
+  [5, 2, 2, 2],
+  [6, 2, 2, 1],
+])('Bloodstep rank %i retains its MP buff and never presents a swap', (rank, mp, turns, ap) => {
+  const authored = spells.find(({ name }) => name === 'Bloodstep')!.levels[rank! - 1]!
+  const level = JSON.parse(JSON.stringify(authored), (_key, value: unknown) =>
+    typeof value === 'number' ? BigInt(value) : value
+  ) as SpellLevel
+  expect(level).toMatchObject({
+    ap_cost: BigInt(ap!),
+    range_min: 0n,
+    range_max: 0n,
+    cooldown_turns: 3n,
+    crit_effects: [],
+  })
+  expect(level.effects).toHaveLength(1)
+  expect(level.effects[0]).toMatchObject({
+    kind: EFFECT_KINDS.add,
+    stat: CHANNELS.mp,
+    value: BigInt(mp!),
+    value_max: BigInt(mp!),
+    target_filter: 4n,
+    turns: BigInt(turns!),
+    chance_bp: 10_000n,
+  })
+  const { state, event, origin } = setup('ikari', 'Bloodstep', level)
+  const recipe = resolve_spell_effect(state, { ...event, payload: { ...event.payload, target_cell: origin } })!
+  expect(recipe.areas).toEqual([
+    { kind: String(EFFECT_KINDS.add), element: 'neutral', stat: 'mp', value: mp, cells: [Number(origin)] },
+  ])
+  expect(recipe.preset).toMatchObject({ path: 'self', swap: 0, fx: 6, tok: 'mp', ap })
+  const source = create_authored_spell_source()
+  const preset = source.select('ikari', 'Bloodstep', recipe.preset)
+  expect(source.frame(preset.cast + preset.fly + 0.2, 320, 240).uSwap).toBe(0)
+  const plan = spell_effect_audio_plan(recipe)
+  expect(plan.length).toBeGreaterThan(0)
+  expect(plan.some(({ name }) => name === 'd:vol')).toBeFalse()
 })
 
 test('actual AP cost changes the original cast formula without changing the authored path', () => {

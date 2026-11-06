@@ -57,7 +57,7 @@ import {
   dungeon_portal_targets,
   publish_dungeon_portal_prompt,
 } from './dungeon_portal_feed.ts'
-import { publish_pose, type WorldPose } from './pose_feed.ts'
+import { publish_observed_pose, publish_pose, type WorldPose } from './pose_feed.ts'
 import { pet_animation, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
 import { run_to_mount, type RunTarget } from './run_to.ts'
 import { create_world_collision } from './world_collision.ts'
@@ -226,11 +226,15 @@ export const create_world = ({
     ...initial_spectate,
   }
   let { y: spectate_y, zoom: spectate_zoom, yaw: spectate_yaw, pitch: spectate_pitch } = overview
-  let mode: 'spectate' | 'follow' | 'fight' = 'spectate'
+  type CameraMode = 'spectate' | 'follow' | 'fight'
+  let mode: CameraMode = 'spectate'
   let fight_board: FightBoardFrame = { origin: { x: 0, y: 0, z: 0 }, grid_w: 1, grid_h: 1, cell_size: 1 }
   let active = false
   let enabled = false
+  let control_enabled = true
+  let observed_target: Readonly<{ id: string; position: Vec3 }> | null = null
   const interactive = (): boolean => enabled && resources_ready && scene_preparation.ready()
+  const controllable = (): boolean => interactive() && control_enabled
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
   let run_target: RunTarget | null = null
   let walking: ReturnType<typeof begin_walking> | null = null
@@ -344,6 +348,7 @@ export const create_world = ({
     if (next !== 'follow') stop_run('inactive')
     if (next !== 'follow') {
       publish_pose(null)
+      publish_observed_pose(null)
       engine.set_character_anchor(null)
       label_portal(false)
       crew_npc.hide()
@@ -368,7 +373,7 @@ export const create_world = ({
   let touch_axes = { forward: 0, strafe: 0 }
   let mouse_forward = false
   const update_mouse_forward = (buttons: number): void => {
-    const next = interactive() && !action_lock && mode === 'follow' && (buttons & 3) === 3
+    const next = controllable() && !action_lock && mode === 'follow' && (buttons & 3) === 3
     if (next === mouse_forward) return
     mouse_forward = next
     if (next) unlock_audio()
@@ -426,7 +431,7 @@ export const create_world = ({
     character.set_input({ forward: held.forward, strafe: held.strafe })
   }
   const set_jump = (down: boolean): void => {
-    if (!interactive() || mode !== 'follow' || action_lock) return
+    if (!controllable() || mode !== 'follow' || action_lock) return
     if (down) {
       unlock_audio()
       stop_run('manual')
@@ -558,7 +563,7 @@ export const create_world = ({
     clear_dungeon_portal_prompt()
   }
   const on_key_down = (event: KeyboardEvent): void => {
-    if (!interactive() || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
+    if (!controllable() || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
     if (mode === 'follow' && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) unlock_audio()
     on_key(event, true)
   }
@@ -641,12 +646,12 @@ export const create_world = ({
   }
 
   const toggle_mount = (): void => {
-    if (!interactive() || mode !== 'follow' || action_lock) return
+    if (!controllable() || mode !== 'follow' || action_lock) return
     if (riding) set_riding(false)
     else if (pet_interactable()) set_riding(true)
   }
   const travel = (): void => {
-    if (interactive() && !action_lock && portal_eligible()) on_travel?.()
+    if (controllable() && !action_lock && portal_eligible()) on_travel?.()
   }
 
   const render_pet = (transform = character.get_transform(), delta_seconds = 0): boolean => {
@@ -690,11 +695,37 @@ export const create_world = ({
   const rendered_character_position = (height: number, fallback: Vec3): Vec3 =>
     engine.entity_position(character_render?.id ?? '', height) ?? [fallback[0], fallback[1] + height, fallback[2]]
 
-  const tick = (now: number, delta_seconds: number): void => {
-    const world_time_of_day = world_daylight(now, pinned_time, day_night_cycle_enabled)
-    let anchor: CameraAnchor
-    if (mode === 'spectate') {
-      anchor = {
+  const observed_position = (): Vec3 => engine.entity_position(observed_target!.id, 0) ?? observed_target!.position
+  const publish_observed_view = (time_of_day: number): void => {
+    if (!observed_target) return
+    const [x, y, z] = mode === 'fight' ? observed_target.position : observed_position()
+    publish_observed_pose({
+      character_id: observed_target.id,
+      x,
+      y,
+      z,
+      yaw: director.active().get_yaw(),
+      riding: false,
+      gliding: false,
+      time_of_day,
+    })
+  }
+  const observed_anchor = (): CameraAnchor => {
+    const position = observed_position()
+    const anchor: CameraAnchor = {
+      x: position[0],
+      y: position[1],
+      z: position[2],
+      eye_height: CHARACTER_EYE_HEIGHT,
+      speed: 0,
+      on_ground: true,
+    }
+    engine.set_character_anchor(position)
+    return anchor
+  }
+  const camera_anchors: Record<CameraMode, (delta_seconds: number, world_time_of_day: number) => CameraAnchor> = {
+    spectate: () => {
+      const anchor: CameraAnchor = {
         x: spectate.x,
         y: spectate_y,
         z: spectate.z,
@@ -702,7 +733,9 @@ export const create_world = ({
         speed: 0,
         on_ground: true,
       }
-    } else if (mode === 'follow') {
+      return anchor
+    },
+    follow: (delta_seconds, world_time_of_day) => {
       const before = character.get_transform().position
       const ready = city_artifacts_ready({
         min_x: before[0] - 3,
@@ -733,7 +766,7 @@ export const create_world = ({
       if (transform.air_jumped) engine.play_jump_puff(transform.visual_position)
       const rendered_position = rendered_character_position(0, transform.visual_position)
       const eye = rendered_character_position(CHARACTER_EYE_HEIGHT, transform.visual_position)
-      anchor = {
+      const anchor: CameraAnchor = {
         x: eye[0],
         y: eye[1] - CHARACTER_EYE_HEIGHT,
         z: eye[2],
@@ -758,10 +791,12 @@ export const create_world = ({
       // the night lantern (and any character-anchored presentation) follows the FEET, never
       // the camera target — the follow camera leads ahead of the body
       engine.set_character_anchor(rendered_position)
-    } else {
+      return anchor
+    },
+    fight: () => {
       const width = fight_board.grid_w * fight_board.cell_size
       const height = fight_board.grid_h * fight_board.cell_size
-      anchor = {
+      const anchor: CameraAnchor = {
         x: fight_board.origin.x + width / 2,
         y: fight_board.origin.y,
         z: fight_board.origin.z + height / 2,
@@ -769,8 +804,15 @@ export const create_world = ({
         speed: 0,
         on_ground: true,
       }
-    }
+      return anchor
+    },
+  }
+  const tick = (now: number, delta_seconds: number): void => {
+    const world_time_of_day = world_daylight(now, pinned_time, day_night_cycle_enabled)
+    const anchor_for_mode = mode === 'follow' && observed_target ? observed_anchor : camera_anchors[mode]
+    const anchor = anchor_for_mode(delta_seconds, world_time_of_day)
     const view = director.frame(anchor, delta_seconds)
+    publish_observed_view(world_time_of_day)
     if (mode === 'follow' && render_character()) submit_entities()
     last_view = view
     holograms.forEach((hologram) => hologram.update(view, mode !== 'fight'))
@@ -835,6 +877,14 @@ export const create_world = ({
     set_view: ({ focus }: Pick<WorldView, 'focus'>) => {
       spectate.x = focus[0]
       spectate.z = focus[1]
+    },
+    observe_character: (target: Readonly<{ id: string; position: Vec3 }> | null) => {
+      observed_target = target
+      publish_observed_pose(null)
+      if (!target) return
+      clear_movement()
+      publish_pose(null)
+      if (mode !== 'fight') set_mode('follow')
     },
     set_character: (next: LoadedCharacterRender | null) => {
       character_render = next ? Object.freeze(next) : null
@@ -977,7 +1027,7 @@ export const create_world = ({
     set_jump,
     set_movement_area: character.set_movement_area,
     set_movement: (axes: Readonly<{ forward: number; strafe: number }>) => {
-      if (!interactive() || mode !== 'follow' || action_lock) return
+      if (!controllable() || mode !== 'follow' || action_lock) return
       const magnitude = Math.hypot(axes.forward, axes.strafe)
       if (magnitude > 0) stop_run('manual')
       const length = Math.max(1, magnitude)
@@ -987,6 +1037,7 @@ export const create_world = ({
     },
     set_run_target: (next: RunTarget | null) => {
       stop_run('manual', false)
+      if (!control_enabled && next) return
       if (!next) return
       clear_movement()
       run_target = Object.freeze(next)
@@ -1013,10 +1064,16 @@ export const create_world = ({
         dragging = null
         engine.stop()
         publish_pose(null)
+        publish_observed_pose(null)
         crew_npc.hide()
       }
     },
-    set_interactive: (next: boolean) => {
+    set_interactive: (next: boolean, controls = true) => {
+      if (control_enabled !== controls) {
+        control_enabled = controls
+        clear_movement()
+        stop_run('inactive')
+      }
       if (enabled === next) return
       enabled = next
       if (!next) {
@@ -1066,6 +1123,7 @@ export const create_world = ({
       holograms.forEach((hologram) => hologram.dispose())
       if (action_animation_timer) clearInterval(action_animation_timer)
       publish_pose(null)
+      publish_observed_pose(null)
       clear_fight_labels()
       clear_dungeon_portal_labels()
       dungeon_guides.dispose()

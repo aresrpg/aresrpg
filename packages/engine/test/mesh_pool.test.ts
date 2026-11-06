@@ -88,3 +88,39 @@ test('cancel settles an active caller without reusing its occupied worker early'
   expect(pool.state().active).toBe(0)
   pool.dispose()
 })
+
+test('flora preparation reuses one existing worker and its reply cannot release a mesh slot', async () => {
+  const workers: ReturnType<typeof fake_worker>[] = []
+  const pool = create_mesh_pool({ scenery: { plants: [] } } as never, () => {
+    const worker = fake_worker()
+    workers.push(worker)
+    return worker
+  })
+  const flora = pool.prepare_flora()
+  expect(pool.prepare_flora()).toBe(flora)
+  const mesh = pool.mesh(chunk('pending'), 0).catch((error: Error) => error.message)
+  workers[0]!.emit('message', { type: 'flora', result: null })
+  expect(await flora).toBeNull()
+  expect(pool.state().active).toBe(1)
+  expect(workers.flatMap(({ sent }) => sent).filter((row) => (row as { type: string }).type === 'flora')).toHaveLength(
+    1
+  )
+  pool.dispose()
+  await mesh
+})
+
+test('flora preparation fails on disposal and terminal worker faults', async () => {
+  for (const fault of ['dispose', 'error'] as const) {
+    const workers: ReturnType<typeof fake_worker>[] = []
+    const pool = create_mesh_pool({} as never, () => {
+      const worker = fake_worker()
+      workers.push(worker)
+      return worker
+    })
+    const flora = pool.prepare_flora().catch((error: Error) => error.message)
+    if (fault === 'dispose') pool.dispose()
+    else workers[0]!.emit('error', { message: 'lost worker' })
+    expect(await flora).toContain(fault === 'dispose' ? 'disposed' : 'lost worker')
+    pool.dispose()
+  }
+})

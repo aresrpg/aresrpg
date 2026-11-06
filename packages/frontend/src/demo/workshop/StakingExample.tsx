@@ -17,6 +17,7 @@ const snapshot = (address: string, stake: bigint): FinanceSnapshot => ({
   network: 'testnet',
   address,
   clock_ms: 0n,
+  coin_type: '0x99::token::TOKEN',
   total_supply: KARES_SUPPLY,
   combat_pot: {
     authorized: '0x1::fight_rewards::BossVictory',

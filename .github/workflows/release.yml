@@ -286,17 +286,9 @@ jobs:
           sparse-checkout: |
             /*
             !seed/icons/*
-            /seed/icons/branding/
-            !seed/icons/branding/*
-            /seed/icons/branding/kares/
-            !seed/icons/branding/kares/*
-            /seed/icons/branding/kares/*.webp
             /seed/icons/currency/
             !seed/icons/currency/*
             /seed/icons/currency/kares.png
-            /seed/icons/journal/
-            !seed/icons/journal/*
-            /seed/icons/journal/helmet-favicon.png
             !seed/models
             !music
           sparse-checkout-cone-mode: false

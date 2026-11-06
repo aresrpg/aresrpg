@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+/* Mechanical split of Opus-authored rules; original cascade order is preserved. */
+@import './landing_base.css';
+@import './landing_sections.css';
+@import './landing_world.css';
+@import './landing_agent.css';
+@import './landing_footer.css';
+@import './landing_modal.css';

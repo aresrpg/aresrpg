@@ -87,7 +87,7 @@ test('an indexed zone discovery streams its generated mob population', async () 
       ...bus(mesh_events),
       publish: async () => {},
       heartbeat: async () => {},
-      cluster_online: async () => 1,
+      cluster_online: async () => ({ online: 1, online_characters: 12 }),
     },
   }
   const graph = {

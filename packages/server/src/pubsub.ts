@@ -18,6 +18,8 @@ const log = logger(import.meta)
 
 const terminal_redis = (url: string): Redis => new Redis(url, { retryStrategy: () => null, maxRetriesPerRequest: 0 })
 
+export const mesh_redis = new Redis(MESH_REDIS_URL)
+
 export const pubsub: Pubsub = {
   graph: create_graph_bus({
     item_graph: graph,
@@ -28,5 +30,5 @@ export const pubsub: Pubsub = {
       process.exit(1)
     },
   }),
-  mesh: create_mesh_bus({ subscriber: new Redis(MESH_REDIS_URL), publisher: new Redis(MESH_REDIS_URL) }),
+  mesh: create_mesh_bus({ subscriber: new Redis(MESH_REDIS_URL), publisher: mesh_redis }),
 }

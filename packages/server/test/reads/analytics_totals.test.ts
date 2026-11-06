@@ -41,3 +41,10 @@ test('compact reads preserve signed and large exact values and reject malformed 
     ])
   ).toEqual([value, ZERO_TOTALS])
 })
+
+test('legacy compact rows default only the missing tournament field and reject invalid amounts', () => {
+  const { tournament_mist: _tournament_mist, ...legacy } = ZERO_TOTALS
+  expect(parse_analytics_totals(JSON.stringify(legacy))).toEqual(ZERO_TOTALS)
+  for (const tournament_mist of [null, -1, '-1', 'invalid', String(1n << 128n)])
+    expect(() => parse_analytics_totals(JSON.stringify({ ...legacy, tournament_mist }))).toThrow()
+})

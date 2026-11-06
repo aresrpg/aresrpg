@@ -62,7 +62,9 @@ session_replaced_body: 你的账户已在其他位置打开游戏，因此此窗
 session_replaced_reconnect: 在此重新连接
 latency_unit: 毫秒
 indexing_health: 索引状态
-online_players: 在线玩家
+online_accounts: 在线账号
+online_characters: 在线角色
+online_characters_body: 所有世界，包括战斗和地下城。
 indexing_lag_warning: 游戏操作可能出现延迟
 indexing_block_title: 正在同步世界
 indexing_block_body: 区块链历史仍在建立索引。当服务器进入安全的实时范围后，游戏会自动解锁。
@@ -810,6 +812,7 @@ admin_page:
   character_royalties: 角色版税
   character_creation_revenue: 角色创建
   kolizeum_revenue: 竞技场费用
+  tournament_revenue: 已记录的锦标赛费用
   game_transactions: 游戏交易
   game_gas_fees: 游戏Gas费用
   all_time: 全部时间
@@ -2349,6 +2352,40 @@ item_categories:
   relic_slot: 遗物{{number}}
 kares: 质押
 kares_page:
+  ledger_intro: '支撑AresRPG奖励、质押和宝箱的代币。仅发行一次，每次销毁都会减少供应量。'
+  buy_aftermath: '在Aftermath购买'
+  swap_note: '在新标签页打开Aftermath。交易前请核对代币类型。'
+  read_at: '读取自Sui，时间：{{time}}。'
+  supply_heading: '供应量'
+  supply_cap: '上限为{{cap}} KARES。每次销毁都会减少供应量。'
+  burned: '已销毁'
+  pools_heading: '奖励池'
+  staking_summary: '在1,825个活跃日内分配给质押者。无人质押时计时暂停。'
+  boss_summary: '首领奖励平均分配给获胜角色。'
+  uses_heading: '使用KARES'
+  compete: '竞技'
+  compete_note: '赢取首领、PvP竞赛和赛季排行榜奖励。'
+  token_type: '代币类型'
+  token_pending: '等待验证'
+  copy_token: '复制'
+  token_copied: '已复制代币类型。'
+  token_hint: '验证代币及储备关联后即可复制。'
+  figures_unfunded: '奖励池尚未注资。供应量仍未知。'
+  figures_stale: '数据可能已过时。请刷新核实。'
+  figures_unconfigured: '此网络尚未配置实时数据。这并不表示供应量或储备为零。'
+  figures_unavailable: '实时数据不可用。请刷新重试。'
+  figures_ready: '链上数据'
+  current_supply: '当前总供应量'
+  circulating_supply: '流通量'
+  circulating_unknown: '暂无数据：尚无经过验证的流通量统计。'
+  total_staked: '质押总量'
+  pool_held: '池中余额'
+  pool_held_note: '包含已赚取但尚未领取的奖励，不包含质押本金。'
+  pool_forecast: '预测 · 未来24个活跃小时'
+  pool_forecast_note: '整个池已备资的释放计划，并非历史支付量或您的个人收益。无人质押时，活跃计时暂停。'
+  treasury_claimable: '国库可领取'
+  daily_cap: '每日上限'
+  daily_cap_note: '从设置时刻起计算的每日首领奖励支付上限，并非实际释放量。未使用额度不累积。'
   other_networks: '其他网络 · EVM / Solana'
   sui_wallet_required: '请选择 Sui 钱包以使用此功能。'
   blast_soon: '代币即将在 Blast 发售'
@@ -2410,8 +2447,8 @@ kares_page:
   community: 'PvP 竞赛与赛季排行榜'
   team: 团队分配
   five_years: 社区质押奖励
-  mastery_title: 通过游戏获奖，或销毁KARES。
-  mastery_note: '精通价格每1点相当于1,000 KARES。支付的KARES将永久销毁。'
+  mastery_title: '宝箱'
+  mastery_note: '在游戏中使用KARES购买宝箱。KARES在购买时永久销毁，而非开箱时。'
   rewards_note: '质押奖励在 1,825 个活跃日内释放。任何人都可捐赠 KARES 或 SUI，从下一个活跃日边界起在 30 个活跃日内分配，不延长旧计划。捐赠不可撤回。无人质押时计时暂停；已获得的奖励仍可领取。'
   revenue_note: 市场已收取版税的20%用于SUI质押奖励。奖励随收入和参与质押量变化。
   points: 精通点
@@ -2657,6 +2694,63 @@ spell_effects:
   short_stat: '属性'
   expires_next_turn: '持续至下回合开始'
 ui:
+  add_funds_agent: '为代理充值'
+  agent_funding_unverified: '无法验证收款方。请先刷新召回，再添加资金。'
+  agent_entry_intro: '连接助手，选择角色，并在此管理其物品。'
+  agent_entry_play: '开始游戏'
+  agent_watch: '观看智能体'
+  agent_watching: '正在观看智能体'
+  agent_watch_empty: '没有可观看的角色。'
+  agent_watch_failed: '无法观看此智能体。请重试。'
+  portrait_share: '分享肖像'
+  portrait_download: '下载 PNG'
+  portrait_copy: '复制图片链接'
+  portrait_copied: '链接已复制'
+  portrait_failed: '无法加载肖像或复制链接。你可以选择下方链接。'
+  portrait_close: '关闭'
+  portrait_preview: '角色肖像'
+  agent_recall_steps: '请签署两个步骤：使用 Google 多签成员授权召回，然后在下方返还列表中领取角色及其装备。领取会一次性转移全部装备并重新穿戴，其他物品留在原处。召回由多签支付 gas，领取由您的钱包支付。请先退出战斗。取消后，装备会以卸下状态留在原售货亭。'
+  agent_asset_proceeds: '售货亭销售收益'
+  agent_asset_collect: '收取到多签'
+  agent_asset_delist: '取消上架'
+  agent_asset_reserved: '专属报价 · 需要 PurchaseCap'
+  agent_asset_unconfigured: '此部署尚未配置'
+  agent_asset_fee_budget: 'Gas 预算上限'
+  agent_inventory: '智能体物品栏'
+  agent_asset_refresh: '刷新物品栏'
+  agent_asset_available: '可用'
+  agent_asset_listed: '已上架 · 请先取消上架'
+  agent_asset_equipped: '已装备'
+  agent_asset_sui: 'SUI 数量'
+  agent_asset_kares: 'KARES 数量'
+  agent_asset_reserve: '手续费后保留的 SUI'
+  agent_asset_positions: '已质押 KARES'
+  agent_asset_unstake: '提取到多签'
+  agent_asset_owned: '其他自有对象（只读）'
+  agent_asset_incoming: '待领取物品'
+  agent_asset_claim: '领取所选物品'
+  agent_asset_cancel: '取消所选物品返还'
+  agent_asset_scope: '请选择具体物品和代币数量。选中的堆叠将整组转移。装备会先卸下，上架物品须先取消上架。先提取质押的 KARES 并刷新，再选择转移数量。请为后续召回保留 SUI。其他对象类型只读；战斗须先结算。'
+  agent_setup_prompt: '请按照 {guide}，使用此私密临时链接设置我的 AresRPG 智能体：{url}。自动返回公开证明。此设置不授权资产转移或游戏操作。'
+  agent_cancel: '取消'
+  agent_pair_connect: '连接'
+  agent_pair_pending: '正在等待你的助手…'
+  agent_pair_failed: '设置已过期或无法完成。请重新连接。'
+  agent_pair_verified: '智能体密钥已验证。这不代表服务器认证或角色托管已完成。'
+  agent_environment: '请选择具有持久智能体运行环境的助手，例如 ChatGPT dots 或 Grok Bot。'
+  agent_pair_ephemeral: '仅验证公钥。智能体进程退出时，此临时密钥将丢失。切勿向此身份发送资产。'
+  agent_pair_instructions: '将此请求发送给助手。结果会自动显示在这里。'
+  agent_pair_blocked: '此钱包未提供用于配对的 Google 公开标识符。请通过 Google 连接以创建公开请求。'
+  agent_copy_request: '复制设置请求'
+  agent_paste_request: '将此请求粘贴给你的智能体。复制不会连接任何账户。'
+  agent_copy_failed: '复制失败。请选中上方请求并手动复制。'
+  agent_handoff_request: '请按照 {{url}} 为 {{provider}} 准备 Connect Your Agent。报告缺失的签名配置，必要时请求临时设置链接。此请求不授权创建凭据、转移资产或游戏操作。'
+  agent_connect_your: '连接你的智能体'
+  agent_bootstrap: '打开设置说明'
+  agent_choose: '选择你的智能体'
+  agent_unavailable: '配对功能尚不可用。尚未连接任何智能体。'
+  agent_setup: '设置智能体'
+  agent_send: '移交给智能体'
   feedback_question: '是什么让你难以继续？'
   feedback_unclear: '不知道该做什么'
   feedback_controls: '操作方式'
@@ -3333,3 +3427,116 @@ tournament_page:
   find_review: 为 {{character}} 寻找队伍并报名该角色？
   joined_count: '{{count}}/{{total}} 已入场'
   versus: 对阵 {{team}}
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

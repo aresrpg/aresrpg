@@ -17,8 +17,8 @@ import {
 import { render_article, render_index, render_not_found } from '../src/pages.tsx'
 
 const package_dir = resolve(import.meta.dirname, '..')
-const content_dir = resolve(package_dir, '../../seed/content/journal')
-const image_dir = resolve(package_dir, '../../seed/icons/journal')
+const content_dir = resolve(package_dir, 'content')
+const image_dir = resolve(package_dir, 'artwork')
 const output_dir = resolve(package_dir, 'dist')
 const catalogue = decode_catalogue(JSON.parse(await readFile(resolve(content_dir, 'articles.json'), 'utf8')))
 const published = published_articles(catalogue)
@@ -34,7 +34,7 @@ await mkdir(resolve(output_dir, 'articles'), { recursive: true })
 await cp(resolve(package_dir, 'public'), output_dir, { recursive: true })
 await mkdir(resolve(output_dir, 'assets'), { recursive: true })
 await cp(resolve(image_dir, SITE_COVER), resolve(output_dir, 'assets', SITE_COVER))
-await cp(resolve(image_dir, 'helmet-favicon.png'), resolve(output_dir, 'favicon.png'))
+await cp(resolve(package_dir, '../frontend/public/branding/helmet-favicon.png'), resolve(output_dir, 'favicon.png'))
 await cp(resolve(package_dir, 'src/journal.css'), resolve(output_dir, 'assets/journal.css'))
 await Promise.all(
   articles.map(async (article, index) => {

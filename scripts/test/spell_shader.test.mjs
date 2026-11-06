@@ -38,7 +38,9 @@ test('the approved source is preserved byte-for-byte and every original effect f
   const source = readFileSync(new URL('../../seed/content/spell_effects/source.html', import.meta.url), 'utf8')
   expect(createHash('sha256').update(source).digest('hex')).toBe(SOURCE_SHA256)
   expect(source).toContain(FRAGMENT)
-  expect(reference.source_sha256).toBe(SOURCE_SHA256)
+  // This independent rendering oracle was captured on 2026-10-19, before the Bloodstep
+  // catalogue change. Preserve its historical provenance rather than relabeling it as current.
+  expect(reference.source_sha256).toBe('44b81111c73a3b39e13260687fc4f033b63de4000f6ad059a4b25689d2ce6d42')
   expect(GAME_FRAGMENT).not.toMatch(/aresGame|\bdummy\s*\(|\bbox\s*\(|\bin_area\s*\(|\buCam\b|\buLook\b|\buDum2\b/)
   const integrated = new Set(['prj', 'box', 'in_area', 'spot', 'spot_on', 'ground', 'dummy', 'main'])
   for (const match of FRAGMENT.matchAll(/^(?:float|vec[234]|void) (\w+)\([^{}]*\{/gm)) {

@@ -38,6 +38,11 @@ const auth_session = (address = '0xowner'): AuthSession =>
     is_character_name_claimed: async () => false,
     create_character: async () => ({ digest: '', character_id: '' }),
     // action namespaces are never exercised by these reducer/DOM tests
+    read_agent_recall: async () => {
+      throw new Error('unused')
+    },
+    read_agent_returns: unsupported,
+    agent_transfer: { sender: address, prepare: unsupported },
     fight: {} as never,
     dungeon: {} as never,
     tournament: {
@@ -234,6 +239,7 @@ describe('app state', () => {
       type: 'server/packet',
       packet: {
         type: 'packet/server_info',
+        online_characters: 12,
         online: 42,
         indexing_lag: 7,
         current_epoch: '9',
@@ -242,6 +248,7 @@ describe('app state', () => {
       },
     })
     expect(online.session.online).toBe(42)
+    expect(online.session.online_characters).toBe(12)
     expect(online.session.indexing_lag).toBe(7)
     const frozen = reduce_app_state(online, {
       type: 'server/packet',
@@ -260,6 +267,7 @@ describe('app state', () => {
       type: 'server/packet',
       packet: {
         type: 'packet/server_info',
+        online_characters: 12,
         online: 42,
         indexing_lag: 12,
         current_epoch: '9',
@@ -273,6 +281,32 @@ describe('app state', () => {
     expect(indexed.session.indexing_lag).toBe(12)
     expect(reconnecting.session.latency_ms).toBeNull()
     expect(reconnecting.session.indexing_lag).toBeNull()
+    expect(reconnecting.session.online).toBeNull()
+    expect(reconnecting.session.online_characters).toBeNull()
+    for (const input of [
+      { type: 'link/connecting' },
+      { type: 'link/replaced' },
+      { type: 'link/rejected', reason: 'disconnected' },
+      { type: 'link/violation', reason: 'disconnected' },
+    ] as const) {
+      const disconnected = reduce_app_state(indexed, input)
+      expect(disconnected.session.online).toBeNull()
+      expect(disconnected.session.online_characters).toBeNull()
+    }
+    const reconnected = reduce_app_state(reconnecting, {
+      type: 'server/packet',
+      packet: {
+        type: 'packet/server_info',
+        online: 1,
+        online_characters: 6,
+        indexing_lag: 0,
+        current_epoch: '9',
+        chain_timestamp_ms: 1_000_000,
+        chain_sample_age_ms: 0,
+      },
+    })
+    expect(reconnected.session.online).toBe(1)
+    expect(reconnected.session.online_characters).toBe(6)
   })
 
   test('logout clears account truth but retains device settings', () => {

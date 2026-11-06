@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+import { expect, test } from '@playwright/test'
+
+test('online characters show real scoped counts on hover and keyboard focus', async ({ page }) => {
+  await page.goto('/e2e/fixtures/ui_world_hud.html?hud-layout')
+  const trigger = page.getByRole('button', { name: 'Online characters: 12', exact: true })
+  const detail = page.locator('.world-online-details')
+  await expect(page.getByRole('img', { name: 'Online accounts: 6', exact: true })).toBeVisible()
+  await expect(trigger).toHaveText('(12)')
+  await trigger.hover()
+  await expect(detail).toBeVisible()
+  await expect(detail.locator('dd')).toHaveText(['6', '12'])
+  await expect(detail).toContainText('Across all worlds, including fights and dungeons.')
+  await detail.hover()
+  await expect(detail).toBeVisible()
+  await page.mouse.move(500, 300)
+  await expect(detail).toBeHidden()
+  await trigger.focus()
+  await expect(detail).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(detail).toBeHidden()
+  await page.keyboard.press('Tab')
+  await expect(trigger).not.toBeFocused()
+  const group = page.getByRole('switch', { name: 'Group only' })
+  const initial = await group.getAttribute('aria-checked')
+  expect(['true', 'false']).toContain(initial)
+  await group.click()
+  await expect(group).toHaveAttribute('aria-checked', initial === 'true' ? 'false' : 'true')
+  await group.click()
+  await expect(group).toHaveAttribute('aria-checked', initial!)
+})
+
+test('compact touch HUD opens the character panel and dismisses it with an outside tap', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 667, height: 375 }, hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  try {
+    await page.goto('/e2e/fixtures/ui_world_hud.html?hud-layout&mobile')
+    const trigger = page.getByRole('button', { name: 'Online characters: 12', exact: true })
+    await trigger.tap()
+    const detail = page.locator('.world-online-details')
+    await expect(detail).toBeVisible()
+    const bar = await page.locator('.aui-performance').first().boundingBox()
+    expect(bar!.height).toBe(30)
+    await expect(page.getByRole('switch', { name: 'Group only' })).toBeVisible()
+    const target = await trigger.boundingBox()
+    const bounds = await detail.boundingBox()
+    expect(target!.width).toBeGreaterThanOrEqual(44)
+    expect(target!.height).toBeGreaterThanOrEqual(44)
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(667)
+    await page.touchscreen.tap(400, 240)
+    await expect(detail).toBeHidden()
+  } finally {
+    await context.close()
+  }
+})

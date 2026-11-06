@@ -33,6 +33,10 @@ fun successful_registration_splits_exactly_and_leave_does_not_refund() {
   api::register_tournament(&mut t, option::none(), 0, b"Team".to_string(), vector[],
     coin::mint_for_testing<SUI>(5, s.ctx()), &kiosk, &cap, id, &version, &clock, s.ctx());
   assert!(tournament::sui_balance_for_testing(&t) == 3, 0);
+  let paid = sui::event::events_by_type<tournament::EntryFeePaid>();
+  assert!(paid.length() == 1, 7);
+  let expected = vector[2, 0, 0, 0, 0, 0, 0, 0];
+  assert!(std::bcs::to_bytes(&paid[0]) == expected, 8);
   s.next_tx(@0xB);
   assert!(fixture::payout<SUI>(&s, @treasury) == 2, 1);
   tournament::leave_team(&mut t, 0, id, &version, &clock, s.ctx());
@@ -55,7 +59,7 @@ fun successful_registration_splits_exactly_and_leave_does_not_refund() {
 fun joining_an_existing_team_pays_the_same_fee() {
   let (mut s, mut t, admin, version, clock) = setup(2);
   let (mut kiosk, cap) = kiosk::new(s.ctx());
-  let mut i = 0;
+  let mut i = 0u64;
   while (i < 2) {
     let c = character::test_character(b"senshi".to_string(), 1, 0, s.ctx());
     let id = object::id(&c);

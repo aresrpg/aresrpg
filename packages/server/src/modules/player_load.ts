@@ -17,7 +17,7 @@ import { get_closable_fights } from '../reads/get_closable_fights.ts'
 import { get_mastery } from '../reads/get_mastery.ts'
 import logger from '../logger.ts'
 import type { PlayerAction, PlayerModule } from '../player.ts'
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
@@ -66,17 +66,25 @@ export default {
       send({ type: 'packet/characters', characters })
     }
     const domain = <T>(key: AccountDomain, read: () => Promise<T>, deliver: (value: T) => void) => {
-      const latest = latest_reader(read, (value) => {
-        if (signal.aborted) return
-        completed.add(key)
-        if (Array.isArray(value)) counts.set(key, value.length)
-        deliver(value)
-        finish()
-      })
+      const latest = coalesced_reader(
+        read,
+        (value) => {
+          if (signal.aborted) return
+          completed.add(key)
+          if (Array.isArray(value)) counts.set(key, value.length)
+          deliver(value)
+          finish()
+        },
+        signal
+      )
+      let observed: Promise<void> | null = null
       return (): void => {
         if (signal.aborted) return
         if (!ready) completed.delete(key)
-        void latest().catch((error: Error) => {
+        const pending = latest()
+        if (pending === observed) return
+        observed = pending
+        void pending.catch((error: Error) => {
           if (signal.aborted) return
           log.error({ address, domain: key, error: error.message }, 'account snapshot read failed')
           // An incomplete baseline cannot become usable. Reconnection owns recovery.

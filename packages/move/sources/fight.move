@@ -577,6 +577,10 @@ public(package) fun place(
   ctx: &TxContext,
 ) {
   let _ = assert_fighter_owner(fight, fighter, ctx);
+  let occupant = combat::fighter_at(&fight.combat, cell);
+  if (occupant.is_some()) {
+    let _ = assert_fighter_owner(fight, *occupant.borrow(), ctx);
+  };
   combat::place(&mut fight.combat, fighter, cell);
 }
 
@@ -1478,4 +1482,25 @@ public(package) fun retained_history_for_testing(character: Character, history: 
   };
   dynamic_object::add(&mut fight.id, FighterKey(0), character);
   fight
+}
+
+#[test_only]
+public(package) fun placement_fight_for_testing(owner: address, other_owner: address, ctx: &mut TxContext): Fight {
+  let board = aresrpg_math::combat_grid::generate(1, 0);
+  let fighters = vector[
+    authority_test_player(0, board.start_cells_a()[0]),
+    authority_test_player(0, board.start_cells_a()[1]),
+    authority_test_mob(1, board.start_cells_b()[0]),
+  ];
+  Fight {
+    id: object::new(ctx), world: b"placement_test".to_string(), x: 0, z: 0,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET, opener_a: option::none(), opener_b: option::none(),
+    authorities: vector[
+      FighterAuthority::Player { character: object::id_from_address(@0xCA), owner },
+      FighterAuthority::Player { character: object::id_from_address(@0xCB), owner: other_owner },
+      FighterAuthority::Mob,
+    ],
+    combat: combat::new_state(board, fighters, 0), dungeon: option::none(), door_policy: 0,
+    drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false, rewards: fight_rewards::new(),
+  }
 }

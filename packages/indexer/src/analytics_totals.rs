@@ -47,6 +47,8 @@ pub struct Totals {
     pub character_creation_mist: u128,
     #[serde(with = "decimal")]
     pub kolizeum_mist: u128,
+    #[serde(default, with = "decimal")]
+    pub tournament_mist: u128,
 }
 
 pub fn checkpoint_totals(
@@ -78,6 +80,10 @@ pub fn checkpoint_totals(
             .kolizeum_mist
             .checked_add(fact.delta.kolizeum_mist.into())
             .context("kolizeum revenue overflow")?;
+        totals.tournament_mist = totals
+            .tournament_mist
+            .checked_add(fact.delta.tournament_mist.into())
+            .context("tournament revenue overflow")?;
     }
     Ok(totals)
 }
@@ -119,6 +125,10 @@ pub(super) fn combine(previous: &Totals, delta: &Totals) -> Result<Totals> {
             .kolizeum_mist
             .checked_add(delta.kolizeum_mist)
             .context("kolizeum revenue overflow")?,
+        tournament_mist: previous
+            .tournament_mist
+            .checked_add(delta.tournament_mist)
+            .context("tournament revenue overflow")?,
     })
 }
 

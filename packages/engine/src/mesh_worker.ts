@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { build_flora_mesh } from './scenery_flora_mesh.ts'
+import type { SceneryPlant } from './scenery_data.ts'
 import { worker_error } from './worker_reply.ts'
 import { opaque_canopy_mesh } from './opaque_canopy.ts'
 import { greedy_mesh } from './greedy_mesher.ts'
@@ -14,6 +16,7 @@ import { CHUNK_EDGE } from './voxel_data.ts'
 import { compile_runtime_world_recipe, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
 
 type WorkerRequest =
+  | Readonly<{ type: 'flora'; rows: readonly SceneryPlant[] }>
   | Readonly<{ type: 'initialize'; world: WorldRecipe }>
   | Readonly<{ type: 'mesh'; id: number; chunk: RenderChunkRequest }>
 
@@ -24,6 +27,19 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
   if (data.type === 'initialize') {
     world_ready = Promise.resolve(compile_runtime_world_recipe(data.world))
     structure_cache.clear()
+    return
+  }
+  if (data.type === 'flora') {
+    void Promise.resolve()
+      .then(() => {
+        const result = build_flora_mesh(data.rows)
+        self.postMessage(
+          { type: 'flora', id: 0, result },
+          { transfer: Object.values(result ?? {}).map((values) => values.buffer) }
+        )
+      })
+      // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- preparation errors return to the owning pool and engine failure boundary.
+      .catch((error: unknown) => self.postMessage({ type: 'flora', id: 0, ...worker_error(error) }))
     return
   }
   if (!world_ready) throw new Error('mesh worker received work before its world recipe')

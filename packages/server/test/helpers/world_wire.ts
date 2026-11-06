@@ -147,7 +147,7 @@ export const wire = ({
     : {
         emitter,
         graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
-        mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
+        mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => ({ online: 7, online_characters: 12 }) },
       }
   return { sent, ws, graph, pubsub, published, dropped, checkpoint }
 }

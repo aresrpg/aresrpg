@@ -93,7 +93,7 @@ addresses and per-source quota overflow:
 bun scripts/allocation_campaign.ts import /private/path/reserved.json
 ```
 
-Rules and quotas come from `seed/content/allocation_campaign.json`. Keep private
+Rules and quotas come from `packages/immutable/src/allocation_campaign.json`. Keep private
 addresses and operational exports out of seed and Git. `submissions_close_at` is
 2026-10-28 at 15:00 UTC: Wednesday at 23:00 UTC+8. The UI countdown
 must use this exact instant. Redis checks its own clock inside the atomic submission

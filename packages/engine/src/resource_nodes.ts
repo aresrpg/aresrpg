@@ -21,7 +21,10 @@ import { MeshSSSNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu'
 import { attribute, float, texture } from 'three/tsl'
 
 import grain_visuals from '../../../seed/content/grain_visuals.json'
+import mineral_visuals from '../../../seed/content/mineral_visuals.json'
 
+import { create_mineral_texture } from './nature/mineral_texture.ts'
+import { mineral_outcrop, type MineralVisual } from './nature/mineral_outcrop.ts'
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
 import { create_nature_texture } from './nature/surface_texture.ts'
@@ -104,16 +107,35 @@ const grain_visual = (grain: GrainVisual) => {
   }
 }
 
-export const resource_visual = (item_type: string, job: string, tier: number) => {
-  const step = (clamp_tier(tier) - 1) / 10
-  const size = { tier: clamp_tier(tier), scale: 0.9 + step * 0.22 }
-  const grain = grains[item_type]
-  if (grain) return Object.freeze({ ...size, ...grain_visual(grain) })
+const fallback_visual = (job: string, step: number) => {
   const family: ResourceFamily = job === 'FARMER' || job === 'MINER' ? job : 'HERBALIST'
   const [hue_lo, hue_hi] = HUES[family]
   const hue = hue_lo + (hue_hi - hue_lo) * step
   const fallback_body = new Color().setHSL(hue / 360, family === 'MINER' ? 0.38 : 0.52, family === 'MINER' ? 0.3 : 0.28)
   const fallback_accent = new Color().setHSL(hue / 360, 0.72, 0.62)
+  return { family, fallback_body, fallback_accent }
+}
+
+export const resource_visual = (item_type: string, job: string, tier: number) => {
+  const step = (clamp_tier(tier) - 1) / 10
+  const size = { tier: clamp_tier(tier), scale: 0.9 + step * 0.22 }
+  const mineral = (mineral_visuals as Readonly<Record<string, MineralVisual>>)[item_type]
+  if (mineral) {
+    const palette = Object.freeze(mineral.palette.map(color_tuple))
+    return Object.freeze({
+      ...size,
+      family: 'MINER' as const,
+      silhouette: 'ore' as const,
+      body: palette[0]!,
+      accent: palette[palette.length - 1]!,
+      palette,
+      pattern: undefined,
+      mineral,
+    })
+  }
+  const grain = grains[item_type]
+  if (grain) return Object.freeze({ ...size, ...grain_visual(grain) })
+  const { family, fallback_body, fallback_accent } = fallback_visual(job, step)
   const authored = RESOURCE_VISUALS[item_type]
   return Object.freeze({
     ...size,
@@ -131,10 +153,16 @@ export const resource_visual = (item_type: string, job: string, tier: number) =>
 }
 
 const resource_recipe = (visual: ReturnType<typeof resource_visual>, random: () => number) =>
-  visual.pattern ? grain_stalk(random, visual.pattern) : BUILDERS[visual.silhouette].build(random)
+  'mineral' in visual
+    ? mineral_outcrop(visual.mineral)
+    : visual.pattern
+      ? grain_stalk(random, visual.pattern)
+      : BUILDERS[visual.silhouette].build(random)
 
 const resource_color = (visual: ReturnType<typeof resource_visual>, band: number): readonly number[] =>
-  visual.palette?.[band] ?? visual.body.map((value, index) => value + (visual.accent[index]! - value) * band)
+  'mineral' in visual
+    ? [1, 1, 1]
+    : (visual.palette?.[band] ?? visual.body.map((value, index) => value + (visual.accent[index]! - value) * band))
 
 const geometry_for = (item_type: string, job: string, tier: number): BufferGeometry => {
   const visual = resource_visual(item_type, job, tier)
@@ -149,7 +177,9 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
   const wind =
     visual.family === 'MINER' ? null : { sway: new Float32Array(recipe.length), phase: new Float32Array(recipe.length) }
   const surface_kind = BUILDERS[visual.silhouette].surface
-  const uvs = new Float32Array(recipe.flatMap((vertex) => nature_uv(surface_kind, vertex)))
+  const uvs = new Float32Array(
+    recipe.flatMap((vertex) => ('mineral' in visual ? [vertex[5]!, vertex[6]!] : nature_uv(surface_kind, vertex)))
+  )
   const glow = new Float32Array(recipe.length)
   const glow_scale = Number(visual.silhouette === 'mushroom')
   for (let start = 0; start < recipe.length; start += 3) {
@@ -204,6 +234,9 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
   return geometry
 }
 
+const bump_surface = (visual: ReturnType<typeof resource_visual>, surface: Texture | null) =>
+  !('mineral' in visual) && (visual.family === 'MINER' || visual.silhouette === 'mushroom') ? surface : null
+
 const material_for = (
   visual: ReturnType<typeof resource_visual>,
   wind: boolean,
@@ -212,7 +245,7 @@ const material_for = (
   const options = {
     vertexColors: true,
     map: surface,
-    bumpMap: visual.family === 'MINER' || visual.silhouette === 'mushroom' ? surface : null,
+    bumpMap: bump_surface(visual, surface),
     bumpScale: 0.035,
     side: DoubleSide,
     roughness: visual.family === 'MINER' ? 0.55 : 0.9,
@@ -238,6 +271,7 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
   const meshes = new Map<string, InstancedMesh>()
   const anchors = new Map<string, Vector3>()
   let surface_texture: Texture | null = null
+  const mineral_textures = new Map<string, Texture>()
   // The backend reveals resource dressing only after its first terrain frame has presented.
   let visible = false
 
@@ -253,12 +287,21 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
     meshes.clear()
   }
 
+  const texture_for = (item_type: string, visual: ReturnType<typeof resource_visual>): Texture => {
+    if (!('mineral' in visual)) return (surface_texture ??= create_nature_texture())
+    const known = mineral_textures.get(item_type)
+    if (known) return known
+    const surface = create_mineral_texture(visual.mineral)
+    mineral_textures.set(item_type, surface)
+    return surface
+  }
+
   const mesh_for = (key: string, rows: readonly ResourceNodeMarker[]): InstancedMesh => {
     const known = meshes.get(key)
     if (known && known.instanceMatrix.count >= rows.length) return known
     const first = rows[0]!
     const visual = resource_visual(first.item_type, first.job, first.tier)
-    const surface = (surface_texture ??= create_nature_texture())
+    const surface = texture_for(first.item_type, visual)
     const { geometry, material } = known ?? {
       geometry: geometry_for(first.item_type, first.job, first.tier),
       material: material_for(visual, wind, surface),
@@ -328,6 +371,8 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
     dispose: () => {
       clear_meshes()
       surface_texture?.dispose()
+      mineral_textures.forEach((texture) => texture.dispose())
+      mineral_textures.clear()
       anchors.clear()
     },
   })

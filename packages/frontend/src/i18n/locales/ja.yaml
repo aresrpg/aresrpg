@@ -59,7 +59,9 @@ session_replaced_body: アカウントが別の場所でゲームを開いたた
 session_replaced_reconnect: ここで再接続
 latency_unit: ms
 indexing_health: インデックス状態
-online_players: オンラインプレイヤー
+online_accounts: オンラインアカウント
+online_characters: オンラインキャラクター
+online_characters_body: 戦闘・ダンジョンを含む全ワールド。
 indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
 indexing_block_title: ワールドを同期中
 indexing_block_body: チェーン履歴をインデックス中です。サーバーが安全なライブ範囲に達すると、ゲームプレイは自動的に解除されます。
@@ -809,6 +811,7 @@ admin_page:
   character_royalties: キャラクターロイヤリティ
   character_creation_revenue: キャラクター作成
   kolizeum_revenue: コロシアム手数料
+  tournament_revenue: 記録済み大会手数料
   game_transactions: ゲームトランザクション
   game_gas_fees: ゲームガス代
   all_time: 累計
@@ -2352,6 +2355,40 @@ item_categories:
 
 kares: 'ステーキング'
 kares_page:
+  ledger_intro: 'AresRPGの報酬、ステーキング、クレートを支えるトークン。一度だけ発行され、バーンのたびに供給量が減ります。'
+  buy_aftermath: 'Aftermathで購入'
+  swap_note: '新しいタブでAftermathを開きます。取引前にトークン型を確認してください。'
+  read_at: 'Suiからの取得日時：{{time}}。'
+  supply_heading: '供給量'
+  supply_cap: '上限は{{cap}} KARES。バーンのたびに減少します。'
+  burned: 'バーン済み'
+  pools_heading: '報酬プール'
+  staking_summary: '1,825稼働日にわたり参加者に分配。誰もステーキングしていない間は時計が止まります。'
+  boss_summary: 'ボス報酬は勝利したキャラクターに均等に分配されます。'
+  uses_heading: 'KARESを使う'
+  compete: '競争する'
+  compete_note: 'ボス報酬、PvP大会、シーズンランキングの賞品を獲得。'
+  token_type: 'トークン型'
+  token_pending: '検証待ち'
+  copy_token: 'コピー'
+  token_copied: 'トークン型をコピーしました。'
+  token_hint: 'トークンと準備金のリンク検証後にコピーできます。'
+  figures_unfunded: '報酬プールはまだ資金未投入です。供給量は不明のままです。'
+  figures_stale: 'データが古い可能性があります。更新して確認してください。'
+  figures_unconfigured: 'このネットワークのライブデータは未設定です。供給量や準備金がゼロという意味ではありません。'
+  figures_unavailable: 'ライブデータを取得できません。更新して再試行してください。'
+  figures_ready: 'オンチェーンデータ'
+  current_supply: '現在の総供給量'
+  circulating_supply: '流通量'
+  circulating_unknown: '取得不可：検証済みの流通量集計はありません。'
+  total_staked: 'ステーキング総額'
+  pool_held: 'プール保有額'
+  pool_held_note: '獲得済みで未請求の報酬を含みます。預け入れ元本は含みません。'
+  pool_forecast: '予測 · 次の稼働24時間'
+  pool_forecast_note: 'プール全体の資金確保済み放出予定です。過去の支払額や個人の収益ではありません。ステーキング参加者がいない間は稼働時計が止まります。'
+  treasury_claimable: 'トレジャリーが請求可能'
+  daily_cap: '1日の上限'
+  daily_cap_note: '設定時点から数えた1日あたりのボス報酬上限で、実際の放出量ではありません。未使用枠は繰り越されません。'
   other_networks: '他のネットワーク · EVM / Solana'
   sui_wallet_required: 'この機能には Sui ウォレットを選択してください。'
   blast_soon: 'トークン販売がまもなくBlastで開始'
@@ -2413,8 +2450,8 @@ kares_page:
   community: 'PvP大会とシーズンランキング'
   team: 'チーム配分'
   five_years: 'コミュニティのステーキング報酬'
-  mastery_title: 'プレイで獲得。またはKARESをバーン。'
-  mastery_note: 'マスタリー価格の1ポイントは1,000 KARESに相当します。支払ったKARESは永久にバーンされます。'
+  mastery_title: 'クレート'
+  mastery_note: 'ゲーム内でKARESを使ってクレートを購入できます。KARESは開封時ではなく購入時に永久にバーンされます。'
   rewards_note: '報酬は1,825稼働日で配布されます。誰でもKARESやSUIを寄付でき、次の稼働日の境界から30稼働日で配布されます。既存の配布期間は延びず、寄付は取り戻せません。ステークがゼロなら時計は停止し、獲得済み報酬は請求できます。'
   revenue_note: '回収したマーケットロイヤリティの20%をSUIステーキング報酬へ。報酬は収益と参加ステーク量に応じて変動します。'
   points: 'マスタリーポイント'
@@ -2669,6 +2706,63 @@ spell_effects:
   expires_next_turn: '次のターンまで'
 
 ui:
+  add_funds_agent: 'エージェントに入金'
+  agent_funding_unverified: '送金先を確認できません。資金を追加する前に呼び戻しを更新してください。'
+  agent_entry_intro: 'アシスタントを接続し、キャラクターを選んで、ここで所持品を管理できます。'
+  agent_entry_play: 'ゲームをプレイ'
+  agent_watch: 'エージェントを観戦'
+  agent_watching: 'エージェントを観戦中'
+  agent_watch_empty: '観戦できるキャラクターがいません。'
+  agent_watch_failed: 'このエージェントを観戦できません。もう一度お試しください。'
+  portrait_share: 'ポートレートを共有'
+  portrait_download: 'PNGをダウンロード'
+  portrait_copy: '画像リンクをコピー'
+  portrait_copied: 'リンクをコピーしました'
+  portrait_failed: '画像の読み込みまたはリンクのコピーに失敗しました。下のリンクを選択できます。'
+  portrait_close: '閉じる'
+  portrait_preview: 'キャラクターのポートレート'
+  agent_recall_steps: 'Googleマルチシグメンバーで回収を承認し、下の返却一覧からキャラクターと装備を受け取る二つの手順に署名します。受取時にすべてを一括転送して再装備します。他のアイテムは移動しません。回収のガスはマルチシグ、受取は自分のウォレットが支払います。戦闘中は先に退出してください。取消時は装備が元のキオスクに外れた状態で残ります。'
+  agent_asset_proceeds: 'キオスクの売上'
+  agent_asset_collect: 'マルチシグへ回収'
+  agent_asset_delist: '出品を取り消す'
+  agent_asset_reserved: '専用オファー · PurchaseCapが必要'
+  agent_asset_unconfigured: 'この環境では未設定'
+  agent_asset_fee_budget: 'ガス予算の上限'
+  agent_inventory: 'エージェントの所持品'
+  agent_asset_refresh: '所持品を更新'
+  agent_asset_available: '利用可能'
+  agent_asset_listed: '出品中 · 先に出品を取消'
+  agent_asset_equipped: '装備中'
+  agent_asset_sui: 'SUIの数量'
+  agent_asset_kares: 'KARESの数量'
+  agent_asset_reserve: '手数料後に残すSUI'
+  agent_asset_positions: 'ステーキング中のKARES'
+  agent_asset_unstake: 'マルチシグへ引き出す'
+  agent_asset_owned: 'その他の所有オブジェクト（閲覧のみ）'
+  agent_asset_incoming: '受取待ちのアイテム'
+  agent_asset_claim: '選択したアイテムを受け取る'
+  agent_asset_cancel: '選択した返却を取り消す'
+  agent_asset_scope: 'アイテムと数量を指定してください。選択したスタックは全量転送します。装備は先に外し、出品は先に取り消してください。ステーキング中のKARESは引き出して更新してから数量を指定します。後の回収用にSUIを残してください。他の種類は閲覧のみです。戦闘を先に精算してください。'
+  agent_setup_prompt: '非公開の一時リンク {url} を使い、{guide} に従ってAresRPGエージェントを設定してください。公開証明を自動送信してください。この設定は資産移転やゲームプレイを許可しません。'
+  agent_cancel: 'キャンセル'
+  agent_pair_connect: '接続'
+  agent_pair_pending: 'アシスタントを待っています…'
+  agent_pair_failed: '設定が期限切れになったか完了できませんでした。再接続してください。'
+  agent_pair_verified: 'エージェントの鍵を検証しました。サーバー認証やキャラクターの保有を確認したものではありません。'
+  agent_environment: 'ChatGPT dots や Grok Bot など、継続して動作できるエージェント環境を持つアシスタントを選んでください。'
+  agent_pair_ephemeral: '公開鍵の検証のみです。この一時的な鍵はエージェントのプロセス終了時に失われます。このアドレスには絶対に資産を送らないでください。'
+  agent_pair_instructions: 'この依頼をアシスタントに送ってください。結果はここに自動表示されます。'
+  agent_pair_blocked: 'このウォレットはペアリング用の Google 公開識別子を提供していません。Google で接続して公開リクエストを作成してください。'
+  agent_copy_request: '設定リクエストをコピー'
+  agent_paste_request: 'このリクエストをエージェントに貼り付けてください。コピーしてもアカウントは接続されません。'
+  agent_copy_failed: 'コピーできませんでした。上のリクエストを選択して手動でコピーしてください。'
+  agent_handoff_request: '{{url}} に従って {{provider}} のConnect Your Agentを準備してください。不足する署名設定を報告し、必要なら一時リンクを求めてください。この依頼は認証情報の作成、資産移転、ゲームプレイを許可しません。'
+  agent_connect_your: 'エージェントを接続'
+  agent_bootstrap: '設定手順を開く'
+  agent_choose: 'エージェントを選択'
+  agent_unavailable: 'ペアリングはまだ利用できません。エージェントは接続されていません。'
+  agent_setup: 'エージェントを設定'
+  agent_send: 'エージェントに送る'
   feedback_question: '先に進むうえで何が難しいですか？'
   feedback_unclear: '何をすればいいか分からない'
   feedback_controls: '操作方法'
@@ -3345,3 +3439,116 @@ tournament_page:
   find_review: '{{character}} のチームを探して、このキャラクターを登録しますか？'
   joined_count: 入場 {{count}}/{{total}}
   versus: 対 {{team}}
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

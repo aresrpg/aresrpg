@@ -12,7 +12,7 @@ import { fight_resource_loader, type FightResourceLoader } from '../../src/game/
 import { FightLayer } from '../../src/game/fight/FightLayer.tsx'
 import type { SceneHandle } from '../../src/game/core/scene_feed.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
-import { dispatch_app, observe_app, useAppStore, type AppInput } from '../../src/store.ts'
+import { dispatch_app, observe_app, read_app_state, useAppStore, type AppInput } from '../../src/store.ts'
 import { tournament_fixture } from '../../test/helpers/tournament.ts'
 import '../../src/tailwind.css'
 
@@ -180,6 +180,26 @@ const boot = async (): Promise<void> => {
     packet: { type: 'packet/characters', characters: [row('alice', 'Alice'), row('ally', 'Ally')] },
   })
   dispatch_app({ type: 'character/select', character_id: 'alice' })
+  if (params.has('agent')) {
+    dispatch_app({
+      type: 'agent/watch',
+      observation: {
+        pairing: { address: 'owner', multisig_public_key: 'public', signer_mode: 'disposable' },
+        public_identifier: 'google',
+        character_id: 'alice',
+      },
+    })
+    dispatch_app({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/agent_observed',
+        id: read_app_state().session.agent_view.serial,
+        characters: [row('alice', 'Alice')],
+        selected_character_id: 'alice',
+        failed: false,
+      },
+    })
+  }
   observe_app(['fight', 'fight_chain', 'tournament'])
   const initial = spell_probe ? chain.apply({ type: 'start', observed_ms: 60_000n }).state : chain.state()
   if (spell_probe) picking.cell = Number(initial.contract.fighters[0]!.cell)

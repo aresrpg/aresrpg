@@ -6,6 +6,7 @@
 import type { TradeRow } from '@aresrpg/protocol'
 
 import { create_fight, type FightCommand, type HydratedFightCheckpoint } from '../../fight/src/index.ts'
+import { read_personal_kiosks } from '../src/kiosk_discovery.ts'
 import type { Sdk } from '../src/client.ts'
 import { character_actions } from '../src/character_actions.ts'
 import { character_create, type CharacterCreateInput } from '../src/character.ts'
@@ -20,7 +21,7 @@ import { trade_actions } from '../src/trade.ts'
 /** Use an SDK constructed for this same signing address. Every method below can spend gas. */
 export const create_agent_actions = (sdk: Sdk, address: string) => {
   const kiosk_cap = async (kiosk_id?: string) => {
-    const { kioskOwnerCaps: caps } = await sdk.get_owned_kiosks(address)
+    const caps = await read_personal_kiosks(sdk, address)
     return caps.find((cap) => cap.isPersonal && (!kiosk_id || cap.kioskId === kiosk_id)) ?? null
   }
   const create_in_kiosk = create_personal_kiosk_runner(kiosk_cap)

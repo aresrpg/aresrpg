@@ -6,6 +6,8 @@ import { createRoot } from 'react-dom/client'
 import { createPortal } from 'react-dom'
 import { GameWindow, NativeModal, suspend_native_modals } from '@aresrpg/ui'
 
+import { agent_funding_authorization } from '../../src/funding/recipient.ts'
+import { character } from '../../test/modules/automation_fixture.ts'
 import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
 import { gift_funding_text } from '../../src/airdrop/GiftClaimNotice.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -34,6 +36,33 @@ dispatch_app({
   kares_balance: null,
   gas_spent_mist: 0n,
 })
+const agent_address = `0x${'22'.repeat(32)}`
+if (params.has('agent')) {
+  dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+  dispatch_app({
+    type: 'agent/watch',
+    observation: {
+      character_id: 'remote',
+      public_identifier: 'google',
+      pairing: { address: agent_address, multisig_public_key: 'public', signer_mode: 'disposable' },
+    },
+  })
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/agent_observed',
+      id: read_app_state().session.agent_view.serial,
+      failed: false,
+      characters: [{ ...character(), id: 'remote' }],
+      selected_character_id: 'remote',
+    },
+  })
+}
+const agent_authorization = agent_funding_authorization(read_app_state().session) ?? undefined
+window.addEventListener('change-agent', () =>
+  dispatch_app({ type: 'agent/watch', observation: read_app_state().session.agent_view.request })
+)
+window.addEventListener('disconnect-player', () => dispatch_app({ type: 'auth/disconnected' }))
 const sent = (address: string, amount: bigint): string => {
   document.documentElement.dataset.payment = JSON.stringify({ address, amount: String(amount) })
   document.documentElement.dataset.paymentCount = String(Number(document.documentElement.dataset.paymentCount ?? 0) + 1)
@@ -193,7 +222,8 @@ const Fixture = () => {
           </Suspense>
         ) : (
           <AddFundsModal
-            address={recipient}
+            address={params.has('agent') ? agent_address : recipient}
+            authorization={agent_authorization}
             copy={copy}
             cost_mist={params.has('funded') || params.has('fees') ? 0n : 1_000_000_000n}
             network={params.has('testnet') ? 'testnet' : 'mainnet'}

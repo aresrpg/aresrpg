@@ -11,6 +11,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 
 import { connection_label, indexing_health_tone } from './connection_status.ts'
 import { FullscreenButton } from './FullscreenButton.tsx'
+import { OnlineCharacters } from './OnlineCharacters.tsx'
 
 export const FpsPanel = ({
   active,
@@ -46,8 +47,16 @@ export const FpsPanel = ({
         data-indexing-health={indexing_health_tone(session.indexing_lag)}
       >
         <i data-connected={session.link_status === 'ready'} />
-        <Users size={13} aria-label={copy.online_players} />
-        <b>{session.online ?? '—'}</b>
+        <span
+          className="world-online-count"
+          role="img"
+          aria-label={`${copy.online_accounts}: ${session.online ?? '—'}`}
+          title={copy.online_accounts}
+        >
+          <Users size={13} aria-hidden="true" />
+          <b>{session.online ?? '—'}</b>
+        </span>
+        <OnlineCharacters copy={copy} online={session.online} characters={session.online_characters} />
       </span>
       <FullscreenButton copy={copy} />
       <select

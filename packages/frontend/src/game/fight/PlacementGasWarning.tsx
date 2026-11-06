@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { HydratedFightCheckpoint } from '@aresrpg/fight'
+import { placement_plan, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { useState, type ReactNode } from 'react'
 
 import { ModalFrame } from '../../components/ModalFrame.tsx'
@@ -17,16 +17,7 @@ export const placement_available = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   fighter: bigint,
   cell: bigint
-): boolean => {
-  const row = checkpoint.contract.fighters[Number(fighter)]
-  const starts = row?.team === 0n ? checkpoint.contract.board.start_cells_a : checkpoint.contract.board.start_cells_b
-  return (
-    !!row &&
-    !row.ready &&
-    starts.includes(cell) &&
-    !checkpoint.contract.fighters.some((candidate) => candidate.cell === cell)
-  )
-}
+): boolean => typeof placement_plan(checkpoint.contract, fighter, cell) !== 'string'
 
 const PlacementGasWarning = ({
   cancel,
@@ -119,11 +110,13 @@ export const usePlacementGasWarning = ({
     })
   }
   const place = (fight: string, fighter: bigint, cell: bigint): void => {
-    if (!checkpoint || checkpoint.contract.id !== fight || !placement_available(checkpoint, fighter, cell)) return
+    if (!checkpoint || checkpoint.contract.id !== fight) return
+    const plan = placement_plan(checkpoint.contract, fighter, cell)
+    if (typeof plan === 'string') return
     const placement = Object.freeze({ fight, fighter, cell })
     if (
       placement_click_decision(
-        changed_seats[Number(placement.fighter)] === true,
+        plan.some((move) => changed_seats[Number(move.fighter)] === true),
         settings.placement_gas_warning_disabled === true
       ) === 'warn'
     ) {

@@ -96,6 +96,7 @@ pub struct MoneyDelta {
     pub character_royalty_mist: u64,
     pub character_creation_mist: u64,
     pub kolizeum_mist: u64,
+    pub tournament_mist: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

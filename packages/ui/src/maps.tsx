@@ -18,20 +18,24 @@ export const MinimapView = ({
   title: string
   coordinates: string
   open_label: string
-  open: () => void
+  open: (() => void) | null
   controls?: ReactNode
 }>) => (
   <section className="aui-minimap">
-    <button type="button" className="aui-minimap-lens" aria-label={open_label} onClick={open}>
-      {map}
-    </button>
+    {open ? (
+      <button type="button" className="aui-minimap-lens" aria-label={open_label} onClick={open}>
+        {map}
+      </button>
+    ) : (
+      <div className="aui-minimap-lens">{map}</div>
+    )}
     <header>
       <strong>{title}</strong>
       <span>{coordinates}</span>
     </header>
     <div className="aui-minimap-controls">
       {controls}
-      <Button onClick={open}>{open_label}</Button>
+      {open && <Button onClick={open}>{open_label}</Button>}
     </div>
     <span className="aui-map-north" aria-hidden="true">
       N

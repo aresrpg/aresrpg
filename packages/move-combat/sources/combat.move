@@ -493,10 +493,20 @@ public fun player_count(state: &State, team: u8): u64 {
 
 public fun place(state: &mut State, fighter: u64, cell: u64) {
   assert!(in_placement(state), ENotPlacement);
-  assert!(!state.fighters[fighter].settled && !state.fighters[fighter].dead, EBadCell);
-  let team = state.fighters[fighter].team;
+  let actor = &state.fighters[fighter];
+  assert!(!is_mob(actor) && !actor.settled && !actor.dead && !actor.ready, EBadCell);
+  let team = actor.team;
+  let from = actor.cell;
   let starts = if (team == 0) state.board.start_cells_a() else state.board.start_cells_b();
-  assert!(starts.contains(&cell) && fighter_at(state, cell).is_none(), EBadCell);
+  assert!(from != cell && starts.contains(&cell), EBadCell);
+  let occupant = fighter_at(state, cell);
+  if (occupant.is_some()) {
+    let other = *occupant.borrow();
+    let target = &state.fighters[other];
+    assert!(!is_mob(target) && !target.settled && !target.ready && target.team == team, EBadCell);
+    assert!(starts.contains(&from), EBadCell);
+    state.fighters[other].cell = from;
+  };
   state.fighters[fighter].cell = cell;
 }
 
@@ -3136,7 +3146,7 @@ fun mob_snapshot(fighter: &Fighter): &MobSnapshot {
   match (&fighter.kind) { FighterKind::Player => abort ENotAMob, FighterKind::Mob(snapshot) => snapshot }
 }
 
-fun fighter_at(state: &State, cell: u64): Option<u64> {
+public fun fighter_at(state: &State, cell: u64): Option<u64> {
   let mut fighter = 0;
   while (fighter < state.fighters.length()) {
     let row = &state.fighters[fighter];

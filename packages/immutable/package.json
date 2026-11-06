@@ -15,7 +15,8 @@
     "./rune": "./src/rune.ts",
     "./world": "./src/world.ts",
     "./allocation": "./src/allocation.ts",
-    "./leaderboards": "./src/leaderboards.ts"
+    "./leaderboards": "./src/leaderboards.ts",
+    "./portrait": "./src/portrait.ts"
   },
   "scripts": {
     "test": "bun test"

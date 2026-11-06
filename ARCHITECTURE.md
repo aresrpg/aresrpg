@@ -66,9 +66,9 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                            |
 | `packages/ui`          | Shared visual tokens, accessible React controls, windows, and responsive game layouts                                                                                              | Stores, wallet/SDK calls, gameplay calculations, or authored content                         |
 | `packages/mobile`      | Landscape player presentation, touch adapters, and fullscreen management overlays using the shared frontend runtime and controllers                                                | Separate game state, transaction execution, authored content, or duplicated page controllers |
-| `packages/journal`     | Static editorial publication at `journal.aresrpg.world`, rendering seed-authored Markdown and published-only feeds, routes, metadata, and cover assets                             | Game runtime, chain writes, browser-visible drafts                                           |
+| `packages/journal`     | Static editorial publication at `journal.aresrpg.world`, rendering package-owned Markdown and published-only feeds, routes, metadata, and cover assets                             | Game runtime, chain writes, browser-visible drafts                                           |
 | `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                          |
-| `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                            |
+| `seed/`                | Authored in-game items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and game assets                                                          | Live player state or website/editorial artwork                                               |
 | `pins.json`            | Current mainnet lineage, shared object addresses, and active content reconciliation metadata                                                                                       | Authored gameplay values                                                                     |
 
 Root `pins.json` describes one current mainnet deployment. It contains no previous deployments,
@@ -140,6 +140,13 @@ Stateful core edits restart the app to rebuild reducer and observer lifecycles t
 Game boot consumes engine data through `@aresrpg/engine/data`; its static dependency graph never
 loads Three.js. Surface lifecycles import rendering. Fight cue projection chooses movement gait;
 the engine consumes that cue rather than exporting a renderer-bound helper for the choice.
+`/connect-agent?intent=connect-agent` opens the existing agent modal after the ordinary Google login.
+The modal intent is consumed once while the `/connect-agent` screen survives reload and logout.
+This screen shares the running player store, observers, pairing, selection and funding components;
+it never mounts the menu or game canvas. Play or explicit agent observation lazily imports the player
+presentation without restarting authentication. Service-worker installation is deferred until that
+transition because precaching would otherwise fetch the renderer bundles. Shared plain terrain and
+gameplay data remain in the store graph; Three/WebGPU implementations and model assets do not.
 Deployment headers give content-hashed `/assets/` files immutable browser caching. Stable asset
 names, HTML and the service worker retain revalidation.
 Page navigations bypass the service-worker cache so reloads fetch the current app shell and its
@@ -429,10 +436,14 @@ indexer's FalkorDB. Successful calls across the game-package lineage write exact
 membership plus one first-interaction timestamp per address. Character lifecycle observations remain
 in daily buckets; the server derives their chart intervals and reads the current Character count
 from the graph. Active-player membership stays in 15-minute, hourly, daily, weekly, and calendar-month sets.
-Numeric analytics combine transaction count, signed net gas, and all four revenue channels into one
+Numeric analytics combine transaction count, signed net gas, and all five revenue channels into one
 fixed-size record per visible time bucket plus one all-time record. Every record stores its exact
 integer totals and last applied checkpoint together; the sequential writer groups all contributions
 within each checkpoint before replacing records. Retries cannot double count a partly committed batch.
+Tournament revenue uses only the certified EntryFeePaid treasury amount, never contributions or prizes.
+Older compact records default that added field to zero. Recorded tournament revenue begins with the
+fee-event contract upgrade; pre-event payments require a separately verified historical backfill.
+Replaying checkpoints alone cannot invent missing fee events.
 Fine buckets expire after two/eight days; daily, weekly, and monthly records retain four hundred days
 plus their bucket width. Dashboard numeric reads fetch bounded records, never historical checkpoint fields.
 Deployment-only core calls and publish, upgrade, and seed transactions contribute neither gas nor activity.
@@ -533,7 +544,16 @@ pass those gates.
 
 ## Realtime server law
 
-Each connection owns one server reducer tracking every allowed character. The graph Redis carries
+Each authenticated address has one connection and one server reducer tracking its complete owned
+character roster, including fight custody, without a character-count cap. Held and seated query
+results deduplicate by character ID; a duplicate prefers the seated projection. The frontend
+projects at most six non-deleted characters from that sorted roster for selection and control. It
+retains the authorized read-only world windows and union cache for the full server stream, so a
+character entering the visible six already has its known window. Rendering projects the selected
+window; the six-character interface is not a fixed memory-footprint guarantee. Combat and party
+limits remain independent. Realtime input retains a 150-packet/second floor and scales above six tracked actors
+at twenty packets per actor plus thirty control packets per second. Graph-read and socket-output
+budgets remain account-scoped; larger rosters are not a promise of unlimited throughput. The graph Redis carries
 `evt:*` chain projections. The mesh Redis carries only ephemeral presence, chat, heartbeats, and
 fight-action courtesy relays.
 
@@ -543,12 +563,17 @@ socket buffers and position queues have hard ceilings; stalled movement closes f
 presence changes submit models at most once per animation frame.
 
 Online history is the deliberate exception to chain replay: authenticated websocket presence is
-off-chain. Each server heartbeat publishes its short-lived authenticated-address snapshot; their
-cluster union collapses into one-minute samples, 15-minute aggregates through seven days, and daily
-aggregates afterward. Rolling replicas cannot multiply one player. The admin surface labels this
+off-chain. Each server heartbeat atomically publishes its short-lived authenticated-address snapshot and a character-only companion key. The original `server:*` address schema stays readable by older binaries; companion keys use `server-characters:*`. The
+address union collapses into one-minute samples, 15-minute aggregates through seven days, and daily
+aggregates afterward. Rolling replicas cannot multiply one account. The HUD also displays the union of live tracked character IDs
+across all worlds, including connected fighters and dungeon characters. It excludes untracked holdings
+and disconnected owners, even when their fights persist on-chain. Both figures use the existing five-second
+heartbeat and twenty-second pod expiry; an older pod without character IDs makes that count unknown.
+The admin surface labels this
 separate source and freshness; the indexer never pretends it can reconstruct past connections.
 
-One latest reader per account domain serves baseline and refresh demand. Required subscriptions
+One single-flight reader per account domain serves baseline and refresh demand, coalescing
+overlapping invalidations into one pending rerun and suppressing superseded delivery. Required subscriptions
 precede baseline reads; `packet/characters` becomes the ready barrier only after every prerequisite
 completes. Connection closure terminates its reducer and subscription lifetime, including pending
 acquisitions. Public equipment and zone projections share one subscription and at most one in-flight
@@ -623,6 +648,84 @@ server issues a challenge and verifies the personal-message signature. Until
 `packet/connection_accepted`, the socket carries no application packets. One address owns one live
 connection; replacement is terminal until the player explicitly reconnects. Login reads no game
 state from chain—the app becomes ready only after the server's indexed snapshot.
+
+Connect Your Agent is the single official supported bot onboarding flow; public SDK guides teach bot building after that flow, without claiming to restrict permissionless chain execution. Agent setup is available from the world HUD’s former Friends entry, account settings and
+character-tab menus. The Friends reducer and persisted social data remain unchanged. Google
+sessions expose a validated public pairing request through the SDK. The existing game session
+creates a five-minute Redis setup exchange bound to its authenticated owner. A one-prompt link
+lets an assistant return public proof through the existing HTTP server; authenticated status
+reports the verified address. Redis stores public metadata and a capability hash, never a signer. Pending requests are cleared on account/session
+change, disconnect and successful verification. Public multisig identities are retained in owner-scoped browser storage for recovery; they are revalidated against the current Google identifier and never restore a persistent signing claim. Proofs and setup tokens are not persisted or treated as server authentication or custody. The signed proof binds a disposable or
+host-declared persistent signer mode; status returns that mode and the public multisig identity. A signed
+mode declaration authenticates the host claim, not the durability of its storage. Other wallets retain the copyable setup
+handoff and bootstrap guide. Agent pairing accepts only mainnet in the signed request; non-mainnet
+wallet sessions and requests are rejected without changing the shared SDK’s network support. Its foreground process retains an in-memory agent key
+and uses the existing SDK transport for ordinary-member multisig authentication; the public pairing
+proof alone is not a game login. Pairing previews select no characters because a fresh multisig
+has no custody. Loopback tests exercise the actual verifier with synthetic mainnet pairing identities; the
+runner's default endpoint is restricted to the realtime service in the existing frontend deployment
+route, with explicit loopback transport injection for tests. This checks the configured destination;
+the WebSocket challenge does not attest the service's actual chain network. Durable key storage, recovery
+and production readiness are not established. Disposable identities must never receive assets.
+The SDK exposes non-executing exclusive-offer, claim and capability-return builders, reusing marketplace
+policy settlement in either custody direction. Its separate transaction-signing adapters verify already-resolved bytes and an externally supplied
+ordinary-member or Google-member signature; Google verification uses an explicit network client. They own no credentials.
+Wallet sessions provide simulation-backed one-use confirmation and certified receipts. A session retains one Recall executor per paired multisig; its reload-idle guard includes all such queues and pending digests. Auth, Recall and return discovery share complete personal-kiosk pagination. Preflight failures permit a fresh review; uncertain submissions retain their digest and do not permit resubmission. Missing localized agent UI labels use the English UI fallback. The paired-address UI
+requires independent full-address comparison before custody controls, and offers an explicitly selected naked
+owned character only with a host-declared persistent signer. Disposable pairing cannot submit. Return inspection
+is an explicit one-shot SDK custody-preflight read: all character PurchaseCaps owned by the human wallet,
+filtered to zero price and kiosks whose personal capabilities belong to the paired agent. Both capability and
+kiosk reads paginate completely. The return UI claims or cancels only a verified incoming offer through the same review
+and receipt path. Owner Recall reconstructs the canonical 1-of-2 identity from the current Google
+wallet and signs the multisig transaction through its existing Enoki binding. It reads kiosk-held
+characters and their current equipment, composes generated unequip doors before the exclusive offer,
+and rechecks equipment and simulation before signing. It issues ordinary exclusive PurchaseCaps
+for that character and its CURRENT equipped items together. Incoming discovery reads complete gRPC
+transaction events, binding ItemUnequipped character/slot/item records to unchanged, zero-price caps
+created for the recipient by that transaction in the same source kiosk. Missing or ambiguous receipt
+associations fail closed. Receipt ownership is checked again before signing; one claim transaction
+settles character and item policies, then re-equips the current gear in the human kiosk atomically.
+No original delegation snapshot or additional Move module is involved. Cancellation returns all caps
+to the source kiosk’s listings, leaving its gear unequipped. The human claims with their ordinary wallet; agent cooperation is unnecessary. A pending outbound cap
+held by the multisig can likewise be cancelled by its Google member. This does not override fight
+custody, third-party-owned capabilities or revoke the ordinary member. Actual chain validation
+remains authoritative at execution. Browser and agent connections share SDK login-proof construction;
+public multisig construction is independent from signing adapters. Gas refusals reuse FundingModal
+for the actual SDK sender; a distinct multisig payer has an unknown balance rather than the human balance.
+The CLI supports an explicit loopback-only local-preview opt-in, without changing default endpoint restrictions.
+The character-tab shortcut remains unavailable; the verified pairing modal owns custody review. Circuit-and-robot tab ornaments accept presentation inputs only; live owned
+rosters do not infer agent custody from a provider selection.
+Selective owner recovery extends the same per-multisig SDK executor and one-use review pipeline.
+The SDK inventory reader completes all personal-kiosk and address-object pages; canonical item
+snapshots optionally include amount/version, while the existing staking decoder supplies positions.
+Available, equipped, public-listed, exclusive-offer and opaque objects remain distinct. Game item
+selection binds current object revisions and source kiosks; direct items are locked into a personal
+kiosk before exclusive offer. Public delisting and kiosk-proceeds collection share the existing
+marketplace PTB builders. Staking withdrawal reuses the ordinary KARES builder and returns to the
+multisig before a separately selected coin transfer. Incoming standalone item caps exclude gear
+associated with a pending character return. Owner choice is exact, including whole stacks and
+explicit token amounts. Variable batches estimate fees; the fresh SUI balance must cover the
+prepared fee budget, chosen amount and visible editable reserve (default GAS_BUDGET_MIST).
+The existing inventory cells/selection, transaction review and funding modal render this flow.
+Opaque Move types remain read only; fight-held characters require existing settlement before they
+reappear in the kiosk inventory. There is no additional Move module or credential store.
+Read-only agent observation validates the saved pairing through the canonical SDK owner identity,
+then reads the paired address's complete character roster (including fight custody) separately from
+owned/control rosters. Observed rows never enter server allowed/tracked character authority or the
+frontend transaction selector. Existing world-window, fight and dungeon subscriptions render the
+selected observed character; owner-targeted presence discovery supplies live pose without publishing
+as that character. The camera follows remote presence or the authoritative checkpoint/stage, never
+the owned local-pose cache. Observation suspends local movement, automation and gameplay input;
+its existing character tabs can return to owned play. Existing vitals, minimap, compass and performance
+telemetry remain visible; the map and party presentation mount without gameplay commands. A separate
+displayed-pose feed supplies those widgets without notifying controlled-pose subscribers. Public party
+membership uses the existing party read/subscription owner and never joins party chat or control rosters.
+The portrait uses the shared appearance resolver. Account funding remains available through the canonical
+checkout: the explicit agent destination requires a server-accepted observation and is bound to the exact
+wallet, observation generation and selected character. Both checkout entry and the asynchronous signing
+boundary revalidate that binding; agent balances remain unknown rather than borrowing the player's balance. Recall funding outside observation instead proves the canonical multisig's
+Google member from the current wallet's public identifier, binds the exact recipient and wallet generation,
+and uses the same checkout and asynchronous signing guard. Self-funding retains its existing owner-address check.
 
 ### Funding
 
@@ -850,6 +953,9 @@ from the committed stream; fixed-valued/control rows add no magnitude draw, and 
 Each side's six start cells also bound its lifetime admissions. Forfeits return character custody
 but do not restore admission capacity; leaving and settlement remain available. Placement occupancy
 still follows living fighters, so a departed fighter's cell can be used by a remaining teammate.
+Placement can atomically swap two unready teammates when the sender owns both and both occupy
+that side's start cells. The combat core owns the swap; the game wrapper authenticates both seats.
+The TypeScript placement plan drives prediction, cell eligibility, and gas-warning tracking for both moved seats.
 
 Accepted server fight snapshots carry their normalized checkpoint directly to the rollback owner.
 Raw packet handlers never read the app cache as a substitute: nested reducer inputs may still be
@@ -952,6 +1058,25 @@ only the player's matches mount the shared fight runtime and viewport. Other mat
 Live tournaments and practice share the same bracket tree, match cards and game-window presentation;
 plain presentation props keep practice independent of live tournament actions and projections.
 Practice results never enter live tournament or character state. Reloading starts a fresh bracket.
+
+### Character portraits
+
+The current class/sex PNG masters under `seed/icons/characters` remain the artwork source.
+Per-model color-region authoring and derived RGB masks live under `seed/portraits`; the three
+mask channels follow each actual body/hair GLB's color slots, including slots absent from a bust.
+The mask generation gate pins source and model hashes. No equipment layers are composed.
+One read-only frontend Node endpoint, `/api/portrait`, renders transparent 1024px PNGs from those
+masters and masks. It preserves source alpha, unmasked pixels, and painted lightness. The immutable
+portrait URL owner includes class, sex, three uint24 colors, and the generated art revision.
+Character tabs, the character sheet, fight timeline and played-turn cards resolve that same URL.
+Profile and visible-player context actions open the shared preview with PNG download and image-link copy.
+Class-only catalogue illustrations retain their authored source. Legacy `/classe/*.jpg` routes remain.
+The SDK creates or prepares a Display V2 image template using the Character object's existing color
+fields. Hosting and Display-capability updates are separate release operations: no application action
+submits them. Palette changes produce distinct image URLs; explorer metadata refresh remains client-owned.
+When changing the renderer or art revision, retain the previous image service/assets if old shared links
+must remain fetchable; the current endpoint only renders its shipped revision. Validate the deployed
+function's native canvas/assets and explorer fetches before updating the live Display metadata.
 
 ### Sound presentation
 
@@ -1072,6 +1197,8 @@ one batch capped at 96 placements. Up to four authored glow sources may also ill
 surfaces through shadowless point lights, with 1/2/4 active on Low/Medium/High. No extra shadow maps
 are created. One merged mesh owns at most 512 authored plants, ice sprites, and distant conifer
 silhouettes. These reuse ordinary ground-scatter builders and rooted wind; hanging ice remains still.
+Authored plant vertex expansion runs once in one existing meshing worker and transfers its buffers to the renderer.
+Renderer construction yields between resource groups so loading UI tasks can run; GPU and DOM resources remain on the main thread.
 Scenery appears after terrain, hides during fights and dungeon stages, and releases its buffers,
 materials and lights with the world. These are presentation assets; fixed voxel structures retain
 ordinary residency and collision. The public adventure remains authored in `seed/content/adventure_environment.json`.
@@ -1180,6 +1307,10 @@ is checked between indivisible jobs, while one oversized job may advance to avoi
 leaf veins, mineral striations, mushroom caps, gills and stem fibres. Bent botanical ribbons and faceted ore
 reuse the existing merged or instanced batches, wind, culling and disposal. The dedicated mushroom-only
 texture factory and old city shrub silhouette are removed.
+All eleven mineable gatherables author compact block forms and original pixel palettes in
+`seed/content/mineral_visuals.json`. Their existing resource instances use small padded identity
+atlases, cached and released by the resource layer. Other nature assets retain the neutral atlas.
+These visual meshes do not change resource seats, gathering identities or collision.
 Recipes may opt into `canopy: clusters`; the default remains voxel crowns. Workers replace exposed
 foliage faces with compact six-face volumes in the existing packed terrain pool. Near, mid and far
 chunks use progressively coarser occupied-cell grids and clump sizes from `canopy_transforms.ts`.
@@ -1549,8 +1680,8 @@ The temporary `/allocation` campaign uses a canvas-free entry with normal Google
 sign-in from one wallet chooser on the full campaign page. The chooser always offers Google alongside
 installed wallets; linking Google preserves the current login. Both use the same signed server admission;
 Google is not required inside wallet browsers. Its paper layout follows the approved standalone HTML
-reference. Seed owns quotas,
-scoring and the cutoff. The normal wallet-authenticated WebSocket is its private request door;
+reference. The shared allocation module owns quotas, scoring and the cutoff in
+`packages/immutable/src/allocation_campaign.json`. The normal wallet-authenticated WebSocket is its private request door;
 a temporary server module owns a separate persistent Redis, never the disposable game index.
 The admitted wallet proof establishes the portfolio owner. Up to ten distinct wallets, including
 that wallet, belong to the account's retained portfolio. Adding another requires a fresh,
@@ -1576,7 +1707,7 @@ can issue an opaque share link. Its HTML metadata and server-rendered PNG show t
 and allocation without wallet addresses, X identity, ranks or operator notes. Account cards expose
 only a validated leaderboard name or a generic reserved/social source. Vercel proxies these public
 share and linking callbacks to the existing HTTPS server; it has no campaign credentials. The
-server image includes the same localized copy, fonts and seed artwork, and its release inputs track
+server image includes the same localized copy, fonts and frontend-owned campaign artwork, and its release inputs track
 those dependencies. The campaign accepts no sale payments until real sale pins and allowlist proof
 delivery have been verified. Snapshot files and CSV exports outlive the temporary database.
 
@@ -1673,7 +1804,9 @@ If the explanation needs two owners for one fact, the data model is wrong.
   `packages/sdk/examples/` are typechecked with that package and reuse its builders and the fight twin.
 - `packages/frontend/public/links/index.html` is the script-free link hub for social bios. Its logo and
   loot ribbon are rendered by `bun run social:cards`; its font and Blast branding are symlinks to their owners.
-- `seed/content/journal/`: English editorial articles and publication catalogue. `seed/icons/journal/`
+- Website-only landing artwork, provider marks, branding and social cards live in `packages/frontend/public/`;
+  the original KARES token image remains in seed and is exposed by the existing public metadata symlink.
+- `packages/journal/content/`: English editorial articles and publication catalogue. `packages/journal/artwork/`
   owns their cover artwork. Only explicitly published entries enter the journal's static output;
   drafts remain source-only. The journal deploys independently of game releases and seed transactions.
 - `ARCHITECTURE.md`: current system topology and laws.

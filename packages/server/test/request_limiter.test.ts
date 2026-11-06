@@ -52,3 +52,16 @@ describe('global request limiter', () => {
     expect(limiter.take('0x2')).toBeFalse() // the survivor's spent count is intact
   })
 })
+
+test('dynamic capacity preserves spent requests when the authenticated roster grows or shrinks', () => {
+  let capacity = 2
+  const limiter = create_request_limiter({ capacity: () => capacity, now: () => 0 })
+  expect(limiter.take('owner')).toBeTrue()
+  expect(limiter.take('owner')).toBeTrue()
+  expect(limiter.take('owner')).toBeFalse()
+  capacity = 3
+  expect(limiter.take('owner')).toBeTrue()
+  expect(limiter.take('owner')).toBeFalse()
+  capacity = 1
+  expect(limiter.take('owner')).toBeFalse()
+})

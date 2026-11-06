@@ -15,7 +15,6 @@ import { encyclopedia_item_path } from './src/encyclopedia/routes.ts'
 import { create_social_renderer, type EncyclopediaCard, type EntityCard } from './social_card_render.ts'
 
 export type SocialDirectories = Readonly<{
-  cards_dir: string
   content_dir: string
   copy_path: string
   icons_dir: string
@@ -196,9 +195,7 @@ export const social_catalog = async ({
   content_dir,
   copy_path,
   icons_dir,
-}: Omit<SocialDirectories, 'cards_dir'>): Promise<
-  Readonly<{ cards: readonly SocialCard[]; encyclopedia: EncyclopediaCard }>
-> => {
+}: SocialDirectories): Promise<Readonly<{ cards: readonly SocialCard[]; encyclopedia: EncyclopediaCard }>> => {
   const [items, mobs, spells, recipes] = await Promise.all([
     read_json<readonly Item[]>(join(content_dir, 'items.json')),
     read_json<readonly Mob[]>(join(content_dir, 'mobs.json')),
@@ -286,8 +283,6 @@ export const social_cards_plugin = (
     const { cards, encyclopedia } = await social_catalog(directories)
     const renderer = await create_social_renderer(render)
     const shell = await readFile(join(dir, 'index.html'), 'utf8')
-    for (const name of await readdir(directories.cards_dir))
-      await emit(`social/${name}`, await readFile(join(directories.cards_dir, name)))
     await emit(ENCYCLOPEDIA_IMAGE.slice(1), await renderer.encyclopedia(encyclopedia))
     for (const card of cards) {
       if (card.entity) await emit(card.image.slice(1), await renderer.entity(card.entity))

@@ -11,7 +11,7 @@ type ItemReadClient = Readonly<{
   core: Readonly<{
     getObjects: (input: Readonly<{ objectIds: string[]; include: { json: true } }>) => Promise<{
       objects: readonly (
-        Error | Readonly<{ objectId?: string; type?: string; json?: Record<string, unknown> | null }>
+        Error | Readonly<{ objectId?: string; type?: string; version?: string; json?: Record<string, unknown> | null }>
       )[]
     }>
     listDynamicFields: (input: Readonly<{ parentId: string }>) => Promise<{
@@ -55,6 +55,8 @@ export type ItemSnapshot = Readonly<{
   item_type: string
   category: string
   level: number
+  amount?: number
+  version?: string
   pet_power?: number
   stats?: Readonly<Record<string, number>>
 }>
@@ -68,7 +70,9 @@ const dynamic_name = (
 ): DynamicFieldName | null => fields.find(({ name }) => name.type === `${type_package}::${suffix}`)?.name ?? null
 
 const item_json = (
-  objects: readonly (Error | Readonly<{ objectId?: string; type?: string; json?: Record<string, unknown> | null }>)[],
+  objects: readonly (
+    Error | Readonly<{ objectId?: string; type?: string; version?: string; json?: Record<string, unknown> | null }>
+  )[],
   item_id: string,
   type_package: string
 ): Record<string, unknown> => {
@@ -105,7 +109,8 @@ const stats_record = (stats_field: Awaited<ReturnType<typeof item_field_value>>)
 export const read_item_snapshot = async (
   client: ItemReadClient,
   type_package: string | null,
-  item_id: string
+  item_id: string,
+  include_amount = false
 ): Promise<ItemSnapshot> => {
   if (!type_package) throw new Error('Linked items are unavailable on this network')
   const [{ objects }, { dynamicFields }] = await Promise.all([
@@ -124,6 +129,7 @@ export const read_item_snapshot = async (
     item_type: String(json.item_type),
     category: String(json.category),
     level: Number(json.level),
+    ...(include_amount ? { amount: Number(json.amount), version: (objects[0] as { version?: string }).version } : {}),
     ...(json.category === 'pet'
       ? { pet_power: feed_field ? Number(FEED_STATE_BCS.parse(feed_field.dynamicField.value.bcs).count) : 0 }
       : {}),

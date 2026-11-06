@@ -55,3 +55,16 @@ export async function get_party_invites(graph: Graph, { character_id }: { charac
   )
   return shape_parties(rows)
 }
+
+/** Public membership presentation; this read grants neither party commands nor party chat. */
+export async function get_character_party(graph: Graph, { character_id }: { character_id: string }) {
+  const rows = await graph.read(
+    `MATCH (:Character {id: $character_id})-[:MEMBER_OF]->(p:Party)
+     OPTIONAL MATCH (member:Character)-[m:MEMBER_OF]->(p)
+     OPTIONAL MATCH (p)-[:INVITED]->(invited:Character)
+     RETURN p AS party, collect(DISTINCT { order: m.order, character: member }) AS members,
+            collect(DISTINCT invited) AS invited`,
+    { character_id }
+  )
+  return shape_parties(rows)
+}

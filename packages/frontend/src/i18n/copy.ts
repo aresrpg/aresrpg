@@ -117,7 +117,9 @@ export type AppCopy = Readonly<{
   session_replaced_reconnect: string
   latency_unit: string
   indexing_health: string
-  online_players: string
+  online_accounts: string
+  online_characters: string
+  online_characters_body: string
   indexing_lag_warning: string
   indexing_block_title: string
   indexing_block_body: string
@@ -245,4 +247,10 @@ const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = O
   pt: () => import('./locales/pt.yaml'),
 })
 
-export const load_app_copy = async (locale: Locale): Promise<AppCopy> => (await loaders[locale]()).default as AppCopy
+export const with_english_ui = (localized: AppCopy, english: AppCopy): AppCopy =>
+  Object.freeze({ ...localized, ui: Object.freeze({ ...english.ui, ...localized.ui }) })
+
+export const load_app_copy = async (locale: Locale): Promise<AppCopy> => {
+  const [localized, english] = await Promise.all([loaders[locale](), loaders.en()])
+  return with_english_ui(localized.default as AppCopy, english.default as AppCopy)
+}

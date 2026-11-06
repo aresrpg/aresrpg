@@ -16,11 +16,13 @@ fn checkpoint_contributions_are_grouped_and_exact_including_negative_gas() {
         ts_ms: 1,
         delta: MoneyDelta {
             item_royalty_mist: u64::MAX,
+            tournament_mist: u64::MAX,
             ..MoneyDelta::default()
         },
     });
     let delta = checkpoint_totals(42, 7, -100, &money).unwrap();
     assert_eq!(delta.item_royalty_mist, u128::from(u64::MAX) * 2);
+    assert_eq!(delta.tournament_mist, u128::from(u64::MAX) * 2);
     let encoded = serde_json::to_string(&delta).unwrap();
     assert!(encoded.contains("\"gas_mist\":\"-100\""));
     assert_eq!(add(Some(&encoded), &delta).unwrap(), delta);
@@ -100,4 +102,26 @@ async fn partial_checkpoint_retry_keeps_all_six_accumulators_equal_and_expiring(
     let final_size: u64 = redis::cmd("DBSIZE").query_async(&mut conn).await.unwrap();
     assert_eq!(initial, 6);
     assert_eq!(initial, final_size);
+}
+
+#[test]
+fn old_compact_records_accept_the_new_revenue_channel_without_recounting() {
+    let mut old = serde_json::to_value(Totals {
+        checkpoint: 42,
+        ..Totals::default()
+    })
+    .unwrap();
+    old.as_object_mut().unwrap().remove("tournament_mist");
+    let old = old.to_string();
+    let delta = Totals {
+        checkpoint: 43,
+        tournament_mist: 7,
+        ..Totals::default()
+    };
+    let next = add(Some(&old), &delta).unwrap();
+    assert_eq!(next.tournament_mist, 7);
+    assert_eq!(
+        add(Some(&serde_json::to_string(&next).unwrap()), &delta).unwrap(),
+        next
+    );
 }

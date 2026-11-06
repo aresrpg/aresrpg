@@ -1,20 +1,24 @@
-# Optional AresRPG indexing and WebSocket integration
+# AresRPG game-server protocol for paired bots
 
-We encourage bots that play in the world to connect and participate visibly on the map. Other players can see their movement and share an active world with them. The connection also supplies indexed inventory, market discovery/history, leaderboard rankings, and live fight rows. Performance-focused bots and clients may use the chain directly without this connection, or keep their chain-native reader and add the WebSocket for presence. Start with [the two-path comparison](https://aresrpg.world/agents/protocol.txt); all these integrations submit gameplay transactions directly through the SDK. Presence is encouraged, not required by the license.
+Complete [Connect Your Agent](https://aresrpg.world/agents/client.txt), the single official
+supported bot onboarding flow, then use this reference to authenticate the paired multisig and
+consume game projections. These protocol details are not a parallel manual-wallet setup guide.
 
 Sui GraphQL is a Sui data service. The AresRPG indexer is the game's checkpoint-to-graph projection behind its realtime server. They are different services. The indexer is not a public GraphQL endpoint and the WebSocket is not a transaction relay.
 
 ## Wallet authentication and Google accounts
 
-A normal Sui wallet/signer can authenticate: the server verifies a personal-message signature for the requested address. No Google OAuth client is required for that path. Connecting an authorized external wallet is supported; it does not give control of an existing Google-backed game address.
+Official bots authenticate with the paired multisig's personal-message signer. The underlying
+verifier also understands ordinary Sui signatures; that protocol capability does not change the
+official bot onboarding flow or grant control of a Google-backed game account.
 
 The game's browser Google login uses Enoki/Wallet Standard with its configured Google client ID, Enoki API key, allowed origins, redirect and proof flow. Creating your own Google OAuth client is not a drop-in way to access the same account: zkLogin address derivation includes the JWT audience (client ID), issuer, subject and salt. A separately configured OAuth/zkLogin integration can only act for the address it actually derives and can validly sign for. Its provider/prover setup and network support must be verified; this guide does not supply a turnkey headless Google login. For the existing game account, use its authorized wallet/session rather than extracting OAuth tokens or ephemeral keys.
 
-## Connect to the correct account (optional integration)
+## Connect the paired multisig
 
 Use the same deployment's SDK pins, network, and websocket endpoint. The production game endpoint is `wss://server.aresrpg.world`. Do not pair it with testnet pins. Obtain testnet/dev endpoints from that environment's configuration. Source branch `edge` can be ahead of production; use the matching release when integrating a deployed game.
 
-Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. A standalone process needs its own authorized signer and must explicitly select the intended account. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
+Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. The bot process uses the signer and multisig address returned by Connect Your Agent. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
 
 One address has one live connection. A new agent connection can replace its browser session. Coordinate that handoff; do not build a reconnect war. `REPLACED` and `ALREADY_CONNECTED` are terminal takeover signals. Invalid proof, rate, or speed violations need diagnosis, not rapid retries.
 
@@ -29,30 +33,13 @@ The wire is JSON with a `type: 'packet/...'` discriminator:
 5. Wait for `packet/connection_accepted` and verify its address.
 6. Accumulate the baseline; `packet/characters` is the initial ready barrier after prerequisite account reads.
 
-For a trusted standalone Bun host, the connection and proof fragments are:
-
-```ts
-const url = new URL('wss://server.aresrpg.world/')
-url.searchParams.set('address', address)
-const socket = new WebSocket(url, { headers: { Origin: 'https://aresrpg.world' } })
-```
-
-After receiving this socket's challenge from the configured trusted server:
-
-```ts
-const proof = await signer.signPersonalMessage(
-  new TextEncoder().encode(`aresrpg::${challenge_payload}`)
-)
-socket.send(JSON.stringify({ type: 'packet/signature_response', ...proof }))
-```
-
-The constructor overload is Bun-specific; browser WebSocket supplies its page origin. These fragments assume an authorized signer and do not implement the packet/reconnect lifecycle.
+The existing `create_agent_connection` and Bun transport implement this handshake. Use the client guide rather than copying a second connection loop. Browser integrations retain their existing Wallet Standard/Enoki path.
 
 Do not send application packets before acceptance. Use `parse_server_packet` and the typed `ClientPacket`/`ServerPacket` union from `@aresrpg/protocol`. Bigint chain values generally travel as decimal strings; preserve them.
 
 ## Observe rather than repeatedly scan
 
-The bounded baseline and deltas include characters, inventory, equipment, trades, listings, claims, Mastery, fight recovery, and nearby world state. Retain one state owner per domain. Account replacement clears the prior account's state and pending intents. The tracked roster is capped at six characters; it is not a complete census of every holding at an address.
+The bounded baseline and deltas include characters, inventory, equipment, trades, listings, claims, Mastery, fight recovery, and nearby world state. Retain one state owner per domain. Account replacement clears the prior account's state and pending intents. The current source discovers all indexed owned characters without a six-character server slice. The browser still exposes six selectable characters. A roster remains an indexed projection, not a proof of every current chain holding.
 
 Keep certified versions/tombstones when reconciling inventory and listing changes. A delayed snapshot must not resurrect an item spent by a newer receipt. Do not interpret a bounded market page or tracked-zone window as the complete global inventory. Initializing from a snapshot should not replay purchases, level celebrations, or automated claims.
 
@@ -107,9 +94,9 @@ Indexed rows can lag certified SDK receipts. Reconcile by version and digest; ne
 These source defaults can differ by deployment; they are not an availability guarantee:
 
 - Graph-reaching read requests: 60 per 60 seconds per authenticated address per server process. Repeated observation commands count; pushed updates do not. Throttled requests return an error; wait instead of opening another connection.
-- Incoming packet flood ceiling: 150 per second per connection. Exceeding it disconnects with `RATE_LIMIT`; the default local cool-off is ten minutes. This is not a target sending rate or a way around the separate read budget.
+- Incoming packet flood ceiling in current source: max(150, 20 × server-verified tracked characters + 30) per second per connection. Exceeding it disconnects with `RATE_LIMIT`; the default local cool-off is ten minutes. This is not a target sending rate or a way around the separate read budget.
 - Authentication timeout: 15 seconds. Incoming message maximum: 64 KiB. Outgoing buffering is bounded at 8 MiB; slow consumers are disconnected.
-- The client presence/presentation cadence is 50 ms per character, with at most six tracked characters; this is not a separate per-character inbound quota. Read the position validation rules; this does not authorize arbitrary speed or teleportation.
+- The client presence/presentation cadence is 50 ms per character. Browser selection and combat team limits remain six; the server roster has no six-character slice. This is not a separate per-character inbound quota. Read the position validation rules; this does not authorize arbitrary speed or teleportation.
 
 ## Source owners
 

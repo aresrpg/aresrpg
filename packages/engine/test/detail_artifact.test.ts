@@ -7,6 +7,7 @@ import { float, uniform } from 'three/tsl'
 
 import { detail_builder } from '../src/detail_builder.ts'
 import {
+  decode_detail_cell,
   decode_detail_vertices,
   DETAIL_STRIDE,
   validate_detail_metadata,
@@ -18,6 +19,8 @@ import { compile_materials } from '../src/world_materials.ts'
 import { create_material_texture } from '../src/material_texture.ts'
 import { terrain_recipe, parse_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
+
+import { detail_triangle } from './fixtures/detail_triangle.ts'
 
 const palette = { wood: { color: '#785533', preset: 'wood' } } as const
 
@@ -303,4 +306,35 @@ test('evicted detail meshes release their render bindings without disposing anot
   layer.dispose()
   expect(final_disposals).toBe(1)
   atlas.dispose()
+})
+
+test('captured little-endian detail bytes retain positions, normals, UVs and material IDs', () => {
+  const expected = new Float32Array([
+    11.4, 26.51, 4.91, 0, -1, 0, 0, 0, 0, 14.6, 26.51, 4.91, 0, -1, 0, 0.8, 0, 0, 14.6, 26.51, 5.09, 0, -1, 0, 0.8,
+    0.045, 0,
+  ])
+  expect(decode_detail_cell(detail_triangle)).toEqual(expected)
+  expect(() => decode_detail_vertices('AA==')).toThrow('whole triangles')
+})
+
+test('detail admission rejects invalid components at every vertex offset', () => {
+  const encode = (values: Float32Array): string => Buffer.from(values.buffer).toString('base64')
+  for (let offset = 0; offset < DETAIL_STRIDE * 3; offset++) {
+    const values = decode_detail_cell(detail_triangle)
+    values[offset] = NaN
+    expect(() => decode_detail_cell({ ...detail_triangle, vertices: encode(values) })).toThrow('Invalid detail')
+  }
+  for (const [offset, value] of [
+    [0, -1],
+    [1, 33],
+    [2, Infinity],
+    [4, 0.5],
+    [8, -1],
+    [8, 0.5],
+    [8, 9],
+  ]) {
+    const values = decode_detail_cell(detail_triangle)
+    values[offset!] = value!
+    expect(() => decode_detail_cell({ ...detail_triangle, vertices: encode(values) })).toThrow('Invalid detail')
+  }
 })

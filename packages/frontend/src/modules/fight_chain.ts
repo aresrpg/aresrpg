@@ -9,6 +9,7 @@ import { type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/auth'
 
+import { agent_watching } from '../agents/observation.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -32,6 +33,7 @@ const checkpoint_for = (state: Readonly<AppState>, fight: string): HydratedFight
   state.fight.cached[fight] ?? (state.fight.checkpoint?.contract.id === fight ? state.fight.checkpoint : null)
 
 export const remote_input_context = (state: Readonly<AppState>, fight: string | null, origin: 'local' | 'streamed') => {
+  if (agent_watching(state.session)) return null
   const { wallet } = state.session
   if (origin !== 'local' || !fight || state.fight.mode !== 'remote' || !wallet) return null
   const checkpoint = checkpoint_for(state, fight)
@@ -39,6 +41,7 @@ export const remote_input_context = (state: Readonly<AppState>, fight: string | 
 }
 
 const ready_all_context = (state: Readonly<AppState>, fight: string) => {
+  if (agent_watching(state.session)) return null
   const { wallet } = state.session
   const checkpoint = checkpoint_for(state, fight)
   if (

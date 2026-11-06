@@ -163,7 +163,7 @@ const fold_command = (state: AppState, input: AppInput): AppState | null => {
 }
 
 const cancels_run = (state: AppState, input: Readonly<AppInput>): boolean =>
-  ['run_to/stopped', 'auth/disconnected', 'auth/rejected', 'auth/connected'].includes(input.type) ||
+  ['agent/watch', 'run_to/stopped', 'auth/disconnected', 'auth/rejected', 'auth/connected'].includes(input.type) ||
   (input.type === 'character/select' &&
     state.session.selected_character_id !== state.run_to.run?.controlled_character_id)
 

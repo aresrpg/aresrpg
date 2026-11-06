@@ -120,10 +120,10 @@ const server = Bun.serve<{ address: string }>({
 console.log(JSON.stringify({ ready: server.port }))
 const heartbeat = setInterval(
   () =>
-    void pubsub.mesh.heartbeat(
-      `${name}_${raw_port}`,
-      [...players.keys()].map((socket) => (socket as { data: { address: string } }).data.address)
-    ),
+    void pubsub.mesh.heartbeat(`${name}_${raw_port}`, {
+      addresses: [...players.keys()].map((socket) => (socket as { data: { address: string } }).data.address),
+      characters: [...players.values()].flatMap((player) => player.online_characters()),
+    }),
   5000
 )
 process.on('SIGTERM', () => {

@@ -6,7 +6,7 @@ import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { isValidSuiAddress } from '@mysten/sui/utils'
-import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
+import type { AgentPairingIdentity, GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 import { registerSlushWallet, SLUSH_WALLET_NAME } from '@mysten/slush-wallet'
 
@@ -16,7 +16,11 @@ import { suins_actions, type SuinsActions } from './suins_actions.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
 import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
+import { create_agent_recall_reader, type AgentRecall } from './agent_recall.ts'
+import { read_personal_kiosks } from './kiosk_discovery.ts'
+import { check_agent_return, read_agent_returns, type AgentReturnOffer } from './agent_returns.ts'
 import { gas_mist_from_receipt } from './gas.ts'
+import { agent_transfer_actions, type AgentTransferActions } from './agent_transfer_actions.ts'
 import { SDK, sui_transport, type TransactionSigner, type Pins } from './client.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty, claim_marketplace_royalties as claim_royalties } from './marketplace_admin.ts'
@@ -67,6 +71,7 @@ export type AuthSession = Readonly<{
   address: string
   wallet_name: string
   identity: 'zklogin' | 'wallet'
+  read_agent_pairing_request?: ReturnType<typeof create_wallet_binding>['read_agent_pairing_request']
   sign_personal_message: (message: Uint8Array) => Promise<{ bytes: string; signature: string }>
   blast: BlastPurchaseActions
   read_sui_balance: () => Promise<bigint>
@@ -94,6 +99,9 @@ export type AuthSession = Readonly<{
   character: CharacterActions
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
   read_item: (item_id: string) => Promise<ItemSnapshot>
+  read_agent_returns: (agent_address: string) => Promise<readonly AgentReturnOffer[]>
+  read_agent_recall: (pairing: AgentPairingIdentity) => Promise<AgentRecall>
+  agent_transfer: AgentTransferActions
   marketplace: MarketplaceActions
   stacks: StackActions
   create_trade: (
@@ -181,14 +189,14 @@ const create_wallet_session = (
   })
   const read_item = create_item_snapshot_reader(client, sdk.game_type_package)
   const registry_pin = (sdk.pins.name_registry as { id?: string | null } | undefined)?.id
-  let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
+  let kiosk_caps: ReturnType<typeof read_personal_kiosks> | null = null
   const kiosk_cap = async (kiosk_id?: string, fresh = false) => {
-    const request = kiosk_caps ?? sdk.get_owned_kiosks(account.address)
+    const request = kiosk_caps ?? read_personal_kiosks(sdk, account.address)
     kiosk_caps = request
     try {
-      const { kioskOwnerCaps } = await request
+      const owned_caps = await request
       const cap = select_personal_kiosk(
-        kioskOwnerCaps.filter(({ isPersonal }) => isPersonal),
+        owned_caps.filter(({ isPersonal }) => isPersonal),
         kiosk_id
       )
       if (!cap) {
@@ -207,16 +215,23 @@ const create_wallet_session = (
     if (!registry_pin) throw new Error('The character registry is not published on this network')
     return registry_pin
   }
+  const recall = create_agent_recall_reader({
+    read_request: () => binding.read_agent_pairing_request(crypto.randomUUID()),
+    client: resolution_client,
+    sign_transaction,
+    pins,
+  })
   const session: AuthSession = Object.freeze({
     address: account.address,
     wallet_name: wallet.name,
     identity: 'enoki:getSession' in wallet.features ? 'zklogin' : 'wallet',
     suins: suins_actions({ client: resolution_client, sdk, address: account.address }),
+    read_agent_pairing_request: binding.read_agent_pairing_request,
     sign_personal_message: binding.sign_personal_message,
     read_sui_balance: sdk.read_sui_balance,
     read_kares_balance: sdk.read_kares_balance,
     gas_spent_24h: sdk.gas_spent_24h,
-    is_transaction_idle: sdk.is_transaction_idle,
+    is_transaction_idle: () => sdk.is_transaction_idle() && recall.is_transaction_idle(),
     on_transaction: sdk.on_transaction,
     derive_character_id: (name: string) => character_id(require_registry(), name),
     is_character_name_claimed: async (name: string) => {
@@ -236,6 +251,14 @@ const create_wallet_session = (
     character: character_actions(sdk, { kiosk_cap }),
     read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
     read_item,
+    read_agent_recall: recall.read,
+    read_agent_returns: (agent_address) => read_agent_returns(resolution_client, sdk, account.address, agent_address),
+    agent_transfer: agent_transfer_actions(sdk, {
+      address: account.address,
+      kiosk_cap,
+      assets: { client: resolution_client },
+      check_return: (intent) => check_agent_return(resolution_client, sdk, account.address, intent),
+    }),
     marketplace: marketplace_actions(sdk, { address: account.address, kiosk_cap }),
     stacks: stack_actions(sdk, { kiosk_cap }),
     create_trade: (counterparty, cleanup) => trade_create(sdk, { address: account.address, counterparty, cleanup }),

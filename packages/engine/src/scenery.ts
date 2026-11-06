@@ -19,6 +19,7 @@ import {
 
 import { scenery_butterflies, BUTTERFLY_BUDGET } from './scenery_butterflies.ts'
 import { create_scenery_lights } from './scenery_lights.ts'
+import type { FloraMeshData } from './scenery_flora_mesh.ts'
 import { scenery_flora } from './scenery_flora.ts'
 import { scenery_fire } from './scenery_fire.ts'
 import { particle_geometry, type Particle } from './scenery_particles.ts'
@@ -163,7 +164,11 @@ const particle_rows = (scenery: WorldScenery, mist: boolean): readonly Particle[
 }
 
 /** Four bounded batches, no textures, lights, timers, CPU particle simulation or extra render passes. */
-export const create_scenery = ({ scene, scenery }: Readonly<{ scene: Scene; scenery?: WorldScenery }>) => {
+export const create_scenery = ({
+  scene,
+  scenery,
+  flora_data,
+}: Readonly<{ scene: Scene; scenery?: WorldScenery; flora_data: FloraMeshData | null }>) => {
   if (!scenery)
     return Object.freeze({
       set_visible: (_visible: boolean): void => {},
@@ -177,7 +182,7 @@ export const create_scenery = ({ scene, scenery }: Readonly<{ scene: Scene; scen
   const seasonal = create_seasonal_scenery(scenery)
   const lights = create_scenery_lights(scene, scenery.glows ?? [])
   const butterflies = scenery_butterflies(scenery.butterflies ?? [])
-  const flora = scenery_flora(scenery.plants ?? [])
+  const flora = scenery_flora(flora_data)
   const fires = scenery_fire(scenery.fires)
   const meshes = [falls, mist, spores, vines, ...seasonal.meshes, ...fires.meshes, flora, butterflies].filter(
     (mesh) => mesh !== null

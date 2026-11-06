@@ -35,6 +35,7 @@ describe('marketplace projection', () => {
     const initial = initial_app_state(settings)
     const heartbeat = {
       type: 'packet/server_info' as const,
+      online_characters: 12,
       online: 1,
       indexing_lag: 0,
       current_epoch: '100',

@@ -109,3 +109,61 @@ test('network mismatches, missing objects and duplicate owned rows are refused',
   state.objects = []
   await expect(reader.snapshot()).rejects.toThrow('unavailable')
 })
+
+test('public tokenomics proves unfunded rewards without requiring currency pins or inventing supply', async () => {
+  const { client, state } = kares_test_client()
+  state.objects[0]!.json.token = ''
+  const pins = {
+    kares_economy: kares_test_pins.kares_economy,
+    kares_rewards_package_original: kares_test_pins.kares_rewards_package_original,
+  }
+  const reader = create_kares_snapshot_reader(client as never, pins, 'testnet')
+  expect(await reader.public_snapshot()).toBeNull()
+  expect(state.balance_reads).toBe(0)
+  state.objects[0]!.json.token = kares_test_pins.kares_coin_type.slice(2)
+  await expect(reader.public_snapshot()).rejects.toThrow('is not configured')
+})
+
+test('public readings verify linked reserves and expose their exact token identity without wallet reads', async () => {
+  const { reader, state } = fixture()
+  const snapshot = await reader.public_snapshot()
+  expect(snapshot?.coin_type).toBe(kares_test_pins.kares_coin_type)
+  expect(snapshot?.total_supply).toBe(KARES_SUPPLY)
+  expect(snapshot?.positions).toEqual([])
+  expect(state.balance_reads).toBe(0)
+  state.objects[0]!.json.currency = id(999)
+  await expect(reader.public_snapshot()).rejects.toThrow('not linked')
+})
+
+test('an old unfunded economy cannot rewind a verified funded reading', async () => {
+  const { reader, state } = fixture()
+  await reader.public_snapshot()
+  state.objects[0]!.json.token = ''
+  state.objects[0]!.version = '1'
+  await expect(reader.public_snapshot()).rejects.toThrow('behind the previous reading')
+})
+
+test('public reads reject a foreign economy and network before claiming it is unfunded', async () => {
+  const { reader, state, client } = fixture()
+  state.objects[0]!.json.token = ''
+  client.network = 'mainnet'
+  await expect(reader.public_snapshot()).rejects.toThrow('different network')
+  client.network = 'testnet'
+  state.objects[0]!.type = `${id(999)}::economy::Economy`
+  await expect(reader.public_snapshot()).rejects.toThrow('canonical')
+})
+
+test('unfunded public readings respect receipt floors and require original package configuration', async () => {
+  const { client, state } = kares_test_client()
+  state.objects[0]!.json.token = ''
+  const cache = create_cache()
+  cache.shared.set(id(102), { initialSharedVersion: '1', version: '3' })
+  const reader = create_kares_snapshot_reader(client as never, kares_test_pins, 'testnet', cache)
+  await expect(reader.public_snapshot()).rejects.toThrow('behind the previous reading')
+  const incomplete = create_kares_snapshot_reader(
+    client as never,
+    { kares_economy: kares_test_pins.kares_economy },
+    'testnet'
+  )
+  await expect(incomplete.public_snapshot()).rejects.toThrow('is not configured')
+})

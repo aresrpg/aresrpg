@@ -210,6 +210,8 @@ events! {
     // Friends, parties, and trades publish from object writes in publish.rs. Their full
     // objects already carry the state needed to invalidate every relevant projection.
 
+    tournament::EntryFeePaid { treasury_mist: u64 }
+        => |_: &EntryFeePaid| "evt:economy".to_string(),
     tournament::TournamentUpdated { tournament: Id }
         => |_: &TournamentUpdated| "evt:tournament".to_string(),
     // ── kolizeum ──

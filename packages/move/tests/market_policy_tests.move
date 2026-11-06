@@ -85,7 +85,7 @@ fun zero_price_private_transfers_allow_exact_stack_amounts_and_gear() {
 }
 
 #[test]
-fun naked_character_rule_confirms_the_actual_purchase_identity() {
+fun bare_level_one_character_can_complete_a_paid_sale() {
   let mut scenario = setup();
   let publisher = scenario.take_from_sender<Publisher>();
   let version = scenario.take_shared<version::Version>();
@@ -93,7 +93,7 @@ fun naked_character_rule_confirms_the_actual_purchase_identity() {
   naked_rule::add(&mut policy, &policy_cap);
   let (mut seller, cap) = kiosk::new(scenario.ctx());
   let personal = personal_kiosk::new(&mut seller, cap, scenario.ctx());
-  let actor = character::test_character(b"senshi".to_string(), 30, 0, scenario.ctx());
+  let actor = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
   let id = object::id(&actor);
   seller.lock(personal.borrow(), &policy, actor);
   seller.list<character::Character>(personal.borrow(), id, 100);
@@ -101,6 +101,32 @@ fun naked_character_rule_confirms_the_actual_purchase_identity() {
   naked_rule::prove(&actor, &mut request, &version, &seller);
   let (sold_id, paid, _) = policy.confirm_request(request);
   assert!(sold_id == id && paid == 100, 0);
+  character::destroy(actor);
+  transfer::public_share_object(seller);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
+  transfer_policy::destroy_and_withdraw(policy, policy_cap, scenario.ctx()).into_balance().destroy_zero();
+  publisher.burn();
+  test_scenario::return_shared(version);
+  scenario.end();
+}
+
+#[test]
+fun bare_level_one_character_can_complete_a_zero_price_exclusive_transfer() {
+  let mut scenario = setup();
+  let publisher = scenario.take_from_sender<Publisher>();
+  let version = scenario.take_shared<version::Version>();
+  let (mut policy, policy_cap) = transfer_policy::new<character::Character>(&publisher, scenario.ctx());
+  naked_rule::add(&mut policy, &policy_cap);
+  let (mut seller, cap) = kiosk::new(scenario.ctx());
+  let personal = personal_kiosk::new(&mut seller, cap, scenario.ctx());
+  let actor = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
+  let id = object::id(&actor);
+  seller.lock(personal.borrow(), &policy, actor);
+  let purchase_cap = seller.list_with_purchase_cap<character::Character>(personal.borrow(), id, 0, scenario.ctx());
+  let (actor, mut request) = seller.purchase_with_cap<character::Character>(purchase_cap, coin::mint_for_testing(0, scenario.ctx()));
+  naked_rule::prove(&actor, &mut request, &version, &seller);
+  let (sold_id, paid, _) = policy.confirm_request(request);
+  assert!(sold_id == id && paid == 0, 0);
   character::destroy(actor);
   transfer::public_share_object(seller);
   personal_kiosk::transfer_to_sender(personal, scenario.ctx());
@@ -231,7 +257,7 @@ fun equipped_character_cannot_pass_the_market_rule() {
   let version = scenario.take_shared<version::Version>();
   let (mut seller, cap) = kiosk::new(scenario.ctx());
   let _personal = personal_kiosk::new(&mut seller, cap, scenario.ctx());
-  let mut actor = character::test_character(b"senshi".to_string(), 30, 0, scenario.ctx());
+  let mut actor = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
   let template = item_rows::template_for_testing(b"hat".to_string(), b"hat".to_string(), scenario.ctx());
   equipment::equip(&mut actor, b"hat".to_string(), item::mint_plain(&template, 1, scenario.ctx()));
   let mut request = transfer_policy::new_request(object::id(&actor), 1, object::id(&seller));

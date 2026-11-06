@@ -194,31 +194,6 @@ export const craft_output_stack_plan = (
   return target ? Object.freeze({ target_id: target.id, source_ids: Object.freeze([]), kiosk }) : null
 }
 
-/** Exact per-object burn plan for a recipe ingredient. Null means the unlocked balance is insufficient. */
-export const allocate_stack_amount = (
-  stacks: readonly Readonly<ItemRow>[],
-  amount: number
-): readonly Readonly<{ item_id: string; amount: number }>[] | null => {
-  if (!Number.isSafeInteger(amount) || amount < 1) return null
-  const folded = stacks.reduce(
-    (state, stack) => {
-      if (state.remaining === 0) return state
-      const taken = Math.min(stack.amount, state.remaining)
-      return taken > 0
-        ? Object.freeze({
-            remaining: state.remaining - taken,
-            plan: Object.freeze([...state.plan, Object.freeze({ item_id: stack.id, amount: taken })]),
-          })
-        : state
-    },
-    Object.freeze({
-      remaining: amount,
-      plan: Object.freeze([]) as readonly Readonly<{ item_id: string; amount: number }>[],
-    })
-  )
-  return folded.remaining === 0 ? folded.plan : null
-}
-
 /** One visual balance per stackable type and kiosk; unique items retain their own cells. */
 export const inventory_groups = (inventory: readonly Readonly<ItemRow>[]) => {
   const groups = new Map<string, Readonly<{ item: Readonly<ItemRow>; amount: number }>>()

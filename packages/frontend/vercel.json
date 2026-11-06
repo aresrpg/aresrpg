@@ -22,7 +22,7 @@
       "destination": "https://us.i.posthog.com/:path"
     },
     {
-      "source": "/((?!api/|ingest(?:/|$)|assets/|agents(?:/|$)|links(?:/|$)|llms\\.txt$|item/|classe/|social/|sw\\.js$|workbox-[^/]+\\.js$).*)",
+      "source": "/((?!api/|ingest(?:/|$)|assets/|branding/|providers/|landing/|agents(?:/|$)|links(?:/|$)|llms\\.txt$|item/|classe/|social/|sw\\.js$|workbox-[^/]+\\.js$).*)",
       "destination": "/index.html"
     }
   ],
@@ -32,6 +32,9 @@
     },
     "api/gift.ts": {
       "maxDuration": 30
+    },
+    "api/portrait.ts": {
+      "includeFiles": "../../seed/{icons/characters/*_hd.png,portraits/*.png}"
     }
   },
   "headers": [

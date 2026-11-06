@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button, SettingsView, type WorkspaceHeader } from '@aresrpg/ui'
 import { Globe, LogOut, Music2, Settings, SlidersHorizontal, Swords } from 'lucide-react'
 
+import { AgentSetupButton } from '../agents/AgentSetup.tsx'
 import { LanguageCard, DiscordCard, TelegramCard } from '../components/AccountControls.tsx'
 import type { GameSettings } from '../game/core/settings.ts'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -31,7 +32,12 @@ export default function SettingsPage({
     graphics: <GraphicsSettings copy={copy} settings={settings} change={change} />,
     audio: <AudioSettings copy={copy} settings={settings} change={change} />,
     gameplay: <GameplaySettings copy={copy} settings={settings} change={change} />,
-    account: <SuinsSettings copy={copy} />,
+    account: (
+      <div className="flex flex-col gap-4">
+        <AgentSetupButton copy={copy} />
+        <SuinsSettings copy={copy} />
+      </div>
+    ),
   }
   return (
     <SettingsView

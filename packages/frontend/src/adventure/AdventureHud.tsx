@@ -4,6 +4,7 @@
 import { lazy, Suspense, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 
+import { ZonePrompt } from '../components/ZonePrompt.tsx'
 import { MobPackCard } from '../components/MobPackCard.tsx'
 import { useNametags } from '../game/core/nametag_feed.ts'
 import { nearest_interaction_id } from '../components/SpawnNametag.tsx'
@@ -107,7 +108,9 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
     <>
       {!mounted && (
         <>
-          <CompassStrip copy={copy} objective={objective} />
+          <CompassStrip copy={copy} objective={objective}>
+            <ZonePrompt copy={copy} />
+          </CompassStrip>
           <OverworldVitals character={row} />
         </>
       )}

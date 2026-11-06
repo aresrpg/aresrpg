@@ -10,6 +10,7 @@ import {
   job_max_level,
   tier_unlock_level,
 } from './experience.ts'
+import { mob_loot_chance_scaled } from './mob_scaling.ts'
 import { gatherable_catalog } from './gathering.ts'
 import { dofus_weapon_damage_envelope } from './item_power.ts'
 import { item_stat_center, weapon_categories } from './item.ts'
@@ -205,11 +206,10 @@ const mob_drop_range = (
   const quantity = (drop.min_qty + drop.max_qty) / 2
   const overhead = encounter_overhead(mob, item_level, content)
   const seconds_per_unit = (level: number, overhead_seconds: number): number => {
-    const chance_scale =
-      mob.level_min === mob.level_max
-        ? 1
-        : (8 * (mob.level_max - mob.level_min) + 4 * (level - mob.level_min)) / (10 * (mob.level_max - mob.level_min))
-    const chance = Math.min(1, (drop.chance_bp * chance_scale) / 10_000)
+    const chance =
+      Number(
+        mob_loot_chance_scaled(BigInt(drop.chance_bp), BigInt(mob.level_min), BigInt(mob.level_max), BigInt(level))
+      ) / 10_000
     return (
       (overhead_seconds + fight_seconds_at(mob, item_level, level, content)) /
       Math.max(Number.EPSILON, count * chance * quantity)

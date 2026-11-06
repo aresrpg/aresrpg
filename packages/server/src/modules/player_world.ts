@@ -9,6 +9,7 @@ import {
   SPEED_BUDGET_BLOCKS_PER_SECOND,
   PET_SPEED_MULTIPLIER,
   type CharacterRow,
+  type PlayerPosition,
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
@@ -21,6 +22,8 @@ import { create_visible_players } from '../visible_players.ts'
 import { presence_discovery } from '../presence_discovery.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
+
+import { observed_character } from './player_agent_observation.ts'
 
 const log = logger(import.meta)
 
@@ -136,7 +139,27 @@ export default {
 
     /** channel → forwarder — the subscription machinery, rebuilt by mount/unmount */
     const { watch, unwatch, has, watched } = create_watcher(pubsub, signal)
-    const visible = create_visible_players(context)
+    const position_zone = ({ x = 0, z = 0 }: Pick<CharacterRow, 'x' | 'z'>) => zone_of(x, z)
+    const follow_observed = (position: PlayerPosition): void => {
+      const target = observed_character(get_state())
+      if (
+        target?.id !== position.character_id ||
+        target.world !== position.world ||
+        target.active_fight ||
+        target.dungeon_run
+      )
+        return
+      const at = position_zone(position)
+      const current = windows.get(target.id)
+      const center = current?.zones[Math.floor(current.zones.length / 2)]
+      if (current?.world === position.world && center?.zx === at.zx && center.zz === at.zz) return
+      void track(target.id, position.world, spiral(at.zx, at.zz)).catch(tracking_failed)
+    }
+    const tracking_failed = (error: unknown): void => {
+      log.warn({ err: error }, 'observed world tracking failed')
+      drop('SNAPSHOT_FAILED')
+    }
+    const visible = create_visible_players({ ...context, on_position: follow_observed })
     /** `world:zx:zz` → the seed whose population this connection has already been sent. The
      *  population is pure in the seed, so this is the whole condition for re-sending it: a
      *  consumption update ships the row alone, a re-roll ships the row and the new population. */
@@ -162,9 +185,13 @@ export default {
         // a later joiner probes the zone it now tracks — only a player STANDING there answers
         Object.values(get_state().characters).forEach(({ presence: me, fight, dungeon_run }) => {
           if (fight || dungeon_run) return
-          if (me.world !== fact.world) return
-          const my_zone = zone_of(me.x, me.z)
-          if (my_zone.zx !== fact.zx || my_zone.zz !== fact.zz) return
+          if (fact.character_id) {
+            if (me.character_id !== fact.character_id) return
+          } else {
+            if (me.world !== fact.world) return
+            const my_zone = zone_of(me.x, me.z)
+            if (my_zone.zx !== fact.zx || my_zone.zz !== fact.zz) return
+          }
           void pubsub.mesh.publish(fact.reply_to, {
             kind: 'reply',
             request: fact.request,
@@ -177,9 +204,31 @@ export default {
 
     const discovery = presence_discovery(pubsub, signal, address, (player, owner) => {
       const at = zone_of(player.x, player.z)
+      const target = observed_character(get_state())
+      if (
+        target?.id === player.character_id &&
+        get_state().agent_watch?.request.observation.pairing.address === owner
+      ) {
+        const request = get_state().agent_watch?.request
+        void track(target.id, player.world, spiral(at.zx, at.zz))
+          .then(() => {
+            if (
+              get_state().agent_watch?.request === request &&
+              observed_character(get_state())?.id === player.character_id
+            )
+              visible.receive(player.world, { kind: 'appear', player, address: owner })
+          })
+          .catch(tracking_failed)
+        return
+      }
       if (!has(mesh.pos(player.world, at.zx, at.zz))) return
       forward_presence({ world: player.world, ...at })({ kind: 'appear', player, address: owner })
     })
+
+    const owner_watch = create_watcher(pubsub, signal)
+    void owner_watch
+      .watch(mesh.presence_owner(address), forward_presence({ world: '', zx: 0, zz: 0 }))
+      .catch(tracking_failed)
 
     const watch_zone = (world: string, zx: number, zz: number): void => {
       const key = `${world}:${zx}:${zz}`
@@ -266,6 +315,7 @@ export default {
     const appear = (character: Embodied): void => {
       const { zx, zz } = zone_of(character.x, character.z)
       void pubsub.mesh.publish(mesh.pos(character.world, zx, zz), { kind: 'appear', player: character, address })
+      void pubsub.mesh.publish(mesh.presence_owner(address), { kind: 'appear', player: character, address })
     }
 
     const leave = (character: Embodied): void => {
@@ -441,8 +491,45 @@ export default {
       })
     })
 
+    const observation_anchor = (character: CharacterRow | null) =>
+      character &&
+      JSON.stringify([
+        character.id,
+        character.world,
+        character.x,
+        character.z,
+        character.at_ms,
+        character.dungeon_run,
+        character.active_fight,
+      ])
+    const sync_observed = (state: PlayerState, previous: PlayerState): void => {
+      const before = observed_character(previous)
+      const target = observed_character(state)
+      const request = state.agent_watch?.request
+      if (observation_anchor(before) === observation_anchor(target) && request === previous.agent_watch?.request) return
+      discovery.target(null, null)
+      if (before && before.id !== target?.id && before.world)
+        void track(before.id, before.world, []).catch(tracking_failed)
+      if (!target?.world) return
+      const { world, id } = target
+      const at = position_zone(target)
+      const zones = target.dungeon_run ? [] : spiral(at.zx, at.zz)
+      void track(id, world, zones)
+        .then(() => {
+          if (
+            get_state().agent_watch?.request !== request ||
+            observation_anchor(observed_character(get_state())) !== observation_anchor(target)
+          )
+            return
+          if (target.active_fight || target.dungeon_run) return
+          discovery.target(state.agent_watch!.request.observation.pairing.address, id)
+        })
+        .catch(tracking_failed)
+    }
+
     // THE EFFECT DOOR — everything the world does is a reaction to a state DELTA.
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
+      sync_observed(state, previous)
       if (state.character_signatures !== previous.character_signatures) {
         Object.keys(previous.characters).forEach((character_id) => {
           if (state.allowed_characters.has(character_id)) return

@@ -114,6 +114,8 @@ export const surface_is_drawable = (
   )
 }
 
+const yield_to_browser = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
 export const create_webgpu_backend = async (
   canvas: HTMLCanvasElement,
   initial_quality: EngineQuality,
@@ -258,6 +260,8 @@ export const create_webgpu_backend = async (
     // scratch, reused every frame — the draw loop allocates nothing
     const board_view_projection = new Matrix4()
     const uploads = own(create_upload_queue())
+    const mesh_pool = own(create_mesh_pool(world))
+    const flora_data = await mesh_pool.prepare_flora()
     const terrain = own(
       create_terrain_pool({
         scene,
@@ -269,6 +273,7 @@ export const create_webgpu_backend = async (
         board_occlusion,
       })
     )
+    await yield_to_browser()
     const far_terrain = own(
       create_far_terrain({
         scene,
@@ -282,9 +287,11 @@ export const create_webgpu_backend = async (
         materials: compiled_world.materials,
       })
     )
+    await yield_to_browser()
     const scatter = own(create_scatter_layer({ scene, board_occlusion }))
     const resource_nodes = own(create_resource_node_layer({ scene, wind: true }))
-    const scenery = own(create_scenery({ scene, scenery: world.scenery }))
+    const scenery = own(create_scenery({ scene, scenery: world.scenery, flora_data }))
+    await yield_to_browser()
     const lantern = own(create_lantern({ scene }))
     const water = own(
       create_water({
@@ -310,7 +317,6 @@ export const create_webgpu_backend = async (
     const water_gate = float(has_water)
     const water_level = float(world.sea_level)
     let was_submerged = false
-    const mesh_pool = own(create_mesh_pool(world))
     const speed_wind = own(create_speed_wind(scene))
     const frame_renderer = own(
       create_frame_renderer(

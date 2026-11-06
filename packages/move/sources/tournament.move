@@ -47,20 +47,17 @@ public struct Team has copy, drop, store {
   name: String, revision: u64, allowed: vector<ID>, seats: vector<Seat>, place: u8,
 }
 public struct TournamentUpdated has copy, drop { tournament: ID }
+public struct EntryFeePaid has copy, drop { treasury_mist: u64 }
 public struct RulesKey has copy, drop, store {}
 public struct Rules has copy, drop, store { entry_fee_mist: u64, max_level: Option<u16> }
-
-public(package) fun reward(template: &ItemTemplate, place: u8, amount: u32): Reward {
-  assert!(place >= 1 && place <= 5 && amount > 0 && amount <= 10, ESettings);
-  // Non-stackable rewards are one copy per seat; stackable rewards may contain ten units.
-  assert!(amount == 1 || aresrpg_math::content_rules::is_stackable(&item_rows::template_category(template)), ESettings);
-  Reward { place, template: item_rows::template_id(template), amount }
-}
 
 /// Build typed prize settings inside Move, including an empty list, without guessing type origins.
 public fun rewards(): vector<Reward> { vector[] }
 public fun add_reward(mut rewards: vector<Reward>, template: &ItemTemplate, place: u8, amount: u32): vector<Reward> {
-  rewards.push_back(reward(template, place, amount)); rewards
+  assert!(place >= 1 && place <= 5 && amount > 0 && amount <= 10, ESettings);
+  // Non-stackable rewards are one copy per seat; stackable rewards may contain ten units.
+  assert!(amount == 1 || aresrpg_math::content_rules::is_stackable(&item_rows::template_category(template)), ESettings);
+  rewards.push_back(Reward { place, template: item_rows::template_id(template), amount }); rewards
 }
 
 public fun create(
@@ -99,7 +96,9 @@ public(package) fun assert_free_registration(t: &Tournament) {
 
 public(package) fun pay_entry(t: &mut Tournament, payment: Coin<SUI>, ctx: &mut TxContext) {
   let amount = rules(t).entry_fee_mist;
+  let prizes_before = t.sui.value();
   funds::pay_entry(&mut t.sui, payment, amount, @treasury, ctx);
+  event::emit(EntryFeePaid { treasury_mist: amount - (t.sui.value() - prizes_before) });
 }
 
 

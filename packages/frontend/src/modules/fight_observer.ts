@@ -4,6 +4,7 @@
 import { decode_fight_action, type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { FightStateRow } from '@aresrpg/protocol'
 
+import { displayed_character, agent_watching } from '../agents/observation.ts'
 import { catalog_spell_sources } from '../content/fight_sources.ts'
 import { fight_chat_lines_at_event, project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
 import { auto_switch_fighter_from } from '../game/core/settings.ts'
@@ -107,7 +108,10 @@ export const observe_fights = ({
 
   const state_fights = (state: ReturnType<typeof get_state>): Set<string> =>
     new Set([
-      ...state.session.characters.flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : [])),
+      ...[
+        ...state.session.characters,
+        ...(displayed_character(state.session) ? [displayed_character(state.session)!] : []),
+      ].flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : [])),
       ...Object.values(state.fight.spectating_by_character),
       ...(state.fight.nearby ? [state.fight.nearby.fight] : []),
       ...previews.values(),
@@ -133,7 +137,7 @@ export const observe_fights = ({
 
   const selected_fight_id = (): string | null => {
     const state = get_state()
-    const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+    const character = displayed_character(state.session)
     return (
       character?.active_fight?.id ??
       state.fight.spectating_by_character[character?.id ?? ''] ??
@@ -153,7 +157,7 @@ export const observe_fights = ({
       awaiting_turn_witness,
     }: ActiveFightSession) => {
       const state = get_state()
-      const selected_character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+      const selected_character = displayed_character(state.session)
       const legacy_seat =
         !selected_character?.active_fight &&
         holds_character_seat(checkpoint, state.session.selected_character_id, state.session.wallet?.address ?? null)
@@ -181,6 +185,11 @@ export const observe_fights = ({
     origin: 'local' | 'streamed'
   ): ActiveFightSession | null => {
     const before = session.state()
+    if (origin === 'local') {
+      if (agent_watching(get_state().session)) return null
+      if (input.type === 'start' && before?.mode === 'remote')
+        dispatch({ type: 'fight/started_at', fight: before.checkpoint.contract.id, at_ms: Date.now() })
+    }
     session.apply(input)
     const after = session.state()
     if (local_draft_finished_turn(get_state().fight, input, origin, before, after))
@@ -276,13 +285,11 @@ export const observe_fights = ({
     if (origin === 'local' && fight_id && state.fight.environments[fight_id]?.transaction_pending) return
     const session = state.fight.mode === 'local' ? local_session : fight_id ? sessions.get(fight_id) : null
     if (!session) return
-    if (origin === 'local' && input.type === 'start' && fight_id)
-      dispatch({ type: 'fight/started_at', fight: fight_id, at_ms: Date.now() })
     const witness_key = input.type === 'turn_seed' ? `${input.fighter}:${input.seed}` : null
     const applied = fight_id ? witnesses.get(fight_id) : null
     if (witness_key && applied?.has(witness_key)) return
     const after = apply_input(session, input, origin)
-    if (witness_key && after?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
+    if (witness_key && after && after.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
   })
   events.on('fight/runtime_input', ({ fight, input }) => {
     const session = sessions.get(fight)
@@ -300,7 +307,7 @@ export const observe_fights = ({
   events.on('fight/cancel_pending_turn', ({ fight }) => sessions.get(fight)?.cancel_pending_turn())
   events.on('server/packet', ({ packet }) => {
     if (packet.type === 'packet/characters') {
-      packet.characters.forEach((character) => {
+      get_state().session.characters.forEach((character) => {
         const preview = previews.get(character.id)
         if (preview && character.active_fight?.id === preview)
           dispatch({ type: 'fight/watch', character_id: character.id, fight: null })
@@ -403,7 +410,10 @@ export const observe_fights = ({
     })
     if (state.session.link_status === 'ready' && previous.session.link_status !== 'ready')
       previews.forEach((fight, character_id) => dispatch({ type: 'fight/watch', character_id, fight }))
-    if (state.fight !== previous.fight && fight_should_close(state.fight, state.session.selected_character_id)) {
+    if (
+      state.fight !== previous.fight &&
+      fight_should_close(state.fight, state.session.selected_character_id, agent_watching(state.session))
+    ) {
       const selected = state.session.selected_character_id
       if (state.fight.mode === 'remote' && !state.fight.checkpoint?.contract.ended && selected)
         dispatch({ type: 'fight/released', character_id: selected })
@@ -413,6 +423,13 @@ export const observe_fights = ({
           fight: state.fight.mode === 'remote' ? (state.fight.checkpoint?.contract.id ?? null) : null,
         })
     }
+  })
+  events.on('STATE_UPDATED', (state, previous) => {
+    if (state.session.agent_view === previous.session.agent_view) return
+    const fight = displayed_character(state.session)?.active_fight?.id
+    if (fight) project_session(fight)
+    else if (agent_watching(state.session) && state.fight.mounted)
+      dispatch({ type: 'fight/released', character_id: state.session.selected_character_id ?? '' })
   })
   events.on('character/select', ({ character_id }) => {
     const state = get_state()
@@ -425,6 +442,7 @@ export const observe_fights = ({
       local_session?.simulate_turn()
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    if (agent_watching(state.session)) return
     const participant = spectating_interruption(state)
     if (participant) {
       const selected = state.session.selected_character_id!

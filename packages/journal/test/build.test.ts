@@ -11,9 +11,7 @@ import { decode_catalogue } from '../src/content.ts'
 test('production output contains only published documents and artwork, including after a rebuild', async () => {
   const package_dir = resolve(import.meta.dirname, '..')
   const output_dir = resolve(package_dir, 'dist')
-  const catalogue = decode_catalogue(
-    JSON.parse(await readFile(resolve(package_dir, '../../seed/content/journal/articles.json'), 'utf8'))
-  )
+  const catalogue = decode_catalogue(JSON.parse(await readFile(resolve(package_dir, 'content/articles.json'), 'utf8')))
   const stale = resolve(output_dir, 'articles/previous-draft.html')
   await Bun.write(stale, 'PRIVATE_DRAFT_SENTINEL')
   const process = Bun.spawn(['bun', 'scripts/build.ts'], { cwd: package_dir, stdout: 'pipe', stderr: 'pipe' })
@@ -30,7 +28,7 @@ test('production output contains only published documents and artwork, including
     ['index.html', 'feed.xml', 'sitemap.xml'].map((name) => readFile(resolve(output_dir, name), 'utf8'))
   )
   for (const article of catalogue) {
-    const markdown = await readFile(resolve(package_dir, '../../seed/content/journal', `${article.slug}.md`), 'utf8')
+    const markdown = await readFile(resolve(package_dir, 'content', `${article.slug}.md`), 'utf8')
     if (article.status === 'published') {
       expect(markdown.trim().length).toBeGreaterThan(0)
       expect(pages).toContain(`${article.slug}.html`)

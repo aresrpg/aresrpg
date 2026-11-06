@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { craft_required_level, job_xp_for_level } from '@aresrpg/immutable'
 import { expect, test } from 'bun:test'
 
 import { better_job_character, recipe_tiers } from '../../src/characters/JobsTab.tsx'
 import { craft_result_tone } from '../../src/characters/CraftControls.tsx'
-import { ingredient_destination, job_from_path, job_path } from '../../src/characters/job_navigation.ts'
+import { job_from_path, job_path } from '../../src/characters/job_navigation.ts'
 
 const character = (id: string, name: string, farmer_level: number) => ({
   id,
@@ -53,19 +51,4 @@ test('recipe subsections derive their ingredient count and required job level on
     [2, craft_required_level(2), 2],
     [3, craft_required_level(3), 1],
   ])
-})
-
-test('ingredient navigation opens intermediaries at their owning craft job and everything else in the encyclopedia', () => {
-  expect(ingredient_destination('quartzbound_scrap')).toMatchObject({
-    kind: 'craft',
-    job: 'FORGER',
-    pathname: '/characters/jobs?job=FORGER',
-    selection: { item_type: 'quartzbound_scrap', recipe: { output_type: 'quartzbound_scrap' } },
-  })
-  expect(ingredient_destination('salvaged_scrap')).toEqual({
-    kind: 'encyclopedia',
-    pathname: '/encyclopedia/items/salvaged_scrap',
-    job: null,
-    selection: null,
-  })
 })

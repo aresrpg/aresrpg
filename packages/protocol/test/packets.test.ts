@@ -164,6 +164,8 @@ describe('the wire contract', () => {
       /unknown packet type/
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
+      'packet/agent_observe',
+      'packet/agent_setup_request',
       'packet/market_floor_request',
       'packet/allocation_request',
       'packet/signature_response',
@@ -314,6 +316,7 @@ describe('the wire contract', () => {
       parse_server_packet(
         JSON.stringify({
           type: 'packet/server_info',
+          online_characters: 12,
           online: 12,
           indexing_lag: 4,
           current_epoch: '9',
@@ -323,6 +326,7 @@ describe('the wire contract', () => {
       )
     ).toEqual({
       type: 'packet/server_info',
+      online_characters: 12,
       online: 12,
       indexing_lag: 4,
       current_epoch: '9',

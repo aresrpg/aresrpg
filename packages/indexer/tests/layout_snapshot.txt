@@ -16,6 +16,7 @@ tournament::Team = name: string::String, revision: u64, allowed: vector<object::
 tournament::Seat = character: object::ID, owner: address, sui_claimed: bool, items_claimed: u64
 tournament::Reward = place: u8, template: object::ID, amount: u32
 tournament::TournamentUpdated = tournament: object::ID
+tournament::EntryFeePaid = treasury_mist: u64
 distribution::Giftcard = id: object::UID, template: object::ID, amount: u32
 loot_box::BoxClaim = id: object::UID, box_template: object::ID, rolled_template: object::ID, amount: u32
 forgemagie::CrushClaim = id: object::UID, seed: u64, raws: vector<u64>, revealed: bool, owed: vector<u64>

@@ -3,6 +3,8 @@
 
 export { CARDINAL_DIRECTIONS, step_cell } from './combat_grid.ts'
 export { create_fight } from './fight.ts'
+export { placement_plan } from './placement.ts'
+export type { PlacementMove } from './placement.ts'
 export {
   create_character_source,
   create_fight_state,
@@ -20,6 +22,7 @@ export { generate_board } from './board_gen.ts'
 export { project_board_cells } from './board.ts'
 export { spell_target_cells, weapon_target_cells, split_placements } from './effects.ts'
 export type { SpellCellProjection } from './effects.ts'
+export { spell_level_of } from './spell_turn.ts'
 export { preview_spell_cast, preview_weapon_strike } from './spell_preview.ts'
 export type { SpellCastPreview, SpellPreviewEffect, SpellPreviewMovement, SpellTargetPreview } from './spell_preview.ts'
 export {

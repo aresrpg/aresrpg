@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ZonePrompt } from '../../components/ZonePrompt.tsx'
 import { useText } from '../../i18n/useText.ts'
 
 import { Text } from '../../i18n/Text.tsx'
@@ -17,15 +16,16 @@ import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { Building2, Skull, Diamond } from 'lucide-react'
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 
 import './compass_strip.css'
+import { displayed_character } from '../../agents/observation.ts'
 import { city_at_position, world_city_areas } from '../../content/worlds.ts'
 import { titleize } from '../../content/catalog.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
-import { useWorldPose } from '../core/pose_feed.ts'
+import { useDisplayedWorldPose } from '../core/pose_feed.ts'
 
 import {
   CARDINALS,
@@ -123,11 +123,13 @@ const ObjectiveCompassMarker = ({
 export const CompassStrip = ({
   copy,
   objective,
+  children,
 }: Readonly<{
+  children?: ReactNode
   copy: AppCopy
   objective?: Readonly<{ x: number; z: number; label: string }>
 }>) => {
-  const pose = useWorldPose()
+  const pose = useDisplayedWorldPose()
   const root = useRef<HTMLDivElement>(null)
   const visible = pose !== null
   useEffect(() => {
@@ -156,9 +158,7 @@ export const CompassStrip = ({
   }, [visible])
   const zones = useAppStore(({ world }) => world.zones)
   const world_state = useAppStore(({ world }) => world)
-  const world_name = useAppStore(
-    ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
-  )
+  const world_name = useAppStore(({ session }) => displayed_character(session)?.world ?? null)
   const ui = useText()
   const text = copy_text(copy.world_hud)
   if (!pose) return null
@@ -296,7 +296,7 @@ export const CompassStrip = ({
           <span className="gw-compass__tod-mark" style={{ left: `${pose.time_of_day * 100}%` }} />
         </div>
       </div>
-      <ZonePrompt copy={copy} />
+      {children}
     </div>
   )
 }

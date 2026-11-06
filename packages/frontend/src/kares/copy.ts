@@ -3,6 +3,40 @@
 import type { ErrorCopy } from '../i18n/error_text.ts'
 export type KaresCopy = ErrorCopy &
   Readonly<{
+    ledger_intro: string
+    buy_aftermath: string
+    swap_note: string
+    read_at: string
+    supply_heading: string
+    supply_cap: string
+    burned: string
+    pools_heading: string
+    staking_summary: string
+    boss_summary: string
+    uses_heading: string
+    compete: string
+    compete_note: string
+    token_type: string
+    token_pending: string
+    copy_token: string
+    token_copied: string
+    token_hint: string
+    figures_unfunded: string
+    figures_stale: string
+    figures_unconfigured: string
+    figures_unavailable: string
+    figures_ready: string
+    current_supply: string
+    circulating_supply: string
+    circulating_unknown: string
+    total_staked: string
+    pool_held: string
+    pool_held_note: string
+    pool_forecast: string
+    pool_forecast_note: string
+    treasury_claimable: string
+    daily_cap: string
+    daily_cap_note: string
     other_networks: string
     sui_wallet_required: string
     upgradeability_note: string

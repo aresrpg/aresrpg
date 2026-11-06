@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { mob_loot_chance_scaled } from '../../immutable/src/mob_scaling.ts'
+
 import { generate_board } from './board_gen.ts'
 import { GRID_CELLS, empty_mask, mask_add_cells, mask_get } from './combat_grid.ts'
 import { CONTRACT_CONSTANTS, ITEM_STAT_FIELDS } from './move_contract.gen.ts'
@@ -45,12 +47,7 @@ export const mob_centered_band_scaled = (
   return scaled >= center ? 0n : center - scaled
 }
 
-export const mob_loot_chance_scaled = (base_bp: bigint, low: bigint, high: bigint, level: bigint): bigint => {
-  if (high === low) return base_bp
-  const span = high - low
-  const scaled = (base_bp * (8n * span + 4n * (level - low))) / (10n * span)
-  return scaled > 10_000n ? 10_000n : scaled
-}
+export { mob_loot_chance_scaled } from '../../immutable/src/mob_scaling.ts'
 
 export const mob_pool_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
   if (high === low) return base

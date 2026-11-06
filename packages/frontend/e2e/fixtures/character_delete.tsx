@@ -66,6 +66,7 @@ const Fixture = () => {
       type: 'server/packet',
       packet: {
         type: 'packet/server_info',
+        online_characters: 12,
         online: 1,
         indexing_lag: 0,
         current_epoch: '3',

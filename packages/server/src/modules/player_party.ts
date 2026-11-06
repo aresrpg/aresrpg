@@ -6,13 +6,69 @@
 import type { PartyRow } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type ChatFact } from '../protocol.ts'
-import { get_party, get_party_invites } from '../reads/get_party.ts'
+import { get_party, get_party_invites, get_character_party } from '../reads/get_party.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
-import { latest_keyed_reader } from '../latest_read.ts'
+import { latest_keyed_reader, coalesced_reader } from '../latest_read.ts'
+
+import { observed_character } from './player_agent_observation.ts'
 
 const log = logger(import.meta)
+
+const party_view = ({ id, members, invited }: Awaited<ReturnType<typeof get_party>>[number]): PartyRow => ({
+  id,
+  members: members.map((member) => ({ character_id: member.id, name: member.name })),
+  invited: invited.map((member) => ({ character_id: member.id, name: member.name })),
+})
+
+const observe_agent_party = ({
+  events,
+  get_state,
+  graph,
+  pubsub,
+  signal,
+  send,
+}: Parameters<NonNullable<PlayerModule['observe']>>[0]): void => {
+  let lifetime: AbortController | null = null
+  events.on('STATE_UPDATED', (state, previous) => {
+    const target = observed_character(state)?.id
+    const before = observed_character(previous)?.id
+    const request = state.agent_watch?.request
+    if (target === before && request === previous.agent_watch?.request) return
+    lifetime?.abort()
+    lifetime = null
+    if (before) send({ type: 'packet/party', character_id: before, party: null })
+    if (!target) return
+    const controller = new AbortController()
+    lifetime = controller
+    const valid = () => !controller.signal.aborted && get_state().agent_watch?.request === request
+    const { watch, unwatch, watched } = create_watcher(pubsub, controller.signal)
+    const read = () => get_character_party(graph, { character_id: target })
+    const refresh = coalesced_reader(
+      async () => {
+        const rows = await read()
+        if (!valid()) return []
+        const channel = rows[0] ? channels.party(rows[0].id) : null
+        for (const old of watched()) if (old.startsWith('evt:party:') && old !== channel) unwatch(old)
+        if (!channel || watched().includes(channel)) return rows
+        await watch(channel, changed)
+        return read()
+      },
+      (rows) => {
+        if (valid()) send({ type: 'packet/party', character_id: target, party: rows[0] ? party_view(rows[0]) : null })
+      },
+      controller.signal
+    )
+    const changed = () => {
+      void refresh().catch((error) => log.warn({ err: error }, 'observed party read failed'))
+    }
+    void watch(channels.character(target), changed)
+      .then(changed)
+      .catch((error) => log.warn({ err: error }, 'observed party watch failed'))
+  })
+  signal.addEventListener('abort', () => lifetime?.abort(), { once: true })
+}
 
 export default {
   name: 'player_party',
@@ -32,7 +88,9 @@ export default {
     return state
   },
 
-  observe: ({ pubsub, graph, events, send, address, signal, get_state }) => {
+  observe: (context) => {
+    const { pubsub, graph, events, send, address, signal, get_state } = context
+    observe_agent_party(context)
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
 
     const forward_party_chat = (party: string) => (fact: ChatFact) => {
@@ -54,15 +112,7 @@ export default {
         if (!party) return null
         const [row] = await get_party(graph, { party_id: party })
         if (!row) return null
-        const { id, members, invited } = row
-        return {
-          id,
-          members: members.map((member) => ({ character_id: member.id, name: member.name })),
-          invited: invited.map(({ id, name }) => ({
-            character_id: id,
-            name,
-          })),
-        } satisfies PartyRow
+        return party_view(row)
       },
       (character_id, party) => {
         if (party && get_state().characters[character_id]?.party === party.id)

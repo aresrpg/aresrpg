@@ -58,6 +58,7 @@ mod tests {
         ("tournament", "Seat"),
         ("tournament", "Reward"),
         ("tournament", "TournamentUpdated"),
+        ("tournament", "EntryFeePaid"),
         ("distribution", "Giftcard"),
         ("loot_box", "BoxClaim"),
         ("forgemagie", "CrushClaim"),

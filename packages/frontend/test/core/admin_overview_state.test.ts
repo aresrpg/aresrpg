@@ -18,6 +18,7 @@ const overview: AdminOverviewResult = Object.freeze({
     character_royalty_mist: '3',
     character_creation_mist: '0',
     kolizeum_mist: '0',
+    tournament_mist: '0',
     last_30d_revenue_mist: '5',
     month_to_date_revenue_mist: '5',
     all_time_revenue_mist: '105',
@@ -177,6 +178,7 @@ test('heartbeats update the sole current online count while cached analytics ret
     type: 'server/packet',
     packet: {
       type: 'packet/server_info',
+      online_characters: 12,
       online: 7,
       indexing_lag: 0,
       current_epoch: '1',

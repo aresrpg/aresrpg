@@ -22,6 +22,7 @@ const result: AdminOverviewResult = {
     character_royalty_mist: '18600000000',
     character_creation_mist: '15930000000',
     kolizeum_mist: '13800000000',
+    tournament_mist: '13800000000',
     last_30d_revenue_mist: '93540000000',
     month_to_date_revenue_mist: '93540000000',
     all_time_revenue_mist: '452130000000',
@@ -31,6 +32,7 @@ const result: AdminOverviewResult = {
       character_royalty_mist: String(n * 40000000),
       character_creation_mist: String(n * 80000000),
       kolizeum_mist: String(n * 20000000),
+      tournament_mist: String(n * 20000000),
     })),
   },
   players: {

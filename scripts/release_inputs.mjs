@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 // Canonical runtime input ownership for release builds. Version-only metadata is not a build input.
-export const JOURNAL_CONTENT_PREFIXES = ['seed/content/journal/', 'seed/icons/journal/']
+export const JOURNAL_CONTENT_PREFIXES = ['packages/journal/content/', 'packages/journal/artwork/']
 
 export const SCENE_COMPILER_FILES = Object.freeze([
   'scripts/generate_main_menu.mjs',
@@ -41,7 +41,6 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/immutable/',
     'packages/protocol/',
     'seed/',
-    'seed/icons/journal/helmet-favicon.png',
     'pins.json',
     'bun.lock',
     'patches/',
@@ -55,9 +54,9 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/server/',
     'packages/frontend/src/i18n/locales/',
     'packages/ui/src/assets/font/',
-    'seed/icons/branding/kares/',
+    'packages/frontend/public/branding/kares/',
     'seed/icons/currency/kares.png',
-    'seed/icons/journal/helmet-favicon.png',
+    'packages/frontend/public/branding/helmet-favicon.png',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/engine/package.json',
     'packages/ui/package.json',

@@ -62,7 +62,9 @@ session_replaced_body: 계정이 다른 곳에서 게임을 열어 이 창의 �
 session_replaced_reconnect: 여기서 다시 연결
 latency_unit: ms
 indexing_health: 색인 상태
-online_players: 접속 중인 플레이어
+online_accounts: 온라인 계정
+online_characters: 온라인 캐릭터
+online_characters_body: 전투와 던전을 포함한 모든 월드.
 indexing_lag_warning: 게임 동작이 지연될 수 있습니다
 indexing_block_title: 월드 동기화 중
 indexing_block_body: 블록체인 기록을 색인하는 중입니다. 서버가 안전한 최신 범위에 도달하면 게임이 자동으로 열립니다.
@@ -810,6 +812,7 @@ admin_page:
   character_royalties: 캐릭터 로열티
   character_creation_revenue: 캐릭터 생성
   kolizeum_revenue: 콜리제움 수수료
+  tournament_revenue: 기록된 토너먼트 수수료
   game_transactions: 게임 거래
   game_gas_fees: 게임 가스비
   all_time: 전체 기간
@@ -2349,6 +2352,40 @@ item_categories:
   relic_slot: 유물 {{number}}
 kares: 스테이킹
 kares_page:
+  ledger_intro: 'AresRPG 보상, 스테이킹, 상자를 위한 토큰입니다. 한 번만 발행되며 소각할 때마다 공급량이 줄어듭니다.'
+  buy_aftermath: 'Aftermath에서 구매'
+  swap_note: '새 탭에서 Aftermath를 엽니다. 거래 전에 토큰 유형을 확인하세요.'
+  read_at: 'Sui에서 읽은 시각: {{time}}.'
+  supply_heading: '공급량'
+  supply_cap: '상한은 {{cap}} KARES입니다. 소각할 때마다 줄어듭니다.'
+  burned: '소각량'
+  pools_heading: '보상 풀'
+  staking_summary: '1,825 활성 일 동안 스테이킹 참여자에게 분배됩니다. 참여자가 없으면 시간이 멈춥니다.'
+  boss_summary: '보스 보상은 승리한 캐릭터에게 균등 분배됩니다.'
+  uses_heading: 'KARES 사용'
+  compete: '경쟁'
+  compete_note: '보스 보상과 PvP 대회 및 시즌 순위 보상을 획득하세요.'
+  token_type: '토큰 유형'
+  token_pending: '검증 대기 중'
+  copy_token: '복사'
+  token_copied: '토큰 유형을 복사했습니다.'
+  token_hint: '토큰과 준비금 연결을 검증한 후 복사할 수 있습니다.'
+  figures_unfunded: '보상 풀에 아직 자금이 없습니다. 공급량은 여전히 알 수 없습니다.'
+  figures_stale: '오래된 데이터일 수 있습니다. 새로고침하여 확인하세요.'
+  figures_unconfigured: '이 네트워크의 실시간 데이터가 설정되지 않았습니다. 공급량이나 준비금이 0이라는 뜻은 아닙니다.'
+  figures_unavailable: '실시간 데이터를 불러올 수 없습니다. 새로고침하여 다시 시도하세요.'
+  figures_ready: '온체인 데이터'
+  current_supply: '현재 총공급량'
+  circulating_supply: '유통량'
+  circulating_unknown: '확인 불가: 검증된 유통량 집계가 없습니다.'
+  total_staked: '총 스테이킹 수량'
+  pool_held: '풀 보유량'
+  pool_held_note: '획득했으나 아직 청구하지 않은 보상을 포함하며 스테이킹 원금은 제외합니다.'
+  pool_forecast: '예측 · 다음 활성 24시간'
+  pool_forecast_note: '전체 풀의 자금이 확보된 지급 예정량이며 과거 지급액이나 개인 수익이 아닙니다. 스테이킹 참여자가 없으면 활성 시간이 멈춥니다.'
+  treasury_claimable: '재무부 청구 가능량'
+  daily_cap: '일일 상한'
+  daily_cap_note: '설정 시점부터 계산한 일일 보스 보상 상한이며 실제 지급량이 아닙니다. 미사용 한도는 이월되지 않습니다.'
   other_networks: '다른 네트워크 · EVM / Solana'
   sui_wallet_required: '이 기능을 사용하려면 Sui 지갑을 선택하세요.'
   blast_soon: '곧 Blast에서 토큰 판매 시작'
@@ -2410,8 +2447,8 @@ kares_page:
   community: 'PvP 대회 및 시즌 순위표'
   team: 팀 배분
   five_years: 커뮤니티 스테이킹 보상
-  mastery_title: 플레이로 보상을 얻거나 KARES를 소각하세요.
-  mastery_note: '마스터리 가격 1포인트는 1,000 KARES입니다. 사용한 KARES는 영구 소각됩니다.'
+  mastery_title: '상자'
+  mastery_note: '게임에서 KARES로 상자를 구매하세요. KARES는 상자를 열 때가 아니라 구매할 때 영구 소각됩니다.'
   rewards_note: '보상은 활성 1,825일 동안 지급됩니다. 누구나 KARES 또는 SUI를 기부할 수 있으며, 다음 활성 일자 경계부터 활성 30일 동안 배분됩니다. 기존 일정은 연장되지 않고 기부금은 회수할 수 없습니다. 스테이크가 없으면 시계가 멈추며 획득한 보상은 계속 청구할 수 있습니다.'
   revenue_note: 수령한 거래소 로열티의 20%가 SUI 스테이킹 보상으로 배분됩니다. 보상은 수익과 참여 스테이킹에 따라 달라집니다.
   points: 숙련 포인트
@@ -2657,6 +2694,63 @@ spell_effects:
   short_stat: '능력'
   expires_next_turn: '다음 턴까지'
 ui:
+  add_funds_agent: '에이전트에 자금 추가'
+  agent_funding_unverified: '수신자를 확인할 수 없습니다. 자금을 추가하기 전에 회수를 새로고침하세요.'
+  agent_entry_intro: '어시스턴트를 연결하고 캐릭터를 선택한 뒤 여기서 인벤토리를 관리하세요.'
+  agent_entry_play: '게임 플레이'
+  agent_watch: '에이전트 관전'
+  agent_watching: '에이전트 관전 중'
+  agent_watch_empty: '관전할 캐릭터가 없습니다.'
+  agent_watch_failed: '이 에이전트를 관전할 수 없습니다. 다시 시도해 주세요.'
+  portrait_share: '초상화 공유'
+  portrait_download: 'PNG 다운로드'
+  portrait_copy: '이미지 링크 복사'
+  portrait_copied: '링크 복사됨'
+  portrait_failed: '초상화를 불러오거나 링크를 복사하지 못했습니다. 아래 링크를 선택할 수 있습니다.'
+  portrait_close: '닫기'
+  portrait_preview: '캐릭터 초상화'
+  agent_recall_steps: 'Google 멀티시그 멤버로 회수를 승인한 뒤 아래 반환 목록에서 캐릭터와 장비를 받는 두 단계에 서명하세요. 수령 시 모두 함께 이전하고 다시 장착합니다. 다른 아이템은 이동하지 않습니다. 회수 가스는 멀티시그가, 수령 가스는 내 지갑이 지불합니다. 먼저 전투를 종료하세요. 취소하면 장비가 원래 키오스크에 해제된 상태로 남습니다.'
+  agent_asset_proceeds: '키오스크 판매 수익'
+  agent_asset_collect: '멀티시그로 수령'
+  agent_asset_delist: '판매 취소'
+  agent_asset_reserved: '독점 제안 · PurchaseCap 필요'
+  agent_asset_unconfigured: '이 배포에 설정되지 않음'
+  agent_asset_fee_budget: '최대 가스 예산'
+  agent_inventory: '에이전트 인벤토리'
+  agent_asset_refresh: '인벤토리 새로고침'
+  agent_asset_available: '사용 가능'
+  agent_asset_listed: '판매 중 · 먼저 판매 취소'
+  agent_asset_equipped: '장착됨'
+  agent_asset_sui: 'SUI 수량'
+  agent_asset_kares: 'KARES 수량'
+  agent_asset_reserve: '수수료 후 남길 SUI'
+  agent_asset_positions: '스테이킹된 KARES'
+  agent_asset_unstake: '멀티시그로 출금'
+  agent_asset_owned: '기타 소유 객체 (읽기 전용)'
+  agent_asset_incoming: '받을 아이템'
+  agent_asset_claim: '선택한 아이템 받기'
+  agent_asset_cancel: '선택한 반환 취소'
+  agent_asset_scope: '아이템과 정확한 수량을 선택하세요. 선택한 묶음은 전부 이전합니다. 장비는 먼저 해제하고 판매는 먼저 취소해야 합니다. 스테이킹 KARES를 출금한 뒤 새로고침하여 수량을 선택하세요. 후속 회수를 위한 SUI를 남기세요. 다른 객체 유형은 읽기 전용이며 전투 정산이 먼저 필요합니다.'
+  agent_setup_prompt: '비공개 임시 링크 {url}을 사용하여 {guide}에 따라 AresRPG 에이전트를 설정하세요. 공개 증명을 자동으로 반환하세요. 이 설정은 자산 이전이나 게임 플레이를 허가하지 않습니다.'
+  agent_cancel: '취소'
+  agent_pair_connect: '연결'
+  agent_pair_pending: '어시스턴트를 기다리는 중…'
+  agent_pair_failed: '설정이 만료되었거나 완료되지 않았습니다. 다시 연결하세요.'
+  agent_pair_verified: '에이전트 키가 확인되었습니다. 서버 인증이나 캐릭터 소유권을 확인한 것은 아닙니다.'
+  agent_environment: 'ChatGPT dots나 Grok Bot처럼 지속적인 에이전트 환경을 갖춘 어시스턴트를 선택하세요.'
+  agent_pair_ephemeral: '공개 키 검증만 수행합니다. 이 임시 키는 에이전트 프로세스가 종료되면 사라집니다. 이 주소로 자산을 절대 보내지 마세요.'
+  agent_pair_instructions: '이 요청을 어시스턴트에게 보내세요. 결과가 여기에 자동으로 표시됩니다.'
+  agent_pair_blocked: '이 지갑은 페어링용 Google 공개 식별자를 제공하지 않습니다. Google로 연결하여 공개 요청을 만드세요.'
+  agent_copy_request: '설정 요청 복사'
+  agent_paste_request: '이 요청을 에이전트에 붙여 넣으세요. 복사해도 계정이 연결되지 않습니다.'
+  agent_copy_failed: '복사하지 못했습니다. 위 요청을 선택해 직접 복사하세요.'
+  agent_handoff_request: '{{url}}에 따라 {{provider}}의 Connect Your Agent를 준비하세요. 누락된 서명 설정을 보고하고 필요하면 임시 링크를 요청하세요. 이 요청은 자격 증명 생성, 자산 이전 또는 게임 플레이를 허가하지 않습니다.'
+  agent_connect_your: '내 에이전트 연결'
+  agent_bootstrap: '설정 안내 열기'
+  agent_choose: '에이전트 선택'
+  agent_unavailable: '페어링은 아직 사용할 수 없습니다. 연결된 에이전트가 없습니다.'
+  agent_setup: '에이전트 설정'
+  agent_send: '에이전트에게 보내기'
   feedback_question: '계속 진행하기 어려운 이유가 무엇인가요?'
   feedback_unclear: '무엇을 해야 할지 모르겠어요'
   feedback_controls: '조작 방법'
@@ -3333,3 +3427,116 @@ tournament_page:
   find_review: '{{character}}의 팀을 찾아 이 캐릭터를 등록할까요?'
   joined_count: 입장 {{count}}/{{total}}
   versus: '상대: {{team}}'
+
+landing_page:
+  new_tab: ' (opens a new tab)'
+  sign_alt: AresRPG
+  nav_label: Resources
+  nav:
+    encyclopedia: Encyclopedia
+    journal: Journal
+    discord: Discord
+  kares:
+    trigger: $KARES
+    trigger_detail: Tokenomics
+    modal_label: $KARES tokenomics
+    close: Close
+  hero:
+    title:
+      - Explore planets.
+      - Fight in turns.
+      - Keep what you find.
+    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
+      craft and trade with other players, and compete when tournaments run. Or hand the controls to
+      your agent and watch it play.
+    play: Play
+    let_ai_play: Let AI play
+  earn:
+    title: Three ways to earn as you play
+    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
+      them.'
+    bays:
+      - Key of Ivory Rampart
+      - Tidal Horn Core and Amberwood Recurve
+      - Tournaments
+    paths:
+      - title: Sell your dungeon drops
+        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
+          the marketplace, and receive SUI when another player buys.
+      - title: Gather, craft and trade
+        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
+          or sell the materials themselves.
+        link: Browse the item encyclopedia
+      - title: Win tournament prizes
+        body: When a tournament runs, play for its announced prizes. Your final placement decides your
+          share.
+  world:
+    title: Inside the Mosswood tutorial
+    label: Real gameplay captures from the Mosswood tutorial
+    beats:
+      - title: Explore the planets
+        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
+          the locals.
+      - title: Walk up and challenge
+        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
+      - title: Fight in turns
+        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
+          marks the goblins. Plan every move.
+    keys_label: Press W to walk up, then F to challenge
+    keys_then: then
+    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
+      waterfalls and goblins ahead.
+    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
+    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
+      reachable positions; orange tiles mark the goblins.
+    marks:
+      you: You
+      tiles: Tiles you can reach
+      goblins: Goblins
+  agent:
+    title: Your agent plays. You watch.
+    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
+      run while you watch, and you can stop watching whenever you like.
+    character: Senshi
+    status_connecting: Connecting…
+    status_watching: Watching Senshi
+    stop: Stop watching
+    you: You
+    your_agent: Your agent
+    said:
+      - Clear
+      - the
+      - goblins
+      - on
+      - the
+      - path.
+    bubbles:
+      - On it. Watch from here.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    call_title: Voice call
+    call_detail: with your agent
+    log:
+      - Clear the goblins on the path.
+      - On it. Watch from here.
+      - Following the path through Mosswood.
+      - Goblins on the path ahead. I’m challenging them.
+      - Fight started. Picking a tile on the grid.
+    replay: Replay
+    note: Filmed in Mosswood. Your agent’s lines are an example.
+  end:
+    title: Start in Mosswood
+    body: The tutorial takes you from the first path to your first turn-based fight.
+    play: Play
+    discord: Join the Discord
+  footer:
+    wordmark: AresRPG
+    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
+    game: Game
+    community: Community
+    play: Play
+    encyclopedia: Item encyclopedia
+    journal: Journal
+    discord: Discord
+    telegram: Telegram
+    x: X

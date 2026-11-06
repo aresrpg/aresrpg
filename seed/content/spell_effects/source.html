@@ -296,7 +296,7 @@ const IKARI = [
   { name: 'Vital Exchange', el: 'blood', path: 'bolt', ap: 4, fx: 10, tok: 'hp', on: 'ally', does: 'Gives their own life to an ally' },
   { name: 'Blood Blade', el: 'blood', path: 'bolt', ap: 4, fx: 1, push: -1, heavy: 1, does: 'Earth damage · steals life · pulls 1 cell' },
   { name: 'Punishment', el: 'blood', path: 'melee', ap: 4, heavy: 1, ...NEAR, does: 'The lower their life, the harder it hits' },
-  { name: 'Bloodstep', el: 'blood', path: 'bolt', ap: 2, swap: 1, does: 'Trades places with the target' },
+  { name: 'Bloodstep', el: 'blood', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'mp', ...SELF, does: 'Increases own MP' },
   { name: 'Absorption', el: 'blood', path: 'bolt', ap: 4, fx: 2, does: 'Steals life (Fire)' },
   { name: 'Sacrifice', el: 'blood', path: 'sky', ap: 3, fx: 11, on: 'ally', does: 'Takes the damage meant for an ally' },
   { name: 'Swap', el: 'blood', path: 'melee', ap: 1, swap: 1, ...NEAR, does: 'Trades places, close range' },

@@ -1,20 +1,17 @@
-# SDK scripting cookbook
+# SDK reference and offline planning
 
-Use scripts for bounded, measurable work: inspect recipes, rank acquisition choices, calculate travel eligibility, evaluate combat drafts, or execute an approved finite routine. Keep observation, planning, authorization, and execution separate.
+First complete [Connect Your Agent](https://aresrpg.world/agents/client.txt), the single official
+supported bot onboarding flow. This reference teaches SDK bot building after pairing: compose
+existing gameplay actions with the paired multisig signer. It does not offer separate manual-wallet
+onboarding. The optional observation example does not limit the SDK's action capabilities.
 
-## Get the source
+## Offline planning
 
-The SDK and fight simulator are public source workspace packages. Their `private` package flags prevent treating them as independently published npm packages. Use the repository's Bun version and lockfile. Select a release compatible with the deployed pins and chosen services; `edge` links below are source navigation, not proof that its newest content is already live.
-
-In a fresh local checkout:
+After installing the matching checkout through the client guide:
 
 ```sh
-git clone https://github.com/aresrpg/aresrpg.git
-cd aresrpg
-bun install --frozen-lockfile --ignore-scripts
 bun packages/sdk/examples/agent_plan.ts recall_potion 1
 bun packages/sdk/examples/agent_plan.ts recall_potion 10 5
-bun run --cwd packages/sdk typecheck
 ```
 
 The planner requires no wallet, network request, or payment. Its arguments are output item type, current job level, and attempted quantity. It prints eligibility, required job/level, initial displayed success chance, initial XP per attempt, ingredients, and authored sources. At job level one it correctly marks recall potions ineligible. At level ten it expands the materials for five attempts, not five guaranteed outputs.
@@ -24,20 +21,24 @@ The displayed percentage uses the existing UI helper, which floors fractional pe
 - [Offline planner source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_plan.ts)
 - [Typed action/simulation source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts)
 
-## Choose a signing integration
+## Use the paired signing adapter
 
 In the browser, use the existing authenticated `AuthSession` from `@aresrpg/sdk/auth`. It already exposes `character`, `fight`, `dungeon`, `marketplace`, `party`, `mastery`, trade builders, balance reads, personal-message signing, and transaction observation. Do not read a private wallet key out of the browser.
 
-In a trusted local process, `SDK` accepts a Sui `Signer` or an explicit address plus `sign_transaction` adapter. Supply matching network/pins and a compatible gRPC endpoint. A read-only SDK can use an address without a signer. Chain-native play needs no Google client or WebSocket login. Obtain player authorization before connecting a signer; coordinate session replacement only when opting into the WebSocket path.
+In the bot's host process, use the multisig signer returned by the official setup flow. The signer
+owns no strategy; compose the existing SDK action builders around it. Supply matching network/pins,
+a compatible gRPC endpoint and durable transaction recovery storage.
 
-This integration fragment assumes the host has already supplied `signer`, `network`, `pins`, `rpc_url`, and durable `transaction_storage`:
+This fragment assumes `paired_signer`, `network`, `pins`, `rpc_url` and `transaction_storage` have
+been configured through that setup:
 
 ```ts
 import { SDK } from './packages/sdk/src/client.ts'
 import { create_agent_actions } from './packages/sdk/examples/agent_actions.ts'
 
-const address = signer.toSuiAddress()
-const sdk = SDK({ signer, network, pins, rpc_url, transaction_storage })
+const address = paired_signer.address
+const sdk = SDK({ address, sign_transaction: paired_signer.sign_transaction,
+  network, pins, rpc_url, transaction_storage })
 const actions = create_agent_actions(sdk, address)
 const balance_mist = await sdk.read_sui_balance()
 ```
@@ -48,7 +49,7 @@ Paths above are for a script at the repository root. Inside a workspace, use dec
 
 A headless writer's `transaction_storage` must implement synchronous `getItem`, `setItem`, and `removeItem`, preserving the SDK's exact string values across restarts. Use a private, durable store with atomic writes and one writer process per wallet. Persist before submission; propagate storage failures. Do not replace this with an in-memory Map for paid unattended work. Do not store signatures or signed bytes in the activity journal.
 
-## Obtain live inputs: default chain-native path
+## Chain-native read adapter reference
 
 Use a separate Sui GraphQL reader and keep the SDK writer on gRPC. This bounded object-read fragment assumes `graphql_url`, `network`, and exact `object_ids` have already been selected for the deployment:
 
@@ -72,9 +73,10 @@ Keep GraphQL reads bounded, account for provider quotas and checkpoint visibilit
 
 ## Alternative: consume AresRPG's indexed inputs
 
-Choose [optional indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt) when prepared account/world/fight rows, market discovery/history or social services are worth its added lifecycle. That guide owns the handshake, ordinary-wallet and Google-account constraints, subscriptions, readiness and limits. It is not a prerequisite for constructing `SDK` or `create_agent_actions`.
-
-For bots playing on the map, we encourage that connection for online presence even when you keep a direct chain reader. Publishing valid live positions makes the bot visible to other players. Performance-focused chain-only clients remain supported; WebSocket presence is optional and does not change transaction execution.
+Use the [game-server protocol](https://aresrpg.world/agents/indexing.txt) with the paired multisig
+for prepared account/world/fight rows and online presence. Direct GraphQL reads remain useful SDK
+inputs after onboarding; selecting a read source is not a separate account-setup path. The server
+does not relay transactions: the SDK submits them through gRPC.
 
 Both integrations use the same action builders below. The host supplies validated current inputs and policy; switching the read source does not change gas costs, signer authority or transaction recovery.
 

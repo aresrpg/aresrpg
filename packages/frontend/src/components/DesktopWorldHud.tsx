@@ -7,13 +7,16 @@ import { RunToProgress } from '../game/hud/RunToProgress.tsx'
 import { WorldInteractions } from '../game/WorldInteractions.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
 
+import { ZonePrompt } from './ZonePrompt.tsx'
 import { WorldChat } from './Chat.tsx'
 import { ZoneRevealBanner } from './ZoneRevealBanner.tsx'
 
 export const DesktopWorldHud = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <>
     <WorldInteractions copy={copy} />
-    <CompassStrip copy={copy} />
+    <CompassStrip copy={copy}>
+      <ZonePrompt copy={copy} />
+    </CompassStrip>
     <RunToProgress copy={copy} />
     <ZoneRevealBanner copy={copy} />
     <OverworldVitals />

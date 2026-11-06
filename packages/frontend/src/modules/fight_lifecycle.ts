@@ -33,7 +33,8 @@ type FightLifecycle = Readonly<{
   canonical_ended?: boolean
 }>
 
-export const fight_should_close = (fight: FightLifecycle, character_id: string | null): boolean => {
+export const fight_should_close = (fight: FightLifecycle, character_id: string | null, observing = false): boolean => {
+  if (observing) return false
   if (fight.presentations.length > 0 || !fight.checkpoint) return false
   if (fight.mode === 'local') return fight.checkpoint.contract.ended
   if (fight.mode !== 'remote') return false

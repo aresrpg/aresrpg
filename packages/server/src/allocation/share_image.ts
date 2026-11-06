@@ -26,11 +26,11 @@ export const render_card = async (
   if (!GlobalFonts.has('Allocation'))
     GlobalFonts.registerFromPath(path('../../../ui/src/assets/font/nunito-800.ttf'), 'Allocation')
   const [helmet, kares, texture] = await Promise.all([
-    loadImage(path('../../../../seed/icons/journal/helmet-favicon.png')),
+    loadImage(path('../../../frontend/public/branding/helmet-favicon.png')),
     loadImage(path('../../../../seed/icons/currency/kares.png')),
     loadImage(
       path(
-        `../../../../seed/icons/branding/kares/card-${['veteran', 'member'].includes(card.tier) ? card.tier : 'relief'}.webp`
+        `../../../frontend/public/branding/kares/card-${['veteran', 'member'].includes(card.tier) ? card.tier : 'relief'}.webp`
       )
     ),
   ])

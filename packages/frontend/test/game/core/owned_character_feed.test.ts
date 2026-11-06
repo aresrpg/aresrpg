@@ -3,6 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
+import { initial_session_state } from '../../../src/modules/session.ts'
 import {
   clear_owned_character_positions,
   owned_character_position,
@@ -60,7 +61,8 @@ test('recall makes a stale live pose ineligible for selection and other owned-ch
   const before = character('0xb', 'nauvis', { x: 53_196, z: 50_000, at_ms: 1 })
   record_owned_character_position('0xb', 'nauvis', { checkpoint: 'nauvis:53196:50000:1', x: 53_197, y: 4, z: 50_000 })
   const recalled = { ...before, x: 50_000, z: 50_000, at_ms: 2 }
-  const state = (row: unknown) => ({ session: { characters: [row], selected_character_id: '0xb' } }) as never
+  const state = (row: unknown) =>
+    ({ session: { ...initial_session_state(), characters: [row], selected_character_id: '0xb' } }) as never
   expect(selected_position(state(before))).toEqual({ x: 3197, z: 0 })
   expect(selected_position(state(recalled))).toEqual({ x: 0, z: 0 })
   expect(owned_character_presence_rows([recalled] as never, '0xowner', 'nauvis', () => 7)['0xb']).toMatchObject({
@@ -78,6 +80,7 @@ test('anchor corrections stay continuous only for the same available character a
   const state = (id: string, world: string, available = true) =>
     ({
       session: {
+        ...initial_session_state(),
         selected_character_id: id,
         characters: available ? [character(id, world)] : [],
       },

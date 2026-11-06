@@ -18,16 +18,16 @@ fun refusal(which: Failure) {
   let c = character::test_character(b"senshi".to_string(), 1, 0, s.ctx());
   let second = character::test_character(b"senshi".to_string(), 1, 0, s.ctx());
   let template = item_rows::template_for_testing(b"prize".to_string(), b"hat".to_string(), s.ctx());
-  if (which == Failure::RewardLarge) { let _ = tournament::reward(&template, 1, 11); abort 999 };
+  if (which == Failure::RewardLarge) { let _ = tournament::add_reward(vector[], &template, 1, 11); abort 999 };
   if (which == Failure::TeamName) { tournament::create_team(&mut t, b"".to_string(), vector[], &c, &clock, s.ctx()); abort 999 };
   if (which == Failure::TeamAllowed) { tournament::create_team(&mut t, b"A".to_string(), vector[object::id(&c),object::id(&c),object::id(&c),object::id(&c)], &c, &clock, s.ctx()); abort 999 };
   if (which == Failure::ClosedDonation) {
     tournament::cancel(&mut t, &admin, &version, s.ctx());
     tournament::donate_sui(&mut t, coin::mint_for_testing<SUI>(1, s.ctx()), &version, &clock); abort 999
   };
-  if (which == Failure::RewardPlace) { let _ = tournament::reward(&template, 0, 1); abort 999 };
-  if (which == Failure::RewardAmount) { let _ = tournament::reward(&template, 1, 0); abort 999 };
-  if (which == Failure::RewardUnique) { let _ = tournament::reward(&template, 1, 2); abort 999 };
+  if (which == Failure::RewardPlace) { let _ = tournament::add_reward(vector[], &template, 0, 1); abort 999 };
+  if (which == Failure::RewardAmount) { let _ = tournament::add_reward(vector[], &template, 1, 0); abort 999 };
+  if (which == Failure::RewardUnique) { let _ = tournament::add_reward(vector[], &template, 1, 2); abort 999 };
   if (which == Failure::ExpireEarly) { tournament::expire(&mut t, &version, &clock, s.ctx()); abort 999 };
   if (which == Failure::ClaimEarly) { tournament::claim_sui(&mut t, 0, 0, &version, s.ctx()); abort 999 };
   if (which == Failure::CrankOpen) { tournament::crank_unopened(&mut t, 0, &version, &clock, s.ctx()); abort 999 };
@@ -43,7 +43,7 @@ fun refusal(which: Failure) {
   let mut rewards = vector[];
   if (which == Failure::RewardsLarge) {
     let mut i = 0u64;
-    while (i < 11) { rewards.push_back(tournament::reward(&template, 1, 1)); i = i + 1; };
+    while (i < 11) { rewards = tournament::add_reward(rewards, &template, 1, 1); i = i + 1; };
   };
   if (which == Failure::Format || which == Failure::Name || which == Failure::LongName || which == Failure::Deadline || which == Failure::BpsLength
     || which == Failure::BpsTotal || which == Failure::BpsLarge || which == Failure::RewardsLarge) {

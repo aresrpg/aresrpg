@@ -93,6 +93,7 @@ const observe_with_wait = (
   const close_once = (
     row: Readonly<{ fight: string; kolizeum: string | null; tournament?: TournamentLink | null }>
   ): void => {
+    if (get_state().session.agent_view.request) return
     const { fight } = row
     const { wallet } = get_state().session
     if (!settlement_owner || !wallet || closing.has(fight)) return
@@ -129,6 +130,7 @@ const observe_with_wait = (
   }
 
   const sweep = (): void => {
+    if (get_state().session.agent_view.request) return
     if (!settlement_owner || active) return
     const state = get_state()
     const { wallet, inventory, characters } = state.session

@@ -26,3 +26,35 @@ export const latest_reader = <T>(read: () => Promise<T>, deliver: (value: T) => 
     })
   }
 }
+
+/** One active read and one shared pending refresh. A queued refresh suppresses the active
+ * result; errors still reject the callers of that read. Pending refreshes run after either
+ * outcome. Abort retires delivery and pending work, but cannot cancel an active graph read.
+ */
+export const coalesced_reader = <T>(read: () => Promise<T>, deliver: (value: T) => void, signal: AbortSignal) => {
+  let active: Promise<void> | null = null
+  let queued: Promise<void> | null = null
+  const start = (): Promise<void> => {
+    active = Promise.resolve()
+      .then(async () => {
+        if (signal.aborted) return
+        const value = await read()
+        if (!queued && !signal.aborted) deliver(value)
+      })
+      .finally(() => {
+        active = null
+      })
+    return active
+  }
+  const rerun = (): Promise<void> | void => {
+    queued = null
+    if (!signal.aborted) return start()
+  }
+  return (): Promise<void> => {
+    if (signal.aborted) return Promise.resolve()
+    if (queued) return queued
+    if (!active) return start()
+    queued = active.then(rerun, rerun)
+    return queued
+  }
+}

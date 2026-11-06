@@ -4,7 +4,10 @@ import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, Se
 import { fight_action_to_wire } from '@aresrpg/fight'
 import type { CharacteristicName } from '@aresrpg/immutable'
 
+import { initial_agent_view, fold_agent_view, agent_subscription } from '../agents/observation.ts'
+import type { AgentView, AgentViewInput } from '../agents/observation.ts'
 import type { Auth, AuthSession } from '../auth.ts'
+import { observe_agent_setup_requests, type AgentSetupInput } from '../agents/setup_requests.ts'
 import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
 import {
   browser_auth_storage,
@@ -37,6 +40,7 @@ export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
+  agent_view: AgentView
   character_creation: CharacterCreation | null
   auth_status: AuthStatus
   auth_request: AuthRequest | null
@@ -60,6 +64,7 @@ export type SessionState = Readonly<{
   giftcards: readonly GiftcardRow[]
   selected_character_id: string | null
   online: number | null
+  online_characters: number | null
   auth_ready: boolean
   wallets: readonly string[]
   wallet: AuthSession | null
@@ -68,6 +73,8 @@ export type SessionState = Readonly<{
   gas_spent_mist: bigint
 }>
 export type SessionInput =
+  | AgentViewInput
+  | AgentSetupInput
   | CharacterCreationInput
   | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
   | Readonly<{ type: 'auth/connecting' }>
@@ -129,11 +136,14 @@ export type SessionInput =
     }>
 /** The played character row; the roster owns custody and every transaction reads its kiosk pair here. */
 export const selected_character = (session: Readonly<SessionState>): CharacterRow | null =>
-  session.characters.find(({ id }) => id === session.selected_character_id) ?? null
+  session.agent_view.request
+    ? null
+    : (session.characters.find(({ id }) => id === session.selected_character_id) ?? null)
 export const character_custody = (character: Readonly<CharacterRow>) =>
   Object.freeze({ kiosk: character.kiosk, ...(character.kiosk_cap ? { kiosk_cap: character.kiosk_cap } : {}) })
-export const initial_session_state = (): SessionState =>
+export const initial_session_state = (serial = 0): SessionState =>
   Object.freeze({
+    agent_view: { ...initial_agent_view(), serial },
     character_creation: null,
     auth_status: 'idle',
     auth_request: null,
@@ -157,6 +167,7 @@ export const initial_session_state = (): SessionState =>
     redeemed_giftcards: [],
     selected_character_id: read_selected_character(),
     online: null,
+    online_characters: null,
     auth_ready: false,
     wallets: [],
     wallet: null,
@@ -240,6 +251,7 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
     return Object.freeze({
       ...session,
       online: packet.online,
+      online_characters: packet.online_characters,
       indexing_lag: packet.indexing_lag,
       current_epoch: packet.current_epoch,
     })
@@ -260,7 +272,10 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
-  const receipt = fold_inventory_input(fold_character_receipt(fold_character_deletion(current, input), input), input)
+  const receipt = fold_inventory_input(
+    fold_character_receipt(fold_character_deletion(fold_agent_view(current, input), input), input),
+    input
+  )
   const creation = fold_character_creation(receipt, input)
   if (creation !== current) return with_session(state, creation)
   const link_state = fold_link_input(current, input)
@@ -293,7 +308,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({
-        ...initial_session_state(),
+        ...initial_session_state(current.agent_view.serial + 1),
         wallet: input.session,
         auth_status: 'authenticated',
         auth_request: null,
@@ -311,7 +326,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({
-        ...initial_session_state(),
+        ...initial_session_state(current.agent_view.serial + 1),
         auth_error: input.error,
         auth_ready: current.auth_ready,
         wallets: current.wallets,
@@ -320,7 +335,11 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected')
     return with_session(
       state,
-      Object.freeze({ ...initial_session_state(), auth_ready: current.auth_ready, wallets: current.wallets })
+      Object.freeze({
+        ...initial_session_state(current.agent_view.serial + 1),
+        auth_ready: current.auth_ready,
+        wallets: current.wallets,
+      })
     )
   if (input.type === 'wallet/refreshed')
     return with_session(
@@ -358,6 +377,11 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     next_request_id += 1
     return next_request_id - 1
   }
+  observe_agent_setup_requests(
+    { events, dispatch, signal, get_state },
+    (packet) => link?.send(packet) ?? false,
+    next_id
+  )
   const character_requests = new Map<
     number,
     Readonly<{
@@ -508,6 +532,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     sync_market_subscription(state, previous)
+    agent_subscription(state.session, previous.session).forEach((packet) => link?.send(packet))
     const reconnected = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
     nearby_watch_changes(state.fight.nearby, previous.fight.nearby, reconnected).forEach((packet) => {
       publish_selected_position(true)
@@ -553,7 +578,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   )
   events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()
-    if (input.type === 'end_turn') return
+    if (state.session.agent_view.request || input.type === 'end_turn') return
     const action = fight_action_to_wire(input)
     if (origin !== 'local' || !fight || fight_environment(state.fight, fight).transaction_pending || !action) return
     link?.send({ type: 'packet/fight_action', fight, action })

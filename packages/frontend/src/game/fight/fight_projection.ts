@@ -74,7 +74,7 @@ export type FightFighterView = Readonly<{
   name: string
   level: bigint
   character_id: string | null
-  character_portrait: Readonly<Pick<PlayerSource, 'classe' | 'sex'>> | null
+  character_portrait: Readonly<Pick<PlayerSource, 'classe' | 'sex' | 'color_1' | 'color_2' | 'color_3'>> | null
   mob_type: string | null
   owned: boolean
   active: boolean

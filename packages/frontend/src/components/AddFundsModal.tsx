@@ -19,6 +19,7 @@ import type { WalletView } from '../wallet/model.ts'
 import type { ExternalSession } from '../wallet/external_session.ts'
 import { useAppStore } from '../store.ts'
 import { capture_analytics } from '../analytics.ts'
+import type { FundingAuthorization } from '../funding/recipient.ts'
 import { useFundingCheckout } from '../funding/useFundingCheckout.ts'
 
 import { useCopy } from './useCopy.ts'
@@ -42,7 +43,14 @@ const WalletAddressBlock = ({
   compact,
   copy,
   method,
-}: Readonly<{ address: string; compact?: boolean; copy: AppCopy; method: FundingMethod }>) => {
+  recipient_label,
+}: Readonly<{
+  address: string
+  compact?: boolean
+  copy: AppCopy
+  method: FundingMethod
+  recipient_label?: string
+}>) => {
   const [copied, copy_value] = useCopy()
   useEffect(() => {
     if (copied) capture_analytics('funding_address_copied', { method })
@@ -55,7 +63,7 @@ const WalletAddressBlock = ({
       {!compact && (
         <>
           <h3 className="mb-2 text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-            {wallet_text(copy, 'your_address')}
+            {recipient_label ?? wallet_text(copy, 'your_address')}
           </h3>
           <p className="mb-3 text-[10px] tracking-wide text-muted">{wallet_text(copy, 'send_sui')}</p>
         </>
@@ -75,7 +83,7 @@ const WalletAddressBlock = ({
   )
 }
 
-type FundingProps = Readonly<{ address: string; copy: AppCopy }>
+type FundingProps = Readonly<{ address: string; copy: AppCopy; recipient_label?: string }>
 const CardFunding = ({ copy, locked }: Readonly<{ copy: AppCopy; locked: boolean }>) => (
   <section className="space-y-3 border-t border-border pt-4">
     <h3 className="flex items-center gap-2 text-xs text-muted">
@@ -120,6 +128,7 @@ const FundingForm = ({
   checkout,
   close,
   wallet,
+  recipient_label,
 }: FundingProps &
   Readonly<{
     cost: bigint
@@ -136,7 +145,7 @@ const FundingForm = ({
   useFundingAnalytics(wallet.state.session ? 'bridge' : 'direct', env.network)
   return (
     <>
-      <WalletAddressBlock address={address} copy={copy} method="direct" />
+      <WalletAddressBlock address={address} copy={copy} method="direct" recipient_label={recipient_label} />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[10px] font-semibold tracking-[0.12em] text-muted uppercase">
           {wallet_text(copy, 'funding_available')}
@@ -177,6 +186,8 @@ type FundingModalProps = Readonly<{
   on_close: () => void
   warning?: string
   cost_mist?: bigint
+  authorization?: FundingAuthorization
+  recipient_label?: string
 }>
 type FundingSource = Readonly<{ wallet: WalletView; source: ExternalSession | null; balance: bigint | null }>
 
@@ -188,13 +199,15 @@ export const FundingModal = ({
   on_close,
   warning,
   cost_mist = 0n,
+  authorization,
+  recipient_label,
   funding: { wallet, source, balance },
 }: FundingModalProps & Readonly<{ funding: FundingSource }>) => {
   const testnet = network === 'testnet'
   const recipient = address ?? ''
-  const checkout = useFundingCheckout(source, recipient, cost_mist, balance, !testnet)
+  const checkout = useFundingCheckout(source, recipient, cost_mist, balance, !testnet, authorization)
   const close = on_close
-  const title = wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
+  const title = recipient_label ?? wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
   const content = (
     <GameWindow
       title={title}
@@ -215,6 +228,7 @@ export const FundingModal = ({
           <FundingForm
             key={recipient}
             address={recipient}
+            recipient_label={recipient_label}
             copy={copy}
             cost={cost_mist}
             balance={balance}
@@ -232,7 +246,7 @@ export const FundingModal = ({
         <NativeModal close={on_close} label={title}>
           <div className="border border-border bg-surface p-6" role="alert">
             <p className="text-xs">{wallet_text(copy, 'funding_failed')}</p>
-            <WalletAddressBlock address={recipient} copy={copy} method="direct" />
+            <WalletAddressBlock address={recipient} copy={copy} method="direct" recipient_label={recipient_label} />
           </div>
         </NativeModal>
       }

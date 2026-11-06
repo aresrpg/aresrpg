@@ -20,7 +20,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     })
   if (input.type !== 'server/packet' || input.packet.type !== 'packet/characters') return state
   const character_id = state.settings.always_craft_from_character_id
-  if (!character_id || input.packet.characters.some(({ id }) => id === character_id)) return state
+  if (!character_id || state.session.characters.some(({ id }) => id === character_id)) return state
   return Object.freeze({
     ...state,
     settings: Object.freeze({ ...state.settings, always_craft_from_character_id: null }),

@@ -29,6 +29,7 @@ const snapshot: FinanceSnapshot = {
     quota: 20_000n,
     spent: 0n,
   },
+  coin_type: '0x99::token::TOKEN',
   total_supply: 1_000_000_000_000_000n,
   community: {
     id: '0xcommunity',

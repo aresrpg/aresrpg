@@ -46,8 +46,13 @@ test('documented wire examples pass the actual client-packet parser', () => {
   for (const example of examples) expect(parse_client_packet(example)).toEqual(JSON.parse(example))
 })
 
-test('chain-native entry points keep socket setup in the optional indexed guide', () => {
-  for (const path of ['llms.txt', 'agents/protocol.txt', 'agents/sdk.txt']) {
+test('official onboarding is singular while SDK references retain read and transaction detail', () => {
+  const entry = readFileSync(resolve(public_dir, 'llms.txt'), 'utf8')
+  expect(entry).toContain('https://aresrpg.world/agents/client.txt')
+  expect(entry).toContain('single official supported bot onboarding flow')
+  expect(entry).toContain('SDK bot-building reference')
+  expect(entry).not.toContain('bounded, read-only development preview')
+  for (const path of ['agents/protocol.txt', 'agents/sdk.txt']) {
     const guide = readFileSync(resolve(public_dir, path), 'utf8')
     expect(guide).toContain('GraphQL')
     expect(guide).toContain('gRPC')
@@ -55,4 +60,24 @@ test('chain-native entry points keep socket setup in the optional indexed guide'
     expect(guide).not.toContain('packet/signature_response')
     expect(guide).not.toContain('new WebSocket')
   }
+})
+
+test('all onboarding entry points point to the canonical Connect Your Agent guide', () => {
+  for (const path of [
+    'llms.txt',
+    'agents/sdk.txt',
+    'agents/protocol.txt',
+    'agents/play.txt',
+    'agents/indexing.txt',
+    'agents/index.html',
+  ]) {
+    const source = readFileSync(resolve(public_dir, path), 'utf8')
+    expect(source).toContain('single official')
+    expect(source).toContain('/agents/client.txt')
+    expect(source).not.toContain('Performance-focused chain-only clients remain supported')
+  }
+  const landing = readFileSync(resolve(public_dir, 'agents/index.html'), 'utf8')
+  const hrefs = [...landing.matchAll(/href="(\/(?:agents\/[^"#]+|llms.txt))"/g)].map((match) => match[1]!)
+  expect(hrefs.length).toBeGreaterThan(0)
+  for (const href of hrefs) expect(existsSync(resolve(public_dir, href.slice(1)))).toBe(true)
 })

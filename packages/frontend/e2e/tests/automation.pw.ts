@@ -9,7 +9,7 @@ const unlock = async (page: Page): Promise<void> => {
 
 test('switching app pages and browser focus preserves the run and keeps Stop available', async ({ page }) => {
   await page.goto('/e2e/fixtures/automation.html')
-  await expect(page.locator('[data-friends-card]')).toBeVisible()
+  await expect(page.locator('[data-agent-setup-button]')).toBeVisible()
   await unlock(page)
   const panel = page.locator('[data-automation-panel]')
   const option = panel.locator('option:not([disabled])').nth(1)

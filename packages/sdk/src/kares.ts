@@ -3,7 +3,6 @@
 export * from './kares_ptb.ts'
 export * from './kares_actions.ts'
 export * from './kares_snapshot.ts'
-export * from './kares_wallet.ts'
 export * from './kares_metadata.ts'
 export * from './kares_staking.ts'
 export * from './kares_economy.ts'

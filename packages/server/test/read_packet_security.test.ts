@@ -10,6 +10,7 @@ import { wire } from './helpers/world_wire.ts'
 
 const address = `0x${'a'.repeat(64)}`
 const requests = [
+  { type: 'packet/agent_setup_request', id: 9, request: { action: 'status', pairing_id: 'pairing' } },
   { type: 'packet/character_owner_request', id: 1, character_id: address },
   { type: 'packet/allocation_request', id: 2, request: { action: 'status' } },
   { type: 'packet/admin_request', id: 3, kind: 'overview_section', section: 'revenue', days: 1 },

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 
+import { displayed_character } from '../agents/observation.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import {
@@ -92,8 +93,7 @@ const reconcile_fight = (
   const previous = fight_environment(state.fight, fight_id)
   const mounted =
     input.mode === 'local' ||
-    state.session.characters.find(({ id }) => id === state.session.selected_character_id)?.active_fight?.id ===
-      fight_id ||
+    displayed_character(state.session)?.active_fight?.id === fight_id ||
     state.fight.spectating_by_character[state.session.selected_character_id ?? ''] === fight_id ||
     (input.mode === 'remote' &&
       holds_character_seat(
@@ -227,7 +227,9 @@ const drop_presentation_queue = (
 
 const select_character_fight = (state: Readonly<AppState>, character_id: string): AppState => {
   const owner = state.session.wallet?.address ?? null
-  const character = state.session.characters.find(({ id }) => id === character_id)
+  const character = [...state.session.characters, ...state.session.agent_view.characters].find(
+    ({ id }) => id === character_id
+  )
   const seated = character?.active_fight
     ? state.fight.cached[character.active_fight.id]
     : character && character.custody !== 'kiosk'
@@ -430,10 +432,11 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (transform) return transform(state, input as never)
   const local_latch = reduce_local_fight_latch(state, input)
   if (local_latch) return local_latch
-  if (input.type === 'server/packet' && input.packet.type === 'packet/characters') {
-    const selected = state.session.selected_character_id
-    return selected ? select_character_fight(state, selected) : state
-  }
+  if (
+    ['agent/watch', 'character/select'].includes(input.type) ||
+    (input.type === 'server/packet' && ['packet/characters', 'packet/agent_observed'].includes(input.packet.type))
+  )
+    return select_character_fight(state, state.session.selected_character_id ?? '')
   if (input.type === 'fight/kolizeum') {
     const kolizeum_by_fight = Object.freeze({
       ...Object.fromEntries(Object.entries(state.fight.kolizeum_by_fight).filter(([fight]) => fight !== input.fight)),
@@ -445,7 +448,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return update_fight_environment(state, input.fight, (environment) =>
       Object.freeze({ ...environment, canonical_ended: input.ended })
     )
-  if (input.type === 'character/select') return select_character_fight(state, input.character_id)
   if (input.type === 'fight/started_at')
     return update_fight_environment(state, input.fight, (environment) =>
       Object.freeze({ ...environment, started_at_ms: input.at_ms })

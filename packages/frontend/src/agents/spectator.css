@@ -1,0 +1,145 @@
+.agent-spectator-status {
+  padding: 6px 10px;
+  color: var(--aui-muted);
+  background: var(--color-surface-low);
+  font-size: 10px;
+}
+.agent-spectator-portrait {
+  position: absolute;
+  bottom: max(12px, var(--safe-bottom, 0px));
+  left: max(12px, var(--safe-left, 0px));
+  width: clamp(160px, 28cqh, 300px);
+  pointer-events: none;
+}
+.agent-spectator-portrait img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: center bottom;
+  animation: agent-spectator-idle 5.6s ease-in-out infinite;
+}
+.agent-spectator-portrait strong {
+  display: block;
+  padding: 8px 12px;
+  background: var(--color-surface-low);
+  color: #ecd19c;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@keyframes agent-spectator-idle {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.012);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-spectator-portrait img {
+    animation: none;
+  }
+}
+
+.agent-spectator {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.agent-spectator-map {
+  width: var(--world-map-size);
+}
+.agent-spectator-map .gw-minimap {
+  position: relative;
+  inset: auto;
+  width: 100%;
+}
+.agent-spectator-map .party-frame {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  max-height: min(220px, 28cqh);
+}
+.agent-spectator-map .aui-minimap-controls:empty {
+  display: none;
+}
+.agent-spectator-fight-vitals .fight-hud__bottom {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+@container world-viewport (max-width: 600px) {
+  .agent-spectator .world-status {
+    max-width: calc(100cqw - var(--world-map-size) - 30px);
+  }
+  .agent-spectator .aui-performance {
+    flex-wrap: wrap;
+  }
+  .agent-spectator-portrait {
+    width: clamp(140px, 23cqh, 200px);
+    bottom: 82px;
+  }
+  [data-world-frame] .agent-spectator .gw-compass-wrap {
+    top: 210px;
+    left: 10px !important;
+    right: calc(var(--world-map-size) + 20px) !important;
+  }
+}
+@container world-viewport (max-height: 500px) {
+  .agent-spectator-portrait {
+    width: clamp(120px, 30cqh, 170px);
+  }
+  .agent-spectator-portrait img {
+    max-height: 32cqh;
+    object-fit: contain;
+    object-position: bottom;
+  }
+  .agent-spectator-map .party-frame {
+    max-height: 30cqh;
+  }
+}
+
+.agent-spectator .world-status:has(.character-switcher) {
+  display: flex;
+}
+.world-social-dock.agent-spectator-map {
+  display: flex;
+  width: var(--world-map-size);
+}
+.world-social-dock.agent-spectator-map .gw-minimap {
+  width: 100%;
+}
+.agent-spectator-map .gw-minimap > .aui-minimap {
+  display: block;
+  height: auto;
+}
+.agent-spectator .aui-performance select {
+  display: block;
+}
+
+[data-world-frame] .agent-spectator .agent-spectator-world-vitals .fight-hud__bottom {
+  display: flex;
+  justify-content: center;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  transform: none;
+}
+
+.agent-funding {
+  position: relative;
+}
+.agent-funding summary {
+  list-style: none;
+}
+.agent-funding-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  display: grid;
+  padding: 6px;
+  gap: 4px;
+  z-index: 10;
+}

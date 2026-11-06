@@ -25,6 +25,12 @@ const fake_redis = () => {
       return undefined as never
     }
   const redis: BusRedis = {
+    multi: (commands) => ({
+      exec: async () => {
+        commands.forEach((command) => calls.push(command.map(String)))
+        return commands.map(() => [null, 'OK'])
+      },
+    }),
     on: (event, listener) => void emitter.on(event, listener as (...args: unknown[]) => void),
     subscribe: record('subscribe') as BusRedis['subscribe'],
     unsubscribe: record('unsubscribe') as BusRedis['unsubscribe'],
@@ -109,19 +115,20 @@ test('a message fans out parsed, and the heartbeat writes the TTL presence key',
   bus.emitter.on('chat:world:w1', (payload) => void seen.push(payload))
 
   subscriber.emitter.emit('message', 'chat:world:w1', JSON.stringify({ text: 'yo' }))
-  await bus.heartbeat('pod-1', ['0xa', '0xb', '0xc'])
+  await bus.heartbeat('pod-1', { addresses: ['0xa', '0xb', '0xc'], characters: ['c1', 'c2'] })
   await bus.record_online?.(3, 1_800_000)
 
   expect(seen).toEqual([{ text: 'yo' }])
   expect(publisher.calls).toContainEqual(['setex', 'server:pod-1', '20', '["0xa","0xb","0xc"]'])
+  expect(publisher.calls).toContainEqual(['setex', 'server-characters:pod-1', '20', '["c1","c2"]'])
   expect(publisher.calls.filter(([name]) => name === 'zadd')).toHaveLength(5)
 })
 
 test('cluster online unions rolling pod snapshots instead of summing duplicate players', () => {
-  expect(cluster_online_count(['["0xa","0xb"]', '["0xb","0xc"]'])).toBe(3)
-  expect(cluster_online_count(['2', '3'])).toBe(5)
-  expect(cluster_online_count(['4', '["0xa","0xb"]'])).toBe(4)
-  expect(() => cluster_online_count(['broken'])).toThrow('invalid shape')
+  expect(cluster_online_count(['["0xa","0xb"]', '["0xb","0xc"]'])).toEqual({ online: 3, online_characters: null })
+  expect(cluster_online_count(['2', '3'])).toEqual({ online: 5, online_characters: null })
+  expect(cluster_online_count(['4', '["0xa","0xb"]'])).toEqual({ online: 4, online_characters: null })
+  expect(() => cluster_online_count(['broken'])).toThrow()
 })
 
 test('a refused watch rolls back completely so the next attempt really subscribes', async () => {
@@ -376,4 +383,41 @@ test('chart reads attach cached supply before the first sale', async () => {
   } finally {
     bus.close()
   }
+})
+
+test('cluster population deduplicates reconnect overlap and ignores expired companion keys', () => {
+  const first = '["a"]'
+  const replacement = '["a","b"]'
+  const first_characters = '["one","two","two"]'
+  const next_characters = '["one","two","three"]'
+  expect(cluster_online_count([first], [first_characters])).toEqual({ online: 1, online_characters: 2 })
+  expect(cluster_online_count([first, replacement], [first_characters, next_characters])).toEqual({
+    online: 2,
+    online_characters: 3,
+  })
+  expect(cluster_online_count([null, replacement], [first_characters, next_characters])).toEqual({
+    online: 2,
+    online_characters: 3,
+  })
+  expect(cluster_online_count([null, null], [first_characters, next_characters])).toEqual({
+    online: 0,
+    online_characters: 0,
+  })
+  expect(cluster_online_count([first, '["b"]'], [first_characters, null])).toEqual({
+    online: 2,
+    online_characters: null,
+  })
+  expect(cluster_online_count([first, '4'], [first_characters, null])).toEqual({ online: 4, online_characters: null })
+  expect(() => cluster_online_count([first], ['[1]'])).toThrow()
+})
+
+test.each([
+  { addresses: [['a'], ['a', 'b']], online: 2 },
+  { addresses: [['a', 'a'], ['a']], online: 1 },
+  { addresses: [[], []], online: 0 },
+])('adding character identities preserves the baseline online-account union: %j', ({ addresses, online }) => {
+  const snapshots = addresses.map((ids) => JSON.stringify(ids))
+  const characters = addresses.map(() => '["one","two","three"]')
+  expect(cluster_online_count(snapshots).online).toBe(online)
+  expect(cluster_online_count(snapshots, characters).online).toBe(online)
 })

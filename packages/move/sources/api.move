@@ -405,7 +405,7 @@ public fun join_fight_grouped(
   );
 }
 
-/// Pick another of your side's start cells during placement.
+/// Pick another start cell, swapping with an unready teammate only when the sender owns both.
 public fun place_fighter(
   fight_object: &mut Fight,
   fighter_idx: u64,

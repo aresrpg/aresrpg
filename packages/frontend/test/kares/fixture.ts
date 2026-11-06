@@ -19,6 +19,7 @@ export const finance_snapshot = (): FinanceSnapshot => ({
     quota: 20_000n,
     spent: 0n,
   },
+  coin_type: '0x99::token::TOKEN',
   total_supply: KARES_SUPPLY,
   community: {
     id: '0xcommunity',

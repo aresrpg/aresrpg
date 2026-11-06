@@ -2,12 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { normalizeStructTag, normalizeSuiObjectId, isValidSuiObjectId } from '@mysten/sui/utils'
 import type { Transaction } from '@mysten/sui/transactions'
+import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
-import type { Sdk } from './client.ts'
+import type { Sdk, Pins } from './client.ts'
 import { kares_coin_type, rewards_shared_pin } from './kares_ptb.ts'
 
 const object_id = (value: unknown): string => {
-  if (typeof value !== 'string' || !isValidSuiObjectId(value)) throw new Error('Invalid rewards economy object ID')
+  if (typeof value !== 'string' || !isValidSuiObjectId(value))
+    throw new Error('KARES object ID is not configured or invalid')
   return normalizeSuiObjectId(value)
 }
 
@@ -27,24 +29,26 @@ export const decode_rewards_economy = (json: Readonly<Record<string, unknown>>) 
   }
 }
 
-export const read_rewards_economy = async (sdk: Pick<Sdk, 'pins' | 'sui_client'>) => {
+export const read_rewards_economy = async (
+  sdk: Pick<Sdk, 'pins' | 'sui_client'> | Readonly<{ pins: Pins; sui_client: SuiGrpcClient }>
+) => {
   const pin = rewards_shared_pin(sdk.pins.kares_economy, 'economy')
   const original = object_id(sdk.pins.kares_rewards_package_original)
   const { objects } = await sdk.sui_client.core.getObjects({ objectIds: [pin.id], include: { json: true } })
   const [object] = objects
   if (
     !object ||
-    !object.type ||
+    object instanceof Error ||
     !object.json ||
     object.objectId !== pin.id ||
-    normalizeStructTag(object.type) !== `${original}::economy::Economy` ||
+    normalizeStructTag(object.type!) !== `${original}::economy::Economy` ||
     object.owner?.$kind !== 'Shared' ||
     object.owner.Shared?.initialSharedVersion !== pin.shared_version
   )
     throw new Error('Unexpected canonical rewards economy')
   const economy = decode_rewards_economy(object.json)
   if (economy.id !== pin.id) throw new Error('Unexpected rewards economy UID')
-  return economy
+  return { ...economy, version: BigInt(String(object.version)) }
 }
 
 /** Resolve before building; the contract serializes this proof against atomic funding. */

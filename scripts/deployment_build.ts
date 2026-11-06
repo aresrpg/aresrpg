@@ -3,7 +3,7 @@
 // Node-only Move package compiler shared by trusted release tooling. It emits unsigned artifacts;
 // signing and chain submission remain outside this module.
 
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { mkdtemp, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -65,8 +65,6 @@ const read_protocol_version: ReadProtocol = async (network) => {
   const { protocolConfig: protocol } = await client.core.getProtocolConfig()
   return protocol.protocolVersion
 }
-
-const revision_of = (source: string): string => createHash('sha256').update(source).digest('hex')
 
 const PACKAGE_VERSION_PATTERN = /(const\s+PACKAGE_VERSION\s*:\s*u64\s*=\s*)(\d+)(\s*;)/
 export const package_version_from_source = (source: string): number => {
@@ -355,7 +353,6 @@ export const create_contract_build_service = ({
     }
     return next.version
   }
-  const game_version = async (): Promise<number> => package_version_from_source(await readFile(version_path, 'utf8'))
   return Object.freeze({
     compile_math,
     compile_control,
@@ -365,6 +362,5 @@ export const create_contract_build_service = ({
     compile_game,
     verify_bytecode,
     prepare_upgrade,
-    game_version,
   })
 }

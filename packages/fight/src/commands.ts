@@ -6,6 +6,7 @@ import { resolve_spell } from './effects.ts'
 import { is_mob, is_player, kill_fighter, living_count, players_ready_after } from './fighters.ts'
 import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { walk_path } from './movement.ts'
+import { placement_plan } from './placement.ts'
 import { emit, fail } from './runtime.ts'
 import { run_until_player, weave } from './turns.ts'
 import { tick_cooldowns, tick_turn_end } from './turn_effects.ts'
@@ -106,20 +107,12 @@ const join = (runtime: FightRuntime, action: JoinAction): FightRuntime => {
 }
 
 const place = (runtime: FightRuntime, action: PlaceAction): FightRuntime => {
-  if (!placement_open(runtime)) return fail(runtime, 'not_placement')
-  const fighter = runtime.contract.fighters[Number(action.fighter)]
-  if (!is_player(fighter)) return fail(runtime, 'not_your_fighter')
-  const starts = fighter.team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
-  if (
-    fighter.dead ||
-    fighter.settled ||
-    !starts.includes(action.cell) ||
-    runtime.contract.fighters.some((candidate) => !candidate.dead && candidate.cell === action.cell)
-  )
-    return fail(runtime, 'bad_cell')
-  const from = fighter.cell
-  fighter.cell = action.cell
-  emit(runtime, 'fighter_placed', { fighter: action.fighter, from, to: action.cell })
+  const plan = placement_plan(runtime.contract, action.fighter, action.cell)
+  if (typeof plan === 'string') return fail(runtime, plan)
+  for (const move of plan) {
+    runtime.contract.fighters[Number(move.fighter)]!.cell = move.to
+    emit(runtime, 'fighter_placed', move)
+  }
   return runtime
 }
 

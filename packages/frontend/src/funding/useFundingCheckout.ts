@@ -11,6 +11,7 @@ import type { ExternalSession, FundingAsset, FundingBalance, FundingBalances } f
 import { crypto_session, sui_session } from '../wallet/external_session.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
+import { funding_recipient_current, type FundingAuthorization } from './recipient.ts'
 import { create_transfer_observer } from './analytics.ts'
 import {
   funding_quote,
@@ -80,7 +81,8 @@ export const useFundingCheckout = (
   recipient: string,
   cost: bigint,
   balance: bigint | null,
-  enabled = true
+  enabled = true,
+  authorization?: FundingAuthorization
 ) => {
   const [state, dispatch] = useReducer(reduce_checkout, undefined, initial_checkout)
   const choices = state.assets_source === source ? state.assets : []
@@ -119,7 +121,7 @@ export const useFundingCheckout = (
     const controller = new AbortController()
     lifetime.current = controller
     return () => controller.abort()
-  }, [recipient])
+  }, [recipient, authorization])
   useEffect(() => {
     generation.current++
     dispatch({ type: 'reset' })
@@ -156,7 +158,7 @@ export const useFundingCheckout = (
       dispatch({ type: 'error', error: 'funding_quote_expired' })
       return
     }
-    if (read_app_state().session.wallet?.address !== recipient) return
+    if (!funding_recipient_current(read_app_state().session, recipient, authorization)) return
     pending.current = true
     dispatch({ type: 'stage', stage: 'preparing', amount_text })
     let submitted = false
@@ -164,7 +166,7 @@ export const useFundingCheckout = (
       if (
         signal.aborted ||
         read_app_state().external_wallet.session !== source ||
-        read_app_state().session.wallet?.address !== recipient
+        !funding_recipient_current(read_app_state().session, recipient, authorization)
       )
         throw new Error('funding_source_changed')
       if (quoted && quoted.deadline <= Date.now()) throw new Error('funding_quote_expired')

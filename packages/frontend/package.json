@@ -35,10 +35,10 @@
     "react-dom": "19.3.0",
     "thinking-orbs": "^0.3.1",
     "viem": "2.56.9",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.15",
+    "@napi-rs/canvas": "1.0.10"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "1.0.10",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "^1.4.2",
     "@types/react": "^19.3.0",

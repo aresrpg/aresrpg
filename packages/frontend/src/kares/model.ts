@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { KaresWalletSession, KaresStakingSnapshot, KaresBalances } from '@aresrpg/sdk/kares'
+import type { AuthSession } from '@aresrpg/sdk/auth'
+import type { KaresStakingSnapshot, KaresBalances } from '@aresrpg/sdk/kares'
 
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
-export type FinanceSession = Pick<KaresWalletSession, 'address' | 'kares'>
+export type FinanceSession = Pick<AuthSession, 'address' | 'kares'>
 
 export type FinanceSnapshot = KaresStakingSnapshot
 export type FinanceBalances = KaresBalances
@@ -22,6 +23,8 @@ export type FinanceState = Readonly<{
   sequence: number
   request: FinanceRequest | null
   error: string | null
+  stale: boolean
+  unfunded: boolean
   digest: string | null
 }>
 export type FinanceInput =
@@ -30,12 +33,12 @@ export type FinanceInput =
   | Readonly<{
       type: 'snapshot'
       sequence: number
-      snapshot: FinanceSnapshot
+      snapshot: FinanceSnapshot | null
       balances: FinanceBalances | null
       digest?: string
     }>
   | Readonly<{ type: 'receipt'; sequence: number; digest: string }>
-  | Readonly<{ type: 'failed'; sequence: number; error: string }>
+  | Readonly<{ type: 'failed'; sequence: number; error: string; stale?: boolean }>
 
 export const initial_finance = (address: string | null = null): FinanceState => ({
   address,
@@ -44,6 +47,8 @@ export const initial_finance = (address: string | null = null): FinanceState => 
   sequence: 0,
   request: null,
   error: null,
+  stale: false,
+  unfunded: false,
   digest: null,
 })
 
@@ -74,13 +79,15 @@ const finish_finance = (state: FinanceState, input: Extract<FinanceInput, { sequ
       return {
         ...state,
         snapshot: input.snapshot,
+        unfunded: input.snapshot === null,
+        stale: false,
         balances: input.balances,
         request: null,
         error: null,
         digest: input.digest ?? state.digest,
       }
     case 'failed':
-      return { ...state, request: null, error: input.error }
+      return { ...state, request: null, error: input.error, stale: input.stale === true }
   }
 }
 

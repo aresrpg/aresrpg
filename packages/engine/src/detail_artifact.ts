@@ -15,10 +15,15 @@ export const DETAIL_LIMITS = Object.freeze({ cells: 512, triangles: 100_000, ext
 export const CITY_DETAIL_LIMITS = Object.freeze({ cells: 4096, triangles: 500_000 })
 
 export const decode_detail_vertices = (encoded: string): Float32Array => {
-  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
+  // Preallocated loops avoid the string iterator and per-element callbacks in the upload hot path.
+  const binary = atob(encoded)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index)
   if (bytes.length % (DETAIL_STRIDE * 3 * 4) !== 0) throw new TypeError('Detail data must contain whole triangles')
   const view = new DataView(bytes.buffer)
-  return Float32Array.from({ length: bytes.length / 4 }, (_, index) => view.getFloat32(index * 4, true))
+  const values = new Float32Array(bytes.length / 4)
+  for (let index = 0; index < values.length; index++) values[index] = view.getFloat32(index * 4, true)
+  return values
 }
 
 const valid_vertices = (values: Float32Array, palette_size: number): boolean => {

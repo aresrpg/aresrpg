@@ -78,7 +78,7 @@ const wire = () => {
     mesh: {
       ...bus,
       heartbeat: async () => {},
-      cluster_online: async () => 7,
+      cluster_online: async () => ({ online: 7, online_characters: 12 }),
       online_samples: async (keys: readonly string[]) => keys.map(() => []),
     },
   }

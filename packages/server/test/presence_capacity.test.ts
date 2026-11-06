@@ -26,7 +26,7 @@ test('a nearby login burst hydrates each public identity once and directs discov
   }
   const pubsub: Pubsub = {
     graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
-    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => count },
+    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => ({ online: count, online_characters: 12 }) },
   }
   let equipment_reads = 0
   const public_world = create_public_world(

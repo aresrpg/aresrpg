@@ -35,6 +35,9 @@ const boot = async (): Promise<void> => {
   } else if (is_gift_entry(location.pathname, location.hash, saved_gift_route())) {
     const { boot_gift } = await import('./airdrop/gift_entry.tsx')
     await boot_gift()
+  } else if (location.pathname.replace(/\/+$/, '') === '') {
+    const { boot_landing } = await import('./landing/entry.tsx')
+    await boot_landing()
   } else {
     const { boot_game } = await import('./game_entry.tsx')
     boot_game()

@@ -47,14 +47,13 @@ export type FinanceOptions = Readonly<{
 
 const read_finance_snapshot = async (
   session: FinanceSession | null,
-  reader: Pick<ReturnType<typeof create_kares_reader>, 'snapshot'>,
+  reader: Pick<ReturnType<typeof create_kares_reader>, 'public_snapshot'>,
   managed: boolean
 ) => {
   if (managed)
     return { snapshot: await read_snapshot(() => require_session(session).kares.staking_snapshot()), balances: null }
-  const { kares_balance, sui_balance, ...snapshot } = await read_snapshot(() =>
-    session ? session.kares.snapshot() : reader.snapshot()
-  )
+  if (!session) return { snapshot: await read_snapshot(reader.public_snapshot), balances: null }
+  const { kares_balance, sui_balance, ...snapshot } = await read_snapshot(session.kares.snapshot)
   return { snapshot, balances: { kares_balance, sui_balance } }
 }
 
@@ -64,7 +63,7 @@ export const create_finance_runtime = (options: FinanceOptions, session: Finance
   const start = (): (() => void) => {
     let stopped = false
     let public_reader: ReturnType<typeof create_kares_reader> | null = null
-    const reader = { snapshot: () => (public_reader ??= create_kares_reader(options)).snapshot() }
+    const reader = { public_snapshot: () => (public_reader ??= create_kares_reader(options)).public_snapshot() }
     const send = (input: FinanceInput): void => {
       if (!stopped) dispatch(input)
     }
@@ -91,7 +90,12 @@ export const create_finance_runtime = (options: FinanceOptions, session: Finance
       }
       void run().catch((error: unknown) => {
         console.error('KARES operation failed.', error)
-        send({ type: 'failed', sequence, error: error instanceof Error ? error.message : String(error) })
+        send({
+          type: 'failed',
+          sequence,
+          error: error instanceof Error ? error.message : String(error),
+          stale: error instanceof KaresSnapshotPending,
+        })
       })
     })
     dispatch({ type: 'resume' })

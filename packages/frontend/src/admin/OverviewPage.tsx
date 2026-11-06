@@ -230,6 +230,11 @@ const revenue_series = (
       color: COLORS.orange,
       values: revenue.money.map((row) => sui_number(row.kolizeum_mist)),
     }),
+    Object.freeze({
+      label: text(copy, 'tournament_revenue', 'Recorded tournament fees'),
+      color: COLORS.gold,
+      values: revenue.money.map((row) => sui_number(row.tournament_mist)),
+    }),
   ])
 
 const player_series = (

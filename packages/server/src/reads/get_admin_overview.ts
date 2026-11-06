@@ -106,6 +106,7 @@ const money_point = (at_ms: number, rows: readonly AnalyticsTotals[]): AdminMone
     character_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.character_royalty_mist), 0n).toString(),
     character_creation_mist: rows.reduce((sum, row) => sum + bigint(row.character_creation_mist), 0n).toString(),
     kolizeum_mist: rows.reduce((sum, row) => sum + bigint(row.kolizeum_mist), 0n).toString(),
+    tournament_mist: rows.reduce((sum, row) => sum + bigint(row.tournament_mist), 0n).toString(),
   })
 
 const money_bucket = (tier: AdminBucket, at_ms: number): number => {
@@ -126,12 +127,14 @@ const sum_money = (rows: readonly AdminMoneyPoint[]) =>
       character_royalty_mist: total.character_royalty_mist + bigint(row.character_royalty_mist),
       character_creation_mist: total.character_creation_mist + bigint(row.character_creation_mist),
       kolizeum_mist: total.kolizeum_mist + bigint(row.kolizeum_mist),
+      tournament_mist: total.tournament_mist + bigint(row.tournament_mist),
     }),
     {
       item_royalty_mist: 0n,
       character_royalty_mist: 0n,
       character_creation_mist: 0n,
       kolizeum_mist: 0n,
+      tournament_mist: 0n,
     }
   )
 
@@ -158,7 +161,13 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
   const month_to_date = total_since(mtd_start)
   const all_time = sum_money([money_point(0, [rows.get(ALL_TOTALS_KEY) ?? ZERO_TOTALS])])
   const revenue_total = (row: ReturnType<typeof sum_money>): string =>
-    (row.item_royalty_mist + row.character_royalty_mist + row.character_creation_mist + row.kolizeum_mist).toString()
+    (
+      row.item_royalty_mist +
+      row.character_royalty_mist +
+      row.character_creation_mist +
+      row.kolizeum_mist +
+      row.tournament_mist
+    ).toString()
   return Object.freeze({
     days,
     bucket: buckets.tier,
@@ -166,6 +175,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     character_royalty_mist: selected.character_royalty_mist.toString(),
     character_creation_mist: selected.character_creation_mist.toString(),
     kolizeum_mist: selected.kolizeum_mist.toString(),
+    tournament_mist: selected.tournament_mist.toString(),
     last_30d_revenue_mist: revenue_total(last_30d),
     month_to_date_revenue_mist: revenue_total(month_to_date),
     all_time_revenue_mist: revenue_total(all_time),

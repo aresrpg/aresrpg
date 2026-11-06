@@ -48,7 +48,8 @@ export const ExperienceBar = ({ experience, job }: Readonly<{ experience: string
 
 export const OverworldVitals = ({
   character: supplied_character,
-}: Readonly<{ character?: Readonly<CharacterRow> }> = {}) => {
+  read_only = false,
+}: Readonly<{ character?: Readonly<CharacterRow>; read_only?: boolean }> = {}) => {
   const selected = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
@@ -73,9 +74,11 @@ export const OverworldVitals = ({
               max_hp={BigInt(character_max_hp(character))}
               mp={BigInt(movement_points(character))}
             />
-            <WorldQuickslots />
+            {!read_only && <WorldQuickslots />}
           </div>
-          <ExperienceBar experience={job ? (character.jobs[job] ?? '0') : character.experience} job={job} />
+          {!read_only && (
+            <ExperienceBar experience={job ? (character.jobs[job] ?? '0') : character.experience} job={job} />
+          )}
         </div>
       </div>
     </div>

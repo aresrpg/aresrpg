@@ -9,6 +9,7 @@ const FIELDS = [
   'character_royalty_mist',
   'character_creation_mist',
   'kolizeum_mist',
+  'tournament_mist',
 ] as const
 export type AnalyticsTotals = Readonly<Record<(typeof FIELDS)[number], string> & { checkpoint: number }>
 export const ZERO_TOTALS: AnalyticsTotals = Object.freeze({
@@ -19,6 +20,7 @@ export const ZERO_TOTALS: AnalyticsTotals = Object.freeze({
   character_royalty_mist: '0',
   character_creation_mist: '0',
   kolizeum_mist: '0',
+  tournament_mist: '0',
 })
 
 const valid_decimal = (value: unknown, signed: boolean): boolean => {
@@ -29,7 +31,8 @@ const valid_decimal = (value: unknown, signed: boolean): boolean => {
 
 export const parse_analytics_totals = (value: string | null): AnalyticsTotals => {
   if (value === null) return ZERO_TOTALS
-  const row = JSON.parse(value) as Record<string, unknown>
+  const parsed = JSON.parse(value) as Record<string, unknown> | null
+  const row: Record<string, unknown> | null = parsed && { tournament_mist: '0', ...parsed }
   if (
     !row ||
     !Number.isSafeInteger(row.checkpoint) ||

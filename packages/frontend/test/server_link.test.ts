@@ -40,14 +40,18 @@ describe('server authentication link', () => {
     const response = await create_login_response(
       {
         sign_personal_message: async (message) => ({
-          bytes: new TextDecoder().decode(message),
+          bytes: Buffer.from(message).toString('base64'),
           signature: 'proof',
         }),
       },
       'fresh'
     )
 
-    expect(response).toEqual({ type: 'packet/signature_response', bytes: 'aresrpg::fresh', signature: 'proof' })
+    expect(response).toEqual({
+      type: 'packet/signature_response',
+      bytes: Buffer.from('aresrpg::fresh').toString('base64'),
+      signature: 'proof',
+    })
   })
 
   test('application packets cannot enter the socket before challenge acceptance', () => {

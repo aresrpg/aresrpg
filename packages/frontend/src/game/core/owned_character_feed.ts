@@ -49,6 +49,31 @@ const presence_position = (
   )
 }
 
+export const character_presence_row = (
+  character: Readonly<CharacterRow>,
+  owner: string,
+  world: string,
+  position: Readonly<{ x: number; y: number; z: number }>
+): PresenceRow =>
+  Object.freeze({
+    character_id: character.id,
+    world,
+    owner,
+    name: character.name,
+    classe: character.classe,
+    sex: character.sex,
+    level: character.level,
+    color_1: character.color_1,
+    color_2: character.color_2,
+    color_3: character.color_3,
+    ...visible_equipment(character.equipment),
+    riding: false,
+    gliding: false,
+    x: position.x,
+    y: position.y,
+    z: position.z,
+  })
+
 export const owned_character_presence_rows = (
   characters: readonly Readonly<CharacterRow>[],
   owner: string,
@@ -61,29 +86,7 @@ export const owned_character_presence_rows = (
           characters.flatMap((character) => {
             const position = presence_position(character, world, ground_height)
             if (!position) return []
-            return [
-              [
-                character.id,
-                Object.freeze({
-                  character_id: character.id,
-                  world,
-                  owner,
-                  name: character.name,
-                  classe: character.classe,
-                  sex: character.sex,
-                  level: character.level,
-                  color_1: character.color_1,
-                  color_2: character.color_2,
-                  color_3: character.color_3,
-                  ...visible_equipment(character.equipment),
-                  riding: false,
-                  gliding: false,
-                  x: position.x,
-                  y: position.y,
-                  z: position.z,
-                }) satisfies PresenceRow,
-              ],
-            ]
+            return [[character.id, character_presence_row(character, owner, world, position)]]
           })
         )
       )

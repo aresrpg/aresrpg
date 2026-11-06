@@ -27,7 +27,9 @@ export const fight_portrait_source = (
   character_icon_for: typeof character_icon = character_icon
 ): string | null => {
   if (mob_type) return mob_icon_for(mob_type)
-  return character_portrait ? character_icon_for(character_portrait.classe, character_portrait.sex) : null
+  return character_portrait
+    ? character_icon_for(character_portrait.classe, character_portrait.sex, character_portrait)
+    : null
 }
 
 const timeline_card_class = (fighter: FightFighterView, targetable: boolean): string =>

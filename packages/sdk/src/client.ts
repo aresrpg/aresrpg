@@ -526,7 +526,10 @@ export function SDK({
     hydrate,
     hydrate_unknown,
     // lookup by the DEFINING package (the default client) — see the lineage-split note above
-    get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
+    get_owned_kiosks: (address: string, pagination?: Parameters<KioskClient['getOwnedKiosks']>[0]['pagination']) =>
+      kiosk_client.getOwnedKiosks({ address, pagination }),
+    get_kiosk: (id: string, options?: Parameters<KioskClient['getKiosk']>[0]['options']) =>
+      kiosk_client.getKiosk({ id, options }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
     transfer_policy_transaction: (transaction: Transaction, rule_package?: string) =>
       new TransferPolicyTransaction({

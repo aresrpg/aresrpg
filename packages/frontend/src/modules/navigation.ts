@@ -4,6 +4,7 @@
 import type { ServerPacket } from '@aresrpg/protocol'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
+import { AGENT_ENTRY_PATH, consumed_agent_entry_url } from '../agents/entry_intent.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -24,6 +25,7 @@ export const pages = [
 
 export type Page = (typeof pages)[number]
 export type AppDialog =
+  | 'agent_setup'
   | 'welcome'
   | 'character_create'
   | 'top_up'
@@ -96,6 +98,7 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
 }
 
 const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
+  if (dialog === 'agent_setup' && !state.session.wallet) return state
   if (dialog === 'top_up')
     return {
       ...state,
@@ -124,7 +127,10 @@ const logged_out_navigation = (state: AppState): NavigationState =>
         page: 'airdrop',
         pathname: '/gift',
       })
-    : initial_navigation_state()
+    : {
+        ...initial_navigation_state(),
+        pathname: state.navigation.pathname === AGENT_ENTRY_PATH ? AGENT_ENTRY_PATH : '/',
+      }
 
 const arrived_fight = (state: AppState, reason: string): AppState => {
   const { run } = state.run_to
@@ -133,7 +139,9 @@ const arrived_fight = (state: AppState, reason: string): AppState => {
 }
 
 const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): AppState => {
-  if (packet.type === 'packet/characters') return open_dialog(state, packet.characters.length === 0 ? 'welcome' : null)
+  if (state.session.agent_view.request) return state
+  if (packet.type === 'packet/characters' && state.navigation.dialog !== 'agent_setup')
+    return open_dialog(state, state.session.characters.length === 0 ? 'welcome' : null)
   if (
     packet.type === 'packet/fight_phase' &&
     packet.phase === 'ended' &&
@@ -156,11 +164,24 @@ const reduce_window = (state: AppState, input: AppInput): AppState | null => {
   }
 }
 
+type RouteInput = Extract<AppInput, { type: 'page/open' | 'path/open' | 'route/changed' }>
+const NAVIGATION_TRANSFORMS: { [Input in RouteInput as Input['type']]: (state: AppState, input: Input) => AppState } = {
+  'page/open': (state, input) => open_page(state, input.page),
+  'path/open': (state, input) => open_path(state, input.pathname),
+  'route/changed': (state, input) => open_path(state, input.pathname),
+}
+
+const reduce_observed_navigation = (state: AppState, input: AppInput): AppState => {
+  if (input.type === 'agent/watch') return { ...state, navigation: initial_navigation_state() }
+  return state
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
+  if (state.session.agent_view.request) return reduce_observed_navigation(state, input)
   if (input.type === 'run_to/stopped') return arrived_fight(state, input.reason)
   if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
-  if (input.type === 'page/open') return open_page(state, input.page)
-  if (input.type === 'path/open' || input.type === 'route/changed') return open_path(state, input.pathname)
+  const navigate = NAVIGATION_TRANSFORMS[input.type as RouteInput['type']]
+  if (navigate) return navigate(state, input as never)
   const window = reduce_window(state, input)
   if (window) return window
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
@@ -173,7 +194,23 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
   if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') return
   let initial_route_read = false
   let initial_route_scheduled = false
-  const read_route = (): void => dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
+  const open_agent_entry = (state: AppState): void => {
+    if (!state.session.wallet || state.session.agent_view.request) return
+    const consumed = consumed_agent_entry_url(globalThis.location)
+    if (consumed === null) return
+    // Consume before dispatch: nested state updates and repeated roster packets cannot replay it.
+    globalThis.history.replaceState(globalThis.history.state, '', consumed)
+    dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
+    dispatch({ type: 'dialog/open', dialog: 'agent_setup' })
+  }
+  const read_route = (): void => {
+    dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
+    open_agent_entry(get_state())
+  }
+  const pop_route = (): void => {
+    if (get_state().navigation.dialog === 'agent_setup') dispatch({ type: 'dialog/open', dialog: null })
+    read_route()
+  }
   const schedule_initial_route = (): void => {
     if (initial_route_read || initial_route_scheduled || signal.aborted) return
     initial_route_scheduled = true
@@ -188,6 +225,7 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     schedule_initial_route()
+    open_agent_entry(state)
     if (state.fight.mounted && !previous.fight.mounted && state.navigation.page === 'kolizeum') {
       dispatch({ type: 'page/open', page: 'world' })
       return
@@ -200,7 +238,7 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
       return
     globalThis.history.pushState(null, '', next_pathname)
   })
-  globalThis.addEventListener('popstate', read_route, { signal })
+  globalThis.addEventListener('popstate', pop_route, { signal })
   schedule_initial_route()
 }
 

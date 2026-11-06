@@ -1,0 +1,574 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Draft authored by Claude Opus 5.5 (claude-opus-5-5): accepted V19 landing styles, scoped.
+   Every rule is scoped to the .landing root, except the NativeModal portal, which carries its own landing-owned class
+   (.landing-modal) because @aresrpg/ui mounts dialogs on document.body. No html/body rule exists here. The accepted
+   html.pin / html[data-motion] states are attributes on .landing ([data-pin], [data-motion]) set by landing_motion.ts.
+   Typography uses @aresrpg/ui's 'Ares UI' faces (byte-identical Nunito 400/700/800). */
+
+.landing,
+.aui-native-modal.landing-modal {
+  --night: #12161e;
+  --ink: #efe8dc;
+  --ink-soft: #d6d0c4;
+  --ink-faint: #b2aea5;
+  --ink-hi: #f4efe6;
+  --gold: #f2b552;
+  --gold-ink: #2b1a05;
+  --rune: #76c8ff;
+  --rune-ink: #06213a;
+  --plate: #ecd19c;
+  --font: 'Ares UI', Nunito, ui-rounded, system-ui, sans-serif;
+  --halo: 0 0 2px #090b10, 0 0 10px #090b10, 0 0 22px rgb(9 11 16 / 0.85);
+  --carve: 0 -2px 0 #05070c, 0 2px 0 #343c4c, 0 0 18px #090b10, 0 14px 34px #000;
+  color-scheme: dark;
+}
+/* The landing is its own full-viewport native scroll container, independent of the game shell's overflow policy. */
+.landing {
+  --wide: min(1120px, calc(100vw - 40px));
+  --text: min(720px, calc(100vw - 40px));
+  --nav-r: clamp(16px, 3.2vw, 60px);
+  --dock-w: 128px;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  overflow-x: clip;
+  overflow-y: auto;
+  scroll-padding-top: 16px;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.62;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+@media (min-width: 720px) {
+  .landing {
+    --wide: min(1120px, calc(100vw - 96px));
+    --text: min(720px, calc(100vw - 96px));
+  }
+}
+.landing *,
+.landing *::before,
+.landing *::after {
+  box-sizing: border-box;
+}
+.landing [hidden] {
+  display: none !important;
+}
+.landing :is(h1, h2, h3, h4, h5, p, figure, ol, ul, dl, dd) {
+  margin: 0;
+}
+.landing :is(ol, ul) {
+  padding: 0;
+  list-style: none;
+}
+.landing img {
+  display: block;
+  max-width: 100%;
+}
+.landing a {
+  color: inherit;
+}
+.landing button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.landing ::selection {
+  background: var(--rune);
+  color: var(--rune-ink);
+}
+.landing :focus-visible {
+  outline: 3px solid var(--rune);
+  outline-offset: 4px;
+}
+.landing .sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.landing .wide {
+  width: var(--wide);
+  margin-inline: auto;
+}
+.landing .text {
+  width: var(--text);
+  margin-inline: auto;
+}
+.landing .tone-defs {
+  position: absolute;
+}
+.landing .n {
+  --s: 6px;
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+}
+.landing .arch {
+  --a: 16px;
+  clip-path: polygon(
+    0 100%,
+    0 calc(var(--a) * 3),
+    var(--a) calc(var(--a) * 3),
+    var(--a) calc(var(--a) * 2),
+    calc(var(--a) * 2.5) calc(var(--a) * 2),
+    calc(var(--a) * 2.5) var(--a),
+    calc(var(--a) * 4.5) var(--a),
+    calc(var(--a) * 4.5) 0,
+    calc(100% - var(--a) * 4.5) 0,
+    calc(100% - var(--a) * 4.5) var(--a),
+    calc(100% - var(--a) * 2.5) var(--a),
+    calc(100% - var(--a) * 2.5) calc(var(--a) * 2),
+    calc(100% - var(--a)) calc(var(--a) * 2),
+    calc(100% - var(--a)) calc(var(--a) * 3),
+    100% calc(var(--a) * 3),
+    100% 100%
+  );
+}
+
+/* ---------- The surface: one raster, one uniform scale, edge to edge ---------- */
+.landing .surface {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--night);
+}
+.landing .pan {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate3d(-50%, 0, 0);
+}
+.landing .pan picture {
+  display: block;
+}
+.landing .surface img {
+  display: block;
+  max-width: none;
+  height: auto;
+  width: max(100vw, calc(100vh * 973 / 1616));
+  filter: url(#aresrpg-landing-tone);
+}
+@media (min-width: 973px) {
+  .landing .surface img {
+    image-rendering: pixelated;
+  }
+}
+@media (max-width: 719px) {
+  .landing .surface img {
+    width: max(100vw, calc(100vh * 921 / 1708 * 1.12));
+  }
+}
+.landing[data-motion='on'] .pan {
+  will-change: transform;
+}
+
+/* ---------- Ambient life (art-registered; every colour <= the 102-per-channel cap) ---------- */
+.landing .fx {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+@media (min-width: 720px) {
+  .landing[data-motion='on'] .fx-d {
+    display: block;
+  }
+}
+@media (max-width: 719px) {
+  .landing[data-motion='on'] .fx-p {
+    display: block;
+  }
+}
+.landing .fx i {
+  position: absolute;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  display: block;
+}
+.landing .glow {
+  width: calc(var(--r, 3.2) * 1%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(102 84 48 / 0.95), rgb(102 80 44 / 0.45) 50%, transparent);
+  mix-blend-mode: lighten;
+  opacity: 0.8;
+  animation: landing-flicker var(--d, 5.2s) ease-in-out var(--dl, 0s) infinite;
+}
+.landing .glow::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 320%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(102 80 44 / 0.48), rgb(102 80 44 / 0.17) 55%, transparent);
+}
+.landing .glow.cy {
+  background: radial-gradient(closest-side, rgb(64 98 102 / 0.95), rgb(58 94 102 / 0.45) 50%, transparent);
+  animation-name: landing-pulse;
+}
+.landing .glow.cy::before {
+  background: radial-gradient(closest-side, rgb(58 94 102 / 0.48), rgb(58 94 102 / 0.17) 55%, transparent);
+}
+@keyframes landing-flicker {
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  15% {
+    opacity: 0.55;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  46% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.7;
+  }
+  84% {
+    opacity: 0.92;
+  }
+}
+@keyframes landing-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.landing .fall {
+  width: calc(var(--w) * 1%);
+  height: calc(var(--h) * 1%);
+  transform: translateX(-50%);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 3px, rgb(98 102 102 / 0.95) 3px 5px, transparent 5px 9px),
+    repeating-linear-gradient(180deg, transparent 0 6px, rgb(80 96 102 / 0.8) 6px 8px, transparent 8px 14px);
+  background-size:
+    100% 9px,
+    100% 14px;
+  mix-blend-mode: lighten;
+  animation: landing-pour 0.7s linear infinite;
+}
+.landing .fall::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 260%;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(98 102 102 / 0.9), transparent);
+  animation: landing-foam 1.4s ease-in-out infinite alternate;
+}
+@keyframes landing-pour {
+  to {
+    background-position:
+      0 9px,
+      0 28px;
+  }
+}
+@keyframes landing-foam {
+  from {
+    opacity: 0.45;
+    transform: translateX(-50%) scaleX(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.1);
+  }
+}
+.landing .glint {
+  width: calc(var(--w) * 1%);
+  height: 2px;
+  transform: translateX(-50%) scaleX(0.5);
+  background: rgb(102 84 48);
+  mix-blend-mode: lighten;
+  opacity: 0;
+  animation: landing-glint var(--d, 3.6s) ease-in-out var(--dl, 0s) infinite;
+}
+.landing .glint.cy {
+  background: rgb(64 98 102);
+}
+@keyframes landing-glint {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.5);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.15);
+  }
+  60% {
+    opacity: 0.7;
+  }
+}
+@media (max-width: 719px) {
+  .landing .glow {
+    --r: 5;
+  }
+}
+.landing .rain,
+.landing .wind {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.landing .rain i {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: 1px;
+  height: var(--l);
+  background: linear-gradient(180deg, transparent, rgb(92 100 102));
+  opacity: 0.9;
+  animation: landing-fall var(--d) linear var(--dl) infinite;
+}
+.landing .rain i.h {
+  width: 2px;
+  opacity: 0.6;
+}
+@keyframes landing-fall {
+  from {
+    transform: translateY(-20vh);
+  }
+  to {
+    transform: translateY(110vh);
+  }
+}
+.landing .leaf {
+  position: absolute;
+  left: -4vw;
+  top: var(--y);
+  animation: landing-gust var(--d) linear var(--dl) infinite;
+}
+.landing .leaf b {
+  display: block;
+  width: var(--p, 3px);
+  height: var(--p, 3px);
+  background: #4a6436;
+  box-shadow:
+    var(--p, 3px) 0 #56643a,
+    var(--p, 3px) calc(var(--p, 3px) * -1) #3c5530,
+    calc(var(--p, 3px) * 2) calc(var(--p, 3px) * -1) #4a6436;
+  animation: landing-tumble var(--t, 1.8s) ease-in-out infinite alternate;
+}
+@keyframes landing-gust {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(55vw, var(--dy1, 6vh));
+  }
+  100% {
+    transform: translate(112vw, var(--dy2, 14vh));
+  }
+}
+@keyframes landing-tumble {
+  from {
+    transform: translateY(-10px) rotate(-25deg);
+  }
+  to {
+    transform: translateY(10px) rotate(35deg);
+  }
+}
+.landing .fly {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 3px;
+  height: 3px;
+  background: rgb(102 88 46);
+  box-shadow: 0 0 6px 2px rgb(102 84 44 / 0.7);
+  animation:
+    landing-wander var(--d) ease-in-out var(--dl) infinite alternate,
+    landing-blink var(--b) ease-in-out var(--dl) infinite;
+}
+.landing .fly.cy {
+  background: rgb(70 100 102);
+  box-shadow: 0 0 6px 2px rgb(58 94 102 / 0.7);
+}
+@keyframes landing-wander {
+  0% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(var(--wx), calc(var(--wy) * -1));
+  }
+  66% {
+    transform: translate(calc(var(--wx) * -0.6), var(--wy));
+  }
+  100% {
+    transform: translate(calc(var(--wx) * 0.4), calc(var(--wy) * -0.5));
+  }
+}
+@keyframes landing-blink {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+}
+@media (min-width: 973px) {
+  .landing .leaf {
+    --p: 4px;
+  }
+}
+
+/* ---------- Buttons ---------- */
+.landing .slab {
+  display: inline-flex;
+  position: relative;
+  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 12px 18px rgb(0 0 0 / 0.55));
+}
+.landing .slab-gold {
+  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 0 18px rgb(242 181 82 / 0.3));
+}
+.landing .slab:has(:focus-visible) {
+  outline: 3px solid var(--ink);
+  outline-offset: 7px;
+}
+.landing .btn {
+  --s: 6px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 2px 30px 6px;
+  border: 0;
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+.landing .btn:focus-visible {
+  outline: none;
+}
+.landing .btn svg {
+  flex: none;
+}
+.landing .btn-gold {
+  color: var(--gold-ink);
+  background: linear-gradient(180deg, #ffd98c 0%, #f4b851 46%, #de9634 100%);
+  box-shadow:
+    inset 0 3px 0 #fff3cc,
+    inset 0 -6px 0 #a5641f,
+    inset 3px 0 0 #ffd995,
+    inset -3px 0 0 #c27c2c;
+}
+.landing .btn-rune {
+  color: var(--ink);
+  background: linear-gradient(180deg, #38424f 0%, #242b36 100%);
+  box-shadow:
+    inset 0 2px 0 #56606e,
+    inset 0 -6px 0 #13171e;
+}
+.landing .btn-rune::before {
+  content: '';
+  position: absolute;
+  inset: 5px 5px 9px;
+  --s: 4px;
+  border: 1.5px solid rgb(118 200 255 / 0.62);
+  clip-path: polygon(
+    var(--s) 0,
+    calc(100% - var(--s)) 0,
+    calc(100% - var(--s)) var(--s),
+    100% var(--s),
+    100% calc(100% - var(--s)),
+    calc(100% - var(--s)) calc(100% - var(--s)),
+    calc(100% - var(--s)) 100%,
+    var(--s) 100%,
+    var(--s) calc(100% - var(--s)),
+    0 calc(100% - var(--s)),
+    0 var(--s),
+    var(--s) var(--s)
+  );
+  pointer-events: none;
+}
+.landing .btn-rune svg {
+  color: var(--rune);
+  filter: drop-shadow(0 0 6px rgb(118 200 255 / 0.7));
+}
+.landing .btn:hover {
+  filter: brightness(1.08);
+}
+.landing .btn:active {
+  filter: brightness(0.93);
+}
+.landing .ctas {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+
+/* ---------- Type ---------- */
+.landing .h2 {
+  color: var(--ink-hi);
+  font-weight: 800;
+  font-size: clamp(32px, 3.4vw, 50px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  text-shadow: var(--carve);
+  text-wrap: balance;
+}
+.landing .h3 {
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.landing .sec-head {
+  text-align: center;
+  margin-bottom: clamp(30px, 5vh, 48px);
+}
+.landing .sec-head p {
+  margin: 14px auto 0;
+  max-width: 52ch;
+  color: var(--ink-hi);
+  text-shadow: var(--halo);
+}

@@ -193,6 +193,72 @@
   font-size: 11px;
   white-space: nowrap;
 }
+.world-online-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.world-online-characters {
+  display: inline-flex;
+  align-self: stretch;
+}
+.world-online-characters > button {
+  gap: 3px;
+  min-width: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #a3c7ac;
+  cursor: pointer;
+  font: inherit;
+}
+.world-online-characters > button:hover {
+  background: #a3c7ac12;
+}
+.world-online-characters > button:focus-visible {
+  outline: 1px solid #a3c7ac;
+  outline-offset: -1px;
+}
+.world-online-details {
+  position: fixed;
+  margin: 0;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  border: 1px solid #a3c7ac50;
+  border-radius: 4px;
+  background: #171923;
+  color: #d5d7e0;
+  font:
+    11px/1.5 'JetBrains Mono',
+    monospace;
+  white-space: normal;
+  box-shadow: 0 8px 24px #0008;
+}
+.world-online-details dl {
+  margin: 0;
+}
+.world-online-details dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.world-online-details dd {
+  margin: 0;
+  color: #a3c7ac;
+  font-variant-numeric: tabular-nums;
+}
+.world-online-details p {
+  margin: 8px 0 0;
+  color: #a6a9b5;
+}
+@media (pointer: coarse) {
+  .world-online-characters > button {
+    min-height: 44px;
+    margin-block: -8px;
+  }
+}
 .world-connection i {
   width: 5px;
   height: 5px;

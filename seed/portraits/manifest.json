@@ -1,0 +1,390 @@
+{
+  "version": "85e7fd7dee70c191",
+  "source_commit": "f188e94774fa0ad56a4ec5240d9f00b70793cbac",
+  "portraits": {
+    "asobi_female": {
+      "source_sha256": "9cb9057f92a3622329684709336c752ad39feddf0006ab5df738e8086971e771",
+      "mask_sha256": "a8c525332ba6a5135278490638648a8a69c9b03523967bde44e0e51b33c3ee37",
+      "centers": [
+        0.3,
+        0.9,
+        0.37058823529411766
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "f17fd173bb383f8f3dbf861f4ba5b50d661ad44aa423e7c7605a1bff3a6fbbfe",
+      "hair_sha256": "1f02bcb0f1f12026bfcbb015fe377a7b514ae27d367d7d6aecf9e4d7c1438a2c"
+    },
+    "asobi_male": {
+      "source_sha256": "7aee37608b38754cbfa1e711e066d3b3bb4c6c7a924c10f68209d763de7ac0ed",
+      "mask_sha256": "b408bac451f0915e295d30f7e30a20fdadac83cc337dd457e7c7974833f3990c",
+      "centers": [
+        0.307843137254902,
+        0.907843137254902,
+        0.5372549019607843
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "3f75d5ef6068ee575e59c9afb2c2e56cc9f3970e0fa1af90a0913809115d19d8",
+      "hair_sha256": "5cfaf8451738c846e358b7ed74492d7e017df6dd42d42bb505b9bc46a4c5e989"
+    },
+    "ikari_female": {
+      "source_sha256": "d636e17f2c43a1ad4f699edf49a88fb1d384051b212cd8d4ed5f4f04b33c59dd",
+      "mask_sha256": "565dffb785fceea9bd725ee36469f58ac61b8198a360fef63d476f7c4785296c",
+      "centers": [
+        0.5,
+        0.5725490196078431,
+        0.6196078431372549
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "535841d71a639d9f293cc21db222c9dc679825fe92229a80f1e9b4a88d942a8c",
+      "hair_sha256": "142abfc09e4a54c5b5deed14d2ff8770218a98e8a6b0692272e7f4869b87f884"
+    },
+    "ikari_male": {
+      "source_sha256": "48770c6d5bb9abd322a9afd3f8b91299da82cca82af372b5b0833c7eb0f6449b",
+      "mask_sha256": "aee7a6df71a107322d0cc49969f8473025f714f815235b60030097fa205b4f71",
+      "centers": [
+        0.5,
+        0.5294117647058824,
+        0.5647058823529412
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "f8c3d277076582f063d6a7dc62575c1e4437dd0d1f30b20e134654aad54fb065",
+      "hair_sha256": "a2b66a65bd008b37f2026f44bf8aacbb11d2845a40a40b0d58b1bd711364ad7d"
+    },
+    "iyashi_female": {
+      "source_sha256": "c64af42c05d62370b88d7739d3695cb468503875b3a3961d94d6bfe21d9d6d81",
+      "mask_sha256": "019a1eb8482abc33a07a7d1f1f9772e9303884a2b8a6724e8f9cb0a24bbb84c8",
+      "centers": [
+        0.37450980392156863,
+        0.4470588235294118,
+        0.8196078431372549
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "722915d44fdba9b92a5f0b4b4a58fadfcc775ec8bcd48558e7d7c08739f2ab3f",
+      "hair_sha256": "eb29303d3d6d401a2a2ce3fa1a7bbe8856fd0016f93ee5e065b1f4a952d4ba6f"
+    },
+    "iyashi_male": {
+      "source_sha256": "8d71835f720545b4b61d1500abd9e4d073ef814708ffc8fc5a58b272c975ac8a",
+      "mask_sha256": "0b5ad4664198b09719f8efb80ed07427538fc3278b96f73d9addec785bd0edd6",
+      "centers": [
+        0.3215686274509804,
+        0.4607843137254902,
+        0.5
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "fdf220223d69f201dda82f2a5a7e2a059f176776737008ffdd0a2a1ff8be246f",
+      "hair_sha256": "90fabf5178bada92b9e809963797e55ee05fd6b3064845406d76059f82ce1077"
+    },
+    "mori_female": {
+      "source_sha256": "fb72e0395997b7b84e3216d3193e6ddc17eb89680efffda30c673123f334ffb6",
+      "mask_sha256": "32db65985855af8ad9b1b31fe1887b692b5cd5246a944789e235370267ee15b6",
+      "centers": [
+        0.503921568627451,
+        0.5,
+        0.5
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "f3704f225729a904e06dc03c35bb88a401b06cb48c592d5ddeb1c261649f8fd6",
+      "hair_sha256": "3be3a4037819cc08ea8fb19ea10b81c44536b8076f090ef86c64fdc5de0763e1"
+    },
+    "mori_male": {
+      "source_sha256": "907f7e8ae8ed5aefa60c5215dfaf744f0c3ec2af6e54d5615b2b3dadd667fde0",
+      "mask_sha256": "772d68a6b799b45f10dbb6178ab810cb4e78e381efc27bdcccf0acd1ebef3932",
+      "centers": [
+        0.5,
+        0.48235294117647065,
+        0.4647058823529412
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "e89f3d15315d481277264788587549a9e60ce9a0c22866ec092add29f6801249",
+      "hair_sha256": "0ab07e05fb72a63830dca74866bd5768858c194f8fb3daffe5f73c59cb4af04b"
+    },
+    "rojin_female": {
+      "source_sha256": "1bc3536acec072ed133f55d4969f28ed45c4a7fd3d551f2a12f50966fb6cb3bd",
+      "mask_sha256": "6b7e8d25f13fef530a6f18b118ffef934e344f1c88b50ebf76a2bfb0a3aa7eb6",
+      "centers": [
+        0.29411764705882354,
+        0.7607843137254902,
+        0.5
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "1dbb9cad5af1b13fdfe43cde87ca686d340c643371712cf60aff62a0e0d11873",
+      "hair_sha256": "2677f0eafd788e12e05732c53f7d10b325207eff790c199ca58de098a3037603"
+    },
+    "rojin_male": {
+      "source_sha256": "91a5f3b6e60a9c1dab9a3f0054c09650f40d1311cae716a02e998ac2b31fadeb",
+      "mask_sha256": "3411b2c5fe881b53971235c24d8898b3e814aa66c417214fb7227e3b1caab456",
+      "centers": [
+        0.5,
+        0.2549019607843137,
+        0.5274509803921569
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "ceef891bb7db9bd997cb378b0caf9b963834cd8f046f4451069bb2a78825d441",
+      "hair_sha256": "f2109d4368bbd87d1a1bdb722ec1faaf61c3623f871b30d8c0cc0a9e4731fcd6"
+    },
+    "senshi_female": {
+      "source_sha256": "7e6938e7c2e79480888c3f0a191978c71bb11c4941eb92f90c10c5785af388e0",
+      "mask_sha256": "fc14db220b78f72283815aaddbf1058cd344781dc622bd16a3ee13d61eb7393a",
+      "centers": [
+        0.4666666666666667,
+        0.7156862745098039,
+        0.6647058823529411
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "99e83de3effaa8750db55e982006e537531d6424e5d2b99a763ae8ac99b02f27",
+      "hair_sha256": "32f2be29d5e198898773ce90b5176ad05ac3e99e1167bcb084b64896f6c09385"
+    },
+    "senshi_male": {
+      "source_sha256": "88f21330846a07a175ebff2aea643bc1b63e95e7089d3782ef0cbcbd0ff18f14",
+      "mask_sha256": "8cc6a7a219a89cbde92fd704970d822453ff4be89b91cf9af81c502e11b3df9a",
+      "centers": [
+        0.5,
+        0.6098039215686275,
+        0.9
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "9e8fa848457a03d7ffdfffb98acccf011d53b9e39ee6369f220cc95938177b19",
+      "hair_sha256": "7c377b137885a0f81869f69bcf76f81e99caba654e4ca0092ad1d4badf142a5e"
+    },
+    "shugo_female": {
+      "source_sha256": "78cc3ea158491c6bf54300c298009593debe2c7dd110f9ea580168c0ad5fb1a1",
+      "mask_sha256": "eba2551761419942833a0523b8e51cc4be44779db8c3846a26e87003e1833770",
+      "centers": [
+        0.5607843137254902,
+        0.5,
+        0.411764705882353
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "9c5d2395cb8e8fe1860320b20d4f9da909359d33cfac4ea7e06f0a290ce258a9",
+      "hair_sha256": "39ec750f1ce0f578773a4694906dfc0f17be2556747ed14820267d7a86f0c146"
+    },
+    "shugo_male": {
+      "source_sha256": "013a5c6550a648a27d51c3c652fcfd3e007a9d4f86dbc2e74b91b9c0c6b40182",
+      "mask_sha256": "9944df2a9dae66427308beb7e42f8c5ce21e45b83e9ead5ecce910deec38f5cd",
+      "centers": [
+        0.5607843137254902,
+        0.5,
+        0.4019607843137255
+      ],
+      "gains": [
+        0.24,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "da5d99abb43d146cd0d85ac11e619495f9cb2e7052d64fe703db6ebc8cf3e99f",
+      "hair_sha256": "3b62acb2b0b9dca2566adc57b6b9dc60e63ae5838e31542dcf1e016ebd49f287"
+    },
+    "shusen_female": {
+      "source_sha256": "65c34f9cb9d0e5e11231b93a2b950eb9b385bcf10ce6fd355f193ee4a14b748e",
+      "mask_sha256": "1b340f7c1ca3da7b3565fe089df77a4d9f91f0bbb76a125b599a05ac82f8efcc",
+      "centers": [
+        0.34705882352941175,
+        0.2803921568627451,
+        0.5705882352941176
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "009af0efc2ba4a57c81b8f50882c449fce706efbf82bacddff9f18b6563a6d88",
+      "hair_sha256": "b916e9c96e672be40c144ddf21f08cd4717567c91b1cfecb0fc5b333f4fedb12"
+    },
+    "shusen_male": {
+      "source_sha256": "686d295e95df2a3b3b8580eb9ee94ab1dc5e92a602da5c49be6c85751feed350",
+      "mask_sha256": "7a5baebe5579c4c2effb08653dbdde6e2d75cc14fd774cdaeb018ae81d0c5f72",
+      "centers": [
+        0.33725490196078434,
+        0.28823529411764703,
+        0.5647058823529412
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "1cc407b878f8328dd0564d3a3afcb00793f3f1475852ac0ffe752f38e2a4237e",
+      "hair_sha256": "d169349f1b564a2601e4740246ab0df53c13343efc6bf25b308da4b424f70754"
+    },
+    "tokei_female": {
+      "source_sha256": "7816ae7d048839de72533835d8937a3a324d80e7ab5ca64c420ca9df0ab40065",
+      "mask_sha256": "a07cb520f3e4b5b337ac5161c75cad0824f22a797a61eba4b44d5d4b6fe3ce8f",
+      "centers": [
+        0.3235294117647059,
+        0.5666666666666667,
+        0.8411764705882353
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "e8858309ae9ceb20e0ab25e5499dbaec71e08f1249917290885b9ec17356c459",
+      "hair_sha256": "e7ccebbf48a2806c420b5eb22eaa0e6d2540721051a259ea4a82c9a475149274"
+    },
+    "tokei_male": {
+      "source_sha256": "b3e5eafb1d87d1fe6d61519462ba7b88ecac2224920383fd248a33b0250b0066",
+      "mask_sha256": "533ab6bf080953f19e8f20070783ab8201a24ad20294c86a9f7f82d25eeaea43",
+      "centers": [
+        0.28431372549019607,
+        0.5,
+        0.5686274509803921
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "fa7f04a2ae57faf89edcb6b893ba3364ab2caabd7c299c7469b4816224a4575d",
+      "hair_sha256": "93dcee725fe9f3637946936b72ec2b703e026f826c994ec38be1643ad6a0e021"
+    },
+    "tomoda_female": {
+      "source_sha256": "e4dad2eae34969e2133c6a134a8e471b8d22551d28470faf0c3810d1ef7979bb",
+      "mask_sha256": "b02e4ec33ca5a470e56010da8691d93a4a8ced930929dbff7008d3408c5d3882",
+      "centers": [
+        0.4313725490196078,
+        0.27254901960784317,
+        0.8509803921568627
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "4356ecfb80951bc1b4f798b568f863649bef40af115cc38cc772b23d6b89826b",
+      "hair_sha256": "01aed8786f569233134cfdc51251eb57a733c47274a6175d979137fb1a1b65eb"
+    },
+    "tomoda_male": {
+      "source_sha256": "43753d7a31c794a7e72f6421700a25697b5266901b0cd2fe4c379eb25c4972c7",
+      "mask_sha256": "b338951b9581c46b92824c1ad537696ee15a179ff700406e7cf6f0085d58d8a7",
+      "centers": [
+        0.40980392156862744,
+        0.5,
+        0.8588235294117648
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "729844bdec906f0ed66341ec5ce7a7334e998a4e3c7aeb0696ef4a24d8c38f07",
+      "hair_sha256": "fb51edfe96c5bf17e93eb6733f210950189297606850ade87ddf919c8f736aef"
+    },
+    "yajin_female": {
+      "source_sha256": "665ca0a116f73d41c31756d8c9850f844448c166c2c67313f2f3b97a9fe465e0",
+      "mask_sha256": "4fa3d2be8a436871da944997da221e5803a2deeca6a94899ac062ae8c8d9ba9a",
+      "centers": [
+        0.3254901960784313,
+        0.5,
+        0.8784313725490196
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "5b7c3fa95ad3cfab4991dfa152a56341186df0052b8a3a5751aba125d957b116",
+      "hair_sha256": "14410fc171120fa8e3c98ce8e2a309eca038819d0858d9cf8edd3766310a3b83"
+    },
+    "yajin_male": {
+      "source_sha256": "1b86fdee8da1a6db9cf4aff1f41c1fb449527f7c509ca71ad199dad24d362f68",
+      "mask_sha256": "7a79d107b99610fc77292bcd1e1b42c8524598db83cc1bfbb3c36553e51ec093",
+      "centers": [
+        0.3607843137254902,
+        0.5,
+        0.5
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "7b6cd4a1e6d97d56b13eceb850ed71d2d945923ad855eb1fc61f67157b2e8cf8",
+      "hair_sha256": "7039fe43dfe303498dcd40c5646a34bf00e8535810927cae82b4bc084b6e4364"
+    },
+    "yogan_female": {
+      "source_sha256": "090d71966cb44080793e657c1bd0fae2e1eb529dd1bffe1ce7911e9574270b31",
+      "mask_sha256": "711710d671bb805dfc8d28fcb5a0c35d40b3e9c17b37a0285858a98b189ed17e",
+      "centers": [
+        0.5294117647058824,
+        0.8725490196078431,
+        0.5627450980392157
+      ],
+      "gains": [
+        0.86,
+        0.86,
+        0.86
+      ],
+      "model_sha256": "fa8c1ac73bacfcfea1ed5749bae8ea6f11b765918ce89faf784945ef3f49b138",
+      "hair_sha256": "74ebb14d25249b159785285aab1eb8cb5e079edbadfbd818944466f971ccb96e"
+    },
+    "yogan_male": {
+      "source_sha256": "5acc41c112a63e227b20a98508a6a41f8c779169d399cbd1b30c2a502e1de2e2",
+      "mask_sha256": "2f33c07c1547fa4185e8abc126378bb02c9997de6167745e2e67be3d7a5148c0",
+      "centers": [
+        0.38823529411764707,
+        0.8764705882352941,
+        0.45098039215686275
+      ],
+      "gains": [
+        0.4143065693430656,
+        0.8638651685393258,
+        0.86
+      ],
+      "model_sha256": "27ba64c5c88ce6de5bb70ccdb293acd15839c01a3755927da43a322d41b99aec",
+      "hair_sha256": "095bb94fbf4a6cca65f3a3db2343b89a7d91c45343aa550473be77095ff37937"
+    }
+  }
+}

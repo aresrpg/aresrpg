@@ -44,6 +44,7 @@ test('fire and smoke share two bounded GPU-animated batches across all emitters'
 test('fire participates in scenery visibility, quality and resource disposal', () => {
   const scene = new Scene()
   const scenery = create_scenery({
+    flora_data: null,
     scene,
     scenery: { waterfalls: [], spores: [], vines: [], fires: [{ center: [0, 32, 0], scale: 1 }] },
   })

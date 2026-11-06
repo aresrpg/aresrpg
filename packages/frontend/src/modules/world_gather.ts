@@ -326,6 +326,7 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
 
   events.on('world/resolve_ambush', ({ character_id }) => {
     const state = get_state()
+    if (state.session.agent_view.request) return
     const character = state.session.characters.find(({ id }) => id === character_id)
     const gathering = state.world.gathering[character_id]
     const ambush = world_ambush(state, character_id)

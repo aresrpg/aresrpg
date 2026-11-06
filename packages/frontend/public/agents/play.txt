@@ -18,7 +18,7 @@ A spending allowance is a ceiling, not a target. Do not request wallet secrets i
 
 ## Inspect before choosing
 
-Choose a data path using [the tradeoffs guide](https://aresrpg.world/agents/protocol.txt). Performance-focused bots and clients may use Sui GraphQL reads plus direct SDK transactions without a WebSocket or Google login. For bots playing in the world, we encourage [WebSocket presence](https://aresrpg.world/agents/indexing.txt): visible movement lets other players share the map with the bot. You can retain chain-native reads while adding that presence connection, or also use its prepared gameplay projections. Choose with the player and coordinate any existing browser session.
+Complete [Connect Your Agent](https://aresrpg.world/agents/client.txt), the single official supported bot onboarding flow. Build the bot from the existing SDK actions and coordinate its game-server session. Follow the player’s agreed objective and spending authority; the diagnostic observer is not the gameplay executor.
 
 Read the selected signing address, network, available SUI/KARES, characters, equipment, inventory, active fights, dungeon runs, pending claims, listings, trades, and Mastery state. Check read freshness and unresolved transactions before issuing anything. Resolve stranded fight custody before proposing an activity that needs the same character.
 

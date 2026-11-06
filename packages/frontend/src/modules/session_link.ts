@@ -21,6 +21,8 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       link_status: 'connecting',
       link_error: null,
       latency_ms: null,
+      online: null,
+      online_characters: null,
       indexing_lag: null,
       current_epoch: null,
     }
@@ -30,6 +32,8 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       link_status: input.type === 'link/replaced' ? 'replaced' : 'idle',
       link_error: input.type === 'link/rejected' ? message(input.reason) : null,
       latency_ms: null,
+      online: null,
+      online_characters: null,
       indexing_lag: null,
       current_epoch: null,
     }
@@ -40,6 +44,8 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       link_error: message(input.reason),
       link_violation: message(input.reason),
       latency_ms: null,
+      online: null,
+      online_characters: null,
       current_epoch: null,
     }
   if (input.type === 'link/failed')
@@ -48,6 +54,8 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       link_status: 'connecting',
       link_error: message(input.error),
       latency_ms: null,
+      online: null,
+      online_characters: null,
       indexing_lag: null,
       current_epoch: null,
     }

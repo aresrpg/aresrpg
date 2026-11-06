@@ -19,7 +19,12 @@ describe('websocket admission', () => {
       verify: async ({ uuid }) => uuid === 'fresh',
       promote: () => {
         promoted += 1
-        return { dispatch: () => undefined, on_message: () => undefined, on_close: () => undefined }
+        return {
+          online_characters: () => [],
+          dispatch: () => undefined,
+          on_message: () => undefined,
+          on_close: () => undefined,
+        }
       },
     })
 
@@ -42,7 +47,12 @@ describe('websocket admission', () => {
       verify: async () => false,
       promote: () => {
         promoted = true
-        return { dispatch: () => undefined, on_message: () => undefined, on_close: () => undefined }
+        return {
+          online_characters: () => [],
+          dispatch: () => undefined,
+          on_message: () => undefined,
+          on_close: () => undefined,
+        }
       },
     })
 
@@ -63,7 +73,12 @@ describe('websocket admission', () => {
       send: () => undefined,
       close: (_code, reason) => void closed.push(reason ?? ''),
       verify: async () => true,
-      promote: () => ({ dispatch: () => undefined, on_message: () => undefined, on_close: () => undefined }),
+      promote: () => ({
+        online_characters: () => [],
+        dispatch: () => undefined,
+        on_message: () => undefined,
+        on_close: () => undefined,
+      }),
     })
 
     await connection.on_message(JSON.stringify(packet))

@@ -7,6 +7,8 @@ import { marketplace_royalty_bps } from '@aresrpg/immutable'
 import { Transaction } from '@mysten/sui/transactions'
 import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
+import { character_display_image } from '../../immutable/src/portrait.ts'
+
 import { receipt_events, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
 import { ROYALTY_FLOOR_MIST } from './marketplace.ts'
@@ -190,7 +192,7 @@ export const create_deployment_bootstrap_transaction = async ({
   const character_display = create_display(
     character_type,
     'https://app.aresrpg.world',
-    'https://aresrpg.world/classe/{classe}_{sex}.jpg',
+    character_display_image('https://aresrpg.world'),
     'Level {level} {classe} of the AresRPG universe.'
   )
   transaction.transferObjects([item_display, character_display], recipient)

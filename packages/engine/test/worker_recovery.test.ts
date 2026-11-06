@@ -38,3 +38,26 @@ test('real mesh and planner workers return a failed job ID and accept subsequent
     }
   }
 })
+
+test('the existing mesh worker prepares transferred flora buffers without a terrain request', async () => {
+  const worker = new Worker(new URL('../src/mesh_worker.ts', import.meta.url), { type: 'module' })
+  try {
+    const result = new Promise<{ type: string; result: { position: Float32Array }; error?: string }>((resolve) => {
+      worker.addEventListener('message', ({ data }) => resolve(data), { once: true })
+    })
+    worker.postMessage({
+      type: 'flora',
+      rows: [
+        { kind: 'fern', center: [4, 7, -2], scale: 1.5, color: [0.2, 0.4, 0.6], accent: [0.6, 0.5, 0.4], glow: 0.3 },
+      ],
+    })
+    const reply = await result
+    expect(reply.type).toBe('flora')
+    expect(reply.error).toBeUndefined()
+    expect(reply.result.position).toBeInstanceOf(Float32Array)
+    expect(reply.result.position.length).toBe(252 * 3)
+    expect(reply.result.position.every(Number.isFinite)).toBe(true)
+  } finally {
+    worker.terminate()
+  }
+})

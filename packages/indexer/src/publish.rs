@@ -151,6 +151,10 @@ fn analyze_game_revenue(
                 character_creation_mist: analytics::CHARACTER_CREATION_MIST,
                 ..MoneyDelta::default()
             },
+            ("tournament", "EntryFeePaid") => MoneyDelta {
+                tournament_mist: decode::from_bytes::<events::EntryFeePaid>(event.bytes)?.treasury_mist,
+                ..MoneyDelta::default()
+            },
             _ => continue,
         };
         wire.money.push(MoneyFact {
@@ -2693,3 +2697,7 @@ mod tests {
 #[cfg(test)]
 #[path = "../tests/leaderboards/market.rs"]
 mod leaderboard_tests;
+
+#[cfg(test)]
+#[path = "../tests/publish/tournament_revenue.rs"]
+mod tournament_revenue_tests;

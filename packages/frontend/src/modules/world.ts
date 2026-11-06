@@ -22,6 +22,7 @@ import { read_pose } from '../game/core/pose_feed.ts'
 import { play_audio } from '../game/audio/audio_registry.ts'
 import { toast } from '../toast.ts'
 import { character_travel_ready } from '../game/travel_gate.ts'
+import { displayed_character } from '../agents/observation.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { character_custody, selected_character } from './session.ts'
@@ -33,7 +34,12 @@ import {
   remove_pending_engage,
   submit_pending_engage,
 } from './world_engage.ts'
-import { fold_cached_world, project_world_window, retain_world_characters } from './world_cache.ts'
+import {
+  changes_viewed_world,
+  fold_cached_world,
+  project_world_window,
+  retain_world_characters,
+} from './world_cache.ts'
 import {
   gather_state_input,
   gatherings_from_characters,
@@ -272,17 +278,11 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
   return world
 }
 
-const changes_viewed_world = (input: AppInput, state: AppState): boolean =>
-  input.type === 'character/select' ||
-  (input.type === 'character/world_joined' &&
-    input.character_id === state.session.selected_character_id &&
-    state.session.characters.some(({ id }) => id === input.character_id))
-
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_world(state, initial_world_state())
   if (changes_viewed_world(input, state))
-    return with_world(state, project_world_window(state.world, selected_character(state.session)))
+    return with_world(state, project_world_window(state.world, displayed_character(state.session)))
   if (input.type === 'world/player_menu')
     return with_world(state, Object.freeze({ ...state.world, player_menu: input.menu }))
   if (input.type === 'world/search_zone')
@@ -339,16 +339,16 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.packet.type === 'packet/characters') {
     const retained = retain_world_characters(
       state.world,
-      new Set(input.packet.characters.map(({ id }) => id)),
-      selected_character(state.session)
+      new Set([...input.packet.characters, ...state.session.agent_view.characters].map(({ id }) => id)),
+      displayed_character(state.session)
     )
-    const reconciled = gatherings_from_characters(retained.gathering, input.packet.characters)
+    const reconciled = gatherings_from_characters(retained.gathering, state.session.characters)
     return with_world(state, Object.freeze({ ...retained, gathering: reconciled }))
   }
   const next = fold_cached_world(
     state.world,
     input.packet,
-    selected_character(state.session),
+    displayed_character(state.session),
     fold_union,
     state.chain_clock
   )

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
 
 const repo_file = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url))
-const page_card = (name) => [name, `seed/icons/social/${name}.jpg`]
+const page_card = (name) => [name, `packages/frontend/public/social/${name}.jpg`]
 const OUTPUTS = Object.freeze(
   Object.fromEntries([
     ...['home', 'gift', 'marketplace', 'leaderboard', 'mastery', 'kares', 'allocation', 'agents', 'links'].map(

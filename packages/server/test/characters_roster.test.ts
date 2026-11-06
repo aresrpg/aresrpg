@@ -59,15 +59,24 @@ describe('the roster', () => {
     expect((await get_characters(graph, { address: '0xme' })).map(({ id }) => id)).toEqual(['0xheld', '0xseated'])
   })
 
-  test('legacy wallets above the cap expose one stable six-character roster', async () => {
-    const rows = ['0x09', '0x02', '0x07', '0x01', '0x08', '0x03', '0x06', '0x04', '0x05'].map((id) => ({
+  test('all hundred owned characters are returned in deterministic order', async () => {
+    const ids = Array.from({ length: 100 }, (_, index) => '0x' + (index + 1).toString(16).padStart(64, '0'))
+    const rows = [...ids].reverse().map((id) => ({
       character: character(id),
       kiosk_node: kiosk,
       equipment: [],
     }))
     const roster = await get_characters(graph_of(rows, []), { address: '0xme' })
 
-    expect(roster.map(({ id }) => id)).toEqual(['0x01', '0x02', '0x03', '0x04', '0x05', '0x06'])
+    expect(roster.map(({ id }) => id)).toEqual(ids)
+  })
+
+  test('overlapping custody queries expose one identity, preferring the seated projection', async () => {
+    const held = { character: character('0xsame'), kiosk_node: kiosk, equipment: [] }
+    const seated = { ...held, active_fight: { id: '0xfight', seat: 3 } }
+    const roster = await get_characters(graph_of([held], [seated]), { address: '0xme' })
+    expect(roster).toMatchObject([{ id: '0xsame', custody: 'fight', active_fight: { id: '0xfight', seat: 3 } }])
+    expect(roster).toHaveLength(1)
   })
 
   test('a kiosk the indexer has not met yet yields no cap, never an undefined one', async () => {

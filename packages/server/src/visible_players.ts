@@ -4,6 +4,7 @@
 import { VISIBLE_SLOTS, zone_of, type PresenceRow, type PlayerPosition } from '@aresrpg/protocol'
 
 import type { PlayerContext } from './player.ts'
+import { observed_character } from './modules/player_agent_observation.ts'
 import { mesh, movement_listener_channel, type MeshFact } from './protocol.ts'
 import logger from './logger.ts'
 
@@ -35,11 +36,13 @@ export const create_visible_players = ({
   pubsub,
   get_state,
   drop,
+  on_position,
 }: Pick<
   PlayerContext,
   'address' | 'signal' | 'send' | 'send_position' | 'public_world' | 'pubsub' | 'get_state' | 'drop'
->) => {
+> & { on_position?: (position: PlayerPosition) => void }) => {
   const visible = new Map<string, VisiblePlayer>()
+  const observed = (id: string) => observed_character(get_state())?.id === id
   const remove = (character_id: string): void => {
     const row = visible.get(character_id)
     if (!row) return
@@ -74,12 +77,19 @@ export const create_visible_players = ({
     if (fact.player.world !== world) return
     const { character_id } = fact.player
     const known = visible.get(character_id)
-    if (!known && !get_state().friends.has(fact.address) && visible.size >= VISIBLE_PLAYERS_CAP) return
+    if (
+      !known &&
+      !observed(character_id) &&
+      !get_state().friends.has(fact.address) &&
+      visible.size >= VISIBLE_PLAYERS_CAP
+    )
+      return
     if (known) {
       known.stop_move()
       known.player = fact.player
       known.position = position_of(world, fact.player)
       known.stop_move = listen(known)
+      on_position?.(known.position)
       if (known.presented)
         send({
           type: 'packet/player_appeared',
@@ -98,18 +108,22 @@ export const create_visible_players = ({
     visible.set(character_id, row)
     row.stop_move = listen(row)
     row.stop = hydrate(row)
+    on_position?.(row.position)
   }
   const move = (world: string, fact: Extract<RemoteFact, { kind: 'move' }>): void => {
     const row = visible.get(fact.character_id)
     if (!row || row.position.world !== world) return
     const previous = row.position
     row.position = position_of(world, fact)
+    on_position?.(row.position)
     if (!row.presented) return
-    const near = Object.values(get_state().characters).some(({ presence }) => {
-      const dx = fact.x - presence.x
-      const dz = fact.z - presence.z
-      return presence.world === world && dx * dx + dz * dz <= FAR_PLAYER_BLOCKS ** 2
-    })
+    const near =
+      observed(fact.character_id) ||
+      Object.values(get_state().characters).some(({ presence }) => {
+        const dx = fact.x - presence.x
+        const dz = fact.z - presence.z
+        return presence.world === world && dx * dx + dz * dz <= FAR_PLAYER_BLOCKS ** 2
+      })
     const unchanged = previous.riding === fact.riding && previous.gliding === fact.gliding
     row.skipped = !near && unchanged ? row.skipped + 1 : FAR_MOVE_INTERVAL
     if (row.skipped < FAR_MOVE_INTERVAL) return

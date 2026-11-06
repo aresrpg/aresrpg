@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { EnokiWallet } from '@mysten/enoki'
+import { toBase64 } from '@mysten/sui/utils'
 import type { Transaction } from '@mysten/sui/transactions'
 import {
   getWallets,
@@ -14,6 +15,7 @@ import {
 } from '@mysten/wallet-standard'
 
 import type { SdkNetwork } from './client.ts'
+import { parse_agent_pairing_request } from './agent_pairing.ts'
 
 export const installed_wallets = (): readonly Wallet[] =>
   getWallets()
@@ -69,6 +71,8 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
   const require_active = (): void => {
     if (disposed) throw new Error('This wallet session is disconnected')
   }
+  const pairing_public_key = account.publicKey?.slice()
+  const pairing_owner = account.address
   const session_feature = wallet.features['enoki:getSession'] as EnokiWallet['features']['enoki:getSession'] | undefined
   const with_active_session = <T>(operation: () => Promise<T>): Promise<T> => {
     require_active()
@@ -84,6 +88,19 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
     })
   }
   return Object.freeze({
+    // Enoki exposes the stable public identifier on WalletAccount; never read its secret session.
+    read_agent_pairing_request: (nonce: string) => {
+      require_active()
+      if (!session_feature) return null
+      if (!pairing_public_key) throw new Error('Google public identifier unavailable')
+      return parse_agent_pairing_request({
+        version: 1,
+        nonce,
+        network,
+        owner: pairing_owner,
+        zklogin_public_identifier: toBase64(pairing_public_key),
+      })
+    },
     sign_transaction: (transaction: Transaction) =>
       with_active_session(() =>
         signing.signTransaction({

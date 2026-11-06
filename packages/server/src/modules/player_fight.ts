@@ -14,6 +14,8 @@ import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 
+import { observed_character } from './player_agent_observation.ts'
+
 const log = logger(import.meta)
 
 /** How far (in zones) a spectated fight may stand from the player — the tracked spiral. */
@@ -122,6 +124,7 @@ export default {
       new Set([
         ...Object.values(value.characters).flatMap(({ fight }) => (fight ? [fight] : [])),
         ...Object.values(value.roster_fights),
+        ...(observed_character(value)?.active_fight ? [observed_character(value)!.active_fight!.id] : []),
         ...Object.values(value.spectating),
         ...Object.values(value.fight_previews),
         ...(value.nearby_fight ? [value.nearby_fight.fight] : []),

@@ -1,0 +1,152 @@
+/* Approved setup reference: claude.ai/artifact/EmoR1PMBL9cx6kk7uVmETn */
+.agent-setup {
+  position: relative;
+  width: min(460px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 22px 20px 18px;
+  border-radius: 8px;
+  background: linear-gradient(#222831, #1a1f26);
+  border: 1px solid #0c0e13;
+  box-shadow:
+    0 18px 40px #0008,
+    inset 0 1px #ffffff1c,
+    inset 0 0 0 1px #ffffff06;
+  color: var(--aui-ink);
+  font: 400 13px/1.4 var(--aui-font);
+}
+.agent-setup h2 {
+  margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+.agent-setup .agent-setup-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  box-shadow: none;
+}
+.agent-provider-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+.agent-provider-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  border: 1px solid #0b0d12;
+  color: var(--aui-ink);
+  background: linear-gradient(180deg, #3a434e 0, #2a3139 55%, #232930 100%);
+  box-shadow:
+    inset 0 1px #ffffff30,
+    inset 0 -3px #0006,
+    0 4px 0 #0c0f13,
+    0 8px 16px #0006;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
+}
+.agent-provider-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  pointer-events: none;
+  opacity: 0.07;
+  background:
+    repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 3px);
+}
+.agent-provider-card:hover {
+  border-color: #8fb9cf;
+}
+.agent-provider-card:active {
+  transform: translateY(3px);
+}
+.agent-provider-card:focus-visible {
+  outline: 2px solid #8fb9cf;
+  outline-offset: 3px;
+}
+.agent-provider-card[aria-pressed='true'] {
+  background: linear-gradient(180deg, #5c4c34 0, #3d3426 60%, #2e2820 100%);
+  border-color: #bc955a;
+  box-shadow:
+    inset 0 1px #ffe3a560,
+    inset 0 -3px #0006,
+    0 4px 0 #2a2014,
+    0 8px 18px #0007,
+    0 0 0 1px #bc955a80;
+}
+.agent-provider-card img,
+.agent-provider-card > svg {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+.agent-provider-card span {
+  font-size: 14px;
+  font-weight: 700;
+}
+.agent-provider-card[aria-pressed='true'] span {
+  color: #ecd19c;
+}
+.agent-setup .agent-connect {
+  width: 100%;
+  min-height: 44px;
+}
+.agent-setup-status {
+  margin: 12px 0;
+  color: var(--aui-muted);
+  text-align: center;
+}
+.agent-setup-details {
+  font-size: 12px;
+  color: var(--aui-muted);
+}
+.agent-setup-details summary,
+.agent-setup-details a {
+  color: #8fb9cf;
+  cursor: pointer;
+}
+.agent-setup-details p {
+  margin: 8px 0;
+}
+.agent-setup-details a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: underline;
+}
+@media (max-width: 420px) {
+  .agent-setup {
+    padding: 20px 14px 16px;
+  }
+  .agent-provider-cards {
+    gap: 7px;
+  }
+  .agent-provider-card img,
+  .agent-provider-card > svg {
+    width: 62px;
+    height: 62px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-provider-card {
+    transition: none;
+  }
+}
+
+.world-status button[data-agent-setup-button] {
+  min-height: 44px;
+}

@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client'
 
 import type { AuthSession } from '../../src/auth.ts'
 import { AutomationPanel } from '../../src/components/AutomationPanel.tsx'
-import { FriendsPanel } from '../../src/components/FriendsPanel.tsx'
+import { AgentSetupButton } from '../../src/agents/AgentSetup.tsx'
 import { observe_automation_controls } from '../../src/modules/automation.ts'
 import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -28,6 +28,7 @@ const boot = async (): Promise<void> => {
     type: 'server/packet',
     packet: {
       type: 'packet/server_info',
+      online_characters: 12,
       online: 1,
       indexing_lag: 0,
       current_epoch: '1',
@@ -67,7 +68,7 @@ const boot = async (): Promise<void> => {
         className="relative h-full overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(ellipse_at_70%_60%,#20493a,#141122_70%)] p-6"
       >
         <div className="flex w-fit flex-col items-start gap-2">
-          <FriendsPanel copy={copy} />
+          <AgentSetupButton copy={copy} />
           <AutomationPanel copy={copy} enabled />
         </div>
         <input aria-label="Chat" className="absolute bottom-6 left-6 border border-white/20 p-2" />

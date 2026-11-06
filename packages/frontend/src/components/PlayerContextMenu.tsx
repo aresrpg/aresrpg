@@ -3,6 +3,7 @@
 // One viewport-global player menu host. Body, Party, and chat interactions dispatch the same
 // identity snapshot; source gates only proximity-bound actions, never whether the menu renders.
 
+import type { PortraitAppearance } from '@aresrpg/immutable/portrait'
 import type { PartyRow, TradePhase } from '@aresrpg/protocol'
 import { character_checkpoint, CHAT_MAX_LENGTH, expand_chat_message, type ChatMessage } from '@aresrpg/protocol'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -16,6 +17,7 @@ import { owned_character_position } from '../game/core/owned_character_feed.ts'
 import { trade_row_visible } from '../modules/trade.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { PortraitShareModal } from './PortraitShare.tsx'
 import { ModalFrame } from './ModalFrame.tsx'
 import { ContextMenu } from './ContextMenu.tsx'
 
@@ -197,8 +199,14 @@ export const RunToRow = ({ visible, label, run }: Readonly<{ visible: boolean; l
 
 export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const party_text = copy_text(copy.party_panel)
+  const [portrait, set_portrait] = useState<PortraitAppearance | null>(null)
   const [recipient, set_recipient] = useState<Readonly<{ address: string; name: string }> | null>(null)
   const menu = useAppStore((state) => state.world.player_menu)
+  const appearance = useAppStore((state) =>
+    menu
+      ? (state.world.players[menu.character_id] ?? state.session.characters.find(({ id }) => id === menu.character_id))
+      : undefined
+  )
   const target = useAppStore((state) => menu_target(menu, state.world.players))
   const target_owner = target?.owner.toLowerCase() ?? null
   const already_friend = useAppStore((state) =>
@@ -281,6 +289,21 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <>
       {menu && (target || menu.source === 'party') ? (
         <ContextMenu x={menu.x} y={menu.y}>
+          <>
+            {appearance && (
+              <button
+                className={ROW_CLASS}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  set_portrait(appearance)
+                  close()
+                }}
+              >
+                {copy.ui.portrait_share}
+              </button>
+            )}
+          </>
           <PlayerSocialRows
             add_friend={add_friend}
             already_friend={already_friend}
@@ -298,6 +321,7 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <RunToRow label={party_text('run_to_position')} run={run_to} visible={menu.source === 'party'} />
         </ContextMenu>
       ) : null}
+      <PortraitShareModal appearance={portrait} copy={copy} close={() => set_portrait(null)} />
       <WhisperModal close={() => set_recipient(null)} copy={copy} recipient={recipient} />
     </>
   )

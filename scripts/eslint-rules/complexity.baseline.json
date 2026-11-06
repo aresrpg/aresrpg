@@ -309,7 +309,7 @@
     },
     "packages/frontend/src/modules/fight_observer.ts": {
       "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [
-        14
+        12
       ],
       "observe_fights > events.on[1]({ packet })": [
         27
@@ -326,6 +326,9 @@
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [
         11
+      ],
+      "observe > sync_target": [
+        11
       ]
     },
     "packages/frontend/src/modules/session.ts": {
@@ -338,7 +341,7 @@
     },
     "packages/frontend/src/modules/fight.ts": {
       "reduce": [
-        21
+        18
       ]
     },
     "packages/frontend/src/modules/fight_chain.ts": {
@@ -551,6 +554,11 @@
       "emit_direction": [
         62
       ]
+    },
+    "packages/frontend/src/agents/observation.ts": {
+      "fold_agent_view": [
+        13
+      ]
     }
   },
   "cyclomatic": {
@@ -633,6 +641,11 @@
         9
       ]
     },
+    "packages/fight/test/placement_swap.test.ts": {
+      "test[1]()": [
+        9
+      ]
+    },
     "packages/fight/test/spell_turn_projection.test.ts": {
       "describe[1]() > test[1]()": [
         12
@@ -670,6 +683,11 @@
     },
     "packages/fight/src/fight_math.ts": {
       "xp_for_player": [
+        10
+      ]
+    },
+    "packages/fight/src/placement.ts": {
+      "placement_plan": [
         10
       ]
     },
@@ -783,7 +801,7 @@
     },
     "packages/frontend/e2e/fixtures/add_funds.tsx": {
       "Fixture": [
-        9
+        10
       ],
       "Fixture > useEffect[0]()": [
         9
@@ -944,7 +962,7 @@
     },
     "packages/frontend/src/game/fight/FightLayer.tsx": {
       "FightLayer": [
-        52
+        51
       ],
       "FightLayer > anonymous(cue: FightPresentationCue,phase: FightCuePhase)": [
         9
@@ -1017,9 +1035,6 @@
       ],
       "create_world > sync_dungeon_portal_labels": [
         10
-      ],
-      "create_world > tick": [
-        11
       ]
     },
     "packages/frontend/src/game/gather_target.ts": {
@@ -1414,7 +1429,7 @@
     },
     "packages/frontend/src/modules/navigation.ts": {
       "reduce": [
-        10
+        9
       ]
     },
     "packages/frontend/src/modules/audio.ts": {
@@ -1446,7 +1461,7 @@
         11
       ],
       "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [
-        21
+        18
       ],
       "observe_fights > events.on[1]({ packet })": [
         26
@@ -1493,6 +1508,9 @@
       ],
       "observe > mount": [
         13
+      ],
+      "observe > sync_target": [
+        11
       ]
     },
     "packages/frontend/src/modules/distribution.ts": {
@@ -1613,6 +1631,11 @@
         9
       ]
     },
+    "packages/frontend/src/modules/fight_latch.ts": {
+      "single_latch": [
+        9
+      ]
+    },
     "packages/frontend/src/modules/automation_step.ts": {
       "advance_world_step": [
         9
@@ -1627,11 +1650,6 @@
         11
       ],
       "protector_step": [
-        11
-      ]
-    },
-    "packages/frontend/src/modules/engine_selection.ts": {
-      "sync_dungeon_scene": [
         11
       ]
     },
@@ -1828,7 +1846,7 @@
         9
       ],
       "useFundingCheckout > send": [
-        11
+        10
       ]
     },
     "packages/frontend/src/allocation/runtime.ts": {
@@ -1928,6 +1946,12 @@
       ],
       "reduce": [
         10
+      ],
+      "observe > follow_observed": [
+        12
+      ],
+      "observe > sync_observed": [
+        12
       ]
     },
     "packages/server/src/modules/player_fight.ts": {
@@ -2266,11 +2290,6 @@
         51
       ]
     },
-    "packages/engine/src/resource_nodes.ts": {
-      "resource_visual": [
-        10
-      ]
-    },
     "packages/engine/src/fight_swords.ts": {
       "create_fight_sword_layer > set_markers": [
         10
@@ -2289,6 +2308,85 @@
     "packages/engine/src/character_model.ts": {
       "compose_pixels": [
         10
+      ]
+    },
+    "packages/protocol/src/agent_setup.ts": {
+      "valid_agent_observation": [
+        11
+      ]
+    },
+    "packages/server/src/visible_players.ts": {
+      "create_visible_players > appear": [
+        10
+      ],
+      "create_visible_players > move": [
+        10
+      ]
+    },
+    "packages/frontend/src/modules/fight_result_observer.ts": {
+      "observe_with_wait > sweep": [
+        9
+      ]
+    },
+    "packages/frontend/src/modules/engine_selection.ts": {
+      "selected_dungeon_position": [
+        9
+      ],
+      "selected_live_position": [
+        9
+      ],
+      "world_presence_rows": [
+        10
+      ]
+    },
+    "packages/server/src/modules/player_agent_observation.ts": {
+      "observe > events.on[1](state,previous)": [
+        11
+      ]
+    },
+    "packages/frontend/src/agents/observation.ts": {
+      "fold_agent_view": [
+        11
+      ]
+    },
+    "packages/frontend/src/modules/fight_lifecycle.ts": {
+      "fight_should_close": [
+        9
+      ]
+    },
+    "packages/frontend/src/agents/AgentSpectator.tsx": {
+      "AgentSpectator": [
+        11
+      ]
+    },
+    "packages/frontend/src/game/hud/OverworldVitals.tsx": {
+      "OverworldVitals": [
+        9
+      ]
+    },
+    "packages/frontend/src/game/hud/Minimap.tsx": {
+      "Minimap": [
+        11
+      ]
+    },
+    "packages/frontend/src/components/PartyFrame.tsx": {
+      "PartyMemberControl": [
+        9
+      ]
+    },
+    "packages/server/test/agent_observation.test.ts": {
+      "fixture > read": [
+        10
+      ]
+    },
+    "packages/server/src/modules/player_party.ts": {
+      "observe_agent_party > events.on[1](state,previous)": [
+        10
+      ]
+    },
+    "packages/frontend/src/components/AddFundsModal.tsx": {
+      "FundingModal": [
+        9
       ]
     }
   }

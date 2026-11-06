@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
-import { MIN_CHARACTER_SALE_LEVEL, type CharacterRow, type ItemRow, type ListingRow } from '@aresrpg/protocol'
+import type { CharacterRow, ItemRow, ListingRow } from '@aresrpg/protocol'
 import { useState } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
@@ -83,8 +83,7 @@ export const useMarketSell = () => {
     ),
   ]
   const characters = session.characters.filter(
-    ({ id, equipment, level, custody }) =>
-      !encumbered.has(id) && custody !== 'fight' && equipment.length === 0 && level >= MIN_CHARACTER_SALE_LEVEL
+    ({ id, equipment, custody }) => !encumbered.has(id) && custody !== 'fight' && equipment.length === 0
   )
   const selections: readonly Selection[] = [...items, ...characters.map((row) => ({ kind: 'character' as const, row }))]
   const selected = selections.find(({ kind, row }) => `${kind}:${row.id}` === selected_key)

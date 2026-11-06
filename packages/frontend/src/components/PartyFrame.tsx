@@ -78,7 +78,7 @@ const PartyMemberControl = ({
   pending,
   text,
 }: Readonly<{
-  on_follow: (enabled: boolean) => void
+  on_follow: ((enabled: boolean) => void) | null
   on_kick: ((id: string) => void) | null
   member: PartyRow['members'][number]
   leader: string | null
@@ -90,7 +90,7 @@ const PartyMemberControl = ({
   pending: string | null | undefined
   text: CopyText
 }>) => {
-  if (member.character_id === leader && selected === leader)
+  if (on_follow && member.character_id === leader && selected === leader)
     return (
       <label className="party-follow-toggle">
         <input
@@ -134,7 +134,7 @@ const PartyMemberRow = ({
   can_run,
   text,
 }: Readonly<{
-  on_follow: (enabled: boolean) => void
+  on_follow: ((enabled: boolean) => void) | null
   on_kick: ((id: string) => void) | null
   on_select: ((id: string) => void) | null
   member: PartyRow['members'][number]
@@ -230,8 +230,8 @@ export type PartyFrameSource = Readonly<{
   party: PartyRow
   selected: string | null
   following: boolean
-  follow: (enabled: boolean) => void
-  select: (id: string) => void
+  follow: ((enabled: boolean) => void) | null
+  select: ((id: string) => void) | null
 }>
 
 type PartyFrameViewProps = Readonly<{
@@ -239,7 +239,7 @@ type PartyFrameViewProps = Readonly<{
   party: PartyRow
   selected: string | null
   following: boolean
-  follow: (enabled: boolean) => void
+  follow: ((enabled: boolean) => void) | null
   select: ((id: string) => void) | null
   leave: (() => void) | null
   kick: ((id: string) => void) | null
@@ -296,7 +296,7 @@ const PartyFrameView = ({
         <div className="party-frame__member is-invited" key={invited.character_id}>
           <span />
           <b>{invited.name || text('adventurer')}</b>
-          {selected === leader && (
+          {kick && selected === leader && (
             <button
               aria-label={text('rescind')}
               disabled={!!pending}

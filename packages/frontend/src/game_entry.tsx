@@ -4,6 +4,7 @@
 import { lazy, StrictMode, type ComponentType } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { is_agent_entry } from './agents/entry_intent.ts'
 import { ExternalWalletHost } from './wallet/ExternalWalletHost.tsx'
 import {
   dispatch_app,
@@ -43,6 +44,18 @@ const load_surface = async (
   locale: Locale
 ): Promise<Readonly<{ Surface: ComponentType; modules: readonly AppModuleName[] }>> => {
   const route = globalThis.location.pathname.replace(/\/+$/, '')
+  if (is_agent_entry(globalThis.location)) {
+    const [{ AgentEntry }, copy] = await Promise.all([import('./agents/AgentEntry.tsx'), load_app_copy(locale)])
+    dispatch_app({ type: 'locale/loaded', locale, copy })
+    const load_player = () => load_player_surface('/')
+    const start_player = () => {
+      void register_service_worker().catch((error) => report_error(error, { area: 'service_worker' }))
+    }
+    return {
+      Surface: () => <AgentEntry copy={copy} load_player={load_player} start_player={start_player} />,
+      modules: PLAYER_APP_MODULES,
+    }
+  }
   if (route === '/play-demo') {
     const [{ AdventureRuntime }, copy] = await Promise.all([
       import('./adventure/AdventureRuntime.tsx'),
@@ -87,10 +100,12 @@ export const boot_game = (): void => {
       console.warn('App reload safety check failed.', error)
     }
   })
+  const lightweight = is_agent_entry(globalThis.location)
   const locale = load_locale()
   dispatch_app({ type: 'locale/changed', locale })
   const root = createRoot(document.getElementById('root')!, react_error_handlers)
-  void register_service_worker()
+  // Installing the worker precaches game chunks. Agent entry defers that until Play/spectate.
+  void (lightweight ? Promise.resolve() : register_service_worker())
     .then(async () => {
       const { Surface, modules } = await load_surface(locale)
       observe_app(modules)

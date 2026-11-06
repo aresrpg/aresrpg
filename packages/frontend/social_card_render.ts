@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Paints the data-bearing social cards. Hand-composed page cards are authored art under
-// seed/icons/social; anything quoting content derives here so a content change cannot go stale.
+// packages/frontend/public/social; anything quoting content derives here so a content change cannot go stale.
 /* eslint-disable no-param-reassign -- Canvas2D helpers paint only the call-owned surface at this rendering boundary. */
 
 import { readFile } from 'node:fs/promises'

@@ -1,67 +1,46 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
-import { COMBAT_DAILY_BUDGET, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
-import { Flame, Gem, Waves } from 'lucide-react'
+import { KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 
 import type { KaresCopy } from './copy.ts'
 import { kares_distribution } from './distribution.ts'
-import { finance_label } from './components.tsx'
+import { Tokenomics } from './TokenomicsPanel.tsx'
 
 export const TokenomicsTab = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
   const { amount: format_amount } = useNumbers()
   const allocations = kares_distribution(copy)
   return (
-    <section className="mx-auto w-full max-w-5xl p-5 lg:p-10">
-      <div className={finance_label}>{copy.tokenomics}</div>
-      <h1 className="mt-4 text-4xl font-semibold tracking-tight text-gold-light">
-        {format_amount(KARES_SUPPLY)} <span className="text-lg text-gold">KARES</span>
-      </h1>
-      <p className="mt-3 text-xs text-muted">{copy.fixed_supply}</p>
-      <p className="mt-4 max-w-3xl text-[11px] leading-6 text-muted">{copy.supply_detail}</p>
-      <div aria-hidden="true" className="mt-8 flex h-3 gap-1">
-        {allocations.map((row) => (
-          <span key={row.label} style={{ width: `${row.share}%`, background: row.color }} />
-        ))}
-      </div>
-      <div className="mt-5 divide-y divide-white/7 border-y border-border">
-        {allocations.map((row) => (
-          <div className="flex flex-wrap items-center gap-3 py-4 text-xs" key={row.label}>
-            <span className="size-2" style={{ background: row.color }} />
-            <span className="min-w-40 flex-1 text-muted">{row.label}</span>
-            <span className="text-text tabular-nums">{format_amount(row.amount)}</span>
-            <span className="w-12 text-right text-gold tabular-nums">{row.share}%</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 border border-gold/20 bg-gold/4 p-5">
-        <h2 className="text-sm text-gold">{copy.community}</h2>
-        <p className="mt-3 text-[11px] leading-6 text-muted">{copy.community_detail}</p>
-        <p className="mt-3 text-[11px] leading-6 text-muted">{copy.community_release_note}</p>
-      </div>
-      <div className="mt-6 border border-border bg-surface-low/60 p-5">
-        <h2 className="text-sm text-gold">{copy.combat_rewards}</h2>
-        <p className="mt-3 text-[11px] leading-6 text-muted">
-          {copy.combat_detail.replace('{{cap}}', format_amount(COMBAT_DAILY_BUDGET, 9))}
+    <section className="mx-auto w-full max-w-5xl p-3 lg:p-6">
+      <Tokenomics copy={copy} />
+      <details className="mt-6 text-xs text-muted">
+        <summary className="cursor-pointer text-gold">{copy.tokenomics}</summary>
+        <h2 className="mt-10 text-sm text-gold">{copy.fixed_supply}</h2>
+        <p className="mt-4 text-3xl font-semibold tracking-tight text-gold-light">
+          {format_amount(KARES_SUPPLY)} <span className="text-lg text-gold">KARES</span>
         </p>
-      </div>
-      <p className="mt-5 text-[11px] leading-6 text-muted">{copy.emissions_detail}</p>
-      <p className="mt-3 text-[11px] leading-6 text-muted">{copy.upgradeability_note}</p>
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
-        {[
-          { Icon: Flame, title: copy.mastery_title, body: copy.mastery_note },
-          { Icon: Gem, title: copy.five_years, body: copy.rewards_note },
-          { Icon: Waves, title: copy.claimable, body: copy.revenue_note },
-        ].map(({ Icon, title, body }) => (
-          <article className="border border-border bg-surface-low/60 p-5" key={title}>
-            <Icon className="text-gold" size={20} />
-            <h2 className="mt-4 text-sm text-text">{title}</h2>
-            <p className="mt-3 text-[11px] leading-6 text-muted">{body}</p>
-          </article>
-        ))}
-      </div>
+        <div aria-hidden="true" className="mt-8 flex h-3 gap-1">
+          {allocations.map((row) => (
+            <span key={row.label} style={{ width: `${row.share}%`, background: row.color }} />
+          ))}
+        </div>
+        <div className="mt-5 divide-y divide-white/7 border-y border-border">
+          {allocations.map((row) => (
+            <div className="flex flex-wrap items-center gap-3 py-4 text-xs" key={row.label}>
+              <span className="size-2" style={{ background: row.color }} />
+              <span className="min-w-40 flex-1 text-muted">{row.label}</span>
+              <span className="text-text tabular-nums">{format_amount(row.amount)}</span>
+              <span className="w-12 text-right text-gold tabular-nums">{row.share}%</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 leading-6">{copy.rewards_note}</p>
+        <p className="mt-4 leading-6">{copy.revenue_note}</p>
+        <p className="mt-4 leading-6">{copy.emissions_detail}</p>
+        <p className="mt-4 leading-6">{copy.upgradeability_note}</p>
+      </details>
     </section>
   )
 }
