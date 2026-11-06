@@ -39,12 +39,14 @@ for (const width of [1280, 390]) {
       const navigation = warm ? page.reload() : page.goto('/')
       try {
         await expect(page.locator('#root .landing')).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Play', exact: true }).first()).toBeDisabled()
         await expect(page.locator('#root [data-boot-loading]')).toHaveCount(0)
       } finally {
         gate.resolve()
       }
       await navigation
       await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
+      await expect(page.getByRole('button', { name: 'Play', exact: true }).first()).toBeEnabled()
       expect(await page.evaluate(() => Reflect.get(window, 'saw_game_loader'))).toBe(false)
       expect(requests.filter((url) => /game_entry-|webgpu_backend-|three\.webgpu|\/models\//.test(url))).toEqual([])
       await page.unroute(app_chunk)

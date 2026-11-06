@@ -7,5 +7,12 @@
   const path = location.pathname.replace(/\/+$/, '')
   const root = document.getElementById('root')
   const shell = document.getElementById(path === '' ? 'boot-landing' : 'boot-game')
-  if (root && shell && path !== '/enoki') root.replaceChildren(shell.content.cloneNode(true))
+  if (root && shell && path !== '/enoki') {
+    const content = shell.content.cloneNode(true)
+    // Static buttons have no handlers; React replaces them with interactive controls after startup.
+    if (path === '') {
+      for (const button of content.querySelectorAll('button')) button.setAttribute('disabled', '')
+    }
+    root.replaceChildren(content)
+  }
 }
