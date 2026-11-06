@@ -152,7 +152,8 @@ fn analyze_game_revenue(
                 ..MoneyDelta::default()
             },
             ("tournament", "EntryFeePaid") => MoneyDelta {
-                tournament_mist: decode::from_bytes::<events::EntryFeePaid>(event.bytes)?.treasury_mist,
+                tournament_mist: decode::from_bytes::<events::EntryFeePaid>(event.bytes)?
+                    .treasury_mist,
                 ..MoneyDelta::default()
             },
             _ => continue,

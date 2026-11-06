@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 
+import { raster_portrait_coverage } from './portrait_coverage.mjs'
+
 const require = createRequire(new URL('../packages/frontend/package.json', import.meta.url))
 const { createCanvas, loadImage } = require('@napi-rs/canvas')
 const root = new URL('../seed/portraits/', import.meta.url)
@@ -22,23 +24,6 @@ const filters = {
   dark: (rgb) => 1 - smooth(0.33, 0.65, Math.max(...rgb)),
   ivory: (rgb) => smooth(0.45, 0.7, Math.max(...rgb)),
 }
-const draw_polygons = (ctx, polygons, color) => {
-  ctx.fillStyle = color
-  for (const points of polygons) {
-    ctx.beginPath()
-    points.forEach(([x, y], index) => (index ? ctx.lineTo(x * 2, y * 2) : ctx.moveTo(x * 2, y * 2)))
-    ctx.closePath()
-    ctx.fill()
-  }
-}
-const raster_rule = (rule) => {
-  const canvas = createCanvas(1024, 1024)
-  const ctx = canvas.getContext('2d')
-  draw_polygons(ctx, rule.polygons, 'white')
-  ctx.globalCompositeOperation = 'destination-out'
-  draw_polygons(ctx, rule.exclude, 'white')
-  return ctx.getImageData(0, 0, 1024, 1024).data
-}
 const save_artifact = async (url, bytes) => {
   if (process.argv.includes('--check')) {
     if (!Buffer.from(await readFile(url)).equals(Buffer.from(bytes))) throw new Error(`Stale portrait artifact: ${url}`)
@@ -52,7 +37,7 @@ for (const [name, rules] of Object.entries(regions.portraits)) {
   ctx.drawImage(await loadImage(source_bytes), 0, 0)
   const source = ctx.getImageData(0, 0, 1024, 1024).data
   const mask = ctx.createImageData(1024, 1024)
-  const coverage = rules.map(raster_rule)
+  const coverage = rules.map(raster_portrait_coverage)
   const shades = [[], [], []]
   for (let pixel = 0; pixel < 1024 * 1024; pixel++) {
     const offset = pixel * 4
@@ -61,8 +46,7 @@ for (const [name, rules] of Object.entries(regions.portraits)) {
     if (!source[offset + 3]) continue
     let selected_slot = -1
     for (const [index, rule] of rules.entries()) {
-      const weight =
-        (coverage[index][offset + 3] / 255) * filters[rule.filter](rgb) * smooth(0.12, 0.28, Math.max(...rgb))
+      const weight = (coverage[index][pixel] / 255) * filters[rule.filter](rgb) * smooth(0.12, 0.28, Math.max(...rgb))
       if (weight <= 0) continue
       // Retain authored slot priority, but union overlapping regions of that slot.
       // An antialiased polygon edge must not hide a fully covered hair/horn region.
