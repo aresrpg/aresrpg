@@ -10,6 +10,9 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 import type { ItemMenuState } from './InventoryOverlays.tsx'
 
+const equipment_slot_at = (point: Readonly<{ x: number; y: number }>) =>
+  document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-equipment-slot]')?.dataset.equipmentSlot
+
 /** Both inventory presentations share gestures and the same selected-ID owner. */
 export const InventorySelectionGrid = ({
   items,
@@ -22,25 +25,27 @@ export const InventorySelectionGrid = ({
   class_name,
   drag_item,
   equip,
+  transfer,
 }: Readonly<{
   items: readonly ItemRow[]
   selected: readonly string[]
   change: (ids: readonly string[]) => void
-  menu: (menu: ItemMenuState) => void
+  menu?: (menu: ItemMenuState) => void
   disabled: boolean
   copy: AppCopy
   children: ReactNode
   class_name: string
   drag_item?: (id: string | null) => void
-  equip: (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot) => void
+  equip?: (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot) => void
+  transfer?: (ids: readonly string[], point: Readonly<{ x: number; y: number }>) => boolean
 }>) => {
   const [selection_mode, set_selection_mode] = useState(false)
   const selected_items = items.filter(({ id }) => selected.includes(id))
   const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): void => {
-    if (ids.length !== 1) return
+    if (transfer?.(ids, point)) return
+    if (!equip || ids.length !== 1) return
     const [id] = ids
-    const slot = document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-equipment-slot]')
-      ?.dataset.equipmentSlot
+    const slot = equipment_slot_at(point)
     const item = items.find((item) => item.id === id)
     if (!item || !character_equipment_slots.includes(slot as CharacterEquipmentSlot)) return
     equip(item, slot as CharacterEquipmentSlot)
@@ -66,19 +71,21 @@ export const InventorySelectionGrid = ({
         >
           <X size={13} />
         </Button>
-        <Button
-          aria-label={copy.ui.mobile_item_actions}
-          disabled={selected_items.length === 0 || disabled}
-          onClick={(event) => {
-            event.stopPropagation()
-            const [item] = selected_items
-            if (!item) return
-            const bounds = event.currentTarget.getBoundingClientRect()
-            menu({ item, items: selected_items, x: bounds.left, y: bounds.bottom })
-          }}
-        >
-          <MoreHorizontal size={14} />
-        </Button>
+        {menu && (
+          <Button
+            aria-label={copy.ui.mobile_item_actions}
+            disabled={selected_items.length === 0 || disabled}
+            onClick={(event) => {
+              event.stopPropagation()
+              const [item] = selected_items
+              if (!item) return
+              const bounds = event.currentTarget.getBoundingClientRect()
+              menu({ item, items: selected_items, x: bounds.left, y: bounds.bottom })
+            }}
+          >
+            <MoreHorizontal size={14} />
+          </Button>
+        )}
       </div>
       <SelectionGrid
         className={class_name}

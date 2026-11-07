@@ -140,7 +140,7 @@ test('prepared gas budget and explicit reserve use a fresh balance; failure bloc
   const actions = agent_transfer_actions(f.sdk as never, {
     address: sender,
     kiosk_cap: async () => cap,
-    assets: { client: f.client as never, recipient: owner },
+    assets: { client: f.client as never, recipient: () => owner },
   })
   const review = await actions.prepare(asset_offer)
   if (!is_asset_intent(review.intent)) throw new Error('Expected asset review')
@@ -415,7 +415,7 @@ test('confirming an item offer submits only the offer, never the separate recipi
   const actions = agent_transfer_actions(sdk as never, {
     address: sender,
     kiosk_cap: async () => cap,
-    assets: { client: f.client as never, recipient: owner },
+    assets: { client: f.client as never, recipient: () => owner },
   })
   const review = await actions.prepare({ ...asset_offer, sui_mist: '0' })
   expect(submitted).toHaveLength(0)
@@ -452,7 +452,7 @@ test('a changed member of a reviewed item group prevents the entire offer from s
   const actions = agent_transfer_actions(sdk as never, {
     address: sender,
     kiosk_cap: async () => cap,
-    assets: { client: client as never, recipient: owner },
+    assets: { client: client as never, recipient: () => owner },
   })
   const review = await actions.prepare({
     ...asset_offer,

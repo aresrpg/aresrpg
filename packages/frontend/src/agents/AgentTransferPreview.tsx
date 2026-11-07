@@ -2,10 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { AgentPairingIdentity } from '@aresrpg/protocol'
 import { useState } from 'react'
+import { owner_agent_identity } from '@aresrpg/sdk/agent-recall'
 import { Button } from '@aresrpg/ui'
 
 import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { toast } from '../toast.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { AgentRecallPanel } from './AgentRecallPanel.tsx'
@@ -20,7 +22,7 @@ export const AgentTransferPreview = ({
 }: Readonly<{ pairing: AgentPairingIdentity; copy: AppCopy; recovery_only?: boolean }>) => {
   const { address } = pairing
   const wallet = useAppStore((app) => app.session.wallet)
-  const [confirmed_address, confirm_address] = useState<string | null>(null)
+  const confirmed_address = useAppStore((app) => app.session.inventory_pairing?.address)
   if (!wallet) return null
   return (
     <div className="space-y-2">
@@ -42,7 +44,15 @@ export const AgentTransferPreview = ({
         <input
           type="checkbox"
           checked={confirmed_address === address}
-          onChange={(event) => confirm_address(event.target.checked ? address : null)}
+          onChange={(event) => {
+            try {
+              const request = wallet.read_agent_pairing_request?.(crypto.randomUUID())
+              owner_agent_identity(pairing, request)
+              dispatch_app({ type: 'agent/inventory_target', wallet, pairing: event.target.checked ? pairing : null })
+            } catch {
+              toast.add(copy.ui.agent_verify_mismatch, 'info')
+            }
+          }}
         />
         {copy.ui.agent_verify_address}
       </label>

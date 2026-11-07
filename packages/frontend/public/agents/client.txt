@@ -1,115 +1,74 @@
 # Connect an assistant to AresRPG
 
-**Connect Your Agent is the single official supported bot onboarding flow.**
-This guide owns pairing, host signing, handover and Recall. After pairing, use the SDK as composable
-building blocks; no additional bot framework or hosted service is required.
-Use a checkout and Bun version matching the server; install with `bun install --frozen-lockfile --ignore-scripts`.
+Use this real, persistent setup. Do not substitute a disposable identity.
+Pairing automatically posts public proof. It does not authorize assets, payments or gameplay.
 
-## Pair once
+## Run now
 
-1. The human chooses **Connect your agent** and copies the frontend prompt containing this guide
-   and the private temporary setup link. Pairing alone does not authorize transfers or gameplay.
-2. The assistant uses its already-approved persistent Ed25519 signer. A local adapter exports
-   `create_pairing_client(request)` and calls `prepare_agent_pairing(request, member)` from
-   `@aresrpg/sdk/agent-signer`. `member` supplies `storage: 'persistent'`, `public_key`,
-   `sign_personal_message(bytes)` and `sign_transaction(bytes)`, returning `{bytes, signature}`.
-   The host owns key storage. This repository does not provision credentials or a Nox key store.
-3. Call `bootstrap_setup_link(link, {bootstrap: create_pairing_client})` from
-   `packages/sdk/examples/agent_setup.ts`. It fetches the request, posts the public proof and
-   returns the multisig signer. Keep the link private; do not paste private keys or proofs into chat.
-   Pass the complete link through your runtime’s structured environment API as `ARESRPG_SETUP_LINK`
-   if needed. Never interpolate it into shell code, print it, or forward its fragment to a guide URL.
-   The SDK removes the fragment and sends the token only as a Bearer header to the pairing API.
-   Do not request manual public-key JSON copyback. Report missing runtime or signer configuration
-   instead of claiming a successful connection.
-4. Independently report `signer.address`. The human compares the full address before handover.
-   A leaked unused bearer link can be claimed first by a different key.
+1. Use the assistant's POSIX cloud host with Node.js 22+ and a private persistent directory (a real path, not a symlink)
+   outside the checkout and temporary storage. Download the standalone client; no npm, Bun,
+   Sui CLI, repository clone or dependency install is needed. If Node is missing,
+   install an official Node.js 22+ runtime from https://nodejs.org/en/download first:
 
-Without the adapter, setup creates a disposable in-memory identity. It is suitable only for
-pairing checks, and the browser disables asset handover. Persistent mode is a signed host claim,
-not proof that its storage survives restart.
+   curl -fsSLo ares-agent.mjs https://aresrpg.world/agents/ares-agent.mjs
 
-## Connect and act
+2. Before first use, obtain the required approval to create/store a dedicated Ed25519 signing
+   key in that directory. Then initialize it (replace the example path):
 
-`create_agent_connection` from `@aresrpg/sdk/agent-connection` handles challenge authentication,
-roster updates and read-only fight resync using a supplied transport and personal-message signer.
-The Bun transport example is `packages/sdk/examples/agent_transport.ts`. It does not auto-play.
+   node ./ares-agent.mjs init /absolute/persistent/ares-agent --approve-key-creation
 
-Construct the ordinary SDK with the returned transaction signer:
+   Existing keys are reused, never replaced. If already initialized, skip this step.
+   Complete installation and approval before asking for a fresh setup link if the old one expired.
 
-```ts
-import { SDK, sui_transport } from '@aresrpg/sdk'
-import { SuiGrpcClient } from '@mysten/sui/grpc'
+3. Pass the complete private link as ARESRPG_SETUP_LINK through the runtime's structured
+   environment API, then run:
 
-const client = new SuiGrpcClient({ network: 'mainnet', baseUrl: 'https://fullnode.mainnet.sui.io:443' })
-const sdk = SDK({ client: sui_transport(client), network: 'mainnet',
-  address: signer.address, sign_transaction: signer.sign_transaction })
-```
+   node ./ares-agent.mjs pair /absolute/persistent/ares-agent
 
-Use existing character, fight, dungeon and marketplace actions; `packages/sdk/examples/agent_actions.ts`
-shows their composition. The SDK owns resolution, signing, submission and digest recovery.
-Never retry an uncertain transaction: reconcile its digest first.
+   If structured environment input is unavailable, send the link directly to this process's
+   non-interactive stdin and close stdin. Never put it in shell code, command arguments, logs,
+   files or chat replies. The client sends its fragment only as a Bearer header to the pairing API.
+   It saves public identity metadata before posting proof and verifies the response automatically.
 
-For custody, `agent_character_transfer(sdk)` from `@aresrpg/sdk/agent-transactions` exposes
-`offer`, `claim` and `cancel` transaction builders. They reuse personal kiosks and marketplace
-policy settlement. `agent_transfer_actions` adds simulation, one-use confirmation and receipts.
-Claim the human's exclusive PurchaseCap into the multisig's personal kiosk; selected character IDs,
-cap IDs and gas must come from actual state, never examples. Zero price does not waive gas or royalties.
+4. Verify a fresh process loads the same identity, then report its full address to the human:
 
-## Human Recall
+   node ./ares-agent.mjs reload /absolute/persistent/ares-agent
 
-The browser retains public recovery identities per Google owner. Reopen setup and use the saved
-identity even if the assistant is offline. Restored identities allow recovery, not new handover.
+   The human compares that address before any handover. No public-key JSON copyback is needed.
+   Future runs use the saved identity, never the expired setup link.
 
-**Recall** uses the human's Google member to authorize a return from the multisig kiosk. It unequips
-into that kiosk, then issues exclusive PurchaseCaps for the character and precisely its CURRENT
-equipped items. The claim settles their policies and re-equips those items atomically in the human
-kiosk. The original delegation loadout is not used; unrelated inventory stays put.
-The SDK verifies the offer transaction’s ItemUnequipped events and unchanged newly created
-capabilities before review and again before signing. Missing or ambiguous history, ownership or
-gear blocks the claim. A failed claim leaves all transfers unexecuted; reconcile uncertain digests
-before trying again. Cancelling releases the character and item listings in the source kiosk,
-leaving the gear unequipped there. This uses existing contracts and needs no new Move module.
-The human then checks incoming returns and claims into their own personal kiosk. Both signatures
-come from the human; the agent is not asked. The first transaction needs multisig gas; the claim
-needs human-wallet gas. Pending initial handovers can be cancelled through Recall; pending returns
-can be cancelled from the incoming list.
+## Use and recover
 
-This follows existing custody rules: a fighting character must first return to kiosk custody;
-a capability already transferred to a third party is controlled by that holder. Recall does not
-revoke the agent's 1-of-2 authority over assets remaining in the multisig.
+Status: node ./ares-agent.mjs status /absolute/persistent/ares-agent
+Code: import { load_agent_signer } from './ares-agent.mjs';
+      const signer = await load_agent_signer('/absolute/persistent/ares-agent');
+The signer works with the ordinary SDK and agent connection; loading it does not play or transfer.
 
-## Selective inventory recovery
+Missing/corrupt/unsafe storage stops setup. Never delete a key to fix an error.
+A pending outcome cannot load as paired. Keep the key and request a fresh link for the same owner;
+re-pairing uses the same address. A stale operation.lock requires confirming no process is running
+before removing only that lock. Another identity uses another state directory.
 
-The human opens Recall, then refreshes Agent inventory. The read covers every personal kiosk,
-address-owned object page, kiosk character's current equipment, liquid SUI/KARES, kiosk sale
-proceeds and KARES staking positions. Unknown Move types are visible read only. Fighting
-characters remain subject to existing settlement and are outside the kiosk inventory until returned.
+Files use owner-only POSIX permissions and atomic identity writes. This is a local keystore,
+not an encrypted key vault: code running as the host user can read it. Host reset, snapshot expiry
+or disk loss can remove it. Use retained storage with a host-approved private backup/recovery plan;
+never upload the key as an attachment or store it in assistant memory. Protect backups as credentials.
+Grok Bot and other hosts must verify their directory/backup lifecycle rather than assume persistence.
 
-Select exact items (whole stacks) and token amounts. Available, equipped, public-listed and
-exclusive-offer items have distinct controls. Current equipment is checked before unequipping;
-public listings can be cancelled first. Directly address-owned game items are deposited into a
-personal kiosk before exclusive offer. The human then selects incoming item caps to claim or
-cancel. Gear tied to a pending character return is excluded from independent item claims.
-Kiosk proceeds and staked KARES are withdrawn to the multisig first; refresh before selecting
-an external recovery amount. Everything reuses existing kiosk, marketplace and staking primitives.
+The target is under one minute on a ready Node host. Download speed, runtime installation,
+required human approval and service availability can take longer. The setup link lasts five minutes.
+No success is claimed until automatic proof and fresh-process identity reload both pass.
 
-SUI review retains an editable reserve, initially the existing SDK gas budget (0.05 SUI).
-Variable-sized recovery batches use the existing fee estimator. Fresh balance must cover the
-chosen SUI amount, the full prepared gas budget and the explicit reserve. Coin transfers never
-implicitly drain all funds. Missing KARES deployment pins disable that currency without hiding
-items or SUI; staking additionally requires its ordinary currency/pool/reward pins. Check live state again before signing; an uncertain digest must be
-reconciled rather than retried. These checks do not suspend the trusted agent's concurrent actions.
+## Optional key care, after setup
 
-## Verification boundary
+Periodically check your host's official updates for a secret vault or protected signing support.
+Recheck file ownership/permissions and storage retention; review available access logs and
+unexpected file changes. These checks cannot prove that nobody has accessed the key.
+Offer a secure, user-controlled backup/recovery option. Explain custody risks and obtain explicit
+approval before exporting or migrating credentials. Never expose keys in chat, logs, attachments
+or assistant memory. Verify recovery and the same public identity before retiring old storage;
+never silently replace or delete the signing key. This upkeep does not block initial setup.
 
-Gas failures open the existing funding flow for the actual payer: multisig for the Recall offer,
-human for the claim. No funds are sent automatically.
-
-Local tests cover identity binding, signed-mode tampering, both custody builders, equipment reads,
-Google-member envelope wiring with an explicit verification stub, public identity recovery and
-failed/uncertain submissions. Actual Google proof verification, host-key persistence and the full
-live handover/Recall round trip remain for the human's manual test after deployment. The optional
-`agent_kit.ts` observer is a diagnostic example, not a required runtime or autonomous player.
-
-Gameplay and SDK references: https://aresrpg.world/agents/play.txt and https://aresrpg.world/agents/sdk.txt.
+SDK/strategy: https://aresrpg.world/agents/sdk.txt
+Handover and human Recall: https://aresrpg.world/agents/custody.txt
+Gameplay agreement: https://aresrpg.world/agents/play.txt

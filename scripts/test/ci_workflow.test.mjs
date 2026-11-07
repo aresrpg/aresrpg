@@ -50,7 +50,7 @@ test('verification selector executes with only its sparse checkout files', () =>
       env: { ...process.env, BASE_SHA: '', GITHUB_OUTPUT: output },
       stdio: 'pipe',
     })
-    expect(readFileSync(output, 'utf8')).toBe('browsers=true\nmove=true\nindexer=true\n')
+    expect(readFileSync(output, 'utf8')).toBe('browsers=true\nmove=true\nindexer=true\nsource=true\n')
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
@@ -62,6 +62,7 @@ test('all selective lanes use a successful edge push baseline, including PRs', (
   expect(step.run).toContain('--branch edge --event push --status success')
   expect(step.run).toContain('node scripts/ci_inputs.mjs')
   for (const [job, output] of [
+    ['source', 'source'],
     ['tests_move', 'move'],
     ['tests_indexer', 'indexer'],
     ['browsers', 'browsers'],
@@ -72,19 +73,21 @@ test('all selective lanes use a successful edge push baseline, including PRs', (
   }
 })
 
-const check_gate = (lane, result, required) => {
+const check_gate = (lane, result, required, changes_result = 'success') => {
   const fields = {
-    'needs.changes.result': 'success',
+    'needs.changes.result': changes_result,
     'needs.source.result': 'success',
     'needs.tests_move.result': 'success',
     'needs.tests_indexer.result': 'success',
     'needs.browsers.result': 'success',
+    'needs.changes.outputs.source': 'true',
     'needs.changes.outputs.move': 'true',
     'needs.changes.outputs.indexer': 'true',
     'needs.changes.outputs.browsers': 'true',
     "github.event_name == 'push' || needs.bundle-gate.result == 'success'": 'true',
     [`needs.${lane}.result`]: result,
-    [`needs.changes.outputs.${{ tests_move: 'move', tests_indexer: 'indexer', browsers: 'browsers' }[lane]}`]: required,
+    [`needs.changes.outputs.${{ source: 'source', tests_move: 'move', tests_indexer: 'indexer', browsers: 'browsers' }[lane]}`]:
+      required,
   }
   const run = jobs.gate.steps[0].run.replace(/\$\{\{\s*(.*?)\s*\}\}/g, (_, key) => {
     if (!(key in fields)) throw new Error(`Unexpected expression ${key}`)
@@ -93,7 +96,7 @@ const check_gate = (lane, result, required) => {
   return () => execFileSync('/bin/bash', ['-e', '-c', run], { stdio: 'pipe' })
 }
 
-for (const lane of ['tests_move', 'tests_indexer', 'browsers'])
+for (const lane of ['source', 'tests_move', 'tests_indexer', 'browsers'])
   test(`${lane} skips only with explicit unchanged-input evidence`, () => {
     check_gate(lane, 'success', 'true')()
     check_gate(lane, 'skipped', 'false')()
@@ -102,9 +105,9 @@ for (const lane of ['tests_move', 'tests_indexer', 'browsers'])
     expect(check_gate(lane, 'skipped', '')).toThrow()
   })
 
-test('failed or missing source verification cannot certify a release', () => {
-  check_gate('source', 'success', 'true')()
-  for (const result of ['failure', 'cancelled', 'skipped', '']) expect(check_gate('source', result, 'true')).toThrow()
+test('failed or missing change classification cannot certify reused source checks', () => {
+  for (const result of ['failure', 'cancelled', 'skipped', ''])
+    expect(check_gate('source', 'skipped', 'false', result)).toThrow()
 })
 
 test('indexer parity checkout includes the shared leaderboard vocabulary', () => {

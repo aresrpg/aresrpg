@@ -21,6 +21,7 @@ jobs:
       contents: read
       actions: read
     outputs:
+      source: ${{ steps.inputs.outputs.source }}
       browsers: ${{ steps.inputs.outputs.browsers }}
       move: ${{ steps.inputs.outputs.move }}
       indexer: ${{ steps.inputs.outputs.indexer }}
@@ -43,6 +44,8 @@ jobs:
           export BASE_SHA
           node scripts/ci_inputs.mjs
   source:
+    needs: changes
+    if: needs.changes.outputs.source == 'true'
     name: source (${{ matrix.check }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -359,10 +362,10 @@ jobs:
       - name: every required verification completed
         run: |
           test "${{ needs.changes.result }}" = success
-          test "${{ needs.source.result }}" = success
           check_lane() {
             [ "$1" = success ] || { [ "$2" = false ] && [ "$1" = skipped ]; }
           }
+          check_lane "${{ needs.source.result }}" "${{ needs.changes.outputs.source }}"
           check_lane "${{ needs.tests_move.result }}" "${{ needs.changes.outputs.move }}"
           check_lane "${{ needs.tests_indexer.result }}" "${{ needs.changes.outputs.indexer }}"
           check_lane "${{ needs.browsers.result }}" "${{ needs.changes.outputs.browsers }}"

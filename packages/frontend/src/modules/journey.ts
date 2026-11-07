@@ -9,6 +9,7 @@ import {
   completed_quests_from,
   initial_journey_state,
   JOURNEY_QUESTS,
+  next_quest,
   type JourneyState,
 } from '../journey/model.ts'
 import { quest_changes } from '../journey/facts.ts'
@@ -101,7 +102,11 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const action = input as JourneyInput
   if (!accepts_input(state.journey, action)) return state
   const journey = reduce_journey(state.journey, action)
-  return journey === state.journey ? state : { ...state, journey }
+  if (journey === state.journey) return state
+  return {
+    ...state,
+    journey: next_quest(journey.completed) ? journey : { ...journey, journal_open: false, celebrations: [] },
+  }
 }
 
 export const observe_journey = (context: AppContext, storage: JourneyStorage): void => {

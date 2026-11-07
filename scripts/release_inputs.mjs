@@ -164,6 +164,68 @@ const working_blobs = async (cwd) => {
   )
 }
 
+// Parse with the pinned build runtime, then use the same pure selectors as both services.
+// No YAML parser dependency or duplicate list of backend-consumed translation keys.
+const locale_inputs = (sources) =>
+  new Promise((resolve_inputs, reject) => {
+    const module_url = new URL('../packages/immutable/src/locale.ts', import.meta.url).href
+    const program = `
+    import { allocation_locale, notification_locale } from ${JSON.stringify(module_url)}
+    if (!Bun.YAML?.parse) throw new Error('Release locale inspection requires Bun with YAML support')
+    const sources = await Bun.stdin.json()
+    console.log(JSON.stringify(Object.fromEntries(Object.entries(sources).map(([path, source]) => {
+      const document = Bun.YAML.parse(source)
+      const server = allocation_locale(document)
+      const discord = notification_locale(document)
+      if (!server || typeof server !== 'object' || Array.isArray(server) || !discord.copy)
+        throw new Error('Missing backend locale sections: ' + path)
+      return [path, { server, discord }]
+    }))))
+  `
+    const child = execFile(
+      'bun',
+      ['-e', program],
+      { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
+      (error, stdout) => {
+        if (error) return reject(error)
+        try {
+          resolve_inputs(JSON.parse(stdout))
+        } catch (failure) {
+          reject(failure)
+        }
+      }
+    )
+    child.stdin.on('error', reject)
+    child.stdin.end(JSON.stringify(sources))
+  })
+
+const locale_hashes = async (cwd, ref, files) => {
+  const paths = [...files]
+    .filter(([path, hash]) => hash !== null && /^packages\/frontend\/src\/i18n\/locales\/[^/]+\.yaml$/.test(path))
+    .map(([path]) => path)
+  if (!paths.length) return {}
+  const sources = Object.fromEntries(
+    await Promise.all(
+      paths.map(async (path) => [
+        path,
+        ref === null ? await readFile(resolve(cwd, path), 'utf8') : await git(cwd, ['show', `${ref}:${path}`]),
+      ])
+    )
+  )
+  const inputs = await locale_inputs(sources)
+  return Object.fromEntries(
+    Object.entries(inputs).map(([path, components]) => [
+      path,
+      Object.fromEntries(
+        Object.entries(components).map(([component, value]) => [
+          component,
+          createHash('sha256').update(JSON.stringify(value)).digest('hex'),
+        ])
+      ),
+    ])
+  )
+}
+
 export const runtime_fingerprints = async (cwd, ref = null, scope = 'all') => {
   const tree = await git(cwd, ['ls-tree', '-r', '-z', ref ?? 'HEAD'])
   const committed = tree
@@ -181,11 +243,11 @@ export const runtime_fingerprints = async (cwd, ref = null, scope = 'all') => {
       ? await readFile(resolve(cwd, 'package.json'), 'utf8')
       : await git(cwd, ['show', `${ref}:package.json`])
   const metadata = runtime_package_json(package_source)
-  return fingerprint_runtime_files([...files], metadata, scope)
+  return fingerprint_runtime_files([...files], metadata, scope, await locale_hashes(cwd, ref, files))
 }
 
 /** Local backend work excludes app files, but retains workspace manifests and all shared dependencies. */
-export const fingerprint_runtime_files = (files, metadata, scope = 'all') => {
+export const fingerprint_runtime_files = (files, metadata, scope = 'all', locales = {}) => {
   if (scope !== 'all' && scope !== 'local') throw new Error('Unsupported runtime fingerprint scope')
   const selected = files.filter(
     ([path]) =>
@@ -198,6 +260,7 @@ export const fingerprint_runtime_files = (files, metadata, scope = 'all') => {
       Object.keys(RELEASE_INPUTS).map((component) => {
         const inputs = selected
           .filter(([path, hash]) => hash !== null && component_owns_path(component, path))
+          .map(([path, hash]) => [path, locales[path]?.[component] ?? hash])
           .sort(([left], [right]) => left.localeCompare(right))
         return [
           component,

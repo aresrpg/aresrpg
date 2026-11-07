@@ -194,6 +194,10 @@ jobs:
             seed/structures
             scripts/release_inputs.mjs
             package.json
+      - name: setup the pinned locale parser
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: derive changed backend images from release-tag inputs
         id: plan
         run: |

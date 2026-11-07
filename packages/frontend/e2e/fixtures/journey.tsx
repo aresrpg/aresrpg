@@ -115,6 +115,12 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         >
           Load completed journey
         </button>
+        <button
+          onClick={() => dispatch_app({ type: 'journey/completed', ids: JOURNEY_QUESTS.map(({ id }) => id) })}
+          type="button"
+        >
+          Finish quests
+        </button>
         <button onClick={harvest} type="button">
           Harvest wheat
         </button>

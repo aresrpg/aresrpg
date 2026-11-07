@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { notification_locale } from '@aresrpg/immutable/locale'
 export type Copy = Readonly<{
   title: string
   sale: string
@@ -26,7 +27,7 @@ export const load_copy = async (locale: string): Promise<Copy> => {
     discord_marketplace?: Omit<Copy, 'stats'>
     simulator_page: Record<string, string>
   }
-  const copy = document.discord_marketplace
+  const { copy, stats } = notification_locale(document)
   const keys = [
     'title',
     'sale',
@@ -47,11 +48,6 @@ export const load_copy = async (locale: string): Promise<Copy> => {
   ] as const
   if (!copy || !keys.every((key) => typeof copy[key] === 'string'))
     throw new Error('Discord locale is missing notification copy')
-  const stats = Object.fromEntries(
-    Object.entries(document.simulator_page)
-      .filter(([key]) => key.startsWith('stat_'))
-      .map(([key, value]) => [key.slice(5), value])
-  )
   return { ...copy, stats }
 }
 export const interpolate = (template: string, values: Readonly<Record<string, string>>): string =>

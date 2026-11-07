@@ -1,0 +1,212 @@
+/* Extend the existing window. Equipment, player filters and their corner geometry stay untouched. */
+.game-character-window--equipment:has(.agent-kiosk) {
+  width: min(1125px, calc(100cqw - 24px));
+}
+.game-character-body > .chr-equip--agent {
+  grid-template-columns: minmax(290px, 0.85fr) minmax(350px, 1.15fr) 235px;
+}
+.chr-equip--agent {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) 235px;
+}
+.agent-equipment-toggle {
+  display: none;
+}
+.agent-kiosk {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 7px;
+  padding: 6px;
+  overflow: hidden;
+  background: #151a20;
+  border: 1px solid #161c29;
+  box-shadow: inset 0 1px #b9c0d32a;
+  color: #b9bdc5;
+  font-size: 10px;
+}
+.agent-kiosk__header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 25px;
+}
+.agent-kiosk__header > svg {
+  color: #8caec0;
+  flex: none;
+}
+.agent-kiosk__header strong {
+  flex: 1;
+  font-size: 13px;
+  color: #d8d9df;
+}
+.agent-kiosk__badge {
+  font-size: 8px;
+  padding: 2px 3px;
+  border: 1px solid #343b47;
+  color: #8caec0;
+}
+.agent-kiosk__header .aui-button {
+  min-height: 26px;
+  padding: 4px;
+}
+.agent-kiosk__balances {
+  display: flex;
+  gap: 4px;
+}
+.agent-kiosk__balances button {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 3px;
+  background: #202632;
+  border: 1px solid #343b47;
+  color: #e4bb79;
+  cursor: pointer;
+}
+.agent-kiosk__balances b {
+  display: block;
+  color: #dddce2;
+  font-variant-numeric: tabular-nums;
+}
+.agent-kiosk .inventory-filters .chr-equip__bagtabs {
+  height: 48px;
+  gap: 9px;
+  padding: 0;
+}
+.agent-kiosk .inventory-filters .chr-bagtab {
+  flex-basis: 48px;
+  height: 42px;
+  padding: 4px;
+}
+.agent-kiosk .inventory-category-name {
+  display: none;
+}
+.agent-kiosk .inventory-category-count {
+  font-size: 9px;
+}
+.agent-kiosk .inventory-search {
+  min-height: 28px;
+}
+.agent-kiosk .inventory-search input {
+  min-width: 0;
+  font-size: 10px;
+}
+.agent-kiosk .inventory-selection-tools {
+  font-size: 9px;
+  gap: 3px;
+}
+.agent-kiosk__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 52px);
+  justify-content: space-between;
+  grid-auto-rows: 60px;
+  align-content: start;
+  min-height: 70px;
+  flex: 1;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.agent-kiosk__cell {
+  position: relative;
+  min-width: 0;
+}
+.agent-kiosk__cell .chr-cell {
+  width: 100%;
+  height: 52px;
+}
+.agent-kiosk__item-state {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 8px;
+}
+.agent-kiosk__item-state[hidden] {
+  display: none;
+}
+.agent-kiosk__pending {
+  flex: none;
+  max-height: 28%;
+  overflow: auto;
+  font-size: 9px;
+}
+.agent-kiosk__pending .aui-button {
+  padding: 3px;
+  min-height: 26px;
+  font-size: 9px;
+}
+.agent-coin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.agent-coin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.agent-coin-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #343b47;
+  background: #151a20;
+  color: #dddce2;
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .game-character-window--equipment:has(.agent-kiosk) {
+    width: calc(100cqw - 8px);
+  }
+  .game-character-body > .chr-equip--agent {
+    grid-template-columns: minmax(254px, 0.85fr) minmax(280px, 1.15fr) 216px;
+    gap: 6px;
+  }
+  .agent-kiosk {
+    padding: 6px;
+    gap: 4px;
+  }
+  .agent-kiosk__grid {
+    grid-template-columns: repeat(4, 44px);
+    grid-auto-rows: 52px;
+  }
+  .agent-kiosk__cell .chr-cell {
+    height: 44px;
+  }
+  .agent-kiosk__balances button {
+    min-height: 36px;
+    padding: 2px;
+  }
+  .agent-kiosk .inventory-filters .chr-equip__bagtabs {
+    height: 44px;
+  }
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) and (max-width: 820px) {
+  .game-character-body > .chr-equip--agent {
+    position: relative;
+    grid-template-columns: 32px minmax(0, 1fr) 216px;
+  }
+  .agent-equipment-toggle {
+    display: block;
+    writing-mode: vertical-rl;
+    align-self: stretch;
+    background: #202632;
+    color: #e4bb79;
+    border: 1px solid #343b47;
+  }
+  .game-character-body .chr-equip--agent > .chr-equip__side {
+    display: none;
+  }
+  .game-character-body .chr-equip--agent[data-equipment-open] > .chr-equip__side {
+    display: flex;
+    position: absolute;
+    left: 40px;
+    top: 6px;
+    bottom: 6px;
+    width: 280px;
+    z-index: 10;
+    padding: 8px;
+    background: #181d23;
+    border: 1px solid #343b47;
+    box-shadow: 8px 0 20px #0009;
+  }
+}

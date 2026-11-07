@@ -1,10 +1,14 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { test, expect } from 'bun:test'
 
 import {
   classify_release,
   runtime_package_json,
+  runtime_fingerprints,
   fingerprint_runtime_files,
   SCENE_COMPILER_FILES,
 } from '../release_inputs.mjs'
@@ -202,4 +206,98 @@ test('SDK sources copied into the server image invalidate its release and local 
       )
   }
   expect(classify_release(['packages/sdk/src/auth.ts']).server).toBe(false)
+})
+
+const with_locales = async (run) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ares-locale-inputs-'))
+  const path = join(directory, 'packages/frontend/src/i18n/locales/en.yaml')
+  const original =
+    'allocation_page:\n  title: Allocation\ndiscord_marketplace:\n  title: Market\nsimulator_page:\n  stat_health: Health\n  unused_label: Browser only\nui:\n  agent_pair_no_assets: Pairing alone moves no assets\n'
+  const git = (...args) => execFileSync('git', args, { cwd: directory, stdio: 'pipe' })
+  try {
+    mkdirSync(join(directory, 'packages/frontend/src/i18n/locales'), { recursive: true })
+    writeFileSync(join(directory, 'package.json'), '{"version":"1.0.0"}')
+    writeFileSync(path, original)
+    git('init', '-q')
+    git('add', '.')
+    git(
+      '-c',
+      'core.hooksPath=/dev/null',
+      '-c',
+      'commit.gpgsign=false',
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      'commit',
+      '-qm',
+      'fixture'
+    )
+    await run({ directory, path, original })
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+test('browser-only locale changes reuse both backends, while each consumed section invalidates its owner', async () => {
+  await with_locales(async ({ directory, path, original }) => {
+    const before = await runtime_fingerprints(directory, 'HEAD')
+    for (const [from, to, expected] of [
+      ['  agent_pair_no_assets: Pairing alone moves no assets\n', '', []],
+      ['unused_label: Browser only', 'unused_label: New browser copy', []],
+      ['title: Allocation', 'title: New allocation', ['server']],
+      ['title: Market', 'title: New notification', ['discord']],
+      ['stat_health: Health', 'stat_health: Hit points', ['discord']],
+    ]) {
+      writeFileSync(path, original.replace(from, to))
+      const after = await runtime_fingerprints(directory)
+      expect(after.frontend).not.toBe(before.frontend)
+      for (const component of ['server', 'discord', 'indexer'])
+        expect(after[component] !== before[component]).toBe(expected.includes(component))
+    }
+  })
+})
+
+test('locale creation and deletion invalidate both backend locale sets', async () => {
+  await with_locales(async ({ directory, path, original }) => {
+    const before = await runtime_fingerprints(directory, 'HEAD')
+    const french = path.replace('en.yaml', 'fr.yaml')
+    writeFileSync(french, original)
+    const added = await runtime_fingerprints(directory)
+    for (const component of ['frontend', 'server', 'discord']) expect(added[component]).not.toBe(before[component])
+    rmSync(french)
+    rmSync(path)
+    const removed = await runtime_fingerprints(directory)
+    for (const component of ['frontend', 'server', 'discord']) expect(removed[component]).not.toBe(before[component])
+  })
+})
+
+test('invalid locale YAML cannot produce a reusable runtime fingerprint', async () => {
+  await with_locales(async ({ directory, path }) => {
+    writeFileSync(path, 'allocation_page: [unterminated')
+    await expect(runtime_fingerprints(directory)).rejects.toThrow()
+  })
+})
+
+test('YAML aliases from browser copy still invalidate the backend that consumes their values', async () => {
+  await with_locales(async ({ directory, path, original }) => {
+    const aliased = original.replace(
+      'allocation_page:\n  title: Allocation',
+      'ui_copy: &copy\n  title: Allocation\nallocation_page:\n  <<: *copy'
+    )
+    writeFileSync(path, aliased)
+    const before = await runtime_fingerprints(directory)
+    writeFileSync(path, aliased.replace('title: Allocation', 'title: Updated allocation'))
+    const after = await runtime_fingerprints(directory)
+    expect(after.server).not.toBe(before.server)
+    expect(after.discord).toBe(before.discord)
+  })
+})
+
+test('locale fingerprints and both consumers use the same Bun parser semantics', () => {
+  const server = readFileSync(new URL('../../packages/server/src/allocation/preview.ts', import.meta.url), 'utf8')
+  const discord = readFileSync(new URL('../../packages/discord/src/copy.ts', import.meta.url), 'utf8')
+  for (const consumer of [server, discord]) expect(consumer).toContain('Bun.YAML.parse(')
+  expect(server).toContain('allocation_locale(')
+  expect(discord).toContain('notification_locale(')
 })

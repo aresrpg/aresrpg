@@ -10,6 +10,7 @@ import {
   craft_output_stack_plan,
   craft_stack_plan,
   encumbered_asset_ids,
+  inventory_groups,
   stack_merge_target,
   trade_stack_targets,
 } from '../../src/inventory_stacks.ts'
@@ -137,9 +138,9 @@ test('visual balances combine fragments without changing the underlying item row
   const { inventory_groups, stack_merge_sources } = await import('../../src/inventory_stacks.ts')
   const rows = [stack('a', 2), stack('b', 3), stack('hat1', 1, 'hat'), stack('hat2', 1, 'hat')]
   expect(inventory_groups(rows)).toEqual([
-    { item: rows[1], amount: 5 },
-    { item: rows[2], amount: 1 },
-    { item: rows[3], amount: 1 },
+    { item: rows[1], amount: 5, items: [rows[0], rows[1]] },
+    { item: rows[2], amount: 1, items: [rows[2]] },
+    { item: rows[3], amount: 1, items: [rows[3]] },
   ])
   expect(rows[0]!.amount).toBe(2)
   expect(rows[1]!.amount).toBe(3)
@@ -148,4 +149,13 @@ test('visual balances combine fragments without changing the underlying item row
   expect(
     stack_merge_sources([stack('full', 4_294_967_295), stack('extra', 1)], new Set(), stack('full', 4_294_967_295))
   ).toEqual([])
+})
+
+test('pending agent offers are excluded before regrouping available player fragments', () => {
+  const inventory = [stack('offered', 20), stack('available', 3)]
+  const pending = encumbered_asset_ids([], [], new Set(['offered']))
+  const groups = inventory_groups(available_inventory_items(inventory, pending))
+  expect(groups).toHaveLength(1)
+  expect(groups[0]).toMatchObject({ item: { id: 'available' }, amount: 3 })
+  expect(groups[0]?.items.map(({ id }) => id)).toEqual(['available'])
 })

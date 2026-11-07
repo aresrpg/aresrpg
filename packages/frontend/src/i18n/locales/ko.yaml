@@ -2520,29 +2520,6 @@ leaderboard_page:
   job_HANDYMAN: 만능공
   job_ALCHEMIST: 연금술사
   job_BAKER: 제빵사
-automation_panel:
-  retrying: 이동 동기화를 기다린 뒤 재시도
-  title: 자동화
-  gathering: 채집
-  select_resource: 자원 선택
-  level: 레벨 {{level}} 필요
-  tool: 알맞은 도구 필요
-  start: 시작
-  stop: 중지
-  idle: 준비 완료
-  planning: 다음 대상 선택 중
-  moving: 자원으로 이동 중
-  inspecting: 이동 및 구역 데이터 기다리는 중
-  searching: 구역 탐색 중
-  waiting: 구역 새로고침 기다리는 중
-  protector: 수호자 전투 포기 중
-  stopped: 중지됨
-  unavailable: '일시 중지: 캐릭터 또는 연결을 사용할 수 없음'
-  blocked: '일시 중지: 이동 경로가 막힘'
-  failed: '일시 중지: 작업 실패. 오류를 확인하세요.'
-  quantity: '채집량: {{quantity}}'
-  expand: 자동 채집 펼치기
-  collapse: 자동 채집 접기
 item_drop_sources:
   title: 몬스터 드롭
   empty: 이 아이템을 드롭하는 몬스터가 없습니다.
@@ -2580,9 +2557,6 @@ journey:
   resource_details: 자원 상세 정보
   key_details: 던전 열쇠 찾기
   next: 다음 단계
-  chapter_finished: 여정 완료
-  finished_title: 자동화 해금
-  finished_body: AresRPG는 자동화를 즐기는 게임이기도 합니다. 앞으로 많은 기능이 자동화를 중심으로 만들어질 예정입니다. 모든 초보자 퀘스트를 완료한 보상으로 자동 채집을 얻었습니다! 자원을 선택하고 시작을 누르면 캐릭터가 채집합니다. 실행 중에도 조작 패널을 접을 수 있습니다.
   reset_title: 초보자 퀘스트
   reset_hint: 이 브라우저에서 계정의 퀘스트를 초기화합니다. 여정을 다시 시작하면 소유 아이템이 다시 인정됩니다.
   reset_action: 퀘스트 초기화
@@ -2626,9 +2600,7 @@ journey:
   suize_body: 잘했어요, 모험가. 더 좋은 수확은 새 제작법으로 이어집니다. 마지막 과제는 직접 Suize를 채집하는 것입니다. 어디서 찾느냐고요? 처음으로 스스로 풀어 볼 문제라고 생각하세요.
   suize_objective: Suize 수확
   welcome_objective: ''
-  finished_objective: ''
   saving: 저장 중…
-  automation_reward_action: 자동 채집 열기
 fullscreen_enter: 전체 화면으로 전환
 fullscreen_exit: 전체 화면 종료
 fullscreen_failed: 전체 화면 모드를 변경할 수 없습니다.
@@ -2717,6 +2689,19 @@ ui:
   agent_asset_reserved: '독점 제안 · PurchaseCap 필요'
   agent_asset_unconfigured: '이 배포에 설정되지 않음'
   agent_asset_fee_budget: '최대 가스 예산'
+  agent_label: '에이전트'
+  agent_kiosk_badge: '키오스크'
+  agent_kiosk: '에이전트 키오스크'
+  agent_deposit: '에이전트에 입금'
+  agent_withdraw: '플레이어에게 출금'
+  agent_coin_transfer: '{{token}} 전송'
+  agent_coin_direct: '코인은 한 번의 거래로 직접 전송됩니다. 발신자가 가스비를 지불합니다.'
+  agent_pair_for_deposit: '입금 전에 에이전트의 영구 서명자를 확인하세요.'
+  agent_inventory_connect: '에이전트의 전체 주소를 확인하면 인벤토리를 사용할 수 있습니다.'
+  agent_inventory_demo: '에이전트 전송에는 연결된 Google 지갑이 필요합니다. 장비와 선택은 오프라인에서도 작동합니다.'
+  agent_claim_pending: '제안된 아이템은 별도로 수령해야 합니다.'
+  agent_transfer_sender: '보내는 주소'
+  agent_source_balance: '발신자 잔액'
   agent_inventory: '에이전트 인벤토리'
   agent_asset_refresh: '인벤토리 새로고침'
   agent_asset_available: '사용 가능'

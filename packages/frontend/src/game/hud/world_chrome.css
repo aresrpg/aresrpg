@@ -511,10 +511,6 @@
   }
 }
 
-.world-social-dock [data-automation-panel] {
-  width: 100%;
-}
-
 .world-social-dock > .world-party-tools {
   align-self: stretch;
   display: flex;

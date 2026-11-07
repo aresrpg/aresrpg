@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
+import type {
+  AgentPairingIdentity,
+  CharacterRow,
+  ClaimRow,
+  ItemAmountChange,
+  GiftcardRow,
+  ItemRow,
+  ServerPacket,
+} from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
 import type { CharacteristicName } from '@aresrpg/immutable'
 
-import { initial_agent_view, fold_agent_view, agent_subscription } from '../agents/observation.ts'
+import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
+import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
 import type { AgentView, AgentViewInput } from '../agents/observation.ts'
 import type { Auth, AuthSession } from '../auth.ts'
 import { observe_agent_setup_requests, type AgentSetupInput } from '../agents/setup_requests.ts'
@@ -13,7 +22,6 @@ import {
   browser_auth_storage,
   clear_auth_wallet,
   read_auth_wallet,
-  read_selected_character,
   remember_auth_wallet,
   remember_selected_character_change,
 } from '../auth_storage.ts'
@@ -35,12 +43,15 @@ import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
 import { observe_session_positions } from './session_positions.ts'
 import { fold_link_input } from './session_link.ts'
+import { initial_session_state } from './session_state.ts'
+export { initial_session_state } from './session_state.ts'
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   agent_view: AgentView
+  inventory_pairing: AgentPairingIdentity | null
   character_creation: CharacterCreation | null
   auth_status: AuthStatus
   auth_request: AuthRequest | null
@@ -74,6 +85,7 @@ export type SessionState = Readonly<{
 }>
 export type SessionInput =
   | AgentViewInput
+  | AgentInventoryInput
   | AgentSetupInput
   | CharacterCreationInput
   | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
@@ -141,40 +153,6 @@ export const selected_character = (session: Readonly<SessionState>): CharacterRo
     : (session.characters.find(({ id }) => id === session.selected_character_id) ?? null)
 export const character_custody = (character: Readonly<CharacterRow>) =>
   Object.freeze({ kiosk: character.kiosk, ...(character.kiosk_cap ? { kiosk_cap: character.kiosk_cap } : {}) })
-export const initial_session_state = (serial = 0): SessionState =>
-  Object.freeze({
-    agent_view: { ...initial_agent_view(), serial },
-    character_creation: null,
-    auth_status: 'idle',
-    auth_request: null,
-    auth_error: null,
-    link_status: 'idle',
-    link_error: null,
-    link_violation: null,
-    latency_ms: null,
-    indexing_lag: null,
-    current_epoch: null,
-    game_frozen: null,
-    roster_loaded: false,
-    craft_result: null,
-    consumption_result: null,
-    characters: [],
-    deleted_character_ids: [],
-    inventory: [],
-    removed_item_versions: {},
-    claims: [],
-    giftcards: [],
-    redeemed_giftcards: [],
-    selected_character_id: read_selected_character(),
-    online: null,
-    online_characters: null,
-    auth_ready: false,
-    wallets: [],
-    wallet: null,
-    sui_balance_mist: null,
-    kares_balance: null,
-    gas_spent_mist: 0n,
-  })
 const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
 const fold_inventory_input = (session: SessionState, input: AppInput): SessionState => {
   if (input.type === 'inventory/amounts_changed')
@@ -273,7 +251,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
   const receipt = fold_inventory_input(
-    fold_character_receipt(fold_character_deletion(fold_agent_view(current, input), input), input),
+    fold_character_receipt(
+      fold_character_deletion(fold_agent_view(fold_agent_inventory_target(current, input), input), input),
+      input
+    ),
     input
   )
   const creation = fold_character_creation(receipt, input)

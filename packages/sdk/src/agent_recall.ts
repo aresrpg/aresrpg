@@ -73,7 +73,17 @@ const read_recall = async (
   )
   const transfer = agent_transfer_actions(sdk, {
     address: identity.address,
-    assets: { client: options.client, recipient: request.owner },
+    assets: {
+      client: options.client,
+      recipient: () => {
+        const current = parse_agent_pairing_request(options.read_request())
+        owner_agent_identity(
+          { address: identity.address, multisig_public_key: identity.public_key.toBase64(), signer_mode: 'disposable' },
+          current
+        )
+        return current.owner
+      },
+    },
     check_return: (intent) => check_agent_return(options.client, sdk, identity.address, intent),
     check_offer: async (intent) => {
       const current = await read_agent_equipment(options.client, sdk.game_type_package!, intent.character_id)
@@ -93,6 +103,7 @@ const read_recall = async (
     transfer,
     read_inventory: () => read_agent_inventory(options.client, sdk, identity.address),
     read_incoming_items: () => read_agent_item_returns(options.client, sdk, request.owner, identity.address),
+    read_deposit_items: () => read_agent_item_returns(options.client, sdk, identity.address, request.owner),
   })
 }
 export type AgentRecall = Awaited<ReturnType<typeof read_recall>>

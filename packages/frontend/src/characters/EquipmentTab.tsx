@@ -6,7 +6,7 @@
 
 import { IconButton } from '@aresrpg/ui'
 import { character_equipment_slots } from '@aresrpg/immutable'
-import { cloneElement, useMemo, useState } from 'react'
+import { cloneElement, useId, useMemo, useState } from 'react'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
@@ -16,6 +16,8 @@ import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { titleize } from '../content/catalog.ts'
 import { stat_name, type AppCopy } from '../i18n/copy.ts'
+import { AgentKioskPanel } from '../agents/AgentKioskPanel.tsx'
+import { useAgentKiosk } from '../agents/useAgentKiosk.ts'
 
 import { equipment_comparison } from './equipment_comparison.ts'
 import { useEquipment } from './useEquipment.ts'
@@ -35,6 +37,7 @@ export default function EquipmentTab({
   copy,
   session,
 }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) {
+  const kiosk = useAgentKiosk(copy, !!session)
   const {
     t,
     encumbered_ids,
@@ -68,9 +71,11 @@ export default function EquipmentTab({
     activate,
     totals,
     empty_cells,
-  } = useEquipment({ character, copy, session })
+  } = useEquipment({ character, copy, session, blocked_inventory: kiosk.pending_deposit_ids })
 
   const [query, set_query] = useState('')
+  const [equipment_open, set_equipment_open] = useState(false)
+  const equipment_id = useId()
   const filtered = grid_items.filter(({ item }) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
 
   const preview_source = useMemo(
@@ -96,7 +101,8 @@ export default function EquipmentTab({
   })
   return (
     <div
-      className="chr-equip"
+      className="chr-equip chr-equip--agent"
+      data-equipment-open={equipment_open || undefined}
       onClick={(event) => {
         if (committing) return
         const target = event.target as Element
@@ -108,7 +114,16 @@ export default function EquipmentTab({
           set_selected_ids([])
       }}
     >
-      <div className="chr-equip__side" data-tutorial-target="character_equipment">
+      <button
+        type="button"
+        className="agent-equipment-toggle"
+        aria-controls={equipment_id}
+        aria-expanded={equipment_open}
+        onClick={() => set_equipment_open(!equipment_open)}
+      >
+        {t('equipment_head')}
+      </button>
+      <div id={equipment_id} className="chr-equip__side" data-tutorial-target="character_equipment">
         <div className="chr-equip__chip">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[11px] font-semibold tracking-[0.14em] text-text uppercase">
@@ -219,7 +234,7 @@ export default function EquipmentTab({
         )}
       </div>
 
-      <div className="chr-equip__bag" data-tutorial-target="shared_inventory">
+      <div className="chr-equip__bag" data-tutorial-target="shared_inventory" data-inventory-owner="player">
         <PendingClaims copy={copy} />
         <InventoryFilters
           category={category}
@@ -244,6 +259,11 @@ export default function EquipmentTab({
           disabled={committing}
           drag_item={set_dragging_id}
           equip={equip}
+          transfer={(ids, point) => {
+            if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="agent"]')) return false
+            if (!committing) kiosk.offer(ids, 'deposit', bag)
+            return true
+          }}
         >
           {filtered.map(({ item, amount }) => (
             <InventoryItemCell
@@ -269,6 +289,13 @@ export default function EquipmentTab({
           ))}
         </InventorySelectionGrid>
       </div>
+      <AgentKioskPanel
+        key={kiosk.pairing?.address}
+        kiosk={kiosk}
+        copy={copy}
+        disabled={committing}
+        offline={!!session}
+      />
       <ConsumeHealingModal
         character={character}
         close={() => set_healing_item(null)}

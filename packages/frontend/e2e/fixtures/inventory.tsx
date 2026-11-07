@@ -13,7 +13,9 @@ import { content_catalog, encyclopedia_catalog } from '../../src/content/catalog
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import type { AuthSession } from '../../src/auth.ts'
-import { dispatch_app, useAppStore } from '../../src/store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
+
+import { inventory_agent_fixture } from './inventory_agent.ts'
 import '../../src/tailwind.css'
 import '../../src/components/character_surfaces.css'
 import '../../src/characters/characters.css'
@@ -82,6 +84,7 @@ const items: ItemRow[] = item_types.map((item_type, index) => {
   const seed = encyclopedia_catalog.item(item_type)!.item
   return {
     id: `0xitem${index}`,
+    version: '1',
     item_type,
     name: seed.name,
     category: seed.category,
@@ -103,11 +106,15 @@ void load_app_copy(locale)
     window.equip_requests = []
     window.feed_requests = []
     window.consume_requests = []
+    const agent = new URLSearchParams(location.search).has('agent')
+      ? inventory_agent_fixture(items, new URLSearchParams(location.search).has('agent-fail'))
+      : null
     dispatch_app({ type: 'auth/connecting' })
     dispatch_app({
       type: 'auth/connected',
       session: {
         address: '0xowner',
+        ...agent?.wallet,
         character: {
           equip: async (request: unknown) => {
             window.equip_requests = [...window.equip_requests, request]
@@ -137,6 +144,8 @@ void load_app_copy(locale)
         },
       } as unknown as AuthSession,
     })
+    if (agent)
+      dispatch_app({ type: 'agent/inventory_target', wallet: read_app_state().session.wallet!, pairing: agent.pairing })
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [equipped_character] } })
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
     const Inventory = () => {

@@ -108,8 +108,8 @@ global recovery. Desktop and mobile share the full-viewport canvas HUD and `Game
 The mobile surface adds touch input beneath the shared HUD in the same canvas stacking context.
 Feature windows consume the same equipment, allocation, spell, crafting, forge and marketplace
 controllers; mobile never imports the entry that loads it. Feature navigation selects HUD modals, with URLs retained for deep links. There is no page-versus-overlay mode. The world HUD and fight presentation remain mounted while feature modals suspend manual input. The
-shared social dock keeps wallet information, Settings and the party roster during combat; the minimap,
-nearby-fight browser and gathering controls remain overworld-only. Portrait blocks gameplay
+shared social dock keeps wallet information, Settings and the party roster during combat; the minimap and
+nearby-fight browser remain overworld-only. Portrait blocks gameplay
 controls without replacing the canvas. Pending confirmations use compact dialogs.
 
 The existing world input device accepts bounded touch axes and jump alongside keyboard and mouse input.
@@ -667,14 +667,12 @@ change, disconnect and successful verification. Public multisig identities are r
 host-declared persistent signer mode; status returns that mode and the public multisig identity. A signed
 mode declaration authenticates the host claim, not the durability of its storage. Other wallets retain the copyable setup
 handoff and bootstrap guide. Agent pairing accepts only mainnet in the signed request; non-mainnet
-wallet sessions and requests are rejected without changing the shared SDK’s network support. Its foreground process retains an in-memory agent key
-and uses the existing SDK transport for ordinary-member multisig authentication; the public pairing
+wallet sessions and requests are rejected without changing the shared SDK’s network support. The standalone Node setup client uses a host-owned file-backed Ed25519 key, initialized only after explicit credential approval. Owner-only POSIX files retain the key and canonical public pairing descriptor outside the checkout; identity writes are atomic and synced before proof submission. Setup fails closed without an initialized signer, and fresh processes reconstruct the same multisig without a setup token. Pending outcomes cannot load as paired; missing, corrupt or unsafe files never trigger key replacement. The client is bundled from the SDK into each frontend release, so setup needs no repository or package installation. File custody protects against other OS users, not code under the same host user; host storage retention and private backups remain host responsibilities. The existing SDK transport provides ordinary-member multisig authentication; the public pairing
 proof alone is not a game login. Pairing previews select no characters because a fresh multisig
 has no custody. Loopback tests exercise the actual verifier with synthetic mainnet pairing identities; the
 runner's default endpoint is restricted to the realtime service in the existing frontend deployment
 route, with explicit loopback transport injection for tests. This checks the configured destination;
-the WebSocket challenge does not attest the service's actual chain network. Durable key storage, recovery
-and production readiness are not established. Disposable identities must never receive assets.
+the WebSocket challenge does not attest the service's actual chain network. Filesystem-backed signing survives process restart; cloud recreation durability, recovery and production readiness require host-specific verification. Disposable identities must never receive assets.
 The SDK exposes non-executing exclusive-offer, claim and capability-return builders, reusing marketplace
 policy settlement in either custody direction. Its separate transaction-signing adapters verify already-resolved bytes and an externally supplied
 ordinary-member or Google-member signature; Google verification uses an explicit network client. They own no credentials.
@@ -701,8 +699,23 @@ remains authoritative at execution. Browser and agent connections share SDK logi
 public multisig construction is independent from signing adapters. Gas refusals reuse FundingModal
 for the actual SDK sender; a distinct multisig payer has an unknown balance rather than the human balance.
 The CLI supports an explicit loopback-only local-preview opt-in, without changing default endpoint restrictions.
-The character-tab shortcut remains unavailable; the verified pairing modal owns custody review. Circuit-and-robot tab ornaments accept presentation inputs only; live owned
-rosters do not infer agent custody from a provider selection.
+The verified full-address comparison selects an explicit wallet-bound inventory target in session state,
+independent from observation and character-provider selection; disconnect clears it. The equipment
+window extends its existing player bag with a compact agent kiosk, preserving its original profile,
+filters and section corners. Both bags share selection and touch gestures; a dragged visual stack
+expands to every represented object revision and kiosk, while locked fragments remain separate.
+Agent reads and open reviews are bound to the exact wallet and pairing; stale results cannot cross
+an account change. Each item drop opens one Offer review, followed by an independently selected
+Claim or capability-return review. There is no automatic second transaction. Coin balances open
+Deposit or Withdraw with exact amounts, source balance and editable retained SUI reserve; coin-only
+transfers are one direct transaction. Max quotes the SDK fee budget before deducting it and the
+reserve, and final review checks the actual amount again. Missing KARES configuration disables
+submission rather than inventing a balance or coin type. Owner deposits use an SDK action factory
+that revalidates the canonical current Google owner and a freshly verified host-persistent pairing
+at preparation and confirmation. Restored identities remain recovery-only and cannot receive new
+assets. Offline equipment keeps the same gestures through its local adapter; the demo has no
+agent custody adapter and labels agent transfers unavailable. Circuit-and-robot tab ornaments
+accept presentation inputs only; live owned rosters never infer custody from a provider selection.
 Selective owner recovery extends the same per-multisig SDK executor and one-use review pipeline.
 The SDK inventory reader completes all personal-kiosk and address-object pages; canonical item
 snapshots optionally include amount/version, while the existing staking decoder supplies positions.
@@ -716,7 +729,7 @@ explicit token amounts. Variable batches estimate fees; the fresh SUI balance mu
 prepared fee budget, chosen amount and visible editable reserve (default GAS_BUDGET_MIST).
 The existing inventory cells/selection, transaction review and funding modal render this flow.
 Opaque Move types remain read only; fight-held characters require existing settlement before they
-reappear in the kiosk inventory. There is no additional Move module or credential store.
+reappear in the kiosk inventory. There is no additional Move module or server-side credential store; the host owns its local signing key.
 Read-only agent observation validates the saved pairing through the canonical SDK owner identity,
 then reads the paired address's complete character roster (including fight custody) separately from
 owned/control rosters. Observed rows never enter server allowed/tracked character authority or the
@@ -860,11 +873,10 @@ Character projections own its root deadline and protector obligation. Observers 
 from retained state and recheck deadlines on wake. Toast and audio lifetimes cannot gate gameplay
 completion, and authoritative protectors can resolve independently of a delayed gather receipt.
 
-Completing every beginner journey quest unlocks the collapsible gathering automation HUD.
-Access derives from the current account’s loaded completion record, after pending persistence finishes;
-resetting the journey or changing accounts revokes access and stops any run. One frontend automation reducer
-owns a selected character's gathering run and emits existing run-to, zone-search, gather, and
-fight inputs. Automated run-to mounts an available equipped companion through the ordinary
+Connect Your Agent replaces the browser's manual world-gathering automation controls. There is no
+automation panel or beginner-quest reward card. The shared frontend automation reducer remains the
+owner of finite Collect All gathering; its internal world-run machinery has no player-facing start path.
+It emits existing run-to, zone-search, gather, and fight inputs. Automated run-to mounts an available equipped companion through the ordinary
 proximity rule, retains riding between harvests, and remounts on later legs after a fight.
 Biome/city eligibility guides nearby zone exploration; only server populations and zone consumption
 establish available resources. Expiring depleted-zone visits survive window
@@ -880,7 +892,8 @@ and no suspended-time teleport. They submit no render frames; browsers without a
 Temporary connection or clock gaps retain the run and suppress writes until readiness returns.
 Unsigned movement/cooldown refusals wait 500 ms before re-entering inspection; the target and
 travel proof are checked again. Stop, manual control, identity changes, and all other failed or
-uncertain actions stop further automated writes. Executed transactions never retry. Its controls remain available on other pages. Reload never resumes a run.
+uncertain actions stop further automated writes. Executed transactions never retry. Finite Collect All
+retains its separate progress and Stop control on other pages. Reload never resumes a run.
 
 One automatic-travel navigator owns run-to for position links, party snapshots, nearby fights and
 gathering, plus owned-party and adventure following. Open ground uses a one-block clearance probe
@@ -1578,9 +1591,10 @@ the same listing and trade exclusions as crafting. Changes to selection, craftin
 refresh both displayed quantities and completion eligibility. Its practice step accepts one certified craft
 attempt, including failure. Seed-authored superseding milestones retire unfinished introductory steps
 for returning players and market buyers without inventing completed actions.
-These observations never submit transactions or award on-chain assets. Completing the journey
-reveals an automation reward card and unlocks gathering controls without starting a run.
-The controls collapse to a compact status and Stop action; collapsing never stops automation.
+These observations never submit transactions or award on-chain assets. Completing every relevant
+quest removes the tracker, launcher, journal modal and Settings journal action immediately, including
+while the final completion is saving. No completion reward card replaces them. Settings retains Reset,
+which restores the ordinary unfinished journey. Completed IDs remain available to persistence and analytics.
 IndexedDB stores only completed quest IDs per network, original game package, and account. The next
 quest and progress derive from those IDs; journal visibility and celebration queues remain in memory.
 The tracker’s collapsed state belongs to the existing localStorage game settings and survives reloads.
@@ -1772,7 +1786,9 @@ seed validation, and authored artifact freshness in parallel. The native test co
 artifact validation or performance measurements, not tests of array dimensions or wiring.
 
 One input classifier selects Move, indexer parity, and browser checks against the last successful
-`edge` push, including for PRs. Missing evidence runs every lane. Conditional Move and Rust jobs
+`edge` push, including for PRs. Source checks can reuse that successful evidence on an `edge` push
+only when every tracked byte and file mode matches except the root stable release version. PRs
+always run source checks. Missing evidence runs every lane. Conditional Move and Rust jobs
 retain their native coverage and authority/parity checks. The final gate rejects failed, cancelled,
 or unjustifiably skipped verification. PRs also retain the production bundle check.
 
@@ -1796,6 +1812,9 @@ Owner-authorized release preparation builds immutable images and stages Vercel o
 with verification of that exact source SHA. Only a successful `edge` push gate permits the prepared
 release manifest. Activation requires that exact successful preparation and promotes its existing
 artifacts without rebuilding. Failed verification cannot produce a certified manifest or activate production.
+Backend locale fingerprints use the same Bun YAML parser and immutable field projections as the
+server allocation previews and Discord notifications. Browser-only copy does not rebuild those
+services; consumed sections, locale additions/removals and consumer code remain release inputs.
 
 ## Extending the system
 

@@ -12,13 +12,16 @@ character, combat, dungeon, marketplace and transaction primitives. Keep the bot
 runtime in its host environment; no additional bot framework is required. The optional observer
 example is a diagnostic, not a second onboarding flow or the limit of the SDK's gameplay features.
 
-The host supplies its persistent signer and runtime. Match the checkout to the deployed server;
+The standalone setup client supplies a host-owned file-backed signer; the host supplies retained storage and runtime. Match any SDK checkout to the deployed server;
 source documentation may describe changes awaiting deployment. Pairing proves a public identity,
 not completed custody or successful gameplay. Never request wallet secrets in chat.
+After setup, follow the client guide’s optional key-care checks for host upgrades, storage safety
+and an approved private backup/recovery path.
 
 ## Build the bot
 
-- [Connect Your Agent](https://aresrpg.world/agents/client.txt): Official pairing, host signing, handover and human Recall.
+- [Connect Your Agent](https://aresrpg.world/agents/client.txt): Fast persistent pairing, host signing and restart.
+- [Custody and human Recall](https://aresrpg.world/agents/custody.txt): Handover, inventory recovery and return.
 - [SDK building blocks](https://aresrpg.world/agents/sdk.txt): Action composition, offline planning and combat simulation.
 - [State and transaction discipline](https://aresrpg.world/agents/protocol.txt): Chain/indexed read inputs, freshness, receipts and recovery after onboarding.
 - [Game-server protocol](https://aresrpg.world/agents/indexing.txt): Authenticate the paired multisig, receive projections and publish map presence.

@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+import { expect, test } from 'bun:test'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import { AgentKioskPanel } from '../../src/agents/AgentKioskPanel.tsx'
+import type { AgentKioskController } from '../../src/agents/useAgentKiosk.ts'
+import type { AppCopy } from '../../src/i18n/copy.ts'
+
+const copy = {
+  ui: {
+    agent_asset_refresh: 'Refresh',
+    agent_kiosk: 'Agent kiosk',
+    agent_inventory_demo: 'Offline transfers unavailable',
+  },
+  loading_universe: 'Loading',
+} as unknown as AppCopy
+const controller = (phase: 'failed' | 'loading') =>
+  ({
+    pairing: { address: 'agent' },
+    state: { phase, error: 'RPC unavailable' },
+    review: null,
+    refresh: () => {
+      throw new Error('Rendering must not load')
+    },
+  }) as unknown as AgentKioskController
+
+test('an initial inventory read failure keeps refresh available without a snapshot', () => {
+  const html = renderToStaticMarkup(
+    <AgentKioskPanel kiosk={controller('failed')} copy={copy} disabled={false} offline={false} />
+  )
+  expect(html).toContain('RPC unavailable')
+  expect(html).toContain('aria-label="Refresh"')
+  expect(html).not.toContain('disabled=""')
+})
+test('loading and offline panels cannot start another discovery or pretend transfers exist', () => {
+  const loading = renderToStaticMarkup(
+    <AgentKioskPanel kiosk={controller('loading')} copy={copy} disabled={false} offline={false} />
+  )
+  expect(loading).toContain('disabled=""')
+  const offline = renderToStaticMarkup(
+    <AgentKioskPanel kiosk={controller('failed')} copy={copy} disabled={false} offline />
+  )
+  expect(offline).toContain('Offline transfers unavailable')
+  expect(offline).toContain('disabled=""')
+  expect(offline).not.toContain('RPC unavailable')
+})
+
+test('a failed refresh retains display data but disables transfers until discovery succeeds', () => {
+  const kiosk = {
+    ...controller('failed'),
+    snapshot: { inventory: { items: [], sui_mist: '1000000000', kares_mist: null } },
+  } as unknown as AgentKioskController
+  const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />)
+  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>SUI /)
+  expect(html).not.toMatch(/<button[^>]*aria-label="Refresh"[^>]*disabled/)
+  expect(html).toContain('RPC unavailable')
+})

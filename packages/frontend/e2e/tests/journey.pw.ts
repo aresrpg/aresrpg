@@ -65,3 +65,34 @@ test('real IndexedDB completion survives reload, ignores purchases for harvestin
   await page.reload()
   await expect(page.getByRole('button', { name: 'Start my first quest' })).toBeVisible()
 })
+
+test('finishing all quests removes the open journal and collapsed tracker across reload, but reset restores them', async ({
+  page,
+}) => {
+  await page.goto('/e2e/fixtures/journey.html')
+  await page.getByRole('button', { name: 'Start my first quest' }).click()
+  const journal = page.getByRole('dialog')
+  await journal.getByRole('button', { name: 'Start my first quest' }).click()
+  await expect(journal.locator('h3')).toHaveText('Find your way')
+  // The final gameplay observation can arrive while a journal is open.
+  await page
+    .getByRole('button', { name: 'Finish quests', exact: true })
+    .evaluate((button: HTMLButtonElement) => button.click())
+  await expect(journal).toHaveCount(0)
+  await expect(page.locator('.journey-tracker')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Quest journal', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Reset quests', exact: true })).toBeVisible()
+  const completed = await page.locator('[data-completion]').textContent()
+  await page.reload()
+  await expect(page.locator('[data-completion]')).toHaveText(completed!)
+  await expect(page.locator('.journey-tracker')).toHaveCount(0)
+  await expect(page.locator('.journey-panel')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Quest journal', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Reset quests', exact: true }).click()
+  await expect(page.locator('.journey-tracker')).toBeVisible()
+  await page.getByRole('button', { name: 'Collapse quests', exact: true }).click()
+  await expect(page.locator('.journey-launcher')).toBeVisible()
+  await page.getByRole('button', { name: 'Load completed journey', exact: true }).click()
+  await expect(page.locator('.journey-launcher')).toHaveCount(0)
+  await expect(page.locator('.journey-tracker')).toHaveCount(0)
+})

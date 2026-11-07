@@ -3,7 +3,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 
 import type { Redis } from 'ioredis'
-import { parse } from 'yaml'
+import { allocation_locale } from '@aresrpg/immutable/locale'
 import { cap_mist, sui_amount, nominal_tokens, share_version, campaign } from '@aresrpg/immutable/allocation'
 
 import { read_campaign } from './store.ts'
@@ -23,9 +23,11 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
   const files = await readdir(new URL('../../../frontend/src/i18n/locales/', import.meta.url))
   const requested = params.get('locale') ?? 'en'
   const locale = files.includes(`${requested}.yaml`) ? requested : 'en'
-  const { allocation_page: copy } = parse(
-    await readFile(new URL(`../../../frontend/src/i18n/locales/${locale}.yaml`, import.meta.url), 'utf8')
-  ) as { allocation_page: Record<string, string> }
+  const copy = allocation_locale(
+    Bun.YAML.parse(
+      await readFile(new URL(`../../../frontend/src/i18n/locales/${locale}.yaml`, import.meta.url), 'utf8')
+    ) as { allocation_page: Record<string, string> }
+  )
   const current = await read_campaign(redis)
   const award = current.awards.find((row) => row.address === address)
   const tier = award?.tier ?? (current.phase === 'final' ? 'no_spot' : 'pending')

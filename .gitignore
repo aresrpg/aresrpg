@@ -54,3 +54,6 @@ vfx
 
 # Private local database backups.
 /misc/db-backups/
+
+# Bundled from the SDK for the matching frontend release.
+/packages/frontend/public/agents/ares-agent.mjs

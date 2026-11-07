@@ -112,9 +112,38 @@ export const ci_checks_for_diff = (base, head, git) => {
   return ci_checks_required(paths, (path) => manifest(base, path) !== manifest(head, path), workflow)
 }
 
+const version_only_manifest_change = (before, after) => {
+  const version_line = /^ {2}"version": "(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)",$/m
+  if (!version_line.test(before) || !version_line.test(after)) return false
+  return (
+    runtime_manifest(before) === runtime_manifest(after) &&
+    before.replace(version_line, '') === after.replace(version_line, '')
+  )
+}
+
+// Reuse is deliberately narrower than an input allowlist: every tracked byte and mode
+// must match the successful gate, except the root release version. Even formatting reruns lint.
+export const source_checks_for_diff = (base, head, git) => {
+  if (!base || /^0+$/.test(base)) return true
+  const paths = git(['diff', '--name-only', '--no-renames', '-z', base, head]).split('\0').filter(Boolean)
+  if (paths.length === 0) return false
+  if (paths.length !== 1 || paths[0] !== 'package.json') return true
+  const entry = (ref) => git(['ls-tree', ref, '--', 'package.json']).split(' ')[0]
+  if (entry(base) !== '100644' || entry(head) !== '100644') return true
+  const before = git(['show', `${base}:package.json`])
+  const after = git(['show', `${head}:package.json`])
+  return !version_only_manifest_change(before, after)
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const git = (args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
-  const checks = ci_checks_for_diff(process.env.BASE_SHA, 'HEAD', git)
+  const checks = {
+    ...ci_checks_for_diff(process.env.BASE_SHA, 'HEAD', git),
+    source:
+      process.env.GITHUB_EVENT_NAME !== 'push' ||
+      process.env.GITHUB_REF !== 'refs/heads/edge' ||
+      source_checks_for_diff(process.env.BASE_SHA, 'HEAD', git),
+  }
   appendFileSync(
     process.env.GITHUB_OUTPUT,
     Object.entries(checks)

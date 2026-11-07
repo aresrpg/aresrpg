@@ -4,8 +4,6 @@
 import { useContext } from 'react'
 import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'lucide-react'
 
-import automation_art from '../../../../seed/icons/world/gathering_automation_hd.png'
-import automation_icon from '../../../../seed/icons/world/gathering_automation.png'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app } from '../store.ts'
@@ -142,9 +140,8 @@ const useJourneyView = (copy: AppCopy) => {
   const { state: journey, quests } = useJourneySource(copy)
   const [celebrated] = journey.celebrations
   const quest = quests.find(({ id }) => id === celebrated) ?? next_quest(journey.completed, quests)
-  const display = quest ?? { id: 'finished', chapter: 'finished', item: 'wheat_suize', kind: 'start' }
   const celebrating = Boolean(celebrated) && !journey.saving
-  return { journey, celebrated, quest, display, celebrating }
+  return { journey, celebrated, quest, celebrating }
 }
 
 const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
@@ -170,38 +167,21 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
         {text(quest?.kind === 'start' ? 'start' : 'journal')}
       </button>
     )
-  return quest ? (
-    <QuestActions copy={copy} quest={quest} />
-  ) : (
-    <button
-      className="journey-button"
-      onClick={() => {
-        dispatch_app({ type: 'automation/collapse', collapsed: false })
-        source.collapse(true)
-        open_path('/')
-      }}
-      type="button"
-    >
-      <img alt="" className="size-5" draggable={false} src={automation_icon} /> {text('automation_reward_action')}
-    </button>
-  )
+  return quest ? <QuestActions copy={copy} quest={quest} /> : null
 }
 
 const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
-  const { celebrated, display } = useJourneyView(copy)
+  const { celebrated, quest } = useJourneyView(copy)
   const source = useJourneySource(copy)
   const { text } = source
-  const { id, item: item_type, chapter, kind } = display
+  if (!quest) return null
+  const { id, item: item_type, chapter, kind } = quest
   const item = source.name(item_type)
   const objective = text(`${id}_objective`, { item })
   return (
     <div className="journey-quest" data-quest-kind={kind}>
       <div className="journey-art">
-        {id === 'finished' ? (
-          <img alt="" className="journey-automation-art" draggable={false} src={automation_art} />
-        ) : (
-          <ItemArt item={item_type} />
-        )}
+        <ItemArt item={item_type} />
       </div>
       <div className="journey-copy">
         <span className="journey-eyebrow">{text(`chapter_${chapter}`)}</span>
@@ -322,7 +302,7 @@ export const JourneyPanel = ({ copy, compact }: Readonly<{ copy: AppCopy; compac
 export const JourneyTracker = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const source = useJourneySource(copy)
   const { state: journey, available, text } = source
-  if (!journey.ready || !journey.identity || !available) return null
+  if (!journey.ready || !journey.identity || !available || !next_quest(journey.completed, source.quests)) return null
   return (
     <aside className="journey-tracker">
       {source.collapsed ? (

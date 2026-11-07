@@ -2517,29 +2517,6 @@ leaderboard_page:
   job_HANDYMAN: Artesão
   job_ALCHEMIST: Alquimista
   job_BAKER: Padeiro
-automation_panel:
-  retrying: Aguardando sincronização do movimento; tentando novamente
-  title: Automação
-  gathering: Coleta
-  select_resource: Selecione um recurso
-  level: Nível {{level}} necessário
-  tool: Ferramenta correspondente necessária
-  start: Iniciar
-  stop: Parar
-  idle: Pronto
-  planning: Escolhendo o próximo alvo
-  moving: Indo até os recursos
-  inspecting: Aguardando dados de viagem e zona
-  searching: Explorando a zona
-  waiting: Aguardando renovação da zona
-  protector: Desistindo do protetor
-  stopped: Parado
-  unavailable: 'Pausado: personagem ou conexão indisponível'
-  blocked: 'Pausado: movimento bloqueado'
-  failed: 'Pausado: ação falhou. Confira o erro.'
-  quantity: 'Coletado: {{quantity}}'
-  expand: Expandir automação de coleta
-  collapse: Recolher automação de coleta
 item_drop_sources:
   title: Saque de monstros
   empty: Nenhum monstro fornece este item.
@@ -2577,9 +2554,6 @@ journey:
   resource_details: Detalhes do recurso
   key_details: Encontre uma chave de masmorra
   next: A seguir
-  chapter_finished: Jornada concluída
-  finished_title: Automação desbloqueada
-  finished_body: AresRPG também é um jogo sobre automação. Muitos recursos futuros serão baseados nela. Você concluiu todas as missões iniciais e ganhou automação de coleta! Escolha um recurso, pressione Iniciar e deixe seu personagem coletar. Você pode recolher os controles enquanto ela funciona.
   reset_title: Missões iniciais
   reset_hint: Redefina as missões desta conta neste navegador. Seus itens contam novamente após reiniciar a jornada.
   reset_action: Redefinir missões
@@ -2623,9 +2597,7 @@ journey:
   suize_body: 'Muito bem, aventureiro. Colheitas melhores abrem novas receitas, então tenho um último desafio: colha Suize por conta própria. Onde encontrar? Considere esse seu primeiro problema sem supervisão.'
   suize_objective: Colha Suize
   welcome_objective: ''
-  finished_objective: ''
   saving: Salvando…
-  automation_reward_action: Abrir automação de coleta
 fullscreen_enter: Entrar em tela cheia
 fullscreen_exit: Sair da tela cheia
 fullscreen_failed: Não foi possível alterar o modo de tela cheia.
@@ -2737,6 +2709,19 @@ ui:
   agent_asset_reserved: 'Oferta exclusiva · exige PurchaseCap'
   agent_asset_unconfigured: 'Não configurado para esta implantação'
   agent_asset_fee_budget: 'Orçamento máximo de gas'
+  agent_label: 'Agente'
+  agent_kiosk_badge: 'QUIOSQUE'
+  agent_kiosk: 'Quiosque do agente'
+  agent_deposit: 'Depositar no agente'
+  agent_withdraw: 'Retirar para o jogador'
+  agent_coin_transfer: 'Transferir {{token}}'
+  agent_coin_direct: 'As moedas são transferidas diretamente numa transação. O remetente paga o gas.'
+  agent_pair_for_deposit: 'Verifique um assinante persistente do agente antes de depositar.'
+  agent_inventory_connect: 'Verifique o endereço completo do agente para usar o inventário.'
+  agent_inventory_demo: 'As transferências do agente exigem uma carteira Google conectada. Equipamento e seleção funcionam offline.'
+  agent_claim_pending: 'Os itens oferecidos exigem um resgate separado.'
+  agent_transfer_sender: 'Remetente'
+  agent_source_balance: 'Saldo do remetente'
   agent_inventory: 'Inventário do agente'
   agent_asset_refresh: 'Atualizar inventário'
   agent_asset_available: 'Disponível'

@@ -41,7 +41,7 @@ test('Connect → one prompt → automatic proof return → local server authent
   expect(payload).toContain(`${new URL(page.url()).origin}/agents/client.txt`)
   expect(payload).toContain('does not authorize asset transfers or gameplay')
   const url = setup_url(payload)
-  const signer = await bootstrap_setup_link(url.href, { fetch })
+  const signer = await bootstrap_setup_link(url.href, { fetch, bootstrap: bootstrap_disposable_agent })
   await expect(dialog.locator('[data-paired-address]')).toHaveText(signer.address, { timeout: 10_000 })
   await expect(prompt).toHaveCount(0)
   await expect(

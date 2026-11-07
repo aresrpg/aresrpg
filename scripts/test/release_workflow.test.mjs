@@ -324,3 +324,12 @@ test('an older release without a bot image builds Discord without rebuilding unc
   expect(output).toContain('server=false')
   expect(output).toContain('indexer=false')
 })
+
+test('backend planning checks out shared locale selectors and supplies the pinned Bun parser', () => {
+  const { steps } = workflow.jobs['backend-plan']
+  const checkout = steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+  expect(checkout.with['sparse-checkout']).toContain('packages/immutable')
+  const parser = steps.find(({ uses }) => uses?.startsWith('oven-sh/setup-bun@'))
+  expect(parser.with['bun-version-file']).toBe('package.json')
+  expect(steps.indexOf(parser)).toBeLessThan(steps.findIndex(({ id }) => id === 'plan'))
+})

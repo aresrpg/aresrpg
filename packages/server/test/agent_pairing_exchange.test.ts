@@ -136,7 +136,7 @@ test('authenticated session creates one setup link; HTTP client returns proof an
     const instructions = await fetch(link).then((response) => response.text())
     expect(instructions).toBe('Setup guide: https://aresrpg.world/agents/client.txt\n')
     expect(instructions).not.toContain(begun.token)
-    const signer = await bootstrap_setup_link(link, { fetch })
+    const signer = await bootstrap_setup_link(link, { fetch, bootstrap: bootstrap_disposable_agent })
     const { verify_login } = await import('../src/auth.ts')
     const uuid = crypto.randomUUID()
     const proof = await signer.sign_personal_message(new TextEncoder().encode(`aresrpg::${uuid}`))
@@ -150,7 +150,9 @@ test('authenticated session creates one setup link; HTTP client returns proof an
         signer_mode: 'disposable',
       },
     })
-    await expect(bootstrap_setup_link(link, { fetch })).rejects.toThrow('SETUP_COMPLETION_FAILED')
+    await expect(bootstrap_setup_link(link, { fetch, bootstrap: bootstrap_disposable_agent })).rejects.toThrow(
+      'SETUP_COMPLETION_FAILED'
+    )
     expect(await send(3, { action: 'cancel', pairing_id: begun.pairing_id })).toEqual({ action: 'cancel' })
     expect(await send(4, { action: 'status', pairing_id: begun.pairing_id })).toEqual({
       action: 'error',

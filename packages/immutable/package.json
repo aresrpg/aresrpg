@@ -16,7 +16,8 @@
     "./world": "./src/world.ts",
     "./allocation": "./src/allocation.ts",
     "./leaderboards": "./src/leaderboards.ts",
-    "./portrait": "./src/portrait.ts"
+    "./portrait": "./src/portrait.ts",
+    "./locale": "./src/locale.ts"
   },
   "scripts": {
     "test": "bun test"

@@ -43,6 +43,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     },
     read_agent_returns: unsupported,
     agent_transfer: { sender: address, prepare: unsupported },
+    agent_deposit: () => ({ sender: address, prepare: unsupported }),
     fight: {} as never,
     dungeon: {} as never,
     tournament: {

@@ -2520,29 +2520,6 @@ leaderboard_page:
   job_HANDYMAN: Thợ đa năng
   job_ALCHEMIST: Nhà giả kim
   job_BAKER: Thợ bánh
-automation_panel:
-  retrying: Đang chờ đồng bộ di chuyển; sẽ thử lại
-  title: Tự động hóa
-  gathering: Thu thập
-  select_resource: Chọn tài nguyên
-  level: Cần cấp {{level}}
-  tool: Cần công cụ phù hợp
-  start: Bắt đầu
-  stop: Dừng
-  idle: Sẵn sàng
-  planning: Đang chọn mục tiêu tiếp theo
-  moving: Đang đến tài nguyên
-  inspecting: Đang chờ di chuyển và dữ liệu khu vực
-  searching: Đang khám phá khu vực
-  waiting: Đang chờ khu vực làm mới
-  protector: Đang bỏ trận hộ vệ
-  stopped: Đã dừng
-  unavailable: 'Tạm dừng: nhân vật hoặc kết nối không khả dụng'
-  blocked: 'Tạm dừng: đường đi bị chặn'
-  failed: 'Tạm dừng: thao tác thất bại. Hãy xem lỗi.'
-  quantity: 'Đã thu thập: {{quantity}}'
-  expand: Mở rộng thu thập tự động
-  collapse: Thu gọn thu thập tự động
 item_drop_sources:
   title: Quái rơi vật phẩm
   empty: Không có quái nào rơi vật phẩm này.
@@ -2580,9 +2557,6 @@ journey:
   resource_details: Chi tiết tài nguyên
   key_details: Tìm chìa khóa ngục tối
   next: Tiếp theo
-  chapter_finished: Hoàn tất hành trình
-  finished_title: Đã mở khóa tự động hóa
-  finished_body: AresRPG cũng là một trò chơi về tự động hóa. Nhiều tính năng tương lai sẽ được xây dựng quanh điều đó. Bạn đã hoàn thành mọi nhiệm vụ tân thủ và nhận phần thưởng thu thập tự động! Chọn tài nguyên, nhấn Bắt đầu và để nhân vật thu thập. Bạn có thể thu gọn bảng điều khiển khi đang chạy.
   reset_title: Nhiệm vụ tân thủ
   reset_hint: Đặt lại nhiệm vụ của tài khoản trên trình duyệt này. Vật phẩm đang sở hữu sẽ được tính lại khi bạn bắt đầu lại hành trình.
   reset_action: Đặt lại nhiệm vụ
@@ -2626,9 +2600,7 @@ journey:
   suize_body: 'Làm tốt lắm, nhà thám hiểm. Thu hoạch tốt hơn mở ra công thức mới, nên còn một thử thách cuối: tự thu hoạch Suize. Tìm ở đâu ư? Coi như bài toán đầu tiên không có người kèm.'
   suize_objective: Thu hoạch Suize
   welcome_objective: ''
-  finished_objective: ''
   saving: Đang lưu…
-  automation_reward_action: Mở thu thập tự động
 fullscreen_enter: Vào toàn màn hình
 fullscreen_exit: Thoát toàn màn hình
 fullscreen_failed: Không thể đổi chế độ toàn màn hình.
@@ -2717,6 +2689,19 @@ ui:
   agent_asset_reserved: 'Đề nghị riêng · cần PurchaseCap'
   agent_asset_unconfigured: 'Chưa được cấu hình cho bản triển khai này'
   agent_asset_fee_budget: 'Ngân sách gas tối đa'
+  agent_label: 'Tác nhân'
+  agent_kiosk_badge: 'KI-ỐT'
+  agent_kiosk: 'Ki-ốt tác nhân'
+  agent_deposit: 'Nạp cho tác nhân'
+  agent_withdraw: 'Rút về người chơi'
+  agent_coin_transfer: 'Chuyển {{token}}'
+  agent_coin_direct: 'Tiền được chuyển trực tiếp trong một giao dịch. Người gửi trả phí gas.'
+  agent_pair_for_deposit: 'Xác minh người ký lâu dài của tác nhân trước khi nạp.'
+  agent_inventory_connect: 'Xác minh toàn bộ địa chỉ tác nhân để sử dụng kho đồ.'
+  agent_inventory_demo: 'Chuyển tài sản của tác nhân cần kết nối ví Google. Trang bị và chọn vật phẩm vẫn hoạt động ngoại tuyến.'
+  agent_claim_pending: 'Vật phẩm đã đề nghị cần một giao dịch nhận riêng.'
+  agent_transfer_sender: 'Người gửi'
+  agent_source_balance: 'Số dư người gửi'
   agent_inventory: 'Túi đồ của tác nhân'
   agent_asset_refresh: 'Làm mới túi đồ'
   agent_asset_available: 'Có sẵn'

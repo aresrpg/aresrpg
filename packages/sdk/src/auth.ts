@@ -21,6 +21,7 @@ import { read_personal_kiosks } from './kiosk_discovery.ts'
 import { check_agent_return, read_agent_returns, type AgentReturnOffer } from './agent_returns.ts'
 import { gas_mist_from_receipt } from './gas.ts'
 import { agent_transfer_actions, type AgentTransferActions } from './agent_transfer_actions.ts'
+import { agent_deposit_actions } from './agent_deposit.ts'
 import { SDK, sui_transport, type TransactionSigner, type Pins } from './client.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty, claim_marketplace_royalties as claim_royalties } from './marketplace_admin.ts'
@@ -102,6 +103,7 @@ export type AuthSession = Readonly<{
   read_agent_returns: (agent_address: string) => Promise<readonly AgentReturnOffer[]>
   read_agent_recall: (pairing: AgentPairingIdentity) => Promise<AgentRecall>
   agent_transfer: AgentTransferActions
+  agent_deposit: (pairing: AgentPairingIdentity) => AgentTransferActions
   marketplace: MarketplaceActions
   stacks: StackActions
   create_trade: (
@@ -253,6 +255,17 @@ const create_wallet_session = (
     read_item,
     read_agent_recall: recall.read,
     read_agent_returns: (agent_address) => read_agent_returns(resolution_client, sdk, account.address, agent_address),
+    agent_deposit: (pairing) =>
+      agent_deposit_actions(
+        sdk,
+        {
+          address: account.address,
+          kiosk_cap,
+          client: resolution_client,
+          read_request: () => binding.read_agent_pairing_request(crypto.randomUUID()),
+        },
+        pairing
+      ),
     agent_transfer: agent_transfer_actions(sdk, {
       address: account.address,
       kiosk_cap,

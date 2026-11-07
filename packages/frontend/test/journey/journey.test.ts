@@ -223,3 +223,31 @@ test.each([...JOURNEY_QUESTS])('quest references and forward milestones are vali
       JOURNEY_QUESTS.indexOf(quest)
     )
 })
+
+test('finishing the journey closes its journal and cannot reopen it until reset', () => {
+  const state = journey.reduce(loaded(), { type: 'journey/journal', open: true })
+  const completed = JOURNEY_QUESTS.map(({ id }) => id)
+  const done = journey.reduce(state, { type: 'journey/completed', ids: completed })
+  expect(done.journey.completed).toEqual(completed)
+  expect(done.journey.saving).toBe(true)
+  expect(done.journey.journal_open).toBe(false)
+  expect(done.journey.celebrations).toEqual([])
+  expect(journey.reduce(done, { type: 'journey/journal', open: true }).journey.journal_open).toBe(false)
+  expect(journey.reduce(done, { type: 'journey/acknowledged' }).journey.journal_open).toBe(false)
+  const reset = journey.reduce(done, { type: 'journey/reset' })
+  expect(journey.reduce(reset, { type: 'journey/journal', open: true }).journey.journal_open).toBe(true)
+})
+
+test('hydrating completed quests closes an already open journal without changing completion', () => {
+  const state = journey.reduce(loaded(), { type: 'journey/journal', open: true })
+  const completed = JOURNEY_QUESTS.map(({ id }) => id)
+  const restored = journey.reduce(state, {
+    type: 'journey/loaded',
+    identity: state.journey.identity!,
+    generation: state.journey.generation,
+    completed,
+  })
+  expect(restored.journey.journal_open).toBe(false)
+  expect(restored.journey.completed).toEqual(completed)
+  expect(restored.journey.celebrations).toEqual([])
+})

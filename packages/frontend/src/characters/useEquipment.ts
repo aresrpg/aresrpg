@@ -47,7 +47,13 @@ export function useEquipment({
   character,
   copy,
   session,
-}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) {
+  blocked_inventory,
+}: Readonly<{
+  character: Readonly<CharacterRow>
+  copy: AppCopy
+  session?: CharacterSession
+  blocked_inventory?: ReadonlySet<string>
+}>) {
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
   const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
@@ -55,7 +61,10 @@ export function useEquipment({
   const all_inventory = session?.inventory ?? stored_inventory
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
   const trades = useAppStore(({ trade }) => trade.rows)
-  const encumbered_ids = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
+  const encumbered_ids = useMemo(
+    () => encumbered_asset_ids(listings, trades, blocked_inventory),
+    [listings, trades, blocked_inventory]
+  )
   const inventory = useMemo(
     () => available_inventory_items(all_inventory, encumbered_ids, character.kiosk),
     [all_inventory, character.kiosk, encumbered_ids]
@@ -132,7 +141,7 @@ export function useEquipment({
       if (!current_character) throw localized_error(t('consume_busy'))
       if (current_character.dungeon_run && ['recall', 'city'].includes(action.effect.type))
         throw localized_error(t('teleport_dungeon_blocked'))
-      const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+      const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows, blocked_inventory)
       const plan = consumable_plan(current_character, item, state.session.inventory, encumbered, Date.now())
       const amount = mode === 'full' ? plan.maximum_amount : 1
       if (plan.needed === 0) throw localized_error(t('already_full_hp'))
@@ -190,7 +199,7 @@ export function useEquipment({
     const transaction = run_direct_transaction(() => {
       const state = read_app_state()
       const current = editable_character(state, character.id, Date.now())
-      const blocked = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+      const blocked = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows, blocked_inventory)
       const refusal = equipment_commit_refusal({
         character,
         current,

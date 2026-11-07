@@ -11,6 +11,7 @@ import type {
   AgentTransferReview as Review,
 } from '@aresrpg/sdk/agent-transfer-actions'
 
+import { SendModalShell } from '../components/SendModalShell.tsx'
 import { funding_recipient_current, recall_funding_authorization } from '../funding/recipient.ts'
 import { FundingModal } from '../components/AddFundsModal.tsx'
 import { external_wallet_view } from '../wallet/view.ts'
@@ -20,6 +21,8 @@ import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 import { readable_transaction_error, run_direct_transaction } from '../transaction_guard.ts'
+
+import { is_coin_transfer } from './inventory_transfer.ts'
 
 type State = Readonly<{
   phase: 'idle' | 'preparing' | 'review' | 'submitting' | 'done' | 'failed' | 'preflight_failed'
@@ -74,7 +77,7 @@ export const AgentTransferOutcome = ({
               {t.agent_asset_fee_budget}: {state.review.gas_budget_mist} MIST
             </p>
           )}
-          <p>{t.agent_transfer_step}</p>
+          <p>{is_coin_transfer(state.review.intent) ? t.agent_coin_direct : t.agent_transfer_step}</p>
           <Button onClick={confirm} disabled={!allow_submit}>
             {t.agent_transfer_confirm}
           </Button>
@@ -105,6 +108,8 @@ export const AgentTransferReview = ({
   allow_submit,
   actions = wallet.agent_transfer,
   funding_pairing,
+  close,
+  on_complete,
 }: Readonly<{
   wallet: AuthSession
   intent: AgentTransferIntent
@@ -112,6 +117,8 @@ export const AgentTransferReview = ({
   allow_submit: boolean
   actions?: AgentTransferActions
   funding_pairing?: AgentPairingIdentity
+  close?: () => void
+  on_complete?: () => void
 }>) => {
   const [funding, set_funding] = useState(false)
   const [state, dispatch] = useReducer(reduce_transfer_review, { phase: 'idle' })
@@ -140,16 +147,19 @@ export const AgentTransferReview = ({
     if (!pending) return
     dispatch({ type: 'submit' })
     void pending.then(
-      (result) => dispatch({ type: 'done', digest: result.digest }),
+      (result) => {
+        dispatch({ type: 'done', digest: result.digest })
+        on_complete?.()
+      },
       (error) => fail(error, pre_submission_failure(error))
     )
   }
   if (!active) return null
-  return (
+  const content = (
     <section className="space-y-2 break-all" data-agent-transfer-review="">
       <p>{t.agent_transfer_review}</p>
       <p>
-        {t.agent_return_from}: {actions.sender}
+        {t.agent_transfer_sender}: {actions.sender}
       </p>
       <ReturnEquipmentList intent={intent} />
       <TransferIntentSummary intent={intent} copy={copy} />
@@ -172,6 +182,18 @@ export const AgentTransferReview = ({
       )}
       <AgentTransferOutcome state={state} copy={copy} allow_submit={allow_submit} confirm={confirm} />
     </section>
+  )
+  return close ? (
+    <SendModalShell
+      close={close}
+      close_label={copy.wallet_close}
+      locked={state.phase === 'submitting'}
+      title={copy.ui.agent_transfer_review}
+    >
+      {content}
+    </SendModalShell>
+  ) : (
+    content
   )
 }
 

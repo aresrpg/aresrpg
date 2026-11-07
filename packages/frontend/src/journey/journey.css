@@ -148,10 +148,6 @@
   transform: rotate(-10deg);
   filter: drop-shadow(0 7px 0 color-mix(in srgb, var(--color-bg) 45%, transparent));
 }
-.journey-art img.journey-automation-art {
-  max-width: 100%;
-  transform: none;
-}
 .journey-copy {
   min-width: 0;
 }

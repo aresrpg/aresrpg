@@ -56,11 +56,18 @@ export const initial_journey_state = (identity: string | null = null, generation
 export const complete_quests = (state: JourneyState, ids: readonly string[], celebrate = true): JourneyState => {
   const added = completed_quests_from(ids).filter((id) => !state.completed.includes(id))
   if (!added.length) return state
+  const completed = completed_quests_from([...state.completed, ...added])
+  const unfinished = next_quest(completed) !== null
   return Object.freeze({
     ...state,
-    completed: completed_quests_from([...state.completed, ...added]),
+    completed,
     saving: !state.storage_failed,
-    celebrations: celebrate ? [...state.celebrations, ...added.filter((id) => id !== 'welcome')] : state.celebrations,
+    journal_open: unfinished && state.journal_open,
+    celebrations: !unfinished
+      ? []
+      : celebrate
+        ? [...state.celebrations, ...added.filter((id) => id !== 'welcome')]
+        : state.celebrations,
   })
 }
 

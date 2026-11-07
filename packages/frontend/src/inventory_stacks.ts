@@ -9,9 +9,11 @@ const MAX_STACK_AMOUNT = 4_294_967_295
 
 export const encumbered_asset_ids = (
   listings: readonly Readonly<ListingRow>[],
-  trades: readonly Readonly<TradeRow>[]
+  trades: readonly Readonly<TradeRow>[],
+  additional: ReadonlySet<string> = new Set()
 ): ReadonlySet<string> =>
   new Set([
+    ...additional,
     ...listings.map(({ id }) => id),
     ...trades.flatMap(({ caps_a, caps_b }) => [...caps_a, ...caps_b].map(({ object }) => object)),
   ])
@@ -196,12 +198,22 @@ export const craft_output_stack_plan = (
 
 /** One visual balance per stackable type and kiosk; unique items retain their own cells. */
 export const inventory_groups = (inventory: readonly Readonly<ItemRow>[]) => {
-  const groups = new Map<string, Readonly<{ item: Readonly<ItemRow>; amount: number }>>()
+  const groups = new Map<
+    string,
+    Readonly<{ item: Readonly<ItemRow>; amount: number; items: readonly Readonly<ItemRow>[] }>
+  >()
   for (const item of inventory) {
     const key = item_is_stackable(item.category) ? [item.kiosk, item.item_type].join(':') : item.id
-    const previous = groups.get(key)
-    const representative = previous && previous.item.amount >= item.amount ? previous.item : item
-    groups.set(key, Object.freeze({ item: representative, amount: (previous?.amount ?? 0) + item.amount }))
+    const previous = groups.get(key) ?? { item, amount: 0, items: [] }
+    const representative = previous.item.amount >= item.amount ? previous.item : item
+    groups.set(
+      key,
+      Object.freeze({
+        item: representative,
+        amount: previous.amount + item.amount,
+        items: Object.freeze([...previous.items, item]),
+      })
+    )
   }
   return Object.freeze([...groups.values()])
 }

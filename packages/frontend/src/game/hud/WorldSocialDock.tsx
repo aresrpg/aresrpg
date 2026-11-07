@@ -4,7 +4,6 @@ import type { ReactNode } from 'react'
 import { useAppStore } from '../../store.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { PartyFrame, PartyInviteCard } from '../../components/PartyFrame.tsx'
-import { AutomationPanel } from '../../components/AutomationPanel.tsx'
 import { Minimap } from './Minimap.tsx'
 import { MultiplayerHud } from './MultiplayerHud.tsx'
 import { WorldAccount } from './WorldAccount.tsx'
@@ -29,7 +28,6 @@ export const WorldSocialDock = ({
           <>
             <PartyFrame copy={copy} />
             <PartyInviteCard copy={copy} />
-            <AutomationPanel copy={copy} enabled={!fighting} />
           </>
         ) : (
           children

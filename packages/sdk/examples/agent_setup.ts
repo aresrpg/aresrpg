@@ -9,7 +9,13 @@ import { assert_agent_endpoint } from './agent_deployment.ts'
 import { bootstrap_disposable_agent } from './agent_bootstrap.ts'
 
 const parse_setup_link = (link: string) => {
-  const url = new URL(link)
+  const url = (() => {
+    try {
+      return new URL(link)
+    } catch {
+      throw new Error('INVALID_SETUP_LINK')
+    }
+  })()
   const token = url.hash.slice(1)
   const id = url.searchParams.get('id') ?? ''
   const checks = [
@@ -41,6 +47,8 @@ export const bootstrap_setup_link = async (
     bootstrap?: PairingBootstrap
   }> = {}
 ) => {
+  const { bootstrap } = options
+  if (!bootstrap) throw new Error('PERSISTENT_SIGNER_REQUIRED')
   const { url, token } = parse_setup_link(link)
   const socket_origin = url.origin.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')
   assert_agent_endpoint(
@@ -52,8 +60,9 @@ export const bootstrap_setup_link = async (
   const init = { headers: { authorization: `Bearer ${token}` }, redirect: 'error' as const, signal: options.signal }
   const pending = await request(url, init)
   if (!pending.ok) throw new Error('SETUP_UNAVAILABLE')
-  const bootstrap = options.bootstrap ?? bootstrap_disposable_agent
   const client = await bootstrap(await pending.json())
+  if (![client.response.signer_mode === 'host-persistent', options.fetch !== undefined].some(Boolean))
+    throw new Error('PERSISTENT_SIGNER_REQUIRED')
   const response = await request(url, { ...init, method: 'POST', body: JSON.stringify(client.response) })
   if (!response.ok) throw new Error('SETUP_COMPLETION_FAILED')
   const result = (await response.json()) as { address?: unknown; multisig_public_key?: unknown; signer_mode?: unknown }
@@ -69,7 +78,7 @@ export const bootstrap_setup_link = async (
 }
 
 const load_pairing_adapter = async (path: string | undefined): Promise<PairingBootstrap> => {
-  if (!path) return bootstrap_disposable_agent
+  if (!path) throw new Error('PERSISTENT_SIGNER_REQUIRED')
   if (!path.endsWith('.ts') || /^[a-z][a-z0-9+.-]*:/i.test(path)) throw new Error('INVALID_PAIRING_ADAPTER')
   const adapter = await import(path_to_file_url(resolve(path)).href)
   if (typeof adapter.create_pairing_client !== 'function') throw new Error('INVALID_PAIRING_ADAPTER')

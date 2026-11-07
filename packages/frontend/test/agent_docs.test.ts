@@ -81,3 +81,9 @@ test('all onboarding entry points point to the canonical Connect Your Agent guid
   expect(hrefs.length).toBeGreaterThan(0)
   for (const href of hrefs) expect(existsSync(resolve(public_dir, href.slice(1)))).toBe(true)
 })
+
+test('production Vercel uses the frontend build that generates the standalone agent client', () => {
+  const { scripts } = JSON.parse(readFileSync(resolve(public_dir, '../package.json'), 'utf8'))
+  expect(deployment.buildCommand).toBe('bun run build')
+  expect(scripts.build.split(' && ')).toEqual(['bun ../sdk/scripts/build_agent_cli.ts', 'vite build'])
+})

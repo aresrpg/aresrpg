@@ -10,6 +10,7 @@ import { useAppStore } from '../store.ts'
 
 import { useJourneySource } from './source.tsx'
 import { JourneyPanel } from './JourneyPanel.tsx'
+import { next_quest } from './model.ts'
 
 export const JourneyHost = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const source = useJourneySource(copy)
@@ -34,7 +35,7 @@ export const JourneyHost = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     played.current = sound_key
     play_audio('quest_completed')
   }, [journey.saving, sound_key, unobstructed, visible])
-  if (!journey.journal_open || !journey.ready) return null
+  if (!journey.journal_open || !journey.ready || !next_quest(journey.completed, source.quests)) return null
   return (
     <ModalFrame
       close={() => source.journal(false)}

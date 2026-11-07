@@ -17,13 +17,7 @@ for (const viewport of [{ width: 844, height: 390 }]) {
     expect(search_box.height).toBeGreaterThanOrEqual(44)
     expect(search_box.x + search_box.width).toBeLessThanOrEqual((await page.locator('.gw-compass').boundingBox())!.x)
     await page.screenshot({ path: test.info().outputPath('mobile-hud.png') })
-    const automation = page.locator('.world-social-dock [data-automation-panel]')
-    await expect(automation).toBeVisible()
-    expect((await automation.boundingBox())!.y).toBeGreaterThan((await page.locator('.party-frame').boundingBox())!.y)
-    await automation.scrollIntoViewIfNeeded()
-    expect((await automation.boundingBox())!.y + (await automation.boundingBox())!.height).toBeLessThanOrEqual(
-      viewport.height
-    )
+    await expect(page.locator('[data-automation-panel]')).toHaveCount(0)
     await page.locator('[data-test-notification]').evaluate((node: HTMLButtonElement) => node.click())
     const notification = page.getByText('HUD verification', { exact: true })
     await expect(notification).toBeVisible()

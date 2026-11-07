@@ -61,7 +61,7 @@ export const agent_transfer_actions = (
     kiosk_cap: KioskCapLoader
     check_offer?: (intent: Extract<AgentTransferIntent, { kind: 'offer' }>) => Promise<void>
     check_return?: (intent: Exclude<CharacterTransferIntent, { kind: 'offer' }>) => Promise<void>
-    assets?: Readonly<{ client: SuiGrpcClient; recipient?: string }>
+    assets?: Readonly<{ client: SuiGrpcClient; recipient?: () => string }>
   }>
 ) => {
   const builders = agent_character_transfer(sdk)
@@ -69,7 +69,8 @@ export const agent_transfer_actions = (
   const check_return = context.check_return ?? (async () => undefined)
   const { assets } = context
   const compose_assets = assets
-    ? (intent: AgentAssetIntent) => compose_agent_assets(assets.client, sdk, context.address, intent, assets.recipient)
+    ? (intent: AgentAssetIntent) =>
+        compose_agent_assets(assets.client, sdk, context.address, intent, assets.recipient?.())
     : async () => {
         throw new Error('Asset recovery is unavailable for this session.')
       }

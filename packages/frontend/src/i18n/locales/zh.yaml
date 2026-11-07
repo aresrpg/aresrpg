@@ -2520,29 +2520,6 @@ leaderboard_page:
   job_HANDYMAN: 杂工
   job_ALCHEMIST: 炼金术士
   job_BAKER: 面包师
-automation_panel:
-  retrying: 等待位置同步，准备重试
-  title: 自动化
-  gathering: 采集
-  select_resource: 选择资源
-  level: 需要{{level}}级
-  tool: 需要对应工具
-  start: 开始
-  stop: 停止
-  idle: 准备就绪
-  planning: 正在选择下一个目标
-  moving: 正在前往资源
-  inspecting: 等待移动和区域数据
-  searching: 正在搜索区域
-  waiting: 等待区域刷新
-  protector: 正在退出守护者战斗
-  stopped: 已停止
-  unavailable: 已暂停：角色或连接不可用
-  blocked: 已暂停：移动受阻
-  failed: 已暂停：操作失败。请查看错误信息。
-  quantity: 已采集：{{quantity}}
-  expand: 展开自动采集
-  collapse: 收起自动采集
 item_drop_sources:
   title: 怪物掉落
   empty: 没有怪物掉落此物品。
@@ -2580,9 +2557,6 @@ journey:
   resource_details: 资源详情
   key_details: 寻找地下城钥匙
   next: 接下来
-  chapter_finished: 旅程完成
-  finished_title: 自动化已解锁
-  finished_body: AresRPG也是一款关于自动化的游戏，未来许多功能都会围绕自动化展开。你已完成全部新手任务，获得了自动采集作为奖励！选择资源，点击“开始”，让角色自行采集。运行时也可以收起控制面板。
   reset_title: 新手任务
   reset_hint: 重置此账户在本浏览器中的任务。重新开始旅程后，已有物品会再次计入。
   reset_action: 重置任务
@@ -2626,9 +2600,7 @@ journey:
   suize_body: 干得好，冒险者。更好的收获会带来新配方，所以还有最后一个挑战：亲手收获Suize。去哪里找？就当作你第一次独立解决的问题吧。
   suize_objective: 收获Suize
   welcome_objective: ''
-  finished_objective: ''
   saving: 正在保存…
-  automation_reward_action: 打开自动采集
 fullscreen_enter: 进入全屏
 fullscreen_exit: 退出全屏
 fullscreen_failed: 无法切换全屏模式。
@@ -2717,6 +2689,19 @@ ui:
   agent_asset_reserved: '专属报价 · 需要 PurchaseCap'
   agent_asset_unconfigured: '此部署尚未配置'
   agent_asset_fee_budget: 'Gas 预算上限'
+  agent_label: '代理'
+  agent_kiosk_badge: '货亭'
+  agent_kiosk: '代理货亭'
+  agent_deposit: '存入代理'
+  agent_withdraw: '提取到玩家'
+  agent_coin_transfer: '转账 {{token}}'
+  agent_coin_direct: '代币通过一笔交易直接转账，由发送方支付燃气费。'
+  agent_pair_for_deposit: '存入前请验证代理的持久签名方。'
+  agent_inventory_connect: '验证代理的完整地址后即可使用其物品栏。'
+  agent_inventory_demo: '代理转账需要连接 Google 钱包。装备和选择功能可离线使用。'
+  agent_claim_pending: '已提供的物品需要另行领取。'
+  agent_transfer_sender: '发送方'
+  agent_source_balance: '发送方余额'
   agent_inventory: '智能体物品栏'
   agent_asset_refresh: '刷新物品栏'
   agent_asset_available: '可用'

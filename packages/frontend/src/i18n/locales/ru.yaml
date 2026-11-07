@@ -2520,29 +2520,6 @@ leaderboard_page:
   job_HANDYMAN: Умелец
   job_ALCHEMIST: Алхимик
   job_BAKER: Пекарь
-automation_panel:
-  retrying: Ожидаем синхронизации движения; повторяем
-  title: Автоматизация
-  gathering: Сбор
-  select_resource: Выберите ресурс
-  level: Нужен уровень {{level}}
-  tool: Нужен подходящий инструмент
-  start: Начать
-  stop: Остановить
-  idle: Готово
-  planning: Выбор следующей цели
-  moving: Движение к ресурсам
-  inspecting: Ожидание перемещения и данных зоны
-  searching: Исследование зоны
-  waiting: Ожидание обновления зоны
-  protector: Выход из боя с защитником
-  stopped: Остановлено
-  unavailable: 'Пауза: персонаж или соединение недоступны'
-  blocked: 'Пауза: путь заблокирован'
-  failed: 'Пауза: действие не удалось. Проверьте ошибку.'
-  quantity: 'Собрано: {{quantity}}'
-  expand: Развернуть автосбор
-  collapse: Свернуть автосбор
 item_drop_sources:
   title: Добыча с монстров
   empty: Ни один монстр не роняет этот предмет.
@@ -2580,9 +2557,6 @@ journey:
   resource_details: Сведения о ресурсе
   key_details: Найти ключ подземелья
   next: Далее
-  chapter_finished: Путешествие завершено
-  finished_title: Автоматизация открыта
-  finished_body: AresRPG — это ещё и игра об автоматизации. На ней будут строиться многие будущие возможности. Вы выполнили все задания новичка и заслужили автоматический сбор! Выберите ресурс, нажмите «Начать» и позвольте персонажу собирать его. Панель можно свернуть, не останавливая работу.
   reset_title: Задания новичка
   reset_hint: Сбросить задания аккаунта в этом браузере. После нового старта уже имеющиеся предметы снова будут учтены.
   reset_action: Сбросить задания
@@ -2626,9 +2600,7 @@ journey:
   suize_body: 'Отлично, искатель приключений. Лучший урожай открывает новые рецепты. Последнее испытание: соберите Suize сами. Где его найти? Считайте это первой задачей без наставника.'
   suize_objective: Собрать Suize
   welcome_objective: ''
-  finished_objective: ''
   saving: Сохранение…
-  automation_reward_action: Открыть автосбор
 fullscreen_enter: На весь экран
 fullscreen_exit: Выйти из полного экрана
 fullscreen_failed: Не удалось изменить полноэкранный режим.
@@ -2717,6 +2689,19 @@ ui:
   agent_asset_reserved: 'Эксклюзивное предложение · нужен PurchaseCap'
   agent_asset_unconfigured: 'Не настроено для этого развёртывания'
   agent_asset_fee_budget: 'Максимальный бюджет газа'
+  agent_label: 'Агент'
+  agent_kiosk_badge: 'КИОСК'
+  agent_kiosk: 'Киоск агента'
+  agent_deposit: 'Внести агенту'
+  agent_withdraw: 'Вывести игроку'
+  agent_coin_transfer: 'Перевести {{token}}'
+  agent_coin_direct: 'Монеты переводятся напрямую одной транзакцией. Газ оплачивает отправитель.'
+  agent_pair_for_deposit: 'Перед внесением средств подтвердите постоянного подписанта агента.'
+  agent_inventory_connect: 'Проверьте полный адрес агента, чтобы использовать его инвентарь.'
+  agent_inventory_demo: 'Для переводов агента нужен подключённый Google-кошелёк. Экипировка и выбор работают офлайн.'
+  agent_claim_pending: 'Предложенные предметы нужно получить отдельной транзакцией.'
+  agent_transfer_sender: 'Отправитель'
+  agent_source_balance: 'Баланс отправителя'
   agent_inventory: 'Инвентарь агента'
   agent_asset_refresh: 'Обновить инвентарь'
   agent_asset_available: 'Доступно'

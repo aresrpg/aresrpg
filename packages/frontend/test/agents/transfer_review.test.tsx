@@ -16,6 +16,7 @@ const copy = {
   ui: {
     agent_transfer_gas: 'Gas',
     agent_transfer_step: 'One step only',
+    agent_coin_direct: 'One direct coin transfer',
     agent_transfer_confirm: 'Confirm',
     agent_transfer_signer_missing: 'Persistent signer required',
     agent_transfer_failed: 'Check the outcome',
@@ -32,7 +33,10 @@ test('disposable review displays estimate but cannot offer enabled confirmation'
       copy={copy}
       allow_submit={false}
       confirm={never_confirm}
-      state={{ phase: 'review', review: { network: 'mainnet', gas_mist: '13' } as AgentTransferReview }}
+      state={{
+        phase: 'review',
+        review: { network: 'mainnet', gas_mist: '13', intent: { kind: 'cancel' } } as AgentTransferReview,
+      }}
     />
   )
   expect(html).toContain('disabled')
@@ -95,4 +99,35 @@ test('transient preflight failure can be checked again but uncertain submission 
   )
   expect(can_check_transfer(uncertain.phase)).toBe(false)
   expect(uncertain.error).toContain('digest')
+})
+
+test('coin-only review describes one direct transfer without promising a claim step', () => {
+  const html = renderToStaticMarkup(
+    <AgentTransferOutcome
+      copy={copy}
+      allow_submit
+      confirm={never_confirm}
+      state={{
+        phase: 'review',
+        review: {
+          network: 'mainnet',
+          gas_mist: '13',
+          gas_budget_mist: '20',
+          sender: 'agent',
+          confirm: async () => never_confirm(),
+          intent: {
+            kind: 'asset_offer',
+            items: [],
+            recipient: 'player',
+            sui_mist: '1',
+            kares_mist: '0',
+            reserve_mist: '0',
+          },
+        } as AgentTransferReview,
+      }}
+    />
+  )
+  expect(html).toContain('One direct coin transfer')
+  expect(html).not.toContain('One step only')
+  expect(html).toContain('20 MIST')
 })
