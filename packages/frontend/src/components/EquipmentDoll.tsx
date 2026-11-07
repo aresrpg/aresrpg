@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The established paper-doll layout, extracted from the inventory for reuse by local character
-// authoring AND the live characters page (drag-drop staging rides the optional slot_state).
+// authoring AND the live characters page (pending equipment and drop highlighting ride the optional slot_state).
 
 import { slot_art } from '@aresrpg/ui/art'
-import type { DragEvent, ReactElement, ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
 /** The anatomical body order — DOM reading order IS the layout (the .inv__rig auto-flow
@@ -33,13 +33,12 @@ import { useItemClick } from './useItemClick.ts'
 /** What a slot needs to paint — the seed catalog rows and the projected chain rows both fit. */
 export type DollItem = Readonly<{ name: string; item_type: string; level: number }>
 
-/** Optional live-page interactivity per slot: drop targets, drag-over highlight, staged mark. */
+/** Optional live-page interactivity per slot: drop highlight and pending transaction state. */
 export type DollSlotState = Readonly<{
   hover?: (content: Readonly<ReactElement<{ title?: string }>>) => ReactNode
   valid?: boolean
-  staged?: boolean
+  pending?: boolean
   on_double_click?: () => void
-  on_drop?: (event: Readonly<DragEvent<HTMLButtonElement>>) => void
 }>
 
 const slot_label = (slot: CharacterEquipmentSlot, category_name: (category: string) => string): string =>
@@ -66,14 +65,12 @@ const EquipmentSlot = ({
   const accessible_label = item?.name ?? label
   const button = (
     <button
-      className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
+      className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}`}
       data-equipment-slot={slot}
+      aria-busy={state.pending}
+      disabled={state.pending}
       onClick={click}
       onDoubleClick={state.on_double_click}
-      onDragOver={(event) => {
-        if (state.on_drop) event.preventDefault()
-      }}
-      onDrop={state.on_drop}
       aria-label={accessible_label}
       title={accessible_label}
       type="button"
@@ -93,6 +90,7 @@ const EquipmentSlot = ({
           <span className="inv__slot-label">{label}</span>
         </>
       )}
+      <span className="inventory-item-pending" hidden={!state.pending} aria-hidden="true" />
     </button>
   )
   return hover(button)

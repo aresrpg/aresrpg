@@ -97,6 +97,7 @@ dispatch_app({
       }
     },
     character: {
+      equip: async () => undefined,
       crush_gear: async ({ gear_ids }: { gear_ids: readonly string[] }) => {
         recorded.push([...gear_ids])
         document.body.dataset.crushCalls = JSON.stringify(recorded)
@@ -185,20 +186,28 @@ if (new URLSearchParams(location.search).has('listed'))
       kiosk_versions: { kiosk: '1' },
     },
   })
+const InventoryFixture = () => {
+  const current = useAppStore((state) => state.session.characters.find(({ id }) => id === character.id))!
+  return CharacterWindow ? (
+    <CharacterWindow tab="equipment" character={current} copy={copy} close={() => undefined} />
+  ) : (
+    <EquipmentTab character={current} copy={copy} />
+  )
+}
 createRoot(document.getElementById('root')!).render(
   <main
     className="gw-tab market-page flex min-h-0 min-w-0 flex-1"
     style={{ containerType: 'inline-size', containerName: 'app-content' }}
   >
     {CharacterWindow ? (
-      <CharacterWindow tab="equipment" character={character} copy={copy} close={() => undefined} />
+      <InventoryFixture />
     ) : trading ? (
       <TradeFixture />
     ) : sell ? (
       <SellPanel text={copy_text(copy.marketplace_page)} />
     ) : (
       <>
-        <EquipmentTab character={character} copy={copy} />
+        <InventoryFixture />
         <CrushResultModal copy={copy} />
       </>
     )}

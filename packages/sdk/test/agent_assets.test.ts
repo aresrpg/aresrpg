@@ -390,3 +390,77 @@ test('a changed stack version and an incomplete incoming set abort before buildi
     })
   ).rejects.toThrow('ownership or custody changed')
 })
+
+test('an ordinary wallet without a pairing-bound recipient cannot prepare an outgoing asset offer', async () => {
+  const f = fixture()
+  const actions = agent_transfer_actions(f.sdk as never, {
+    address: owner,
+    kiosk_cap: async () => cap,
+    assets: { client: f.client as never },
+  })
+  await expect(actions.prepare({ ...asset_offer, recipient: sender })).rejects.toThrow('Google owner')
+  expect(f.state.executions).toBe(0)
+})
+
+test('confirming an item offer submits only the offer, never the separate recipient claim', async () => {
+  const f = fixture()
+  const submitted: Transaction[] = []
+  const sdk = {
+    ...f.sdk,
+    execute: async (tx: Transaction) => {
+      submitted.push(tx)
+      return f.sdk.execute()
+    },
+  }
+  const actions = agent_transfer_actions(sdk as never, {
+    address: sender,
+    kiosk_cap: async () => cap,
+    assets: { client: f.client as never, recipient: owner },
+  })
+  const review = await actions.prepare({ ...asset_offer, sui_mist: '0' })
+  expect(submitted).toHaveLength(0)
+  await review.confirm()
+  expect(submitted).toHaveLength(1)
+  expect(calls(submitted[0]!)).toContain('list_with_purchase_cap')
+  expect(calls(submitted[0]!)).not.toContain('purchase_with_cap')
+  expect(calls(submitted[0]!)).not.toContain('confirm_request')
+  expect(f.state.executions).toBe(1)
+})
+
+test('a changed member of a reviewed item group prevents the entire offer from submitting', async () => {
+  const f = fixture()
+  const second = id(43)
+  let second_version = '1'
+  const client = {
+    core: {
+      ...f.client.core,
+      getObject: async ({ objectId }: { objectId: string }) => ({
+        object: { objectId, version: objectId === second ? second_version : '1' },
+      }),
+    },
+  }
+  const sdk = {
+    ...f.sdk,
+    get_kiosk: async () => ({
+      items: [item_id, second].map((object_id) => ({
+        objectId: object_id,
+        kioskId: kiosk_id,
+        type: `${game}::item::Item`,
+      })),
+    }),
+  }
+  const actions = agent_transfer_actions(sdk as never, {
+    address: sender,
+    kiosk_cap: async () => cap,
+    assets: { client: client as never, recipient: owner },
+  })
+  const review = await actions.prepare({
+    ...asset_offer,
+    sui_mist: '0',
+    items: [...asset_offer.items, { item_id: second, kiosk: kiosk_id, version: '1' }],
+  })
+  second_version = '2'
+  await expect(review.confirm()).rejects.toThrow('version changed')
+  expect(f.state.executions).toBe(0)
+  await expect(review.confirm()).rejects.toThrow('Reconcile')
+})

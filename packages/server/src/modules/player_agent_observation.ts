@@ -3,8 +3,8 @@
 import { randomUUID } from 'node:crypto'
 
 import type { AgentObservation, CharacterRow } from '@aresrpg/protocol'
+import { owner_agent_identity } from '@aresrpg/sdk/agent-pairing'
 
-import { owner_agent_identity } from '../../../sdk/src/agent_pairing.ts'
 import { get_characters } from '../reads/get_characters.ts'
 import { coalesced_reader } from '../latest_read.ts'
 import { channels } from '../protocol.ts'

@@ -44,3 +44,20 @@ export const selection_edge_speed = (position: number, size: number): number => 
   if (position > size - edge) return Math.min(12, (position - size + edge) / 2)
   return 0
 }
+
+/** Selection and item transport are disjoint gestures, even when they start on the same cell. */
+export const selection_gesture_kind = ({
+  select,
+  item,
+  transferable,
+}: Readonly<{
+  select: boolean
+  item: string | null
+  transferable: boolean
+}>): 'selecting' | 'dragging' | 'scrolling' => {
+  if (select || !transferable) return 'selecting'
+  return item ? 'dragging' : 'scrolling'
+}
+
+export const dragged_selection = (item: string, selected: readonly string[]): readonly string[] =>
+  selected.includes(item) ? selected : [item]

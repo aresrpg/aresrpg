@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-// EQUIPMENT — the loadout surface: the paper-doll + equipped totals on the left, the bag on
-// the right (category tabs, grid, drag-drop). Changes STAGE locally; Accept composes ONE
-// SDK transaction and the proven receipt folds through the session reducer (the server
-// never re-sends what this player's own transaction caused). Click a bag item to inspect
-// it, Shift-click to equip, double-click to equip (or drink), drag onto a specific slot, click
-// a filled slot to inspect it, double-click to stage its unequip.
+// One equipment gesture submits immediately; the pending preview restores on failure.
+// Shift-click and Shift-drag select. Double-click equips; touch retains the Equip action.
 
 import { IconButton } from '@aresrpg/ui'
 import { character_equipment_slots } from '@aresrpg/immutable'
@@ -25,7 +21,7 @@ import { equipment_comparison } from './equipment_comparison.ts'
 import { useEquipment } from './useEquipment.ts'
 import type { CharacterSession } from './character_session.ts'
 import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
-import { equip_refusal, natural_slot_for, stage_unequip } from './equipment_stage.ts'
+import { equip_refusal } from './equipment_stage.ts'
 import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { inventory_action_selection, useInventoryActions } from './InventoryOverlays.tsx'
@@ -42,9 +38,6 @@ export default function EquipmentTab({
   const {
     t,
     encumbered_ids,
-    inventory,
-    staged,
-    set_staged,
     category,
     set_category,
     resource_filter,
@@ -63,17 +56,16 @@ export default function EquipmentTab({
     set_healing_item,
     equipment,
     changes,
-    dirty,
     bag,
     display_bag,
     grid_items,
     selected_items,
     select_item,
     inspected,
-    try_stage,
+    equip,
+    unequip,
     drink,
     activate,
-    accept,
     totals,
     empty_cells,
   } = useEquipment({ character, copy, session })
@@ -165,34 +157,13 @@ export default function EquipmentTab({
                   )
                 : undefined,
               valid,
-              staged: changes.to_equip.some((change) => change.slot === slot),
+              pending: [...changes.to_equip, ...changes.to_unequip].some((change) => change.slot === slot),
               on_double_click: () => {
                 if (committing || !equipment[slot]) return
-                set_staged(stage_unequip(equipment, slot))
-              },
-              on_drop: (event) => {
-                event.preventDefault()
-                const item = bag.find(({ id }) => id === event.dataTransfer.getData('text/plain'))
-                set_dragging_id(null)
-                if (item) try_stage(item, slot)
+                unequip(slot)
               },
             }
           }}
-          footer={
-            <div className="inventory-commit-bar" style={{ visibility: dirty ? 'visible' : 'hidden' }}>
-              <button
-                className="btn-outline chr-btn"
-                disabled={committing}
-                onClick={() => set_staged(null)}
-                type="button"
-              >
-                {t('cancel')}
-              </button>
-              <button className="btn-gold chr-btn" disabled={committing} onClick={accept} type="button">
-                {committing ? '…' : t('accept')}
-              </button>
-            </div>
-          }
         />
 
         <div className="chr-eyebrow">{t('equipped_totals')}</div>
@@ -239,7 +210,7 @@ export default function EquipmentTab({
               }}
               close={() => set_inspected_id(null)}
               activate={() => {
-                if (inspected_slot) set_staged(stage_unequip(equipment, inspected_slot))
+                if (inspected_slot) unequip(inspected_slot)
                 else if (inspected_bag_item) activate(inspected_bag_item)
                 set_inspected_id(null)
               }}
@@ -272,7 +243,7 @@ export default function EquipmentTab({
           menu={set_menu}
           disabled={committing}
           drag_item={set_dragging_id}
-          equip={try_stage}
+          equip={equip}
         >
           {filtered.map(({ item, amount }) => (
             <InventoryItemCell
@@ -281,11 +252,8 @@ export default function EquipmentTab({
               aria-pressed={selected_ids.includes(item.id)}
               item={item}
               key={item.id}
-              onClick={(event) => {
-                const slot = event.shiftKey ? natural_slot_for(item, equipment) : null
-                if (slot) try_stage(item, slot)
-                else select_item(item, event.shiftKey)
-              }}
+              disabled={committing}
+              onClick={(event) => select_item(item, event.shiftKey)}
               onDoubleClick={(event) => {
                 if (!event.shiftKey) activate(item)
               }}

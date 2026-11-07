@@ -4,13 +4,12 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 
 import type { Redis } from 'ioredis'
 import type { AgentSetupRequest, AgentSetupResult } from '@aresrpg/protocol'
-
 import {
   parse_agent_pairing_request,
   verify_agent_pairing,
   type AgentPairingRequest,
   type AgentPairingResponse,
-} from '../../sdk/src/agent_pairing.ts'
+} from '@aresrpg/sdk/agent-pairing'
 
 type PairingResult = Awaited<ReturnType<typeof verify_agent_pairing>>
 type RecordValue = Readonly<{

@@ -187,3 +187,19 @@ test('allocation preview copy and artwork invalidate the server image', () => {
     )
   }
 })
+
+test('SDK sources copied into the server image invalidate its release and local recovery fingerprint', () => {
+  const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
+  const sources = [...dockerfile.matchAll(/^COPY (packages\/sdk\/src\/[^\n]+)$/gm)].flatMap((match) =>
+    match[1].split(' ').slice(0, -1)
+  )
+  expect(sources.length).toBeGreaterThan(0)
+  for (const path of sources) {
+    expect(classify_release([path]).server).toBe(true)
+    for (const scope of ['all', 'local'])
+      expect(fingerprint_runtime_files([[path, 'before']], '{}', scope).server).not.toBe(
+        fingerprint_runtime_files([[path, 'after']], '{}', scope).server
+      )
+  }
+  expect(classify_release(['packages/sdk/src/auth.ts']).server).toBe(false)
+})

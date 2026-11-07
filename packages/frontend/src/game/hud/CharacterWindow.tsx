@@ -27,7 +27,7 @@ const PanelBody = ({
 }: Readonly<{ tab: DetailTab; character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) => {
   switch (tab) {
     case 'equipment':
-      return <Equipment character={character} copy={copy} session={session} />
+      return <Equipment key={character.id} character={character} copy={copy} session={session} />
     case 'stats':
       return <Stats character={character} copy={copy} raise_stats={session?.raise_stats} />
     case 'jobs':

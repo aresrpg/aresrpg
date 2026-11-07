@@ -726,7 +726,7 @@ tutorial:
   fight_title: Seu primeiro combate na blockchain
   fight_body: 'Escolha feitiços ou clique numa célula para andar. Encerrar turno envia suas ações juntas.'
   equipment_gear_title: Equipamento
-  equipment_gear_body: 'Clique num item, escolha Equipar e confirme as alterações.'
+  equipment_gear_body: 'Clique duas vezes num item, arraste-o para um espaço ou escolha Equipar. Cada alteração começa imediatamente.'
   equipment_inventory_title: Inventário compartilhado
   equipment_inventory_body: 'Seus personagens compartilham os itens. Passe o cursor para ver atributos; clique para detalhes e ações.'
   stats_title: Características
@@ -1804,6 +1804,7 @@ characters_page:
   refusal_level_too_low: Seu nível é baixo demais para este item
   refusal_relic_duplicate: Uma relíquia do mesmo tipo já está equipada
   refusal_item_listed: Este item está à venda
+  refusal_unavailable: 'Este personagem ou item mudou ou está indisponível. Tente novamente quando estiver livre.'
   points_to_assign: Pontos para distribuir
   spend_hint: Gaste pontos nas seis características e confirme
   reset: Redefinir
@@ -2883,8 +2884,8 @@ adventure:
   goblins_title: 'Abra o caminho'
   goblins_objective: 'Aproxime-se dos Goblins e use o botão de ataque.'
   equip_title: 'Prepare-se para a jornada'
-  equip_objective: 'Equipe todas as recompensas, incluindo seu mascote, e pressione {{confirm}}.'
-  equip_body: 'Abra o inventário e equipe todos os itens que ganhou. Pressione {{confirm}} para aplicar as mudanças. No jogo real, isso envia uma transação Sui; aqui, é gratuito e simulado.'
+  equip_objective: 'Equipe todas as recompensas, incluindo seu mascote.'
+  equip_body: 'Abra o inventário e equipe todas as recompensas. Clique duas vezes num item, arraste-o para um espaço ou escolha Equipar. No jogo real, cada alteração inicia uma transação Sui; aqui, tudo é gratuito e simulado.'
   speak_title: 'Um estranho na ponte'
   speak_objective: 'Encontre Sceat na ponte e converse com ele.'
   invite_title: 'Mais fortes juntos'

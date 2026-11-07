@@ -60,3 +60,7 @@ move-binary-format = { git = "https://github.com/MystenLabs/sui.git", rev = "6a5
 
 # Exercise captured checkpoint bytes through the framework's actual store decoder.
 object_store = "0.13.2"
+
+# Deterministic checkpoint streaming/reconnect regressions.
+futures = "0.3"
+tokio-stream = "0.1"

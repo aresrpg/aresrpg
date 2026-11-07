@@ -728,7 +728,7 @@ tutorial:
   fight_title: Votre premier combat on-chain
   fight_body: 'Choisissez des sorts ou cliquez sur une case pour bouger. Fin de tour envoie vos actions ensemble.'
   equipment_gear_title: Équipement
-  equipment_gear_body: 'Cliquez sur un objet, choisissez Équiper, puis confirmez les changements.'
+  equipment_gear_body: 'Double-cliquez sur un objet, glissez-le vers un emplacement ou choisissez Équiper. Chaque changement commence immédiatement.'
   equipment_inventory_title: Inventaire partagé
   equipment_inventory_body: 'Les objets sont partagés entre vos personnages. Survolez-les pour voir leurs stats, cliquez pour les actions.'
   stats_title: Caractéristiques
@@ -1836,6 +1836,7 @@ characters_page:
   refusal_level_too_low: Votre niveau est trop bas pour cet objet
   refusal_relic_duplicate: Une relique identique est déjà portée
   refusal_item_listed: Cet objet est en vente
+  refusal_unavailable: 'Ce personnage ou cet objet a changé ou est indisponible. Réessayez au repos.'
   points_to_assign: Points à répartir
   spend_hint: Répartissez vos points entre les six caractéristiques, puis confirmez
   reset: Réinitialiser
@@ -2926,8 +2927,8 @@ adventure:
   goblins_title: 'Dégager le chemin'
   goblins_objective: 'Approchez des Gobelins et utilisez le bouton d’attaque.'
   equip_title: 'Équipez-vous pour la route'
-  equip_objective: 'Équipez toutes vos récompenses, y compris votre familier, puis appuyez sur {{confirm}}.'
-  equip_body: 'Ouvrez votre inventaire et équipez tous les objets gagnés. Appuyez sur {{confirm}} pour appliquer vos changements. Dans le vrai jeu, cela soumet une transaction Sui ; ici, c’est gratuit et simulé.'
+  equip_objective: 'Équipez toutes vos récompenses, y compris votre familier.'
+  equip_body: 'Ouvrez votre inventaire et équipez toutes vos récompenses. Double-cliquez sur un objet, glissez-le vers un emplacement ou choisissez Équiper. Dans le vrai jeu, chaque changement lance une transaction Sui ; ici, tout est gratuit et simulé.'
   speak_title: 'Un inconnu sur le pont'
   speak_objective: 'Retrouvez Sceat sur le pont et parlez-lui.'
   invite_title: 'Plus forts ensemble'

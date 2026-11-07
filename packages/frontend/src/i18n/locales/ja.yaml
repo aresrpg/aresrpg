@@ -728,7 +728,7 @@ tutorial:
   fight_title: 初めてのオンチェーン戦闘
   fight_body: '呪文を選ぶか、マスをクリックして移動します。ターン終了で行動をまとめて送信します。'
   equipment_gear_title: 装備
-  equipment_gear_body: 'アイテムをクリックして「装備」を選び、変更を確定します。'
+  equipment_gear_body: 'アイテムをダブルクリックするか、装備枠にドラッグするか、「装備」を選びます。変更はすぐに開始されます。'
   equipment_inventory_title: 共有インベントリ
   equipment_inventory_body: 'アイテムはキャラクター間で共有されます。カーソルを合わせると能力、クリックすると詳細と操作が表示されます。'
   stats_title: 特性
@@ -1808,6 +1808,7 @@ characters_page:
   refusal_level_too_low: レベルが足りません
   refusal_relic_duplicate: 同じ種類のレリックをすでに装備しています
   refusal_item_listed: このアイテムは出品中です
+  refusal_unavailable: 'キャラクターまたはアイテムが変更されたか、利用できません。行動が終わってから再試行してください。'
   points_to_assign: 割り振りポイント
   spend_hint: 6つの特性にポイントを割り振り、確定してください
   reset: リセット
@@ -2874,8 +2875,8 @@ adventure:
   goblins_title: '道を切り開く'
   goblins_objective: 'ゴブリンに近づいて攻撃ボタンを使いましょう。'
   equip_title: '旅の身支度'
-  equip_objective: 'ペットを含むすべての報酬を装備して、{{confirm}}を押しましょう。'
-  equip_body: 'インベントリを開き、獲得したアイテムをすべて装備してください。{{confirm}}を押すと変更が適用されます。実際のゲームでは Sui トランザクションが送信されますが、このチュートリアルでは無料のシミュレーションです。'
+  equip_objective: 'ペットを含むすべての報酬を装備しましょう。'
+  equip_body: 'インベントリを開き、すべての報酬を装備してください。ダブルクリック、装備枠へのドラッグ、または「装備」で変更できます。実際のゲームでは変更ごとに Sui トランザクションが始まりますが、ここでは無料のシミュレーションです。'
   speak_title: '橋の上の旅人'
   speak_objective: '橋のSceatを見つけて話しましょう。'
   invite_title: '力を合わせて'

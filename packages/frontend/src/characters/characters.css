@@ -146,14 +146,10 @@
   padding: 10px;
 }
 
-/* staged / drop-target slot states on the shared doll */
+/* Drop-target slot state on the shared doll. */
 .inv__slot.is-valid {
   border-color: rgba(103, 173, 255, 0.7);
   box-shadow: 0 0 8px rgba(74, 158, 255, 0.25);
-}
-
-.inv__slot.is-staged {
-  border-color: rgba(200, 150, 60, 0.8);
 }
 
 /* ── RUNEFORGE ─────────────────────────────────────────────────────────────── */

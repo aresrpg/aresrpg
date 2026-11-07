@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Pure equipment staging — the client twin of equipment.move's guards. The tab stages a
-// change-set locally (immutable slot map), the Accept button turns the diff into ONE SDK
-// transaction, and the proven receipt folds through the session reducer.
+// Pure equipment intent — the client twin of equipment.move's guards. One gesture creates
+// one immutable slot change, revalidated before the SDK transaction and receipt fold.
 
 import {
   character_equipment_slots,
@@ -87,4 +86,44 @@ export const equipment_change_set = (staged: EquipmentMap, real: EquipmentMap): 
     return item && item.id !== staged[slot]?.id ? [{ slot, item_id: item.id }] : []
   })
   return Object.freeze({ to_equip: Object.freeze(to_equip), to_unequip: Object.freeze(to_unequip) })
+}
+
+/** A gesture binds the visible loadout and item revision, never a later replacement. */
+export const equipment_commit_refusal = ({
+  character,
+  current,
+  equipment,
+  inventory,
+  blocked,
+}: Readonly<{
+  character: Readonly<CharacterRow>
+  current: Readonly<CharacterRow> | null
+  equipment: EquipmentMap
+  inventory: readonly Readonly<ItemRow>[]
+  blocked: ReadonlySet<string>
+}>): Exclude<EquipRefusal, null> | 'unavailable' | null => {
+  if (!current) return 'unavailable'
+  const changed = equipment_change_set(equipment_map_of(current), equipment_map_of(character))
+  const unavailable = [
+    current.custody !== 'kiosk',
+    current.kiosk !== character.kiosk,
+    blocked.has(current.id),
+    changed.to_equip.length + changed.to_unequip.length > 0,
+  ].some(Boolean)
+  if (unavailable) return 'unavailable'
+  const changes = equipment_change_set(equipment, equipment_map_of(character))
+  for (const { slot, item_id } of changes.to_equip) {
+    const item = inventory.find(({ id }) => id === item_id)
+    const target = slot as CharacterEquipmentSlot
+    if (item?.kiosk !== current.kiosk || item.version !== equipment[target]!.version) return 'unavailable'
+    const refusal = equip_refusal({
+      item,
+      slot: target,
+      character_level: current.level,
+      equipment,
+      listed_ids: blocked,
+    })
+    if (refusal) return refusal
+  }
+  return null
 }

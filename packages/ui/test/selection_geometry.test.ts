@@ -1,6 +1,11 @@
 import { expect, test } from 'bun:test'
 
-import { stroke_selection, selection_edge_speed } from '../src/selection_geometry.ts'
+import {
+  stroke_selection,
+  selection_edge_speed,
+  selection_gesture_kind,
+  dragged_selection,
+} from '../src/selection_geometry.ts'
 
 const cells = [
   { id: 'first', left: 0, top: 0, width: 44, height: 44 },
@@ -24,4 +29,16 @@ test('edge scrolling is bounded and stops away from the edge', () => {
   expect(selection_edge_speed(200, 400)).toBe(0)
   expect(selection_edge_speed(0, 400)).toBe(-12)
   expect(selection_edge_speed(400, 400)).toBe(12)
+})
+
+test('Shift selects while an ordinary item drag carries the selected group', () => {
+  expect(selection_gesture_kind({ select: true, item: 'first', transferable: true })).toBe('selecting')
+  expect(selection_gesture_kind({ select: false, item: 'first', transferable: true })).toBe('dragging')
+  expect(selection_gesture_kind({ select: false, item: null, transferable: true })).toBe('scrolling')
+  expect(dragged_selection('first', ['first', 'second'])).toEqual(['first', 'second'])
+  expect(dragged_selection('third', ['first', 'second'])).toEqual(['third'])
+})
+
+test('selection-only surfaces retain painting without enabling item transfers', () => {
+  expect(selection_gesture_kind({ select: false, item: 'first', transferable: false })).toBe('selecting')
 })

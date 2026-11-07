@@ -41,3 +41,49 @@
     min-height: 32px;
   }
 }
+
+.inventory-select-toggle.aui-button {
+  display: none;
+}
+@media (pointer: coarse) {
+  .inventory-select-toggle.aui-button {
+    display: inline-flex;
+    min-height: 44px;
+  }
+}
+.inventory-item-pending {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #141a22b8;
+  border-radius: inherit;
+}
+.inventory-item-pending[hidden] {
+  display: none;
+}
+.inventory-item-pending::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e4bb7940;
+  border-top-color: #e4bb79;
+  border-radius: 50%;
+  animation: inventory-pending-spin 0.8s linear infinite;
+}
+@keyframes inventory-pending-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inventory-item-pending::after {
+    animation: none;
+  }
+}
+
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .inventory-select-toggle.aui-button {
+    display: inline-flex;
+  }
+}

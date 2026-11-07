@@ -728,7 +728,7 @@ tutorial:
   fight_title: Your first on-chain fight
   fight_body: 'Choose spells or click a cell to move. End Turn sends your actions together.'
   equipment_gear_title: Equipment
-  equipment_gear_body: 'Click an item, choose Equip, then confirm your equipment changes.'
+  equipment_gear_body: 'Double-click an item, drag it to a slot, or choose Equip. Each change starts immediately.'
   equipment_inventory_title: Shared inventory
   equipment_inventory_body: 'Items are shared across your characters. Hover for stats; click for details and actions.'
   stats_title: Characteristics
@@ -1830,6 +1830,7 @@ characters_page:
   refusal_level_too_low: Your level is too low for this item
   refusal_relic_duplicate: A relic of the same kind is already worn
   refusal_item_listed: This item is listed for sale
+  refusal_unavailable: 'This character or item changed or is unavailable. Try again when idle.'
   # stats
   points_to_assign: Points to assign
   spend_hint: Spend points on the six characteristics, then confirm
@@ -2924,8 +2925,8 @@ adventure:
   goblins_title: 'Clear the path'
   goblins_objective: 'Approach the Goblins and use the attack prompt.'
   equip_title: 'Dress for the road'
-  equip_objective: 'Equip every reward, including your pet, then press {{confirm}}.'
-  equip_body: 'Open your inventory and equip all the items you won. Press {{confirm}} to apply your changes. In the real game, this submits a Sui transaction; here, it is free and simulated.'
+  equip_objective: 'Equip every reward, including your pet.'
+  equip_body: 'Open your inventory and equip every reward. Double-click an item, drag it to a slot, or choose Equip. Each change starts a Sui transaction in the real game; here, it is free and simulated.'
   speak_title: 'A stranger on the bridge'
   speak_objective: 'Find Sceat on the bridge and speak with him.'
   invite_title: 'Stronger together'

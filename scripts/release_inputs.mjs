@@ -65,6 +65,8 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/mobile/package.json',
     'packages/journal/package.json',
     'packages/sdk/package.json',
+    'packages/sdk/src/agent_pairing.ts',
+    'packages/sdk/src/agent_multisig.ts',
     'packages/fight/src/',
     'packages/fight/package.json',
     'packages/immutable/src/',

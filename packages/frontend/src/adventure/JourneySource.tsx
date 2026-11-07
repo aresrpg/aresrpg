@@ -27,10 +27,6 @@ export const AdventureJourneySource = ({ copy, children }: Readonly<{ copy: AppC
   const text = copy_text({
     ...copy.journey,
     ...copy.adventure,
-    equip_objective: copy_text(copy.adventure)('equip_objective', {
-      confirm: copy_text(copy.characters_page)('accept'),
-    }),
-    equip_body: copy_text(copy.adventure)('equip_body', { confirm: copy_text(copy.characters_page)('accept') }),
     title: copy.adventure.journal!,
     eyebrow: copy.adventure.chapter!,
     chapter_adventure: copy.adventure.chapter!,

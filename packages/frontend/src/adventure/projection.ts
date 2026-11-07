@@ -59,6 +59,7 @@ export const adventure_character_row = (
     spells: { ...character.spell_levels },
     jobs: {},
     kiosk: 'adventure',
+    custody: 'kiosk',
     world: 'nauvis',
     equipment,
     folded_stats: fold_equipment_stats(equipment),

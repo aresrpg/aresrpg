@@ -269,10 +269,10 @@ request, and initializes the ordinary world lifecycle after success. Cancellatio
 world; failed requests use the shared loading recovery and emit a loading failure. Workers receive
 named placements and the height grid, never raw construction tuples or an adventure generator.
 Quest progress derives from those facts. After the first
-victory, the equipment quest requires confirming every earned item, including the pet, through the
-ordinary inventory staging and acceptance flow before Sceat becomes interactive. Its completion is
-retained even if equipment later changes. The tutorial explains that confirmation is a Sui transaction
-in the real game; local confirmation stays free and never initializes a wallet. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
+victory, the equipment quest requires equipping every earned item, including the pet, through the
+ordinary immediate inventory actions before Sceat becomes interactive. Its completion is
+retained even if equipment later changes. The tutorial explains that each equipment change starts a Sui transaction
+in the real game; local equipment changes stay free and never initialize a wallet. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
 The journey source boundary changes facts and actions, never markup; the existing production `JourneyPanel`
 owns both the compact tracker and full journal, including progress, quest art, milestones and checklist. The local source also reuses party controls, speech captions and the ordinary multi-character fight resolver.
 Recruiting Sceat requires an explicit context-menu invitation; the talk shortcut cannot recruit him.
@@ -800,6 +800,14 @@ The old LI.FI widget, fee, route configuration and price reader are removed. Exi
 history is not deleted or rewritten.
 
 ### Equipment
+
+Inventory Shift-click toggles selection and Shift-drag paints a selected set. Ordinary item drags
+carry that set without changing it; touch uses a Select toggle and a held item drag, while immediate
+swipes scroll. Double-click, an equipment-slot drop, and the existing Equip action each submit one
+change immediately through the SDK, preserving wallet approval. The current character custody,
+loadout, item revision and listing/trade exclusions are revalidated before submission. Pending slots
+show a loader; rejected changes restore the authoritative projection. Local demo adapters apply the
+same gesture directly without a wallet. There is no separate equipment Confirm/Cancel staging bar.
 
 The Character's existing equipment map owns both stat gear and the statless `cosmetic_hat` and
 `cosmetic_cloak` slots. All slots use the same equip/unequip custody flow. Seed rejects cosmetic

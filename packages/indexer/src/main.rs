@@ -20,6 +20,7 @@ mod decode;
 mod events;
 mod gates;
 mod graph;
+mod ingestion;
 mod leaderboard_store;
 mod leaderboards;
 mod market_prices;
@@ -217,10 +218,14 @@ async fn main() -> Result<()> {
     };
 
     let registry = prometheus::Registry::new();
-    let mut indexer = Indexer::new(
+    let (archive, streaming, gap_fill) =
+        ingestion::clients(client_args, &ingestion_config, &registry)?;
+    let mut indexer = Indexer::with_ingestion_clients(
         store,
         args.indexer,
-        client_args,
+        archive,
+        streaming,
+        gap_fill,
         ingestion_config,
         None,
         &registry,

@@ -729,7 +729,7 @@ tutorial:
   fight_title: 你的首场链上战斗
   fight_body: '选择法术或点击格子移动。结束回合会一次提交所有行动。'
   equipment_gear_title: 装备
-  equipment_gear_body: '点击物品，选择装备，然后确认更改。'
+  equipment_gear_body: '双击物品、将其拖到装备栏，或选择装备。每次更改都会立即开始。'
   equipment_inventory_title: 共享背包
   equipment_inventory_body: '角色共享物品。悬停查看属性，点击查看详情和操作。'
   stats_title: 属性
@@ -1807,6 +1807,7 @@ characters_page:
   refusal_level_too_low: 等级不足，无法使用此物品
   refusal_relic_duplicate: 已佩戴同类遗物
   refusal_item_listed: 此物品正在出售
+  refusal_unavailable: '角色或物品已变化或当前不可用。请在空闲时重试。'
   points_to_assign: 待分配点数
   spend_hint: 为六项属性分配点数，然后确认
   reset: 重置
@@ -2862,8 +2863,8 @@ adventure:
   goblins_title: '清理道路'
   goblins_objective: '靠近哥布林并使用攻击按钮。'
   equip_title: '整装出发'
-  equip_objective: '装备所有奖励，包括宠物，然后点击{{confirm}}。'
-  equip_body: '打开背包，装备所有获得的物品。点击{{confirm}}应用更改。在正式游戏中，这会提交一笔 Sui 交易；在本教程中，一切都是免费模拟的。'
+  equip_objective: '装备所有奖励，包括宠物。'
+  equip_body: '打开背包并装备所有奖励。双击物品、将其拖到装备栏，或选择装备。在正式游戏中，每次更改都会发起一笔 Sui 交易；在这里，所有操作都是免费的模拟。'
   speak_title: '桥上的陌生人'
   speak_objective: '找到桥上的Sceat并与他交谈。'
   invite_title: '携手同行'

@@ -728,7 +728,7 @@ tutorial:
   fight_title: Dein erster On-Chain-Kampf
   fight_body: 'Wähle Zauber oder klicke zum Bewegen auf ein Feld. Zug beenden sendet deine Aktionen gemeinsam.'
   equipment_gear_title: Ausrüstung
-  equipment_gear_body: 'Klicke auf einen Gegenstand, wähle Ausrüsten und bestätige die Änderungen.'
+  equipment_gear_body: 'Doppelklicke einen Gegenstand, ziehe ihn in einen Platz oder wähle Ausrüsten. Jede Änderung beginnt sofort.'
   equipment_inventory_title: Geteiltes Inventar
   equipment_inventory_body: 'Deine Charaktere teilen sich Gegenstände. Darüberfahren zeigt Werte, Anklicken öffnet Details und Aktionen.'
   stats_title: Eigenschaften
@@ -1831,6 +1831,7 @@ characters_page:
   refusal_level_too_low: Deine Stufe ist zu niedrig für diesen Gegenstand
   refusal_relic_duplicate: Ein gleiches Relikt wird bereits getragen
   refusal_item_listed: Dieser Gegenstand steht zum Verkauf
+  refusal_unavailable: 'Dieser Charakter oder Gegenstand hat sich geändert oder ist nicht verfügbar. Versuche es im Ruhezustand erneut.'
   points_to_assign: Punkte zu verteilen
   spend_hint: Verteile Punkte auf die sechs Attribute und bestätige dann
   reset: Zurücksetzen
@@ -2897,8 +2898,8 @@ adventure:
   goblins_title: 'Den Weg freimachen'
   goblins_objective: 'Gehe zu den Goblins und nutze die Angriffsaktion.'
   equip_title: 'Bereit für den Weg'
-  equip_objective: 'Lege alle Belohnungen an, auch dein Haustier, und drücke dann {{confirm}}.'
-  equip_body: 'Öffne dein Inventar und lege alle gewonnenen Gegenstände an. Drücke {{confirm}}, um die Änderungen anzuwenden. Im echten Spiel wird dabei eine Sui-Transaktion gesendet; hier ist alles kostenlos und simuliert.'
+  equip_objective: 'Rüste alle Belohnungen aus, auch dein Haustier.'
+  equip_body: 'Öffne das Inventar und rüste alle Belohnungen aus. Doppelklicke einen Gegenstand, ziehe ihn in einen Platz oder wähle Ausrüsten. Im echten Spiel startet jede Änderung eine Sui-Transaktion; hier ist alles kostenlos und simuliert.'
   speak_title: 'Ein Fremder auf der Brücke'
   speak_objective: 'Finde Sceat auf der Brücke und sprich mit ihm.'
   invite_title: 'Gemeinsam stärker'

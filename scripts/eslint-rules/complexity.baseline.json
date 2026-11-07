@@ -1244,7 +1244,7 @@
         9
       ],
       "EquipmentSlot": [
-        11
+        10
       ]
     },
     "packages/frontend/src/components/ItemCrafting.tsx": {

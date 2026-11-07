@@ -13,8 +13,17 @@ import { audio_snapshot } from '../../src/modules/audio.ts'
 import { adventure_quest, adventure_roster } from '../../src/adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../../src/adventure/character.ts'
 import { adventure_fight_setup } from '../../src/adventure/fight_setup.ts'
-import { natural_slot_for, stage_equip } from '../../src/characters/equipment_stage.ts'
-import { adventure_available_inventory, ADVENTURE_INVENTORY } from '../../src/adventure/projection.ts'
+import {
+  natural_slot_for,
+  stage_equip,
+  equipment_commit_refusal,
+  equipment_map_of,
+} from '../../src/characters/equipment_stage.ts'
+import {
+  adventure_available_inventory,
+  adventure_character_row,
+  ADVENTURE_INVENTORY,
+} from '../../src/adventure/projection.ts'
 
 const win_first_fight = (app: ReturnType<typeof create_app>) => {
   app.dispatch({ type: 'adventure/entered' })
@@ -29,11 +38,22 @@ const win_first_fight = (app: ReturnType<typeof create_app>) => {
 }
 
 const equip_rewards = (app: ReturnType<typeof create_app>) => {
-  const equipment = ADVENTURE_INVENTORY.reduce(
-    (equipment, item) => stage_equip(equipment, item, natural_slot_for(item, equipment)!),
-    {}
-  )
-  app.dispatch({ type: 'adventure/equipment_changed', equipment })
+  for (const item of ADVENTURE_INVENTORY) {
+    const state = app.store.getState().adventure
+    const character = adventure_character_row(state.character!)
+    const real = equipment_map_of(character)
+    const equipment = stage_equip(real, item, natural_slot_for(item, real)!)
+    expect(
+      equipment_commit_refusal({
+        character,
+        current: character,
+        equipment,
+        inventory: adventure_available_inventory(state),
+        blocked: new Set(),
+      })
+    ).toBeNull()
+    app.dispatch({ type: 'adventure/equipment_changed', equipment })
+  }
 }
 
 test('quest progression teaches recruitment, both characters and follow before the guards', () => {
@@ -185,15 +205,15 @@ for (const winner of [0n, 1n])
     expect(app.store.getState().adventure.phase).toBe('entered')
   })
 
-test('every locale explains equipment confirmation without an actual transaction in the tutorial', async () => {
+test('every locale explains immediate equipment without an actual transaction in the tutorial', async () => {
   const { load_app_copy, copy_text } = await import('../../src/i18n/copy.ts')
   const { LOCALES } = await import('../../src/i18n/locale.ts')
   for (const { code } of LOCALES) {
     const copy = await load_app_copy(code)
     const text = copy_text(copy.adventure)
-    const confirm = copy_text(copy.characters_page)('accept')
     expect(text('equip_title')).not.toBe('equip_title')
-    expect(text('equip_objective', { confirm })).not.toContain('{{confirm}}')
-    expect(text('equip_body', { confirm })).toContain('Sui')
+    expect(text('equip_objective')).not.toContain('{{confirm}}')
+    expect(text('equip_body')).toContain('Sui')
+    expect(text('equip_body')).not.toContain('{{confirm}}')
   }
 })

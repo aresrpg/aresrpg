@@ -21,9 +21,11 @@ import { consumable_plan } from './consumable_plan.ts'
 import {
   equip_refusal,
   equipment_change_set,
+  equipment_commit_refusal,
   equipment_map_of,
   natural_slot_for,
   stage_equip,
+  stage_unequip,
   type EquipmentMap,
 } from './equipment_stage.ts'
 import { select_inventory_item } from './inventory_selection.ts'
@@ -59,7 +61,7 @@ export function useEquipment({
     [all_inventory, character.kiosk, encumbered_ids]
   )
   const real = useMemo(() => equipment_map_of(character), [character])
-  const [staged, set_staged] = useState<EquipmentMap | null>(null)
+  const [pending_equipment, set_pending_equipment] = useState<EquipmentMap | null>(null)
   const [category, set_category] = useState<BagCategory>('equipment')
   const [resource_filter, set_resource_filter] = useState<ResourceFilter>('all')
   const [inspected_id, set_inspected_id] = useState<string | null>(null)
@@ -70,26 +72,24 @@ export function useEquipment({
   const [reveal_box, set_reveal_box] = useState<ItemRow | null>(null)
   const [healing_item, set_healing_item] = useState<Readonly<ItemRow> | null>(null)
 
-  const equipment = staged ?? real
+  const equipment = pending_equipment ?? real
   const changes = useMemo(() => equipment_change_set(equipment, real), [equipment, real])
-  const dirty = changes.to_equip.length > 0 || changes.to_unequip.length > 0
-  const staged_ids = useMemo(
+  const equipped_ids = useMemo(
     () => new Set(Object.values(equipment).flatMap((item) => (item ? [item.id] : []))),
     [equipment]
   )
 
-  // items whose unequip is STAGED come back to the bag view immediately (re-clickable to
-  // cancel); they leave the doll but must never vanish from both surfaces at once
+  // Pending removals remain visible in the bag until the certified result or failure restores it.
   const freed = useMemo(
     () =>
       character.equipment
-        .filter(({ id }) => !staged_ids.has(id))
+        .filter(({ id }) => !equipped_ids.has(id))
         .map(({ slot: _slot, ...item }) => ({ ...item, kiosk: character.kiosk })),
-    [character, staged_ids]
+    [character, equipped_ids]
   )
   const bag = useMemo(
-    () => [...inventory.filter((item) => !staged_ids.has(item.id)), ...freed],
-    [inventory, staged_ids, freed]
+    () => [...inventory.filter((item) => !equipped_ids.has(item.id)), ...freed],
+    [inventory, equipped_ids, freed]
   )
   const display_bag = useMemo(() => inventory_groups(bag), [bag])
   const grid_items = useMemo(
@@ -99,8 +99,9 @@ export function useEquipment({
 
   const selected_items = grid_items.map(({ item }) => item).filter(({ id }) => selected_ids.includes(id))
   const select_item = (item: Readonly<ItemRow>, toggle: boolean): void => {
-    set_inspected_id(item.id)
+    if (committing) return
     if (toggle) set_selected_ids(select_inventory_item(selected_ids, item.id, true))
+    else set_inspected_id(item.id)
   }
 
   const inspected =
@@ -118,14 +119,6 @@ export function useEquipment({
     })
     if (refusal) toast.add(t(`refusal_${refusal}`), 'info')
     return refusal !== null
-  }
-
-  const try_stage = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot | null): void => {
-    if (committing) return
-    const target = slot ?? natural_slot_for(item, equipment)
-    if (!target) return void toast.add(t('refusal_wrong_slot'), 'info')
-    if (refuse(item, target)) return
-    set_staged(stage_equip(equipment, item, target))
   }
 
   const drink = (item: Readonly<ItemRow>, mode: 'one' | 'full' = 'one'): void => {
@@ -161,7 +154,7 @@ export function useEquipment({
     const pending = toast.loading(t('consume_pending'))
     void transaction
       .then(({ digest, inventory_changes, amount }) => {
-        if (read_app_state().session.wallet !== wallet) return
+        if (read_app_state().session.wallet !== wallet) return pending.dismiss()
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         dispatch_app({
           type: 'character/consumed',
@@ -177,46 +170,78 @@ export function useEquipment({
       .finally(() => set_committing(false))
   }
 
+  const commit = (next: EquipmentMap): void => {
+    if (committing) return
+    const requested = equipment_change_set(next, real)
+    if (!requested.to_equip.length && !requested.to_unequip.length) return
+    if (session) {
+      const refusal = equipment_commit_refusal({
+        character,
+        current: character,
+        equipment: next,
+        inventory,
+        blocked: encumbered_ids,
+      })
+      if (refusal) return void toast.add(t(`refusal_${refusal}`), 'info')
+      session.commit(next)
+      return
+    }
+    if (!wallet) return
+    const transaction = run_direct_transaction(() => {
+      const state = read_app_state()
+      const current = editable_character(state, character.id, Date.now())
+      const blocked = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+      const refusal = equipment_commit_refusal({
+        character,
+        current,
+        equipment: next,
+        inventory: state.session.inventory,
+        blocked,
+      })
+      if (state.session.wallet !== wallet || refusal) throw localized_error(t(`refusal_${refusal ?? 'unavailable'}`))
+      return wallet.character.equip({
+        character_id: character.id,
+        ...requested,
+        custody: { kiosk: current!.kiosk, kiosk_cap: current!.kiosk_cap },
+      })
+    })
+    if (!transaction) return
+    set_committing(true)
+    set_pending_equipment(next)
+    const pending = toast.loading(t('equip_pending'))
+    void transaction
+      .then(() => {
+        if (read_app_state().session.wallet !== wallet) return pending.dismiss()
+        dispatch_app({
+          type: 'character/equip_folded',
+          character_id: character.id,
+          equipped: requested.to_equip,
+          unequipped: requested.to_unequip,
+        })
+        pending.success(t('equip_success'))
+      })
+      .catch(pending.error)
+      .finally(() => {
+        set_pending_equipment(null)
+        set_committing(false)
+      })
+  }
+
+  const equip = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot | null): void => {
+    if (committing) return
+    const target = slot ?? natural_slot_for(item, real)
+    if (!target) return void toast.add(t('refusal_wrong_slot'), 'info')
+    if (!refuse(item, target)) commit(stage_equip(real, item, target))
+  }
+  const unequip = (slot: CharacterEquipmentSlot): void => commit(stage_unequip(real, slot))
+
   const activate = (item: Readonly<ItemRow>): void => {
+    if (committing) return
     if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
     if (is_loot_box(item)) return set_reveal_box(item)
     const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
     if (effect) return effect.type === 'heal' ? set_healing_item(item) : drink(item)
-    try_stage(item, null)
-  }
-
-  const accept = (): void => {
-    if (!dirty || committing) return
-    if (session) {
-      session.commit(equipment)
-      set_staged(null)
-      return
-    }
-    if (!wallet) return
-    const transaction = run_direct_transaction(() =>
-      wallet.character.equip({
-        character_id: character.id,
-        to_equip: changes.to_equip,
-        to_unequip: changes.to_unequip,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
-      })
-    )
-    if (!transaction) return
-    set_committing(true)
-    const pending = toast.loading(t('equip_pending'))
-    void transaction
-      .then(() => {
-        dispatch_app({
-          type: 'character/equip_folded',
-          character_id: character.id,
-          equipped: changes.to_equip,
-          unequipped: changes.to_unequip,
-        })
-        set_staged(null)
-        pending.success(t('equip_success'))
-      })
-      .catch(pending.error)
-      .finally(() => set_committing(false))
+    equip(item, null)
   }
 
   const totals = useMemo(() => {
@@ -239,8 +264,6 @@ export function useEquipment({
     encumbered_ids,
     inventory,
     real,
-    staged,
-    set_staged,
     category,
     set_category,
     resource_filter,
@@ -260,8 +283,7 @@ export function useEquipment({
     set_healing_item,
     equipment,
     changes,
-    dirty,
-    staged_ids,
+    equipped_ids,
     freed,
     bag,
     display_bag,
@@ -269,10 +291,10 @@ export function useEquipment({
     selected_items,
     select_item,
     inspected,
-    try_stage,
+    equip,
+    unequip,
     drink,
     activate,
-    accept,
     totals,
     empty_cells,
   }

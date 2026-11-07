@@ -150,29 +150,7 @@
   .game-character-body .inv__rig {
     padding-inline: 4px;
   }
-  .inventory-commit-bar {
-    height: 30px;
-  }
   .inventory-resource-filter {
     min-height: 32px;
-  }
-}
-
-@container aui-viewport (max-height:500px) and (min-width:501px) {
-  .game-character-body .inventory-commit-bar {
-    position: absolute;
-    left: 4px;
-    right: auto;
-    top: auto;
-    bottom: 54px;
-    max-width: calc(100% - 188px);
-    flex-wrap: wrap;
-    justify-content: center;
-    z-index: 3;
-    height: auto;
-    padding: 5px;
-    border-radius: 4px;
-    background: #141a22f5;
-    box-shadow: 0 3px 12px #0006;
   }
 }

@@ -5,6 +5,8 @@ import { useEffect, useRef, type PointerEvent, type ReactNode } from 'react'
 
 import {
   stroke_selection,
+  selection_gesture_kind,
+  dragged_selection,
   point_inside,
   selection_edge_speed,
   type SelectionCell,
@@ -13,8 +15,9 @@ import {
 
 type Gesture = Readonly<{
   pointer: number
-  touch: boolean
-  mode: 'pending' | 'scrolling' | 'selecting'
+  scrollable_touch: boolean
+  mode: 'pending' | 'scrolling' | 'selecting' | 'dragging'
+  action: 'scrolling' | 'selecting' | 'dragging'
   client: SelectionPoint
   initial_client: SelectionPoint
   last_point: SelectionPoint
@@ -44,7 +47,7 @@ const cell_bounds = (root: Readonly<HTMLElement>): readonly SelectionCell[] => {
   })
 }
 
-/** A short tap stays a click; holding paints items, while an immediate touch swipe scrolls. */
+/** Shift or Select paints; ordinary item drags carry the selected group. Touch swipes scroll until held. */
 export const SelectionGrid = ({
   children,
   className = '',
@@ -53,6 +56,7 @@ export const SelectionGrid = ({
   on_change,
   on_drag_item,
   on_item_drop,
+  selection_mode = false,
 }: Readonly<{
   children: ReactNode
   className?: string
@@ -60,7 +64,8 @@ export const SelectionGrid = ({
   disabled?: boolean
   on_change: (ids: readonly string[]) => void
   on_drag_item?: (id: string | null) => void
-  on_item_drop?: (id: string, point: SelectionPoint) => boolean
+  on_item_drop?: (ids: readonly string[], point: SelectionPoint) => void
+  selection_mode?: boolean
 }>) => {
   const root = useRef<HTMLDivElement>(null)
   const gesture = useRef<Gesture | null>(null)
@@ -134,18 +139,20 @@ export const SelectionGrid = ({
     }
     frame.current = requestAnimationFrame(scroll_edge)
   }
-  const begin_selection = (): void => {
+  const begin_gesture = (): void => {
     const { current } = gesture,
       element = root.current
     if (current?.mode !== 'pending' || !element) return
     clear_hold()
-    gesture.current = { ...current, mode: 'selecting' }
+    gesture.current = { ...current, mode: current.action }
     suppress_click.current = true
     element.focus({ preventScroll: true })
     element.setPointerCapture(current.pointer)
-    on_drag_item?.(current.item)
-    paint()
-    frame.current = requestAnimationFrame(scroll_edge)
+    if (current.action === 'dragging') on_drag_item?.(current.item)
+    if (current.action === 'selecting') {
+      paint()
+      frame.current = requestAnimationFrame(scroll_edge)
+    }
   }
   const down = (event: Readonly<PointerEvent<HTMLDivElement>>): void => {
     suppress_click.current = false
@@ -153,10 +160,12 @@ export const SelectionGrid = ({
     event.stopPropagation()
     if (gesture.current) return cancel()
     const client = { x: event.clientX, y: event.clientY }
+    const item = cell_id(event.target)
     gesture.current = {
       pointer: event.pointerId,
-      touch: event.pointerType === 'touch',
+      scrollable_touch: event.pointerType === 'touch' && !selection_mode,
       mode: 'pending',
+      action: selection_gesture_kind({ select: event.shiftKey || selection_mode, item, transferable: !!on_item_drop }),
       client,
       initial_client: client,
       last_point: content_point(event.currentTarget, client),
@@ -164,9 +173,9 @@ export const SelectionGrid = ({
       before: selected,
       painted: selected,
       cells: cell_bounds(event.currentTarget),
-      item: event.pointerType === 'touch' ? null : cell_id(event.target),
+      item,
     }
-    hold.current = setTimeout(begin_selection, 350)
+    if (event.pointerType === 'touch') hold.current = setTimeout(begin_gesture, 350)
   }
   const move = (event: Readonly<PointerEvent<HTMLDivElement>>): void => {
     const { current } = gesture
@@ -181,13 +190,14 @@ export const SelectionGrid = ({
     event.preventDefault()
     event.stopPropagation()
     if (current.mode === 'pending') {
-      if (!current.touch) return begin_selection()
+      if (!current.scrollable_touch) return begin_gesture()
       clear_hold()
       gesture.current = { ...current, client, mode: 'scrolling' }
       event.currentTarget.setPointerCapture(event.pointerId)
     }
     suppress_click.current = true
-    if (gesture.current?.mode === 'selecting') return paint()
+    if (gesture.current!.mode === 'selecting') return paint()
+    if (gesture.current!.mode === 'dragging') return
     root.current!.scrollLeft = current.scroll_origin.x + current.initial_client.x - client.x
     root.current!.scrollTop = current.scroll_origin.y + current.initial_client.y - client.y
   }
@@ -195,11 +205,9 @@ export const SelectionGrid = ({
     const { current } = gesture
     if (current?.pointer !== event.pointerId) return
     suppress_click.current = current.mode !== 'pending'
-    if (current.mode === 'selecting') {
-      if (current.item && on_item_drop?.(current.item, { x: event.clientX, y: event.clientY }))
-        on_change(current.before)
-      else paint()
-    }
+    if (current.mode === 'selecting') paint()
+    if (current.mode === 'dragging' && current.item && !disabled)
+      on_item_drop?.(dragged_selection(current.item, current.before), { x: event.clientX, y: event.clientY })
     stop()
   }
   return (
@@ -219,7 +227,18 @@ export const SelectionGrid = ({
           event.preventDefault()
           event.stopPropagation()
           suppress_click.current = false
+        } else if (!disabled && selection_mode && cell_id(event.target)) {
+          const id = cell_id(event.target)!
+          event.preventDefault()
+          event.stopPropagation()
+          on_change(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id])
         } else if (!disabled && !cell_id(event.target)) on_change([])
+      }}
+      onDoubleClickCapture={(event) => {
+        if (selection_mode) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
       }}
       onContextMenuCapture={(event) => {
         if (suppress_click.current) {

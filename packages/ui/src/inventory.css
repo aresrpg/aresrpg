@@ -529,14 +529,6 @@
   opacity: 0.35;
 }
 
-.inventory-commit-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  height: 32px;
-  flex: none;
-}
 .game-character-body .inv__rig {
   padding-inline: 8px;
 }

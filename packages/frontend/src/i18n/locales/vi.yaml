@@ -729,7 +729,7 @@ tutorial:
   fight_title: Trận chiến trên chuỗi đầu tiên
   fight_body: 'Chọn phép hoặc nhấp ô để di chuyển. Kết thúc lượt gửi các hành động cùng lúc.'
   equipment_gear_title: Trang bị
-  equipment_gear_body: 'Nhấp vật phẩm, chọn Trang bị rồi xác nhận thay đổi.'
+  equipment_gear_body: 'Nhấp đúp vật phẩm, kéo vào ô trang bị hoặc chọn Trang bị. Mỗi thay đổi bắt đầu ngay.'
   equipment_inventory_title: Túi đồ dùng chung
   equipment_inventory_body: 'Các nhân vật dùng chung vật phẩm. Di chuột để xem chỉ số; nhấp để xem chi tiết và thao tác.'
   stats_title: Thuộc tính
@@ -1807,6 +1807,7 @@ characters_page:
   refusal_level_too_low: Cấp của bạn quá thấp để dùng vật phẩm này
   refusal_relic_duplicate: Đã đeo di vật cùng loại
   refusal_item_listed: Vật phẩm đang được đăng bán
+  refusal_unavailable: 'Nhân vật hoặc vật phẩm đã thay đổi hay không khả dụng. Hãy thử lại khi nhân vật rảnh.'
   points_to_assign: Điểm chờ phân bổ
   spend_hint: Phân điểm vào sáu thuộc tính rồi xác nhận
   reset: Đặt lại
@@ -2862,8 +2863,8 @@ adventure:
   goblins_title: 'Dọn đường'
   goblins_objective: 'Đến gần Goblin và chọn hành động tấn công.'
   equip_title: 'Trang bị cho hành trình'
-  equip_objective: 'Trang bị mọi phần thưởng, kể cả thú cưng, rồi nhấn {{confirm}}.'
-  equip_body: 'Mở túi đồ và trang bị tất cả vật phẩm đã nhận. Nhấn {{confirm}} để áp dụng thay đổi. Trong trò chơi chính, thao tác này gửi một giao dịch Sui; ở đây, mọi thứ đều miễn phí và được mô phỏng.'
+  equip_objective: 'Trang bị mọi phần thưởng, kể cả thú cưng.'
+  equip_body: 'Mở túi đồ và trang bị mọi phần thưởng. Nhấp đúp vật phẩm, kéo vào ô trang bị hoặc chọn Trang bị. Trong trò chơi chính, mỗi thay đổi bắt đầu một giao dịch Sui; ở đây, mọi thứ đều miễn phí và được mô phỏng.'
   speak_title: 'Người lạ trên cầu'
   speak_objective: 'Tìm Sceat trên cầu và nói chuyện với anh ấy.'
   invite_title: 'Mạnh hơn khi cùng nhau'

@@ -32,6 +32,10 @@ resumes without a network-dependent boot query.
 | `INGEST_MAX_CONCURRENCY` | Checkpoint fetch ceiling |
 | `RUST_LOG` | Rust log filter |
 
+The HTTP archive fills every restart and reconnect gap, even when live streaming is healthy.
+A gRPC provider's retained history may begin after our watermark; its `NOT_FOUND` response must
+not trap replay on that provider. Live checkpoints still arrive over gRPC.
+
 The store binds itself to the original package and chain. Starting it against another game or
 network refuses instead of mixing projections.
 

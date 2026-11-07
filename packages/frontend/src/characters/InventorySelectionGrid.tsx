@@ -4,7 +4,7 @@ import { character_equipment_slots, type CharacterEquipmentSlot } from '@aresrpg
 import type { ItemRow } from '@aresrpg/protocol'
 import { Button, SelectionGrid } from '@aresrpg/ui'
 import { MoreHorizontal, X } from 'lucide-react'
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
@@ -34,18 +34,28 @@ export const InventorySelectionGrid = ({
   drag_item?: (id: string | null) => void
   equip: (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot) => void
 }>) => {
+  const [selection_mode, set_selection_mode] = useState(false)
   const selected_items = items.filter(({ id }) => selected.includes(id))
-  const drop = (id: string, point: Readonly<{ x: number; y: number }>): boolean => {
+  const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): void => {
+    if (ids.length !== 1) return
+    const [id] = ids
     const slot = document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-equipment-slot]')
       ?.dataset.equipmentSlot
     const item = items.find((item) => item.id === id)
-    if (!item || !character_equipment_slots.includes(slot as CharacterEquipmentSlot)) return false
+    if (!item || !character_equipment_slots.includes(slot as CharacterEquipmentSlot)) return
     equip(item, slot as CharacterEquipmentSlot)
-    return true
   }
   return (
     <>
       <div className="inventory-selection-tools">
+        <Button
+          className="inventory-select-toggle"
+          aria-pressed={selection_mode}
+          disabled={disabled}
+          onClick={() => set_selection_mode(!selection_mode)}
+        >
+          {copy.ui.inventory_select}
+        </Button>
         <span aria-live="polite">
           {copy_text(copy.ui)('inventory_selected_count', { count: selected_items.length })}
         </span>
@@ -73,6 +83,7 @@ export const InventorySelectionGrid = ({
       <SelectionGrid
         className={class_name}
         selected={selected}
+        selection_mode={selection_mode}
         disabled={disabled}
         on_change={change}
         on_drag_item={drag_item}

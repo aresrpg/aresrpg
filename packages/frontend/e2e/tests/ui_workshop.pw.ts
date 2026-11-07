@@ -15,7 +15,7 @@ test('continuous inventory search, cosmetics and equip reuse the character contr
   await cells.first().click()
   await inventory.getByRole('button', { name: 'Equip', exact: true }).click()
   expect(await inventory.locator('.inv__portrait').boundingBox()).toEqual(layout_before)
-  await inventory.getByRole('button', { name: 'Accept', exact: true }).click()
+  await expect(inventory.getByRole('button', { name: 'Accept', exact: true })).toHaveCount(0)
   expect(await inventory.locator('.inv__portrait').boundingBox()).toEqual(layout_before)
   await expect(inventory.locator('[data-equipment-slot="hat"] img')).toHaveCount(1)
   await expect(inventory.getByRole('button', { name: 'Cosmetics', exact: true })).toHaveCount(0)
@@ -24,7 +24,7 @@ test('continuous inventory search, cosmetics and equip reuse the character contr
   await expect(inventory.locator('[data-equipment-slot="cosmetic_cloak"]')).toBeVisible()
 })
 
-test('drag selection keeps inspection closed and exposes the exact batch to crushing', async ({ page }) => {
+test('Shift-drag selection keeps inspection closed and exposes the exact batch to crushing', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/demo#ui')
   await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Equipment', exact: true }).click()
@@ -32,17 +32,21 @@ test('drag selection keeps inspection closed and exposes the exact batch to crus
   const first = (await cells.nth(0).boundingBox())!,
     second = (await cells.nth(1).boundingBox())!
   await page.mouse.move(first.x + 20, first.y + 20)
+  await page.keyboard.down('Shift')
   await page.mouse.down()
   await page.mouse.move(second.x + 20, second.y + 20, { steps: 8 })
   await expect(page.locator('.aui-selection-marquee')).toHaveCount(0)
   await page.mouse.up()
+  await page.keyboard.up('Shift')
   await expect(page.locator('.chr-equip__grid [aria-pressed="true"]')).toHaveCount(2)
   await expect(page.locator('.chr-equip__detail')).toHaveCount(0)
   await page.mouse.move(first.x + 10, first.y + 10)
+  await page.keyboard.down('Shift')
   await page.mouse.down()
   await page.mouse.move(second.x + 35, second.y + 70, { steps: 5 })
   await page.keyboard.press('Escape')
   await page.mouse.up()
+  await page.keyboard.up('Shift')
   await expect(page.locator('.chr-equip__grid [aria-pressed="true"]')).toHaveCount(2)
   await page.locator('.inventory-selection-tools').getByRole('button', { name: 'Item actions', exact: true }).click()
   await page.getByRole('menu').getByRole('button', { name: /Crush/ }).click()
@@ -56,7 +60,8 @@ test('touch selection cancels cleanly and ordinary touch scrolling remains avail
   await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Equipment', exact: true }).click()
   await expect(
     page.locator('.inventory-selection-tools').getByRole('button', { name: 'Select', exact: true })
-  ).toHaveCount(0)
+  ).toBeVisible()
+  await page.locator('.inventory-select-toggle').click()
   const cells = page.locator('.chr-equip__grid [data-selection-id]')
   const first = (await cells.nth(0).boundingBox())!,
     second = (await cells.nth(1).boundingBox())!
@@ -83,6 +88,7 @@ test('touch selection cancels cleanly and ordinary touch scrolling remains avail
   await page.waitForTimeout(400)
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await expect(page.locator('.chr-equip__grid [aria-pressed="true"]')).toHaveCount(3)
+  await page.locator('.inventory-select-toggle').click()
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] })
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await expect(page.locator('.chr-equip__detail')).toBeVisible()
@@ -126,4 +132,31 @@ test('release outside the inventory cancels a pending long press', async ({ page
   const selected = await page.locator('.chr-cell.is-selected').count()
   await page.mouse.move(bounds.x + 100, bounds.y + 100)
   await expect(page.locator('.chr-cell.is-selected')).toHaveCount(selected)
+})
+
+test('a held touch drag equips immediately in the offline demo without a confirmation bar', async ({ page }) => {
+  await page.setViewportSize({ width: 932, height: 430 })
+  await page.goto('/demo#ui')
+  await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Equipment', exact: true }).click()
+  const inventory = page.locator('[data-character-panel="equipment"]')
+  await inventory.getByRole('searchbox', { name: 'Search inventory…' }).fill('Zukin')
+  const item = inventory.locator('.chr-equip__grid [data-selection-id]').first()
+  const slot = inventory.locator('[data-equipment-slot="hat"]')
+  const start = (await item.boundingBox())!,
+    end = (await slot.boundingBox())!
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: start.x + start.width / 2, y: start.y + start.height / 2, id: 1 }],
+  })
+  await page.waitForTimeout(400)
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: end.x + end.width / 2, y: end.y + end.height / 2, id: 1 }],
+  })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await expect(slot).toHaveClass(/is-filled/)
+  await expect(item).toHaveCount(0)
+  await expect(inventory.locator('.chr-equip__detail')).toHaveCount(0)
+  await expect(inventory.getByRole('button', { name: 'Accept', exact: true })).toHaveCount(0)
 })

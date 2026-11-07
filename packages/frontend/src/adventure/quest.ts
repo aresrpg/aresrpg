@@ -47,6 +47,6 @@ export const adventure_completed_quests = (state: Readonly<AdventureState>): rea
           : ADVENTURE_QUESTS.indexOf(adventure_quest(state))
       )
 
-/** The ordinary equipment confirmation commits the complete reward loadout once. */
+/** The ordinary immediate equipment actions complete the quest once every reward is worn. */
 export const adventure_rewards_equipped = (loadout: Readonly<Record<string, string>>): boolean =>
   ADVENTURE_LOOT.every(({ item_type }) => Object.values(loadout).includes(item_type))

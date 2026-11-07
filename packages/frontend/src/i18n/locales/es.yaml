@@ -728,7 +728,7 @@ tutorial:
   fight_title: Tu primer combate on-chain
   fight_body: 'Elige hechizos o pulsa una casilla para moverte. Terminar turno envía tus acciones juntas.'
   equipment_gear_title: Equipo
-  equipment_gear_body: 'Pulsa un objeto, elige Equipar y confirma los cambios.'
+  equipment_gear_body: 'Haz doble clic en un objeto, arrástralo a una ranura o elige Equipar. Cada cambio comienza de inmediato.'
   equipment_inventory_title: Inventario compartido
   equipment_inventory_body: 'Tus personajes comparten los objetos. Pasa el cursor para ver estadísticas; pulsa para ver detalles y acciones.'
   stats_title: Características
@@ -1830,6 +1830,7 @@ characters_page:
   refusal_level_too_low: Tu nivel es demasiado bajo para este objeto
   refusal_relic_duplicate: Ya llevas una reliquia igual
   refusal_item_listed: Este objeto está en venta
+  refusal_unavailable: 'Este personaje u objeto ha cambiado o no está disponible. Inténtalo cuando esté libre.'
   points_to_assign: Puntos por asignar
   spend_hint: Reparte puntos entre las seis características y confirma
   reset: Restablecer
@@ -2920,8 +2921,8 @@ adventure:
   goblins_title: 'Despeja el camino'
   goblins_objective: 'Acércate a los Goblins y usa el botón de ataque.'
   equip_title: 'Prepárate para el camino'
-  equip_objective: 'Equipa todas tus recompensas, incluida tu mascota, y pulsa {{confirm}}.'
-  equip_body: 'Abre tu inventario y equipa todos los objetos que ganaste. Pulsa {{confirm}} para aplicar los cambios. En el juego real, esto envía una transacción de Sui; aquí es gratis y simulado.'
+  equip_objective: 'Equipa todas tus recompensas, incluida tu mascota.'
+  equip_body: 'Abre tu inventario y equipa todas tus recompensas. Haz doble clic, arrastra un objeto a una ranura o elige Equipar. En el juego real, cada cambio inicia una transacción de Sui; aquí es gratis y simulado.'
   speak_title: 'Un extraño en el puente'
   speak_objective: 'Encuentra a Sceat en el puente y habla con él.'
   invite_title: 'Más fuertes juntos'

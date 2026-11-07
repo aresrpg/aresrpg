@@ -182,6 +182,7 @@
         "@aresrpg/fight": "workspace:*",
         "@aresrpg/immutable": "workspace:*",
         "@aresrpg/protocol": "workspace:*",
+        "@aresrpg/sdk": "workspace:*",
         "@mysten/sui": "2.31.3",
         "@napi-rs/canvas": "1.0.10",
         "falkordb": "^6.8.0",

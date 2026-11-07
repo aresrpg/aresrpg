@@ -149,9 +149,7 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
         leave={() => globalThis.location.assign('/')}
         session={{
           inventory: adventure_available_inventory(adventure),
-          equipment_notice: copy_text(copy.adventure)('equip_body', {
-            confirm: copy_text(copy.characters_page)('accept'),
-          }),
+          equipment_notice: copy_text(copy.adventure)('equip_body'),
           commit: (equipment) => dispatch_app({ type: 'adventure/equipment_changed', equipment }),
           raise_stats: (spending) => dispatch_app({ type: 'adventure/stats_raised', spending }),
         }}

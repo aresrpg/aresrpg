@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 
-test('equipped items inspect on single click and only stage removal on double click', async ({ page }) => {
+test('equipped items inspect on single click and immediately unequip on double click', async ({ page }) => {
   await page.goto('/e2e/fixtures/inventory.html?equipped')
   const pet = page.locator('[data-equipment-slot="pet"]')
   await expect(pet.locator('img')).toHaveAttribute('src', '/item/siluri_hd.png')
@@ -18,10 +18,9 @@ test('equipped items inspect on single click and only stage removal on double cl
   await expect(page.getByRole('button', { name: 'Accept', exact: true })).toHaveCount(0)
   await pet.dblclick()
   await expect(pet).not.toHaveClass(/is-filled/)
-  await expect(page.getByRole('button', { name: 'Accept', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Accept', exact: true })).toHaveCount(0)
   await expect(page.locator('.chr-equip__bag').getByRole('button', { name: 'Siluri', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-  await expect(pet).toHaveClass(/is-filled/)
+  await expect.poll(() => page.evaluate(() => window.equip_requests.length)).toBe(1)
 })
 
 for (const [name, item_type] of [['Recall Potion', 'recall_potion']] as const) {

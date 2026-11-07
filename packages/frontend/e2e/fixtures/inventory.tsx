@@ -13,13 +13,16 @@ import { content_catalog, encyclopedia_catalog } from '../../src/content/catalog
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import type { AuthSession } from '../../src/auth.ts'
-import { dispatch_app } from '../../src/store.ts'
+import { dispatch_app, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
 import '../../src/components/character_surfaces.css'
 import '../../src/characters/characters.css'
 
 declare global {
   interface Window {
+    equip_requests: readonly unknown[]
+    resolve_equip: () => void
+    reject_equip: () => void
     consume_requests: readonly string[]
     feed_requests: readonly Readonly<{ pet_id: string; food_id: string }>[]
     resolve_feed: () => void
@@ -97,6 +100,7 @@ void load_app_copy(locale)
   .then((copy) => {
     dispatch_app({ type: 'locale/changed', locale })
     dispatch_app({ type: 'locale/loaded', locale, copy })
+    window.equip_requests = []
     window.feed_requests = []
     window.consume_requests = []
     dispatch_app({ type: 'auth/connecting' })
@@ -105,6 +109,15 @@ void load_app_copy(locale)
       session: {
         address: '0xowner',
         character: {
+          equip: async (request: unknown) => {
+            window.equip_requests = [...window.equip_requests, request]
+            if (new URLSearchParams(location.search).has('pending-equip')) {
+              const pending = Promise.withResolvers<void>()
+              window.resolve_equip = () => pending.resolve()
+              window.reject_equip = () => pending.reject(new Error('Equipment rejected'))
+              await pending.promise
+            }
+          },
           use_consumable: async ({ item_type }: { item_type: string }) => {
             window.consume_requests = [...window.consume_requests, item_type]
             return { inventory_changes: [] }
@@ -126,6 +139,10 @@ void load_app_copy(locale)
     })
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [equipped_character] } })
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
+    const Inventory = () => {
+      const current = useAppStore((state) => state.session.characters.find(({ id }) => id === character.id))!
+      return <EquipmentTab character={current} copy={copy} />
+    }
     createRoot(document.getElementById('root')!).render(
       <main className="h-dvh overflow-y-auto bg-bg p-6 font-mono text-text">
         <button
@@ -190,7 +207,7 @@ void load_app_copy(locale)
             className="game-character-body"
             style={new URLSearchParams(location.search).has('crowded') ? { width: 880, height: 600 } : undefined}
           >
-            <EquipmentTab character={equipped_character} copy={copy} />
+            <Inventory />
           </div>
         )}
         {new URLSearchParams(location.search).get('view') === 'crush' && (

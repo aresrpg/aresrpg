@@ -74,3 +74,13 @@ test('release checkout materializes every explicitly copied server share image',
     expect(patterns).toContain(`/${asset}`)
   }
 })
+
+test('the server declares its SDK dependency and imports the production graph during every image build', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../../packages/server/package.json', import.meta.url), 'utf8'))
+  expect(manifest.dependencies['@aresrpg/sdk']).toBe('workspace:*')
+  const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
+  const runtime = dockerfile.slice(dockerfile.indexOf('USER bun'))
+  expect(runtime).toContain(
+    `RUN bun -e "await import('./packages/server/src/agent_pairing.ts'); await import('./packages/server/src/player.ts')"`
+  )
+})

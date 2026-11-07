@@ -15,6 +15,7 @@
     "@aresrpg/fight": "workspace:*",
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
+    "@aresrpg/sdk": "workspace:*",
     "@mysten/sui": "2.31.3",
     "falkordb": "^6.8.0",
     "ioredis": "^6.0.0",
