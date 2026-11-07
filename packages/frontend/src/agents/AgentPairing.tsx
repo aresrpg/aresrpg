@@ -87,7 +87,6 @@ export const AgentPairing = ({
       <Button className="agent-connect" tone="primary" disabled={disabled || pending} onClick={begin}>
         {text.agent_pair_connect}
       </Button>
-      <p hidden={state.status === 'idle'}>{text.agent_pair_no_assets}</p>
       {state.link && (
         <AgentPrompt
           key={state.link}

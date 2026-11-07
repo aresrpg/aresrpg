@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
-import { Share2 } from 'lucide-react'
 import { portrait_url, type PortraitAppearance } from '@aresrpg/immutable/portrait'
 
 import type { AppCopy } from '../i18n/copy.ts'
@@ -66,33 +65,6 @@ const PortraitShareContent = ({
         )}
       </div>
     </ModalFrame>
-  )
-}
-
-export const PortraitShareButton = ({
-  appearance,
-  copy,
-}: Readonly<{ appearance: PortraitAppearance; copy: AppCopy }>) => {
-  const [open, set_open] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        className="btn-outline inline-flex items-center gap-2 px-3 py-2 text-xs"
-        onClick={() => set_open(true)}
-      >
-        <Share2 aria-hidden="true" size={14} />
-        {copy.ui.portrait_share}
-      </button>
-      {open && (
-        <PortraitShareModal
-          key={portrait_url(appearance)}
-          appearance={appearance}
-          copy={copy}
-          close={() => set_open(false)}
-        />
-      )}
-    </>
   )
 }
 

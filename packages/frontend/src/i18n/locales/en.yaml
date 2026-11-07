@@ -2748,7 +2748,6 @@ ui:
   portrait_failed: 'Could not load the portrait or copy its link. You can select the link below.'
   portrait_close: 'Close'
   portrait_preview: 'Character portrait'
-  agent_pair_no_assets: 'Pairing alone moves no assets.'
   agent_signer_persistent: 'Your assistant reports a persistent transaction signer.'
   agent_saved_recovery: 'Saved agent recovery'
   agent_return_cancel: 'Cancel pending return'

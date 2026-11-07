@@ -29,3 +29,10 @@ test('characteristics show base values followed by signed equipment bonuses, wit
   expect(value('wisdom')).toBe('30 (-8)')
   expect(value('agility')).toBe('0')
 })
+
+test('the Stats identity header keeps its portrait without a share action', async () => {
+  const copy = await load_app_copy('en')
+  const html = render_english(<StatsTab copy={copy} character={character()} />)
+  expect(html).toContain('aui-character-portrait')
+  expect(html).not.toContain(copy.ui.portrait_share)
+})

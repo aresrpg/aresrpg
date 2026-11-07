@@ -2750,7 +2750,6 @@ ui:
   portrait_failed: 'Impossible de charger le portrait ou de copier son lien. Vous pouvez sélectionner le lien ci-dessous.'
   portrait_close: 'Fermer'
   portrait_preview: 'Portrait du personnage'
-  agent_pair_no_assets: 'L’association seule ne déplace aucun actif.'
   agent_signer_persistent: 'Votre assistant déclare disposer d’un signataire de transactions persistant.'
   agent_saved_recovery: 'Récupération d’un agent enregistré'
   agent_return_cancel: 'Annuler le retour en attente'

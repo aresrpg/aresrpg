@@ -36,7 +36,7 @@ test('Connect → one prompt → automatic proof return → local server authent
   await expect(prompt).toBeVisible()
   await expect(dialog.locator('textarea')).toHaveCount(1)
   await expect(warning).toBeHidden()
-  await expect(dialog.getByText('Pairing alone moves no assets.')).toBeVisible()
+  await expect(dialog.getByText('Pairing alone moves no assets.')).toHaveCount(0)
   const payload = await prompt.inputValue()
   expect(payload).toContain(`${new URL(page.url()).origin}/agents/client.txt`)
   expect(payload).toContain('does not authorize asset transfers or gameplay')

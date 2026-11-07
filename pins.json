@@ -6277,10 +6277,10 @@
       }
     },
     "0x1d1408b25097322a357bb9ac4bc83f1e74fa5b7e2d26390345960fbc6ec33062": {
-      "hash": "9408dbc806cb3254",
+      "hash": "95694aa7cf105841",
       "label": "spell Bloodstep",
       "revisions": {
-        "0x1d1408b25097322a357bb9ac4bc83f1e74fa5b7e2d26390345960fbc6ec33062": "1011622785:GQ3qKQUrvJFTDPzQY4VfJVnTEiEqJz3fhuAgxvs3vkiX"
+        "0x1d1408b25097322a357bb9ac4bc83f1e74fa5b7e2d26390345960fbc6ec33062": "1068191150:4ufS8SYC8iknCs5ZFWBRVFJfnWmG3fZBHcXDaLANb37o"
       },
       "domain": "spell",
       "spell": {
@@ -6661,10 +6661,10 @@
       }
     },
     "0x9ce43b7fc7e1f5fca68adfc10fb17d01290b682669885ac5be84c6d8fc089025": {
-      "hash": "aad3aaac4df2f6ce",
+      "hash": "d625fda89f767fea",
       "label": "spell Swap",
       "revisions": {
-        "0x9ce43b7fc7e1f5fca68adfc10fb17d01290b682669885ac5be84c6d8fc089025": "855011994:8LNKduTJWYhMsVMSuGEDXyNwjzHWR3yXV125cd7c8NH9"
+        "0x9ce43b7fc7e1f5fca68adfc10fb17d01290b682669885ac5be84c6d8fc089025": "1068191150:6hMsqNnRDTPo9GPJcTrJSGMF3Doi4QCZrAnbmyYsz8e3"
       },
       "domain": "spell",
       "spell": {
@@ -7165,10 +7165,10 @@
       }
     },
     "0xc6ed5d1ce617bbf240d57cccafdc255f11f755c991dbc4d919ad85b3143a61b5": {
-      "hash": "c8a9571d2baa7f97",
+      "hash": "fe564134af68005d",
       "label": "spell Cooperation",
       "revisions": {
-        "0xc6ed5d1ce617bbf240d57cccafdc255f11f755c991dbc4d919ad85b3143a61b5": "855011996:4ktBwayww3hiHZSZ5LsSqs1mMZuJj26RCYSbjYcK8zaZ"
+        "0xc6ed5d1ce617bbf240d57cccafdc255f11f755c991dbc4d919ad85b3143a61b5": "1068191150:FMreymWJWqBrWegrZcSZbzQkDaPNJrJt2QSDghKhwZYN"
       },
       "domain": "spell",
       "spell": {

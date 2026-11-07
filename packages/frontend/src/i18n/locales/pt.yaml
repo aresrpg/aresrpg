@@ -2707,7 +2707,6 @@ ui:
   portrait_failed: 'Não foi possível carregar o retrato ou copiar o link. Você pode selecionar o link abaixo.'
   portrait_close: 'Fechar'
   portrait_preview: 'Retrato do personagem'
-  agent_pair_no_assets: 'A ligação por si só não move ativos.'
   agent_signer_persistent: 'O seu assistente declara ter um signatário persistente de transações.'
   agent_saved_recovery: 'Recuperação de agente salvo'
   agent_return_cancel: 'Cancelar devolução pendente'

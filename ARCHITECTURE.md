@@ -1085,7 +1085,7 @@ One read-only frontend Node endpoint, `/api/portrait`, renders transparent 1024p
 masters and masks. It preserves source alpha, unmasked pixels, and painted lightness. The immutable
 portrait URL owner includes class, sex, three uint24 colors, and the generated art revision.
 Character tabs, the character sheet, fight timeline and played-turn cards resolve that same URL.
-Profile and visible-player context actions open the shared preview with PNG download and image-link copy.
+Character-tab and visible-player context actions open the shared preview with PNG download and image-link copy.
 Class-only catalogue illustrations retain their authored source. Legacy `/classe/*.jpg` routes remain.
 The SDK creates or prepares a Display V2 image template using the Character object's existing color
 fields. Hosting and Display-capability updates are separate release operations: no application action

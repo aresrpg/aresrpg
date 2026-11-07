@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { EnokiWallet } from '@mysten/enoki'
-import { toBase64 } from '@mysten/sui/utils'
+import { SIGNATURE_SCHEME_TO_FLAG } from '@mysten/sui/cryptography'
+import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import type { Transaction } from '@mysten/sui/transactions'
 import {
   getWallets,
@@ -93,12 +94,17 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
       require_active()
       if (!session_feature) return null
       if (!pairing_public_key) throw new Error('Google public identifier unavailable')
+      const identifier =
+        pairing_public_key[0] === SIGNATURE_SCHEME_TO_FLAG.ZkLogin ? pairing_public_key.slice(1) : pairing_public_key
+      // Wallet metadata may carry Sui's scheme prefix or a legacy unpadded seed.
+      // Bind those public bytes to this account before emitting the canonical wire identifier.
+      const google = ZkLoginPublicIdentifier.fromBytes(identifier, { address: pairing_owner })
       return parse_agent_pairing_request({
         version: 1,
         nonce,
         network,
         owner: pairing_owner,
-        zklogin_public_identifier: toBase64(pairing_public_key),
+        zklogin_public_identifier: google.toBase64(),
       })
     },
     sign_transaction: (transaction: Transaction) =>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { PortraitAppearance } from '@aresrpg/immutable/portrait'
 import { Button, IconButton } from '@aresrpg/ui'
 import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 import { Plus, UsersRound } from 'lucide-react'
@@ -16,6 +17,7 @@ import { CharacterTab } from './CharacterTab.tsx'
 import { CharacterDeleteModal } from './CharacterDeleteModal.tsx'
 import './character_tabs.css'
 import { ContextMenu } from './ContextMenu.tsx'
+import { PortraitShareModal } from './PortraitShare.tsx'
 
 export const character_tab_invite_enabled = (
   character_id: string,
@@ -42,7 +44,9 @@ const CreateCharacterTab = ({
   )
 }
 
-type CharacterTabDialogState = Readonly<{ kind: 'agent' } | { kind: 'delete'; character_id: string }> | null
+type CharacterTabDialogState = Readonly<
+  { kind: 'agent' } | { kind: 'delete'; character_id: string } | { kind: 'portrait'; appearance: PortraitAppearance }
+> | null
 
 const CharacterTabDialog = ({
   dialog,
@@ -54,6 +58,8 @@ const CharacterTabDialog = ({
   close: () => void
 }>) => {
   switch (dialog?.kind) {
+    case 'portrait':
+      return <PortraitShareModal appearance={dialog.appearance} copy={copy} close={close} />
     case 'agent':
       return <AgentSetup copy={copy} close={close} />
     case 'delete':
@@ -184,6 +190,18 @@ export const CharacterTabs = ({
       {menu && (
         <ContextMenu x={menu.x} y={menu.y}>
           <div data-character-tab-menu="">
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
+              onClick={() => {
+                const target = characters.find(({ id }) => id === menu.character_id)
+                if (target) set_dialog({ kind: 'portrait', appearance: target })
+                set_menu(null)
+              }}
+            >
+              {copy.ui.portrait_share}
+            </button>
             <button
               type="button"
               role="menuitem"

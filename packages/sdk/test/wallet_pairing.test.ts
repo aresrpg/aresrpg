@@ -57,6 +57,32 @@ for (const legacy_address of [false, true]) {
   })
 }
 
+// Enoki forwards its API publicKey bytes directly into WalletAccount. Exercise
+// both Sui's scheme-prefixed envelope and legacy unpadded seed bytes rather
+// than only the normalized identifier returned by toRawBytes().
+for (const legacy_address of [false, true]) {
+  for (const prefixed of [false, true]) {
+    test(`wallet public metadata is normalized before pairing (legacy=${legacy_address}, prefixed=${prefixed})`, async () => {
+      const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: legacy_address })
+      const raw = google.toRawBytes()
+      const identifier = legacy_address ? new Uint8Array([...raw.slice(0, 1 + raw[0]!), 1]) : raw
+      const account = {
+        address: google.toSuiAddress(),
+        publicKey: prefixed ? new Uint8Array([google.flag(), ...identifier]) : identifier,
+        chains: ['sui:mainnet'],
+        features: [],
+      } as WalletAccount
+      const binding = create_wallet_binding(wallet(), account, 'mainnet')
+      const request = binding.read_agent_pairing_request(crypto.randomUUID())!
+      expect(request.zklogin_public_identifier).toBe(google.toBase64())
+      expect(request.owner).toBe(account.address)
+      const agent = await bootstrap_disposable_agent(request)
+      expect((await verify_agent_pairing(request, agent.response)).address).toBe(agent.signer.address)
+      binding.dispose()
+    })
+  }
+}
+
 test('ordinary wallet has no Google pairing request and invalid metadata fails without signing', () => {
   const account = {
     address: `0x${'0'.repeat(64)}`,
@@ -83,4 +109,19 @@ test('a non-mainnet wallet session cannot produce a mainnet pairing request', ()
   const binding = create_wallet_binding(wallet(), account, 'testnet')
   expect(() => binding.read_agent_pairing_request(crypto.randomUUID())).toThrow('INVALID_PAIRING_REQUEST')
   binding.dispose()
+})
+
+test('wallet public metadata still rejects a foreign owner, wrong scheme and non-Google issuer', () => {
+  const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })
+  const other = toZkLoginPublicIdentifier(1n, 'https://example.com', { legacyAddress: false })
+  for (const [address, public_key] of [
+    [`0x${'ab'.repeat(32)}`, google.toSuiBytes()],
+    [google.toSuiAddress(), new Uint8Array([0, ...google.toRawBytes()])],
+    [other.toSuiAddress(), other.toSuiBytes()],
+  ] as const) {
+    const account = { address, publicKey: public_key, chains: ['sui:mainnet'], features: [] } as WalletAccount
+    const binding = create_wallet_binding(wallet(), account, 'mainnet')
+    expect(() => binding.read_agent_pairing_request(crypto.randomUUID())).toThrow()
+    binding.dispose()
+  }
 })
