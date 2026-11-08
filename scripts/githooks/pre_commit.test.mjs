@@ -9,7 +9,7 @@ import { expect, test } from 'bun:test'
 
 const hook = fileURLToPath(new URL('./pre-commit', import.meta.url))
 
-const run_hook = async (staged, fail_formatter = false) => {
+const run_hook = async (staged, fail_tool = '') => {
   const directory = await mkdtemp(join(tmpdir(), 'ares-pre-commit-'))
   const bin = join(directory, 'bin')
   const log = join(directory, 'calls')
@@ -24,7 +24,7 @@ const run_hook = async (staged, fail_formatter = false) => {
     await writeFile(join(bin, 'git'), '#!/bin/sh\ncat staged\n', { mode: 0o755 })
     await writeFile(
       join(bin, 'bunx'),
-      '#!/bin/sh\nprintf "bunx %s\\n" "$*" >> "$HOOK_LOG"\nfor file in "$@"; do if [ -L "$file" ]; then exit 2; fi; done\nif [ "$1" = prettier ] && [ "$FAIL_FORMATTER" = yes ]; then exit 3; fi\n',
+      '#!/bin/sh\nprintf "bunx %s\\n" "$*" >> "$HOOK_LOG"\nfor file in "$@"; do if [ -L "$file" ]; then exit 2; fi; done\nif [ "$1" = "$FAIL_TOOL" ]; then exit 3; fi\n',
       { mode: 0o755 }
     )
     await writeFile(join(bin, 'bun'), '#!/bin/sh\nprintf "bun %s\\n" "$*" >> "$HOOK_LOG"\n', { mode: 0o755 })
@@ -34,7 +34,7 @@ const run_hook = async (staged, fail_formatter = false) => {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
         HOOK_LOG: log,
-        FAIL_FORMATTER: fail_formatter ? 'yes' : 'no',
+        FAIL_TOOL: fail_tool,
       },
     })
     return { status: result.exitCode, calls: (await readFile(log, 'utf8')).trim().split('\n').filter(Boolean) }
@@ -43,14 +43,10 @@ const run_hook = async (staged, fail_formatter = false) => {
   }
 }
 
-test('staged symlinks skip style tools while regular source keeps lint and coverage checks', async () => {
+test('staged symlinks skip style tools while regular source keeps fast checks', async () => {
   expect(await run_hook(['regular.ts', 'linked.ts', 'linked.jpg'])).toEqual({
     status: 0,
-    calls: [
-      'bunx eslint regular.ts',
-      'bunx prettier --check --ignore-unknown regular.ts',
-      'bun run coverage:typescript',
-    ],
+    calls: ['bunx eslint regular.ts', 'bunx prettier --check --ignore-unknown regular.ts'],
   })
 })
 
@@ -61,8 +57,26 @@ test.each([{ staged: [] }, { staged: ['linked.jpg'] }])(
   }
 )
 
-test('a real formatting failure still stops the hook before coverage', async () => {
-  const result = await run_hook(['regular.ts', 'linked.jpg'], true)
+test('a formatting failure still rejects the commit', async () => {
+  const result = await run_hook(['regular.ts', 'linked.jpg'], 'prettier')
   expect(result.status).not.toBe(0)
   expect(result.calls).toEqual(['bunx eslint regular.ts', 'bunx prettier --check --ignore-unknown regular.ts'])
+})
+
+test.each([
+  'package.json',
+  'packages/indexer/src/main.rs',
+  'packages/move/sources/fight.move',
+  'packages/rewards/sources/rewards.move',
+])('staging %s leaves full-language coverage to CI', async (path) => {
+  expect(await run_hook([path])).toEqual({
+    status: 0,
+    calls: [`bunx prettier --check --ignore-unknown ${path}`],
+  })
+})
+
+test('an ESLint failure stops before formatting', async () => {
+  const result = await run_hook(['regular.ts'], 'eslint')
+  expect(result.status).not.toBe(0)
+  expect(result.calls).toEqual(['bunx eslint regular.ts'])
 })

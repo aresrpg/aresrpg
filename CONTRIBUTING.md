@@ -9,6 +9,9 @@ bun run test       # the one test truth — same command CI runs
 bun run lint       # eslint + prettier + the constraint gates
 ```
 
+Commits run ESLint and Prettier on staged source files only. Pushes do not rerun repository-wide
+checks. Run focused tests while developing; CI owns the complete required verification.
+
 ## The flow — LINEAR EVERYWHERE
 
 History is linear by law; nothing ever rewrites what landed.
@@ -65,8 +68,8 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 - The gate (`.github/workflows/gate.yml`) is required. Remove superseded or redundant checks; preserve behavioral guarantees and coverage floors.
 - Coverage is language-native and aggregate: Bun JS/TS 60% lines + 75% functions; Rust indexer 65%
   LLVM lines; Move package/module floors are declared only in `scripts/coverage_move.sh`. Tests and generated JS/TS
-  are excluded, but no authored module is hidden. CI and pre-commit route each changed language
-  through its gate; `bun run coverage:all` runs the complete local set. Every production Move
+  are excluded, but no authored module is hidden. CI routes each changed language through its gate;
+  `bun run coverage:all` runs the complete local set. Every production Move
   module targets more than 98%; meaningful gains raise its package floor in the same change, and
   floors never decrease. Math `characteristic_costs`/`prng` and game `zone` already carry 98.01%
   per-module ratchets.

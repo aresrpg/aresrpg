@@ -1783,7 +1783,9 @@ while funded trades use its exact token type to remove even an empty currency ba
 ## Verification and release preparation
 
 Verification has three purposes: fast native unit coverage, bounded browser regressions, and opt-in
-performance measurement. Independent source jobs run lint/formatting, types, unit coverage with
+performance measurement. Local commit hooks run staged-file ESLint and Prettier only; there is no
+pre-push verification hook. Focused local checks support development, while CI owns the complete
+required gate without repeating full-language suites on every commit. Independent source jobs run lint/formatting, types, unit coverage with
 seed validation, and authored artifact freshness in parallel. The native test command does not repeatedly regenerate the cities;
 `validate:assets` checks all generated scenes once. Expensive production-sized inputs belong in
 artifact validation or performance measurements, not tests of array dimensions or wiring.
