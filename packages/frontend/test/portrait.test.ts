@@ -211,3 +211,40 @@ test('reviewed arms continue below shoulder cutoffs without tinting fixed armor 
     expect(Array.from(mask.data.slice(offset, offset + 3))).toEqual([0, 0, 0])
   }
 }, 30000)
+
+test('Ikari hair interiors fully recolor while adjacent skin and ties stay fixed', async () => {
+  for (const sample of reviewed.ikari_hair_samples) {
+    const mask = await pixels(await readFile(new URL(`../../../seed/portraits/${sample.name}.png`, import.meta.url)))
+    const offset = (sample.y * mask.width + sample.x) * 4
+    expect({ sample, channels: Array.from(mask.data.slice(offset, offset + 3)) }).toEqual({
+      sample,
+      channels: [0, sample.expected, 0],
+    })
+  }
+}, 30000)
+
+const material_patch_mismatches = (
+  mask: { data: Uint8ClampedArray; width: number },
+  sample: (typeof reviewed.material_coverage_samples)[number]
+) => {
+  const expected = [1, 2, 3].map((slot) => (slot === sample.slot ? 255 : 0))
+  const mismatches = []
+  for (let y = sample.y - sample.radius; y <= sample.y + sample.radius; y++) {
+    for (let x = sample.x - sample.radius; x <= sample.x + sample.radius; x++) {
+      const offset = (y * mask.width + x) * 4
+      const channels = Array.from(mask.data.slice(offset, offset + 3))
+      if (channels.some((value, index) => value !== expected[index])) mismatches.push({ x, y, channels })
+    }
+  }
+  return mismatches
+}
+
+// Full coverage in reviewed opaque interiors; separate protected skin, fur and trim patches.
+test('reviewed material interiors recolor fully without leaking into protected regions', async () => {
+  for (const name of new Set(reviewed.material_coverage_samples.map((sample) => sample.name))) {
+    const mask = await pixels(await readFile(new URL(`../../../seed/portraits/${name}.png`, import.meta.url)))
+    for (const sample of reviewed.material_coverage_samples.filter((entry) => entry.name === name)) {
+      expect({ sample, mismatches: material_patch_mismatches(mask, sample) }).toEqual({ sample, mismatches: [] })
+    }
+  }
+}, 30000)

@@ -2728,6 +2728,8 @@ ui:
   agent_setup_prompt: 'Thiết lập tác nhân AresRPG theo {guide} bằng liên kết tạm thời riêng tư này: {url}. Tự động gửi bằng chứng công khai. Thiết lập này không cho phép chuyển tài sản hay chơi game.'
   agent_cancel: 'Hủy'
   agent_pair_connect: 'Kết nối'
+  agent_setup_request: 'Yêu cầu thiết lập'
+  agent_pair_failed_title: 'Không thể kết nối'
   agent_pair_pending: 'Đang chờ trợ lý của bạn…'
   agent_pair_failed: 'Thiết lập đã hết hạn hoặc không thể hoàn tất. Hãy kết nối lại.'
   agent_pair_verified: 'Đã xác minh khóa tác nhân. Điều này không xác nhận đăng nhập máy chủ hay quyền giữ nhân vật.'

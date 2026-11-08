@@ -2728,6 +2728,8 @@ ui:
   agent_setup_prompt: '请按照 {guide}，使用此私密临时链接设置我的 AresRPG 智能体：{url}。自动返回公开证明。此设置不授权资产转移或游戏操作。'
   agent_cancel: '取消'
   agent_pair_connect: '连接'
+  agent_setup_request: '设置请求'
+  agent_pair_failed_title: '无法连接'
   agent_pair_pending: '正在等待你的助手…'
   agent_pair_failed: '设置已过期或无法完成。请重新连接。'
   agent_pair_verified: '智能体密钥已验证。这不代表服务器认证或角色托管已完成。'

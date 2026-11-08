@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useCallback, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { Button, IconButton, NativeModal } from '@aresrpg/ui'
 import { Bot, X } from 'lucide-react'
 
@@ -27,6 +27,7 @@ export const AgentSetup = ({
   close: () => void
   exchange?: SetupExchange
 }>) => {
+  const title_id = useId()
   const [provider, select_provider] = useState<string | null>(null)
   const wallet = useAppStore((state) => state.session.wallet)
   const [connected_wallet, set_connected_wallet] = useState<typeof wallet>(null)
@@ -40,6 +41,7 @@ export const AgentSetup = ({
   if (wallet && connected_wallet === wallet) return <AgentConnectedHint copy={copy} close={close} />
   const chooser = (
     <>
+      <h2 id={title_id}>{t.agent_choose}</h2>
       <div className="agent-provider-cards" role="group" aria-label={t.agent_choose}>
         {providers.map(({ id, label, logo }) => (
           <button
@@ -58,16 +60,17 @@ export const AgentSetup = ({
     </>
   )
   return (
-    <NativeModal close={close} label={t.agent_choose} className="aui-modal-scrim">
+    <NativeModal close={close} label={t.agent_choose} aria-labelledby={title_id} className="aui-modal-scrim">
       <section className="agent-setup" data-agent-setup="">
         <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={close} />
-        <h2>{t.agent_choose}</h2>
         {read_request ? (
           <AgentPairing
             key={JSON.stringify([wallet?.address, provider])}
             copy={copy}
             read_request={read_request}
             disabled={!provider}
+            provider={providers.find(({ id }) => id === provider)}
+            title_id={title_id}
             exchange={exchange}
             connected={show_connected}
           >

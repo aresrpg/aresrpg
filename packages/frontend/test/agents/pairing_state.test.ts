@@ -45,3 +45,22 @@ test('verified signer mode reaches the UI and is removed by cancellation', () =>
   expect(verified.identity?.signer_mode).toBe('host-persistent')
   expect(reduce_pairing(verified, { type: 'clear' }).identity).toBeNull()
 })
+
+test('terminal attempts reject late replies until an explicit retry', () => {
+  const started = reduce_pairing(EMPTY_PAIRING, { type: 'start', public_identifier: 'public' })
+  for (const terminal of [
+    reduce_pairing(started, { type: 'failed', attempt: started.attempt }),
+    reduce_pairing(started, { type: 'verified', attempt: started.attempt, identity: identity('verified') }),
+  ]) {
+    expect(reduce_pairing(terminal, { type: 'link', attempt: started.attempt, link: 'late' })).toBe(terminal)
+    expect(reduce_pairing(terminal, { type: 'failed', attempt: started.attempt })).toBe(terminal)
+    expect(reduce_pairing(terminal, { type: 'verified', attempt: started.attempt, identity: identity('late') })).toBe(
+      terminal
+    )
+    const retry = reduce_pairing(terminal, { type: 'start', public_identifier: 'retry' })
+    expect(retry.status).toBe('starting')
+    expect(retry.attempt).toBeGreaterThan(terminal.attempt)
+    expect(retry.identity).toBeNull()
+    expect(reduce_pairing(retry, { type: 'link', attempt: terminal.attempt, link: 'obsolete' })).toBe(retry)
+  }
+})

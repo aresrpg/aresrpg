@@ -12,6 +12,7 @@ import { complete_agent_pairing } from './pairing_storage.ts'
 import { EMPTY_PAIRING, reduce_pairing } from './pairing_state.ts'
 import { run_agent_setup } from './setup_exchange.ts'
 import type { SetupExchange } from './setup_requests.ts'
+import { AgentPairingStage, type PairingProvider } from './AgentPairingStage.tsx'
 import { agent_guide_url, AgentPrompt } from './AgentHandoff.tsx'
 
 const request_setup: SetupExchange = (wallet, request) =>
@@ -22,6 +23,8 @@ export const AgentPairing = ({
   copy,
   read_request,
   disabled,
+  provider,
+  title_id,
   exchange = request_setup,
   children,
   connected,
@@ -29,12 +32,15 @@ export const AgentPairing = ({
   copy: AppCopy
   read_request: (nonce: string) => AgentPairingRequest | null
   disabled: boolean
+  provider?: PairingProvider
+  title_id: string
   exchange?: SetupExchange
   children?: ReactNode
   connected: () => void
 }>) => {
   const [state, dispatch] = useReducer(reduce_pairing, EMPTY_PAIRING)
   const wallet = useAppStore((app) => app.session.wallet)
+  const candidate = useAppStore((app) => app.session.agent_pairing_candidate)
   const active = useRef<AbortController | null>(null)
   const text = copy.ui
   useEffect(() => dispatch({ type: 'clear' }), [read_request])
@@ -68,9 +74,14 @@ export const AgentPairing = ({
     return () => controller.abort()
   }, [public_identifier, attempt, wallet, exchange, read_request])
   useEffect(() => {
-    if (state.status !== 'verified') return
-    if (read_app_state().session.agent_pairing_candidate?.address === state.identity?.address) connected()
-  }, [state.status, state.identity, connected])
+    if (state.status !== 'verified' || !state.identity || candidate?.address !== state.identity.address) return
+    // Presentation delay only: verified proof and saved recovery metadata already own success.
+    const timer = setTimeout(() => {
+      const { session } = read_app_state()
+      if (session.wallet === wallet && session.agent_pairing_candidate === candidate) connected()
+    }, 1_600)
+    return () => clearTimeout(timer)
+  }, [state.status, state.identity, candidate, wallet, connected])
   const begin = () => {
     try {
       const request = read_request(crypto.randomUUID())
@@ -80,29 +91,49 @@ export const AgentPairing = ({
       dispatch({ type: 'start', public_identifier: null })
     }
   }
-  const pending = state.status === 'starting' || state.status === 'waiting'
+  const pending = ['starting', 'waiting'].includes(state.status)
+  const failure = {
+    storage: text.agent_pair_storage_failed,
+    disposable: text.agent_pair_disposable,
+    unavailable: text.agent_pair_failed,
+  }[state.failure ?? 'unavailable']
+  const title = {
+    idle: text.agent_choose,
+    starting: text.agent_connect_your,
+    waiting: text.agent_connect_your,
+    failed: text.agent_connect_your,
+    verified: text.agent_connected,
+  }[state.status]
+  const can_connect = ['idle', 'failed'].includes(state.status)
   return (
-    <div className="agent-setup-details" data-agent-pairing="">
-      {['idle', 'failed'].includes(state.status) && (
+    <div className="agent-setup-details" data-agent-pairing={state.status}>
+      {state.status === 'idle' ? (
+        children
+      ) : (
         <>
-          {children}
-          <Button className="agent-connect" tone="primary" disabled={disabled} onClick={begin}>
-            {text.agent_pair_connect}
-          </Button>
+          <h2 id={title_id}>{title}</h2>
+          {state.link && (
+            <section className="agent-pair-prompt">
+              <div className="agent-pair-label">
+                <span>{text.agent_setup_request}</span>
+                <span className="agent-pair-provider">{provider?.label}</span>
+              </div>
+              <AgentPrompt
+                key={state.link}
+                copy={copy}
+                request={copy_text(text)('agent_setup_prompt', { url: state.link, guide: agent_guide_url() })}
+                hint={text.agent_pair_instructions}
+              />
+            </section>
+          )}
+          <AgentPairingStage copy={copy} state={state.status} provider={provider} failure={failure} />
         </>
       )}
-      {state.link && (
-        <AgentPrompt
-          key={state.link}
-          copy={copy}
-          request={copy_text(text)('agent_setup_prompt', { url: state.link, guide: agent_guide_url() })}
-          hint={text.agent_pair_instructions}
-        />
+      {can_connect && (
+        <Button className="agent-connect" tone="primary" disabled={disabled} onClick={begin}>
+          {text.agent_pair_connect}
+        </Button>
       )}
-      <p className="agent-waiting" role="status" hidden={!pending}>
-        <span className="agent-waiting-dot" aria-hidden="true" />
-        {text.agent_pair_pending}
-      </p>
       {pending && (
         <Button
           className="agent-connect"
@@ -114,13 +145,6 @@ export const AgentPairing = ({
           {text.agent_cancel}
         </Button>
       )}
-      <p role="alert" hidden={state.status !== 'failed'}>
-        {state.failure === 'storage'
-          ? text.agent_pair_storage_failed
-          : state.failure === 'disposable'
-            ? text.agent_pair_disposable
-            : text.agent_pair_failed}
-      </p>
     </div>
   )
 }

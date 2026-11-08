@@ -2728,6 +2728,8 @@ ui:
   agent_setup_prompt: '비공개 임시 링크 {url}을 사용하여 {guide}에 따라 AresRPG 에이전트를 설정하세요. 공개 증명을 자동으로 반환하세요. 이 설정은 자산 이전이나 게임 플레이를 허가하지 않습니다.'
   agent_cancel: '취소'
   agent_pair_connect: '연결'
+  agent_setup_request: '설정 요청'
+  agent_pair_failed_title: '연결할 수 없습니다'
   agent_pair_pending: '어시스턴트를 기다리는 중…'
   agent_pair_failed: '설정이 만료되었거나 완료되지 않았습니다. 다시 연결하세요.'
   agent_pair_verified: '에이전트 키가 확인되었습니다. 서버 인증이나 캐릭터 소유권을 확인한 것은 아닙니다.'

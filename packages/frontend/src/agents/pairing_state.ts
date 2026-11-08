@@ -34,13 +34,13 @@ export const reduce_pairing = (state: PairingState, input: PairingInput): Pairin
       public_identifier: input.public_identifier,
       status: input.public_identifier ? 'starting' : 'failed',
     }
-  if (input.attempt !== state.attempt) return state
-  switch (input.type) {
-    case 'link':
-      return { ...state, status: 'waiting', link: input.link }
-    case 'verified':
-      return { ...state, status: 'verified', public_identifier: null, link: null, identity: input.identity }
-    case 'failed':
-      return { ...state, status: 'failed', failure: input.failure, public_identifier: null, link: null, identity: null }
+  if (input.attempt !== state.attempt || !['starting', 'waiting'].includes(state.status)) return state
+  if (input.type === 'link') return { ...state, status: 'waiting', link: input.link }
+  return {
+    ...EMPTY_PAIRING,
+    attempt: state.attempt,
+    ...(input.type === 'verified'
+      ? { status: 'verified' as const, identity: input.identity }
+      : { status: 'failed' as const, failure: input.failure }),
   }
 }

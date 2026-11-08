@@ -4,6 +4,7 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { createRoot } from 'react-dom/client'
+import type { CharacterRow } from '@aresrpg/protocol'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
@@ -64,6 +65,38 @@ const connect = (index: number) => {
   } as AuthSession
   dispatch_app({ type: 'auth/connecting' })
   dispatch_app({ type: 'auth/connected', session })
+  if (new URLSearchParams(location.search).has('character'))
+    dispatch_app({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/characters',
+        characters: [
+          {
+            id: 'fixture-character',
+            name: 'Asobi',
+            classe: 'asobi',
+            sex: 'male',
+            experience: '0',
+            level: 1,
+            color_1: 0,
+            color_2: 0,
+            color_3: 0,
+            vitality: 0,
+            wisdom: 0,
+            strength: 0,
+            intelligence: 0,
+            chance: 0,
+            agility: 0,
+            available_points: 0,
+            spells: {},
+            available_spell_points: 0,
+            jobs: {},
+            kiosk: 'fixture-kiosk',
+            equipment: [],
+          } satisfies CharacterRow,
+        ],
+      },
+    })
 }
 const exchange: SetupExchange = async (wallet, request) => {
   const endpoint = env.server_ws_url.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:')

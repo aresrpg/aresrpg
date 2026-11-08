@@ -53,7 +53,9 @@ for (const [name, rules] of Object.entries(regions.portraits)) {
     if (!source[offset + 3]) continue
     let selected_slot = -1
     for (const [index, rule] of rules.entries()) {
-      const weight = (coverage[index][pixel] / 255) * filters[rule.filter](rgb) * smooth(0.12, 0.28, Math.max(...rgb))
+      // Explicitly traced materials include their dark interiors; fading them retains the original pigment.
+      const shading = rule.mask_shadows ? 1 : smooth(0.12, 0.28, Math.max(...rgb))
+      const weight = (coverage[index][pixel] / 255) * filters[rule.filter](rgb) * shading
       if (weight <= 0) continue
       // Retain authored slot priority, but union overlapping regions of that slot.
       // An antialiased polygon edge must not hide a fully covered hair/horn region.

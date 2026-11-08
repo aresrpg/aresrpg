@@ -2762,6 +2762,8 @@ ui:
   agent_setup_prompt: 'Richte meinen AresRPG-Agenten gemäß {guide} mit diesem privaten temporären Link ein: {url}. Sende den öffentlichen Nachweis automatisch zurück. Dies erlaubt keine Vermögensübertragungen oder Spielaktionen.'
   agent_cancel: 'Abbrechen'
   agent_pair_connect: 'Verbinden'
+  agent_setup_request: 'Einrichtungsanfrage'
+  agent_pair_failed_title: 'Verbindung fehlgeschlagen'
   agent_pair_pending: 'Warte auf deinen Assistenten…'
   agent_pair_failed: 'Die Einrichtung ist abgelaufen oder fehlgeschlagen. Verbinde erneut.'
   agent_pair_verified: 'Agentenschlüssel bestätigt. Dies bestätigt weder die Serveranmeldung noch den Charakterbesitz.'

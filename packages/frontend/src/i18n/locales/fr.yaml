@@ -2790,6 +2790,8 @@ ui:
   agent_setup_prompt: 'Configure mon agent AresRPG en suivant {guide} avec ce lien temporaire privé : {url}. Renvoie automatiquement la preuve publique. Cette configuration ne permet aucun transfert d’actifs ni jeu.'
   agent_cancel: 'Annuler'
   agent_pair_connect: 'Connecter'
+  agent_setup_request: 'Demande de configuration'
+  agent_pair_failed_title: 'Connexion impossible'
   agent_pair_pending: 'En attente de votre assistant…'
   agent_pair_failed: 'La configuration a expiré ou a échoué. Reconnectez-vous.'
   agent_pair_verified: 'Clé de l’agent vérifiée. Cela ne prouve ni l’authentification au serveur ni la possession d’un personnage.'

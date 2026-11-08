@@ -11,8 +11,8 @@ import { prepare_agent_pairing } from '../../../sdk/src/agent_signer.ts'
 import { bootstrap_disposable_agent } from '../../../sdk/examples/agent_bootstrap.ts'
 
 const origin = 'http://127.0.0.1:5198'
-const open_setup = async (page: Page) => {
-  await page.goto('/e2e/fixtures/agent_pairing.html')
+const open_setup = async (page: Page, query = '') => {
+  await page.goto(`/e2e/fixtures/agent_pairing.html${query}`)
   await page.getByRole('button', { name: 'Connect your agent' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'ChatGPT', exact: true }).click()
@@ -36,6 +36,9 @@ test('disposable proof still authenticates locally but never connects or enables
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
   const prompt = dialog.locator('.agent-prompt')
   await expect(prompt).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Connect your agent', exact: true })).toBeVisible()
+  await expect(dialog.locator('.agent-pair-sigil')).toBeVisible()
+  await expect(dialog.getByText('Waiting for your assistant…')).toBeVisible()
   await expect(dialog.locator('textarea')).toHaveCount(0)
   await expect(dialog.locator('.agent-provider-card')).toHaveCount(0)
   await expect(dialog.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0)
@@ -71,7 +74,7 @@ test('disposable proof still authenticates locally but never connects or enables
 test('persistent signed proof replaces setup with a hint and retains only an unconfirmed session candidate', async ({
   page,
 }) => {
-  const dialog = await open_setup(page)
+  const dialog = await open_setup(page, '?character')
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
   const prompt = dialog.locator('.agent-prompt')
   await expect(prompt).toBeVisible()
@@ -90,6 +93,12 @@ test('persistent signed proof replaces setup with a hint and retains only an unc
   })
   await expect(page.locator('[data-agent-connected-hint]')).toBeVisible({ timeout: 10_000 })
   await expect(page.locator('[data-agent-setup]')).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const hint = page.locator('[data-agent-connected-hint]')
+  await expect(hint.locator('.agent-hint-pointer')).toHaveCSS('z-index', '2')
+  await expect(hint.locator('.agent-hint-menu')).toHaveCSS('z-index', 'auto')
+  await expect(hint).toContainText('Right-click your character portrait or tab')
+  await page.screenshot({ path: 'test-results/agent-connected-nonmodal.png' })
   await expect(page.locator('input[type="checkbox"]')).toHaveCount(0)
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', 'host-persistent')
   await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
@@ -120,6 +129,14 @@ test('cancel and expiry retire the link and reject late public proofs', async ({
   await expect(prompt).toHaveCount(0)
   expect((await request.post(expired.href, { ...authorized(expired), data: agent.response })).status()).toBe(403)
   await expect(dialog.locator('[data-paired-address]')).toHaveCount(0)
+  await expect(dialog.locator('.agent-provider-card')).toHaveCount(0)
+  await expect(dialog.getByRole('alert')).toContainText('Setup expired or could not complete')
+  await begin.click()
+  await expect(prompt).toBeVisible()
+  expect(setup_url((await prompt.textContent())!).hash).not.toBe(expired.hash)
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(dialog.getByRole('heading', { name: 'Choose your agent', exact: true })).toBeVisible()
+  await expect(dialog.locator('.agent-provider-card')).toHaveCount(2)
 })
 
 test('a late begin reply cannot restore a cancelled attempt', async ({ page, request }) => {

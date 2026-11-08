@@ -540,5 +540,1577 @@
       "x": 835,
       "y": 1000
     }
+  ],
+  "ikari_hair_samples": [
+    {
+      "name": "ikari_male",
+      "x": 537,
+      "y": 500,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 756,
+      "y": 520,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 728,
+      "y": 580,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 330,
+      "y": 500,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 350,
+      "y": 250,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 610,
+      "y": 370,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 620,
+      "y": 375,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 540,
+      "y": 500,
+      "expected": 0
+    },
+    {
+      "name": "ikari_male",
+      "x": 750,
+      "y": 520,
+      "expected": 0
+    },
+    {
+      "name": "ikari_male",
+      "x": 725,
+      "y": 580,
+      "expected": 0
+    },
+    {
+      "name": "ikari_male",
+      "x": 602,
+      "y": 380,
+      "expected": 0
+    },
+    {
+      "name": "ikari_male",
+      "x": 400,
+      "y": 183,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 480,
+      "y": 620,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 820,
+      "y": 660,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 900,
+      "y": 760,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 918,
+      "y": 830,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 900,
+      "y": 880,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 420,
+      "y": 868,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 450,
+      "y": 850,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 330,
+      "y": 880,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 320,
+      "y": 920,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 510,
+      "y": 620,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 530,
+      "y": 660,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 770,
+      "y": 760,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 355,
+      "y": 845,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 580,
+      "y": 640,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 430,
+      "y": 680,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 830,
+      "y": 707,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 560,
+      "y": 336,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 620,
+      "y": 380,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 705,
+      "y": 416,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 736,
+      "y": 416,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 574,
+      "y": 380,
+      "expected": 0
+    },
+    {
+      "name": "ikari_male",
+      "x": 604,
+      "y": 377,
+      "expected": 255
+    },
+    {
+      "name": "ikari_male",
+      "x": 775,
+      "y": 415,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 400,
+      "y": 200,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 200,
+      "y": 400,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 450,
+      "y": 480,
+      "expected": 255
+    },
+    {
+      "name": "ikari_female",
+      "x": 175,
+      "y": 742,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 185,
+      "y": 720,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 524,
+      "y": 366,
+      "expected": 0
+    },
+    {
+      "name": "ikari_female",
+      "x": 360,
+      "y": 645,
+      "expected": 255
+    }
+  ],
+  "material_coverage_samples": [
+    {
+      "name": "shusen_female",
+      "x": 550,
+      "y": 940,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 550,
+      "y": 980,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 320,
+      "y": 970,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 350,
+      "y": 190,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 460,
+      "y": 190,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 600,
+      "y": 450,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 260,
+      "y": 760,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shusen_female",
+      "x": 500,
+      "y": 940,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 350,
+      "y": 940,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 430,
+      "y": 980,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 600,
+      "y": 940,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 300,
+      "y": 1020,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 500,
+      "y": 120,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 530,
+      "y": 185,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 600,
+      "y": 400,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 160,
+      "y": 850,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shusen_male",
+      "x": 600,
+      "y": 785,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 682,
+      "y": 210,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 490,
+      "y": 228,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 304,
+      "y": 176,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 360,
+      "y": 423,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 580,
+      "y": 847,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 550,
+      "y": 955,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 275,
+      "y": 820,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 600,
+      "y": 550,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 285,
+      "y": 760,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 595,
+      "y": 793,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 390,
+      "y": 200,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 400,
+      "y": 207,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 375,
+      "y": 250,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_female",
+      "x": 431,
+      "y": 180,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 550,
+      "y": 184,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 650,
+      "y": 236,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 336,
+      "y": 176,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 590,
+      "y": 605,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 240,
+      "y": 820,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 925,
+      "y": 865,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 430,
+      "y": 444,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 670,
+      "y": 450,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 650,
+      "y": 800,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 600,
+      "y": 700,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 480,
+      "y": 710,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "mori_male",
+      "x": 550,
+      "y": 775,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "rojin_female",
+      "x": 545,
+      "y": 390,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "rojin_female",
+      "x": 580,
+      "y": 390,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "rojin_female",
+      "x": 535,
+      "y": 460,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "rojin_female",
+      "x": 520,
+      "y": 520,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "rojin_female",
+      "x": 300,
+      "y": 750,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "rojin_female",
+      "x": 250,
+      "y": 980,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "rojin_female",
+      "x": 600,
+      "y": 560,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "rojin_female",
+      "x": 530,
+      "y": 650,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "rojin_female",
+      "x": 550,
+      "y": 800,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 320,
+      "y": 90,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 735,
+      "y": 235,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "rojin_male",
+      "x": 270,
+      "y": 420,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "rojin_male",
+      "x": 880,
+      "y": 506,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "rojin_male",
+      "x": 500,
+      "y": 250,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 280,
+      "y": 400,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 400,
+      "y": 970,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 220,
+      "y": 820,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 600,
+      "y": 680,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "rojin_male",
+      "x": 550,
+      "y": 940,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 640,
+      "y": 730,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 696,
+      "y": 760,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 470,
+      "y": 866,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "tokei_female",
+      "x": 498,
+      "y": 546,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "tokei_female",
+      "x": 400,
+      "y": 710,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 430,
+      "y": 740,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "tokei_female",
+      "x": 655,
+      "y": 520,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "tokei_female",
+      "x": 600,
+      "y": 350,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 380,
+      "y": 150,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 360,
+      "y": 420,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 600,
+      "y": 600,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 280,
+      "y": 850,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_female",
+      "x": 600,
+      "y": 940,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 416,
+      "y": 714,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 550,
+      "y": 1000,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 310,
+      "y": 1000,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 250,
+      "y": 500,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 570,
+      "y": 840,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 500,
+      "y": 610,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 530,
+      "y": 320,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tokei_male",
+      "x": 600,
+      "y": 700,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 600,
+      "y": 444,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 501,
+      "y": 489,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 432,
+      "y": 192,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 450,
+      "y": 580,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 540,
+      "y": 850,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 650,
+      "y": 950,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 280,
+      "y": 818,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 550,
+      "y": 600,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 510,
+      "y": 630,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 563,
+      "y": 719,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_female",
+      "x": 536,
+      "y": 397,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "iyashi_female",
+      "x": 800,
+      "y": 439,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "iyashi_male",
+      "x": 570,
+      "y": 428,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 687,
+      "y": 435,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 510,
+      "y": 460,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 352,
+      "y": 160,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 450,
+      "y": 660,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 635,
+      "y": 910,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 640,
+      "y": 950,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 250,
+      "y": 760,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 350,
+      "y": 750,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 500,
+      "y": 865,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 550,
+      "y": 638,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "iyashi_male",
+      "x": 529,
+      "y": 439,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "iyashi_male",
+      "x": 687,
+      "y": 685,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "iyashi_male",
+      "x": 733,
+      "y": 433,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "iyashi_male",
+      "x": 624,
+      "y": 417,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "shugo_female",
+      "x": 545,
+      "y": 305,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "shugo_female",
+      "x": 517,
+      "y": 545,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 800,
+      "y": 625,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 300,
+      "y": 300,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 490,
+      "y": 660,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "shugo_female",
+      "x": 690,
+      "y": 417,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "shugo_female",
+      "x": 540,
+      "y": 320,
+      "slot": 3,
+      "radius": 0
+    },
+    {
+      "name": "shugo_female",
+      "x": 430,
+      "y": 860,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 500,
+      "y": 970,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 600,
+      "y": 500,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 250,
+      "y": 800,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_female",
+      "x": 650,
+      "y": 800,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 735,
+      "y": 446,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 500,
+      "y": 500,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 540,
+      "y": 410,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 680,
+      "y": 430,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 200,
+      "y": 400,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 650,
+      "y": 460,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 700,
+      "y": 950,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 670,
+      "y": 675,
+      "slot": 1,
+      "radius": 0
+    },
+    {
+      "name": "shugo_male",
+      "x": 725,
+      "y": 490,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 720,
+      "y": 420,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "shugo_male",
+      "x": 600,
+      "y": 370,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 420,
+      "y": 130,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 600,
+      "y": 570,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 850,
+      "y": 820,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "shugo_male",
+      "x": 440,
+      "y": 160,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 450,
+      "y": 90,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 800,
+      "y": 150,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 400,
+      "y": 250,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 380,
+      "y": 910,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 620,
+      "y": 850,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 550,
+      "y": 670,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 610,
+      "y": 635,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 510,
+      "y": 500,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 470,
+      "y": 200,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 380,
+      "y": 760,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 675,
+      "y": 550,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_female",
+      "x": 739,
+      "y": 235,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "asobi_female",
+      "x": 424,
+      "y": 268,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "asobi_male",
+      "x": 430,
+      "y": 80,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 400,
+      "y": 230,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 740,
+      "y": 165,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 640,
+      "y": 880,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 800,
+      "y": 710,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 500,
+      "y": 640,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 600,
+      "y": 760,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 550,
+      "y": 500,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 470,
+      "y": 200,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 480,
+      "y": 910,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "asobi_male",
+      "x": 761,
+      "y": 167,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "asobi_male",
+      "x": 755,
+      "y": 167,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "asobi_male",
+      "x": 424,
+      "y": 290,
+      "slot": 2,
+      "radius": 0
+    },
+    {
+      "name": "asobi_male",
+      "x": 684,
+      "y": 765,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "asobi_male",
+      "x": 688,
+      "y": 780,
+      "slot": 0,
+      "radius": 0
+    },
+    {
+      "name": "yajin_female",
+      "x": 550,
+      "y": 505,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "yajin_female",
+      "x": 277,
+      "y": 568,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "yajin_female",
+      "x": 394,
+      "y": 586,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "yajin_female",
+      "x": 440,
+      "y": 500,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_female",
+      "x": 600,
+      "y": 530,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_female",
+      "x": 270,
+      "y": 850,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 600,
+      "y": 702,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 560,
+      "y": 690,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 475,
+      "y": 635,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 706,
+      "y": 691,
+      "slot": 1,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 700,
+      "y": 360,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "yajin_male",
+      "x": 500,
+      "y": 660,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 677,
+      "y": 458,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 638,
+      "y": 660,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 568,
+      "y": 460,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 709,
+      "y": 493,
+      "slot": 2,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 306,
+      "y": 720,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 410,
+      "y": 795,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_female",
+      "x": 580,
+      "y": 560,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_male",
+      "x": 602,
+      "y": 441,
+      "slot": 3,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_male",
+      "x": 440,
+      "y": 720,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_male",
+      "x": 580,
+      "y": 590,
+      "slot": 0,
+      "radius": 3
+    },
+    {
+      "name": "tomoda_male",
+      "x": 560,
+      "y": 860,
+      "slot": 1,
+      "radius": 3
+    }
   ]
 }

@@ -2739,6 +2739,8 @@ ui:
   agent_setup_prompt: '非公開の一時リンク {url} を使い、{guide} に従ってAresRPGエージェントを設定してください。公開証明を自動送信してください。この設定は資産移転やゲームプレイを許可しません。'
   agent_cancel: 'キャンセル'
   agent_pair_connect: '接続'
+  agent_setup_request: 'セットアップリクエスト'
+  agent_pair_failed_title: '接続できませんでした'
   agent_pair_pending: 'アシスタントを待っています…'
   agent_pair_failed: '設定が期限切れになったか完了できませんでした。再接続してください。'
   agent_pair_verified: 'エージェントの鍵を検証しました。サーバー認証やキャラクターの保有を確認したものではありません。'
