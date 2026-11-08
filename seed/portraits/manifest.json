@@ -1,14 +1,14 @@
 {
-  "version": "85e7fd7dee70c191",
+  "version": "c17634d91733b72d",
   "source_commit": "f188e94774fa0ad56a4ec5240d9f00b70793cbac",
   "portraits": {
     "asobi_female": {
-      "source_sha256": "9cb9057f92a3622329684709336c752ad39feddf0006ab5df738e8086971e771",
-      "mask_sha256": "a8c525332ba6a5135278490638648a8a69c9b03523967bde44e0e51b33c3ee37",
+      "source_sha256": "16ade52762e5f29fa842d0b1f36c0858926baf917992ce579d2a7018934dd78b",
+      "mask_sha256": "52a71c6a489874b33110566c55cf521b81bdab3940331ba1f8225d916da193a2",
       "centers": [
-        0.3,
+        0.2901960784313726,
         0.9,
-        0.37058823529411766
+        0.3843137254901961
       ],
       "gains": [
         0.86,
@@ -19,10 +19,10 @@
       "hair_sha256": "1f02bcb0f1f12026bfcbb015fe377a7b514ae27d367d7d6aecf9e4d7c1438a2c"
     },
     "asobi_male": {
-      "source_sha256": "7aee37608b38754cbfa1e711e066d3b3bb4c6c7a924c10f68209d763de7ac0ed",
-      "mask_sha256": "b408bac451f0915e295d30f7e30a20fdadac83cc337dd457e7c7974833f3990c",
+      "source_sha256": "215f930089d7145438c025c9807101e5b4e172b4ec2dab38d29d926f8c3ac4cc",
+      "mask_sha256": "90773f8f0b637543dcbb9b60cdb6f6d7f00cfa929d14930c6fe0d30afaf5a01f",
       "centers": [
-        0.307843137254902,
+        0.27254901960784317,
         0.907843137254902,
         0.5372549019607843
       ],
@@ -35,12 +35,12 @@
       "hair_sha256": "5cfaf8451738c846e358b7ed74492d7e017df6dd42d42bb505b9bc46a4c5e989"
     },
     "ikari_female": {
-      "source_sha256": "d636e17f2c43a1ad4f699edf49a88fb1d384051b212cd8d4ed5f4f04b33c59dd",
-      "mask_sha256": "565dffb785fceea9bd725ee36469f58ac61b8198a360fef63d476f7c4785296c",
+      "source_sha256": "d7bc16677d14c808c57b4f48ffba2809e75aa3a75e9f2e4a1f4e327e3ed7bf26",
+      "mask_sha256": "257ee26d93e636ad1505a457bbb4c564e64f4cb4904cf964ed1cff1d114c100b",
       "centers": [
         0.5,
-        0.5725490196078431,
-        0.6196078431372549
+        0.5745098039215686,
+        0.5666666666666667
       ],
       "gains": [
         0.86,
@@ -51,12 +51,12 @@
       "hair_sha256": "142abfc09e4a54c5b5deed14d2ff8770218a98e8a6b0692272e7f4869b87f884"
     },
     "ikari_male": {
-      "source_sha256": "48770c6d5bb9abd322a9afd3f8b91299da82cca82af372b5b0833c7eb0f6449b",
-      "mask_sha256": "aee7a6df71a107322d0cc49969f8473025f714f815235b60030097fa205b4f71",
+      "source_sha256": "1a0246a6df5b367490c692e23461c90cc43420debbdb96fe3a526f1368daa918",
+      "mask_sha256": "71f2c7bf9eb0002de3c5b84f7590c2cd4731b3c4f414eba220e3d2f3d6bd6ec7",
       "centers": [
         0.5,
         0.5294117647058824,
-        0.5647058823529412
+        0.5588235294117647
       ],
       "gains": [
         0.86,
@@ -67,12 +67,12 @@
       "hair_sha256": "a2b66a65bd008b37f2026f44bf8aacbb11d2845a40a40b0d58b1bd711364ad7d"
     },
     "iyashi_female": {
-      "source_sha256": "c64af42c05d62370b88d7739d3695cb468503875b3a3961d94d6bfe21d9d6d81",
-      "mask_sha256": "019a1eb8482abc33a07a7d1f1f9772e9303884a2b8a6724e8f9cb0a24bbb84c8",
+      "source_sha256": "cc39713464c5991bce803e7d40d6613638d37dddf17df88d506dac56bf1f543c",
+      "mask_sha256": "e09f415c6d5c47b85e14fa33c76dd7ba8b1d7401737216c80066ca8d173194e4",
       "centers": [
-        0.37450980392156863,
-        0.4470588235294118,
-        0.8196078431372549
+        0.33529411764705885,
+        0.43333333333333335,
+        0.6549019607843137
       ],
       "gains": [
         0.86,
@@ -83,11 +83,11 @@
       "hair_sha256": "eb29303d3d6d401a2a2ce3fa1a7bbe8856fd0016f93ee5e065b1f4a952d4ba6f"
     },
     "iyashi_male": {
-      "source_sha256": "8d71835f720545b4b61d1500abd9e4d073ef814708ffc8fc5a58b272c975ac8a",
-      "mask_sha256": "0b5ad4664198b09719f8efb80ed07427538fc3278b96f73d9addec785bd0edd6",
+      "source_sha256": "0aa8e4816a26c379aa3fa9d53768636710ffe5ff95c0243dc4909fc64dc14a5b",
+      "mask_sha256": "a906cea89c5abe1f9f3f21f08a579b7b7797003a907ec0905e46d119f831568d",
       "centers": [
-        0.3215686274509804,
-        0.4607843137254902,
+        0.3156862745098039,
+        0.45098039215686275,
         0.5
       ],
       "gains": [
@@ -99,10 +99,10 @@
       "hair_sha256": "90fabf5178bada92b9e809963797e55ee05fd6b3064845406d76059f82ce1077"
     },
     "mori_female": {
-      "source_sha256": "fb72e0395997b7b84e3216d3193e6ddc17eb89680efffda30c673123f334ffb6",
-      "mask_sha256": "32db65985855af8ad9b1b31fe1887b692b5cd5246a944789e235370267ee15b6",
+      "source_sha256": "037a9457e2f2b0fcfbe7bdc70397adaec93f9e628dc2c66b394512e1f6d54f85",
+      "mask_sha256": "d3663b8a7210a02628d3bb1cad291557f56a5f574c050f3fb19c37f494a28b59",
       "centers": [
-        0.503921568627451,
+        0.4745098039215686,
         0.5,
         0.5
       ],
@@ -115,11 +115,11 @@
       "hair_sha256": "3be3a4037819cc08ea8fb19ea10b81c44536b8076f090ef86c64fdc5de0763e1"
     },
     "mori_male": {
-      "source_sha256": "907f7e8ae8ed5aefa60c5215dfaf744f0c3ec2af6e54d5615b2b3dadd667fde0",
-      "mask_sha256": "772d68a6b799b45f10dbb6178ab810cb4e78e381efc27bdcccf0acd1ebef3932",
+      "source_sha256": "0db961aedf53850dd676f41e5bc30d665292a2de0a587d8f3f69a2b75266742b",
+      "mask_sha256": "2bdb45e9b9df1475d1a580e1174a156122606ff037bbde84088659e312ce425a",
       "centers": [
         0.5,
-        0.48235294117647065,
+        0.484313725490196,
         0.4647058823529412
       ],
       "gains": [
@@ -131,11 +131,11 @@
       "hair_sha256": "0ab07e05fb72a63830dca74866bd5768858c194f8fb3daffe5f73c59cb4af04b"
     },
     "rojin_female": {
-      "source_sha256": "1bc3536acec072ed133f55d4969f28ed45c4a7fd3d551f2a12f50966fb6cb3bd",
-      "mask_sha256": "6b7e8d25f13fef530a6f18b118ffef934e344f1c88b50ebf76a2bfb0a3aa7eb6",
+      "source_sha256": "453f2beca9b5aeb648b6db8185d51a4a27bd0ff39bfd37c1c1f7bea8bea54eed",
+      "mask_sha256": "d825c4b6c0033a5ff5d19d1ea51740c72a6dff6f32f01dc9aed0dc09d281673f",
       "centers": [
-        0.29411764705882354,
-        0.7607843137254902,
+        0.28431372549019607,
+        0.7568627450980392,
         0.5
       ],
       "gains": [
@@ -147,11 +147,11 @@
       "hair_sha256": "2677f0eafd788e12e05732c53f7d10b325207eff790c199ca58de098a3037603"
     },
     "rojin_male": {
-      "source_sha256": "91a5f3b6e60a9c1dab9a3f0054c09650f40d1311cae716a02e998ac2b31fadeb",
-      "mask_sha256": "3411b2c5fe881b53971235c24d8898b3e814aa66c417214fb7227e3b1caab456",
+      "source_sha256": "9bc3a5d75290237f695217dc34baee45d95cfa2bebe49e7d96a1d21f0baf78e1",
+      "mask_sha256": "019b9f3ceb8129a904ca9a093db34cba82a7d5bf13032ea5bd17ac5b44609c95",
       "centers": [
         0.5,
-        0.2549019607843137,
+        0.25098039215686274,
         0.5274509803921569
       ],
       "gains": [
@@ -163,11 +163,11 @@
       "hair_sha256": "f2109d4368bbd87d1a1bdb722ec1faaf61c3623f871b30d8c0cc0a9e4731fcd6"
     },
     "senshi_female": {
-      "source_sha256": "7e6938e7c2e79480888c3f0a191978c71bb11c4941eb92f90c10c5785af388e0",
-      "mask_sha256": "fc14db220b78f72283815aaddbf1058cd344781dc622bd16a3ee13d61eb7393a",
+      "source_sha256": "9e9a40cfcc9baf2bc496420f5f745df639fad2372564916e0628750f02ca85a2",
+      "mask_sha256": "1e82739043ebe600b258583025637026fde9a068df27f1f0d31145f551571048",
       "centers": [
-        0.4666666666666667,
-        0.7156862745098039,
+        0.4607843137254902,
+        0.6588235294117647,
         0.6647058823529411
       ],
       "gains": [
@@ -179,12 +179,12 @@
       "hair_sha256": "32f2be29d5e198898773ce90b5176ad05ac3e99e1167bcb084b64896f6c09385"
     },
     "senshi_male": {
-      "source_sha256": "88f21330846a07a175ebff2aea643bc1b63e95e7089d3782ef0cbcbd0ff18f14",
-      "mask_sha256": "8cc6a7a219a89cbde92fd704970d822453ff4be89b91cf9af81c502e11b3df9a",
+      "source_sha256": "59b1c8b3e4e8269f3dbc2f676a82f4241ce1f845d5dce09f2147b515b0cb5f00",
+      "mask_sha256": "58ce7f8216f30a06adfed3f73d7718e57faf448fac3c2a508f29743b8c84cdbe",
       "centers": [
-        0.5,
-        0.6098039215686275,
-        0.9
+        0.4980392156862745,
+        0.607843137254902,
+        0.8862745098039215
       ],
       "gains": [
         0.86,
@@ -195,12 +195,12 @@
       "hair_sha256": "7c377b137885a0f81869f69bcf76f81e99caba654e4ca0092ad1d4badf142a5e"
     },
     "shugo_female": {
-      "source_sha256": "78cc3ea158491c6bf54300c298009593debe2c7dd110f9ea580168c0ad5fb1a1",
-      "mask_sha256": "eba2551761419942833a0523b8e51cc4be44779db8c3846a26e87003e1833770",
+      "source_sha256": "0daefb4844623434cd88ef873517ecbba2e1b387048f0d236ecbdac09c876043",
+      "mask_sha256": "78ff7d1c44b1c16c771720dc9d58c77f8949861d4f1c785bce2ae11285ee5514",
       "centers": [
-        0.5607843137254902,
+        0.5588235294117647,
         0.5,
-        0.411764705882353
+        0.4137254901960784
       ],
       "gains": [
         0.86,
@@ -211,10 +211,10 @@
       "hair_sha256": "39ec750f1ce0f578773a4694906dfc0f17be2556747ed14820267d7a86f0c146"
     },
     "shugo_male": {
-      "source_sha256": "013a5c6550a648a27d51c3c652fcfd3e007a9d4f86dbc2e74b91b9c0c6b40182",
-      "mask_sha256": "9944df2a9dae66427308beb7e42f8c5ce21e45b83e9ead5ecce910deec38f5cd",
+      "source_sha256": "10fe995880a1807a2f43d7638187dad32c5412c317788728f54c1b57943e13ef",
+      "mask_sha256": "4bf5e6abe6609a2a9d223fa3fb7d43006f08593294aed0087033866fc0e8e69d",
       "centers": [
-        0.5607843137254902,
+        0.5450980392156862,
         0.5,
         0.4019607843137255
       ],
@@ -227,10 +227,10 @@
       "hair_sha256": "3b62acb2b0b9dca2566adc57b6b9dc60e63ae5838e31542dcf1e016ebd49f287"
     },
     "shusen_female": {
-      "source_sha256": "65c34f9cb9d0e5e11231b93a2b950eb9b385bcf10ce6fd355f193ee4a14b748e",
-      "mask_sha256": "1b340f7c1ca3da7b3565fe089df77a4d9f91f0bbb76a125b599a05ac82f8efcc",
+      "source_sha256": "ad51f9f6a02630d5030b7a1f77b3497228a224d0daef29850336ebd06d4d6772",
+      "mask_sha256": "e2893cca483311d2a88d2e37a24d2f6c46016fe1ec5e638c039e17157e1f8f07",
       "centers": [
-        0.34705882352941175,
+        0.32941176470588235,
         0.2803921568627451,
         0.5705882352941176
       ],
@@ -243,10 +243,10 @@
       "hair_sha256": "b916e9c96e672be40c144ddf21f08cd4717567c91b1cfecb0fc5b333f4fedb12"
     },
     "shusen_male": {
-      "source_sha256": "686d295e95df2a3b3b8580eb9ee94ab1dc5e92a602da5c49be6c85751feed350",
-      "mask_sha256": "7a5baebe5579c4c2effb08653dbdde6e2d75cc14fd774cdaeb018ae81d0c5f72",
+      "source_sha256": "b15f97e99c94d95c04fb912342dbef7116443774056aead6398ff67982a1f01d",
+      "mask_sha256": "a0bd07f56300f766e83e6198adbbd2f970ca1afb246dcaace1295eaa176f4d41",
       "centers": [
-        0.33725490196078434,
+        0.3392156862745098,
         0.28823529411764703,
         0.5647058823529412
       ],
@@ -259,12 +259,12 @@
       "hair_sha256": "d169349f1b564a2601e4740246ab0df53c13343efc6bf25b308da4b424f70754"
     },
     "tokei_female": {
-      "source_sha256": "7816ae7d048839de72533835d8937a3a324d80e7ab5ca64c420ca9df0ab40065",
-      "mask_sha256": "a07cb520f3e4b5b337ac5161c75cad0824f22a797a61eba4b44d5d4b6fe3ce8f",
+      "source_sha256": "3de8d12050874350872c6ef06d736c443a7fd399dbaac31206cfb46e23f85298",
+      "mask_sha256": "622fffae6e3aa251e7795c409965ec0fa1f710a4915d2525bfe39451e427befd",
       "centers": [
         0.3235294117647059,
         0.5666666666666667,
-        0.8411764705882353
+        0.8411764705882352
       ],
       "gains": [
         0.86,
@@ -275,12 +275,12 @@
       "hair_sha256": "e7ccebbf48a2806c420b5eb22eaa0e6d2540721051a259ea4a82c9a475149274"
     },
     "tokei_male": {
-      "source_sha256": "b3e5eafb1d87d1fe6d61519462ba7b88ecac2224920383fd248a33b0250b0066",
-      "mask_sha256": "533ab6bf080953f19e8f20070783ab8201a24ad20294c86a9f7f82d25eeaea43",
+      "source_sha256": "cf44b617876e85ea0f9937d496dc7957cae5dfbbbec315047bff9a0315a0d6a9",
+      "mask_sha256": "ad452c614538ebb4d7b6e8d8075c4afa9d6b22f2145faadedcea10a6404d7f03",
       "centers": [
-        0.28431372549019607,
+        0.2784313725490196,
         0.5,
-        0.5686274509803921
+        0.5705882352941176
       ],
       "gains": [
         0.86,
@@ -291,12 +291,12 @@
       "hair_sha256": "93dcee725fe9f3637946936b72ec2b703e026f826c994ec38be1643ad6a0e021"
     },
     "tomoda_female": {
-      "source_sha256": "e4dad2eae34969e2133c6a134a8e471b8d22551d28470faf0c3810d1ef7979bb",
-      "mask_sha256": "b02e4ec33ca5a470e56010da8691d93a4a8ced930929dbff7008d3408c5d3882",
+      "source_sha256": "93c91771b2c16f64a1e990c540d81b7f68b54a605b1deb5055539367afe9cb2c",
+      "mask_sha256": "19a34a783140b80ed47fb0f03d2a0c5d212766ed90136a98740b05522a8431e8",
       "centers": [
-        0.4313725490196078,
-        0.27254901960784317,
-        0.8509803921568627
+        0.41960784313725485,
+        0.27058823529411763,
+        0.8549019607843137
       ],
       "gains": [
         0.86,
@@ -307,10 +307,10 @@
       "hair_sha256": "01aed8786f569233134cfdc51251eb57a733c47274a6175d979137fb1a1b65eb"
     },
     "tomoda_male": {
-      "source_sha256": "43753d7a31c794a7e72f6421700a25697b5266901b0cd2fe4c379eb25c4972c7",
-      "mask_sha256": "b338951b9581c46b92824c1ad537696ee15a179ff700406e7cf6f0085d58d8a7",
+      "source_sha256": "51ff129c03a92b5cb1118f5a06f1643c6b3f78148f78c0710618e7d5173221f3",
+      "mask_sha256": "14cb75b6afd0fa0f10be1733e58294f10dd1508c8d39232bf6801f17d7b1c7d6",
       "centers": [
-        0.40980392156862744,
+        0.39019607843137255,
         0.5,
         0.8588235294117648
       ],
@@ -323,10 +323,10 @@
       "hair_sha256": "fb51edfe96c5bf17e93eb6733f210950189297606850ade87ddf919c8f736aef"
     },
     "yajin_female": {
-      "source_sha256": "665ca0a116f73d41c31756d8c9850f844448c166c2c67313f2f3b97a9fe465e0",
-      "mask_sha256": "4fa3d2be8a436871da944997da221e5803a2deeca6a94899ac062ae8c8d9ba9a",
+      "source_sha256": "d12bfac57e01e43166af6ba2623fb2fb321e1a48542dda71715a0062989eb10a",
+      "mask_sha256": "2e8b2c526d43cb7f457c15575127cc1b8cf5d056593437e2984191df10f1ef2b",
       "centers": [
-        0.3254901960784313,
+        0.3156862745098039,
         0.5,
         0.8784313725490196
       ],
@@ -339,8 +339,8 @@
       "hair_sha256": "14410fc171120fa8e3c98ce8e2a309eca038819d0858d9cf8edd3766310a3b83"
     },
     "yajin_male": {
-      "source_sha256": "1b86fdee8da1a6db9cf4aff1f41c1fb449527f7c509ca71ad199dad24d362f68",
-      "mask_sha256": "7a79d107b99610fc77292bcd1e1b42c8524598db83cc1bfbb3c36553e51ec093",
+      "source_sha256": "c4bb3c290567d13e9e7383030eaf4a1e618994c8141fa6927cc4d170d56514d8",
+      "mask_sha256": "2e64dea23cb1cf6700d5a55d444c8df761762e6dc353726b85f6e3590831fcaf",
       "centers": [
         0.3607843137254902,
         0.5,
@@ -355,12 +355,12 @@
       "hair_sha256": "7039fe43dfe303498dcd40c5646a34bf00e8535810927cae82b4bc084b6e4364"
     },
     "yogan_female": {
-      "source_sha256": "090d71966cb44080793e657c1bd0fae2e1eb529dd1bffe1ce7911e9574270b31",
-      "mask_sha256": "711710d671bb805dfc8d28fcb5a0c35d40b3e9c17b37a0285858a98b189ed17e",
+      "source_sha256": "e851ed87e7106a0bcec9227477c48a5f4d4840f7a64e63c6b23b02693613c2ad",
+      "mask_sha256": "c71ac58b5502eb953c02ef199b7e8fbe2f112e6b3287d5b6adb9a5d21b9fd699",
       "centers": [
-        0.5294117647058824,
-        0.8725490196078431,
-        0.5627450980392157
+        0.3921568627450981,
+        0.8764705882352941,
+        0.5490196078431372
       ],
       "gains": [
         0.86,
@@ -371,10 +371,10 @@
       "hair_sha256": "74ebb14d25249b159785285aab1eb8cb5e079edbadfbd818944466f971ccb96e"
     },
     "yogan_male": {
-      "source_sha256": "5acc41c112a63e227b20a98508a6a41f8c779169d399cbd1b30c2a502e1de2e2",
-      "mask_sha256": "2f33c07c1547fa4185e8abc126378bb02c9997de6167745e2e67be3d7a5148c0",
+      "source_sha256": "cfa688d86d912bd9c738bc9e39780b4d25d09eb28b28f6276de95f8db7ef6af4",
+      "mask_sha256": "71a05ee0a43a7307b68ce21584ca982036bfd66cd98ffcf425ccf630ae3968ab",
       "centers": [
-        0.38823529411764707,
+        0.396078431372549,
         0.8764705882352941,
         0.45098039215686275
       ],

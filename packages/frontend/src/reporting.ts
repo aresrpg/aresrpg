@@ -63,7 +63,19 @@ export const init_reporting = (
   }
   init({
     ...config,
-    sendDefaultPii: false,
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: { request: { allow: ['User-Agent'] }, response: false },
+      httpBodies: [],
+      urlQueryParams: false,
+      graphQL: { document: false, variables: false },
+      genAI: { inputs: false, outputs: false },
+      mcp: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
     beforeSend: (event, hint) => {
       const correlated = correlate_error(event, reporting_analytics_context())
       const clean = before_send(correlated, hint)

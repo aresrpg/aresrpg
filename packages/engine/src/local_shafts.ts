@@ -36,7 +36,7 @@ import type { WorldScenery, SceneryVolume } from './scenery_data.ts'
 import type { QualityProfile } from './types.ts'
 
 type Config = NonNullable<QualityProfile['effects']['local_shafts']>
-type DepthNode = ReturnType<typeof texture>
+type DepthNode = ReturnType<typeof texture<'vec4'>>
 type VectorUniform = ReturnType<typeof uniform<'vec3', Vector3>>
 export type LocalShaftEnvironment = Readonly<{
   scenery?: WorldScenery

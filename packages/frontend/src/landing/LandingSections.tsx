@@ -36,9 +36,9 @@ const EyeIcon = () => (
 )
 
 /** Gold Play enters the game through the entry's existing owner; it is a button, not a route of the landing. */
-const PlayButton = ({ label, on_play }: Readonly<{ label: string; on_play: () => void }>) => (
+const PlayButton = ({ label, on_play }: Readonly<{ label: string; on_play: (url?: string) => void }>) => (
   <span className="slab slab-gold">
-    <button className="btn btn-gold n" onClick={on_play} type="button">
+    <button className="btn btn-gold n" onClick={() => on_play()} type="button">
       <PlayIcon size={20} />
       {label}
     </button>
@@ -55,7 +55,7 @@ export const LandingHero = ({
 }: Readonly<{
   assets: LandingAssets
   links: LandingLinks
-  on_play: () => void
+  on_play: (url?: string) => void
   agent_connect_url: string
   kares_trigger: ReactNode
 }> &
@@ -89,7 +89,15 @@ export const LandingHero = ({
       <div className="ctas">
         <PlayButton label={copy.hero.play} on_play={on_play} />
         <span className="slab">
-          <a className="btn btn-rune n" href={agent_connect_url}>
+          <a
+            className="btn btn-rune n"
+            href={agent_connect_url}
+            onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              on_play(agent_connect_url)
+            }}
+          >
             <EyeIcon />
             {copy.hero.let_ai_play}
           </a>
@@ -401,7 +409,11 @@ export const LandingAgent = ({ copy, assets }: Readonly<{ assets: LandingAssets 
   </section>
 )
 
-export const LandingEnd = ({ copy, links, on_play }: Readonly<{ links: LandingLinks; on_play: () => void }> & Copy) => (
+export const LandingEnd = ({
+  copy,
+  links,
+  on_play,
+}: Readonly<{ links: LandingLinks; on_play: (url?: string) => void }> & Copy) => (
   <>
     <section aria-labelledby="landing-end-title" className="end text">
       <h2 className="h2" id="landing-end-title">
@@ -430,7 +442,7 @@ export const LandingEnd = ({ copy, links, on_play }: Readonly<{ links: LandingLi
           </h2>
           <ul>
             <li>
-              <button className="foot-link" onClick={on_play} type="button">
+              <button className="foot-link" onClick={() => on_play()} type="button">
                 {copy.footer.play}
               </button>
             </li>

@@ -54,26 +54,29 @@ for (const width of [1280, 390]) {
   })
 }
 
-test('Play restores the postcard while the game entry is delayed', async ({ page }) => {
-  const gate = Promise.withResolvers<void>()
-  await page.route(game_chunk, async (route) => {
-    await gate.promise
-    await route.fulfill({
-      contentType: 'application/javascript',
-      body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Game ready"))',
+for (const agent of [false, true])
+  test(`${agent ? 'Let AI Play' : 'Play'} restores the postcard through the same game entry`, async ({ page }) => {
+    const gate = Promise.withResolvers<void>()
+    await page.route(game_chunk, async (route) => {
+      await gate.promise
+      await route.fulfill({
+        contentType: 'application/javascript',
+        body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Game ready"))',
+      })
     })
+    await page.goto('/')
+    await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
+    if (agent) await page.getByRole('link', { name: 'Let AI play', exact: true }).click()
+    else await page.getByRole('button', { name: 'Play', exact: true }).first().click()
+    expect(new URL(page.url()).searchParams.get('intent')).toBe(agent ? 'connect-agent' : null)
+    try {
+      await expect(page.locator('#root [data-boot-loading]')).toBeVisible()
+      await expect(page.locator('#root .landing')).toHaveCount(0)
+    } finally {
+      gate.resolve()
+    }
+    await expect(page.locator('#root')).toHaveText('Game ready')
   })
-  await page.goto('/')
-  await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
-  await page.getByRole('button', { name: 'Play', exact: true }).first().click()
-  try {
-    await expect(page.locator('#root [data-boot-loading]')).toBeVisible()
-    await expect(page.locator('#root .landing')).toHaveCount(0)
-  } finally {
-    gate.resolve()
-  }
-  await expect(page.locator('#root')).toHaveText('Game ready')
-})
 
 test('failed landing startup restores explicit reload recovery', async ({ page }) => {
   await page.route(/\/assets\/app_boot-[^/]+\.js$/, (route) => route.fulfill({ status: 503, body: 'unavailable' }))

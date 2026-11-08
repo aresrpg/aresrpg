@@ -51,6 +51,7 @@ export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replac
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   agent_view: AgentView
+  agent_pairing_candidate: AgentPairingIdentity | null
   inventory_pairing: AgentPairingIdentity | null
   character_creation: CharacterCreation | null
   auth_status: AuthStatus

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { close, flush, type ErrorEvent } from '@sentry/react'
+import { close, flush, getClient as get_client, type ErrorEvent } from '@sentry/react'
 import type { EngineStatus } from '@aresrpg/engine'
 
 import deployment from '../../vercel.json' with { type: 'json' }
@@ -33,6 +33,19 @@ test('a caught pre-submission MoveAbort reaches Sentry before toast translation'
       flush: async () => true,
     })
   )
+  expect(get_client()!.getOptions().dataCollection).toMatchObject({
+    userInfo: false,
+    cookies: false,
+    httpHeaders: { request: { allow: ['User-Agent'] }, response: false },
+    httpBodies: [],
+    urlQueryParams: false,
+    graphQL: { document: false, variables: false },
+    genAI: { inputs: false, outputs: false },
+    mcp: { inputs: false, outputs: false },
+    databaseQueryData: false,
+    queues: false,
+    stackFrameVariables: false,
+  })
   const failure = new Error(
     "[sdk] transaction resolution failed — NOT submitted: Transaction resolution failed: MoveAbort in 2nd command, abort code: 1723, in '0x6a3c71cd9bd381574e5b3877aa8b0c525a47d497bbdaf70215ad9afa4ef5a039::combat::start' (instruction 28)"
   )

@@ -78,9 +78,10 @@ export const boot_landing = async (): Promise<void> => {
     const { boot_game } = await import('../game_entry.tsx')
     boot_game()
   }
-  const play = (): void => {
+  const play = (url?: string): void => {
     if (entering) return
     entering = true
+    if (url) history.replaceState(history.state, '', url)
     if (ready_frame) cancelAnimationFrame(ready_frame)
     queueMicrotask(() => {
       void enter_game().catch((error: unknown) => {

@@ -97,7 +97,7 @@ export type LandingProps = Readonly<{
   assets: LandingAssets
   links: LandingLinks
   /** Enters the game through the existing player surface; the landing owns no route. */
-  on_play: () => void
+  on_play: (url?: string) => void
   /** From agents/entry_intent.ts `agent_connect_url()`; login and pairing keep their owners. */
   agent_connect_url: string
   /** The shared TokenomicsPanel. Rendered only while the modal is open. */

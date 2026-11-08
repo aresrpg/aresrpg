@@ -140,13 +140,11 @@ Stateful core edits restart the app to rebuild reducer and observer lifecycles t
 Game boot consumes engine data through `@aresrpg/engine/data`; its static dependency graph never
 loads Three.js. Surface lifecycles import rendering. Fight cue projection chooses movement gait;
 the engine consumes that cue rather than exporting a renderer-bound helper for the choice.
-`/connect-agent?intent=connect-agent` opens the existing agent modal after the ordinary Google login.
-The modal intent is consumed once while the `/connect-agent` screen survives reload and logout.
-This screen shares the running player store, observers, pairing, selection and funding components;
-it never mounts the menu or game canvas. Play or explicit agent observation lazily imports the player
-presentation without restarting authentication. Service-worker installation is deferred until that
-transition because precaching would otherwise fetch the renderer bundles. Shared plain terrain and
-gameplay data remain in the store graph; Three/WebGPU implementations and model assets do not.
+Let AI Play enters the same player startup, home screen, Google login and service-worker lifecycle as Play.
+`/world?intent=connect-agent` opens the existing agent modal once after authentication. The old
+`/connect-agent` URL is a modal-intent alias, consumed into `/world` without a separate surface.
+Modal consumption preserves unrelated query fields, fragments and history state; dismissal and logout
+follow ordinary player navigation. There is no separate agent entry or renderer handoff.
 Deployment headers give content-hashed `/assets/` files immutable browser caching. Stable asset
 names, HTML and the service worker retain revalidation.
 Page navigations bypass the service-worker cache so reloads fetch the current app shell and its
@@ -660,10 +658,15 @@ state from chain—the app becomes ready only after the server's indexed snapsho
 Connect Your Agent is the single official supported bot onboarding flow; public SDK guides teach bot building after that flow, without claiming to restrict permissionless chain execution. Agent setup is available from the world HUD’s former Friends entry, account settings and
 character-tab menus. The Friends reducer and persisted social data remain unchanged. Google
 sessions expose a validated public pairing request through the SDK. The existing game session
-creates a five-minute Redis setup exchange bound to its authenticated owner. A one-prompt link
+creates one five-minute Redis setup exchange per authenticated owner, atomically across server replicas.
+An owner index and its request expire together; repeated begins reuse the request without extending its deadline.
+The browser creates one in-memory random capability per attempt. Repeating that same begin is read-only;
+a new attempt replaces only the capability hash, so stale links, status reads and cancellations cannot control
+its replacement. Explicit cancellation atomically removes the request and owner index. Pairing requests share
+the existing authenticated read allowance; there is no independent module quota. A one-prompt link
 lets an assistant return public proof through the existing HTTP server; authenticated status
 reports the verified address. Redis stores public metadata and a capability hash, never a signer. Pending requests are cleared on account/session
-change, disconnect and successful verification. Public multisig identities are retained in owner-scoped browser storage for recovery; they are revalidated against the current Google identifier and never restore a persistent signing claim. Proofs and setup tokens are not persisted or treated as server authentication or custody. The signed proof binds a disposable or
+change, disconnect and successful verification. Successful host-persistent proof must first save validated public recovery metadata, then publishes a wallet-bound unconfirmed pairing candidate and closes setup into a separate non-transactional hint. Proof alone never selects a transfer recipient. The real inventory and exact-character Send action share one explicit full-address comparison; confirmation promotes that candidate, and a new proof or wallet change revokes the previous target. Public multisig identities are retained in owner-scoped browser storage for recovery; they are revalidated against the current Google identifier and never restore a persistent signing claim. Proofs and setup tokens are not persisted or treated as server authentication or custody. The signed proof binds a disposable or
 host-declared persistent signer mode; status returns that mode and the public multisig identity. A signed
 mode declaration authenticates the host claim, not the durability of its storage. Other wallets retain the copyable setup
 handoff and bootstrap guide. Agent pairing accepts only mainnet in the signed request; non-mainnet
@@ -676,13 +679,12 @@ the WebSocket challenge does not attest the service's actual chain network. File
 The SDK exposes non-executing exclusive-offer, claim and capability-return builders, reusing marketplace
 policy settlement in either custody direction. Its separate transaction-signing adapters verify already-resolved bytes and an externally supplied
 ordinary-member or Google-member signature; Google verification uses an explicit network client. They own no credentials.
-Wallet sessions provide simulation-backed one-use confirmation and certified receipts. A session retains one Recall executor per paired multisig; its reload-idle guard includes all such queues and pending digests. Auth, Recall and return discovery share complete personal-kiosk pagination. Preflight failures permit a fresh review; uncertain submissions retain their digest and do not permit resubmission. Missing localized agent UI labels use the English UI fallback. The paired-address UI
-requires independent full-address comparison before custody controls, and offers an explicitly selected naked
-owned character only with a host-declared persistent signer. Disposable pairing cannot submit. Return inspection
+Wallet sessions provide simulation-backed one-use confirmation and certified receipts. A session retains one Recall executor per paired multisig; its reload-idle guard includes all such queues and pending digests. Auth, Recall and return discovery share complete personal-kiosk pagination. Preflight and rejected-signature failures permit a fresh explicit action; uncertain submissions retain their digest and do not permit resubmission. Missing localized agent UI labels use the English UI fallback. The paired-address UI
+requires independent full-address comparison before custody controls, and offers the exact context-menu character only when it is owned, outside fight custody and unequipped, with a host-declared persistent signer. Disposable pairing cannot submit. Return inspection
 is an explicit one-shot SDK custody-preflight read: all character PurchaseCaps owned by the human wallet,
 filtered to zero price and kiosks whose personal capabilities belong to the paired agent. Both capability and
-kiosk reads paginate completely. The return UI claims or cancels only a verified incoming offer through the same review
-and receipt path. Owner Recall reconstructs the canonical 1-of-2 identity from the current Google
+kiosk reads paginate completely. The return UI claims or cancels only a verified incoming offer through the same SDK preflight, wallet-signature
+and receipt path, without another custom review screen. Owner Recall reconstructs the canonical 1-of-2 identity from the current Google
 wallet and signs the multisig transaction through its existing Enoki binding. It reads kiosk-held
 characters and their current equipment, composes generated unequip doors before the exclusive offer,
 and rechecks equipment and simulation before signing. It issues ordinary exclusive PurchaseCaps
@@ -700,16 +702,12 @@ public multisig construction is independent from signing adapters. Gas refusals 
 for the actual SDK sender; a distinct multisig payer has an unknown balance rather than the human balance.
 The CLI supports an explicit loopback-only local-preview opt-in, without changing default endpoint restrictions.
 The verified full-address comparison selects an explicit wallet-bound inventory target in session state,
-independent from observation and character-provider selection; disconnect clears it. The equipment
+independent from observation and character-provider selection; disconnect clears it and any unconfirmed candidate. Saved recovery and character returns remain available in the inventory even when the player owns no characters. The equipment
 window extends its existing player bag with a compact agent kiosk, preserving its original profile,
 filters and section corners. Both bags share selection and touch gestures; a dragged visual stack
 expands to every represented object revision and kiosk, while locked fragments remain separate.
-Agent reads and open reviews are bound to the exact wallet and pairing; stale results cannot cross
-an account change. Each item drop opens one Offer review, followed by an independently selected
-Claim or capability-return review. There is no automatic second transaction. Coin balances open
-Deposit or Withdraw with exact amounts, source balance and editable retained SUI reserve; coin-only
-transfers are one direct transaction. Max quotes the SDK fee budget before deducting it and the
-reserve, and final review checks the actual amount again. Missing KARES configuration disables
+Agent reads and pending actions are bound to the exact wallet and pairing; stale results cannot cross
+an account change. Dismissing the inventory retires unsigned preparation. Each item drop directly prepares one Offer and requests the actual wallet signature, with item loaders while pending. Claim or capability-return is an independently selected action. There is no custom Check transaction or Transfer review modal, and no automatic second transaction. Coin balances open the existing Send-style shell with Deposit or Withdraw, an amount, Max and the retained SUI reserve. Submission shows the existing transaction loader; coin-only transfers are one transaction. Max quotes the SDK fee budget before deducting it and the retained reserve (the existing GAS_BUDGET_MIST default), and SDK preparation checks the actual amount again. Missing KARES configuration disables
 submission rather than inventing a balance or coin type. Owner deposits use an SDK action factory
 that revalidates the canonical current Google owner and a freshly verified host-persistent pairing
 at preparation and confirmation. Restored identities remain recovery-only and cannot receive new
@@ -1099,6 +1097,11 @@ masters and masks. It preserves source alpha, unmasked pixels, and painted light
 portrait URL owner includes class, sex, three uint24 colors, and the generated art revision.
 Character tabs, the character sheet, fight timeline and played-turn cards resolve that same URL.
 Character-tab and visible-player context actions open the shared preview with PNG download and image-link copy.
+The share preview offers eight approved background PNGs under frontend public/portrait-share, behind the unchanged full-size bust.
+One strict export-style parser and content-hashed art revision bind preview, download and copied links to the same image.
+The default transparent URL, pixels and Display template stay unchanged. The asset manifest pins approved source, runtime and thumbnail hashes;
+The export revision is the first sixteen SHA-256 hex characters of JSON containing the composition version and ordered background hash records;
+changing art or composition requires a new revision. Modal-local generations reject obsolete image and clipboard completions.
 Class-only catalogue illustrations retain their authored source. Legacy `/classe/*.jpg` routes remain.
 The SDK creates or prepares a Display V2 image template using the Character object's existing color
 fields. Hosting and Display-capability updates are separate release operations: no application action

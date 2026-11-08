@@ -33,7 +33,12 @@ export const run_agent_setup = async (
   signal: Readonly<AbortSignal>,
   report: (input: PairingInput) => void
 ): Promise<AgentPairingIdentity> => {
-  const begun = await exchange(wallet, { action: 'begin', public_identifier })
+  // One in-memory capability per attempt makes duplicate begin requests idempotent.
+  const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replace(/=+$/, '')
+  const begun = await exchange(wallet, { action: 'begin', public_identifier, token })
   if (begun.action !== 'begin') throw new Error('SETUP_UNAVAILABLE')
   const { pairing_id } = begun
   try {
@@ -43,14 +48,14 @@ export const run_agent_setup = async (
     while (!identity) {
       await wait_for_status(signal)
       signal.throwIfAborted()
-      const result = await exchange(wallet, { action: 'status', pairing_id })
+      const result = await exchange(wallet, { action: 'status', pairing_id, token })
       if (result.action !== 'status') throw new Error('SETUP_UNAVAILABLE')
       ;({ identity } = result)
     }
     signal.throwIfAborted()
     return identity
   } finally {
-    await exchange(wallet, { action: 'cancel', pairing_id }).then(
+    await exchange(wallet, { action: 'cancel', pairing_id, token }).then(
       (result) => {
         if (result.action !== 'cancel')
           console.warn('Agent setup is already unavailable; its server expiry still applies.')

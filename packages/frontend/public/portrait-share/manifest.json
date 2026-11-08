@@ -1,0 +1,46 @@
+{
+  "revision": "bdf23aa567843753",
+  "composition": 1,
+  "backgrounds": {
+    "fire": {
+      "sha256": "cb3be102e7734c60e9245bc06e8cd0b0a7f66067899ebd43112537440c2cd21f",
+      "thumbnail_sha256": "4c3cba4eefa7fe64ccc03e3f4c8f2e9fb34d50bfedf94b122a5ed4027afd3960",
+      "source_sha256": "fcd8f883b8ebd55b67d85fc451eb253f4b06dd30c68ff8bb1c7e9a8f4175d8f8"
+    },
+    "water": {
+      "sha256": "8d7e4fa7382434cb57b127d93a4828a0aedc9b4f27b43e01b91b463c8771ed0d",
+      "thumbnail_sha256": "887f91a8afa32d9cb66e741c62cd22fc36ab4cd8582df33cef21169ffce3c834",
+      "source_sha256": "e529103993a4298239361df885f10f4f110ae0262195369d872ab7c245bd6b55"
+    },
+    "wind": {
+      "sha256": "1abbbcd92b8ba9c03361c654550bbab94f36a4cb38e1f5766eeac8f441eedbe6",
+      "thumbnail_sha256": "ad0f90e9ee5f80b43b50ea0fa1a7ada4b4f78d3559e6485aedac80e4a17d44ce",
+      "source_sha256": "334f3462c85be5e102c07714ba283684c1dbcfab458400d1d3bb633f6e3aa3c7"
+    },
+    "marble": {
+      "sha256": "6b28506c6234e42a3a8193ebe022426f413f1fc17e553dca2b9c4bb956c229f7",
+      "thumbnail_sha256": "fcc41407fb98960a3de2646209512f272097bc609072edab8d559c5cee6f4437",
+      "source_sha256": "f7043f8269fbfcbadb28de53723b8ba77aa5254905200bfc0c0cda8c90f223ff"
+    },
+    "shadow": {
+      "sha256": "d688489e2b66d00bf5d19090d4f89b8fecb87e2f145bb8d216c9fcb14bc433a9",
+      "thumbnail_sha256": "6e36ae8a4b214b92d02e42aeb497789d77f478e79a8fc5c8d7bffdc510221254",
+      "source_sha256": "bb4db9d645e43a59248cb04af7be8074b27bd2594a588505822c3f30aebd813b"
+    },
+    "sand": {
+      "sha256": "d19579516a8da45ccb2725281a72fd4a20b7a51f6ef9421313f2b07b1a5b98be",
+      "thumbnail_sha256": "cbac48bec927a3ffca7d1bc42189d167513e21486cc5957b67ff86943691cb65",
+      "source_sha256": "19c0d37301ea9d023c1477be07f1112f1d396284a8c59886fff4f727f1f319a4"
+    },
+    "cobblestone": {
+      "sha256": "f2d499a90c6d44d5d99a93355704842ef8bd1f891e2fb2573aa7071903606cd3",
+      "thumbnail_sha256": "b415ee65e82fad84ed900659b932c86c535f0cb3b9d80c5e0e4e3fb38937e055",
+      "source_sha256": "4b82553083c4eae0ae286732aa93eb3b67e1fe963b99db8e69d917d13a0a820c"
+    },
+    "milk": {
+      "sha256": "19392fed2540d9a64dba009ef793809aedb28923e71873ba7f6c46a6973d5f12",
+      "thumbnail_sha256": "f573233cf638bb518f7965d688250741d21e279fbf13da12b70139855ea475c4",
+      "source_sha256": "a12bbf5e1b4d000aaf8039de28a31d46ab323f5b45cc4e56268c1b64be37cb52"
+    }
+  }
+}

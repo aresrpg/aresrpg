@@ -4,7 +4,7 @@
 import type { ServerPacket } from '@aresrpg/protocol'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
-import { AGENT_ENTRY_PATH, consumed_agent_entry_url } from '../agents/entry_intent.ts'
+import { consumed_agent_entry_url } from '../agents/entry_intent.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -127,10 +127,7 @@ const logged_out_navigation = (state: AppState): NavigationState =>
         page: 'airdrop',
         pathname: '/gift',
       })
-    : {
-        ...initial_navigation_state(),
-        pathname: state.navigation.pathname === AGENT_ENTRY_PATH ? AGENT_ENTRY_PATH : '/',
-      }
+    : initial_navigation_state()
 
 const arrived_fight = (state: AppState, reason: string): AppState => {
   const { run } = state.run_to

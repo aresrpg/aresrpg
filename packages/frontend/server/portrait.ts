@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
 
 import { parse_portrait_query, portrait_name, type PortraitAppearance } from '../../immutable/src/portrait.ts'
+import { parse_portrait_style, TRANSPARENT_PORTRAIT, type PortraitStyle } from '../src/components/portrait_share.ts'
 import manifest from '../../../seed/portraits/manifest.json' with { type: 'json' }
 
 const linear_channel = (value: number): number => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
@@ -40,7 +41,10 @@ export const color_portrait_pixels = (
   return output
 }
 
-export const render_portrait = async (appearance: PortraitAppearance): Promise<Buffer> => {
+export const render_portrait = async (
+  appearance: PortraitAppearance,
+  style: PortraitStyle = TRANSPARENT_PORTRAIT
+): Promise<Buffer> => {
   const name = portrait_name(appearance)
   if (!name) throw new Error('Unknown portrait')
   const entry = manifest.portraits[name as keyof typeof manifest.portraits]
@@ -65,20 +69,29 @@ export const render_portrait = async (appearance: PortraitAppearance): Promise<B
     )
   )
   ctx.putImageData(source, 0, 0)
+  if (style.background) {
+    ctx.globalCompositeOperation = 'destination-over'
+    const background = await readFile(
+      new URL(`../public/portrait-share/backgrounds/${style.background}.png`, import.meta.url)
+    ).then(loadImage)
+    ctx.drawImage(background, 0, 0)
+  }
   return canvas.toBuffer('image/png')
 }
 
 export const serve_portrait = async (request: Request): Promise<Response> => {
   if (request.method !== 'GET' && request.method !== 'HEAD')
     return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } })
-  const appearance = parse_portrait_query(new URL(request.url).searchParams)
-  if (!appearance)
+  const query = new URL(request.url).searchParams
+  const appearance = parse_portrait_query(query)
+  const style = parse_portrait_style(query)
+  if (!appearance || !style)
     return new Response('Unknown portrait, revision or palette', {
       status: 400,
       headers: { 'Cache-Control': 'no-store' },
     })
   try {
-    const png = await render_portrait(appearance)
+    const png = await render_portrait(appearance, style)
     const etag = `"${createHash('sha256').update(png).digest('hex')}"`
     const headers = {
       'Content-Type': 'image/png',

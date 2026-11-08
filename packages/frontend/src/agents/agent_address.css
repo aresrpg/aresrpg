@@ -1,0 +1,27 @@
+.agent-address-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 11px;
+  color: #b9bdc5;
+}
+.agent-address-confirmation__address {
+  padding: 10px;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  color: #d8d9df;
+  background: #101820;
+  border: 1px solid #ffffff18;
+}
+.agent-address-confirmation label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.agent-address-confirmation input {
+  margin-top: 3px;
+  accent-color: #d8b574;
+  flex: none;
+}

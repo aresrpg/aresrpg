@@ -14,6 +14,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 
 import { DETAIL_TABS, character_detail_tab, character_detail_path } from './character_navigation.ts'
 import { CharacterWorkspace } from './CharacterWorkspace.tsx'
+import { EmptyEquipment } from './EmptyEquipment.tsx'
 
 // the doll/rows/stat-row primitives every character surface shares (one home)
 import '../components/character_surfaces.css'
@@ -54,11 +55,13 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
         })}
       </nav>
       {!character ? (
-        <div className="grid flex-1 place-items-center p-8 text-center">
-          <p className="text-[10px] tracking-[0.2em] text-muted uppercase">
-            {roster_loaded ? t('no_character') : copy.loading_universe}
-          </p>
-        </div>
+        roster_loaded ? (
+          <EmptyEquipment copy={copy} />
+        ) : (
+          <div className="grid flex-1 place-items-center p-8 text-center">
+            <p>{copy.loading_universe}</p>
+          </div>
+        )
       ) : (
         <Suspense
           fallback={

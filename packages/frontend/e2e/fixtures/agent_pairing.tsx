@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { createRoot } from 'react-dom/client'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
@@ -145,6 +145,12 @@ const inventory_fixture = {
 const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [open, set_open] = useState(false)
   const wallet = useAppStore((app) => app.session.wallet)
+  const candidate = useAppStore((app) => app.session.agent_pairing_candidate)
+  const confirmed = useAppStore((app) => app.session.inventory_pairing)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-agent-candidate', candidate?.signer_mode ?? '')
+    document.documentElement.setAttribute('data-agent-confirmed', String(!!confirmed))
+  }, [candidate, confirmed])
   const payer = new URLSearchParams(location.search).get('funding')
   if (new URLSearchParams(location.search).has('inventory') && wallet)
     return <AgentInventoryPanel wallet={wallet} copy={copy} recall={inventory_fixture} />
@@ -207,6 +213,10 @@ void load_app_copy('en')
     }
     // The fixture injects only the already-authenticated owner boundary; the real exchange verifies its proof.
     window.addEventListener('fixture/wallet', (event) => connect((event as CustomEvent<number>).detail))
-    createRoot(document.getElementById('root')!).render(<Fixture copy={copy} />)
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <Fixture copy={copy} />
+      </StrictMode>
+    )
   })
   .catch(console.error)

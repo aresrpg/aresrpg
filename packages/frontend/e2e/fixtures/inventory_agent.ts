@@ -36,6 +36,8 @@ export const inventory_agent_fixture = (items: readonly ItemRow[], fail_first: b
   })
   const recall = {
     transfer: actions('0xagent'),
+    characters: [],
+    pending: [],
     read_inventory: async () => ({
       items: items
         .filter(({ item_type }) => ['wheat', 'siluri'].includes(item_type))
@@ -71,11 +73,12 @@ export const inventory_agent_fixture = (items: readonly ItemRow[], fail_first: b
     wallet: {
       agent_deposit: () => actions('0xowner'),
       agent_transfer: actions('0xowner'),
+      read_agent_returns: async () => [],
       read_agent_recall: async () => {
         reads += 1
         if (fail_first && reads === 1) throw new Error('Synthetic inventory read failed')
         return recall
       },
-    } satisfies Pick<AuthSession, 'agent_deposit' | 'agent_transfer' | 'read_agent_recall'>,
+    } satisfies Pick<AuthSession, 'agent_deposit' | 'agent_transfer' | 'read_agent_recall' | 'read_agent_returns'>,
   }
 }

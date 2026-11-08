@@ -20,7 +20,7 @@ export const observe_agent_setup_requests = (
   send: ServerLink['send'],
   next_id: () => number
 ): void => {
-  const active = new Set<string>()
+  const active = new Map<string, string>()
   const pending = new Map<number, Readonly<{ input: AgentSetupInput; timer: ReturnType<typeof setTimeout> }>>()
   const fail_all = () => {
     for (const entry of pending.values()) {
@@ -30,8 +30,10 @@ export const observe_agent_setup_requests = (
     pending.clear()
   }
   const retire = () => {
-    for (const pairing_id of active) {
-      if (!send({ type: 'packet/agent_setup_request', id: next_id(), request: { action: 'cancel', pairing_id } }))
+    for (const [pairing_id, token] of active) {
+      if (
+        !send({ type: 'packet/agent_setup_request', id: next_id(), request: { action: 'cancel', pairing_id, token } })
+      )
         console.warn('Agent setup cancellation could not be sent; its server expiry still applies.')
     }
     active.clear()
@@ -42,7 +44,8 @@ export const observe_agent_setup_requests = (
       input.reject(new Error('SETUP_UNAVAILABLE'))
       return
     }
-    if (input.request.action === 'cancel') active.delete(input.request.pairing_id)
+    if (input.request.action === 'cancel' && active.get(input.request.pairing_id) === input.request.token)
+      active.delete(input.request.pairing_id)
     const id = next_id()
     const timer = setTimeout(() => {
       pending.delete(id)
@@ -67,13 +70,13 @@ export const observe_agent_setup_requests = (
         send({
           type: 'packet/agent_setup_request',
           id: next_id(),
-          request: { action: 'cancel', pairing_id: packet.result.pairing_id },
+          request: { action: 'cancel', pairing_id: packet.result.pairing_id, token: packet.result.token },
         })
       return
     }
     clearTimeout(entry.timer)
     pending.delete(packet.id)
-    if (packet.result.action === 'begin') active.add(packet.result.pairing_id)
+    if (packet.result.action === 'begin') active.set(packet.result.pairing_id, packet.result.token)
     entry.input.resolve(packet.result)
   })
   events.on('STATE_UPDATED', (state, previous) => {

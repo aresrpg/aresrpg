@@ -7,12 +7,14 @@ import type { AgentInventory } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { format_sui } from '../wallet_amount.ts'
+import { SuiLogo } from '../components/SuiLogo.tsx'
+import { KaresLogo } from '../components/KaresLogo.tsx'
 
 import type { AgentKioskController } from './useAgentKiosk.ts'
 import { agent_inventory_groups, type TransferToken } from './inventory_transfer.ts'
-import { AgentSetupButton } from './AgentSetup.tsx'
 import { AgentCoinTransfer } from './AgentCoinTransfer.tsx'
-import { AgentTransferReview } from './AgentTransferReview.tsx'
+import { AgentKioskIdentity } from './AgentKioskIdentity.tsx'
+import { AgentKioskCharacters } from './AgentKioskCharacters.tsx'
 import { AgentKioskGrid } from './AgentKioskGrid.tsx'
 import './agent_inventory.css'
 
@@ -28,10 +30,10 @@ export const AgentKioskPanel = ({
   offline: boolean
 }>) => {
   const [coin, set_coin] = useState<TransferToken | null>(null)
-  const { snapshot, pairing, state, review } = kiosk
-  const busy = disabled || !!review || state.phase === 'loading'
+  const { snapshot, pairing, state } = kiosk
+  const busy = disabled || kiosk.busy || state.phase === 'loading'
   const refreshable = [!offline, pairing, !busy].every(Boolean)
-  const controls_disabled = busy || state.phase !== 'ready'
+  const controls_disabled = busy || kiosk.blocked || state.phase !== 'ready'
   const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): boolean => {
     if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="player"]')) return false
     kiosk.offer(ids, 'withdraw')
@@ -52,12 +54,18 @@ export const AgentKioskPanel = ({
       {snapshot && (
         <>
           <AgentBalances inventory={snapshot.inventory} disabled={controls_disabled} choose={set_coin} />
-          <AgentKioskGrid rows={snapshot.inventory.items} copy={copy} disabled={controls_disabled} transfer={drop} />
+          <AgentKioskGrid
+            rows={snapshot.inventory.items}
+            copy={copy}
+            disabled={controls_disabled}
+            pending_ids={kiosk.pending_ids}
+            transfer={drop}
+          />
           <AgentPendingTransfers kiosk={kiosk} copy={copy} disabled={controls_disabled} />
+          <AgentKioskCharacters kiosk={kiosk} copy={copy} disabled={controls_disabled} />
+          {coin && <AgentCoinTransfer key={coin} token={coin} kiosk={kiosk} copy={copy} close={() => set_coin(null)} />}
         </>
       )}
-      {coin && <AgentCoinTransfer key={coin} token={coin} kiosk={kiosk} copy={copy} close={() => set_coin(null)} />}
-      <AgentKioskReview kiosk={kiosk} copy={copy} />
     </section>
   )
 }
@@ -71,8 +79,17 @@ const AgentBalances = ({
     {(['sui', 'kares'] as const).map((token) => {
       const balance = inventory[`${token}_mist`]
       return (
-        <button type="button" key={token} disabled={disabled} onClick={() => choose(token)}>
-          {token.toUpperCase()} <b>{balance === null ? '—' : format_sui(BigInt(balance), 4)}</b>
+        <button
+          type="button"
+          key={token}
+          aria-label={token.toUpperCase()}
+          disabled={disabled}
+          onClick={() => choose(token)}
+        >
+          <span className={token === 'sui' ? 'agent-sui-mark' : ''}>
+            {token === 'sui' ? <SuiLogo size={18} /> : <KaresLogo size={18} />}
+          </span>
+          <b>{balance === null ? '—' : format_sui(BigInt(balance), 4)}</b>
         </button>
       )
     })}
@@ -85,40 +102,16 @@ const AgentKioskStatus = ({
   offline,
 }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; offline: boolean }>) => {
   if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
-  if (!kiosk.pairing)
-    return (
-      <>
-        <p>{copy.ui.agent_inventory_connect}</p>
-        <AgentSetupButton copy={copy} />
-      </>
-    )
+  if (!kiosk.pairing) return <AgentKioskIdentity copy={copy} />
   return (
     <>
-      <p role="alert" hidden={!kiosk.state.error}>
-        {kiosk.state.error}
+      <p className="agent-transfer-error" role="alert" hidden={!(kiosk.state.error || kiosk.transaction?.error)}>
+        {kiosk.state.error || kiosk.transaction?.error}
       </p>
       <p role="status" hidden={kiosk.state.phase !== 'loading'}>
         {copy.loading_universe}
       </p>
     </>
-  )
-}
-
-const AgentKioskReview = ({ kiosk, copy }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy }>) => {
-  const { review, wallet, pairing } = kiosk
-  if (!review || !wallet) return null
-  return (
-    <AgentTransferReview
-      key={JSON.stringify(review.intent)}
-      wallet={wallet}
-      actions={review.actions}
-      intent={review.intent}
-      copy={copy}
-      funding_pairing={pairing ?? undefined}
-      allow_submit
-      close={() => kiosk.set_review(null)}
-      on_complete={kiosk.refresh}
-    />
   )
 }
 

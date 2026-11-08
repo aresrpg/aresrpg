@@ -1,0 +1,340 @@
+diff --git a/build/three.webgpu.js b/build/three.webgpu.js
+index f8fc49fe7df98cbac4609603a1f2a2c6aea79675..d3ee844842e69056f8b3a1c690884ae013d21ead 100644
+--- a/build/three.webgpu.js
++++ b/build/three.webgpu.js
+@@ -22987,6 +22987,13 @@ class Renderer {
+ 		 */
+ 		this._compilationPromises = null;
+ 
++		/**
++		 * Serializes CPU compilation sections that borrow renderer state.
++		 * @private
++		 * @type {?Promise<void>}
++		 */
++		this._compilationQueue = null;
++
+ 		/**
+ 		 * The state of the current precompilation in `compileAsync()`.
+ 		 * `null` when the renderer is not precompiling.
+@@ -23455,63 +23462,85 @@ class Renderer {
+ 
+ 		};
+ 
+-		for ( const item of compilationPromises ) {
++		// Node building temporarily owns renderer state, including across microtasks.
++		// Queue these sections, but keep GPU pipeline compilation parallel.
++		const previousCompilation = this._compilationQueue;
++		let releaseCompilation;
++		this._compilationQueue = new Promise( ( resolve ) => { releaseCompilation = resolve; } );
++		await previousCompilation;
+ 
+-			if ( item.computeNodes !== undefined ) {
++		try {
+ 
+-				// compute work queued by the drawing pipeline, e.g. its culling
++			for ( const item of compilationPromises ) {
+ 
+-				await this.compileComputeAsync( item.computeNodes );
++				if ( item.computeNodes !== undefined ) {
+ 
+-				onLoaded();
++					// compute work queued by the drawing pipeline, e.g. its culling
+ 
+-				continue;
++					await this.compileComputeAsync( item.computeNodes );
+ 
+-			}
++					onLoaded();
+ 
+-			const pipelinePromises = [];
++					continue;
+ 
+-			// each item is compiled with the state of the render call that queued it, e.g. a nested render into another target
++				}
+ 
+-			const itemPrecompilationState = item.precompilationState;
+-			itemPrecompilationState.item = item;
++				const pipelinePromises = [];
+ 
+-			this._beginPreCompile( itemPrecompilationState );
++				// each item is compiled with the state of the render call that queued it, e.g. a nested render into another target
+ 
+-			const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId );
+-			renderObject.drawRange = item.object.geometry.drawRange;
+-			renderObject.group = item.group;
++				const itemPrecompilationState = item.precompilationState;
++				itemPrecompilationState.item = item;
+ 
+-			await this._nodes.getForRenderAsync( renderObject, yieldPreCompile );
+-			this._nodes.updateBefore( renderObject );
+-			this._geometries.updateForRender( renderObject );
+-			this._nodes.updateForRender( renderObject );
+-			this._bindings.updateForRender( renderObject );
+-			this._pipelines.getForRender( renderObject, pipelinePromises );
+-			this._nodes.updateAfter( renderObject );
++				this._beginPreCompile( itemPrecompilationState );
+ 
+-			this._finishPreCompile();
++				try {
+ 
+-			if ( pipelinePromises.length > 0 ) {
++					const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId );
++					renderObject.drawRange = item.object.geometry.drawRange;
++					renderObject.group = item.group;
+ 
+-				const promise = Promise.all( pipelinePromises ).then( () => {
++					await this._nodes.getForRenderAsync( renderObject, yieldPreCompile );
++					this._nodes.updateBefore( renderObject );
++					this._geometries.updateForRender( renderObject );
++					this._nodes.updateForRender( renderObject );
++					this._bindings.updateForRender( renderObject );
++					this._pipelines.getForRender( renderObject, pipelinePromises );
++					this._nodes.updateAfter( renderObject );
+ 
+-					compilingPipelines.delete( promise );
+-					onLoaded();
++				} finally {
+ 
+-				} );
++					if ( this._precompilationState === itemPrecompilationState ) this._finishPreCompile();
+ 
+-				compilingPipelines.add( promise );
++				}
+ 
+-				while ( compilingPipelines.size >= _maxCompilingPipelines ) await Promise.race( compilingPipelines );
+ 
+-			} else {
++				if ( pipelinePromises.length > 0 ) {
+ 
+-				onLoaded();
++					const promise = Promise.all( pipelinePromises ).then( () => {
++
++						compilingPipelines.delete( promise );
++						onLoaded();
++
++					} );
++
++					compilingPipelines.add( promise );
++
++					while ( compilingPipelines.size >= _maxCompilingPipelines ) await Promise.race( compilingPipelines );
++
++				} else {
++
++					onLoaded();
++
++				}
++
++				if ( scheduler.needsYield() ) await scheduler.yield();
+ 
+ 			}
+ 
+-			if ( scheduler.needsYield() ) await scheduler.yield();
++		} finally {
++
++			releaseCompilation();
+ 
+ 		}
+ 
+@@ -23529,6 +23558,14 @@ class Renderer {
+ 	 */
+ 	_beginPreCompile( precompilationState ) {
+ 
++		// Restore the state at this resume, not the state when compilation was queued.
++
++		precompilationState.previousPrecompilationState = this._precompilationState;
++		precompilationState.outputRenderTarget = this._renderTarget;
++		precompilationState.activeCubeFace = this._activeCubeFace;
++		precompilationState.activeMipmapLevel = this._activeMipmapLevel;
++		precompilationState.outputMRT = this._mrt;
++
+ 		const { useFrameBufferTarget, renderTarget, mrt, renderContext, item } = precompilationState;
+ 
+ 		if ( useFrameBufferTarget === true ) this.setRenderTarget( renderTarget );
+@@ -23563,7 +23600,7 @@ class Renderer {
+ 	 */
+ 	_finishPreCompile() {
+ 
+-		const { useFrameBufferTarget, outputRenderTarget, activeCubeFace, activeMipmapLevel, outputMRT, previousRenderContext, item, materialSide } = this._precompilationState;
++		const { useFrameBufferTarget, outputRenderTarget, activeCubeFace, activeMipmapLevel, outputMRT, previousRenderContext, previousPrecompilationState, item, materialSide } = this._precompilationState;
+ 
+ 		if ( useFrameBufferTarget === true ) this.setRenderTarget( outputRenderTarget, activeCubeFace, activeMipmapLevel );
+ 		this.setMRT( outputMRT );
+@@ -23574,7 +23611,7 @@ class Renderer {
+ 
+ 		this._callDepth --;
+ 
+-		this._precompilationState = null;
++		this._precompilationState = previousPrecompilationState;
+ 
+ 	}
+ 
+diff --git a/src/renderers/common/Renderer.js b/src/renderers/common/Renderer.js
+index fb1255af55606f4ab915e2798a9174e9e00ee209..54498361a583196dcdb677f5fd74b6dab11e82b9 100644
+--- a/src/renderers/common/Renderer.js
++++ b/src/renderers/common/Renderer.js
+@@ -755,6 +755,13 @@ class Renderer {
+ 		 */
+ 		this._compilationPromises = null;
+ 
++		/**
++		 * Serializes CPU compilation sections that borrow renderer state.
++		 * @private
++		 * @type {?Promise<void>}
++		 */
++		this._compilationQueue = null;
++
+ 		/**
+ 		 * The state of the current precompilation in `compileAsync()`.
+ 		 * `null` when the renderer is not precompiling.
+@@ -1223,63 +1230,85 @@ class Renderer {
+ 
+ 		};
+ 
+-		for ( const item of compilationPromises ) {
++		// Node building temporarily owns renderer state, including across microtasks.
++		// Queue these sections, but keep GPU pipeline compilation parallel.
++		const previousCompilation = this._compilationQueue;
++		let releaseCompilation;
++		this._compilationQueue = new Promise( ( resolve ) => { releaseCompilation = resolve; } );
++		await previousCompilation;
+ 
+-			if ( item.computeNodes !== undefined ) {
++		try {
+ 
+-				// compute work queued by the drawing pipeline, e.g. its culling
++			for ( const item of compilationPromises ) {
+ 
+-				await this.compileComputeAsync( item.computeNodes );
++				if ( item.computeNodes !== undefined ) {
+ 
+-				onLoaded();
++					// compute work queued by the drawing pipeline, e.g. its culling
+ 
+-				continue;
++					await this.compileComputeAsync( item.computeNodes );
+ 
+-			}
++					onLoaded();
+ 
+-			const pipelinePromises = [];
++					continue;
+ 
+-			// each item is compiled with the state of the render call that queued it, e.g. a nested render into another target
++				}
+ 
+-			const itemPrecompilationState = item.precompilationState;
+-			itemPrecompilationState.item = item;
++				const pipelinePromises = [];
+ 
+-			this._beginPreCompile( itemPrecompilationState );
++				// each item is compiled with the state of the render call that queued it, e.g. a nested render into another target
+ 
+-			const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId );
+-			renderObject.drawRange = item.object.geometry.drawRange;
+-			renderObject.group = item.group;
++				const itemPrecompilationState = item.precompilationState;
++				itemPrecompilationState.item = item;
+ 
+-			await this._nodes.getForRenderAsync( renderObject, yieldPreCompile );
+-			this._nodes.updateBefore( renderObject );
+-			this._geometries.updateForRender( renderObject );
+-			this._nodes.updateForRender( renderObject );
+-			this._bindings.updateForRender( renderObject );
+-			this._pipelines.getForRender( renderObject, pipelinePromises );
+-			this._nodes.updateAfter( renderObject );
++				this._beginPreCompile( itemPrecompilationState );
+ 
+-			this._finishPreCompile();
++				try {
+ 
+-			if ( pipelinePromises.length > 0 ) {
++					const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId );
++					renderObject.drawRange = item.object.geometry.drawRange;
++					renderObject.group = item.group;
+ 
+-				const promise = Promise.all( pipelinePromises ).then( () => {
++					await this._nodes.getForRenderAsync( renderObject, yieldPreCompile );
++					this._nodes.updateBefore( renderObject );
++					this._geometries.updateForRender( renderObject );
++					this._nodes.updateForRender( renderObject );
++					this._bindings.updateForRender( renderObject );
++					this._pipelines.getForRender( renderObject, pipelinePromises );
++					this._nodes.updateAfter( renderObject );
+ 
+-					compilingPipelines.delete( promise );
+-					onLoaded();
++				} finally {
+ 
+-				} );
++					if ( this._precompilationState === itemPrecompilationState ) this._finishPreCompile();
+ 
+-				compilingPipelines.add( promise );
++				}
+ 
+-				while ( compilingPipelines.size >= _maxCompilingPipelines ) await Promise.race( compilingPipelines );
+ 
+-			} else {
++				if ( pipelinePromises.length > 0 ) {
+ 
+-				onLoaded();
++					const promise = Promise.all( pipelinePromises ).then( () => {
++
++						compilingPipelines.delete( promise );
++						onLoaded();
++
++					} );
++
++					compilingPipelines.add( promise );
++
++					while ( compilingPipelines.size >= _maxCompilingPipelines ) await Promise.race( compilingPipelines );
++
++				} else {
++
++					onLoaded();
++
++				}
++
++				if ( scheduler.needsYield() ) await scheduler.yield();
+ 
+ 			}
+ 
+-			if ( scheduler.needsYield() ) await scheduler.yield();
++		} finally {
++
++			releaseCompilation();
+ 
+ 		}
+ 
+@@ -1297,6 +1326,14 @@ class Renderer {
+ 	 */
+ 	_beginPreCompile( precompilationState ) {
+ 
++		// Restore the state at this resume, not the state when compilation was queued.
++
++		precompilationState.previousPrecompilationState = this._precompilationState;
++		precompilationState.outputRenderTarget = this._renderTarget;
++		precompilationState.activeCubeFace = this._activeCubeFace;
++		precompilationState.activeMipmapLevel = this._activeMipmapLevel;
++		precompilationState.outputMRT = this._mrt;
++
+ 		const { useFrameBufferTarget, renderTarget, mrt, renderContext, item } = precompilationState;
+ 
+ 		if ( useFrameBufferTarget === true ) this.setRenderTarget( renderTarget );
+@@ -1331,7 +1368,7 @@ class Renderer {
+ 	 */
+ 	_finishPreCompile() {
+ 
+-		const { useFrameBufferTarget, outputRenderTarget, activeCubeFace, activeMipmapLevel, outputMRT, previousRenderContext, item, materialSide } = this._precompilationState;
++		const { useFrameBufferTarget, outputRenderTarget, activeCubeFace, activeMipmapLevel, outputMRT, previousRenderContext, previousPrecompilationState, item, materialSide } = this._precompilationState;
+ 
+ 		if ( useFrameBufferTarget === true ) this.setRenderTarget( outputRenderTarget, activeCubeFace, activeMipmapLevel );
+ 		this.setMRT( outputMRT );
+@@ -1342,7 +1379,7 @@ class Renderer {
+ 
+ 		this._callDepth --;
+ 
+-		this._precompilationState = null;
++		this._precompilationState = previousPrecompilationState;
+ 
+ 	}
+ 

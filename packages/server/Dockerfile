@@ -14,7 +14,7 @@
 #   PORT, SUI_NETWORK, SUI_RPC_URL, ALLOWED_ORIGINS, MAX_PLAYERS
 # =============================================================================
 
-FROM oven/bun:1.3.5-slim@sha256:6111acec4c5a703f2069d6e681967c047920ff2883e7e5a5e64f4ac95ddeb27f AS runtime
+FROM oven/bun:1.4.4-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS runtime
 WORKDIR /app
 # CJK fallback for localized campaign OG cards.
 RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 # present for the install to resolve; only the server's own dependency closure is
 # copied as source below.
 COPY package.json bun.lock ./
-COPY patches patches
+COPY patches ./patches
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/

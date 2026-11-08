@@ -33,17 +33,6 @@ addEventListener('fixture/login', () => {
   dispatch_app({ type: 'auth/connected', session })
   dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
 })
-addEventListener('fixture/watch', () =>
-  dispatch_app({
-    type: 'agent/watch',
-    observation: {
-      pairing: { address: session.address, multisig_public_key: 'fixture', signer_mode: 'disposable' },
-      public_identifier: session.read_agent_pairing_request!('11111111-1111-4111-8111-111111111111')!
-        .zklogin_public_identifier,
-      character_id: null,
-    },
-  })
-)
 addEventListener('fixture/snapshot', () =>
   document.documentElement.setAttribute('data-session-wallet', read_app_state().session.wallet?.address ?? '')
 )

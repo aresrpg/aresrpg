@@ -2,14 +2,14 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 # Build from the repository root. This image never starts the realtime server.
 
-FROM oven/bun:1.3.5-slim@sha256:6111acec4c5a703f2069d6e681967c047920ff2883e7e5a5e64f4ac95ddeb27f AS runtime
+FROM oven/bun:1.4.4-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS runtime
 WORKDIR /app
 
 # The frozen lockfile spans the whole workspace, so every member's manifest must be
 # present for the install to resolve; only the bot's dependency closure is
 # copied as source below.
 COPY package.json bun.lock ./
-COPY patches patches
+COPY patches ./patches
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/

@@ -35,3 +35,27 @@ test('restored disposable metadata is retained as disposable, never upgraded', (
       .session.inventory_pairing
   ).toBeNull()
 })
+
+test('verified proof is only a candidate until explicit comparison, and replacement revokes consent', () => {
+  const original = automation_fixture(),
+    wallet = original.session.wallet!
+  const verified = reduce_app_state(original, { type: 'agent/pairing_verified', wallet, pairing })
+  expect(verified.session.agent_pairing_candidate).toEqual(pairing)
+  expect(verified.session.inventory_pairing).toBeNull()
+  const confirmed = reduce_app_state(verified, { type: 'agent/inventory_target', wallet, pairing })
+  expect(confirmed.session.agent_pairing_candidate).toBeNull()
+  expect(confirmed.session.inventory_pairing).toEqual(pairing)
+  const revoked = reduce_app_state(confirmed, { type: 'agent/inventory_target', wallet, pairing: null })
+  expect(revoked.session.inventory_pairing).toBeNull()
+  expect(revoked.session.agent_pairing_candidate).toEqual(pairing)
+  const replacement = reduce_app_state(confirmed, {
+    type: 'agent/pairing_verified',
+    wallet,
+    pairing: { ...pairing, address: 'other' },
+  })
+  expect(replacement.session.inventory_pairing).toBeNull()
+  expect(reduce_app_state(replacement, { type: 'auth/disconnected' }).session.agent_pairing_candidate).toBeNull()
+  expect(reduce_app_state(original, { type: 'agent/pairing_verified', wallet: { ...wallet }, pairing }).session).toBe(
+    original.session
+  )
+})

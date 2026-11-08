@@ -256,7 +256,7 @@ export default function EquipmentTab({
           selected={selected_ids}
           change={set_selected_ids}
           menu={set_menu}
-          disabled={committing}
+          disabled={[committing, kiosk.busy].some(Boolean)}
           drag_item={set_dragging_id}
           equip={equip}
           transfer={(ids, point) => {
@@ -265,14 +265,15 @@ export default function EquipmentTab({
             return true
           }}
         >
-          {filtered.map(({ item, amount }) => (
+          {filtered.map(({ item, amount, items }) => (
             <InventoryItemCell
               amount={amount}
               class_name={selected_ids.includes(item.id) ? 'is-selected' : ''}
               aria-pressed={selected_ids.includes(item.id)}
               item={item}
               key={item.id}
-              disabled={committing}
+              disabled={[committing, kiosk.busy].some(Boolean)}
+              pending={items.some(({ id }) => kiosk.pending_ids.has(id))}
               onClick={(event) => select_item(item, event.shiftKey)}
               onDoubleClick={(event) => {
                 if (!event.shiftKey) activate(item)

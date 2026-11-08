@@ -479,21 +479,25 @@ export function SDK({
       budget = gas_budget,
       include,
       gas_scope,
-    }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string } = {}
+      before_sign,
+    }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string; before_sign?: () => void } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     require_write_transport(sui_client)
     await execution.before_next()
     await prepare_transaction(tx, sender, { budget })
-    const signed = await sign(tx)
-    const { bytes, signature } = signed
-    return execute_signed(bytes, signature, { include, gas_scope })
+    let signed: Awaited<ReturnType<TransactionSigner>>
+    try {
+      before_sign?.()
+      signed = await sign(tx)
+    } catch (error) {
+      throw transaction_resolution_error(error)
+    }
+    return execute_signed(signed.bytes, signed.signature, { include, gas_scope })
   }
 
-  const execute = (
-    tx: Transaction,
-    options: Readonly<{ budget?: bigint | 'estimate'; include?: object; gas_scope?: string }> = {}
-  ): Promise<Receipt> => execution.enqueue(() => execute_now(tx, options))
+  const execute = (tx: Transaction, options: Readonly<Parameters<typeof execute_now>[1]> = {}): Promise<Receipt> =>
+    execution.enqueue(() => execute_now(tx, options))
   const sponsored = create_sponsored_execution({
     address: sender,
     sign,

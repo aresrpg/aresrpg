@@ -21,8 +21,11 @@ import {
   solana_rpc_result,
 } from './fixtures/solana_rpc.ts'
 
-const decode = (bytes: Uint8Array) =>
-  getCompiledTransactionMessageDecoder().decode(getTransactionDecoder().decode(bytes).messageBytes)
+const decode = (bytes: Uint8Array) => {
+  const message = getCompiledTransactionMessageDecoder().decode(getTransactionDecoder().decode(bytes).messageBytes)
+  if (message.version !== 0) throw new Error('Expected a version-0 funding transaction')
+  return message
+}
 const fixture = (balance = 10_000_000_000) => {
   const transactions: Uint8Array[] = []
   const wallet = {

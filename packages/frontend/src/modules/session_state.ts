@@ -8,6 +8,7 @@ import type { SessionState } from './session.ts'
 export const initial_session_state = (serial = 0): SessionState =>
   Object.freeze({
     agent_view: { ...initial_agent_view(), serial },
+    agent_pairing_candidate: null,
     inventory_pairing: null,
     character_creation: null,
     auth_status: 'idle',

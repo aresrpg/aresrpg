@@ -14,6 +14,7 @@ type InventoryItemCellProps = Readonly<Omit<ButtonHTMLAttributes<HTMLButtonEleme
     item: Readonly<Omit<ItemRow, 'kiosk'>>
     amount?: number
     show_level?: boolean
+    pending?: boolean
   }>
 
 /** The canonical compact inventory item. Every inventory subset reuses this exact cell. */
@@ -21,6 +22,7 @@ export const InventoryItemCell = ({
   class_name = '',
   item,
   show_level = false,
+  pending,
   amount = item.amount,
   title: _title,
   type = 'button',
@@ -33,6 +35,7 @@ export const InventoryItemCell = ({
         data-selection-id={item.id}
         className={`chr-cell ${class_name}`.trim()}
         aria-label={item.name}
+        aria-busy={pending}
         type={type}
         {...button_props}
         onClick={on_click}
@@ -42,6 +45,7 @@ export const InventoryItemCell = ({
         ) : (
           <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
         )}
+        <span className="inventory-item-pending" hidden={!pending} aria-hidden="true" />
         {amount > 1 && <span className="chr-cell__amount tabular-nums">×{amount}</span>}
         {show_level && <span className="chr-cell__lvl tabular-nums">{item.level}</span>}
       </button>

@@ -5,7 +5,11 @@ import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_agent_multisig } from '@aresrpg/sdk/agent-multisig'
 
-import { read_agent_identities, remember_agent_identity } from '../../src/agents/pairing_storage.ts'
+import {
+  complete_agent_pairing,
+  read_agent_identities,
+  remember_agent_identity,
+} from '../../src/agents/pairing_storage.ts'
 
 const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })
 const request = {
@@ -49,4 +53,36 @@ test('multiple public recovery identities survive reload, deduplicate, and never
   expect(read_agent_identities(storage, { ...request, owner: 'other' })).toEqual([])
   expect([...rows.values()][0]).not.toContain('signer_mode')
   expect(() => remember_agent_identity(null, request, pairing(1))).toThrow('storage')
+})
+
+test('setup publishes nothing unless persistent canonical identity is durably saved', () => {
+  const rows = new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => rows.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      rows.set(key, value)
+    },
+    removeItem: (key: string) => {
+      rows.delete(key)
+    },
+  }
+  expect(complete_agent_pairing(storage, request, pairing(1))).toBeNull()
+  expect(read_agent_identities(storage, request)[0]?.signer_mode).toBe('disposable')
+  expect(complete_agent_pairing(null, request, pairing(1))).toBe('storage')
+  expect(
+    complete_agent_pairing(
+      {
+        ...storage,
+        setItem: () => {
+          throw new Error('quota')
+        },
+      },
+      request,
+      pairing(2)
+    )
+  ).toBe('storage')
+  expect(complete_agent_pairing({ ...storage, setItem: () => undefined }, request, pairing(2))).toBe('storage')
+  expect(complete_agent_pairing(storage, request, { ...pairing(1), signer_mode: 'disposable' })).toBe('disposable')
+  expect(() => complete_agent_pairing(storage, { ...request, owner: 'other' }, pairing(1))).toThrow()
+  expect(() => complete_agent_pairing(storage, request, { ...pairing(1), multisig_public_key: 'malformed' })).toThrow()
 })

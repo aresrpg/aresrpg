@@ -7,7 +7,11 @@
 import { describe, expect, test } from 'bun:test'
 
 import { GAS_BUDGET_MIST, SDK, absorb_receipt, type Receipt, type SuiTransport } from '../src/client.ts'
-import { executed_transaction_digest, pre_submission_version_race } from '../src/transaction_error.ts'
+import {
+  executed_transaction_digest,
+  pre_submission_failure,
+  pre_submission_version_race,
+} from '../src/transaction_error.ts'
 
 import { changed, digest, fake_client, id, pins, signer } from './helpers/transport.ts'
 
@@ -238,6 +242,131 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.balances).toBe(2) // cached UI read + post-receipt UI read
   })
 
+  test('a rejected wallet signature permits a later explicit attempt without submitting or reporting a receipt', async () => {
+    const client = fake_client({ simulate_ok: true })
+    const rejection = new Error('User rejected the signature request')
+    let rejected = true
+    let signatures = 0
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        if (rejected) throw rejection
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+    const observed: unknown[] = []
+    sdk.on_transaction((execution) => observed.push(execution))
+
+    const error = await sdk.execute(sdk.tx()).catch((error: unknown) => error)
+    expect(pre_submission_failure(error)).toBeTrue()
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).cause).toBe(rejection)
+    expect(signatures).toBe(1)
+    expect(client.calls.executions).toBe(0)
+    expect(observed).toEqual([])
+    expect(sdk.is_transaction_idle()).toBeTrue()
+
+    rejected = false
+    await sdk.execute(sdk.tx())
+    expect(signatures).toBe(2)
+    expect(client.calls.executions).toBe(1)
+    expect(observed).toEqual([{ digest: expect.any(String), outcome: 'success' }])
+  })
+
+  test.each(['build', 'queue'])('operation invalidated during %s never signs or submits', async (stage) => {
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const client = fake_client({ simulate_ok: true })
+    let signatures = 0
+    let current = true
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+    const observed: unknown[] = []
+    sdk.on_transaction((execution) => observed.push(execution))
+    const blocked = sdk.tx()
+    blocked.addBuildPlugin(async (_data, _options, next) => {
+      entered.resolve()
+      await release.promise
+      await next()
+    })
+    const predecessor =
+      stage === 'queue'
+        ? sdk
+            .execute(blocked, {
+              before_sign: () => {
+                throw new Error('Queue predecessor retired')
+              },
+            })
+            .catch((error: unknown) => error)
+        : Promise.resolve()
+    const pending = sdk
+      .execute(stage === 'build' ? blocked : sdk.tx(), {
+        before_sign: () => {
+          if (!current) throw new Error('Operation retired')
+        },
+      })
+      .catch((error: unknown) => error)
+    await entered.promise
+    current = false
+    release.resolve()
+    const error = await pending
+    const previous = await predecessor
+    if (stage === 'queue') expect(String(previous)).toContain('Queue predecessor retired')
+    expect(pre_submission_failure(error)).toBeTrue()
+    expect(String(error)).toContain('Operation retired')
+    expect(signatures).toBe(0)
+    expect(client.calls.executions).toBe(0)
+    expect(observed).toEqual([])
+    expect(sdk.is_transaction_idle()).toBeTrue()
+  })
+
+  test('operation guard runs after predecessor receipt visibility, before another signature', async () => {
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const client = fake_client({ simulate_ok: true })
+    const wait = client.core.waitForTransaction
+    client.core.waitForTransaction = async (input) => {
+      entered.resolve()
+      await release.promise
+      return wait(input)
+    }
+    let current = true
+    let signatures = 0
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+    await sdk.execute(sdk.tx())
+    const pending = sdk
+      .execute(sdk.tx(), {
+        before_sign: () => {
+          if (!current) throw new Error('Operation retired')
+        },
+      })
+      .catch((error: unknown) => error)
+    await entered.promise
+    current = false
+    release.resolve()
+    expect(pre_submission_failure(await pending)).toBeTrue()
+    expect(signatures).toBe(1)
+    expect(client.calls.executions).toBe(1)
+  })
+
   test('refuses a bad transaction before opening the wallet', async () => {
     const client = fake_client({ simulate_ok: false })
     let signatures = 0
@@ -287,7 +416,9 @@ describe('the execute gate (core interface)', () => {
     const transaction = sdk.tx()
     transaction.transferObjects([transaction.gas], id(98))
 
-    await expect(sdk.execute(transaction)).rejects.toThrow(/transaction \S+ failed on-chain.*scribe locked/)
+    const error = await sdk.execute(transaction).catch((error: unknown) => error)
+    expect(String(error)).toMatch(/transaction \S+ failed on-chain.*scribe locked/)
+    expect(pre_submission_failure(error)).toBeFalse()
     expect(client.calls.executions).toBe(1)
   })
 

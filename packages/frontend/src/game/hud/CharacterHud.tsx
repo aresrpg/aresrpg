@@ -78,9 +78,7 @@ export const CharacterHud = ({
   if (!enabled) return null
   return (
     <>
-      {panel && character && (
-        <CharacterWindow tab={panel} character={character} copy={copy} session={session} close={close} />
-      )}
+      {panel && <CharacterWindow tab={panel} character={character} copy={copy} session={session} close={close} />}
       {dialog === 'leave_game' && (
         <ConfirmDialog
           title={copy.ui.leave_game_title}

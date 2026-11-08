@@ -15,6 +15,7 @@ import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
+import { agent_connect_url } from './src/agents/entry_intent.ts'
 import { create_landing_assets, landing_links } from './src/landing/presentation.ts'
 import { LandingPage } from './src/landing/LandingPage.tsx'
 import type { LandingCopy } from './src/landing/landing_types.ts'
@@ -64,7 +65,7 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
         item_bow: `${icon_root}/items/amberwood_recurve_hd.png`,
       }),
       links: landing_links(env.app_url, env.discord_url),
-      agent_connect_url: new URL('/connect-agent?intent=connect-agent', env.app_url).href,
+      agent_connect_url: agent_connect_url(env.app_url),
       on_play: () => {},
     })
   )

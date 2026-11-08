@@ -6,14 +6,21 @@ import type { AuthSession } from '../auth.ts'
 import type { SessionState } from '../modules/session.ts'
 import type { AppInput } from '../store.ts'
 
-export type AgentInventoryInput = Readonly<{
-  type: 'agent/inventory_target'
-  wallet: AuthSession
-  pairing: AgentPairingIdentity | null
-}>
+export type AgentInventoryInput = Readonly<
+  | { type: 'agent/inventory_target'; wallet: AuthSession; pairing: AgentPairingIdentity | null }
+  | { type: 'agent/pairing_verified'; wallet: AuthSession; pairing: AgentPairingIdentity }
+>
 
-/** Explicit full-address verification selects this session's inventory, not a provider or observation. */
+/** Proof discovers an unconfirmed candidate; explicit comparison alone selects a transfer target. */
 export const fold_agent_inventory_target = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type !== 'agent/inventory_target' || input.wallet !== session.wallet) return session
-  return { ...session, inventory_pairing: input.pairing && Object.freeze({ ...input.pairing }) }
+  if (input.type !== 'agent/inventory_target' && input.type !== 'agent/pairing_verified') return session
+  if (input.wallet !== session.wallet) return session
+  const pairing = input.pairing && Object.freeze({ ...input.pairing })
+  if (input.type === 'agent/pairing_verified')
+    return { ...session, agent_pairing_candidate: pairing, inventory_pairing: null }
+  return {
+    ...session,
+    inventory_pairing: pairing,
+    agent_pairing_candidate: pairing ? null : (session.inventory_pairing ?? session.agent_pairing_candidate),
+  }
 }

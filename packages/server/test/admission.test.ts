@@ -133,6 +133,6 @@ test('actual websocket pending flood stays bounded while a proved replacement ca
     // Bun 1.3.5 retains replaced sockets in its stop promise after their CLOSED events.
     // The forced listener shutdown is synchronous; prove it instead of awaiting that counter.
     void server.stop(true)
-    await expect(fetch(endpoint)).rejects.toMatchObject({ code: 'ConnectionRefused' })
+    await expect(fetch(endpoint)).rejects.toMatchObject({ code: 'ECONNREFUSED' })
   }
 })

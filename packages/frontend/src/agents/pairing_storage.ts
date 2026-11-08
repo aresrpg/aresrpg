@@ -46,3 +46,23 @@ export const remember_agent_identity = (
     )
   )
 }
+
+/** A fresh setup must save public recovery metadata before it can publish a connected candidate. */
+export const complete_agent_pairing = (
+  storage: AuthStorage | null,
+  request: AgentPairingRequest | null,
+  identity: AgentPairingIdentity
+): 'storage' | 'disposable' | null => {
+  owner_agent_identity(identity, request)
+  if (identity.signer_mode !== 'host-persistent') return 'disposable'
+  try {
+    if (!request) throw new Error('Google identity unavailable')
+    remember_agent_identity(storage, request, identity)
+    if (!read_agent_identities(storage, request).some((row) => row.address === identity.address))
+      throw new Error('Recovery identity was not retained')
+    return null
+  } catch (error) {
+    console.error('Agent recovery identity could not be saved.', error)
+    return 'storage'
+  }
+}

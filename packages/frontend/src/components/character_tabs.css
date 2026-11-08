@@ -128,3 +128,7 @@
 .character-tab[data-delegated='recall'] .character-tab-bot {
   color: #d9b07a;
 }
+
+[data-character-tab-menu] > button {
+  min-height: 44px;
+}

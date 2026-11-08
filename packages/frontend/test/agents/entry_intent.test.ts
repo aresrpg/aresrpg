@@ -2,16 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { agent_connect_url, consumed_agent_entry_url, is_agent_entry } from '../../src/agents/entry_intent.ts'
+import { agent_connect_url, consumed_agent_entry_url } from '../../src/agents/entry_intent.ts'
 import { env } from '../../src/env.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 test('agent entry uses the configured app URL and preserves other URL fields when consumed', () => {
-  expect(agent_connect_url()).toBe(new URL('/connect-agent?intent=connect-agent', env.app_url).href)
-  expect(agent_connect_url('https://game.example/')).toBe('https://game.example/connect-agent?intent=connect-agent')
+  expect(agent_connect_url()).toBe(new URL('/world?intent=connect-agent', env.app_url).href)
+  expect(agent_connect_url('https://game.example/')).toBe('https://game.example/world?intent=connect-agent')
   expect(
     consumed_agent_entry_url({ pathname: '/', search: '?keep=one&intent=connect-agent&keep=two', hash: '#anchor' })
-  ).toBe('/connect-agent?keep=one&keep=two#anchor')
+  ).toBe('/?keep=one&keep=two#anchor')
   expect(consumed_agent_entry_url({ pathname: '/', search: '?intent=unknown', hash: '' })).toBeNull()
   expect(consumed_agent_entry_url({ pathname: '/', search: '', hash: '' })).toBeNull()
 })
@@ -29,13 +29,16 @@ test('agent dialog requires a session and survives the first empty or repeated r
   expect(reduce_app_state(first, { type: 'auth/disconnected' }).navigation.dialog).toBeNull()
 })
 
-test('the lightweight route survives reload and logout while the open-modal intent stays one-shot', () => {
-  expect(is_agent_entry({ pathname: '/connect-agent', search: '' })).toBe(true)
-  expect(is_agent_entry({ pathname: '/', search: '?intent=connect-agent' })).toBe(true)
-  expect(is_agent_entry({ pathname: '/', search: '' })).toBe(false)
-  expect(is_agent_entry({ pathname: '/practice', search: '' })).toBe(false)
-  expect(consumed_agent_entry_url({ pathname: '/connect-agent', search: '', hash: '' })).toBeNull()
+test('legacy direct links open the normal World flow once without retaining a separate logout route', () => {
+  for (const pathname of ['/connect-agent', '/connect-agent/']) {
+    expect(consumed_agent_entry_url({ pathname, search: '', hash: '' })).toBe('/world')
+    expect(consumed_agent_entry_url({ pathname, search: '?keep=one&intent=connect-agent', hash: '#anchor' })).toBe(
+      '/world?keep=one#anchor'
+    )
+  }
+  expect(consumed_agent_entry_url({ pathname: '/world', search: '', hash: '' })).toBeNull()
+  expect(consumed_agent_entry_url({ pathname: '/world', search: '?intent=connect-agent', hash: '' })).toBe('/world')
   const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const route = reduce_app_state(base, { type: 'route/changed', pathname: '/connect-agent' })
-  expect(reduce_app_state(route, { type: 'auth/disconnected' }).navigation.pathname).toBe('/connect-agent')
+  expect(reduce_app_state(route, { type: 'auth/disconnected' }).navigation.pathname).toBe('/')
 })

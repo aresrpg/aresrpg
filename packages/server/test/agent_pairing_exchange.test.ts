@@ -3,9 +3,10 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { randomBytes } from 'node:crypto'
 import { EventEmitter } from 'node:events'
 
-import { afterAll, beforeAll, expect, test } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, expect, test } from 'bun:test'
 import { Redis } from 'ioredis'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
@@ -58,10 +59,100 @@ afterAll(async () => {
   if (directory) await rm(directory, { recursive: true, force: true })
 })
 
+beforeEach(async () => {
+  await redis.flushdb()
+})
+const fresh_token = () => randomBytes(32).toString('base64url')
+
+test('an account reuses one unexpired request across replicas without extending its lifetime', async () => {
+  const token = fresh_token()
+  const first = await exchange.begin(owner, google.toBase64(), 10_000, token)
+  const lifetime = await redis.pttl(`agent-pairing:${first.id}`)
+  const writes = () => redis.info('commandstats').then((info) => info.match(/cmdstat_set:calls=(\d+)/)?.[1])
+  const writes_before = await writes()
+  const replica = create_pairing_exchange(redis)
+  const repeated = await Promise.all(
+    Array.from({ length: 20 }, () => replica.begin(owner, google.toBase64(), 10_000, token))
+  )
+  expect(repeated.every((link) => link.id === first.id && link.token === first.token)).toBe(true)
+  expect(await redis.keys('agent-pairing:*')).toEqual([`agent-pairing:${first.id}`])
+  expect(await redis.keys('agent-pairing-owner:*')).toHaveLength(1)
+  expect(await redis.pttl(`agent-pairing:${first.id}`)).toBeLessThanOrEqual(lifetime)
+  expect(await writes()).toBe(writes_before)
+})
+
+test('concurrent fresh attempts keep one request and only the newest capability can read, complete or cancel it', async () => {
+  const replica = create_pairing_exchange(redis)
+  const links = await Promise.all(
+    Array.from({ length: 25 }, () => replica.begin(owner, google.toBase64(), 10_000, fresh_token()))
+  )
+  expect(new Set(links.map((link) => link.id)).size).toBe(1)
+  expect(await redis.dbsize()).toBe(2)
+  const reads = await Promise.allSettled(links.map((link) => exchange.setup(link.id, link.token)))
+  expect(reads.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+  const current = links[reads.findIndex((result) => result.status === 'fulfilled')]!
+  const retired = links.find((link) => link.token !== current.token)!
+  await expect(exchange.status(owner, retired.id, retired.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  await expect(exchange.cancel(owner, retired.id, retired.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  const client = await bootstrap_disposable_agent(await exchange.setup(current.id, current.token))
+  await expect(exchange.complete(retired.id, retired.token, client.response)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  expect(await exchange.status(owner, current.id, current.token)).toBeNull()
+  await exchange.complete(current.id, current.token, client.response)
+  const resumed = await exchange.begin(owner, google.toBase64(), 10_000, current.token)
+  expect(resumed).toEqual(current)
+  expect((await exchange.status(owner, resumed.id, resumed.token))?.address).toBe(client.signer.address)
+  const recovered = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  expect(recovered.id).toBe(current.id)
+  expect((await exchange.status(owner, recovered.id, recovered.token))?.address).toBe(client.signer.address)
+  await expect(exchange.status(owner, current.id, current.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  await expect(exchange.complete(recovered.id, recovered.token, client.response)).rejects.toThrow(
+    'PAIRING_ALREADY_COMPLETED'
+  )
+  await exchange.cancel(owner, recovered.id, recovered.token)
+  expect(await redis.dbsize()).toBe(0)
+})
+
+test('completion and capability rotation are atomic and leave the new attempt usable', async () => {
+  const first = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  const client = await bootstrap_disposable_agent(await exchange.setup(first.id, first.token))
+  const completed = exchange.complete(first.id, first.token, client.response).then(
+    () => true,
+    () => false
+  )
+  const next = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  const won = await completed
+  const identity = await exchange.status(owner, next.id, next.token)
+  expect(identity?.address ?? null).toBe(won ? client.signer.address : null)
+  await expect(exchange.cancel(owner, first.id, first.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  if (!won) await exchange.complete(next.id, next.token, client.response)
+  expect((await exchange.status(owner, next.id, next.token))?.address).toBe(client.signer.address)
+  expect(await redis.dbsize()).toBe(2)
+})
+
+test('owners stay isolated and expiry creates a fresh request without leaving an old index', async () => {
+  const second_google = toZkLoginPublicIdentifier(2n, 'https://accounts.google.com', { legacyAddress: false })
+  const first = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  const second = await exchange.begin(second_google.toSuiAddress(), second_google.toBase64(), 10_000, fresh_token())
+  expect(second.id).not.toBe(first.id)
+  expect(await redis.dbsize()).toBe(4)
+  await expect(exchange.begin(other, google.toBase64(), 10_000, fresh_token())).rejects.toThrow()
+  await expect(exchange.cancel(second_google.toSuiAddress(), first.id, first.token)).rejects.toThrow(
+    'PAIRING_UNAVAILABLE'
+  )
+  await redis.pexpire(`agent-pairing:${first.id}`, 1)
+  await Bun.sleep(10)
+  const replacement = await exchange.begin(owner, google.toBase64(), 10_000, first.token)
+  expect(replacement.id).not.toBe(first.id)
+  expect(await redis.get(`agent-pairing-owner:${owner}`)).toBe(replacement.id)
+  expect(await redis.dbsize()).toBe(4)
+  expect((await exchange.setup(second.id, second.token)).owner).toBe(second_google.toSuiAddress())
+  await expect(exchange.setup(first.id, first.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+})
+
 test('one capability exchanges only public proof and the owning game session reads the result', async () => {
-  const link = await exchange.begin(owner, google.toBase64(), 10_000)
-  expect(await exchange.status(owner, link.id)).toBeNull()
-  await expect(exchange.status(other, link.id)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  const link = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  expect(await exchange.status(owner, link.id, link.token)).toBeNull()
+  await expect(exchange.status(other, link.id, link.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
   await expect(exchange.setup(link.id, 'wrong')).rejects.toThrow('PAIRING_UNAVAILABLE')
   const request = await exchange.setup(link.id, link.token)
   const agent = await bootstrap_disposable_agent(request)
@@ -70,7 +161,7 @@ test('one capability exchanges only public proof and the owning game session rea
     exchange.complete(link.id, link.token, agent.response),
   ])
   expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
-  expect((await exchange.status(owner, link.id))?.address).toBe(agent.signer.address)
+  expect((await exchange.status(owner, link.id, link.token))?.address).toBe(agent.signer.address)
   await expect(exchange.complete(link.id, link.token, agent.response)).rejects.toThrow('PAIRING_ALREADY_COMPLETED')
   const stored = await redis.get(`agent-pairing:${link.id}`)
   expect(stored).not.toContain(link.token)
@@ -79,17 +170,19 @@ test('one capability exchanges only public proof and the owning game session rea
 })
 
 test('a proof for another request cannot complete this request; expired capabilities cannot revive it', async () => {
-  const a = await exchange.begin(owner, google.toBase64(), 10_000)
-  const b = await exchange.begin(owner, google.toBase64(), 10_000)
+  const a = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
   const agent = await bootstrap_disposable_agent(await exchange.setup(a.id, a.token))
+  await exchange.cancel(owner, a.id, a.token)
+  const b = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
+  expect(b.id).not.toBe(a.id)
   await expect(exchange.complete(b.id, b.token, agent.response)).rejects.toThrow()
-  expect(await exchange.status(owner, b.id)).toBeNull()
-  await redis.pexpire(`agent-pairing:${a.id}`, 1)
+  expect(await exchange.status(owner, b.id, b.token)).toBeNull()
+  await redis.pexpire(`agent-pairing:${b.id}`, 1)
   await Bun.sleep(10)
-  await expect(exchange.complete(a.id, a.token, agent.response)).rejects.toThrow('PAIRING_UNAVAILABLE')
-  await expect(exchange.status(owner, a.id)).rejects.toThrow('PAIRING_UNAVAILABLE')
-  await expect(exchange.begin(other, google.toBase64(), 1000)).rejects.toThrow()
-  await expect(exchange.begin(owner, google.toBase64(), 0)).rejects.toThrow('INVALID_PAIRING_LIFETIME')
+  await expect(exchange.complete(b.id, b.token, agent.response)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  await expect(exchange.status(owner, b.id, b.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  await expect(exchange.begin(other, google.toBase64(), 1000, fresh_token())).rejects.toThrow()
+  await expect(exchange.begin(owner, google.toBase64(), 0, fresh_token())).rejects.toThrow('INVALID_PAIRING_LIFETIME')
 })
 
 test('authenticated session creates one setup link; HTTP client returns proof and session detects completion', async () => {
@@ -126,11 +219,11 @@ test('authenticated session creates one setup link; HTTP client returns proof an
         JSON.stringify({
           type: 'packet/agent_setup_request',
           id: 0,
-          request: { action: 'begin', public_identifier: google.toBase64(), owner: other },
+          request: { action: 'begin', public_identifier: google.toBase64(), token: fresh_token(), owner: other },
         })
       )
     ).toThrow()
-    const begun = await send(1, { action: 'begin', public_identifier: google.toBase64() })
+    const begun = await send(1, { action: 'begin', public_identifier: google.toBase64(), token: fresh_token() })
     if (begun.action !== 'begin') throw Error('No setup link')
     const link = `http://127.0.0.1:${server.port}/api/agent-setup?id=${begun.pairing_id}#${begun.token}`
     const instructions = await fetch(link).then((response) => response.text())
@@ -141,8 +234,8 @@ test('authenticated session creates one setup link; HTTP client returns proof an
     const uuid = crypto.randomUUID()
     const proof = await signer.sign_personal_message(new TextEncoder().encode(`aresrpg::${uuid}`))
     expect(await verify_login({ ...proof, uuid, address: signer.address })).toBe(true)
-    await expect(exchange.cancel(other, begun.pairing_id)).rejects.toThrow('PAIRING_UNAVAILABLE')
-    expect(await send(2, { action: 'status', pairing_id: begun.pairing_id })).toEqual({
+    await expect(exchange.cancel(other, begun.pairing_id, begun.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
+    expect(await send(2, { action: 'status', pairing_id: begun.pairing_id, token: begun.token })).toEqual({
       action: 'status',
       identity: {
         address: signer.address,
@@ -153,8 +246,10 @@ test('authenticated session creates one setup link; HTTP client returns proof an
     await expect(bootstrap_setup_link(link, { fetch, bootstrap: bootstrap_disposable_agent })).rejects.toThrow(
       'SETUP_COMPLETION_FAILED'
     )
-    expect(await send(3, { action: 'cancel', pairing_id: begun.pairing_id })).toEqual({ action: 'cancel' })
-    expect(await send(4, { action: 'status', pairing_id: begun.pairing_id })).toEqual({
+    expect(await send(3, { action: 'cancel', pairing_id: begun.pairing_id, token: begun.token })).toEqual({
+      action: 'cancel',
+    })
+    expect(await send(4, { action: 'status', pairing_id: begun.pairing_id, token: begun.token })).toEqual({
       action: 'error',
       error: 'unavailable',
     })
@@ -165,14 +260,14 @@ test('authenticated session creates one setup link; HTTP client returns proof an
 })
 
 test('concurrent completion cannot survive acknowledged owner cancellation', async () => {
-  const link = await exchange.begin(owner, google.toBase64(), 10_000)
+  const link = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
   const agent = await bootstrap_disposable_agent(await exchange.setup(link.id, link.token))
   const results = await Promise.allSettled([
     exchange.complete(link.id, link.token, agent.response),
-    exchange.cancel(owner, link.id),
+    exchange.cancel(owner, link.id, link.token),
   ])
   expect(results[1]?.status).toBe('fulfilled')
-  await expect(exchange.status(owner, link.id)).rejects.toThrow('PAIRING_UNAVAILABLE')
+  await expect(exchange.status(owner, link.id, link.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
   await expect(exchange.complete(link.id, link.token, agent.response)).rejects.toThrow('PAIRING_UNAVAILABLE')
 })
 
@@ -186,7 +281,7 @@ const setup_reply = async (sent: ServerPacket[], id: number) => {
 }
 
 test('player boundary cancels during pending status with its shared read allowance exhausted', async () => {
-  const link = await exchange.begin(owner, google.toBase64(), 10_000)
+  const link = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
   const status = Promise.withResolvers<void>()
   const started = Promise.withResolvers<void>()
   const wires = wire({ character_ids: [] })
@@ -209,16 +304,16 @@ test('player boundary cancels during pending status with its shared read allowan
   const send = (id: number, request: AgentSetupRequest) =>
     player.on_message(JSON.stringify({ type: 'packet/agent_setup_request', id, request }))
   try {
-    send(1, { action: 'status', pairing_id: link.id })
+    send(1, { action: 'status', pairing_id: link.id, token: link.token })
     await started.promise
-    send(2, { action: 'begin', public_identifier: google.toBase64() })
+    send(2, { action: 'begin', public_identifier: google.toBase64(), token: fresh_token() })
     expect(wires.sent).toContainEqual({ type: 'packet/error', id: 2, reason: 'rate limited' })
-    send(3, { action: 'cancel', pairing_id: link.id })
+    send(3, { action: 'cancel', pairing_id: link.id, token: link.token })
     expect(await setup_reply(wires.sent, 3)).toEqual({ action: 'cancel' })
     await expect(exchange.setup(link.id, link.token)).rejects.toThrow('PAIRING_UNAVAILABLE')
     status.resolve()
     expect(await setup_reply(wires.sent, 1)).toEqual({ action: 'error', error: 'unavailable' })
-    send(4, { action: 'status', pairing_id: link.id })
+    send(4, { action: 'status', pairing_id: link.id, token: link.token })
     expect(wires.sent).toContainEqual({ type: 'packet/error', id: 4, reason: 'rate limited' })
   } finally {
     status.resolve()
@@ -227,7 +322,7 @@ test('player boundary cancels during pending status with its shared read allowan
 })
 
 test('account replacement cannot cancel another owner; admitted old cancellation survives socket close without late replies', async () => {
-  const link = await exchange.begin(owner, google.toBase64(), 10_000)
+  const link = await exchange.begin(owner, google.toBase64(), 10_000, fresh_token())
   const release = Promise.withResolvers<void>()
   const status_started = Promise.withResolvers<void>()
   const cancel_started = Promise.withResolvers<void>()
@@ -253,7 +348,11 @@ test('account replacement cannot cancel another owner; admitted old cancellation
   const next = create_player({ ...next_wires, address: other, admin: false, agent_pairing: exchange })
   const send = (player: typeof old, id: number, action: 'status' | 'cancel') =>
     player.on_message(
-      JSON.stringify({ type: 'packet/agent_setup_request', id, request: { action, pairing_id: link.id } })
+      JSON.stringify({
+        type: 'packet/agent_setup_request',
+        id,
+        request: { action, pairing_id: link.id, token: link.token },
+      })
     )
   try {
     send(old, 1, 'status')
@@ -278,7 +377,7 @@ test('account replacement cannot cancel another owner; admitted old cancellation
 })
 
 test('server status preserves the signed persistent-mode declaration and public identity', async () => {
-  const link = await exchange.begin(owner, google.toBase64(), 5_000)
+  const link = await exchange.begin(owner, google.toBase64(), 5_000, fresh_token())
   const keypair = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(7))
   const client = await prepare_agent_pairing(await exchange.setup(link.id, link.token), {
     storage: 'persistent',
@@ -287,7 +386,7 @@ test('server status preserves the signed persistent-mode declaration and public 
     sign_transaction: (bytes) => keypair.signTransaction(bytes),
   })
   await exchange.complete(link.id, link.token, client.response)
-  expect(await exchange.request(owner, { action: 'status', pairing_id: link.id })).toEqual({
+  expect(await exchange.request(owner, { action: 'status', pairing_id: link.id, token: link.token })).toEqual({
     action: 'status',
     identity: {
       address: client.signer.address,
@@ -295,5 +394,5 @@ test('server status preserves the signed persistent-mode declaration and public 
       signer_mode: 'host-persistent',
     },
   })
-  await exchange.cancel(owner, link.id)
+  await exchange.cancel(owner, link.id, link.token)
 })

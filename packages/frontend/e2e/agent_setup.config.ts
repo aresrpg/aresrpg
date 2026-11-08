@@ -12,7 +12,7 @@ const root = file_url_to_path(new URL('../../../', import.meta.url))
 export default defineConfig({
   ...base,
   testMatch: [
-    '**/agent_lightweight.pw.ts',
+    '**/agent_boot.pw.ts',
     '**/agent_entry.pw.ts',
     '**/agent_setup.pw.ts',
     '**/agent_pairing.pw.ts',

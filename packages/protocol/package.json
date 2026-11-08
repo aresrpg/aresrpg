@@ -2,7 +2,7 @@
   "name": "@aresrpg/protocol",
   "version": "1.0.0",
   "private": true,
-  "description": "The one wire contract between the app and the server — every packet fully shaped, imported by both sides",
+  "description": "The one wire contract between the app and the server \u2014 every packet fully shaped, imported by both sides",
   "type": "module",
   "exports": {
     ".": "./src/packets.ts"
@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "typescript": "~6.0.3",
-    "@types/bun": "^1.4.2"
+    "@types/bun": "^1.4.4"
   },
   "dependencies": {
     "@aresrpg/fight": "workspace:*",

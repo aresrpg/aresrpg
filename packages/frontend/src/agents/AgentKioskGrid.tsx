@@ -5,7 +5,6 @@ import type { ItemRow } from '@aresrpg/protocol'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
-import { InventoryFilters } from '../characters/InventoryFilters.tsx'
 import { InventoryItemCell } from '../characters/InventoryItemCell.tsx'
 import { InventorySelectionGrid } from '../characters/InventorySelectionGrid.tsx'
 import { bag_item_matches, type BagCategory, type ResourceFilter } from '../characters/InventoryResourceFilters.tsx'
@@ -13,6 +12,7 @@ import { select_inventory_item } from '../characters/inventory_selection.ts'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { SendModalShell } from '../components/SendModalShell.tsx'
 
+import { AgentKioskFilters } from './AgentKioskFilters.tsx'
 import { agent_inventory_groups } from './inventory_transfer.ts'
 
 export const AgentKioskGrid = ({
@@ -20,10 +20,12 @@ export const AgentKioskGrid = ({
   copy,
   disabled,
   transfer,
+  pending_ids,
 }: Readonly<{
   rows: readonly AgentInventoryItem[]
   copy: AppCopy
   disabled: boolean
+  pending_ids: ReadonlySet<string>
   transfer: (ids: readonly string[], point: Readonly<{ x: number; y: number }>) => boolean
 }>) => {
   const [category, set_category] = useState<BagCategory>('equipment')
@@ -39,7 +41,7 @@ export const AgentKioskGrid = ({
   )
   return (
     <>
-      <InventoryFilters
+      <AgentKioskFilters
         category={category}
         set_category={(value) => {
           set_category(value)
@@ -61,12 +63,13 @@ export const AgentKioskGrid = ({
         disabled={disabled}
         transfer={transfer}
       >
-        {filtered.map(({ item, amount, status, locked }) => (
+        {filtered.map(({ item, items, amount, status, locked }) => (
           <div className="agent-kiosk__cell" key={item.id}>
             <InventoryItemCell
               item={item}
               amount={amount}
               disabled={disabled || locked}
+              pending={items.some(({ id }) => pending_ids.has(id))}
               aria-pressed={selected.includes(item.id)}
               class_name={selected.includes(item.id) ? 'is-selected' : ''}
               onClick={(event) =>

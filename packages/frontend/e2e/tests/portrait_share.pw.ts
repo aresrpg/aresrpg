@@ -39,3 +39,53 @@ test('character-tab sharing previews the clicked character without changing sele
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
 })
+
+test('all approved backdrops share the exact preview PNG and reset safely to transparency', async ({ page }) => {
+  await page.route('**/api/portrait?**', async (route) => {
+    const response = await serve_portrait(new Request(route.request().url()))
+    await route.fulfill({
+      status: response.status,
+      contentType: 'image/png',
+      body: Buffer.from(await response.arrayBuffer()),
+    })
+  })
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/e2e/fixtures/agent_setup.html')
+  await page.locator('[data-character-tabs] [data-character-tab]').first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Share portrait', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Share portrait', exact: true })
+  const preview = dialog.getByRole('img', { name: 'Character portrait' })
+  const original = await preview.getAttribute('src')
+  await expect(dialog.getByRole('radio')).toHaveCount(9)
+  for (const [label, slug] of [
+    ['Fire', 'fire'],
+    ['Water', 'water'],
+    ['Wind', 'wind'],
+    ['Marble', 'marble'],
+    ['Purple Shadow', 'shadow'],
+    ['Sand', 'sand'],
+    ['Dark Cobblestone', 'cobblestone'],
+    ['Milky White', 'milk'],
+  ]) {
+    await dialog.getByTitle(label, { exact: true }).click()
+    await expect(dialog.getByRole('radio', { name: label, exact: true })).toBeChecked()
+    await expect(preview).toHaveAttribute('src', new RegExp(`bg=${slug}$`))
+    const source = (await preview.getAttribute('src'))!
+    await expect(dialog.getByRole('link', { name: 'Download PNG' })).toHaveAttribute('href', source)
+    await expect(dialog.getByRole('link', { name: 'Download PNG' })).toHaveAttribute(
+      'download',
+      new RegExp(`_${slug}\\.png$`)
+    )
+    const url = new URL(source, page.url()).href
+    await expect(dialog.getByRole('textbox', { name: 'Copy image link' })).toHaveValue(url)
+    await dialog.getByRole('button', { name: 'Copy image link', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(url)
+  }
+  await dialog.getByTitle('Transparent', { exact: true }).click()
+  await expect(dialog.getByRole('radio', { name: 'Transparent', exact: true })).toBeChecked()
+  await expect(preview).toHaveAttribute('src', original!)
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click()
+  await page.locator('[data-character-tabs] [data-character-tab]').first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Share portrait', exact: true }).click()
+  await expect(dialog.getByRole('radio', { name: 'Transparent', exact: true })).toBeChecked()
+})

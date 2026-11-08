@@ -4,6 +4,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import type { DetailTab } from '../../characters/character_navigation.ts'
 import type { CharacterSession } from '../../characters/character_session.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
+import { EmptyEquipment } from '../../characters/EmptyEquipment.tsx'
 import '../../characters/characters.css'
 import '../../components/character_surfaces.css'
 
@@ -47,7 +48,7 @@ export const CharacterWindow = ({
   close,
 }: Readonly<{
   tab: DetailTab
-  character: Readonly<CharacterRow>
+  character?: Readonly<CharacterRow>
   copy: AppCopy
   session?: CharacterSession
   close: () => void
@@ -62,13 +63,17 @@ export const CharacterWindow = ({
         data-character-panel={tab}
         title={title}
         icon={<CarvedIcon name={tab_layout.icon} />}
-        meta={`${character.name} · ${character.level}`}
+        meta={character ? `${character.name} · ${character.level}` : undefined}
         close={close}
         close_label={copy.wallet_close}
       >
         <div className="game-character-body aui-workspace-main">
           <Suspense fallback={<div className="p-8">{copy.loading_universe}</div>}>
-            <PanelBody tab={tab} character={character} copy={copy} session={session} />
+            {character ? (
+              <PanelBody tab={tab} character={character} copy={copy} session={session} />
+            ) : (
+              <EmptyEquipment copy={copy} />
+            )}
           </Suspense>
         </div>
       </GameWindow>

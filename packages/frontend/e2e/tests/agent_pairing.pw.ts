@@ -2,10 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { execFileSync as exec_file_sync } from 'node:child_process'
 
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { expect, test, type Page } from '@playwright/test'
 
 import { mock_funding } from '../support/funding.ts'
 import { bootstrap_setup_link } from '../../../sdk/examples/agent_setup.ts'
+import { prepare_agent_pairing } from '../../../sdk/src/agent_signer.ts'
 import { bootstrap_disposable_agent } from '../../../sdk/examples/agent_bootstrap.ts'
 
 const origin = 'http://127.0.0.1:5198'
@@ -23,7 +25,7 @@ const setup_url = (prompt: string) => {
 }
 const authorized = (url: URL) => ({ headers: { authorization: `Bearer ${url.hash.slice(1)}` } })
 
-test('Connect → one prompt → automatic proof return → local server authentication', async ({ page }) => {
+test('disposable proof still authenticates locally but never connects or enables custody', async ({ page }) => {
   const dialog = await open_setup(page)
   const warning = dialog.getByText(
     'Public-key verification only. This disposable key is lost when the agent process exits. Never send assets to this identity.'
@@ -32,22 +34,21 @@ test('Connect → one prompt → automatic proof return → local server authent
   await expect(dialog.locator('details')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/agent-chooser-subtitle.png' })
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
-  const prompt = dialog.getByRole('textbox', { name: 'Copy setup request', exact: true })
+  const prompt = dialog.locator('.agent-prompt')
   await expect(prompt).toBeVisible()
-  await expect(dialog.locator('textarea')).toHaveCount(1)
+  await expect(dialog.locator('textarea')).toHaveCount(0)
+  await expect(dialog.locator('.agent-provider-card')).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0)
   await expect(warning).toBeHidden()
   await expect(dialog.getByText('Pairing alone moves no assets.')).toHaveCount(0)
-  const payload = await prompt.inputValue()
+  const payload = (await prompt.textContent())!
   expect(payload).toContain(`${new URL(page.url()).origin}/agents/client.txt`)
   expect(payload).toContain('does not authorize asset transfers or gameplay')
   const url = setup_url(payload)
   const signer = await bootstrap_setup_link(url.href, { fetch, bootstrap: bootstrap_disposable_agent })
-  await expect(dialog.locator('[data-paired-address]')).toHaveText(signer.address, { timeout: 10_000 })
+  await expect(dialog.getByRole('alert')).toContainText('temporary credentials', { timeout: 10_000 })
+  await expect(page.locator('[data-agent-connected-hint]')).toHaveCount(0)
   await expect(prompt).toHaveCount(0)
-  await expect(
-    dialog.getByText('Agent key verified. This is not server authentication or character custody.')
-  ).toBeVisible()
-  await expect(warning).toBeVisible()
   const uuid = crypto.randomUUID()
   const proof = await signer.sign_personal_message(new TextEncoder().encode(`aresrpg::${uuid}`))
   const result = exec_file_sync(
@@ -63,26 +64,55 @@ test('Connect → one prompt → automatic proof return → local server authent
   await page.keyboard.press('Escape')
   await page.reload()
   const restored = await open_setup(page)
-  await expect(restored.getByText('Saved agent recovery', { exact: true })).toBeVisible()
-  await expect(restored.locator('output').filter({ hasText: signer.address })).toBeVisible()
-  await restored.getByRole('checkbox').check()
-  await expect(restored.getByRole('button', { name: 'Recall', exact: true })).toBeVisible()
+  await expect(restored.getByText('Saved agent recovery', { exact: true })).toHaveCount(0)
   await expect(restored.locator('[data-agent-transfer-review]')).toHaveCount(0)
+})
+
+test('persistent signed proof replaces setup with a hint and retains only an unconfirmed session candidate', async ({
+  page,
+}) => {
+  const dialog = await open_setup(page)
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
+  const prompt = dialog.locator('.agent-prompt')
+  await expect(prompt).toBeVisible()
+  const key = new Ed25519Keypair()
+  await bootstrap_setup_link(setup_url((await prompt.textContent())!).href, {
+    fetch,
+    bootstrap: (input) =>
+      prepare_agent_pairing(input, {
+        storage: 'persistent',
+        public_key: key.getPublicKey(),
+        sign_personal_message: (bytes) => key.signPersonalMessage(bytes),
+        sign_transaction: async () => {
+          throw new Error('No transactions in this fixture')
+        },
+      }),
+  })
+  await expect(page.locator('[data-agent-connected-hint]')).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('[data-agent-setup]')).toHaveCount(0)
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(0)
+  await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', 'host-persistent')
+  await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', 'host-persistent')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
 })
 
 test('cancel and expiry retire the link and reject late public proofs', async ({ page, request }) => {
   const dialog = await open_setup(page)
   const begin = dialog.getByRole('button', { name: 'Connect', exact: true })
-  const prompt = dialog.getByRole('textbox', { name: 'Copy setup request', exact: true })
+  const prompt = dialog.locator('.agent-prompt')
   await begin.click()
   await expect(prompt).toBeVisible()
-  const cancelled = setup_url(await prompt.inputValue())
+  const cancelled = setup_url((await prompt.textContent())!)
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(prompt).toHaveCount(0)
   await expect.poll(async () => (await request.get(cancelled.href, authorized(cancelled))).status()).toBe(403)
   await begin.click()
   await expect(prompt).toBeVisible()
-  const expired = setup_url(await prompt.inputValue())
+  const expired = setup_url((await prompt.textContent())!)
   const pending = await request.get(expired.href, authorized(expired)).then((reply) => reply.json())
   const agent = await bootstrap_disposable_agent(pending)
   await request.post(`${origin}/fixture/expire?id=${expired.searchParams.get('id')}`)
@@ -122,16 +152,16 @@ test('a late begin reply cannot restore a cancelled attempt', async ({ page, req
 test('account replacement and close cancel their owning setup', async ({ page, request }) => {
   const dialog = await open_setup(page)
   const begin = dialog.getByRole('button', { name: 'Connect', exact: true })
-  const prompt = dialog.getByRole('textbox', { name: 'Copy setup request', exact: true })
+  const prompt = dialog.locator('.agent-prompt')
   await begin.click()
   await expect(prompt).toBeVisible()
-  const old = setup_url(await prompt.inputValue())
+  const old = setup_url((await prompt.textContent())!)
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture/wallet', { detail: 1 })))
   await expect(prompt).toHaveCount(0)
   await expect.poll(async () => (await request.get(old.href, authorized(old))).status()).toBe(403)
   await begin.click()
   await expect(prompt).toBeVisible()
-  const closed = setup_url(await prompt.inputValue())
+  const closed = setup_url((await prompt.textContent())!)
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect.poll(async () => (await request.get(closed.href, authorized(closed))).status()).toBe(403)

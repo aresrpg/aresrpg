@@ -112,7 +112,7 @@ export const agent_transfer_actions = (
         gas_mist: gas_mist.toString(),
         gas_budget_mist: transaction.getData().gasData.budget,
         // Recheck the exact reviewed transaction against current chain state before signing.
-        confirm: async () => {
+        confirm: async ({ before_sign }: Readonly<{ before_sign?: () => void }> = {}) => {
           if (consumed) throw new Error('This review was already submitted. Reconcile its outcome first.')
           consumed = true
           const reviewed = Transaction.from(serialized)
@@ -125,7 +125,7 @@ export const agent_transfer_actions = (
           } catch (error) {
             throw transaction_resolution_error(error)
           }
-          const receipt = await sdk.execute(reviewed, { include: { objectTypes: true } })
+          const receipt = await sdk.execute(reviewed, { include: { objectTypes: true }, before_sign })
           return Object.freeze({ digest: receipt_digest(receipt), receipt })
         },
       })

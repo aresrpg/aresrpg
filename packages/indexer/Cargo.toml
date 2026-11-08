@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 # --- Sui ingestion framework (Mysten) ---------------------------------------
-# Pinned to mainnet-v1.82.3; decodes mainnet checkpoint 330185168.
+# Decodes captured mainnet checkpoint 330185168.
 # Move compilation and native verification share the root-manifest toolchain pin.
 # `default-features = false` drops the optional Postgres pipeline;
 # checkpoint types come from the crate's `types` re-export so we can never

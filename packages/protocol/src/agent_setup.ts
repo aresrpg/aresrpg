@@ -8,8 +8,8 @@ export type AgentPairingIdentity = Readonly<{
 }>
 export const AGENT_SETUP_PATH = '/api/agent-setup'
 export type AgentSetupRequest =
-  | Readonly<{ action: 'begin'; public_identifier: string }>
-  | Readonly<{ action: 'status' | 'cancel'; pairing_id: string }>
+  | Readonly<{ action: 'begin'; public_identifier: string; token: string }>
+  | Readonly<{ action: 'status' | 'cancel'; pairing_id: string; token: string }>
 export type AgentSetupResult =
   | Readonly<{ action: 'begin'; pairing_id: string; token: string }>
   | Readonly<{ action: 'status'; identity: AgentPairingIdentity | null }>
@@ -18,9 +18,13 @@ export type AgentSetupResult =
 export const valid_agent_setup_request = (value: unknown): value is AgentSetupRequest => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const request = value as Record<string, unknown>
-  if (Object.keys(request).length !== 2) return false
-  if (request.action === 'begin') return typeof request.public_identifier === 'string'
-  return (request.action === 'status' || request.action === 'cancel') && typeof request.pairing_id === 'string'
+  const field = request.action === 'begin' ? 'public_identifier' : 'pairing_id'
+  return [
+    Object.keys(request).length === 3,
+    /^[A-Za-z0-9_-]{43}$/.test(typeof request.token === 'string' ? request.token : ''),
+    ['begin', 'status', 'cancel'].includes(request.action as string),
+    typeof request[field] === 'string',
+  ].every(Boolean)
 }
 
 export type AgentObservation = Readonly<{

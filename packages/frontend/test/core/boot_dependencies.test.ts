@@ -5,36 +5,31 @@ import { dirname, resolve } from 'node:path'
 
 import { expect, test } from 'bun:test'
 
-test.each(['game_entry.tsx', 'agents/AgentEntry.tsx'])(
-  '%s reaches no Three.js runtime before loading a game surface',
-  async (entry) => {
-    const packages = resolve(import.meta.dir, '../../..')
-    const pending = [resolve(import.meta.dir, '../../src', entry)]
-    const visited = new Set<string>()
-    const violations: string[] = []
-    const transpilers = {
-      ts: new Bun.Transpiler({ loader: 'ts' }),
-      tsx: new Bun.Transpiler({ loader: 'tsx', tsconfig: { compilerOptions: { jsx: 'react' } } }),
-    }
-    while (pending.length) {
-      const file = pending.pop()!
-      if (visited.has(file)) continue
-      visited.add(file)
-      // Erase type-only edges; lazy imports belong to their own lifecycle, not boot.
-      const transpiler = file.endsWith('x') ? transpilers.tsx : transpilers.ts
-      const source = transpiler.transformSync(await Bun.file(file).text())
-      const imports = transpiler.scanImports(source).filter(({ kind }) => kind === 'import-statement')
-      violations.push(
-        ...imports.filter(({ path }) => /^three(?:\/|$)/.test(path)).map(({ path }) => `${file}: ${path}`)
-      )
-      pending.push(
-        ...imports
-          .filter(({ path }) => /^(?:\.|@aresrpg\/)/.test(path))
-          .map(({ path }) => Bun.resolveSync(path, dirname(file)))
-          .filter((path) => path.startsWith(`${packages}/`) && /\.[jt]sx?$/.test(path))
-      )
-    }
-    expect(visited.size).toBeGreaterThan(1)
-    expect(violations).toEqual([])
+test.each(['game_entry.tsx'])('%s reaches no Three.js runtime before loading a game surface', async (entry) => {
+  const packages = resolve(import.meta.dir, '../../..')
+  const pending = [resolve(import.meta.dir, '../../src', entry)]
+  const visited = new Set<string>()
+  const violations: string[] = []
+  const transpilers = {
+    ts: new Bun.Transpiler({ loader: 'ts' }),
+    tsx: new Bun.Transpiler({ loader: 'tsx', tsconfig: { compilerOptions: { jsx: 'react' } } }),
   }
-)
+  while (pending.length) {
+    const file = pending.pop()!
+    if (visited.has(file)) continue
+    visited.add(file)
+    // Erase type-only edges; lazy imports belong to their own lifecycle, not boot.
+    const transpiler = file.endsWith('x') ? transpilers.tsx : transpilers.ts
+    const source = transpiler.transformSync(await Bun.file(file).text())
+    const imports = transpiler.scanImports(source).filter(({ kind }) => kind === 'import-statement')
+    violations.push(...imports.filter(({ path }) => /^three(?:\/|$)/.test(path)).map(({ path }) => `${file}: ${path}`))
+    pending.push(
+      ...imports
+        .filter(({ path }) => /^(?:\.|@aresrpg\/)/.test(path))
+        .map(({ path }) => Bun.resolveSync(path, dirname(file)))
+        .filter((path) => path.startsWith(`${packages}/`) && /\.[jt]sx?$/.test(path))
+    )
+  }
+  expect(visited.size).toBeGreaterThan(1)
+  expect(violations).toEqual([])
+})

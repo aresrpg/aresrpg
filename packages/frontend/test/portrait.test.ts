@@ -7,6 +7,8 @@ import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { color_portrait_pixels, serve_portrait } from '../server/portrait.ts'
 import { portrait_url, parse_portrait_query, character_display_image } from '../../immutable/src/portrait.ts'
 import manifest from '../../../seed/portraits/manifest.json' with { type: 'json' }
+
+import reviewed from './fixtures/portrait_material_samples.json' with { type: 'json' }
 const appearance = { classe: 'senshi', sex: 'male', color_1: 0xffffff, color_2: 0xd9af57, color_3: 0x8b6539 }
 const pixels = async (bytes: Uint8Array) => {
   const image = await loadImage(Buffer.from(bytes))
@@ -164,3 +166,48 @@ test('Senshi female covers hair tips without tinting ear, face or shoulder trim'
     expect({ x, y, hair: mask.data[offset + 2] }).toEqual({ x, y, hair: 0 })
   }
 })
+
+// Source-preservation and material landmarks reviewed against the 2026-11-08 portrait masters.
+test('extended portraits preserve original upper art and anchor every torso at the bottom', async () => {
+  for (const [name, expected_hash] of Object.entries(reviewed.original_upper_800_sha256)) {
+    const source = await pixels(
+      await readFile(new URL(`../../../seed/icons/characters/${name}_hd.png`, import.meta.url))
+    )
+    const upper_hash = createHash('sha256')
+      .update(source.data.subarray(0, 800 * 1024 * 4))
+      .digest('hex')
+    expect({ name, upper_hash }).toEqual({ name, upper_hash: expected_hash })
+    const bottom = source.data.subarray(1023 * 1024 * 4)
+    expect({ name, reaches_bottom: Array.from(bottom).some((value, index) => index % 4 === 3 && value > 127) }).toEqual(
+      {
+        name,
+        reaches_bottom: true,
+      }
+    )
+  }
+}, 30000)
+
+test('reviewed lower-body material slots and protected skin remain pixel aligned', async () => {
+  for (const sample of reviewed.samples) {
+    const mask = await pixels(await readFile(new URL(`../../../seed/portraits/${sample.name}.png`, import.meta.url)))
+    const offset = (sample.y * mask.width + sample.x) * 4
+    const channels = Array.from(mask.data.slice(offset, offset + 3))
+    if (sample.slot === 0) expect({ sample, channels }).toEqual({ sample, channels: [0, 0, 0] })
+    else {
+      expect({ sample, selected: channels[sample.slot - 1]! > 0 }).toEqual({ sample, selected: true })
+      expect(channels.every((value, index) => index === sample.slot - 1 || value === 0)).toBeTrue()
+    }
+  }
+}, 30000)
+
+test('reviewed arms continue below shoulder cutoffs without tinting fixed armor or skin', async () => {
+  for (const sample of reviewed.arm_landmarks) {
+    const source = await pixels(
+      await readFile(new URL(`../../../seed/icons/characters/${sample.name}_hd.png`, import.meta.url))
+    )
+    const mask = await pixels(await readFile(new URL(`../../../seed/portraits/${sample.name}.png`, import.meta.url)))
+    const offset = (sample.y * source.width + sample.x) * 4
+    expect({ sample, visible: source.data[offset + 3]! > 127 }).toEqual({ sample, visible: true })
+    expect(Array.from(mask.data.slice(offset, offset + 3))).toEqual([0, 0, 0])
+  }
+}, 30000)

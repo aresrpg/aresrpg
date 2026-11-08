@@ -8,6 +8,7 @@ export type PairingState = Readonly<{
   status: 'idle' | 'starting' | 'waiting' | 'failed' | 'verified'
   public_identifier: string | null
   link: string | null
+  failure?: 'storage' | 'disposable'
   identity: AgentPairingIdentity | null
 }>
 export type PairingInput = Readonly<
@@ -15,7 +16,7 @@ export type PairingInput = Readonly<
   | { type: 'start'; public_identifier: string | null }
   | { type: 'link'; attempt: number; link: string }
   | { type: 'verified'; attempt: number; identity: AgentPairingIdentity }
-  | { type: 'failed'; attempt: number }
+  | { type: 'failed'; attempt: number; failure?: 'storage' | 'disposable' }
 >
 export const EMPTY_PAIRING: PairingState = {
   attempt: 0,
@@ -40,6 +41,6 @@ export const reduce_pairing = (state: PairingState, input: PairingInput): Pairin
     case 'verified':
       return { ...state, status: 'verified', public_identifier: null, link: null, identity: input.identity }
     case 'failed':
-      return { ...state, status: 'failed', public_identifier: null, link: null, identity: null }
+      return { ...state, status: 'failed', failure: input.failure, public_identifier: null, link: null, identity: null }
   }
 }

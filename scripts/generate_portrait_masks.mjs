@@ -14,6 +14,13 @@ const digest = (bytes) => createHash('sha256').update(bytes).digest('hex')
 const smooth = (low, high, value) => Math.max(0, Math.min(1, (value - low) / (high - low)))
 const filters = {
   any: () => 1,
+  // Red armor highlights stay colored while neutral metal sleeves remain fixed.
+  armor_red: ([r, g]) => smooth(1.15, 1.25, r / Math.max(g, 0.001)),
+  // Keep tattoo pigment separate from warm skin shadows.
+  tattoo_red: ([r, g, b]) =>
+    smooth(1.45, 1.7, r / Math.max(g, 0.001)) *
+    (1 - smooth(1.25, 1.45, g / Math.max(b, 0.001))) *
+    smooth(0.25, 0.35, (Math.max(r, g, b) - Math.min(r, g, b)) / Math.max(r, g, b, 0.001)),
   red: ([r, g, b]) => smooth(0.12, 0.22, r - Math.max(g, b)) * smooth(0.035, 0.085, r - g - (g - b) * 1.4),
   blue: ([r, g, b]) => smooth(0.015, 0.06, b - r) * smooth(-0.03, 0.015, b - g),
   cyan: ([r, g, b]) => smooth(0.025, 0.08, Math.min(g, b) - r),

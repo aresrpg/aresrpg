@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.portrait-share-checkerboard {
+  background-color: #191720;
+  background-image: conic-gradient(#25222e 25%, transparent 0 50%, #25222e 0 75%, transparent 0);
+  background-size: 16px 16px;
+}

@@ -33,7 +33,7 @@ export const ContextMenu = ({ x, y, children }: Readonly<{ x: number; y: number;
   }, [x, y])
   return createPortal(
     <div
-      className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[140] max-h-[calc(100dvh-16px)] min-w-[min(168px,calc(100vw-16px))] max-w-[calc(100vw-16px)] overflow-y-auto divide-y divide-white/10 text-[11px]`}
+      className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[140] w-max max-h-[calc(100dvh-16px)] max-w-[calc(100vw-16px)] overflow-y-auto divide-y divide-white/10 text-[11px]`}
       onPointerDown={(event) => event.stopPropagation()}
       ref={menu}
       role="menu"

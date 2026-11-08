@@ -39,19 +39,15 @@ export const AgentPrompt = ({
   }
   return (
     <>
-      <Button tone="primary" className="agent-connect" disabled={disabled} onClick={() => void copy_request()}>
-        {text('agent_copy_request')}
-      </Button>
-      <div hidden={disabled} className="agent-setup-details">
-        <p>{hint ?? text('agent_paste_request')}</p>
-        <textarea
-          aria-label={text('agent_copy_request')}
-          readOnly
-          value={request}
-          rows={4}
-          className="w-full resize-y rounded border border-white/15 bg-black/20 p-2 text-xs text-text"
-        />
-        <p role="status" hidden={status === 'idle'}>
+      <div className="agent-setup-details">
+        <p hidden={disabled}>{hint ?? text('agent_paste_request')}</p>
+        <pre hidden={disabled} aria-label={text('agent_copy_request')} className="agent-prompt" tabIndex={0}>
+          {request}
+        </pre>
+        <Button tone="primary" className="agent-connect" disabled={disabled} onClick={() => void copy_request()}>
+          {text('agent_copy_request')}
+        </Button>
+        <p role="status" className={status === 'copied' ? 'sr-only' : undefined} hidden={status === 'idle'}>
           {status === 'failed' ? text('agent_copy_failed') : copy_text(copy.wallet_send_shared)('copied')}
         </p>
       </div>

@@ -19,7 +19,8 @@ const controller = (phase: 'failed' | 'loading') =>
   ({
     pairing: { address: 'agent' },
     state: { phase, error: 'RPC unavailable' },
-    review: null,
+    transaction: { phase: 'idle' },
+    pending_ids: new Set(),
     refresh: () => {
       throw new Error('Rendering must not load')
     },
@@ -52,7 +53,21 @@ test('a failed refresh retains display data but disables transfers until discove
     snapshot: { inventory: { items: [], sui_mist: '1000000000', kares_mist: null } },
   } as unknown as AgentKioskController
   const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />)
-  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>SUI /)
+  expect(html).toMatch(/<button[^>]*aria-label="SUI"[^>]*disabled=""/)
   expect(html).not.toMatch(/<button[^>]*aria-label="Refresh"[^>]*disabled/)
   expect(html).toContain('RPC unavailable')
+})
+
+test('inventory uses compact filters and official coin marks without the rejected review surface', () => {
+  const kiosk = {
+    ...controller('failed'),
+    snapshot: { inventory: { items: [], sui_mist: '1', kares_mist: null } },
+  } as unknown as AgentKioskController
+  const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />)
+  expect(html).toContain('agent-kiosk__categories')
+  expect(html).toContain('data-sui-logo')
+  expect(html).toContain('agent-sui-mark')
+  expect(html).not.toContain('chr-bagtab')
+  expect(html).not.toContain('Transfer review')
+  expect(html).not.toContain('Check transaction')
 })

@@ -27,7 +27,7 @@ test('setup reuses session packet IDs and cancels a late begin after session inv
   const first = new Promise<AgentSetupResult>((resolve, reject) =>
     events.emit('agent_setup/request', {
       wallet,
-      request: { action: 'begin', public_identifier: 'public' },
+      request: { action: 'begin', public_identifier: 'public', token: 'capability' },
       resolve,
       reject,
     })
@@ -35,7 +35,7 @@ test('setup reuses session packet IDs and cancels a late begin after session inv
   expect(sent[0]).toEqual({
     type: 'packet/agent_setup_request',
     id: 1,
-    request: { action: 'begin', public_identifier: 'public' },
+    request: { action: 'begin', public_identifier: 'public', token: 'capability' },
   })
   events.emit('server/packet', {
     packet: {
@@ -48,7 +48,7 @@ test('setup reuses session packet IDs and cancels a late begin after session inv
   const pending = new Promise<AgentSetupResult>((resolve, reject) =>
     events.emit('agent_setup/request', {
       wallet,
-      request: { action: 'begin', public_identifier: 'public' },
+      request: { action: 'begin', public_identifier: 'public', token: 'capability' },
       resolve,
       reject,
     })
@@ -65,7 +65,43 @@ test('setup reuses session packet IDs and cancels a late begin after session inv
   expect(sent.at(-1)).toEqual({
     type: 'packet/agent_setup_request',
     id: 4,
-    request: { action: 'cancel', pairing_id: 'late' },
+    request: { action: 'cancel', pairing_id: 'late', token: 'never-displayed' },
   })
   signal.abort()
+})
+
+test('an old attempt cannot remove the current token from session cleanup', async () => {
+  const events = new EventEmitter()
+  const signal = new AbortController()
+  const wallet = { address: 'owner' } as AuthSession
+  const state = { session: { wallet } } as AppState
+  const sent: ClientPacket[] = []
+  let id = 0
+  observe_agent_setup_requests(
+    { events, get_state: () => state, signal: signal.signal } as unknown as AppContext,
+    (packet) => {
+      sent.push(packet)
+      return true
+    },
+    () => ++id
+  )
+  const request = async (input: import('@aresrpg/protocol').AgentSetupRequest, result: AgentSetupResult) => {
+    const pending = new Promise<AgentSetupResult>((resolve, reject) =>
+      events.emit('agent_setup/request', { wallet, request: input, resolve, reject })
+    )
+    events.emit('server/packet', { packet: { type: 'packet/agent_setup_response', id, result } })
+    return pending
+  }
+  for (const token of ['old', 'current'])
+    await request(
+      { action: 'begin', public_identifier: 'public', token },
+      { action: 'begin', pairing_id: 'shared', token }
+    )
+  await request({ action: 'cancel', pairing_id: 'shared', token: 'old' }, { action: 'error', error: 'unavailable' })
+  signal.abort()
+  expect(sent.at(-1)).toEqual({
+    type: 'packet/agent_setup_request',
+    id: 4,
+    request: { action: 'cancel', pairing_id: 'shared', token: 'current' },
+  })
 })

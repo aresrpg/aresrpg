@@ -150,3 +150,109 @@
 .world-status button[data-agent-setup-button] {
   min-height: 44px;
 }
+
+.agent-prompt {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid #ffffff20;
+  border-radius: 6px;
+  background: var(--aui-bg);
+  color: var(--aui-ink);
+  font: inherit;
+  line-height: 1.65;
+}
+.agent-waiting {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+}
+.agent-waiting[hidden] {
+  display: none;
+}
+.agent-waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8fb9cf;
+  animation: agent-wait 2.4s ease-in-out infinite;
+}
+.agent-character-send,
+.agent-connected-hint {
+  display: grid;
+  gap: 16px;
+}
+.agent-character-id {
+  font-size: 10px;
+  color: var(--aui-muted);
+  overflow-wrap: anywhere;
+}
+.agent-connect {
+  min-height: 44px;
+  width: 100%;
+}
+.agent-hint-demo {
+  position: relative;
+  padding: 20px 0;
+  display: grid;
+  gap: 12px;
+}
+.agent-hint-tab {
+  pointer-events: none;
+}
+.agent-hint-pointer {
+  position: absolute;
+  top: 62px;
+  right: 28px;
+  color: #ecd19c;
+  animation: agent-hint-point 4.8s ease-in-out infinite;
+}
+.agent-hint-menu {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-left: 40px;
+  padding: 14px;
+  color: #ecd19c;
+  background: var(--aui-surface);
+  border: 1px solid var(--aui-border);
+  animation: agent-hint-menu 4.8s ease-in-out infinite;
+}
+@keyframes agent-wait {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes agent-hint-point {
+  0%,
+  20% {
+    transform: translateY(0);
+  }
+  55%,
+  85% {
+    transform: translateY(55px);
+  }
+}
+@keyframes agent-hint-menu {
+  0%,
+  20% {
+    opacity: 0.35;
+  }
+  45%,
+  100% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-waiting-dot,
+  .agent-hint-pointer,
+  .agent-hint-menu {
+    animation: none;
+  }
+  .agent-hint-pointer {
+    display: none;
+  }
+}
