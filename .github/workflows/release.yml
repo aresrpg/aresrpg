@@ -143,7 +143,7 @@ jobs:
       - name: build
         run: bun run vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
       - name: pin prebuilt deployment assets
-        run: bun scripts/pin_vercel_deployment.ts
+        run: bun --env-file=.vercel/.env.production.local scripts/pin_vercel_deployment.ts
       - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
         id: deploy
         run: echo "url=$(bun run vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"

@@ -85,7 +85,7 @@ jobs:
       - name: build
         run: bun run vercel build --scope aresrpg --token="$VERCEL_TOKEN"
       - name: pin prebuilt deployment assets
-        run: bun scripts/pin_vercel_deployment.ts
+        run: bun --env-file=.vercel/.env.preview.local scripts/pin_vercel_deployment.ts
       - name: deploy the prebuilt output
         id: deploy
         run: echo "url=$(bun run vercel deploy --prebuilt --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"

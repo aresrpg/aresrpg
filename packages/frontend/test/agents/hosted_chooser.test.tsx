@@ -14,6 +14,7 @@ test('the chooser keeps provider cards and Connect without technical setup prose
     const html = render_english(<AgentSetup copy={copy} close={() => {}} />)
     expect(html).toContain('/providers/claude.svg')
     expect(html).toContain('>Connect</button>')
+    expect(html).toMatch(/<button[^>]*class="[^"]*mt-3[^"]*"[^>]*>Cancel<\/button>/)
     for (const key of [
       'agent_hosted_intro',
       'agent_hosted_unavailable',

@@ -62,7 +62,7 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
         {state.phase === 'ready' && (
           <HostedBotPanel copy={copy} provider={provider} state={state} dispatch={dispatch} />
         )}
-        <Button className="agent-connect" onClick={dismiss}>
+        <Button className="agent-connect mt-3" onClick={dismiss}>
           {text.agent_cancel}
         </Button>
       </section>
