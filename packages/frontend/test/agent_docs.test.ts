@@ -50,7 +50,7 @@ test('official onboarding is singular while SDK references retain read and trans
   const entry = readFileSync(resolve(public_dir, 'llms.txt'), 'utf8')
   expect(entry).toContain('https://aresrpg.world/agents/client.txt')
   expect(entry).toContain('single official supported bot onboarding flow')
-  expect(entry).toContain('SDK bot-building reference')
+  expect(entry).toContain('hosted executor uses the same SDK actions')
   expect(entry).not.toContain('bounded, read-only development preview')
   for (const path of ['agents/protocol.txt', 'agents/sdk.txt']) {
     const guide = readFileSync(resolve(public_dir, path), 'utf8')
@@ -82,8 +82,28 @@ test('all onboarding entry points point to the canonical Connect Your Agent guid
   for (const href of hrefs) expect(existsSync(resolve(public_dir, href.slice(1)))).toBe(true)
 })
 
-test('production Vercel uses the frontend build that generates the standalone agent client', () => {
+test('production frontend no longer ships a local signing CLI', () => {
   const { scripts } = JSON.parse(readFileSync(resolve(public_dir, '../package.json'), 'utf8'))
   expect(deployment.buildCommand).toBe('bun run build')
-  expect(scripts.build.split(' && ')).toEqual(['bun ../sdk/scripts/build_agent_cli.ts', 'vite build'])
+  expect(scripts.build).toBe('vite build')
+  expect(scripts['build:test']).not.toContain('build_agent_cli')
+})
+
+test('hosted guides separate encrypted actor journals from browser digest-only storage', () => {
+  for (const path of ['agents/sdk.txt', 'agents/protocol.txt']) {
+    const guide = readFileSync(resolve(public_dir, path), 'utf8')
+    expect(guide).toContain('transaction_journal')
+    expect(guide).toContain('@aresrpg/sdk/transaction-execution')
+    expect(guide).toContain('digest-only')
+    expect(guide).toContain('packages/bot/README.md')
+    expect(guide).not.toContain("headless writer's `transaction_storage`")
+    expect(guide).not.toContain('headless writer must supply durable `transaction_storage`')
+  }
+  const indexing = readFileSync(resolve(public_dir, 'agents/indexing.txt'), 'utf8')
+  expect(indexing).not.toContain('signer and multisig address returned by Connect Your Agent')
+  expect(indexing).toContain('never a signer or key')
+  const custody = readFileSync(resolve(public_dir, 'agents/custody.txt'), 'utf8')
+  expect(custody).not.toContain('returned transaction signer')
+  expect(custody).toContain('tools/list')
+  expect(readFileSync(resolve(public_dir, 'agents/play.txt'), 'utf8')).not.toContain('local signing mechanism')
 })

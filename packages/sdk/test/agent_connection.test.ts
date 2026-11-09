@@ -189,3 +189,72 @@ test('malformed roster and malformed JSON retire the connection', async () => {
   await sessions[1].handlers.on_message('{')
   expect(client.state().status).toBe('failed')
 })
+
+test('managed connection awaits admission and cannot open after stop during authorization', async () => {
+  let release = () => {}
+  const admission = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let opens = 0
+  const client = create_agent_connection({
+    endpoint: 'ws://127.0.0.1:0/',
+    origin: 'https://aresrpg.world',
+    signer: {
+      address,
+      sign_personal_message: async () => {
+        throw new Error('unexpected signing')
+      },
+    },
+    authorize: async () => admission,
+    transport: {
+      open: () => {
+        opens += 1
+        return { send: () => {}, close: () => {} }
+      },
+    },
+  })
+  const states: string[] = []
+  client.subscribe((state) => {
+    states.push(state.status)
+  })
+  const connecting = client.connect()
+  expect(opens).toBe(0)
+  expect(await client.send({ type: 'packet/fight_resync', fight })).toBe(false)
+  client.stop()
+  release()
+  await connecting
+  expect(opens).toBe(0)
+  expect(states).toEqual(['connecting', 'stopped'])
+})
+
+for (const frozen of [true, false, null]) {
+  test(`initial game state ${frozen} is buffered until admission and retained through roster`, async () => {
+    const { client, send } = fixture()
+    const observations: { status: string; frozen: boolean | null }[] = []
+    client.subscribe((state) => {
+      if (state.last_packet?.type === 'packet/game_state')
+        observations.push({ status: state.status, frozen: state.last_packet.frozen })
+    })
+    await client.connect()
+    await send(challenge)
+    await send({ type: 'packet/game_state', frozen })
+    expect(client.state().last_packet).toBe(null)
+    expect(observations).toHaveLength(0)
+    await send(acceptance)
+    expect(observations).toEqual([{ status: 'resyncing', frozen }])
+    await send(roster)
+    expect(client.state().status).toBe('ready')
+    client.disconnect()
+    await client.connect()
+    await send(challenge)
+    await send(acceptance)
+    expect(client.state().last_packet).toBe(null)
+  })
+}
+test('malformed initial game state fails closed before admission', async () => {
+  const { client, send } = fixture()
+  await client.connect()
+  await send(challenge)
+  await send({ type: 'packet/game_state', frozen: 'false' })
+  expect(client.state().status).toBe('failed')
+})

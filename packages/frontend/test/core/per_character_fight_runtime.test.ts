@@ -366,7 +366,7 @@ test('a queued background turn remains executable without its FightLayer mounted
   })
   state = reduce_app_state(state, { type: 'fight/end_turn_queued', fight: '0xfa', queued: true })
 
-  state = { ...state, chain_clock: { chain_ms: 10_000, received_ms: 10_000 } }
+  state = { ...state, chain_clock: { chain_ms: 10_000, observed_at: 10_000 } }
   // a background fight stores no animation replay — only its live state and the queued turn
   expect(state.fight.environments['0xfa']?.presentations).toEqual([])
   expect(queued_end_turn(state, '0xfa', 10_000)).toEqual({ fighter: 0n, delay_ms: 0 })
@@ -486,7 +486,7 @@ test('the transaction observer drains A queued turn while B remains visible', as
   listeners.get('STATE_UPDATED')?.forEach((listener) => listener(state as never, previous as never))
   expect(commits).toEqual([])
   const before_clock = state
-  state = { ...state, chain_clock: { chain_ms: 10_000, received_ms: performance.now() } }
+  state = { ...state, chain_clock: { chain_ms: 10_000, observed_at: performance.now() } }
   listeners.get('STATE_UPDATED')?.forEach((listener) => listener(state as never, before_clock as never))
   await new Promise((resolve) => setTimeout(resolve, 0))
 

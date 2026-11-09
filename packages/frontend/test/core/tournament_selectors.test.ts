@@ -71,7 +71,7 @@ const state_for = (rows: readonly TournamentRow[]): AppState => {
       selected_character_id: 'a',
       characters: viewer().characters as never,
     },
-    chain_clock: { chain_ms: 2000, received_ms: 0 },
+    chain_clock: { chain_ms: 2000, observed_at: 0 },
   }
 }
 
@@ -85,7 +85,7 @@ test('completed results remain for one day but yield to an open or running event
   }
   const state = state_for([finished])
   expect(select_tournament_view(state, null, 0)).toMatchObject({ card: 'results', results: { id: 'finished' } })
-  const later = { ...state, chain_clock: { chain_ms: 86_401_000, received_ms: 0 } }
+  const later = { ...state, chain_clock: { chain_ms: 86_401_000, observed_at: 0 } }
   expect(select_tournament_view(later, null, 0)).toMatchObject({ card: 'hidden', results: null })
   for (const status of ['open', 'in_progress'] as const) {
     const active = { ...tournament_fixture(), id: 'active', status }
@@ -121,7 +121,7 @@ test('team creation remains discoverable while character custody explains why it
 test('an open event invites only a player without a team, until registration closes', () => {
   const open = { ...tournament_fixture(), status: 'open' as const }
   const view = (row: TournamentRow, chain_ms = 2000) =>
-    select_tournament_view({ ...state_for([row]), chain_clock: { chain_ms, received_ms: 0 } }, null, 0)
+    select_tournament_view({ ...state_for([row]), chain_clock: { chain_ms, observed_at: 0 } }, null, 0)
   expect(view(open)).toMatchObject({ registration_invite: false })
   const stranger = { ...open, teams: open.teams.filter((team) => team.seats.every((seat) => seat.owner !== 'owner')) }
   expect(view(stranger)).toMatchObject({ registration_invite: true })

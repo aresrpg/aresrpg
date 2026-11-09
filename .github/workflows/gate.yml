@@ -103,7 +103,26 @@ jobs:
         if: matrix.check == 'test'
         run: sudo apt-get update && sudo apt-get install -y redis-server
       - name: verify
-        run: bun run "${{ matrix.check }}"
+        env:
+          TEST_BOT_REDIS_URL: redis://127.0.0.1:16379/15
+        run: |
+          if [ "${{ matrix.check }}" = test ]; then
+            fixture=$(mktemp -d)
+            redis-server --bind 127.0.0.1 --port 16379 --save "" --appendonly no --dir "$fixture" > "$fixture/redis.log" 2>&1 &
+            redis_pid=$!
+            trap 'kill "$redis_pid"; wait "$redis_pid" || true; rm -rf "$fixture"' EXIT
+            for attempt in $(seq 1 50); do
+              if redis-cli -u "$TEST_BOT_REDIS_URL" ping | grep -qx PONG; then break; fi
+              kill -0 "$redis_pid" || { cat "$fixture/redis.log"; exit 1; }
+              sleep 0.1
+            done
+            redis-cli -u "$TEST_BOT_REDIS_URL" ping | grep -qx PONG
+            redis-cli -u "$TEST_BOT_REDIS_URL" info server | tr -d '\r' | grep -qx "process_id:$redis_pid"
+          fi
+          bun run "${{ matrix.check }}"
+      - name: bundle the hosted bot entry
+        if: matrix.check == 'typecheck'
+        run: bun build packages/bot/src/index.ts --target=bun --outfile="$RUNNER_TEMP/bot.js"
   tests_move:
     needs: changes
     if: needs.changes.outputs.move == 'true'

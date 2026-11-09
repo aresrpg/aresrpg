@@ -28,8 +28,6 @@ const SILENT_PACKETS: ReadonlySet<string> = new Set([
   'packet/position',
   'packet/allocation_request',
   'packet/allocation_response',
-  'packet/agent_setup_request',
-  'packet/agent_setup_response',
   'packet/players_moved',
   'packet/ping',
   'packet/pong',

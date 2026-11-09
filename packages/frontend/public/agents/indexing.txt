@@ -8,19 +8,19 @@ Sui GraphQL is a Sui data service. The AresRPG indexer is the game's checkpoint-
 
 ## Wallet authentication and Google accounts
 
-Official bots authenticate with the paired multisig's personal-message signer. The underlying
+The hosted backend actor authenticates with the paired multisig's personal-message signer. The underlying
 verifier also understands ordinary Sui signatures; that protocol capability does not change the
 official bot onboarding flow or grant control of a Google-backed game account.
 
 The game's browser Google login uses Enoki/Wallet Standard with its configured Google client ID, Enoki API key, allowed origins, redirect and proof flow. Creating your own Google OAuth client is not a drop-in way to access the same account: zkLogin address derivation includes the JWT audience (client ID), issuer, subject and salt. A separately configured OAuth/zkLogin integration can only act for the address it actually derives and can validly sign for. Its provider/prover setup and network support must be verified; this guide does not supply a turnkey headless Google login. For the existing game account, use its authorized wallet/session rather than extracting OAuth tokens or ephemeral keys.
 
-## Connect the paired multisig
+## Private actor connection reference
 
 Use the same deployment's SDK pins, network, and websocket endpoint. The production game endpoint is `wss://server.aresrpg.world`. Do not pair it with testnet pins. Obtain testnet/dev endpoints from that environment's configuration. Source branch `edge` can be ahead of production; use the matching release when integrating a deployed game.
 
-Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. The bot process uses the signer and multisig address returned by Connect Your Agent. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
+Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. The hosted backend actor uses its managed signer for the verified multisig address. Connect Your Agent returns public descriptors and scoped MCP authorization, never a signer or key to an external assistant. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
 
-One address has one live connection. A new agent connection can replace its browser session. Coordinate that handoff; do not build a reconnect war. `REPLACED` and `ALREADY_CONNECTED` are terminal takeover signals. Invalid proof, rate, or speed violations need diagnosis, not rapid retries.
+Authorized MCP connectors share the actor’s single socket; assistants must not open competing game connections. One address has one live connection. A new agent connection can replace its browser session. Coordinate that handoff; do not build a reconnect war. `REPLACED` and `ALREADY_CONNECTED` are terminal takeover signals. Invalid proof, rate, or speed violations need diagnosis, not rapid retries.
 
 The websocket upgrade also requires an allowed `Origin` header. Production accepts the game's `https://aresrpg.world` origin. An authorized standalone Bun client must set it explicitly; a default headless WebSocket without Origin receives HTTP 403 before any signature challenge. Use the environment's configured allowed origin for development. This admission header does not replace the account signature.
 

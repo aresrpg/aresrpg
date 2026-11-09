@@ -19,7 +19,7 @@
     "generate:cities": "bun scripts/generate_cities.mjs",
     "snapshot:holders": "bun scripts/snapshot_sui_holders.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 && prettier . --check",
-    "typecheck": "bun run --cwd packages/ui typecheck && bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck && bun run --cwd packages/journal typecheck && bun run --cwd packages/mobile typecheck && bun run --cwd packages/discord typecheck",
+    "typecheck": "bun run --cwd packages/ui typecheck && bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck && bun run --cwd packages/journal typecheck && bun run --cwd packages/mobile typecheck && bun run --cwd packages/discord typecheck && bun run --cwd packages/bot typecheck",
     "format": "prettier . --write && eslint . --fix",
     "coverage:typescript": "bun test packages scripts --coverage --coverage-reporter=lcov --coverage-dir=coverage --reporter=dots && bun scripts/assert_coverage.mjs coverage/lcov.info",
     "coverage:indexer": "sh scripts/coverage_indexer.sh",
@@ -34,7 +34,8 @@
     "test:performance": "REQUIRE_HARDWARE=1 playwright test --config packages/frontend/e2e/playwright.config.ts --project=performance",
     "social:cards": "bun scripts/social_cards/render.mjs",
     "validate:assets": "bun scripts/generate_spell_effects.mjs --check && bun scripts/generate_adventure.mjs --check && bun scripts/generate_cities.mjs --check && bun scripts/generate_main_menu.mjs --check && bun scripts/generate_asset_workshop.mjs --check && node scripts/generate_portrait_masks.mjs --check",
-    "generate:portraits": "node scripts/generate_portrait_masks.mjs"
+    "generate:portraits": "node scripts/generate_portrait_masks.mjs",
+    "build:bot": "bun build packages/bot/src/index.ts --target=bun --outfile=.dev/bot/bot.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

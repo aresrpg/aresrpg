@@ -18,7 +18,7 @@ const idle = (level = 30): AppState => {
     ...state,
     journey: { ...state.journey, completed: [] },
     automation: { ...state.automation, run: null },
-    chain_clock: { chain_ms: 100_000, received_ms: 1_000 },
+    chain_clock: { chain_ms: 100_000, observed_at: 1_000 },
     session: {
       ...state.session,
       characters: state.session.characters.map((row) => ({
@@ -144,7 +144,7 @@ test('finite collection waits for an observed chain deadline, even when the esti
   const early = reduce_automation(rooted, { ...tick(2_000), world_ms: automation_clock(rooted, 2_000) })
   expect(early.automation.run?.step.type).toBe('inspecting')
   expect(automation_command(early, rooted)).toBeNull()
-  const observed = { ...rooted, chain_clock: { chain_ms: 100_501, received_ms: 2_000 } }
+  const observed = { ...rooted, chain_clock: { chain_ms: 100_501, observed_at: 2_000 } }
   expect(
     reduce_automation(observed, { ...tick(2_000), world_ms: automation_clock(observed, 2_000) }).automation.run?.step
       .type

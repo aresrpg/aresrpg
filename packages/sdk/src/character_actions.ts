@@ -414,7 +414,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
             existing,
             attempts,
           }),
-        { custody, inputs: [recipe, output_template], merges }
+        { custody, inputs: [recipe, output_template], merges, include: { objectTypes: true } }
       )
       const outcome = craft_outcome(receipt, { recipe, character: character_id, output_template, attempts })
       return Object.freeze({
@@ -560,7 +560,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
             existing,
             existing_rare,
           }),
-        { custody, inputs: [template, rare_template, zone_object, world_content] }
+        { custody, inputs: [template, rare_template, zone_object, world_content], include: { objectTypes: true } }
       )
       const event = receipt_event(receipt, '::gathering::ResourceGathered')
       if (!event) throw new Error('The gather receipt carried no ResourceGathered event')

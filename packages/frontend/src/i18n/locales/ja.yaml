@@ -1421,7 +1421,7 @@ encyclopedia_page:
     forgemagie_desc: フォルジュマジーはルーン製作システムです。装備を破壊してルーンに変え、そのルーンを他の装備に適用してステータスを変更します。装備を完璧にするためのハイリスク・ハイリターンのエンドゲームシステム。
     crushing: 粉砕
     crushing_desc: 粉砕されたアイテムの各ステータス行は独立して判定されます——高いステータス値と重いステータスほど多くのルーンを生成します。サーバーは存在しません。生成数の除数は、アイテムレベルごとの固定カーブと、アイテムテンプレート自身のtaux（粉砕そのものがそのテンプレートでは下げ、同じ帯の他のテンプレートでは上げる、共有のオンチェーン・インフレ係数、1%〜4000%）を組み合わせたものです。
-    crushing_tiers_desc: ルーンのティア（Ba/Pa/Ra）は確率的に選択されます。高いステータス値はRaルーンを優遍します。
+    rune_tiers_desc: ルーンのティア（Ba/Pa/Ra）は確率的に選択されます。高いステータス値はRaルーンを優遍します。
     rune_tiers: ルーンティア
     rune_ba: ティア1：ルーンあたり最低ウェイト
     rune_pa: ティア2：ルーンあたり中ウェイト
@@ -2761,6 +2761,27 @@ ui:
   agent_sending: '送信中…'
   agent_pair_storage_failed: '復旧用の識別情報を保存できませんでした。ブラウザーのストレージを許可して、再接続してください。'
   agent_pair_disposable: 'このエージェントは一時的な認証情報を使用しています。永続ストレージを設定するよう依頼して、再接続してください。'
+  agent_signer_persistent: '永続的なトランザクション署名者を検証済み。'
+  agent_claim_character: 'ボット用にキャラクターを受け取る'
+  agent_hosted_intro: 'アシスタントは署名鍵を持たずにMCPを使います。AresRPGのサービス鍵とあなたのGoogleウォレットは、互いの承認なしに、それぞれ単独でボットの資産を移動できます。'
+  agent_hosted_unavailable: 'Googleゲームウォレットと設定済みHTTPSボットサービスが必要です。復旧は引き続きインベントリから利用できます。'
+  agent_hosted_failed: '接続できませんでした。明示的に再試行してください。入金や資産移動は行われていません。'
+  agent_hosted_pending: 'ウォレット承認またはサービスを待っています。キャンセルできます。'
+  agent_hosted_authenticate: 'Googleウォレットで認証'
+  agent_hosted_create: 'ホスト型ボットを作成'
+  agent_hosted_bot: 'ホスト型ボット'
+  agent_hosted_select: 'ボットを選択'
+  agent_hosted_verify: 'ホスト型署名者を検証'
+  agent_hosted_ready: '署名者を検証し、復旧用の公開IDを保存しました。'
+  agent_hosted_waiting: 'AIがプレイ中という意味ではありません。推論はアシスタントが行い、ボットは承認済みの指示を待ちます。'
+  agent_hosted_consent: 'アシスタントの権限を確認'
+  agent_hosted_policy: 'ポリシー改訂'
+  agent_hosted_approve: 'このボットと権限を承認'
+  agent_hosted_endpoint: 'この公開HTTPS MCPエンドポイントを追加し、ログインして対象のボットを承認してください。'
+  agent_hosted_recovery: 'インベントリと回収から独立して資産を回収できます。回収しても、ボットに残した資産に対するサービス鍵の権限は失われません。'
+  agent_hosted_chatgpt: 'ChatGPT：利用可能な開発者設定でカスタムMCPプラグインを追加します。プランとワークスペースによって異なります。'
+  agent_hosted_claude: 'Claude：設定でカスタムコネクタを追加し、AresRPG経由で認証します。'
+  agent_hosted_grok: 'Grok：Custom MCPコネクタを追加し、認証を完了します。アカウントの互換性を確認してください。'
   agent_choose: 'エージェントを選択'
   agent_unavailable: 'ペアリングはまだ利用できません。エージェントは接続されていません。'
   agent_setup: 'エージェントを設定'

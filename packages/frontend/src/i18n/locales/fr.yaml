@@ -1449,7 +1449,7 @@ encyclopedia_page:
     forgemagie_desc: La forgemagie est le système de runes. Concassez des équipements pour obtenir des runes, puis appliquez-les sur d'autres équipements pour modifier leurs stats. Un système risqué mais très rentable pour perfectionner son équipement.
     crushing: CONCASSAGE
     crushing_desc: "Chaque ligne de stat de l'objet concassé est évaluée indépendamment — des stats plus élevées et des poids plus lourds produisent plus de runes. Il n'y a pas de serveur : le diviseur de rendement combine une courbe fixe par niveau d'objet avec le taux propre au template de l'objet, un coefficient d'inflation on-chain partagé (1%-4000%) que le concassage lui-même fait baisser pour ce template et monter pour ses voisins."
-    crushing_tiers_desc: Le palier de rune (Ba/Pa/Ra) est sélectionné de manière probabiliste. Des stats plus élevées favorisent les runes Ra.
+    rune_tiers_desc: Le palier de rune (Ba/Pa/Ra) est sélectionné de manière probabiliste. Des stats plus élevées favorisent les runes Ra.
     rune_tiers: PALIERS DE RUNES
     rune_ba: 'Tier 1: poids le plus faible par rune'
     rune_pa: 'Tier 2: poids moyen par rune'
@@ -2729,7 +2729,7 @@ ui:
   portrait_failed: 'Impossible de charger le portrait ou de copier son lien. Vous pouvez sélectionner le lien ci-dessous.'
   portrait_close: 'Fermer'
   portrait_preview: 'Portrait du personnage'
-  agent_signer_persistent: 'Votre assistant déclare disposer d’un signataire de transactions persistant.'
+  agent_signer_persistent: 'Signataire de transactions persistant vérifié.'
   agent_saved_recovery: 'Récupération d’un agent enregistré'
   agent_return_cancel: 'Annuler le retour en attente'
   agent_cancel_handover: 'Annuler un transfert non récupéré'
@@ -2812,6 +2812,26 @@ ui:
   agent_sending: 'Envoi…'
   agent_pair_storage_failed: 'Votre identité de récupération n’a pas pu être enregistrée. Autorisez le stockage du navigateur, puis reconnectez-vous.'
   agent_pair_disposable: 'Cet agent utilise des identifiants temporaires. Demandez-lui de configurer un stockage persistant, puis reconnectez-vous.'
+  agent_claim_character: 'Réclamer le personnage pour le bot'
+  agent_hosted_intro: 'Votre assistant utilise MCP sans clé de signature. La clé du service AresRPG et votre portefeuille Google peuvent chacun déplacer les actifs du bot sans l’accord de l’autre.'
+  agent_hosted_unavailable: 'La connexion nécessite votre portefeuille Google de jeu et un service de bot HTTPS configuré. La récupération reste disponible dans l’inventaire.'
+  agent_hosted_failed: 'La connexion a échoué. Réessayez explicitement ; aucun financement ni transfert effectué.'
+  agent_hosted_pending: 'En attente du portefeuille ou du service hébergé. Vous pouvez annuler.'
+  agent_hosted_authenticate: 'Authentifier le portefeuille Google'
+  agent_hosted_create: 'Créer un bot hébergé'
+  agent_hosted_bot: 'Bot hébergé'
+  agent_hosted_select: 'Choisissez votre bot'
+  agent_hosted_verify: 'Vérifier le signataire hébergé'
+  agent_hosted_ready: 'Signataire hébergé vérifié. Identité publique de récupération enregistrée.'
+  agent_hosted_waiting: 'Cela ne signifie pas que l’IA joue. Votre assistant fournit l’inférence ; le bot attend des instructions autorisées.'
+  agent_hosted_consent: 'Vérifier les accès de l’assistant'
+  agent_hosted_policy: 'Révision de la politique'
+  agent_hosted_approve: 'Autoriser ce bot et ces accès'
+  agent_hosted_endpoint: 'Ajoutez ce point d’accès MCP HTTPS public à votre assistant, puis connectez-vous et autorisez le bot exact.'
+  agent_hosted_recovery: 'Utilisez Inventaire et Rappel pour récupérer vos actifs indépendamment. Cela ne révoque pas le contrôle de la clé du service sur les actifs laissés au bot.'
+  agent_hosted_chatgpt: 'ChatGPT : ajoutez un plugin MCP personnalisé dans les paramètres développeur disponibles. Selon votre offre et espace de travail.'
+  agent_hosted_claude: 'Claude : ajoutez un connecteur personnalisé dans les paramètres, puis autorisez-le via AresRPG.'
+  agent_hosted_grok: 'Grok : ajoutez un connecteur Custom MCP et suivez son autorisation. Vérifiez la compatibilité de votre compte.'
   agent_choose: 'Choisissez votre agent'
   agent_unavailable: 'L’association n’est pas encore disponible. Aucun agent n’est connecté.'
   agent_setup: 'Configurer un agent'

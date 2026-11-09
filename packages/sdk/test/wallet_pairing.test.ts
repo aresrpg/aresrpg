@@ -5,8 +5,9 @@ import type { Wallet, WalletAccount } from '@mysten/wallet-standard'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import { create_wallet_binding } from '../src/wallet_standard.ts'
-import { bootstrap_disposable_agent } from '../examples/agent_bootstrap.ts'
 import { verify_agent_pairing } from '../src/agent_pairing.ts'
+
+import { bootstrap_disposable_agent } from './helpers/agent_bootstrap.ts'
 
 const wallet = (enoki = true) =>
   ({

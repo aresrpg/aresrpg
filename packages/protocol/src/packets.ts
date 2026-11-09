@@ -16,21 +16,8 @@ import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 import type { TournamentLink, TournamentRow } from './tournament.ts'
 import { valid_allocation_request, type AllocationRequest, type AllocationResult } from './allocation.ts'
-import {
-  valid_agent_observation,
-  type AgentObservation,
-  valid_agent_setup_request,
-  type AgentSetupRequest,
-  type AgentSetupResult,
-} from './agent_setup.ts'
-export {
-  AGENT_SETUP_PATH,
-  type AgentSetupRequest,
-  type AgentSetupResult,
-  type AgentSignerMode,
-  type AgentPairingIdentity,
-  type AgentObservation,
-} from './agent_setup.ts'
+import { valid_agent_observation, type AgentObservation } from './agent_identity.ts'
+export type { AgentSignerMode, AgentPairingIdentity, AgentObservation } from './agent_identity.ts'
 export type { TournamentLink, TournamentRow, TournamentTeam, TournamentSeat, TournamentMatch } from './tournament.ts'
 export { coin_share, tournament_coin_claims, TOURNAMENT_RESULTS_MS, recent_tournament_result } from './tournament.ts'
 export type { AllocationRequest, AllocationResult } from './allocation.ts'
@@ -745,7 +732,6 @@ export const DEFAULT_ADMIN_ADDRESS = '0x3d1342fb7de99c69ce821183bcfc5b6374d81453
 export type ClientPackets = {
   'packet/agent_observe': { id: number; observation: AgentObservation | null }
   'packet/allocation_request': { id: number; request: AllocationRequest }
-  'packet/agent_setup_request': { id: number; request: AgentSetupRequest }
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
   /** Deprecated rolling-compatibility no-op. The server tracks its authenticated roster itself. */
@@ -814,7 +800,6 @@ export type ServerPackets = {
     failed: boolean
   }
   'packet/allocation_response': { id: number; result: AllocationResult }
-  'packet/agent_setup_response': { id: number; result: AgentSetupResult }
   /** Pre-auth challenge. No player state exists until its matching proof verifies. */
   'packet/signature_request': { payload: string }
   'packet/connection_accepted': { address: string }
@@ -1049,11 +1034,7 @@ export const PARTY_PACKETS = ['packet/party', 'packet/party_invites'] as const
 export const TRADE_PACKETS = ['packet/trades', 'packet/trade_destroyed'] as const
 
 /** Consumed outside game-domain stores by the admin dashboard or standalone campaign. */
-export const IGNORED_PACKETS = [
-  'packet/admin_response',
-  'packet/allocation_response',
-  'packet/agent_setup_response',
-] as const
+export const IGNORED_PACKETS = ['packet/admin_response', 'packet/allocation_response'] as const
 
 /** Consumed at the transport boundary before packets enter a domain reducer. */
 export const TRANSPORT_PACKETS = ['packet/pong'] as const
@@ -1106,7 +1087,6 @@ void UNROUTED_SERVER_PACKETS
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
   'packet/agent_observe',
-  'packet/agent_setup_request',
   'packet/market_floor_request',
   'packet/allocation_request',
   'packet/signature_response',
@@ -1341,14 +1321,6 @@ const REQUEST_PARSERS = new Map<string, (packet: Record<string, unknown>) => Cli
     },
   ],
   [
-    'packet/agent_setup_request',
-    (packet) => {
-      if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0 || !valid_agent_setup_request(packet.request))
-        throw new Error('invalid agent setup request')
-      return packet as ClientPacket
-    },
-  ],
-  [
     'packet/allocation_request',
     (packet) => {
       if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0 || !valid_allocation_request(packet.request))
@@ -1417,5 +1389,20 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
 
 export type MarketVolume = Readonly<{ day_mist: string; month_mist: string; history_days: number }>
 
+/** Maximum checkpoint indexing lag for playable state, shared by web and hosted actors. */
+export const PLAYABLE_INDEXING_LAG = 300
+
 /** Public fight board and marker visibility, in world blocks. */
 export const FIGHT_VIEW_RADIUS_BLOCKS = 50
+
+export type {
+  HostedBotDescriptor,
+  HostedConnectRequest,
+  HostedChallengeInput,
+  HostedChallengeResponse,
+  HostedVerifyResponse,
+  HostedAuthorizeResponse,
+  HostedProvisionResponse,
+} from './hosted_connect.ts'
+export { hosted_challenge_message, parse_hosted_challenge, validate_hosted_challenge } from './hosted_connect.ts'
+export type { HostedChallengeEnvelope } from './hosted_connect.ts'

@@ -142,7 +142,7 @@ test('browser wall time cannot open a gather before the sampled chain travel dea
   const base = automation_fixture()
   let state = {
     ...base,
-    chain_clock: { chain_ms: 102_000, received_ms: performance.now() },
+    chain_clock: { chain_ms: 102_000, observed_at: performance.now() },
     session: { ...base.session, characters: [{ ...character(), at_ms: 103_000 }] },
     automation: {
       ...base.automation,

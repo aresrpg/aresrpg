@@ -43,6 +43,9 @@ export const AgentKioskCharacters = ({
       {recall.pending.map((offer) => (
         <div key={offer.purchase_cap}>
           <span title={offer.character_id}>{name(offer.character_id)}</span>
+          <Button disabled={disabled || !snapshot.deposit} onClick={() => kiosk.claim_character(offer)}>
+            {copy.ui.agent_claim_character}
+          </Button>
           <Button disabled={disabled} onClick={() => kiosk.execute(recall.transfer, { kind: 'cancel', ...offer })}>
             {copy.ui.agent_cancel_handover}
           </Button>

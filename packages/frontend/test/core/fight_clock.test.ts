@@ -61,7 +61,7 @@ const queued_state = (): AppState => {
   const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   return {
     ...base,
-    chain_clock: { chain_ms: 63_500, received_ms: 500 },
+    chain_clock: { chain_ms: 63_500, observed_at: 500 },
     session: { ...base.session, wallet: { address: 'wallet' } as never, characters: [{ id: 'player' }] as never },
     fight: {
       ...base.fight,

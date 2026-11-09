@@ -1444,7 +1444,7 @@ encyclopedia_page:
     forgemagie_desc: Forgemagie ist das Runen-Herstellungssystem. Zerstöre Ausrüstung zu Runen und wende diese auf andere Gegenstände an, um deren Werte zu verändern. Ein risikoreiches, aber lohnendes Endgame-System zur Perfektion der Ausrüstung.
     crushing: ZERSTÖREN
     crushing_desc: 'Jede Stat-Zeile des zerstörten Gegenstands wird unabhängig gewürfelt — höhere Werte und schwerere Stats erzeugen mehr Runen. Es gibt keinen Server: Der Ertragsteiler kombiniert eine feste Kurve pro Gegenstandslevel mit dem eigenen Taux des Item-Templates, einem gemeinsamen On-Chain-Inflationskoeffizienten (1%-4000%), den das Zerstören selbst für dieses Template senkt und für seine Nachbarn anhebt.'
-    crushing_tiers_desc: Die Runenstufe (Ba/Pa/Ra) wird probabilistisch ausgewählt. Höhere Werte bevorzugen Ra-Runen.
+    rune_tiers_desc: Die Runenstufe (Ba/Pa/Ra) wird probabilistisch ausgewählt. Höhere Werte bevorzugen Ra-Runen.
     rune_tiers: RUNENSTUFEN
     rune_ba: 'Stufe 1: geringstes Gewicht pro Rune'
     rune_pa: 'Stufe 2: mittleres Gewicht pro Rune'
@@ -2784,6 +2784,27 @@ ui:
   agent_sending: 'Wird gesendet…'
   agent_pair_storage_failed: 'Deine Wiederherstellungsidentität konnte nicht gespeichert werden. Erlaube Browserspeicher und verbinde dich erneut.'
   agent_pair_disposable: 'Dieser Agent verwendet temporäre Zugangsdaten. Bitte ihn, dauerhaften Speicher einzurichten, und verbinde dich erneut.'
+  agent_signer_persistent: 'Dauerhafter Transaktionssignierer verifiziert.'
+  agent_claim_character: 'Charakter für Bot übernehmen'
+  agent_hosted_intro: 'Dein Assistent nutzt MCP ohne Signaturschlüssel. Der AresRPG-Dienstschlüssel und deine Google-Wallet können jeweils allein die Vermögenswerte des Bots bewegen, ohne Zustimmung des anderen.'
+  agent_hosted_unavailable: 'Du brauchst dein Google-Spielwallet und einen konfigurierten HTTPS-Botdienst. Wiederherstellung bleibt im Inventar verfügbar.'
+  agent_hosted_failed: 'Verbindung fehlgeschlagen. Bitte ausdrücklich erneut versuchen. Keine Einzahlung oder Übertragung erfolgt.'
+  agent_hosted_pending: 'Warte auf Wallet-Freigabe oder Botdienst. Abbrechen ist möglich.'
+  agent_hosted_authenticate: 'Mit Google-Wallet authentifizieren'
+  agent_hosted_create: 'Gehosteten Bot erstellen'
+  agent_hosted_bot: 'Gehosteter Bot'
+  agent_hosted_select: 'Bot auswählen'
+  agent_hosted_verify: 'Gehosteten Signierer prüfen'
+  agent_hosted_ready: 'Gehosteter Signierer geprüft. Öffentliche Wiederherstellungsidentität gespeichert.'
+  agent_hosted_waiting: 'Die KI spielt damit noch nicht. Dein Assistent liefert die Inferenz; der Bot wartet auf autorisierte Anweisungen.'
+  agent_hosted_consent: 'Assistentenzugriff prüfen'
+  agent_hosted_policy: 'Richtlinienversion'
+  agent_hosted_approve: 'Diesen Bot und Zugriff erlauben'
+  agent_hosted_endpoint: 'Füge diesen öffentlichen HTTPS-MCP-Endpunkt hinzu, melde dich an und genehmige den genauen Bot.'
+  agent_hosted_recovery: 'Nutze Inventar und Rückruf zur unabhängigen Rückholung. Dadurch verliert der Dienstschlüssel nicht die Kontrolle über die beim Bot verbliebenen Vermögenswerte.'
+  agent_hosted_chatgpt: 'ChatGPT: Ein benutzerdefiniertes MCP-Plugin in den verfügbaren Entwicklereinstellungen hinzufügen. Tarif und Workspace bestimmen die Verfügbarkeit.'
+  agent_hosted_claude: 'Claude: Einen eigenen Connector in den Einstellungen hinzufügen und über AresRPG autorisieren.'
+  agent_hosted_grok: 'Grok: Einen Custom-MCP-Connector hinzufügen und autorisieren. Kompatibilität für dein Konto prüfen.'
   agent_choose: 'Wähle deinen Agenten'
   agent_unavailable: 'Die Kopplung ist noch nicht verfügbar. Kein Agent ist verbunden.'
   agent_setup: 'Agenten einrichten'

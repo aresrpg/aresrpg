@@ -30,3 +30,6 @@ packages-old/
 seed/content/spell_effects/source.html
 seed/content/spell_effects/synth.js
 packages/engine/src/generated/*.js
+
+# Helm Go templates are not parseable YAML until rendered by Helm.
+packages/bot/deploy/templates/*.yaml

@@ -39,6 +39,8 @@ export {
   type CharacteristicValues,
 } from './characteristics.ts'
 export {
+  gather_gate,
+  type GatherGate,
   gatherable_catalog,
   gatherable_item_types,
   gatherable_of,

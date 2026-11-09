@@ -7,6 +7,7 @@ import { render_english as renderToStaticMarkup } from '../i18n/render.ts'
 import { GameplayTab } from '../../src/encyclopedia/GameplayTab.tsx'
 import { encyclopedia_text } from '../../src/encyclopedia/copy.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
+import { LOCALES } from '../../src/i18n/locale.ts'
 
 test('gameplay explains the chain Retro XP law and its six-player coefficient', async () => {
   const copy = await load_app_copy('en')
@@ -36,4 +37,16 @@ test('gameplay explains the chain Retro XP law and its six-player coefficient', 
   expect(html).not.toContain('converge')
   expect(html).not.toContain('from anywhere in the world')
   expect(html).toContain('100 − min(RES, 50)')
+})
+
+test.each(LOCALES.map(({ code }) => code))('rune tiers render translated prose in %s', async (locale) => {
+  const copy = await load_app_copy(locale)
+  const text = encyclopedia_text(copy)
+  const description = text('gameplay.rune_tiers_desc')
+  const html = renderToStaticMarkup(<GameplayTab text={text} />)
+
+  expect(description).not.toBe('gameplay.rune_tiers_desc')
+  expect(description).toContain('Ba/Pa/Ra')
+  expect(html).toContain(renderToStaticMarkup(<>{description}</>))
+  expect(html).not.toContain('gameplay.rune_tiers_desc')
 })

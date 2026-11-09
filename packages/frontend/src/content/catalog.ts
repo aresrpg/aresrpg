@@ -186,7 +186,7 @@ const mob_locations_by_type = group_entries(
   mob_locations.map(({ mob_type, world, biomes, cities }) => [mob_type, Object.freeze({ world, biomes, cities })])
 )
 const recipe_job = (recipe: SeedRecipe): string =>
-  craft_job_of(items_by_type[recipe.output_type]?.category ?? '') ?? recipe.job ?? ''
+  craft_job_of(items_by_type[recipe.output_type]?.category ?? '', recipe.job) ?? ''
 const acquisition = acquisition_estimator({
   items,
   recipes,

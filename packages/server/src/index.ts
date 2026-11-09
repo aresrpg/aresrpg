@@ -4,13 +4,10 @@
 // challenge, and becomes a player only after its signature verifies on that exact socket.
 
 import type { ServerWebSocket } from 'bun'
-import { AGENT_SETUP_PATH } from '@aresrpg/protocol'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
 import { create_campaign_boards } from './allocation/leaderboards.ts'
 import { create_allocation } from './allocation/runtime.ts'
-import { create_pairing_exchange } from './agent_pairing.ts'
-import { serve_agent_setup } from './agent_setup_http.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
 import {
@@ -54,7 +51,6 @@ const allocation = create_allocation({
   ...ALLOCATION_OPTIONS,
   boards: create_campaign_boards((observation, address) => pubsub.graph.leaderboard!(observation, address)),
 })
-const agent_pairing = SUI_NETWORK === 'mainnet' ? create_pairing_exchange(mesh_redis) : undefined
 const http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
@@ -92,15 +88,6 @@ const http_routes = new Map<
   (request: Request, server: Readonly<import('bun').Server<ConnectionData>>) => Response | Promise<Response>
 >([
   ['/health', () => new Response('ok')],
-  [
-    AGENT_SETUP_PATH,
-    (request, server) => {
-      const peer = server.requestIP(request)?.address ?? 'unknown'
-      if (!http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
-      if (!agent_pairing) return new Response(null, { status: 503 })
-      return serve_agent_setup(request, agent_pairing)
-    },
-  ],
   [
     '/api/allocation',
     (request, server) => {
@@ -157,7 +144,6 @@ const server = Bun.serve<ConnectionData>({
             const player = create_player({
               ws,
               allocation,
-              agent_pairing,
               address,
               admin: ADMIN_ADDRESSES.has(address),
               graph,

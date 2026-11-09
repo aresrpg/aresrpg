@@ -6,7 +6,6 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { Transaction } from '@mysten/sui/transactions'
 import { fromBase64 } from '@mysten/sui/utils'
 
-import { bootstrap_setup_link } from '../examples/agent_setup.ts'
 import { prepare_agent_pairing } from '../src/agent_signer.ts'
 
 // Publicly known synthetic fixture key, in memory only; never a user credential or funded identity.
@@ -49,28 +48,4 @@ test('a different pairing key cannot be substituted by an injected provider', as
   await expect(
     prepare_agent_pairing(request, { ...member(), sign_personal_message: (bytes) => wrong.signPersonalMessage(bytes) })
   ).rejects.toThrow()
-})
-
-test('server setup can use the injected host signer without key generation or copyback', async () => {
-  const client = await prepare_agent_pairing(request, member())
-  let posted = false
-  const signer = await bootstrap_setup_link(
-    `http://localhost:9800/api/agent-setup?id=${request.nonce}#${'a'.repeat(43)}`,
-    {
-      bootstrap: async () => client,
-      fetch: (async (_url, init) => {
-        if (init?.method !== 'POST') return Response.json(request)
-        posted = true
-        expect(JSON.parse(String(init.body))).toEqual(client.response)
-        return Response.json({
-          address: client.signer.address,
-          multisig_public_key: client.signer.public_key.toBase64(),
-          signer_mode: client.response.signer_mode,
-        })
-      }) as typeof fetch,
-    }
-  )
-  expect(posted).toBe(true)
-  expect(signer.address).toBe(client.signer.address)
-  expect('sign_transaction' in signer).toBe(true)
 })

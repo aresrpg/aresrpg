@@ -5,7 +5,8 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
 
 import { parse_agent_pairing_request, verify_agent_pairing } from '../src/agent_pairing.ts'
-import { bootstrap_disposable_agent } from '../examples/agent_bootstrap.ts'
+
+import { bootstrap_disposable_agent } from './helpers/agent_bootstrap.ts'
 
 const request = () => {
   const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })

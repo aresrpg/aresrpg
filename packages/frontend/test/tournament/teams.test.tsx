@@ -27,7 +27,7 @@ for (const format of [1, 3] as const) {
       ...base,
       tournament,
       session: { ...base.session, wallet, characters, selected_character_id: 'visitor' },
-      chain_clock: { chain_ms: 2000, received_ms: 0 },
+      chain_clock: { chain_ms: 2000, observed_at: 0 },
     }
     const view = { ...select_tournament_view(state, null, 0), tournament, wallet, characters }
     const copy = await load_app_copy('en')
@@ -52,7 +52,7 @@ for (const selected of ['a', 'spare']) {
       ...base,
       tournament,
       session: { ...base.session, wallet, characters, selected_character_id: selected },
-      chain_clock: { chain_ms: 2000, received_ms: 0 },
+      chain_clock: { chain_ms: 2000, observed_at: 0 },
     }
     const view = { ...select_tournament_view(state, null, 0), tournament, wallet, characters }
     const copy = await load_app_copy('en')

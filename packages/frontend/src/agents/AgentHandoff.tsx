@@ -8,18 +8,6 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 type CopyStatus = 'idle' | 'copied' | 'failed'
 
-export const agent_guide_url = () => new URL('/agents/client.txt', globalThis.location.origin).href
-
-/** Copying public instructions is the only supported handoff; it grants no account authority. */
-export const AgentHandoff = ({ copy, provider }: Readonly<{ copy: AppCopy; provider: string | null }>) => {
-  const text = copy_text(copy.ui)
-  const request = text('agent_handoff_request', {
-    provider: provider ?? '',
-    url: agent_guide_url(),
-  })
-  return <AgentPrompt copy={copy} request={request} disabled={!provider} />
-}
-
 export const AgentPrompt = ({
   copy,
   request,

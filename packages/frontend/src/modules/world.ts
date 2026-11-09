@@ -14,6 +14,8 @@ import {
   type ServerPacket,
   type ZoneRow,
 } from '@aresrpg/protocol'
+import { zone_key, merge_zone_rows, merge_zone_population } from '@aresrpg/protocol/world-projection'
+export { zone_key } from '@aresrpg/protocol/world-projection'
 
 import { localized_error } from '../i18n/error_text.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -147,8 +149,6 @@ export type WorldInput =
   | Readonly<{ type: 'world/engage_confirmed'; group: string }>
   | WorldGatherInput
 
-export const zone_key = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
-
 export const initial_world_state = (): WorldState =>
   Object.freeze({
     windows: {},
@@ -174,14 +174,7 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
   if (packet.type === 'packet/zones') {
     // ONE door for "a zone changed": a spiral push, a discovery, and a group being engaged all
     // arrive as the projected row. It MERGES — the server sends one row for a single change.
-    const incoming = packet.zones.map((zone) => [zone_key(zone.world, zone.zx, zone.zz), zone] as const)
-    const rerolled = new Set(
-      incoming.flatMap(([key, zone]) => (world.zones[key] && world.zones[key]!.seed !== zone.seed ? [key] : []))
-    )
-    const zones = { ...world.zones, ...Object.fromEntries(incoming) }
-    const spawns = rerolled.size
-      ? Object.fromEntries(Object.entries(world.spawns).filter(([key]) => !rerolled.has(key)))
-      : world.spawns
+    const { zones, spawns } = merge_zone_rows(world.zones, world.spawns, packet.zones)
     const pending_engages = Object.fromEntries(
       Object.entries(world.pending_engages).filter(([, pending]) => {
         const zone = zones[pending.key]
@@ -199,19 +192,13 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
     })
   }
   if (packet.type === 'packet/zone_spawns') {
-    // the SEED's whole population, consumption unapplied — it arrives once per zone per seed,
-    // and what of it is alive derives from the zone row above
-    const key = zone_key(packet.world, packet.zx, packet.zz)
-    return Object.freeze({
-      ...world,
-      spawns: Object.freeze({
-        ...world.spawns,
-        [key]: Object.freeze({
-          mobs: Object.freeze(packet.mobs),
-          resources: Object.freeze(packet.resources),
-        }),
-      }),
-    })
+    const spawns = merge_zone_population(
+      world.zones,
+      world.spawns,
+      zone_key(packet.world, packet.zx, packet.zz),
+      Object.freeze({ mobs: Object.freeze(packet.mobs), resources: Object.freeze(packet.resources) })
+    )
+    return spawns === world.spawns ? world : Object.freeze({ ...world, spawns })
   }
   if (packet.type === 'packet/fights') {
     const fights = Object.fromEntries(packet.fights.map((fight) => [fight.id, fight]))

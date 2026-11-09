@@ -5,7 +5,11 @@
   "description": "The one wire contract between the app and the server \u2014 every packet fully shaped, imported by both sides",
   "type": "module",
   "exports": {
-    ".": "./src/packets.ts"
+    ".": "./src/packets.ts",
+    "./chain-clock": "./src/chain_clock.ts",
+    "./fight-phase": "./src/fight_phase.ts",
+    "./world-projection": "./src/world_projection.ts",
+    "./inventory": "./src/inventory.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

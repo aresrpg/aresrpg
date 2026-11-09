@@ -2,6 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One marketplace reducer: server projections in, user intents out, SDK receipts re-enter.
 
+import {
+  fold_catalogue,
+  latest_listings,
+  without_relation,
+  type CatalogueProjection,
+} from '@aresrpg/protocol/inventory'
 import { equipment_categories, type ItemCategory } from '@aresrpg/immutable'
 import {
   MAX_TRACKED_CHARACTERS,
@@ -14,7 +20,6 @@ import {
   type MarketVolume,
   type MarketObservation,
   type MarketSaleRow,
-  type MarketSnapshot,
   type ServerPacket,
 } from '@aresrpg/protocol'
 
@@ -56,28 +61,25 @@ const MARKET_CATEGORIES: Readonly<Record<MarketGroup, readonly ItemCategory[]>> 
 })
 export const market_categories = (group: MarketGroup): readonly ItemCategory[] => MARKET_CATEGORIES[group]
 
-export type MarketplaceState = Readonly<{
-  floor: MarketFloor | null
-  prices: PriceHistoryState
-  group: MarketGroup
-  types: readonly MarketType[]
-  type_counts: MarketTypeCounts | null
-  next_cursor: string | null
-  page_cursors: readonly string[]
-  observation: MarketObservation | null
-  listings: readonly ListingRow[]
-  ready_request: number | null
-  recent_pages: readonly RecentOfferPage[]
-  own_listings: readonly ListingRow[]
-  catalogues: Readonly<Record<string, Readonly<{ version: string; owned: boolean }>>>
-  departures: Readonly<Record<string, Readonly<Record<string, string>>>>
-  history: readonly MarketSaleRow[]
-  revenue_30d_mist: string
-  volume: MarketVolume | null
-  history_total: number
-  profits: readonly Readonly<{ kiosk: string; amount_mist: string }>[]
-  pending: string | null
-}>
+export type MarketplaceState = CatalogueProjection &
+  Readonly<{
+    floor: MarketFloor | null
+    prices: PriceHistoryState
+    group: MarketGroup
+    types: readonly MarketType[]
+    type_counts: MarketTypeCounts | null
+    next_cursor: string | null
+    page_cursors: readonly string[]
+    observation: MarketObservation | null
+    ready_request: number | null
+    recent_pages: readonly RecentOfferPage[]
+    history: readonly MarketSaleRow[]
+    revenue_30d_mist: string
+    volume: MarketVolume | null
+    history_total: number
+    profits: readonly Readonly<{ kiosk: string; amount_mist: string }>[]
+    pending: string | null
+  }>
 
 export type MarketplaceInput =
   | MarketFloorInput
@@ -128,17 +130,6 @@ export const initial_marketplace_state = (): MarketplaceState =>
     pending: null,
   })
 
-const latest_listings = (current: readonly ListingRow[], incoming: readonly ListingRow[]): readonly ListingRow[] => {
-  const rows = new Map(current.map((row) => [row.id, row]))
-  incoming.forEach((row) => {
-    if (BigInt(row.version) >= BigInt(rows.get(row.id)?.version ?? '0')) rows.set(row.id, row)
-  })
-  return Object.freeze([...rows.values()])
-}
-
-const without_relation = (rows: readonly ListingRow[], gone: Readonly<ListingRow>): readonly ListingRow[] =>
-  rows.filter((row) => row.id !== gone.id || row.kiosk !== gone.kiosk)
-
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1_000
 const revenue_after_sale = (current: string, sale: Readonly<MarketSaleRow>, known: boolean, now_ms: number): string =>
   known || sale.ts_ms < now_ms - THIRTY_DAYS_MS ? current : String(BigInt(current) + BigInt(sale.price_mist))
@@ -178,70 +169,6 @@ export const market_sale_notice = (
 
 const same_observation = (left: MarketObservation | null, right: MarketObservation): boolean =>
   left?.request === right.request
-
-const fold_catalogue = (
-  market: MarketplaceState,
-  snapshot: Readonly<MarketSnapshot>,
-  own: boolean,
-  address: string | null
-): MarketplaceState => {
-  const current_source = (kiosk: string): boolean =>
-    BigInt(snapshot.kiosk_versions[kiosk] ?? '0') >= BigInt(market.catalogues[kiosk]?.version ?? '0')
-  const incoming = snapshot.listings.filter(
-    (row) => current_source(row.kiosk) && BigInt(row.version) > BigInt(market.departures[row.kiosk]?.[row.id] ?? '-1')
-  )
-  const previous = own ? market.own_listings : market.listings
-  const rows = latest_listings(
-    previous.filter((row) =>
-      own
-        ? BigInt(snapshot.kiosk_versions[row.kiosk] ?? '0') <= BigInt(market.catalogues[row.kiosk]?.version ?? '0')
-        : !current_source(row.kiosk)
-    ),
-    incoming
-  )
-  const own_listings = own
-    ? rows
-    : latest_listings(
-        market.own_listings,
-        incoming.filter((row) => row.seller === address)
-      )
-  const public_rows = own ? market.listings : rows
-  const owned_relations = new Set([...market.own_listings, ...own_listings].map((row) => `${row.kiosk}:${row.id}`))
-  const listings = Object.freeze(
-    public_rows.filter((row) => row.seller !== address && !owned_relations.has(`${row.kiosk}:${row.id}`))
-  )
-  const departures = Object.fromEntries(
-    Object.entries(market.departures).flatMap(([kiosk, removed]) => {
-      const retained = Object.fromEntries(
-        Object.entries(removed).filter(
-          ([, version]) => BigInt(version) > BigInt(snapshot.kiosk_versions[kiosk] ?? '-1')
-        )
-      )
-      return Object.keys(retained).length ? [[kiosk, retained]] : []
-    })
-  )
-  const versions = {
-    ...market.catalogues,
-    ...Object.fromEntries(
-      Object.entries(snapshot.kiosk_versions).map(([kiosk, version]) => [
-        kiosk,
-        {
-          version: current_source(kiosk) ? version : market.catalogues[kiosk]!.version,
-          owned: own || !!market.catalogues[kiosk]?.owned,
-        },
-      ])
-    ),
-  }
-  const observed = new Set([
-    ...listings.map(({ kiosk }) => kiosk),
-    ...Object.keys(snapshot.kiosk_versions),
-    ...Object.keys(departures),
-  ])
-  const catalogues = Object.fromEntries(
-    Object.entries(versions).filter(([kiosk, value]) => value.owned || observed.has(kiosk))
-  )
-  return Object.freeze({ ...market, own_listings, listings, catalogues, departures })
-}
 
 const fold_write = (
   market: MarketplaceState,

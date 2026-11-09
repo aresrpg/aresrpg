@@ -1,74 +1,60 @@
-# Connect an assistant to AresRPG
+# Connect your assistant to hosted AresRPG
 
-Use this real, persistent setup. Do not substitute a disposable identity.
-Pairing automatically posts public proof. It does not authorize assets, payments or gameplay.
+Connect Your Agent is the single official supported bot onboarding flow.
+Use https://aresrpg.world/world?intent=connect-agent and the existing Google game login.
+A hosted service operates the bot; your assistant supplies inference through authenticated MCP.
+No assistant-owned private key, local CLI, server installation or key upload is required.
 
-## Run now
+## Connect
 
-1. Use the assistant's POSIX cloud host with Node.js 22+ and a private persistent directory (a real path, not a symlink)
-   outside the checkout and temporary storage. Download the standalone client; no npm, Bun,
-   Sui CLI, repository clone or dependency install is needed. If Node is missing,
-   install an official Node.js 22+ runtime from https://nodejs.org/en/download first:
+1. Choose ChatGPT, Claude or Grok in Connect Your Agent. Authenticate with your existing
+   Google game wallet. Create or select your hosted bot. If the service is unavailable,
+   stop: a missing signer must never be replaced with a disposable key.
+2. Verify the hosted signer. The browser verifies a fresh public proof against its own
+   Google-bound request and saves the public recovery descriptor. A pending request,
+   service metadata or an assistant-supplied address is not verified custody.
+3. Copy the public HTTPS MCP endpoint shown by the configured service. Add that endpoint
+   in your assistant's custom MCP plugin or connector settings. Do not invent a deployment
+   URL or claim a provider plugin has already been published.
+4. Follow the assistant's OAuth connection. Sign in with the SAME AresRPG Google wallet.
+   Review the exact assistant client, registered callback, bot address, network, scopes,
+   policy revision. Approve only the access you intend.
+   Wallet funding is the only SUI spending limit. Authorization does not fund or transfer assets to the bot.
+5. Ask your assistant to inspect the bot and agree on an objective before requesting actions.
+   Hosted connection readiness is distinct from active AI play. No inference is provided
+   by the hosted executor: it waits when no authorized continuation exists.
 
-   curl -fsSLo ares-agent.mjs https://aresrpg.world/agents/ares-agent.mjs
+ChatGPT: use the custom MCP plugin/developer settings available to your plan and workspace.
+Claude: use Customize > Connectors > Add custom connector and complete AresRPG authorization.
+Grok: use grok.com/connectors > New Connector > Custom, add the public MCP URL, and complete authentication.
+Provider plan restrictions, approvals and supported protocol versions can differ. A successful
+local fixture is not proof that a live provider account has completed OAuth or gameplay.
+Use the provider's current registration flow; never hardcode a historical OAuth callback.
 
-2. Before first use, obtain the required approval to create/store a dedicated Ed25519 signing
-   key in that directory. Then initialize it (replace the example path):
+## Play and recovery
 
-   node ./ares-agent.mjs init /absolute/persistent/ares-agent --approve-key-creation
+The assistant calls hosted MCP tools backed by the same SDK actions used by the game.
+Multiple authorized connectors share one game connection for each bot. They do not create
+competing player WebSockets or independent bot custody.
 
-   Existing keys are reused, never replaced. If already initialized, skip this step.
-   Complete installation and approval before asking for a fresh setup link if the old one expired.
+Character, SUI and item handover remain explicit actions in the existing Inventory flow.
+Compare the complete verified bot address before selecting a transfer recipient. Keep a
+sensible gas reserve. Never automatically retry an uncertain or executed transaction.
 
-3. Pass the complete private link as ARESRPG_SETUP_LINK through the runtime's structured
-   environment API, then run:
+For a new empty bot, verify its fresh persistent signer and compare its full address in Inventory.
+First explicitly deposit enough SUI for the bot’s claim gas and a reserve using the existing
+owner transfer flow. Then offer the selected character. In the bot’s pending character offers,
+choose “Claim character for bot” and approve with your Google wallet: your Google multisig
+member signs, and the bot’s multisig pays claim gas. The claim creates its personal kiosk if
+needed. Offering and claiming are separate actions; neither funding nor claiming is automatic.
+After the claim is confirmed, ask the assistant to observe the bot and choose an authorized
+PvE action. The current MCP catalog does not transfer or claim characters for you.
 
-   node ./ares-agent.mjs pair /absolute/persistent/ares-agent
+Owner Recall uses your Google member of the canonical multisig and does not require the
+hosted service or assistant to cooperate. Saved public recovery descriptors remain available
+in Inventory, including legacy identities. Never delete an old key or move legacy assets
+merely to adopt hosted onboarding. Fight custody and third-party offers retain their normal rules.
 
-   If structured environment input is unavailable, send the link directly to this process's
-   non-interactive stdin and close stdin. Never put it in shell code, command arguments, logs,
-   files or chat replies. The client sends its fragment only as a Bearer header to the pairing API.
-   It saves public identity metadata before posting proof and verifies the response automatically.
-
-4. Verify a fresh process loads the same identity, then report its full address to the human:
-
-   node ./ares-agent.mjs reload /absolute/persistent/ares-agent
-
-   The human compares that address before any handover. No public-key JSON copyback is needed.
-   Future runs use the saved identity, never the expired setup link.
-
-## Use and recover
-
-Status: node ./ares-agent.mjs status /absolute/persistent/ares-agent
-Code: import { load_agent_signer } from './ares-agent.mjs';
-      const signer = await load_agent_signer('/absolute/persistent/ares-agent');
-The signer works with the ordinary SDK and agent connection; loading it does not play or transfer.
-
-Missing/corrupt/unsafe storage stops setup. Never delete a key to fix an error.
-A pending outcome cannot load as paired. Keep the key and request a fresh link for the same owner;
-re-pairing uses the same address. A stale operation.lock requires confirming no process is running
-before removing only that lock. Another identity uses another state directory.
-
-Files use owner-only POSIX permissions and atomic identity writes. This is a local keystore,
-not an encrypted key vault: code running as the host user can read it. Host reset, snapshot expiry
-or disk loss can remove it. Use retained storage with a host-approved private backup/recovery plan;
-never upload the key as an attachment or store it in assistant memory. Protect backups as credentials.
-Grok Bot and other hosts must verify their directory/backup lifecycle rather than assume persistence.
-
-The target is under one minute on a ready Node host. Download speed, runtime installation,
-required human approval and service availability can take longer. The setup link lasts five minutes.
-No success is claimed until automatic proof and fresh-process identity reload both pass.
-
-## Optional key care, after setup
-
-Periodically check your host's official updates for a secret vault or protected signing support.
-Recheck file ownership/permissions and storage retention; review available access logs and
-unexpected file changes. These checks cannot prove that nobody has accessed the key.
-Offer a secure, user-controlled backup/recovery option. Explain custody risks and obtain explicit
-approval before exporting or migrating credentials. Never expose keys in chat, logs, attachments
-or assistant memory. Verify recovery and the same public identity before retiring old storage;
-never silently replace or delete the signing key. This upkeep does not block initial setup.
-
-SDK/strategy: https://aresrpg.world/agents/sdk.txt
-Handover and human Recall: https://aresrpg.world/agents/custody.txt
-Gameplay agreement: https://aresrpg.world/agents/play.txt
+Do not request or paste wallet secrets, private keys, session cookies or OAuth tokens in chat.
+A failed, closed, expired or cancelled setup needs an explicit new attempt, not automatic consent.
+For gameplay strategy see /agents/play.txt; for custody and Recall see /agents/custody.txt.

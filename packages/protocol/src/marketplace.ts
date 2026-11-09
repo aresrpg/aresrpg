@@ -12,6 +12,36 @@ export type MarketQuery =
 export type MarketObservation = MarketQuery & Readonly<{ request: number }>
 export type MarketTypeCounts = Readonly<Partial<Record<ItemCategory, number>>>
 export type MarketType = Readonly<{ item_type: string; category: ItemCategory; name: string; level: number }>
+/** Wire schema for connectors; semantic parsing remains parse_market_observation. */
+export const MARKET_OBSERVATION_SCHEMA = {
+  oneOf: [
+    { type: 'null' },
+    ...[
+      { kind: 'overview', fields: {}, required: [] },
+      { kind: 'types', fields: { category: { type: 'string' } }, required: ['category'] },
+      {
+        kind: 'offers',
+        fields: { category: { type: 'string' }, item_type: { type: 'string' }, cursor: { type: 'string' } },
+        required: ['category', 'item_type'],
+      },
+      {
+        kind: 'characters',
+        fields: {
+          cursor: { type: 'string' },
+          classe: { type: 'string' },
+          min_level: { type: 'integer' },
+          max_level: { type: 'integer' },
+        },
+        required: [],
+      },
+    ].map(({ kind, fields, required }) => ({
+      type: 'object',
+      properties: { kind: { const: kind }, request: { type: 'integer', minimum: 0 }, ...fields },
+      required: ['kind', 'request', ...required],
+      additionalProperties: false,
+    })),
+  ],
+} as const
 export const market_category = (observation: MarketQuery | null): ItemCategory | null =>
   observation && (observation.kind === 'types' || observation.kind === 'offers') ? observation.category : null
 export const has_market_page = (

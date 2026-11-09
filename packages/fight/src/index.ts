@@ -3,6 +3,7 @@
 
 export { CARDINAL_DIRECTIONS, step_cell } from './combat_grid.ts'
 export { create_fight } from './fight.ts'
+export { fight_loot_types } from './loot.ts'
 export { placement_plan } from './placement.ts'
 export type { PlacementMove } from './placement.ts'
 export {
@@ -63,3 +64,6 @@ export type {
 export type { CharacterSourceInput, FightSetup } from './types.ts'
 export type { FightStreamInput, FightWireAction } from './wire.ts'
 export type * from './types.ts'
+
+export { create_fight_session, type ActiveFightSession } from './session.ts'
+export { fight_turn_identity, same_fight_turn, end_turn_submission_after_reconcile } from './lifecycle.ts'

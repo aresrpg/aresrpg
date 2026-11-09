@@ -2,7 +2,7 @@
 
 Move owns game truth. Complete [Connect Your Agent](https://aresrpg.world/agents/client.txt),
 the single official supported bot onboarding flow. The choices below concern read inputs and
-transaction discipline for the paired bot, not alternative onboarding.
+transaction discipline inside an authorized SDK integration, not alternative onboarding. Hosted MCP assistants use the service’s actual `tools/list` catalog; they do not construct signers or direct SDK clients. The read-adapter choices below are engineering references, not promises that every SDK action is exposed by MCP.
 
 ## Choose a read path
 
@@ -80,7 +80,7 @@ Distinguish these outcomes:
 | Submission response lost or incomplete | Retain the exact pending digest and recover its receipt; do not submit a replacement |
 | Read/projection delayed after success | Wait/reconcile; never repeat the successful action to force the UI to catch up |
 
-The SDK derives the digest before submission and recovers the exact transaction. A headless writer must supply durable `transaction_storage`; the browser's session storage does not exist in Bun. Preserve the SDK's pending record across process restarts. Do not delete it to unblock a script. Keep a separate durable activity ledger for spending and multi-step intents. Only one process may use a wallet's writer state at a time.
+The SDK derives the digest before submission and reconciles the exact transaction. The hosted backend actor supplies the awaited `TransactionJournal` from `@aresrpg/sdk/transaction-execution` via `SDK({ transaction_journal })`, with encrypted exact-envelope persistence and fenced authorization checks. See [the SDK journal reference](https://aresrpg.world/agents/sdk.txt) and [operator recovery requirements](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/README.md). Browser `transaction_storage` is synchronous digest-only recovery, not an actor durability substitute. Never delete a pending record to unblock work. Keep a separate activity ledger without signatures or signed bytes. An uncertain digest must be reconciled; only the SDK executor may resume a retained envelope under the documented authorization and recovery conditions.
 
 Recovery can invalidate the intent that was queued before the outcome became known. Refresh game state and rebuild the plan. An error after a successful first phase does not mean the phase failed. Never blindly retry a whole craft, purchase, fight settlement, claim, or batch because its wrapper threw.
 

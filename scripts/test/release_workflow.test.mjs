@@ -15,6 +15,8 @@ const activation = Bun.YAML.parse(
   readFileSync(new URL('../../.github/workflows/activate-production.yml', import.meta.url), 'utf8')
 )
 
+const manifest_script = readFileSync(new URL('../release_manifest.sh', import.meta.url), 'utf8')
+
 const certified_digest = `sha256:${'b'.repeat(64)}`
 const moved_tag_digest = `sha256:${'a'.repeat(64)}`
 
@@ -34,12 +36,12 @@ test('activation checkout contains every patch required by the locked install', 
   for (const patch of Object.values(manifest.patchedDependencies ?? {})) expect(files).toContain(patch)
 })
 
-const run_baseline_plan = (network, include_discord = true) => {
+const run_baseline_plan = (network, include_discord = true, include_bot = true) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-release-baseline-'))
   const output = join(directory, 'output')
   const plan = workflow.jobs['backend-plan'].steps.find(({ id }) => id === 'plan').run
-  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false; discord=false
-server_version=2.0.0; indexer_version=2.0.0; discord_version=2.0.0; server_digest=''; indexer_digest=''; discord_digest=''
+  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false; discord=false; bot=false
+server_digest=''; indexer_digest=''; discord_digest=''; bot_digest=''
 if true; then
 ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER,,}', 'aresrpg')}`
   try {
@@ -52,13 +54,15 @@ ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER
         version: '1.0.0',
         network,
         images: Object.fromEntries(
-          (include_discord ? ['server', 'indexer', 'discord'] : ['server', 'indexer']).map((name) => [
-            name,
-            {
-              repository: `ghcr.io/aresrpg/${name}`,
-              digest: certified_digest,
-            },
-          ])
+          ['server', 'indexer', ...(include_discord ? ['discord'] : []), ...(include_bot ? ['bot'] : [])].map(
+            (name) => [
+              name,
+              {
+                repository: `ghcr.io/aresrpg/${name}`,
+                digest: certified_digest,
+              },
+            ]
+          )
         ),
       })
     )
@@ -90,36 +94,39 @@ cp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/previous-release/release-manifest.
 
 test('a previous testnet release triggers a full mainnet build instead of aborting preparation', () => {
   const output = run_baseline_plan('testnet')
-  for (const component of ['server', 'indexer', 'frontend', 'discord']) expect(output).toContain(`${component}=true`)
+  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot'])
+    expect(output).toContain(`${component}=true`)
   expect(output).toContain('server_digest=\n')
   expect(output).toContain('indexer_digest=\n')
 })
 
 test('a certified mainnet baseline retains the fast path for unchanged runtime inputs', () => {
   const output = run_baseline_plan('mainnet')
-  for (const component of ['server', 'indexer', 'frontend', 'discord']) expect(output).toContain(`${component}=false`)
+  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot'])
+    expect(output).toContain(`${component}=false`)
   expect(output).toContain(`server_digest=${certified_digest}`)
   expect(output).toContain(`indexer_digest=${certified_digest}`)
 })
 
-const run_image_step = (component, step_id, current_digest) => {
+const run_image_step = (component, step_id, current_digest, changed = false, revision = '1'.repeat(40)) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-image-identity-'))
   const output = join(directory, 'output')
   const calls = join(directory, 'calls')
   const digest_file = join(directory, 'digest')
   const values = {
     'github.repository_owner': 'aresrpg',
-    [`needs.backend-plan.outputs.${component}`]: 'false',
-    [`needs.backend-plan.outputs.${component}_version`]: '2.0.0',
+    [`needs.backend-plan.outputs.${component}`]: String(changed),
+    'needs.backend-plan.outputs.version': '2.0.0',
     [`needs.backend-plan.outputs.${component}_digest`]: certified_digest,
     'needs.backend-plan.outputs.previous_tag': 'v1.0.0',
   }
   const step = workflow.jobs[`build-${component}`].steps.find(({ id }) => id === step_id)
-  const script = step.run.replace(/\$\{\{\s*([^}]+?)\s*\}\}/g, (_, expression) => {
-    const value = values[expression.trim()]
-    if (value === undefined) throw new Error(`Unexpected workflow input ${expression}`)
-    return value
-  })
+  const interpolate = (source) =>
+    source.replace(/\$\{\{\s*([^}]+?)\s*\}\}/g, (_, expression) => {
+      const value = values[expression.trim()]
+      if (value === undefined) throw new Error(`Unexpected workflow input ${expression}`)
+      return value
+    })
   try {
     writeFileSync(digest_file, current_digest)
     writeFileSync(output, '')
@@ -129,6 +136,10 @@ const run_image_step = (component, step_id, current_digest) => {
 set -eu
 printf '%s\\n' "$*" >> "$CALLS_PATH"
 if [ "$1" = manifest ]; then exit 0; fi
+if [ "$6" = '{{json .Image.Config.Labels}}' ]; then
+  printf '{"org.opencontainers.image.revision":"%s"}\\n' "$IMAGE_REVISION"
+  exit 0
+fi
 if [ "$3" = create ]; then
   source_ref="\${!#}"
   if [ "$source_ref" = "$IMAGE_REPOSITORY@$EXPECTED_DIGEST" ]; then
@@ -147,13 +158,18 @@ printf '"%s"\\n' "$digest"
 `,
       { mode: 0o700 }
     )
-    execFileSync('/bin/bash', ['-e', '-c', script], {
+    execFileSync('/bin/bash', ['-e', '-c', interpolate(step.run)], {
+      cwd: new URL('../../', import.meta.url),
       env: {
+        ...Object.fromEntries(
+          Object.entries(workflow.jobs[`build-${component}`].env).map(([key, value]) => [key, interpolate(value)])
+        ),
         PATH: `${directory}:/usr/bin:/bin`,
         GITHUB_OUTPUT: output,
         GITHUB_SHA: '1'.repeat(40),
         IMAGE_REPOSITORY: `ghcr.io/aresrpg/${component}`,
         EXPECTED_DIGEST: certified_digest,
+        IMAGE_REVISION: revision,
         MOVED_TAG_DIGEST: moved_tag_digest,
         CALLS_PATH: calls,
         DIGEST_FILE: digest_file,
@@ -166,7 +182,22 @@ printf '"%s"\\n' "$digest"
   }
 }
 
-for (const component of ['server', 'indexer', 'discord']) {
+for (const component of ['server', 'indexer', 'discord', 'bot']) {
+  test(`${component}: changed images only reuse the exact source revision`, () => {
+    expect(() => run_image_step(component, 'image', certified_digest, true, '2'.repeat(40))).toThrow()
+    expect(run_image_step(component, 'image', certified_digest, true).output).toContain(`digest=${certified_digest}`)
+  })
+
+  test(`${component}: reruns attest the reused exact-source digest and reject malformed identities`, () => {
+    const attestation = workflow.jobs[`build-${component}`].steps.find(({ uses }) =>
+      uses?.startsWith('actions/attest@')
+    )
+    expect(attestation.if).toBe(`needs.backend-plan.outputs.${component} == 'true'`)
+    expect(attestation.with['subject-digest']).toBe('${{ steps.image.outputs.digest || steps.build.outputs.digest }}')
+    expect(run_image_step(component, 'image', certified_digest, true).output).toContain(`digest=${certified_digest}`)
+    expect(() => run_image_step(component, 'image', 'latest', true)).toThrow()
+  })
+
   test(`${component}: alias copies the certified digest even when the previous tag has moved`, () => {
     const result = run_image_step(component, 'alias', moved_tag_digest)
     expect(result.output).toContain(`digest=${certified_digest}`)
@@ -215,7 +246,7 @@ test('the previous preparation must bind both image digests to the expected rele
     )
   validate(manifest)
   for (const invalid of [
-    { ...manifest, schema: 2 },
+    { ...manifest, schema: 3 },
     { ...manifest, source_sha: '2'.repeat(40) },
     { ...manifest, version: '2.0.0' },
     {
@@ -285,7 +316,14 @@ test('release builds overlap verification but certification requires the green g
   const manifest = workflow.jobs['release-manifest']
   expect(manifest.needs).toContain('verify-gate')
   expect(manifest.if).toContain("needs.verify-gate.result == 'success'")
-  for (const name of ['backend-plan', 'prepare-production', 'build-server', 'build-discord', 'build-indexer']) {
+  for (const name of [
+    'backend-plan',
+    'prepare-production',
+    'build-server',
+    'build-discord',
+    'build-indexer',
+    'build-bot',
+  ]) {
     expect(workflow.jobs[name].steps.some(({ run }) => run?.includes('actions/workflows/gate.yml'))).toBe(false)
     expect(workflow.jobs[name].needs).not.toContain('verify-gate')
   }
@@ -332,4 +370,123 @@ test('backend planning checks out shared locale selectors and supplies the pinne
   const parser = steps.find(({ uses }) => uses?.startsWith('oven-sh/setup-bun@'))
   expect(parser.with['bun-version-file']).toBe('package.json')
   expect(steps.indexOf(parser)).toBeLessThan(steps.findIndex(({ id }) => id === 'plan'))
+})
+
+test('legacy preparation without hosted bot rebuilds only the missing artifact', () => {
+  const output = run_baseline_plan('mainnet', true, false)
+  expect(output).toContain('bot=true')
+  for (const component of ['server', 'indexer', 'discord']) expect(output).toContain(`${component}=false`)
+})
+
+test('hosted bot certification includes the image and activation requires it', () => {
+  const manifest = workflow.jobs['release-manifest']
+  expect(manifest.needs).toContain('build-bot')
+  expect(manifest.if).toContain("needs.build-bot.result == 'success'")
+  const write = manifest.steps.find(({ name }) => name === 'write immutable release manifest')
+  expect(write.run).toBe('bash scripts/release_manifest.sh')
+  expect(manifest_script).toContain('schema: 2')
+  expect(write.env.BOT_DIGEST).toBe('${{ needs.build-bot.outputs.digest }}')
+  expect(manifest_script).toContain('repository: "ghcr.io/aresrpg/bot"')
+  const verify = activation.jobs.activate.steps.find(({ id }) => id === 'manifest')
+  expect(verify.run).toContain('.schema == 2')
+  expect(verify.run).toContain('for image in server indexer discord bot; do')
+})
+
+test('CI runs durable bot tests against an explicit disposable loopback fixture', () => {
+  const gate = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
+  const verify = gate.jobs.source.steps.find(({ name }) => name === 'verify')
+  expect(verify.env.TEST_BOT_REDIS_URL).toBe('redis://127.0.0.1:16379/15')
+  expect(verify.run).toContain('redis-server')
+  expect(verify.run).toContain('trap ')
+  expect(verify.run).toContain('redis-cli')
+})
+
+test('the prepared schema2 manifest survives activation checks and rejects a missing or foreign bot', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ares-manifest-activation-'))
+  const version = '2.0.0'
+  const sha = '1'.repeat(40)
+  const verify = activation.jobs.activate.steps.find(({ id }) => id === 'manifest')
+  const script = verify.run
+    .replaceAll('${{ steps.release.outputs.source_sha }}', sha)
+    .replaceAll('${{ steps.release.outputs.version }}', version)
+  const environment = {
+    PATH: `${directory}:${process.env.PATH}`,
+    RUNNER_TEMP: directory,
+    GITHUB_STEP_SUMMARY: join(directory, 'summary'),
+    GITHUB_OUTPUT: join(directory, 'output'),
+    GITHUB_SHA: sha,
+    SUI_NETWORK: 'mainnet',
+    VERSION: version,
+    PREVIOUS_TAG: 'v1.0.0',
+    VERCEL_URL: '',
+    FRONTEND_BUILT: 'false',
+    ...Object.fromEntries(
+      ['BOT', 'SERVER', 'INDEXER', 'DISCORD'].flatMap((name) => [
+        [`${name}_DIGEST`, certified_digest],
+        [`${name}_BUILT`, 'true'],
+      ])
+    ),
+  }
+  try {
+    writeFileSync(
+      join(directory, 'pins.json'),
+      JSON.stringify({
+        network: 'mainnet',
+        ...Object.fromEntries(
+          ['math_', 'control_', 'combat_', 'seed_', ''].flatMap((prefix) => [
+            [`${prefix}package`, '0x1'],
+            [`${prefix}package_original`, '0x1'],
+          ])
+        ),
+      })
+    )
+    writeFileSync(join(directory, 'docker'), '#!/bin/sh\nexit 0\n', { mode: 0o700 })
+    execFileSync('/bin/bash', ['-e', '-c', manifest_script], { cwd: directory, env: environment, stdio: 'pipe' })
+    expect(() =>
+      execFileSync('/bin/bash', ['-e', '-c', manifest_script], {
+        cwd: directory,
+        env: { ...environment, BOT_DIGEST: '' },
+        stdio: 'pipe',
+      })
+    ).toThrow()
+    execFileSync('/bin/bash', ['-e', '-c', manifest_script], { cwd: directory, env: environment, stdio: 'pipe' })
+    const path = join(directory, 'production-release/release-manifest.json')
+    const manifest = JSON.parse(readFileSync(path, 'utf8'))
+    expect(manifest.schema).toBe(2)
+    expect(manifest.images.bot).toEqual({
+      repository: 'ghcr.io/aresrpg/bot',
+      version,
+      digest: certified_digest,
+      built: true,
+    })
+    const activate = () => execFileSync('/bin/bash', ['-e', '-c', script], { env: environment, stdio: 'pipe' })
+    activate()
+    expect(readFileSync(environment.GITHUB_OUTPUT, 'utf8')).toContain('frontend=false')
+    for (const invalid of [
+      { ...manifest, schema: 1 },
+      { ...manifest, source_sha: '2'.repeat(40) },
+      { ...manifest, images: { ...manifest.images, bot: null } },
+      { ...manifest, images: { ...manifest.images, bot: { ...manifest.images.bot, digest: 'latest' } } },
+      {
+        ...manifest,
+        images: { ...manifest.images, bot: { ...manifest.images.bot, repository: 'ghcr.io/foreign/bot' } },
+      },
+    ]) {
+      writeFileSync(path, JSON.stringify(invalid))
+      expect(activate).toThrow()
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('release jobs check out their shared immutable artifact scripts', () => {
+  for (const name of ['server', 'indexer', 'discord', 'bot']) {
+    const checkout = workflow.jobs[`build-${name}`].steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+    const paths = checkout.with['sparse-checkout']
+    expect(paths.includes('/*') || paths.includes('scripts/release_image.sh')).toBe(true)
+  }
+  const checkout = workflow.jobs['release-manifest'].steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+  expect(checkout.with['sparse-checkout']).toContain('scripts/release_manifest.sh')
+  expect(checkout.with['sparse-checkout']).toContain('pins.json')
 })

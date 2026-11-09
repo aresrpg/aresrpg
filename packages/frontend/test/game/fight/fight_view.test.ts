@@ -103,7 +103,7 @@ describe('generic fight view', () => {
       ...base,
       session: { ...base.session, wallet: { address: 'other' } as never, selected_character_id: 'theirs' },
       fight: { ...base.fight, mode: 'remote' as const, checkpoint },
-      chain_clock: { chain_ms: 100_000, received_ms: 1_500 },
+      chain_clock: { chain_ms: 100_000, observed_at: 1_500 },
     }
     const select = spyOn(store, 'useAppStore').mockImplementation(<T>(selector: (value: store.AppState) => T): T =>
       selector(state)

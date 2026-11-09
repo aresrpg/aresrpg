@@ -1457,7 +1457,7 @@ encyclopedia_page:
     forgemagie_desc: 룬 강화는 장비를 분쇄해 룬을 얻고 다른 장비에 적용해 능력치를 바꾸는 시스템입니다. 장비를 완성하기 위한 고위험·고보상 후반 콘텐츠입니다.
     crushing: 분쇄
     crushing_desc: 분쇄한 아이템의 능력치 줄마다 독립적으로 추첨하며 높은 수치와 무거운 능력치일수록 더 많은 룬을 줍니다. 서버가 결과를 결정하지 않습니다. 생산량 제수는 아이템 레벨 곡선과 템플릿의 온체인 계수(1%~4000%)를 결합합니다. 분쇄하면 해당 템플릿 계수는 내려가고 이웃 템플릿은 올라갑니다.
-    crushing_tiers_desc: 룬 등급(Ba/Pa/Ra)은 확률로 정해집니다. 능력치가 높을수록 Ra 룬이 나올 가능성이 커집니다.
+    rune_tiers_desc: 룬 등급(Ba/Pa/Ra)은 확률로 정해집니다. 능력치가 높을수록 Ra 룬이 나올 가능성이 커집니다.
     rune_tiers: 룬 등급
     rune_ba: '1등급: 룬당 무게 최소'
     rune_pa: '2등급: 룬당 무게 중간'
@@ -2750,6 +2750,27 @@ ui:
   agent_sending: '보내는 중…'
   agent_pair_storage_failed: '복구 정보를 저장하지 못했습니다. 브라우저 저장소를 허용한 다음 다시 연결하세요.'
   agent_pair_disposable: '이 에이전트는 임시 자격 증명을 사용합니다. 영구 저장소를 설정하도록 요청한 다음 다시 연결하세요.'
+  agent_signer_persistent: '영구 트랜잭션 서명자가 검증되었습니다.'
+  agent_claim_character: '봇으로 캐릭터 받기'
+  agent_hosted_intro: '어시스턴트는 서명 키 없이 MCP를 사용합니다. AresRPG 서비스 키와 Google 지갑은 상대방의 승인 없이 각각 독립적으로 봇의 자산을 이동할 수 있습니다.'
+  agent_hosted_unavailable: 'Google 게임 지갑과 설정된 HTTPS 봇 서비스가 필요합니다. 복구는 인벤토리에서 계속 사용할 수 있습니다.'
+  agent_hosted_failed: '연결하지 못했습니다. 직접 다시 시도하세요. 입금이나 자산 전송은 이루어지지 않았습니다.'
+  agent_hosted_pending: '지갑 승인 또는 서비스를 기다리는 중입니다. 취소할 수 있습니다.'
+  agent_hosted_authenticate: 'Google 지갑 인증'
+  agent_hosted_create: '호스팅 봇 생성'
+  agent_hosted_bot: '호스팅 봇'
+  agent_hosted_select: '봇 선택'
+  agent_hosted_verify: '호스팅 서명자 검증'
+  agent_hosted_ready: '서명자 검증 완료. 공개 복구 ID가 저장되었습니다.'
+  agent_hosted_waiting: 'AI가 플레이 중이라는 뜻은 아닙니다. 어시스턴트가 추론을 제공하며 봇은 승인된 지시를 기다립니다.'
+  agent_hosted_consent: '어시스턴트 접근 검토'
+  agent_hosted_policy: '정책 버전'
+  agent_hosted_approve: '이 봇과 접근 승인'
+  agent_hosted_endpoint: '공개 HTTPS MCP 엔드포인트를 추가하고 로그인한 후 정확한 봇을 승인하세요.'
+  agent_hosted_recovery: '인벤토리와 회수 기능으로 독립적으로 자산을 회수할 수 있습니다. 회수해도 봇에 남은 자산에 대한 서비스 키의 통제권은 해제되지 않습니다.'
+  agent_hosted_chatgpt: 'ChatGPT: 사용 가능한 개발자 설정에서 사용자 지정 MCP 플러그인을 추가하세요. 요금제와 워크스페이스에 따라 다릅니다.'
+  agent_hosted_claude: 'Claude: 설정에서 사용자 지정 커넥터를 추가하고 AresRPG를 통해 인증하세요.'
+  agent_hosted_grok: 'Grok: Custom MCP 커넥터를 추가하고 인증을 완료하세요. 계정 호환성을 확인하세요.'
   agent_choose: '에이전트 선택'
   agent_unavailable: '페어링은 아직 사용할 수 없습니다. 연결된 에이전트가 없습니다.'
   agent_setup: '에이전트 설정'

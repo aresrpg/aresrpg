@@ -1,0 +1,22 @@
+{
+  "name": "@aresrpg/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@aresrpg/sdk": "workspace:*",
+    "@aresrpg/protocol": "workspace:*",
+    "@aresrpg/fight": "workspace:*",
+    "@mysten/sui": "2.39.1",
+    "@aresrpg/immutable": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "~6.0.3"
+  }
+}

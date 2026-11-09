@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The SDK factory composes PTBs whose game-object inputs are PRE-RESOLVED and exposes only narrow
-// reads needed by wallet-owned state. It carries zero content. Pins default to root pins.json; `hydrate()` seeds game refs. The Sui client
-// separately resolves gas payment and budget because wallet coin state is its concern.
+// The SDK composes pre-resolved game PTBs; the Sui resolver owns gas payment and budget.
 
 import { KioskClient, TransferPolicyTransaction, type KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient, isSuiGraphQLClient } from '@mysten/sui/graphql'
@@ -33,7 +31,12 @@ import { kares_coin_type } from './kares_ptb.ts'
 import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
 import { create_gas_ledger, gas_mist_from_receipt, log_transaction_receipt } from './gas.ts'
 import { GAS_BUDGET_MIST } from './gas_budget.ts'
-import { create_transaction_execution, type ExecutionCore, type TransactionStorage } from './transaction_execution.ts'
+import {
+  create_transaction_execution,
+  type ExecutionCore,
+  type TransactionStorage,
+  type TransactionJournal,
+} from './transaction_execution.ts'
 import { create_sponsored_execution } from './sponsored_execution.ts'
 import { transaction_resolution_error } from './transaction_error.ts'
 
@@ -53,11 +56,7 @@ const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_v
   typeof Reflect.get(value, 'id') === 'string' &&
   typeof Reflect.get(value, 'shared_version') === 'string'
 
-/**
- * The transport the SDK needs — the modern CORE interface, identical on the gRPC and GraphQL
- * clients (`client.core.*`; JSON-RPC is dead — owner 2026-08-12). Structural on purpose so any
- * flavor or test fake fits: hydrate, resolve gas, simulate, execute, and synchronize the next write.
- */
+/** Structural Core transport: hydrate, resolve, simulate, execute, and synchronize writes. */
 export interface SuiTransport {
   core: {
     resolveTransactionPlugin: () => TransactionPlugin
@@ -134,6 +133,7 @@ export type SdkOptions = {
    *  transaction itself (variable-cost batches); otherwise the game-door default applies */
   gas_budget?: bigint | 'estimate'
   transaction_storage?: TransactionStorage | null
+  transaction_journal?: TransactionJournal
 }
 
 /** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */
@@ -215,6 +215,7 @@ export function SDK({
   pins: supplied_pins,
   gas_budget,
   transaction_storage,
+  transaction_journal,
 }: SdkOptions = {}) {
   const pins = resolve_pins(network, supplied_pins)
   const sui_client =
@@ -226,7 +227,6 @@ export function SDK({
         : null)
   if (!sui_client)
     throw new Error('[sdk] SDK({ client }), SDK({ rpc_url }), or SDK({ graphql_url }) needs a chain transport')
-
   // On-chain type arguments name types by their FIRST-publish package address forever;
   // pins.package / pins.math_package follow the latest upgrade's package object and are
   // move-call targets only. Raw reads — the pins proxy fails fast on missing pins.
@@ -238,7 +238,6 @@ export function SDK({
   }
   const game_type_package = defining_package('package')
   const math_type_package = defining_package('math_package')
-
   // the kiosk client rides the same transport (structurally identical at the core seam)
   const kiosk_client = new KioskClient({
     client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
@@ -273,7 +272,6 @@ export function SDK({
       return BigInt(result.balance.balance)
     },
   })
-
   // ── transaction factory + game-object resolver ────────────────────────────────────
   const create_transaction = (): Transaction => {
     const transaction = new Transaction()
@@ -282,7 +280,6 @@ export function SDK({
       transaction.moveCall({ target: `${math_package}::aresrpg::aresrpg` })
     return transaction
   }
-
   const resolve = (tx: Transaction, value: Resolvable, mutable: boolean): TransactionObjectArgument => {
     if (typeof value !== 'string') {
       // already an in-PTB argument (a result, a resolved input) or an explicit ref object
@@ -299,7 +296,6 @@ export function SDK({
       `[sdk] unresolved object ${value} — hydrate it first (sdk.hydrate([id])) or pass a full ref; the SDK never resolves over RPC inside a build`
     )
   }
-
   const intern_pure = (
     tx: Transaction,
     type: string,
@@ -316,7 +312,6 @@ export function SDK({
     values.set(key, input)
     return input
   }
-
   const ctx: DoorCtx = {
     pins: new Proxy(pins, {
       get(target, key) {
@@ -427,7 +422,9 @@ export function SDK({
   const execution = create_transaction_execution({
     core: sui_client.core,
     key: `aresrpg:transaction:${network}:${sender}`,
+    address: sender,
     storage: transaction_storage,
+    journal: transaction_journal,
     on_receipt: (receipt, gas_scope, gas_payer = sender ?? undefined) => {
       log_transaction_receipt(receipt)
       if (gas_payer === sender) {
@@ -488,9 +485,11 @@ export function SDK({
     await prepare_transaction(tx, sender, { budget })
     let signed: Awaited<ReturnType<TransactionSigner>>
     try {
+      await execution.before_sign(await tx.build(), String(tx.getData().gasData.budget ?? ''), { include, gas_scope })
       before_sign?.()
       signed = await sign(tx)
     } catch (error) {
+      if (transaction_journal) throw new Error('[sdk] durable transaction requires reconciliation', { cause: error })
       throw transaction_resolution_error(error)
     }
     return execute_signed(signed.bytes, signed.signature, { include, gas_scope })
@@ -564,6 +563,7 @@ export function SDK({
       }),
     is_transaction_idle: execution.is_transaction_idle,
     recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
+    resume_pending_transaction: () => execution.enqueue(execution.resume_pending),
     execute_personal_kiosk,
     read_sui_balance: () => {
       if (!sender) throw new Error('[sdk] balance reads need an address')

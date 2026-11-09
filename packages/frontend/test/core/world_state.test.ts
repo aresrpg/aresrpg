@@ -77,9 +77,7 @@ const tracked = (world: string, zones: readonly { zx: number; zz: number }[]): S
 })
 
 test('packet/zones is the ONE door for a zone changing — rows merge and land whole', () => {
-  // a spiral push, a discovery and a consumption all arrive the same way: the projected row.
-  // Nothing is carried forward by hand — a re-roll ZEROES consumption on chain, and the client
-  // that used to preserve the old bitmaps was inventing state the chain had already discarded.
+  // Discovery and consumption share the projected row; a reroll must clear the old consumption bits.
   const state = fold([
     tracked('overworld', [
       { zx: 3, zz: 4 },
@@ -534,6 +532,10 @@ test('a population with no zone row states nothing about consumption and renders
   const state = fold([POPULATED_ZONE[2]!])
 
   expect(spawn_markers(state)).toHaveLength(0)
+  expect(state.all_spawns).toEqual({})
+  const late_baseline = fold([POPULATED_ZONE[0]!, POPULATED_ZONE[2]!, POPULATED_ZONE[1]!])
+  expect(spawn_markers(late_baseline)).toHaveLength(0)
+  expect(late_baseline.all_spawns).toEqual({})
 })
 
 test('a disconnect clears the whole surrounding', () => {
@@ -566,9 +568,7 @@ test('fight markers fold: tracked batches merge, creations upsert, phases flip a
   const snapshotted = fold([tracked('overworld', [{ zx: 0, zz: 0 }]), { type: 'packet/fights', fights: [row] }])
   expect(Object.keys(snapshotted.fights)).toEqual(['0xfight1'])
 
-  // A CREATION SHIPS THE PROJECTED ROW (2026-08-21): the fold stores what the wire carried and
-  // never fills a missing field — a guessed `managed` used to plant a sword on a fight that
-  // must never wear one, until the next snapshot happened to correct it.
+  // Preserve the projected row: guessing `managed` once planted swords on fights that must never show one.
   const born = { ...row, id: '0xf2', x: 5, z: 6, managed: true, access_a: 1, placement_ms: '2000' }
   const created = fold([
     tracked('overworld', [{ zx: 0, zz: 0 }]),

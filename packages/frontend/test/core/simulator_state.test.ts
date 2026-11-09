@@ -60,7 +60,12 @@ describe('local fight simulator setup', () => {
       .filter(({ source }) => source.includes('create_fight({'))
       .map(({ file }) => file)
 
-    expect(owners).toEqual(['modules/fight_session.ts'])
+    expect(owners).toEqual([])
+    const adapter = await Bun.file(`${source_root}/modules/fight_session.ts`).text()
+    expect(adapter).toContain("export { create_fight_session, type ActiveFightSession } from '@aresrpg/fight'")
+    const session = await Bun.file(new URL('../../../fight/src/session.ts', import.meta.url)).text()
+    expect(session).toContain('export const create_fight_session =')
+    expect(session).toContain('runtime = create_fight({ setup, state, mode, seed })')
   })
 
   test('the shared picker composes category, text, and pill filters', () => {

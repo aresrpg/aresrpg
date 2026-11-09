@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import {
+  reconcile_trade_row,
+  terminal_phase,
+  packet_rows_merged,
+  close_trade_projection,
+} from '@aresrpg/protocol/inventory'
+export { reconcile_trade_row } from '@aresrpg/protocol/inventory'
 import type { ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
 import type { AuthSession } from '@aresrpg/sdk/auth'
 import {
@@ -127,40 +134,6 @@ const without_key = <T>(rows: Readonly<Record<string, T>>, key: string): Readonl
 const upsert = (rows: readonly TradeRow[], trade: Readonly<TradeRow>): readonly TradeRow[] =>
   Object.freeze([...rows.filter(({ id }) => id !== trade.id), trade])
 
-const cap_intersection = (left: readonly TradeCapRow[], right: readonly TradeCapRow[]): readonly TradeCapRow[] => {
-  const right_ids = new Set(right.map(({ object }) => object))
-  return Object.freeze(left.filter(({ object }) => right_ids.has(object)))
-}
-
-const min_balance = (left: string, right: string): string => {
-  const a = BigInt(left)
-  const b = BigInt(right)
-  return (a < b ? a : b).toString()
-}
-
-const terminal_phase = (trade: Readonly<TradeRow>): boolean => trade.phase === 'settling' || trade.phase === 'cancelled'
-
-export const reconcile_trade_row = (current: Readonly<TradeRow>, incoming: Readonly<TradeRow>): TradeRow => {
-  if (incoming.offer_revision > current.offer_revision) return incoming
-  if (incoming.offer_revision < current.offer_revision) return current
-  if (current.phase !== incoming.phase) return incoming
-  if (terminal_phase(current))
-    return Object.freeze({
-      ...incoming,
-      caps_a: cap_intersection(current.caps_a, incoming.caps_a),
-      caps_b: cap_intersection(current.caps_b, incoming.caps_b),
-      sui_a: min_balance(current.sui_a, incoming.sui_a),
-      sui_b: min_balance(current.sui_b, incoming.sui_b),
-      kares_a: min_balance(current.kares_a, incoming.kares_a),
-      kares_b: min_balance(current.kares_b, incoming.kares_b),
-    })
-  return Object.freeze({
-    ...incoming,
-    accept_a: current.accept_a || incoming.accept_a,
-    accept_b: current.accept_b || incoming.accept_b,
-  })
-}
-
 const same_offer = (packet: Readonly<TradeRow>, projected: Readonly<TradeRow>): boolean =>
   packet.sui_a === projected.sui_a &&
   packet.sui_b === projected.sui_b &&
@@ -229,24 +202,6 @@ const offer_projection_arrived = (pending: string | null, rows: readonly TradeRo
   const [, id, revision] = pending.split(':')
   const row = rows.find((trade) => trade.id === id)
   return !!row && row.offer_revision >= Number(revision)
-}
-
-const packet_rows_merged = (state: Readonly<TradeState>, packet_rows: readonly TradeRow[]): readonly TradeRow[] => {
-  const current_by_id = new Map(state.rows.map((row) => [row.id, row]))
-  const merged = Object.freeze(
-    packet_rows
-      .filter(({ id }) => !state.tombstones[id])
-      .map((row) => {
-        const current = current_by_id.get(row.id)
-        return current ? reconcile_trade_row(current, row) : row
-      })
-  )
-  const packet_ids = new Set(packet_rows.map(({ id }) => id))
-  const projected_requests = state.rows.filter(
-    ({ id, phase }) =>
-      phase === 'requested' && !!state.awaiting_projection[id] && !packet_ids.has(id) && !state.tombstones[id]
-  )
-  return Object.freeze([...merged, ...projected_requests])
 }
 
 const awaiting_after_packet = (
@@ -335,12 +290,9 @@ const terminal_trade_state = (state: Readonly<TradeState>, delta: Readonly<Trade
 
 const closed_trade_state = (state: Readonly<TradeState>, id: string): TradeState =>
   Object.freeze({
-    ...state,
+    ...close_trade_projection(state, id),
     active: state.active === id ? null : state.active,
-    rows: Object.freeze(state.rows.filter((trade) => trade.id !== id)),
     settlement_armed: without_key(state.settlement_armed, id),
-    awaiting_projection: without_key(state.awaiting_projection, id),
-    tombstones: Object.freeze({ ...state.tombstones, [id]: true }),
   })
 
 const local_trade_state = (state: Readonly<TradeState>, input: Readonly<AppInput>): TradeState => {

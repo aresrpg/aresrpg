@@ -59,8 +59,8 @@ const craft_jobs_by_category: Readonly<Partial<Record<ItemCategory, JobSlug>>> =
   key: 'HANDYMAN',
 })
 
-export const craft_job_of = (category: string): JobSlug | null =>
-  is_item_category(category) ? (craft_jobs_by_category[category] ?? null) : null
+export const craft_job_of = (category: string, authored_job: JobSlug | null = null): JobSlug | null =>
+  (is_item_category(category) ? craft_jobs_by_category[category] : null) ?? authored_job
 
 export const stackable_item_categories = Object.freeze(['consumable', 'resource', 'rune', 'key'] as const)
 export const item_is_stackable = (category: string): boolean =>

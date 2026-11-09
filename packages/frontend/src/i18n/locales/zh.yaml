@@ -1457,7 +1457,7 @@ encyclopedia_page:
     forgemagie_desc: 符文锻造可将装备分解成符文，再将符文应用于其他装备以修改属性。这是一套高风险高回报的终局装备完善系统。
     crushing: 分解
     crushing_desc: 被分解物品的每项属性独立抽取，数值越高、权重越大，符文产量越多。产量无需服务器决定：除数由固定物品等级曲线与模板自身的链上通胀系数（1%至4000%）共同决定。分解会降低本模板系数，并提高邻近模板的系数。
-    crushing_tiers_desc: 符文阶级（Ba/Pa/Ra）随机选择。属性越高，越倾向于获得Ra符文。
+    rune_tiers_desc: 符文阶级（Ba/Pa/Ra）随机选择。属性越高，越倾向于获得Ra符文。
     rune_tiers: 符文阶级
     rune_ba: 1阶：每枚符文权重最低
     rune_pa: 2阶：每枚符文权重中等
@@ -2750,6 +2750,27 @@ ui:
   agent_sending: '正在发送…'
   agent_pair_storage_failed: '无法保存恢复身份。请允许浏览器存储，然后重新连接。'
   agent_pair_disposable: '此智能体使用临时凭据。请让它设置持久存储，然后重新连接。'
+  agent_signer_persistent: '持久交易签名者已验证。'
+  agent_claim_character: '为机器人领取角色'
+  agent_hosted_intro: '助手通过MCP操作，不持有签名密钥。AresRPG服务密钥和你的Google钱包均可独立转移机器人的资产，无需另一方批准。'
+  agent_hosted_unavailable: '需要Google游戏钱包和已配置的HTTPS机器人服务。仍可在背包中恢复资产。'
+  agent_hosted_failed: '连接未完成。请手动重试；未进行充值或资产转移。'
+  agent_hosted_pending: '正在等待钱包批准或托管服务。你可以取消。'
+  agent_hosted_authenticate: '使用Google钱包验证'
+  agent_hosted_create: '创建托管机器人'
+  agent_hosted_bot: '托管机器人'
+  agent_hosted_select: '选择机器人'
+  agent_hosted_verify: '验证托管签名者'
+  agent_hosted_ready: '托管签名者已验证，公开恢复身份已保存。'
+  agent_hosted_waiting: '这不表示AI正在游戏。助手提供推理，机器人等待已授权的指令。'
+  agent_hosted_consent: '检查助手权限'
+  agent_hosted_policy: '策略版本'
+  agent_hosted_approve: '批准此机器人和权限'
+  agent_hosted_endpoint: '添加此公开HTTPS MCP端点，然后登录并批准指定机器人。'
+  agent_hosted_recovery: '通过物品栏和召回功能可独立取回资产。取回操作不会撤销服务密钥对机器人中剩余资产的控制权。'
+  agent_hosted_chatgpt: 'ChatGPT：在可用的开发者设置中添加自定义MCP插件。可用性取决于套餐和工作区。'
+  agent_hosted_claude: 'Claude：在设置中添加自定义连接器，然后通过AresRPG授权。'
+  agent_hosted_grok: 'Grok：添加Custom MCP连接器并完成授权。请验证你的账户是否兼容。'
   agent_choose: '选择你的智能体'
   agent_unavailable: '配对功能尚不可用。尚未连接任何智能体。'
   agent_setup: '设置智能体'

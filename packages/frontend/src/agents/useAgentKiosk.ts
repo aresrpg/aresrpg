@@ -140,6 +140,24 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     })
   }
 
-  return { wallet, pairing, snapshot, routes, state, refresh, offer, incoming, pending_deposit_ids, ...transfer }
+  const claim_character = (offer: AgentReturnOffer): void => {
+    if (!snapshot || !snapshot.deposit || state.phase !== 'ready' || transfer.busy) return
+    if (!snapshot.recall.pending.includes(offer)) return
+    void transfer.execute(snapshot.recall.transfer, { kind: 'claim', ...offer })
+  }
+
+  return {
+    wallet,
+    pairing,
+    snapshot,
+    routes,
+    state,
+    refresh,
+    offer,
+    incoming,
+    claim_character,
+    pending_deposit_ids,
+    ...transfer,
+  }
 }
 export type AgentKioskController = ReturnType<typeof useAgentKiosk>

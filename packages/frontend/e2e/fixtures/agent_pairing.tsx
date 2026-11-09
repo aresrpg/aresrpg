@@ -18,7 +18,6 @@ import type { AgentTransferIntent } from '../../../sdk/src/agent_transfer_action
 import { AgentTransferReview } from '../../src/agents/AgentTransferReview.tsx'
 import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 import { env } from '../../src/env.ts'
-import type { SetupExchange } from '../../src/agents/setup_requests.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import '../../src/tailwind.css'
@@ -62,7 +61,19 @@ const connect = (index: number) => {
     address: identity.address,
     identity: 'zklogin',
     read_agent_pairing_request: binding.read_agent_pairing_request,
-  } as AuthSession
+    // Fixture-only placeholder; no wallet signature or credential is created.
+    sign_personal_message: async () => {
+      document.documentElement.setAttribute('data-fixture-signing', 'true')
+      if (
+        new URLSearchParams(location.search).has('slow_signature') ||
+        document.documentElement.hasAttribute('data-delay-next-signature')
+      )
+        await new Promise<void>((resolve) =>
+          window.addEventListener('fixture/signature', () => resolve(), { once: true })
+        )
+      return { bytes: '', signature: 'fixture-signature' }
+    },
+  } as unknown as AuthSession
   dispatch_app({ type: 'auth/connecting' })
   dispatch_app({ type: 'auth/connected', session })
   if (new URLSearchParams(location.search).has('character'))
@@ -97,16 +108,6 @@ const connect = (index: number) => {
         ],
       },
     })
-}
-const exchange: SetupExchange = async (wallet, request) => {
-  const endpoint = env.server_ws_url.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:')
-  const response = await fetch(new URL('/fixture/session', endpoint), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ owner: wallet.address, request }),
-  })
-  if (!response.ok) throw new Error('FIXTURE_SESSION_FAILED')
-  return response.json()
 }
 const inventory_fixture = {
   read_inventory: async () => ({
@@ -207,7 +208,7 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <main className="min-h-screen bg-bg p-4 text-text">
       <p>Synthetic mainnet public identity; local verifier only. No wallet, RPC, assets or credentials.</p>
       <Button onClick={() => set_open(true)}>{copy.ui.agent_connect_your}</Button>
-      {open && <AgentSetup copy={copy} close={() => set_open(false)} exchange={exchange} />}
+      {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </main>
   )
 }

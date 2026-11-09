@@ -58,7 +58,7 @@ test('an expired retry sleeps without a clock and resumes on the readiness delta
   try {
     expect(timer).not.toHaveBeenCalled()
     const previous = state
-    state = { ...state, chain_clock: { chain_ms: 100_000, received_ms: performance.now() } }
+    state = { ...state, chain_clock: { chain_ms: 100_000, observed_at: performance.now() } }
     notify(state, previous)
     expect(state.automation.run?.step.type).not.toBe('retrying')
     expect(timer).toHaveBeenCalled()
@@ -73,7 +73,7 @@ test('an expired retry without a live pose uses the normal poll interval', () =>
   const initial = automation_fixture()
   const state: AppState = {
     ...initial,
-    chain_clock: { chain_ms: 100_000, received_ms: performance.now() },
+    chain_clock: { chain_ms: 100_000, observed_at: performance.now() },
     automation: {
       ...initial.automation,
       run: {

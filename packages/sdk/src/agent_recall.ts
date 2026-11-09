@@ -93,7 +93,7 @@ const read_recall = async (
     },
     kiosk_cap: async (kiosk_id) => {
       const current = await read_personal_kiosks(sdk, identity.address)
-      return current.find((cap) => cap.kioskId === kiosk_id) ?? null
+      return (kiosk_id === undefined ? current[0] : current.find((cap) => cap.kioskId === kiosk_id)) ?? null
     },
   })
   const pending = await read_agent_returns(options.client, sdk, identity.address, request.owner)

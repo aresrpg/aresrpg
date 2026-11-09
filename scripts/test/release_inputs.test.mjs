@@ -15,7 +15,13 @@ import {
 
 test('scene compiler inputs invalidate the frontend artifact', () => {
   for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
-    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false, discord: false })
+    expect(classify_release([path])).toEqual({
+      frontend: true,
+      server: false,
+      indexer: false,
+      bot: false,
+      discord: false,
+    })
 })
 
 test('engine is frontend-owned and server/indexer releases stay independent', () => {
@@ -23,18 +29,21 @@ test('engine is frontend-owned and server/indexer releases stay independent', ()
     frontend: true,
     server: false,
     indexer: false,
+    bot: false,
     discord: false,
   })
   expect(classify_release(['packages/indexer/src/main.rs'])).toEqual({
     frontend: false,
     server: false,
     indexer: true,
+    bot: false,
     discord: false,
   })
   expect(classify_release(['packages/server/src/index.ts'])).toEqual({
     frontend: false,
     server: true,
     indexer: false,
+    bot: false,
     discord: false,
   })
 })
@@ -45,7 +54,13 @@ test('journal prose and artwork do not invalidate game artifacts', () => {
     'packages/journal/artwork/cover.png',
     'packages/journal/src/pages.tsx',
   ]
-  expect(classify_release(paths)).toEqual({ frontend: false, server: false, indexer: false, discord: false })
+  expect(classify_release(paths)).toEqual({
+    frontend: false,
+    server: false,
+    indexer: false,
+    bot: false,
+    discord: false,
+  })
   expect(
     fingerprint_runtime_files(
       paths.map((path) => [path, 'before']),
@@ -126,6 +141,7 @@ test('mobile presentation changes invalidate the shared frontend artifact', () =
     frontend: true,
     server: false,
     indexer: false,
+    bot: false,
     discord: false,
   })
 })
@@ -135,12 +151,14 @@ test('shared UI changes invalidate browser artifacts and its manifest participat
     frontend: true,
     server: false,
     indexer: false,
+    bot: false,
     discord: false,
   })
   expect(classify_release(['packages/ui/package.json'])).toEqual({
     frontend: true,
     server: true,
     indexer: false,
+    bot: true,
     discord: true,
   })
 })
@@ -154,7 +172,13 @@ test('Discord artwork, typography, and identity changes rebuild the backend imag
     'seed/icons/items/gnawed_branch.png',
     'seed/icons/mobs/golden_lorito.png',
   ]) {
-    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false, discord: true })
+    expect(classify_release([path])).toEqual({
+      frontend: true,
+      server: false,
+      indexer: false,
+      bot: false,
+      discord: true,
+    })
   }
 })
 
@@ -163,12 +187,14 @@ test('notification implementation changes rebuild only the independently deploye
     frontend: false,
     server: false,
     indexer: false,
+    bot: false,
     discord: true,
   })
   expect(classify_release(['packages/server/src/suins.ts'])).toEqual({
     frontend: false,
     server: true,
     indexer: false,
+    bot: false,
     discord: true,
   })
 })
@@ -300,4 +326,49 @@ test('locale fingerprints and both consumers use the same Bun parser semantics',
   for (const consumer of [server, discord]) expect(consumer).toContain('Bun.YAML.parse(')
   expect(server).toContain('allocation_locale(')
   expect(discord).toContain('notification_locale(')
+})
+
+test('hosted bot runtime closure invalidates its artifact independently', () => {
+  expect(classify_release(['packages/bot/src/index.ts'])).toEqual({
+    frontend: false,
+    server: false,
+    indexer: false,
+    discord: false,
+    bot: true,
+  })
+  for (const path of [
+    'packages/bot/Dockerfile',
+    'packages/bot/Dockerfile.dockerignore',
+    'packages/sdk/src/client.ts',
+    'packages/protocol/src/index.ts',
+    'packages/fight/src/index.ts',
+    'packages/immutable/src/portrait.ts',
+    'packages/ui/package.json',
+    'packages/new-workspace/package.json',
+    'seed/content/items.json',
+    'seed/content/recipes.json',
+    'seed/content/mobs.json',
+    'seed/content/spells.json',
+    'seed/portraits/manifest.json',
+    'pins.json',
+    'bun.lock',
+    'patches/dependency.patch',
+  ]) {
+    expect(classify_release([path]).bot).toBe(true)
+    expect(fingerprint_runtime_files([[path, 'before']], '{}').bot).not.toBe(
+      fingerprint_runtime_files([[path, 'after']], '{}').bot
+    )
+  }
+})
+
+test('bot fingerprints bind runtime pins but ignore publication ledger changes', async () => {
+  await with_locales(async ({ directory }) => {
+    const path = join(directory, 'pins.json')
+    writeFileSync(path, JSON.stringify({ network: 'mainnet', package: '0x1', seed_ledger: { a: 1 } }))
+    const before = await runtime_fingerprints(directory)
+    writeFileSync(path, JSON.stringify({ network: 'mainnet', package: '0x1', seed_ledger: { a: 2 } }))
+    expect((await runtime_fingerprints(directory)).bot).toBe(before.bot)
+    writeFileSync(path, JSON.stringify({ network: 'mainnet', package: '0x2', seed_ledger: { a: 2 } }))
+    expect((await runtime_fingerprints(directory)).bot).not.toBe(before.bot)
+  })
 })

@@ -1,30 +1,28 @@
 # AresRPG
 
-> Build an AresRPG bot with the existing SDK, onboard it through Connect Your Agent, and act within the player's objective.
+> Connect your assistant to a hosted AresRPG bot through authenticated MCP and act within the player's objective.
 
 **Connect Your Agent is the single official supported bot onboarding flow.** Start with the
-[Connect Your Agent guide](https://aresrpg.world/agents/client.txt). The player creates the setup
-link in the game; the bot returns public proof automatically, and the player reviews the paired
-identity and character handover. Human Recall uses the Google member of the 1-of-2 multisig.
+[Connect Your Agent guide](https://aresrpg.world/agents/client.txt). Choose ChatGPT, Claude or Grok,
+add the configured public HTTPS MCP endpoint, log in with the existing AresRPG Google wallet,
+and explicitly consent to the exact bot, client, scopes, policy.
 
-Then use the [SDK bot-building reference](https://aresrpg.world/agents/sdk.txt) to compose existing
-character, combat, dungeon, marketplace and transaction primitives. Keep the bot's strategy and
-runtime in its host environment; no additional bot framework is required. The optional observer
-example is a diagnostic, not a second onboarding flow or the limit of the SDK's gameplay features.
+The hosted executor uses the same SDK actions as the game. The assistant supplies inference;
+the executor waits when no authorized continuation exists. One game WebSocket is shared by
+all authorized connectors for a bot. Connection readiness never means the AI is actively playing.
+No assistant-owned signing key or local CLI is required. Never request wallet secrets in chat.
 
-The standalone setup client supplies a host-owned file-backed signer; the host supplies retained storage and runtime. Match any SDK checkout to the deployed server;
-source documentation may describe changes awaiting deployment. Pairing proves a public identity,
-not completed custody or successful gameplay. Never request wallet secrets in chat.
-After setup, follow the client guide’s optional key-care checks for host upgrades, storage safety
-and an approved private backup/recovery path.
+Inventory handover and owner Recall retain their existing explicit custody flows. Saved public
+recovery descriptors, including legacy identities, remain usable independently of hosted-service
+availability. Provider compatibility and production publication require separate live verification.
 
 ## Build the bot
 
-- [Connect Your Agent](https://aresrpg.world/agents/client.txt): Fast persistent pairing, host signing and restart.
+- [Connect Your Agent](https://aresrpg.world/agents/client.txt): Hosted bot registration, authenticated MCP and explicit owner consent.
 - [Custody and human Recall](https://aresrpg.world/agents/custody.txt): Handover, inventory recovery and return.
 - [SDK building blocks](https://aresrpg.world/agents/sdk.txt): Action composition, offline planning and combat simulation.
 - [State and transaction discipline](https://aresrpg.world/agents/protocol.txt): Chain/indexed read inputs, freshness, receipts and recovery after onboarding.
-- [Game-server protocol](https://aresrpg.world/agents/indexing.txt): Authenticate the paired multisig, receive projections and publish map presence.
+- [Game-server protocol](https://aresrpg.world/agents/indexing.txt): Private actor authentication, projections and map presence; external assistants use MCP.
 - [Action examples](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts): Compose existing SDK builders.
 - [Offline planner](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_plan.ts): Inspect recipes and progression without a signer.
 

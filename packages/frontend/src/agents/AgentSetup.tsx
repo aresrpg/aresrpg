@@ -1,96 +1,77 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
-import { useCallback, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { Button, IconButton, NativeModal } from '@aresrpg/ui'
 import { Bot, X } from 'lucide-react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { env } from '../env.ts'
 
-import { AgentConnectedHint } from './AgentConnectedHint.tsx'
-import { AgentPairing } from './AgentPairing.tsx'
-import { AgentHandoff } from './AgentHandoff.tsx'
-import type { SetupExchange } from './setup_requests.ts'
+import { useHostedConnect } from './useHostedConnect.ts'
+import { HostedBotPanel } from './HostedBotPanel.tsx'
 import './agent_setup.css'
 
-const chatgpt_logo = '/providers/chatgpt.svg'
-const grok_logo = '/providers/grok.svg'
-
-/** Public proof only; no agent signer or custody is stored by the modal. */
-export const AgentSetup = ({
-  copy,
-  close,
-  exchange,
-}: Readonly<{
-  copy: AppCopy
-  close: () => void
-  exchange?: SetupExchange
-}>) => {
+export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
   const title_id = useId()
-  const [provider, select_provider] = useState<string | null>(null)
-  const wallet = useAppStore((state) => state.session.wallet)
-  const [connected_wallet, set_connected_wallet] = useState<typeof wallet>(null)
-  const show_connected = useCallback(() => set_connected_wallet(wallet), [wallet])
-  const read_request = wallet?.identity === 'zklogin' ? wallet.read_agent_pairing_request : undefined
-  const t = copy.ui
-  const providers = [
-    { id: 'dot', label: 'ChatGPT', logo: chatgpt_logo },
-    { id: 'grok', label: 'Grok Bot', logo: grok_logo },
-  ]
-  if (wallet && connected_wallet === wallet) return <AgentConnectedHint copy={copy} close={close} />
-  const chooser = (
-    <>
-      <h2 id={title_id}>{t.agent_choose}</h2>
-      <div className="agent-provider-cards" role="group" aria-label={t.agent_choose}>
-        {providers.map(({ id, label, logo }) => (
-          <button
-            key={id}
-            type="button"
-            className="agent-provider-card"
-            aria-pressed={provider === id}
-            onClick={() => select_provider(id)}
-          >
-            <img src={logo} alt="" style={{ colorScheme: 'dark' }} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
-      <p className="agent-setup-details">{t.agent_environment}</p>
-    </>
-  )
+  const wallet = useAppStore((app) => app.session.wallet)
+  const [provider, select_provider] = useState('')
+  const [authorization_id] = useState(() => new URLSearchParams(location.search).get('authorization_id'))
+  const { state, dispatch } = useHostedConnect(wallet, env.bot_service_url, authorization_id)
+  const text = copy.ui
+  const pending = ['authenticating', 'creating', 'verifying', 'authorizing'].includes(state.phase)
+  const eligible = [wallet?.identity === 'zklogin', !!env.bot_service_url].every(Boolean)
+  const dismiss = () => {
+    const url = new URL(location.href)
+    url.searchParams.delete('authorization_id')
+    history.replaceState(history.state, '', url)
+    close()
+  }
   return (
-    <NativeModal close={close} label={t.agent_choose} aria-labelledby={title_id} className="aui-modal-scrim">
-      <section className="agent-setup" data-agent-setup="">
-        <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={close} />
-        {read_request ? (
-          <AgentPairing
-            key={JSON.stringify([wallet?.address, provider])}
-            copy={copy}
-            read_request={read_request}
-            disabled={!provider}
-            provider={providers.find(({ id }) => id === provider)}
-            title_id={title_id}
-            exchange={exchange}
-            connected={show_connected}
-          >
-            {chooser}
-          </AgentPairing>
-        ) : (
-          <>
-            {chooser}
-            <AgentHandoff key={provider} copy={copy} provider={provider} />
-          </>
-        )}
-        <p className="agent-setup-status" role="status" hidden={!!read_request}>
-          {t.agent_unavailable}
-        </p>
-        <div className="agent-setup-details" hidden={!!read_request}>
-          <p hidden={!provider}>{t.agent_pair_blocked}</p>
-          <a href="/agents/client.txt" target="_blank" rel="noreferrer">
-            {t.agent_bootstrap}
-          </a>
+    <NativeModal close={dismiss} label={text.agent_choose} aria-labelledby={title_id} className="aui-modal-scrim">
+      <section className="agent-setup" data-agent-setup="" data-hosted-phase={state.phase}>
+        <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={dismiss} />
+        <h2 id={title_id}>{text.agent_choose}</h2>
+        <div className="agent-provider-cards" role="group" aria-label={text.agent_choose}>
+          {['ChatGPT', 'Claude', 'Grok'].map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="agent-provider-card"
+              aria-pressed={provider === name}
+              disabled={pending}
+              onClick={() => select_provider(name)}
+            >
+              {name === 'Claude' ? (
+                <Bot size={28} aria-hidden="true" />
+              ) : (
+                <img src={`/providers/${name.toLowerCase()}.svg`} alt="" style={{ colorScheme: 'dark' }} />
+              )}
+              <span>{name}</span>
+            </button>
+          ))}
         </div>
+        <p className="agent-setup-details">{text.agent_hosted_intro}</p>
+        {!eligible && <p role="status">{text.agent_hosted_unavailable}</p>}
+        {state.phase === 'failed' && <p role="alert">{text.agent_hosted_failed}</p>}
+        {pending && <p role="status">{text.agent_hosted_pending}</p>}
+        {['idle', 'failed'].includes(state.phase) && (
+          <Button
+            className="agent-connect"
+            tone="primary"
+            disabled={!eligible || !provider}
+            onClick={() => dispatch({ type: 'start', phase: 'authenticating' })}
+          >
+            {text.agent_hosted_authenticate}
+          </Button>
+        )}
+        {state.phase === 'ready' && (
+          <HostedBotPanel copy={copy} provider={provider} state={state} dispatch={dispatch} />
+        )}
+        <p className="agent-setup-details">{text.agent_hosted_recovery}</p>
+        <Button className="agent-connect" onClick={dismiss}>
+          {text.agent_cancel}
+        </Button>
       </section>
     </NativeModal>
   )

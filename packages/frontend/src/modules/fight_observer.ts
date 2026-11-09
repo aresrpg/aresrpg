@@ -3,6 +3,12 @@
 
 import { decode_fight_action, type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { FightStateRow } from '@aresrpg/protocol'
+import {
+  fight_checkpoint_phase_rank,
+  fight_state_regresses,
+  fight_packet_phase,
+  type FightPhaseRank,
+} from '@aresrpg/protocol/fight-phase'
 
 import { displayed_character, agent_watching } from '../agents/observation.ts'
 import { catalog_spell_sources } from '../content/fight_sources.ts'
@@ -16,15 +22,7 @@ import type { FightKolizeumManager, FightPresentationBatch } from './fight.ts'
 import { active_seat_is_dead, fight_should_close, local_draft_finished_turn } from './fight_lifecycle.ts'
 import { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 
-export type FightPhaseRank = 0 | 1 | 2
-
-export const fight_checkpoint_phase_rank = (contract: unknown): FightPhaseRank => {
-  if (!contract || typeof contract !== 'object') return 0
-  return Reflect.get(contract, 'ended') === true ? 2 : Number(Reflect.get(contract, 'round') ?? 0) > 0 ? 1 : 0
-}
-
-export const fight_state_regresses = (floor: FightPhaseRank, contract: unknown) =>
-  fight_checkpoint_phase_rank(contract) < floor
+export { fight_checkpoint_phase_rank, fight_state_regresses } from '@aresrpg/protocol/fight-phase'
 
 const kolizeum_manager = (row: FightStateRow['kolizeum']): FightKolizeumManager | null =>
   row ? Object.freeze({ id: row.id, pledge_mist: BigInt(row.pledge_mist) }) : null
@@ -372,15 +370,11 @@ export const observe_fights = ({
       dispatch({ type: 'fight/transaction_pending', fight: fight_id, pending: true })
       dispatch({ type: 'fight/resync', fight: fight_id })
     }
-    if (packet.type === 'packet/fight_phase') {
-      advance_phase(packet.phase === 'ended' ? 2 : 1)
-      return
-    }
+    const phase = fight_packet_phase(packet)
+    if (phase !== null) advance_phase(phase.rank)
     if (packet.type === 'packet/fight_started') {
-      advance_phase(1)
       dispatch({ type: 'fight/started_at', fight: fight_id, at_ms: Number(packet.started_ms ?? Date.now()) })
     }
-    if (packet.type === 'packet/fight_ended') advance_phase(2)
     if (packet.type === 'packet/fight_action') {
       session.apply(decode_fight_action(packet.action))
       return

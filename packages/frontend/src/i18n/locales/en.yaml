@@ -1479,7 +1479,7 @@ encyclopedia_page:
     forgemagie_desc: Forgemagie is the rune crafting system. Crush equipment into runes, then apply those runes to other gear to modify its stats. A high-risk, high-reward endgame system for perfecting equipment.
     crushing: CRUSHING
     crushing_desc: "Each stat line on the crushed item rolls independently — higher stat values and heavier stats produce more runes. There is no server: the yield divisor combines a fixed per-item-level curve with the item template's own taux, a shared on-chain inflation coefficient (1%-4000%) that crushing itself pushes down for that template and up for its neighbors."
-    crushing_tiers_desc: Rune tier (Ba/Pa/Ra) is selected probabilistically. Higher stat values bias toward Ra runes.
+    rune_tiers_desc: Rune tier (Ba/Pa/Ra) is selected probabilistically. Higher stat values bias toward Ra runes.
     rune_tiers: RUNE TIERS
     rune_ba: 'Tier 1: lowest weight per rune'
     rune_pa: 'Tier 2: medium weight per rune'
@@ -2727,7 +2727,7 @@ ui:
   portrait_failed: 'Could not load the portrait or copy its link. You can select the link below.'
   portrait_close: 'Close'
   portrait_preview: 'Character portrait'
-  agent_signer_persistent: 'Your assistant reports a persistent transaction signer.'
+  agent_signer_persistent: 'Persistent transaction signer verified.'
   agent_saved_recovery: 'Saved agent recovery'
   agent_return_cancel: 'Cancel pending return'
   agent_cancel_handover: 'Cancel an unclaimed handover'
@@ -2810,6 +2810,26 @@ ui:
   agent_sending: 'Sending…'
   agent_pair_storage_failed: 'Your recovery identity could not be saved. Allow browser storage, then connect again.'
   agent_pair_disposable: 'This agent uses temporary credentials. Ask it to set up persistent storage, then connect again.'
+  agent_claim_character: 'Claim character for bot'
+  agent_hosted_intro: 'Your assistant uses MCP without a signing key. AresRPG’s service key and your Google wallet can each move the bot’s assets independently; neither needs the other’s approval.'
+  agent_hosted_unavailable: 'Hosted setup requires your Google game wallet and a configured HTTPS bot service. Saved recovery remains available in Inventory.'
+  agent_hosted_failed: 'Connection could not complete. Retry explicitly; no funding or transfer was performed.'
+  agent_hosted_pending: 'Waiting for wallet approval or the hosted service. You can cancel safely.'
+  agent_hosted_authenticate: 'Authenticate with Google wallet'
+  agent_hosted_create: 'Create hosted bot'
+  agent_hosted_bot: 'Hosted bot'
+  agent_hosted_select: 'Select your bot'
+  agent_hosted_verify: 'Verify hosted signer'
+  agent_hosted_ready: 'Hosted signer verified. Public recovery identity saved.'
+  agent_hosted_waiting: 'This does not mean AI is playing. Your assistant supplies inference; the bot waits without authorized instructions.'
+  agent_hosted_consent: 'Review assistant access'
+  agent_hosted_policy: 'Policy revision'
+  agent_hosted_approve: 'Approve this bot and access'
+  agent_hosted_endpoint: 'Add this public HTTPS MCP endpoint in your assistant, then sign in and approve the exact bot.'
+  agent_hosted_recovery: 'Use Inventory and Recall to recover independently. Recovery does not revoke the service key’s control over assets left in the bot.'
+  agent_hosted_chatgpt: 'ChatGPT: add a custom MCP plugin in your available developer settings. Availability depends on your plan and workspace.'
+  agent_hosted_claude: 'Claude: add a custom connector in Settings, then connect through AresRPG authorization.'
+  agent_hosted_grok: 'Grok: add a Custom MCP connector. Complete the provider’s authorization flow; compatibility must be verified for your account.'
   agent_choose: 'Choose your agent'
   agent_unavailable: 'Pairing is not available yet. No agent is connected.'
   agent_setup: 'Set up an agent'

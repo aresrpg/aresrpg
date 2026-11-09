@@ -58,6 +58,11 @@ export const create_sponsored_execution =
     const sponsor = await verifyTransactionSignature(raw, prepared.sponsor_signature)
     if (!sponsor.verifyAddress(transaction.getData().gasData.owner!)) throw new Error('Invalid sponsor signature')
     require_success(await simulate(raw), 'Sponsored transaction simulation failed')
+    await execution.before_sign(raw, String(transaction.getData().gasData.budget ?? ''), {
+      include: { objectTypes: true },
+      gas_scope,
+      gas_payer: transaction.getData().gasData.owner!,
+    })
     const signed = await sign(transaction)
     const signed_bytes = typeof signed.bytes === 'string' ? fromBase64(signed.bytes) : signed.bytes
     if (TransactionDataBuilder.getDigestFromBytes(signed_bytes) !== prepared.digest)

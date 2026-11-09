@@ -3,6 +3,7 @@
 // One union of world facts, projected through the selected character's tracked window.
 
 import { fight_discoverable, zone_of, type CharacterRow, type FightRow, type ServerPacket } from '@aresrpg/protocol'
+import { zone_key as key_of, tracked_zone_keys, retain_zone_keys } from '@aresrpg/protocol/world-projection'
 
 import type { AppInput, AppState } from '../store.ts'
 
@@ -10,8 +11,6 @@ import type { ChainClock } from './chain_clock.ts'
 import type { WorldState } from './world.ts'
 
 type WorldCharacter = Readonly<Pick<CharacterRow, 'id' | 'world'>> | null | undefined
-
-const key_of = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
 
 /** Remove discovery only. Owned fight checkpoints and settlement stay in the fight domain. */
 const expire_world_fights = (world: WorldState, now_ms: number): WorldState => {
@@ -28,11 +27,8 @@ const expire_world_fights = (world: WorldState, now_ms: number): WorldState => {
 }
 
 const prune_world_union = (world: WorldState): WorldState => {
-  const wanted = new Set(
-    Object.values(world.windows).flatMap(({ world: name, zones }) => zones.map(({ zx, zz }) => key_of(name, zx, zz)))
-  )
-  const keep = <T>(rows: Readonly<Record<string, T>>): Readonly<Record<string, T>> =>
-    Object.freeze(Object.fromEntries(Object.entries(rows).filter(([key]) => wanted.has(key))))
+  const wanted = tracked_zone_keys(Object.values(world.windows))
+  const keep = <T>(rows: Readonly<Record<string, T>>) => retain_zone_keys(rows, wanted)
   return Object.freeze({
     ...world,
     all_zones: keep(world.all_zones),
@@ -80,9 +76,8 @@ export const project_world_window = (world: WorldState, character: WorldCharacte
       pending_engages: {},
       player_menu: null,
     })
-  const wanted = new Set(window.zones.map(({ zx, zz }) => key_of(window.world, zx, zz)))
-  const keep = <T>(rows: Readonly<Record<string, T>>): Readonly<Record<string, T>> =>
-    Object.freeze(Object.fromEntries(Object.entries(rows).filter(([key]) => wanted.has(key))))
+  const wanted = tracked_zone_keys([window])
+  const keep = <T>(rows: Readonly<Record<string, T>>) => retain_zone_keys(rows, wanted)
   const players = Object.freeze(
     Object.fromEntries(
       Object.entries(world.all_players).filter(([, player]) => {

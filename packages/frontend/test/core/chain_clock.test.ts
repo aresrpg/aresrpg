@@ -16,7 +16,7 @@ test('placement follows sampled chain time, regardless of a device wall clock ah
 })
 
 test('interpolation cannot force-start while the chain is stalled before the deadline', () => {
-  const clock = { chain_ms: 60_500, received_ms: 100 }
+  const clock = { chain_ms: 60_500, observed_at: 100 }
   expect(chain_now(clock, 1_100)).toBe(61_500)
   expect(chain_deadline_reached(clock, 61_000n, 1_100)).toBeFalse()
   expect(chain_deadline_reached({ ...clock, chain_ms: 61_000 }, 61_000n, 1_100)).toBeTrue()

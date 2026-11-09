@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { expect, test } from 'bun:test'
 import { parse } from 'yaml'
 
-import { copy_text, with_english_ui, type AppCopy } from '../../src/i18n/copy.ts'
+import { with_english_ui, type AppCopy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 
 const read = (code: string) =>
@@ -25,18 +25,24 @@ test('every supported locale renders all agent custody and recovery labels, pres
   }
 })
 
-test('every locale copies the frontend guide and private setup link without unresolved placeholders', () => {
-  const guide = 'https://game.example/agents/client.txt'
-  const url = 'https://api.example/api/agent-setup?id=test#private-token'
+test('every locale provides hosted MCP, consent and independent recovery copy', () => {
+  const keys = Object.keys(english.ui).filter((key) => key.startsWith('agent_hosted_'))
   for (const { code } of LOCALES) {
-    const text = copy_text(read(code).ui)
-    const prompt = text('agent_setup_prompt', { guide, url })
-    expect(prompt).toContain(guide)
-    expect(prompt).toContain(url)
-    expect(prompt).not.toMatch(/\{(?:guide|url)\}/)
-    const handoff = text('agent_handoff_request', { provider: 'Nox', url: guide })
-    expect(handoff).toContain('Nox')
-    expect(handoff).toContain(guide)
-    expect(handoff).not.toContain('agent_kit.ts')
+    const localized = read(code)
+    for (const key of keys) expect(localized.ui[key]?.length).toBeGreaterThan(0)
+  }
+})
+
+test('hosted consent discloses independent custody authority without an extra spending allowance', () => {
+  expect(english.ui.agent_hosted_intro).toContain('can each move')
+  expect(english.ui.agent_hosted_intro).toContain('neither needs the other’s approval')
+  expect(english.ui.agent_hosted_recovery).toContain('does not revoke')
+  expect(english.ui.agent_signer_persistent).toBe('Persistent transaction signer verified.')
+  for (const { code } of LOCALES) {
+    const copy = read(code).ui
+    expect(copy.agent_hosted_intro).toContain('AresRPG')
+    expect(copy.agent_hosted_intro).toContain('Google')
+    expect(copy.agent_signer_persistent?.length).toBeGreaterThan(0)
+    expect(copy.agent_hosted_recovery?.length).toBeGreaterThan(0)
   }
 })

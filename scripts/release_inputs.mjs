@@ -58,6 +58,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'seed/icons/currency/kares.png',
     'packages/frontend/public/branding/helmet-favicon.png',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
+    'packages/bot/package.json',
     'packages/engine/package.json',
     'packages/ui/package.json',
     'packages/discord/package.json',
@@ -108,12 +109,30 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/protocol/package.json',
     'packages/mobile/package.json',
     'packages/sdk/package.json',
+    'packages/bot/package.json',
     'packages/engine/package.json',
+  ]),
+  bot: Object.freeze([
+    'packages/bot/',
+    'packages/sdk/src/',
+    'packages/protocol/src/',
+    'packages/fight/src/',
+    'packages/immutable/src/',
+    'seed/content/items.json',
+    'seed/content/recipes.json',
+    'seed/content/mobs.json',
+    'seed/content/spells.json',
+    'seed/portraits/manifest.json',
+    'pins.json',
+    'bun.lock',
+    'patches/',
+    'scripts/release_inputs.mjs',
   ]),
   indexer: Object.freeze(['packages/indexer/', 'scripts/release_inputs.mjs']),
 })
 
 export const component_owns_path = (component, path) =>
+  (component === 'bot' && /^packages\/[^/]+\/package\.json$/.test(path)) ||
   RELEASE_INPUTS[component].includes(path) ||
   (!JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
     RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix)))
@@ -236,8 +255,13 @@ export const runtime_fingerprints = async (cwd, ref = null, scope = 'all') => {
       return [path, metadata.split(' ')[2]]
     })
   const files = new Map([...committed, ...(ref === null ? await working_blobs(cwd) : [])])
-  // Pins are checked against the selected chain separately. Seed ledgers must not trigger builds.
-  files.delete('pins.json')
+  // The bot bundles SDK pins. Authored ledgers do not change its runtime identity.
+  if (files.get('pins.json')) {
+    const source =
+      ref === null ? await readFile(resolve(cwd, 'pins.json'), 'utf8') : await git(cwd, ['show', `${ref}:pins.json`])
+    const { seed_ledger: _ledger, ...pins } = JSON.parse(source)
+    files.set('pins.json', createHash('sha256').update(JSON.stringify(pins)).digest('hex'))
+  }
   const package_source =
     ref === null
       ? await readFile(resolve(cwd, 'package.json'), 'utf8')
@@ -259,7 +283,10 @@ export const fingerprint_runtime_files = (files, metadata, scope = 'all', locale
     Object.fromEntries(
       Object.keys(RELEASE_INPUTS).map((component) => {
         const inputs = selected
-          .filter(([path, hash]) => hash !== null && component_owns_path(component, path))
+          .filter(
+            ([path, hash]) =>
+              hash !== null && component_owns_path(component, path) && (path !== 'pins.json' || component === 'bot')
+          )
           .map(([path, hash]) => [path, locales[path]?.[component] ?? hash])
           .sort(([left], [right]) => left.localeCompare(right))
         return [

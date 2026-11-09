@@ -16,6 +16,7 @@ export default defineConfig({
     '**/agent_entry.pw.ts',
     '**/agent_setup.pw.ts',
     '**/agent_pairing.pw.ts',
+    '**/hosted_connect.pw.ts',
     '**/character_delete.pw.ts',
   ],
   projects: [{ name: 'agent-setup' }],
@@ -25,17 +26,11 @@ export default defineConfig({
   use: { ...base.use, baseURL: `http://127.0.0.1:${port}` },
   webServer: [
     {
-      command: 'bun packages/frontend/e2e/fixtures/agent_exchange.ts',
-      cwd: root,
-      url: 'http://127.0.0.1:5198',
-      timeout: 30_000,
-    },
-    {
       command: `bun run --cwd packages/frontend build --mode test --outDir /tmp/ares-agent-build --emptyOutDir > /tmp/ares-agent-build.log 2>&1 && bun run --cwd packages/frontend preview --host 127.0.0.1 --port ${port} --strictPort --outDir /tmp/ares-agent-build`,
       cwd: root,
       url: `http://127.0.0.1:${port}/e2e/fixtures/agent_pairing.html`,
       timeout: 240_000,
-      env: { VITE_SERVER_WS_URL: 'ws://127.0.0.1:5198/' },
+      env: { VITE_BOT_SERVICE_URL: 'https://bot.fixture.example' },
     },
   ],
 })

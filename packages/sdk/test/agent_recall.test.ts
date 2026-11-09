@@ -348,3 +348,113 @@ test('refreshing Recall shares the signing queue and keeps reload vetoed until b
   expect(signs).toBe(2)
   expect(reader.is_transaction_idle()).toBe(true)
 })
+
+// Synthetic chain objects only. Exercise the real Recall loader and transaction builders;
+// the owner wallet rejects before producing any signature or submitting to a network.
+const recall_kiosk_fixture = async (kiosk_ids: readonly number[]) => {
+  const id = (n: number) => `0x${n.toString(16).padStart(64, '0')}`
+  const cap_bcs = bcs.struct('SyntheticRecallCap', {
+    id: bcs.Address,
+    cap: bcs.option(bcs.struct('SyntheticRecallOwnerCap', { id: bcs.Address, for: bcs.Address })),
+  })
+  const signed: ReturnType<Transaction['getData']>[] = []
+  const resolver: TransactionPlugin = async (data, _options, next) => {
+    data.inputs.forEach((input, index) => {
+      if (input.UnresolvedObject)
+        data.inputs[index] = Inputs.ObjectRef({
+          objectId: input.UnresolvedObject.objectId,
+          version: '1',
+          digest: '11111111111111111111111111111111',
+        })
+    })
+    data.gasData.price = '1'
+    data.gasData.payment = [{ objectId: id(99), version: '1', digest: '11111111111111111111111111111111' }]
+    await next()
+  }
+  const recall = await read_agent_recall({
+    pairing,
+    request,
+    transaction_storage: null,
+    client: {
+      core: {
+        listOwnedObjects: async ({ owner, type }: { owner: string; type: string }) => ({
+          objects:
+            owner === identity.address && type.includes('PersonalKioskCap')
+              ? kiosk_ids.map((kiosk) => ({
+                  objectId: id(kiosk + 10),
+                  version: '1',
+                  digest: '11111111111111111111111111111111',
+                  type,
+                  content: cap_bcs
+                    .serialize({ id: id(kiosk + 10), cap: { id: id(kiosk + 20), for: id(kiosk) } })
+                    .toBytes(),
+                }))
+              : [],
+          hasNextPage: false,
+        }),
+        listDynamicFields: async () => ({ dynamicFields: [], hasNextPage: false }),
+        resolveTransactionPlugin: () => resolver,
+        simulateTransaction: async () => ({
+          Transaction: {
+            effects: {
+              status: { success: true },
+              gasUsed: { computationCost: '1', storageCost: '0', storageRebate: '0' },
+            },
+          },
+        }),
+      },
+    } as never,
+    sign_transaction: async (tx) => {
+      signed.push(tx.getData())
+      throw new Error('Synthetic owner rejected before signing')
+    },
+  })
+  return { recall, signed, id }
+}
+
+for (const kiosks of [[1, 2], []]) {
+  test(`owner claim ${kiosks.length ? 'reuses the first current personal kiosk' : 'creates a kiosk only when none exists'}`, async () => {
+    const { recall, signed, id } = await recall_kiosk_fixture(kiosks)
+    const review = await recall.transfer.prepare({
+      kind: 'claim',
+      character_id: id(40),
+      seller_kiosk: id(41),
+      purchase_cap: id(42),
+    })
+    expect(signed).toHaveLength(0)
+    expect(review.sender).toBe(identity.address)
+    await expect(review.confirm()).rejects.toThrow('Synthetic owner rejected before signing')
+    expect(signed).toHaveLength(1)
+    const tx = signed[0]!
+    const calls = tx.commands.flatMap((command) => (command.MoveCall ? [command.MoveCall] : []))
+    expect(calls.some((call) => call.module === 'kiosk' && call.function === 'new')).toBe(kiosks.length === 0)
+    expect(calls.some((call) => call.function === 'purchase_with_cap')).toBe(true)
+    if (kiosks.length) {
+      const objects = tx.inputs.flatMap((input) =>
+        input.Object?.ImmOrOwnedObject ? [input.Object.ImmOrOwnedObject.objectId] : []
+      )
+      expect(objects).toContain(id(11))
+      expect(objects).not.toContain(id(12))
+    }
+  })
+}
+
+test('Recall explicit kiosk lookup uses the exact cap and refuses a missing ID without falling back', async () => {
+  const { recall, signed, id } = await recall_kiosk_fixture([1, 2])
+  await expect(
+    recall.transfer.prepare({ kind: 'offer', character_id: id(40), kiosk: id(3), recipient: request.owner })
+  ).rejects.toThrow('PersonalKioskCap is unavailable')
+  expect(signed).toHaveLength(0)
+  const review = await recall.transfer.prepare({
+    kind: 'offer',
+    character_id: id(40),
+    kiosk: id(2),
+    recipient: request.owner,
+  })
+  await expect(review.confirm()).rejects.toThrow('Synthetic owner rejected before signing')
+  const objects = signed[0]!.inputs.flatMap((input) =>
+    input.Object?.ImmOrOwnedObject ? [input.Object.ImmOrOwnedObject.objectId] : []
+  )
+  expect(objects).toContain(id(12))
+  expect(objects).not.toContain(id(11))
+})

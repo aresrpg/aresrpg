@@ -228,3 +228,44 @@ test('self-transferred associated gear remains excluded using its immutable char
     (await read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).map((row) => row.purchase_cap)
   ).toEqual([game])
 })
+
+test('owner-to-bot offer is a bot-held capability from the owner kiosk, rechecked before claim', async () => {
+  const row = { ...object(), owner: { $kind: 'AddressOwner', AddressOwner: agent } }
+  const queried: string[] = []
+  const source = {
+    ...sdk,
+    get_owned_kiosks: async (address: string) => {
+      expect(address).toBe(owner)
+      return { kioskOwnerCaps: [{ isPersonal: true, kioskId: kiosk_id }], hasNextPage: false }
+    },
+  }
+  const chain = {
+    core: {
+      listOwnedObjects: async ({ owner: recipient, type: requested }: { owner: string; type: string }) => {
+        queried.push(recipient)
+        return { objects: requested === type ? [row] : [], hasNextPage: false }
+      },
+      getTransaction: async () => ({
+        ...receipt([row]),
+        Transaction: { ...receipt([row]).Transaction, transaction: { sender: owner } },
+      }),
+    },
+  }
+  const offers = await read_agent_returns(chain as never, source as never, agent, owner)
+  expect(offers).toEqual([
+    {
+      purchase_cap: cap_id,
+      character_id,
+      seller_kiosk: kiosk_id,
+      recipient: agent,
+      agent_address: owner,
+      equipment: [],
+    },
+  ])
+  expect(queried.every((recipient) => recipient === agent)).toBe(true)
+  await check_agent_return(chain as never, source as never, agent, offers[0]!)
+  await expect(
+    check_agent_return(chain as never, source as never, agent, { ...offers[0]!, seller_kiosk: owner })
+  ).rejects.toThrow('ownership changed')
+  await expect(read_agent_returns(chain as never, source as never, owner, owner)).rejects.toThrow()
+})

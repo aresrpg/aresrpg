@@ -115,3 +115,33 @@ test('the operation guard also reaches the final SDK signing boundary', async ()
   await expect(execute_agent_transfer({ actions, intent, is_current: () => current })).rejects.toThrow('changed')
   expect(signatures).toBe(0)
 })
+
+test('bot character claim retains the human source and equipment and refuses a changed signing session', async () => {
+  const claim = {
+    kind: 'claim' as const,
+    character_id: 'character',
+    purchase_cap: 'character-cap',
+    seller_kiosk: 'human-kiosk',
+    agent_address: 'human',
+    recipient: 'bot',
+    equipment: [{ slot: 'weapon', item_id: 'weapon', purchase_cap: 'weapon-cap' }],
+  }
+  let current = true
+  const signatures: string[] = []
+  const actions = {
+    prepare: async (received: unknown) => {
+      expect(received).toEqual(claim)
+      return {
+        confirm: async ({ before_sign }: { before_sign: () => void }) => {
+          current = false
+          before_sign()
+          signatures.push('must not sign')
+        },
+      }
+    },
+  } as unknown as AgentTransferActions
+  await expect(execute_agent_transfer({ actions, intent: claim, is_current: () => current })).rejects.toThrow(
+    'wallet or agent changed'
+  )
+  expect(signatures).toEqual([])
+})

@@ -66,6 +66,11 @@ snapshots.
 9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL. Unchanged images retain the previous certified digest;
    deployment configuration consumes those digests, never mutable semver aliases.
+   New schema-two manifests include server, indexer, Discord and hosted bot images. A legacy
+   manifest without the hosted bot cannot certify its first rollout; preparation builds that image.
+   Before its first rollout, review the real issuer/routing configuration and provision the bot's
+   persistent Redis credentials and separate signing/envelope key material through the normal
+   secrets workflow. Image publication alone does not configure those prerequisites.
 10. Pause gameplay when content or package work requires it.
 11. Apply content batches in deterministic order.
 12. Record every successful transaction digest.

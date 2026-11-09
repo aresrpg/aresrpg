@@ -10,6 +10,7 @@ WORKDIR /app
 # copied as source below.
 COPY package.json bun.lock ./
 COPY patches ./patches
+COPY packages/bot/package.json packages/bot/
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/

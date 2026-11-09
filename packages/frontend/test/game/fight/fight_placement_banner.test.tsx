@@ -85,7 +85,7 @@ test('an unattended tournament exposes Force start only after its observed admis
     { walkover: false, chain_ms: 61_000, ready: false, locked: false, visible: false },
     { walkover: true, chain_ms: 61_000, ready: null, locked: false, visible: false },
   ]) {
-    const state = { ...base, chain_clock: { chain_ms: scenario.chain_ms, received_ms: performance.now() } }
+    const state = { ...base, chain_clock: { chain_ms: scenario.chain_ms, observed_at: performance.now() } }
     const select = spyOn(store, 'useAppStore').mockImplementation(<T,>(selector: (value: store.AppState) => T): T =>
       selector(state)
     )

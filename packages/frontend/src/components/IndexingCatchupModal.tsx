@@ -2,11 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useEffect, useState } from 'react'
+import { PLAYABLE_INDEXING_LAG } from '@aresrpg/protocol'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import type { LinkStatus } from '../modules/session.ts'
 
-export const PLAYABLE_INDEXING_LAG = 300
+export { PLAYABLE_INDEXING_LAG } from '@aresrpg/protocol'
 const SAMPLE_LIMIT = 12
 const SAMPLE_STALE_MS = 10_000
 

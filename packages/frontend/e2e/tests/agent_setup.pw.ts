@@ -12,23 +12,19 @@ test('setup selection never claims a connection or sends a request', async ({ pa
   const open = page.getByRole('button', { name: 'Set up an agent', exact: true })
   await open.click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.locator('.agent-provider-card')).toHaveCount(2)
-  const connect = dialog.getByRole('button', { name: 'Copy setup request', exact: true })
+  await expect(dialog.locator('.agent-provider-card')).toHaveCount(3)
+  const connect = dialog.getByRole('button', { name: 'Authenticate with Google wallet', exact: true })
   await expect(connect).toBeDisabled()
-  for (const name of ['ChatGPT', 'Grok Bot']) {
+  for (const name of ['ChatGPT', 'Claude', 'Grok']) {
     const provider = dialog.getByRole('button', { name, exact: true })
     await provider.click()
     await expect(provider).toHaveAttribute('aria-pressed', 'true')
-    await expect(connect).toBeEnabled()
-    await expect(dialog.locator('.agent-setup-status')).toHaveText(
-      'Pairing is not available yet. No agent is connected.'
+    await expect(connect).toBeDisabled()
+    await expect(dialog.getByRole('status')).toHaveText(
+      'Hosted setup requires your Google game wallet and a configured HTTPS bot service. Saved recovery remains available in Inventory.'
     )
   }
   await expect(dialog.locator('details')).toHaveCount(0)
-  await expect(dialog.getByRole('link', { name: 'Open setup instructions' })).toHaveAttribute(
-    'href',
-    '/agents/client.txt'
-  )
   await expect(dialog.locator('input')).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
@@ -77,7 +73,7 @@ for (const width of [390, 1280]) {
     const bounds = await page.locator('[data-agent-setup]').boundingBox()
     expect(bounds!.x).toBeGreaterThanOrEqual(0)
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
-    await dialog.getByRole('button', { name: 'Grok Bot', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Grok', exact: true }).click()
     await page.screenshot({ path: `test-results/agent-setup-${width}.png` })
     await page.keyboard.press('Escape')
     if (width === 390) {
@@ -111,19 +107,13 @@ for (const viewport of [
     const dialog = page.getByRole('dialog', { name: 'Choose your agent' })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'ChatGPT', exact: true }).click()
-    await expect(dialog.getByRole('button', { name: 'Copy setup request', exact: true })).toBeEnabled()
-    await expect(dialog).toContainText('This wallet does not expose a Google public pairing identifier.')
-    const guide = dialog.getByRole('link', { name: 'Open setup instructions' })
-    await expect(guide).toHaveAttribute('href', '/agents/client.txt')
+    await expect(dialog.getByRole('button', { name: 'Authenticate with Google wallet', exact: true })).toBeDisabled()
+    await expect(dialog).toContainText('Hosted setup requires your Google game wallet')
     const response = await page.request.get('/agents/client.txt')
     expect(response.ok()).toBe(true)
     const instructions = await response.text()
-    expect(instructions).toContain('https://aresrpg.world/agents/ares-agent.mjs')
-    for (const command of ['init', 'pair', 'reload']) expect(instructions).toContain(`node ./ares-agent.mjs ${command}`)
-    const client = await page.request.get('/agents/ares-agent.mjs')
-    expect(client.ok()).toBe(true)
-    expect(client.headers()['content-type']).toContain('javascript')
-    expect((await client.body()).length).toBeGreaterThan(0)
+    expect(instructions).toContain('authenticated MCP')
+    expect(instructions).not.toContain('ares-agent.mjs')
     await page.screenshot({ path: `test-results/agent-world-setup-${viewport.width}.png` })
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
@@ -131,39 +121,3 @@ for (const viewport of [
     await expect(party).toHaveAttribute('aria-checked', String(before !== 'true'))
   })
 }
-
-test('setup handoff copies public bootstrap instructions and exposes manual fallback on refusal', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', {
-      value: {
-        writeText: async (value: string) => {
-          if (document.documentElement.hasAttribute('data-refuse-clipboard')) throw new Error('Clipboard denied')
-          document.documentElement.setAttribute('data-copied-request', value)
-        },
-      },
-    })
-  })
-  await page.goto('/e2e/fixtures/agent_setup.html')
-  await page.getByRole('button', { name: 'Set up an agent', exact: true }).click()
-  const dialog = page.getByRole('dialog')
-  await dialog.getByRole('button', { name: 'ChatGPT', exact: true }).click()
-  const request = dialog.locator('.agent-prompt')
-  const payload = (await request.textContent())!
-  expect(payload).toContain('/agents/client.txt')
-  expect(payload).not.toContain('agent_kit.ts')
-  expect(payload).toContain('Connect Your Agent')
-  expect(payload).toContain('does not authorize creating credentials')
-  const copy_button = dialog.getByRole('button', { name: 'Copy setup request' })
-  const copy_bounds = await copy_button.boundingBox()
-  await copy_button.click()
-  await expect(page.locator('html')).toHaveAttribute('data-copied-request', payload)
-  await expect(dialog.getByText('Copied', { exact: true })).toHaveClass('sr-only')
-  expect(await copy_button.boundingBox()).toEqual(copy_bounds)
-  await expect(dialog.locator('.agent-setup-status')).toContainText('No agent is connected.')
-  await page.evaluate(() => document.documentElement.setAttribute('data-refuse-clipboard', ''))
-  await dialog.getByRole('button', { name: 'Grok Bot', exact: true }).click()
-  await dialog.getByRole('button', { name: 'Copy setup request' }).click()
-  await expect(dialog.getByText('Copy failed. Select and copy the request above manually.')).toBeVisible()
-  await expect(request).toBeVisible()
-  await expect(request).toContainText(/Grok/i)
-})

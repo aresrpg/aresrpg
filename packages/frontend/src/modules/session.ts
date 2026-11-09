@@ -9,6 +9,7 @@ import type {
   ItemRow,
   ServerPacket,
 } from '@aresrpg/protocol'
+import { fold_inventory, fold_item_packet, is_item_packet } from '@aresrpg/protocol/inventory'
 import { fight_action_to_wire } from '@aresrpg/fight'
 import type { CharacteristicName } from '@aresrpg/immutable'
 
@@ -16,7 +17,6 @@ import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
 import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
 import type { AgentView, AgentViewInput } from '../agents/observation.ts'
 import type { Auth, AuthSession } from '../auth.ts'
-import { observe_agent_setup_requests, type AgentSetupInput } from '../agents/setup_requests.ts'
 import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
 import {
   browser_auth_storage,
@@ -87,7 +87,6 @@ export type SessionState = Readonly<{
 export type SessionInput =
   | AgentViewInput
   | AgentInventoryInput
-  | AgentSetupInput
   | CharacterCreationInput
   | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
   | Readonly<{ type: 'auth/connecting' }>
@@ -186,36 +185,6 @@ const fold_inventory_input = (session: SessionState, input: AppInput): SessionSt
       giftcards: session.giftcards.filter(({ id }) => id !== input.giftcard),
     })
   return session
-}
-type ItemPacket = Extract<ServerPacket, { type: 'packet/item_updated' | 'packet/item_removed' }>
-const ITEM_PACKETS = new Set<ServerPacket['type']>(['packet/item_updated', 'packet/item_removed'])
-const is_item_packet = (packet: Readonly<ServerPacket>): packet is ItemPacket => ITEM_PACKETS.has(packet.type)
-const latest_item = (incoming: Readonly<ItemRow>, current: Readonly<ItemRow> | undefined): Readonly<ItemRow> =>
-  BigInt(incoming.version ?? '0') < BigInt(current?.version ?? '0') ? current! : incoming
-type InventoryProjection = Pick<SessionState, 'inventory' | 'removed_item_versions'>
-const newer_than_departure = (item: Readonly<ItemRow>, removed: Readonly<Record<string, string>>): boolean =>
-  removed[item.id] === undefined || BigInt(item.version ?? '0') > BigInt(removed[item.id]!)
-const fold_inventory = (current: InventoryProjection, incoming: readonly ItemRow[]): readonly ItemRow[] => {
-  const by_id = new Map(current.inventory.map((item) => [item.id, item]))
-  return incoming
-    .map((item) => latest_item(item, by_id.get(item.id)))
-    .filter((item) => newer_than_departure(item, current.removed_item_versions))
-}
-const fold_item_packet = (current: InventoryProjection, packet: Readonly<ItemPacket>): InventoryProjection => {
-  if (packet.type === 'packet/item_removed') {
-    const previous = current.inventory.find(({ id }) => id === packet.item)
-    const observed = previous?.version ?? current.removed_item_versions[packet.item] ?? '0'
-    if (BigInt(packet.version) < BigInt(observed)) return current
-    return Object.freeze({
-      inventory: current.inventory.filter(({ id }) => id !== packet.item),
-      removed_item_versions: { ...current.removed_item_versions, [packet.item]: packet.version },
-    })
-  }
-  if (!newer_than_departure(packet.item, current.removed_item_versions)) return current
-  const inventory = current.inventory.some(({ id }) => id === packet.item.id)
-    ? current.inventory.map((row) => (row.id === packet.item.id ? latest_item(packet.item, row) : row))
-    : [...current.inventory, packet.item]
-  return Object.freeze({ ...current, inventory })
 }
 const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): SessionState => {
   if (packet.type === 'packet/characters') {
@@ -359,11 +328,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     next_request_id += 1
     return next_request_id - 1
   }
-  observe_agent_setup_requests(
-    { events, dispatch, signal, get_state },
-    (packet) => link?.send(packet) ?? false,
-    next_id
-  )
   const character_requests = new Map<
     number,
     Readonly<{

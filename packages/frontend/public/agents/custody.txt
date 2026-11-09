@@ -4,24 +4,9 @@ Complete https://aresrpg.world/agents/client.txt first. Pairing alone authorizes
 
 ## Connect and act
 
-`create_agent_connection` from `@aresrpg/sdk/agent-connection` handles challenge authentication,
-roster updates and read-only fight resync using a supplied transport and personal-message signer.
-The Bun transport example is `packages/sdk/examples/agent_transport.ts`. It does not auto-play.
+The hosted backend actor owns the managed signer and its single game connection. External assistants receive scoped MCP access, never a transaction signer or private key. `tools/list` is the implemented catalog; the SDK custody capabilities below are not a promise that each is exposed as an MCP tool.
 
-Construct the ordinary SDK with the returned transaction signer:
-
-```ts
-import { SDK, sui_transport } from '@aresrpg/sdk'
-import { SuiGrpcClient } from '@mysten/sui/grpc'
-
-const client = new SuiGrpcClient({ network: 'mainnet', baseUrl: 'https://fullnode.mainnet.sui.io:443' })
-const sdk = SDK({ client: sui_transport(client), network: 'mainnet',
-  address: signer.address, sign_transaction: signer.sign_transaction })
-```
-
-Use existing character, fight, dungeon and marketplace actions; `packages/sdk/examples/agent_actions.ts`
-shows their composition. The SDK owns resolution, signing, submission and digest recovery.
-Never retry an uncertain transaction: reconcile its digest first.
+For private service integration, `create_agent_connection` from `@aresrpg/sdk/agent-connection` handles challenge authentication, roster updates and read-only fight resync using the actor’s managed personal-message signer. The ordinary SDK uses that actor’s transaction signer and awaited encrypted exact-envelope `transaction_journal`. See [the SDK integration reference](https://aresrpg.world/agents/sdk.txt) and [operator README](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/README.md). The SDK owns resolution, signing, submission and digest recovery; do not construct an unjournaled hosted writer or retry an uncertain digest.
 
 For custody, `agent_character_transfer(sdk)` from `@aresrpg/sdk/agent-transactions` exposes
 `offer`, `claim` and `cancel` transaction builders. They reuse personal kiosks and marketplace

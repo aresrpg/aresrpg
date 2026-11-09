@@ -2,7 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { TournamentLink } from '@aresrpg/protocol'
 import type { ClosableFightRow, FightResolutionRow, ServerPacket } from '@aresrpg/protocol'
-import { player_max_hp, xp_award_of, type Fighter, type HydratedFightCheckpoint } from '@aresrpg/fight'
+import {
+  fight_loot_types,
+  player_max_hp,
+  xp_award_of,
+  type Fighter,
+  type HydratedFightCheckpoint,
+} from '@aresrpg/fight'
 import { level_from_xp } from '@aresrpg/immutable'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -152,20 +158,6 @@ const participant_from = (
   })
 }
 
-const loot_types_for = (checkpoint: Readonly<HydratedFightCheckpoint>, own_seat: number): readonly string[] => {
-  const own = checkpoint.contract.fighters[own_seat]
-  if (!own || checkpoint.contract.winner !== own.team) return Object.freeze([])
-  return Object.freeze([
-    ...new Set(
-      checkpoint.contract.fighters.flatMap((fighter) =>
-        fighter.team === own.team || fighter.kind.type !== 'mob'
-          ? []
-          : fighter.kind.snapshot.loot.map(({ item_type }) => item_type)
-      )
-    ),
-  ])
-}
-
 const merge_participants = (
   incoming: readonly ResultParticipant[],
   existing: FightResult | null
@@ -276,7 +268,7 @@ export const merge_checkpoint = (
     ),
     participants: Object.freeze(participants),
     own_seat: own_seat < 0 ? null : own_seat,
-    loot_types: own_seat < 0 ? Object.freeze([]) : loot_types_for(checkpoint, own_seat),
+    loot_types: own_seat < 0 ? Object.freeze([]) : fight_loot_types(checkpoint, own_seat),
     ...progression_state(state, character_id, existing, previous_own, next_own),
     error: existing?.error ?? null,
     result_open: existing?.result_open ?? true,

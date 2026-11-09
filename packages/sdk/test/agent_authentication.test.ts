@@ -9,9 +9,10 @@ import type { ServerPacket } from '@aresrpg/protocol'
 import { create_agent_connection } from '../src/agent_connection.ts'
 import { create_bun_agent_transport } from '../examples/agent_transport.ts'
 import { create_agent_multisig } from '../src/agent_multisig.ts'
-import { bootstrap_disposable_agent } from '../examples/agent_bootstrap.ts'
 import { verify_agent_pairing } from '../src/agent_pairing.ts'
 import { create_agent_run } from '../examples/agent_kit.ts'
+
+import { bootstrap_disposable_agent } from './helpers/agent_bootstrap.ts'
 
 type LoginProof = Readonly<{ bytes: string; signature: string; address: string; uuid: string }>
 type FixtureConnection = Readonly<{ on_message: (raw: string | Buffer) => Promise<void>; on_close: () => void }>

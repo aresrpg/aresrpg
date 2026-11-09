@@ -10,6 +10,9 @@
 !patches/**
 !packages
 packages/*
+!packages/bot
+packages/bot/*
+!packages/bot/package.json
 !packages/engine
 packages/engine/*
 !packages/engine/package.json

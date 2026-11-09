@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 # copied as source below.
 COPY package.json bun.lock ./
 COPY patches ./patches
+COPY packages/bot/package.json packages/bot/
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/
@@ -55,7 +56,7 @@ COPY packages/frontend/public/branding/helmet-favicon.png packages/frontend/publ
 COPY packages/frontend/public/branding/kares/*.webp packages/frontend/public/branding/kares/
 USER bun
 # Execute the installed runtime graph, not the developer workspace's hoisted dependencies.
-# These lifecycle-free owners cover pairing and every player module without opening sockets.
-RUN bun -e "await import('./packages/server/src/agent_pairing.ts'); await import('./packages/server/src/player.ts')"
+# The lifecycle-free player owner covers normal observation and every player module without opening sockets.
+RUN bun -e "await import('./packages/server/src/player.ts')"
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

@@ -80,7 +80,5 @@ test('the server declares its SDK dependency and imports the production graph du
   expect(manifest.dependencies['@aresrpg/sdk']).toBe('workspace:*')
   const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
   const runtime = dockerfile.slice(dockerfile.indexOf('USER bun'))
-  expect(runtime).toContain(
-    `RUN bun -e "await import('./packages/server/src/agent_pairing.ts'); await import('./packages/server/src/player.ts')"`
-  )
+  expect(runtime).toContain(`RUN bun -e "await import('./packages/server/src/player.ts')"`)
 })

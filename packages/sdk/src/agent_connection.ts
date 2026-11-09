@@ -8,6 +8,7 @@ import {
   TAKEOVER_DROP_REASONS,
   VIOLATION_DROP_REASONS,
   type CharacterRow,
+  type ClientPacket,
   type ServerPacket,
 } from '@aresrpg/protocol'
 
@@ -37,6 +38,7 @@ export type AgentConnectionOptions = Readonly<{
     sign_personal_message: (message: Uint8Array) => Promise<Readonly<{ bytes: string; signature: string }>>
   }>
   transport: AgentTransport
+  authorize?: (stage: 'connect' | 'sign' | 'send') => Promise<void>
 }>
 
 type Status =
@@ -90,6 +92,8 @@ const valid_roster = (characters: readonly CharacterRow[]): boolean =>
 const decode_packet = (raw: string): ServerPacket => {
   const packet = parse_server_packet(raw)
   if (!packet || !SERVER_PACKET_TYPES.includes(packet.type)) throw new Error('Unknown server packet')
+  if (packet.type === 'packet/game_state' && packet.frozen !== null && typeof packet.frozen !== 'boolean')
+    throw new Error('Invalid game state')
   if (packet.type === 'packet/characters' && !valid_roster(packet.characters)) throw new Error('Invalid roster')
   return packet
 }
@@ -118,14 +122,18 @@ const reduce_connection = (state: AgentConnectionState, action: ConnectionAction
  */
 export const create_agent_connection = (options: AgentConnectionOptions) => {
   const url = connection_url(options)
+  const listeners = new Set<(state: AgentConnectionState) => void>()
   let state = empty_state('disconnected')
   let socket: AgentSocket | null = null
   let generation = 0
   let stopped = false
+  let initial_game_state: Extract<ServerPacket, { type: 'packet/game_state' }> | null = null
   const dispatch = (action: ConnectionAction) => {
     state = reduce_connection(state, action)
+    for (const listener of listeners) listener(structuredClone(state))
   }
   const retire = (status: Status, error?: string) => {
+    initial_game_state = null
     generation += 1
     const previous = socket
     socket = null
@@ -138,7 +146,7 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
     }
   }
   const report_error = (error: unknown) => retire('failed', String(error))
-  const connect = (): void => {
+  const connect = async (): Promise<void> => {
     if (stopped) return
     retire('connecting')
     const active_generation = generation
@@ -151,6 +159,8 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
       )
         throw new Error('Unexpected login challenge')
       dispatch({ type: 'status', status: 'signing' })
+      if (options.authorize) await options.authorize('sign')
+      if (!current()) return
       const packet = await create_login_response(options.signer, payload)
       if (!current()) return
       dispatch({ type: 'status', status: 'authenticating' })
@@ -161,10 +171,15 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
       if (state.status !== 'authenticating' || address !== options.signer.address)
         throw new Error('Unexpected connection acceptance')
       dispatch({ type: 'status', status: 'resyncing' })
+      if (initial_game_state) dispatch({ type: 'packet', packet: initial_game_state })
+      initial_game_state = null
     }
     const application_packet = (packet: ServerPacket) => {
       // Server promotion emits game_state synchronously, just before connection_accepted.
-      if (packet.type === 'packet/game_state' && state.status === 'authenticating') return
+      if (packet.type === 'packet/game_state' && state.status === 'authenticating') {
+        initial_game_state = packet
+        return
+      }
       if (!['resyncing', 'ready'].includes(state.status)) throw new Error('Packet before admission')
       dispatch({ type: 'packet', packet })
     }
@@ -187,6 +202,8 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
       }
     }
     try {
+      if (options.authorize) await options.authorize('connect')
+      if (!current() || stopped) return
       socket = options.transport.open(url, {
         origin: options.origin,
         on_message: receive,
@@ -210,6 +227,7 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
   }
   const request_fight_resync = (fight: string): boolean => {
     if (
+      !!options.authorize ||
       state.status !== 'ready' ||
       !socket ||
       !state.characters.some((character) => character.custody === 'fight' && character.active_fight?.id === fight)
@@ -234,5 +252,20 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
     },
     state: (): AgentConnectionState => structuredClone(state),
     request_fight_resync,
+    subscribe: (listener: (state: AgentConnectionState) => void): (() => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    send: async (packet: ClientPacket): Promise<boolean> => {
+      const active_generation = generation
+      if (state.status !== 'ready' || !socket || packet.type === 'packet/signature_response') return false
+      await options.authorize?.('send')
+      if (active_generation !== generation || state.status !== 'ready' || !socket) return false
+      const validated = parse_client_packet(JSON.stringify(packet))
+      socket.send(JSON.stringify(validated))
+      return true
+    },
   })
 }

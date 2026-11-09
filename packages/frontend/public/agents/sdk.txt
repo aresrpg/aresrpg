@@ -1,13 +1,13 @@
 # SDK reference and offline planning
 
 First complete [Connect Your Agent](https://aresrpg.world/agents/client.txt), the single official
-supported bot onboarding flow. This reference teaches SDK bot building after pairing: compose
-existing gameplay actions with the paired multisig signer. It does not offer separate manual-wallet
+supported bot onboarding flow. This reference describes the SDK actions used by the hosted executor after onboarding.
+Assistants call the currently exposed subset through MCP `tools/list`, not arbitrary SDK methods; they never receive a signing adapter or private key. It does not offer separate manual-wallet
 onboarding. The optional observation example does not limit the SDK's action capabilities.
 
 ## Offline planning
 
-After installing the matching checkout through the client guide:
+For developers inspecting a matching source checkout (not required for MCP onboarding):
 
 ```sh
 bun packages/sdk/examples/agent_plan.ts recall_potion 1
@@ -21,24 +21,24 @@ The displayed percentage uses the existing UI helper, which floors fractional pe
 - [Offline planner source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_plan.ts)
 - [Typed action/simulation source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts)
 
-## Use the paired signing adapter
+## Private actor and browser SDK integration
 
 In the browser, use the existing authenticated `AuthSession` from `@aresrpg/sdk/auth`. It already exposes `character`, `fight`, `dungeon`, `marketplace`, `party`, `mastery`, trade builders, balance reads, personal-message signing, and transaction observation. Do not read a private wallet key out of the browser.
 
-In the bot's host process, use the multisig signer returned by the official setup flow. The signer
-owns no strategy; compose the existing SDK action builders around it. Supply matching network/pins,
-a compatible gRPC endpoint and durable transaction recovery storage.
+Inside the hosted execution service only, the managed signing adapter composes the existing SDK
+action builders. It is not returned by OAuth or MCP. Service configuration supplies matching
+network/pins, a compatible gRPC endpoint and durable transaction recovery storage.
 
-This fragment assumes `paired_signer`, `network`, `pins`, `rpc_url` and `transaction_storage` have
-been configured through that setup:
+This fragment assumes `managed_signer`, `network`, `pins`, `rpc_url` and `transaction_journal` have
+been configured internally by the execution service, never by the assistant:
 
 ```ts
 import { SDK } from './packages/sdk/src/client.ts'
 import { create_agent_actions } from './packages/sdk/examples/agent_actions.ts'
 
-const address = paired_signer.address
-const sdk = SDK({ address, sign_transaction: paired_signer.sign_transaction,
-  network, pins, rpc_url, transaction_storage })
+const address = managed_signer.address
+const sdk = SDK({ address, sign_transaction: managed_signer.sign_transaction,
+  network, pins, rpc_url, transaction_journal })
 const actions = create_agent_actions(sdk, address)
 const balance_mist = await sdk.read_sui_balance()
 ```
@@ -47,7 +47,9 @@ Paths above are for a script at the repository root. Inside a workspace, use dec
 
 `create_agent_actions` demonstrates construction of existing domain builders with a personal-kiosk loader. It adds no budget enforcement, wallet permission UI, autonomous loop, or general read client. Its methods perform real transactions. Merely constructing it or calling the offline preview does not.
 
-A headless writer's `transaction_storage` must implement synchronous `getItem`, `setItem`, and `removeItem`, preserving the SDK's exact string values across restarts. Use a private, durable store with atomic writes and one writer process per wallet. Persist before submission; propagate storage failures. Do not replace this with an in-memory Map for paid unattended work. Do not store signatures or signed bytes in the activity journal.
+The hosted backend actor supplies the awaited `TransactionJournal` seam exported by `@aresrpg/sdk/transaction-execution` through `SDK({ transaction_journal })`. Its durable journal encrypts exact prepared/signed transaction envelopes and retains receipts across actor failures. Signing and submission must await the journal transitions; storage failures stop execution. Recovery belongs to the same SDK executor under current authorization and a fenced wallet lane, not an assistant retry loop. See the [journal implementation](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/src/transaction_journal.ts) and [operator README](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/README.md).
+
+Browser `transaction_storage` is a different, synchronous digest-only recovery seam (`getItem`, `setItem`, `removeItem`); it does not retain signed bytes and is not the hosted actor journal. Keep signatures and exact envelopes out of chat, logs and activity ledgers. Only the trusted backend can decrypt its envelope journal. External assistants never receive keys or signing adapters.
 
 ## Chain-native read adapter reference
 

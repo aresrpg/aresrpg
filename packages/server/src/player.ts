@@ -56,8 +56,6 @@ import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
 import player_allocation from './modules/player_allocation.ts'
-import player_agent_setup from './modules/player_agent_setup.ts'
-import type { create_pairing_exchange } from './agent_pairing.ts'
 import type { Allocation } from './allocation/runtime.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
@@ -149,7 +147,6 @@ export type PlayerState = {
 }
 
 export type PlayerContext = {
-  agent_pairing?: ReturnType<typeof create_pairing_exchange>
   allocation?: Allocation
   public_world: PublicWorld
   public_market: PublicMarket
@@ -212,7 +209,6 @@ const MODULES: PlayerModule[] = [
   player_tournament,
   player_requests,
   player_allocation,
-  player_agent_setup,
   player_inspection,
   player_admin,
 ]
@@ -224,7 +220,6 @@ const READ_PACKETS = new Set<string>([
   'packet/agent_observe',
   'packet/market_floor_request',
   'packet/allocation_request',
-  'packet/agent_setup_request',
   'packet/spectate',
   'packet/fight_preview',
   'packet/fight_nearby',
@@ -250,8 +245,6 @@ const cancels_read = (packet: Readonly<ClientPacket>): boolean => {
   )
     return packet.observation === null
   switch (packet.type) {
-    case 'packet/agent_setup_request':
-      return packet.request.action === 'cancel'
     case 'packet/spectate':
     case 'packet/fight_preview':
     case 'packet/fight_nearby':
@@ -284,7 +277,6 @@ type PlayerWires = Pick<
   PlayerContext,
   'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name' | 'public_world' | 'public_market'
 > & {
-  agent_pairing?: ReturnType<typeof create_pairing_exchange>
   allocation?: Allocation
   game_state?: GameState
   indexing_health?: () => Promise<IndexingHealth>
@@ -303,7 +295,6 @@ const UNKNOWN_GAME_STATE: GameState = Object.freeze({
 export function create_player({
   ws,
   allocation,
-  agent_pairing,
   address,
   resolve_name,
   admin,
@@ -333,7 +324,6 @@ export function create_player({
   events.setMaxListeners(0)
   const context: PlayerContext = {
     allocation,
-    agent_pairing,
     address,
     resolve_name,
     admin,

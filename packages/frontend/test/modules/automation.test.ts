@@ -316,7 +316,7 @@ test('the next inspection wakes at the known chain root instead of a full poll l
   const base = reduce_automation(automation_fixture(), tick())
   const rooted: AppState = {
     ...base,
-    chain_clock: { chain_ms: 101_000, received_ms: 1_000 },
+    chain_clock: { chain_ms: 101_000, observed_at: 1_000 },
     session: { ...base.session, characters: [{ ...character(), at_ms: 101_025 }] },
   }
   expect(automation_wake_delay(rooted, 101_001)).toBe(24)
@@ -331,7 +331,7 @@ test('inspection wakes at the legal travel budget, including the both-end pet ru
   if (step.type !== 'inspecting') throw new Error('Expected an inspection')
   const walking: AppState = {
     ...base,
-    chain_clock: { chain_ms: 101_800, received_ms: 1_000 },
+    chain_clock: { chain_ms: 101_800, observed_at: 1_000 },
     session: { ...base.session, characters: [{ ...character(), at_ms: 101_000 }] },
     automation: {
       ...base.automation,
@@ -348,7 +348,7 @@ test('inspection wakes at the legal travel budget, including the both-end pet ru
   expect(automation_wake_delay(newly_equipped, 101_800)).toBe(70)
   const riding = {
     ...newly_equipped,
-    chain_clock: { chain_ms: 101_550, received_ms: 1_000 },
+    chain_clock: { chain_ms: 101_550, observed_at: 1_000 },
     session: { ...walking.session, characters: [{ ...equipped, pet: true }] },
   }
   expect(automation_wake_delay(riding, 101_550)).toBe(30)

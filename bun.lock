@@ -23,6 +23,21 @@
         "vercel": "65.12.1",
       },
     },
+    "packages/bot": {
+      "name": "@aresrpg/bot",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aresrpg/fight": "workspace:*",
+        "@aresrpg/immutable": "workspace:*",
+        "@aresrpg/protocol": "workspace:*",
+        "@aresrpg/sdk": "workspace:*",
+        "@mysten/sui": "2.39.1",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.4",
+        "typescript": "~6.0.3",
+      },
+    },
     "packages/discord": {
       "name": "@aresrpg/discord",
       "version": "0.1.0",
@@ -168,6 +183,7 @@
         "@mysten/suins": "2.0.20",
         "@mysten/wallet-standard": "^0.21.38",
         "@mysten/zksend": "1.2.41",
+        "@noble/hashes": "^2.3.0",
       },
       "devDependencies": {
         "@types/bun": "^1.4.4",
@@ -222,6 +238,8 @@
     "@0no-co/graphqlsp": ["@0no-co/graphqlsp@1.18.0", "", { "dependencies": { "@gql.tada/internal": "^1.2.1", "graphql": "^15.5.0 || ^16.0.0 || ^17.0.0" }, "peerDependencies": { "typescript": "^5.0.0 || ^6.0.0" } }, "sha512-A6ZId4J6l4KxN5ZtTFZaPtZcU0ikx9mB3kTzEVP3ui5c8srtPA1cGXqjhHFBsKt1ZP839RIHy//LrZMmbE4VAw=="],
 
     "@adraffy/ens-normalize": ["@adraffy/ens-normalize@1.11.1", "", {}, "sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ=="],
+
+    "@aresrpg/bot": ["@aresrpg/bot@workspace:packages/bot"],
 
     "@aresrpg/discord": ["@aresrpg/discord@workspace:packages/discord"],
 

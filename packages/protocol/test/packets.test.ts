@@ -165,7 +165,6 @@ describe('the wire contract', () => {
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
       'packet/agent_observe',
-      'packet/agent_setup_request',
       'packet/market_floor_request',
       'packet/allocation_request',
       'packet/signature_response',
