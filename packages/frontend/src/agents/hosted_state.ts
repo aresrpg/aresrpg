@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { HostedConnectRequest } from '@aresrpg/protocol'
 
-export type HostedPhase =
-  'idle' | 'authenticating' | 'ready' | 'creating' | 'verifying' | 'authorizing' | 'failed' | 'complete'
+export type HostedPhase = 'idle' | 'authenticating' | 'ready' | 'authorizing' | 'failed' | 'complete'
 export type HostedState<T> = Readonly<{
   generation: number
   session: object | null
@@ -16,8 +15,7 @@ export type HostedState<T> = Readonly<{
 }>
 export type HostedInput<T> = Readonly<
   | { type: 'reset'; session: object | null }
-  | { type: 'edit'; values: Partial<Pick<HostedState<T>, 'selected' | 'verified'>> }
-  | { type: 'start'; phase: 'authenticating' | 'creating' | 'verifying' | 'authorizing' }
+  | { type: 'start'; phase: 'authenticating' | 'authorizing' }
   | { type: 'result'; generation: number; values: Partial<Omit<HostedState<T>, 'generation' | 'session'>> }
 >
 export const empty_hosted = <T>(): HostedState<T> => ({
@@ -30,11 +28,9 @@ export const empty_hosted = <T>(): HostedState<T> => ({
   selected: '',
   verified: '',
 })
-export const hosted_pending = (phase: HostedPhase) =>
-  ['authenticating', 'creating', 'verifying', 'authorizing'].includes(phase)
+export const hosted_pending = (phase: HostedPhase) => ['authenticating', 'authorizing'].includes(phase)
 export const reduce_hosted = <T>(state: HostedState<T>, input: HostedInput<T>): HostedState<T> => {
   if (input.type === 'reset') return { ...empty_hosted<T>(), generation: state.generation + 1, session: input.session }
-  if (input.type === 'edit') return state.phase === 'ready' ? { ...state, ...input.values } : state
   if (input.type === 'start') {
     if (hosted_pending(state.phase)) return state
     const previous = input.phase === 'authenticating' ? empty_hosted<T>() : state

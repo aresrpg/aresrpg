@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useId, useState } from 'react'
 import { Button, IconButton, NativeModal } from '@aresrpg/ui'
-import { Bot, X } from 'lucide-react'
+import { Bot, Loader2, X } from 'lucide-react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -19,7 +19,7 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
   const [authorization_id] = useState(() => new URLSearchParams(location.search).get('authorization_id'))
   const { state, dispatch } = useHostedConnect(wallet, env.bot_service_url, authorization_id)
   const text = copy.ui
-  const pending = ['authenticating', 'creating', 'verifying', 'authorizing'].includes(state.phase)
+  const pending = ['authenticating', 'authorizing'].includes(state.phase)
   const eligible = [wallet?.identity === 'zklogin', !!env.bot_service_url].every(Boolean)
   const dismiss = () => {
     const url = new URL(location.href)
@@ -48,7 +48,16 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
           ))}
         </div>
         {state.phase === 'failed' && <p role="alert">{text.agent_hosted_failed}</p>}
-        {pending && <p role="status">{text.agent_hosted_pending}</p>}
+        {pending && (
+          <div
+            className="flex justify-center py-8"
+            role="status"
+            aria-label={text.agent_hosted_pending}
+            aria-busy="true"
+          >
+            <Loader2 className="animate-spin text-gold opacity-80" size={28} aria-hidden="true" />
+          </div>
+        )}
         {['idle', 'failed'].includes(state.phase) && (
           <Button
             className="agent-connect"

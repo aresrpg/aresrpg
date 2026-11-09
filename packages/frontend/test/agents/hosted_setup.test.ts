@@ -1,0 +1,247 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+import { expect, spyOn, test } from 'bun:test'
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
+import { prepare_agent_pairing } from '@aresrpg/sdk/agent-signer'
+
+import { setup_hosted, create_hosted_client } from '../../src/agents/hosted_client.ts'
+import type { AuthSession } from '../../src/auth.ts'
+import * as app from '../../src/store.ts'
+
+const fixture = async (existing: boolean) => {
+  const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })
+  const key = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(7))
+  const member = {
+    public_key: key.getPublicKey(),
+    storage: 'persistent' as const,
+    sign_personal_message: (bytes: Uint8Array) => key.signPersonalMessage(bytes),
+    sign_transaction: async () => {
+      throw new Error('No transactions')
+    },
+  }
+  const request = (nonce: string) => ({
+    version: 1 as const,
+    network: 'mainnet' as const,
+    nonce,
+    owner: google.toSuiAddress(),
+    zklogin_public_identifier: google.toBase64(),
+  })
+  const pairing = await prepare_agent_pairing(request(crypto.randomUUID()), member)
+  const bot = {
+    id: 'bot',
+    address: pairing.signer.address,
+    multisig_public_key: pairing.signer.public_key.toBase64(),
+    generation: 1,
+    policy_revision: 1,
+    status: 'ready' as const,
+  }
+  const wallet = {
+    identity: 'zklogin',
+    address: google.toSuiAddress(),
+    read_agent_pairing_request: request,
+    sign_personal_message: async () => {
+      throw new Error('Verified session must not sign again')
+    },
+  } as unknown as AuthSession
+  const read = spyOn(app, 'read_app_state').mockReturnValue({ session: { wallet } } as ReturnType<
+    typeof app.read_app_state
+  >)
+  const published: unknown[] = []
+  const dispatch = spyOn(app, 'dispatch_app').mockImplementation((input) => {
+    published.push(input)
+  })
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+  const values = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (name: string) => values.get(name) ?? null,
+      setItem: (name: string, value: string) => values.set(name, value),
+    },
+  })
+  const controller = new AbortController()
+  const calls: string[] = []
+  const state = {
+    existing,
+    fail_create: false,
+    retire: '',
+    multiple: false,
+    paused: false,
+    oauth: false,
+    invalid_proof: false,
+  }
+  const routes: Record<string, (init: RequestInit) => Response | Promise<Response>> = {
+    'GET /connect/request': () =>
+      Response.json({
+        authorization_id: 'authorization',
+        client_id: 'client',
+        client_name: 'Fixture assistant',
+        redirect_uri: 'https://assistant.example/callback',
+        resource: 'https://bot.example.test/mcp',
+        network: 'mainnet',
+        scopes: ['bot:play'],
+      }),
+    'GET /connect/bots': () =>
+      Response.json({
+        owner: wallet.address,
+        bots: state.multiple
+          ? [{ ...bot, id: 'second', address: '0x' + '2'.repeat(64) }, bot]
+          : state.existing
+            ? [{ ...bot, status: state.paused ? 'paused' : 'ready' }]
+            : [],
+      }),
+    'POST /connect/bots': () => {
+      if (state.fail_create) return Response.json({ error: 'unavailable' }, { status: 503 })
+      state.existing = true
+      return Response.json({ status: 'ready', bot })
+    },
+    'POST /connect/proof': async (init) => {
+      const body = JSON.parse(String(init.body))
+      const proof = await prepare_agent_pairing(body.request, member)
+      if (state.retire === 'abort') controller.abort(new Error('Cancelled'))
+      if (state.retire === 'wallet')
+        read.mockReturnValue({ session: { wallet: null } } as ReturnType<typeof app.read_app_state>)
+      return Response.json({
+        status: 'ready',
+        proof: state.invalid_proof ? { ...proof.response, signature: 'invalid' } : proof.response,
+      })
+    },
+  }
+  const fetcher = (async (url: URL, init: RequestInit) => {
+    const route = `${init.method ?? 'GET'} ${url.pathname}`
+    calls.push(route)
+    if (!routes[route]) throw new Error('Unexpected fixture request')
+    return routes[route](init)
+  }) as unknown as typeof fetch
+  const run = () =>
+    setup_hosted(
+      create_hosted_client('https://bot.example.test', controller.signal, fetcher),
+      wallet,
+      state.oauth ? 'authorization' : null,
+      () => {},
+      'verified-session'
+    )
+  return {
+    run,
+    calls,
+    published,
+    state,
+    bot,
+    bind: (descriptor = bot.multisig_public_key) =>
+      read.mockReturnValue({
+        session: {
+          wallet,
+          inventory_pairing: { address: bot.address, multisig_public_key: descriptor, signer_mode: 'host-persistent' },
+        },
+      } as ReturnType<typeof app.read_app_state>),
+    cleanup: () => {
+      read.mockRestore()
+      dispatch.mockRestore()
+      if (previous) Object.defineProperty(globalThis, 'localStorage', previous)
+      else Reflect.deleteProperty(globalThis, 'localStorage')
+    },
+  }
+}
+
+test.each([false, true])(
+  'Connect automatically provisions when needed and verifies a real fixture pairing: existing=%s',
+  async (existing) => {
+    const f = await fixture(existing)
+    try {
+      const result = await f.run()
+      expect(result).toMatchObject({ selected: f.bot.id, verified: f.bot.id, consent: null })
+      expect(f.calls).toEqual([
+        'GET /connect/bots',
+        ...(!existing ? ['POST /connect/bots'] : []),
+        'POST /connect/proof',
+      ])
+      expect(f.published).toHaveLength(1)
+      await f.run()
+      expect(f.calls.filter((call) => call === 'POST /connect/bots')).toHaveLength(existing ? 0 : 1)
+    } finally {
+      f.cleanup()
+    }
+  }
+)
+
+test('failed creation can retry without publishing unverified success', async () => {
+  const f = await fixture(false)
+  try {
+    f.state.fail_create = true
+    await expect(f.run()).rejects.toThrow('Hosted service request failed')
+    expect(f.published).toEqual([])
+    f.state.fail_create = false
+    await expect(f.run()).resolves.toMatchObject({ verified: f.bot.id })
+  } finally {
+    f.cleanup()
+  }
+})
+
+test.each(['abort', 'wallet'])('automatic setup cannot publish after %s retirement', async (reason) => {
+  const f = await fixture(false)
+  try {
+    f.state.retire = reason
+    await expect(f.run()).rejects.toThrow()
+    expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
+
+test.each(['multiple', 'paused', 'invalid_proof'] as const)(
+  'setup fails closed for %s without publishing success',
+  async (reason) => {
+    const f = await fixture(true)
+    try {
+      f.state[reason] = true
+      await expect(f.run()).rejects.toThrow()
+      expect(f.published).toEqual([])
+      expect(f.calls).not.toContain('POST /connect/bots')
+    } finally {
+      f.cleanup()
+    }
+  }
+)
+
+test('automatic setup retains OAuth scopes and callback without granting access', async () => {
+  const f = await fixture(true)
+  try {
+    f.state.oauth = true
+    await expect(f.run()).resolves.toMatchObject({
+      verified: f.bot.id,
+      consent: {
+        scopes: ['bot:play'],
+        redirect_uri: 'https://assistant.example/callback',
+        client_id: 'client',
+      },
+    })
+    expect(f.calls).not.toContain('POST /connect/authorize')
+  } finally {
+    f.cleanup()
+  }
+})
+
+test('multiple bots reuse the existing verified inventory target, not response order', async () => {
+  const f = await fixture(true)
+  try {
+    f.state.multiple = true
+    f.bind()
+    await expect(f.run()).resolves.toMatchObject({ selected: f.bot.id, verified: f.bot.id })
+    expect(f.calls).not.toContain('POST /connect/bots')
+  } finally {
+    f.cleanup()
+  }
+})
+
+test('an address match with another descriptor cannot select among multiple bots', async () => {
+  const f = await fixture(true)
+  try {
+    f.state.multiple = true
+    f.bind('different-descriptor')
+    await expect(f.run()).rejects.toThrow('Multiple hosted bots require an explicit choice')
+    expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})

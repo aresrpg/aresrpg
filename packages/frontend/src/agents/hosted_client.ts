@@ -197,6 +197,34 @@ export const verify_hosted_bot = async (
   if (failure) throw new Error(`Hosted recovery unavailable: ${failure}`)
   dispatch_app({ type: 'agent/pairing_verified', wallet, pairing: identity })
 }
+const setup_bot = (bots: readonly HostedBotDescriptor[]) => {
+  if (bots.length < 2) return bots[0]
+  const { session } = read_app_state()
+  const pairing = session.inventory_pairing ?? session.agent_pairing_candidate
+  if (pairing?.signer_mode !== 'host-persistent') throw new Error('Multiple hosted bots require an explicit choice')
+  const matching = bots.filter(
+    (bot) => bot.address === pairing.address && bot.multisig_public_key === pairing.multisig_public_key
+  )
+  if (matching.length !== 1) throw new Error('Multiple hosted bots require an explicit choice')
+  return matching[0]
+}
+
+/** One Connect intent prepares one unambiguous wallet and verifies custody before reporting readiness. */
+export const setup_hosted = async (
+  client: Readonly<HostedClient>,
+  wallet: AuthSession,
+  authorization_id: string | null,
+  retain: (id: string) => void,
+  session_id: string | null = authorization_id
+) => {
+  const result = await authenticate_hosted(client, wallet, authorization_id, retain, session_id)
+  current_wallet(wallet, client.signal)
+  const bot = setup_bot(result.bots) ?? (await provision_hosted(client, result.authorization_id))
+  current_wallet(wallet, client.signal)
+  await verify_hosted_bot(client, wallet, result.authorization_id, bot)
+  return { ...result, bots: [bot], selected: bot.id, verified: bot.id }
+}
+
 export const authorize_hosted = async (
   client: Readonly<HostedClient>,
   wallet: AuthSession,

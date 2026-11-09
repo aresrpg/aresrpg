@@ -6,13 +6,7 @@ import type { HostedBotDescriptor } from '@aresrpg/protocol'
 import type { AuthSession } from '../auth.ts'
 
 import { empty_hosted, hosted_pending, reduce_hosted } from './hosted_state.ts'
-import {
-  authenticate_hosted,
-  authorize_hosted,
-  create_hosted_client,
-  provision_hosted,
-  verify_hosted_bot,
-} from './hosted_client.ts'
+import { setup_hosted, authorize_hosted, create_hosted_client } from './hosted_client.ts'
 
 export const useHostedConnect = (wallet: AuthSession | null, origin: string, requested_id: string | null) => {
   const [state, dispatch] = useReducer(reduce_hosted<HostedBotDescriptor>, undefined, empty_hosted<HostedBotDescriptor>)
@@ -45,10 +39,6 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     const client = create_hosted_client(origin, controller.signal)
     const { generation } = state
     const context = lifetime.current
-    const session_id = () => {
-      if (!state.authorization_id) throw new Error('Hosted authentication required')
-      return state.authorization_id
-    }
     const selected_bot = () => {
       const bot = state.bots.find((row) => row.id === state.selected)
       if (!bot) throw new Error('Select an owned bot')
@@ -56,7 +46,7 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     }
     const operations = {
       authenticating: async () => {
-        const result = await authenticate_hosted(
+        const result = await setup_hosted(
           client,
           wallet,
           requested_id,
@@ -68,23 +58,11 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
         )
         dispatch({ type: 'result', generation, values: { ...result, phase: 'ready' } })
       },
-      creating: async () => {
-        const bot = await provision_hosted(client, session_id())
-        dispatch({
-          type: 'result',
-          generation,
-          values: { phase: 'ready', bots: [...state.bots.filter((row) => row.id !== bot.id), bot] },
-        })
-      },
-      verifying: async () => {
-        const bot = selected_bot()
-        await verify_hosted_bot(client, wallet, session_id(), bot)
-        dispatch({ type: 'result', generation, values: { phase: 'ready', verified: bot.id } })
-      },
       authorizing: async () => {
         const bot = selected_bot()
-        if (!state.consent || state.verified !== bot.id) throw new Error('Verified consent required')
-        const redirect = await authorize_hosted(client, wallet, session_id(), bot, state.consent)
+        if (!state.authorization_id || !state.consent || state.verified !== bot.id)
+          throw new Error('Verified consent required')
+        const redirect = await authorize_hosted(client, wallet, state.authorization_id, bot, state.consent)
         controller.signal.throwIfAborted()
         // eslint-disable-next-line functional/immutable-data -- Completed OAuth must not be cancelled when navigation disposes the modal.
         context.completed = true

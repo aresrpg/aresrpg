@@ -8,9 +8,9 @@ No assistant-owned private key, local CLI, server installation or key upload is 
 ## Connect
 
 1. Choose ChatGPT, Claude or Grok in Connect Your Agent. Authenticate with your existing
-   Google game wallet. Create or select your hosted bot. If the service is unavailable,
+   Google game wallet. Connect prepares your hosted bot and verifies its signer automatically. If the service is unavailable,
    stop: a missing signer must never be replaced with a disposable key.
-2. Verify the hosted signer. The browser verifies a fresh public proof against its own
+2. Wait for setup to complete. The browser verifies a fresh public proof against its own
    Google-bound request and saves the public recovery descriptor. A pending request,
    service metadata or an assistant-supplied address is not verified custody.
 3. Copy the public HTTPS MCP endpoint shown by the configured service. Add that endpoint

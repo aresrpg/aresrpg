@@ -21,9 +21,9 @@ test('close, back and account replacement retire all late hosted completions', (
   expect(retired.authorization_id).toBeNull()
   expect(retired.bots).toEqual([])
 })
-test('double activation cannot start another authentication or consent operation', () => {
-  const pending = reduce_hosted(empty_hosted(), { type: 'start', phase: 'authorizing' })
-  expect(reduce_hosted(pending, { type: 'start', phase: 'authorizing' })).toBe(pending)
+test.each(['authenticating', 'authorizing'] as const)('double activation cannot restart pending %s', (phase) => {
+  const pending = reduce_hosted(empty_hosted(), { type: 'start', phase })
+  expect(reduce_hosted(pending, { type: 'start', phase })).toBe(pending)
   const complete = reduce_hosted(pending, {
     type: 'result',
     generation: pending.generation,

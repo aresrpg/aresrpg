@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useReducer } from 'react'
+import { useReducer, type ReactNode } from 'react'
 import { Button } from '@aresrpg/ui'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -11,9 +11,8 @@ type CopyStatus = 'idle' | 'copied' | 'failed'
 export const AgentPrompt = ({
   copy,
   request,
-  disabled = false,
-  hint,
-}: Readonly<{ copy: AppCopy; request: string; disabled?: boolean; hint?: string }>) => {
+  children,
+}: Readonly<{ copy: AppCopy; request: string; children?: ReactNode }>) => {
   const [status, report] = useReducer((_state: CopyStatus, next: CopyStatus) => next, 'idle')
   const text = copy_text(copy.ui)
   const copy_request = async () => {
@@ -28,11 +27,12 @@ export const AgentPrompt = ({
   return (
     <>
       <div className="agent-setup-details">
-        <p hidden={disabled}>{hint ?? text('agent_paste_request')}</p>
-        <pre hidden={disabled} aria-label={text('agent_copy_request')} className="agent-prompt" tabIndex={0}>
-          {request}
-        </pre>
-        <Button tone="primary" className="agent-connect" disabled={disabled} onClick={() => void copy_request()}>
+        {children || (
+          <pre aria-label={text('agent_copy_request')} className="agent-prompt" tabIndex={0}>
+            {request}
+          </pre>
+        )}
+        <Button tone="primary" className="agent-connect" onClick={() => void copy_request()}>
           {text('agent_copy_request')}
         </Button>
         <p role="status" className={status === 'copied' ? 'sr-only' : undefined} hidden={status === 'idle'}>

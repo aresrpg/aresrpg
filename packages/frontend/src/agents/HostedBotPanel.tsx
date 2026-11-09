@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Button } from '@aresrpg/ui'
+import { Check } from 'lucide-react'
 import type { HostedBotDescriptor, HostedConnectRequest } from '@aresrpg/protocol'
 import type { Dispatch } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { env } from '../env.ts'
 
-import { AgentPrompt } from './AgentHandoff.tsx'
+import { ProviderHandoff } from './ProviderHandoff.tsx'
 import type { HostedInput, HostedState } from './hosted_state.ts'
 
 type PanelProps = Readonly<{
@@ -54,64 +55,21 @@ const HostedConsent = ({
     </section>
   )
 }
-const SelectedBot = ({ copy, provider, state, dispatch, bot }: PanelProps & Readonly<{ bot: HostedBotDescriptor }>) => {
+export const HostedBotPanel = ({ copy, provider, state, dispatch }: PanelProps) => {
   const text = copy.ui
-  return (
-    <>
-      <p className="break-all">{bot.address}</p>
-      {state.verified !== bot.id ? (
-        <Button className="agent-connect" onClick={() => dispatch({ type: 'start', phase: 'verifying' })}>
-          {text.agent_hosted_verify}
-        </Button>
-      ) : (
-        <>
-          <p role="status">{text.agent_hosted_ready}</p>
-          <p>{text.agent_hosted_waiting}</p>
-          {state.consent ? (
-            <HostedConsent copy={copy} consent={state.consent} bot={bot} dispatch={dispatch} />
-          ) : (
-            <>
-              <p>{text[`agent_hosted_${provider.toLowerCase()}`]}</p>
-              <AgentPrompt
-                copy={copy}
-                request={new URL('/mcp', env.bot_service_url).href}
-                hint={text.agent_hosted_endpoint}
-              />
-            </>
-          )}
-        </>
-      )}
-    </>
-  )
-}
-export const HostedBotPanel = (props: PanelProps) => {
-  const { copy, state, dispatch } = props
-  const text = copy.ui
-  const selected = state.bots.find((bot) => bot.id === state.selected)
+  const bot = state.bots.find((row) => row.id === state.selected)
+  if (!bot || state.verified !== bot.id) return null
   return (
     <div className="agent-setup-details">
-      {state.bots.length === 0 ? (
-        <Button className="agent-connect" onClick={() => dispatch({ type: 'start', phase: 'creating' })}>
-          {text.agent_hosted_create}
-        </Button>
+      <p className="flex items-center justify-center gap-2" role="status">
+        <Check size={20} aria-hidden="true" />
+        {text.agent_hosted_ready}
+      </p>
+      {state.consent ? (
+        <HostedConsent copy={copy} consent={state.consent} bot={bot} dispatch={dispatch} />
       ) : (
-        <label>
-          {text.agent_hosted_bot}
-          <select
-            className="w-full"
-            value={state.selected}
-            onChange={(event) => dispatch({ type: 'edit', values: { selected: event.target.value, verified: '' } })}
-          >
-            <option value="">{text.agent_hosted_select}</option>
-            {state.bots.map((bot) => (
-              <option key={bot.id} value={bot.id} disabled={bot.status !== 'ready'}>
-                {bot.address}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ProviderHandoff copy={copy} provider={provider} url={new URL('/mcp', env.bot_service_url).href} />
       )}
-      {selected && <SelectedBot {...props} bot={selected} />}
     </div>
   )
 }

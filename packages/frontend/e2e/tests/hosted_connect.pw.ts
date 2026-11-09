@@ -96,6 +96,7 @@ const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
         expires_at,
       },
       '/connect/verify': { owner, bots: [bot] },
+      '/connect/bots': { status: 'ready', bot },
       '/connect/cancel': { cancelled: true },
       '/connect/authorize': { redirect_url: 'https://assistant.fixture.example/callback?code=fixture-code' },
     }
@@ -132,9 +133,7 @@ const open = async (page: Page, query = '') => {
   await page.getByRole('button', { name: 'Connect', exact: true }).click()
 }
 const verify = async (page: Page) => {
-  await page.getByRole('combobox', { name: 'Hosted bot' }).selectOption('fixture-bot')
-  await page.getByRole('button', { name: 'Verify hosted signer', exact: true }).click()
-  await expect(page.getByText('Hosted signer verified. Public recovery identity saved.')).toBeVisible()
+  await expect(page.getByText('Setup complete')).toBeVisible()
 }
 
 test('fresh hosted proof saves recovery but never confirms a transfer recipient or active AI', async ({ page }) => {
@@ -143,8 +142,8 @@ test('fresh hosted proof saves recovery but never confirms a transfer recipient 
   await verify(page)
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', 'host-persistent')
   await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
-  await expect(page.locator('.agent-prompt')).toHaveText(`${service}/mcp`)
-  await expect(page.getByText(/This does not mean AI is playing/)).toBeVisible()
+  await expect(page.locator('.agent-provider-example-url')).toHaveText(`${service}/mcp`)
+  await expect(page.getByRole('combobox')).toHaveCount(0)
   const saved = await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)
   expect(JSON.parse(saved!)).toEqual([{ address: bot.address, multisig_public_key: bot.multisig_public_key }])
   expect(requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
@@ -227,8 +226,6 @@ test('invalid hosted proof cannot publish a custody candidate', async ({ page })
     })
   )
   await open(page)
-  await page.getByRole('combobox', { name: 'Hosted bot' }).selectOption('fixture-bot')
-  await page.getByRole('button', { name: 'Verify hosted signer', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
 })
@@ -255,10 +252,9 @@ test('unconfigured provisioning stays unavailable without a fake funded or conne
     })
   )
   await open(page)
-  await page.getByRole('button', { name: 'Create hosted bot', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
-  await expect(page.locator('.agent-prompt')).toHaveCount(0)
+  await expect(page.locator('.agent-provider-example-url')).toHaveCount(0)
 })
 
 test('MCP endpoint copy remains selectable when clipboard permission is refused', async ({ page }) => {
@@ -274,9 +270,9 @@ test('MCP endpoint copy remains selectable when clipboard permission is refused'
   await mock_hosted(page)
   await open(page)
   await verify(page)
-  await page.getByRole('button', { name: 'Copy setup request', exact: true }).click()
+  await page.getByRole('button', { name: 'Copy connection URL', exact: true }).click()
   await expect(page.getByText('Copy failed. Select and copy the request above manually.')).toBeVisible()
-  await expect(page.locator('.agent-prompt')).toHaveText(`${service}/mcp`)
+  await expect(page.locator('.agent-provider-example-url')).toHaveText(`${service}/mcp`)
 })
 
 for (const viewport of [
