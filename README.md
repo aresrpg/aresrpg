@@ -32,8 +32,8 @@ Blast hosts the standalone KARES presale. The in-game card links to Blast and re
 progress when a presale is configured. The app's `/kares` page hosts staking; the encyclopedia
 explains allocations, vesting and rewards.
 
-Solana bridge reads use the same-origin `/api/solana` function. Set `SOLANA_RPC_URL` as a
-server-only secret in the frontend Vercel project's production and `edge` preview environments.
+Solana bridge reads use the same-origin `/api/solana` function. `SOLANA_RPC_URL` is
+server-only configuration.
 The endpoint must support SPL Token and Token-2022 account reads. Never use a `VITE_` variable
 for this credential. For local development, set the same server-only variable in the frontend's
 ignored local environment; Vite serves the same relay handler. Requests retain the site's Origin,

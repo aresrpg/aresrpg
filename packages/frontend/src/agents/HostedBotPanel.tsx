@@ -32,6 +32,7 @@ const HostedConsent = ({
     <section>
       <h3>{text.agent_hosted_consent}</h3>
       <p>{consent.client_name}</p>
+      {consent.scopes.includes('bot:play') && <p>{text.agent_hosted_authority}</p>}
       <p className="break-all">{consent.client_id}</p>
       <p className="break-all">{consent.redirect_uri}</p>
       <p className="break-all">{consent.resource}</p>

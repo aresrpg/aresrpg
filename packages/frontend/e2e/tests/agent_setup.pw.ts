@@ -13,16 +13,14 @@ test('setup selection never claims a connection or sends a request', async ({ pa
   await open.click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.locator('.agent-provider-card')).toHaveCount(3)
-  const connect = dialog.getByRole('button', { name: 'Authenticate with Google wallet', exact: true })
+  const connect = dialog.getByRole('button', { name: 'Connect', exact: true })
   await expect(connect).toBeDisabled()
   for (const name of ['ChatGPT', 'Claude', 'Grok']) {
     const provider = dialog.getByRole('button', { name, exact: true })
     await provider.click()
     await expect(provider).toHaveAttribute('aria-pressed', 'true')
     await expect(connect).toBeDisabled()
-    await expect(dialog.getByRole('status')).toHaveText(
-      'Hosted setup requires your Google game wallet and a configured HTTPS bot service. Saved recovery remains available in Inventory.'
-    )
+    await expect(dialog.getByRole('status')).toHaveCount(0)
   }
   await expect(dialog.locator('details')).toHaveCount(0)
   await expect(dialog.locator('input')).toHaveCount(0)
@@ -107,8 +105,8 @@ for (const viewport of [
     const dialog = page.getByRole('dialog', { name: 'Choose your agent' })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'ChatGPT', exact: true }).click()
-    await expect(dialog.getByRole('button', { name: 'Authenticate with Google wallet', exact: true })).toBeDisabled()
-    await expect(dialog).toContainText('Hosted setup requires your Google game wallet')
+    await expect(dialog.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
+    await expect(dialog).not.toContainText('Hosted setup requires')
     const response = await page.request.get('/agents/client.txt')
     expect(response.ok()).toBe(true)
     const instructions = await response.text()

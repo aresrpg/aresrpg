@@ -56,10 +56,16 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     }
     const operations = {
       authenticating: async () => {
-        const result = await authenticate_hosted(client, wallet, requested_id, (id) => {
-          // eslint-disable-next-line functional/immutable-data -- Retain only the public cancellation handle at the lifecycle edge.
-          context.authorization_id = id
-        })
+        const result = await authenticate_hosted(
+          client,
+          wallet,
+          requested_id,
+          (id) => {
+            // eslint-disable-next-line functional/immutable-data -- Retain only the public cancellation handle at the lifecycle edge.
+            context.authorization_id = id
+          },
+          context.authorization_id
+        )
         dispatch({ type: 'result', generation, values: { ...result, phase: 'ready' } })
       },
       creating: async () => {

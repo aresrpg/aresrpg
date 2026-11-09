@@ -13,12 +13,7 @@ Configure these private variables on the **game server**, never Vercel or `VITE_
 - `ALLOCATION_X_CLIENT_ID`, `ALLOCATION_X_CLIENT_SECRET`, `ALLOCATION_X_BEARER`: X linking and read credentials.
 - `ALLOCATION_LEADERBOARD_REDIS_URL`: operator-only access to the active indexer's Redis.
 
-The server Helm chart's `allocation.enabled` switch mounts `aresrpg-allocation-secrets`,
-reads the password from `allocation-redis-credentials`, and gives the server pods the
-`aresrpg.world/allocation-client: "true"` label required by Redis NetworkPolicy.
-The encrypted source remains `domains/aresrpg/secrets.yaml` in the Kubernetes repository.
-Redis has no public endpoint. It uses its own retained 1 GiB PVC, synchronous AOF and no eviction.
-The game server connects lazily; a campaign database outage does not prevent game boot.
+Campaign state must remain durable and isolated from disposable game projections. The game server connects lazily; a campaign database outage does not prevent game boot.
 
 Google sign-in creates the ordinary Enoki wallet; Wallet Standard sign-in supports wallet browsers directly.
 The existing WebSocket challenge admits either wallet through the same game connection. Private campaign requests use

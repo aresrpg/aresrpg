@@ -68,19 +68,16 @@ snapshots.
    deployment configuration consumes those digests, never mutable semver aliases.
    New schema-two manifests include server, indexer, Discord and hosted bot images. A legacy
    manifest without the hosted bot cannot certify its first rollout; preparation builds that image.
-   Before its first rollout, review the real issuer/routing configuration and provision the bot's
-   persistent Redis credentials and separate signing/envelope key material through the normal
-   secrets workflow. Image publication alone does not configure those prerequisites.
+   Image publication alone does not satisfy application configuration or security prerequisites.
+   Verify those privately before separately authorized activation.
 10. Pause gameplay when content or package work requires it.
 11. Apply content batches in deterministic order.
 12. Record every successful transaction digest.
 13. Never retry a transaction that executed and returned a digest.
 14. If a batch stops, inspect chain state and resume only the missing rows.
-15. Before cluster changes, review the retained Helm diff and generated Kubernetes values.
-    Publish those exact values before applying them. Verify the published inputs match the reviewed
-    archive. Changed inputs or diffs stop recovery.
-    A certified app-only release skips Kubernetes; an unknown baseline requires review. The composite
-    game+seed projection identity decides whether the store is retained or replaced for a repin.
+15. Before backend changes, review the exact prepared inputs privately. Changed or unknown inputs
+    stop recovery. Preserve projection state only when its game+seed lineage remains compatible.
+    Infrastructure procedures and configuration remain outside public documentation.
 16. Release tooling automatically dispatches the production-activation workflow with the retained
     tag, version, preparation run and request ID. The network is always mainnet. It promotes the
     staged Vercel deployment without rebuilding, verifies production, and publishes the draft release.
@@ -143,7 +140,7 @@ Historical Hytale awards use an isolated restored database, never the active gam
 Export only the ranking inputs and the recorded shop-spending counter:
 
 ```bash
-bun scripts/export_hytale_players.mjs <isolated-container> ares <backup.rdb> <backup-timestamp-ms> <private-export.json>
+bun scripts/export_hytale_players.mjs <isolated-container> <graph-name> <backup.rdb> <backup-timestamp-ms> <private-export.json>
 bun scripts/prepare_hytale_gifts.mjs <private-export.json> <private-ranking-report.json>
 ```
 
@@ -174,10 +171,9 @@ and current object custody; never retry automatically.
 
 ## Gift sponsorship configuration
 
-The frontend Vercel project needs server-only `GIFT_SPONSOR_PRIVATE_KEY`, a Sui Ed25519 private key
+The gift API requires server-only `GIFT_SPONSOR_PRIVATE_KEY`, a Sui Ed25519 private key
 for a dedicated, lightly funded address on the selected network. Keep the public Enoki key and Google
-client configuration for login. Store the sponsor key as a sensitive Production variable, never with a
-`VITE_` prefix. The server constructs and signs only the fixed campaign transactions; the SDK submits
+client configuration for login. Never expose the sponsor key through a `VITE_` variable. The server constructs and signs only the fixed campaign transactions; the SDK submits
 both the sponsor and sender signatures directly. No external sponsorship credits or gas pool are required.
 The QR key signs transport locally; Slush’s hosted sponsor is not used.
 No dashboard-wide Move allowlist or QR reprint is needed. The existing 100 vouchers remain the supply.

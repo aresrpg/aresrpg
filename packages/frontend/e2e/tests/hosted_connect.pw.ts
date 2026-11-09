@@ -67,6 +67,17 @@ const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
     const path = new URL(request.url()).pathname
     const body = request.method() === 'POST' ? (request.postDataJSON() as Record<string, unknown>) : {}
     requests.push({ path, body })
+    if (path === '/connect/bots' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 400,
+        headers: {
+          'access-control-allow-origin': new URL(page.url()).origin,
+          'access-control-allow-credentials': 'true',
+        },
+        json: { error: 'owner_authentication_required' },
+      })
+      return
+    }
     const expires_at = Date.now() + 60_000
     const replies: Record<string, unknown> = {
       '/connect/request': {
@@ -118,7 +129,7 @@ const open = async (page: Page, query = '') => {
   await page.goto(`/e2e/fixtures/agent_pairing.html${query}`)
   await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
   await page.getByRole('button', { name: 'Claude', exact: true }).click()
-  await page.getByRole('button', { name: 'Authenticate with Google wallet', exact: true }).click()
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
 }
 const verify = async (page: Page) => {
   await page.getByRole('combobox', { name: 'Hosted bot' }).selectOption('fixture-bot')

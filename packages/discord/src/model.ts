@@ -172,10 +172,11 @@ const loot_announcement = (
     content: message(copy.loot, {
       player: player(names, notification.address),
       quality: percentage,
-      item: notification.name,
-      mob: notification.mob_types
-        .map((mob_type) => mobs.find((mob) => mob.mob_type === mob_type)?.name ?? titleize(mob_type))
-        .join(', '),
+      // Historical eligibility is proven; the exact winning monster is not recorded.
+      mob: notification.sources
+        .slice(0, 1)
+        .map(({ mob_type }) => mobs.find((mob) => mob.mob_type === mob_type)?.name ?? titleize(mob_type))
+        .join(''),
     }),
     visual: {
       type: copy.loot_title,

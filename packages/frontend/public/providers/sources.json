@@ -3,5 +3,7 @@
   "retrieved": "2026-11-03",
   "note": "Original source SVGs, unmodified. chatgpt.svg is the official ChatGPT site icon, used for the dot choice at the owner’s request; it is not a dedicated dot logo. Grok is the official Grok site icon. Marks belong to their respective owners. No endorsement or working integration implied.",
   "chatgpt.svg": "https://cdn.oaistatic.com/assets/favicon-l4nq08hd.svg",
-  "chatgpt_reference": "https://chatgpt.com/"
+  "chatgpt_reference": "https://chatgpt.com/",
+  "claude.svg": "https://claude.ai/favicon.svg",
+  "claude_retrieved": "2026-11-09"
 }

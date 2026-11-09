@@ -42,17 +42,11 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
               disabled={pending}
               onClick={() => select_provider(name)}
             >
-              {name === 'Claude' ? (
-                <Bot size={28} aria-hidden="true" />
-              ) : (
-                <img src={`/providers/${name.toLowerCase()}.svg`} alt="" style={{ colorScheme: 'dark' }} />
-              )}
+              <img src={`/providers/${name.toLowerCase()}.svg`} alt="" style={{ colorScheme: 'dark' }} />
               <span>{name}</span>
             </button>
           ))}
         </div>
-        <p className="agent-setup-details">{text.agent_hosted_intro}</p>
-        {!eligible && <p role="status">{text.agent_hosted_unavailable}</p>}
         {state.phase === 'failed' && <p role="alert">{text.agent_hosted_failed}</p>}
         {pending && <p role="status">{text.agent_hosted_pending}</p>}
         {['idle', 'failed'].includes(state.phase) && (
@@ -62,13 +56,12 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
             disabled={!eligible || !provider}
             onClick={() => dispatch({ type: 'start', phase: 'authenticating' })}
           >
-            {text.agent_hosted_authenticate}
+            {text.agent_pair_connect}
           </Button>
         )}
         {state.phase === 'ready' && (
           <HostedBotPanel copy={copy} provider={provider} state={state} dispatch={dispatch} />
         )}
-        <p className="agent-setup-details">{text.agent_hosted_recovery}</p>
         <Button className="agent-connect" onClick={dismiss}>
           {text.agent_cancel}
         </Button>

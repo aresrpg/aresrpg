@@ -12,24 +12,21 @@ claimed fight gear. Gear posts only when average normalized variable-stat qualit
 
 Run `bun run --cwd packages/discord start` with:
 
-| Variable             | Value                                                   |
-| -------------------- | ------------------------------------------------------- |
-| `DISCORD_BOT_TOKEN`  | Existing bot token, injected from the Kubernetes Secret |
-| `DISCORD_CHANNEL_ID` | Destination channel ID                                  |
-| `PACKAGE_ORIGINAL`   | Original game package ID matching the indexer           |
-| `SUI_NETWORK`        | `mainnet` or `testnet`                                  |
-| `SUI_RPC_URL`        | Network gRPC endpoint for optional SuiNS names          |
-| `GRAPH_URL`          | Existing indexer Redis URL                              |
-| `DISCORD_LOCALE`     | App locale; defaults to `en`                            |
+| Variable             | Value                                          |
+| -------------------- | ---------------------------------------------- |
+| `DISCORD_BOT_TOKEN`  | Bot token; keep private                        |
+| `DISCORD_CHANNEL_ID` | Destination channel ID                         |
+| `PACKAGE_ORIGINAL`   | Original game package ID matching the indexer  |
+| `SUI_NETWORK`        | `mainnet` or `testnet`                         |
+| `SUI_RPC_URL`        | Network gRPC endpoint for optional SuiNS names |
+| `GRAPH_URL`          | Existing indexer Redis URL                     |
+| `DISCORD_LOCALE`     | App locale; defaults to `en`                   |
 
 The bot needs View Channel, Send Messages and Attach Files. It needs no Gateway
 connection or privileged intents. `/health` reports subscription-connection readiness; `/live`
 reports process liveness.
 
-Release CI publishes the dedicated `ghcr.io/aresrpg/discord` image. Its Helmfile release lives in
-`~/dev/kubernetes/domains/aresrpg/helmfile.d/15-discord.yaml` and stays at one replica independently
-of the realtime server. Deploy the publishing indexer first, then pin the bot's image digest and
-activate its release through Helmfile. The prepared chart remains disabled until configured.
+Release CI publishes the dedicated bot image. The publishing indexer must support the notification contract before the bot consumes it.
 
 For the visual gallery, run the frontend development server and open
 `http://127.0.0.1:5173/e2e/fixtures/notifications.html`. Its events are illustrative; it sends nothing.

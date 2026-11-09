@@ -30,7 +30,10 @@ export const create_hosted_client = (origin: string, signal: Readonly<AbortSigna
       body: body === undefined ? undefined : JSON.stringify(body),
     })
     signal.throwIfAborted()
-    if (!response.ok) throw new Error(`Hosted service request failed (${response.status})`)
+    if (!response.ok) {
+      const failure = (await response.json()) as { error?: string }
+      throw new Error(`Hosted service request failed (${response.status})`, { cause: failure.error })
+    }
     return response.json() as Promise<T>
   }
   return { request, signal, origin }
@@ -65,12 +68,41 @@ const pairing_request = (wallet: AuthSession) => {
   if (wallet.identity !== 'zklogin' || !request) throw new Error('Google wallet required')
   return request
 }
+const read_hosted_session = async (
+  client: Readonly<HostedClient>,
+  wallet: AuthSession,
+  id: string,
+  standalone: boolean
+) => {
+  let result: HostedVerifyResponse
+  try {
+    result = await client.request<HostedVerifyResponse>(`/connect/bots?authorization_id=${encodeURIComponent(id)}`)
+  } catch (error) {
+    if (!(error instanceof Error)) throw error
+    switch (error.cause) {
+      case 'owner_authentication_required':
+        return { id, session: null }
+      case 'invalid_session':
+        // Only standalone requests can be replaced without discarding an OAuth consent intent.
+        if (standalone) return { id: null, session: null }
+        break
+      default:
+        break
+    }
+    throw error
+  }
+  current_wallet(wallet, client.signal)
+  if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
+  return { id, session: result }
+}
 export const authenticate_hosted = async (
   client: Readonly<HostedClient>,
   wallet: AuthSession,
   authorization_id: string | null,
-  retain: (id: string) => void
+  retain: (id: string) => void,
+  session_id: string | null = authorization_id
 ) => {
+  current_wallet(wallet, client.signal)
   const pairing = pairing_request(wallet)
   const consent = authorization_id
     ? await client.request<HostedConnectRequest>(
@@ -86,25 +118,33 @@ export const authenticate_hosted = async (
     ].every(Boolean)
   )
     throw new Error('Invalid consent request')
-  const signed = await sign_hosted_challenge(
-    client,
-    wallet,
-    {
-      authorization_id: authorization_id ?? undefined,
-      owner: pairing.owner,
-      zklogin_public_identifier: pairing.zklogin_public_identifier,
-      purpose: 'session',
-    },
-    retain,
-    consent
-  )
-  const result = await client.request<HostedVerifyResponse>('/connect/verify', {
-    challenge_id: signed.challenge_id,
-    signature: signed.signature,
-  })
-  current_wallet(wallet, client.signal)
-  if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
-  return { authorization_id: signed.authorization_id, bots: result.bots, consent }
+  const prove = async (proof_id: string | null) => {
+    const signed = await sign_hosted_challenge(
+      client,
+      wallet,
+      {
+        authorization_id: proof_id ?? undefined,
+        owner: pairing.owner,
+        zklogin_public_identifier: pairing.zklogin_public_identifier,
+        purpose: 'session',
+      },
+      retain,
+      consent
+    )
+    const result = await client.request<HostedVerifyResponse>('/connect/verify', {
+      challenge_id: signed.challenge_id,
+      signature: signed.signature,
+    })
+    current_wallet(wallet, client.signal)
+    if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
+    return { authorization_id: signed.authorization_id, bots: result.bots, consent }
+  }
+  const existing = session_id
+    ? await read_hosted_session(client, wallet, session_id, authorization_id === null)
+    : { id: null, session: null }
+  if (!existing.session) return prove(existing.id)
+  retain(existing.id!)
+  return { authorization_id: existing.id!, bots: existing.session.bots, consent }
 }
 
 const pause = (signal: Readonly<AbortSignal>) =>
