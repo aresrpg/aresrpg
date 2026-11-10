@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { world_travel_refusal } from '@aresrpg/sdk/transaction-error'
+import { world_travel_refusal, pre_submission_failure } from '@aresrpg/sdk/transaction-error'
 
 import type { AppCopy } from './copy.ts'
 import { error_message, error_text } from './error_text.ts'
@@ -31,7 +31,7 @@ export const failure_copy_key = (message: string): FailureCopyKey | null => {
   if (message.startsWith('[sdk] transaction outcome unknown:')) return 'transaction_unknown_toast'
   if (message.startsWith('[sdk] previous transaction recovered')) return 'transaction_recovered_toast'
   if (message.includes('::version::assert_latest')) return 'game_paused_toast'
-  if (message.includes('gas budget exceeded')) return 'gas_budget_toast'
+  if (message.includes('gas budget exceeded') && pre_submission_failure(new Error(message))) return 'gas_budget_toast'
   if (world_travel_refusal(message)) return 'movement_sync_toast'
   return ABORT_FAILURES.find(({ code, owner }) => matches_abort(message, code, owner))?.key ?? null
 }

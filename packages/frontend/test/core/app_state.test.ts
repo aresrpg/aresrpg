@@ -44,8 +44,20 @@ const auth_session = (address = '0xowner'): AuthSession =>
     read_agent_returns: unsupported,
     read_agent_balances: unsupported,
     return_agent_assets: unsupported,
-    agent_transfer: { sender: address, fits: unsupported, quote: unsupported, prepare: unsupported },
-    agent_deposit: () => ({ sender: address, fits: unsupported, quote: unsupported, prepare: unsupported }),
+    agent_transfer: {
+      sender: address,
+      synchronize: async () => {},
+      fits: unsupported,
+      quote: unsupported,
+      prepare: unsupported,
+    },
+    agent_deposit: () => ({
+      sender: address,
+      synchronize: async () => {},
+      fits: unsupported,
+      quote: unsupported,
+      prepare: unsupported,
+    }),
     fight: {} as never,
     dungeon: {} as never,
     tournament: {

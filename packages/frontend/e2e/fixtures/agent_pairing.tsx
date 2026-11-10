@@ -73,7 +73,7 @@ const connect = (index: number) => {
         },
       })
       return {
-        transfer: { sender: pairing.address, quote: forbidden, prepare: forbidden },
+        transfer: { synchronize: async () => {}, sender: pairing.address, quote: forbidden, prepare: forbidden },
         characters: [],
         pending: [],
         read_deposit_items: async () => [],
@@ -83,13 +83,14 @@ const connect = (index: number) => {
     },
     read_agent_returns: async () => [],
     agent_deposit: () => ({
+      synchronize: async () => {},
       sender: identity.address,
       prepare: async () => {
         document.documentElement.setAttribute('data-fixture-offer', 'true')
         throw new Error('Fixture refuses transaction preparation; no signer exists.')
       },
     }),
-    agent_transfer: { sender: identity.address, prepare: forbidden },
+    agent_transfer: { synchronize: async () => {}, sender: identity.address, prepare: forbidden },
     return_agent_assets: async (
       _pairing: AgentPairingIdentity,
       options: Parameters<AuthSession['return_agent_assets']>[1]

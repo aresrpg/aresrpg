@@ -69,6 +69,23 @@ const fixtures = () => {
   })
   const client = {
     core: {
+      getTransaction: async () => ({
+        Transaction: {
+          digest: 'batch-offer',
+          status: { success: true },
+          transaction: { sender: id(9) },
+          events: [],
+          effects: {
+            changedObjects: [20, 21].map((n) => ({
+              objectId: id(n + 30),
+              idOperation: 'Created',
+              outputVersion: '1',
+              outputDigest: 'cap-digest',
+              outputOwner: { $kind: 'AddressOwner', AddressOwner: id(10) },
+            })),
+          },
+        },
+      }),
       getObjects: async ({ objectIds }: { objectIds: string[] }) => ({
         objects: objectIds.map((object_id) => ({ objectId: object_id, version: '1' })),
       }),
@@ -77,6 +94,9 @@ const fixtures = () => {
         objects: type.includes('::item::Item')
           ? [20, 21].map((n) => ({
               objectId: id(n + 30),
+              version: '1',
+              digest: 'cap-digest',
+              previousTransaction: 'batch-offer',
               type,
               owner: { $kind: 'AddressOwner', AddressOwner: id(10) },
               content: purchase_cap

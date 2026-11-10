@@ -107,9 +107,13 @@ export const pending_inventory_transfer = (
       unresolved: true,
     }
   const to_agent = preview.recipient === accounts.agent
-  const confirmed = new Set((to_agent ? accounts.agent_items : accounts.player_items).map(({ id }) => id))
+  const [destination, source] = to_agent
+    ? [accounts.agent_items, accounts.player_items]
+    : [accounts.player_items, accounts.agent_items]
+  const confirmed = new Set(destination.map(({ id }) => id))
+  const source_ids = new Set(source.map(({ id }) => id))
   const pending = preview.items.filter(({ id }) => !confirmed.has(id))
-  const unresolved = busy ? preview.items : pending
+  const unresolved = busy ? preview.items : preview.items.filter(({ id }) => !confirmed.has(id) || source_ids.has(id))
   return {
     agent_pending: to_agent ? pending : [],
     player_pending: to_agent ? [] : pending,
@@ -125,3 +129,14 @@ export const offered_item_ids = (items: readonly AgentItemReturnOffer[], charact
     ...items.map(({ item_id }) => item_id),
     ...characters.flatMap(({ equipment }) => (equipment ?? []).map(({ item_id }) => item_id)),
   ])
+
+/** A verified creation receipt scopes one recovery gesture; another receipt or direction is never appended. */
+export const item_return_group = (offers: readonly AgentItemReturnOffer[], selected: AgentItemReturnOffer) =>
+  offers.filter((offer) =>
+    [
+      offer.agent_address === selected.agent_address,
+      offer.recipient === selected.recipient,
+      offer.purchase_cap === selected.purchase_cap ||
+        Boolean(selected.offer_digest && offer.offer_digest === selected.offer_digest),
+    ].every(Boolean)
+  )

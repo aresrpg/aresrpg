@@ -32,7 +32,7 @@ export const EmptyEquipment = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           incoming={kiosk.player_pending}
           pending_ids={kiosk.pending_deposit_ids}
           copy={copy}
-          disabled={kiosk.busy}
+          disabled={kiosk.busy || kiosk.blocked}
           transfer={(ids, point) => {
             if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="agent"]')) return false
             kiosk.offer(ids, 'deposit', transferable)

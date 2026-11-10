@@ -39,6 +39,7 @@ const fixture = () => {
   const state = { balance: 1000n, executions: 0, listed: false, owned: true, present: true }
   const sdk = {
     network: 'mainnet',
+    synchronize_transactions: async () => {},
     game_type_package: game,
     read_kares_balance: async () => 1000n,
     tx: () => new Transaction(),
@@ -89,12 +90,34 @@ const fixture = () => {
     core: {
       getObject: async () => ({ object: { objectId: item_id, version: '1' } }),
       getObjects: async () => ({ objects: [{ objectId: item_id, version: '1' }] }),
+      getTransaction: async () => ({
+        Transaction: {
+          digest: 'offer',
+          status: { success: true },
+          transaction: { sender },
+          events: [],
+          effects: {
+            changedObjects: [
+              {
+                objectId: cap_id,
+                idOperation: 'Created',
+                outputVersion: '1',
+                outputDigest: 'cap-digest',
+                outputOwner: { $kind: 'AddressOwner', AddressOwner: owner },
+              },
+            ],
+          },
+        },
+      }),
       listOwnedObjects: async ({ type }: { type: string }) => ({
         objects:
           state.present && type.includes('::item::Item')
             ? [
                 {
                   objectId: cap_id,
+                  version: '1',
+                  digest: 'cap-digest',
+                  previousTransaction: 'offer',
                   type,
                   owner: { $kind: 'AddressOwner', AddressOwner: owner },
                   content: cap_bcs.serialize({ id: cap_id, kiosk_id, item_id, min_price: 0 }).toBytes(),

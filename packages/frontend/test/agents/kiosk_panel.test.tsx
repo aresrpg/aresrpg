@@ -9,7 +9,7 @@ import type { AppCopy } from '../../src/i18n/copy.ts'
 
 const copy = {
   ui: {
-    agent_asset_refresh: 'Refresh',
+    agent_hosted_retry: 'Try again',
     agent_kiosk: 'Agent kiosk',
     agent_inventory_demo: 'Offline transfers unavailable',
   },
@@ -27,12 +27,13 @@ const controller = (phase: 'failed' | 'loading') =>
     },
   }) as unknown as AgentKioskController
 
-test('an initial inventory read failure keeps refresh available without a snapshot', () => {
+test('an initial read failure exposes retry without a permanent inventory refresh control', () => {
   const html = renderToStaticMarkup(
     <AgentKioskPanel kiosk={controller('failed')} copy={copy} disabled={false} offline={false} />
   )
   expect(html).toContain('RPC unavailable')
-  expect(html).toContain('aria-label="Refresh"')
+  expect(html).toContain('Try again')
+  expect(html).not.toContain('aria-label="Refresh"')
   expect(html).not.toContain('disabled=""')
 })
 test('loading and offline panels cannot start another discovery or pretend transfers exist', () => {
@@ -44,7 +45,7 @@ test('loading and offline panels cannot start another discovery or pretend trans
     <AgentKioskPanel kiosk={controller('failed')} copy={copy} disabled={false} offline />
   )
   expect(offline).toContain('Offline transfers unavailable')
-  expect(offline).toContain('disabled=""')
+  expect(offline).not.toContain('Try again')
   expect(offline).not.toContain('RPC unavailable')
 })
 

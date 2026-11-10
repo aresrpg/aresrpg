@@ -28,6 +28,7 @@ const fixture = (intent: AgentHandoverIntent = character) => {
   let current = true
   const actions = (sender: string): AgentTransferActions => ({
     sender,
+    synchronize: async () => {},
     fits: async () => true,
     quote: async () => ({ budget_mist: 2_000_000n, cost_mist: 1_000_000n, required_mist: 2_000_000n }),
     prepare: async (input) => ({
@@ -170,4 +171,97 @@ test('a failed receipt projection cannot label an executed offer as unsubmitted'
   expect(error).toBeInstanceOf(AgentHandoverIncomplete)
   expect(pre_submission_failure(error)).toBe(false)
   expect(f.calls.map(({ kind }) => kind)).toEqual(['offer'])
+})
+
+test('confirmed offers wait for their sender visibility barrier before reading receiving capabilities', async () => {
+  const f = fixture(assets)
+  let visible = false
+  const released = Promise.withResolvers<void>()
+  const entered = Promise.withResolvers<void>()
+  const options = {
+    ...f.options,
+    offer: {
+      ...f.options.offer,
+      synchronize: async () => {
+        if (!f.calls.length) return
+        entered.resolve()
+        await released.promise
+        visible = true
+      },
+    },
+    read: { ...f.options.read, items: async () => (visible ? f.options.read.items() : []) },
+  }
+  const result = complete_agent_handover(options)
+  const observed = await Promise.race([
+    entered.promise.then(() => 'waiting'),
+    result.then(
+      () => 'done',
+      () => 'failed'
+    ),
+  ])
+  expect(observed).toBe('waiting')
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer'])
+  released.resolve()
+  await result
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer', 'asset_claim'])
+})
+
+test('the real sender execution owner delays capability discovery until its accepted receipt is visible', async () => {
+  const { SDK } = await import('../src/client.ts')
+  const { fake_client, pins, signer } = await import('./helpers/transport.ts')
+  const { receipt_digest } = await import('../src/cache.ts')
+  const f = fixture(assets)
+  const entered = Promise.withResolvers<void>(),
+    release = Promise.withResolvers<void>()
+  let visible = false
+  const client = fake_client({ simulate_ok: true, visibility_gate: release.promise })
+  const wait = client.core.waitForTransaction
+  client.core.waitForTransaction = async (input) => {
+    entered.resolve()
+    const receipt = await wait(input)
+    visible = true
+    return receipt
+  }
+  const sdk = SDK({ client, signer, pins, transaction_storage: null })
+  const { prepare } = f.options.offer
+  const offer = {
+    ...f.options.offer,
+    synchronize: sdk.synchronize_transactions,
+    prepare: async (input: AgentTransferIntent) => {
+      const review = await prepare(input)
+      return {
+        ...review,
+        confirm: async () => {
+          await review.confirm()
+          const receipt = await sdk.execute(sdk.tx())
+          return { receipt, digest: receipt_digest(receipt) }
+        },
+      }
+    },
+  }
+  const pending = complete_agent_handover({
+    ...f.options,
+    offer,
+    read: { ...f.options.read, items: async () => (visible ? f.options.read.items() : []) },
+  })
+  await entered.promise
+  expect(client.calls.executions).toBe(1)
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer'])
+  release.resolve()
+  await pending
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer', 'asset_claim'])
+  expect(client.calls.visibility_waits).toEqual(client.calls.digests)
+})
+
+test('an explicit retry of a certified offer cannot repeat that offer when capability discovery still lags', async () => {
+  const f = fixture(assets)
+  const options = { ...f.options, read: { ...f.options.read, items: async () => [] } }
+  const first = await complete_agent_handover(options).catch((error: unknown) => error)
+  expect(first).toBeInstanceOf(AgentHandoverIncomplete)
+  await expect(
+    complete_agent_handover({ ...options, confirmed_offer: (first as AgentHandoverIncomplete).offer_digest })
+  ).rejects.toThrow('could not be completed')
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer'])
+  await complete_agent_handover({ ...f.options, confirmed_offer: 'owner-receipt' })
+  expect(f.calls.map(({ kind }) => kind)).toEqual(['asset_offer', 'asset_claim'])
 })

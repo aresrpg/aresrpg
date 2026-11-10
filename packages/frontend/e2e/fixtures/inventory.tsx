@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { item_stat_center } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
@@ -150,7 +151,13 @@ void load_app_copy(locale)
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
     const Inventory = () => {
       const current = useAppStore((state) => state.session.characters.find(({ id }) => id === character.id))!
-      return <EquipmentTab character={current} copy={copy} />
+      const [shown, set_shown] = useState(true)
+      return (
+        <>
+          <button onClick={() => set_shown(!shown)}>{shown ? 'Close inventory' : 'Open inventory'}</button>
+          {shown && <EquipmentTab character={current} copy={copy} />}
+        </>
+      )
     }
     createRoot(document.getElementById('root')!).render(
       <main className="h-dvh overflow-y-auto bg-bg p-6 font-mono text-text">

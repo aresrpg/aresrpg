@@ -38,6 +38,7 @@ const fixture = () => {
   const transactions: Transaction[] = []
   const sdk = {
     network: 'mainnet',
+    synchronize_transactions: async () => {},
     tx: () => new Transaction(),
     pins: {},
     get_owned_kiosks: async () => ({ kioskOwnerCaps: [], hasNextPage: false }),

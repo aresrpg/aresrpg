@@ -290,6 +290,7 @@ test('refreshing Recall shares the signing queue and keeps reload vetoed until b
           digest: '11111111111111111111111111111111',
         })
     })
+    data.gasData.budget ??= '100000000'
     data.gasData.price = '1'
     data.gasData.payment = [
       { objectId: `0x${'9'.repeat(64)}`, version: '1', digest: '11111111111111111111111111111111' },
@@ -333,9 +334,11 @@ test('refreshing Recall shares the signing queue and keeps reload vetoed until b
   await entered.promise
   expect(reader.is_transaction_idle()).toBe(false)
   const refreshed = await reader.read(pairing)
-  const next_review = await refreshed.transfer.prepare(intent)
-  const next_result = next_review.confirm().catch((error) => String(error))
-  // Let the second confirmation finish preflight and reach its executor queue.
+  const next_result = refreshed.transfer
+    .prepare(intent)
+    .then((next_review) => next_review.confirm())
+    .catch((error) => String(error))
+  // The second preparation waits behind the first signer before reading new transaction inputs.
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(signs).toBe(1)
   expect(reader.is_transaction_idle()).toBe(false)
@@ -364,6 +367,7 @@ const recall_kiosk_fixture = async (kiosk_ids: readonly number[]) => {
           digest: '11111111111111111111111111111111',
         })
     })
+    data.gasData.budget ??= '100000000'
     data.gasData.price = '1'
     data.gasData.payment = [{ objectId: id(99), version: '1', digest: '11111111111111111111111111111111' }]
     await next()

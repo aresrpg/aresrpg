@@ -17,9 +17,9 @@ test('all four types select canonical artwork and use verified names or addresse
     'golden_lorito.png',
     'lorito_hat__golden.png',
   ])
-  expect(models[2]?.visual.party).toEqual(['sceat.sui'])
+  expect(models[2]?.visual.party).toEqual(['@sceat'])
   expect(models[3]?.visual.summary).toBe('97.5%')
-  expect(models[3]?.content).toBe('**sceat.sui** found a **97.5% roll** on **Golden Lorito**.')
+  expect(models[3]?.content).toBe('**@\u200bsceat** found a **97.5% roll** on **Golden Lorito**.')
   expect(models[3]?.visual.stats.map(({ value }) => value)).toEqual([49, 48, 2])
   expect(announcement(copy, {}, examples[1]!)?.content).toContain('0xaaaa…aaaa')
 })
@@ -64,7 +64,7 @@ test('exceptional loot names only eligible sources, independently of encounter o
     ['golden_lorito', 'nook'],
   ]) {
     const model = announcement(copy, { [address]: 'sceat.sui' }, { ...loot, mob_types })!
-    expect(model.content).toBe('**sceat.sui** found a **97.5% roll** on **Golden Lorito**.')
+    expect(model.content).toBe('**@\u200bsceat** found a **97.5% roll** on **Golden Lorito**.')
     expect(model.visual.title).toBe(loot.name)
   }
 })
@@ -86,7 +86,7 @@ test('exceptional loot selects only the first eligible source, retaining unknown
         sources,
       }
     )!
-    expect(model.content).toBe(`**sceat.sui** found a **97.5% roll** on **${name}**.`)
+    expect(model.content).toBe(`**@\u200bsceat** found a **97.5% roll** on **${name}**.`)
     expect(model.visual.title).toBe(loot.name)
   }
 })
@@ -103,5 +103,18 @@ test('every locale keeps the item on the card and the source in the exceptional-
     expect(model.content).not.toContain(loot.name)
     expect(model.content).not.toMatch(/\{\w+\}/)
     expect(model.visual.title).toBe(loot.name)
+  }
+})
+
+test.each([
+  ['login905.sui', '@login905'],
+  ['dhuts.dhuts.sui', '@dhuts'],
+  ['dhuts@dhuts', '@dhuts'],
+  ['other.dhuts.sui', 'other.dhuts.sui'],
+])('uses the canonical label for %s in every announcement', (name, label) => {
+  for (const event of examples) {
+    const model = announcement(copy, { [address]: name }, event)!
+    expect(model.content).toContain(label.replace('@', '@\u200b'))
+    if (event.kind !== 'loot') expect([model.visual.subtitle, ...model.visual.party].join(' ')).toContain(label)
   }
 })

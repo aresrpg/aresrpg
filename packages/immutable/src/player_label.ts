@@ -3,5 +3,5 @@
 
 export const display_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
 
-/** A self-subname keeps its full identity in state; only the visible label is shortened. */
-export const display_suins_name = (name: string): string => name.replace(/^([a-z0-9-]+)(?:\.\1\.sui|@\1)$/i, '@$1')
+/** Root names and self-subnames share a handle label; full identities remain unchanged in state. */
+export const display_suins_name = (name: string): string => name.replace(/^([a-z0-9-]+)(?:\.(?:\1\.)?sui|@\1)$/i, '@$1')

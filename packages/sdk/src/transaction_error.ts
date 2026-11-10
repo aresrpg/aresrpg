@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { GAS_BUDGET_MIST } from './gas_budget.ts'
-
 export const readable_transaction_error = (error: unknown): string => {
   const message = error instanceof Error ? error.message : String(error)
   return message.replaceAll(/%([0-9a-f]{2})/gi, (encoded, hex: string) => {
@@ -69,10 +67,16 @@ export const pre_submission_failure = (error: unknown): boolean => {
 const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
 const refusal_error = (refusal: string): Error =>
   GAS_BUDGET_REFUSAL.test(refusal)
-    ? new Error(`[sdk] gas budget exceeded — this action needs more than ${GAS_BUDGET_MIST} MIST; NOT submitted`)
+    ? new Error(`[sdk] gas budget exceeded — ${refusal}; NOT submitted`)
     : new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
 export const transaction_resolution_error = (error: unknown): unknown => {
   const message = error instanceof Error ? error.message : String(error)
+  if (
+    /^\[sdk\] (?:transaction (?:outcome unknown:|\S+ failed on-chain:)|previous transaction|durable transaction)/.test(
+      message
+    )
+  )
+    return error
   if (GAS_BUDGET_REFUSAL.test(message)) return refusal_error(message)
   if (message.includes('NOT submitted')) return error
   return new Error(`[sdk] transaction resolution failed — NOT submitted: ${message}`, { cause: error })

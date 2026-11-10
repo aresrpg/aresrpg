@@ -23,7 +23,7 @@ type Readers = Readonly<{
 export class AgentHandoverIncomplete extends Error {
   readonly offer_digest: string | null
   constructor(cause: unknown, offer_digest: string | null) {
-    super('The transfer is awaiting collection. Refresh the inventory to resume or cancel.', { cause })
+    super('The offered transfer could not be completed.', { cause })
     // eslint-disable-next-line functional/no-this-expressions -- Error metadata retains the confirmed offer digest for recovery.
     this.offer_digest = offer_digest
   }
@@ -97,6 +97,7 @@ export const complete_agent_handover = async ({
   before_sign,
   on_offer,
   before_step,
+  confirmed_offer = null,
 }: Readonly<{
   offer: AgentTransferActions
   claim: AgentTransferActions
@@ -104,6 +105,7 @@ export const complete_agent_handover = async ({
   read: Readers
   before_sign: () => void
   on_offer?: (digest: string) => void
+  confirmed_offer?: string | null
   before_step?: (actions: AgentTransferActions, intent: AgentTransferIntent) => Promise<void>
 }>) => {
   const snapshot = structuredClone(intent)
@@ -126,19 +128,22 @@ export const complete_agent_handover = async ({
   let incoming: Claim | null
   try {
     before_sign()
+    await Promise.all([offer.synchronize(), claim.synchronize()])
     if (![snapshot.recipient === claim.sender, offer.sender !== claim.sender].every(Boolean))
       throw new Error('Transfer signer or recipient mismatch.')
     incoming = await pending()
   } catch (error) {
+    if (confirmed_offer) throw new AgentHandoverIncomplete(error, confirmed_offer)
     throw transaction_resolution_error(error)
   }
-  let offer_digest: string | null = null
-  if (!incoming) {
+  let offer_digest: string | null = confirmed_offer
+  if (!incoming && !offer_digest) {
     offer_digest = (await execute(offer, snapshot)).digest
     notify_offer(on_offer, offer_digest)
   }
   try {
     before_sign()
+    await offer.synchronize()
     incoming ??= await pending()
     if (!incoming) throw new Error('The confirmed transfer capabilities are not visible yet.')
     return await execute(claim, incoming)

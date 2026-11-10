@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useReducer } from 'react'
-import { GAS_BUDGET_MIST } from '@aresrpg/sdk'
 import type { AgentPairingIdentity, CharacterRow, ItemRow } from '@aresrpg/protocol'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 import type { AgentRecall } from '@aresrpg/sdk/agent-recall'
@@ -11,16 +10,17 @@ import type { AgentItemReturnOffer, AgentReturnOffer } from '@aresrpg/sdk/agent-
 import type { AuthSession } from '../auth.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
-import { player_error_text } from '../i18n/player_error.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 
+import { agent_transfer_error } from './transfer_error.ts'
+import { item_claim_attempts } from './item_recovery.ts'
 import { useAgentTransaction } from './useAgentTransaction.ts'
 import { character_send_equipment } from './character_send.ts'
 import { same_inventory_pairing, type AgentInventoryView } from './inventory_state.ts'
 import {
   selected_transfer_items,
-  pending_inventory_transfer,
   offered_item_ids,
+  item_return_group,
   type TransferDirection,
 } from './inventory_transfer.ts'
 
@@ -64,6 +64,7 @@ export const read_kiosk_returns = <T>(read: () => Promise<readonly T[]>) =>
 
 const discover_transfers = async (wallet: AuthSession, pairing: AgentPairingIdentity): Promise<Snapshot> => {
   const recall = await wallet.read_agent_recall(pairing)
+  await Promise.all([wallet.agent_transfer.synchronize(), recall.transfer.synchronize()])
   const [withdrawals, deposits, returns, pending] = await Promise.all([
     read_kiosk_returns(recall.read_incoming_items),
     read_kiosk_returns(recall.read_deposit_items),
@@ -120,7 +121,7 @@ const kiosk_status = (discovery: State, view: AgentInventoryView, copy: AppCopy,
   return {
     phase: discovery.phase === 'ready' ? (link_ready ? view.phase : 'loading') : discovery.phase,
     error: error
-      ? player_error_text(copy, error)
+      ? agent_transfer_error(copy, error).message
       : view.phase === 'failed'
         ? copy.kares_page.error_connection
         : undefined,
@@ -158,7 +159,10 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
   const pairing = useAppStore((app) => app.session.inventory_pairing)
   const view = useAppStore((app) => app.session.agent_inventory)
   const link_ready = useAppStore((app) => app.session.link_status === 'ready')
+  const returning = useAppStore((app) => app.session.agent_connection.phase === 'returning')
   const player_inventory = useAppStore((app) => app.session.inventory)
+  const player_listings = useAppStore((app) => app.marketplace.own_listings)
+  const listing_revision = JSON.stringify([player_listings, view.catalogue.own_listings])
   const [discovery, dispatch] = useReducer(reduce, { phase: 'idle' })
   const refresh = () => {
     dispatch_app({ type: 'agent/inventory_refresh' })
@@ -168,9 +172,27 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     if (!wallet || !pairing || offline) return
     let current = true
     dispatch({ type: 'load' })
+    let completed: readonly string[] = []
+    try {
+      completed = item_claim_attempts(window.sessionStorage, wallet.address).completed()
+    } catch (error) {
+      console.warn('Item transfer attempt history is unavailable.', error)
+      dispatch({ type: 'failed', error })
+      return
+    }
     void discover_transfers(wallet, pairing).then(
       (snapshot) => {
-        if (current) dispatch({ type: 'ready', snapshot })
+        if (!current) return
+        try {
+          item_claim_attempts(window.sessionStorage, wallet.address).retire(
+            completed,
+            [...snapshot.withdrawals, ...snapshot.deposits],
+            [wallet.address, pairing.address]
+          )
+        } catch (error) {
+          console.warn('Completed item attempt fences could not be retired.', error)
+        }
+        dispatch({ type: 'ready', snapshot })
       },
       (error: unknown) => {
         if (current) dispatch({ type: 'failed', error })
@@ -179,17 +201,11 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     return () => {
       current = false
     }
-  }, [wallet, pairing, view.serial, offline])
+  }, [wallet, pairing, view.serial, offline, listing_revision, link_ready])
   const snapshot = current_snapshot(discovery.snapshot, wallet, pairing, view, offline)
   const state = kiosk_status(discovery, view, copy, link_ready)
   const routes = snapshot ? transfer_routes(snapshot, []) : null
-  const pending = pending_inventory_transfer(transfer.preview, transfer.busy, {
-    player: wallet?.address,
-    agent: pairing?.address,
-    player_items: player_inventory,
-    agent_items: view.inventory,
-  })
-  const pending_deposit_ids = new Set([...(snapshot?.reserved_player_items ?? []), ...pending.pending_ids])
+  const pending_deposit_ids = new Set([...(snapshot?.reserved_player_items ?? []), ...transfer.pending_ids])
   const offer = (ids: readonly string[], direction: TransferDirection, player_items: readonly ItemRow[] = []): void => {
     if (!snapshot || transfer.busy || state.phase !== 'ready') return
     const route = transfer_routes(snapshot, player_items)[direction]
@@ -204,7 +220,7 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
         recipient: route.recipient,
         sui_mist: '0',
         kares_mist: '0',
-        reserve_mist: String(GAS_BUDGET_MIST),
+        reserve_mist: '0',
       },
       {
         handover: { claim: route.claim, read: route.read },
@@ -217,16 +233,51 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
       }
     )
   }
-  const incoming = (direction: TransferDirection, cancel: boolean): void => {
-    if (!routes || transfer.busy || state.phase !== 'ready') return
-    const route = routes[direction]
-    if (!cancel && !route.can_claim) return
-    if (!route.pending.length) return
-    void transfer.execute(route.claim, {
-      kind: cancel ? 'asset_cancel' : 'asset_claim',
-      agent_address: route.sender,
-      items: route.pending,
-    })
+  const pending_items = routes
+    ? Object.values(routes).flatMap((route) => (route.can_claim ? route.pending.map((item) => ({ route, item })) : []))
+    : []
+  const attempt_status = (item: AgentItemReturnOffer) => {
+    if (transfer.transaction.claimed?.some((claimed) => claimed.purchase_cap === item.purchase_cap)) return 'complete'
+    return item_claim_attempts(window.sessionStorage, wallet!.address).status(item)
+  }
+  const recover_item = (selected: Readonly<(typeof pending_items)[number]>, automatic: boolean) => {
+    const { route, item } = selected
+    const items = item_return_group(route.pending, item)
+    const ids = new Set(items.map(({ item_id }) => item_id))
+    const source = [...player_inventory, ...view.inventory].filter(({ id }) => ids.has(id))
+    return transfer.execute(
+      route.claim,
+      { kind: 'asset_claim', agent_address: route.sender, items },
+      {
+        automatic,
+        preview: source.length ? { recipient: route.recipient, items: source } : undefined,
+      }
+    )
+  }
+  const recovery = (() => {
+    try {
+      return {
+        items: pending_items.map((selected) => ({
+          ...selected,
+          status: item_return_group(selected.route.pending, selected.item).map(attempt_status).find(Boolean),
+        })),
+        error: null,
+      }
+    } catch (error) {
+      return { items: [], error }
+    }
+  })()
+  useEffect(() => {
+    if (transfer.busy || transfer.reconciling || returning || state.phase !== 'ready') return
+    if (recovery.error) return dispatch({ type: 'failed', error: recovery.error })
+    const selected = recovery.items.find(({ status }) => !status)
+    if (selected) void recover_item(selected, true)
+  })
+  const item_recovery_blocked = !transfer.busy && recovery.items.some(({ status }) => status === 'attempted')
+  const retry_items = () => {
+    if (transfer.reconciling) return transfer.retry()
+    const selected = recovery.items.find(({ status }) => status === 'attempted')
+    if (selected) void recover_item(selected, false)
   }
   const recall_character = (character: Readonly<CharacterRow>): void => {
     if (!routes || transfer.busy || state.phase !== 'ready') return
@@ -256,13 +307,13 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     state,
     refresh,
     offer,
-    incoming,
+    item_recovery_blocked,
+    retry_items,
     claim_character,
     recall_character,
     pending_deposit_ids,
     ...transfer,
-    ...pending,
-    blocked: transfer.blocked && pending.unresolved,
+    blocked: transfer.reconciling || (transfer.blocked && transfer.unresolved),
   }
 }
 export type AgentKioskController = ReturnType<typeof useAgentKiosk>

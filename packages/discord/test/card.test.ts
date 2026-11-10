@@ -47,7 +47,7 @@ test('every supported locale renders the same sale fields without missing placeh
   for await (const file of glob.scan(directory)) {
     const copy = await load_copy(file.replace('.yaml', ''))
     const model = announcement(copy, { [row.seller]: 'sceat.sui' }, parse_notification(row))!
-    expect(model.content).toContain('sceat.sui')
+    expect(model.content).toContain('@\u200bsceat')
     expect(model.content).toContain('2.5 SUI')
     expect(model.content).not.toMatch(/\{\w+\}/)
   }

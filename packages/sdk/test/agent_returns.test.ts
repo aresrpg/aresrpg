@@ -155,7 +155,16 @@ const gear_fixture = () => {
         objects: state.rows.filter((row) => row.type === requested),
         hasNextPage: false,
       }),
-      getTransaction: async () => state.result,
+      getTransaction: async ({ digest }: { digest: string }) =>
+        digest === 'offer-tx'
+          ? state.result
+          : {
+              ...receipt(state.rows.filter((row) => row.previousTransaction === digest)),
+              Transaction: {
+                ...receipt(state.rows.filter((row) => row.previousTransaction === digest)).Transaction,
+                digest,
+              },
+            },
     },
   }
   return { state, rpc, item, event }
@@ -278,6 +287,7 @@ test('standalone items sharing a batched character offer receipt remain claimabl
     content: cap_layout.serialize({ id: game, kiosk_id, item_id: owner, min_price: 0 }).toBytes(),
   }
   f.state.rows.push(standalone)
+  f.state.result = receipt(f.state.rows, f.state.events)
   expect(
     (await read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).map(({ purchase_cap }) => purchase_cap)
   ).toEqual([game])

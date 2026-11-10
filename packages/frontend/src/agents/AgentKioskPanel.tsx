@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
-import { Bot, RefreshCw } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
@@ -35,7 +35,6 @@ export const AgentKioskPanel = ({
   const [coin, set_coin] = useState<TransferToken | null>(null)
   const { snapshot, pairing, state } = kiosk
   const busy = [disabled, kiosk.busy, state.phase === 'loading'].some(Boolean)
-  const refreshable = [!offline, pairing, !busy].every(Boolean)
   const controls_disabled = [busy, kiosk.blocked, state.phase !== 'ready'].some(Boolean)
   const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): boolean => {
     if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="player"]')) return false
@@ -49,9 +48,6 @@ export const AgentKioskPanel = ({
         <strong>{copy.ui.agent_label}</strong>
         <span className="agent-kiosk__badge">{copy.ui.agent_kiosk_badge}</span>
         <span>{snapshot ? agent_inventory_groups(snapshot.inventory.items).length : '—'}</span>
-        <Button aria-label={copy.ui.agent_asset_refresh} disabled={!refreshable} onClick={kiosk.refresh}>
-          <RefreshCw size={13} />
-        </Button>
       </header>
       <AgentKioskStatus kiosk={kiosk} copy={copy} offline={offline} />
       {snapshot && (
@@ -65,7 +61,6 @@ export const AgentKioskPanel = ({
             pending_ids={kiosk.pending_ids}
             transfer={drop}
           />
-          <AgentPendingTransfers kiosk={kiosk} copy={copy} disabled={busy || state.phase !== 'ready'} />
           <AgentKioskCharacters kiosk={kiosk} copy={copy} disabled={busy || state.phase !== 'ready'} />
           {coin && <AgentCoinTransfer key={coin} token={coin} kiosk={kiosk} copy={copy} close={() => set_coin(null)} />}
         </>
@@ -115,48 +110,28 @@ const AgentKioskStatus = ({
   const connected = useAppStore((app) => owner_connected(app.session))
   if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
   if (!kiosk.pairing) return <AgentKioskIdentity copy={copy} />
-  if (kiosk.pairing.signer_mode === 'disposable')
-    return <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
+  const failure =
+    kiosk.state.error ||
+    kiosk.transaction.error ||
+    (kiosk.item_recovery_blocked ? copy.ui.agent_transfer_interrupted : null)
+  const retry = kiosk.item_recovery_blocked ? kiosk.retry_items : kiosk.state.error ? kiosk.refresh : kiosk.retry
   return (
     <>
+      {kiosk.pairing.signer_mode === 'disposable' && (
+        <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
+      )}
       {connected && <p role="status">{copy.ui.agent_connected}</p>}
-      <p className="agent-transfer-error" role="alert" hidden={!(kiosk.state.error || kiosk.transaction.error)}>
-        {kiosk.state.error || kiosk.transaction.error}
+      <p className="agent-transfer-error" role="alert" hidden={!failure}>
+        {failure}
       </p>
+      {failure && (
+        <Button disabled={kiosk.busy || kiosk.state.phase === 'loading'} onClick={retry}>
+          {copy.ui.agent_hosted_retry}
+        </Button>
+      )}
       <p role="status" hidden={kiosk.state.phase !== 'loading'}>
         {copy.loading_universe}
       </p>
     </>
-  )
-}
-
-const AgentPendingTransfers = ({
-  kiosk,
-  copy,
-  disabled,
-}: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; disabled: boolean }>) => {
-  const { routes } = kiosk
-  if (!routes) return null
-  return (
-    <div className="agent-kiosk__pending">
-      {(['deposit', 'withdraw'] as const).map((direction) => {
-        const route = routes[direction]
-        if (!route.pending.length) return null
-        return (
-          <div key={direction}>
-            <p>
-              {copy.ui[direction === 'deposit' ? 'agent_deposit' : 'agent_withdraw']} · {route.pending.length} ·{' '}
-              {copy.ui.agent_claim_pending}
-            </p>
-            <Button disabled={disabled || !route.can_claim} onClick={() => kiosk.incoming(direction, false)}>
-              {copy.ui.agent_asset_claim}
-            </Button>
-            <Button disabled={disabled} onClick={() => kiosk.incoming(direction, true)}>
-              {copy.ui.agent_asset_cancel}
-            </Button>
-          </div>
-        )
-      })}
-    </div>
   )
 }

@@ -112,10 +112,10 @@ export const agent_transfer_actions = (
         return builders.cancel({ ...intent, holder: context.address })
     }
   }
-  const simulate = (tx: Transaction, intent: AgentTransferIntent) =>
-    sdk.simulate(tx, { budget: context.budget ?? (is_asset_intent(intent) ? 'estimate' : undefined) })
+  const simulate = (tx: Transaction) => sdk.simulate(tx, { budget: context.budget ?? 'estimate' })
   return Object.freeze({
     sender: context.address,
+    synchronize: () => sdk.synchronize_transactions(),
     fits: async (input: AgentTransferIntent) => {
       await sdk.synchronize_transactions()
       if (!assets || !context.batch_limits) throw new Error('Batch transaction limits are unavailable.')
@@ -127,9 +127,10 @@ export const agent_transfer_actions = (
       return quote_return_transaction(assets.client, context.address, await compose(intent))
     },
     prepare: async (input: AgentTransferIntent) => {
+      await sdk.synchronize_transactions()
       const intent = snapshot_intent(input)
       const transaction = await compose(intent)
-      const simulation = await simulate(transaction, intent)
+      const simulation = await simulate(transaction)
       assert_simulation(simulation)
       if (is_asset_intent(intent)) await check_asset_reserve(sdk, context.address, intent, transaction)
       const gas_mist = gas_mist_from_receipt(simulation)
@@ -147,11 +148,12 @@ export const agent_transfer_actions = (
           if (consumed) throw new Error('This review was already submitted. Reconcile its outcome first.')
           consumed = true
           const reviewed = Transaction.from(serialized)
+          await sdk.synchronize_transactions()
           try {
             if (is_asset_intent(intent) || is_agent_batch(intent)) await compose(intent)
             else if (intent.kind === 'offer') await check_offer(intent)
             else await check_return(intent)
-            assert_simulation(await simulate(reviewed, intent))
+            assert_simulation(await simulate(reviewed))
             if (is_asset_intent(intent)) await check_asset_reserve(sdk, context.address, intent, reviewed)
           } catch (error) {
             throw transaction_resolution_error(error)

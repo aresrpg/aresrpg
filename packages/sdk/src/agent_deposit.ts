@@ -38,6 +38,7 @@ export const agent_deposit_actions = (
   })
   return Object.freeze({
     sender: actions.sender,
+    synchronize: actions.synchronize,
     fits: actions.fits,
     quote: async (intent: AgentTransferIntent) => {
       if (intent.kind !== 'asset_offer' && intent.kind !== 'offer')

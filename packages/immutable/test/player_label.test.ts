@@ -5,12 +5,29 @@ import { expect, test } from 'bun:test'
 
 import { display_suins_name } from '../src/player_label.ts'
 
-test('a self-subname displays as its root handle without changing other names', () => {
-  expect(display_suins_name('sceat.sceat.sui')).toBe('@sceat')
-  expect(display_suins_name('sceat@sceat')).toBe('@sceat')
-  expect(display_suins_name('player-one.player-one.sui')).toBe('@player-one')
-  expect(display_suins_name('other.sceat.sui')).toBe('other.sceat.sui')
-  expect(display_suins_name('other@sceat')).toBe('other@sceat')
-  expect(display_suins_name('sceat.sui')).toBe('sceat.sui')
-  expect(display_suins_name('deep.sceat.sceat.sui')).toBe('deep.sceat.sceat.sui')
+test.each([
+  ['login905.sui', '@login905'],
+  ['player-one.sui', '@player-one'],
+  ['Login905.SUI', '@Login905'],
+  ['dhuts.dhuts.sui', '@dhuts'],
+  ['dhuts@dhuts', '@dhuts'],
+  ['player-one.player-one.sui', '@player-one'],
+  ['Dhuts.dhuts.sui', '@Dhuts'],
+])('formats %s as %s without changing the stored identity', (name, label) => {
+  expect(display_suins_name(name)).toBe(label)
+  expect(display_suins_name(label)).toBe(label)
+})
+
+test.each([
+  'other.sceat.sui',
+  'other@sceat',
+  'deep.sceat.sceat.sui',
+  '@login905',
+  'login905',
+  '',
+  '.sui',
+  'login905.sui.extra',
+  ' login905.sui',
+])('preserves names outside the root and self-subname display forms: %s', (name) => {
+  expect(display_suins_name(name)).toBe(name)
 })

@@ -119,6 +119,11 @@
         12
       ]
     },
+    "packages/frontend/e2e/fixtures/inventory_agent.ts": {
+      "inventory_agent_fixture > actions > prepare > confirm": [
+        13
+      ]
+    },
     "packages/frontend/src/agents/disconnect_agent.ts": {
       "disconnect_agent": [
         12
@@ -461,6 +466,11 @@
     "packages/protocol/src/packets.ts": {
       "parse_client_packet": [
         29
+      ]
+    },
+    "packages/sdk/test/resolver_roundtrips.test.ts": {
+      "test[1]()": [
+        12
       ]
     },
     "packages/sdk/src/marketplace.ts": {
@@ -824,6 +834,11 @@
         15
       ]
     },
+    "packages/frontend/e2e/fixtures/inventory_agent.ts": {
+      "inventory_agent_fixture > actions > prepare > confirm": [
+        12
+      ]
+    },
     "packages/frontend/e2e/fixtures/engine_lifecycle.ts": {
       "window.run_terrain_route": [
         10
@@ -921,6 +936,11 @@
         10
       ]
     },
+    "packages/frontend/src/agents/AgentKioskPanel.tsx": {
+      "AgentKioskStatus": [
+        12
+      ]
+    },
     "packages/frontend/src/agents/hosted_client.ts": {
       "refresh_hosted_owner": [
         10
@@ -949,6 +969,14 @@
     "packages/frontend/src/agents/observation.ts": {
       "fold_agent_view": [
         11
+      ]
+    },
+    "packages/frontend/src/agents/useAgentTransaction.ts": {
+      "useAgentTransaction": [
+        11
+      ],
+      "useAgentTransaction > execute": [
+        9
       ]
     },
     "packages/frontend/src/game/fight/spell_effect_context.ts": {
@@ -1462,6 +1490,11 @@
     "packages/frontend/src/practice/policy.ts": {
       "practice_bot_input": [
         12
+      ]
+    },
+    "packages/frontend/src/i18n/player_error.ts": {
+      "failure_copy_key": [
+        9
       ]
     },
     "packages/frontend/src/modules/party.ts": {
@@ -2130,6 +2163,11 @@
         9
       ]
     },
+    "packages/sdk/test/resolver_roundtrips.test.ts": {
+      "test[1]()": [
+        10
+      ]
+    },
     "packages/sdk/test/agent_return_custody.test.ts": {
       "fixture": [
         10
@@ -2497,6 +2535,11 @@
     },
     "packages/engine/src/character_model.ts": {
       "compose_pixels": [
+        10
+      ]
+    },
+    "packages/sdk/src/agent_handover.ts": {
+      "complete_agent_handover": [
         10
       ]
     }

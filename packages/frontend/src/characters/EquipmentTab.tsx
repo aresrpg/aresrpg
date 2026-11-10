@@ -257,7 +257,7 @@ export default function EquipmentTab({
           selected={selected_ids}
           change={set_selected_ids}
           menu={set_menu}
-          disabled={[committing, kiosk.busy].some(Boolean)}
+          disabled={[committing, kiosk.busy, kiosk.blocked].some(Boolean)}
           drag_item={set_dragging_id}
           equip={equip}
           transfer={(ids, point) => {
@@ -295,7 +295,7 @@ export default function EquipmentTab({
               aria-pressed={selected_ids.includes(item.id)}
               item={item}
               key={item.id}
-              disabled={[committing, kiosk.busy].some(Boolean)}
+              disabled={[committing, kiosk.busy, kiosk.blocked].some(Boolean)}
               pending={items.some(({ id }) => kiosk.pending_ids.has(id))}
               onClick={(event) => select_item(item, event.shiftKey)}
               onDoubleClick={(event) => {

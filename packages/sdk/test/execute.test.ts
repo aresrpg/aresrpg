@@ -164,12 +164,12 @@ describe('the execute gate (core interface)', () => {
   // The budget is OURS and fixed, so a gas refusal at the dry run is our bug, not an empty
   // wallet. The message must say so — and must NOT carry the raw `InsufficientGas`, which is
   // the vocabulary the app's out-of-SUI prompt watches for.
-  test('a dry run refused for gas names the budget, not the wallet', async () => {
+  test('a gas preflight refusal preserves its diagnostic without claiming a fixed estimated budget', async () => {
     const client = fake_client({ simulate_ok: false, failure_message: 'InsufficientGas' })
     const sdk = await game(client)
 
     await expect(sdk.execute(sdk.tx())).rejects.toThrow(/gas budget exceeded.*NOT submitted/)
-    await expect(sdk.execute(sdk.tx())).rejects.not.toThrow(/InsufficientGas/)
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/InsufficientGas/)
     expect(client.calls.executions).toBe(0)
   })
 

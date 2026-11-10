@@ -189,6 +189,7 @@ export const check_agent_return = async (
 }
 
 export type AgentItemReturnOffer = Readonly<{
+  offer_digest?: string
   item_id: string
   seller_kiosk: string
   purchase_cap: string
@@ -235,20 +236,24 @@ export const read_agent_item_returns = async (
       })
       .map((object) => object.objectId)
   )
-  return Object.freeze(
+  const verified = await Promise.all(
     objects
-      .map((object) => verified_offer(object, { type, recipient, agent, kiosks }))
-      .filter((offer): offer is AgentReturnOffer => offer !== null && !paired_gear.has(offer.purchase_cap))
-      .map((offer) =>
-        Object.freeze({
+      .filter((object) => !paired_gear.has(object.objectId))
+      .map(async (object) => {
+        const offer = verified_offer(object, { type, recipient, agent, kiosks })
+        if (!offer) return null
+        await offer_receipt(client, object, agent, recipient)
+        return Object.freeze({
+          offer_digest: object.previousTransaction!,
           item_id: offer.character_id,
           seller_kiosk: offer.seller_kiosk,
           purchase_cap: offer.purchase_cap,
           recipient,
           agent_address: agent,
         })
-      )
+      })
   )
+  return Object.freeze(verified.filter((offer) => offer !== null))
 }
 
 const equipment_events = (receipt: OfferReceipt, type_package: string, character: string) => {

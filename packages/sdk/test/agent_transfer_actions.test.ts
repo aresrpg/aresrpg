@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import { Transaction } from '@mysten/sui/transactions'
 
-import { agent_transfer_actions } from '../src/agent_transfer_actions.ts'
+import { agent_transfer_actions, execute_agent_transfer } from '../src/agent_transfer_actions.ts'
 import { SDK } from '../src/client.ts'
 import { pre_submission_failure } from '../src/transaction_error.ts'
 
@@ -16,6 +16,7 @@ const fixture = (success = true, ambiguous = false, check_return?: () => Promise
   let valid = success
   const sdk = {
     network: 'mainnet',
+    synchronize_transactions: async () => {},
     game_type_package: id,
     tx: () => new Transaction(),
     simulate: async () => ({
@@ -145,6 +146,7 @@ test('recall freezes equipment inputs and refuses changes before signing', async
   let hydrated: readonly string[] = []
   const sdk = {
     network: 'mainnet',
+    synchronize_transactions: async () => {},
     game_type_package: id,
     tx: () => new Transaction(),
     hydrate: async (ids: readonly string[]) => {
@@ -197,4 +199,93 @@ test('receipt ownership is checked again before submission; a consumed gear cap 
   expect(f.executions()).toBe(0)
   await expect(review.confirm()).rejects.toThrow('Reconcile')
   expect(reads).toBe(2)
+})
+
+test('eleven equipped items use the shared SDK estimator instead of imposing the fixed character ceiling', async () => {
+  const ids = (n: number) => `0x${n.toString(16).padStart(64, '0')}`
+  const gear = [
+    'hat',
+    'amulet',
+    'cloak',
+    'weapon',
+    'tool',
+    'left_ring',
+    'belt',
+    'right_ring',
+    'pet',
+    'title',
+    'boots',
+  ].map((slot, index) => ({ slot, item_id: ids(100 + index) }))
+  const client = fake_client({
+    simulate_ok: true,
+    owned_versions: new Map(gear.map(({ item_id }) => [item_id, ['2']])),
+  })
+  const resolve = client.core.resolveTransactionPlugin()
+  let resolutions = 0
+  client.core.resolveTransactionPlugin = () => async (data, options, next) => {
+    if (!resolutions++) expect(data.gasData.budget).toBeNull()
+    data.gasData.budget = '120000000'
+    await resolve(data, options, next)
+  }
+  client.core.simulateTransaction = async () =>
+    ({
+      Transaction: {
+        effects: {
+          status: { success: true },
+          gasUsed: { computationCost: '100000000', storageCost: '0', storageRebate: '0' },
+        },
+      },
+    }) as never
+  const sdk = SDK({ client, address: ids(99), pins, transaction_storage: null })
+  const actions = agent_transfer_actions(
+    {
+      ...sdk,
+      with_personal_kiosk: (tx: Transaction, _cap: unknown, compose: (kiosk: unknown, cap: unknown) => void) =>
+        compose(
+          tx.sharedObjectRef({ objectId: ids(90), initialSharedVersion: '1', mutable: true }),
+          tx.objectRef({ objectId: ids(91), version: '1', digest })
+        ),
+    } as never,
+    {
+      address: ids(99),
+      kiosk_cap: async () => ({ objectId: ids(91), kioskId: ids(90), isPersonal: true, version: '1', digest }),
+    }
+  )
+  const review = await actions.prepare({
+    kind: 'offer',
+    character_id: ids(92),
+    kiosk: ids(90),
+    recipient: ids(98),
+    unequip: gear,
+  })
+  expect(review.gas_budget_mist).toBe('120000000')
+  expect(client.calls.executions).toBe(0)
+  expect(client.calls.hydrations.flat()).toEqual(gear.map(({ item_id }) => item_id))
+})
+
+test('a recipient with an unresolved SDK submission cannot prepare an automatic recovery or relabel uncertainty as preflight', async () => {
+  const client = fake_client({ simulate_ok: true })
+  let submissions = 0
+  client.core.executeTransaction = async () => {
+    submissions += 1
+    throw new Error('response lost')
+  }
+  client.core.waitForTransaction = async () => {
+    throw new Error('receipt unavailable')
+  }
+  const sdk = SDK({
+    client,
+    address: id,
+    pins,
+    transaction_storage: null,
+    sign_transaction: async (tx) => ({ bytes: await tx.build(), signature: 'synthetic-no-network-signature' }),
+  })
+  await expect(sdk.execute(sdk.tx())).rejects.toThrow('outcome unknown')
+  const actions = agent_transfer_actions(sdk, { address: id, kiosk_cap: async () => null })
+  const error = await execute_agent_transfer({ actions, intent, is_current: () => true }).catch(
+    (error: unknown) => error
+  )
+  expect(String(error)).toContain('outcome unknown')
+  expect(pre_submission_failure(error)).toBe(false)
+  expect(submissions).toBe(1)
 })
