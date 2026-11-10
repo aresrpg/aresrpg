@@ -169,3 +169,13 @@ export const create_gas_ledger = ({
 }
 
 export type GasLedger = ReturnType<typeof create_gas_ledger>
+
+/** Mirrors the installed Sui resolver's gas-budget calculation, including its 1,000 gas-unit overhead.
+ * A quote uses this budget for liquidity checks; net gas remains the estimated execution cost. */
+export const simulation_gas_budget = (receipt: Receipt, gas_price: bigint): bigint => {
+  const gas = gas_summary_from_receipt(receipt)
+  if (!gas || gas_price <= 0n) throw new Error('Gas estimation is unavailable.')
+  const computation = gas.computation + 1_000n * gas_price
+  const net = gas.net + 1_000n * gas_price
+  return computation > net ? computation : net
+}

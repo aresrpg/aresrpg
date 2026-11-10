@@ -67,10 +67,9 @@
   box-shadow:
     inset 0 0 0 1px #b6b0a012,
     inset 0 0 24px #0003;
-  border-radius: 22px 3px 22px 3px;
+  border-radius: 0 0 22px 3px;
 }
 .game-character-body .chr-equip__bag {
-  border-radius: 3px 18px 3px 18px;
   border-color: #a9a39429;
 }
 
@@ -103,7 +102,7 @@
 .game-character-body .chr-equip__bag {
   position: relative;
   isolation: isolate;
-  border-radius: 18px 18px 6px 6px;
+  border-radius: 0 0 6px 6px;
 }
 .game-character-body .chr-equip__bag::before,
 .game-character-body .chr-equip__bag::after {

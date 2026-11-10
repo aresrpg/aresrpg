@@ -164,6 +164,7 @@ describe('the wire contract', () => {
       /unknown packet type/
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
+      'packet/inventory_observe',
       'packet/agent_observe',
       'packet/market_floor_request',
       'packet/allocation_request',

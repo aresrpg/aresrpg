@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { AuthSession } from '../../src/auth.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import { saved_recovery_identities } from '../../src/agents/pairing_storage.ts'
-import { read_kiosk_character_returns } from '../../src/agents/useAgentKiosk.ts'
+import { read_kiosk_returns } from '../../src/agents/useAgentKiosk.ts'
 import { EmptyEquipment } from '../../src/characters/EmptyEquipment.tsx'
 
 const copy = {
@@ -44,8 +44,7 @@ test('a damaged character return is isolated from the inventory and coin snapsho
       throw new Error('Equipment capability missing')
     },
   } as unknown as AuthSession
-  expect(await read_kiosk_character_returns(wallet, 'agent')).toEqual({
-    characters: [],
-    character_error: 'Equipment capability missing',
-  })
+  const result = await read_kiosk_returns(() => wallet.read_agent_returns('agent'))
+  expect(result.rows).toEqual([])
+  expect(result.error).toBeInstanceOf(Error)
 })

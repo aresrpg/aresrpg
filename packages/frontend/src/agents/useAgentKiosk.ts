@@ -1,35 +1,49 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 import { GAS_BUDGET_MIST } from '@aresrpg/sdk'
-import type { AgentPairingIdentity, ItemRow } from '@aresrpg/protocol'
-import type { AgentInventory } from '@aresrpg/sdk/agent-inventory'
+import type { AgentPairingIdentity, CharacterRow, ItemRow } from '@aresrpg/protocol'
+import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 import type { AgentRecall } from '@aresrpg/sdk/agent-recall'
 import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
 import type { AgentItemReturnOffer, AgentReturnOffer } from '@aresrpg/sdk/agent-returns'
 
 import type { AuthSession } from '../auth.ts'
-import { useAppStore } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
-import { readable_transaction_error } from '../transaction_guard.ts'
+import { player_error_text } from '../i18n/player_error.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 
 import { useAgentTransaction } from './useAgentTransaction.ts'
-import { selected_transfer_items, type TransferDirection } from './inventory_transfer.ts'
+import { character_send_equipment } from './character_send.ts'
+import { same_inventory_pairing, type AgentInventoryView } from './inventory_state.ts'
+import {
+  selected_transfer_items,
+  pending_inventory_transfer,
+  offered_item_ids,
+  type TransferDirection,
+} from './inventory_transfer.ts'
 
 type Snapshot = Readonly<{
   wallet: AuthSession
   pairing: AgentPairingIdentity
   recall: AgentRecall
   deposit: AgentTransferActions | null
-  inventory: AgentInventory
   withdrawals: readonly AgentItemReturnOffer[]
   deposits: readonly AgentItemReturnOffer[]
   characters: readonly AgentReturnOffer[]
-  character_error?: string
+  pending_characters: readonly AgentReturnOffer[]
+  recovery_error?: unknown
 }>
-type State = Readonly<{ phase: 'idle' | 'loading' | 'ready' | 'failed'; snapshot?: Snapshot; error?: string }>
-type Input = Readonly<{ type: 'load' } | { type: 'ready'; snapshot: Snapshot } | { type: 'failed'; error: string }>
+export type KioskInventory = Readonly<{
+  items: readonly AgentInventoryItem[]
+  sui_mist: string | null
+  kares_mist: string | null
+}>
+type KioskSnapshot = Snapshot &
+  Readonly<{ inventory: KioskInventory; roster: readonly CharacterRow[]; reserved_player_items: ReadonlySet<string> }>
+type State = Readonly<{ phase: 'idle' | 'loading' | 'ready' | 'failed'; snapshot?: Snapshot; error?: unknown }>
+type Input = Readonly<{ type: 'load' } | { type: 'ready'; snapshot: Snapshot } | { type: 'failed'; error: unknown }>
 const reduce = (state: State, input: Input): State => {
   switch (input.type) {
     case 'load':
@@ -41,13 +55,78 @@ const reduce = (state: State, input: Input): State => {
   }
 }
 
-const same_target = (
-  source: Readonly<{ wallet: AuthSession | null; pairing: AgentPairingIdentity | null }> | null | undefined,
-  wallet: AuthSession | null,
-  pairing: AgentPairingIdentity | null
-): boolean => source?.wallet === wallet && source?.pairing === pairing
+/** A damaged capability never hides the independent indexed inventory or coin balance. */
+export const read_kiosk_returns = <T>(read: () => Promise<readonly T[]>) =>
+  read().then(
+    (rows) => ({ rows, error: undefined }),
+    (error: unknown) => ({ rows: [] as readonly T[], error })
+  )
 
-const transfer_routes = (snapshot: Snapshot, player_items: readonly ItemRow[]) => ({
+const discover_transfers = async (wallet: AuthSession, pairing: AgentPairingIdentity): Promise<Snapshot> => {
+  const recall = await wallet.read_agent_recall(pairing)
+  const [withdrawals, deposits, returns, pending] = await Promise.all([
+    read_kiosk_returns(recall.read_incoming_items),
+    read_kiosk_returns(recall.read_deposit_items),
+    read_kiosk_returns(() => wallet.read_agent_returns(pairing.address)),
+    read_kiosk_returns(recall.read_pending_characters),
+  ])
+  return {
+    wallet,
+    pairing,
+    recall,
+    deposit: pairing.signer_mode === 'host-persistent' ? wallet.agent_deposit(pairing) : null,
+    withdrawals: withdrawals.rows,
+    deposits: deposits.rows,
+    characters: returns.rows,
+    pending_characters: pending.rows,
+    recovery_error: [withdrawals, deposits, returns, pending]
+      .map(({ error }) => error)
+      .find((error) => error !== undefined),
+  }
+}
+
+const project_kiosk = (source: Snapshot, view: AgentInventoryView): KioskSnapshot => {
+  const listed = new Set(view.catalogue.own_listings.map(({ id }) => id))
+  const exclusive = offered_item_ids(source.withdrawals, source.characters)
+  return {
+    ...source,
+    reserved_player_items: offered_item_ids(source.deposits, source.pending_characters),
+    roster: view.characters.filter(({ custody }) => custody === 'kiosk'),
+    inventory: {
+      items: view.inventory.map((item) => ({
+        item,
+        status: listed.has(item.id) || exclusive.has(item.id) ? 'listed' : 'available',
+        exclusive: exclusive.has(item.id),
+      })),
+      sui_mist: view.sui_balance_mist === null ? null : String(view.sui_balance_mist),
+      kares_mist: view.kares_balance === null ? null : String(view.kares_balance),
+    },
+  }
+}
+const current_snapshot = (
+  source: Snapshot | undefined,
+  wallet: AuthSession | null,
+  pairing: AgentPairingIdentity | null,
+  view: AgentInventoryView,
+  offline: boolean
+) => {
+  if (!source || offline) return undefined
+  return source.wallet === wallet && same_inventory_pairing(source.pairing, pairing)
+    ? project_kiosk(source, view)
+    : undefined
+}
+const kiosk_status = (discovery: State, view: AgentInventoryView, copy: AppCopy, link_ready: boolean) => {
+  const error = discovery.error ?? discovery.snapshot?.recovery_error
+  return {
+    phase: discovery.phase === 'ready' ? (link_ready ? view.phase : 'loading') : discovery.phase,
+    error: error
+      ? player_error_text(copy, error)
+      : view.phase === 'failed'
+        ? copy.kares_page.error_connection
+        : undefined,
+  }
+}
+const transfer_routes = (snapshot: KioskSnapshot, player_items: readonly ItemRow[]) => ({
   deposit: {
     offer: snapshot.deposit,
     claim: snapshot.recall.transfer,
@@ -56,6 +135,7 @@ const transfer_routes = (snapshot: Snapshot, player_items: readonly ItemRow[]) =
     recipient: snapshot.pairing.address,
     pending: snapshot.deposits,
     items: player_items.map((item) => ({ item, status: 'available' as const })),
+    read: { characters: snapshot.recall.read_pending_characters, items: snapshot.recall.read_deposit_items },
   },
   withdraw: {
     offer: snapshot.recall.transfer,
@@ -65,68 +145,77 @@ const transfer_routes = (snapshot: Snapshot, player_items: readonly ItemRow[]) =
     recipient: snapshot.wallet.address,
     pending: snapshot.withdrawals,
     items: snapshot.inventory.items,
+    read: {
+      characters: () => snapshot.wallet.read_agent_returns(snapshot.pairing.address),
+      items: snapshot.recall.read_incoming_items,
+    },
   },
 })
 
-/** A damaged character return must not hide unrelated items or token recovery. */
-export const read_kiosk_character_returns = (wallet: AuthSession, address: string) =>
-  wallet.read_agent_returns(address).then(
-    (characters) => ({ characters }),
-    (error) => ({ characters: [], character_error: readable_transaction_error(error) })
-  )
-
-/** Read-only discovery and explicit transfer gestures. The SDK remains the only transaction authority. */
+/** Transaction discovery owns capabilities only; game inventory and balances come from the session reducer. */
 export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
   const wallet = useAppStore((app) => app.session.wallet)
   const pairing = useAppStore((app) => app.session.inventory_pairing)
-  const [state, dispatch] = useReducer(reduce, { phase: 'idle' })
-  const [revision, set_revision] = useState(0)
-  const refresh = () => set_revision((value) => value + 1)
-  const transfer = useAgentTransaction(wallet, pairing, refresh)
+  const view = useAppStore((app) => app.session.agent_inventory)
+  const link_ready = useAppStore((app) => app.session.link_status === 'ready')
+  const player_inventory = useAppStore((app) => app.session.inventory)
+  const [discovery, dispatch] = useReducer(reduce, { phase: 'idle' })
+  const refresh = () => {
+    dispatch_app({ type: 'agent/inventory_refresh' })
+  }
+  const transfer = useAgentTransaction(wallet, pairing, refresh, copy)
   useEffect(() => {
     if (!wallet || !pairing || offline) return
     let current = true
     dispatch({ type: 'load' })
-    void wallet
-      .read_agent_recall(pairing)
-      .then(async (recall) => {
-        const [inventory, withdrawals, deposits, returns] = await Promise.all([
-          recall.read_inventory(),
-          recall.read_incoming_items(),
-          recall.read_deposit_items(),
-          read_kiosk_character_returns(wallet, pairing.address),
-        ])
-        const deposit = pairing.signer_mode === 'host-persistent' ? wallet.agent_deposit(pairing) : null
-        if (current)
-          dispatch({
-            type: 'ready',
-            snapshot: { wallet, pairing, recall, deposit, inventory, withdrawals, deposits, ...returns },
-          })
-      })
-      .catch((error) => {
-        if (current) dispatch({ type: 'failed', error: readable_transaction_error(error) })
-      })
+    void discover_transfers(wallet, pairing).then(
+      (snapshot) => {
+        if (current) dispatch({ type: 'ready', snapshot })
+      },
+      (error: unknown) => {
+        if (current) dispatch({ type: 'failed', error })
+      }
+    )
     return () => {
       current = false
     }
-  }, [wallet, pairing, revision, offline])
-  const snapshot = !offline && same_target(state.snapshot, wallet, pairing) ? state.snapshot : undefined
+  }, [wallet, pairing, view.serial, offline])
+  const snapshot = current_snapshot(discovery.snapshot, wallet, pairing, view, offline)
+  const state = kiosk_status(discovery, view, copy, link_ready)
   const routes = snapshot ? transfer_routes(snapshot, []) : null
-  const pending_deposit_ids = useMemo(() => new Set(snapshot?.deposits.map(({ item_id }) => item_id)), [snapshot])
+  const pending = pending_inventory_transfer(transfer.preview, transfer.busy, {
+    player: wallet?.address,
+    agent: pairing?.address,
+    player_items: player_inventory,
+    agent_items: view.inventory,
+  })
+  const pending_deposit_ids = new Set([...(snapshot?.reserved_player_items ?? []), ...pending.pending_ids])
   const offer = (ids: readonly string[], direction: TransferDirection, player_items: readonly ItemRow[] = []): void => {
     if (!snapshot || transfer.busy || state.phase !== 'ready') return
     const route = transfer_routes(snapshot, player_items)[direction]
     if (!route.offer) return void toast.add(copy.ui.agent_pair_for_deposit, 'info')
     const items = selected_transfer_items(route.items, ids)
     if (!items) return void toast.add(copy.characters_page.refusal_unavailable, 'info')
-    void transfer.execute(route.offer, {
-      kind: 'asset_offer',
-      items,
-      recipient: route.recipient,
-      sui_mist: '0',
-      kares_mist: '0',
-      reserve_mist: String(GAS_BUDGET_MIST),
-    })
+    void transfer.execute(
+      route.offer,
+      {
+        kind: 'asset_offer',
+        items,
+        recipient: route.recipient,
+        sui_mist: '0',
+        kares_mist: '0',
+        reserve_mist: String(GAS_BUDGET_MIST),
+      },
+      {
+        handover: { claim: route.claim, read: route.read },
+        preview: {
+          recipient: route.recipient,
+          items: route.items
+            .filter(({ item }) => items.some(({ item_id }) => item_id === item.id))
+            .map(({ item }) => item),
+        },
+      }
+    )
   }
   const incoming = (direction: TransferDirection, cancel: boolean): void => {
     if (!routes || transfer.busy || state.phase !== 'ready') return
@@ -139,13 +228,26 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
       items: route.pending,
     })
   }
-
+  const recall_character = (character: Readonly<CharacterRow>): void => {
+    if (!routes || transfer.busy || state.phase !== 'ready') return
+    const route = routes.withdraw
+    void transfer.execute(
+      route.offer,
+      {
+        kind: 'offer',
+        character_id: character.id,
+        kiosk: character.kiosk,
+        unequip: character_send_equipment(character),
+        recipient: route.recipient,
+      },
+      { handover: { claim: route.claim, read: route.read } }
+    )
+  }
   const claim_character = (offer: AgentReturnOffer): void => {
     if (!snapshot || !snapshot.deposit || state.phase !== 'ready' || transfer.busy) return
-    if (!snapshot.recall.pending.includes(offer)) return
+    if (!snapshot.pending_characters.includes(offer)) return
     void transfer.execute(snapshot.recall.transfer, { kind: 'claim', ...offer })
   }
-
   return {
     wallet,
     pairing,
@@ -156,8 +258,11 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     offer,
     incoming,
     claim_character,
+    recall_character,
     pending_deposit_ids,
     ...transfer,
+    ...pending,
+    blocked: transfer.blocked && pending.unresolved,
   }
 }
 export type AgentKioskController = ReturnType<typeof useAgentKiosk>

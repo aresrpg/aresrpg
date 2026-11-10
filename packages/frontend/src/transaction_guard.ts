@@ -48,7 +48,7 @@ export const retry_close_after_projection_lag = async <T>(
 /** Admit one promise immediately and reject duplicate gestures until it settles. */
 export const create_single_flight = () => {
   let active: Promise<unknown> | null = null
-  return <T>(action: () => Promise<T>): Promise<T> | null => {
+  const run = <T>(action: () => Promise<T>): Promise<T> | null => {
     if (active) return null
     const transaction = Promise.resolve()
       .then(action)
@@ -58,6 +58,8 @@ export const create_single_flight = () => {
     active = transaction
     return transaction
   }
+  // eslint-disable-next-line fp-law/no-mutating-methods -- run is a fresh function constructed in this factory.
+  return Object.assign(run, { when_idle: () => Promise.allSettled(active ? [active] : []) })
 }
 
 /** One tab-wide player-gesture lane. It survives component unmounts and page switches. */

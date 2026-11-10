@@ -50,6 +50,8 @@
     "./agent-connection": "./src/agent_connection.ts",
     "./agent-multisig": "./src/agent_multisig.ts",
     "./agent-pairing": "./src/agent_pairing.ts",
+    "./agent-return": "./src/agent_return.ts",
+    "./agent-handover": "./src/agent_handover.ts",
     "./agent-transactions": "./src/agent_transactions.ts",
     "./agent-transfer-actions": "./src/agent_transfer_actions.ts",
     "./agent-signer": "./src/agent_signer.ts",

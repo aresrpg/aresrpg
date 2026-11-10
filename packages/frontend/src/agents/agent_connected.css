@@ -1,0 +1,212 @@
+/* Approved Verdigris control and minimal connected modal. */
+.e-wrap,
+.agent-connected {
+  --jade-ink: #a6e6b8;
+  --keyline: #0a0e13;
+  --jade-rim: #59b077;
+}
+.agent-btn {
+  min-height: 44px;
+}
+.agent-btn svg.bot {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.agent-btn span.label {
+  position: relative;
+}
+.aui-button.opt-e {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  padding: 5px 15px;
+  background: var(--keyline);
+  box-shadow: none;
+  --c: 7px;
+  clip-path: polygon(
+    var(--c) 0,
+    calc(100% - var(--c)) 0,
+    100% var(--c),
+    100% calc(100% - var(--c)),
+    calc(100% - var(--c)) 100%,
+    var(--c) 100%,
+    0 calc(100% - var(--c)),
+    0 var(--c)
+  );
+}
+.aui-button.opt-e::before,
+.aui-button.opt-e::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+.aui-button.opt-e::before {
+  inset: 1px;
+  --c: 6.5px;
+  background: linear-gradient(180deg, #9ad8ad 0, #57a06f 30%, #2f6646 68%, #1a3727 100%);
+  clip-path: polygon(
+    var(--c) 0,
+    calc(100% - var(--c)) 0,
+    100% var(--c),
+    100% calc(100% - var(--c)),
+    calc(100% - var(--c)) 100%,
+    var(--c) 100%,
+    0 calc(100% - var(--c)),
+    0 var(--c)
+  );
+}
+.aui-button.opt-e::after {
+  inset: 3px;
+  --c: 5.5px;
+  background:
+    url('../../../ui/src/assets/panel_grain.webp') 0 0 / 256px 256px,
+    linear-gradient(180deg, #3c444e 0, #343b44 48%, #2c323a 100%);
+  background-blend-mode: soft-light, normal;
+  box-shadow:
+    inset 0 1px #d5dee03a,
+    inset 0 -2px #070b1466;
+  clip-path: polygon(
+    var(--c) 0,
+    calc(100% - var(--c)) 0,
+    100% var(--c),
+    100% calc(100% - var(--c)),
+    calc(100% - var(--c)) 100%,
+    var(--c) 100%,
+    0 calc(100% - var(--c)),
+    0 var(--c)
+  );
+}
+.opt-e svg.bot {
+  color: var(--jade-ink);
+}
+.e-wrap {
+  display: inline-block;
+  filter: drop-shadow(0 2px 2px #0005);
+}
+
+/* Keep the existing focus treatment outside E's clipped button. */
+.e-wrap:has(> .opt-e:focus-visible) {
+  outline: 2px solid var(--aui-blue);
+  outline-offset: 2px;
+}
+.e-wrap > .opt-e:focus-visible {
+  outline: none;
+}
+.agent-connected {
+  position: relative;
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 24px));
+  padding: 26px 20px 20px;
+  border-radius: 8px;
+  background: linear-gradient(#222831, #1a1f26);
+  border: 1px solid #0c0e13;
+  box-shadow:
+    0 18px 40px #0008,
+    inset 0 1px #ffffff1c,
+    inset 0 0 0 1px #ffffff06;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  animation: modal-enter 0.18s ease-out;
+}
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.agent-connected .close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: #c9ccd4;
+}
+.agent-connected .close svg {
+  width: 16px;
+  height: 16px;
+}
+.agent-connected .seal {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background-color: #343b44;
+  background-image: url('../../../ui/src/assets/panel_grain.webp');
+  background-size: 256px 256px;
+  background-blend-mode: soft-light;
+  border: 1px solid #101821;
+  box-shadow:
+    inset 0 0 0 1px #0c1117,
+    inset 0 0 0 2.5px var(--jade-rim),
+    inset 0 4px 6px #d5dee01f,
+    inset 0 -6px 8px #070b1466,
+    0 0 18px #58c27a24,
+    0 3px 6px #0006;
+}
+.agent-connected .seal svg {
+  width: 26px;
+  height: 26px;
+  color: var(--jade-ink);
+  filter: drop-shadow(0 1px #0008);
+}
+.agent-connected .seal .gem {
+  position: absolute;
+  right: -1px;
+  bottom: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0c1015;
+  box-shadow:
+    inset 0 1px 2px #000c,
+    0 0 0 1.5px #1a1f26;
+}
+.agent-connected .seal .gem::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #effff2 0 10%, #8fe6a8 28%, #3ea862 62%, #1c5a34 100%);
+  box-shadow: 0 0 5px #6fdc8f99;
+}
+.agent-connected h2 {
+  margin: 14px 0 20px;
+  font: 800 19px/1.2 var(--aui-font);
+  color: var(--jade-ink);
+  text-shadow: 0 1px #0008;
+}
+.aui-button.disconnect {
+  width: 100%;
+  min-height: 44px;
+  color: var(--aui-danger);
+}
+.aui-button.disconnect svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.agent-connected {
+  font: 400 13px/1.4 var(--aui-font);
+  color: var(--aui-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-connected {
+    animation: none;
+  }
+}

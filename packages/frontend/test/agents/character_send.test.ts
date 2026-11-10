@@ -59,7 +59,7 @@ test('send binds clicked character rather than first or selected, and requires e
     false
   )
   expect(character_send_eligible({ ...clicked, custody: 'fight' })).toBe(false)
-  expect(character_send_eligible(character())).toBe(false)
+  expect(character_send_eligible(character())).toBe(true)
 })
 
 for (const change of ['wallet', 'target', 'custody', 'equipment', 'kiosk', 'removed'] as const) {
@@ -107,13 +107,11 @@ test('duplicate gestures cannot prepare a second character offer', async () => {
   expect(calls).toBe(1)
 })
 
-test('context menu retains the clicked row and StrictMode setup restores the send lifetime', async () => {
+test('context menu retains the clicked row and sends without a second technical modal', async () => {
   const tabs = await Bun.file(new URL('../../src/components/CharacterTabs.tsx', import.meta.url)).text()
   expect(tabs).not.toContain('data-character-actions')
   expect(tabs).toContain('set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })')
   expect(tabs).toContain('character_id={menu.character_id}')
-  const send = await Bun.file(new URL('../../src/agents/AgentCharacterSend.tsx', import.meta.url)).text()
-  expect(send).toMatch(
-    /useEffect\(\(\) => \{[\s\S]*?mounted.current = true[\s\S]*?return \(\) => \{[\s\S]*?mounted.current = false/
-  )
+  expect(tabs).toContain('send_character_to_agent(character_id, copy)')
+  expect(tabs).not.toContain('AgentCharacterSend')
 })

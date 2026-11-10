@@ -68,3 +68,41 @@ test('cancellation and account replacement reject late owner verification result
   }
   expect(reduce_app_state(pending, { ...result, wallet: { ...wallet } }).session).toBe(pending.session)
 })
+
+test('routine owner refresh preserves an explicit recovery selection without promoting its deposit authority', () => {
+  const original = automation_fixture(),
+    wallet = original.session.wallet!
+  const recovery = { ...pairing, address: 'recovery', signer_mode: 'disposable' as const }
+  const selected = reduce_app_state(original, { type: 'agent/inventory_target', wallet, pairing: recovery })
+  const checking = reduce_app_state(selected, { type: 'agent/connection_refresh' })
+  const result = reduce_app_state(checking, {
+    type: 'agent/connection_result',
+    wallet,
+    generation: checking.session.agent_connection.generation,
+    response: response(wallet.address),
+    pairing,
+  })
+  expect(result.session.inventory_pairing).toBe(selected.session.inventory_pairing)
+  expect(result.session.inventory_pairing?.signer_mode).toBe('disposable')
+  expect(owner_connected(result.session)).toBe(false)
+})
+
+test('fresh authorization restores the same returned account without replacing its identity', () => {
+  const original = automation_fixture()
+  const wallet = original.session.wallet!
+  const selected = reduce_app_state(original, {
+    type: 'agent/inventory_target',
+    wallet,
+    pairing: { ...pairing, signer_mode: 'disposable' },
+  })
+  const checking = reduce_app_state(selected, { type: 'agent/connection_refresh' })
+  const connected = reduce_app_state(checking, {
+    type: 'agent/connection_result',
+    wallet,
+    generation: checking.session.agent_connection.generation,
+    response: response(wallet.address),
+    pairing,
+  })
+  expect(connected.session.inventory_pairing).toBe(pairing)
+  expect(owner_connected(connected.session)).toBe(true)
+})

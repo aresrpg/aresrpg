@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import { normalizeSuiAddress, normalizeStructTag } from '@mysten/sui/utils'
-import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
+import { Transaction, type TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import type { Sdk } from './client.ts'
 import { read_personal_kiosks } from './kiosk_discovery.ts'
@@ -60,8 +60,16 @@ const offer_items = async (
     if (!cap) throw new Error('The selected asset kiosk is no longer owned by this multisig.')
     const kiosk = await sdk.get_kiosk(kiosk_id)
     const chosen = intent.items.filter((item) => !item.direct && item.kiosk === kiosk_id)
-    await Promise.all(chosen.map((item) => check_selected_item(client, sdk, kiosk, item)))
-    await sdk.hydrate_unknown(chosen.map((item) => item.item_id))
+    const { objects } = await client.core.getObjects({ objectIds: chosen.map(({ item_id }) => item_id) })
+    const versions = new Map(
+      objects.map((object) => {
+        if (object instanceof Error) throw new Error('Selected item revisions are unavailable.', { cause: object })
+        return [object.objectId, object.version] as const
+      })
+    )
+    if (versions.size !== chosen.length) throw new Error('Selected item revisions are incomplete.')
+    await Promise.all(chosen.map((item) => check_selected_item(client, sdk, kiosk, item, versions.get(item.item_id))))
+    await sdk.hydrate(chosen.map((item) => item.item_id))
     sdk.with_personal_kiosk(tx, cap, (kiosk, owner) => {
       const purchase_caps = chosen.map((item) => {
         if (item.character_id && item.slot)
@@ -82,9 +90,10 @@ const check_selected_item = async (
   client: SuiGrpcClient,
   sdk: Sdk,
   kiosk: Awaited<ReturnType<Sdk['get_kiosk']>>,
-  item: RecallItem
+  item: RecallItem,
+  version: string | undefined
 ) => {
-  await check_item_revision(client, item)
+  if (version !== item.version) throw new Error('Selected item version changed. Refresh before signing.')
   if (item.character_id) {
     if (!kiosk.items.some((row) => row.objectId === item.character_id && !row.listing))
       throw new Error('The equipped character is unavailable or listed. Resolve custody first.')
@@ -107,7 +116,8 @@ export const compose_agent_assets = async (
   sdk: Sdk,
   sender: string,
   intent: AgentAssetIntent,
-  recipient?: string
+  recipient?: string,
+  transaction?: Transaction
 ): Promise<Transaction> => {
   if (intent.kind === 'asset_collect') {
     unique(intent.items.map((row) => row.kiosk))
@@ -124,13 +134,18 @@ export const compose_agent_assets = async (
   if (intent.kind === 'asset_unstake') {
     unique(intent.items.map((row) => row.id))
     if (!intent.items.length) throw new Error('Select a staking position.')
-    return create_kares_transaction(
-      { sdk, address: sender },
-      { kind: 'withdraw', withdrawals: intent.items.map((row) => ({ id: row.id, amount: amount(row.amount) })) }
-    )
+    const ids = intent.items.map(({ id }) => id)
+    await sdk.hydrate(ids)
+    const withdrawals = intent.items
+      .map((row) => ({ id: row.id, amount: amount(row.amount) }))
+      .filter((row) => row.amount > 0n)
+    const tx = withdrawals.length
+      ? await create_kares_transaction({ sdk, address: sender }, { kind: 'withdraw', withdrawals })
+      : new Transaction()
+    return create_kares_transaction({ sdk, address: sender }, { kind: 'claim', ids }, tx)
   }
   if (intent.kind !== 'asset_offer') return claim_items(client, sdk, sender, intent)
-  return compose_asset_offer(client, sdk, sender, intent, recipient)
+  return compose_asset_offer(client, sdk, sender, intent, recipient, transaction)
 }
 
 const compose_asset_offer = async (
@@ -138,7 +153,8 @@ const compose_asset_offer = async (
   sdk: Sdk,
   sender: string,
   intent: Extract<AgentAssetIntent, { kind: 'asset_offer' }>,
-  recipient?: string
+  recipient?: string,
+  transaction?: Transaction
 ) => {
   if (normalizeSuiAddress(intent.recipient) !== recipient)
     throw new Error('Asset recovery must return to the current Google owner.')
@@ -148,7 +164,7 @@ const compose_asset_offer = async (
   if ([!intent.items.length, sui === 0n, kares === 0n].every(Boolean))
     throw new Error('Select assets or an amount to recover.')
   amount(intent.reserve_mist)
-  const tx = sdk.tx()
+  const tx = transaction ?? sdk.tx()
   tx.setSender(sender)
   await offer_items(client, sdk, sender, intent, tx)
   const coins = []
@@ -164,19 +180,7 @@ const claim_items = async (
   sender: string,
   intent: Extract<AgentAssetIntent, { kind: 'asset_claim' | 'asset_cancel' }>
 ) => {
-  unique(intent.items.map((row) => row.purchase_cap))
-  if (!intent.items.length) throw new Error('Select incoming item returns.')
-  const current = await read_agent_item_returns(client, sdk, sender, intent.agent_address)
-  if (
-    !intent.items.every((item) =>
-      current.some((row) =>
-        (['item_id', 'seller_kiosk', 'purchase_cap', 'recipient', 'agent_address'] as const).every(
-          (key) => row[key] === item[key]
-        )
-      )
-    )
-  )
-    throw new Error('Incoming item ownership or custody changed. Refresh before signing.')
+  await check_agent_item_claims(client, sdk, sender, intent)
   const tx = sdk.tx()
   tx.setSender(sender)
   const type = `${sdk.game_type_package}::item::Item`
@@ -191,26 +195,7 @@ const claim_items = async (
   }
   const caps = await read_personal_kiosks(sdk, sender)
   sdk.with_personal_kiosk(tx, caps[0] ?? null, (kiosk, cap) => {
-    for (const item of intent.items) {
-      const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
-      const [purchased, request] = tx.moveCall({
-        target: '0x2::kiosk::purchase_with_cap',
-        typeArguments: [type],
-        arguments: [tx.object(item.seller_kiosk), tx.object(item.purchase_cap), zero],
-      })
-      resolve_marketplace_transfer(
-        sdk,
-        tx,
-        'item',
-        item.item_id,
-        0n,
-        kiosk,
-        cap,
-        purchased!,
-        request!,
-        item.seller_kiosk
-      )
-    }
+    claim_agent_items(sdk, tx, kiosk, cap, intent.items)
   })
   return tx
 }
@@ -284,7 +269,7 @@ const offer_direct_items = async (
     )
   )
     throw new Error('Direct item ownership changed. Refresh before signing.')
-  await sdk.hydrate_unknown(items.map((item) => item.item_id))
+  await sdk.hydrate(items.map((item) => item.item_id))
   sdk.with_personal_kiosk(tx, cap, (kiosk, owner) => {
     const caps = items.map((item) => {
       tx.moveCall({
@@ -296,4 +281,44 @@ const offer_direct_items = async (
     })
     tx.transferObjects(caps, recipient)
   })
+}
+
+export const check_agent_item_claims = async (
+  client: SuiGrpcClient,
+  sdk: Sdk,
+  sender: string,
+  intent: Extract<AgentAssetIntent, { kind: 'asset_claim' | 'asset_cancel' }>
+) => {
+  unique(intent.items.map((row) => row.purchase_cap))
+  if (!intent.items.length) throw new Error('Select incoming item returns.')
+  const current = await read_agent_item_returns(client, sdk, sender, intent.agent_address)
+  if (
+    !intent.items.every((item) =>
+      current.some((row) =>
+        (['item_id', 'seller_kiosk', 'purchase_cap', 'recipient', 'agent_address'] as const).every(
+          (key) => row[key] === item[key]
+        )
+      )
+    )
+  )
+    throw new Error('Incoming item ownership or custody changed. Refresh before signing.')
+}
+
+export const claim_agent_items = (
+  sdk: Sdk,
+  tx: Transaction,
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument,
+  items: readonly AgentItemReturnOffer[]
+) => {
+  const type = `${sdk.game_type_package}::item::Item`
+  for (const item of items) {
+    const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
+    const [purchased, request] = tx.moveCall({
+      target: '0x2::kiosk::purchase_with_cap',
+      typeArguments: [type],
+      arguments: [tx.object(item.seller_kiosk), tx.object(item.purchase_cap), zero],
+    })
+    resolve_marketplace_transfer(sdk, tx, 'item', item.item_id, 0n, kiosk, cap, purchased!, request!, item.seller_kiosk)
+  }
 }

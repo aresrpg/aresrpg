@@ -44,7 +44,7 @@ const useAgentCoinForm = ({
   const routes = kiosk.routes!
   const balances = {
     deposit: { sui: player_sui, kares: player_kares },
-    withdraw: { sui: BigInt(snapshot.inventory.sui_mist), kares: token_balance(snapshot.inventory.kares_mist) },
+    withdraw: { sui: token_balance(snapshot.inventory.sui_mist), kares: token_balance(snapshot.inventory.kares_mist) },
   }
   const configured = token === 'sui' || snapshot.inventory.kares_mist !== null
   const balance = balances[direction][token],
@@ -151,7 +151,7 @@ export const AgentCoinTransfer = ({
             <div className="agent-coin-amount-heading">
               <span>{send_text(copy, 'amount_label')}</span>
               <span>
-                {balance === null ? '—' : format_sui(balance, 4)} {token.toUpperCase()}
+                {balance === null ? '—' : format_sui(balance, token === 'sui' ? 2 : 4)} {token.toUpperCase()}
               </span>
               <Button disabled={!configured || estimating} onClick={maximum}>
                 {copy_text(copy.characters_page)('common.max')}

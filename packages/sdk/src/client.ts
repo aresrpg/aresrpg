@@ -563,6 +563,7 @@ export function SDK({
       }),
     is_transaction_idle: execution.is_transaction_idle,
     recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
+    synchronize_transactions: () => execution.enqueue(execution.before_next),
     resume_pending_transaction: () => execution.enqueue(execution.resume_pending),
     execute_personal_kiosk,
     read_sui_balance: () => {
@@ -596,5 +597,4 @@ export function SDK({
     coin_of,
   }
 }
-
 export type Sdk = ReturnType<typeof SDK>

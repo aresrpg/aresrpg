@@ -16,6 +16,8 @@ export default defineConfig({
     '**/agent_entry.pw.ts',
     '**/agent_setup.pw.ts',
     '**/agent_pairing.pw.ts',
+    '**/agent_inventory.pw.ts',
+    '**/agent_return.pw.ts',
     '**/hosted_connect.pw.ts',
     '**/character_delete.pw.ts',
   ],

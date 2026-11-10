@@ -4,7 +4,7 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { createRoot } from 'react-dom/client'
-import type { CharacterRow } from '@aresrpg/protocol'
+import type { AgentPairingIdentity, CharacterRow } from '@aresrpg/protocol'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
@@ -13,12 +13,10 @@ import { create_wallet_binding } from '../../../sdk/src/wallet_standard.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import { AgentSetup, AgentSetupButton } from '../../src/agents/AgentSetup.tsx'
 import { AgentKioskPanel } from '../../src/agents/AgentKioskPanel.tsx'
-import { AgentCharacterSend } from '../../src/agents/AgentCharacterSend.tsx'
+import { send_character_to_agent } from '../../src/agents/send_character.ts'
 import { useAgentKiosk } from '../../src/agents/useAgentKiosk.ts'
-import { AgentInventoryPanel } from '../../src/agents/AgentInventoryPanel.tsx'
-import type { AgentRecall } from '../../../sdk/src/agent_recall.ts'
-import type { AgentTransferIntent } from '../../../sdk/src/agent_transfer_actions.ts'
-import { AgentTransferReview } from '../../src/agents/AgentTransferReview.tsx'
+import { Toasts } from '../../src/components/Toasts.tsx'
+import { AgentTransferFunding } from '../../src/agents/AgentTransferFunding.tsx'
 import { dispatch_app, read_app_state, useAppStore, observe_app } from '../../src/store.ts'
 import { env } from '../../src/env.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
@@ -64,18 +62,54 @@ const connect = (index: number) => {
     address: identity.address,
     identity: 'zklogin',
     read_agent_pairing_request: binding.read_agent_pairing_request,
-    read_agent_recall: async () => ({
-      ...inventory_fixture,
-      characters: [],
-      pending: [],
-      read_deposit_items: async () => [],
-    }),
+    read_agent_recall: async (pairing: AgentPairingIdentity) => {
+      const { session } = read_app_state()
+      dispatch_app({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/inventory_observed',
+          id: session.agent_inventory.serial,
+          packet: { type: 'packet/inventory', items: [] },
+        },
+      })
+      return {
+        transfer: { sender: pairing.address, quote: forbidden, prepare: forbidden },
+        characters: [],
+        pending: [],
+        read_deposit_items: async () => [],
+        read_incoming_items: async () => [],
+        read_pending_characters: async () => [],
+      }
+    },
     read_agent_returns: async () => [],
-    agent_deposit: () => ({ sender: identity.address, prepare: forbidden }),
+    agent_deposit: () => ({
+      sender: identity.address,
+      prepare: async () => {
+        document.documentElement.setAttribute('data-fixture-offer', 'true')
+        throw new Error('Fixture refuses transaction preparation; no signer exists.')
+      },
+    }),
     agent_transfer: { sender: identity.address, prepare: forbidden },
+    return_agent_assets: async (
+      _pairing: AgentPairingIdentity,
+      options: Parameters<AuthSession['return_agent_assets']>[1]
+    ) => {
+      options.before_sign()
+      await options.guard()
+      document.documentElement.setAttribute('data-fixture-returning', 'true')
+      await new Promise<void>((resolve, reject) => {
+        addEventListener('fixture/return', () => resolve(), { once: true })
+        addEventListener('fixture/return-failed', () => reject(new Error('Return outcome uncertain')), { once: true })
+      })
+      options.before_sign()
+      await options.guard()
+      document.documentElement.removeAttribute('data-fixture-returning')
+    },
     // Fixture-only placeholder; no wallet signature or credential is created.
     sign_personal_message: async () => {
-      document.documentElement.setAttribute('data-fixture-signing', 'true')
+      const html = document.documentElement
+      html.setAttribute('data-fixture-signing', 'true')
+      html.setAttribute('data-fixture-signatures', String(Number(html.getAttribute('data-fixture-signatures')) + 1))
       if (
         new URLSearchParams(location.search).has('slow_signature') ||
         document.documentElement.hasAttribute('data-delay-next-signature')
@@ -88,6 +122,7 @@ const connect = (index: number) => {
   } as unknown as AuthSession
   dispatch_app({ type: 'auth/connecting' })
   dispatch_app({ type: 'auth/connected', session })
+  dispatch_app({ type: 'server/packet', packet: { type: 'packet/connection_accepted', address: session.address } })
   if (new URLSearchParams(location.search).has('character'))
     dispatch_app({
       type: 'server/packet',
@@ -122,72 +157,6 @@ const connect = (index: number) => {
       },
     })
 }
-const inventory_fixture = {
-  read_inventory: async () => ({
-    items: [
-      {
-        item: {
-          id: 'available-item',
-          version: '1',
-          name: 'Available wool',
-          item_type: 'wool',
-          category: 'resource',
-          level: 1,
-          amount: 2,
-          kiosk: 'first-kiosk',
-        },
-        status: 'available',
-      },
-      {
-        item: {
-          id: 'equipped-item',
-          version: '2',
-          name: 'Equipped hat',
-          item_type: 'wool',
-          category: 'hat',
-          level: 1,
-          amount: 1,
-          kiosk: 'second-kiosk',
-        },
-        status: 'equipped',
-        character_id: 'character',
-        slot: 'hat',
-      },
-      {
-        item: {
-          id: 'listed-item',
-          version: '3',
-          name: 'Listed wool',
-          item_type: 'wool',
-          category: 'resource',
-          level: 1,
-          amount: 3,
-          kiosk: 'third-kiosk',
-        },
-        status: 'listed',
-        exclusive: false,
-      },
-    ],
-    positions: [],
-    proceeds: [],
-    owned: [],
-    other_kiosk_objects: [],
-    sui_mist: '1000000000',
-    kares_mist: '2000000000',
-  }),
-  read_incoming_items: async () => {
-    if (new URLSearchParams(location.search).has('incoming_failure'))
-      throw new Error('Incoming equipment capability is missing')
-    return []
-  },
-  transfer: {
-    sender: identities[1]!.address,
-    prepare: async (intent: AgentTransferIntent) => {
-      document.documentElement.setAttribute('data-inventory-review', JSON.stringify(intent))
-      return { intent, sender: identities[1]!.address, network: 'mainnet', gas_mist: '1000', confirm: forbidden }
-    },
-  },
-} as unknown as AgentRecall
 
 const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [open, set_open] = useState(false)
@@ -200,24 +169,7 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   }, [candidate, confirmed])
   const payer = new URLSearchParams(location.search).get('funding')
   if (new URLSearchParams(location.search).has('custody')) return <CustodyFixture copy={copy} />
-  if (new URLSearchParams(location.search).has('inventory') && wallet)
-    return <AgentInventoryPanel wallet={wallet} copy={copy} recall={inventory_fixture} />
-  if (payer && wallet)
-    return (
-      <AgentTransferReview
-        wallet={wallet}
-        copy={copy}
-        allow_submit
-        funding_pairing={funding_pairing}
-        intent={{ kind: 'claim', character_id: 'character', seller_kiosk: 'kiosk', purchase_cap: 'cap' }}
-        actions={{
-          sender: payer === 'human' ? wallet.address : funding_pairing.address,
-          prepare: async () => {
-            throw new Error('No valid gas coins for transaction')
-          },
-        }}
-      />
-    )
+  if (payer && wallet) return <FundingFixture wallet={wallet} payer={payer} copy={copy} />
   return (
     <main className="min-h-screen bg-bg p-4 text-text">
       <p>Synthetic mainnet public identity; local verifier only. No wallet, RPC, assets or credentials.</p>
@@ -226,24 +178,39 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     </main>
   )
 }
+const FundingFixture = ({ wallet, payer, copy }: Readonly<{ wallet: AuthSession; payer: string; copy: AppCopy }>) => {
+  const [open, set_open] = useState(false)
+  return (
+    <>
+      <Button onClick={() => set_open(true)}>{copy.ui.agent_return_character}</Button>
+      <AgentTransferFunding
+        wallet={wallet}
+        sender={open ? (payer === 'human' ? wallet.address : funding_pairing.address) : null}
+        pairing={funding_pairing}
+        copy={copy}
+        close={() => set_open(false)}
+      />
+    </>
+  )
+}
+
 const CustodyFixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [open, set_open] = useState(true)
   return (
     <main className="min-h-screen bg-bg p-4 text-text">
       <Button onClick={() => set_open(!open)}>{open ? 'Close inventory' : 'Open inventory'}</Button>
       {open && <CustodyPanel copy={copy} />}
+      <Toasts />
     </main>
   )
 }
 const CustodyPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const kiosk = useAgentKiosk(copy, false)
-  const [send, set_send] = useState(false)
   return (
     <>
       <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
       <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />
-      <Button onClick={() => set_send(true)}>Offer fixture character</Button>
-      {send && <AgentCharacterSend character_id="fixture-character" copy={copy} close={() => set_send(false)} />}
+      <Button onClick={() => send_character_to_agent('fixture-character', copy)}>Offer fixture character</Button>
     </>
   )
 }

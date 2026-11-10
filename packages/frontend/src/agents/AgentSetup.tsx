@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useId, useState } from 'react'
-import { Button, IconButton, NativeModal } from '@aresrpg/ui'
-import { Bot, CircleAlert, Loader2, X } from 'lucide-react'
+import { Button, IconButton, NativeModal, ConfirmDialog } from '@aresrpg/ui'
+import { CircleAlert, Loader2, Unplug, X } from 'lucide-react'
+import type { HostedBotDescriptor } from '@aresrpg/protocol'
 
+import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { env } from '../env.ts'
 
 import { useHostedConnect } from './useHostedConnect.ts'
 import { HostedBotPanel } from './HostedBotPanel.tsx'
+import { disconnect_agent } from './disconnect_agent.ts'
+import { AgentConnectionButton, AgentConnectedModal } from './AgentConnected.tsx'
 import { owner_connected } from './owner_state.ts'
-import { AgentRecovery } from './AgentRecovery.tsx'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
 import './agent_setup.css'
 
-export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
+const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
   const title_id = useId()
   const wallet = useAppStore((app) => app.session.wallet)
   const [provider, select_provider] = useState('')
@@ -91,13 +94,58 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
           : env.bot_service_url && (
               <ProviderHandoff copy={copy} provider={provider} url={new URL('/mcp', env.bot_service_url).href} />
             )}
-        {!authorization_request && <AgentRecovery copy={copy} mode="setup" />}
         <Button className="agent-connect mt-3" onClick={dismiss}>
           {text.agent_cancel}
         </Button>
       </section>
     </NativeModal>
   )
+}
+
+const AgentDisconnect = ({
+  wallet,
+  bot,
+  copy,
+  close,
+}: Readonly<{
+  wallet: AuthSession
+  bot: HostedBotDescriptor
+  copy: AppCopy
+  close: () => void
+}>) => {
+  const [confirm, set_confirm] = useState(false)
+  const unfunded = useAppStore(
+    ({ session }) =>
+      session.sui_balance_mist === 0n &&
+      session.agent_inventory.sui_balance_mist === 0n &&
+      session.agent_inventory.characters.length + session.agent_inventory.inventory.length > 0
+  )
+  if (!confirm) return <AgentConnectedModal copy={copy} close={close} disconnect={() => set_confirm(true)} />
+  return (
+    <ConfirmDialog
+      title={copy.ui.agent_disconnect_title}
+      icon={<Unplug />}
+      description={`${copy.ui.agent_disconnect_body}${unfunded ? ` ${copy.ui.agent_return_needs_sui}` : ''}`}
+      confirm_label={copy.ui.agent_disconnect_confirm}
+      cancel_label={copy.ui.agent_cancel}
+      close_label={copy.wallet_close}
+      danger
+      on_cancel={close}
+      on_confirm={() => {
+        void disconnect_agent(wallet, bot, copy)
+        close()
+      }}
+    />
+  )
+}
+
+export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
+  const session = useAppStore((app) => app.session)
+  const bot = session.agent_connection.response?.bot
+  const authorization = new URLSearchParams(location.search).has('authorization_id')
+  if (!authorization && owner_connected(session) && session.wallet && bot)
+    return <AgentDisconnect wallet={session.wallet} bot={bot} copy={copy} close={close} />
+  return <AgentProviderSetup copy={copy} close={close} />
 }
 
 export const AgentSetupButton = ({
@@ -111,12 +159,25 @@ export const AgentSetupButton = ({
 }>) => {
   const [open, set_open] = useState(false)
   const connected = useAppStore((app) => owner_connected(app.session))
+  const wallet = useAppStore((app) => app.session.wallet)
+  const bot = useAppStore((app) => app.session.agent_connection.response?.bot)
+  const returning = bot?.status === 'returning'
+  const busy = useAppStore((app) => app.session.agent_connection.phase === 'returning')
+  const activate = () => {
+    if (returning && wallet && bot) void disconnect_agent(wallet, bot, copy)
+    else set_open(true)
+  }
   return (
     <>
-      <Button className={class_name} onClick={() => set_open(true)} data-agent-setup-button="">
-        <Bot size={16} />
-        {connected ? copy.ui.agent_connected : (label ?? copy.ui.agent_setup)}
-      </Button>
+      <AgentConnectionButton
+        connected={connected}
+        class_name={class_name}
+        open={activate}
+        disabled={busy}
+        label={
+          connected ? copy.ui.agent_connected : returning ? copy.ui.agent_return_resume : (label ?? copy.ui.agent_setup)
+        }
+      />
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>
   )

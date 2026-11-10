@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { initial_owner_connection } from '../agents/owner_state.ts'
+import { initial_agent_inventory } from '../agents/inventory_state.ts'
 import { initial_agent_view } from '../agents/observation.ts'
 import { read_selected_character } from '../auth_storage.ts'
 
@@ -10,6 +11,7 @@ export const initial_session_state = (serial = 0): SessionState =>
   Object.freeze({
     agent_connection: initial_owner_connection(),
     agent_view: { ...initial_agent_view(), serial },
+    agent_inventory: initial_agent_inventory(serial),
     agent_pairing_candidate: null,
     inventory_pairing: null,
     character_creation: null,

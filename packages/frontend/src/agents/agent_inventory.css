@@ -369,3 +369,11 @@
     grid-template-columns: minmax(0, 1fr) 216px;
   }
 }
+
+.chr-equip--agent > .chr-equip__side,
+.chr-equip--agent > .chr-equip__bag,
+.agent-kiosk,
+.agent-equipment-toggle {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

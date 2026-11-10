@@ -3,22 +3,22 @@
 import { useState } from 'react'
 import { Bot, RefreshCw } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
-import type { AgentInventory } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
+import { InventoryTransferGrid } from '../characters/InventoryTransferGrid.tsx'
 
-import type { AgentKioskController } from './useAgentKiosk.ts'
+import type { AgentKioskController, KioskInventory } from './useAgentKiosk.ts'
 import { agent_inventory_groups, type TransferToken } from './inventory_transfer.ts'
+import { AgentTransferFunding } from './AgentTransferFunding.tsx'
 import { AgentCoinTransfer } from './AgentCoinTransfer.tsx'
 import { owner_connected } from './owner_state.ts'
-import { AgentRecovery } from './AgentRecovery.tsx'
+import { AgentSetupButton } from './AgentSetup.tsx'
 import { AgentKioskIdentity } from './AgentKioskIdentity.tsx'
 import { AgentKioskCharacters } from './AgentKioskCharacters.tsx'
-import { AgentKioskGrid } from './AgentKioskGrid.tsx'
 import './agent_inventory.css'
 
 export const AgentKioskPanel = ({
@@ -34,9 +34,9 @@ export const AgentKioskPanel = ({
 }>) => {
   const [coin, set_coin] = useState<TransferToken | null>(null)
   const { snapshot, pairing, state } = kiosk
-  const busy = disabled || kiosk.busy || state.phase === 'loading'
+  const busy = [disabled, kiosk.busy, state.phase === 'loading'].some(Boolean)
   const refreshable = [!offline, pairing, !busy].every(Boolean)
-  const controls_disabled = busy || kiosk.blocked || state.phase !== 'ready'
+  const controls_disabled = [busy, kiosk.blocked, state.phase !== 'ready'].some(Boolean)
   const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): boolean => {
     if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="player"]')) return false
     kiosk.offer(ids, 'withdraw')
@@ -54,22 +54,29 @@ export const AgentKioskPanel = ({
         </Button>
       </header>
       <AgentKioskStatus kiosk={kiosk} copy={copy} offline={offline} />
-      <AgentRecovery copy={copy} mode="inventory" offline={offline} />
       {snapshot && (
         <>
           <AgentBalances inventory={snapshot.inventory} disabled={controls_disabled} choose={set_coin} />
-          <AgentKioskGrid
+          <InventoryTransferGrid
             rows={snapshot.inventory.items}
+            incoming={kiosk.agent_pending}
             copy={copy}
             disabled={controls_disabled}
             pending_ids={kiosk.pending_ids}
             transfer={drop}
           />
-          <AgentPendingTransfers kiosk={kiosk} copy={copy} disabled={controls_disabled} />
-          <AgentKioskCharacters kiosk={kiosk} copy={copy} disabled={controls_disabled} />
+          <AgentPendingTransfers kiosk={kiosk} copy={copy} disabled={busy || state.phase !== 'ready'} />
+          <AgentKioskCharacters kiosk={kiosk} copy={copy} disabled={busy || state.phase !== 'ready'} />
           {coin && <AgentCoinTransfer key={coin} token={coin} kiosk={kiosk} copy={copy} close={() => set_coin(null)} />}
         </>
       )}
+      <AgentTransferFunding
+        wallet={kiosk.wallet}
+        sender={kiosk.funding_sender}
+        pairing={pairing}
+        copy={copy}
+        close={kiosk.dismiss_funding}
+      />
     </section>
   )
 }
@@ -78,7 +85,7 @@ const AgentBalances = ({
   inventory,
   disabled,
   choose,
-}: Readonly<{ inventory: AgentInventory; disabled: boolean; choose: (token: TransferToken) => void }>) => (
+}: Readonly<{ inventory: KioskInventory; disabled: boolean; choose: (token: TransferToken) => void }>) => (
   <div className="agent-kiosk__balances">
     {(['sui', 'kares'] as const).map((token) => {
       const balance = inventory[`${token}_mist`]
@@ -93,7 +100,7 @@ const AgentBalances = ({
           <span className={token === 'sui' ? 'agent-sui-mark' : ''}>
             {token === 'sui' ? <SuiLogo size={18} /> : <KaresLogo size={18} />}
           </span>
-          <b>{balance === null ? '—' : format_sui(BigInt(balance), 4)}</b>
+          <b>{balance === null ? '—' : format_sui(BigInt(balance), token === 'sui' ? 2 : 4)}</b>
         </button>
       )
     })}
@@ -108,11 +115,13 @@ const AgentKioskStatus = ({
   const connected = useAppStore((app) => owner_connected(app.session))
   if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
   if (!kiosk.pairing) return <AgentKioskIdentity copy={copy} />
+  if (kiosk.pairing.signer_mode === 'disposable')
+    return <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
   return (
     <>
       {connected && <p role="status">{copy.ui.agent_connected}</p>}
-      <p className="agent-transfer-error" role="alert" hidden={!(kiosk.state.error || kiosk.transaction?.error)}>
-        {kiosk.state.error || kiosk.transaction?.error}
+      <p className="agent-transfer-error" role="alert" hidden={!(kiosk.state.error || kiosk.transaction.error)}>
+        {kiosk.state.error || kiosk.transaction.error}
       </p>
       <p role="status" hidden={kiosk.state.phase !== 'loading'}>
         {copy.loading_universe}

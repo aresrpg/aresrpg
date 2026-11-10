@@ -6,6 +6,8 @@ import type { AuthSession } from '../auth.ts'
 import type { SessionState } from '../modules/session.ts'
 import type { AppInput } from '../store.ts'
 
+import { same_inventory_pairing } from './inventory_state.ts'
+
 export type AgentInventoryInput = Readonly<
   | { type: 'agent/inventory_target'; wallet: AuthSession; pairing: AgentPairingIdentity | null }
   | { type: 'agent/pairing_verified'; wallet: AuthSession; pairing: AgentPairingIdentity }
@@ -23,4 +25,17 @@ export const fold_agent_inventory_target = (session: SessionState, input: AppInp
     inventory_pairing: pairing,
     agent_pairing_candidate: pairing ? null : (session.inventory_pairing ?? session.agent_pairing_candidate),
   }
+}
+
+/** Fresh proof can restore this account's authority without replacing an explicitly selected recovery account. */
+export const refreshed_inventory_target = (
+  current: AgentPairingIdentity | null,
+  incoming: AgentPairingIdentity | null
+) => {
+  if (
+    current?.signer_mode === 'disposable' &&
+    !same_inventory_pairing(current, incoming && { ...incoming, signer_mode: 'disposable' })
+  )
+    return current
+  return same_inventory_pairing(current, incoming) ? current : incoming
 }

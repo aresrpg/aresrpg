@@ -3,6 +3,7 @@
 /* eslint-disable functional/immutable-data -- refs own disposable pointer/animation handles; selected IDs stay controlled by the caller. */
 import { useEffect, useRef, type PointerEvent, type ReactNode } from 'react'
 
+import { selection_drag_preview } from './selection_drag.ts'
 import {
   stroke_selection,
   selection_gesture_kind,
@@ -28,7 +29,9 @@ type Gesture = Readonly<{
   item: string | null
 }>
 const cell_id = (target: EventTarget | null): string | null =>
-  target instanceof Element ? (target.closest<HTMLElement>('[data-selection-id]')?.dataset.selectionId ?? null) : null
+  target instanceof Element
+    ? (target.closest<HTMLElement>('[data-selection-id]:not(:disabled)')?.dataset.selectionId ?? null)
+    : null
 const content_point = (root: Readonly<HTMLElement>, point: SelectionPoint): SelectionPoint => {
   const bounds = root.getBoundingClientRect()
   return { x: point.x - bounds.left + root.scrollLeft, y: point.y - bounds.top + root.scrollTop }
@@ -72,12 +75,15 @@ export const SelectionGrid = ({
   const frame = useRef<number | null>(null)
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suppress_click = useRef(false)
+  const preview = useRef<ReturnType<typeof selection_drag_preview>>(null)
 
   const clear_hold = (): void => {
     if (hold.current !== null) clearTimeout(hold.current)
     hold.current = null
   }
   const stop = (): void => {
+    preview.current?.remove()
+    preview.current = null
     clear_hold()
     if (frame.current !== null) cancelAnimationFrame(frame.current)
     frame.current = null
@@ -94,6 +100,7 @@ export const SelectionGrid = ({
   }
   useEffect(
     () => () => {
+      preview.current?.remove()
       if (frame.current !== null) cancelAnimationFrame(frame.current)
       if (hold.current !== null) clearTimeout(hold.current)
     },
@@ -148,7 +155,11 @@ export const SelectionGrid = ({
     suppress_click.current = true
     element.focus({ preventScroll: true })
     element.setPointerCapture(current.pointer)
-    if (current.action === 'dragging') on_drag_item?.(current.item)
+    if (current.action === 'dragging') {
+      preview.current = selection_drag_preview(element, current.item, current.client)
+      if (!preview.current) return cancel()
+      on_drag_item?.(current.item)
+    }
     if (current.action === 'selecting') {
       paint()
       frame.current = requestAnimationFrame(scroll_edge)
@@ -197,7 +208,7 @@ export const SelectionGrid = ({
     }
     suppress_click.current = true
     if (gesture.current!.mode === 'selecting') return paint()
-    if (gesture.current!.mode === 'dragging') return
+    if (gesture.current!.mode === 'dragging') return preview.current!.move(client)
     root.current!.scrollLeft = current.scroll_origin.x + current.initial_client.x - client.x
     root.current!.scrollTop = current.scroll_origin.y + current.initial_client.y - client.y
   }

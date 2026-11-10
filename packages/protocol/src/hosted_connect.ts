@@ -6,7 +6,7 @@ export type HostedBotDescriptor = Readonly<{
   multisig_public_key: string
   generation: number
   policy_revision: number
-  status: 'ready' | 'paused'
+  status: 'ready' | 'paused' | 'returning'
 }>
 export const same_hosted_bot = (left: HostedBotDescriptor | null, right: HostedBotDescriptor): boolean =>
   left !== null &&
@@ -52,7 +52,7 @@ export type HostedChallengeResponse = Readonly<{
 export type HostedVerifyResponse = Readonly<{ owner: string; bots: readonly HostedBotDescriptor[] }>
 export type HostedAuthorizeResponse = Readonly<{ redirect_url: string }>
 export type HostedProvisionResponse = Readonly<{
-  status: 'pending' | 'ready' | 'paused'
+  status: 'pending' | 'ready' | 'paused' | 'returning'
   bot?: HostedBotDescriptor
   request_id?: string
 }>
@@ -224,3 +224,9 @@ const validate_reviewed_consent = (data: HostedChallengeEnvelope, input: HostedC
         consent_fields.every((key) => data.consent![key] === reviewed_consent[key])
   if (!matches) throw new Error('hosted_consent_review_mismatch')
 }
+
+/** Owner-requested return uses the existing actor journal as its drain barrier. */
+export type HostedReturnResponse = Readonly<{
+  bot: HostedBotDescriptor
+  phase: 'draining' | 'stopped' | 'complete'
+}>

@@ -20,18 +20,17 @@ const controller = (deposit: object | null) =>
     snapshot: {
       deposit,
       characters: [],
-      recall: {
-        characters: [],
-        pending: [
-          {
-            character_id: 'character',
-            purchase_cap: 'cap',
-            seller_kiosk: 'owner-kiosk',
-            recipient: 'bot',
-            agent_address: 'owner',
-          },
-        ],
-      },
+      roster: [],
+      recall: {},
+      pending_characters: [
+        {
+          character_id: 'character',
+          purchase_cap: 'cap',
+          seller_kiosk: 'owner-kiosk',
+          recipient: 'bot',
+          agent_address: 'owner',
+        },
+      ],
     },
     execute: () => {
       throw new Error('Rendering must never initiate a transfer')

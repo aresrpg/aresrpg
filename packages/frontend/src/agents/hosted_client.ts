@@ -11,7 +11,7 @@ import type {
   HostedVerifyResponse,
 } from '@aresrpg/protocol'
 import { same_hosted_bot } from '@aresrpg/protocol'
-import { verify_agent_pairing, type AgentPairingResponse } from '@aresrpg/sdk/agent-pairing'
+import { verify_agent_pairing, owner_agent_identity, type AgentPairingResponse } from '@aresrpg/sdk/agent-pairing'
 
 import type { AuthSession } from '../auth.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
@@ -158,7 +158,7 @@ export const authenticate_hosted = async (
   return { authorization_id: existing.id!, bots: existing.session.bots, consent }
 }
 
-const pause = (signal: Readonly<AbortSignal>) =>
+export const pause_hosted_request = (signal: Readonly<AbortSignal>) =>
   new Promise<void>((resolve, reject) => {
     const aborted = () => {
       clearTimeout(timer)
@@ -178,7 +178,7 @@ export const provision_hosted = async (
   const result = await client.request<HostedProvisionResponse>('/connect/bots', { authorization_id })
   if (result.status === 'ready' && result.bot?.status === 'ready') return result.bot
   if (result.status !== 'pending') throw new Error('Hosted signer unavailable')
-  await pause(client.signal)
+  await pause_hosted_request(client.signal)
   return provision_hosted(client, authorization_id)
 }
 export const verify_hosted_bot = async (
@@ -197,7 +197,7 @@ export const verify_hosted_bot = async (
     )
     if (result.status === 'ready' && result.proof) return result.proof
     if (result.status !== 'pending') throw new Error('Invalid signer proof')
-    await pause(client.signal)
+    await pause_hosted_request(client.signal)
     return poll()
   }
   const identity = await verify_agent_pairing(request, await poll())
@@ -299,6 +299,15 @@ export const refresh_hosted_owner = async (
 ) => {
   const authenticated = await authenticate_hosted(client, wallet, null, retain, session_id)
   const response = await owner_status(client, wallet, authenticated.authorization_id)
+  if (response.bot?.status === 'returning') {
+    const pairing = {
+      address: response.bot.address,
+      multisig_public_key: response.bot.multisig_public_key,
+      signer_mode: 'disposable' as const,
+    }
+    owner_agent_identity(pairing, pairing_request(wallet))
+    return { response, pairing }
+  }
   if (response.status !== 'connected' || !response.bot) return { response, pairing: null }
   const { bot } = response
   const pairing = client.get_state().session.inventory_pairing

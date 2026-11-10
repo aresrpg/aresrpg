@@ -10,7 +10,7 @@ export type Bot = Readonly<{
   multisig_public_key: string
   key_id: string
   generation: number
-  status: 'ready' | 'paused'
+  status: 'ready' | 'paused' | 'returning'
   policy: BotPolicy
 }>
 export type Account = Readonly<{

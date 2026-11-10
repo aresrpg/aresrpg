@@ -731,6 +731,7 @@ export const DEFAULT_ADMIN_ADDRESS = '0x3d1342fb7de99c69ce821183bcfc5b6374d81453
 
 export type ClientPackets = {
   'packet/agent_observe': { id: number; observation: AgentObservation | null }
+  'packet/inventory_observe': { id: number; observation: AgentObservation | null }
   'packet/allocation_request': { id: number; request: AllocationRequest }
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
@@ -792,7 +793,30 @@ export type ClientPackets = {
 
 // ╔════════════════ [ server → client (the push stream) ] ═════════════════════ ]
 
+export type InventoryPacket = {
+  [
+    K in
+      | 'packet/inventory'
+      | 'packet/item_updated'
+      | 'packet/item_removed'
+      | 'packet/listings'
+      | 'packet/characters'
+      | 'packet/fight_state'
+      | 'packet/fight_resolutions'
+  ]: {
+    type: K
+  } & ServerPackets[K]
+}[
+  | 'packet/inventory'
+  | 'packet/item_updated'
+  | 'packet/item_removed'
+  | 'packet/listings'
+  | 'packet/characters'
+  | 'packet/fight_state'
+  | 'packet/fight_resolutions']
+
 export type ServerPackets = {
+  'packet/inventory_observed': { id: number; packet: InventoryPacket | null }
   'packet/agent_observed': {
     id: number
     characters: readonly CharacterRow[]
@@ -965,6 +989,7 @@ export type Packet = ClientPacket | ServerPacket
 // a name in two lists reaches two stores; a name in none is unparseable by construction.
 
 export const SESSION_PACKETS = [
+  'packet/inventory_observed',
   'packet/agent_observed',
   'packet/signature_request',
   'packet/connection_accepted',
@@ -1086,6 +1111,7 @@ void UNROUTED_SERVER_PACKETS
 
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
+  'packet/inventory_observe',
   'packet/agent_observe',
   'packet/market_floor_request',
   'packet/allocation_request',
@@ -1274,6 +1300,18 @@ const parse_admin_request_packet = (
 type ObservationParser = (packet: Readonly<Record<string, unknown>>) => ClientPacket
 const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<string, ObservationParser>([
   [
+    'packet/inventory_observe',
+    (packet) => {
+      if (
+        !Number.isSafeInteger(packet.id) ||
+        Number(packet.id) < 0 ||
+        (packet.observation !== null && !valid_agent_observation(packet.observation))
+      )
+        throw new Error('Invalid inventory observation')
+      return { type: 'packet/inventory_observe', id: packet.id as number, observation: packet.observation }
+    },
+  ],
+  [
     'packet/agent_observe',
     (packet) => {
       if (
@@ -1399,6 +1437,7 @@ export type {
   HostedBotDescriptor,
   HostedConnectRequest,
   HostedOwnerStatus,
+  HostedReturnResponse,
   HostedChallengeInput,
   HostedChallengeResponse,
   HostedVerifyResponse,

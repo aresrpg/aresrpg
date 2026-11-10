@@ -149,14 +149,14 @@ test('Recall discovery uses the multisig and owner readers without invoking eith
       throw new Error('Discovery must never sign')
     },
   })
-  expect(recall.characters).toEqual([])
-  expect(recall.pending).toEqual([])
+  expect(owners).toEqual([])
+  expect(await recall.read_pending_characters()).toEqual([])
   expect(owners).toContain(identity.address)
   expect(owners).toContain(request.owner)
   expect(typeof recall.transfer.prepare).toBe('function')
 })
 
-test('Recall discovers a populated personal kiosk and current equipment through real SDK readers', async () => {
+test('Recall checks current equipment only when preparing a transfer', async () => {
   const id = (n: number) => `0x${n.toString(16).padStart(64, '0')}`
   const cap_bcs = bcs.struct('SyntheticPersonalKioskCap', {
     id: bcs.Address,
@@ -219,9 +219,6 @@ test('Recall discovers a populated personal kiosk and current equipment through 
       throw new Error('Discovery must never sign')
     },
   })
-  expect(recall.characters).toEqual([
-    { character_id: id(14), kiosk: id(12), unequip: [{ slot: 'tool', item_id: id(16) }] },
-  ])
   await expect(
     recall.transfer.prepare({
       kind: 'offer',
@@ -237,7 +234,7 @@ test('Recall discovers a populated personal kiosk and current equipment through 
       character_id: id(14),
       kiosk: id(12),
       recipient: id(99),
-      unequip: recall.characters[0]!.unequip,
+      unequip: [{ slot: 'tool', item_id: id(16) }],
     })
   ).rejects.toThrow('current Google owner')
 })

@@ -101,6 +101,8 @@ export type AuthSession = Readonly<{
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
   read_item: (item_id: string) => Promise<ItemSnapshot>
   read_agent_returns: (agent_address: string) => Promise<readonly AgentReturnOffer[]>
+  read_agent_balances: ReturnType<typeof create_agent_recall_reader>['read_balances']
+  return_agent_assets: ReturnType<typeof create_agent_recall_reader>['return_all']
   read_agent_recall: (pairing: AgentPairingIdentity) => Promise<AgentRecall>
   agent_transfer: AgentTransferActions
   agent_deposit: (pairing: AgentPairingIdentity) => AgentTransferActions
@@ -219,6 +221,8 @@ const create_wallet_session = (
   }
   const recall = create_agent_recall_reader({
     read_request: () => binding.read_agent_pairing_request(crypto.randomUUID()),
+    owner_sdk: sdk,
+    owner_kiosk_cap: kiosk_cap,
     client: resolution_client,
     sign_transaction,
     pins,
@@ -254,6 +258,8 @@ const create_wallet_session = (
     read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
     read_item,
     read_agent_recall: recall.read,
+    read_agent_balances: recall.read_balances,
+    return_agent_assets: recall.return_all,
     read_agent_returns: (agent_address) => read_agent_returns(resolution_client, sdk, account.address, agent_address),
     agent_deposit: (pairing) =>
       agent_deposit_actions(

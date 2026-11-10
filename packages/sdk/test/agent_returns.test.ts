@@ -269,3 +269,16 @@ test('owner-to-bot offer is a bot-held capability from the owner kiosk, rechecke
   ).rejects.toThrow('ownership changed')
   await expect(read_agent_returns(chain as never, source as never, owner, owner)).rejects.toThrow()
 })
+
+test('standalone items sharing a batched character offer receipt remain claimable while its gear stays reserved', async () => {
+  const f = gear_fixture()
+  const standalone = {
+    ...f.item,
+    objectId: game,
+    content: cap_layout.serialize({ id: game, kiosk_id, item_id: owner, min_price: 0 }).toBytes(),
+  }
+  f.state.rows.push(standalone)
+  expect(
+    (await read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).map(({ purchase_cap }) => purchase_cap)
+  ).toEqual([game])
+})

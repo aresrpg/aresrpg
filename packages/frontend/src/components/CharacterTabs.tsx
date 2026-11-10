@@ -7,7 +7,7 @@ import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 import { Plus, UsersRound } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 
-import { AgentCharacterSend } from '../agents/AgentCharacterSend.tsx'
+import { send_character_to_agent } from '../agents/send_character.ts'
 import { AgentSetup } from '../agents/AgentSetup.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { crafting_lock_id } from '../modules/craft_character_lock.ts'
@@ -46,10 +46,7 @@ const CreateCharacterTab = ({
 }
 
 type CharacterTabDialogState = Readonly<
-  | { kind: 'agent' }
-  | { kind: 'send'; character_id: string }
-  | { kind: 'delete'; character_id: string }
-  | { kind: 'portrait'; appearance: PortraitAppearance }
+  { kind: 'agent' } | { kind: 'delete'; character_id: string } | { kind: 'portrait'; appearance: PortraitAppearance }
 > | null
 
 const CharacterTabDialog = ({
@@ -66,8 +63,6 @@ const CharacterTabDialog = ({
       return <PortraitShareModal appearance={dialog.appearance} copy={copy} close={close} />
     case 'agent':
       return <AgentSetup copy={copy} close={close} />
-    case 'send':
-      return <AgentCharacterSend character_id={dialog.character_id} copy={copy} close={close} />
     case 'delete':
       return <CharacterDeleteModal character_id={dialog.character_id} copy={copy} close={close} />
     case undefined:
@@ -84,16 +79,18 @@ const CharacterAgentAction = ({
   copy: AppCopy
   open: (dialog: CharacterTabDialogState) => void
 }>) => {
-  const paired = useAppStore(
-    (state) =>
-      (state.session.inventory_pairing ?? state.session.agent_pairing_candidate)?.signer_mode === 'host-persistent'
-  )
+  const paired = useAppStore((state) => state.session.inventory_pairing?.signer_mode === 'host-persistent')
   return (
     <button
       type="button"
       role="menuitem"
       className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
-      onClick={() => open(paired ? { kind: 'send', character_id } : { kind: 'agent' })}
+      onClick={() => {
+        if (paired) {
+          open(null)
+          send_character_to_agent(character_id, copy)
+        } else open({ kind: 'agent' })
+      }}
     >
       {paired ? copy.ui.agent_send : copy.ui.agent_setup}
     </button>

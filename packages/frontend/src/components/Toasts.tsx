@@ -37,14 +37,16 @@ const raise_toasts = (element: Readonly<HTMLElement> | null): void => {
 const ToastLayer = ({ children }: Readonly<{ children: ReactNode }>) => {
   const layer = useRef<HTMLElement>(null)
   const [host, set_host] = useState<HTMLElement>(() => active_modal(document) ?? document.body)
-  useLayoutEffect(
-    () =>
-      observe_window_changes(document, () => {
-        set_host(active_modal(document) ?? document.body)
-        raise_toasts(layer.current)
-      }),
-    []
-  )
+  useLayoutEffect(() => {
+    const changed = () => {
+      set_host(active_modal(document) ?? document.body)
+      raise_toasts(layer.current)
+    }
+    const stop = observe_window_changes(document, changed)
+    // Render may select a dialog that this same commit removes before the observer attaches.
+    changed()
+    return stop
+  }, [])
   useLayoutEffect(() => {
     const element = layer.current
     raise_toasts(element)

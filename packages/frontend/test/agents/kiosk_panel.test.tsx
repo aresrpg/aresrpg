@@ -21,6 +21,7 @@ const controller = (phase: 'failed' | 'loading') =>
     state: { phase, error: 'RPC unavailable' },
     transaction: { phase: 'idle' },
     pending_ids: new Set(),
+    agent_pending: [],
     refresh: () => {
       throw new Error('Rendering must not load')
     },
@@ -70,4 +71,12 @@ test('inventory uses compact filters and official coin marks without the rejecte
   expect(html).not.toContain('chr-bagtab')
   expect(html).not.toContain('Transfer review')
   expect(html).not.toContain('Check transaction')
+})
+
+test('agent SUI display truncates to two decimal digits without changing the stored amount', () => {
+  const inventory = { items: [], sui_mist: '1234567890', kares_mist: null }
+  const kiosk = { ...controller('failed'), snapshot: { inventory } } as unknown as AgentKioskController
+  const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />)
+  expect(html).toContain('<b>1.23</b>')
+  expect(inventory.sui_mist).toBe('1234567890')
 })

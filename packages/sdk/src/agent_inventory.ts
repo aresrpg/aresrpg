@@ -6,10 +6,17 @@ import { normalizeStructTag } from '@mysten/sui/utils'
 
 import type { Sdk } from './client.ts'
 import { read_personal_kiosks } from './kiosk_discovery.ts'
-import { read_agent_equipment } from './agent_equipment.ts'
 import { read_item_snapshot } from './item_snapshot.ts'
-import { kares_coin_type } from './kares_ptb.ts'
-import { STAKE_POSITION_BCS } from './kares_decode.ts'
+import { kares_coin_type, rewards_shared_pin } from './kares_ptb.ts'
+import { STAKE_POSITION_BCS, REWARD_SCALE } from './kares_decode.ts'
+
+export type AgentKioskAsset = Readonly<{
+  kind: 'item' | 'character'
+  id: string
+  kiosk: string
+  listed: boolean
+  exclusive: boolean
+}>
 
 export type AgentInventoryItem = Readonly<{
   item: ItemRow
@@ -20,16 +27,17 @@ export type AgentInventoryItem = Readonly<{
   direct?: boolean
 }>
 
-/** Read only: every owned-object and kiosk page is required, never an incomplete inventory. */
-export const read_agent_inventory = async (client: SuiGrpcClient, sdk: Sdk, address: string) => {
+/** Explicit recovery audit for direct objects, staking and proceeds. Game inventory uses indexed subscriptions. */
+export const read_agent_recovery_assets = async (client: SuiGrpcClient, sdk: Sdk, address: string) => {
   const caps = await read_personal_kiosks(sdk, address)
   const kiosks = await Promise.all(caps.map((cap) => sdk.get_kiosk(cap.kioskId, { withKioskFields: true })))
   if (kiosks.some((kiosk) => !kiosk.kiosk)) throw new Error('Kiosk proceeds could not be read.')
   const coin_type = typeof sdk.pins.kares_coin_type === 'string' ? kares_coin_type(sdk.pins.kares_coin_type) : null
   const owned = await read_owned_inventory(client, address)
-  const [sui, kares] = await Promise.all([client.core.getBalance({ owner: address }), sdk.read_kares_balance()])
-  const items = (await Promise.all(kiosks.map((kiosk) => read_kiosk_inventory(client, sdk, kiosk)))).flat()
-  const direct = owned.filter((row) => row.type === `${sdk.game_type_package}::item::Item`)
+  const items: AgentInventoryItem[] = []
+  const direct = owned.filter(
+    (row) => normalizeStructTag(row.type) === normalizeStructTag(`${sdk.game_type_package}::item::Item`)
+  )
   for (const row of direct)
     items.push({
       item: { ...(await inventory_item(client, sdk, row.objectId)), kiosk: '' },
@@ -46,12 +54,46 @@ export const read_agent_inventory = async (client: SuiGrpcClient, sdk: Sdk, addr
       : null
   const positions = owned
     .filter((row) => normalizeStructTag(row.type) === position_type)
-    .map((row) => Object.freeze({ id: row.objectId, amount: STAKE_POSITION_BCS.parse(row.content).amount.toString() }))
+    .map((row) => {
+      const position = STAKE_POSITION_BCS.parse(row.content)
+      const pool = rewards_shared_pin(sdk.pins.kares_staking_pool, 'staking pool')
+      if (position.id !== row.objectId || position.pool !== pool.id)
+        throw new Error('Staking position identity changed.')
+      return {
+        id: row.objectId,
+        amount: position.amount.toString(),
+        exhausted:
+          position.amount === 0n && position.kares_accrued < REWARD_SCALE && position.sui_accrued < REWARD_SCALE,
+      }
+    })
   return Object.freeze({
+    kiosk_caps: Object.freeze(caps.map(({ objectId }) => objectId)),
+    kiosk_assets: Object.freeze(
+      kiosks.flatMap((kiosk) =>
+        kiosk.items.flatMap((row): AgentKioskAsset[] => {
+          const kind =
+            normalizeStructTag(row.type) === type
+              ? 'item'
+              : normalizeStructTag(row.type) === character_type
+                ? 'character'
+                : null
+          return kind
+            ? [
+                {
+                  kind,
+                  id: row.objectId,
+                  kiosk: row.kioskId,
+                  listed: !!row.listing,
+                  exclusive: !!row.listing?.isExclusive,
+                },
+              ]
+            : []
+        })
+      )
+    ),
     items: Object.freeze(items),
-    positions: Object.freeze(positions),
-    sui_mist: String(sui.balance.balance),
-    kares_mist: kares === null ? null : String(kares),
+    positions: Object.freeze(positions.filter(({ exhausted }) => !exhausted).map(({ id, amount }) => ({ id, amount }))),
+    exhausted_positions: Object.freeze(positions.filter(({ exhausted }) => exhausted).map(({ id }) => id)),
     proceeds: Object.freeze(
       kiosks
         .map((kiosk, index) => ({ kiosk: caps[index]!.kioskId, sui_mist: kiosk.kiosk!.profits }))
@@ -83,34 +125,11 @@ const read_owned_inventory = async (client: SuiGrpcClient, owner: string) => {
     throw new Error('Inventory ownership changed.')
   return objects
 }
-export type AgentInventory = Awaited<ReturnType<typeof read_agent_inventory>>
+export type AgentRecoveryAssets = Awaited<ReturnType<typeof read_agent_recovery_assets>>
 
 const inventory_item = async (client: SuiGrpcClient, sdk: Sdk, id: string) => {
   const item = await read_item_snapshot(client, sdk.game_type_package, id, true)
   if (item.amount === undefined || !Number.isFinite(item.amount) || !item.version)
     throw new Error('Inventory amount is unavailable.')
   return { ...item, amount: item.amount, version: item.version }
-}
-
-const read_kiosk_inventory = async (client: SuiGrpcClient, sdk: Sdk, kiosk: Awaited<ReturnType<Sdk['get_kiosk']>>) => {
-  const type = normalizeStructTag(`${sdk.game_type_package}::item::Item`)
-  const character_type = normalizeStructTag(`${sdk.game_type_package}::character::Character`)
-  const items: AgentInventoryItem[] = []
-  for (const row of kiosk.items.filter((item) => normalizeStructTag(item.type) === type))
-    items.push({
-      item: { ...(await inventory_item(client, sdk, row.objectId)), kiosk: row.kioskId },
-      status: row.listing ? 'listed' : 'available',
-      exclusive: row.listing?.isExclusive,
-    })
-  for (const row of kiosk.items.filter((item) => normalizeStructTag(item.type) === character_type)) {
-    const equipped = await read_agent_equipment(client, sdk.game_type_package!, row.objectId)
-    for (const gear of equipped)
-      items.push({
-        item: { ...(await inventory_item(client, sdk, gear.item_id)), kiosk: row.kioskId },
-        status: 'equipped',
-        character_id: row.objectId,
-        slot: gear.slot,
-      })
-  }
-  return items
 }

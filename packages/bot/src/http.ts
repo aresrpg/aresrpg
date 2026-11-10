@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { HostedChallengeInput } from '@aresrpg/protocol'
+import type { HostedChallengeInput, HostedBotDescriptor } from '@aresrpg/protocol'
 import { parse_agent_pairing_request } from '@aresrpg/sdk/agent-pairing'
 
 import type { Bot, BotConfig, BotPolicy, OwnerChallenge } from './model.ts'
@@ -85,7 +85,18 @@ export const create_ingress = (
       ? response({ status: 'ready', proof: proof.proof })
       : response({ status: 'pending' }, 202)
   }
+  const return_action =
+    (operation: typeof connect.begin_return): PostHandler =>
+    async (request, body) => {
+      const id = require_string(body.authorization_id)
+      const bot = body.bot as HostedBotDescriptor | undefined
+      if (!bot || typeof bot !== 'object') throw new Error('invalid_request')
+      require_string(bot.id)
+      return response(await operation(id, session_cookie(request, id), bot))
+    }
   const post_routes = new Map<string, PostHandler>([
+    ['/connect/disconnect', return_action(connect.begin_return)],
+    ['/connect/return-complete', return_action(connect.complete_return)],
     [
       '/connect/challenge',
       async (request, body) => {

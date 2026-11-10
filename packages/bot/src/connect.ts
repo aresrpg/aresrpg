@@ -3,6 +3,7 @@
 import {
   hosted_challenge_message,
   type HostedChallengeInput,
+  type HostedBotDescriptor,
   type HostedConnectRequest,
   type HostedChallengeEnvelope,
 } from '@aresrpg/protocol'
@@ -19,6 +20,13 @@ import {
   type OwnerChallenge,
 } from './model.ts'
 import { hash_secret, random_secret, secret_matches } from './security.ts'
+import { empty_lane, lane_key_for, type Lane } from './control.ts'
+import {
+  begin_owner_return,
+  complete_owner_return,
+  stop_return_profession,
+  type ReturnTransition,
+} from './owner_return.ts'
 import { validate_owner, type OwnerVerifier } from './owner_proof.ts'
 
 const require_session = (
@@ -261,7 +269,54 @@ export const create_connect_service = (
     require_owner(request)
     return request as AuthorizationRequest & Required<Pick<AuthorizationRequest, 'owner' | 'zklogin_public_identifier'>>
   }
-  return { details, challenge, verify, authorize, cancel, list_bots, owner_session }
+  const return_action = async (
+    id: string,
+    session: string,
+    review: HostedBotDescriptor,
+    transition: (bot: Bot, lane: Lane, review: HostedBotDescriptor) => ReturnTransition
+  ) => {
+    const initial = await store.read<Bot>(`bot:${review.id}`)
+    if (!initial) throw new Error('bot_not_owned')
+    const lane_key = lane_key_for(initial)
+    const initial_lane = (await store.read<Lane>(lane_key)) ?? empty_lane(initial)
+    const keys = [
+      `request:${id}`,
+      `bot:${review.id}`,
+      lane_key,
+      ...(initial_lane.profession_run_id ? [`profession:${initial_lane.profession_run_id}`] : []),
+    ]
+    return store.transaction(keys, async (tx) => {
+      const request = require_session(
+        await tx.get<AuthorizationRequest>(`request:${id}`),
+        session,
+        now(),
+        config.authority_generation
+      )
+      const bot = owned_bot(await tx.get<Bot>(`bot:${review.id}`), request)
+      if (lane_key_for(bot) !== lane_key) throw new Error('connection_changed')
+      const lane = (await tx.get<Lane>(lane_key)) ?? empty_lane(bot)
+      if (lane.profession_run_id !== initial_lane.profession_run_id) throw new Error('connection_changed')
+      const next = transition(bot, lane, review)
+      if (lane.profession_run_id && next.lane.profession_run_id === null)
+        await stop_return_profession(tx, bot, lane.profession_run_id)
+      if (next.bot !== bot) await tx.put(`bot:${bot.id}`, next.bot)
+      if (next.lane !== lane) await tx.put(lane_key, next.lane)
+      return next.result
+    })
+  }
+  return {
+    details,
+    challenge,
+    verify,
+    authorize,
+    cancel,
+    list_bots,
+    owner_session,
+    begin_return: (id: string, session: string, bot: HostedBotDescriptor) =>
+      return_action(id, session, bot, begin_owner_return),
+    complete_return: (id: string, session: string, bot: HostedBotDescriptor) =>
+      return_action(id, session, bot, complete_owner_return),
+  }
 }
 
 const standalone_request = (id: string, session: string, config: BotConfig, now: number): AuthorizationRequest => ({

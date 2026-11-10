@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { KioskOwnerCap } from '@mysten/kiosk'
-import { Transaction } from '@mysten/sui/transactions'
+import { Transaction, type TransactionObjectArgument } from '@mysten/sui/transactions'
 import { fromBase64, toBase64 } from '@mysten/sui/utils'
 import { verifyTransactionSignature } from '@mysten/sui/verify'
 
@@ -71,21 +71,7 @@ export const agent_character_transfer = (sdk: Sdk) => {
       const tx = sdk.tx()
       tx.setSender(input.sender)
       sdk.with_personal_kiosk(tx, input.kiosk_cap, (kiosk, cap) => {
-        for (const { slot, item_id } of input.unequip ?? [])
-          sdk.doors.unequip_item(tx, { kiosk, cap, character_id: input.character_id, slot, receiving: item_id })
-        const purchase_cap = tx.moveCall({
-          target: '0x2::kiosk::list_with_purchase_cap',
-          typeArguments: [type],
-          arguments: [kiosk, cap, tx.pure.id(input.character_id), tx.pure.u64(0)],
-        })
-        const gear = (input.unequip ?? []).map(({ item_id }) =>
-          tx.moveCall({
-            target: '0x2::kiosk::list_with_purchase_cap',
-            typeArguments: [item_type],
-            arguments: [kiosk, cap, tx.pure.id(item_id), tx.pure.u64(0)],
-          })
-        )
-        tx.transferObjects([purchase_cap, ...gear], input.recipient)
+        tx.transferObjects(offer_character_caps(sdk, tx, kiosk, cap, input), input.recipient)
       })
       return tx
     },
@@ -102,45 +88,7 @@ export const agent_character_transfer = (sdk: Sdk) => {
       const tx = sdk.tx()
       tx.setSender(input.recipient)
       sdk.with_personal_kiosk(tx, input.kiosk_cap, (kiosk, cap) => {
-        const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
-        const [character, request] = tx.moveCall({
-          target: '0x2::kiosk::purchase_with_cap',
-          typeArguments: [type],
-          arguments: [tx.object(input.seller_kiosk), tx.object(input.purchase_cap), zero],
-        })
-        resolve_marketplace_transfer(
-          sdk,
-          tx,
-          'character',
-          input.character_id,
-          0n,
-          kiosk,
-          cap,
-          character!,
-          request!,
-          input.seller_kiosk
-        )
-        for (const { slot, item_id, purchase_cap } of input.equipment ?? []) {
-          const payment = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
-          const [item, item_request] = tx.moveCall({
-            target: '0x2::kiosk::purchase_with_cap',
-            typeArguments: [item_type],
-            arguments: [tx.object(input.seller_kiosk), tx.object(purchase_cap), payment],
-          })
-          resolve_marketplace_transfer(
-            sdk,
-            tx,
-            'item',
-            item_id,
-            0n,
-            kiosk,
-            cap,
-            item!,
-            item_request!,
-            input.seller_kiosk
-          )
-          sdk.doors.equip_item(tx, { kiosk, cap, character_id: input.character_id, slot, item_id })
-        }
+        claim_character_caps(sdk, tx, kiosk, cap, input)
       })
       return tx
     },
@@ -168,4 +116,74 @@ export const agent_character_transfer = (sdk: Sdk) => {
       return tx
     },
   })
+}
+
+export const offer_character_caps = (
+  sdk: Sdk,
+  tx: Transaction,
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument,
+  input: Readonly<{ character_id: string; unequip?: readonly EquipChange[] }>
+) => {
+  const type = `${sdk.game_type_package}::character::Character`
+  const item_type = `${sdk.game_type_package}::item::Item`
+  for (const { slot, item_id } of input.unequip ?? [])
+    sdk.doors.unequip_item(tx, { kiosk, cap, character_id: input.character_id, slot, receiving: item_id })
+  const purchase_cap = tx.moveCall({
+    target: '0x2::kiosk::list_with_purchase_cap',
+    typeArguments: [type],
+    arguments: [kiosk, cap, tx.pure.id(input.character_id), tx.pure.u64(0)],
+  })
+  const gear = (input.unequip ?? []).map(({ item_id }) =>
+    tx.moveCall({
+      target: '0x2::kiosk::list_with_purchase_cap',
+      typeArguments: [item_type],
+      arguments: [kiosk, cap, tx.pure.id(item_id), tx.pure.u64(0)],
+    })
+  )
+  return [purchase_cap, ...gear]
+}
+
+export const claim_character_caps = (
+  sdk: Sdk,
+  tx: Transaction,
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument,
+  input: Readonly<{
+    character_id: string
+    seller_kiosk: string
+    purchase_cap: string
+    equipment?: readonly ReturnEquipment[]
+  }>
+) => {
+  const type = `${sdk.game_type_package}::character::Character`
+  const item_type = `${sdk.game_type_package}::item::Item`
+  const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
+  const [character, request] = tx.moveCall({
+    target: '0x2::kiosk::purchase_with_cap',
+    typeArguments: [type],
+    arguments: [tx.object(input.seller_kiosk), tx.object(input.purchase_cap), zero],
+  })
+  resolve_marketplace_transfer(
+    sdk,
+    tx,
+    'character',
+    input.character_id,
+    0n,
+    kiosk,
+    cap,
+    character!,
+    request!,
+    input.seller_kiosk
+  )
+  for (const { slot, item_id, purchase_cap } of input.equipment ?? []) {
+    const payment = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
+    const [item, item_request] = tx.moveCall({
+      target: '0x2::kiosk::purchase_with_cap',
+      typeArguments: [item_type],
+      arguments: [tx.object(input.seller_kiosk), tx.object(purchase_cap), payment],
+    })
+    resolve_marketplace_transfer(sdk, tx, 'item', item_id, 0n, kiosk, cap, item!, item_request!, input.seller_kiosk)
+    sdk.doors.equip_item(tx, { kiosk, cap, character_id: input.character_id, slot, item_id })
+  }
 }

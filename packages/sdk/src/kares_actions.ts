@@ -50,10 +50,11 @@ const merge_payments = (tx: Transaction, payments: readonly TransactionObjectArg
 /** The same unsigned composition is used by browser actions and the testnet rehearsal. */
 export const create_kares_transaction = async (
   { sdk, address }: Omit<FinanceContext, 'client'>,
-  intent: KaresIntent
+  intent: KaresIntent,
+  transaction?: Transaction
 ): Promise<Transaction> => {
   const pins = kares_pins(sdk.pins)
-  const tx = new Transaction()
+  const tx = transaction ?? new Transaction()
   const object = (id: string) => sdk.door_context.obj(tx, id, true)
   switch (intent.kind) {
     case 'fund_combat': {

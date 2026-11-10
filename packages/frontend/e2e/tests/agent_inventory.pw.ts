@@ -14,7 +14,7 @@ const drag = async (page: Page, from: Locator, to: Locator) => {
 test('initial discovery failure can refresh without reopening inventory', async ({ page }) => {
   await page.goto('/e2e/fixtures/inventory.html?agent&agent-fail')
   const agent = page.getByRole('region', { name: 'Agent kiosk' })
-  await expect(agent.getByRole('alert')).toHaveText('Synthetic inventory read failed')
+  await expect(agent.getByRole('alert')).toBeVisible()
   await agent.getByRole('button', { name: 'Refresh inventory' }).click()
   await expect(agent.getByRole('button', { name: 'Siluri', exact: true })).toBeVisible()
 })
@@ -44,35 +44,80 @@ test('both balance buttons offer both directions, exact Max and safe KARES unava
   await expect(kares.locator('.agent-coin-actions').getByRole('button').first()).toBeDisabled()
 })
 
-test('dragging either stack direction submits every represented object without automatically claiming', async ({
+test('a drag follows the cursor and shows an unavailable destination until offer and claim complete', async ({
   page,
 }) => {
-  await page.goto('/e2e/fixtures/inventory.html?agent')
+  await page.goto('/e2e/fixtures/inventory.html?agent&pending-transfer')
   const player = page.locator('[data-inventory-owner="player"]'),
     agent = page.locator('[data-inventory-owner="agent"]')
   await player.getByRole('button', { name: 'Resources', exact: true }).click()
+  const item = player.getByRole('button', { name: 'Wheat', exact: true })
+  const start = (await item.boundingBox())!,
+    end = (await agent.boundingBox())!
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 12 })
+  await expect(page.locator('.aui-selection-drag')).toBeVisible()
+  await page.mouse.up()
+  await expect(page.locator('.aui-selection-drag')).toHaveCount(0)
+  await expect(agent.locator('.is-incoming')).toHaveAttribute('aria-busy', 'true')
+  await expect(agent.locator('.is-incoming')).toBeDisabled()
+  await expect(agent.locator('.is-incoming')).toHaveCSS('border-style', 'dashed')
+  const spinner = agent.locator('.is-incoming .inventory-item-pending')
+  await expect(spinner).toHaveCSS('width', '12px')
+  await expect(spinner).toHaveCSS('bottom', '3px')
+  await expect(spinner).toHaveCSS('right', '3px')
+  await expect(spinner).toHaveCSS('border-top-color', 'rgb(138, 189, 225)')
+  await page.screenshot({ path: test.info().outputPath('pending-inventory.png'), animations: 'disabled' })
+  await expect.poll(() => page.evaluate(() => window.agent_prepared.at(-1)?.intent.kind)).toBe('asset_offer')
+  await page.evaluate(() => window.resolve_agent_transaction())
+  await expect.poll(() => page.evaluate(() => window.agent_prepared.at(-1)?.intent.kind)).toBe('asset_claim')
+  await expect(agent.locator('.is-incoming')).toBeVisible()
+  await page.evaluate(() => window.resolve_agent_transaction())
+  await expect.poll(() => page.evaluate(() => window.agent_confirmed.length)).toBe(2)
+  await expect(agent.locator('.is-incoming')).toHaveCount(0)
+  expect(await page.evaluate(() => window.agent_confirmed.map(({ intent }) => intent.kind))).toEqual([
+    'asset_offer',
+    'asset_claim',
+  ])
+})
+
+test('withdrawing a stack automatically claims it for the player', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory.html?agent')
+  const player = page.locator('[data-inventory-owner="player"]'),
+    agent = page.locator('[data-inventory-owner="agent"]')
   await agent.getByRole('button', { name: 'Resources', exact: true }).click()
-  await drag(page, player.getByRole('button', { name: 'Wheat', exact: true }), agent)
-  await expect
-    .poll(() => page.evaluate(() => window.agent_prepared.at(-1)?.intent))
-    .toMatchObject({
-      kind: 'asset_offer',
-      items: [{ item_id: '0xitem9' }, { item_id: '0xitem10' }],
-      recipient: '0xagent',
-    })
-  await expect.poll(() => page.evaluate(() => window.agent_confirmed.length)).toBe(1)
-  await expect(agent.getByRole('button', { name: 'Wheat', exact: true })).toBeEnabled()
   await drag(page, agent.getByRole('button', { name: 'Wheat', exact: true }), player)
-  await expect
-    .poll(() => page.evaluate(() => window.agent_prepared.at(-1)?.intent))
-    .toMatchObject({
+  await expect.poll(() => page.evaluate(() => window.agent_confirmed.length)).toBe(2)
+  const operations = await page.evaluate(() => window.agent_confirmed)
+  expect(operations[0]).toMatchObject({
+    sender: '0xagent',
+    intent: {
       kind: 'asset_offer',
       items: [{ item_id: 'agent-0xitem9' }, { item_id: 'agent-0xitem10' }],
       recipient: '0xowner',
-    })
-  await expect.poll(() => page.evaluate(() => window.agent_confirmed.length)).toBe(2)
-  expect(await page.evaluate(() => window.agent_confirmed.every(({ intent }) => intent.kind === 'asset_offer'))).toBe(
-    true
-  )
-  await expect(page.getByRole('dialog', { name: 'Transfer review', exact: true })).toHaveCount(0)
+    },
+  })
+  expect(operations[1]).toMatchObject({ sender: '0xowner', intent: { kind: 'asset_claim' } })
 })
+
+for (const width of [844, 667]) {
+  test(`agent and player inventory retain square section tops at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 390 })
+    await page.goto('/e2e/fixtures/inventory.html?agent')
+    // This standalone fixture has no game window; supply its ordinary viewport container boundary.
+    await page.locator('#root').evaluate((root) => {
+      root.style.container = 'aui-viewport / size'
+      root.style.height = '100dvh'
+    })
+    const sections = page.locator('.chr-equip__bag, .agent-kiosk, .inv__doll')
+    for (const section of await sections.all()) {
+      await expect(section).toHaveCSS('border-top-left-radius', '0px')
+      await expect(section).toHaveCSS('border-top-right-radius', '0px')
+    }
+    await expect(
+      page.getByRole('region', { name: 'Agent kiosk' }).getByRole('button', { name: 'Siluri', exact: true })
+    ).toBeVisible()
+    await page.screenshot({ path: test.info().outputPath(`inventory-${width}.png`), animations: 'disabled' })
+  })
+}

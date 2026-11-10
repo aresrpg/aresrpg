@@ -147,7 +147,7 @@ test('recall freezes equipment inputs and refuses changes before signing', async
     network: 'mainnet',
     game_type_package: id,
     tx: () => new Transaction(),
-    hydrate_unknown: async (ids: readonly string[]) => {
+    hydrate: async (ids: readonly string[]) => {
       hydrated = ids
     },
     doors: { unequip_item: (tx: Transaction) => tx.moveCall({ target: `${id}::api::unequip_item` }) },

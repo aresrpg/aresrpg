@@ -10,7 +10,7 @@
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { get_characters } from '../reads/get_characters.ts'
-import { get_items } from '../reads/get_items.ts'
+import { create_inventory_reader } from '../inventory_reader.ts'
 import { get_claims, get_giftcards, get_kiosks, get_my_listings } from '../reads/get_user_economy.ts'
 import { get_fight_resolutions } from '../reads/get_fight_resolutions.ts'
 import { get_closable_fights } from '../reads/get_closable_fights.ts'
@@ -49,6 +49,7 @@ export type AccountDomain =
 export default {
   name: 'player_load',
   observe: ({ graph, address, send, dispatch, events, signal, drop, pubsub, channels }) => {
+    const { read: read_inventory } = create_inventory_reader({ graph, address, send, signal, pubsub })
     const completed = new Set<AccountDomain>()
     const counts = new Map<AccountDomain, number>()
     let characters: CharacterRow[] | null = null
@@ -107,11 +108,7 @@ export default {
           if (ready) send({ type: 'packet/characters', characters: value })
         }
       ),
-      inventory: domain(
-        'inventory',
-        () => get_items(graph, { address }),
-        (items) => send({ type: 'packet/inventory', items })
-      ),
+      inventory: domain('inventory', read_inventory, (items) => send({ type: 'packet/inventory', items })),
       claims: domain(
         'claims',
         () => get_claims(graph, { address }),

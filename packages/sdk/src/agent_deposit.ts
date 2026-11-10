@@ -7,6 +7,7 @@ import type { Sdk } from './client.ts'
 import type { KioskCapLoader } from './kiosk_runner.ts'
 import { owner_agent_identity, parse_agent_pairing_request } from './agent_pairing.ts'
 import { agent_transfer_actions, type AgentTransferIntent } from './agent_transfer_actions.ts'
+import { read_agent_equipment, same_agent_equipment } from './agent_equipment.ts'
 
 /** The ordinary wallet may deposit only into its canonical, freshly verified persistent pairing.
  * Resolve again for every prepare and confirm; restored public metadata is recovery-only. */
@@ -28,11 +29,24 @@ export const agent_deposit_actions = (
     address: context.address,
     kiosk_cap: context.kiosk_cap,
     assets: { client: context.client, recipient },
+    check_offer: async (intent) => {
+      if (intent.recipient !== recipient()) throw new Error('The paired recipient changed.')
+      const equipment = await read_agent_equipment(context.client, sdk.game_type_package!, intent.character_id)
+      if (!same_agent_equipment(equipment, intent.unequip ?? []))
+        throw new Error('Equipment changed. Refresh before signing.')
+    },
   })
   return Object.freeze({
     sender: actions.sender,
+    fits: actions.fits,
+    quote: async (intent: AgentTransferIntent) => {
+      if (intent.kind !== 'asset_offer' && intent.kind !== 'offer')
+        throw new Error('Select a deposit of items, coins or a character.')
+      return actions.quote(intent)
+    },
     prepare: async (intent: AgentTransferIntent) => {
-      if (intent.kind !== 'asset_offer') throw new Error('Select a deposit of items or coins.')
+      if (intent.kind !== 'asset_offer' && intent.kind !== 'offer')
+        throw new Error('Select a deposit of items, coins or a character.')
       return actions.prepare(intent)
     },
   })

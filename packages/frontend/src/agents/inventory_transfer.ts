@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { AgentItemReturnOffer, AgentReturnOffer } from '@aresrpg/sdk/agent-returns'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 import type { AgentTransferIntent } from '@aresrpg/sdk/agent-transfer-actions'
 import type { AgentAssetIntent } from '@aresrpg/sdk/agent-asset-transfer'
@@ -83,3 +84,44 @@ export const agent_inventory_groups = (rows: readonly AgentInventoryItem[]) => {
       })),
   ]
 }
+
+export type TransferPreview = Readonly<{ recipient: string; items: readonly import('@aresrpg/protocol').ItemRow[] }>
+
+/** Pending cells stay outside both inventories and retire only when the destination owns their IDs. */
+export const pending_inventory_transfer = (
+  preview: TransferPreview | undefined,
+  busy: boolean,
+  accounts: Readonly<{
+    player: string | undefined
+    agent: string | undefined
+    player_items: readonly import('@aresrpg/protocol').ItemRow[]
+    agent_items: readonly import('@aresrpg/protocol').ItemRow[]
+  }>
+) => {
+  if (!preview || ![accounts.player, accounts.agent].includes(preview.recipient))
+    return {
+      agent_pending: [],
+      player_pending: [],
+      player_source_pending: [],
+      pending_ids: new Set<string>(),
+      unresolved: true,
+    }
+  const to_agent = preview.recipient === accounts.agent
+  const confirmed = new Set((to_agent ? accounts.agent_items : accounts.player_items).map(({ id }) => id))
+  const pending = preview.items.filter(({ id }) => !confirmed.has(id))
+  const unresolved = busy ? preview.items : pending
+  return {
+    agent_pending: to_agent ? pending : [],
+    player_pending: to_agent ? [] : pending,
+    player_source_pending: to_agent ? unresolved : [],
+    pending_ids: new Set(unresolved.map(({ id }) => id)),
+    unresolved: unresolved.length > 0,
+  }
+}
+
+/** Standalone and character-linked caps reserve their source objects until claim or cancellation. */
+export const offered_item_ids = (items: readonly AgentItemReturnOffer[], characters: readonly AgentReturnOffer[]) =>
+  new Set([
+    ...items.map(({ item_id }) => item_id),
+    ...characters.flatMap(({ equipment }) => (equipment ?? []).map(({ item_id }) => item_id)),
+  ])

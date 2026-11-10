@@ -45,6 +45,7 @@ import player_chat from './modules/player_chat.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
 import player_items from './modules/player_items.ts'
+import player_inventory_observation from './modules/player_inventory_observation.ts'
 import player_market from './modules/player_market.ts'
 import player_leaderboards from './modules/player_leaderboards.ts'
 import type { ResolveName } from './suins.ts'
@@ -204,6 +205,7 @@ const MODULES: PlayerModule[] = [
   player_market,
   player_leaderboards,
   player_items,
+  player_inventory_observation,
   player_trade,
   player_kolizeum,
   player_tournament,
@@ -218,6 +220,7 @@ const MODULES: PlayerModule[] = [
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
   'packet/agent_observe',
+  'packet/inventory_observe',
   'packet/market_floor_request',
   'packet/allocation_request',
   'packet/spectate',
@@ -238,6 +241,7 @@ const cancels_read = (packet: Readonly<ClientPacket>): boolean => {
     'observation' in packet &&
     [
       'packet/agent_observe',
+      'packet/inventory_observe',
       'packet/market_observe',
       'packet/market_prices_observe',
       'packet/leaderboard_observe',

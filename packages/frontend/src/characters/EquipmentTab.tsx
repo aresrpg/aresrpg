@@ -12,6 +12,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
 import { character_render_source } from '../game/character_entities.ts'
 import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
+import { inventory_groups } from '../inventory_stacks.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { titleize } from '../content/catalog.ts'
@@ -265,6 +266,28 @@ export default function EquipmentTab({
             return true
           }}
         >
+          {inventory_groups(kiosk.player_pending).map(({ item, amount }) => (
+            <InventoryItemCell
+              key={`incoming-${item.id}`}
+              item={item}
+              amount={amount}
+              pending
+              disabled
+              class_name="is-incoming"
+            />
+          ))}
+          {inventory_groups(kiosk.player_source_pending).map(({ item, amount }) => (
+            <InventoryItemCell
+              key={`outgoing-${item.id}`}
+              item={item}
+              amount={amount}
+              pending
+              disabled
+              show_level
+              aria-pressed={selected_ids.includes(item.id)}
+              class_name={selected_ids.includes(item.id) ? 'is-selected' : ''}
+            />
+          ))}
           {filtered.map(({ item, amount, items }) => (
             <InventoryItemCell
               amount={amount}

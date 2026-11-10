@@ -4,6 +4,19 @@
   -webkit-user-select: none;
   outline: none;
 }
+.aui-selection-drag[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+.aui-selection-drag * {
+  pointer-events: none;
+}
 .aui-selection-grid {
   touch-action: none;
   -webkit-touch-callout: none;
@@ -53,23 +66,23 @@
 }
 .inventory-item-pending {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: #141a22b8;
-  border-radius: inherit;
+  right: 3px;
+  bottom: 3px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #8abde155;
+  border-top-color: #8abde1;
+  border-radius: 50%;
+  animation: inventory-pending-spin 0.8s linear infinite;
 }
 .inventory-item-pending[hidden] {
   display: none;
 }
-.inventory-item-pending::after {
-  content: '';
-  width: 18px;
-  height: 18px;
-  border: 2px solid #e4bb7940;
-  border-top-color: #e4bb79;
-  border-radius: 50%;
-  animation: inventory-pending-spin 0.8s linear infinite;
+.chr-cell[aria-busy='true']:not(.is-incoming) {
+  opacity: 0.5;
+}
+.chr-cell[aria-busy='true']:not(.is-incoming) img {
+  filter: grayscale(0.7);
 }
 @keyframes inventory-pending-spin {
   to {
@@ -77,7 +90,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .inventory-item-pending::after {
+  .inventory-item-pending {
     animation: none;
   }
 }
@@ -86,4 +99,13 @@
   .inventory-select-toggle.aui-button {
     display: inline-flex;
   }
+}
+
+.chr-cell.is-incoming {
+  background: #1b2028;
+  border: 1px dashed #8abde199;
+  box-shadow: none;
+}
+.chr-cell.is-incoming img {
+  opacity: 0.35;
 }

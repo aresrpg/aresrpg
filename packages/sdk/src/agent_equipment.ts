@@ -5,6 +5,14 @@ import { isValidSuiObjectId, normalizeStructTag } from '@mysten/sui/utils'
 
 import type { EquipChange } from './character_actions.ts'
 
+export const same_agent_equipment = (
+  left: readonly EquipChange[] = [],
+  right: readonly EquipChange[] = []
+): boolean => {
+  const entries = (rows: readonly EquipChange[]) => rows.map(({ slot, item_id }) => `${slot}:${item_id}`).sort()
+  return JSON.stringify(entries(left)) === JSON.stringify(entries(right))
+}
+
 export const decode_agent_equipment = (json: Record<string, unknown> | null | undefined): readonly EquipChange[] => {
   const value = json?.value as { contents?: unknown } | undefined
   if (!Array.isArray(value?.contents)) throw new Error('Character equipment is unavailable.')
@@ -20,8 +28,8 @@ export const decode_agent_equipment = (json: Record<string, unknown> | null | un
 
 /** The exact equipment map used by naked_rule. Missing field means never equipped;
  * failed reads and incomplete pagination never masquerade as a naked character. */
-const find_equipment_field = async (client: SuiGrpcClient, type_package: string, character_id: string) => {
-  const type = normalizeStructTag(`${type_package}::equipment::EquipmentKey`)
+export const find_character_field = async (client: SuiGrpcClient, type_name: string, character_id: string) => {
+  const type = normalizeStructTag(type_name)
   const seen = new Set<string>()
   let cursor: string | null | undefined
   do {
@@ -36,7 +44,7 @@ const find_equipment_field = async (client: SuiGrpcClient, type_package: string,
 }
 
 export const read_agent_equipment = async (client: SuiGrpcClient, type_package: string, character_id: string) => {
-  const field = await find_equipment_field(client, type_package, character_id)
+  const field = await find_character_field(client, `${type_package}::equipment::EquipmentKey`, character_id)
   if (!field) return Object.freeze([]) as readonly EquipChange[]
   const {
     objects: [object],

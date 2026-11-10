@@ -13,6 +13,12 @@ import { fold_inventory, fold_item_packet, is_item_packet } from '@aresrpg/proto
 import { fight_action_to_wire } from '@aresrpg/fight'
 import type { CharacteristicName } from '@aresrpg/immutable'
 
+import {
+  fold_agent_inventory,
+  observe_inventory_subscription,
+  type AgentInventoryView,
+  type AgentInventoryViewInput,
+} from '../agents/inventory_state.ts'
 import { fold_owner_connection, type OwnerConnection, type OwnerConnectionInput } from '../agents/owner_state.ts'
 import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
 import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
@@ -53,6 +59,7 @@ const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   agent_connection: OwnerConnection
   agent_view: AgentView
+  agent_inventory: AgentInventoryView
   agent_pairing_candidate: AgentPairingIdentity | null
   inventory_pairing: AgentPairingIdentity | null
   character_creation: CharacterCreation | null
@@ -89,6 +96,7 @@ export type SessionState = Readonly<{
 export type SessionInput =
   | OwnerConnectionInput
   | AgentViewInput
+  | AgentInventoryViewInput
   | AgentInventoryInput
   | CharacterCreationInput
   | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
@@ -226,7 +234,14 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const receipt = fold_inventory_input(
     fold_character_receipt(
       fold_character_deletion(
-        fold_agent_view(fold_agent_inventory_target(fold_owner_connection(current, input), input), input),
+        fold_agent_view(
+          fold_agent_inventory(
+            fold_agent_inventory_target(fold_owner_connection(current, input), input),
+            current,
+            input
+          ),
+          input
+        ),
         input
       ),
       input
@@ -265,7 +280,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({
-        ...initial_session_state(current.agent_view.serial + 1),
+        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
         wallet: input.session,
         auth_status: 'authenticated',
         auth_request: null,
@@ -283,7 +298,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({
-        ...initial_session_state(current.agent_view.serial + 1),
+        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
         auth_error: input.error,
         auth_ready: current.auth_ready,
         wallets: current.wallets,
@@ -293,7 +308,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({
-        ...initial_session_state(current.agent_view.serial + 1),
+        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
         auth_ready: current.auth_ready,
         wallets: current.wallets,
       })
@@ -377,7 +392,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   }
 
   const refresh_wallet = (): void => {
-    const connected = get_state().session.wallet
+    const { wallet: connected, inventory_pairing: pairing } = get_state().session
     if (!connected) return
     balance_request_id += 1
     const request_id = balance_request_id
@@ -387,6 +402,14 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
         dispatch({ type: 'wallet/refreshed', balance_mist, kares_balance, gas_spent_mist: connected.gas_spent_24h() })
       })
       .catch((error) => console.warn('Wallet balance could not be refreshed.', error))
+    if (pairing)
+      void connected
+        .read_agent_balances(pairing)
+        .then((balances) => {
+          if (request_id !== balance_request_id || connected !== get_state().session.wallet) return
+          dispatch({ type: 'agent/inventory_balances', wallet: connected, pairing, ...balances })
+        })
+        .catch((error) => console.warn('Agent balance could not be refreshed.', error))
   }
   events.on('wallet/refresh', refresh_wallet)
   const balance_timer = setInterval(refresh_wallet, BALANCE_POLL_MS)
@@ -482,6 +505,14 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       observation: market_open ? state.marketplace.observation : null,
     })
   }
+  observe_inventory_subscription({
+    events,
+    dispatch,
+    send: (packet) => {
+      link?.send(packet)
+    },
+    refresh_balances: refresh_wallet,
+  })
   events.on('STATE_UPDATED', (state, previous) => {
     sync_market_subscription(state, previous)
     agent_subscription(state.session, previous.session).forEach((packet) => link?.send(packet))

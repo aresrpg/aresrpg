@@ -219,7 +219,6 @@ export const read_agent_item_returns = async (
   })
   const evidence = await Promise.all(
     pending.map(async ({ object, offer }) => ({
-      digest: object.previousTransaction,
       items: equipment_events(
         await offer_receipt(client, object, agent, recipient),
         sdk.game_type_package!,
@@ -228,12 +227,11 @@ export const read_agent_item_returns = async (
     }))
   )
   const associated_items = new Set(evidence.flatMap((row) => row.items))
-  const receipts = evidence.map((row) => row.digest)
   const paired_gear = new Set(
     objects
       .filter((object) => {
         const cap = decode_agent_purchase_cap(object.content)
-        return associated_items.has(`${cap.kiosk_id}:${cap.item_id}`) || receipts.includes(object.previousTransaction)
+        return associated_items.has(`${cap.kiosk_id}:${cap.item_id}`)
       })
       .map((object) => object.objectId)
   )

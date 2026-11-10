@@ -8,7 +8,7 @@ import { bcs } from '@mysten/sui/bcs'
 import { compose_agent_assets, check_asset_reserve, is_asset_intent } from '../src/agent_asset_transfer.ts'
 import { agent_transfer_actions } from '../src/agent_transfer_actions.ts'
 import { with_personal_kiosk } from '../src/ptb.ts'
-import { read_agent_inventory } from '../src/agent_inventory.ts'
+import { read_agent_recovery_assets } from '../src/agent_inventory.ts'
 import { STAKE_POSITION_BCS } from '../src/kares_decode.ts'
 
 import { kares_test_pins } from './helpers/kares.ts'
@@ -61,6 +61,7 @@ const fixture = () => {
         },
       ],
     }),
+    hydrate: async () => undefined,
     hydrate_unknown: async () => undefined,
     with_personal_kiosk: (
       tx: Transaction,
@@ -188,7 +189,11 @@ test('inventory includes every kiosk/owned page, available/listed/current equipm
   const visited: string[] = []
   const sdk = {
     ...f.sdk,
-    pins: { ...f.sdk.pins, kares_rewards_package_original: id(13) },
+    pins: {
+      ...f.sdk.pins,
+      kares_rewards_package_original: id(13),
+      kares_staking_pool: { id: id(15), shared_version: '1' },
+    },
     get_owned_kiosks: async (_owner: string, page?: { cursor?: string }) =>
       page?.cursor
         ? { kioskOwnerCaps: [{ ...cap, kioskId: id(16) }], hasNextPage: false }
@@ -240,10 +245,9 @@ test('inventory includes every kiosk/owned page, available/listed/current equipm
       }),
     },
   }
-  const inventory = await read_agent_inventory(client as never, sdk as never, sender)
+  const inventory = await read_agent_recovery_assets(client as never, sdk as never, sender)
   expect(visited).toEqual(['first', 'next'])
-  expect(inventory.items.map((row) => row.status).sort()).toEqual(['available', 'equipped', 'listed'])
-  expect(inventory.items.every((row) => row.item.amount === 2)).toBe(true)
+  expect(inventory.items).toEqual([])
   expect(inventory.owned).toHaveLength(2)
   expect(inventory.proceeds.map((row) => row.sui_mist)).toEqual(['37', '37'])
   expect(inventory.positions).toEqual([{ id: id(14), amount: '25' }])
@@ -252,14 +256,13 @@ test('inventory includes every kiosk/owned page, available/listed/current equipm
     pins: { ...sdk.pins, kares_coin_type: undefined },
     read_kares_balance: async () => null,
   }
-  const partial = await read_agent_inventory(client as never, missing_kares as never, sender)
-  expect(partial.kares_mist).toBeNull()
-  expect(partial.items).toHaveLength(3)
+  const partial = await read_agent_recovery_assets(client as never, missing_kares as never, sender)
+  expect(partial.items).toEqual([])
   expect(partial.positions).toEqual([])
   const incomplete = {
     core: { ...client.core, listOwnedObjects: async () => ({ objects: [], hasNextPage: true, cursor: null }) },
   }
-  await expect(read_agent_inventory(incomplete as never, sdk as never, sender)).rejects.toThrow('pagination')
+  await expect(read_agent_recovery_assets(incomplete as never, sdk as never, sender)).rejects.toThrow('pagination')
 })
 
 test('public listings can be cancelled through the shared builder; exclusive transfers cannot be overridden', async () => {
@@ -377,7 +380,7 @@ test('KARES amount selection uses the canonical payment helper; staking withdraw
 test('a changed stack version and an incomplete incoming set abort before building any transfer', async () => {
   const f = fixture()
   const client = {
-    core: { ...f.client.core, getObject: async () => ({ object: { objectId: item_id, version: '2' } }) },
+    core: { ...f.client.core, getObjects: async () => ({ objects: [{ objectId: item_id, version: '2' }] }) },
   }
   await expect(compose_agent_assets(client as never, f.sdk as never, sender, asset_offer, owner)).rejects.toThrow(
     'version changed'
@@ -434,8 +437,11 @@ test('a changed member of a reviewed item group prevents the entire offer from s
   const client = {
     core: {
       ...f.client.core,
-      getObject: async ({ objectId }: { objectId: string }) => ({
-        object: { objectId, version: objectId === second ? second_version : '1' },
+      getObjects: async ({ objectIds }: { objectIds: string[] }) => ({
+        objects: objectIds.map((object_id) => ({
+          objectId: object_id,
+          version: object_id === second ? second_version : '1',
+        })),
       }),
     },
   }
@@ -464,3 +470,70 @@ test('a changed member of a reviewed item group prevents the entire offer from s
   expect(f.state.executions).toBe(0)
   await expect(review.confirm()).rejects.toThrow('Reconcile')
 })
+
+test('full staking recovery withdraws principal then claims both rewards in one PTB; zero principal only claims', async () => {
+  const f = fixture()
+  const sdk = {
+    ...f.sdk,
+    pins: kares_test_pins,
+    door_context: { obj: (tx: Transaction, object_id: string) => tx.object(object_id) },
+  }
+  for (const principal of ['5', '0']) {
+    const tx = await compose_agent_assets(f.client as never, sdk as never, sender, {
+      kind: 'asset_unstake',
+      items: [{ id: id(40), amount: principal }],
+    })
+    expect(calls(tx)).toEqual(principal === '0' ? ['claim'] : ['withdraw', 'claim'])
+    expect(
+      tx
+        .getData()
+        .commands.flatMap((command) => (command.TransferObjects ? [command.TransferObjects.objects.length] : []))
+    ).toEqual(principal === '0' ? [2] : [1, 2])
+  }
+})
+
+for (const [name, amount, kares_accrued, sui_accrued, exhausted] of [
+  ['principal and rewards', 25n, 10n ** 27n, 2n * 10n ** 27n, false],
+  ['zero principal with KARES rewards', 0n, 10n ** 27n, 0n, false],
+  ['zero principal with SUI rewards', 0n, 0n, 10n ** 27n, false],
+  ['exhausted shell', 0n, 0n, 0n, true],
+  ['nonclaimable fractional shell', 0n, 10n ** 27n - 1n, 10n ** 27n - 1n, true],
+] as const) {
+  test(`recovery audit distinguishes ${name} from recoverable staking value`, async () => {
+    const f = fixture()
+    const position = {
+      id: id(40),
+      pool: kares_test_pins.kares_staking_pool.id,
+      amount,
+      kares_index: 0n,
+      sui_index: 0n,
+      kares_accrued,
+      sui_accrued,
+    }
+    const client = {
+      core: {
+        listOwnedObjects: async () => ({
+          hasNextPage: false,
+          objects: [
+            {
+              objectId: position.id,
+              type: `${kares_test_pins.kares_rewards_package_original}::staking::StakePosition<${kares_test_pins.kares_coin_type}>`,
+              content: STAKE_POSITION_BCS.serialize(position).toBytes(),
+            },
+          ],
+        }),
+      },
+    }
+    const sdk = {
+      ...f.sdk,
+      pins: kares_test_pins,
+      get_owned_kiosks: async () => ({ kioskOwnerCaps: [], hasNextPage: false }),
+    }
+    const snapshot = await read_agent_recovery_assets(client as never, sdk as never, sender)
+    expect(snapshot.positions).toEqual(exhausted ? [] : [{ id: position.id, amount: String(amount) }])
+    expect(snapshot.exhausted_positions).toEqual(exhausted ? [position.id] : [])
+    expect(snapshot.owned).toHaveLength(1)
+    position.pool = id(99)
+    await expect(read_agent_recovery_assets(client as never, sdk as never, sender)).rejects.toThrow('identity changed')
+  })
+}

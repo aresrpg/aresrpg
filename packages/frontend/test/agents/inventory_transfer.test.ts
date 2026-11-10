@@ -5,6 +5,8 @@ import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 
 import {
   selected_transfer_items,
+  offered_item_ids,
+  pending_inventory_transfer,
   coin_transfer_intent,
   agent_inventory_groups,
 } from '../../src/agents/inventory_transfer.ts'
@@ -69,4 +71,47 @@ test('locked fragments never inflate movable cells or their transferred quantity
   expect(selected_transfer_items(rows, ['large'])?.map(({ item_id }) => item_id)).toEqual(['small', 'large'])
   expect(selected_transfer_items(rows, ['locked'])).toBeNull()
   expect(groups[1]?.status).toBe('reserved')
+})
+
+test('pending destination cells never become owned inventory and clear only after authoritative arrival', () => {
+  const items = [row('moving', 2).item]
+  const accounts = { player: 'player', agent: 'agent', player_items: items, agent_items: [] }
+  const preview = { recipient: 'agent', items }
+  const pending = pending_inventory_transfer(preview, true, accounts)
+  expect(pending.agent_pending).toEqual(items)
+  expect(pending.player_source_pending).toEqual(items)
+  expect(pending.pending_ids.has('moving')).toBe(true)
+  expect(accounts.agent_items).toEqual([])
+  const waiting_for_indexer = pending_inventory_transfer(preview, false, accounts)
+  expect(waiting_for_indexer.unresolved).toBe(true)
+  const reconciled = pending_inventory_transfer(preview, false, { ...accounts, player_items: [], agent_items: items })
+  expect(reconciled.agent_pending).toEqual([])
+  expect(reconciled.pending_ids.size).toBe(0)
+  expect(reconciled.unresolved).toBe(false)
+})
+
+test('cancelled unsigned previews disappear and stale destinations cannot populate another account', () => {
+  const accounts = { player: 'player', agent: 'agent', player_items: [], agent_items: [] }
+  expect(pending_inventory_transfer(undefined, false, accounts).pending_ids.size).toBe(0)
+  expect(
+    pending_inventory_transfer({ recipient: 'old-agent', items: [row('old', 1).item] }, true, accounts).agent_pending
+  ).toEqual([])
+})
+
+test('a pending character handover reserves its current gear independently of standalone item offers', () => {
+  const reserved = offered_item_ids(
+    [],
+    [
+      {
+        character_id: 'character',
+        seller_kiosk: 'kiosk',
+        purchase_cap: 'character-cap',
+        recipient: 'agent',
+        agent_address: 'player',
+        equipment: [{ slot: 'weapon', item_id: 'sword', purchase_cap: 'sword-cap' }],
+      },
+    ]
+  )
+  expect([...reserved]).toEqual(['sword'])
+  expect(offered_item_ids([], []).size).toBe(0)
 })

@@ -42,8 +42,10 @@ const auth_session = (address = '0xowner'): AuthSession =>
       throw new Error('unused')
     },
     read_agent_returns: unsupported,
-    agent_transfer: { sender: address, prepare: unsupported },
-    agent_deposit: () => ({ sender: address, prepare: unsupported }),
+    read_agent_balances: unsupported,
+    return_agent_assets: unsupported,
+    agent_transfer: { sender: address, fits: unsupported, quote: unsupported, prepare: unsupported },
+    agent_deposit: () => ({ sender: address, fits: unsupported, quote: unsupported, prepare: unsupported }),
     fight: {} as never,
     dungeon: {} as never,
     tournament: {

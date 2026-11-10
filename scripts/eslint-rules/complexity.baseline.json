@@ -119,6 +119,11 @@
         12
       ]
     },
+    "packages/frontend/src/agents/disconnect_agent.ts": {
+      "disconnect_agent": [
+        12
+      ]
+    },
     "packages/frontend/src/agents/observation.ts": {
       "fold_agent_view": [
         13
@@ -463,6 +468,11 @@
         15
       ]
     },
+    "packages/sdk/src/agent_return.ts": {
+      "return_agent_assets": [
+        12
+      ]
+    },
     "packages/sdk/src/seed.ts": {
       "validate_biome_maps": [
         15
@@ -474,6 +484,16 @@
     "packages/sdk/src/seed_sync.ts": {
       "seed_sync_view": [
         14
+      ]
+    },
+    "packages/sdk/src/agent_batch_limits.ts": {
+      "submit_agent_batches": [
+        11
+      ]
+    },
+    "packages/sdk/src/agent_return_custody.ts": {
+      "return_character_custody": [
+        11
       ]
     },
     "packages/bot/test/profession_runtime.test.ts": {
@@ -901,9 +921,29 @@
         10
       ]
     },
+    "packages/frontend/src/agents/hosted_client.ts": {
+      "refresh_hosted_owner": [
+        10
+      ]
+    },
+    "packages/frontend/src/agents/inventory_state.ts": {
+      "fold_observed_packet": [
+        9
+      ]
+    },
     "packages/frontend/src/agents/AgentSpectator.tsx": {
       "AgentSpectator": [
         11
+      ]
+    },
+    "packages/frontend/src/agents/disconnect_agent.ts": {
+      "disconnect_agent": [
+        11
+      ]
+    },
+    "packages/frontend/src/agents/owner_state.ts": {
+      "fold_owner_connection": [
+        12
       ]
     },
     "packages/frontend/src/agents/observation.ts": {
@@ -2090,6 +2130,16 @@
         9
       ]
     },
+    "packages/sdk/test/agent_return_custody.test.ts": {
+      "fixture": [
+        10
+      ]
+    },
+    "packages/sdk/test/helpers/agent_return_fixture.ts": {
+      "mock.module[1]() > agent_transfer_actions > prepare > confirm": [
+        9
+      ]
+    },
     "packages/sdk/scripts/generate_doors.mjs": {
       "arg_expr": [
         11
@@ -2098,6 +2148,16 @@
     "packages/sdk/src/kares_economy.ts": {
       "read_rewards_economy": [
         11
+      ]
+    },
+    "packages/sdk/src/agent_batch.ts": {
+      "offer_batch": [
+        9
+      ]
+    },
+    "packages/sdk/src/agent_return_funding.ts": {
+      "quote_return_transaction": [
+        10
       ]
     },
     "packages/sdk/src/transaction_execution.ts": {
@@ -2127,6 +2187,11 @@
         10
       ]
     },
+    "packages/sdk/src/agent_transfer_actions.ts": {
+      "agent_transfer_actions > compose": [
+        11
+      ]
+    },
     "packages/sdk/src/gift_gateway.ts": {
       "authorize": [
         9
@@ -2152,6 +2217,16 @@
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [
         22
+      ]
+    },
+    "packages/sdk/src/kares_actions.ts": {
+      "create_kares_transaction": [
+        9
+      ]
+    },
+    "packages/sdk/src/agent_return.ts": {
+      "return_agent_assets": [
+        12
       ]
     },
     "packages/sdk/src/seed.ts": {
@@ -2202,6 +2277,11 @@
     "packages/sdk/src/seed_sync.ts": {
       "seed_sync_view": [
         12
+      ]
+    },
+    "packages/sdk/src/agent_batch_limits.ts": {
+      "read_agent_batch_limits > read": [
+        11
       ]
     },
     "packages/sdk/src/gas.ts": {

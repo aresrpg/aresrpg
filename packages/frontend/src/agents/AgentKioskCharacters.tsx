@@ -8,39 +8,31 @@ import { truncate_address } from '../components/SuiTransferResult.tsx'
 
 import type { AgentKioskController } from './useAgentKiosk.ts'
 
-/** Recovery remains in the inventory. Every offer, claim and cancellation is a separate gesture. */
+/** Recovery remains in the inventory. Recall offers and claims together; interrupted transfers retain explicit recovery actions. */
 export const AgentKioskCharacters = ({
   kiosk,
   copy,
   disabled,
 }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; disabled: boolean }>) => {
-  const roster = useAppStore((app) => app.session.characters)
+  const player_roster = useAppStore((app) => app.session.characters)
   const { snapshot, wallet } = kiosk
   if (!snapshot || !wallet) return null
-  const { recall, characters } = snapshot
-  if (![recall.characters.length, recall.pending.length, characters.length, snapshot.character_error].some(Boolean))
-    return null
-  const name = (id: string) => roster.find(({ id: owned }) => owned === id)?.name ?? truncate_address(id)
+  const { recall, characters, roster, pending_characters } = snapshot
+  if (![roster.length, pending_characters.length, characters.length].some(Boolean)) return null
+  const name = (id: string) =>
+    [...player_roster, ...roster].find(({ id: owned }) => owned === id)?.name ?? truncate_address(id)
   return (
-    <details className="agent-kiosk__characters">
-      <summary>{copy.ui.agent_transfer_character}</summary>
-      {snapshot.character_error && (
-        <p className="agent-transfer-error" role="alert">
-          {snapshot.character_error}
-        </p>
-      )}
-      {recall.characters.map((row) => (
-        <div key={row.character_id}>
-          <span title={row.character_id}>{name(row.character_id)}</span>
-          <Button
-            disabled={disabled}
-            onClick={() => kiosk.execute(recall.transfer, { kind: 'offer', ...row, recipient: wallet.address })}
-          >
+    <section className="agent-kiosk__characters" aria-label={copy.ui.agent_transfer_character}>
+      <h3>{copy.ui.agent_transfer_character}</h3>
+      {roster.map((row) => (
+        <div key={row.id}>
+          <span title={row.id}>{row.name}</span>
+          <Button disabled={disabled || kiosk.blocked} onClick={() => kiosk.recall_character(row)}>
             {copy.ui.agent_withdraw}
           </Button>
         </div>
       ))}
-      {recall.pending.map((offer) => (
+      {pending_characters.map((offer) => (
         <div key={offer.purchase_cap}>
           <span title={offer.character_id}>{name(offer.character_id)}</span>
           <Button disabled={disabled || !snapshot.deposit} onClick={() => kiosk.claim_character(offer)}>
@@ -65,6 +57,6 @@ export const AgentKioskCharacters = ({
           </Button>
         </div>
       ))}
-    </details>
+    </section>
   )
 }

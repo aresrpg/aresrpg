@@ -5,23 +5,29 @@ import type { ItemRow } from '@aresrpg/protocol'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
-import { InventoryItemCell } from '../characters/InventoryItemCell.tsx'
-import { InventorySelectionGrid } from '../characters/InventorySelectionGrid.tsx'
-import { bag_item_matches, type BagCategory, type ResourceFilter } from '../characters/InventoryResourceFilters.tsx'
-import { select_inventory_item } from '../characters/inventory_selection.ts'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { SendModalShell } from '../components/SendModalShell.tsx'
+import { inventory_groups } from '../inventory_stacks.ts'
+import { AgentKioskFilters } from '../agents/AgentKioskFilters.tsx'
+import { agent_inventory_groups } from '../agents/inventory_transfer.ts'
 
-import { AgentKioskFilters } from './AgentKioskFilters.tsx'
-import { agent_inventory_groups } from './inventory_transfer.ts'
+import { InventoryFilters } from './InventoryFilters.tsx'
+import { InventoryItemCell } from './InventoryItemCell.tsx'
+import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
+import { bag_item_matches, type BagCategory, type ResourceFilter } from './InventoryResourceFilters.tsx'
+import { select_inventory_item } from './inventory_selection.ts'
 
-export const AgentKioskGrid = ({
+export const InventoryTransferGrid = ({
+  owner = 'agent',
   rows,
+  incoming,
   copy,
   disabled,
   transfer,
   pending_ids,
 }: Readonly<{
+  owner?: 'player' | 'agent'
+  incoming: readonly ItemRow[]
   rows: readonly AgentInventoryItem[]
   copy: AppCopy
   disabled: boolean
@@ -33,6 +39,7 @@ export const AgentKioskGrid = ({
   const [query, set_query] = useState('')
   const [selected, select] = useState<readonly string[]>([])
   const [inspected, inspect] = useState<ItemRow | null>(null)
+  const Filters = owner === 'player' ? InventoryFilters : AgentKioskFilters
   const groups = agent_inventory_groups(rows)
   const filtered = groups.filter(
     ({ item }) =>
@@ -41,7 +48,7 @@ export const AgentKioskGrid = ({
   )
   return (
     <>
-      <AgentKioskFilters
+      <Filters
         category={category}
         set_category={(value) => {
           set_category(value)
@@ -55,7 +62,7 @@ export const AgentKioskGrid = ({
         copy={copy}
       />
       <InventorySelectionGrid
-        class_name="agent-kiosk__grid"
+        class_name={owner === 'player' ? 'chr-equip__grid' : 'agent-kiosk__grid'}
         items={groups.map(({ item }) => item)}
         selected={selected}
         change={select}
@@ -63,12 +70,22 @@ export const AgentKioskGrid = ({
         disabled={disabled}
         transfer={transfer}
       >
+        {inventory_groups(incoming).map(({ item, amount }) => (
+          <InventoryItemCell
+            key={`incoming-${item.id}`}
+            item={item}
+            amount={amount}
+            pending
+            disabled
+            class_name="is-incoming"
+          />
+        ))}
         {filtered.map(({ item, items, amount, status, locked }) => (
           <div className="agent-kiosk__cell" key={item.id}>
             <InventoryItemCell
               item={item}
               amount={amount}
-              disabled={disabled || locked}
+              disabled={disabled || locked || items.some(({ id }) => pending_ids.has(id))}
               pending={items.some(({ id }) => pending_ids.has(id))}
               aria-pressed={selected.includes(item.id)}
               class_name={selected.includes(item.id) ? 'is-selected' : ''}
