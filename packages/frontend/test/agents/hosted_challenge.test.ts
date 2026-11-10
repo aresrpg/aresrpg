@@ -163,3 +163,27 @@ test('rejects expired and envelope-mismatched response lifetimes before signing'
     expect(calls).toHaveLength(0)
   }
 })
+
+test('consent identity uses the registered HTTPS destination, not client branding', async () => {
+  const { hosted_consent_destination } = await import('../../src/agents/hosted_challenge.ts')
+  expect(hosted_consent_destination('https://receiver.example:8443/callback?state=value')).toBe('receiver.example:8443')
+  for (const uri of [
+    'http://receiver.example',
+    'https://ChatGPT@receiver.example/callback',
+    'https://receiver.example/#fake',
+    'not a URL',
+  ])
+    expect(() => hosted_consent_destination(uri)).toThrow()
+})
+
+test('only the exact documented ChatGPT callback receives its friendly name', async () => {
+  const { hosted_consent_destination } = await import('../../src/agents/hosted_challenge.ts')
+  expect(hosted_consent_destination('https://chatgpt.com/connector_platform_oauth_redirect')).toBe('ChatGPT')
+  for (const uri of [
+    'https://chatgpt.com.attacker.example/connector_platform_oauth_redirect',
+    'https://chatgpt.com:8443/connector_platform_oauth_redirect',
+    'https://chatgpt.com/unrelated',
+    'https://chatgpt.com/connector_platform_oauth_redirect?next=attacker',
+  ])
+    expect(hosted_consent_destination(uri)).not.toBe('ChatGPT')
+})

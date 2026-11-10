@@ -26,13 +26,14 @@ export const create_http_fixture = (
     provision_enabled: true,
     play_enabled: true,
   })
-  let cookie = ''
+  const cookies = new Map<string, string>()
+  const cookie = () => [...cookies].map(([name, value]) => `${name}=${value}`).join('; ')
   const request = async (path: string, body?: unknown, bearer?: string) => {
     const browser = path.startsWith('/connect/')
     const headers = new Headers({ 'content-type': 'application/json' })
     if (browser) {
       headers.set('origin', config.web_origin)
-      headers.set('cookie', cookie)
+      headers.set('cookie', cookie())
     }
     if (bearer) headers.set('authorization', `Bearer ${bearer}`)
     const response = await ingress(
@@ -43,7 +44,11 @@ export const create_http_fixture = (
       })
     )
     const set_cookie = response.headers.get('set-cookie')
-    if (set_cookie) cookie = set_cookie.split(';')[0]!
+    if (set_cookie) {
+      const [name, value] = set_cookie.split(';')[0]!.split('=')
+      if (set_cookie.includes('Max-Age=0')) cookies.delete(name!)
+      else cookies.set(name!, value!)
+    }
     return response
   }
   const json = async <T>(path: string, body?: unknown, bearer?: string): Promise<T> => {
@@ -52,5 +57,13 @@ export const create_http_fixture = (
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${JSON.stringify(value)}`)
     return value
   }
-  return { store, config, ingress, request, json, signature: (message: string) => `fixture:${hash_secret(message)}` }
+  return {
+    store,
+    config,
+    ingress,
+    request,
+    json,
+    cookie,
+    signature: (message: string) => `fixture:${hash_secret(message)}`,
+  }
 }

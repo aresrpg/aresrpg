@@ -228,3 +228,56 @@ test.each(['wallet', 'abort'])(
     }
   }
 )
+
+test.each(['', 'malformed', 'expired'])(
+  'invalid provider authorization ID %s never creates a standalone request',
+  async (id) => {
+    const wallet = {
+      identity: 'zklogin',
+      address: 'owner',
+      read_agent_pairing_request: () => ({ owner: 'owner', zklogin_public_identifier: 'google' }),
+    } as unknown as AuthSession
+    const read = spyOn(app, 'read_app_state').mockReturnValue({ session: { wallet } } as ReturnType<
+      typeof app.read_app_state
+    >)
+    const calls: string[] = []
+    const fetcher = (async (url: URL) => {
+      calls.push(url.pathname)
+      return Response.json({ error: 'invalid_session' }, { status: 400 })
+    }) as unknown as typeof fetch
+    try {
+      const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+      await expect(authenticate_hosted(client, wallet, id, () => {})).rejects.toThrow('Hosted service request failed')
+      expect(calls).toEqual(['/connect/request'])
+    } finally {
+      read.mockRestore()
+    }
+  }
+)
+
+test.each([
+  ['another request', { ...consent, authorization_id: 'another' }],
+  ['missing request', null],
+  ['foreign resource', { ...consent, resource: 'https://foreign.example/mcp' }],
+] as const)('provider entry refuses %s before session reuse or signing', async (_name, response) => {
+  const wallet = {
+    identity: 'zklogin',
+    address: 'owner',
+    read_agent_pairing_request: () => ({ owner: 'owner', zklogin_public_identifier: 'google' }),
+  } as unknown as AuthSession
+  const read = spyOn(app, 'read_app_state').mockReturnValue({ session: { wallet } } as ReturnType<
+    typeof app.read_app_state
+  >)
+  const calls: string[] = []
+  const fetcher = (async (url: URL) => {
+    calls.push(url.pathname)
+    return Response.json(response)
+  }) as unknown as typeof fetch
+  try {
+    const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+    await expect(authenticate_hosted(client, wallet, 'request', () => {})).rejects.toThrow('Invalid consent request')
+    expect(calls).toEqual(['/connect/request'])
+  } finally {
+    read.mockRestore()
+  }
+})

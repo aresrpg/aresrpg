@@ -148,9 +148,10 @@ export const create_connect_service = (
         consumed: false,
         consent,
       } satisfies OwnerChallenge)
-      return { authorization_id: id, challenge_id, message, expires_at }
+      return { authorization_id: id, challenge_id, message, expires_at, session_expires_at: request.expires_at }
     })
-    return { result, session }
+    const { session_expires_at, ...challenge_result } = result
+    return { result: challenge_result, session, expires_at: session_expires_at }
   }
   const load_proof = async (id: string, signature: string, session: string, purpose: OwnerChallenge['purpose']) => {
     const proof = await store.read<OwnerChallenge>(`challenge:${id}`)

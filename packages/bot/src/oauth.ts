@@ -110,7 +110,7 @@ export const create_oauth_service = (store: ControlStore, config: BotConfig, now
     const location = new URL('/world', config.web_origin)
     location.searchParams.set('intent', 'connect-agent')
     location.searchParams.set('authorization_id', request.id)
-    return { location: location.href, session }
+    return { location: location.href, session, authorization_id: request.id, expires_at: request.expires_at }
   }
   const authenticate = async (token: string): Promise<Grant> => {
     const [id, secret] = opaque_parts(token)

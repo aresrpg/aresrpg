@@ -15,7 +15,7 @@ import type { AuthSession } from '../auth.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
 import { read_app_state, dispatch_app } from '../store.ts'
 
-import { sign_hosted_message } from './hosted_challenge.ts'
+import { sign_hosted_message, hosted_consent_destination } from './hosted_challenge.ts'
 import { complete_agent_pairing } from './pairing_storage.ts'
 
 export type HostedClient = ReturnType<typeof create_hosted_client>
@@ -104,18 +104,22 @@ export const authenticate_hosted = async (
 ) => {
   current_wallet(wallet, client.signal)
   const pairing = pairing_request(wallet)
-  const consent = authorization_id
-    ? await client.request<HostedConnectRequest>(
-        `/connect/request?authorization_id=${encodeURIComponent(authorization_id)}`
-      )
-    : null
+  const consent =
+    authorization_id !== null
+      ? await client.request<HostedConnectRequest>(
+          `/connect/request?authorization_id=${encodeURIComponent(authorization_id)}`
+        )
+      : null
   if (
-    consent &&
-    ![
-      consent.network === 'mainnet',
-      Array.isArray(consent.scopes),
-      consent.resource === new URL('/mcp', client.origin).href,
-    ].every(Boolean)
+    authorization_id !== null &&
+    (!consent ||
+      ![
+        consent.authorization_id === authorization_id,
+        Boolean(hosted_consent_destination(consent.redirect_uri)),
+        consent.network === 'mainnet',
+        Array.isArray(consent.scopes),
+        consent.resource === new URL('/mcp', client.origin).href,
+      ].every(Boolean))
   )
     throw new Error('Invalid consent request')
   const prove = async (proof_id: string | null) => {

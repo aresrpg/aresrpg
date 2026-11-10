@@ -24,3 +24,13 @@ export const sign_hosted_message = async <T>(
   if (challenge.expires_at <= Date.now()) throw new Error('Expired challenge')
   return signed
 }
+
+/** Display the registered destination, never a self-asserted OAuth client brand. */
+export const hosted_consent_destination = (redirect_uri: string): string => {
+  const url = new URL(redirect_uri)
+  if ([url.protocol !== 'https:', url.username, url.password, url.hash].some(Boolean))
+    throw new Error('Invalid consent callback')
+  // Exact stable callback documented at https://developers.openai.com/plugins/build/auth.
+  // Recognition changes presentation only; it grants no trust or authorization to the client.
+  return url.href === 'https://chatgpt.com/connector_platform_oauth_redirect' ? 'ChatGPT' : url.host
+}

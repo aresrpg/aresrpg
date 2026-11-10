@@ -3,7 +3,7 @@
 import type { HostedChallengeInput } from '@aresrpg/protocol'
 import { parse_agent_pairing_request } from '@aresrpg/sdk/agent-pairing'
 
-import type { Bot, BotConfig, BotPolicy } from './model.ts'
+import type { Bot, BotConfig, BotPolicy, OwnerChallenge } from './model.ts'
 import { public_bot } from './model.ts'
 import type { ControlStore } from './store.ts'
 import type { OwnerVerifier } from './owner_proof.ts'
@@ -14,17 +14,26 @@ import { create_mcp_handler } from './mcp.ts'
 import { hash_secret, require_string } from './security.ts'
 import { request_pairing_proof, request_provisioning } from './provisioning.ts'
 
-const COOKIE = '__Host-ares-bot'
 const response = (value: unknown, status = 200) =>
   Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } })
-const cookie_header = (secret: string) => `${COOKIE}=${secret}; Path=/; HttpOnly; Secure; SameSite=None`
-const session_cookie = (request: Request) =>
-  request.headers
-    .get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${COOKIE}=`))
-    ?.slice(COOKIE.length + 1) ?? ''
+const cookie_name = (id: string) => {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(id)) throw new Error('invalid_session')
+  return `__Host-ares-bot-${id}`
+}
+const cookie_header = (id: string, secret: string, expires_at: number) =>
+  `${cookie_name(id)}=${secret}; Path=/; HttpOnly; Secure; SameSite=None; Expires=${new Date(expires_at).toUTCString()}`
+const session_cookie = (request: Request, id?: string) => {
+  if (!id) return ''
+  const name = cookie_name(id)
+  return (
+    request.headers
+      .get('cookie')
+      ?.split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${name}=`))
+      ?.slice(name.length + 1) ?? ''
+  )
+}
 
 export const create_ingress = (
   options: Readonly<{
@@ -45,8 +54,14 @@ export const create_ingress = (
   const control = create_control_service(store, config, options.observation_freshness_ms, Date.now, options.observe)
   const mcp = create_mcp_handler(control, options.play_enabled, `${config.issuer}/.well-known/oauth-protected-resource`)
   type PostHandler = (request: Request, body: Readonly<Record<string, unknown>>) => Promise<Response>
+  // The stored challenge selects its own request binding; a caller cannot substitute another cookie.
+  const proof_session = async (request: Request, id: string) => {
+    const proof = await store.read<OwnerChallenge>(`challenge:${id}`)
+    return session_cookie(request, proof?.authorization_id)
+  }
   const provision: PostHandler = async (request, body) => {
-    const owner = await connect.owner_session(require_string(body.authorization_id), session_cookie(request))
+    const id = require_string(body.authorization_id)
+    const owner = await connect.owner_session(id, session_cookie(request, id))
     if (config.recovery_mode || !options.provision_enabled) throw new Error('managed_signer_unconfigured')
     const creation_id = body.creation_id === undefined ? 'first' : require_string(body.creation_id)
     const bot_id = hash_secret(`${config.network}:${owner.owner}:${owner.zklogin_public_identifier}:${creation_id}`)
@@ -63,7 +78,7 @@ export const create_ingress = (
   }
   const pairing_proof: PostHandler = async (request, body) => {
     const id = require_string(body.authorization_id)
-    const owner = await connect.owner_session(id, session_cookie(request))
+    const owner = await connect.owner_session(id, session_cookie(request, id))
     if (config.recovery_mode || !options.provision_enabled) throw new Error('managed_signer_unconfigured')
     const proof = await request_pairing_proof(store, {
       authorization_id: id,
@@ -79,40 +94,37 @@ export const create_ingress = (
     [
       '/connect/challenge',
       async (request, body) => {
-        const challenge = await connect.challenge(body as HostedChallengeInput, session_cookie(request))
+        const input = body as HostedChallengeInput
+        const challenge = await connect.challenge(input, session_cookie(request, input.authorization_id))
         const reply = response(challenge.result)
-        reply.headers.set('Set-Cookie', cookie_header(challenge.session))
+        reply.headers.set(
+          'Set-Cookie',
+          cookie_header(challenge.result.authorization_id, challenge.session, challenge.expires_at)
+        )
         return reply
       },
     ],
     [
       '/connect/verify',
-      async (request, body) =>
-        response(
-          await connect.verify(
-            require_string(body.challenge_id),
-            require_string(body.signature),
-            session_cookie(request)
-          )
-        ),
+      async (request, body) => {
+        const id = require_string(body.challenge_id)
+        return response(await connect.verify(id, require_string(body.signature), await proof_session(request, id)))
+      },
     ],
     [
       '/connect/authorize',
-      async (request, body) =>
-        response(
-          await connect.authorize(
-            require_string(body.challenge_id),
-            require_string(body.signature),
-            session_cookie(request)
-          )
-        ),
+      async (request, body) => {
+        const id = require_string(body.challenge_id)
+        return response(await connect.authorize(id, require_string(body.signature), await proof_session(request, id)))
+      },
     ],
     [
       '/connect/cancel',
       async (request, body) => {
-        await connect.cancel(require_string(body.authorization_id), session_cookie(request))
+        const id = require_string(body.authorization_id)
+        await connect.cancel(id, session_cookie(request, id))
         const reply = response({ cancelled: true })
-        reply.headers.set('Set-Cookie', `${cookie_header('')}; Max-Age=0`)
+        reply.headers.set('Set-Cookie', `${cookie_header(id, '', 0)}; Max-Age=0`)
         return reply
       },
     ],
@@ -164,7 +176,11 @@ export const create_ingress = (
           status: 302,
           headers: {
             Location: authorization.location,
-            'Set-Cookie': cookie_header(authorization.session),
+            'Set-Cookie': cookie_header(
+              authorization.authorization_id,
+              authorization.session,
+              authorization.expires_at
+            ),
             'Cache-Control': 'no-store',
           },
         })
@@ -172,17 +188,17 @@ export const create_ingress = (
     ],
     [
       '/connect/request',
-      async (request, url) =>
-        response(
-          await connect.details(require_string(url.searchParams.get('authorization_id')), session_cookie(request))
-        ),
+      async (request, url) => {
+        const id = require_string(url.searchParams.get('authorization_id'))
+        return response(await connect.details(id, session_cookie(request, id)))
+      },
     ],
     [
       '/connect/bots',
-      async (request, url) =>
-        response(
-          await connect.list_bots(require_string(url.searchParams.get('authorization_id')), session_cookie(request))
-        ),
+      async (request, url) => {
+        const id = require_string(url.searchParams.get('authorization_id'))
+        return response(await connect.list_bots(id, session_cookie(request, id)))
+      },
     ],
   ])
   const route = async (request: Request): Promise<Response> => {
@@ -209,7 +225,14 @@ export const create_ingress = (
       return cors(await route(request), origin)
     } catch (error) {
       const failure = request_error(error, config, new URL(request.url).pathname)
-      console.error('Hosted request rejected', failure.status)
+      console.error(
+        'Hosted request rejected',
+        JSON.stringify({
+          path: new URL(request.url).pathname,
+          status: failure.status,
+          code: public_error_code(error),
+        })
+      )
       return cors(failure, origin)
     }
   }
@@ -272,9 +295,12 @@ const parse_body = (text: string, content_type: string): Readonly<Record<string,
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('invalid_request')
   return body as Readonly<Record<string, unknown>>
 }
-const error_response = (error: unknown, config: BotConfig) => {
+const public_error_code = (error: unknown): string => {
   const message = error instanceof Error ? error.message : 'request_failed'
-  const code = /^[a-z_]+$/.test(message) ? message : 'request_failed'
+  return /^[a-z_]+$/.test(message) ? message : 'request_failed'
+}
+const error_response = (error: unknown, config: BotConfig) => {
+  const code = public_error_code(error)
   const auth = code === 'invalid_token' || code === 'insufficient_scope'
   const statuses: Readonly<Record<string, number>> = {
     invalid_token: 401,

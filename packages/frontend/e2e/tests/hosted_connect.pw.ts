@@ -129,20 +129,38 @@ const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
 const open = async (page: Page, query = '') => {
   await page.goto(`/e2e/fixtures/agent_pairing.html${query}`)
   await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
-  await page.getByRole('button', { name: 'Claude', exact: true }).click()
-  await page.getByRole('button', { name: 'Connect', exact: true }).click()
+  if (!new URLSearchParams(query).has('authorization_id')) {
+    await page.getByRole('button', { name: 'Claude', exact: true }).click()
+  }
 }
 const verify = async (page: Page) => {
-  await expect(page.getByText('Setup complete')).toBeVisible()
+  await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'ready')
 }
+
+test('standalone provider installation never starts owner proof, provisioning, or consent', async ({ page }) => {
+  const { requests } = await mock_hosted(page)
+  await open(page)
+  for (const provider of ['ChatGPT', 'Claude', 'Grok']) {
+    await page.getByRole('button', { name: provider, exact: true }).click()
+    await expect(page.locator('[data-provider-guide]')).toHaveAttribute('data-provider-guide', provider)
+    await expect(page.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0)
+  }
+  await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
+  await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'idle')
+  await page.keyboard.press('Escape')
+  expect(requests).toEqual([])
+  expect(
+    await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)
+  ).toBeNull()
+})
 
 test('fresh hosted proof saves recovery but never confirms a transfer recipient or active AI', async ({ page }) => {
   const { requests, bot } = await mock_hosted(page)
-  await open(page)
+  await open(page, '?authorization_id=fixture-auth')
   await verify(page)
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', 'host-persistent')
   await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
-  await expect(page.locator('.agent-provider-example-url')).toHaveText(`${service}/mcp`)
+  await expect(page.locator('[data-provider-guide]')).toHaveCount(0)
   await expect(page.getByRole('combobox')).toHaveCount(0)
   const saved = await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)
   expect(JSON.parse(saved!)).toEqual([{ address: bot.address, multisig_public_key: bot.multisig_public_key }])
@@ -150,18 +168,16 @@ test('fresh hosted proof saves recovery but never confirms a transfer recipient 
   await page.screenshot({ path: 'test-results/hosted-agent-ready.png' })
 })
 
-test('OAuth shows the exact client, bot, scopes without an extra spending allowance before explicit approval', async ({
-  page,
-}) => {
+test('OAuth shows the callback destination and meaningful access before explicit connection', async ({ page }) => {
   const { requests, bot } = await mock_hosted(page)
   await open(page, '?authorization_id=fixture-auth')
   await verify(page)
-  await expect(page.getByText('Fixture assistant', { exact: true })).toBeVisible()
-  await expect(page.getByText('bot:observe', { exact: true })).toBeVisible()
+  await expect(page.getByText('assistant.fixture.example', { exact: true })).toBeVisible()
+  await expect(page.getByText('Can view this bot.', { exact: true })).toBeVisible()
   await expect(page.getByRole('textbox')).toHaveCount(0)
   expect(requests.some(({ path, body }) => path === '/connect/challenge' && body.purpose === 'consent')).toBe(false)
   await page.screenshot({ path: 'test-results/hosted-agent-consent.png' })
-  await page.getByRole('button', { name: 'Approve this bot and access', exact: true }).click()
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
   await expect(page).toHaveURL('https://assistant.fixture.example/callback?code=fixture-code')
   expect(requests.find(({ body }) => body.purpose === 'consent')?.body).toMatchObject({
     bot_id: bot.id,
@@ -177,7 +193,7 @@ test('OAuth shows the exact client, bot, scopes without an extra spending allowa
 for (const action of ['close', 'wallet'] as const) {
   test(`${action} during wallet approval cancels the session and ignores the late signature`, async ({ page }) => {
     const { requests } = await mock_hosted(page)
-    await open(page, '?slow_signature')
+    await open(page, '?authorization_id=fixture-auth&slow_signature')
     await expect(page.locator('html')).toHaveAttribute('data-fixture-signing', 'true')
     if (action === 'close') await page.keyboard.press('Escape')
     else await page.evaluate(() => dispatchEvent(new CustomEvent('fixture/wallet', { detail: 1 })))
@@ -187,6 +203,10 @@ for (const action of ['close', 'wallet'] as const) {
     expect(requests.some(({ path }) => path === '/connect/verify')).toBe(false)
     expect(requests.filter(({ path }) => path === '/connect/challenge')).toHaveLength(1)
     await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
+    if (action === 'wallet') {
+      await expect(page.getByRole('alert')).toContainText('Start the connection again in your assistant.')
+      await expect(page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0)
+    }
   })
 }
 
@@ -202,7 +222,7 @@ test('cancelling a pending consent signature cannot submit authorization', async
   await open(page, '?authorization_id=fixture-auth')
   await verify(page)
   await page.evaluate(() => document.documentElement.setAttribute('data-delay-next-signature', ''))
-  await page.getByRole('button', { name: 'Approve this bot and access', exact: true }).click()
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
   await expect.poll(() => requests.some(({ body }) => body.purpose === 'consent')).toBe(true)
   await page.keyboard.press('Escape')
   await expect.poll(() => requests.some(({ path }) => path === '/connect/cancel')).toBe(true)
@@ -225,7 +245,7 @@ test('invalid hosted proof cannot publish a custody candidate', async ({ page })
       },
     })
   )
-  await open(page)
+  await open(page, '?authorization_id=fixture-auth')
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
 })
@@ -251,7 +271,7 @@ test('unconfigured provisioning stays unavailable without a fake funded or conne
       json: { error: 'managed_signer_unconfigured' },
     })
   )
-  await open(page)
+  await open(page, '?authorization_id=fixture-auth')
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
   await expect(page.locator('.agent-provider-example-url')).toHaveCount(0)
@@ -269,7 +289,6 @@ test('MCP endpoint copy remains selectable when clipboard permission is refused'
   )
   await mock_hosted(page)
   await open(page)
-  await verify(page)
   await page.getByRole('button', { name: 'Copy connection URL', exact: true }).click()
   await expect(page.getByText('Copy failed. Select and copy the request above manually.')).toBeVisible()
   await expect(page.locator('.agent-provider-example-url')).toHaveText(`${service}/mcp`)
@@ -284,7 +303,7 @@ for (const viewport of [
     await mock_hosted(page)
     await open(page, '?authorization_id=fixture-auth')
     await verify(page)
-    const approval = page.getByRole('button', { name: 'Approve this bot and access', exact: true })
+    const approval = page.getByRole('button', { name: 'Connect', exact: true })
     await approval.scrollIntoViewIfNeeded()
     await expect(approval).toBeVisible()
     const modal = await page.locator('[data-agent-setup]').boundingBox()

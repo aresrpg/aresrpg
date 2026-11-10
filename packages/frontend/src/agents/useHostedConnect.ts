@@ -5,17 +5,18 @@ import type { HostedBotDescriptor } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../auth.ts'
 
-import { empty_hosted, hosted_pending, reduce_hosted } from './hosted_state.ts'
+import { empty_hosted, hosted_pending, reduce_hosted, hosted_failure } from './hosted_state.ts'
 import { setup_hosted, authorize_hosted, create_hosted_client } from './hosted_client.ts'
 
 export const useHostedConnect = (wallet: AuthSession | null, origin: string, requested_id: string | null) => {
   const [state, dispatch] = useReducer(reduce_hosted<HostedBotDescriptor>, undefined, empty_hosted<HostedBotDescriptor>)
+  const eligible = [wallet?.identity === 'zklogin', !!origin].every(Boolean)
   const lifetime = useRef({ authorization_id: requested_id, completed: false, wallet })
   useEffect(() => {
     const context = { authorization_id: requested_id, completed: false, wallet }
     // eslint-disable-next-line functional/immutable-data -- This ref owns one mounted network lifetime, never app state.
     lifetime.current = context
-    dispatch({ type: 'reset', session: wallet })
+    dispatch({ type: 'reset', session: wallet, resume_authorization: requested_id !== null && eligible })
     return () =>
       queueMicrotask(() => {
         if (lifetime.current !== context && lifetime.current.wallet === wallet) return
@@ -32,7 +33,7 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
           })
           .catch((error) => console.warn('Hosted authorization cancellation failed; expiry still applies.', error))
       })
-  }, [wallet, origin, requested_id])
+  }, [wallet, origin, requested_id, eligible])
   useEffect(() => {
     if (!wallet || state.session !== wallet || !origin || !hosted_pending(state.phase)) return
     const controller = new AbortController()
@@ -73,9 +74,13 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     void operations[state.phase as keyof typeof operations]().catch((error) => {
       if (controller.signal.aborted) return
       console.error('Hosted agent connection failed.', error)
-      dispatch({ type: 'result', generation, values: { phase: 'failed' } })
+      dispatch({
+        type: 'result',
+        generation,
+        values: { phase: 'failed', failure: hosted_failure(error, requested_id) },
+      })
     })
     return () => controller.abort()
   }, [wallet, origin, requested_id, state])
-  return { state, dispatch }
+  return { state, dispatch, eligible }
 }

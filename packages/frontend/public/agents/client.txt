@@ -7,18 +7,17 @@ No assistant-owned private key, local CLI, server installation or key upload is 
 
 ## Connect
 
-1. Choose ChatGPT, Claude or Grok in Connect Your Agent. Authenticate with your existing
-   Google game wallet. Connect prepares your hosted bot and verifies its signer automatically. If the service is unavailable,
-   stop: a missing signer must never be replaced with a disposable key.
-2. Wait for setup to complete. The browser verifies a fresh public proof against its own
-   Google-bound request and saves the public recovery descriptor. A pending request,
-   service metadata or an assistant-supplied address is not verified custody.
-3. Copy the public HTTPS MCP endpoint shown by the configured service. Add that endpoint
+1. Choose ChatGPT, Claude or Grok in Connect Your Agent. Follow its installation guide.
+   This step does not prepare a bot or request a wallet signature.
+2. Copy the public HTTPS MCP endpoint shown by the configured service. Add that endpoint
    in your assistant's custom MCP plugin or connector settings. Do not invent a deployment
    URL or claim a provider plugin has already been published.
-4. Follow the assistant's OAuth connection. Sign in with the SAME AresRPG Google wallet.
-   Review the exact assistant client, registered callback, bot address, network, scopes,
-   policy revision. Approve only the access you intend.
+3. Follow the assistant's OAuth connection. Sign in with the SAME AresRPG Google wallet.
+   The browser restores owner proof, prepares the hosted bot if needed, verifies its fresh
+   signer proof and saves its public recovery descriptor. If the service is unavailable,
+   stop: a missing signer must never be replaced with a disposable key.
+4. Review the destination and requested access. Select Connect only for the access you intend.
+   This approves that exact OAuth request; setup alone never grants assistant access.
    Wallet funding is the only SUI spending limit. Authorization does not fund or transfer assets to the bot.
 5. Ask your assistant to inspect the bot and agree on an objective before requesting actions.
    Hosted connection readiness is distinct from active AI play. No inference is provided

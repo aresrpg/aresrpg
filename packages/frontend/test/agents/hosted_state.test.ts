@@ -57,3 +57,42 @@ test('hosted service has no implicit endpoint and rejects insecure or credential
   ])
     expect(() => resolve_bot_service_url(url)).toThrow()
 })
+
+test('provider entry resumes setup once but never grants consent automatically', () => {
+  const wallet = {}
+  const pending = reduce_hosted(empty_hosted(), { type: 'reset', session: wallet, resume_authorization: true })
+  expect(pending.phase).toBe('authenticating')
+  const replacement = reduce_hosted(pending, { type: 'reset', session: {}, resume_authorization: true })
+  expect(replacement).toMatchObject({ phase: 'failed', failure: 'restart' })
+  const disconnected = reduce_hosted(pending, { type: 'reset', session: null })
+  expect(reduce_hosted(disconnected, { type: 'reset', session: {}, resume_authorization: true })).toMatchObject({
+    phase: 'failed',
+    failure: 'restart',
+  })
+  expect(
+    reduce_hosted(replacement, { type: 'result', generation: pending.generation, values: { phase: 'ready' } })
+  ).toBe(replacement)
+  expect(reduce_hosted(pending, { type: 'start', phase: 'authenticating' })).toBe(pending)
+  const ready = reduce_hosted(pending, { type: 'result', generation: pending.generation, values: { phase: 'ready' } })
+  expect(ready.phase).toBe('ready')
+  const failed = reduce_hosted(pending, { type: 'result', generation: pending.generation, values: { phase: 'failed' } })
+  expect(failed.phase).toBe('failed')
+  expect(reduce_hosted(failed, { type: 'start', phase: 'authenticating' }).generation).toBeGreaterThan(
+    failed.generation
+  )
+  const closed = reduce_hosted(pending, { type: 'reset', session: null })
+  expect(reduce_hosted(closed, { type: 'result', generation: pending.generation, values: { phase: 'ready' } })).toBe(
+    closed
+  )
+  expect(reduce_hosted(empty_hosted(), { type: 'reset', session: wallet }).phase).toBe('idle')
+  expect(reduce_hosted(empty_hosted(), { type: 'reset', session: null, resume_authorization: true }).phase).toBe('idle')
+})
+
+test('invalid bound authorization requires provider restart; unknown errors permit explicit retry', async () => {
+  const { hosted_failure } = await import('../../src/agents/hosted_state.ts')
+  for (const cause of ['invalid_session', 'invalid_challenge', 'invalid_grant', 'invalid_client']) {
+    expect(hosted_failure(new Error('Request failed', { cause }), 'request')).toBe('restart')
+    expect(hosted_failure(new Error('Request failed', { cause }), null)).toBe('retry')
+  }
+  expect(hosted_failure(new Error('Request failed', { cause: 'storage_unavailable' }), 'request')).toBe('retry')
+})
