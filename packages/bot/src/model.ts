@@ -13,7 +13,13 @@ export type Bot = Readonly<{
   status: 'ready' | 'paused'
   policy: BotPolicy
 }>
-export type Account = Readonly<{ owner: string; zklogin_public_identifier: string; bot_ids: readonly string[] }>
+export type Account = Readonly<{
+  owner: string
+  zklogin_public_identifier: string
+  bot_ids: readonly string[]
+  grant_ids?: readonly string[]
+  grants_indexed?: boolean
+}>
 export type OAuthClient = Readonly<{ id: string; name: string; redirect_uris: readonly string[]; expires_at?: number }>
 export type AuthorizationRequest = Readonly<{
   id: string

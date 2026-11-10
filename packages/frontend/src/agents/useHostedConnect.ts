@@ -4,9 +4,10 @@ import { useEffect, useReducer, useRef } from 'react'
 import type { HostedBotDescriptor } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../auth.ts'
+import { read_app_state, dispatch_app } from '../store.ts'
 
 import { empty_hosted, hosted_pending, reduce_hosted, hosted_failure } from './hosted_state.ts'
-import { setup_hosted, authorize_hosted, create_hosted_client } from './hosted_client.ts'
+import { setup_hosted, authorize_hosted, create_hosted_client, cancel_hosted_session } from './hosted_client.ts'
 
 export const useHostedConnect = (wallet: AuthSession | null, origin: string, requested_id: string | null) => {
   const [state, dispatch] = useReducer(reduce_hosted<HostedBotDescriptor>, undefined, empty_hosted<HostedBotDescriptor>)
@@ -21,23 +22,18 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
       queueMicrotask(() => {
         if (lifetime.current !== context && lifetime.current.wallet === wallet) return
         if (!origin || !context.authorization_id || context.completed) return
-        void fetch(new URL('/connect/cancel', origin), {
-          method: 'POST',
-          credentials: 'include',
-          keepalive: true,
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ authorization_id: context.authorization_id }),
-        })
-          .then((response) => {
-            if (!response.ok) console.warn('Hosted authorization cancellation was refused.')
-          })
-          .catch((error) => console.warn('Hosted authorization cancellation failed; expiry still applies.', error))
+        void cancel_hosted_session(origin, context.authorization_id).catch((error) =>
+          console.warn('Hosted authorization cancellation failed; expiry still applies.', error)
+        )
       })
   }, [wallet, origin, requested_id, eligible])
   useEffect(() => {
     if (!wallet || state.session !== wallet || !origin || !hosted_pending(state.phase)) return
     const controller = new AbortController()
-    const client = create_hosted_client(origin, controller.signal)
+    const client = create_hosted_client(origin, controller.signal, {
+      get_state: read_app_state,
+      dispatch: dispatch_app,
+    })
     const { generation } = state
     const context = lifetime.current
     const selected_bot = () => {

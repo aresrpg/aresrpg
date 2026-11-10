@@ -4,6 +4,7 @@ import { expect, test } from 'bun:test'
 import { Transaction, TransactionDataBuilder } from '@mysten/sui/transactions'
 import { MultiSigPublicKey } from '@mysten/sui/multisig'
 import { fromBase64 } from '@mysten/sui/utils'
+import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { SuiTransport } from '@aresrpg/sdk'
 
@@ -99,10 +100,11 @@ test('an unresolved wallet receipt does not block provisioning another wallet', 
     await runtime.tick()
     expect(await Promise.race([started.then(() => true), Bun.sleep(100).then(() => false)])).toBe(true)
     expect(f.errors).toEqual([])
+    const second_owner = toZkLoginPublicIdentifier(2n, 'https://accounts.google.com', { legacyAddress: false })
     await request_provisioning(f.store, {
       id: 'second',
-      owner: f.bot.owner,
-      zklogin_public_identifier: f.bot.zklogin_public_identifier,
+      owner: second_owner.toSuiAddress(),
+      zklogin_public_identifier: second_owner.toBase64(),
       policy: f.bot.policy,
     })
     await runtime.tick()

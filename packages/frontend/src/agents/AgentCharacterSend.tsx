@@ -9,7 +9,6 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { read_app_state, useAppStore } from '../store.ts'
 import { readable_transaction_error, run_direct_transaction } from '../transaction_guard.ts'
 
-import { AgentAddressConfirmation } from './AgentAddressConfirmation.tsx'
 import { execute_agent_transfer } from './agent_transaction.ts'
 import { character_send_current, character_send_eligible } from './character_send.ts'
 import './agent_setup.css'
@@ -79,7 +78,6 @@ export const AgentCharacterSend = ({
       <section className="agent-character-send" data-agent-character-send={character_id}>
         <strong>{character?.name ?? character_id}</strong>
         <output className="agent-character-id">{character_id}</output>
-        <AgentAddressConfirmation pairing={pairing} copy={copy} />
         <p>{copy.ui.agent_character_offer_hint}</p>
         {!ready && <p role="status">{copy.ui.agent_verify_mismatch}</p>}
         {!eligible && <p role="alert">{copy.ui.agent_transfer_unavailable}</p>}

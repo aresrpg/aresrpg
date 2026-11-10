@@ -2812,6 +2812,8 @@ ui:
   agent_claim_character: 'Claim character for bot'
   agent_hosted_intro: 'Your assistant uses MCP without a signing key. AresRPG’s service key and your Google wallet can each move the bot’s assets independently; neither needs the other’s approval.'
   agent_hosted_unavailable: 'Hosted setup requires your Google game wallet and a configured HTTPS bot service. Saved recovery remains available in Inventory.'
+  agent_hosted_ambiguous: 'More than one hosted wallet needs review. No wallet was selected.'
+  agent_other_wallets: 'Other saved wallets'
   agent_hosted_pending: 'Connecting…'
   agent_hosted_authenticate: 'Authenticate with Google wallet'
   agent_hosted_ready: 'Setup complete'

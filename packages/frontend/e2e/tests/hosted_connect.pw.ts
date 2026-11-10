@@ -46,7 +46,14 @@ const fixture_challenge = (url: string, body: Record<string, unknown>, resource:
         : null,
   })
 }
-const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
+const connector_fixture = () => ({
+  authorized: false,
+  expired: false,
+  ambiguous: false,
+  stale_proof: false,
+  revoke_during_proof: false,
+})
+const mock_hosted = async (page: Page, resource = `${service}/mcp`, connection = connector_fixture()) => {
   // Public deterministic test fixture, never a real credential or network signer.
   const key = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(7))
   const identity = create_agent_identity({
@@ -61,26 +68,15 @@ const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
     policy_revision: 1,
     status: 'ready',
   }
+  let authenticated = false
   const requests: { path: string; body: Record<string, unknown> }[] = []
-  await page.route(`${service}/connect/**`, async (route) => {
-    const request = route.request()
-    const path = new URL(request.url()).pathname
-    const body = request.method() === 'POST' ? (request.postDataJSON() as Record<string, unknown>) : {}
-    requests.push({ path, body })
-    if (path === '/connect/bots' && request.method() === 'GET') {
-      await route.fulfill({
-        status: 400,
-        headers: {
-          'access-control-allow-origin': new URL(page.url()).origin,
-          'access-control-allow-credentials': 'true',
-        },
-        json: { error: 'owner_authentication_required' },
-      })
-      return
-    }
-    const expires_at = Date.now() + 60_000
-    const replies: Record<string, unknown> = {
-      '/connect/request': {
+  const reply = (json: unknown, status = 200) => ({ json, status })
+  const handlers: Record<
+    string,
+    (body: Record<string, unknown>, method: string) => ReturnType<typeof reply> | Promise<ReturnType<typeof reply>>
+  > = {
+    '/connect/request': () =>
+      reply({
         authorization_id: 'fixture-auth',
         client_name: 'Fixture assistant',
         client_id: 'fixture-client',
@@ -88,43 +84,72 @@ const mock_hosted = async (page: Page, resource = `${service}/mcp`) => {
         scopes: ['bot:observe'],
         resource,
         network: 'mainnet',
-      },
-      '/connect/challenge': {
+      }),
+    '/connect/challenge': (body) => {
+      const expires_at = Date.now() + 60_000
+      return reply({
         authorization_id: 'fixture-auth',
         challenge_id: 'fixture-challenge',
-        message: path === '/connect/challenge' ? fixture_challenge(page.url(), body, resource, expires_at) : '',
+        message: fixture_challenge(page.url(), body, resource, expires_at),
         expires_at,
-      },
-      '/connect/verify': { owner, bots: [bot] },
-      '/connect/bots': { status: 'ready', bot },
-      '/connect/cancel': { cancelled: true },
-      '/connect/authorize': { redirect_url: 'https://assistant.fixture.example/callback?code=fixture-code' },
-    }
-    const proof =
-      path === '/connect/proof'
-        ? await prepare_agent_pairing(body.request, {
-            storage: 'persistent',
-            public_key: key.getPublicKey(),
-            sign_personal_message: (bytes) => key.signPersonalMessage(bytes),
-            sign_transaction: async () => {
-              throw new Error('Transactions forbidden in fixture')
-            },
-          })
-        : null
+      })
+    },
+    '/connect/verify': () => {
+      authenticated = true
+      return reply({ owner, bots: [bot] })
+    },
+    '/connect/cancel': () => {
+      authenticated = false
+      return reply({ cancelled: true })
+    },
+    '/connect/bots': (_body, method) => {
+      if (method === 'GET')
+        return authenticated ? reply({ owner, bots: [bot] }) : reply({ error: 'owner_authentication_required' }, 400)
+      return reply({ status: 'ready', bot })
+    },
+    '/connect/status': () =>
+      reply({
+        owner,
+        status: connection.ambiguous ? 'ambiguous' : connection.authorized ? 'connected' : 'disconnected',
+        bot: connection.ambiguous ? null : bot,
+        recovery_bots: [],
+        expires_at: connection.expired ? Date.now() - 1 : Date.now() + 60_000,
+      }),
+    '/connect/authorize': () => reply({ redirect_url: 'https://assistant.fixture.example/callback?code=fixture-code' }),
+    '/connect/proof': async (body) => {
+      const request = connection.stale_proof
+        ? { ...(body.request as object), nonce: '22222222-2222-4222-8222-222222222222' }
+        : body.request
+      const proof = await prepare_agent_pairing(request, {
+        storage: 'persistent',
+        public_key: key.getPublicKey(),
+        sign_personal_message: (bytes) => key.signPersonalMessage(bytes),
+        sign_transaction: async () => {
+          throw new Error('Transactions forbidden in fixture')
+        },
+      })
+      if (connection.revoke_during_proof) connection.authorized = false
+      return reply({ status: 'ready', proof: proof.response })
+    },
+  }
+  await page.route(`${service}/connect/**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    const body = request.method() === 'POST' ? (request.postDataJSON() as Record<string, unknown>) : {}
+    requests.push({ path, body })
     await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
+      ...(await handlers[path]!(body, request.method())),
       headers: {
         'access-control-allow-origin': new URL(page.url()).origin,
         'access-control-allow-credentials': 'true',
       },
-      body: JSON.stringify(proof ? { status: 'ready', proof: proof.response } : replies[path]),
     })
   })
-  await page.route('https://assistant.fixture.example/**', (route) =>
-    route.fulfill({ body: 'Fixture authorization callback' })
-  )
-  return { requests, bot }
+  await page.route('https://assistant.fixture.example/**', (route) => {
+    connection.authorized = true
+    return route.fulfill({ body: 'Fixture authorization callback' })
+  })
+  return { requests, bot, connection }
 }
 const open = async (page: Page, query = '') => {
   await page.goto(`/e2e/fixtures/agent_pairing.html${query}`)
@@ -312,3 +337,149 @@ for (const viewport of [
     await page.screenshot({ path: `test-results/hosted-agent-consent-${viewport.width}.png` })
   })
 }
+
+const open_custody = (page: Page, query = '') => page.goto(`/e2e/fixtures/agent_pairing.html?custody&character${query}`)
+const connected_inventory = async (page: Page) => {
+  await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'true')
+  await expect(page.getByRole('combobox')).toHaveCount(0)
+  await expect(page.getByText('I compared this full address', { exact: false })).toHaveCount(0)
+  await expect(page.getByText('Saved agent recovery', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'SUI', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Deposit to agent', exact: true })).toBeEnabled()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Offer fixture character', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Send to agent', exact: true })).toBeEnabled()
+  await expect(page.getByRole('checkbox')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+}
+
+test('OAuth approval, callback and return restore one verified inventory target without another consent', async ({
+  page,
+}) => {
+  const f = await mock_hosted(page)
+  await open(page, '?authorization_id=fixture-auth')
+  await verify(page)
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
+  await expect(page).toHaveURL('https://assistant.fixture.example/callback?code=fixture-code')
+  await open_custody(page)
+  await connected_inventory(page)
+  expect(f.requests.filter(({ path }) => path === '/connect/authorize')).toHaveLength(1)
+  expect(f.requests.filter(({ path }) => path === '/connect/proof')).toHaveLength(2)
+  expect(
+    f.requests.filter(({ path, body }) => path === '/connect/challenge' && body.purpose === 'consent')
+  ).toHaveLength(1)
+  const identities = await page.evaluate(
+    (address) => JSON.parse(localStorage.getItem(`aresrpg.agent-identities:${address}`)!),
+    owner
+  )
+  expect(identities).toEqual([{ address: f.bot.address, multisig_public_key: f.bot.multisig_public_key }])
+})
+
+test('original tab resolves the backend bot after another tab authorizes, ignoring historical identities', async ({
+  page,
+  context,
+}) => {
+  const connection = connector_fixture()
+  const f = await mock_hosted(page, `${service}/mcp`, connection)
+  const older = create_agent_identity({
+    agent_public_key: Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(8)).getPublicKey(),
+    zklogin_public_identifier: toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false }),
+  })
+  await page.goto('/e2e/fixtures/agent_pairing.html')
+  await page.evaluate(
+    ({ owner, address, multisig_public_key }) =>
+      localStorage.setItem(`aresrpg.agent-identities:${owner}`, JSON.stringify([{ address, multisig_public_key }])),
+    { owner, address: older.address, multisig_public_key: older.public_key.toBase64() }
+  )
+  await open_custody(page)
+  await expect.poll(() => f.requests.some(({ path }) => path === '/connect/status')).toBe(true)
+  await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
+  const provider = await context.newPage()
+  await mock_hosted(provider, `${service}/mcp`, connection)
+  await open(provider, '?authorization_id=fixture-auth')
+  await verify(provider)
+  await provider.getByRole('button', { name: 'Connect', exact: true }).click()
+  await expect(provider).toHaveURL('https://assistant.fixture.example/callback?code=fixture-code')
+  await page.bringToFront()
+  await page.evaluate(() => dispatchEvent(new Event('focus')))
+  await connected_inventory(page)
+  expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
+  const identities = await page.evaluate(
+    (address) => JSON.parse(localStorage.getItem(`aresrpg.agent-identities:${address}`)!),
+    owner
+  )
+  expect(identities.map((row: { address: string }) => row.address).sort()).toEqual(
+    [older.address, f.bot.address].sort()
+  )
+  await provider.close()
+})
+
+for (const reason of ['expired', 'ambiguous', 'stale_proof', 'revoke_during_proof'] as const) {
+  test(`owner refresh rejects ${reason} without enabling custody or granting consent`, async ({ page }) => {
+    const f = await mock_hosted(page)
+    f.connection.authorized = true
+    f.connection[reason] = true
+    await open_custody(page)
+    if (reason === 'ambiguous') await expect(page.getByRole('alert')).toContainText('More than one hosted wallet')
+    else await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
+    await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toHaveCount(0)
+    expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
+    expect(f.requests.some(({ path, body }) => path === '/connect/challenge' && body.purpose === 'consent')).toBe(false)
+    if (reason === 'expired') {
+      f.connection.expired = false
+      await page.getByRole('button', { name: 'Try again', exact: true }).click()
+      await connected_inventory(page)
+    }
+  })
+}
+
+test('revocation clears an established target and connected status on the next owner check', async ({ page }) => {
+  const f = await mock_hosted(page)
+  f.connection.authorized = true
+  await open_custody(page)
+  await connected_inventory(page)
+  f.connection.authorized = false
+  await page.evaluate(() => dispatchEvent(new Event('focus')))
+  await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
+  await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toHaveCount(0)
+  expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
+})
+
+for (const action of ['cancel', 'wallet'] as const) {
+  test(`owner refresh ${action} retires late signatures; cancellation permits explicit retry`, async ({ page }) => {
+    const f = await mock_hosted(page)
+    f.connection.authorized = true
+    await open_custody(page, '&slow_signature')
+    await expect(page.locator('html')).toHaveAttribute('data-fixture-signing', 'true')
+    if (action === 'cancel') await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    else await page.evaluate(() => dispatchEvent(new CustomEvent('fixture/wallet', { detail: 1 })))
+    await expect.poll(() => f.requests.some(({ path }) => path === '/connect/cancel')).toBe(true)
+    await page.evaluate(() => dispatchEvent(new Event('fixture/signature')))
+    await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
+    expect(f.requests.some(({ path }) => path === '/connect/proof')).toBe(false)
+    if (action === 'cancel') {
+      await page.getByRole('button', { name: 'Try again', exact: true }).click()
+      await expect.poll(() => f.requests.filter(({ path }) => path === '/connect/challenge').length).toBe(2)
+      await page.evaluate(() => dispatchEvent(new Event('fixture/signature')))
+      await connected_inventory(page)
+    }
+  })
+}
+
+test('dismissing a malformed provider request restores owner status without another tab focus', async ({ page }) => {
+  const f = await mock_hosted(page)
+  f.connection.authorized = true
+  await open_custody(page, '&authorization_id=invalid')
+  await page
+    .getByRole('region', { name: 'Agent kiosk' })
+    .getByRole('button', { name: 'Connect your agent', exact: true })
+    .click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page).not.toHaveURL(/authorization_id/)
+  await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toBeVisible({ timeout: 8000 })
+  await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'true')
+  expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
+})

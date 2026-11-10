@@ -9,7 +9,7 @@ import type { SessionState } from '../modules/session.ts'
 export const character_send_eligible = (character: CharacterRow | undefined): character is CharacterRow =>
   !!character && character.custody === 'kiosk' && character.equipment.length === 0
 
-/** The clicked character, confirmed recipient and current canonical owner must survive preparation. */
+/** The clicked character, verified inventory target and current canonical owner must survive preparation. */
 export const character_send_current = (
   session: SessionState,
   wallet: AuthSession,

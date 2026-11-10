@@ -5,7 +5,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { prepare_agent_pairing } from '@aresrpg/sdk/agent-signer'
 
-import { setup_hosted, create_hosted_client } from '../../src/agents/hosted_client.ts'
+import { setup_hosted, refresh_hosted_owner, create_hosted_client } from '../../src/agents/hosted_client.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import * as app from '../../src/store.ts'
 
@@ -82,6 +82,14 @@ const fixture = async (existing: boolean) => {
         network: 'mainnet',
         scopes: ['bot:play'],
       }),
+    'GET /connect/status': () =>
+      Response.json({
+        owner: wallet.address,
+        status: state.existing ? 'connected' : 'disconnected',
+        bot: state.existing ? bot : null,
+        recovery_bots: [],
+        expires_at: state.existing ? Date.now() + 60_000 : null,
+      }),
     'GET /connect/bots': () =>
       Response.json({
         owner: wallet.address,
@@ -116,7 +124,12 @@ const fixture = async (existing: boolean) => {
   }) as unknown as typeof fetch
   const run = () =>
     setup_hosted(
-      create_hosted_client('https://bot.example.test', controller.signal, fetcher),
+      create_hosted_client(
+        'https://bot.example.test',
+        controller.signal,
+        { get_state: app.read_app_state, dispatch: app.dispatch_app },
+        fetcher
+      ),
       wallet,
       state.oauth ? 'authorization' : null,
       () => {},
@@ -124,6 +137,19 @@ const fixture = async (existing: boolean) => {
     )
   return {
     run,
+    refresh: () =>
+      refresh_hosted_owner(
+        create_hosted_client(
+          'https://bot.example.test',
+          controller.signal,
+          { get_state: app.read_app_state, dispatch: app.dispatch_app },
+          fetcher
+        ),
+        wallet,
+        'verified-session',
+        () => {},
+        null
+      ),
     calls,
     published,
     state,
@@ -222,12 +248,12 @@ test('automatic setup retains OAuth scopes and callback without granting access'
   }
 })
 
-test('multiple bots reuse the existing verified inventory target, not response order', async () => {
+test('multiple bots cannot be selected through a local inventory preference', async () => {
   const f = await fixture(true)
   try {
     f.state.multiple = true
     f.bind()
-    await expect(f.run()).resolves.toMatchObject({ selected: f.bot.id, verified: f.bot.id })
+    await expect(f.run()).rejects.toThrow('Multiple hosted bots require review')
     expect(f.calls).not.toContain('POST /connect/bots')
   } finally {
     f.cleanup()
@@ -239,7 +265,37 @@ test('an address match with another descriptor cannot select among multiple bots
   try {
     f.state.multiple = true
     f.bind('different-descriptor')
-    await expect(f.run()).rejects.toThrow('Multiple hosted bots require an explicit choice')
+    await expect(f.run()).rejects.toThrow('Multiple hosted bots require review')
+    expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
+
+test('owner refresh verifies the server-resolved wallet without provisioning or consent', async () => {
+  const f = await fixture(true)
+  try {
+    const result = await f.refresh()
+    expect(result).toMatchObject({
+      response: { status: 'connected', bot: { id: f.bot.id } },
+      pairing: {
+        address: f.bot.address,
+        multisig_public_key: f.bot.multisig_public_key,
+        signer_mode: 'host-persistent',
+      },
+    })
+    expect(f.published).toEqual([])
+    expect(f.calls).toEqual(['GET /connect/bots', 'GET /connect/status', 'POST /connect/proof', 'GET /connect/status'])
+  } finally {
+    f.cleanup()
+  }
+})
+
+test('an owner without a hosted wallet receives no automatic provisioning or consent', async () => {
+  const f = await fixture(false)
+  try {
+    expect(await f.refresh()).toMatchObject({ response: { status: 'disconnected' }, pairing: null })
+    expect(f.calls).toEqual(['GET /connect/bots', 'GET /connect/status'])
     expect(f.published).toEqual([])
   } finally {
     f.cleanup()

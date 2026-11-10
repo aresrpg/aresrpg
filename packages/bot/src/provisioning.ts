@@ -7,6 +7,7 @@ import { fromBase64 } from '@mysten/sui/utils'
 import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import type { Account, Bot, BotPolicy } from './model.ts'
+import { hash_secret } from './security.ts'
 import type { ControlStore } from './store.ts'
 import type { ManagedKey, ManagedProvider } from './managed_signer.ts'
 
@@ -36,18 +37,70 @@ export const request_provisioning = async (
 ): Promise<ProvisionRequest> => {
   verify_owner(input.owner, input.zklogin_public_identifier)
   const key = `provision:${input.id}`
-  return store.transaction([key], async (tx) => {
-    const previous = await tx.get<ProvisionRequest>(key)
-    if (previous) {
-      if (previous.owner !== input.owner || previous.zklogin_public_identifier !== input.zklogin_public_identifier)
+  const owner_key = `account:${input.owner}`
+  return store
+    .transaction([key, owner_key], async (tx) => {
+      const account = (await tx.get<Account>(owner_key)) ?? {
+        owner: input.owner,
+        zklogin_public_identifier: input.zklogin_public_identifier,
+        bot_ids: [],
+        grant_ids: [],
+        grants_indexed: true,
+      }
+      if (account.zklogin_public_identifier !== input.zklogin_public_identifier)
         throw new Error('PROVISION_IDENTITY_CONFLICT')
-      return previous
-    }
-    const request: ProvisionRequest = { ...input, status: 'requested', key: null }
-    await tx.put(key, request)
-    return request
+      if (account.bot_ids.some((id) => id !== input.id)) throw new Error('multiple_hosted_bots')
+      if (!account.bot_ids.length) await tx.put(owner_key, { ...account, bot_ids: [input.id] })
+      const previous = await tx.get<ProvisionRequest>(key)
+      if (previous) {
+        if (
+          ![
+            previous.owner === input.owner,
+            previous.zklogin_public_identifier === input.zklogin_public_identifier,
+          ].every(Boolean)
+        )
+          throw new Error('PROVISION_IDENTITY_CONFLICT')
+        return previous
+      }
+      const request: ProvisionRequest = { ...input, status: 'requested', key: null }
+      await tx.put(key, request)
+      return request
+    })
+    .catch(async (error: unknown) => {
+      // A competing or uncertain upsert may already have retained this exact owner request.
+      const committed = await store.read<ProvisionRequest>(key)
+      const account = await store.read<Account>(owner_key)
+      if (!committed || !account) throw error
+      const matches = [
+        committed.owner === input.owner,
+        committed.zklogin_public_identifier === input.zklogin_public_identifier,
+        account.zklogin_public_identifier === input.zklogin_public_identifier,
+        account.bot_ids.length === 1,
+        account.bot_ids[0] === input.id,
+      ].every(Boolean)
+      if (!matches) throw error
+      return committed
+    })
+}
+
+/** Only the verified owner chooses the mapping. The fixed legacy suffix preserves existing request identity. */
+export const request_owner_provisioning = async (
+  store: ControlStore,
+  owner: Readonly<{ owner: string; zklogin_public_identifier: string }>,
+  policy: BotPolicy
+) => {
+  const account = await store.read<Account>(`account:${owner.owner}`)
+  const ids = [...new Set(account?.bot_ids ?? [])]
+  if (ids.length > 1) throw new Error('multiple_hosted_bots')
+  const id = ids[0] ?? hash_secret(`mainnet:${owner.owner}:${owner.zklogin_public_identifier}:first`)
+  return request_provisioning(store, {
+    id,
+    owner: owner.owner,
+    zklogin_public_identifier: owner.zklogin_public_identifier,
+    policy,
   })
 }
+
 /** This fails if an uncertain commit permits replacement of a published wallet. Every
  * creation compares the same request and bot revisions; delayed/competing commits cannot
  * replace the winner. Reconcile the same creation ID before ever exposing a descriptor. */
@@ -90,13 +143,15 @@ export const run_provisioning = async (store: ControlStore, provider: ManagedPro
         const identity_owner = await tx.get<string>(address_key)
         if (identity_owner && identity_owner !== id) throw new Error('PROVISION_ADDRESS_CONFLICT')
         const account = await tx.get<Account>(`account:${bot.owner}`)
+        if (account?.bot_ids.some((existing) => existing !== id)) throw new Error('multiple_hosted_bots')
         await tx.put(key.key_id, sealed)
         await tx.put(address_key, id)
         await tx.put(`bot:${id}`, bot)
         await tx.put(`account:${bot.owner}`, {
+          ...account,
           owner: bot.owner,
           zklogin_public_identifier: bot.zklogin_public_identifier,
-          bot_ids: [...new Set([...(account ? account.bot_ids : []), id])],
+          bot_ids: [id],
         })
         await tx.put(`provision:${id}`, { ...request, key, status: 'ready' })
         return bot

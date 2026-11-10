@@ -117,20 +117,26 @@ test('HTTP owner sessions cannot list, provision, consent or request proof for a
   expect(await store.scan_keys('grant:', 10)).toEqual([])
 })
 
-test('provisioning ignores claimed owners and supports multiple bots for the verified wallet', async () => {
+test('provisioning accepts no caller-selected identity and reuses the verified owner mapping', async () => {
   const { store, alice } = await accounts()
-  for (const creation_id of ['first', 'second']) {
-    const reply = await alice.request('/connect/bots', {
-      authorization_id: alice.identity.authorization_id,
-      creation_id,
-      owner: other_bot.owner,
-      bot_id: other_bot.id,
-    })
-    expect(reply.status).toBe(202)
-  }
-  const keys = await store.scan_keys('provision:', 10)
-  expect(keys).toHaveLength(2)
-  for (const key of keys) expect(await store.read(key)).toMatchObject({ owner: fixture_bot.owner })
+  for (const fields of [
+    { creation_id: 'first' },
+    { creation_id: 'second' },
+    { owner: other_bot.owner },
+    { bot_id: other_bot.id },
+  ])
+    expect(
+      (await alice.request('/connect/bots', { authorization_id: alice.identity.authorization_id, ...fields })).status
+    ).toBe(400)
+  const first = await alice.json<{ bot: { id: string } }>('/connect/bots', {
+    authorization_id: alice.identity.authorization_id,
+  })
+  const again = await alice.json<{ bot: { id: string } }>('/connect/bots', {
+    authorization_id: alice.identity.authorization_id,
+  })
+  expect(first.bot.id).toBe(fixture_bot.id)
+  expect(again.bot.id).toBe(first.bot.id)
+  expect(await store.scan_keys('provision:', 10)).toHaveLength(1)
 })
 
 const call = (f: ReturnType<typeof create_http_fixture>, token: string, name: string, args: object) =>

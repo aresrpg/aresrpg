@@ -43,6 +43,7 @@ import navigation, {
   type NavigationInput,
   type NavigationState,
 } from './modules/navigation.ts'
+import hosted_agent from './modules/hosted_agent.ts'
 import session, { initial_session_state, type SessionInput, type SessionState } from './modules/session.ts'
 import suins, { initial_suins_state, type SuinsInput, type SuinsState } from './modules/suins.ts'
 import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
@@ -186,6 +187,7 @@ const MODULE_REGISTRY = [
   [practice, 'practice'],
   [adventure, 'adventure'],
   [session, 'player'],
+  [hosted_agent, 'player'],
   [suins, 'player'],
   [chain_clock, 'player'],
   [external_wallet, 'player'],

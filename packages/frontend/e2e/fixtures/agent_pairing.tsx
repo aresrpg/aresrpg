@@ -11,12 +11,15 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_agent_identity } from '../../../sdk/src/agent_multisig.ts'
 import { create_wallet_binding } from '../../../sdk/src/wallet_standard.ts'
 import type { AuthSession } from '../../src/auth.ts'
-import { AgentSetup } from '../../src/agents/AgentSetup.tsx'
+import { AgentSetup, AgentSetupButton } from '../../src/agents/AgentSetup.tsx'
+import { AgentKioskPanel } from '../../src/agents/AgentKioskPanel.tsx'
+import { AgentCharacterSend } from '../../src/agents/AgentCharacterSend.tsx'
+import { useAgentKiosk } from '../../src/agents/useAgentKiosk.ts'
 import { AgentInventoryPanel } from '../../src/agents/AgentInventoryPanel.tsx'
 import type { AgentRecall } from '../../../sdk/src/agent_recall.ts'
 import type { AgentTransferIntent } from '../../../sdk/src/agent_transfer_actions.ts'
 import { AgentTransferReview } from '../../src/agents/AgentTransferReview.tsx'
-import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
+import { dispatch_app, read_app_state, useAppStore, observe_app } from '../../src/store.ts'
 import { env } from '../../src/env.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -61,6 +64,15 @@ const connect = (index: number) => {
     address: identity.address,
     identity: 'zklogin',
     read_agent_pairing_request: binding.read_agent_pairing_request,
+    read_agent_recall: async () => ({
+      ...inventory_fixture,
+      characters: [],
+      pending: [],
+      read_deposit_items: async () => [],
+    }),
+    read_agent_returns: async () => [],
+    agent_deposit: () => ({ sender: identity.address, prepare: forbidden }),
+    agent_transfer: { sender: identity.address, prepare: forbidden },
     // Fixture-only placeholder; no wallet signature or credential is created.
     sign_personal_message: async () => {
       document.documentElement.setAttribute('data-fixture-signing', 'true')
@@ -103,6 +115,7 @@ const connect = (index: number) => {
             available_spell_points: 0,
             jobs: {},
             kiosk: 'fixture-kiosk',
+            custody: 'kiosk',
             equipment: [],
           } satisfies CharacterRow,
         ],
@@ -186,6 +199,7 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     document.documentElement.setAttribute('data-agent-confirmed', String(!!confirmed))
   }, [candidate, confirmed])
   const payer = new URLSearchParams(location.search).get('funding')
+  if (new URLSearchParams(location.search).has('custody')) return <CustodyFixture copy={copy} />
   if (new URLSearchParams(location.search).has('inventory') && wallet)
     return <AgentInventoryPanel wallet={wallet} copy={copy} recall={inventory_fixture} />
   if (payer && wallet)
@@ -212,8 +226,31 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     </main>
   )
 }
+const CustodyFixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const [open, set_open] = useState(true)
+  return (
+    <main className="min-h-screen bg-bg p-4 text-text">
+      <Button onClick={() => set_open(!open)}>{open ? 'Close inventory' : 'Open inventory'}</Button>
+      {open && <CustodyPanel copy={copy} />}
+    </main>
+  )
+}
+const CustodyPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const kiosk = useAgentKiosk(copy, false)
+  const [send, set_send] = useState(false)
+  return (
+    <>
+      <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
+      <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />
+      <Button onClick={() => set_send(true)}>Offer fixture character</Button>
+      {send && <AgentCharacterSend character_id="fixture-character" copy={copy} close={() => set_send(false)} />}
+    </>
+  )
+}
+
 void load_app_copy('en')
   .then((copy) => {
+    if (new URLSearchParams(location.search).has('custody')) observe_app(['hosted_agent'])
     connect(0)
     if (new URLSearchParams(location.search).has('funding')) {
       const source = {

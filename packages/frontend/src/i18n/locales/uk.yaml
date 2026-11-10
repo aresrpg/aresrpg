@@ -2785,6 +2785,8 @@ ui:
   agent_claim_character: 'Отримати персонажа для бота'
   agent_hosted_intro: 'Асистент використовує MCP без ключа підпису. Ключ сервісу AresRPG і ваш Google-гаманець можуть кожен самостійно переміщувати активи бота без схвалення іншої сторони.'
   agent_hosted_unavailable: 'Потрібні ігровий Google-гаманець і налаштований HTTPS-сервіс бота. Відновлення залишається в інвентарі.'
+  agent_hosted_ambiguous: 'Потрібно перевірити кілька розміщених гаманців. Гаманець не вибрано.'
+  agent_other_wallets: 'Інші збережені гаманці'
   agent_hosted_pending: 'Підключення…'
   agent_hosted_authenticate: 'Підтвердити Google-гаманець'
   agent_hosted_ready: 'Налаштування завершено'

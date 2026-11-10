@@ -13,6 +13,7 @@ import { fold_inventory, fold_item_packet, is_item_packet } from '@aresrpg/proto
 import { fight_action_to_wire } from '@aresrpg/fight'
 import type { CharacteristicName } from '@aresrpg/immutable'
 
+import { fold_owner_connection, type OwnerConnection, type OwnerConnectionInput } from '../agents/owner_state.ts'
 import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
 import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
 import type { AgentView, AgentViewInput } from '../agents/observation.ts'
@@ -50,6 +51,7 @@ export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
+  agent_connection: OwnerConnection
   agent_view: AgentView
   agent_pairing_candidate: AgentPairingIdentity | null
   inventory_pairing: AgentPairingIdentity | null
@@ -85,6 +87,7 @@ export type SessionState = Readonly<{
   gas_spent_mist: bigint
 }>
 export type SessionInput =
+  | OwnerConnectionInput
   | AgentViewInput
   | AgentInventoryInput
   | CharacterCreationInput
@@ -222,7 +225,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
   const receipt = fold_inventory_input(
     fold_character_receipt(
-      fold_character_deletion(fold_agent_view(fold_agent_inventory_target(current, input), input), input),
+      fold_character_deletion(
+        fold_agent_view(fold_agent_inventory_target(fold_owner_connection(current, input), input), input),
+        input
+      ),
       input
     ),
     input

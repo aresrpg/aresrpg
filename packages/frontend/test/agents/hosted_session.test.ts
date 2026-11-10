@@ -38,7 +38,12 @@ test.each(['owner', 'foreign'])('existing hosted session is bound to the current
     throw new Error('Unexpected authentication request')
   }) as unknown as typeof fetch
   try {
-    const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+    const client = create_hosted_client(
+      'https://bot.example',
+      new AbortController().signal,
+      { get_state: app.read_app_state, dispatch: app.dispatch_app },
+      fetcher
+    )
     const result = authenticate_hosted(client, wallet, 'request', () => {})
     if (owner === 'owner')
       await expect(result).resolves.toMatchObject({ authorization_id: 'request', bots: [], consent })
@@ -69,7 +74,12 @@ test.each(['owner_authentication_required', 'storage_unavailable'])(
       throw new Error('Owner proof requested')
     }) as unknown as typeof fetch
     try {
-      const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+      const client = create_hosted_client(
+        'https://bot.example',
+        new AbortController().signal,
+        { get_state: app.read_app_state, dispatch: app.dispatch_app },
+        fetcher
+      )
       await expect(authenticate_hosted(client, wallet, 'request', () => {})).rejects.toThrow(
         error === 'owner_authentication_required' ? 'Owner proof requested' : 'Hosted service request failed'
       )
@@ -141,7 +151,12 @@ test('expired standalone session requests and verifies a new wallet-bound challe
     throw new Error('Unexpected request')
   }) as unknown as typeof fetch
   try {
-    const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+    const client = create_hosted_client(
+      'https://bot.example',
+      new AbortController().signal,
+      { get_state: app.read_app_state, dispatch: app.dispatch_app },
+      fetcher
+    )
     await expect(
       authenticate_hosted(
         client,
@@ -186,7 +201,12 @@ test.each(['/connect/request', '/connect/bots'])(
       throw new Error('Unexpected request')
     }) as unknown as typeof fetch
     try {
-      const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+      const client = create_hosted_client(
+        'https://bot.example',
+        new AbortController().signal,
+        { get_state: app.read_app_state, dispatch: app.dispatch_app },
+        fetcher
+      )
       await expect(authenticate_hosted(client, wallet, 'request', () => {})).rejects.toThrow(
         'Hosted service request failed'
       )
@@ -218,7 +238,12 @@ test.each(['wallet', 'abort'])(
       return Response.json({ error: 'invalid_session' }, { status: 400 })
     }) as unknown as typeof fetch
     try {
-      const client = create_hosted_client('https://bot.example', controller.signal, fetcher)
+      const client = create_hosted_client(
+        'https://bot.example',
+        controller.signal,
+        { get_state: app.read_app_state, dispatch: app.dispatch_app },
+        fetcher
+      )
       await expect(authenticate_hosted(client, wallet, null, () => {}, 'expired')).rejects.toThrow(
         reason === 'wallet' ? 'Wallet changed' : 'Retired'
       )
@@ -246,7 +271,12 @@ test.each(['', 'malformed', 'expired'])(
       return Response.json({ error: 'invalid_session' }, { status: 400 })
     }) as unknown as typeof fetch
     try {
-      const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+      const client = create_hosted_client(
+        'https://bot.example',
+        new AbortController().signal,
+        { get_state: app.read_app_state, dispatch: app.dispatch_app },
+        fetcher
+      )
       await expect(authenticate_hosted(client, wallet, id, () => {})).rejects.toThrow('Hosted service request failed')
       expect(calls).toEqual(['/connect/request'])
     } finally {
@@ -274,7 +304,12 @@ test.each([
     return Response.json(response)
   }) as unknown as typeof fetch
   try {
-    const client = create_hosted_client('https://bot.example', new AbortController().signal, fetcher)
+    const client = create_hosted_client(
+      'https://bot.example',
+      new AbortController().signal,
+      { get_state: app.read_app_state, dispatch: app.dispatch_app },
+      fetcher
+    )
     await expect(authenticate_hosted(client, wallet, 'request', () => {})).rejects.toThrow('Invalid consent request')
     expect(calls).toEqual(['/connect/request'])
   } finally {

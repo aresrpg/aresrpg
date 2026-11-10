@@ -6,6 +6,7 @@ import { Button } from '@aresrpg/ui'
 import type { AgentInventory } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
+import { useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
@@ -13,6 +14,8 @@ import { KaresLogo } from '../components/KaresLogo.tsx'
 import type { AgentKioskController } from './useAgentKiosk.ts'
 import { agent_inventory_groups, type TransferToken } from './inventory_transfer.ts'
 import { AgentCoinTransfer } from './AgentCoinTransfer.tsx'
+import { owner_connected } from './owner_state.ts'
+import { AgentRecovery } from './AgentRecovery.tsx'
 import { AgentKioskIdentity } from './AgentKioskIdentity.tsx'
 import { AgentKioskCharacters } from './AgentKioskCharacters.tsx'
 import { AgentKioskGrid } from './AgentKioskGrid.tsx'
@@ -51,6 +54,7 @@ export const AgentKioskPanel = ({
         </Button>
       </header>
       <AgentKioskStatus kiosk={kiosk} copy={copy} offline={offline} />
+      <AgentRecovery copy={copy} mode="inventory" offline={offline} />
       {snapshot && (
         <>
           <AgentBalances inventory={snapshot.inventory} disabled={controls_disabled} choose={set_coin} />
@@ -101,10 +105,12 @@ const AgentKioskStatus = ({
   copy,
   offline,
 }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; offline: boolean }>) => {
+  const connected = useAppStore((app) => owner_connected(app.session))
   if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
   if (!kiosk.pairing) return <AgentKioskIdentity copy={copy} />
   return (
     <>
+      {connected && <p role="status">{copy.ui.agent_connected}</p>}
       <p className="agent-transfer-error" role="alert" hidden={!(kiosk.state.error || kiosk.transaction?.error)}>
         {kiosk.state.error || kiosk.transaction?.error}
       </p>

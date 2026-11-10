@@ -2764,6 +2764,8 @@ ui:
   agent_claim_character: 'ボット用にキャラクターを受け取る'
   agent_hosted_intro: 'アシスタントは署名鍵を持たずにMCPを使います。AresRPGのサービス鍵とあなたのGoogleウォレットは、互いの承認なしに、それぞれ単独でボットの資産を移動できます。'
   agent_hosted_unavailable: 'Googleゲームウォレットと設定済みHTTPSボットサービスが必要です。復旧は引き続きインベントリから利用できます。'
+  agent_hosted_ambiguous: '複数のホスト型ウォレットの確認が必要です。ウォレットは選択されていません。'
+  agent_other_wallets: 'その他の保存済みウォレット'
   agent_hosted_pending: '接続中…'
   agent_hosted_authenticate: 'Googleウォレットで認証'
   agent_hosted_ready: '設定が完了しました'

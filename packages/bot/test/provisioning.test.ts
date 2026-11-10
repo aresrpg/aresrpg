@@ -8,6 +8,7 @@ import { create_managed_agent_signer } from '@aresrpg/sdk/agent-signer'
 
 import {
   request_provisioning,
+  request_owner_provisioning,
   run_provisioning,
   request_pairing_proof,
   run_pairing_proof,
@@ -48,7 +49,7 @@ test('unknown commit reconciles the same creation ID and never prepares a replac
   }
   expect(await run_provisioning(original, restarted, input.id)).toEqual(bot)
 })
-test('an aborted commit leaves no key, bot or owner index', async () => {
+test('an aborted commit preserves only the owner request reservation, never a funding destination', async () => {
   const { store: original, provider } = fixture()
   await request_provisioning(original, input)
   const store: ControlStore = {
@@ -60,7 +61,8 @@ test('an aborted commit leaves no key, bot or owner index', async () => {
       }),
   }
   await expect(run_provisioning(store, provider, input.id)).rejects.toThrow('before commit')
-  expect(await original.scan_keys('', 20)).toEqual(['provision:fixture'])
+  expect(await original.scan_keys('', 20)).toEqual([`account:${input.owner}`, 'provision:fixture'])
+  expect(await original.read(`account:${input.owner}`)).toMatchObject({ bot_ids: [input.id] })
   expect((await original.read<{ status: string }>('provision:fixture'))!.status).toBe('requested')
 })
 test('unavailable reconciliation fails closed before any new candidate can be generated', async () => {
@@ -171,4 +173,39 @@ test('a changed descriptor invalidates an already requested pairing proof', asyn
   await expect(run_pairing_proof(store, provider, `proof:changed:${request.nonce}`)).rejects.toThrow(
     'PAIRING_BOT_UNAVAILABLE'
   )
+})
+
+test('one Google owner reserves one request and refuses alternate identities without creating another key', async () => {
+  const { store, provider } = fixture()
+  const owner = {
+    owner: input.owner,
+    zklogin_public_identifier: input.zklogin_public_identifier,
+    authorization_id: 'not-durable',
+    session_hash: 'not-durable',
+  }
+  const requests = await Promise.all(
+    Array.from({ length: 12 }, () => request_owner_provisioning(store, owner, input.policy))
+  )
+  expect(new Set(requests.map(({ id }) => id)).size).toBe(1)
+  expect(JSON.stringify(requests)).not.toContain('not-durable')
+  const first = requests[0]!
+  const bot = await run_provisioning(store, provider, first.id)
+  const resumed = await request_owner_provisioning(store, owner, input.policy)
+  expect((await run_provisioning(store, provider, resumed.id)).address).toBe(bot.address)
+  await expect(request_provisioning(store, { ...input, id: 'alternate' })).rejects.toThrow('multiple_hosted_bots')
+  expect(await store.scan_keys('provision:', 20)).toHaveLength(1)
+  expect(await store.scan_keys('identity:', 20)).toHaveLength(1)
+})
+
+test('historical multiple wallets block the upsert without selecting or deleting either', async () => {
+  const { store } = fixture()
+  const account = {
+    owner: input.owner,
+    zklogin_public_identifier: input.zklogin_public_identifier,
+    bot_ids: ['one', 'two'],
+  }
+  await put(store, `account:${input.owner}`, account)
+  await expect(request_owner_provisioning(store, input, input.policy)).rejects.toThrow('multiple_hosted_bots')
+  expect(await store.read(`account:${input.owner}`)).toEqual(account)
+  expect(await store.scan_keys('provision:', 20)).toEqual([])
 })

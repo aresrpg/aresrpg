@@ -8,11 +8,12 @@ import { public_bot } from './model.ts'
 import type { ControlStore } from './store.ts'
 import type { OwnerVerifier } from './owner_proof.ts'
 import { create_connect_service } from './connect.ts'
+import { read_owner_status } from './owner_status.ts'
 import { create_oauth_service } from './oauth.ts'
 import { create_control_service, type Observe } from './control.ts'
 import { create_mcp_handler } from './mcp.ts'
-import { hash_secret, require_string } from './security.ts'
-import { request_pairing_proof, request_provisioning } from './provisioning.ts'
+import { require_string } from './security.ts'
+import { request_pairing_proof, request_owner_provisioning } from './provisioning.ts'
 
 const response = (value: unknown, status = 200) =>
   Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -60,18 +61,12 @@ export const create_ingress = (
     return session_cookie(request, proof?.authorization_id)
   }
   const provision: PostHandler = async (request, body) => {
+    if (Object.keys(body).some((key) => key !== 'authorization_id')) throw new Error('invalid_request')
     const id = require_string(body.authorization_id)
     const owner = await connect.owner_session(id, session_cookie(request, id))
     if (config.recovery_mode || !options.provision_enabled) throw new Error('managed_signer_unconfigured')
-    const creation_id = body.creation_id === undefined ? 'first' : require_string(body.creation_id)
-    const bot_id = hash_secret(`${config.network}:${owner.owner}:${owner.zklogin_public_identifier}:${creation_id}`)
-    const pending = await request_provisioning(store, {
-      id: bot_id,
-      owner: owner.owner,
-      zklogin_public_identifier: owner.zklogin_public_identifier,
-      policy: options.policy,
-    })
-    const bot = await store.read<Bot>(`bot:${bot_id}`)
+    const pending = await request_owner_provisioning(store, owner, options.policy)
+    const bot = await store.read<Bot>(`bot:${pending.id}`)
     return bot
       ? response({ status: bot.status, bot: public_bot(bot) })
       : response({ status: 'pending', request_id: pending.id }, 202)
@@ -184,6 +179,14 @@ export const create_ingress = (
             'Cache-Control': 'no-store',
           },
         })
+      },
+    ],
+    [
+      '/connect/status',
+      async (request, url) => {
+        const id = require_string(url.searchParams.get('authorization_id'))
+        const owner = await connect.owner_session(id, session_cookie(request, id))
+        return response(await read_owner_status(store, config, owner))
       },
     ],
     [

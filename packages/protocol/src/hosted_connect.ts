@@ -8,6 +8,20 @@ export type HostedBotDescriptor = Readonly<{
   policy_revision: number
   status: 'ready' | 'paused'
 }>
+export const same_hosted_bot = (left: HostedBotDescriptor | null, right: HostedBotDescriptor): boolean =>
+  left !== null &&
+  (['id', 'address', 'multisig_public_key', 'generation', 'policy_revision', 'status'] as const).every(
+    (key) => left[key] === right[key]
+  )
+
+/** Current owner-authorized connector access, not actor presence or active inference. */
+export type HostedOwnerStatus = Readonly<{
+  owner: string
+  status: 'connected' | 'disconnected' | 'ambiguous'
+  bot: HostedBotDescriptor | null
+  recovery_bots: readonly HostedBotDescriptor[]
+  expires_at: number | null
+}>
 export type HostedConnectRequest = Readonly<{
   authorization_id: string
   client_id: string

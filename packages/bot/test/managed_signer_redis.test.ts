@@ -7,7 +7,12 @@ import type { RedisClient } from 'bun'
 
 import { create_key_provider } from '../src/managed_signer.ts'
 import { create_redis_store } from '../src/store.ts'
-import { request_provisioning, run_provisioning, type ProvisionRequest } from '../src/provisioning.ts'
+import {
+  request_provisioning,
+  request_owner_provisioning,
+  run_provisioning,
+  type ProvisionRequest,
+} from '../src/provisioning.ts'
 import type { Account } from '../src/model.ts'
 
 import { fixture_google } from './helpers/control_fixture.ts'
@@ -124,5 +129,29 @@ integration('lost successful Redis commit reply reconciles exact bot, key and ow
   } finally {
     await redis.send('DEL', [namespace, `${namespace}:pending`])
     redis.close()
+  }
+})
+
+integration('concurrent owner upserts across Redis clients resolve one retained wallet request', async () => {
+  const connections = [fixture_redis(url!), fixture_redis(url!)]
+  await Promise.all(connections.map((redis) => redis.connect()))
+  const namespace = `bot:fixture:${randomUUID()}`
+  const stores = connections.map((redis) => create_redis_store(redis, namespace))
+  try {
+    const requests = await Promise.all(
+      Array.from({ length: 12 }, (_, index) => request_owner_provisioning(stores[index % 2]!, input, input.policy))
+    )
+    expect(new Set(requests.map(({ id }) => id)).size).toBe(1)
+    const { id } = requests[0]!
+    const bots = await Promise.all(
+      stores.map((store) => run_provisioning(store, create_key_provider(store, keyring), id))
+    )
+    expect(bots[1]!.address).toBe(bots[0]!.address)
+    expect((await stores[0]!.read<Account>(`account:${input.owner}`))!.bot_ids).toEqual([id])
+    expect(await stores[0]!.scan_keys('bot:signing:', 20)).toHaveLength(1)
+  } finally {
+    const keys = (await connections[0]!.send('KEYS', [`${namespace}*`])) as string[]
+    if (keys.length) await connections[0]!.send('DEL', keys)
+    for (const redis of connections) redis.close()
   }
 })

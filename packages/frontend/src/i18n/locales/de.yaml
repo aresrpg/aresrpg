@@ -2787,6 +2787,8 @@ ui:
   agent_claim_character: 'Charakter für Bot übernehmen'
   agent_hosted_intro: 'Dein Assistent nutzt MCP ohne Signaturschlüssel. Der AresRPG-Dienstschlüssel und deine Google-Wallet können jeweils allein die Vermögenswerte des Bots bewegen, ohne Zustimmung des anderen.'
   agent_hosted_unavailable: 'Du brauchst dein Google-Spielwallet und einen konfigurierten HTTPS-Botdienst. Wiederherstellung bleibt im Inventar verfügbar.'
+  agent_hosted_ambiguous: 'Mehrere gehostete Wallets müssen geprüft werden. Keine Wallet wurde ausgewählt.'
+  agent_other_wallets: 'Andere gespeicherte Wallets'
   agent_hosted_pending: 'Verbindung wird hergestellt…'
   agent_hosted_authenticate: 'Mit Google-Wallet authentifizieren'
   agent_hosted_ready: 'Einrichtung abgeschlossen'

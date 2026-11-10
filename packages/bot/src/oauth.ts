@@ -9,6 +9,7 @@ import {
   type Grant,
   type OAuthClient,
 } from './model.ts'
+import { index_owner_grant } from './owner_status.ts'
 import { hash_secret, opaque_parts, random_secret, require_string, secret_matches } from './security.ts'
 
 const valid_redirect = (value: unknown): boolean => {
@@ -126,27 +127,31 @@ export const create_oauth_service = (store: ControlStore, config: BotConfig, now
     const [id, secret] = opaque_parts(require_string(refreshing ? input.refresh_token : input.code))
     const initial = await store.read<Grant>(`grant:${id}`)
     if (!initial) throw new Error('invalid_grant')
-    const result = await store.transaction([`grant:${id}`, `bot:${initial.bot_id}`], async (tx) => {
-      const grant = await tx.get<Grant>(`grant:${id}`)
-      if (!grant) throw new Error('invalid_grant')
-      if (grant.client_id !== input.client_id || input.resource !== grant.resource) throw new Error('invalid_grant')
-      assert_live_grant(config, grant, await tx.get<Bot>(`bot:${grant.bot_id}`), now())
-      if (refreshing && grant.family?.used_hashes.includes(hash_secret(secret))) {
-        await tx.put(`grant:${id}`, { ...grant, revoked: true, access: null, family: null })
-        return null
+    const result = await store.transaction(
+      [`grant:${id}`, `bot:${initial.bot_id}`, `account:${initial.owner}`],
+      async (tx) => {
+        const grant = await tx.get<Grant>(`grant:${id}`)
+        if (!grant) throw new Error('invalid_grant')
+        if (grant.client_id !== input.client_id || input.resource !== grant.resource) throw new Error('invalid_grant')
+        assert_live_grant(config, grant, await tx.get<Bot>(`bot:${grant.bot_id}`), now())
+        if (refreshing && grant.family?.used_hashes.includes(hash_secret(secret))) {
+          await tx.put(`grant:${id}`, { ...grant, revoked: true, access: null, family: null })
+          return null
+        }
+        validate_exchange(grant, secret, input, refreshing, now())
+        const access = random_secret()
+        const refresh = random_secret()
+        await tx.put(`grant:${id}`, rotated_grant(grant, config, access, refresh, now()))
+        await index_owner_grant(tx, grant)
+        return {
+          access_token: `${id}.${access}`,
+          token_type: 'Bearer',
+          expires_in: Math.floor(config.access_ttl_ms / 1000),
+          refresh_token: `${id}.${refresh}`,
+          scope: grant.scopes.join(' '),
+        }
       }
-      validate_exchange(grant, secret, input, refreshing, now())
-      const access = random_secret()
-      const refresh = random_secret()
-      await tx.put(`grant:${id}`, rotated_grant(grant, config, access, refresh, now()))
-      return {
-        access_token: `${id}.${access}`,
-        token_type: 'Bearer',
-        expires_in: Math.floor(config.access_ttl_ms / 1000),
-        refresh_token: `${id}.${refresh}`,
-        scope: grant.scopes.join(' '),
-      }
-    })
+    )
     if (!result) throw new Error('invalid_grant')
     return result
   }

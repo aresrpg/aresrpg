@@ -5,12 +5,12 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { AuthSession } from '../../src/auth.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
-import { saved_recovery_identities } from '../../src/agents/AgentKioskIdentity.tsx'
+import { saved_recovery_identities } from '../../src/agents/pairing_storage.ts'
 import { read_kiosk_character_returns } from '../../src/agents/useAgentKiosk.ts'
 import { EmptyEquipment } from '../../src/characters/EmptyEquipment.tsx'
 
 const copy = {
-  ui: { agent_kiosk: 'Agent kiosk', agent_inventory_connect: 'Connect your agent' },
+  ui: { agent_kiosk: 'Agent kiosk', agent_connect_your: 'Connect your agent' },
   characters_page: { no_character: 'No character' },
 } as unknown as AppCopy
 

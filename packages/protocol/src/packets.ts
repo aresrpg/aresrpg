@@ -1398,11 +1398,17 @@ export const FIGHT_VIEW_RADIUS_BLOCKS = 50
 export type {
   HostedBotDescriptor,
   HostedConnectRequest,
+  HostedOwnerStatus,
   HostedChallengeInput,
   HostedChallengeResponse,
   HostedVerifyResponse,
   HostedAuthorizeResponse,
   HostedProvisionResponse,
 } from './hosted_connect.ts'
-export { hosted_challenge_message, parse_hosted_challenge, validate_hosted_challenge } from './hosted_connect.ts'
+export {
+  hosted_challenge_message,
+  parse_hosted_challenge,
+  validate_hosted_challenge,
+  same_hosted_bot,
+} from './hosted_connect.ts'
 export type { HostedChallengeEnvelope } from './hosted_connect.ts'

@@ -37,7 +37,10 @@ Multiple authorized connectors share one game connection for each bot. They do n
 competing player WebSockets or independent bot custody.
 
 Character, SUI and item handover remain explicit actions in the existing Inventory flow.
-Compare the complete verified bot address before selecting a transfer recipient. Keep a
+After returning to the game, Inventory restores the unique hosted bot from your authenticated
+owner record and verifies its signer again. This grants no new assistant access. Connected means
+current renewable assistant authorization, not live AI activity. Other saved wallets remain
+available separately for recovery; they never choose the active bot. Keep a
 sensible gas reserve. Never automatically retry an uncertain or executed transaction.
 
 For a new empty bot, verify its fresh persistent signer and compare its full address in Inventory.

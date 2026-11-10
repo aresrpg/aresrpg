@@ -10,6 +10,8 @@ import { env } from '../env.ts'
 
 import { useHostedConnect } from './useHostedConnect.ts'
 import { HostedBotPanel } from './HostedBotPanel.tsx'
+import { owner_connected } from './owner_state.ts'
+import { AgentRecovery } from './AgentRecovery.tsx'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
 import './agent_setup.css'
 
@@ -89,6 +91,7 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
           : env.bot_service_url && (
               <ProviderHandoff copy={copy} provider={provider} url={new URL('/mcp', env.bot_service_url).href} />
             )}
+        {!authorization_request && <AgentRecovery copy={copy} mode="setup" />}
         <Button className="agent-connect mt-3" onClick={dismiss}>
           {text.agent_cancel}
         </Button>
@@ -107,11 +110,12 @@ export const AgentSetupButton = ({
   class_name?: string
 }>) => {
   const [open, set_open] = useState(false)
+  const connected = useAppStore((app) => owner_connected(app.session))
   return (
     <>
       <Button className={class_name} onClick={() => set_open(true)} data-agent-setup-button="">
         <Bot size={16} />
-        {label ?? copy.ui.agent_setup}
+        {connected ? copy.ui.agent_connected : (label ?? copy.ui.agent_setup)}
       </Button>
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>

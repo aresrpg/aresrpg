@@ -86,3 +86,17 @@ test('setup publishes nothing unless persistent canonical identity is durably sa
   expect(() => complete_agent_pairing(storage, { ...request, owner: 'other' }, pairing(1))).toThrow()
   expect(() => complete_agent_pairing(storage, request, { ...pairing(1), multisig_public_key: 'malformed' })).toThrow()
 })
+
+test('refresh never overwrites an unreadable historical recovery record', () => {
+  const original = JSON.stringify([pairing(1), { address: 'unknown', multisig_public_key: 'damaged' }])
+  let value = original
+  const storage = {
+    getItem: () => value,
+    setItem: (_key: string, next: string) => {
+      value = next
+    },
+    removeItem: () => {},
+  }
+  expect(complete_agent_pairing(storage, request, pairing(2))).toBe('storage')
+  expect(value).toBe(original)
+})

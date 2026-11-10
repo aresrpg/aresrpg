@@ -2772,6 +2772,8 @@ ui:
   agent_claim_character: 'Receber personagem para o bot'
   agent_hosted_intro: 'Seu assistente usa MCP sem chave de assinatura. A chave do serviço AresRPG e sua carteira Google podem mover os ativos do bot separadamente, sem a aprovação da outra parte.'
   agent_hosted_unavailable: 'É necessária a carteira Google do jogo e um serviço HTTPS configurado. A recuperação continua no Inventário.'
+  agent_hosted_ambiguous: 'Há várias carteiras hospedadas para revisar. Nenhuma foi selecionada.'
+  agent_other_wallets: 'Outras carteiras salvas'
   agent_hosted_pending: 'Conectando…'
   agent_hosted_authenticate: 'Autenticar com carteira Google'
   agent_hosted_ready: 'Configuração concluída'

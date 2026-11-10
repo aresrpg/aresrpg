@@ -2814,6 +2814,8 @@ ui:
   agent_claim_character: 'Réclamer le personnage pour le bot'
   agent_hosted_intro: 'Votre assistant utilise MCP sans clé de signature. La clé du service AresRPG et votre portefeuille Google peuvent chacun déplacer les actifs du bot sans l’accord de l’autre.'
   agent_hosted_unavailable: 'La connexion nécessite votre portefeuille Google de jeu et un service de bot HTTPS configuré. La récupération reste disponible dans l’inventaire.'
+  agent_hosted_ambiguous: 'Plusieurs portefeuilles hébergés doivent être examinés. Aucun n’a été sélectionné.'
+  agent_other_wallets: 'Autres portefeuilles enregistrés'
   agent_hosted_pending: 'Connexion…'
   agent_hosted_authenticate: 'Authentifier le portefeuille Google'
   agent_hosted_ready: 'Configuration terminée'

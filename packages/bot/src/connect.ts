@@ -182,6 +182,8 @@ export const create_connect_service = (
             owner: proof.owner,
             zklogin_public_identifier: proof.zklogin_public_identifier,
             bot_ids: [],
+            grant_ids: [],
+            grants_indexed: true,
           } satisfies Account)
       )
       await tx.put(`request:${request.id}`, {

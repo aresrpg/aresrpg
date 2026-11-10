@@ -6,26 +6,33 @@ import type {
   HostedChallengeInput,
   HostedChallengeResponse,
   HostedConnectRequest,
+  HostedOwnerStatus,
   HostedProvisionResponse,
   HostedVerifyResponse,
 } from '@aresrpg/protocol'
+import { same_hosted_bot } from '@aresrpg/protocol'
 import { verify_agent_pairing, type AgentPairingResponse } from '@aresrpg/sdk/agent-pairing'
 
 import type { AuthSession } from '../auth.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
-import { read_app_state, dispatch_app } from '../store.ts'
+import type { AppContext } from '../store.ts'
 
 import { sign_hosted_message, hosted_consent_destination } from './hosted_challenge.ts'
 import { complete_agent_pairing } from './pairing_storage.ts'
 
 export type HostedClient = ReturnType<typeof create_hosted_client>
-export const create_hosted_client = (origin: string, signal: Readonly<AbortSignal>, fetcher: typeof fetch = fetch) => {
+export const create_hosted_client = (
+  origin: string,
+  signal: Readonly<AbortSignal>,
+  app: Pick<AppContext, 'get_state' | 'dispatch'>,
+  fetcher: typeof fetch = fetch
+) => {
   const request = async <T>(path: string, body?: Readonly<unknown>): Promise<T> => {
     signal.throwIfAborted()
     const response = await fetcher(new URL(path, origin), {
       method: body === undefined ? 'GET' : 'POST',
       credentials: 'include',
-      signal,
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     })
@@ -36,11 +43,11 @@ export const create_hosted_client = (origin: string, signal: Readonly<AbortSigna
     }
     return response.json() as Promise<T>
   }
-  return { request, signal, origin }
+  return { request, signal, origin, ...app }
 }
-export const current_wallet = (wallet: AuthSession, signal: Readonly<AbortSignal>): void => {
-  signal.throwIfAborted()
-  if (read_app_state().session.wallet !== wallet) throw new Error('Wallet changed')
+export const current_wallet = (wallet: AuthSession, client: Readonly<HostedClient>): void => {
+  client.signal.throwIfAborted()
+  if (client.get_state().session.wallet !== wallet) throw new Error('Wallet changed')
 }
 export const sign_hosted_challenge = async (
   client: Readonly<HostedClient>,
@@ -49,9 +56,9 @@ export const sign_hosted_challenge = async (
   retain: (id: string) => void,
   consent: HostedConnectRequest | null
 ) => {
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const challenge = await client.request<HostedChallengeResponse>('/connect/challenge', input)
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const { signature } = await sign_hosted_message(
     challenge,
     { input, consent, issuer: client.origin, web_origin: window.location.origin },
@@ -60,7 +67,7 @@ export const sign_hosted_challenge = async (
       return wallet.sign_personal_message(bytes)
     }
   )
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   return { challenge_id: challenge.challenge_id, signature, authorization_id: challenge.authorization_id }
 }
 const pairing_request = (wallet: AuthSession) => {
@@ -91,7 +98,7 @@ const read_hosted_session = async (
     }
     throw error
   }
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
   return { id, session: result }
 }
@@ -102,7 +109,7 @@ export const authenticate_hosted = async (
   retain: (id: string) => void,
   session_id: string | null = authorization_id
 ) => {
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const pairing = pairing_request(wallet)
   const consent =
     authorization_id !== null
@@ -139,7 +146,7 @@ export const authenticate_hosted = async (
       challenge_id: signed.challenge_id,
       signature: signed.signature,
     })
-    current_wallet(wallet, client.signal)
+    current_wallet(wallet, client)
     if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
     return { authorization_id: signed.authorization_id, bots: result.bots, consent }
   }
@@ -180,7 +187,7 @@ export const verify_hosted_bot = async (
   authorization_id: string,
   bot: HostedBotDescriptor
 ) => {
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const request = pairing_request(wallet)
   if (bot.status !== 'ready') throw new Error('Hosted signer unavailable')
   const poll = async (): Promise<AgentPairingResponse> => {
@@ -194,23 +201,20 @@ export const verify_hosted_bot = async (
     return poll()
   }
   const identity = await verify_agent_pairing(request, await poll())
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   if (identity.address !== bot.address || identity.multisig_public_key !== bot.multisig_public_key)
     throw new Error('Hosted descriptor mismatch')
+  return { request, identity }
+}
+const retain_hosted_pairing = ({ request, identity }: Readonly<Awaited<ReturnType<typeof verify_hosted_bot>>>) => {
   const failure = complete_agent_pairing(browser_auth_storage(), request, identity)
   if (failure) throw new Error(`Hosted recovery unavailable: ${failure}`)
-  dispatch_app({ type: 'agent/pairing_verified', wallet, pairing: identity })
+  return identity
 }
+
 const setup_bot = (bots: readonly HostedBotDescriptor[]) => {
-  if (bots.length < 2) return bots[0]
-  const { session } = read_app_state()
-  const pairing = session.inventory_pairing ?? session.agent_pairing_candidate
-  if (pairing?.signer_mode !== 'host-persistent') throw new Error('Multiple hosted bots require an explicit choice')
-  const matching = bots.filter(
-    (bot) => bot.address === pairing.address && bot.multisig_public_key === pairing.multisig_public_key
-  )
-  if (matching.length !== 1) throw new Error('Multiple hosted bots require an explicit choice')
-  return matching[0]
+  if (bots.length > 1) throw new Error('Multiple hosted bots require review')
+  return bots[0]
 }
 
 /** One Connect intent prepares one unambiguous wallet and verifies custody before reporting readiness. */
@@ -222,10 +226,11 @@ export const setup_hosted = async (
   session_id: string | null = authorization_id
 ) => {
   const result = await authenticate_hosted(client, wallet, authorization_id, retain, session_id)
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const bot = setup_bot(result.bots) ?? (await provision_hosted(client, result.authorization_id))
-  current_wallet(wallet, client.signal)
-  await verify_hosted_bot(client, wallet, result.authorization_id, bot)
+  current_wallet(wallet, client)
+  const proof = await verify_hosted_bot(client, wallet, result.authorization_id, bot)
+  client.dispatch({ type: 'agent/pairing_verified', wallet, pairing: retain_hosted_pairing(proof) })
   return { ...result, bots: [bot], selected: bot.id, verified: bot.id }
 }
 
@@ -259,10 +264,68 @@ export const authorize_hosted = async (
     challenge_id: signed.challenge_id,
     signature: signed.signature,
   })
-  current_wallet(wallet, client.signal)
+  current_wallet(wallet, client)
   const redirect = new URL(result.redirect_url)
   const registered = new URL(consent.redirect_uri)
   if (redirect.origin !== registered.origin || redirect.pathname !== registered.pathname)
     throw new Error('Unexpected OAuth redirect')
   return redirect.href
+}
+
+const owner_status = async (client: Readonly<HostedClient>, wallet: AuthSession, id: string) => {
+  const response = await client.request<HostedOwnerStatus>(`/connect/status?authorization_id=${encodeURIComponent(id)}`)
+  current_wallet(wallet, client)
+  if (
+    response.owner !== wallet.address ||
+    !['connected', 'disconnected', 'ambiguous'].includes(response.status) ||
+    !Array.isArray(response.recovery_bots)
+  )
+    throw new Error('Owner connection mismatch')
+  if (
+    response.status === 'connected' &&
+    (!response.bot || !Number.isSafeInteger(response.expires_at) || Number(response.expires_at) <= Date.now())
+  )
+    throw new Error('Owner authorization expired')
+  return response
+}
+
+/** Resolve current authorization from the owner, never from saved recovery metadata or URL hints. */
+export const refresh_hosted_owner = async (
+  client: Readonly<HostedClient>,
+  wallet: AuthSession,
+  session_id: string | null,
+  retain: (id: string) => void,
+  previous: HostedOwnerStatus | null
+) => {
+  const authenticated = await authenticate_hosted(client, wallet, null, retain, session_id)
+  const response = await owner_status(client, wallet, authenticated.authorization_id)
+  if (response.status !== 'connected' || !response.bot) return { response, pairing: null }
+  const { bot } = response
+  const pairing = client.get_state().session.inventory_pairing
+  if (pairing && previous) {
+    const reusable = [
+      pairing.signer_mode === 'host-persistent',
+      previous.status === 'connected',
+      same_hosted_bot(previous.bot, bot),
+      pairing.address === bot.address,
+      pairing.multisig_public_key === bot.multisig_public_key,
+    ].every(Boolean)
+    if (reusable) return { response, pairing }
+  }
+  const proof = await verify_hosted_bot(client, wallet, authenticated.authorization_id, bot)
+  const checked = await owner_status(client, wallet, authenticated.authorization_id)
+  if (checked.status !== 'connected' || !same_hosted_bot(checked.bot, bot))
+    throw new Error('Owner authorization changed')
+  return { response: checked, pairing: retain_hosted_pairing(proof) }
+}
+
+export const cancel_hosted_session = async (origin: string, authorization_id: string) => {
+  const response = await fetch(new URL('/connect/cancel', origin), {
+    method: 'POST',
+    credentials: 'include',
+    keepalive: true,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ authorization_id }),
+  })
+  if (!response.ok) throw new Error('Hosted authorization cancellation was refused.')
 }
