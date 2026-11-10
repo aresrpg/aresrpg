@@ -10,10 +10,16 @@ import { refreshed_inventory_target } from './inventory_target.ts'
 
 export type OwnerConnection = Readonly<{
   generation: number
-  phase: 'idle' | 'checking' | 'ready' | 'failed' | 'returning'
+  phase: 'idle' | 'checking' | 'ready' | 'failed' | 'unavailable' | 'returning'
   response: HostedOwnerStatus | null
+  pairing: AgentPairingIdentity | null
 }>
-export const initial_owner_connection = (): OwnerConnection => ({ generation: 0, phase: 'idle', response: null })
+export const initial_owner_connection = (): OwnerConnection => ({
+  generation: 0,
+  phase: 'idle',
+  response: null,
+  pairing: null,
+})
 export type OwnerConnectionInput = Readonly<
   | { type: 'agent/connection_refresh' }
   | { type: 'agent/connection_cancel' }
@@ -25,6 +31,7 @@ export type OwnerConnectionInput = Readonly<
       generation: number
       response: HostedOwnerStatus | null
       pairing: AgentPairingIdentity | null
+      failure: 'unavailable' | 'failed' | null
     }
 >
 
@@ -53,6 +60,7 @@ export const fold_owner_connection = (session: SessionState, input: AppInput): S
         agent_connection: {
           generation: current.generation + 1,
           phase: current.phase === 'returning' ? 'returning' : 'ready',
+          pairing: null,
           response: {
             owner: input.wallet.address,
             status: 'disconnected',
@@ -77,7 +85,12 @@ export const fold_owner_connection = (session: SessionState, input: AppInput): S
         ...session,
         agent_pairing_candidate: null,
         inventory_pairing: refreshed_inventory_target(session.inventory_pairing, input.pairing),
-        agent_connection: { ...current, phase: input.response ? 'ready' : 'failed', response: input.response },
+        agent_connection: {
+          ...current,
+          phase: input.failure ?? 'ready',
+          response: input.response,
+          pairing: input.pairing,
+        },
       }
     default:
       return session
@@ -86,10 +99,11 @@ export const fold_owner_connection = (session: SessionState, input: AppInput): S
 
 /** Connection display requires both current owner authorization and the matching fresh custody proof. */
 export const owner_connected = (session: SessionState): boolean => {
-  const { response } = session.agent_connection
-  const pairing = session.inventory_pairing
+  const { response, pairing } = session.agent_connection
   if (!response || response.status !== 'connected' || !response.bot || !pairing) return false
   return [
+    response.owner === session.wallet?.address,
+    Number(response.expires_at) > Date.now(),
     pairing.signer_mode === 'host-persistent',
     pairing.address === response.bot.address,
     pairing.multisig_public_key === response.bot.multisig_public_key,

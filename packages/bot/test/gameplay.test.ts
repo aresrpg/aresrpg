@@ -99,6 +99,7 @@ test('canonical catalog exposes the complete bounded PvE lifecycle and strict ne
     'gather',
     'craft',
     'resolve_ambush',
+    'raise_stats',
     'world_search',
     'fight_engage',
     'fight_place',

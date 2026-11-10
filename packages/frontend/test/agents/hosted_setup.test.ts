@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, spyOn, test } from 'bun:test'
+import type { HostedOwnerStatus } from '@aresrpg/protocol'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { prepare_agent_pairing } from '@aresrpg/sdk/agent-signer'
 
 import { setup_hosted, refresh_hosted_owner, create_hosted_client } from '../../src/agents/hosted_client.ts'
+import { initial_owner_connection } from '../../src/agents/owner_state.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import * as app from '../../src/store.ts'
 
@@ -44,9 +46,9 @@ const fixture = async (existing: boolean) => {
       throw new Error('Verified session must not sign again')
     },
   } as unknown as AuthSession
-  const read = spyOn(app, 'read_app_state').mockReturnValue({ session: { wallet } } as ReturnType<
-    typeof app.read_app_state
-  >)
+  const read = spyOn(app, 'read_app_state').mockReturnValue({
+    session: { wallet, agent_connection: initial_owner_connection() },
+  } as ReturnType<typeof app.read_app_state>)
   const published: unknown[] = []
   const dispatch = spyOn(app, 'dispatch_app').mockImplementation((input) => {
     published.push(input)
@@ -137,7 +139,7 @@ const fixture = async (existing: boolean) => {
     )
   return {
     run,
-    refresh: () =>
+    refresh: (previous_status: HostedOwnerStatus | null = null) =>
       refresh_hosted_owner(
         create_hosted_client(
           'https://bot.example.test',
@@ -148,8 +150,16 @@ const fixture = async (existing: boolean) => {
         wallet,
         'verified-session',
         () => {},
-        null
+        previous_status
       ),
+    bind_connection: (result: Awaited<ReturnType<typeof refresh_hosted_owner>>) =>
+      read.mockReturnValue({
+        session: {
+          wallet,
+          inventory_pairing: { ...result.pairing, address: 'recovery', signer_mode: 'disposable' },
+          agent_connection: { ...initial_owner_connection(), ...result, phase: 'ready' },
+        },
+      } as ReturnType<typeof app.read_app_state>),
     calls,
     published,
     state,
@@ -297,6 +307,22 @@ test('an owner without a hosted wallet receives no automatic provisioning or con
     expect(await f.refresh()).toMatchObject({ response: { status: 'disconnected' }, pairing: null })
     expect(f.calls).toEqual(['GET /connect/bots', 'GET /connect/status'])
     expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
+
+test('connection proof reuse ignores the recovery inventory selection and still observes grant revocation', async () => {
+  const f = await fixture(true)
+  try {
+    const verified = await f.refresh()
+    f.bind_connection(verified)
+    const before = f.calls.filter((call) => call === 'POST /connect/proof').length
+    const refreshed = await f.refresh(verified.response)
+    expect(refreshed.pairing).toEqual(verified.pairing)
+    expect(f.calls.filter((call) => call === 'POST /connect/proof')).toHaveLength(before)
+    f.state.existing = false
+    expect(await f.refresh(refreshed.response)).toMatchObject({ response: { status: 'disconnected' }, pairing: null })
   } finally {
     f.cleanup()
   }

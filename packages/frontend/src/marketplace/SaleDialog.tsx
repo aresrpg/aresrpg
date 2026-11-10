@@ -156,7 +156,7 @@ const LowestPrice = ({
         ? text('floor_unavailable')
         : price === undefined
           ? text('floor_empty')
-          : `${sale.localized_numbers.sui(BigInt(price), 9)} SUI`
+          : `${sale.localized_numbers.decimal(Number(price) / 1_000_000_000, 3)} SUI`
   return (
     <p className="mt-3 flex flex-wrap justify-between gap-2 text-[10px] text-muted" role="status">
       <span>{text('floor_price', { amount })}</span>

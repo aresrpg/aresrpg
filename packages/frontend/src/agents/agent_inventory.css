@@ -247,25 +247,6 @@
   border: 1px solid #343b47;
   color: #d8d9df;
 }
-.agent-kiosk__characters {
-  flex: none;
-  max-height: 30%;
-  overflow: auto;
-}
-.agent-kiosk__characters summary {
-  cursor: pointer;
-}
-.agent-kiosk__characters > div {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  padding: 4px 0;
-}
-.agent-kiosk__characters .aui-button {
-  padding: 3px;
-  min-height: 26px;
-  font-size: 9px;
-}
 .agent-coin-form {
   display: flex;
   flex-direction: column;

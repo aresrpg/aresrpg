@@ -254,6 +254,34 @@ pub(crate) fn field_key(t: &TypeKey) -> Option<&str> {
     (is_native(t, "dynamic_field", "Field")).then(|| t.type_params[0].as_str())
 }
 
+/// Character field vocabulary shared by graph projection and its post-projection invalidation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CharacterField {
+    Hp,
+    JobXp,
+    SpellBook,
+    Folded,
+    Equipment,
+    CurrentWorld,
+    Checkpoint,
+    DungeonRun,
+    Ambush,
+}
+pub(crate) fn character_field(key: &str, game: &str) -> Option<CharacterField> {
+    match key.strip_prefix(game)?.strip_prefix("::")? {
+        "progression::HpKey" => Some(CharacterField::Hp),
+        "progression::JobXpKey" => Some(CharacterField::JobXp),
+        "progression::SpellBookKey" => Some(CharacterField::SpellBook),
+        "equipment::FoldedKey" => Some(CharacterField::Folded),
+        "equipment::EquipmentKey" => Some(CharacterField::Equipment),
+        "world::CurrentWorldKey" => Some(CharacterField::CurrentWorld),
+        "world::CheckpointKey" => Some(CharacterField::Checkpoint),
+        "dungeon::DungeonRunKey" => Some(CharacterField::DungeonRun),
+        "gathering::AmbushKey" => Some(CharacterField::Ambush),
+        _ => None,
+    }
+}
+
 /// The parent of a DF, from its owner edge. The bool marks TYPED CO-PRESENCE: the parent
 /// object rode the same transaction (a fresh parent+DF birth — write with MERGE, order-free).
 /// A DF arriving ALONE (equip/hp/scribe mutate only the child — measured 2026-08-21: the
@@ -713,7 +741,7 @@ fn emit_field(
     }
 
     // ── Character DFs ──
-    if key == game_key(game, "progression::HpKey") {
+    if character_field(key, game) == Some(CharacterField::Hp) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -733,7 +761,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "progression::JobXpKey") {
+    if character_field(key, game) == Some(CharacterField::JobXp) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -762,7 +790,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "progression::SpellBookKey") {
+    if character_field(key, game) == Some(CharacterField::SpellBook) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -786,7 +814,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "equipment::FoldedKey") {
+    if character_field(key, game) == Some(CharacterField::Folded) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -803,7 +831,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "equipment::EquipmentKey") {
+    if character_field(key, game) == Some(CharacterField::Equipment) {
         let Some((parent, _)) = df_parent(o, outputs, game, "character", "Character") else {
             return Ok(());
         };
@@ -829,7 +857,7 @@ fn emit_field(
         }
         return Ok(());
     }
-    if key == game_key(game, "world::CurrentWorldKey") {
+    if character_field(key, game) == Some(CharacterField::CurrentWorld) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -846,7 +874,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "world::CheckpointKey") {
+    if character_field(key, game) == Some(CharacterField::Checkpoint) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -873,7 +901,7 @@ fn emit_field(
         }
         return Ok(());
     }
-    if key == game_key(game, "dungeon::DungeonRunKey") {
+    if character_field(key, game) == Some(CharacterField::DungeonRun) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -900,7 +928,7 @@ fn emit_field(
         );
         return Ok(());
     }
-    if key == game_key(game, "gathering::AmbushKey") {
+    if character_field(key, game) == Some(CharacterField::Ambush) {
         let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
         else {
             return Ok(());
@@ -1541,7 +1569,7 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
     if let Some(key) = field_key(t) {
         // the run DF is the one REMOVABLE game DF (end_run) — its deletion
         // clears the character's run (the pre-state owner IS the character).
-        if key == game_key(game, "dungeon::DungeonRunKey") {
+        if character_field(key, game) == Some(CharacterField::DungeonRun) {
             if let OwnerKind::Object(character) = gone.owner {
                 cypher.push(format!(
                     "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL, c.dungeon = NULL, \

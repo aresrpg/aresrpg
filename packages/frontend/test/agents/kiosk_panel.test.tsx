@@ -81,3 +81,29 @@ test('agent SUI display truncates to two decimal digits without changing the sto
   expect(html).toContain('<b>1.23</b>')
   expect(inventory.sui_mist).toBe('1234567890')
 })
+
+test('agent inventory has no character selection, recall, claim or setup controls', () => {
+  const kiosk = {
+    ...controller('failed'),
+    wallet: { address: 'owner' },
+    snapshot: {
+      inventory: { items: [], sui_mist: '1', kares_mist: null },
+      roster: [{ id: 'agent-character', name: 'Agent hero' }],
+      characters: [],
+      pending_characters: [],
+      recall: {},
+    },
+  } as unknown as AgentKioskController
+  const labels = {
+    ...copy,
+    ui: {
+      ...copy.ui,
+      agent_transfer_character: 'Select a character',
+      agent_withdraw: 'Withdraw to player',
+      agent_connect_your: 'Connect your agent',
+    },
+  }
+  const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={labels} disabled={false} offline={false} />)
+  for (const label of ['Select a character', 'Withdraw to player', 'Connect your agent', 'Agent hero'])
+    expect(html).not.toContain(label)
+})

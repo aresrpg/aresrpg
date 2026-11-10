@@ -7,6 +7,7 @@ import type { AgentTransferActions, AgentTransferIntent } from '@aresrpg/sdk/age
 import { complete_agent_handover, AgentHandoverIncomplete } from '@aresrpg/sdk/agent-handover'
 import { pre_submission_failure } from '@aresrpg/sdk/transaction-error'
 
+import type { SessionState } from '../modules/session.ts'
 import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { read_app_state, dispatch_app, useAppStore } from '../store.ts'
@@ -39,7 +40,8 @@ export const useAgentTransaction = (
   wallet: AuthSession | null,
   pairing: AgentPairingIdentity | null,
   complete: () => void,
-  copy: AppCopy
+  copy: AppCopy,
+  read_pairing?: (session: SessionState) => AgentPairingIdentity | null
 ) => {
   const mounted = useRef(true)
   const last_attempt = useRef<(() => unknown) | null>(null)
@@ -83,7 +85,8 @@ export const useAgentTransaction = (
     if (!wallet || !pairing || busy || (reconciling && !retry)) return null
     const is_current = () => {
       const { session } = read_app_state()
-      return mounted.current && session.wallet === wallet && same_inventory_pairing(session.inventory_pairing, pairing)
+      const selected = read_pairing ? read_pairing(session) : session.inventory_pairing
+      return mounted.current && session.wallet === wallet && same_inventory_pairing(selected, pairing)
     }
     const before_sign = () => {
       if (!is_current()) throw new Error('The confirmed wallet or agent changed.')

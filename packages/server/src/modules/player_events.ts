@@ -3,7 +3,7 @@
 // THE SELF STREAM (push model): the SERVER decides what a connection watches — never the client.
 // Two standing watches carry the account's indexed changes:
 //   evt:social:<address>   — friend facts (trade births ride the same channel, in player_trade),
-//   evt:character:<id>     — the EMBODIED character's own chain channel (mounted on the state
+//   evt:character:<id>     — every owned character's chain channel (mounted on the roster
 //                            delta): party invites, the party-membership mirror, fight seats,
 //                            and own visible-slot equips folding back into presence truth.
 // Envelopes forward as shaped packets or re-enter as internal actions, never raw.
@@ -20,7 +20,7 @@ const log = logger(import.meta)
 const refreshes_roster = (type: string): boolean =>
   [
     'WorldJoined',
-    'CharacterCheckpointChanged',
+    'CharacterChanged',
     'DungeonEntered',
     'DungeonRoomCleared',
     'DungeonEnded',
@@ -102,8 +102,8 @@ export default {
     }
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
-      const before = new Set(Object.keys(previous.characters))
-      const current = new Set(Object.keys(state.characters))
+      const before = previous.allowed_characters
+      const current = state.allowed_characters
       before.forEach((character_id) => {
         if (!current.has(character_id)) {
           unwatch(channels.character(character_id))

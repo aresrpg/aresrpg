@@ -11,7 +11,7 @@ const pairing = { address: 'agent', multisig_public_key: 'descriptor', signer_mo
 const response = (owner: string): HostedOwnerStatus => ({
   owner,
   status: 'connected',
-  expires_at: 1_000_000,
+  expires_at: Date.now() + 60_000,
   recovery_bots: [],
   bot: { id: 'bot', ...pairing, status: 'ready', generation: 1, policy_revision: 1 },
 })
@@ -28,6 +28,7 @@ test('one validated owner result supplies connection display and inventory ident
   const checking = reduce_app_state(remembered, { type: 'agent/connection_refresh' })
   const ready = reduce_app_state(checking, {
     type: 'agent/connection_result',
+    failure: null,
     wallet,
     generation: checking.session.agent_connection.generation,
     response: response(wallet.address),
@@ -39,6 +40,7 @@ test('one validated owner result supplies connection display and inventory ident
   const revoked = reduce_app_state(ready, { type: 'agent/connection_refresh' })
   const stopped = reduce_app_state(revoked, {
     type: 'agent/connection_result',
+    failure: null,
     wallet,
     generation: revoked.session.agent_connection.generation,
     response: { ...response(wallet.address), status: 'disconnected', expires_at: null },
@@ -54,6 +56,7 @@ test('cancellation and account replacement reject late owner verification result
   const pending = reduce_app_state(original, { type: 'agent/connection_refresh' })
   const result = {
     type: 'agent/connection_result' as const,
+    failure: null,
     wallet,
     generation: pending.session.agent_connection.generation,
     response: response(wallet.address),
@@ -77,6 +80,7 @@ test('routine owner refresh preserves an explicit recovery selection without pro
   const checking = reduce_app_state(selected, { type: 'agent/connection_refresh' })
   const result = reduce_app_state(checking, {
     type: 'agent/connection_result',
+    failure: null,
     wallet,
     generation: checking.session.agent_connection.generation,
     response: response(wallet.address),
@@ -84,7 +88,7 @@ test('routine owner refresh preserves an explicit recovery selection without pro
   })
   expect(result.session.inventory_pairing).toBe(selected.session.inventory_pairing)
   expect(result.session.inventory_pairing?.signer_mode).toBe('disposable')
-  expect(owner_connected(result.session)).toBe(false)
+  expect(owner_connected(result.session)).toBe(true)
 })
 
 test('fresh authorization restores the same returned account without replacing its identity', () => {
@@ -98,6 +102,7 @@ test('fresh authorization restores the same returned account without replacing i
   const checking = reduce_app_state(selected, { type: 'agent/connection_refresh' })
   const connected = reduce_app_state(checking, {
     type: 'agent/connection_result',
+    failure: null,
     wallet,
     generation: checking.session.agent_connection.generation,
     response: response(wallet.address),
@@ -105,4 +110,19 @@ test('fresh authorization restores the same returned account without replacing i
   })
   expect(connected.session.inventory_pairing).toBe(pairing)
   expect(owner_connected(connected.session)).toBe(true)
+})
+
+test('connection proof expires and cannot be replaced by a matching inventory preference', () => {
+  const original = automation_fixture()
+  const wallet = original.session.wallet!
+  const checking = reduce_app_state(original, { type: 'agent/connection_refresh' })
+  const connected = reduce_app_state(checking, {
+    type: 'agent/connection_result',
+    failure: null,
+    wallet,
+    generation: checking.session.agent_connection.generation,
+    response: { ...response(wallet.address), expires_at: Date.now() - 1 },
+    pairing,
+  })
+  expect(owner_connected(connected.session)).toBe(false)
 })

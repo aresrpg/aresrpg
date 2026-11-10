@@ -32,9 +32,9 @@ test('unsupported pairing never crashes ordinary inventory recovery discovery', 
 
 test('an empty owned roster retains the real agent inventory instead of requiring another character', () => {
   const html = renderToStaticMarkup(<EmptyEquipment copy={copy} />)
-  expect(html).toContain('No character')
+  expect(html).not.toContain('No character')
   expect(html).toContain('aria-label="Agent kiosk"')
-  expect(html).toContain('Connect your agent')
+  expect(html).not.toContain('Connect your agent')
   expect(html).not.toContain('Transfer review')
 })
 

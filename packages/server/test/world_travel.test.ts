@@ -76,7 +76,7 @@ test('WorldJoined moves subscriptions and delivers the destination scout without
     searched = true
     anchor_ms = 200
     fixture.pubsub.emitter.emit('evt:character:0xabc', {
-      type: 'CharacterCheckpointChanged',
+      type: 'CharacterChanged',
       data: { character: '0xabc' },
     })
     fixture.pubsub.emitter.emit('evt:zone:yakutia:0:0', { type: 'ZoneSearched', data: { world, zone_x: 0, zone_z: 0 } })

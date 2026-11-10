@@ -97,7 +97,7 @@ const CharacterAgentAction = ({
   )
 }
 
-/** The app-wide character selector: one tab per owned character, plus a create tab. Selecting
+/** The app-wide selector keeps owned and read-only agent tabs distinct, plus an owned create tab. Selecting
  *  a tab re-points every character-scoped surface (world embodiment, stats, gear, spells,
  *  jobs) through the one session `character/select` door. */
 export const CharacterTabs = ({
@@ -106,13 +106,22 @@ export const CharacterTabs = ({
   create_character,
   select_character,
   selected_character_id,
+  agent_characters = [],
+  select_agent,
+  recall_agent,
+  agent_busy,
 }: Readonly<{
   characters: readonly CharacterRow[]
+  agent_characters?: readonly CharacterRow[]
+  select_agent?: (character_id: string) => void
+  recall_agent?: (character_id: string) => void
+  agent_busy?: boolean
   copy: AppCopy
   create_character: (() => void) | null
   select_character: (character_id: string) => void
   selected_character_id: string | null
 }>) => {
+  const tabs = [...characters, ...agent_characters.filter((row) => !characters.some(({ id }) => id === row.id))]
   const [expanded, set_expanded] = useState(false)
   const selector_id = useId()
   const selector = useRef<HTMLDivElement>(null)
@@ -143,6 +152,9 @@ export const CharacterTabs = ({
   const parties = useAppStore((state) => state.party.by_id)
   const pending_by_character = useAppStore((state) => state.party.pending_by_character)
   const [menu, set_menu] = useState<Readonly<{ character_id: string; x: number; y: number }> | null>(null)
+  const agent_target = agent_characters.find(
+    ({ id }) => id === menu?.character_id && !characters.some((row) => row.id === id)
+  )
   const party_id = selected_character_id ? party_by_character[selected_character_id] : undefined
   const party = party_id ? (parties[party_id] ?? null) : null
   const invite_view = useMemo(
@@ -189,7 +201,8 @@ export const CharacterTabs = ({
           data-character-tabs=""
           data-tutorial-target="character_tabs"
         >
-          {characters.map((character) => {
+          {tabs.map((character) => {
+            const delegated = !characters.some(({ id }) => id === character.id)
             const active = character.id === selected_character_id
             const locked = !!locked_character && character.id !== locked_character
             return (
@@ -197,14 +210,16 @@ export const CharacterTabs = ({
                 character={character}
                 key={character.id}
                 selected={active}
+                agent={delegated ? { status: 'agent', label: copy.ui.agent_watch } : undefined}
                 disabled={locked}
                 onClick={() => {
-                  select_character(character.id)
+                  if (delegated) select_agent?.(character.id)
+                  else select_character(character.id)
                   set_expanded(false)
                 }}
                 onContextMenu={(event: Readonly<ReactMouseEvent<HTMLButtonElement>>) => {
                   event.preventDefault()
-                  if (!create_character) return
+                  if (!create_character && !delegated) return
                   set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })
                 }}
                 title={locked ? copy.settings_page.always_craft_from_hint : undefined}
@@ -223,46 +238,63 @@ export const CharacterTabs = ({
               role="menuitem"
               className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
               onClick={() => {
-                const target = characters.find(({ id }) => id === menu.character_id)
+                const target = tabs.find(({ id }) => id === menu.character_id)
                 if (target) set_dialog({ kind: 'portrait', appearance: target })
                 set_menu(null)
               }}
             >
               {copy.ui.portrait_share}
             </button>
-            <CharacterAgentAction
-              character_id={menu.character_id}
-              copy={copy}
-              open={(next) => {
-                set_menu(null)
-                set_dialog(next)
-              }}
-            />
-            <button
-              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
-              disabled={!can_invite || !!pending}
-              onClick={() => {
-                const target = characters.find(({ id }) => id === menu.character_id)
-                if (can_invite && target)
-                  dispatch_app({ type: 'party/invite', character_id: target.id, name: target.name })
-                set_menu(null)
-              }}
-              role="menuitem"
-              type="button"
-            >
-              {copy.world_hud.menu_group}
-            </button>
-            <button
-              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
-              onClick={() => {
-                set_dialog({ kind: 'delete', character_id: menu.character_id })
-                set_menu(null)
-              }}
-              role="menuitem"
-              type="button"
-            >
-              {copy_text(copy.characters_page)('delete_character')}
-            </button>
+            {agent_target ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5 disabled:opacity-35"
+                disabled={agent_busy || !recall_agent || agent_target.custody !== 'kiosk'}
+                onClick={() => {
+                  recall_agent?.(agent_target.id)
+                  set_menu(null)
+                }}
+              >
+                {copy.ui.agent_recall}
+              </button>
+            ) : (
+              <>
+                <CharacterAgentAction
+                  character_id={menu.character_id}
+                  copy={copy}
+                  open={(next) => {
+                    set_menu(null)
+                    set_dialog(next)
+                  }}
+                />
+                <button
+                  className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
+                  disabled={!can_invite || !!pending}
+                  onClick={() => {
+                    const target = tabs.find(({ id }) => id === menu.character_id)
+                    if (can_invite && target)
+                      dispatch_app({ type: 'party/invite', character_id: target.id, name: target.name })
+                    set_menu(null)
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  {copy.world_hud.menu_group}
+                </button>
+                <button
+                  className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
+                  onClick={() => {
+                    set_dialog({ kind: 'delete', character_id: menu.character_id })
+                    set_menu(null)
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  {copy_text(copy.characters_page)('delete_character')}
+                </button>{' '}
+              </>
+            )}
           </div>
         </ContextMenu>
       )}

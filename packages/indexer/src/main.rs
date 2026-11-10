@@ -14,7 +14,7 @@ mod analytics;
 mod analytics_migration;
 mod analytics_totals;
 mod boot;
-mod character_checkpoints;
+mod character_changes;
 mod character_deletions;
 mod decode;
 mod events;

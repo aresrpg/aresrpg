@@ -7,6 +7,7 @@ import { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
 import spells from '../../../seed/content/spells.json'
 
+import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
 import { zone_key, type ActorWorld } from './actor_world.ts'
 import { hash_secret } from './security.ts'
 import {
@@ -31,13 +32,13 @@ export { gameplay_observed_ms, type GameplayContext } from './gameplay_context.t
 import {
   PROFESSION_ACTIONS,
   validate_profession_action,
-  execute_profession_actions,
+  profession_action_executors,
   type ProfessionActionPlan,
 } from './profession_actions.ts'
 
 type AgentActions = ReturnType<typeof create_agent_actions>
 type Actions = AgentActions['fight'] &
-  Pick<AgentActions['character'], 'search_zone' | 'equip' | 'gather' | 'craft' | 'resolve_ambush'>
+  Pick<AgentActions['character'], 'search_zone' | 'equip' | 'gather' | 'craft' | 'resolve_ambush' | 'raise_stats'>
 type TurnInput = Parameters<Actions['commit_turn']>[0]
 type FightPayload = Readonly<{ character_id: string; fight: string; fighter_idx: string; checkpoint_id: string }>
 export type FightTurnPayload = FightPayload &
@@ -128,6 +129,7 @@ export const parse_fight_turn = (value: unknown): FightTurnPayload => {
 /** One catalog supplies both MCP descriptions/schemas and admission parsing. */
 export const GAMEPLAY_ACTIONS = Object.freeze({
   ...PROFESSION_ACTIONS,
+  raise_stats: RAISE_STATS_ACTION,
   world_search: Object.freeze({
     description:
       "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
@@ -195,6 +197,7 @@ type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
 }>
 export type GameplayPlan =
   | ProfessionActionPlan
+  | StatAllocationPlan
   | Plan<'world_search', 'search_zone'>
   | Plan<'fight_engage', 'engage'>
   | Plan<'fight_place', 'place'>
@@ -363,26 +366,18 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
 /** Rechecked at final signing and submission admission against the current actor snapshot. */
 export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
   const observed_ms = assert_fresh(context)
-  switch (context.command.kind) {
-    case 'world_search':
-      return validate_search(context)
-    case 'fight_engage':
-      return validate_engage(context)
-    case 'fight_place':
-      return validate_place(context)
-    case 'fight_ready':
-      return validate_ready(context)
-    case 'fight_start':
-      return validate_boundary(context, 'fight_start')
-    case 'fight_crank':
-      return validate_boundary(context, 'fight_crank')
-    case 'fight_turn':
-      return validate_turn(context, observed_ms)
-    case 'fight_settle':
-      return validate_settle(context)
-    default:
-      return validate_profession_action(context)
+  const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
+    raise_stats: () => validate_stat_allocation(context),
+    world_search: () => validate_search(context),
+    fight_engage: () => validate_engage(context),
+    fight_place: () => validate_place(context),
+    fight_ready: () => validate_ready(context),
+    fight_start: () => validate_boundary(context, 'fight_start'),
+    fight_crank: () => validate_boundary(context, 'fight_crank'),
+    fight_turn: () => validate_turn(context, observed_ms),
+    fight_settle: () => validate_settle(context),
   }
+  return validators[context.command.kind]?.() ?? validate_profession_action(context)
 }
 export type GameplayActions = Pick<
   Actions,
@@ -398,29 +393,24 @@ export type GameplayActions = Pick<
   | 'gather'
   | 'craft'
   | 'resolve_ambush'
+  | 'raise_stats'
 >
 export const execute_gameplay_actions = async (context: GameplayContext, actions: GameplayActions) => {
   const plan = validate_gameplay(context)
-  switch (plan.kind) {
-    case 'world_search':
-      return actions.search_zone(plan.input)
-    case 'fight_engage':
-      return actions.engage(plan.input)
-    case 'fight_place':
-      return actions.place(plan.input)
-    case 'fight_ready':
-      return actions.ready(plan.input)
-    case 'fight_start':
-      return actions.start(plan.input)
-    case 'fight_crank':
-      return actions.crank(plan.input)
-    case 'fight_turn':
-      return actions.commit_turn(plan.input)
-    case 'fight_settle':
-      return actions.settle(plan.input)
-    default:
-      return execute_profession_actions(plan, actions)
-  }
+  const executors = {
+    ...profession_action_executors(actions),
+    raise_stats: actions.raise_stats,
+    world_search: actions.search_zone,
+    fight_engage: actions.engage,
+    fight_place: actions.place,
+    fight_ready: actions.ready,
+    fight_start: actions.start,
+    fight_crank: actions.crank,
+    fight_turn: actions.commit_turn,
+    fight_settle: actions.settle,
+  } satisfies { [Plan in GameplayPlan as Plan['kind']]: (input: Plan['input']) => ReturnType<Actions['search_zone']> }
+  // The mapped type checks each key/input pair; the discriminated plan preserves that correlation at dispatch.
+  return executors[plan.kind](plan.input as never)
 }
 export const execute_fight_turn = async (context: GameplayContext, actions: Pick<Actions, 'commit_turn'>) => {
   const plan = validate_gameplay(context)

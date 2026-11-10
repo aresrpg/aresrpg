@@ -8,7 +8,7 @@ import { selected_party } from '../modules/party.ts'
 import { Minimap } from '../game/hud/Minimap.tsx'
 import { CompassStrip } from '../game/hud/CompassStrip.tsx'
 import { OverworldVitals } from '../game/hud/OverworldVitals.tsx'
-import { CharacterTabs } from '../components/CharacterTabs.tsx'
+import { PlayerCharacterTabs } from '../components/PlayerCharacterTabs.tsx'
 import { character_icon } from '../content/assets.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -23,10 +23,6 @@ export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const fighting = useAppStore((state) => state.fight.mounted)
   const character = displayed_character(session)
   const view = session.agent_view
-  const characters = [
-    ...session.characters,
-    ...view.characters.filter((row) => !session.characters.some((owned) => owned.id === row.id)),
-  ]
   const status =
     view.status === 'failed'
       ? copy.ui.agent_watch_failed
@@ -39,13 +35,7 @@ export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <>
       <div className="agent-spectator" data-agent-spectator="">
         <WorldStatus copy={copy} party_available={false}>
-          <CharacterTabs
-            characters={characters}
-            selected_character_id={session.selected_character_id}
-            copy={copy}
-            create_character={null}
-            select_character={(character_id) => dispatch_app({ type: 'character/select', character_id })}
-          />
+          <PlayerCharacterTabs copy={copy} create_character={null} />
           <Button
             className="pointer-events-auto"
             onClick={() => dispatch_app({ type: 'agent/watch', observation: null })}

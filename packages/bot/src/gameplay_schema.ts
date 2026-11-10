@@ -9,6 +9,7 @@ export type Schema = Readonly<{
   additionalProperties?: false
   items?: Schema
   pattern?: string
+  minProperties?: number
   minLength?: number
   maxLength?: number
   minimum?: number
@@ -32,6 +33,7 @@ export const object_matches = (schema: Schema, value: unknown): boolean => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const row = value as Record<string, unknown>
   return (
+    Object.keys(row).length >= (schema.minProperties ?? 0) &&
     (schema.required ?? []).every((key) => Object.hasOwn(row, key)) &&
     Object.entries(row).every(
       ([key, field]) => Object.hasOwn(schema.properties!, key) && matches(schema.properties![key]!, field)

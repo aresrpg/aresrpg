@@ -4,6 +4,8 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { same_fight_turn } from '@aresrpg/fight'
 import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
+import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
+import { owned_character } from './gameplay_context.ts'
 import { zone_key } from './actor_world.ts'
 import { assert_lease, type Command, type Lane } from './control.ts'
 import { hydrate_gameplay_fight } from './gameplay.ts'
@@ -12,7 +14,11 @@ import { step_observation, receipt_projected } from './profession_runtime.ts'
 import type { ProfessionRun } from './profession_control.ts'
 import type { ControlStore } from './store.ts'
 
-export type ActionBaseline = Readonly<{ checkpoint_ms: number; profession?: ProfessionRun['last_observation'] }>
+export type ActionBaseline = Readonly<{
+  checkpoint_ms: number
+  stats?: StatBaseline
+  profession?: ProfessionRun['last_observation']
+}>
 export const bind_action_baseline = (command: Command, context: GameplayContext): Command => ({
   ...command,
   fight_baseline: command.fight_baseline ?? context.snapshot.fights[String(command.payload.fight)],
@@ -20,6 +26,9 @@ export const bind_action_baseline = (command: Command, context: GameplayContext)
     checkpoint_ms: Number(
       context.snapshot.characters.find(({ id }) => id === command.payload.character_id)?.at_ms ?? 0
     ),
+    ...(command.kind === 'raise_stats'
+      ? { stats: stat_baseline(owned_character(context, String(command.payload.character_id))) }
+      : {}),
     ...(['gather', 'craft'].includes(command.kind) ? { profession: step_observation(command, context) } : {}),
   },
 })
@@ -62,6 +71,8 @@ const character_projected = (
 ): boolean => {
   const checks: Partial<Record<Command['kind'], () => boolean>> = {
     world_search: () => searched_world(command, receipt, context, character),
+    raise_stats: () =>
+      stats_projected(command.action_baseline?.stats, command.payload.spending as StatSpending, character),
     equip_tool: () => character.equipment.some(({ slot, id }) => slot === 'tool' && id === command.payload.item_id),
     fight_engage: () =>
       character.active_fight?.id === receipt_event(receipt, '::fight::FightCreated')?.fight &&

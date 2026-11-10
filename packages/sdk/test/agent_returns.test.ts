@@ -292,3 +292,51 @@ test('standalone items sharing a batched character offer receipt remain claimabl
     (await read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).map(({ purchase_cap }) => purchase_cap)
   ).toEqual([game])
 })
+
+for (const different_receipts of [false, true]) {
+  test(`creation receipts are fetched once per digest per discovery (${different_receipts ? 'two receipts' : 'five caps, one receipt'})`, async () => {
+    const f = gear_fixture()
+    const rows = Array.from({ length: 5 }, (_, index) => {
+      const id = `0x${(index + 10).toString(16).padStart(64, '0')}`
+      return {
+        ...f.item,
+        objectId: id,
+        previousTransaction: different_receipts && index > 2 ? 'second' : 'first',
+        content: cap_layout.serialize({ id, kiosk_id, item_id: id, min_price: 0 }).toBytes(),
+      }
+    })
+    f.state.rows = rows
+    const calls: string[] = []
+    const replies = new Map(
+      ['first', 'second'].map((digest) => [
+        digest,
+        {
+          ...receipt(rows.filter((row) => row.previousTransaction === digest)),
+          Transaction: { ...receipt(rows.filter((row) => row.previousTransaction === digest)).Transaction, digest },
+        },
+      ])
+    )
+    f.rpc.core.getTransaction = async ({ digest }) => {
+      calls.push(digest)
+      return replies.get(digest)!
+    }
+    expect(await read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).toHaveLength(5)
+    expect(calls).toEqual(different_receipts ? ['first', 'second'] : ['first'])
+    calls.length = 0
+    rows[4]!.version = '8'
+    await expect(read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).rejects.toThrow(
+      'unchanged receipt output'
+    )
+    expect(calls).toEqual(different_receipts ? ['first', 'second'] : ['first'])
+    rows[4]!.version = '7'
+    rows[4]!.digest = 'altered'
+    await expect(read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).rejects.toThrow(
+      'unchanged receipt output'
+    )
+    rows[4]!.digest = 'object-digest'
+    rows[4]!.owner = { $kind: 'AddressOwner', AddressOwner: agent }
+    await expect(read_agent_item_returns(f.rpc as never, sdk as never, owner, agent)).rejects.toThrow(
+      'ownership changed'
+    )
+  })
+}

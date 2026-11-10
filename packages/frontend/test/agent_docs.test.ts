@@ -107,3 +107,12 @@ test('hosted guides separate encrypted actor journals from browser digest-only s
   expect(custody).toContain('tools/list')
   expect(readFileSync(resolve(public_dir, 'agents/play.txt'), 'utf8')).not.toContain('local signing mechanism')
 })
+
+test('agent entry guides disclose work in progress and the canonical support destination', () => {
+  for (const path of ['llms.txt', 'agents/client.txt', 'agents/index.html']) {
+    const guide = readFileSync(resolve(public_dir, path), 'utf8')
+    expect(guide).toContain('work in progress')
+    expect(guide).toContain('over the coming months')
+    expect(guide).toContain('https://discord.gg/aresrpg')
+  }
+})

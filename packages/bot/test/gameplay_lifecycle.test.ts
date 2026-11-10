@@ -344,6 +344,9 @@ test('unsupported managed modes and foreign seats cannot reach any SDK door', as
     return { digest: 'bad' }
   }
   const actions: GameplayActions = {
+    raise_stats: async () => {
+      throw new Error('unexpected stat allocation')
+    },
     equip: async () => {
       throw new Error('unexpected equip')
     },
@@ -390,6 +393,9 @@ test('one complete PvE lifecycle uses injected SDK doors and the actual twin, in
     if (result.error) throw new Error(result.error.code)
   }
   const actions: GameplayActions = {
+    raise_stats: async () => {
+      throw new Error('unexpected stat allocation')
+    },
     equip: async () => {
       throw new Error('unexpected equip')
     },

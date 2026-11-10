@@ -20,6 +20,19 @@ import type { AppContext } from '../store.ts'
 import { sign_hosted_message, hosted_consent_destination } from './hosted_challenge.ts'
 import { complete_agent_pairing } from './pairing_storage.ts'
 
+/** HTTP/network availability is retryable; owner proof and consent failures are not. */
+class HostedRequestError extends Error {
+  readonly status: number
+  constructor(status: number, cause: unknown) {
+    super(`Hosted service request failed (${status})`, { cause })
+    // eslint-disable-next-line functional/no-this-expressions -- Error subclasses are the sanctioned error boundary; status classifies transport failures.
+    this.status = status
+  }
+}
+export const retryable_hosted_request = (error: unknown): boolean =>
+  error instanceof HostedRequestError &&
+  [error.status === 0, error.status === 408, error.status === 429, error.status >= 500].some(Boolean)
+
 export type HostedClient = ReturnType<typeof create_hosted_client>
 export const create_hosted_client = (
   origin: string,
@@ -35,11 +48,16 @@ export const create_hosted_client = (
       signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
+    }).catch((error: unknown) => {
+      signal.throwIfAborted()
+      if (!(error instanceof TypeError) && !(error instanceof DOMException && error.name === 'TimeoutError'))
+        throw error
+      throw new HostedRequestError(0, error)
     })
     signal.throwIfAborted()
     if (!response.ok) {
-      const failure = (await response.json()) as { error?: string }
-      throw new Error(`Hosted service request failed (${response.status})`, { cause: failure.error })
+      const failure = (await response.json().catch((error: unknown) => ({ error }))) as { error?: unknown }
+      throw new HostedRequestError(response.status, failure.error)
     }
     return response.json() as Promise<T>
   }
@@ -310,7 +328,7 @@ export const refresh_hosted_owner = async (
   }
   if (response.status !== 'connected' || !response.bot) return { response, pairing: null }
   const { bot } = response
-  const pairing = client.get_state().session.inventory_pairing
+  const { pairing } = client.get_state().session.agent_connection
   if (pairing && previous) {
     const reusable = [
       pairing.signer_mode === 'host-persistent',

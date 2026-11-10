@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useReducer } from 'react'
-import type { AgentPairingIdentity, CharacterRow, ItemRow } from '@aresrpg/protocol'
+import type { AgentPairingIdentity, ItemRow } from '@aresrpg/protocol'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 import type { AgentRecall } from '@aresrpg/sdk/agent-recall'
 import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
@@ -15,7 +15,6 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { agent_transfer_error } from './transfer_error.ts'
 import { item_claim_attempts } from './item_recovery.ts'
 import { useAgentTransaction } from './useAgentTransaction.ts'
-import { character_send_equipment } from './character_send.ts'
 import { same_inventory_pairing, type AgentInventoryView } from './inventory_state.ts'
 import {
   selected_transfer_items,
@@ -40,8 +39,7 @@ export type KioskInventory = Readonly<{
   sui_mist: string | null
   kares_mist: string | null
 }>
-type KioskSnapshot = Snapshot &
-  Readonly<{ inventory: KioskInventory; roster: readonly CharacterRow[]; reserved_player_items: ReadonlySet<string> }>
+type KioskSnapshot = Snapshot & Readonly<{ inventory: KioskInventory; reserved_player_items: ReadonlySet<string> }>
 type State = Readonly<{ phase: 'idle' | 'loading' | 'ready' | 'failed'; snapshot?: Snapshot; error?: unknown }>
 type Input = Readonly<{ type: 'load' } | { type: 'ready'; snapshot: Snapshot } | { type: 'failed'; error: unknown }>
 const reduce = (state: State, input: Input): State => {
@@ -92,7 +90,6 @@ const project_kiosk = (source: Snapshot, view: AgentInventoryView): KioskSnapsho
   return {
     ...source,
     reserved_player_items: offered_item_ids(source.deposits, source.pending_characters),
-    roster: view.characters.filter(({ custody }) => custody === 'kiosk'),
     inventory: {
       items: view.inventory.map((item) => ({
         item,
@@ -279,26 +276,6 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     const selected = recovery.items.find(({ status }) => status === 'attempted')
     if (selected) void recover_item(selected, false)
   }
-  const recall_character = (character: Readonly<CharacterRow>): void => {
-    if (!routes || transfer.busy || state.phase !== 'ready') return
-    const route = routes.withdraw
-    void transfer.execute(
-      route.offer,
-      {
-        kind: 'offer',
-        character_id: character.id,
-        kiosk: character.kiosk,
-        unequip: character_send_equipment(character),
-        recipient: route.recipient,
-      },
-      { handover: { claim: route.claim, read: route.read } }
-    )
-  }
-  const claim_character = (offer: AgentReturnOffer): void => {
-    if (!snapshot || !snapshot.deposit || state.phase !== 'ready' || transfer.busy) return
-    if (!snapshot.pending_characters.includes(offer)) return
-    void transfer.execute(snapshot.recall.transfer, { kind: 'claim', ...offer })
-  }
   return {
     wallet,
     pairing,
@@ -309,8 +286,6 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     offer,
     item_recovery_blocked,
     retry_items,
-    claim_character,
-    recall_character,
     pending_deposit_ids,
     ...transfer,
     blocked: transfer.reconciling || (transfer.blocked && transfer.unresolved),

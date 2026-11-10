@@ -193,18 +193,11 @@ export const validate_profession_action = (context: GameplayContext): Profession
   }
 }
 
-export const execute_profession_actions = (
-  plan: ProfessionActionPlan,
+export const profession_action_executors = (
   actions: Pick<CharacterActions, 'equip' | 'gather' | 'craft' | 'resolve_ambush'>
-) => {
-  switch (plan.kind) {
-    case 'equip_tool':
-      return actions.equip(plan.input)
-    case 'gather':
-      return actions.gather(plan.input)
-    case 'craft':
-      return actions.craft(plan.input)
-    case 'resolve_ambush':
-      return actions.resolve_ambush(plan.input)
-  }
-}
+) => ({
+  equip_tool: actions.equip,
+  gather: actions.gather,
+  craft: actions.craft,
+  resolve_ambush: actions.resolve_ambush,
+})

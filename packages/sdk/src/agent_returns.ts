@@ -88,6 +88,7 @@ export const read_agent_returns = async (
 ): Promise<readonly AgentReturnOffer[]> => {
   const recipient = normalizeSuiAddress(owner)
   const agent = normalizeSuiAddress(agent_address)
+  const read_receipt = offer_receipt_reader(client, agent, recipient)
   const type = normalizeStructTag(`0x2::kiosk::PurchaseCap<${sdk.game_type_package}::character::Character>`)
   const [caps, objects] = await Promise.all([
     read_personal_kiosks(sdk, agent),
@@ -104,7 +105,7 @@ export const read_agent_returns = async (
     await Promise.all(
       offers.map(async (offer) => {
         const object = objects.find((row) => row.objectId === offer.purchase_cap)!
-        const receipt = await offer_receipt(client, object, agent, recipient)
+        const receipt = await read_receipt(object)
         const equipment = equipment_events(receipt, sdk.game_type_package!, offer.character_id)
         const associated = equipment.map((row) => {
           const matches = items.filter((item) => decode_agent_purchase_cap(item.content).item_id === row.item)
@@ -141,22 +142,25 @@ const assert_created_cap = (receipt: OfferReceipt, cap: CapabilityObject, recipi
   ]
   if (!valid.every(Boolean)) throw new Error('Return capability is not the unchanged receipt output.')
 }
-const offer_receipt = async (client: SuiGrpcClient, cap: CapabilityObject, agent: string, recipient: string) => {
-  if (!cap.previousTransaction) throw new Error('Return capability creation receipt is unavailable.')
-  const result = await client.core.getTransaction({
-    digest: cap.previousTransaction,
-    include: { events: true, effects: true, transaction: true },
-  })
-  const receipt = result.Transaction
-  if (
-    !receipt ||
-    !receipt.status.success ||
-    receipt.digest !== cap.previousTransaction ||
-    receipt.transaction.sender !== agent
-  )
-    throw new Error('Return capability receipt is invalid.')
-  assert_created_cap(receipt, cap, recipient)
-  return receipt
+/** Coalesce only immutable creation-receipt reads within this discovery call. Every cap still proves its own output. */
+const offer_receipt_reader = (client: SuiGrpcClient, agent: string, recipient: string) => {
+  const receipts = new Map<string, Promise<OfferReceipt | null>>()
+  return async (cap: CapabilityObject) => {
+    const digest = cap.previousTransaction
+    if (!digest) throw new Error('Return capability creation receipt is unavailable.')
+    let pending = receipts.get(digest)
+    if (!pending) {
+      pending = client.core
+        .getTransaction({ digest, include: { events: true, effects: true, transaction: true } })
+        .then((result) => result.Transaction ?? null)
+      receipts.set(digest, pending)
+    }
+    const receipt = await pending
+    if (!receipt || !receipt.status.success || receipt.digest !== digest || receipt.transaction.sender !== agent)
+      throw new Error('Return capability receipt is invalid.')
+    assert_created_cap(receipt, cap, recipient)
+    return receipt
+  }
 }
 
 /** Re-read receipt and current capability ownership before review and again before signing. */
@@ -204,6 +208,7 @@ export const read_agent_item_returns = async (
 ): Promise<readonly AgentItemReturnOffer[]> => {
   const recipient = normalizeSuiAddress(owner)
   const agent = normalizeSuiAddress(agent_address)
+  const read_receipt = offer_receipt_reader(client, agent, recipient)
   const type = normalizeStructTag(`0x2::kiosk::PurchaseCap<${sdk.game_type_package}::item::Item>`)
   const [caps, objects] = await Promise.all([
     read_personal_kiosks(sdk, agent),
@@ -220,11 +225,9 @@ export const read_agent_item_returns = async (
   })
   const evidence = await Promise.all(
     pending.map(async ({ object, offer }) => ({
-      items: equipment_events(
-        await offer_receipt(client, object, agent, recipient),
-        sdk.game_type_package!,
-        offer.character_id
-      ).map((item) => `${offer.seller_kiosk}:${item.item}`),
+      items: equipment_events(await read_receipt(object), sdk.game_type_package!, offer.character_id).map(
+        (item) => `${offer.seller_kiosk}:${item.item}`
+      ),
     }))
   )
   const associated_items = new Set(evidence.flatMap((row) => row.items))
@@ -242,7 +245,7 @@ export const read_agent_item_returns = async (
       .map(async (object) => {
         const offer = verified_offer(object, { type, recipient, agent, kiosks })
         if (!offer) return null
-        await offer_receipt(client, object, agent, recipient)
+        await read_receipt(object)
         return Object.freeze({
           offer_digest: object.previousTransaction!,
           item_id: offer.character_id,

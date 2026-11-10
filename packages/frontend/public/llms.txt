@@ -1,5 +1,7 @@
 # AresRPG
 
+Hosted bot play is a work in progress. More features and improvements are planned over the coming months. For support, bug reports or feature requests, join the AresRPG Discord: https://discord.gg/aresrpg.
+
 > Connect your assistant to a hosted AresRPG bot through authenticated MCP and act within the player's objective.
 
 **Connect Your Agent is the single official supported bot onboarding flow.** Start with the

@@ -35,12 +35,16 @@ const wire = () => {
       // the roster's two custody shapes: kiosk-held and fight-seated
       if (cypher.includes('[:HOLDS]->(c:Character)'))
         return [
-          { character: { properties: { name: 'nox' } }, kiosk_node: { properties: { id: '0xk' } }, equipment: [] },
+          {
+            character: { properties: { id: '0xcharacter', name: 'nox' } },
+            kiosk_node: { properties: { id: '0xk' } },
+            equipment: [],
+          },
         ]
       if (cypher.includes(':FIGHTER]->(c:Character {owner:')) return []
       return [
         {
-          character: { properties: { name: 'nox' } },
+          character: { properties: { id: '0xcharacter', name: 'nox' } },
           item: { properties: { name: 'sword' } },
           kiosk: '0xk',
           equipment: [],
@@ -111,7 +115,11 @@ describe('the player harness (push model)', () => {
     const { sent, ws, graph, pubsub, queries } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    expect(queries.every(({ params }) => params?.address === '0xme')).toBe(true)
+    expect(queries.filter(({ params }) => params?.address !== '0xme').map(({ params }) => params)).toEqual([
+      { character: '0xcharacter' },
+      { character_id: '0xcharacter' },
+    ])
+    expect(queries.filter(({ params }) => params?.address === '0xme').length).toBeGreaterThan(0)
     const types = sent.map((packet) => packet.type)
     for (const expected of [
       'packet/characters',

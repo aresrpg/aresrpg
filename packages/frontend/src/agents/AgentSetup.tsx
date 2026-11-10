@@ -9,11 +9,13 @@ import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { env } from '../env.ts'
+import { toast } from '../toast.ts'
 
 import { useHostedConnect } from './useHostedConnect.ts'
 import { HostedBotPanel } from './HostedBotPanel.tsx'
 import { disconnect_agent } from './disconnect_agent.ts'
 import { AgentConnectionButton, AgentConnectedModal } from './AgentConnected.tsx'
+import { agent_tab_source } from './character_tabs.ts'
 import { owner_connected } from './owner_state.ts'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
 import './agent_setup.css'
@@ -160,11 +162,25 @@ export const AgentSetupButton = ({
   const [open, set_open] = useState(false)
   const connected = useAppStore((app) => owner_connected(app.session))
   const wallet = useAppStore((app) => app.session.wallet)
-  const bot = useAppStore((app) => app.session.agent_connection.response?.bot)
+  const connection = useAppStore((app) => app.session.agent_connection)
+  const bot = connection.response?.bot
   const returning = bot?.status === 'returning'
-  const busy = useAppStore((app) => app.session.agent_connection.phase === 'returning')
+  const { phase } = connection
+  const checking = phase === 'checking' && !connection.response
+  const busy = phase === 'returning'
+  const status_label = {
+    checking: checking ? copy.ui.agent_cancel : label,
+    returning: copy.ui.agent_return_resume,
+    failed: copy.ui.agent_hosted_retry,
+    unavailable: copy.ui.agent_hosted_retry,
+    idle: label,
+    ready: label,
+  }[returning ? 'returning' : phase]
   const activate = () => {
+    if (checking) return dispatch_app({ type: 'agent/connection_cancel' })
+    if (connection.response?.status === 'ambiguous') return toast.add(copy.ui.agent_hosted_ambiguous, 'error')
     if (returning && wallet && bot) void disconnect_agent(wallet, bot, copy)
+    else if (['failed', 'unavailable'].includes(phase)) dispatch_app({ type: 'agent/connection_refresh' })
     else set_open(true)
   }
   return (
@@ -174,9 +190,7 @@ export const AgentSetupButton = ({
         class_name={class_name}
         open={activate}
         disabled={busy}
-        label={
-          connected ? copy.ui.agent_connected : returning ? copy.ui.agent_return_resume : (label ?? copy.ui.agent_setup)
-        }
+        label={connected ? copy.ui.agent_connected : (status_label ?? copy.ui.agent_setup)}
       />
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>
@@ -194,7 +208,12 @@ export const AgentSetupDialog = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       close={() =>
         dispatch_app({
           type: 'dialog/open',
-          dialog: session.roster_loaded && session.characters.length === 0 ? 'welcome' : null,
+          dialog:
+            session.roster_loaded &&
+            session.characters.length === 0 &&
+            agent_tab_source(session).characters.length === 0
+              ? 'welcome'
+              : null,
         })
       }
     />

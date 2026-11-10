@@ -108,7 +108,7 @@ pub fn analyze_with_digests(
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game, seed)?;
         for (index, character) in
-            crate::character_checkpoints::changed(tx.inputs, tx.outputs, game)?
+            crate::character_changes::changed(tx.inputs, tx.outputs, tx.deleted, game)?
         {
             wire.publications.push(Publication {
                 channel: format!("evt:character:{}", character.hex()),
@@ -117,7 +117,7 @@ pub fn analyze_with_digests(
                     tx.tx_index,
                     index as u64,
                     ts_ms,
-                    "CharacterCheckpointChanged",
+                    "CharacterChanged",
                     json!({ "character": character.hex() }),
                 ),
             });
@@ -1671,7 +1671,7 @@ mod tests {
     }
 
     #[test]
-    fn dungeon_run_writes_and_deletion_invalidate_only_the_portal_lobby() {
+    fn dungeon_run_writes_and_deletion_invalidate_portal_and_character() {
         let run_type = dungeon_run_type();
         let bytes = dungeon_run_bytes(44);
         let run = ObjView {
@@ -1691,7 +1691,7 @@ mod tests {
             outputs: std::slice::from_ref(&run),
         };
         let deleted_tx = TxView {
-            deleted: &[],
+            deleted: std::slice::from_ref(&run),
             tx_index: 3,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1702,14 +1702,21 @@ mod tests {
 
         for tx in [output_tx, deleted_tx] {
             let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
-            assert_eq!(wire.publications.len(), 1);
-            assert_eq!(
-                wire.publications[0].channel,
-                "evt:dungeon:tangled_aftermath"
-            );
-            let payload: serde_json::Value =
-                serde_json::from_str(&wire.publications[0].payload).unwrap();
+            assert_eq!(wire.publications.len(), 2);
+            let lobby = wire
+                .publications
+                .iter()
+                .find(|row| row.channel == "evt:dungeon:tangled_aftermath")
+                .unwrap();
+            let character = wire
+                .publications
+                .iter()
+                .find(|row| row.channel == format!("evt:character:{}", Id([5; 32]).hex()))
+                .unwrap();
+            let payload: serde_json::Value = serde_json::from_str(&lobby.payload).unwrap();
             assert_eq!(payload["type"], "DungeonLobbyChanged");
+            let payload: serde_json::Value = serde_json::from_str(&character.payload).unwrap();
+            assert_eq!(payload["type"], "CharacterChanged");
         }
     }
 

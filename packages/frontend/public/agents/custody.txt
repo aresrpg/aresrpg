@@ -16,8 +16,9 @@ cap IDs and gas must come from actual state, never examples. Zero price does not
 
 ## Human Recall
 
-The browser retains public recovery identities per Google owner. Reopen setup and use the saved
-identity even if the assistant is offline. Restored identities allow recovery, not new handover.
+The browser retains public recovery identities per Google owner. Select the agent character’s
+circuit-and-robot tab and use Recall from its context menu. The hosted assistant need not be online.
+Restored identities allow recovery, not new handover.
 
 **Recall** uses the human's Google member to authorize a return from the multisig kiosk. It unequips
 into that kiosk, then issues exclusive PurchaseCaps for the character and precisely its CURRENT
@@ -28,36 +29,30 @@ capabilities before review and again before signing. Missing or ambiguous histor
 gear blocks the claim. A failed claim leaves all transfers unexecuted; reconcile uncertain digests
 before trying again. Cancelling releases the character and item listings in the source kiosk,
 leaving the gear unequipped there. This uses existing contracts and needs no new Move module.
-The human then checks incoming returns and claims into their own personal kiosk. Both signatures
-come from the human; the agent is not asked. The first transaction needs multisig gas; the claim
-needs human-wallet gas. Pending initial handovers can be cancelled through Recall; pending returns
-can be cancelled from the incoming list.
+Recall offers and claims through the existing SDK sequence. Both signatures come from the human;
+the agent is not asked. The offer needs multisig gas; the claim needs human-wallet gas. A verified
+pending return resumes at the claim without another offer. Inventory has no manual character
+claim or cancellation controls; the underlying SDK custody builders remain available.
 
 This follows existing custody rules: a fighting character must first return to kiosk custody;
 a capability already transferred to a third party is controlled by that holder. Recall does not
 revoke the agent's 1-of-2 authority over assets remaining in the multisig.
 
-## Selective inventory recovery
+## Inventory and full return
 
-The human opens Recall, then refreshes Agent inventory. The read covers every personal kiosk,
-address-owned object page, kiosk character's current equipment, liquid SUI/KARES, kiosk sale
-proceeds and KARES staking positions. Unknown Move types are visible read only. Fighting
-characters remain subject to existing settlement and are outside the kiosk inventory until returned.
+Both bags use the indexed account inventory. Drag exact items or whole displayed stacks between
+them to run the existing offer-and-claim sequence. Coin balances open Deposit or Withdraw with
+an explicit amount, Max and the retained reserve. Missing KARES configuration disables that currency.
+Incoming item recovery validates each capability’s unchanged creation receipt and excludes gear
+belonging to a pending character return. Discovery fetches a shared receipt once per digest within
+that invocation; each capability still proves its own version, digest and recipient.
 
-Select exact items (whole stacks) and token amounts. Available, equipped, public-listed and
-exclusive-offer items have distinct controls. Current equipment is checked before unequipping;
-public listings can be cancelled first. Directly address-owned game items are deposited into a
-personal kiosk before exclusive offer. The human then selects incoming item caps to claim or
-cancel. Gear tied to a pending character return is excluded from independent item claims.
-Kiosk proceeds and staked KARES are withdrawn to the multisig first; refresh before selecting
-an external recovery amount. Everything reuses existing kiosk, marketplace and staking primitives.
-
-SUI review retains an editable reserve, initially the existing SDK gas budget (0.05 SUI).
-Variable-sized recovery batches use the existing fee estimator. Fresh balance must cover the
-chosen SUI amount, the full prepared gas budget and the explicit reserve. Coin transfers never
-implicitly drain all funds. Missing KARES deployment pins disable that currency without hiding
-items or SUI; staking additionally requires its ordinary currency/pool/reward pins. Check live state again before signing; an uncertain digest must be
-reconciled rather than retried. These checks do not suspend the trusted agent's concurrent actions.
+The connected modal’s Disconnect action requires explicit confirmation. It stops hosted work,
+drains unresolved transactions, resolves supported fight/dungeon custody and returns assets through
+the existing SDK before sweeping balances. Partial or uncertain returns stay stopped for explicit
+resume. The SDK’s complete auxiliary audit covers personal kiosks, address-owned assets, proceeds
+and staking; this is not another inventory screen. Unknown or unsupported custody fails closed.
+Fee quotes precede signing. Never retry an uncertain or executed digest.
 
 ## Verification boundary
 

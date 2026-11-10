@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { AgentKioskPanel } from '../agents/AgentKioskPanel.tsx'
 import { useAgentKiosk } from '../agents/useAgentKiosk.ts'
-import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { type AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
 
@@ -19,9 +19,6 @@ export const EmptyEquipment = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return (
     <div className="chr-equip chr-equip--empty-agent">
       <div className="chr-equip__bag" data-inventory-owner="player">
-        <p className="text-[10px] tracking-[0.2em] text-muted uppercase">
-          {copy_text(copy.characters_page)('no_character')}
-        </p>
         <InventoryTransferGrid
           owner="player"
           rows={displayed.map((item) => ({

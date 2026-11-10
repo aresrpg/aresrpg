@@ -5,9 +5,13 @@ import { SDK, type SuiTransport } from '@aresrpg/sdk'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { Inputs, Transaction, type TransactionPlugin } from '@mysten/sui/transactions'
 
-import { validate_gameplay, parse_gameplay_action, execute_gameplay } from '../src/gameplay.ts'
+import {
+  validate_gameplay,
+  parse_gameplay_action,
+  execute_gameplay,
+  execute_gameplay_actions,
+} from '../src/gameplay.ts'
 import { next_profession_action } from '../src/profession_plan.ts'
-import { execute_profession_actions } from '../src/profession_actions.ts'
 import { fold_actor_inventory } from '../src/actor_inventory.ts'
 import { id, pins, digest, fake_client } from '../../sdk/test/helpers/transport.ts'
 
@@ -53,12 +57,12 @@ test('unequipped handover waits for deposited tool, equips through SDK and gathe
   })
   if (action.kind !== 'equip_tool') throw new Error('expected equip')
   const calls: unknown[] = []
-  await execute_profession_actions(action, {
+  await execute_gameplay_actions(deposited, {
     equip: async (input) => {
       calls.push(input)
       return { digest: 'fixture' }
     },
-  } as Parameters<typeof execute_profession_actions>[1])
+  } as Parameters<typeof execute_gameplay_actions>[1])
   expect(calls).toEqual([action.input])
   expect(next_profession_action(plan, deposited).issue?.code).toBe('gathering_tool_required')
   const observed = {

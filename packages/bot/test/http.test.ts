@@ -72,6 +72,21 @@ test('real HTTP handlers issue exact consent and OAuth token, MCP returns direct
   const f = await authenticated_http(undefined, async () =>
     ready ? { state: 'awaiting_ai', observation_revision: 7 } : { status: 'pending' }
   )
+  const initialized = await f.json<{ result: { instructions: string } }>(
+    '/mcp',
+    {
+      jsonrpc: '2.0',
+      id: 0,
+      method: 'initialize',
+      params: { protocolVersion: '2025-11-25' },
+    },
+    f.access_token
+  )
+  expect(initialized.result.instructions).toContain('work in progress')
+  expect(initialized.result.instructions).toContain('over the coming months')
+  expect(initialized.result.instructions).toContain('https://discord.gg/aresrpg')
+  expect(initialized.result.instructions).toContain('At first use')
+  expect(initialized.result.instructions).toContain('Do not repeat it during normal play')
   const listed = await f.json<{ result: { tools: { name: string }[] } }>(
     '/mcp',
     { jsonrpc: '2.0', id: 1, method: 'tools/list' },
@@ -101,6 +116,7 @@ test('real HTTP handlers issue exact consent and OAuth token, MCP returns direct
     f.access_token
   )
   expect(observed.result.structuredContent).toEqual({ state: 'awaiting_ai', observation_revision: 7 })
+  expect(JSON.stringify(observed)).not.toContain('discord.gg')
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
   await f.json('/oauth/revoke', { client_id: f.client.client_id, token: f.access_token })
   const denied = await f.request('/mcp', { jsonrpc: '2.0', id: 4, method: 'tools/list' }, f.access_token)

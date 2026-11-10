@@ -938,7 +938,7 @@
     },
     "packages/frontend/src/agents/AgentKioskPanel.tsx": {
       "AgentKioskStatus": [
-        12
+        11
       ]
     },
     "packages/frontend/src/agents/hosted_client.ts": {
@@ -1541,6 +1541,9 @@
       ]
     },
     "packages/frontend/src/modules/navigation.ts": {
+      "packet_navigation": [
+        11
+      ],
       "reduce": [
         9
       ]
@@ -2338,14 +2341,6 @@
         10
       ]
     },
-    "packages/bot/src/gameplay.ts": {
-      "execute_gameplay_actions": [
-        9
-      ],
-      "validate_gameplay": [
-        9
-      ]
-    },
     "packages/bot/src/profession_plan.ts": {
       "next_profession_action": [
         12
@@ -2540,6 +2535,26 @@
     },
     "packages/sdk/src/agent_handover.ts": {
       "complete_agent_handover": [
+        10
+      ]
+    },
+    "packages/frontend/src/agents/AgentSetup.tsx": {
+      "AgentSetupButton": [
+        9
+      ]
+    },
+    "packages/frontend/src/components/CharacterTabs.tsx": {
+      "CharacterTabs": [
+        12
+      ]
+    },
+    "packages/frontend/src/modules/hosted_agent.ts": {
+      "observe_hosted_agent > run": [
+        9
+      ]
+    },
+    "packages/bot/src/stat_allocation.ts": {
+      "validate_stat_allocation": [
         10
       ]
     }

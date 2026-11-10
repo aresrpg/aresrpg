@@ -16,9 +16,6 @@ import { agent_inventory_groups, type TransferToken } from './inventory_transfer
 import { AgentTransferFunding } from './AgentTransferFunding.tsx'
 import { AgentCoinTransfer } from './AgentCoinTransfer.tsx'
 import { owner_connected } from './owner_state.ts'
-import { AgentSetupButton } from './AgentSetup.tsx'
-import { AgentKioskIdentity } from './AgentKioskIdentity.tsx'
-import { AgentKioskCharacters } from './AgentKioskCharacters.tsx'
 import './agent_inventory.css'
 
 export const AgentKioskPanel = ({
@@ -61,7 +58,6 @@ export const AgentKioskPanel = ({
             pending_ids={kiosk.pending_ids}
             transfer={drop}
           />
-          <AgentKioskCharacters kiosk={kiosk} copy={copy} disabled={busy || state.phase !== 'ready'} />
           {coin && <AgentCoinTransfer key={coin} token={coin} kiosk={kiosk} copy={copy} close={() => set_coin(null)} />}
         </>
       )}
@@ -109,7 +105,7 @@ const AgentKioskStatus = ({
 }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; offline: boolean }>) => {
   const connected = useAppStore((app) => owner_connected(app.session))
   if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
-  if (!kiosk.pairing) return <AgentKioskIdentity copy={copy} />
+  if (!kiosk.pairing) return null
   const failure =
     kiosk.state.error ||
     kiosk.transaction.error ||
@@ -117,9 +113,6 @@ const AgentKioskStatus = ({
   const retry = kiosk.item_recovery_blocked ? kiosk.retry_items : kiosk.state.error ? kiosk.refresh : kiosk.retry
   return (
     <>
-      {kiosk.pairing.signer_mode === 'disposable' && (
-        <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
-      )}
       {connected && <p role="status">{copy.ui.agent_connected}</p>}
       <p className="agent-transfer-error" role="alert" hidden={!failure}>
         {failure}

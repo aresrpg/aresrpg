@@ -1,5 +1,7 @@
 # Connect your assistant to hosted AresRPG
 
+Hosted bot play is a work in progress. More features and improvements are planned over the coming months. For support, bug reports or feature requests, join the AresRPG Discord: https://discord.gg/aresrpg.
+
 Connect Your Agent is the single official supported bot onboarding flow.
 Use https://aresrpg.world/world?intent=connect-agent and the existing Google game login.
 A hosted service operates the bot; your assistant supplies inference through authenticated MCP.
@@ -43,19 +45,22 @@ current renewable assistant authorization, not live AI activity. Other saved wal
 available separately for recovery; they never choose the active bot. Keep a
 sensible gas reserve. Never automatically retry an uncertain or executed transaction.
 
-For a new empty bot, verify its fresh persistent signer and compare its full address in Inventory.
-First explicitly deposit enough SUI for the bot’s claim gas and a reserve using the existing
-owner transfer flow. Then offer the selected character. In the bot’s pending character offers,
-choose “Claim character for bot” and approve with your Google wallet: your Google multisig
-member signs, and the bot’s multisig pays claim gas. The claim creates its personal kiosk if
-needed. Offering and claiming are separate actions; neither funding nor claiming is automatic.
-After the claim is confirmed, ask the assistant to observe the bot and choose an authorized
-PvE action. The current MCP catalog does not transfer or claim characters for you.
+For a new empty bot, verify its fresh persistent signer before depositing assets.
+Explicitly deposit enough SUI for claim gas and a reserve through the existing owner transfer flow.
+Use Send from the selected character's tab. The existing SDK offers and claims the character
+with its current gear using the authorized signers. After confirmation, select its circuit-and-robot
+tab to spectate. The current MCP catalog does not transfer or claim characters for you.
 
-Owner Recall uses your Google member of the canonical multisig and does not require the
-hosted service or assistant to cooperate. Saved public recovery descriptors remain available
-in Inventory, including legacy identities. Never delete an old key or move legacy assets
-merely to adopt hosted onboarding. Fight custody and third-party offers retain their normal rules.
+Owner Recall is available from the agent character's tab. It uses your Google member of the
+canonical multisig and does not require the hosted service or assistant to cooperate.
+Recall resumes a verified pending return instead of offering the character again.
+Never delete an old key or move legacy assets merely to adopt hosted onboarding.
+Fight custody and third-party offers retain their normal rules.
+
+The explicit bot_raise_stats tool spends character capital, not requested stat gains.
+Supply positive integer spending for vitality, wisdom, strength, intelligence, chance or agility.
+Class costs apply; unusable remainders are rejected. Spell points are not allocated.
+Agree on the allocation first. Observe the indexed result before requesting another action.
 
 Do not request or paste wallet secrets, private keys, session cookies or OAuth tokens in chat.
 A failed, closed, expired or cancelled setup needs an explicit new attempt, not automatic consent.

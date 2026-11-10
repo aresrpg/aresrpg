@@ -13,7 +13,7 @@ import { CharacterHud } from '../game/hud/CharacterHud.tsx'
 
 import { social_hud_visible } from './app_layout.ts'
 import { WorldStatus } from './WorldStatus.tsx'
-import { CharacterTabs } from './CharacterTabs.tsx'
+import { PlayerCharacterTabs } from './PlayerCharacterTabs.tsx'
 
 export const DesktopWorldStatus = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const session = useAppStore((state) => state.session)
@@ -30,11 +30,8 @@ export const DesktopWorldStatus = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <CharacterHud copy={copy} enabled={in_app} leave={() => dispatch_app({ type: 'auth/disconnected' })} />
       <WorldStatus copy={copy} party_available={party_available} active={navigation.page === 'world'}>
         {in_app && (
-          <CharacterTabs
-            characters={session.characters}
+          <PlayerCharacterTabs
             copy={copy}
-            selected_character_id={session.selected_character_id}
-            select_character={(character_id) => dispatch_app({ type: 'character/select', character_id })}
             create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
           />
         )}
