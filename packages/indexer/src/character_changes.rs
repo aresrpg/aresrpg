@@ -105,7 +105,7 @@ mod tests {
                 ..output.clone()
             };
             assert!(
-                changed(&[unchanged], &[output.clone()], &[], "0xgame")
+                changed(&[unchanged], std::slice::from_ref(&output), &[], "0xgame")
                     .unwrap()
                     .is_empty(),
                 "{path}"
@@ -152,12 +152,17 @@ mod tests {
             ..root.clone()
         };
         assert_eq!(
-            changed(&[before], &[root.clone()], &[], "0xgame").unwrap(),
+            changed(&[before], std::slice::from_ref(&root), &[], "0xgame").unwrap(),
             vec![(0, root.id)]
         );
-        assert!(changed(&[root.clone()], &[root.clone()], &[], "0xgame")
-            .unwrap()
-            .is_empty());
+        assert!(changed(
+            std::slice::from_ref(&root),
+            std::slice::from_ref(&root),
+            &[],
+            "0xgame"
+        )
+        .unwrap()
+        .is_empty());
         assert!(changed(&[], &[root], &[], "0xother").unwrap().is_empty());
     }
 
@@ -200,7 +205,7 @@ mod tests {
             };
             assert_eq!(
                 !changed(
-                    &[current.clone()],
+                    std::slice::from_ref(&current),
                     &[current.clone(), checkpoint],
                     &[],
                     "0xgame"
@@ -223,11 +228,17 @@ mod tests {
             type_key: &key,
             bytes: &[1],
         };
-        assert!(changed(&[gone.clone()], &[], &[], "0xgame")
+        assert!(changed(std::slice::from_ref(&gone), &[], &[], "0xgame")
             .unwrap()
             .is_empty());
         assert_eq!(
-            changed(&[gone.clone()], &[], &[gone], "0xgame").unwrap(),
+            changed(
+                std::slice::from_ref(&gone),
+                &[],
+                std::slice::from_ref(&gone),
+                "0xgame"
+            )
+            .unwrap(),
             vec![(0, character)]
         );
     }
