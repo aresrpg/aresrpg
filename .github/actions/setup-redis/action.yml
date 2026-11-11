@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+name: Setup Redis test fixture
+description: Cache the official Redis binaries without depending on Ubuntu package mirrors.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ares-ci-redis
+        key: redis-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/actions/setup-redis/action.yml') }}
+    - shell: bash
+      env:
+        REDIS_VERSION: 7.2.17
+        # https://github.com/redis/redis-hashes/blob/master/README
+        REDIS_SHA256: 07c679c013fd82513299733bddf91999bbbc830351ec9ea985a533b09a595d76
+      run: |
+        set -euo pipefail
+        bin="$HOME/.cache/ares-ci-redis"
+        if ! "$bin/redis-server" --version 2>/dev/null | grep -q "v=$REDIS_VERSION "; then
+          fixture=$(mktemp -d)
+          trap 'rm -rf "$fixture"' EXIT
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 10 --max-time 120 \
+            "https://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz" -o "$fixture/redis.tar.gz"
+          echo "$REDIS_SHA256  $fixture/redis.tar.gz" | sha256sum -c -
+          tar -xzf "$fixture/redis.tar.gz" -C "$fixture"
+          make -C "$fixture/redis-$REDIS_VERSION/src" -j2 MALLOC=libc REDIS_CFLAGS= REDIS_LDFLAGS= redis-server redis-cli
+          mkdir -p "$bin"
+          cp "$fixture/redis-$REDIS_VERSION/src/redis-server" "$fixture/redis-$REDIS_VERSION/src/redis-cli" "$bin/"
+        fi
+        "$bin/redis-server" --version | grep -q "v=$REDIS_VERSION "
+        "$bin/redis-cli" --version | grep -qx "redis-cli $REDIS_VERSION"
+        echo "$bin" >> "$GITHUB_PATH"

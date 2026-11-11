@@ -392,6 +392,17 @@ test('hosted bot certification includes the image and activation requires it', (
   expect(verify.run).toContain('for image in server indexer discord bot; do')
 })
 
+test('both Redis test lanes use the same fixture setup without Ubuntu package mirrors', () => {
+  const gate = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
+  for (const lane of ['source', 'tests_indexer']) {
+    const { steps } = gate.jobs[lane]
+    expect(steps.some(({ run }) => /apt-get.*redis-server/.test(run ?? ''))).toBe(false)
+    expect(steps.find(({ uses }) => uses === './.github/actions/setup-redis')).toBeDefined()
+  }
+  const checkout = gate.jobs.tests_indexer.steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+  expect(checkout.with['sparse-checkout']).toContain('.github/actions/setup-redis')
+})
+
 test('CI runs durable bot tests against an explicit disposable loopback fixture', () => {
   const gate = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
   const verify = gate.jobs.source.steps.find(({ name }) => name === 'verify')

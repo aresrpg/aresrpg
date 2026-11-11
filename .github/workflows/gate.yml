@@ -99,9 +99,9 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
-      - name: install Redis for agent pairing tests
+      - name: setup Redis for agent pairing tests
         if: matrix.check == 'test'
-        run: sudo apt-get update && sudo apt-get install -y redis-server
+        uses: ./.github/actions/setup-redis
       - name: verify
         env:
           TEST_BOT_REDIS_URL: redis://127.0.0.1:16379/15
@@ -223,6 +223,7 @@ jobs:
             packages/protocol
             packages/immutable
             scripts/coverage_indexer.sh
+            .github/actions/setup-redis
             move-packages.json
       - name: sui version pin
         id: sui_version
@@ -269,8 +270,8 @@ jobs:
             packages/indexer/target
           key: cargo-${{ runner.os }}-${{ hashFiles('packages/indexer/Cargo.lock') }}-llvm-cov-0.9.0
           restore-keys: cargo-${{ runner.os }}-
-      - name: install Redis for projection recovery tests
-        run: sudo apt-get update && sudo apt-get install -y redis-server
+      - name: setup Redis for projection recovery tests
+        uses: ./.github/actions/setup-redis
       - name: cargo fmt --check
         working-directory: packages/indexer
         run: cargo fmt --check

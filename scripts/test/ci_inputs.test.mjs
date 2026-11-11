@@ -106,6 +106,7 @@ for (const path of [
   'packages/indexer/tests/layout_snapshot.txt',
   'packages/protocol/src/leaderboards.ts',
   'scripts/coverage_indexer.sh',
+  '.github/actions/setup-redis/action.yml',
   'rust-toolchain.toml',
   '.cargo/config.toml',
 ])

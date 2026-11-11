@@ -90,7 +90,9 @@ export const ci_checks_required = (paths, manifest_changed, workflow = ALL_CHECK
       changed_workflow.indexer ||
       paths.some(
         (path) =>
-          ['packages/indexer/', 'packages/protocol/', '.cargo/'].some((prefix) => path.startsWith(prefix)) ||
+          ['packages/indexer/', 'packages/protocol/', '.cargo/', '.github/actions/setup-redis/'].some((prefix) =>
+            path.startsWith(prefix)
+          ) ||
           [
             'packages/immutable/src/leaderboards.ts',
             'scripts/coverage_indexer.sh',
