@@ -25,9 +25,11 @@ describe('chat', () => {
         ],
       })
     )
+    await flush()
     const chat = published.find(({ channel }) => channel.startsWith('chat:world:'))
     expect(chat?.channel).toBe('chat:world:overworld')
     expect(chat?.payload).toEqual({
+      name: null,
       address: '0xme',
       character_id: '0xabc',
       character: 'nox',
@@ -76,6 +78,7 @@ describe('chat', () => {
         ],
       })
     )
+    await flush()
     const whisper = published.find(({ channel }) => channel === 'chat:user:0xpal')
     expect(whisper?.payload).toMatchObject({
       parts: [
@@ -123,6 +126,7 @@ describe('chat', () => {
     player.on_message(
       JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', parts: [{ kind: 'text', text: 'ready' }] })
     )
+    await flush()
     expect(published.some(({ channel }) => channel === 'chat:party:0xp')).toBeTrue()
     pubsub.emitter.emit('chat:party:0xp', {
       address: '0xher',

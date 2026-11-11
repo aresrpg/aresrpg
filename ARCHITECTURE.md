@@ -397,21 +397,25 @@ digest from the signed bytes before submitting once. A bounded submission reques
 response recovers that exact receipt through the gRPC Core transaction reader. GraphQL remains
 available for reads; its capped event pages cannot supply complete business receipts for writes. Missing or incomplete
 receipts remain uncertain; no retry handler may treat them as an unsubmitted transaction.
-One pending record owns both submission recovery and the next-write visibility barrier. Browser
+One pending record owns both submission recovery and explicit ledger visibility synchronization. Browser
 tabs persist uncertain digests and receipt requirements in session storage, scoped by network and
 account, before submission; browser storage never contains signatures or transaction bytes. Reloading
 cannot erase uncertainty. The hosted backend adapter instead awaits encrypted exact unsigned/signed
 envelopes and fenced transitions in this same execution owner. Only the trusted backend has the envelope
 decryption key; the public TLS proxy and browser persistence remain outside that custody boundary. Recovery before a later write rejects that stale intent and earlier queued
 intents; that SDK session requires a refresh after resolving the previous outcome. The normal
-visibility barrier remains lazy and never delays an already completed receipt.
+visibility barrier remains lazy for explicit read synchronization and pre-resolved transactions. A next
+write with unresolved gas payment proceeds from its certified predecessor receipt through Core’s
+checked simulation and fresh gas selection; it does not require a second lookup of that receipt.
+Simulation refusal still stops before signing, and unknown outcomes still block every later write.
 
 Wallet asset selection, including address balances, uses the official Sui coin intent and resolver
 before signing. It does not add a second transaction executor or a gameplay-object read fallback.
 
 The SDK logs every certified transaction once with digest and net gas. Its receipt-fed cache owns
 fresh object references; explicit hydration is the only bootstrap read for unknown transaction
-inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Narrow presentation reads are explicit exceptions: Party may snapshot one external
+inputs. Checked resolution gates fresh writes; the lazy previous-digest barrier gates explicit
+read synchronization and transactions whose gas payment is already resolved. Narrow presentation reads are explicit exceptions: Party may snapshot one external
 character checkpoint for run-to, and an item hover in chat or trades may read that exact Item plus its
 rolled-stat and pet-feed fields through a session-bounded LRU. Linked pet tooltips derive current bonuses
 through the same power scaling as equipment. The external-wallet giftcard import explicitly inspects only that
@@ -506,7 +510,7 @@ boss loot with a positive base chance at most 100 basis points receives a larger
 regardless of category or roll quality. Every possible source must qualify; the largest source
 chance is displayed, before player chance bonuses. It resolves
 verified SuiNS names. Failed name reads fall back once to the official network RPC, with a two-second
-deadline per provider; missing or mismatched names do not trigger fallback. It shortens self-subnames
+deadline per provider; missing or mismatched names do not trigger fallback. It preserves full nested handles and shortens application names
 to their handle and renders double-density PNG attachments at Discord's full image width, without an embed frame. Cards use canonical seed artwork,
 shared UI stat identities, the SUI logo, palette and bundled Nunito fonts. Copy comes from the
 existing YAML locales.
@@ -637,12 +641,38 @@ request identities reject stale replies. Opening samples again; there is no
 profile subscription, polling loop, or retained profile cache. The live profile and UI workshop share one window: identity in the title bar, character roster,
 compact equipped-item icons with existing stat tooltips, and account-wide profession maxima.
 
-Settings exposes the game wallet's default SuiNS name through a dedicated reducer, separate from
-device preferences. The SDK reads owned registrations and resolves names already targeting that
-wallet. One explicit action sets the default; an owned name can update its target in the same
-transaction. A target-only subname requires no NFT transfer. Certified results update the Settings
-view; the leaderboard's verified-name cache refreshes independently. Full names remain the identity
-used for resolution even when a repeated self-subname is displayed as a shorter handle.
+Settings exposes SuiNS chain state through one transient reducer, separate from device preferences.
+Supported mainnet zkLogin wallets select an owned, eligible parent. Apply validates parent authority
+and child collisions before hosted custody creation, reuses the existing standalone hosted setup and
+recovery descriptor, then freshly validates again. The human signs one transaction reconciling
+`aresrpg.<parent>.sui` to itself and `aresrpgagent.<parent>.sui` to the final multisig, and sets its own
+default. The retained Recall executor signs the multisig's separate default transaction. This setup
+creates no external-agent grant or gameplay activation and changes no inventory selection. Existing
+grants remain unchanged. Unfunded multisigs leave honest partial completion, with optional
+sender-bound funding and explicit retry; there is no automatic transfer, sponsorship or transaction retry.
+
+Root registration inputs and nested wrapper inputs remain distinct from the embedded NFT identity
+used for registry authority and lineage. Correct-target valid-lineage leaves are untouched. Live nodes
+collide; supported expired-node and invalid-lineage replacements require current parent authority.
+Any replacement that would erase a nonempty metadata map is refused, including unknown keys.
+The configured deployment has no leaf-metadata restoration operation. There is no migration,
+arbitrary managed-name entry, legacy alias or background rewriting. External-wallet sessions only
+read their existing forward-verified default; they never provision hosted custody or write names.
+Testnet does not acquire a hosted naming capability.
+
+Explicit hosted setup and Apply share this reducer's reconciliation outcome. Connect reserves its
+intent before setup and awaits its terminal naming outcome before OAuth navigation. Overlapping
+intents coalesce even after refusal or partial failure; status and restoration remain read-only.
+Request and wallet lifetimes are checked between stages and at each SDK before-sign boundary;
+submitted transactions retain the executor's recovery ownership. The human application default owns
+the applied parent selection. Public names use the existing verified reverse/forward cache, independently
+of the local certified snapshot. Full relative nested names display as `@name`; exact application
+prefixes shorten to the parent handle. The agent prefix adds `[AI]` and the robot icon in leaderboards
+as a naming convenience, without membership or wallet-auth-type lookup. Chat uses a separate handle
+token before the character name across all channels and echoes. Authenticated admission captures the
+character and destination before the shared 250 ms name-enrichment deadline; publication remains
+ordered across channels and stops on disposal. Resolution names and character context actions retain
+their full identities.
 
 ## Critical workflows
 
@@ -729,10 +759,7 @@ its existing character tabs can return to owned play. Existing vitals, minimap, 
 telemetry remain visible; the map and party presentation mount without gameplay commands. A separate
 displayed-pose feed supplies those widgets without notifying controlled-pose subscribers. Public party
 membership uses the existing party read/subscription owner and never joins party chat or control rosters.
-The portrait uses the shared appearance resolver. Account funding remains available through the canonical
-checkout: the explicit agent destination requires a server-accepted observation and is bound to the exact
-wallet, observation generation and selected character. Both checkout entry and the asynchronous signing
-boundary revalidate that binding; agent balances remain unknown rather than borrowing the player's balance. Recall funding outside observation instead proves the canonical multisig's
+The portrait uses the shared appearance resolver. The spectator HUD retains the original owner wallet card in its top-right account dock. It omits separate stop, watching-status and funding controls; owned tabs restore play. The wallet uses the ordinary owner funding modal, which remains available during observation while gameplay windows stay blocked. Recall funding proves the canonical multisig's
 Google member from the current wallet's public identifier, binds the exact recipient and wallet generation,
 and uses the same checkout and asynchronous signing guard. Self-funding retains its existing owner-address check.
 
@@ -829,7 +856,21 @@ away from a fighter cell. Exact animation names take precedence over partial act
 Equipped title identity uses those same visible-equipment snapshots and deltas, including owned followers.
 Fight appearance rows retain that title through normalization for participants and spectators. The frontend
 maps equipped title and existing custody-wallet identity to one engine aura descriptor beside model
-appearance; title changes do not alter model asset keys or crowd eligibility. One bounded engine layer renders Unbroken's rising emerald energy
+appearance. Optional `title_model` on a seed title names an existing character-body basename. All character appearance consumers select that body and its optional matching hair while
+retaining ordinary hat/cloak precedence and attachments. The class, sex, colors, combat rules and
+portrait identity remain unchanged. Model title changes invalidate the existing appearance load;
+aura-only changes do not alter model asset keys or crowd eligibility. Character assets own their native
+Head/cape equipment bones, Rider contact frame and playable animation clips. Individual, crowd,
+preview and mounted rendering consume those same authored anchors without runtime repair. Optional
+`title_nameplate` on the same title row names seed-authored PNG artwork. The frontend resolves
+that basename to a build-owned URL and localizes the live subtitle through `title_names[item_type]`.
+The engine receives only the optional artwork URL, not title or community identities. One shared
+ornamental layout retains readable neutral fallback while artwork loads or fails; URL and load
+revision participate in caption raster identity. Admin wallet identity keeps priority, while title
+ornament never overrides tactical name, damage or health colors. Fight target cards retain their
+existing tactical presentation. No collection membership or entitlement derives from presentation metadata.
+Replacement changes no collision,
+class, stats, abilities, authority or portrait identity. One bounded engine layer renders Unbroken's rising emerald energy
 and motion trail in two shared billboard batches. The canonical admin wallet selects a client-only red/purple
 profile regardless of title, with priority over Unbroken. A third shared normal-blended haze batch runs only
 for visible admin bearers; the server sends neither an aura ID nor a special admin-appearance flag. The layer
@@ -1349,7 +1390,7 @@ culling, shadows and disposal remain the owners. Leaf clumps suppress direct and
 the shared lighting model; ordinary voxel materials retain their physical response. A camera-independent rounded lighting basis
 prevents dark slabs when viewing crowns from below. Internal canopy attenuation multiplies actual
 external shadow visibility; roofs still block direct sunlight. Bounds include every rotated corner.
-The source PNG and generation prompt live beside the derived atlas data in `seed/textures`;
+The source PNG and provenance live beside the derived atlas data in `seed/textures`;
 `scripts/bake_canopy_texture.py --check` verifies the texture samples against that source.
 Authored local shaft bounds opt High quality into one reduced-resolution sunlight pass. It borrows
 scene depth and the existing sun shadow texture, integrates only inside those bounds, and reconstructs
@@ -1502,6 +1543,8 @@ personal kiosk. Statless items and fixed-endpoint pets need no entropy; pet feed
 stored endpoint neutral until feeding. Issuance is AdminCap-gated and stops at permanent freeze.
 Ordinary transfers distribute existing vouchers without mint authority, whitelists, or claim counters.
 Holder allocations derive from saved, checkpoint-scoped mainnet collection snapshots.
+Uncapped preparation requires resolved custody unless the reviewed campaign explicitly sets
+`exclude_unresolved: true`; excluded NFT identities remain in snapshot evidence.
 The airdrop catalogue describes seed-authored campaigns, eligibility, and delivery routes; it is not
 a separate entitlement store. Historical-player awards become frozen recipient batches through offline
 ranking of a saved database export. The runtime never queries the retired game database.

@@ -23,12 +23,12 @@ test('all four types select canonical artwork and use verified names or addresse
   expect(models[3]?.visual.stats.map(({ value }) => value)).toEqual([49, 48, 2])
   expect(announcement(copy, {}, examples[1]!)?.content).toContain('0xaaaa…aaaa')
 })
-test('a self-subname is announced by its short handle in the message and on the card', () => {
-  const victory = announcement(copy, { [address]: 'sceat.sceat.sui' }, examples[2]!)!
+test('application names shorten while ordinary nested defaults retain every label', () => {
+  const victory = announcement(copy, { [address]: 'aresrpg.sceat.sui' }, examples[2]!)!
   expect(victory.visual.party).toEqual(['@sceat'])
   expect(victory.content).toContain('sceat')
   expect(victory.content).not.toContain('sceat.sceat.sui')
-  expect(announcement(copy, { [address]: 'other.sceat.sui' }, examples[2]!)?.visual.party).toEqual(['other.sceat.sui'])
+  expect(announcement(copy, { [address]: 'other.sceat.sui' }, examples[2]!)?.visual.party).toEqual(['@other.sceat'])
 })
 test('ordinary gear is filtered before rendering or delivery', () => {
   const loot = examples[3]!
@@ -108,9 +108,9 @@ test('every locale keeps the item on the card and the source in the exceptional-
 
 test.each([
   ['login905.sui', '@login905'],
-  ['dhuts.dhuts.sui', '@dhuts'],
-  ['dhuts@dhuts', '@dhuts'],
-  ['other.dhuts.sui', 'other.dhuts.sui'],
+  ['dhuts.dhuts.sui', '@dhuts.dhuts'],
+  ['dhuts@dhuts', '@dhuts.dhuts'],
+  ['other.dhuts.sui', '@other.dhuts'],
 ])('uses the canonical label for %s in every announcement', (name, label) => {
   for (const event of examples) {
     const model = announcement(copy, { [address]: name }, event)!

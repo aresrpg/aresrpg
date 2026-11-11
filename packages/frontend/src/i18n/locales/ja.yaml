@@ -637,6 +637,33 @@ airdrop_page:
     physical: '紙のギフトカード'
     game_wallet: 'Hytaleベテラン報酬'
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: '2026年11月11日のスナップショットでオンチェーンの保有が確認されたPawtatoのウォレットには、NFTのレベルや保有数にかかわらず、ウォレットごとに称号「ポテト王者」が1つ付与されます。ゲームのブリッジが管理するNFTは対象外です。'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたRootletsのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「根の守護者」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたPuggiesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「パグの聖騎士」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたMystic Yetisのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「霜の覇王」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+    title_chosen_one:
+      title: 'The Ones'
+      description: '2026年11月11日のスナップショットで対象となったThe Onesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「選ばれし者」が1つ付与されます。'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: '2026年11月11日のスナップショットで対象となったAEONのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「悠久の守り手」が1つ付与されます。'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: '2026年11月11日のスナップショットで対象となったSuimiliosのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「スイミリオネア」が1つ付与されます。'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: '2026年11月11日のスナップショットで対象となったFuddiesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「FUDバスター」が1つ付与されます。'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: '2026年11月11日のスナップショットで対象となったEnforcer Machinのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「執行者」が1つ付与されます。'
     blast_crew:
       title: 'Crewヘルメット'
       description: 'BlastのKARES販売参加者向けの外見アイテムです。配布後に参加時のウォレットを接続してください。'
@@ -670,25 +697,31 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS名'
-  suins_hint: 'SuiNS名の宛先をゲームウォレットに設定するだけで使えます。name@nameと入力すると、@nameと表示されます。'
+  suins_hint: '所有する親名を選択してください。適用するとホスト型マルチシグを作成または再利用し、公開の復旧情報を保存します。エージェントへの新しい権限やゲーム操作権限は付与しません。'
+  suins_external: '検証済みの既定SuiNS名を表示します。外部ウォレットまたはSuiNSで管理してください。'
+  suins_leaves: 'あなた用の {player} とマルチシグ用の {agent} を作成します。マルチシグの既定名には別の取引とSUIが必要です。'
+  suins_pending_funding: 'プレイヤー名は適用済みです。エージェント名にはSUIが必要です。入金は任意です。「適用」で再試行できます。'
+  suins_pending_uncertain: 'プレイヤー名は適用済みです。エージェント取引の結果は不明です。再試行前に結果を確認してください。自動再送は行いません。'
+  suins_pending_refused: 'プレイヤー名は適用済みです。エージェントの署名は拒否されました。再試行したい場合のみ再度適用してください。'
+  suins_pending_failed: 'プレイヤー名は適用済みです。エージェント名は未完了です。再試行前に取引結果を確認してください。'
+  suins_invalid_parent: '親名の所有権、有効期限、または利用条件が変わりました。更新して選び直してください。'
+  suins_collision: '要求された名前は有効な登録で使用中です。別の親名を選択してください。'
+  suins_metadata: 'この修復では既存のメタデータが失われるため変更しませんでした。別の親名を選択してください。'
+  suins_unsupported: 'このウォレットまたはネットワークでは管理名を利用できません。'
+  suins_fund: 'エージェントウォレットに入金'
   suins_current: '現在のデフォルト名'
   suins_none: 'なし'
   suins_owned: '所有する名前'
   suins_empty: '有効な名前が見つかりません'
   suins_choose: '名前を選択'
-  suins_name: '名前またはサブネーム'
-  suins_placeholder: 'name@name'
   suins_refresh: '名前を更新'
-  suins_use: 'この名前を使用'
+  suins_use: '適用 / 再試行'
   suins_loading: '名前を読み込み中…'
   suins_saving: 'デフォルト名を設定中…'
-  suins_saved: 'デフォルト名を更新しました。ランキングへの反映には数分かかる場合があります。'
+  suins_saved: 'プレイヤー名とエージェント名を適用しました。公開表示の更新には数分かかる場合があります。'
   suins_read_failed: '名前を読み込めませんでした。更新して再試行してください。'
   suins_write_failed: '名前の変更を確認できませんでした。更新してから再試行してください。'
-  suins_invalid_name: '有効なSuiNS名を入力してください。'
-  suins_not_targeted: 'ゲームウォレットが所有するか、すでにそのアドレスを指す有効な名前を選んでください。'
   suins_wallet_required: '名前を選ぶにはログインしてください。'
-  suins_target_hint: 'このウォレットで所有する名前は、このボタンで宛先も設定します。それ以外の名前は、先にSuiNSで宛先をゲームウォレットに設定してください。'
   day_night_cycle_label: 昼夜サイクル
   day_night_cycle_hint: 無効にすると、世界は常に正午になります。
   title: '設定'
@@ -1019,9 +1052,9 @@ fight_hud:
   result_item_unavailable: この報酬はインベントリにありません。
   chat_item_unavailable: このアイテムはオンチェーンで取得できません。
   chat_you: あなた
-  chat_line: '{name}：{message}'
-  chat_party_line: '(パーティ) {name}：{message}'
-  chat_whisper_to: '({name} へ) {message}'
+  chat_line: '{handle}{name}：{message}'
+  chat_party_line: '(パーティ) {handle}{name}：{message}'
+  chat_whisper_to: '({name} へ) {handle}{speaker}: {message}'
   result_title: 戦闘結果
   result_duration: 戦闘時間
   result_gas_spent: ガス使用量
@@ -2505,7 +2538,7 @@ leaderboard_page:
   current_jobs: '現在の職業'
   unavailable: 'ランキングは一時的に利用できません。'
   retry: '再試行'
-  suins_hint: '設定でSuiNS名またはサブネームを選ぶと、ここに表示されます。'
+  suins_hint: '検証済みのSuiNS既定名をハンドルとして表示します。検証済みの名前がない場合はウォレットアドレスを表示します。'
   xp_description: '全キャラクターの勝利で獲得した経験値。キャラクターを譲渡しても獲得済みスコアは移りません。'
   kills_description: '勝利した戦闘の敵モンスター数。勝利した各アドレスにつき、1戦闘を1回だけ集計します。'
   dungeons_description: '最終部屋のクリア数。クリアした各アドレスにつき、1戦闘を1回だけ集計します。'
@@ -2677,8 +2710,21 @@ spell_effects:
   short_stat: '能力'
   expires_next_turn: '次のターンまで'
 
+title_names:
+  title_veteran: '古参'
+  title_frostlord: '霜の覇王'
+  title_tater_champion: 'ポテト王者'
+  title_crew_member: 'クルーメンバー'
+  title_chosen_one: '選ばれし者'
+  title_rootwarden: '根の守護者'
+  title_aeonkeeper: '悠久の守り手'
+  title_suimilionaire: 'スイミリオネア'
+  title_fudbuster: 'FUDバスター'
+  title_pug_paladin: 'パグの聖騎士'
+  title_enforcer: '執行者'
 ui:
   add_funds_agent: 'エージェントに入金'
+  agent_needs_sui: 'エージェントがプレイするにはSUIが必要です。入金してから操作を再試行してください。'
   agent_funding_unverified: '送金先を確認できません。資金を追加する前に呼び戻しを更新してください。'
   agent_watch: 'エージェントを観戦'
   agent_watching: 'エージェントを観戦中'
@@ -2831,7 +2877,6 @@ ui:
   character_details: '詳細'
   allocate_points: '割り振る'
   inventory_search: '所持品を検索…'
-  nameplate_veteran: '古参'
   design_titles: '称号'
   design_no_title: '称号なし'
   design_library: 'デザイン工房'

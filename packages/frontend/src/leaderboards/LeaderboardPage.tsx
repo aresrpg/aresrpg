@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Bot } from 'lucide-react'
+import { application_suins_name } from '@aresrpg/immutable'
 import { LEADERBOARD_LIMIT, type LeaderboardEntry } from '@aresrpg/protocol'
 
 import podium_first from '../assets/leaderboards/podium-1.png'
@@ -41,6 +43,18 @@ const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   return <BadgeRow badges={badges} total={total} title={text(characters ? 'current_characters' : 'current_jobs')} />
 }
 
+const LeaderboardName = ({ entry, fallback = '' }: Readonly<{ entry?: LeaderboardEntry; fallback?: string }>) => {
+  if (!entry) return fallback
+  return (
+    <>
+      {entry.name && application_suins_name(entry.name)?.kind === 'agent' && (
+        <Bot aria-hidden size={13} className="mr-1 inline" />
+      )}
+      {player_name(entry)}
+    </>
+  )
+}
+
 const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const copy = useAppStore(({ copy }) => copy)
   const { observation } = useLeaderboardState()
@@ -63,7 +77,7 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
             title={[entry.name, entry.address].filter(Boolean).join(' · ')}
             className="leaderboard-player-name truncate text-left text-text hover:text-gold"
           >
-            {player_name(entry)}
+            <LeaderboardName entry={entry} />
           </button>
           {self && <span className="shrink-0 text-[10px] text-cyan uppercase">{text('you')}</span>}
         </div>
@@ -110,7 +124,7 @@ const Podium = () => {
               title={[entry?.name, entry?.address].filter(Boolean).join(' · ')}
               className="leaderboard-player-name w-full truncate text-center text-xs text-text"
             >
-              {entry ? player_name(entry) : text('unclaimed')}
+              <LeaderboardName entry={entry} fallback={text('unclaimed')} />
             </button>
             <div
               className="mt-2 max-w-full text-center text-lg font-semibold break-all"

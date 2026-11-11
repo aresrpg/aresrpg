@@ -94,6 +94,7 @@ export type MeshFact =
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
 export type ChatFact = {
+  name?: string | null
   address: string
   character_id: string
   character: string

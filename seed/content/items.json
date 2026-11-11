@@ -902,7 +902,8 @@
     "item_type": "title_veteran",
     "name": "Mark of the Unbroken",
     "category": "title",
-    "level": 1
+    "level": 1,
+    "title_nameplate": "veteran_ethereal_plate"
   },
   {
     "item_type": "tool_herbalist",
@@ -7283,7 +7284,9 @@
     "name": "Siluri",
     "category": "pet",
     "level": 1,
-    "pet_foods": ["gilded_pet_food"],
+    "pet_foods": [
+      "gilded_pet_food"
+    ],
     "stats": {
       "min": {
         "vitality": 0,
@@ -7362,7 +7365,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["bloodamber_pet_food"]
+    "pet_foods": [
+      "bloodamber_pet_food"
+    ]
   },
   {
     "item_type": "suicune",
@@ -7405,7 +7410,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["spectral_draconite_pet_food"]
+    "pet_foods": [
+      "spectral_draconite_pet_food"
+    ]
   },
   {
     "item_type": "suifren_bullshark",
@@ -7448,7 +7455,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["moonfire_pet_food"]
+    "pet_foods": [
+      "moonfire_pet_food"
+    ]
   },
   {
     "item_type": "suifren_capy",
@@ -7491,7 +7500,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["moonfire_pet_food"]
+    "pet_foods": [
+      "moonfire_pet_food"
+    ]
   },
   {
     "item_type": "vaporeon",
@@ -7534,7 +7545,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["abyssal_arcanite_pet_food"]
+    "pet_foods": [
+      "abyssal_arcanite_pet_food"
+    ]
   },
   {
     "item_type": "corbac",
@@ -7577,7 +7590,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["cursed_diamond_pet_food"]
+    "pet_foods": [
+      "cursed_diamond_pet_food"
+    ]
   },
   {
     "item_type": "primemachin",
@@ -7620,7 +7635,9 @@
         "air_resistance": 5
       }
     },
-    "pet_foods": ["jadeghost_pet_food"]
+    "pet_foods": [
+      "jadeghost_pet_food"
+    ]
   },
   {
     "item_type": "coiffe_pepe",
@@ -7908,7 +7925,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["jadeghost_pet_food"]
+    "pet_foods": [
+      "jadeghost_pet_food"
+    ]
   },
   {
     "item_type": "mosho",
@@ -7951,7 +7970,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["phantom_obsidian_pet_food"]
+    "pet_foods": [
+      "phantom_obsidian_pet_food"
+    ]
   },
   {
     "item_type": "beru",
@@ -7994,7 +8015,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["cursed_diamond_pet_food"]
+    "pet_foods": [
+      "cursed_diamond_pet_food"
+    ]
   },
   {
     "item_type": "talokan",
@@ -8037,7 +8060,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["bloodnight_pet_food"]
+    "pet_foods": [
+      "bloodnight_pet_food"
+    ]
   },
   {
     "item_type": "yago",
@@ -8080,7 +8105,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["primordial_dragon_pet_food"]
+    "pet_foods": [
+      "primordial_dragon_pet_food"
+    ]
   },
   {
     "item_type": "zot",
@@ -8123,7 +8150,9 @@
         "air_resistance": 0
       }
     },
-    "pet_foods": ["genesis_duskheart_pet_food"]
+    "pet_foods": [
+      "genesis_duskheart_pet_food"
+    ]
   },
   {
     "item_type": "pampkin",
@@ -8131,7 +8160,9 @@
     "category": "pet",
     "level": 1,
     "pet_movement": "fly",
-    "pet_foods": ["bloodnight_pet_food"],
+    "pet_foods": [
+      "bloodnight_pet_food"
+    ],
     "stats": {
       "min": {
         "vitality": 60,
@@ -8564,5 +8595,85 @@
     "name": "Crew Helmet",
     "category": "cosmetic_hat",
     "level": 1
+  },
+  {
+    "item_type": "title_frostlord",
+    "name": "Frostlord",
+    "category": "title",
+    "level": 1,
+    "title_model": "mystic_yeti",
+    "title_nameplate": "mystic_yetis_plate"
+  },
+  {
+    "item_type": "title_tater_champion",
+    "name": "Tater Champion",
+    "category": "title",
+    "level": 1,
+    "title_model": "pawtato_heroes",
+    "title_nameplate": "pawtato_heroes_plate"
+  },
+  {
+    "item_type": "title_crew_member",
+    "name": "Crew Member",
+    "category": "title",
+    "level": 1,
+    "title_model": "blast_girl",
+    "title_nameplate": "blast_plate"
+  },
+  {
+    "item_type": "title_chosen_one",
+    "name": "The Chosen One",
+    "category": "title",
+    "level": 1,
+    "title_model": "the_ones",
+    "title_nameplate": "the_ones_plate"
+  },
+  {
+    "item_type": "title_rootwarden",
+    "name": "Rootwarden",
+    "category": "title",
+    "level": 1,
+    "title_model": "rootlets",
+    "title_nameplate": "rootlets_plate"
+  },
+  {
+    "item_type": "title_aeonkeeper",
+    "name": "Aeonkeeper",
+    "category": "title",
+    "level": 1,
+    "title_model": "aeon",
+    "title_nameplate": "aeon_plate"
+  },
+  {
+    "item_type": "title_suimilionaire",
+    "name": "Suimilionaire",
+    "category": "title",
+    "level": 1,
+    "title_model": "suimilios",
+    "title_nameplate": "suimilios_plate"
+  },
+  {
+    "item_type": "title_fudbuster",
+    "name": "Fudbuster",
+    "category": "title",
+    "level": 1,
+    "title_model": "fuddies",
+    "title_nameplate": "fuddies_plate"
+  },
+  {
+    "item_type": "title_pug_paladin",
+    "name": "Pug Paladin",
+    "category": "title",
+    "level": 1,
+    "title_model": "puggies",
+    "title_nameplate": "puggies_plate"
+  },
+  {
+    "item_type": "title_enforcer",
+    "name": "The Enforcer",
+    "category": "title",
+    "level": 1,
+    "title_model": "enforcer_machin",
+    "title_nameplate": "enforcer_machin_plate"
   }
 ]

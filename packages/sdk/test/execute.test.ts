@@ -352,8 +352,11 @@ describe('the execute gate (core interface)', () => {
       },
     })
     await sdk.execute(sdk.tx())
+    const resolved = sdk.tx()
+    resolved.setSender(id(99))
+    await resolved.build({ client: client as never })
     const pending = sdk
-      .execute(sdk.tx(), {
+      .execute(resolved, {
         before_sign: () => {
           if (!current) throw new Error('Operation retired')
         },
@@ -444,7 +447,7 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.max_active_executions).toBe(1)
   })
 
-  test('a lazy visibility barrier blocks only the next transaction before resolution or signing', async () => {
+  test('a lazy visibility barrier still blocks pre-resolved transactions before signing', async () => {
     const client = fake_client({ simulate_ok: true, visibility_failures: 1 })
     let signatures = 0
     const sdk = SDK({
@@ -461,24 +464,30 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.visibility_waits).toEqual([])
     expect(signatures).toBe(1)
 
-    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/next transaction NOT submitted.*ledger has not indexed/)
+    const resolved = sdk.tx()
+    resolved.setSender(id(99))
+    resolved.setGasPrice(1000)
+    resolved.setGasBudget(5000000)
+    resolved.setGasPayment([{ objectId: id(50), version: '4', digest }])
+    await expect(sdk.execute(resolved)).rejects.toThrow(/next transaction NOT submitted.*ledger has not indexed/)
     expect(client.calls).toMatchObject({ executions: 1, resolutions: 1, simulations: 1 })
     expect(signatures).toBe(1)
 
-    await sdk.execute(sdk.tx())
+    await sdk.execute(resolved)
     expect(client.calls.visibility_waits).toEqual([client.calls.digests[0]!, client.calls.digests[0]!])
-    expect(client.calls).toMatchObject({ executions: 2, resolutions: 2, simulations: 2 })
+    expect(client.calls).toMatchObject({ executions: 2, resolutions: 1, simulations: 1 })
     expect(signatures).toBe(2)
   })
 
-  test('an executed failure also arms the next-write visibility barrier', async () => {
+  test('an executed failure permits fresh checked resolution without a redundant lookup', async () => {
     const client = fake_client({ simulate_ok: true, execution_ok: false })
     const sdk = SDK({ client, signer, pins })
 
     await expect(sdk.execute(sdk.tx())).rejects.toThrow(/failed on-chain/)
     await expect(sdk.execute(sdk.tx())).rejects.toThrow(/failed on-chain/)
 
-    expect(client.calls.visibility_waits).toEqual([client.calls.digests[0]!])
+    expect(client.calls.visibility_waits).toEqual([])
+    expect(client.calls.simulations).toBe(2)
     expect(client.calls.executions).toBe(2)
   })
 

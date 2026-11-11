@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { resolve_entity_animation_clip } from '../packages/engine/src/entities.ts'
 import { validate_world_recipe } from '../packages/engine/src/index.ts'
 import { giftcards_for_network } from '../packages/sdk/src/seed.ts'
 import {
@@ -35,6 +36,7 @@ import {
   recipe_progression_issues,
   stat_names,
 } from '../packages/immutable/src/index.ts'
+
 const PARKED_CLASSES = []
 
 const repo_dir = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -308,8 +310,8 @@ const mob_model_dir = join(seed_dir, 'models', 'mobs')
 const mob_model_basenames = readdirSync(mob_model_dir)
   .filter((name) => name.endsWith('.glb'))
   .map((name) => name.slice(0, -4))
-const glb_json = (basename) => {
-  const bytes = readFileSync(join(mob_model_dir, `${basename}.glb`))
+const glb_json = (basename, directory = mob_model_dir) => {
+  const bytes = readFileSync(join(directory, `${basename}.glb`))
   const json_length = bytes.readUInt32LE(12)
   return JSON.parse(
     bytes
@@ -415,9 +417,54 @@ const check_item_stat_block = (where, block) => {
   }
 }
 
+const character_model_dir = join(seed_dir, 'models', 'characters')
+const character_models = new Set(readdirSync(character_model_dir).filter((name) => name.endsWith('.glb')))
+const check_character_contract = (where, model, source) => {
+  const names = (source.nodes ?? []).map(({ name }) => name)
+  const joints = (source.skins ?? []).flatMap(({ joints }) => joints.map((index) => names[index]?.toLowerCase() ?? ''))
+  const sockets = {
+    head: joints.some((name) => name.includes('head')),
+    cape: joints.some((name) => name.includes('cape')),
+    Rider: names.includes('Rider'),
+  }
+  Object.entries(sockets)
+    .filter(([, available]) => !available)
+    .forEach(([socket]) => red('I-TITLE-MODEL', `${where}: ${model} needs a ${socket} attachment`))
+  ;['IDLE', 'WALK', 'RUN', 'ATTACK', 'DEATH', 'SIT']
+    .filter((animation) => !resolve_entity_animation_clip(source.animations ?? [], animation))
+    .forEach((animation) => red('I-TITLE-MODEL', `${where}: ${model} cannot play ${animation}`))
+}
+const check_title_model = (where, item) => {
+  const model = item.title_model
+  if (model === undefined) return
+  if (item.category !== 'title') red('I-TITLE-MODEL', `${where}: only titles may author title_model`)
+  if (typeof model !== 'string' || !character_models.has(`${model}.glb`) || model.endsWith('_hair'))
+    return red('I-TITLE-MODEL', `${where}: title_model must name an existing character body GLB`)
+  const source = glb_json(model, character_model_dir)
+  check_character_contract(where, model, source)
+}
+
+const check_title_nameplate = (where, item) => {
+  const artwork = item.title_nameplate
+  if (artwork === undefined) return
+  if (item.category !== 'title') red('I-TITLE-NAMEPLATE', `${where}: only titles may author title_nameplate`)
+  if (typeof artwork !== 'string' || !/^[a-z0-9_]+$/.test(artwork))
+    return red('I-TITLE-NAMEPLATE', `${where}: title_nameplate must name an existing nameplate PNG`)
+  const path = join(seed_dir, 'icons', 'nameplates', `${artwork}.png`)
+  if (!existsSync(path)) return red('I-TITLE-NAMEPLATE', `${where}: missing ${artwork}.png`)
+  const bytes = readFileSync(path)
+  check_rule(
+    bytes.length >= 33 && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a' && bytes[25] === 6,
+    'I-TITLE-NAMEPLATE',
+    `${where}: nameplate must be an RGBA PNG`
+  )
+}
+
 // ── items ────────────────────────────────────────────────────────────────────────────────
 for (const item of items) {
   const where = `items[${item.item_type}]`
+  check_title_model(where, item)
+  check_title_nameplate(where, item)
   if (typeof item.item_type !== 'string' || item.item_type === '') red('L-SLUG', `${where}: empty item_type`)
   if (typeof item.name !== 'string' || item.name === '') red('L-NAME', `${where}: empty name`)
   if (!CATEGORIES.has(item.category))
@@ -906,8 +953,14 @@ for (const campaign of airdrop.campaigns ?? []) {
     'items',
     'delivery',
     ...('tiers' in campaign ? ['tiers'] : []),
+    ...('exclude_unresolved' in campaign ? ['exclude_unresolved'] : []),
     ...('spending_threshold_sui' in campaign ? ['spending_threshold_sui'] : []),
   ])
+  check_rule(
+    campaign.exclude_unresolved === undefined || typeof campaign.exclude_unresolved === 'boolean',
+    'A-CUSTODY-POLICY',
+    `Invalid unresolved custody policy for ${campaign.id}`
+  )
   check_rule(
     typeof campaign.id === 'string' && /^[a-z][a-z0-9_]*$/u.test(campaign.id),
     'A-CAMPAIGN',

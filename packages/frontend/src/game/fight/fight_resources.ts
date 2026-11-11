@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { title_model } from '../../content/items.ts'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { SPELL_EFFECT_CLASSES } from '@aresrpg/engine/data'
@@ -74,7 +76,14 @@ export const useFightResources = (
 ) => {
   const fight_id = checkpoint?.contract.id
   const appearance_key = JSON.stringify(
-    sources.map(({ id, classe, male, colors, loadout }) => [id, classe, male, colors, worn_appearance(loadout)])
+    sources.map(({ id, classe, male, colors, loadout }) => [
+      id,
+      classe,
+      male,
+      colors,
+      worn_appearance(loadout),
+      title_model(loadout.title),
+    ])
   )
   // eslint-disable-next-line react-hooks/exhaustive-deps -- these identities own one preparation lifetime.
   const identity = useMemo(() => ({}), [fight_id, scene, ambient, appearance_key, loader])

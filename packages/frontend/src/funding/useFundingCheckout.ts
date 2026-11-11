@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 /* eslint-disable functional/immutable-data -- React refs retain only this modal's effect lifetime and submission latch. */
+import { transaction_signature_refused as payment_rejected } from '@aresrpg/sdk/transaction-error'
 import { useEffect, useReducer, useRef, useState } from 'react'
 
 import { capture_analytics } from '../analytics.ts'
@@ -23,12 +24,9 @@ import {
 } from './near.ts'
 import { initial_checkout, reduce_checkout, checkout_locked } from './checkout_state.ts'
 
+export { payment_rejected }
+
 const message = (error: unknown): string => (error instanceof Error ? error.message : String(error))
-export const payment_rejected = (error: unknown): boolean => {
-  if (!error || typeof error !== 'object') return false
-  const value = error as { code?: unknown; cause?: unknown }
-  return value.code === 4001 || (value.cause !== error && payment_rejected(value.cause))
-}
 
 const funding_ready = (
   source: ExternalSession | null,

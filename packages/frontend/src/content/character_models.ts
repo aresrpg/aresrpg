@@ -36,9 +36,12 @@ const equipment_basenames = new Set(Object.keys(equipment_loaders))
 
 export const load_character_model_urls = async (
   classe: string,
-  male: boolean
+  male: boolean,
+  replacement?: string
 ): Promise<Readonly<{ body_url: string | null; hair_url: string | null }>> => {
-  const model = character_model_basenames(classe, male)
+  const model = replacement
+    ? { body: replacement, hair: `${replacement}_hair` }
+    : character_model_basenames(classe, male)
   const body = character_loaders[model.body]
   const hair = model.hair ? character_loaders[model.hair] : undefined
   const [body_url, hair_url] = await Promise.all([body?.() ?? null, hair?.() ?? null])

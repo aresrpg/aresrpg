@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Button } from '@aresrpg/ui'
 
+import { WalletCard } from '../components/WalletCard.tsx'
 import { WorldStatus } from '../components/WorldStatus.tsx'
 import { PartyFrame } from '../components/PartyFrame.tsx'
 import { selected_party } from '../modules/party.ts'
@@ -13,7 +13,6 @@ import { character_icon } from '../content/assets.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-import { AgentFunding } from './AgentFunding.tsx'
 import { displayed_character } from './observation.ts'
 import './spectator.css'
 
@@ -22,33 +21,22 @@ export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const party = useAppStore(selected_party)
   const fighting = useAppStore((state) => state.fight.mounted)
   const character = displayed_character(session)
-  const view = session.agent_view
-  const status =
-    view.status === 'failed'
-      ? copy.ui.agent_watch_failed
-      : view.status === 'loading' || session.link_status !== 'ready'
-        ? copy.server_connecting
-        : view.characters.length === 0
-          ? copy.ui.agent_watch_empty
-          : copy.ui.agent_watching
   return (
     <>
       <div className="agent-spectator" data-agent-spectator="">
         <WorldStatus copy={copy} party_available={false}>
           <PlayerCharacterTabs copy={copy} create_character={null} />
-          <Button
-            className="pointer-events-auto"
-            onClick={() => dispatch_app({ type: 'agent/watch', observation: null })}
-          >
-            {copy.fight_hud.stop_spectating}
-          </Button>
-          <span className="agent-spectator-status" role="status">
-            {status}
-          </span>
-          <AgentFunding key={`${session.wallet?.address}:${view.serial}`} copy={copy} />
         </WorldStatus>
         <CompassStrip copy={copy} />
         <aside className="world-social-dock agent-spectator-map">
+          <div className="world-account">
+            <WalletCard
+              key={session.wallet?.address}
+              copy={copy}
+              session={session}
+              disconnect={() => dispatch_app({ type: 'auth/disconnected' })}
+            />
+          </div>
           <Minimap copy={copy} read_only />
           {party && (
             <PartyFrame

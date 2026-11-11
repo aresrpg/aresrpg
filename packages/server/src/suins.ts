@@ -84,3 +84,22 @@ export const create_suins_resolver = ({
     return request
   }
 }
+
+/** Optional chat decoration shares the leaderboard's 250 ms presentation deadline. */
+export const chat_name = async (resolve_name: ResolveName | undefined, address: string): Promise<string | null> => {
+  if (!resolve_name) return null
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      resolve_name(address).catch((error: unknown) => {
+        log.warn({ error }, 'Chat name enrichment failed')
+        return null
+      }),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), 250)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}

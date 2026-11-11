@@ -951,11 +951,6 @@
         9
       ]
     },
-    "packages/frontend/src/agents/AgentSpectator.tsx": {
-      "AgentSpectator": [
-        11
-      ]
-    },
     "packages/frontend/src/agents/disconnect_agent.ts": {
       "disconnect_agent": [
         11

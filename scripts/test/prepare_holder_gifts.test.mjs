@@ -119,3 +119,15 @@ test('a failed collection read never partially changes the airdrop supply', asyn
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('uncapped verified subsets require explicit custody exclusion and preserve evidence', () => {
+  const holders = { ...snapshot, recipient: 'wallet', object_count: 3, unresolved: [address('a')] }
+  const config = { ...collection, recipient: 'wallet' }
+  for (const exclude_unresolved of [undefined, false, 'true'])
+    expect(() => validate_holder_snapshot({ ...config, exclude_unresolved }, holders)).toThrow()
+  expect(validate_holder_snapshot({ ...config, exclude_unresolved: true }, holders)).toBe(holders)
+  expect(holders.unresolved).toEqual([address('a')])
+  expect(() =>
+    validate_holder_snapshot({ ...config, exclude_unresolved: true }, { ...holders, recipients: [] })
+  ).toThrow('no recipients')
+})

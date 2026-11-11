@@ -81,3 +81,28 @@ export const transaction_resolution_error = (error: unknown): unknown => {
   if (message.includes('NOT submitted')) return error
   return new Error(`[sdk] transaction resolution failed — NOT submitted: ${message}`, { cause: error })
 }
+
+/** Wallet Standard refusals retain their numeric code through SDK preparation wrappers. */
+export const transaction_signature_refused = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false
+  const value = error as { code?: unknown; cause?: unknown }
+  return value.code === 4001 || (value.cause !== error && transaction_signature_refused(value.cause))
+}
+
+/** Display classification never authorizes a retry; the executor still owns recovery. */
+export const transaction_failure_kind = (error: unknown): 'uncertain' | 'refused' | 'funding' | 'failed' => {
+  const message = readable_transaction_error(error)
+  if (
+    /^\[sdk\] (?:transaction outcome unknown:|previous transaction|durable transaction|invalid pending transaction)/.test(
+      message
+    )
+  )
+    return 'uncertain'
+  if (transaction_signature_refused(error)) return 'refused'
+  if (
+    pre_submission_failure(error) &&
+    /insufficient.?gas|insufficient.?balance|not enough (?:SUI|coins|balance|gas)|no valid gas coins/i.test(message)
+  )
+    return 'funding'
+  return 'failed'
+}

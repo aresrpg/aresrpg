@@ -187,3 +187,18 @@ test.describe('touch player inspection', () => {
     await page.screenshot({ path: test.info().outputPath('profile-touch.png') })
   })
 })
+
+test('application handles and agent robots appear in podium, rows and the separate self ranking', async ({ page }) => {
+  await page.goto('/e2e/fixtures/leaderboard.html')
+  const podium = page.locator('.leaderboard-podium[data-rank="2"]')
+  await expect(podium.getByRole('button')).toHaveText('[AI] @branch.ares')
+  await expect(podium.locator('svg.lucide-bot')).toHaveCount(1)
+  const rows = page.locator('.leaderboard-entries > [role="row"]')
+  await expect(rows.nth(0).locator('.leaderboard-player-name')).toHaveText('@ares')
+  await expect(rows.nth(1).locator('.leaderboard-player-name')).toHaveText('[AI] @branch.ares')
+  await expect(rows.nth(1).locator('svg.lucide-bot')).toHaveCount(1)
+  await expect(rows.nth(2).locator('.leaderboard-player-name')).toHaveText('@miner.guild')
+  const self = page.getByRole('table', { name: 'You', exact: true })
+  await expect(self.locator('.leaderboard-player-name')).toHaveText('[AI] @self.branch')
+  await expect(self.locator('svg.lucide-bot')).toHaveCount(1)
+})

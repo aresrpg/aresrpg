@@ -14,6 +14,7 @@ import { read_personal_kiosks } from './kiosk_discovery.ts'
 import { return_agent_assets, type AgentReturnOptions } from './agent_return.ts'
 import type { KioskCapLoader } from './kiosk_runner.ts'
 import type { TransactionStorage } from './transaction_execution.ts'
+import { set_agent_suins_default } from './suins_actions.ts'
 import { read_agent_recovery_assets } from './agent_inventory.ts'
 import { check_agent_return, read_agent_returns, read_agent_item_returns } from './agent_returns.ts'
 
@@ -129,6 +130,15 @@ export const create_agent_recall_reader = (options: RecallContext) => {
         owner: request.owner,
         owner_kiosk_cap: options.owner_kiosk_cap,
       })
+    },
+    set_suins_default: async (pairing: AgentPairingIdentity, name: string, current: () => void) => {
+      current()
+      const { sdk, identity } = resolve(pairing)
+      const before_sign = () => {
+        current()
+        owner_agent_identity(pairing, parse_agent_pairing_request(options.read_request()))
+      }
+      await set_agent_suins_default(options.client, sdk, identity.address, name, before_sign)
     },
     is_transaction_idle: () => [...executors.values()].every((sdk) => sdk.is_transaction_idle()),
     read_balances: async (pairing: AgentPairingIdentity) => {

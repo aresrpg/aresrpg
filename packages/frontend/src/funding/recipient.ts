@@ -7,6 +7,7 @@ import type { AgentPairingIdentity } from '@aresrpg/protocol'
 import type { SessionState } from '../modules/session.ts'
 export type FundingAuthorization = Readonly<{
   wallet: NonNullable<SessionState['wallet']>
+  require_inventory_pairing?: boolean
   serial: number
   recipient: string
 }> &
@@ -53,6 +54,11 @@ export const agent_funding_authorization = (session: SessionState): FundingAutho
     character_id: session.selected_character_id!,
   }
 }
+/** Send funding is tied to the active inventory target; saved Recall funding remains independent. */
+const inventory_funding_current = (session: SessionState, authorization: FundingAuthorization): boolean =>
+  !authorization.require_inventory_pairing ||
+  JSON.stringify(session.inventory_pairing) === JSON.stringify(authorization.pairing)
+
 export const funding_recipient_current = (
   session: SessionState,
   recipient: string,
@@ -63,6 +69,7 @@ export const funding_recipient_current = (
     ? recall_funding_authorization(session, authorization.pairing)
     : agent_funding_authorization(session)
   return [
+    inventory_funding_current(session, authorization),
     current?.wallet === authorization.wallet,
     current?.serial === authorization.serial,
     current?.recipient === authorization.recipient,

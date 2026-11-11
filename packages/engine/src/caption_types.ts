@@ -15,7 +15,7 @@ export type WorldCaption = Readonly<{
   world_size?: readonly [number, number]
   accessible?: boolean
 }> &
-  Readonly<{ variant: 'nameplate'; tone: 'neutral' | 'green' | 'red' } | { variant?: 'card' | 'float'; tone?: never }>
+  Readonly<{ variant: 'nameplate'; artwork_url?: string } | { variant?: 'card' | 'float'; artwork_url?: never }>
 export type CaptionTarget = Readonly<{ set: (caption: WorldCaption | null) => void }>
 /** Shared by canvas cards and the retained interactive DOM cards. */
 export const CAPTION_STYLE = Object.freeze({

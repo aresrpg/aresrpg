@@ -637,6 +637,33 @@ airdrop_page:
     physical: 'Physical gift card'
     game_wallet: 'Hytale veteran rewards'
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: 'Verified on-chain Pawtato holder wallets in the 11 November 2026 snapshot receive one Tater Champion title per wallet, regardless of NFT level or quantity. NFTs in game-bridge custody are excluded.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: 'Verified available Rootlets wallets in the 11 November 2026 snapshot receive one Rootwarden title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: 'Verified available Puggies wallets in the 11 November 2026 snapshot receive one Pug Paladin title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: 'Verified available Mystic Yetis wallets in the 11 November 2026 snapshot receive one Frostlord title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: 'Eligible The Ones wallets in the 11 November 2026 snapshot receive one The Chosen One title per wallet, regardless of how many NFTs they held.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: 'Eligible AEON wallets in the 11 November 2026 snapshot receive one Aeonkeeper title per wallet, regardless of how many NFTs they held.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: 'Eligible Suimilios wallets in the 11 November 2026 snapshot receive one Suimilionaire title per wallet, regardless of how many NFTs they held.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: 'Eligible Fuddies wallets in the 11 November 2026 snapshot receive one Fudbuster title per wallet, regardless of how many NFTs they held.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: 'Eligible Enforcer Machin wallets in the 11 November 2026 snapshot receive one The Enforcer title per wallet, regardless of how many NFTs they held.'
     blast_crew:
       title: 'Crew Helmet'
       description: 'A cosmetic gift for KARES sale participants on Blast. Connect your participating wallet after distribution.'
@@ -670,25 +697,31 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS name'
-  suins_hint: 'Your SuiNS name just needs to point to your game wallet. Enter name@name to display @name.'
+  suins_hint: 'Choose a parent name you own. Apply also creates or reuses your hosted multisig and saves public recovery details. It grants no new agent access or gameplay authorization.'
+  suins_external: 'Your existing verified SuiNS default is displayed here. Manage it in your external wallet or SuiNS.'
+  suins_leaves: 'Apply creates {player} for you and {agent} for your multisig. The multisig display default requires its own transaction and SUI.'
+  suins_pending_funding: 'Player name applied; agent display name needs SUI. Funding is optional. Use Apply to retry explicitly.'
+  suins_pending_uncertain: 'Player name applied; the agent transaction outcome is unknown. Check its outcome before retrying. No transaction is retried automatically.'
+  suins_pending_refused: 'Player name applied; the agent signature was declined. Apply again only when you want to retry.'
+  suins_pending_failed: 'Player name applied; agent display name is pending. Check the transaction outcome before using Apply again.'
+  suins_invalid_parent: 'This parent is no longer owned, active or eligible. Refresh and choose an eligible parent.'
+  suins_collision: 'A live registration occupies a requested name. Choose another parent.'
+  suins_metadata: 'This repair would erase existing metadata. The record was left unchanged. Choose another parent.'
+  suins_unsupported: 'Managed naming is unavailable for this wallet or network.'
+  suins_fund: 'Fund agent wallet'
   suins_current: 'Current default'
   suins_none: 'None'
   suins_owned: 'Owned names'
   suins_empty: 'No active names found'
   suins_choose: 'Choose a name'
-  suins_name: 'Name or subname'
-  suins_placeholder: 'name@name'
   suins_refresh: 'Refresh names'
-  suins_use: 'Use this name'
+  suins_use: 'Apply / retry'
   suins_loading: 'Loading names…'
   suins_saving: 'Setting default…'
-  suins_saved: 'Default name updated. Leaderboards may take a few minutes to refresh.'
+  suins_saved: 'Player and agent names applied. Public displays may take a few minutes to refresh.'
   suins_read_failed: 'Names could not be loaded. Try refreshing.'
   suins_write_failed: 'The name change could not be confirmed. Refresh before trying again.'
-  suins_invalid_name: 'Enter a valid SuiNS name.'
-  suins_not_targeted: 'Choose an active name owned by your game wallet, or one already pointing to it.'
   suins_wallet_required: 'Sign in to choose a name.'
-  suins_target_hint: 'For names owned by this wallet, this button also sets the target. Otherwise, point the name to your game wallet in SuiNS first.'
   day_night_cycle_label: Day/night cycle
   day_night_cycle_hint: Disable to keep the world at midday.
   title: 'Settings'
@@ -1019,9 +1052,9 @@ fight_hud:
   result_item_unavailable: This reward is no longer in your inventory.
   chat_item_unavailable: This item is unavailable on chain.
   chat_you: You
-  chat_line: '{name}: {message}'
-  chat_party_line: '(party) {name}: {message}'
-  chat_whisper_to: '(to {name}) {message}'
+  chat_line: '{handle}{name}: {message}'
+  chat_party_line: '(party) {handle}{name}: {message}'
+  chat_whisper_to: '(to {name}) {handle}{speaker}: {message}'
   result_title: Fight result
   result_duration: Duration
   result_gas_spent: Gas spent
@@ -2531,7 +2564,7 @@ leaderboard_page:
   current_jobs: 'Current jobs'
   unavailable: 'Rankings are temporarily unavailable.'
   retry: 'Retry'
-  suins_hint: 'Choose your SuiNS name or subname in Settings to display it here.'
+  suins_hint: 'Verified SuiNS defaults appear as handles. Without a verified name, your wallet address is shown.'
   xp_description: 'XP earned from winning fights by all your characters. Transfers never move earned credit.'
   kills_description: 'Enemy mobs defeated in won fights, counted once per fight for each winning address.'
   dungeons_description: 'Successful final rooms, counted once per fight for each completing address.'
@@ -2703,8 +2736,21 @@ spell_effects:
   short_stat: 'STAT'
   expires_next_turn: 'Until next turn'
 
+title_names:
+  title_veteran: 'Veteran'
+  title_frostlord: 'Frostlord'
+  title_tater_champion: 'Tater Champion'
+  title_crew_member: 'Crew Member'
+  title_chosen_one: 'The Chosen One'
+  title_rootwarden: 'Rootwarden'
+  title_aeonkeeper: 'Aeonkeeper'
+  title_suimilionaire: 'Suimilionaire'
+  title_fudbuster: 'Fudbuster'
+  title_pug_paladin: 'Pug Paladin'
+  title_enforcer: 'The Enforcer'
 ui:
   add_funds_agent: 'Add funds to agent'
+  agent_needs_sui: 'Your agent needs some SUI to play. Add funds, then retry your action.'
   agent_funding_unverified: 'Funding recipient verification is unavailable. Refresh Recall before adding funds.'
   agent_watch: 'Watch agent'
   agent_watching: 'Watching agent'
@@ -2876,7 +2922,6 @@ ui:
   character_details: 'Details'
   allocate_points: 'Allocate'
   inventory_search: 'Search inventory…'
-  nameplate_veteran: 'Veteran'
   design_titles: 'Titles'
   design_no_title: 'No title'
   design_library: 'Design workshop'

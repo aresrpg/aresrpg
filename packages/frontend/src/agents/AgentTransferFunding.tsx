@@ -37,6 +37,7 @@ const FundingForSender = ({
   return (
     <FundingModal
       address={sender}
+      warning={authorization ? copy.ui.agent_needs_sui : undefined}
       copy={copy}
       on_close={close}
       authorization={authorization ?? undefined}

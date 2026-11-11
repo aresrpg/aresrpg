@@ -96,6 +96,7 @@ export type AuthSession = Readonly<{
   mastery: MasteryActions
   kares: KaresActions
   suins: SuinsActions
+  set_agent_default: ReturnType<typeof create_agent_recall_reader>['set_suins_default']
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
@@ -231,7 +232,13 @@ const create_wallet_session = (
     address: account.address,
     wallet_name: wallet.name,
     identity: 'enoki:getSession' in wallet.features ? 'zklogin' : 'wallet',
-    suins: suins_actions({ client: resolution_client, sdk, address: account.address }),
+    suins: suins_actions({
+      client: resolution_client,
+      sdk,
+      address: account.address,
+      managed: 'enoki:getSession' in wallet.features && network === 'mainnet',
+    }),
+    set_agent_default: recall.set_suins_default,
     read_agent_pairing_request: binding.read_agent_pairing_request,
     sign_personal_message: binding.sign_personal_message,
     read_sui_balance: sdk.read_sui_balance,

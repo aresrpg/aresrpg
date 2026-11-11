@@ -915,6 +915,7 @@ export type ServerPackets = {
 
   // ── chat (off-chain, published on the mesh, never stored) ──
   'packet/chat_message': {
+    name?: string | null
     channel: 'world' | 'party' | 'whisper'
     scope: string | null
     from: string

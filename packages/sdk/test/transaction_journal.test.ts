@@ -123,7 +123,7 @@ for (const phase of ['prepared', 'signed', 'mark_submitting', 'settled'] as cons
     }
     await expect(run()).rejects.toThrow('storage failed')
     expect(lane.is_transaction_idle()).toBe(false)
-    await expect(lane.before_next()).rejects.toThrow('outcome unknown')
+    await expect(lane.before_next(false)).rejects.toThrow('outcome unknown')
     expect(events.filter((event) => event === 'execute').length).toBe(phase === 'settled' ? 1 : 0)
   })
 }

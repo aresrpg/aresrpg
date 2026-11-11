@@ -6,6 +6,7 @@ import type { HostedBotDescriptor } from '@aresrpg/protocol'
 import type { AuthSession } from '../auth.ts'
 import { read_app_state, dispatch_app } from '../store.ts'
 
+import { begin_setup_name } from './naming_barrier.ts'
 import { empty_hosted, hosted_pending, reduce_hosted, hosted_failure } from './hosted_state.ts'
 import { setup_hosted, authorize_hosted, create_hosted_client, cancel_hosted_session } from './hosted_client.ts'
 
@@ -43,7 +44,8 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     }
     const operations = {
       authenticating: async () => {
-        const result = await setup_hosted(
+        const naming = begin_setup_name(wallet, controller.signal)
+        const { pairing, ...result } = await setup_hosted(
           client,
           wallet,
           requested_id,
@@ -53,6 +55,8 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
           },
           context.authorization_id
         )
+        await naming(pairing)
+        controller.signal.throwIfAborted()
         dispatch({ type: 'result', generation, values: { ...result, phase: 'ready' } })
       },
       authorizing: async () => {

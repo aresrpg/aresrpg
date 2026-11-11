@@ -15,6 +15,8 @@ import type {
 import type { CharacterRow, EquippedItem, PresenceRow } from '@aresrpg/protocol'
 import { worn_appearance } from '@aresrpg/immutable'
 
+import { title_model } from '../content/items.ts'
+
 import { is_admin_address } from '../admin_access.ts'
 
 type CharacterRenderRow = Readonly<
@@ -89,14 +91,13 @@ export const load_character_appearance = async (
     return load_worn_equipment_model_url({ item_type, category })
   }
   const appearance = worn_appearance(source.loadout)
-  const [{ body_url, hair_url }, head, back] = await Promise.all([
-    load_character_model_urls(source.classe, source.male),
+  const [model, head, back] = await Promise.all([
+    load_character_model_urls(source.classe, source.male, title_model(source.loadout.title)),
     worn_model(appearance.hat, 'hat'),
     worn_model(appearance.cloak, 'cloak'),
   ])
   return Object.freeze({
-    body_url,
-    hair_url,
+    ...model,
     colors: source.colors,
     worn: Object.freeze({ head, back }),
   })

@@ -10,6 +10,8 @@ import type { CharacterAura, CharacterAnimationName, EntityRender, PetWingStyle,
 import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
+import { title_model } from '../content/items.ts'
+
 import {
   load_character_appearance,
   presence_render_source,
@@ -264,7 +266,17 @@ export const create_presence_renderer = ({
       }
       for (const [character_id, row] of visible_rows) {
         const { hat, cloak } = worn_appearance(row)
-        const source_key = [row.classe, row.sex, row.color_1, row.color_2, row.color_3, hat, cloak, row.pet]
+        const source_key = [
+          row.classe,
+          row.sex,
+          row.color_1,
+          row.color_2,
+          row.color_3,
+          hat,
+          cloak,
+          row.pet,
+          title_model(row.title),
+        ]
           .map(String)
           .join('|')
         // presence rides the wire in chain space — the scene lives in client coordinates

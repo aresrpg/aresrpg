@@ -57,6 +57,9 @@ export type SeedItem = Readonly<{
   category: ItemCategory
   level: number
   pet_foods?: readonly string[]
+  /** Client presentation only; equipped title identity remains authoritative. */
+  title_model?: string
+  title_nameplate?: string
   pet_movement?: 'walk' | 'swim' | 'fly'
   stats?: Readonly<{ min: Readonly<Record<StatName, number>>; max: Readonly<Record<StatName, number>> }>
   damages?: readonly Readonly<{ from: number; to: number; damage_type: string; element: ElementName }>[]

@@ -19,7 +19,7 @@ import type { WalletView } from '../wallet/model.ts'
 import type { ExternalSession } from '../wallet/external_session.ts'
 import { useAppStore } from '../store.ts'
 import { capture_analytics } from '../analytics.ts'
-import type { FundingAuthorization } from '../funding/recipient.ts'
+import { funding_recipient_current, type FundingAuthorization } from '../funding/recipient.ts'
 import { useFundingCheckout } from '../funding/useFundingCheckout.ts'
 
 import { useCopy } from './useCopy.ts'
@@ -269,6 +269,22 @@ export const FundingModal = ({
 /** The game's funding window reads its wallet sources from the app store. */
 export const AddFundsModal = (props: FundingModalProps) => {
   const wallet = useAppStore((state) => state.external_wallet)
-  const balance = useAppStore((state) => state.session.sui_balance_mist)
-  return <FundingModal {...props} funding={{ wallet: external_wallet_view(wallet), source: wallet.session, balance }} />
+  const session = useAppStore((state) => state.session)
+  const target = props.authorization
+    ? {
+        ...props,
+        address: props.authorization.recipient,
+        warning: props.copy.ui.agent_needs_sui,
+        recipient_label: props.copy.ui.add_funds_agent,
+      }
+    : props
+  if (props.authorization && !funding_recipient_current(session, target.address!, props.authorization)) return null
+  const balance = props.authorization ? null : session.sui_balance_mist
+  return (
+    <FundingModal
+      {...target}
+      key={target.address}
+      funding={{ wallet: external_wallet_view(wallet), source: wallet.session, balance }}
+    />
+  )
 }

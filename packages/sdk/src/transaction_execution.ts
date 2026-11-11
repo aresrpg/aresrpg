@@ -251,7 +251,7 @@ export const create_transaction_execution = ({
     },
     recover_pending,
     resume_pending,
-    before_next: async (): Promise<void> => {
+    before_next: async (wait_for_visibility?: boolean): Promise<void> => {
       const record = await load_pending()
       await journal?.admit('prepare')
       if (!record) return
@@ -266,6 +266,8 @@ export const create_transaction_execution = ({
           `[sdk] previous transaction recovered: ${record.digest}; refresh your game state before trying again`
         )
       }
+      // A certified receipt already resolves outcome; checked write resolution need not reread it.
+      if (wait_for_visibility === false) return
       try {
         await bounded_request(
           (signal) => core.waitForTransaction({ digest: record.digest, signal }),

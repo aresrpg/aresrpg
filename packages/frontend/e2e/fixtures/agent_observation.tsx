@@ -8,12 +8,32 @@ import { create_world } from '../../src/game/core/world.ts'
 import { load_character_appearance, world_character_entity } from '../../src/game/character_entities.ts'
 import { read_pose, read_displayed_pose } from '../../src/game/core/pose_feed.ts'
 import { AgentSpectator } from '../../src/agents/AgentSpectator.tsx'
-import { dispatch_app, read_app_state, initialize_app_store } from '../../src/store.ts'
+import { dispatch_app, read_app_state, initialize_app_store, useAppStore } from '../../src/store.ts'
 import { character } from '../../test/modules/automation_fixture.ts'
 import type { AuthSession } from '../../src/auth.ts'
-import { load_app_copy } from '../../src/i18n/copy.ts'
+import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
+import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
 import '../../src/tailwind.css'
 import '../../src/game/hud/world_responsive.css'
+
+const ObservationHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const wallet = useAppStore((state) => state.session.wallet)
+  const cost_mist = useAppStore((state) => state.navigation.funding_cost_mist)
+  return (
+    <>
+      <AgentSpectator copy={copy} />
+      {wallet && cost_mist !== null && (
+        <AddFundsModal
+          key={wallet.address}
+          address={wallet.address}
+          copy={copy}
+          cost_mist={cost_mist}
+          on_close={() => dispatch_app({ type: 'funding/close' })}
+        />
+      )}
+    </>
+  )
+}
 
 const boot = async () => {
   initialize_app_store({ quality: 'low', render_distance: 1, music_enabled: false })
@@ -131,7 +151,7 @@ const boot = async () => {
   })
   createRoot(document.getElementById('controls')!).render(
     new URLSearchParams(location.search).has('hud') ? (
-      <AgentSpectator copy={copy} />
+      <ObservationHud copy={copy} />
     ) : (
       <TouchControls copy={copy} device={{ set_movement: world.set_movement, set_jump: world.set_jump }} />
     )

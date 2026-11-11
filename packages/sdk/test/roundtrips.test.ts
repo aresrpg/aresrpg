@@ -167,7 +167,7 @@ for (const intent of intents)
     expect(transactions).toEqual([intent.commands, intent.commands])
     expect(client.calls.hydrations).toHaveLength(1)
     expect(client.calls).toMatchObject({ resolutions: 2, simulations: 2, executions: 2 })
-    expect(client.calls.visibility_waits).toEqual([client.calls.digests[0]!])
+    expect(client.calls.visibility_waits).toEqual([])
   })
 
 for (const intent of intents)

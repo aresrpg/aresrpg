@@ -44,6 +44,15 @@ const character_modules: Readonly<Record<string, string>> =
       }) as Readonly<Record<string, string>>)
     : Object.freeze({})
 
+const nameplate_modules: Readonly<Record<string, string>> =
+  typeof Bun === 'undefined'
+    ? (import.meta.glob('../../../../seed/icons/nameplates/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url',
+      }) as Readonly<Record<string, string>>)
+    : Object.freeze({})
+
 const asset_key = (path: string): string =>
   path
     .split('/')
@@ -55,6 +64,7 @@ const index_assets = (modules: Readonly<Record<string, string>>): Readonly<Recor
   return Object.freeze(Object.fromEntries(entries))
 }
 
+const nameplate_assets = index_assets(nameplate_modules)
 const character_assets = index_assets(character_modules)
 const item_assets = index_assets(item_modules)
 const mob_assets = index_assets(mob_modules)
@@ -87,3 +97,6 @@ export const character_icon = (classe: string, sex: string, colors?: PortraitCol
   (colors ? portrait_url({ classe, sex, ...colors }) : null) ??
   character_assets[character_model_basenames(classe, sex === 'male').body] ??
   null
+
+export const nameplate_artwork_url = (basename: string | undefined): string | undefined =>
+  basename ? nameplate_assets[basename] : undefined

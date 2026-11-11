@@ -4,6 +4,7 @@
 import type { ServerPacket } from '@aresrpg/protocol'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
+import type { FundingAuthorization } from '../funding/recipient.ts'
 import { agent_tab_source } from '../agents/character_tabs.ts'
 import { consumed_agent_entry_url } from '../agents/entry_intent.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
@@ -38,6 +39,7 @@ export type AppDialog =
   | `fight:${string}`
 
 export type NavigationState = Readonly<{
+  funding_authorization?: FundingAuthorization
   funding_cost_mist: bigint | null
   page: Page
   pathname: string
@@ -45,7 +47,7 @@ export type NavigationState = Readonly<{
 }>
 
 export type NavigationInput =
-  | Readonly<{ type: 'funding/open'; cost_mist: bigint }>
+  | Readonly<{ type: 'funding/open'; cost_mist: bigint; authorization?: FundingAuthorization }>
   | Readonly<{ type: 'funding/close' }>
   | Readonly<{ type: 'page/open'; page: Page }>
   | Readonly<{ type: 'path/open'; pathname: string }>
@@ -105,6 +107,7 @@ const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
       ...state,
       navigation: {
         ...state.navigation,
+        funding_authorization: undefined,
         funding_cost_mist: state.session.characters.length === 0 ? CHARACTER_PRICE_MIST : 0n,
       },
     }
@@ -154,9 +157,19 @@ const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): App
 const reduce_window = (state: AppState, input: AppInput): AppState | null => {
   switch (input.type) {
     case 'funding/open':
-      return { ...state, navigation: { ...state.navigation, funding_cost_mist: input.cost_mist } }
+      return {
+        ...state,
+        navigation: {
+          ...state.navigation,
+          funding_cost_mist: input.cost_mist,
+          funding_authorization: input.authorization,
+        },
+      }
     case 'funding/close':
-      return { ...state, navigation: { ...state.navigation, funding_cost_mist: null } }
+      return {
+        ...state,
+        navigation: { ...state.navigation, funding_cost_mist: null, funding_authorization: undefined },
+      }
     case 'dialog/open':
       return open_dialog(state, input.dialog)
     default:
@@ -173,6 +186,9 @@ const NAVIGATION_TRANSFORMS: { [Input in RouteInput as Input['type']]: (state: A
 
 const reduce_observed_navigation = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'agent/watch') return { ...state, navigation: initial_navigation_state() }
+  if (input.type === 'dialog/open' && input.dialog === 'top_up') return open_dialog(state, input.dialog)
+  if (input.type === 'funding/close')
+    return { ...state, navigation: { ...state.navigation, funding_cost_mist: null, funding_authorization: undefined } }
   return state
 }
 

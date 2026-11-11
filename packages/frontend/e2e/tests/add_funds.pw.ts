@@ -319,18 +319,37 @@ test('disconnecting Solana waits for the provider before reopening Privy', async
 for (const event of ['change-agent', 'disconnect-player']) {
   test(`agent checkout refuses deferred signing after ${event}`, async ({ page }) => {
     await page.goto('/e2e/fixtures/add_funds.html?connected&slow&agent')
+    await expect(page.locator('[data-funding-balance]')).toHaveText('—')
+    const amount = page.getByRole('textbox', { name: 'Amount to add' })
+    await expect(amount).toHaveValue('')
+    await amount.fill('1.2')
     await page.getByRole('button', { name: 'Pay 1.2 SUI' }).click()
     await expect(page.getByRole('status')).toContainText('Checking funds')
     await page.evaluate((event) => window.dispatchEvent(new Event(event)), event)
     await page.evaluate(() => window.dispatchEvent(new Event('release-estimate')))
     await expect(page.locator('html')).toHaveAttribute('data-preflight', 'finished')
-    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.locator('[data-add-funds]')).toHaveCount(0)
     await expect(page.locator('html')).not.toHaveAttribute('data-payment')
   })
 }
 test('agent checkout uses the selected paired destination with the existing Sui path', async ({ page }) => {
   await page.goto('/e2e/fixtures/add_funds.html?connected&agent')
+  await expect(page.locator('[data-funding-balance]')).toHaveText('—')
+  const amount = page.getByRole('textbox', { name: 'Amount to add' })
+  await expect(amount).toHaveValue('')
+  await amount.fill('1.2')
   await page.getByRole('button', { name: 'Pay 1.2 SUI' }).click()
   await expect(page.getByRole('status')).toContainText('1.2 SUI delivered')
   expect(JSON.parse((await page.locator('html').getAttribute('data-payment'))!).address).toBe(`0x${'22'.repeat(32)}`)
+})
+
+test('agent funding never displays or suggests spending the funded human balance', async ({ page }) => {
+  await page.goto('/e2e/fixtures/add_funds.html?connected&agent&funded')
+  await expect(page.locator('[data-funding-balance]')).toHaveText('—')
+  await expect(page.locator('[data-funding-minimum]')).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Amount to add' })).toHaveValue('')
+  await expect(page.locator('[data-add-funds]')).not.toContainText('30.04 SUI')
+  await expect(page.locator('html')).not.toHaveAttribute('data-payment')
+  await page.goto('/e2e/fixtures/add_funds.html?connected&funded')
+  await expect(page.locator('[data-funding-balance]')).toContainText('30.04 SUI')
 })

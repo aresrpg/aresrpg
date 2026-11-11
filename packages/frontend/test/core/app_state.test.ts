@@ -22,9 +22,16 @@ const auth_session = (address = '0xowner'): AuthSession =>
     address,
     is_transaction_idle: () => true,
     on_transaction: () => () => {},
+    set_agent_default: async () => {
+      throw new Error('Not used')
+    },
     suins: {
+      managed: false,
       snapshot: async () => ({ default_name: null, names: [] }),
-      set_default: async () => {
+      validate_parent: async () => {
+        throw new Error('Not used')
+      },
+      apply_parent: async () => {
         throw new Error('unused name selection')
       },
     },

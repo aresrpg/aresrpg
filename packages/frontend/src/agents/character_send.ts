@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { AgentReturnOffer } from '@aresrpg/sdk/agent-returns'
 import type { AgentPairingIdentity, CharacterRow } from '@aresrpg/protocol'
 import { owner_agent_identity } from '@aresrpg/sdk/agent-recall'
 
@@ -39,5 +40,30 @@ export const character_send_target_current = (
   } catch (error) {
     console.error('Agent recipient does not match the current wallet.', error)
     return false
+  }
+}
+
+/** A fresh gesture reconstructs its intent from the verified offer, not the now-unequipped roster. */
+export const read_character_send_intent = async (
+  sender: string,
+  recipient: string,
+  character: Readonly<CharacterRow>,
+  read_pending: () => Promise<readonly AgentReturnOffer[]>
+) => {
+  const pending = (await read_pending()).filter(({ character_id }) => character_id === character.id)
+  if (pending.length > 1) throw new Error('Character transfer capabilities are ambiguous.')
+  const [offer] = pending
+  if (
+    offer &&
+    (offer.agent_address !== sender || offer.recipient !== recipient || offer.seller_kiosk !== character.kiosk)
+  )
+    throw new Error('The pending character transfer does not match this selection.')
+  if (offer) return { kind: 'claim' as const, ...offer }
+  return {
+    kind: 'offer' as const,
+    character_id: character.id,
+    kiosk: character.kiosk,
+    recipient,
+    unequip: character_send_equipment(character),
   }
 }

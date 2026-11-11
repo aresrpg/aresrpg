@@ -1,33 +1,31 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
 import { expect, test } from 'bun:test'
 
-import { display_suins_name } from '../src/player_label.ts'
+import {
+  application_suins_name,
+  canonical_suins_name,
+  chat_suins_prefix,
+  display_suins_name,
+} from '../src/player_label.ts'
 
 test.each([
-  ['login905.sui', '@login905'],
-  ['player-one.sui', '@player-one'],
-  ['Login905.SUI', '@Login905'],
-  ['dhuts.dhuts.sui', '@dhuts'],
-  ['dhuts@dhuts', '@dhuts'],
-  ['player-one.player-one.sui', '@player-one'],
-  ['Dhuts.dhuts.sui', '@Dhuts'],
-])('formats %s as %s without changing the stored identity', (name, label) => {
-  expect(display_suins_name(name)).toBe(label)
-  expect(display_suins_name(label)).toBe(label)
+  ['sceat.sui', '@sceat'],
+  ['child.sceat.sui', '@child.sceat'],
+  ['sceat.sceat.sui', '@sceat.sceat'],
+  ['child@sceat', '@child.sceat'],
+  ['aresrpg.child.sceat.sui', '@child.sceat'],
+  ['aresrpgagent.child.sceat.sui', '@child.sceat'],
+  ['otheraresrpg.sceat.sui', '@otheraresrpg.sceat'],
+  ['@Sceat', '@sceat'],
+])('display preserves full relative names: %s', (name, expected) => {
+  expect(display_suins_name(name)).toBe(expected)
 })
-
-test.each([
-  'other.sceat.sui',
-  'other@sceat',
-  'deep.sceat.sceat.sui',
-  '@login905',
-  'login905',
-  '',
-  '.sui',
-  'login905.sui.extra',
-  ' login905.sui',
-])('preserves names outside the root and self-subname display forms: %s', (name) => {
-  expect(display_suins_name(name)).toBe(name)
+test('application namespace classification is exact and needs no membership state', () => {
+  expect(application_suins_name('aresrpgagent.child@sceat')).toEqual({ kind: 'agent', parent: 'child.sceat.sui' })
+  expect(application_suins_name('aresrpg.sceat.sui')).toEqual({ kind: 'player', parent: 'sceat.sui' })
+  expect(application_suins_name('otheraresrpgagent.sceat.sui')).toBeNull()
+  expect(canonical_suins_name(' CHILD@SCEAT ')).toBe('child.sceat.sui')
+  expect(chat_suins_prefix('aresrpg.child.sceat.sui')).toBe('(@child.sceat) ')
+  expect(chat_suins_prefix(null)).toBe('')
 })

@@ -102,6 +102,7 @@ export default {
         from: fact.address,
         character_id: fact.character_id,
         character: fact.character,
+        name: fact.name,
         parts: fact.parts,
       })
     }

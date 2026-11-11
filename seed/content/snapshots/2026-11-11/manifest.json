@@ -1,0 +1,211 @@
+{
+  "checkpoint": {
+    "chainIdentifier": "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S",
+    "checkpoint": {
+      "sequenceNumber": 343987394,
+      "digest": "4qcBq2G7DQDv4CBKWDRv4Nkh8RLqYHznrp6YoHsfePiP",
+      "timestamp": "2026-11-11T06:52:14.040Z"
+    }
+  },
+  "endpoint": "https://graphql.mainnet.sui.io/graphql",
+  "generated_at": "2026-11-11T07:41:21.444825+00:00",
+  "completed_collection_count": 9,
+  "pending_collections": [],
+  "unique_eligible_wallets_across_collections": 7400,
+  "summary": [
+    {
+      "collection": "the_ones",
+      "existing_objects": 1946,
+      "eligible_objects": 1000,
+      "eligible_wallets": 179,
+      "reason_counts": {
+        "verified_control": 1000,
+        "burned_tombstone": 946
+      },
+      "ownership_status_counts": {
+        "address_control": 959,
+        "known_pooled_custody": 946,
+        "protocol_owner_verified": 41
+      }
+    },
+    {
+      "collection": "aeon",
+      "existing_objects": 999,
+      "eligible_objects": 999,
+      "eligible_wallets": 534,
+      "reason_counts": {
+        "verified_control": 999
+      },
+      "ownership_status_counts": {
+        "address_control": 264,
+        "protocol_owner_verified": 735
+      }
+    },
+    {
+      "collection": "suimilios",
+      "existing_objects": 3333,
+      "eligible_objects": 3333,
+      "eligible_wallets": 407,
+      "reason_counts": {
+        "verified_control": 3333
+      },
+      "ownership_status_counts": {
+        "address_control": 1490,
+        "protocol_owner_verified": 1843
+      }
+    },
+    {
+      "collection": "fuddies",
+      "existing_objects": 10000,
+      "eligible_objects": 10000,
+      "eligible_wallets": 2978,
+      "reason_counts": {
+        "verified_control": 10000
+      },
+      "ownership_status_counts": {
+        "protocol_owner_verified": 10000
+      }
+    },
+    {
+      "collection": "puggies",
+      "existing_objects": 3333,
+      "eligible_objects": 3314,
+      "eligible_wallets": 815,
+      "reason_counts": {
+        "verified_control": 3314,
+        "known_custody": 18,
+        "zero_address_controller": 1
+      },
+      "ownership_status_counts": {
+        "protocol_owner_verified": 2176,
+        "address_control": 1138,
+        "known_pooled_custody": 18,
+        "zero_address_controller": 1
+      }
+    },
+    {
+      "collection": "rootlets",
+      "existing_objects": 3333,
+      "eligible_objects": 3257,
+      "eligible_wallets": 1013,
+      "reason_counts": {
+        "verified_control": 3257,
+        "known_custody": 76
+      },
+      "ownership_status_counts": {
+        "address_control": 295,
+        "protocol_owner_verified": 2962,
+        "known_pooled_custody": 76
+      }
+    },
+    {
+      "collection": "pawtato_heroes",
+      "existing_objects": 30000,
+      "eligible_objects": 3305,
+      "eligible_wallets": 823,
+      "reason_counts": {
+        "verified_control": 3305,
+        "game_bridge_custody": 26695
+      },
+      "ownership_status_counts": {
+        "protocol_owner_verified": 3305,
+        "known_pooled_custody": 26695
+      },
+      "proof_kind_counts": {
+        "kiosk_cap": 2140,
+        "personal_kiosk_owner_marker": 1165
+      },
+      "exported_recipients": 823,
+      "eligibility_status": "verified_available_onchain_wallets_all_levels",
+      "recipient_cap": 5000,
+      "selection_method": "all_verified_wallets_below_cap"
+    },
+    {
+      "collection": "enforcer_machin",
+      "existing_objects": 1333,
+      "eligible_objects": 1333,
+      "eligible_wallets": 338,
+      "reason_counts": {
+        "verified_control": 1333
+      },
+      "ownership_status_counts": {
+        "protocol_owner_verified": 1333
+      }
+    },
+    {
+      "collection": "mystic_yetis",
+      "existing_objects": 5555,
+      "eligible_objects": 5496,
+      "eligible_wallets": 1884,
+      "reason_counts": {
+        "verified_control": 5496,
+        "known_custody": 59
+      },
+      "ownership_status_counts": {
+        "protocol_owner_verified": 3154,
+        "address_control": 2342,
+        "known_pooled_custody": 59
+      }
+    }
+  ],
+  "blast_fun": {
+    "status": "blocked_no_verified_onchain_collection",
+    "reason": "Official terms describe server-side Season Zero profile crew cards; no verified on-chain collection or complete public export found.",
+    "source": "https://www.blast.fun/terms"
+  },
+  "limitations": [
+    "A holder snapshot is not a claim of identity or unique humans.",
+    "Known bridge custody and unresolved control are excluded from eligible lists.",
+    "TradePort coin-backed pooled custody is excluded; its bridge IDs and kiosk are wrapped inside the verified Manager object.",
+    "No airdrop or transaction was submitted.",
+    "Pawtato includes every verified on-chain wallet at every level; 26,695 game-bridge NFT beneficiaries remain unproven and excluded. The 5,000-wallet maximum does not truncate the 823 available wallets."
+  ],
+  "inventory_complete": true,
+  "eligibility_definition": "Verified on-chain controller for nine collections, excluding burned objects, zero-address control and unresolved pooled or game-bridge custody. Pawtato includes all levels under the approved available-wallet policy.",
+  "classification_complete": true,
+  "custodial_beneficiaries_resolved": false,
+  "custodial_scope_note": "153 pooled NFTs from Rootlets, Puggies and Mystic Yetis and 26,695 Pawtato game-bridge NFTs lack proven individual beneficiaries and are excluded. One additional Puggie with zero-address control is excluded separately.",
+  "repository_integration": {
+    "directory": "seed/content/snapshots/2026-11-11",
+    "source_json_sha256": "621b2cf4d643f6ffa3db7d23f8ee8116c139fa4b5e083ba3b288117d410b9cbf",
+    "recipient_mode": "wallet",
+    "items_mapped": true,
+    "airdrop_batches_modified": true,
+    "snapshot_configuration_modified": false,
+    "transactions_submitted": false,
+    "classification_vs_custody": "All nine inventories are classified. Four reviewed campaigns explicitly exclude unresolved custody; classification does not establish the beneficiaries of excluded NFTs.",
+    "unresolved_custodial_beneficiaries_outside_pawtato": 153,
+    "source_verification_scope": "The historical source verification predates the all-level Pawtato refresh. Current canonical snapshots and the supplemental exact owner-chain audit establish the approved recipient sets.",
+    "source_verification_archive_member": "2026-11-11/audit/cloud-verification.json",
+    "unresolved_pawtato_bridge_beneficiaries": 26695
+  },
+  "inventoried_collection_count": 9,
+  "confirmed_eligible_objects_across_completed_collections": 32037,
+  "evidence_archive": {
+    "file": "snapshot-before-cleanup.tar.gz",
+    "sha256": "08fd8dd7e273e32b8a36bd88e645c5ed58712a1fd49914a0cfaea728d130c339",
+    "member_prefix": "2026-11-11/",
+    "scope": "Complete 92-file snapshot before repository cleanup, including all raw inventories, contract evidence and historical verification reports. Archive members and inventory_sha256 retain independent revalidation."
+  },
+  "wallet_collection_entitlements": 8971,
+  "updated_at": "2026-11-11T13:47:18.718005+00:00",
+  "evidence_updates": [
+    {
+      "file": "Pawtato-all-levels-evidence-343987394.json",
+      "sha256": "b21df663bab14e5dda6076a60856a2068ca7862f0e9bca4c0679354890102fdc",
+      "size_bytes": 112902001,
+      "inventory_archive_member": "pawtato-all-levels/objects.jsonl",
+      "inventory_sha256": "c6b2ac3bdb320aa972e5363629052190ba1bc9e7bcff03a16ae6f5251a1e00bc",
+      "scope": "All 30,000 Pawtato NFTs at checkpoint 343987394; exact ownership proofs and approved all-level available-wallet classification. Preserved beside the historical archive, not inside it."
+    }
+  ],
+  "ownership_proof_limitations": [
+    {
+      "collection": "the_ones",
+      "kiosk": "0xe323c6597f9d022ae0cc74cb15f6c18d4014ef92251d2f7be55e6fba5bb2af1f",
+      "wallet": "0x2a5f7d81526b101dc6553924cfab980417a57dc5f647c1d36914b6ef032b36d5",
+      "eligible_nfts": 3,
+      "proof": "Direct address ownership of the kiosk is verified; its matching cap is absent from retained evidence. The other 32,034 eligible NFTs have cap/marker corroboration. Recipient data is unchanged."
+    }
+  ]
+}

@@ -639,6 +639,33 @@ airdrop_page:
     physical: Thẻ quà tặng giấy
     game_wallet: Thưởng kỳ cựu Hytale
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: 'Các ví nắm giữ Pawtato được xác minh trên chuỗi trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Nhà vô địch khoai tây» cho mỗi ví, bất kể cấp độ hay số lượng NFT. NFT do cầu nối của trò chơi lưu giữ bị loại trừ.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: 'Các ví Rootlets khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Vệ binh cội rễ» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: 'Các ví Puggies khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Thánh kỵ sĩ Pug» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: 'Các ví Mystic Yetis khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Chúa tể băng giá» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: 'Các ví The Ones đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người được chọn» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: 'Các ví AEON đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người giữ vĩnh hằng» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: 'Các ví Suimilios đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Triệu phú Sui» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: 'Các ví Fuddies đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Thợ săn FUD» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: 'Các ví Enforcer Machin đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người thực thi» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
     blast_crew:
       title: 'Mũ Crew'
       description: 'Quà ngoại hình dành cho người tham gia đợt bán KARES trên Blast. Kết nối ví đã tham gia sau khi quà được phân phối.'
@@ -671,25 +698,31 @@ airdrop_page:
       description: Dành cho mọi ví Hytale đã liên kết có tổng mua cửa hàng ghi nhận hơn {threshold} SUI, không cần thuộc top 100. Danh hiệu gửi tới địa chỉ Sui trong bản sao lưu. Đăng nhập tài khoản Google gốc để tìm thẻ quà.
 settings_page:
   suins_title: Tên SuiNS
-  suins_hint: Tên SuiNS chỉ cần trỏ tới ví trò chơi. Nhập name@name để hiển thị @name.
+  suins_hint: 'Chọn tên cha bạn sở hữu. Áp dụng sẽ tạo hoặc dùng lại ví đa chữ ký được lưu trữ và lưu thông tin khôi phục công khai. Không cấp quyền truy cập tác nhân hay quyền chơi mới.'
+  suins_external: 'Tên SuiNS mặc định đã xác minh được hiển thị ở đây. Quản lý tên trong ví ngoài hoặc SuiNS.'
+  suins_leaves: 'Tạo {player} cho bạn và {agent} cho ví đa chữ ký. Tên mặc định của ví đa chữ ký cần giao dịch riêng và SUI.'
+  suins_pending_funding: 'Đã áp dụng tên người chơi; tên tác nhân cần SUI. Nạp tiền là tùy chọn. Nhấn Áp dụng để thử lại.'
+  suins_pending_uncertain: 'Đã áp dụng tên người chơi; chưa rõ kết quả giao dịch tác nhân. Kiểm tra trước khi thử lại. Không tự động gửi lại.'
+  suins_pending_refused: 'Đã áp dụng tên người chơi; chữ ký tác nhân bị từ chối. Chỉ áp dụng lại khi bạn muốn thử lại.'
+  suins_pending_failed: 'Đã áp dụng tên người chơi; tên tác nhân đang chờ. Kiểm tra kết quả giao dịch trước khi thử lại.'
+  suins_invalid_parent: 'Tên cha không còn thuộc sở hữu của bạn, đã hết hạn hoặc không đủ điều kiện. Hãy làm mới và chọn lại.'
+  suins_collision: 'Một đăng ký còn hiệu lực đang dùng tên yêu cầu. Hãy chọn tên cha khác.'
+  suins_metadata: 'Việc sửa này sẽ xóa siêu dữ liệu hiện có. Bản ghi không thay đổi. Hãy chọn tên cha khác.'
+  suins_unsupported: 'Ví hoặc mạng này không hỗ trợ tên được quản lý.'
+  suins_fund: 'Nạp tiền vào ví tác nhân'
   suins_current: Tên mặc định hiện tại
   suins_none: Không có
   suins_owned: Tên đang sở hữu
   suins_empty: Không tìm thấy tên đang hoạt động
   suins_choose: Chọn tên
-  suins_name: Tên hoặc tên phụ
-  suins_placeholder: name@name
   suins_refresh: Làm mới tên
-  suins_use: Dùng tên này
+  suins_use: 'Áp dụng / thử lại'
   suins_loading: Đang tải tên…
   suins_saving: Đang đặt tên mặc định…
-  suins_saved: Đã cập nhật tên mặc định. Bảng xếp hạng có thể cần vài phút để làm mới.
+  suins_saved: 'Đã áp dụng tên người chơi và tác nhân. Hiển thị công khai có thể mất vài phút để cập nhật.'
   suins_read_failed: Không tải được tên. Hãy làm mới.
   suins_write_failed: Chưa xác nhận được việc đổi tên. Hãy làm mới trước khi thử lại.
-  suins_invalid_name: Nhập tên SuiNS hợp lệ.
-  suins_not_targeted: Chọn tên đang hoạt động thuộc ví trò chơi hoặc đã trỏ tới ví này.
   suins_wallet_required: Đăng nhập để chọn tên.
-  suins_target_hint: Với tên thuộc ví này, nút cũng đặt địa chỉ đích. Nếu không, hãy trỏ tên tới ví trò chơi trong SuiNS trước.
   day_night_cycle_label: Chu kỳ ngày/đêm
   day_night_cycle_hint: Tắt để thế giới luôn ở giữa trưa.
   title: Cài đặt
@@ -1020,9 +1053,9 @@ fight_hud:
   result_item_unavailable: Phần thưởng này không còn trong túi đồ của bạn.
   chat_item_unavailable: Vật phẩm này không khả dụng trên chuỗi.
   chat_you: Bạn
-  chat_line: '{name}: {message}'
-  chat_party_line: '(nhóm) {name}: {message}'
-  chat_whisper_to: (tới {name}) {message}
+  chat_line: '{handle}{name}: {message}'
+  chat_party_line: '(nhóm) {handle}{name}: {message}'
+  chat_whisper_to: '(tới {name}) {handle}{speaker}: {message}'
   result_title: Kết quả trận đấu
   result_duration: Thời lượng
   result_gas_spent: Gas đã dùng
@@ -2499,7 +2532,7 @@ leaderboard_page:
   current_jobs: Nghề hiện tại
   unavailable: Bảng xếp hạng tạm thời không khả dụng.
   retry: Thử lại
-  suins_hint: Chọn tên hoặc tên phụ SuiNS trong Cài đặt để hiển thị tại đây.
+  suins_hint: 'Tên SuiNS mặc định đã xác minh được hiển thị dưới dạng tên định danh. Nếu chưa có tên đã xác minh, địa chỉ ví sẽ được hiển thị.'
   xp_description: Kinh nghiệm thắng trận của mọi nhân vật. Chuyển nhượng không chuyển điểm đã kiếm.
   kills_description: Quái địch bị hạ trong các trận thắng, tính một lần mỗi trận cho từng địa chỉ thắng.
   dungeons_description: Phòng cuối hoàn thành, tính một lần mỗi trận cho từng địa chỉ hoàn thành.
@@ -2666,8 +2699,21 @@ spell_effects:
   short_critical: 'CM'
   short_stat: 'CHỈ SỐ'
   expires_next_turn: 'Đến lượt tiếp theo'
+title_names:
+  title_veteran: 'Cựu binh'
+  title_frostlord: 'Chúa tể băng giá'
+  title_tater_champion: 'Nhà vô địch khoai tây'
+  title_crew_member: 'Thành viên thủy thủ đoàn'
+  title_chosen_one: 'Người được chọn'
+  title_rootwarden: 'Vệ binh cội rễ'
+  title_aeonkeeper: 'Người giữ vĩnh hằng'
+  title_suimilionaire: 'Triệu phú Sui'
+  title_fudbuster: 'Thợ săn FUD'
+  title_pug_paladin: 'Thánh kỵ sĩ Pug'
+  title_enforcer: 'Người thực thi'
 ui:
   add_funds_agent: 'Nạp tiền cho tác nhân'
+  agent_needs_sui: 'Agent cần SUI để chơi. Hãy nạp tiền rồi thử lại thao tác.'
   agent_funding_unverified: 'Không thể xác minh người nhận. Hãy làm mới mục thu hồi trước khi nạp tiền.'
   agent_watch: 'Theo dõi tác nhân'
   agent_watching: 'Đang theo dõi tác nhân'
@@ -2820,7 +2866,6 @@ ui:
   character_details: 'Chi tiết'
   allocate_points: 'Phân bổ'
   inventory_search: 'Tìm trong túi đồ…'
-  nameplate_veteran: 'Cựu binh'
   design_titles: 'Danh hiệu'
   design_no_title: 'Không có danh hiệu'
   design_library: 'Xưởng thiết kế'

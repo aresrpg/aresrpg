@@ -236,7 +236,7 @@ const setup_bot = (bots: readonly HostedBotDescriptor[]) => {
 }
 
 /** One Connect intent prepares one unambiguous wallet and verifies custody before reporting readiness. */
-export const setup_hosted = async (
+export const prepare_hosted = async (
   client: Readonly<HostedClient>,
   wallet: AuthSession,
   authorization_id: string | null,
@@ -248,8 +248,15 @@ export const setup_hosted = async (
   const bot = setup_bot(result.bots) ?? (await provision_hosted(client, result.authorization_id))
   current_wallet(wallet, client)
   const proof = await verify_hosted_bot(client, wallet, result.authorization_id, bot)
-  client.dispatch({ type: 'agent/pairing_verified', wallet, pairing: retain_hosted_pairing(proof) })
-  return { ...result, bots: [bot], selected: bot.id, verified: bot.id }
+  return { ...result, bots: [bot], selected: bot.id, verified: bot.id, pairing: retain_hosted_pairing(proof) }
+}
+
+/** Connect owns inventory selection; naming consumes only the verified setup result. */
+export const setup_hosted = async (...args: Readonly<Parameters<typeof prepare_hosted>>) => {
+  const result = await prepare_hosted(...args)
+  const [client, wallet] = args
+  client.dispatch({ type: 'agent/pairing_verified', wallet, pairing: result.pairing })
+  return result
 }
 
 export const authorize_hosted = async (
@@ -351,8 +358,24 @@ export const cancel_hosted_session = async (origin: string, authorization_id: st
     method: 'POST',
     credentials: 'include',
     keepalive: true,
+    signal: AbortSignal.timeout(15_000),
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ authorization_id }),
   })
   if (!response.ok) throw new Error('Hosted authorization cancellation was refused.')
+}
+
+/** Naming's first-party session is temporary; committed custody and recovery records outlive it. */
+export const prepare_standalone_hosted = async (client: Readonly<HostedClient>, wallet: AuthSession) => {
+  let authorization_id: string | null = null
+  try {
+    return await prepare_hosted(client, wallet, null, (id) => {
+      authorization_id = id
+    })
+  } finally {
+    if (authorization_id)
+      await cancel_hosted_session(client.origin, authorization_id).catch((error: unknown) =>
+        console.warn('Naming session cancellation failed; expiry still applies.', error)
+      )
+  }
 }

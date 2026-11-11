@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { CAPTION_STYLE, type WorldCaption } from './caption_types.ts'
-import { NAMEPLATE_STYLES, paint_nameplate_frame } from './nameplate_frame.ts'
+import { NAMEPLATE_STYLES, BASE_CAPTION_STYLES, paint_nameplate_frame } from './nameplate_frame.ts'
 import { create_nameplate_artwork } from './nameplate_artwork.ts'
 
 const MAX_SPEECH_LINES = 7
@@ -41,8 +41,8 @@ export const caption_raster_key = ({
   color,
   health,
   variant,
-  tone,
-}: WorldCaption): string => JSON.stringify([name, suffix, lines, speech, color, !!health, variant, tone])
+  artwork_url,
+}: WorldCaption): string => JSON.stringify([name, suffix, lines, speech, color, !!health, variant, artwork_url])
 
 const text_y = (context: CanvasRenderingContext2D, text: string, y: number, centered: boolean) => {
   if (!centered) return y
@@ -59,7 +59,7 @@ export const create_caption_raster = (changed: () => void = () => undefined) => 
   if (!context) throw new Error('Caption canvas is unavailable')
 
   const layout = (caption: WorldCaption) => {
-    const style = caption.variant === 'nameplate' ? NAMEPLATE_STYLES[caption.tone] : CAPTION_STYLE
+    const style = caption.artwork_url ? NAMEPLATE_STYLES.ornate : BASE_CAPTION_STYLES.get(caption.variant)!
     const lines = (caption.lines ?? []).slice(0, 6)
     context.textBaseline = style.baseline
     context.letterSpacing = style.name_spacing
@@ -137,8 +137,7 @@ export const create_caption_raster = (changed: () => void = () => undefined) => 
       paint_nameplate_frame(
         context,
         { left: frame_left, top, width: frame_width, height: box_height },
-        caption.tone,
-        artwork.get(caption.tone)
+        artwork.get(caption.artwork_url)
       )
     } else {
       context.fillStyle = CAPTION_STYLE.background
@@ -173,7 +172,7 @@ export const create_caption_raster = (changed: () => void = () => undefined) => 
     context.font = `${style.name_weight} ${style.font_size}px ${style.font}`
     context.fillStyle = caption.color ?? style.color
     context.save()
-    const title_scale = Math.min(1, (frame_width - 24) / Math.max(1, title_width))
+    const title_scale = Math.min(1, (frame_width - style.padding_x) / Math.max(1, title_width))
     context.translate(
       (width - title_width * title_scale) / 2,
       top + text_y(context, title.map(({ text }) => text).join(''), style.name_y, style.center_text)
@@ -195,7 +194,7 @@ export const create_caption_raster = (changed: () => void = () => undefined) => 
         line.text,
         width / 2,
         top + text_y(context, line.text, style.line_y + index * style.line_height, style.center_text),
-        frame_width - 24
+        frame_width - style.padding_x
       )
     })
     if (caption.health) {

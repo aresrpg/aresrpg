@@ -144,3 +144,11 @@ test('Recall funding rejects foreign members, altered configuration, missing and
   available = false
   expect(funding_recipient_current(current, pairing.address, authorization)).toBe(false)
 })
+
+test('Send funding remains bound to the selected pairing without changing recovery funding', () => {
+  const session = { ...recovery(), inventory_pairing: pairing }
+  const authorization = { ...recall_funding_authorization(session, pairing)!, require_inventory_pairing: true }
+  expect(funding_recipient_current(session, pairing.address, authorization)).toBe(true)
+  for (const inventory_pairing of [null, { ...pairing, address: 'replacement' }])
+    expect(funding_recipient_current({ ...session, inventory_pairing }, pairing.address, authorization)).toBe(false)
+})

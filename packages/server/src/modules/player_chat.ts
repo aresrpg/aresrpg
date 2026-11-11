@@ -11,11 +11,15 @@ import { CHAT_MIN_INTERVAL_MS } from '@aresrpg/protocol'
 
 import { mesh, type ChatFact } from '../protocol.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
+import { chat_name } from '../suins.ts'
+import logger from '../logger.ts'
 import { create_watcher } from '../pubsub_bus.ts'
+
+const log = logger(import.meta)
 
 export default {
   name: 'player_chat',
-  observe: ({ pubsub, events, send, address, get_state, signal }) => {
+  observe: ({ pubsub, events, send, address, get_state, signal, resolve_name }) => {
     /** the flood clock — validation bookkeeping, one law for all three doors */
     const clock = { last_ms: 0 }
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
@@ -30,11 +34,24 @@ export default {
       return false
     }
 
+    // Admission captures the destination and character before enrichment. One queue preserves
+    // publication order across world, party and whisper; the existing flood gate bounds admission.
+    let publication = Promise.resolve()
+    const publish = (channel: ReturnType<typeof mesh.chat_world>, fact: ChatFact): void => {
+      const name = chat_name(resolve_name, address)
+      publication = publication
+        .then(async () => {
+          const resolved = await name
+          if (!signal.aborted) await pubsub.mesh.publish(channel, { ...fact, name: resolved })
+        })
+        .catch((error: unknown) => log.warn({ error }, 'Chat publication failed'))
+    }
+
     events.on('packet/chat', ({ character_id, parts }: Extract<PlayerAction, { type: 'packet/chat' }>) => {
       const character = get_state().characters[character_id]?.presence
       if (!character) return
       if (flood_gated()) return
-      void pubsub.mesh.publish(mesh.chat_world(character.world), {
+      publish(mesh.chat_world(character.world), {
         address,
         character_id,
         character: character.name,
@@ -51,7 +68,7 @@ export default {
         return
       }
       if (flood_gated()) return
-      void pubsub.mesh.publish(mesh.chat_party(party), { address, character_id, character: character.name, parts })
+      publish(mesh.chat_party(party), { address, character_id, character: character.name, parts })
     })
 
     events.on(
@@ -60,7 +77,7 @@ export default {
         const character = get_state().characters[character_id]?.presence
         if (!character) return
         if (flood_gated()) return
-        void pubsub.mesh.publish(mesh.chat_user(to), {
+        publish(mesh.chat_user(to), {
           address,
           character_id,
           character: character.name,
@@ -78,6 +95,7 @@ export default {
         from: fact.address,
         character_id: fact.character_id,
         character: fact.character,
+        name: fact.name,
         parts: fact.parts,
       })
     }
@@ -103,6 +121,7 @@ export default {
         from: fact.address,
         character_id: fact.character_id,
         character: fact.character,
+        name: fact.name,
         parts: fact.parts,
       })
     }

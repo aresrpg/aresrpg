@@ -191,3 +191,15 @@ test('observer boot never reads the saved owned pose while normal owned boot sti
   expect(await resolve_selected_position(state, storage)).toEqual({ x: 0, z: 0 })
   expect(reads).toBe(1)
 })
+
+test('spectator wallet opens and closes owner funding without enabling gameplay windows', () => {
+  const observing = received(begin(automation_fixture()))
+  const funded = reduce_app_state(observing, { type: 'dialog/open', dialog: 'top_up' })
+  expect(funded.navigation.funding_cost_mist).toBe(0n)
+  expect(funded.session.agent_view).toBe(observing.session.agent_view)
+  expect(reduce_app_state(funded, { type: 'funding/close' }).navigation.funding_cost_mist).toBeNull()
+  expect(reduce_app_state(observing, { type: 'dialog/open', dialog: 'character_create' }).navigation).toBe(
+    observing.navigation
+  )
+  expect(reduce_app_state(observing, { type: 'page/open', page: 'characters' }).navigation).toBe(observing.navigation)
+})

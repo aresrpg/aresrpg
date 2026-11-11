@@ -54,8 +54,8 @@ test('speech wraps whole words instead of splitting Sceat’s sentence mid-word'
 })
 
 test('nameplate frame changes invalidate the shared atlas tile', () => {
-  const nameplate = { name: 'Sceat', variant: 'nameplate' as const, tone: 'neutral' as const }
-  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, tone: 'green' }))
-  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, tone: 'red' }))
+  const nameplate = { name: 'Sceat', variant: 'nameplate' as const }
+  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, artwork_url: '/a.png' }))
+  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, artwork_url: '/b.png' }))
   expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ name: nameplate.name, variant: 'card' }))
 })

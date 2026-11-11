@@ -6,12 +6,18 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { prepare_agent_pairing } from '@aresrpg/sdk/agent-signer'
 
-import { setup_hosted, refresh_hosted_owner, create_hosted_client } from '../../src/agents/hosted_client.ts'
+import {
+  prepare_hosted,
+  prepare_standalone_hosted,
+  setup_hosted,
+  refresh_hosted_owner,
+  create_hosted_client,
+} from '../../src/agents/hosted_client.ts'
 import { initial_owner_connection } from '../../src/agents/owner_state.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import * as app from '../../src/store.ts'
 
-const fixture = async (existing: boolean) => {
+const fixture = async (existing: boolean, standalone = false) => {
   const google = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })
   const key = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(7))
   const member = {
@@ -43,7 +49,8 @@ const fixture = async (existing: boolean) => {
     address: google.toSuiAddress(),
     read_agent_pairing_request: request,
     sign_personal_message: async () => {
-      throw new Error('Verified session must not sign again')
+      if (!standalone) throw new Error('Verified session must not sign again')
+      return { signature: 'fixture-owner-proof' }
     },
   } as unknown as AuthSession
   const read = spyOn(app, 'read_app_state').mockReturnValue({
@@ -52,6 +59,11 @@ const fixture = async (existing: boolean) => {
   const published: unknown[] = []
   const dispatch = spyOn(app, 'dispatch_app').mockImplementation((input) => {
     published.push(input)
+  })
+  const previous_window = Object.getOwnPropertyDescriptor(globalThis, 'window')
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: { location: { origin: 'https://game.example' } },
   })
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
   const values = new Map<string, string>()
@@ -74,6 +86,42 @@ const fixture = async (existing: boolean) => {
     invalid_proof: false,
   }
   const routes: Record<string, (init: RequestInit) => Response | Promise<Response>> = {
+    'POST /connect/challenge': (init) => {
+      const body = JSON.parse(String(init.body))
+      const expires_at = Date.now() + 60_000
+      return Response.json({
+        authorization_id: 'temporary',
+        challenge_id: 'nonce',
+        expires_at,
+        message:
+          'AresRPG hosted bot session v1\n' +
+          JSON.stringify({
+            purpose: 'session',
+            issuer: 'https://bot.example.test',
+            network: 'mainnet',
+            authority_generation: 'generation',
+            authorization_id: 'temporary',
+            session_hash: 'session',
+            nonce: 'nonce',
+            owner: body.owner,
+            zklogin_public_identifier: body.zklogin_public_identifier,
+            client_id: 'first-party',
+            redirect_uri: 'https://game.example',
+            resource: 'https://bot.example.test/mcp',
+            scopes: [],
+            expires_at,
+            consent: null,
+          }),
+      })
+    },
+    'POST /connect/verify': () => {
+      if (state.retire === 'verify') controller.abort(new Error('Cancelled after verification'))
+      return Response.json({ owner: wallet.address, bots: state.existing ? [bot] : [] })
+    },
+    'POST /connect/cancel': (init) => {
+      expect(JSON.parse(String(init.body))).toEqual({ authorization_id: 'temporary' })
+      return Response.json({ ok: true })
+    },
     'GET /connect/request': () =>
       Response.json({
         authorization_id: 'authorization',
@@ -104,6 +152,7 @@ const fixture = async (existing: boolean) => {
     'POST /connect/bots': () => {
       if (state.fail_create) return Response.json({ error: 'unavailable' }, { status: 503 })
       state.existing = true
+      if (state.retire === 'provision') controller.abort(new Error('Cancelled after provisioning'))
       return Response.json({ status: 'ready', bot })
     },
     'POST /connect/proof': async (init) => {
@@ -124,8 +173,8 @@ const fixture = async (existing: boolean) => {
     if (!routes[route]) throw new Error('Unexpected fixture request')
     return routes[route](init)
   }) as unknown as typeof fetch
-  const run = () =>
-    setup_hosted(
+  const run = (naming = false) =>
+    (naming ? prepare_hosted : setup_hosted)(
       create_hosted_client(
         'https://bot.example.test',
         controller.signal,
@@ -139,6 +188,17 @@ const fixture = async (existing: boolean) => {
     )
   return {
     run,
+    run_standalone: () =>
+      prepare_standalone_hosted(
+        create_hosted_client(
+          'https://bot.example.test',
+          controller.signal,
+          { get_state: app.read_app_state, dispatch: app.dispatch_app },
+          fetcher
+        ),
+        wallet
+      ),
+    fetcher,
     refresh: (previous_status: HostedOwnerStatus | null = null) =>
       refresh_hosted_owner(
         create_hosted_client(
@@ -172,6 +232,8 @@ const fixture = async (existing: boolean) => {
         },
       } as ReturnType<typeof app.read_app_state>),
     cleanup: () => {
+      if (previous_window) Object.defineProperty(globalThis, 'window', previous_window)
+      else Reflect.deleteProperty(globalThis, 'window')
       read.mockRestore()
       dispatch.mockRestore()
       if (previous) Object.defineProperty(globalThis, 'localStorage', previous)
@@ -327,3 +389,39 @@ test('connection proof reuse ignores the recovery inventory selection and still 
     f.cleanup()
   }
 })
+
+test('naming reuses hosted setup and recovery without inventory or authorization dispatch', async () => {
+  const f = await fixture(false)
+  try {
+    f.bind()
+    const result = await f.run(true)
+    expect(result.pairing.address).toBe(f.bot.address)
+    expect(f.published).toEqual([])
+    expect(f.calls).toEqual(['GET /connect/bots', 'POST /connect/bots', 'POST /connect/proof'])
+    await f.run(true)
+    expect(f.calls.filter((call) => call === 'POST /connect/bots')).toHaveLength(1)
+    expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
+
+test.each(['verify', 'provision', 'complete'])(
+  'standalone naming cancels its temporary session after %s without deleting committed custody',
+  async (stage) => {
+    const f = await fixture(false, true)
+    const fetcher = spyOn(globalThis, 'fetch').mockImplementation(f.fetcher)
+    try {
+      f.state.retire = stage
+      if (stage === 'complete') await f.run_standalone()
+      else await expect(f.run_standalone()).rejects.toThrow('Cancelled')
+      expect(f.calls.at(-1)).toBe('POST /connect/cancel')
+      expect(f.calls.filter((call) => call === 'POST /connect/cancel')).toHaveLength(1)
+      expect(f.state.existing).toBe(stage !== 'verify')
+      expect(f.published).toEqual([])
+    } finally {
+      fetcher.mockRestore()
+      f.cleanup()
+    }
+  }
+)

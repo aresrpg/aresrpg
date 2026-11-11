@@ -139,7 +139,16 @@ describe('shipped content assets', () => {
         assert_character_model_asset(character_dir, characters, character_model_basenames(classe, male))
     for (const model of Object.values(NPC_CHARACTER_MODELS))
       assert_character_model_asset(character_dir, characters, model, false)
+    const title_models = items_source.flatMap((item) => {
+      if (!('title_model' in item) || typeof item.title_model !== 'string') return []
+      const body = item.title_model
+      const hair = characters.has(`${body}_hair`) ? `${body}_hair` : undefined
+      const model = { body, ...(hair ? { hair } : {}) }
+      assert_character_model_asset(character_dir, characters, model, false)
+      return Object.values(model)
+    })
     const declared_characters = [
+      ...title_models,
       ...authored_character_model_classes.flatMap((classe) =>
         [true, false].flatMap((male) => Object.values(character_model_basenames(classe, male)))
       ),

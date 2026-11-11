@@ -137,8 +137,8 @@ test('an unknown outcome survives executor recreation and blocks another intent'
   await expect(create_transaction_execution(options).before_next()).rejects.toThrow('outcome unknown')
   available = true
   const restored = create_transaction_execution(options)
-  await expect(restored.before_next()).rejects.toThrow('previous transaction recovered')
-  await expect(restored.before_next()).rejects.toThrow('previous transaction recovered')
+  await expect(restored.before_next(false)).rejects.toThrow('previous transaction recovered')
+  await expect(restored.before_next(false)).rejects.toThrow('previous transaction recovered')
   await create_transaction_execution(options).before_next()
   expect(executions).toBe(1)
 })
@@ -346,4 +346,28 @@ test('reload safety covers queued signing work and retained uncertain submission
   expect(execution.is_transaction_idle()).toBe(false)
   persistence.removeItem('reload-test')
   expect(execution.is_transaction_idle()).toBe(true)
+})
+
+test('receipt callback failure retains recovery evidence even when the next write will resolve gas', async () => {
+  const persistence = storage()
+  let executions = 0
+  const lane = create_transaction_execution({
+    key: 'callback-failure',
+    storage: persistence,
+    core: {
+      executeTransaction: async () => {
+        executions += 1
+        return receipt
+      },
+      waitForTransaction: async () => receipt,
+    },
+    on_receipt: () => {
+      throw new Error('receipt fold failed')
+    },
+  })
+  await expect(lane.submit(raw, ['signature'])).rejects.toThrow('receipt fold failed')
+  await expect(lane.before_next(false)).rejects.toThrow('receipt fold failed')
+  expect(persistence.getItem('callback-failure')).toContain(digest)
+  expect(lane.is_transaction_idle()).toBe(false)
+  expect(executions).toBe(1)
 })

@@ -3,15 +3,22 @@
 // One viewport-global player menu host. Body, Party, and chat interactions dispatch the same
 // identity snapshot; source gates only proximity-bound actions, never whether the menu renders.
 
+import { chat_suins_prefix } from '@aresrpg/immutable'
 import type { PortraitAppearance } from '@aresrpg/immutable/portrait'
 import type { PartyRow, TradePhase } from '@aresrpg/protocol'
-import { character_checkpoint, CHAT_MAX_LENGTH, expand_chat_message, type ChatMessage } from '@aresrpg/protocol'
+import {
+  character_checkpoint,
+  CHAT_MAX_LENGTH,
+  expand_chat_message,
+  type ChatMessage,
+  type ChatMessagePart,
+} from '@aresrpg/protocol'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text, format_text } from '../i18n/copy.ts'
 import { party_invite_allowed, selected_party } from '../modules/party.ts'
-import { character_chat_context } from '../modules/chat.ts'
+import { character_chat_context, type ChatLine } from '../modules/chat.ts'
 import { selected_character } from '../modules/session.ts'
 import { owned_character_position } from '../game/core/owned_character_feed.ts'
 import { trade_row_visible } from '../modules/trade.ts'
@@ -65,6 +72,24 @@ export const party_invite_visible = (
   )
 }
 
+export const outgoing_whisper_line = (
+  recipient: Readonly<{ address: string; name: string }>,
+  speaker: Readonly<{ id: string; name: string }>,
+  parts: readonly ChatMessagePart[],
+  default_name: string | null
+): ChatLine =>
+  Object.freeze({
+    id: `whisper:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+    channel: 'whisper',
+    key: 'chat_whisper_to',
+    values: Object.freeze({
+      handle: Object.freeze({ text: chat_suins_prefix(default_name), cls: 'whisper' }),
+      speaker: Object.freeze({ text: speaker.name, character_id: speaker.id, cls: 'whisper' }),
+      name: Object.freeze({ text: recipient.name, cls: 'whisper', owner: recipient.address }),
+      message: Object.freeze({ text: '', parts, cls: 'whisper' }),
+    }),
+  })
+
 const WhisperModal = ({
   recipient,
   close,
@@ -75,6 +100,7 @@ const WhisperModal = ({
   copy: AppCopy
 }>) => {
   const [message, set_message] = useState('')
+  const default_name = useAppStore(({ suins }) => suins.snapshot?.default_name ?? null)
   const speaker = useAppStore((state) => selected_character(state.session))
   if (!recipient) return null
   const send = (event: Readonly<FormEvent<HTMLFormElement>>): void => {
@@ -89,15 +115,7 @@ const WhisperModal = ({
     dispatch_app({ type: 'chat/whisper', to: recipient.address, parts })
     dispatch_app({
       type: 'chat/line',
-      line: Object.freeze({
-        id: `whisper:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
-        channel: 'whisper',
-        key: 'chat_whisper_to',
-        values: Object.freeze({
-          name: Object.freeze({ text: recipient.name, cls: 'whisper', owner: recipient.address }),
-          message: Object.freeze({ text: '', parts, cls: 'whisper' }),
-        }),
-      }),
+      line: outgoing_whisper_line(recipient, speaker, parts, default_name),
     })
     close()
   }

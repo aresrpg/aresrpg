@@ -10,7 +10,7 @@ export const authored_character_model_classes = class_names
 
 /** Bodies no class owns. They obey the same body/hair contract and share the character model home. */
 export const NPC_CHARACTER_MODELS: Readonly<Record<string, CharacterModelBasenames>> = Object.freeze({
-  blast_girl: Object.freeze({ body: 'blast_girl' }),
+  blast_girl: Object.freeze({ body: 'blast_girl', hair: 'blast_girl_hair' }),
 })
 
 export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames => {

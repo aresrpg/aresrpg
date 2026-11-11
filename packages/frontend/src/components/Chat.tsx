@@ -6,6 +6,7 @@
 // VIEW-ONLY channel fed by the fight module. Lines are semantic (template key + tokenized
 // values); this component localizes live and paints tokens from the chat palette.
 
+import { chat_suins_prefix } from '@aresrpg/immutable'
 import { character_checkpoint, expand_chat_message, type ChatMessagePart } from '@aresrpg/protocol'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
@@ -142,17 +143,19 @@ const LinkedItemToken = ({
   )
 }
 
-const spoken_line = ({
+export const spoken_line = ({
   channel,
   party,
   parts,
   speaker,
+  name,
   character_id,
 }: Readonly<{
   channel: 'general' | 'party'
   party: string | null
   parts: readonly ChatMessagePart[]
   speaker: string
+  name: string | null
   character_id: string
 }>): ChatLine => {
   const scoped = channel === 'party' && party !== null
@@ -160,6 +163,7 @@ const spoken_line = ({
     id: `say:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
     key: scoped ? 'chat_party_line' : 'chat_line',
     values: Object.freeze({
+      handle: Object.freeze({ text: chat_suins_prefix(name), cls: scoped ? 'party' : 'self' }),
       name: Object.freeze({ text: speaker, character_id, cls: scoped ? 'party' : 'self' }),
       message: Object.freeze({ text: '', parts, cls: scoped ? 'party' : 'says' }),
     }),
@@ -257,6 +261,7 @@ export const Chat = ({
       }),
     })
 
+  const default_name = useAppStore(({ suins }) => suins.snapshot?.default_name ?? null)
   const speak = (): void => {
     const message = chat_message_from_draft(draft)
     if (!message.text || !speaker) return
@@ -275,6 +280,7 @@ export const Chat = ({
         party: party?.id ?? null,
         parts,
         speaker: self_name,
+        name: default_name,
         character_id: speaker.id,
       }),
     })

@@ -68,7 +68,7 @@ export const TitlesExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 title,
                 owner,
                 admin_label: copy.admin,
-                veteran_label: copy.ui.nameplate_veteran,
+                title_names: copy.title_names,
               })}
             />
           </div>

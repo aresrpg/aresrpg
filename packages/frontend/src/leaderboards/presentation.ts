@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { display_address, display_suins_name } from '@aresrpg/immutable'
+import { application_suins_name, display_address, display_suins_name } from '@aresrpg/immutable'
 import type { LeaderboardMetric, LeaderboardEntry } from '@aresrpg/protocol'
 
 /** Retained Hytale leaderboard colors; identities follow the current game vocabulary. */
@@ -56,4 +56,6 @@ export const compact_leaderboard_score = (score: string, metric: LeaderboardMetr
 }
 
 export const player_name = (entry: Pick<LeaderboardEntry, 'address' | 'name'>): string =>
-  entry.name ? display_suins_name(entry.name) : display_address(entry.address)
+  entry.name
+    ? `${application_suins_name(entry.name)?.kind === 'agent' ? '[AI] ' : ''}${display_suins_name(entry.name)}`
+    : display_address(entry.address)

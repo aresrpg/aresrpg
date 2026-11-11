@@ -21,6 +21,10 @@ export const validate_holder_snapshot = (collection, snapshot) => {
   assert(Number.isSafeInteger(snapshot.object_count) && snapshot.object_count > 0, 'Invalid snapshot object count')
   assert(Array.isArray(snapshot.recipients), 'Snapshot recipients must be an array')
   assert(snapshot.recipients.length > 0, 'Snapshot has no recipients')
+  assert(
+    collection.exclude_unresolved === undefined || typeof collection.exclude_unresolved === 'boolean',
+    'Unresolved exclusion policy must be a boolean'
+  )
   const unresolved = snapshot.unresolved ?? []
   assert(Array.isArray(unresolved), 'Unresolved custody must be an NFT ID list')
   assert(
@@ -28,7 +32,7 @@ export const validate_holder_snapshot = (collection, snapshot) => {
     'Invalid unresolved NFT ID'
   )
   assert(
-    unresolved.length === 0 || collection.limit !== undefined,
+    unresolved.length === 0 || collection.limit !== undefined || collection.exclude_unresolved === true,
     'Uncapped distributions require every holder to be resolved'
   )
   assert(
@@ -111,7 +115,7 @@ const load_holder_snapshot = async (directory, collection, snapshot_fn, progress
     collection,
     await snapshot_fn({
       ...collection,
-      allow_unresolved: collection.limit !== undefined,
+      allow_unresolved: collection.limit !== undefined || collection.exclude_unresolved === true,
       fetch_fn,
     })
   )

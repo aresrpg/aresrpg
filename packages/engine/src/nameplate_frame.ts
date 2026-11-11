@@ -1,23 +1,22 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { WorldCaption } from './caption_types.ts'
+import { CAPTION_STYLE, type WorldCaption } from './caption_types.ts'
 
-type Tone = NonNullable<WorldCaption['tone']>
 const ART_SIDE_MARGIN = 56
 const NAMEPLATE_STYLE = Object.freeze({
   font: '"Ares UI", Arial, sans-serif',
   color: '#f5f3f1',
   muted: '#b2b2bd',
-  font_size: 13,
-  line_size: 10,
+  font_size: 12,
+  line_size: 9,
   name_weight: 800,
   format_name: (name: string) => name,
   line_weight: 700,
   name_spacing: '0.3px',
   line_spacing: '0.6px',
   line_height: 18,
-  name_y: 12,
-  line_y: 25,
+  name_y: 15,
+  line_y: 24,
   body_height: 34,
   padding_x: 28,
   side_padding: ART_SIDE_MARGIN,
@@ -34,12 +33,22 @@ export const NAMEPLATE_STYLES = {
     top_padding: 8,
     min_width: 100,
     font_size: 14,
+    line_size: 10,
     name_y: 17,
     line_y: 35,
   },
-  green: { ...NAMEPLATE_STYLE, muted: '#a9f5cb' },
-  red: { ...NAMEPLATE_STYLE, muted: '#ffb8b9' },
+  ornate: NAMEPLATE_STYLE,
 } as const
+
+export const BASE_CAPTION_STYLES: ReadonlyMap<
+  WorldCaption['variant'],
+  typeof CAPTION_STYLE | typeof NAMEPLATE_STYLES.neutral
+> = new Map<WorldCaption['variant'], typeof CAPTION_STYLE | typeof NAMEPLATE_STYLES.neutral>([
+  ['nameplate', NAMEPLATE_STYLES.neutral],
+  ['card', CAPTION_STYLE],
+  ['float', CAPTION_STYLE],
+  [undefined, CAPTION_STYLE],
+])
 
 const frame_path = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => {
   context.beginPath()
@@ -58,17 +67,14 @@ const frame_path = (context: CanvasRenderingContext2D, x: number, y: number, wid
 export const paint_nameplate_frame = (
   context: CanvasRenderingContext2D,
   box: Readonly<{ left: number; top: number; width: number; height: number }>,
-  tone: Tone,
   artwork: HTMLImageElement | null
 ) => {
   const { left, top, width, height } = box
-  if (tone !== 'neutral') {
-    if (artwork) {
-      const art_width = width + ART_SIDE_MARGIN * 2
-      const art_height = (art_width * artwork.naturalHeight) / artwork.naturalWidth
-      const art_top = top - 28 + (height + 36 - art_height) / 2
-      context.drawImage(artwork, left - ART_SIDE_MARGIN, art_top, art_width, art_height)
-    }
+  if (artwork) {
+    const art_width = width + ART_SIDE_MARGIN * 2
+    const art_height = (art_width * artwork.naturalHeight) / artwork.naturalWidth
+    const art_top = top - 28 + (height + 36 - art_height) / 2
+    context.drawImage(artwork, left - ART_SIDE_MARGIN, art_top, art_width, art_height)
     return
   }
   context.fillStyle = '#0a0d12'

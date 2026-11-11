@@ -5,10 +5,15 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_agent_identity } from '@aresrpg/sdk/agent-multisig'
-import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
+import type { AgentTransferActions, AgentTransferIntent } from '@aresrpg/sdk/agent-transfer-actions'
+import { complete_agent_handover, AgentHandoverIncomplete } from '@aresrpg/sdk/agent-handover'
 
 import type { AuthSession } from '../../src/auth.ts'
-import { character_send_current, character_send_eligible } from '../../src/agents/character_send.ts'
+import {
+  character_send_current,
+  character_send_eligible,
+  read_character_send_intent,
+} from '../../src/agents/character_send.ts'
 import { execute_agent_transfer } from '../../src/agents/agent_transaction.ts'
 import { create_single_flight } from '../../src/transaction_guard.ts'
 import { automation_fixture, character } from '../modules/automation_fixture.ts'
@@ -114,4 +119,103 @@ test('context menu retains the clicked row and sends without a second technical 
   expect(tabs).toContain('character_id={menu.character_id}')
   expect(tabs).toContain('send_character_to_agent(character_id, copy)')
   expect(tabs).not.toContain('AgentCharacterSend')
+})
+
+test('a new Send gesture restores receipt-proven gear after a zero-SUI interrupted offer', async () => {
+  const offer = {
+    character_id: clicked.id,
+    seller_kiosk: clicked.kiosk,
+    purchase_cap: 'cap',
+    recipient: pairing.address,
+    agent_address: wallet.address,
+    equipment: [{ slot: 'weapon', item_id: 'sword', purchase_cap: 'sword-cap' }],
+  }
+  const intent = await read_character_send_intent(wallet.address, pairing.address, clicked, async () => [offer])
+  expect(intent.kind).toBe('claim')
+  if (intent.kind !== 'claim') throw new Error('Expected the verified pending claim')
+  expect(intent.equipment).toEqual(offer.equipment)
+  expect(intent.character_id).toBe(clicked.id)
+  for (const changed of [
+    { ...offer, recipient: 'other' },
+    { ...offer, agent_address: 'other' },
+    { ...offer, seller_kiosk: 'other' },
+  ])
+    await expect(
+      read_character_send_intent(wallet.address, pairing.address, clicked, async () => [changed])
+    ).rejects.toThrow()
+  await expect(
+    read_character_send_intent(wallet.address, pairing.address, clicked, async () => [offer, offer])
+  ).rejects.toThrow()
+  expect((await read_character_send_intent(wallet.address, pairing.address, clicked, async () => [])).unequip).toEqual(
+    []
+  )
+})
+
+test('zero-SUI claim failure followed by a fresh empty-roster gesture resumes once without re-offering', async () => {
+  const calls: string[] = []
+  let offered = false
+  let funded = false
+  const equipment = [{ slot: 'weapon', item_id: 'sword', purchase_cap: 'sword-cap' }]
+  const read_pending = async () =>
+    offered
+      ? [
+          {
+            character_id: clicked.id,
+            seller_kiosk: clicked.kiosk,
+            purchase_cap: 'character-cap',
+            recipient: pairing.address,
+            agent_address: wallet.address,
+            equipment,
+          },
+        ]
+      : []
+  const actions = (sender: string): AgentTransferActions => ({
+    sender,
+    synchronize: async () => {},
+    fits: async () => true,
+    quote: async () => ({ budget_mist: 1n, cost_mist: 1n, required_mist: 1n }),
+    prepare: async (intent: AgentTransferIntent) => {
+      if (sender === pairing.address && !funded) throw new Error('No valid gas coins')
+      return {
+        intent,
+        sender,
+        network: 'mainnet',
+        gas_mist: '1',
+        gas_budget_mist: '1',
+        confirm: async ({ before_sign } = {}) => {
+          before_sign?.()
+          calls.push(intent.kind)
+          if (intent.kind === 'offer') offered = true
+          return { digest: intent.kind, receipt: {} as never }
+        },
+      }
+    },
+  })
+  const offer = actions(wallet.address)
+  const claim = actions(pairing.address)
+  const options = {
+    offer,
+    claim,
+    intent: {
+      kind: 'offer' as const,
+      character_id: clicked.id,
+      kiosk: clicked.kiosk,
+      recipient: pairing.address,
+      unequip: equipment,
+    },
+    read: { characters: read_pending, items: async () => [] },
+    before_sign: () => {},
+  }
+  await expect(complete_agent_handover(options)).rejects.toBeInstanceOf(AgentHandoverIncomplete)
+  expect(calls).toEqual(['offer'])
+  funded = true
+  // The former new-gesture path fails for the actual reason even after funding.
+  await expect(complete_agent_handover({ ...options, intent: { ...options.intent, unequip: [] } })).rejects.toThrow(
+    'does not match'
+  )
+  const intent = await read_character_send_intent(wallet.address, pairing.address, clicked, read_pending)
+  expect(calls).toEqual(['offer']) // Funding and read-only recovery never submit.
+  expect(intent.kind).toBe('claim')
+  await execute_agent_transfer({ actions: claim, intent, is_current: () => true })
+  expect(calls).toEqual(['offer', 'claim'])
 })

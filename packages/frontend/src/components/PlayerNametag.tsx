@@ -14,7 +14,7 @@ export const PlayerNametag = () => {
   const { others, self } = useNametags()
   const owner = useAppStore((state) => state.session.wallet?.address ?? null)
   const admin_label = useAppStore((state) => state.copy?.admin ?? '')
-  const veteran_label = useAppStore((state) => state.copy?.ui.nameplate_veteran ?? '')
+  const title_names = useAppStore((state) => state.copy?.title_names)
   const players = useAppStore((state) => state.world.players)
   const speech = useAppStore((state) => state.chat.speech)
   const characters = useAppStore((state) => state.session.characters)
@@ -35,15 +35,24 @@ export const PlayerNametag = () => {
     targets.current = [...Object.values(others), ...(self ? [self] : [])]
     Object.entries(others).forEach(([id, target]) => {
       const row = owned[id] ?? players[id]
-      target.set(row ? player_caption({ ...row, admin_label, veteran_label, speech: speech_text(speech[id]) }) : null)
+      target.set(
+        row
+          ? player_caption({ ...row, admin_label, title_names: title_names ?? {}, speech: speech_text(speech[id]) })
+          : null
+      )
     })
     const selected = selected_id ? owned[selected_id] : null
     self?.set(
       selected
-        ? player_caption({ ...selected, admin_label, veteran_label, speech: speech_text(speech[selected_id!]) })
+        ? player_caption({
+            ...selected,
+            admin_label,
+            title_names: title_names ?? {},
+            speech: speech_text(speech[selected_id!]),
+          })
         : null
     )
-  }, [others, self, players, speech, characters, selected_id, owner, admin_label, veteran_label])
+  }, [others, self, players, speech, characters, selected_id, owner, admin_label, title_names])
   useEffect(() => () => targets.current.forEach((target) => target.set(null)), [])
   return null
 }

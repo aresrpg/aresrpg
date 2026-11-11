@@ -637,6 +637,33 @@ airdrop_page:
     physical: 'Tarjeta regalo física'
     game_wallet: 'Recompensas de veteranos de Hytale'
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: 'Las carteras de titulares de Pawtato verificadas en la cadena en la instantánea del 11 de noviembre de 2026 reciben un título «Campeón patata» por cartera, independientemente del nivel o la cantidad de NFT. Se excluyen los NFT bajo custodia del puente del juego.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: 'Las carteras disponibles y verificadas de Rootlets en la instantánea del 11 de noviembre de 2026 reciben un título «Guardián de las raíces» por cartera, independientemente de cuántos NFT tuvieran. Se excluyen los casos de custodia sin resolver.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: 'Las carteras disponibles y verificadas de Puggies en la instantánea del 11 de noviembre de 2026 reciben un título «Paladín pug» por cartera, independientemente de cuántos NFT tuvieran. Se excluyen los casos de custodia sin resolver.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: 'Las carteras disponibles y verificadas de Mystic Yetis en la instantánea del 11 de noviembre de 2026 reciben un título «Señor de la escarcha» por cartera, independientemente de cuántos NFT tuvieran. Se excluyen los casos de custodia sin resolver.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: 'Las carteras de The Ones elegibles en la instantánea del 11 de noviembre de 2026 reciben un título «El Elegido» por cartera, independientemente de cuántos NFT tuvieran.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: 'Las carteras de AEON elegibles en la instantánea del 11 de noviembre de 2026 reciben un título «Guardián de los eones» por cartera, independientemente de cuántos NFT tuvieran.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: 'Las carteras de Suimilios elegibles en la instantánea del 11 de noviembre de 2026 reciben un título «Suimillonario» por cartera, independientemente de cuántos NFT tuvieran.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: 'Las carteras de Fuddies elegibles en la instantánea del 11 de noviembre de 2026 reciben un título «Cazador de FUD» por cartera, independientemente de cuántos NFT tuvieran.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: 'Las carteras de Enforcer Machin elegibles en la instantánea del 11 de noviembre de 2026 reciben un título «El Ejecutor» por cartera, independientemente de cuántos NFT tuvieran.'
     blast_crew:
       title: 'Casco Crew'
       description: 'Un regalo cosmético para quienes participaron en la venta de KARES en Blast. Conecta la cartera utilizada tras la distribución.'
@@ -670,25 +697,31 @@ airdrop_page:
 
 settings_page:
   suins_title: 'Nombre SuiNS'
-  suins_hint: 'Tu nombre SuiNS solo necesita apuntar a tu cartera del juego. Introduce name@name para mostrar @name.'
+  suins_hint: 'Elige un nombre padre que poseas. Aplicar crea o reutiliza tu multisig alojada y guarda sus datos públicos de recuperación. No concede nuevos permisos de agente ni de juego.'
+  suins_external: 'Aquí se muestra tu nombre SuiNS predeterminado verificado. Adminístralo en tu cartera externa o SuiNS.'
+  suins_leaves: 'Aplicar crea {player} para ti y {agent} para tu multisig. El nombre predeterminado de la multisig requiere su propia transacción y SUI.'
+  suins_pending_funding: 'Nombre del jugador aplicado; el nombre del agente necesita SUI. Financiar es opcional. Usa Aplicar para reintentar.'
+  suins_pending_uncertain: 'Nombre del jugador aplicado; resultado de la transacción del agente desconocido. Compruébalo antes de reintentar. No hay reenvío automático.'
+  suins_pending_refused: 'Nombre del jugador aplicado; firma del agente rechazada. Aplica de nuevo solo si quieres reintentar.'
+  suins_pending_failed: 'Nombre del jugador aplicado; el del agente está pendiente. Comprueba la transacción antes de reintentar.'
+  suins_invalid_parent: 'Ya no posees este padre o no está activo o habilitado. Actualiza y elige otro.'
+  suins_collision: 'Un registro activo ocupa un nombre solicitado. Elige otro padre.'
+  suins_metadata: 'Esta reparación borraría metadatos existentes. El registro no se modificó. Elige otro padre.'
+  suins_unsupported: 'Los nombres gestionados no están disponibles para esta cartera o red.'
+  suins_fund: 'Financiar cartera del agente'
   suins_current: 'Nombre predeterminado'
   suins_none: 'Ninguno'
   suins_owned: 'Nombres en propiedad'
   suins_empty: 'No se encontraron nombres activos'
   suins_choose: 'Elegir un nombre'
-  suins_name: 'Nombre o subnombre'
-  suins_placeholder: 'nombre@nombre'
   suins_refresh: 'Actualizar nombres'
-  suins_use: 'Usar este nombre'
+  suins_use: 'Aplicar / reintentar'
   suins_loading: 'Cargando nombres…'
   suins_saving: 'Estableciendo nombre…'
-  suins_saved: 'Nombre predeterminado actualizado. Las clasificaciones pueden tardar unos minutos en actualizarse.'
+  suins_saved: 'Nombres del jugador y agente aplicados. La actualización pública puede tardar unos minutos.'
   suins_read_failed: 'No se pudieron cargar los nombres. Intenta actualizar la lista.'
   suins_write_failed: 'No se pudo confirmar el cambio de nombre. Actualiza antes de intentarlo de nuevo.'
-  suins_invalid_name: 'Introduce un nombre SuiNS válido.'
-  suins_not_targeted: 'Elige un nombre activo que pertenezca a tu cartera del juego o que ya apunte a ella.'
   suins_wallet_required: 'Inicia sesión para elegir un nombre.'
-  suins_target_hint: 'Para los nombres de esta cartera, este botón también establece el destino. Si no, apunta primero el nombre a tu cartera del juego en SuiNS.'
   day_night_cycle_label: Ciclo de día y noche
   day_night_cycle_hint: Desactívalo para mantener el mundo a mediodía.
   title: 'Ajustes'
@@ -1019,9 +1052,9 @@ fight_hud:
   result_item_unavailable: Esta recompensa ya no está en tu inventario.
   chat_item_unavailable: Este objeto no está disponible on-chain.
   chat_you: Tú
-  chat_line: '{name}: {message}'
-  chat_party_line: '(grupo) {name}: {message}'
-  chat_whisper_to: '(a {name}) {message}'
+  chat_line: '{handle}{name}: {message}'
+  chat_party_line: '(grupo) {handle}{name}: {message}'
+  chat_whisper_to: '(a {name}) {handle}{speaker}: {message}'
   result_title: Resultado del combate
   result_duration: Duración
   result_gas_spent: Gas gastado
@@ -2527,7 +2560,7 @@ leaderboard_page:
   current_jobs: 'Oficios actuales'
   unavailable: 'Las clasificaciones no están disponibles temporalmente.'
   retry: 'Reintentar'
-  suins_hint: 'Elige tu nombre o subnombre SuiNS en Ajustes para mostrarlo aquí.'
+  suins_hint: 'Los nombres SuiNS predeterminados verificados se muestran como identificadores. Sin nombre verificado se muestra la dirección de tu cartera.'
   xp_description: 'XP obtenida en victorias por todos tus personajes. Las transferencias nunca mueven los puntos ganados.'
   kills_description: 'Monstruos derrotados en combates ganados, contados una vez por combate y dirección ganadora.'
   dungeons_description: 'Salas finales completadas con éxito, contadas una vez por combate y dirección.'
@@ -2699,8 +2732,21 @@ spell_effects:
   short_stat: 'EST'
   expires_next_turn: 'Hasta el próximo turno'
 
+title_names:
+  title_veteran: 'Veterano'
+  title_frostlord: 'Señor de la escarcha'
+  title_tater_champion: 'Campeón patata'
+  title_crew_member: 'Tripulante'
+  title_chosen_one: 'El Elegido'
+  title_rootwarden: 'Guardián de las raíces'
+  title_aeonkeeper: 'Guardián de los eones'
+  title_suimilionaire: 'Suimillonario'
+  title_fudbuster: 'Cazador de FUD'
+  title_pug_paladin: 'Paladín pug'
+  title_enforcer: 'El Ejecutor'
 ui:
   add_funds_agent: 'Añadir fondos al agente'
+  agent_needs_sui: 'Tu agente necesita SUI para jugar. Añade fondos y vuelve a intentar la acción.'
   agent_funding_unverified: 'No se puede verificar el destinatario. Actualiza la recuperación antes de añadir fondos.'
   agent_watch: 'Observar al agente'
   agent_watching: 'Observando al agente'
@@ -2872,7 +2918,6 @@ ui:
   character_details: 'Detalles'
   allocate_points: 'Repartir'
   inventory_search: 'Buscar en el inventario…'
-  nameplate_veteran: 'Veterano'
   design_titles: 'Títulos'
   design_no_title: 'Sin título'
   design_library: 'Taller de diseño'

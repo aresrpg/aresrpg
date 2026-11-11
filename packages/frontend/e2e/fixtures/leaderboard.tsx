@@ -20,7 +20,11 @@ const address = (id: number): string => `0x${id.toString(16).padStart(64, '0')}`
 const entry = (rank: number): LeaderboardEntry => ({
   address: address(rank),
   name:
-    parameters.get('state') !== 'single' && rank < 4 ? ['ares.sui', 'farmer.ares.sui', 'miner.sui'][rank - 1]! : null,
+    rank === 501
+      ? 'aresrpgagent.self.branch.sui'
+      : parameters.get('state') !== 'single' && rank < 4
+        ? ['aresrpg.ares.sui', 'aresrpgagent.branch.ares.sui', 'miner.guild.sui'][rank - 1]!
+        : null,
   rank,
   score: String(9_007_199_254_740_993n - BigInt(rank)),
   characters: Array.from({ length: 12 }, (_, index) => ({

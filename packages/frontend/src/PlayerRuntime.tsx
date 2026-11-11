@@ -233,17 +233,18 @@ export function PlayerRuntime({
         <OwnedGameplay>
           <PlayerContextMenu copy={copy} />
           <JourneyHost copy={copy} />
-          {in_app && wallet && navigation.funding_cost_mist !== null && (
-            <AddFundsModal
-              key={wallet.address}
-              address={wallet.address}
-              copy={copy}
-              cost_mist={navigation.funding_cost_mist}
-              on_close={() => dispatch_app({ type: 'funding/close' })}
-              warning={gift_funding_text(copy, distribution, session)}
-            />
-          )}
         </OwnedGameplay>
+        {in_app && wallet && navigation.funding_cost_mist !== null && (
+          <AddFundsModal
+            key={wallet.address}
+            address={wallet.address}
+            authorization={navigation.funding_authorization}
+            copy={copy}
+            cost_mist={navigation.funding_cost_mist}
+            on_close={() => dispatch_app({ type: 'funding/close' })}
+            warning={gift_funding_text(copy, distribution, session)}
+          />
+        )}
         {creation_surface === 'character_create' && (
           <CharacterCreateModal
             cancel={() =>

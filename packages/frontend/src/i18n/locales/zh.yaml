@@ -639,6 +639,33 @@ airdrop_page:
     physical: 实体礼品卡
     game_wallet: Hytale老玩家奖励
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: '在2026年11月11日快照中经链上核实的Pawtato持有者钱包，每个钱包获得一个“土豆冠军”称号，与NFT等级和数量无关。由游戏桥托管的NFT不在发放范围内。'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: '在2026年11月11日快照中已核实且可用的Rootlets钱包，每个钱包获得一个“根须守卫”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: '在2026年11月11日快照中已核实且可用的Puggies钱包，每个钱包获得一个“巴哥圣骑士”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: '在2026年11月11日快照中已核实且可用的Mystic Yetis钱包，每个钱包获得一个“霜寒领主”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+    title_chosen_one:
+      title: 'The Ones'
+      description: '在2026年11月11日快照中符合资格的The Ones钱包，每个钱包获得一个“天选之人”称号，与当时持有的NFT数量无关。'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: '在2026年11月11日快照中符合资格的AEON钱包，每个钱包获得一个“永恒守护者”称号，与当时持有的NFT数量无关。'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: '在2026年11月11日快照中符合资格的Suimilios钱包，每个钱包获得一个“Sui百万富翁”称号，与当时持有的NFT数量无关。'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: '在2026年11月11日快照中符合资格的Fuddies钱包，每个钱包获得一个“FUD克星”称号，与当时持有的NFT数量无关。'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: '在2026年11月11日快照中符合资格的Enforcer Machin钱包，每个钱包获得一个“执法者”称号，与当时持有的NFT数量无关。'
     blast_crew:
       title: 'Crew 头盔'
       description: '送给 Blast 上 KARES 发售参与者的外观礼物。发放后，请连接参与时使用的钱包。'
@@ -671,25 +698,31 @@ airdrop_page:
       description: 所有已关联且商店购买记录超过{threshold} SUI的Hytale钱包均可获得，不受前100名排名限制。称号发往备份中的Sui地址。请使用原Google账户登录查收礼品卡。
 settings_page:
   suins_title: SuiNS名称
-  suins_hint: 只需让SuiNS名称指向游戏钱包。输入name@name即可显示为@name。
+  suins_hint: '选择你拥有的父名称。应用将创建或复用托管多签钱包并保存公开恢复信息，不会授予新的代理访问权或游戏操作权限。'
+  suins_external: '此处显示已验证的现有 SuiNS 默认名称。请在外部钱包或 SuiNS 中管理。'
+  suins_leaves: '将为你创建 {player}，为多签钱包创建 {agent}。设置多签默认名称需要单独的交易和 SUI。'
+  suins_pending_funding: '玩家名称已应用；代理显示名称需要 SUI。充值为可选操作，请点击应用手动重试。'
+  suins_pending_uncertain: '玩家名称已应用；代理交易结果未知。重试前请检查结果，不会自动重发交易。'
+  suins_pending_refused: '玩家名称已应用；代理签名已拒绝。仅在希望重试时再次应用。'
+  suins_pending_failed: '玩家名称已应用；代理名称尚未完成。再次应用前请检查交易结果。'
+  suins_invalid_parent: '你已不再拥有此父名称，或它已过期或不符合条件。请刷新并重新选择。'
+  suins_collision: '请求的名称已有有效注册。请选择其他父名称。'
+  suins_metadata: '此修复会删除现有元数据，因此记录未更改。请选择其他父名称。'
+  suins_unsupported: '此钱包或网络不支持托管名称。'
+  suins_fund: '为代理钱包充值'
   suins_current: 当前默认名称
   suins_none: 无
   suins_owned: 拥有的名称
   suins_empty: 未找到有效名称
   suins_choose: 选择名称
-  suins_name: 名称或子名称
-  suins_placeholder: name@name
   suins_refresh: 刷新名称
-  suins_use: 使用此名称
+  suins_use: '应用 / 重试'
   suins_loading: 正在加载名称…
   suins_saving: 正在设置默认名称…
-  suins_saved: 默认名称已更新。排行榜可能需要几分钟才能刷新。
+  suins_saved: '玩家和代理名称已应用。公开显示可能需要几分钟更新。'
   suins_read_failed: 无法加载名称。请刷新重试。
   suins_write_failed: 无法确认名称变更。请刷新后再试。
-  suins_invalid_name: 请输入有效的SuiNS名称。
-  suins_not_targeted: 请选择游戏钱包拥有的有效名称，或已指向该钱包的名称。
   suins_wallet_required: 请登录以选择名称。
-  suins_target_hint: 如果此钱包拥有该名称，此按钮也会设置其指向。否则，请先在SuiNS中将名称指向游戏钱包。
   day_night_cycle_label: 昼夜循环
   day_night_cycle_hint: 关闭后，世界将保持正午。
   title: 设置
@@ -1020,9 +1053,9 @@ fight_hud:
   result_item_unavailable: 此奖励已不在你的背包中。
   chat_item_unavailable: 链上无法找到此物品。
   chat_you: 你
-  chat_line: '{name}：{message}'
-  chat_party_line: （队伍）{name}：{message}
-  chat_whisper_to: （发给{name}）{message}
+  chat_line: '{handle}{name}：{message}'
+  chat_party_line: '（队伍）{handle}{name}：{message}'
+  chat_whisper_to: '（发给{name}）{handle}{speaker}: {message}'
   result_title: 战斗结果
   result_duration: 时长
   result_gas_spent: 已用Gas
@@ -2499,7 +2532,7 @@ leaderboard_page:
   current_jobs: 当前专业
   unavailable: 排行榜暂时不可用。
   retry: 重试
-  suins_hint: 在设置中选择SuiNS名称或子名称，即可在这里显示。
+  suins_hint: '已验证的 SuiNS 默认名称将显示为昵称。没有已验证名称时显示钱包地址。'
   xp_description: 所有角色通过获胜获得的经验。转移角色不会转移已获得的积分。
   kills_description: 胜利战斗中击败的敌方怪物，每场战斗对每个获胜地址只计一次。
   dungeons_description: 成功通关的最终房间，每场战斗对每个完成地址只计一次。
@@ -2666,8 +2699,21 @@ spell_effects:
   short_critical: '暴击'
   short_stat: '属性'
   expires_next_turn: '持续至下回合开始'
+title_names:
+  title_veteran: '老兵'
+  title_frostlord: '霜寒领主'
+  title_tater_champion: '土豆冠军'
+  title_crew_member: '船员'
+  title_chosen_one: '天选之人'
+  title_rootwarden: '根须守卫'
+  title_aeonkeeper: '永恒守护者'
+  title_suimilionaire: 'Sui百万富翁'
+  title_fudbuster: 'FUD克星'
+  title_pug_paladin: '巴哥圣骑士'
+  title_enforcer: '执法者'
 ui:
   add_funds_agent: '为代理充值'
+  agent_needs_sui: '你的代理需要一些 SUI 才能游玩。充值后，请重试操作。'
   agent_funding_unverified: '无法验证收款方。请先刷新召回，再添加资金。'
   agent_watch: '观看智能体'
   agent_watching: '正在观看智能体'
@@ -2820,7 +2866,6 @@ ui:
   character_details: '详情'
   allocate_points: '分配'
   inventory_search: '搜索背包…'
-  nameplate_veteran: '老兵'
   design_titles: '称号'
   design_no_title: '无称号'
   design_library: '设计工坊'

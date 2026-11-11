@@ -637,6 +637,33 @@ airdrop_page:
     physical: 'Carte cadeau physique'
     game_wallet: 'Récompenses des vétérans Hytale'
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: 'Les portefeuilles de détenteurs de Pawtato vérifiés sur la chaîne dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Champion de la patate », quels que soient le niveau et le nombre de NFT. Les NFT sous la garde du pont du jeu sont exclus.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: 'Les portefeuilles Rootlets disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Gardien des racines », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: 'Les portefeuilles Puggies disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Paladin carlin », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: 'Les portefeuilles Mystic Yetis disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Seigneur du givre », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: 'Les portefeuilles The Ones éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « L’Élu », quel que soit le nombre de NFT détenus.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: 'Les portefeuilles AEON éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Gardien des éons », quel que soit le nombre de NFT détenus.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: 'Les portefeuilles Suimilios éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Suimillionnaire », quel que soit le nombre de NFT détenus.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: 'Les portefeuilles Fuddies éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Chasseur de FUD », quel que soit le nombre de NFT détenus.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: 'Les portefeuilles Enforcer Machin éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « L’Exécuteur », quel que soit le nombre de NFT détenus.'
     blast_crew:
       title: 'Casque Crew'
       description: 'Un cadeau cosmétique pour les participants à la vente KARES sur Blast. Connectez le portefeuille utilisé après la distribution.'
@@ -670,25 +697,31 @@ airdrop_page:
 
 settings_page:
   suins_title: 'Nom SuiNS'
-  suins_hint: 'Votre nom SuiNS doit simplement pointer vers votre portefeuille de jeu. Saisissez name@name pour afficher @name.'
+  suins_hint: 'Choisissez un nom parent que vous possédez. Appliquer crée ou réutilise votre multisig hébergé et conserve ses informations publiques de récupération. Aucun nouvel accès agent ni autorisation de jeu n’est accordé.'
+  suins_external: 'Votre nom SuiNS par défaut vérifié est affiché ici. Gérez-le dans votre portefeuille externe ou SuiNS.'
+  suins_leaves: 'Appliquer crée {player} pour vous et {agent} pour votre multisig. Le nom par défaut du multisig nécessite sa propre transaction et des SUI.'
+  suins_pending_funding: 'Nom du joueur appliqué ; le nom de l’agent nécessite des SUI. Le financement est facultatif. Cliquez sur Appliquer pour réessayer.'
+  suins_pending_uncertain: 'Nom du joueur appliqué ; résultat de la transaction agent inconnu. Vérifiez-le avant de réessayer. Aucun nouvel envoi automatique.'
+  suins_pending_refused: 'Nom du joueur appliqué ; signature agent refusée. Réappliquez uniquement pour réessayer explicitement.'
+  suins_pending_failed: 'Nom du joueur appliqué ; celui de l’agent reste en attente. Vérifiez le résultat de la transaction avant de réessayer.'
+  suins_invalid_parent: 'Ce parent n’est plus possédé, actif ou admissible. Actualisez et choisissez un autre parent.'
+  suins_collision: 'Un nom demandé est déjà enregistré et actif. Choisissez un autre parent.'
+  suins_metadata: 'Cette réparation effacerait des métadonnées. Le nom reste inchangé. Choisissez un autre parent.'
+  suins_unsupported: 'La gestion des noms est indisponible pour ce portefeuille ou réseau.'
+  suins_fund: 'Financer le portefeuille agent'
   suins_current: 'Nom par défaut'
   suins_none: 'Aucun'
   suins_owned: 'Noms possédés'
   suins_empty: 'Aucun nom actif trouvé'
   suins_choose: 'Choisir un nom'
-  suins_name: 'Nom ou sous-nom'
-  suins_placeholder: 'nom@nom'
   suins_refresh: 'Actualiser les noms'
-  suins_use: 'Utiliser ce nom'
+  suins_use: 'Appliquer / réessayer'
   suins_loading: 'Chargement des noms…'
   suins_saving: 'Définition du nom…'
-  suins_saved: 'Nom par défaut mis à jour. Les classements peuvent prendre quelques minutes à se rafraîchir.'
+  suins_saved: 'Noms du joueur et de l’agent appliqués. L’affichage public peut prendre quelques minutes.'
   suins_read_failed: 'Impossible de charger les noms. Réessayez en actualisant.'
   suins_write_failed: 'La modification du nom n’a pas pu être confirmée. Actualisez avant de réessayer.'
-  suins_invalid_name: 'Saisissez un nom SuiNS valide.'
-  suins_not_targeted: 'Choisissez un nom actif appartenant à votre portefeuille de jeu ou pointant déjà vers lui.'
   suins_wallet_required: 'Connectez-vous pour choisir un nom.'
-  suins_target_hint: 'Pour les noms détenus par ce portefeuille, ce bouton définit aussi la destination. Sinon, faites d’abord pointer le nom vers votre portefeuille de jeu dans SuiNS.'
   day_night_cycle_label: Cycle jour/nuit
   day_night_cycle_hint: Désactivez pour garder le monde à midi.
   title: 'Paramètres'
@@ -1019,9 +1052,9 @@ fight_hud:
   result_item_unavailable: Cette récompense n’est plus dans votre inventaire.
   chat_item_unavailable: Cet objet est indisponible on-chain.
   chat_you: Vous
-  chat_line: '{name} : {message}'
-  chat_party_line: '(groupe) {name} : {message}'
-  chat_whisper_to: '(à {name}) {message}'
+  chat_line: '{handle}{name} : {message}'
+  chat_party_line: '(groupe) {handle}{name} : {message}'
+  chat_whisper_to: '(à {name}) {handle}{speaker}: {message}'
   result_title: Résultat du combat
   result_duration: Durée
   result_gas_spent: Gas dépensé
@@ -2533,7 +2566,7 @@ leaderboard_page:
   current_jobs: 'Métiers actuels'
   unavailable: 'Classements temporairement indisponibles.'
   retry: 'Réessayer'
-  suins_hint: 'Choisissez votre nom ou sous-nom SuiNS dans les paramètres pour l’afficher ici.'
+  suins_hint: 'Les noms SuiNS par défaut vérifiés sont affichés comme identifiants. Sans nom vérifié, l’adresse du portefeuille est affichée.'
   xp_description: 'XP gagnée lors des victoires par tous vos personnages. Les transferts ne déplacent jamais les points acquis.'
   kills_description: 'Monstres vaincus lors des victoires, comptés une seule fois par combat pour chaque adresse gagnante.'
   dungeons_description: 'Dernières salles terminées avec succès, comptées une seule fois par combat pour chaque adresse.'
@@ -2705,8 +2738,21 @@ spell_effects:
   short_stat: 'STAT'
   expires_next_turn: 'Jusqu’au prochain tour'
 
+title_names:
+  title_veteran: 'Vétéran'
+  title_frostlord: 'Seigneur du givre'
+  title_tater_champion: 'Champion de la patate'
+  title_crew_member: 'Membre d’équipage'
+  title_chosen_one: 'L’Élu'
+  title_rootwarden: 'Gardien des racines'
+  title_aeonkeeper: 'Gardien des éons'
+  title_suimilionaire: 'Suimillionnaire'
+  title_fudbuster: 'Chasseur de FUD'
+  title_pug_paladin: 'Paladin carlin'
+  title_enforcer: 'L’Exécuteur'
 ui:
   add_funds_agent: 'Ajouter des fonds à l’agent'
+  agent_needs_sui: 'Votre agent a besoin de SUI pour jouer. Ajoutez des fonds, puis réessayez votre action.'
   agent_funding_unverified: 'Le destinataire ne peut pas être vérifié. Actualisez le rappel avant d’ajouter des fonds.'
   agent_watch: 'Observer l’agent'
   agent_watching: 'Observation de l’agent'
@@ -2878,7 +2924,6 @@ ui:
   character_details: 'Détails'
   allocate_points: 'Répartir'
   inventory_search: 'Rechercher dans l’inventaire…'
-  nameplate_veteran: 'Vétéran'
   design_titles: 'Titres'
   design_no_title: 'Sans titre'
   design_library: 'Atelier graphique'

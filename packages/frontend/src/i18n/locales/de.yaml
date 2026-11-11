@@ -637,6 +637,33 @@ airdrop_page:
     physical: 'Physische Geschenkkarte'
     game_wallet: 'Belohnungen für Hytale-Veteranen'
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: 'On-Chain-verifizierte Wallets von Pawtato-Besitzern im Snapshot vom 11. November 2026 erhalten je einen Titel „Kartoffelchampion“, unabhängig von NFT-Level und Anzahl. NFTs in Verwahrung der Spiel-Bridge sind ausgeschlossen.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: 'Verfügbare, verifizierte Rootlets-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Wurzelhüter“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: 'Verfügbare, verifizierte Puggies-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Mops-Paladin“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: 'Verfügbare, verifizierte Mystic Yetis-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Frostfürst“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: 'Berechtigte The Ones-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Der Auserwählte“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: 'Berechtigte AEON-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Äonenhüter“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: 'Berechtigte Suimilios-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Suimillionär“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: 'Berechtigte Fuddies-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „FUD-Jäger“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: 'Berechtigte Enforcer Machin-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Der Vollstrecker“, unabhängig von der Anzahl ihrer damaligen NFTs.'
     blast_crew:
       title: 'Crew-Helm'
       description: 'Ein kosmetisches Geschenk für Teilnehmer am KARES-Verkauf auf Blast. Verbinde nach der Verteilung die verwendete Wallet.'
@@ -670,25 +697,31 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS-Name'
-  suins_hint: 'Dein SuiNS-Name muss nur auf deine Spiel-Wallet verweisen. Gib name@name ein, um @name anzuzeigen.'
+  suins_hint: 'Wähle einen übergeordneten Namen in deinem Besitz. Anwenden erstellt oder verwendet deine gehostete Multisig und speichert öffentliche Wiederherstellungsdaten. Es erteilt keine neuen Agenten- oder Spielberechtigungen.'
+  suins_external: 'Hier erscheint dein verifizierter SuiNS-Standardname. Verwalte ihn in deiner externen Wallet oder SuiNS.'
+  suins_leaves: 'Anwenden erstellt {player} für dich und {agent} für deine Multisig. Der Multisig-Standardname benötigt eine eigene Transaktion und SUI.'
+  suins_pending_funding: 'Spielername angewendet; der Agentenname benötigt SUI. Finanzierung ist optional. Mit Anwenden erneut versuchen.'
+  suins_pending_uncertain: 'Spielername angewendet; Ergebnis der Agententransaktion unbekannt. Prüfe es vor einem neuen Versuch. Keine automatische Wiederholung.'
+  suins_pending_refused: 'Spielername angewendet; Agentensignatur abgelehnt. Wende nur für einen bewussten neuen Versuch erneut an.'
+  suins_pending_failed: 'Spielername angewendet; Agentenname ausstehend. Prüfe das Transaktionsergebnis vor einem weiteren Versuch.'
+  suins_invalid_parent: 'Dieser übergeordnete Name gehört dir nicht mehr, ist abgelaufen oder ungeeignet. Aktualisiere die Auswahl.'
+  suins_collision: 'Eine aktive Registrierung belegt einen gewünschten Namen. Wähle einen anderen übergeordneten Namen.'
+  suins_metadata: 'Diese Reparatur würde Metadaten löschen. Der Eintrag bleibt unverändert. Wähle einen anderen Namen.'
+  suins_unsupported: 'Verwaltete Namen sind für diese Wallet oder dieses Netzwerk nicht verfügbar.'
+  suins_fund: 'Agenten-Wallet finanzieren'
   suins_current: 'Aktueller Standardname'
   suins_none: 'Keiner'
   suins_owned: 'Eigene Namen'
   suins_empty: 'Keine aktiven Namen gefunden'
   suins_choose: 'Namen auswählen'
-  suins_name: 'Name oder Untername'
-  suins_placeholder: 'name@name'
   suins_refresh: 'Namen aktualisieren'
-  suins_use: 'Diesen Namen verwenden'
+  suins_use: 'Anwenden / erneut versuchen'
   suins_loading: 'Namen werden geladen…'
   suins_saving: 'Standardname wird gesetzt…'
-  suins_saved: 'Standardname aktualisiert. Ranglisten können einige Minuten für die Aktualisierung benötigen.'
+  suins_saved: 'Spieler- und Agentenname angewendet. Öffentliche Anzeigen können einige Minuten benötigen.'
   suins_read_failed: 'Namen konnten nicht geladen werden. Bitte aktualisiere die Liste.'
   suins_write_failed: 'Die Namensänderung konnte nicht bestätigt werden. Aktualisiere vor einem neuen Versuch.'
-  suins_invalid_name: 'Gib einen gültigen SuiNS-Namen ein.'
-  suins_not_targeted: 'Wähle einen aktiven Namen, der deiner Spiel-Wallet gehört oder bereits auf sie verweist.'
   suins_wallet_required: 'Melde dich an, um einen Namen zu wählen.'
-  suins_target_hint: 'Für Namen in dieser Wallet legt dieser Button auch das Ziel fest. Andernfalls richte den Namen zuerst in SuiNS auf deine Spiel-Wallet aus.'
   day_night_cycle_label: Tag-Nacht-Zyklus
   day_night_cycle_hint: Deaktivieren, um die Welt dauerhaft auf Mittag zu stellen.
   title: 'Einstellungen'
@@ -1019,9 +1052,9 @@ fight_hud:
   result_item_unavailable: Diese Belohnung befindet sich nicht mehr in deinem Inventar.
   chat_item_unavailable: Dieser Gegenstand ist On-Chain nicht verfügbar.
   chat_you: Du
-  chat_line: '{name}: {message}'
-  chat_party_line: '(Gruppe) {name}: {message}'
-  chat_whisper_to: '(an {name}) {message}'
+  chat_line: '{handle}{name}: {message}'
+  chat_party_line: '(Gruppe) {handle}{name}: {message}'
+  chat_whisper_to: '(an {name}) {handle}{speaker}: {message}'
   result_title: Kampfergebnis
   result_duration: Dauer
   result_gas_spent: Gas-Kosten
@@ -2528,7 +2561,7 @@ leaderboard_page:
   current_jobs: 'Aktuelle Berufe'
   unavailable: 'Ranglisten sind vorübergehend nicht verfügbar.'
   retry: 'Erneut versuchen'
-  suins_hint: 'Wähle deinen SuiNS-Namen oder Unternamen in den Einstellungen, um ihn hier anzuzeigen.'
+  suins_hint: 'Verifizierte SuiNS-Standardnamen erscheinen als Handles. Ohne verifizierten Namen wird deine Wallet-Adresse angezeigt.'
   xp_description: 'EP aus gewonnenen Kämpfen aller deiner Charaktere. Transfers übertragen keine verdienten Punkte.'
   kills_description: 'Besiegte Monster in gewonnenen Kämpfen, einmal pro Kampf und siegreicher Adresse gezählt.'
   dungeons_description: 'Erfolgreich abgeschlossene letzte Räume, einmal pro Kampf und abschließender Adresse gezählt.'
@@ -2700,8 +2733,21 @@ spell_effects:
   short_stat: 'WERT'
   expires_next_turn: 'Bis zum nächsten Zug'
 
+title_names:
+  title_veteran: 'Veteran'
+  title_frostlord: 'Frostfürst'
+  title_tater_champion: 'Kartoffelchampion'
+  title_crew_member: 'Crewmitglied'
+  title_chosen_one: 'Der Auserwählte'
+  title_rootwarden: 'Wurzelhüter'
+  title_aeonkeeper: 'Äonenhüter'
+  title_suimilionaire: 'Suimillionär'
+  title_fudbuster: 'FUD-Jäger'
+  title_pug_paladin: 'Mops-Paladin'
+  title_enforcer: 'Der Vollstrecker'
 ui:
   add_funds_agent: 'Agenten aufladen'
+  agent_needs_sui: 'Dein Agent braucht SUI zum Spielen. Lade Guthaben auf und wiederhole deine Aktion.'
   agent_funding_unverified: 'Der Empfänger kann nicht überprüft werden. Aktualisiere den Rückruf, bevor du Guthaben hinzufügst.'
   agent_watch: 'Agenten beobachten'
   agent_watching: 'Agent wird beobachtet'
@@ -2854,7 +2900,6 @@ ui:
   character_details: 'Details'
   allocate_points: 'Verteilen'
   inventory_search: 'Inventar durchsuchen…'
-  nameplate_veteran: 'Veteran'
   design_titles: 'Titel'
   design_no_title: 'Kein Titel'
   design_library: 'Designwerkstatt'

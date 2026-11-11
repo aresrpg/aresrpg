@@ -23,7 +23,13 @@ export {
   tier_unlock_level,
   xp_for_level,
 } from './experience.ts'
-export { display_address, display_suins_name } from './player_label.ts'
+export {
+  display_address,
+  display_suins_name,
+  canonical_suins_name,
+  application_suins_name,
+  chat_suins_prefix,
+} from './player_label.ts'
 export { MODEL_VARIANT_SEPARATOR, model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
 export { archimob_rows, type ArchimobRow } from './archimob.ts'
 export {

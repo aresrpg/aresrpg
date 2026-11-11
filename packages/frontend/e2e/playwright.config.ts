@@ -78,6 +78,7 @@ export default defineConfig({
     { name: 'performance', testMatch: PERFORMANCE_TESTS, workers: 1, timeout: 600_000 },
   ],
   webServer: {
+    env: { VITE_BOT_SERVICE_URL: 'https://bot.fixture.invalid' },
     command:
       'bun run --cwd packages/frontend build:test && bun run --cwd packages/frontend preview --host 127.0.0.1 --port 5180 --strictPort --outDir ../../test-results/browser-build',
     cwd: '../../..',

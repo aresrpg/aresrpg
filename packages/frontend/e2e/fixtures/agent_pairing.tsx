@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client'
 import type { AgentPairingIdentity, CharacterRow } from '@aresrpg/protocol'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
+import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
 
 import { create_agent_identity } from '../../../sdk/src/agent_multisig.ts'
 import { create_wallet_binding } from '../../../sdk/src/wallet_standard.ts'
@@ -15,6 +16,8 @@ import { AgentSetup, AgentSetupButton } from '../../src/agents/AgentSetup.tsx'
 import { AgentKioskPanel } from '../../src/agents/AgentKioskPanel.tsx'
 import { send_character_to_agent } from '../../src/agents/send_character.ts'
 import { useAgentKiosk } from '../../src/agents/useAgentKiosk.ts'
+import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
+import { on_gas_empty } from '../../src/toast.ts'
 import { Toasts } from '../../src/components/Toasts.tsx'
 import { AgentTransferFunding } from '../../src/agents/AgentTransferFunding.tsx'
 import { dispatch_app, read_app_state, useAppStore, observe_app } from '../../src/store.ts'
@@ -40,6 +43,44 @@ const funding_pairing = {
 const forbidden = () => {
   throw new Error('Secret access, signing and transactions are forbidden')
 }
+// Synthetic custody persists only to exercise a reload after the confirmed offer. No chain calls.
+const send_fixture_actions = (sender: string, offering: boolean): AgentTransferActions => ({
+  sender,
+  synchronize: async () => {},
+  fits: async () => true,
+  quote: forbidden,
+  prepare: async (intent) => {
+    if (!offering && !sessionStorage.getItem('fixture-funded')) throw new Error('No valid gas coins')
+    return {
+      intent,
+      sender,
+      network: 'mainnet',
+      gas_mist: '1',
+      gas_budget_mist: '1',
+      confirm: async ({ before_sign } = {}) => {
+        before_sign?.()
+        const key = offering ? 'fixture-offers' : 'fixture-claims'
+        sessionStorage.setItem(key, String(Number(sessionStorage.getItem(key)) + 1))
+        if (offering) sessionStorage.setItem('fixture-offered', 'true')
+        document.documentElement.setAttribute('data-' + key, sessionStorage.getItem(key)!)
+        return { digest: key, receipt: {} as never }
+      },
+    }
+  },
+})
+const fixture_pending = async () =>
+  sessionStorage.getItem('fixture-offered')
+    ? [
+        {
+          character_id: 'fixture-character',
+          seller_kiosk: 'fixture-kiosk',
+          purchase_cap: 'fixture-cap',
+          recipient: funding_pairing.address,
+          agent_address: identities[0]!.address,
+          equipment: [{ slot: 'weapon', item_id: 'fixture-sword', purchase_cap: 'fixture-sword-cap' }],
+        },
+      ]
+    : []
 const connect = (index: number) => {
   dispatch_app({ type: 'auth/disconnected' })
   const identity = identities[index]
@@ -73,23 +114,30 @@ const connect = (index: number) => {
         },
       })
       return {
-        transfer: { synchronize: async () => {}, sender: pairing.address, quote: forbidden, prepare: forbidden },
+        transfer: new URLSearchParams(location.search).has('send_failure')
+          ? send_fixture_actions(pairing.address, false)
+          : { synchronize: async () => {}, sender: pairing.address, quote: forbidden, prepare: forbidden },
         characters: [],
         pending: [],
         read_deposit_items: async () => [],
         read_incoming_items: async () => [],
-        read_pending_characters: async () => [],
+        read_pending_characters: new URLSearchParams(location.search).has('send_failure')
+          ? fixture_pending
+          : async () => [],
       }
     },
     read_agent_returns: async () => [],
-    agent_deposit: () => ({
-      synchronize: async () => {},
-      sender: identity.address,
-      prepare: async () => {
-        document.documentElement.setAttribute('data-fixture-offer', 'true')
-        throw new Error('Fixture refuses transaction preparation; no signer exists.')
-      },
-    }),
+    agent_deposit: () =>
+      new URLSearchParams(location.search).has('send_failure')
+        ? send_fixture_actions(identity.address, true)
+        : {
+            synchronize: async () => {},
+            sender: identity.address,
+            prepare: async () => {
+              document.documentElement.setAttribute('data-fixture-offer', 'true')
+              throw new Error('Fixture refuses transaction preparation; no signer exists.')
+            },
+          },
     agent_transfer: { synchronize: async () => {}, sender: identity.address, prepare: forbidden },
     return_agent_assets: async (
       _pairing: AgentPairingIdentity,
@@ -152,7 +200,20 @@ const connect = (index: number) => {
             jobs: {},
             kiosk: 'fixture-kiosk',
             custody: 'kiosk',
-            equipment: [],
+            equipment:
+              new URLSearchParams(location.search).has('send_failure') && !sessionStorage.getItem('fixture-offered')
+                ? [
+                    {
+                      slot: 'weapon',
+                      id: 'fixture-sword',
+                      name: 'Sword',
+                      level: 1,
+                      item_type: 'fixture-sword',
+                      category: 'weapon',
+                      amount: 1,
+                    },
+                  ]
+                : [],
           } satisfies CharacterRow,
         ],
       },
@@ -168,6 +229,7 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     document.documentElement.setAttribute('data-agent-candidate', candidate?.signer_mode ?? '')
     document.documentElement.setAttribute('data-agent-confirmed', String(!!confirmed))
   }, [candidate, confirmed])
+  if (new URLSearchParams(location.search).has('send_failure')) return <SendFixture copy={copy} />
   const payer = new URLSearchParams(location.search).get('funding')
   if (new URLSearchParams(location.search).has('custody')) return <CustodyFixture copy={copy} />
   if (payer && wallet) return <FundingFixture wallet={wallet} payer={payer} copy={copy} />
@@ -177,6 +239,34 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <Button onClick={() => set_open(true)}>{copy.ui.agent_connect_your}</Button>
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </main>
+  )
+}
+const SendFixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const { navigation, session } = useAppStore((app) => app)
+  return (
+    <>
+      <Button onClick={() => send_character_to_agent('fixture-character', copy)}>Send character</Button>
+      <Button
+        onClick={() => {
+          sessionStorage.setItem('fixture-funded', 'true')
+        }}
+      >
+        Fund synthetic agent
+      </Button>
+      <Button onClick={() => dispatch_app({ type: 'funding/open', cost_mist: 0n })}>Fund owner</Button>
+      <Button onClick={() => dispatch_app({ type: 'agent/inventory_target', wallet: session.wallet!, pairing: null })}>
+        Clear pairing
+      </Button>
+      {session.wallet && navigation.funding_cost_mist !== null && (
+        <AddFundsModal
+          address={session.wallet.address}
+          authorization={navigation.funding_authorization}
+          copy={copy}
+          on_close={() => dispatch_app({ type: 'funding/close' })}
+        />
+      )}
+      <Toasts />
+    </>
   )
 }
 const FundingFixture = ({ wallet, payer, copy }: Readonly<{ wallet: AuthSession; payer: string; copy: AppCopy }>) => {
@@ -220,6 +310,16 @@ void load_app_copy('en')
   .then((copy) => {
     if (new URLSearchParams(location.search).has('custody')) observe_app(['hosted_agent'])
     connect(0)
+    if (new URLSearchParams(location.search).has('send_failure')) {
+      dispatch_app({
+        type: 'agent/inventory_target',
+        wallet: read_app_state().session.wallet!,
+        pairing: { ...funding_pairing, signer_mode: 'host-persistent' },
+      })
+      on_gas_empty(() => dispatch_app({ type: 'funding/open', cost_mist: 0n }))
+      for (const key of ['fixture-offers', 'fixture-claims'])
+        document.documentElement.setAttribute('data-' + key, sessionStorage.getItem(key) ?? '0')
+    }
     if (new URLSearchParams(location.search).has('funding')) {
       const source = {
         address: `0x${'33'.repeat(32)}`,
@@ -239,6 +339,7 @@ void load_app_copy('en')
             'data-fake-payment',
             JSON.stringify({ address, amount: String(amount) })
           )
+          if (new URLSearchParams(location.search).has('send_failure')) sessionStorage.setItem('fixture-funded', 'true')
           return { digest: 'fixture-no-transaction' }
         },
       } as unknown as AuthSession

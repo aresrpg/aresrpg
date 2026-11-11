@@ -10,6 +10,14 @@ export const items_by_type: Readonly<Record<string, SeedItem>> = Object.freeze(
   Object.fromEntries(items.map((item) => [item.item_type, item]))
 )
 
+export const title_item = (item_type: string | null | undefined): SeedItem | undefined => {
+  const item = item_type ? items_by_type[item_type] : undefined
+  return item?.category === 'title' ? item : undefined
+}
+
+export const title_model = (item_type: string | null | undefined): string | undefined =>
+  title_item(item_type)?.title_model
+
 export const box_rewards = (item_type: string) => {
   const effect = items_by_type[item_type]?.consumable
   return effect?.type === 'loot_box' ? effect.rewards : []

@@ -4,38 +4,49 @@ import { expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
 import { player_caption } from '../../src/components/player_caption.ts'
+import { items } from '../../src/content/items.ts'
 
-const player = { name: 'Sceat', title: null, owner: null, admin_label: 'Admin', veteran_label: 'Veteran' }
+const player = {
+  name: 'Sceat',
+  title: null,
+  owner: null,
+  admin_label: 'Admin',
+  title_names: { title_veteran: 'Veteran' },
+}
+const artwork_url = (basename: string | undefined) => (basename ? `/art/${basename}.png` : undefined)
+const caption = (input: Parameters<typeof player_caption>[0]) => player_caption(input, artwork_url)
 
-test('admin appearance follows wallet ownership, never the character name or equipped title', () => {
-  expect(player_caption(player).tone).toBe('neutral')
-  expect(player_caption({ ...player, owner: '0x123', name: 'Admin' }).tone).toBe('neutral')
-  const caption = player_caption({ ...player, owner: DEFAULT_ADMIN_ADDRESS.toUpperCase() })
-  expect(caption.tone).toBe('red')
-  expect(caption.suffix).toBeUndefined()
-  expect(caption.lines).toEqual([{ text: 'Admin' }])
-  expect(player_caption({ ...player, owner: `${DEFAULT_ADMIN_ADDRESS}0` }).tone).toBe('neutral')
-})
-
-test('equipped veteran title supplies its Veteran subtitle and green frame; unequip removes both', () => {
-  const caption = player_caption({ ...player, title: 'title_veteran' })
-  expect(caption.tone).toBe('green')
-  expect(caption.lines?.map(({ text }) => text)).toEqual(['Veteran'])
-  expect(player_caption(player).lines).toEqual([])
-  expect(player_caption(player).tone).toBe('neutral')
-})
-
-test('admin frame takes precedence with one localized subtitle while preserving speech', () => {
-  const caption = player_caption({
+test('admin identity follows wallet ownership, never name or community title', () => {
+  expect(caption(player).artwork_url).toBeUndefined()
+  expect(caption({ ...player, name: 'Admin', owner: '0x123' }).artwork_url).toBeUndefined()
+  const admin = caption({
     ...player,
-    owner: DEFAULT_ADMIN_ADDRESS,
-    title: 'title_veteran',
-    admin_label: 'Administrateur',
-    speech: 'Hello there!',
+    owner: DEFAULT_ADMIN_ADDRESS.toUpperCase(),
+    title: 'title_aeonkeeper',
+    speech: 'Hi',
   })
-  expect(caption.variant).toBe('nameplate')
-  expect(caption.tone).toBe('red')
-  expect(caption.suffix).toBeUndefined()
-  expect(caption.lines).toEqual([{ text: 'Administrateur' }])
-  expect(caption.speech).toBe('Hello there!')
+  expect(admin.artwork_url).toBe('/art/admin_dragon_plate.png')
+  expect(admin.lines).toEqual([{ text: 'Admin', color: '#ffb8b9' }])
+  expect(admin.speech).toBe('Hi')
+  expect(caption({ ...player, owner: `${DEFAULT_ADMIN_ADDRESS}0` }).artwork_url).toBeUndefined()
+})
+
+test('veteran presentation migrates through the generic seed artwork path and reverts on unequip', () => {
+  const veteran = caption({ ...player, title: 'title_veteran' })
+  expect(veteran.artwork_url).toBe('/art/veteran_ethereal_plate.png')
+  expect(veteran.lines).toEqual([{ text: 'Veteran', color: '#a9f5cb' }])
+  expect(caption(player).lines).toEqual([])
+})
+
+test('every model title resolves its authored artwork and generic localized subtitle', () => {
+  const titles = items.filter((item) => item.category === 'title' && item.title_model)
+  expect(titles).toHaveLength(10)
+  for (const item of titles) {
+    const result = caption({ ...player, title: item.item_type, title_names: { [item.item_type]: 'Localized title' } })
+    expect(result.artwork_url).toBe(`/art/${item.title_nameplate}.png`)
+    expect(result.lines?.[0]?.text).toBe('Localized title')
+    expect(result.color).toBeUndefined()
+    expect(result.health).toBeUndefined()
+  }
+  expect(caption({ ...player, title: 'missing_title' }).lines).toEqual([])
 })

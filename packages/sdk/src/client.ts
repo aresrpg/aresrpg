@@ -469,7 +469,6 @@ export function SDK({
     const bytes = await tx.build()
     return sui_client.core.simulateTransaction({ transaction: bytes, include: { effects: true, ...include } })
   }
-
   const execute_now = async (
     tx: Transaction,
     {
@@ -481,7 +480,8 @@ export function SDK({
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     require_write_transport(sui_client)
-    await execution.before_next()
+    // Unresolved gas forces checked Core simulation; pre-resolved writes retain the ledger barrier.
+    await execution.before_next(tx.getData().gasData.payment !== null)
     await prepare_transaction(tx, sender, { budget })
     let signed: Awaited<ReturnType<TransactionSigner>>
     try {

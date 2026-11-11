@@ -7,6 +7,7 @@
 // `replaces` (a chain-adopted amount corrects the line where it already spoke, never appends
 // a second number).
 
+import { chat_suins_prefix } from '@aresrpg/immutable'
 import {
   CHAT_MAX_ITEM_LINKS,
   CHAT_MAX_LENGTH,
@@ -202,7 +203,9 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   })
 }
 
-const wire_chat_line = (packet: Readonly<Extract<ServerPacket, { type: 'packet/chat_message' }>>): ChatLine | null => {
+export const wire_chat_line = (
+  packet: Readonly<Extract<ServerPacket, { type: 'packet/chat_message' }>>
+): ChatLine | null => {
   const channel = { world: 'general', party: 'party', whisper: 'whisper' }[packet.channel] as Exclude<
     ChatChannel,
     'combat'
@@ -213,6 +216,7 @@ const wire_chat_line = (packet: Readonly<Extract<ServerPacket, { type: 'packet/c
     id: `wire:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
     key: { general: 'chat_line', party: 'chat_party_line', whisper: 'chat_line' }[channel],
     values: Object.freeze({
+      handle: Object.freeze({ text: chat_suins_prefix(packet.name), cls: cls ?? 'name' }),
       name: Object.freeze({
         text: packet.character,
         cls: cls ?? 'name',

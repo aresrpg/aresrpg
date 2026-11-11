@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { complete_agent_handover } from '@aresrpg/sdk/agent-handover'
+import { execute_agent_transfer } from '@aresrpg/sdk/agent-transfer-actions'
+import { complete_agent_handover, AgentHandoverIncomplete } from '@aresrpg/sdk/agent-handover'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { read_app_state, dispatch_app } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 import { toast } from '../toast.ts'
 import { send_text } from '../components/SuiTransferResult.tsx'
+import { recall_funding_authorization } from '../funding/recipient.ts'
 
-import { agent_transfer_error } from './transfer_error.ts'
-import { character_send_current, character_send_equipment, character_send_target_current } from './character_send.ts'
+import { agent_transfer_error, agent_transfer_needs_gas } from './transfer_error.ts'
+import {
+  character_send_current,
+  character_send_equipment,
+  character_send_target_current,
+  read_character_send_intent,
+} from './character_send.ts'
 
 /** The menu gesture owns the complete handover; the existing SDK owns both signed transactions. */
 export const send_character_to_agent = (character_id: string, copy: AppCopy): void => {
@@ -25,16 +33,33 @@ export const send_character_to_agent = (character_id: string, copy: AppCopy): vo
   const pending = run_direct_transaction(async () => {
     before_sign()
     const recall = await wallet.read_agent_recall(pairing)
+    const offer = wallet.agent_deposit(pairing)
+    await Promise.all([offer.synchronize(), recall.transfer.synchronize()])
+    before_sign()
+    const intent = await read_character_send_intent(
+      wallet.address,
+      pairing.address,
+      character,
+      recall.read_pending_characters
+    )
+    if (intent.kind === 'claim') {
+      try {
+        return await execute_agent_transfer({
+          actions: recall.transfer,
+          intent,
+          is_current: () => {
+            before_sign()
+            return true
+          },
+        })
+      } catch (error) {
+        throw new AgentHandoverIncomplete(error, null)
+      }
+    }
     return complete_agent_handover({
-      offer: wallet.agent_deposit(pairing),
+      offer,
       claim: recall.transfer,
-      intent: {
-        kind: 'offer',
-        character_id,
-        kiosk: character.kiosk,
-        recipient: pairing.address,
-        unequip: character_send_equipment(character),
-      },
+      intent,
       read: { characters: recall.read_pending_characters, items: recall.read_deposit_items },
       before_sign,
       on_offer: () => {
@@ -58,7 +83,19 @@ export const send_character_to_agent = (character_id: string, copy: AppCopy): vo
       dispatch_app({ type: 'agent/inventory_refresh' })
     },
     (error) => {
-      notification.error(agent_transfer_error(copy, error))
+      const needs_agent_funding = error instanceof AgentHandoverIncomplete && agent_transfer_needs_gas(error)
+      notification.error(
+        needs_agent_funding ? localized_error(copy.ui.agent_needs_sui, error) : agent_transfer_error(copy, error)
+      )
+      if (needs_agent_funding && character_send_target_current(read_app_state().session, wallet, pairing)) {
+        const authorization = recall_funding_authorization(read_app_state().session, pairing)
+        if (authorization)
+          dispatch_app({
+            type: 'funding/open',
+            cost_mist: 0n,
+            authorization: { ...authorization, require_inventory_pairing: true },
+          })
+      }
       if (read_app_state().session.wallet === wallet) dispatch_app({ type: 'agent/inventory_refresh' })
     }
   )

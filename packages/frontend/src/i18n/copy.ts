@@ -8,6 +8,7 @@ import type { KaresCopy } from '../kares/copy.ts'
 import type { Locale } from './locale.ts'
 
 export type AppCopy = Readonly<{
+  title_names: Readonly<Record<string, string>>
   ui: Readonly<Record<string, string>>
   spell_effects: Readonly<Record<string, string>>
   item_drop_sources: Readonly<Record<string, string>>

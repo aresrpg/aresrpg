@@ -639,6 +639,33 @@ airdrop_page:
     physical: 실물 기프트카드
     game_wallet: Hytale 베테랑 보상
   campaigns:
+    title_tater_champion:
+      title: 'Pawtato'
+      description: '2026년 11월 11일 스냅샷에서 온체인 보유가 검증된 Pawtato 지갑은 NFT 레벨이나 수량과 관계없이 지갑당 「감자 챔피언」 칭호를 하나씩 받습니다. 게임 브리지에 보관된 NFT는 제외됩니다.'
+    title_rootwarden:
+      title: 'Rootlets'
+      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Rootlets 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「뿌리 파수꾼」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+    title_pug_paladin:
+      title: 'Puggies'
+      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Puggies 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「퍼그 성기사」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+    title_frostlord:
+      title: 'Mystic Yetis'
+      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Mystic Yetis 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「서리 군주」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+    title_chosen_one:
+      title: 'The Ones'
+      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 The Ones 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「선택받은 자」 칭호를 하나씩 받습니다.'
+    title_aeonkeeper:
+      title: 'AEON'
+      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 AEON 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「영겁의 수호자」 칭호를 하나씩 받습니다.'
+    title_suimilionaire:
+      title: 'Suimilios'
+      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Suimilios 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「수이밀리어네어」 칭호를 하나씩 받습니다.'
+    title_fudbuster:
+      title: 'Fuddies'
+      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Fuddies 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「FUD 사냥꾼」 칭호를 하나씩 받습니다.'
+    title_enforcer:
+      title: 'Enforcer Machin'
+      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Enforcer Machin 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「집행자」 칭호를 하나씩 받습니다.'
     blast_crew:
       title: 'Crew 헬멧'
       description: 'Blast의 KARES 판매 참여자를 위한 외형 선물입니다. 배포 후 참여에 사용한 지갑을 연결하세요.'
@@ -671,25 +698,31 @@ airdrop_page:
       description: 상위 100명 여부와 관계없이 상점 구매 기록이 {threshold} SUI를 초과한 모든 연결된 Hytale 지갑이 대상입니다. 칭호는 백업의 Sui 주소로 보냅니다. 기존 Google 계정으로 로그인해 기프트카드를 확인하세요.
 settings_page:
   suins_title: SuiNS 이름
-  suins_hint: SuiNS 이름이 게임 지갑을 가리키면 됩니다. name@name을 입력하면 @name으로 표시됩니다.
+  suins_hint: '소유한 상위 이름을 선택하세요. 적용하면 호스팅 멀티시그를 만들거나 재사용하고 공개 복구 정보를 저장합니다. 새로운 에이전트 접근이나 게임 권한은 부여하지 않습니다.'
+  suins_external: '검증된 기존 SuiNS 기본 이름을 표시합니다. 외부 지갑 또는 SuiNS에서 관리하세요.'
+  suins_leaves: '플레이어용 {player} 및 멀티시그용 {agent}를 만듭니다. 멀티시그 기본 이름에는 별도 거래와 SUI가 필요합니다.'
+  suins_pending_funding: '플레이어 이름 적용 완료. 에이전트 이름에는 SUI가 필요합니다. 충전은 선택 사항이며 적용으로 재시도할 수 있습니다.'
+  suins_pending_uncertain: '플레이어 이름 적용 완료. 에이전트 거래 결과를 알 수 없습니다. 재시도 전에 결과를 확인하세요. 자동 재전송은 없습니다.'
+  suins_pending_refused: '플레이어 이름 적용 완료. 에이전트 서명이 거절되었습니다. 재시도를 원할 때만 다시 적용하세요.'
+  suins_pending_failed: '플레이어 이름 적용 완료. 에이전트 이름은 대기 중입니다. 재시도 전에 거래 결과를 확인하세요.'
+  suins_invalid_parent: '상위 이름의 소유권, 유효 기간 또는 사용 조건이 변경되었습니다. 새로고침 후 다시 선택하세요.'
+  suins_collision: '요청한 이름에 활성 등록이 있습니다. 다른 상위 이름을 선택하세요.'
+  suins_metadata: '이 복구는 기존 메타데이터를 삭제하므로 변경하지 않았습니다. 다른 상위 이름을 선택하세요.'
+  suins_unsupported: '이 지갑 또는 네트워크에서는 관리 이름을 지원하지 않습니다.'
+  suins_fund: '에이전트 지갑 충전'
   suins_current: 현재 기본 이름
   suins_none: 없음
   suins_owned: 소유한 이름
   suins_empty: 활성 이름이 없습니다
   suins_choose: 이름 선택
-  suins_name: 이름 또는 하위 이름
-  suins_placeholder: name@name
   suins_refresh: 이름 새로고침
-  suins_use: 이 이름 사용
+  suins_use: '적용 / 재시도'
   suins_loading: 이름 불러오는 중…
   suins_saving: 기본 이름 설정 중…
-  suins_saved: 기본 이름이 갱신되었습니다. 순위표에 반영되기까지 몇 분 걸릴 수 있습니다.
+  suins_saved: '플레이어와 에이전트 이름을 적용했습니다. 공개 표시 갱신에는 몇 분이 걸릴 수 있습니다.'
   suins_read_failed: 이름을 불러올 수 없습니다. 새로고침해 보세요.
   suins_write_failed: 이름 변경을 확인할 수 없습니다. 다시 시도하기 전에 새로고침하세요.
-  suins_invalid_name: 올바른 SuiNS 이름을 입력하세요.
-  suins_not_targeted: 게임 지갑이 소유한 활성 이름 또는 이미 이 지갑을 가리키는 이름을 선택하세요.
   suins_wallet_required: 이름을 선택하려면 로그인하세요.
-  suins_target_hint: 이 지갑이 소유한 이름은 이 버튼으로 대상 주소도 설정합니다. 그 외에는 SuiNS에서 먼저 게임 지갑을 가리키도록 설정하세요.
   day_night_cycle_label: 낮/밤 주기
   day_night_cycle_hint: 끄면 월드가 항상 정오로 유지됩니다.
   title: 설정
@@ -1020,9 +1053,9 @@ fight_hud:
   result_item_unavailable: 이 보상은 더 이상 인벤토리에 없습니다.
   chat_item_unavailable: 이 아이템을 온체인에서 확인할 수 없습니다.
   chat_you: 나
-  chat_line: '{name}: {message}'
-  chat_party_line: '(파티) {name}: {message}'
-  chat_whisper_to: ({name}에게) {message}
+  chat_line: '{handle}{name}: {message}'
+  chat_party_line: '(파티) {handle}{name}: {message}'
+  chat_whisper_to: '({name}에게) {handle}{speaker}: {message}'
   result_title: 전투 결과
   result_duration: 소요 시간
   result_gas_spent: 사용한 가스비
@@ -2499,7 +2532,7 @@ leaderboard_page:
   current_jobs: 현재 생산 직업
   unavailable: 순위표를 일시적으로 이용할 수 없습니다.
   retry: 재시도
-  suins_hint: 설정에서 SuiNS 이름이나 하위 이름을 선택하면 여기에 표시됩니다.
+  suins_hint: '검증된 SuiNS 기본 이름을 핸들로 표시합니다. 검증된 이름이 없으면 지갑 주소를 표시합니다.'
   xp_description: 모든 캐릭터가 전투 승리로 얻은 경험치입니다. 캐릭터를 양도해도 획득 기록은 이동하지 않습니다.
   kills_description: 승리한 전투에서 처치한 적 몬스터입니다. 승리 주소마다 전투당 한 번씩 집계합니다.
   dungeons_description: 성공적으로 완료한 마지막 방입니다. 완료 주소마다 전투당 한 번씩 집계합니다.
@@ -2666,8 +2699,21 @@ spell_effects:
   short_critical: '치명'
   short_stat: '능력'
   expires_next_turn: '다음 턴까지'
+title_names:
+  title_veteran: '베테랑'
+  title_frostlord: '서리 군주'
+  title_tater_champion: '감자 챔피언'
+  title_crew_member: '선원'
+  title_chosen_one: '선택받은 자'
+  title_rootwarden: '뿌리 파수꾼'
+  title_aeonkeeper: '영겁의 수호자'
+  title_suimilionaire: '수이밀리어네어'
+  title_fudbuster: 'FUD 사냥꾼'
+  title_pug_paladin: '퍼그 성기사'
+  title_enforcer: '집행자'
 ui:
   add_funds_agent: '에이전트에 자금 추가'
+  agent_needs_sui: '에이전트가 플레이하려면 SUI가 필요합니다. 충전한 후 작업을 다시 시도하세요.'
   agent_funding_unverified: '수신자를 확인할 수 없습니다. 자금을 추가하기 전에 회수를 새로고침하세요.'
   agent_watch: '에이전트 관전'
   agent_watching: '에이전트 관전 중'
@@ -2820,7 +2866,6 @@ ui:
   character_details: '상세'
   allocate_points: '분배'
   inventory_search: '소지품 검색…'
-  nameplate_veteran: '베테랑'
   design_titles: '칭호'
   design_no_title: '칭호 없음'
   design_library: '디자인 작업실'

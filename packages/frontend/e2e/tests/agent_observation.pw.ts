@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
+import { mock_funding } from '../support/funding.ts'
 import { serve_portrait } from '../../server/portrait.ts'
 
 test('real world keyboard and touch remain read-only while observing, owned movement resumes', async ({ page }) => {
@@ -82,6 +83,17 @@ for (const viewport of [
     })
     await page.goto('/e2e/fixtures/agent_observation.html?hud')
     await expect(page.locator('[data-agent-spectator]')).toBeVisible()
+    const wallet = page.locator('[data-wallet-trigger]')
+    await expect(wallet).toHaveCount(1)
+    await expect(wallet).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stop spectating', exact: true })).toHaveCount(0)
+    await expect(page.locator('.agent-spectator-status,.agent-funding')).toHaveCount(0)
+    const wallet_bounds = await wallet.boundingBox()
+    expect(wallet_bounds!.y).toBeGreaterThanOrEqual(0)
+    expect(wallet_bounds!.y).toBeLessThan(50)
+    expect(viewport.width - wallet_bounds!.x - wallet_bounds!.width).toBeGreaterThanOrEqual(0)
+    expect(viewport.width - wallet_bounds!.x - wallet_bounds!.width).toBeLessThanOrEqual(12)
+
     await expect(page.locator('[data-minimap] canvas')).toBeVisible()
     await expect(page.locator('[data-compass-strip]')).toBeVisible()
     await expect(page.locator('.agent-spectator-world-vitals .aui-health')).toBeVisible()
@@ -142,28 +154,23 @@ test('observed combat displays the selected fighter health/AP/MP without ready o
   await expect(page.locator('body')).toHaveAttribute('data-placement_calls', '0')
 })
 
-test('spectator funding routes player and verified agent separately and closes on target/account change', async ({
-  page,
-}) => {
+test('spectator uses the original owner wallet and its existing funding and disconnect actions', async ({ page }) => {
+  await mock_funding(page)
   await page.goto('/e2e/fixtures/agent_observation.html?hud')
-  await page.locator('.agent-funding summary').click()
-  await page.locator('.agent-funding-menu').getByRole('button', { name: 'Add funds', exact: true }).click()
+  const wallet = page.locator('[data-wallet-trigger]')
+  await expect(wallet).toHaveCount(1)
+  await wallet.click()
+  const menu = page.locator('[data-wallet-card]')
+  await expect(menu).toBeVisible()
+  await expect(menu).toContainText('human')
+  await menu.getByRole('button', { name: 'Add funds', exact: true }).click()
   await expect(page.locator('.aui-funding-address')).toContainText('human')
+  await expect(menu).not.toBeVisible()
   await page.keyboard.press('Escape')
-  await page.locator('.agent-funding-menu').getByRole('button', { name: 'Add funds to agent', exact: true }).click()
-  await expect(page.locator('.aui-funding-address')).toContainText('agent')
-  await expect(page.locator('[data-add-funds]')).toContainText('Add funds to agent')
-  await page.screenshot({ path: test.info().outputPath('agent-funding.png') })
-  await page.evaluate(() => window.dispatchEvent(new Event('rewatch')))
   await expect(page.locator('[data-add-funds]')).toHaveCount(0)
-  await page.locator('.agent-funding summary').click()
-  await expect(
-    page.locator('.agent-funding-menu').getByRole('button', { name: 'Add funds to agent', exact: true })
-  ).toBeDisabled()
+  await wallet.click()
+  await menu.getByRole('button', { name: 'Add funds', exact: true }).click()
+  await expect(page.locator('.aui-funding-address')).toContainText('human')
   await page.evaluate(() => window.dispatchEvent(new Event('disconnect')))
   await expect(page.locator('[data-add-funds]')).toHaveCount(0)
-  await page.locator('.agent-funding summary').click()
-  await expect(
-    page.locator('.agent-funding-menu').getByRole('button', { name: 'Add funds', exact: true })
-  ).toBeDisabled()
 })
