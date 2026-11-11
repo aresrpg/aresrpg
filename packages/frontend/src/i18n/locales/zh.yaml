@@ -639,6 +639,9 @@ airdrop_page:
     physical: 实体礼品卡
     game_wallet: Hytale老玩家奖励
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: '计划为 Blast 提供船员称号。钱包白名单尚待确认；领取资格尚未确定，分发尚未开始。'
     title_tater_champion:
       title: 'Pawtato'
       description: '在2026年11月11日快照中经链上核实的Pawtato持有者钱包，每个钱包获得一个“土豆冠军”称号，与NFT等级和数量无关。由游戏桥托管的NFT不在发放范围内。'

@@ -112,6 +112,15 @@
       "delivery": "wallet"
     },
     {
+      "id": "title_crew_member",
+      "name": "Blast",
+      "visibility": "public",
+      "items": [
+        "title_crew_member"
+      ],
+      "delivery": "wallet"
+    },
+    {
       "id": "title_chosen_one",
       "name": "The Ones",
       "visibility": "public",

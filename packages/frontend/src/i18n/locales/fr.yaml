@@ -637,6 +637,9 @@ airdrop_page:
     physical: 'Carte cadeau physique'
     game_wallet: 'Récompenses des vétérans Hytale'
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'Le titre Membre d’équipage est prévu pour Blast. La liste des portefeuilles autorisés reste à confirmer ; l’éligibilité n’est pas encore établie et la distribution n’a pas commencé.'
     title_tater_champion:
       title: 'Pawtato'
       description: 'Les portefeuilles de détenteurs de Pawtato vérifiés sur la chaîne dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Champion de la patate », quels que soient le niveau et le nombre de NFT. Les NFT sous la garde du pont du jeu sont exclus.'

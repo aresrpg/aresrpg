@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { wallet_view } from '../kares/fixture.ts'
-import AirdropPage, { HolderWalletConnect } from '../../src/airdrop/AirdropPage.tsx'
+import AirdropPage, { CampaignCard, HolderWalletConnect } from '../../src/airdrop/AirdropPage.tsx'
 import { group_giftcards } from '../../src/airdrop/gift_rewards.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
@@ -14,6 +14,34 @@ import { initial_session_state } from '../../src/modules/session.ts'
 import { TEMPLATE_ID, use_template_fixture } from './fixture.ts'
 
 use_template_fixture()
+
+test('all community title cards render their matching reward caption', async () => {
+  const copy = await load_app_copy('en')
+  const t = copy_text(copy.airdrop_page)
+  const titles = [
+    'title_chosen_one',
+    'title_aeonkeeper',
+    'title_suimilionaire',
+    'title_fudbuster',
+    'title_enforcer',
+    'title_rootwarden',
+    'title_pug_paladin',
+    'title_frostlord',
+    'title_tater_champion',
+    'title_crew_member',
+  ]
+  for (const item_type of titles) {
+    const campaign = content_catalog.airdrop.campaigns.find(({ id }) => id === item_type)
+    expect(campaign).toBeDefined()
+    expect(campaign!.items).toEqual([item_type])
+    const html = renderToStaticMarkup(<CampaignCard row={campaign!} t={t} />)
+    expect(html).toContain(
+      `<figcaption class="text-[9px] text-muted">${content_catalog.item(item_type)!.item.name}</figcaption>`
+    )
+  }
+  expect(t('campaigns.title_crew_member.description')).toContain('whitelist is pending')
+  expect(t('campaigns.title_crew_member.description')).toContain('not started')
+})
 
 test('claim cards group identical rewards without changing voucher quantities', () => {
   const cards = [

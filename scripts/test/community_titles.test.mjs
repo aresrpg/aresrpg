@@ -107,4 +107,21 @@ test('only the four approved subsets opt into custody exclusions; Blast remains 
   expect(pawtato.eligible_object_count).toBe(3305)
   expect(pawtato.exclusion_counts).toEqual({ game_bridge_custody: 26695 })
   expect(airdrop.giftcard_batches.some(({ item_type }) => item_type === 'title_crew_member')).toBe(false)
+  expect(airdrop.giftcards.some(({ item_type }) => item_type === 'title_crew_member')).toBe(false)
+  expect(airdrop.campaigns.find(({ id }) => id === 'title_crew_member')).toEqual({
+    id: 'title_crew_member',
+    name: 'Blast',
+    visibility: 'public',
+    items: ['title_crew_member'],
+    delivery: 'wallet',
+  })
+})
+
+test('every community title preview has its authored thumbnail and HD artwork', () => {
+  for (const item_type of [...allocations.map(([, item_type]) => item_type), 'title_crew_member']) {
+    for (const suffix of ['', '_hd']) {
+      const bytes = readFileSync(resolve(root, `seed/icons/items/${item_type}${suffix}.png`))
+      expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+    }
+  }
 })

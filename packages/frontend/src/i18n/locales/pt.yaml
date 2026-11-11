@@ -636,6 +636,9 @@ airdrop_page:
     physical: Vale-presente físico
     game_wallet: Recompensas de veteranos do Hytale
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'O título Membro da tripulação está previsto para Blast. A lista de carteiras autorizadas aguarda confirmação; a elegibilidade ainda não foi definida e a distribuição não começou.'
     title_tater_champion:
       title: 'Pawtato'
       description: 'As carteiras de detentores de Pawtato verificadas na blockchain no snapshot de 11 de novembro de 2026 recebem um título «Campeão Batata» por carteira, independentemente do nível ou da quantidade de NFTs. Os NFTs sob custódia da ponte do jogo são excluídos.'

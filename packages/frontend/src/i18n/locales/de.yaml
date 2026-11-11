@@ -637,6 +637,9 @@ airdrop_page:
     physical: 'Physische Geschenkkarte'
     game_wallet: 'Belohnungen für Hytale-Veteranen'
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'Der Titel Crewmitglied ist für Blast vorgesehen. Die Wallet-Zulassungsliste muss noch bestätigt werden; die Berechtigung steht noch nicht fest und die Verteilung hat noch nicht begonnen.'
     title_tater_champion:
       title: 'Pawtato'
       description: 'On-Chain-verifizierte Wallets von Pawtato-Besitzern im Snapshot vom 11. November 2026 erhalten je einen Titel „Kartoffelchampion“, unabhängig von NFT-Level und Anzahl. NFTs in Verwahrung der Spiel-Bridge sind ausgeschlossen.'

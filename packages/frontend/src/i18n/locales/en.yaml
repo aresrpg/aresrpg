@@ -637,6 +637,9 @@ airdrop_page:
     physical: 'Physical gift card'
     game_wallet: 'Hytale veteran rewards'
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'The Crew Member title is planned for Blast. The wallet whitelist is pending confirmation; eligibility is not yet established and distribution has not started.'
     title_tater_champion:
       title: 'Pawtato'
       description: 'Verified on-chain Pawtato holder wallets in the 11 November 2026 snapshot receive one Tater Champion title per wallet, regardless of NFT level or quantity. NFTs in game-bridge custody are excluded.'

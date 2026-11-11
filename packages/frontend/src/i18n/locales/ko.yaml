@@ -639,6 +639,9 @@ airdrop_page:
     physical: 실물 기프트카드
     game_wallet: Hytale 베테랑 보상
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'Blast를 위한 승무원 칭호가 예정되어 있습니다. 지갑 화이트리스트는 확인 대기 중이며, 수령 자격은 아직 확정되지 않았고 배포도 시작되지 않았습니다.'
     title_tater_champion:
       title: 'Pawtato'
       description: '2026년 11월 11일 스냅샷에서 온체인 보유가 검증된 Pawtato 지갑은 NFT 레벨이나 수량과 관계없이 지갑당 「감자 챔피언」 칭호를 하나씩 받습니다. 게임 브리지에 보관된 NFT는 제외됩니다.'

@@ -637,6 +637,9 @@ airdrop_page:
     physical: '紙のギフトカード'
     game_wallet: 'Hytaleベテラン報酬'
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'Blast向けに「クルーメンバー」の称号を予定しています。対象ウォレットのホワイトリストは確認待ちです。受取資格は未確定で、配布はまだ開始していません。'
     title_tater_champion:
       title: 'Pawtato'
       description: '2026年11月11日のスナップショットでオンチェーンの保有が確認されたPawtatoのウォレットには、NFTのレベルや保有数にかかわらず、ウォレットごとに称号「ポテト王者」が1つ付与されます。ゲームのブリッジが管理するNFTは対象外です。'

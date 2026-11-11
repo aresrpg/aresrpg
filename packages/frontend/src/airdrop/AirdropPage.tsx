@@ -75,9 +75,7 @@ export const CampaignCard = ({ row, t }: Readonly<{ row: CampaignRow; t: CopyTex
             className={row.items.length === 1 ? 'size-36 object-contain' : 'size-20 object-contain'}
             src={item_detail_icon(item_type) ?? undefined}
           />
-          {row.items.length > 1 && (
-            <figcaption className="text-[9px] text-muted">{content_catalog.item(item_type)?.item.name}</figcaption>
-          )}
+          <figcaption className="text-[9px] text-muted">{content_catalog.item(item_type)?.item.name}</figcaption>
         </figure>
       ))}
     </div>

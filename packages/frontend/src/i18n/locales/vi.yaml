@@ -639,6 +639,9 @@ airdrop_page:
     physical: Thẻ quà tặng giấy
     game_wallet: Thưởng kỳ cựu Hytale
   campaigns:
+    title_crew_member:
+      title: 'Blast'
+      description: 'Danh hiệu Thành viên phi hành đoàn được dự kiến dành cho Blast. Danh sách ví được phép đang chờ xác nhận; điều kiện nhận chưa được xác định và việc phân phối chưa bắt đầu.'
     title_tater_champion:
       title: 'Pawtato'
       description: 'Các ví nắm giữ Pawtato được xác minh trên chuỗi trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Nhà vô địch khoai tây» cho mỗi ví, bất kể cấp độ hay số lượng NFT. NFT do cầu nối của trò chơi lưu giữ bị loại trừ.'
