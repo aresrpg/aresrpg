@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import { create_fight } from '@aresrpg/fight'
 
-import type { Lane } from '../src/control.ts'
+import { create_control_service, type Lane } from '../src/control.ts'
 import { next_combat_action } from '../src/combat_plan.ts'
 import { create_transaction_journal } from '../src/transaction_journal.ts'
 import { execute_gameplay_actions, hydrate_gameplay_fight, type GameplayActions } from '../src/gameplay.ts'
@@ -136,6 +136,7 @@ test('one autonomous fight selects ready, lethal turn and settlement through exi
     throw new Error('unexpected SDK action')
   }
   const actions: GameplayActions = {
+    use_consumable: unexpected,
     open_loot_boxes: unexpected,
     claim_loot_batch: unexpected,
     raise_stats: unexpected,
@@ -190,4 +191,25 @@ test('one autonomous fight selects ready, lethal turn and settlement through exi
   expect(packets).toHaveLength(1)
   expect(packets[0]).toMatchObject({ type: 'packet/fight_action', fight: fight_id })
   expect((await f.store.read<Lane>(f.key))!.combat_run_id).toBeNull()
+})
+
+test('historical combat blocker resumes through the real shared-run transition', async () => {
+  const f = await combat_fixture()
+  const context = { ...f.context, snapshot: { ...f.context.snapshot, characters: [] } }
+  await f.tick(context)
+  const run = await f.get_run()
+  expect(run.status).toBe('awaiting_ai')
+  const lane = (await f.store.read<Lane>(f.key))!
+  const control = create_control_service(
+    f.store,
+    f.config,
+    f.config.observation_freshness_ms,
+    () => f.now,
+    async () => ({ ...f.context.snapshot, decision_revision: lane.decision_revision, sampled_at: f.now })
+  )
+  await expect(
+    control.resume_combat(f.grant, run.id, lane.decision_revision, lane.observation_revision)
+  ).resolves.toMatchObject({ status: 'active' })
+  await f.tick()
+  expect((await f.get_command()).status).toBe('accepted')
 })

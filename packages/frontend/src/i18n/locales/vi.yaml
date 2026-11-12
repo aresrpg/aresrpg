@@ -701,9 +701,9 @@ airdrop_page:
       description: Dành cho mọi ví Hytale đã liên kết có tổng mua cửa hàng ghi nhận hơn {threshold} SUI, không cần thuộc top 100. Danh hiệu gửi tới địa chỉ Sui trong bản sao lưu. Đăng nhập tài khoản Google gốc để tìm thẻ quà.
 settings_page:
   suins_title: Tên SuiNS
-  suins_hint: 'Chọn tên cha bạn sở hữu. Áp dụng sẽ tạo hoặc dùng lại ví đa chữ ký được lưu trữ và lưu thông tin khôi phục công khai. Không cấp quyền truy cập tác nhân hay quyền chơi mới.'
+  suins_hint: 'Chọn tên bạn sở hữu. Các tên hiện có vẫn ở trong ví của bạn.'
   suins_external: 'Tên SuiNS mặc định đã xác minh được hiển thị ở đây. Quản lý tên trong ví ngoài hoặc SuiNS.'
-  suins_leaves: 'Tạo {player} cho bạn và {agent} cho ví đa chữ ký. Tên mặc định của ví đa chữ ký cần giao dịch riêng và SUI.'
+  suins_leaves: 'Tên trong trò chơi và bảng xếp hạng: {name}. Tạo hoặc dùng lại {player}.'
   suins_pending_funding: 'Đã áp dụng tên người chơi; tên tác nhân cần SUI. Nạp tiền là tùy chọn. Nhấn Áp dụng để thử lại.'
   suins_pending_uncertain: 'Đã áp dụng tên người chơi; chưa rõ kết quả giao dịch tác nhân. Kiểm tra trước khi thử lại. Không tự động gửi lại.'
   suins_pending_refused: 'Đã áp dụng tên người chơi; chữ ký tác nhân bị từ chối. Chỉ áp dụng lại khi bạn muốn thử lại.'
@@ -719,7 +719,7 @@ settings_page:
   suins_empty: Không tìm thấy tên đang hoạt động
   suins_choose: Chọn tên
   suins_refresh: Làm mới tên
-  suins_use: 'Áp dụng / thử lại'
+  suins_use: 'Áp dụng'
   suins_loading: Đang tải tên…
   suins_saving: Đang đặt tên mặc định…
   suins_saved: 'Đã áp dụng tên người chơi và tác nhân. Hiển thị công khai có thể mất vài phút để cập nhật.'
@@ -2715,7 +2715,14 @@ title_names:
   title_pug_paladin: 'Thánh kỵ sĩ Pug'
   title_enforcer: 'Người thực thi'
 ui:
+  agent_wallet: 'Ví của trợ lý'
   agent_activity_label: 'Hoạt động của tác nhân'
+  agent_activity_idle: 'Đang chờ mục tiêu'
+  agent_activity_active: 'Đang thực hiện'
+  agent_activity_waiting: 'Đang chờ'
+  agent_activity_awaiting_ai: 'Đang chờ AI'
+  agent_activity_paused: 'Đã tạm dừng'
+  agent_activity_unavailable: 'Không có trạng thái'
   agent_activity_level: 'Đạt cấp {level}'
   agent_activity_profession: 'Nhận kinh nghiệm nghề'
   agent_activity_travel: 'Đã đổi vị trí'

@@ -2,10 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { refresh_combat_command, stale_combat_draft } from '../src/combat_refresh.ts'
+import { refresh_run_command, stale_run_draft } from '../src/run_refresh.ts'
 import type { CombatRun } from '../src/combat_control.ts'
 import type { CombatProfile } from '../src/combat_profile.ts'
-import { combat_observation } from '../src/combat_runtime.ts'
+import { run_observation } from '../src/run_runtime.ts'
 import type { Lane, Command } from '../src/control.ts'
 import { wait_for_contract } from '../src/command_wait.ts'
 import { fight_checkpoint_id, hydrate_gameplay_fight } from '../src/gameplay.ts'
@@ -123,7 +123,7 @@ test('combat refresh preserves the accepted command identity and replans only it
   const command = await f.get_command()
   await f.control.observed(f.key, 'actor', f.lease.fence, true)
   const context = { ...f.context, snapshot: { ...f.context.snapshot, observation_revision: 2 } }
-  const refreshed = await refresh_combat_command(
+  const refreshed = await refresh_run_command(
     f.store,
     f.config,
     { command, actor_id: 'actor', fence: f.lease.fence },
@@ -159,11 +159,11 @@ test('prepared, signed and submitting combat envelopes can never be replaced by 
     await put(f.store, f.key, lane)
     const context = { ...f.context, snapshot: { ...f.context.snapshot, observation_revision: 2 } }
     await expect(
-      refresh_combat_command(f.store, f.config, { command, actor_id: 'actor', fence: f.lease.fence }, context, f.now)
+      refresh_run_command(f.store, f.config, { command, actor_id: 'actor', fence: f.lease.fence }, context, f.now)
     ).rejects.toThrow('execution_not_authorized')
     expect((await f.store.read<Lane>(f.key))!.pending).toEqual(pending)
     expect(await f.get_command()).toEqual(command)
-    expect(stale_combat_draft(command, lane, new Error('needs_resync'))).toBe(false)
+    expect(stale_run_draft(command, lane, new Error('needs_resync'))).toBe(false)
   }
 })
 
@@ -173,18 +173,18 @@ test('a stopped run cannot refresh its stale accepted command and stale errors n
   const command = await f.get_command()
   await f.control.observed(f.key, 'actor', f.lease.fence, true)
   const lane = (await f.store.read<Lane>(f.key))!
-  expect(stale_combat_draft(command, lane, new Error('needs_resync'))).toBe(true)
-  expect(stale_combat_draft({ ...command, status: 'failed' }, lane, new Error('needs_resync'))).toBe(false)
-  expect(stale_combat_draft({ ...command, status: 'uncertain' }, lane, new Error('needs_resync'))).toBe(false)
+  expect(stale_run_draft(command, lane, new Error('needs_resync'))).toBe(true)
+  expect(stale_run_draft({ ...command, status: 'failed' }, lane, new Error('needs_resync'))).toBe(false)
+  expect(stale_run_draft({ ...command, status: 'uncertain' }, lane, new Error('needs_resync'))).toBe(false)
   await put(f.store, 'combat:fixture-run', { ...(await f.get_run()), status: 'stopped' })
   await expect(
-    refresh_combat_command(
+    refresh_run_command(
       f.store,
       f.config,
       { command, actor_id: 'actor', fence: f.lease.fence },
       {
         ...f.context,
-        command: combat_observation(await f.get_run()),
+        command: run_observation('combat', await f.get_run()),
         snapshot: { ...f.context.snapshot, observation_revision: 2 },
       },
       f.now
@@ -208,7 +208,7 @@ test('a resumed combat command replans its checkpoint even after readiness refre
   const binding = { command, actor_id: 'actor', fence: f.lease.fence }
   const resumed = await wait_for_contract(f.store, binding, context, f.now)
   expect(resumed!.observation_revision).toBe(2)
-  const refreshed = await refresh_combat_command(f.store, f.config, { ...binding, command: resumed! }, context, f.now)
+  const refreshed = await refresh_run_command(f.store, f.config, { ...binding, command: resumed! }, context, f.now)
   expect(refreshed!.payload.checkpoint_id).toBe(fight_checkpoint_id(row))
   expect(refreshed!.id).toBe(command.id)
 })

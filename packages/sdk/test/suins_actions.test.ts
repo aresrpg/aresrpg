@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, expect, mock, spyOn, test } from 'bun:test'
+import { ObjectError } from '@mysten/sui/client'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuinsClient } from '@mysten/suins'
 import type { Transaction } from '@mysten/sui/transactions'
@@ -295,5 +296,48 @@ test('external parent keeps ownership, collision and cancellation checks', async
       player
     )
   ).rejects.toThrow('cancelled')
+  expect(state.executions).toHaveLength(0)
+})
+
+// Exercise the installed SuiNS reader: Core throws for a missing dynamic field,
+// rather than returning the null record that the earlier fixture simulated.
+test('missing application leaves are creatable through the real SuiNS reader', async () => {
+  const reader_client = new SuiGrpcClient({ network: 'mainnet', baseUrl: 'https://unused.invalid' })
+  const reader = new SuinsClient({ client: reader_client })
+  const read = reader.getNameRecord.bind(reader)
+  reader_client.core.getObjects = async () => ({
+    objects: [new ObjectError('notExists', 'Missing application leaf', { reason: 'notFound' })],
+  })
+  const { actions, state } = setup()
+  spyOn(SuinsClient.prototype, 'getNameRecord').mockImplementation(
+    async (name) => state.records.get(name) ?? read(name)
+  )
+  await actions.validate_parent('sceat.sui', current)
+  expect(state.executions).toHaveLength(0)
+  await actions.apply_parent('sceat.sui', agent, current)
+  expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf', 'set_reverse_lookup'])
+  state.records.set('aresrpg.sceat.sui', leaf())
+  state.records.set('aresrpgagent.sceat.sui', leaf(agent))
+  state.defaults.set(owner, 'aresrpg.sceat.sui')
+  await actions.apply_parent('sceat.sui', agent, current)
+  expect(state.executions).toHaveLength(1)
+})
+
+test.each([new ObjectError('unknown', 'Unavailable record', { reason: 'unknown' }), new Error('Network unavailable')])(
+  'record lookup failures never authorize leaf creation: %s',
+  async (failure) => {
+    const { actions, state } = setup()
+    spyOn(SuinsClient.prototype, 'getNameRecord').mockRejectedValue(failure)
+    await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow(failure)
+    expect(state.executions).toHaveLength(0)
+  }
+)
+
+test('a missing parent record is invalid authority, not an available leaf', async () => {
+  const { actions, state } = setup()
+  spyOn(SuinsClient.prototype, 'getNameRecord').mockRejectedValue(
+    new ObjectError('notExists', 'Missing parent', { reason: 'notFound' })
+  )
+  await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('invalid_parent')
   expect(state.executions).toHaveLength(0)
 })

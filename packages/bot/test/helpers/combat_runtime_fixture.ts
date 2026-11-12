@@ -5,7 +5,7 @@ import type { CharacterRow, FightStateRow } from '@aresrpg/protocol'
 
 import { create_fixture } from '../../../fight/test/helpers.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../../src/control.ts'
-import { combat_tick, combat_observation } from '../../src/combat_runtime.ts'
+import { run_tick, run_observation } from '../../src/run_runtime.ts'
 import type { CombatRun } from '../../src/combat_control.ts'
 import type { CombatProfile } from '../../src/combat_profile.ts'
 import { gameplay_json, type GameplayContext } from '../../src/gameplay.ts'
@@ -128,7 +128,7 @@ export const combat_fixture = async (checkpoint = placement()) => {
     address: bot.address,
     now,
     freshness_ms: config.observation_freshness_ms,
-    command: { ...combat_observation(run), observation_revision: 1 },
+    command: { ...run_observation('combat', run), observation_revision: 1 },
     snapshot: {
       characters: [character()],
       fights: { [fight_id]: row_of(checkpoint) },
@@ -148,7 +148,7 @@ export const combat_fixture = async (checkpoint = placement()) => {
   const get_run = async () => (await store.read<CombatRun>('combat:fixture-run'))!
   const get_command = async () => (await store.read<Command>(`command:${(await get_run()).last_command_id}`))!
   const tick = async (current = context, requested?: CombatRun) =>
-    combat_tick({
+    run_tick('combat', {
       store,
       config,
       run: requested ?? (await get_run()),

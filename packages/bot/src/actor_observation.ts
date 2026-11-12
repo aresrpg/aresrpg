@@ -3,7 +3,10 @@
 import type { ClientPacket } from '@aresrpg/protocol'
 
 import type { create_bot_actor } from './actor.ts'
-import type { Command } from './control.ts'
+import type { Command, Lane } from './control.ts'
+import type { ControlStore } from './store.ts'
+import type { Run } from './run_plan.ts'
+import { run_ref_of, run_key } from './run_ref.ts'
 import { observation_events } from './actor_snapshot.ts'
 import { gameplay_knowledge } from './gameplay_knowledge.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, type GameplayContext } from './gameplay.ts'
@@ -58,5 +61,20 @@ export const apply_actor_watches = async (
         ClientPacket,
         { type: typeof type }
       >)
+  }
+}
+
+/** Connector visibility derives from the same canonical run reference as execution. */
+export const owned_run_observation = async (store: ControlStore, lane: Lane | null, command: Command) => {
+  const ref = lane && run_ref_of(lane)
+  const run = ref ? await store.read<Run>(run_key(ref)) : null
+  const visible = run && [run.grant_id === command.grant_id, run.bot_id === command.bot_id].every(Boolean) ? ref : null
+  return {
+    run_ref: visible,
+    ...Object.fromEntries(
+      ['combat', 'profession'].map((kind) => [`${kind}_run_id`, visible && visible.kind === kind ? visible.id : null])
+    ),
+    state: visible && run!.status !== 'awaiting_ai' ? 'running' : 'awaiting_ai',
+    ...(visible ? { run_status: run!.status, issue: run!.issue } : {}),
   }
 }

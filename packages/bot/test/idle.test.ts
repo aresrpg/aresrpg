@@ -3,6 +3,7 @@
 import { expect, test } from 'bun:test'
 import type { ClientPacket } from '@aresrpg/protocol'
 import { create_controller_state } from '@aresrpg/engine/locomotion/controller'
+import { walkable_spawn_height } from '@aresrpg/engine/locomotion/collision'
 
 import { create_locomotion } from '../src/locomotion.ts'
 import { begin_idle, idle_travels, step_idle } from '../src/idle.ts'
@@ -213,3 +214,51 @@ test('mounted momentum cannot carry a published pose outside the idle radius', (
   expect(step.gliding).toBe(false)
   expect(body.position).toEqual([...position])
 })
+
+for (const riding of [false, true]) {
+  test(`idle ${riding ? 'mounted double jump' : 'jump'} lands with the production ground-height oracle`, async () => {
+    let time = 0
+    const packets: Extract<ClientPacket, { type: 'packet/position' }>[] = []
+    const solid_at = (_x: number, y: number) => y < 0
+    const movement = create_locomotion({
+      now: () => time,
+      random: () => 0.25,
+      wait: async (ms) => {
+        time += ms
+      },
+      world_for: () => ({
+        solid_at,
+        liquid_at: () => false,
+        ready: () => true,
+        // Same upward-only spawn-clearance projection as create_world_collision.
+        ground_height: (x, z, anchor_y = 0) => walkable_spawn_height(solid_at, x, anchor_y, z),
+      }),
+    })
+    await movement.idle(
+      async () =>
+        time < 60000
+          ? [
+              {
+                character_id: 'c',
+                checkpoint: 'cp',
+                world: 'w',
+                x: 50000,
+                z: 50000,
+                target_x: 50000,
+                target_z: 50000,
+                riding,
+              },
+            ]
+          : null,
+      async (packet) => {
+        if (packet.type === 'packet/position') packets.push(packet)
+        return true
+      }
+    )
+    const airborne = packets.findIndex((packet) => packet.y > 1)
+    expect(airborne).toBeGreaterThan(-1)
+    expect(packets.slice(airborne + 1).some((packet) => packet.y < 0.01)).toBe(true)
+    if (riding) expect(packets.some((packet) => packet.gliding)).toBe(true)
+    expect(packets.every((packet) => Math.hypot(packet.x - 50000, packet.z - 50000) <= 50)).toBe(true)
+  })
+}

@@ -12,11 +12,12 @@ import { recipe_id, item_template_id } from '@aresrpg/sdk/seed-ids'
 import { fake_client, pins, id, digest } from '../../sdk/test/helpers/transport.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../src/control.ts'
 import { create_transaction_journal } from '../src/transaction_journal.ts'
-import { profession_tick } from '../src/profession_runtime.ts'
+import { run_tick } from '../src/run_runtime.ts'
 import { execute_gameplay } from '../src/gameplay.ts'
 import type { ProfessionRun } from '../src/profession_control.ts'
 import type { ProvisionRequest } from '../src/provisioning.ts'
 
+import { stored_profession } from './helpers/legacy_run_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { profession_context, plan, character, item, recipe, resource } from './helpers/profession_fixture.ts'
 
@@ -26,13 +27,7 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
   const lease = await control.acquire(f.bot, 'actor', 10000)
   const lane_key = lane_key_for(f.bot)
   await control.observed(lane_key, 'actor', lease.fence, true)
-  const started = await control.start_profession(f.grant, {
-    idempotency_key: 'sdk',
-    plan,
-    decision_revision: 0,
-    observation_revision: 1,
-  })
-  if (!('run' in started)) throw new Error('run missing')
+  const started = await stored_profession(f.store, f.grant, plan, f.clock.now)
   const source = profession_context()
   const provision = (await f.store.read<ProvisionRequest>('provision:bot'))!
   const member = f.options.provider.signer(provision.key!)
@@ -96,7 +91,7 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
     },
   } as unknown as SuiTransport
   for (const revision of [1, 2]) {
-    const run = (await f.store.read<ProfessionRun>(`profession:${started.run.id}`))!
+    const run = (await f.store.read<ProfessionRun>(`profession:${started.id}`))!
     const snapshot = {
       ...source.snapshot,
       observation_revision: revision,
@@ -126,7 +121,7 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
       snapshot,
       command: { ...source.command, observation_revision: revision },
     }
-    await profession_tick({
+    await run_tick('profession', {
       store: f.store,
       config: f.options.config,
       run,

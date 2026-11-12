@@ -87,13 +87,16 @@ export const shutdown_service = async ({
   stop,
   redis,
   report_failure,
+  flush_reporting,
 }: Readonly<{
   server: { stop: () => Promise<unknown> }
   stop: () => Promise<void>
   redis: { close: () => void }
   report_failure: (error: unknown) => void
+  flush_reporting?: () => Promise<void>
 }>) => {
   const results = await Promise.allSettled([server.stop(), stop()])
   redis.close()
   for (const result of results) if (result.status === 'rejected') report_failure(result.reason)
+  await flush_reporting?.()
 }

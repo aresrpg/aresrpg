@@ -4,6 +4,7 @@ import { CONTRACT_CONSTANTS, type HydratedFightCheckpoint } from '@aresrpg/fight
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import type { CombatRun } from './combat_control.ts'
+type CombatIntent = Pick<CombatRun, 'fight' | 'profiles'>
 import { validate_profile_checkpoint } from './combat_profile.ts'
 import { plan_combat_turn } from './combat_tactics.ts'
 import { gameplay_observation_ready, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
@@ -16,7 +17,7 @@ export type CombatNext = Readonly<{
 }>
 type FightPayload = Readonly<{ character_id: string; fight: string; fighter_idx: string; checkpoint_id: string }>
 type Selection = Readonly<{
-  run: CombatRun
+  run: CombatIntent
   context: GameplayContext
   checkpoint: HydratedFightCheckpoint
   characters: readonly CharacterRow[]
@@ -76,7 +77,7 @@ const fight_action = (selection: Selection): CombatNext => {
 }
 
 /** A finite fight objective selects ordinary actions; Move and the twin own all legality. */
-export const next_combat_action = (run: CombatRun, context: GameplayContext): CombatNext => {
+export const next_combat_action = (run: CombatIntent, context: GameplayContext): CombatNext => {
   if (!gameplay_observation_ready(context)) return { state: 'waiting' }
   const characters = context.snapshot.characters.filter(({ id }) =>
     run.profiles.some(({ character_id }) => character_id === id)

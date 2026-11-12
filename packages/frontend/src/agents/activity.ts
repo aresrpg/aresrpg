@@ -1,6 +1,28 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { character_checkpoint, type CharacterRow } from '@aresrpg/protocol'
+import { character_checkpoint, type CharacterRow, type HostedAgentActivity } from '@aresrpg/protocol'
+
+import type { SessionState } from '../modules/session.ts'
+
+import { owner_connected } from './owner_state.ts'
+
+/** Owner status is scoped to the exact observed wallet and character, never the last displayed task. */
+export const current_agent_activity = (session: SessionState): HostedAgentActivity | null => {
+  const { request, status } = session.agent_view
+  const { selected_character_id } = session
+  const { response, phase } = session.agent_connection
+  if (![status === 'ready', session.link_status === 'ready', ['ready', 'checking'].includes(phase)].every(Boolean))
+    return null
+  if (!owner_connected(session)) return null
+  if (request?.pairing.address !== response!.bot!.address) return null
+  const { activity } = response!
+  if (
+    !activity ||
+    (activity.character_ids.length && !activity.character_ids.some((id) => id === selected_character_id))
+  )
+    return null
+  return activity
+}
 
 export type AgentActivity =
   | Readonly<{ kind: 'level'; level: number }>

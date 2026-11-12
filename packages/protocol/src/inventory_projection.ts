@@ -58,8 +58,10 @@ export const latest_listings = (
   return Object.freeze([...rows.values()])
 }
 
-export const without_relation = (rows: readonly ListingRow[], gone: Readonly<ListingRow>): readonly ListingRow[] =>
-  rows.filter((row) => row.id !== gone.id || row.kiosk !== gone.kiosk)
+export const without_relation = (
+  rows: readonly ListingRow[],
+  gone: Readonly<Pick<ListingRow, 'id' | 'kiosk'>>
+): readonly ListingRow[] => rows.filter((row) => row.id !== gone.id || row.kiosk !== gone.kiosk)
 
 export const fold_catalogue = <T extends CatalogueProjection>(
   market: T,
@@ -123,6 +125,27 @@ export const fold_catalogue = <T extends CatalogueProjection>(
     Object.entries(versions).filter(([kiosk, value]) => value.owned || observed.has(kiosk))
   )
   return Object.freeze({ ...market, own_listings, listings, catalogues, departures })
+}
+
+/** A certified relation departure dominates older page snapshots, regardless of delivery order. */
+export const catalogue_departed = <T extends CatalogueProjection>(
+  market: T,
+  listing: Pick<ListingRow, 'kiosk' | 'id'>,
+  version: string
+): T => {
+  const current = market.catalogues[listing.kiosk] ?? { version: '0', owned: false }
+  if (BigInt(current.version) > BigInt(version)) return market
+  if (BigInt(market.departures[listing.kiosk]?.[listing.id] ?? '-1') >= BigInt(version)) return market
+  return Object.freeze({
+    ...market,
+    catalogues: { ...market.catalogues, [listing.kiosk]: { ...current, version } },
+    departures: {
+      ...market.departures,
+      [listing.kiosk]: { ...market.departures[listing.kiosk], [listing.id]: version },
+    },
+    own_listings: without_relation(market.own_listings, listing),
+    listings: without_relation(market.listings, listing),
+  })
 }
 
 const cap_intersection = (left: readonly TradeCapRow[], right: readonly TradeCapRow[]): readonly TradeCapRow[] => {

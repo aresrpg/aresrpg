@@ -30,30 +30,17 @@ export const COMBAT_TOOLS = [
   {
     name: 'bot_save_combat_profile',
     description:
-      'Remember validated per-character tactics using the last read revision (0 for new). Summarize the chosen combos, movement and fallback in ordinary language. Saving starts no fight and spends no stat points. Strength-based intent needs separately authorized stat/equipment actions. To revise an active fight, stop it, save the profile, observe again and start a new run.',
+      'Remember validated per-character tactics using the last read revision (0 for new). Summarize the chosen combos, movement and fallback in ordinary language. Saving starts no fight and spends no stat points. Strength-based intent needs separately authorized stat/equipment actions. To revise an active fight, stop it, save the profile, observe again and author a behavior run using the revised tactics.',
     properties: { character_id: identifier, expected_revision: revision, profile: COMBAT_PROFILE_SCHEMA },
     required: ['character_id', 'expected_revision', 'profile'],
     scope: 'bot:play',
     read_only: false,
   },
-  {
-    name: 'bot_start_combat',
-    description:
-      'Authorize automatic play through settlement of exactly one existing supported PvE fight, using the saved revision for every owned unsettled participant. The bot plans finite combos each turn, sends normal movement/cast packets and uses the existing serialized SDK. It never starts another fight. Profile edits do not change this run. Wallet funds remain the spending limit.',
-    properties: {
-      idempotency_key: nonempty,
-      fight: identifier,
-      profiles: { type: 'array', minItems: 1, items: object_schema({ character_id: identifier, revision }) } as Schema,
-      ...revisions,
-    },
-    required: ['idempotency_key', 'fight', 'profiles', 'decision_revision', 'observation_revision'],
-    scope: 'bot:play',
-    read_only: false,
-  },
+
   {
     name: 'bot_combat_status',
     description:
-      'Read the exact combat run, pinned tactics, last command ID and blocker. Inspect bot_status for its transaction outcome. Routine turns need no AI calls; intervene for awaiting_ai, failures, unavailable tactics or requested revisions.',
+      'Read an existing legacy combat run, pinned tactics, last command ID and blocker. Inspect bot_status for its transaction outcome. Routine turns need no AI calls; intervene for awaiting_ai, failures, unavailable tactics or requested revisions.',
     properties: run,
     required: ['run_id'],
     scope: 'bot:observe',
@@ -71,7 +58,7 @@ export const COMBAT_TOOLS = [
   {
     name: 'bot_resume_combat',
     description:
-      'Explicitly resume a paused or awaiting-AI combat run after a fresh observation, using its original pinned tactics. Resolve pending transactions first. Failed, uncertain or stopped work is never automatically replaced; use a newly authorized run after review if needed.',
+      'Explicitly resume an existing legacy paused or awaiting-AI combat run after a fresh observation, using its original pinned tactics. Resolve pending transactions first. Failed, uncertain or stopped work is never automatically replaced; use a newly authorized run after review if needed.',
     properties: { ...run, ...revisions },
     required: ['run_id', 'decision_revision', 'observation_revision'],
     scope: 'bot:play',
@@ -90,7 +77,6 @@ export const combat_calls = (
       control.validate_combat_profile(grant, args.character_id as string, args.profile),
     bot_save_combat_profile: (grant, args) =>
       control.save_combat_profile(grant, args as Parameters<Control['save_combat_profile']>[1]),
-    bot_start_combat: (grant, args) => control.start_combat(grant, args as Parameters<Control['start_combat']>[1]),
     bot_combat_status: (grant, args) => control.combat_status(grant, args.run_id as string),
     bot_stop_combat: (grant, args) => control.stop_combat(grant, args.run_id as string),
     bot_resume_combat: (grant, args) =>
@@ -106,7 +92,7 @@ export const combat_calls = (
       [
         entry.name,
         async (grant, args) => {
-          const parsed = decode<Args>(object_schema(entry.properties), args)
+          const parsed = decode<Args>({ ...object_schema(entry.properties), required: entry.required }, args)
           return handlers[entry.name]!(grant, parsed)
         },
       ] as const

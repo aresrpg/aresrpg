@@ -13,6 +13,13 @@ import { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
 import spells from '../../../seed/content/spells.json'
 
+import {
+  EQUIPMENT_ACTIONS,
+  validate_equip_item,
+  validate_consumable,
+  equipment_executors,
+  type EquipmentActionPlan,
+} from './equipment_actions.ts'
 import { LOOT_BOX_ACTIONS, validate_open_boxes, validate_claim_loot, type LootBoxPlan } from './loot_boxes.ts'
 import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
 import { zone_key, type ActorWorld } from './actor_world.ts'
@@ -43,9 +50,18 @@ import {
   profession_action_executors,
   type ProfessionActionPlan,
 } from './profession_actions.ts'
+import {
+  MARKET_BUY_ACTION,
+  MARKET_SELL_ACTION,
+  validate_market_buy,
+  validate_market_sell,
+  type MarketBuyPlan,
+  type MarketSellPlan,
+} from './market_actions.ts'
 
 type AgentActions = ReturnType<typeof create_agent_actions>
 type Actions = AgentActions['fight'] &
+  Pick<AgentActions['marketplace'], 'buy' | 'list'> &
   Pick<
     AgentActions['character'],
     | 'search_zone'
@@ -56,6 +72,7 @@ type Actions = AgentActions['fight'] &
     | 'raise_stats'
     | 'open_loot_boxes'
     | 'claim_loot_batch'
+    | 'use_consumable'
   >
 type TurnInput = Parameters<Actions['commit_turn']>[0]
 type FightPayload = Readonly<{ character_id: string; fight: string; fighter_idx: string; checkpoint_id: string }>
@@ -149,6 +166,9 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
   ...PROFESSION_ACTIONS,
   ...LOOT_BOX_ACTIONS,
   raise_stats: RAISE_STATS_ACTION,
+  ...EQUIPMENT_ACTIONS,
+  market_buy: MARKET_BUY_ACTION,
+  market_sell: MARKET_SELL_ACTION,
   world_search: Object.freeze({
     description:
       "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
@@ -216,6 +236,9 @@ type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
   input: Parameters<Actions[M]>[0]
 }>
 export type GameplayPlan =
+  | EquipmentActionPlan
+  | MarketBuyPlan
+  | MarketSellPlan
   | ProfessionActionPlan
   | StatAllocationPlan
   | LootBoxPlan
@@ -390,6 +413,10 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
 export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
   const observed_ms = assert_fresh(context)
   const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
+    equip_item: () => validate_equip_item(context),
+    use_consumable: () => validate_consumable(context),
+    market_buy: () => validate_market_buy(context),
+    market_sell: () => validate_market_sell(context),
     raise_stats: () => validate_stat_allocation(context),
     open_loot_boxes: () => validate_open_boxes(context),
     claim_loot: () => validate_claim_loot(context),
@@ -421,16 +448,27 @@ export type GameplayActions = Pick<
   | 'raise_stats'
   | 'open_loot_boxes'
   | 'claim_loot_batch'
+  | 'use_consumable'
 >
+export type MarketplaceExecutor = Partial<Pick<Actions, 'buy' | 'list'>>
 export type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
 export const execute_gameplay_actions = async (
   context: GameplayContext,
-  actions: GameplayActions,
+  actions: GameplayActions & MarketplaceExecutor,
   send?: GameplayPacketSender
 ) => {
   const plan = validate_gameplay(context)
   const executors = {
     ...profession_action_executors(actions),
+    ...equipment_executors(actions),
+    market_buy: (input: MarketBuyPlan['input']) => {
+      if (!actions.buy) throw new Error('market_executor_unavailable')
+      return actions.buy(input)
+    },
+    market_sell: (input: MarketSellPlan['input']) => {
+      if (!actions.list) throw new Error('market_executor_unavailable')
+      return actions.list(input)
+    },
     raise_stats: actions.raise_stats,
     open_loot_boxes: actions.open_loot_boxes,
     claim_loot: actions.claim_loot_batch,
@@ -480,5 +518,9 @@ export const execute_gameplay = ({
   ...context
 }: GameplayContext & Readonly<{ sdk: Sdk; send?: GameplayPacketSender }>) => {
   const actions = create_agent_actions(sdk, context.address)
-  return execute_gameplay_actions(context, { ...actions.fight, ...actions.character }, send)
+  return execute_gameplay_actions(
+    context,
+    { ...actions.fight, ...actions.character, buy: actions.marketplace.buy, list: actions.marketplace.list },
+    send
+  )
 }

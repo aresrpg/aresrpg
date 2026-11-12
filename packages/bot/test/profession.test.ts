@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import { job_xp_for_level } from '@aresrpg/immutable'
 
-import { validate_profession_plan, next_profession_action } from '../src/profession_plan.ts'
+import { next_profession_action } from '../src/profession_plan.ts'
 import { validate_gameplay } from '../src/gameplay.ts'
 import { fold_actor_inventory } from '../src/actor_inventory.ts'
 import { profession_knowledge, acquisition_sources } from '../src/profession_catalog.ts'
@@ -18,33 +18,9 @@ import {
   item,
 } from './helpers/profession_fixture.ts'
 
-test('static validator rejects code, unknown jobs/recipes, mismatched jobs and expired or unbounded plans', () => {
-  for (const patch of [
-    { script: 'arbitrary' },
-    { job: 'UNKNOWN' },
-    { recipe_output: 'missing' },
-    { job: 'FORGER' },
-    { max_actions: 0 },
-    { max_actions: Infinity },
-    { deadline_ms: 1 },
-    { gather_item_types: ['missing'] },
-  ]) {
-    const result = validate_profession_plan({ ...plan, ...patch }, 63000)
-    expect(result.valid).toBe(false)
-    expect(result.static.errors[0]).toHaveProperty('remedy')
-    expect(result.simulation.status).toBe('not_run')
-  }
-  const result = validate_profession_plan(plan, 63000)
-  expect(result).toMatchObject({
-    valid: true,
-    live: { status: 'not_checked' },
-    limits: { max_actions: plan.max_actions, automatic_combat: false, purchases: false },
-  })
-})
-
 test('live validation distinguishes tool, ingredient, travel and protector requirements without writes', () => {
   const context = profession_context()
-  expect(validate_profession_plan(plan, 63000, context).live.next?.action?.kind).toBe('gather')
+  expect(next_profession_action(plan, context).action?.kind).toBe('gather')
   expect(
     next_profession_action(plan, {
       ...context,

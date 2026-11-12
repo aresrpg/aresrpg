@@ -362,6 +362,9 @@ test('unsupported managed modes and foreign seats cannot reach any SDK door', as
     return { digest: 'bad' }
   }
   const actions: GameplayActions = {
+    use_consumable: async () => {
+      throw new Error('unexpected consumable')
+    },
     open_loot_boxes: async () => {
       throw new Error('unexpected box opening')
     },
@@ -417,6 +420,9 @@ test('one complete PvE lifecycle uses injected SDK doors and the actual twin, in
     if (result.error) throw new Error(result.error.code)
   }
   const actions: GameplayActions = {
+    use_consumable: async () => {
+      throw new Error('unexpected consumable')
+    },
     open_loot_boxes: async () => {
       throw new Error('unexpected box opening')
     },

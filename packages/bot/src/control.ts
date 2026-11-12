@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { FightStateRow } from '@aresrpg/protocol'
 
+import { create_behavior_control } from './behavior_control.ts'
+import type { RunRef } from './run_ref.ts'
 import type { ActionBaseline } from './action_reconciliation.ts'
 import type { FightReplay } from './fight_runtime.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
@@ -26,9 +28,11 @@ export type Envelope = Readonly<{
   gas_payer?: string
 }>
 export type Lane = Readonly<{
+  run_ref?: RunRef | null
   reconciliation_command?: string | null
   transport_stopped?: boolean
   fight_replays?: Readonly<Record<string, FightReplay>>
+  catalogue_receipts?: Readonly<Record<string, Readonly<{ digest: string; version: string; command_id: string }>>>
   network: 'mainnet'
   address: string
   actor_id: string
@@ -45,6 +49,8 @@ export type Lane = Readonly<{
   pending: Envelope | null
 }>
 export type Command = Readonly<{
+  run_ref?: RunRef
+  behavior_binding?: Readonly<{ revision: number; node: string }>
   waiting_for_resume?: boolean
   action_baseline?: ActionBaseline
   fight_baseline?: FightStateRow
@@ -233,7 +239,8 @@ export const create_control_service = (
     status,
     pause,
     resume,
-    ...create_profession_control(store, config, now, observe),
+    ...create_behavior_control(store, config, now),
+    ...create_profession_control(store, config, now),
     ...create_combat_control(store, config, now, observe),
   }
 }

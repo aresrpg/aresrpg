@@ -3,7 +3,7 @@
 
 import { Check, Copy, LogOut, Plus, Send, Wallet } from 'lucide-react'
 import { Button, IconButton, WalletBalances } from '@aresrpg/ui'
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react'
 import { display_suins_name } from '@aresrpg/immutable'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
@@ -71,24 +71,12 @@ export const WalletCard = ({
   return (
     <>
       {!embedded && (
-        <button
-          aria-label={copy.account}
-          aria-description={`${sui_balance} SUI · ${kares_balance} KARES`}
-          aria-haspopup="dialog"
-          className="wallet-trigger"
-          data-wallet-trigger=""
-          popoverTarget={menu_id}
-          type="button"
-        >
-          <span className="wallet-trigger__balance" title={`${sui_balance} SUI`}>
-            <SuiLogo size={16} />
-            <span>{sui_balance}</span>
-          </span>
-          <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares_balance} KARES`}>
-            <KaresLogo size={16} />
-            <span>{kares_balance}</span>
-          </span>
-        </button>
+        <WalletBalanceBox
+          label={copy.account}
+          sui_balance_mist={session.sui_balance_mist}
+          kares_balance={session.kares_balance}
+          popover_target={menu_id}
+        />
       )}
       <section {...panel_attributes} id={menu_id} ref={menu} aria-label={copy.account} data-wallet-card="">
         <header className="wallet-popover__identity">
@@ -154,5 +142,50 @@ export const WalletCard = ({
         </>
       )}
     </>
+  )
+}
+
+/** One compact balance presentation for the player control and read-only observed wallet. */
+export const WalletBalanceBox = ({
+  label,
+  sui_balance_mist,
+  kares_balance,
+  popover_target,
+  icon,
+}: Readonly<{
+  label: string
+  sui_balance_mist: bigint | null
+  kares_balance?: bigint | null
+  popover_target?: string
+  icon?: ReactNode
+}>) => {
+  const numbers = useNumbers()
+  const sui = balance_label(sui_balance_mist, numbers.sui)
+  const kares = balance_label(kares_balance ?? null, numbers.amount)
+  const Container = popover_target ? 'button' : 'div'
+  const controls = popover_target
+    ? { popoverTarget: popover_target, type: 'button' as const, 'aria-haspopup': 'dialog' as const }
+    : {}
+  return (
+    <Container
+      {...controls}
+      className="wallet-trigger"
+      data-wallet-trigger=""
+      aria-label={label}
+      aria-description={`${sui} SUI${kares_balance === undefined ? '' : ` · ${kares} KARES`}`}
+      title={label}
+    >
+      {icon}
+      <span className="wallet-trigger__balance" title={`${sui} SUI`}>
+        <SuiLogo size={16} />
+        <span>{sui}</span>
+      </span>
+      {kares_balance !== undefined && (
+        <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares} KARES`}>
+          <KaresLogo size={16} />
+          <span>{kares}</span>
+        </span>
+      )}
+    </Container>
   )
 }

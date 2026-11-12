@@ -4,6 +4,7 @@
 
 import {
   fold_catalogue,
+  catalogue_departed,
   latest_listings,
   without_relation,
   type CatalogueProjection,
@@ -191,17 +192,7 @@ const fold_write = (
       own_listings: latest_listings(market.own_listings, [row]),
       listings: market.listings,
     })
-  return Object.freeze({
-    ...market,
-    pending: null,
-    catalogues,
-    departures: {
-      ...market.departures,
-      [listing.kiosk]: { ...market.departures[listing.kiosk], [listing.id]: version },
-    },
-    own_listings: without_relation(market.own_listings, listing),
-    listings: without_relation(market.listings, listing),
-  })
+  return Object.freeze({ ...catalogue_departed({ ...market, catalogues }, listing, version), pending: null })
 }
 
 const BROWSE_PACKETS = ['packet/market_slice', 'packet/market_types', 'packet/market_counts'] as const

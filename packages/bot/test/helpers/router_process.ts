@@ -3,7 +3,6 @@
 // Two OS processes use real Redis. Game WebSocket and Sui remain explicit local fixture transports.
 import { create_actor_runtime } from '../../src/actor_runtime.ts'
 import { shutdown_service, start_service_runtime } from '../../src/service_runtime.ts'
-import { create_control_service } from '../../src/control.ts'
 import { create_redis_store } from '../../src/store.ts'
 import { create_ingress } from '../../src/http.ts'
 import { fake_client, pins } from '../../../sdk/test/helpers/transport.ts'
@@ -103,7 +102,6 @@ const main = async () => {
       },
     })
     stop_service = service.stop
-    const control = create_control_service(store, f.options.config, 60000, Date.now, service.observe)
     const ingress = create_ingress({
       store,
       config: f.options.config,
@@ -119,7 +117,7 @@ const main = async () => {
     })
     const commands: Record<string, (payload: Record<string, unknown>) => Promise<unknown>> = {
       observe: (payload) => service.observe(f.grant, payload),
-      validate: (payload) => control.validate_plan(f.grant, payload.plan),
+      planning: (payload) => service.observe(f.grant, payload),
       admit: async () => {
         await f.admit()
         await runtime.settle()

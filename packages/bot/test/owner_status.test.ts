@@ -3,7 +3,9 @@
 import { expect, spyOn, test } from 'bun:test'
 import type { HostedChallengeResponse } from '@aresrpg/protocol'
 
+import { empty_lane } from '../src/control.ts'
 import type { Account, Grant } from '../src/model.ts'
+import { read_owner_activity } from '../src/owner_activity.ts'
 import { read_owner_status } from '../src/owner_status.ts'
 
 import { authorize_fixture } from './oauth.test.ts'
@@ -176,4 +178,99 @@ test('different OAuth clients share one owner wallet and revoke independently', 
     bot: { id: fixture_bot.id },
   })
   expect(await first.store.scan_keys('bot:', 10)).toEqual([`bot:${fixture_bot.id}`])
+})
+
+test('owner activity projects only the current lane run, including its authored objective', async () => {
+  const f = await connected_fixture()
+  const lane_key = `lane:mainnet:${fixture_bot.address}`
+  const lane = { ...empty_lane(fixture_bot), lease_until: Date.now() + 60_000, profession_run_id: 'current' }
+  const objective = {
+    title: 'Herbalist level 30',
+    description: 'Gather, then craft.',
+    steps: ['Gather plants', 'Craft potions'],
+  }
+  const run = {
+    id: 'current',
+    bot_id: fixture_bot.id,
+    grant_id: f.grant.id,
+    lane_key,
+    status: 'active',
+    plan: { character_id: 'hero', deadline_ms: Date.now() + 60_000, objective },
+  }
+  await put(f.store, lane_key, lane)
+  await put(f.store, 'profession:current', run)
+  expect(await f.status()).toMatchObject({ activity: { status: 'active', character_ids: ['hero'], objective } })
+  await put(f.store, 'profession:current', { ...run, status: 'completed' })
+  expect(await f.status()).toMatchObject({ activity: { status: 'idle', objective: null } })
+  await put(f.store, 'profession:current', { ...run, bot_id: 'foreign' })
+  expect(await f.status()).toMatchObject({ activity: { status: 'unavailable', objective: null } })
+  await put(f.store, 'profession:current', { ...run, status: 'awaiting_ai' })
+  expect(await f.status()).toMatchObject({ activity: { status: 'awaiting_ai', objective } })
+  await put(f.store, 'profession:current', { ...run, plan: { ...run.plan, deadline_ms: 1 } })
+  expect(await f.status()).toMatchObject({ activity: { status: 'idle', objective: null } })
+  await put(f.store, lane_key, { ...lane, profession_run_id: null })
+  expect(await f.status()).toMatchObject({ activity: { status: 'idle', objective: null } })
+  await put(f.store, lane_key, { ...lane, profession_run_id: null, paused: true })
+  expect(await f.status()).toMatchObject({ activity: { status: 'paused', objective: null } })
+})
+
+test('owner activity distinguishes blocked commands and expired standalone actor leases from work', async () => {
+  const f = await connected_fixture()
+  const lane_key = `lane:mainnet:${fixture_bot.address}`
+  const lane = { ...empty_lane(fixture_bot), active_command: 'work', lease_until: Date.now() + 60_000 }
+  const command = {
+    id: 'work',
+    bot_id: fixture_bot.id,
+    grant_id: f.grant.id,
+    lane_key,
+    kind: 'gather',
+    payload: { character_id: 'hero' },
+    status: 'accepted',
+    waiting_for_resume: true,
+  }
+  await put(f.store, lane_key, lane)
+  await put(f.store, 'command:work', command)
+  expect(await f.status()).toMatchObject({ activity: { status: 'waiting', character_ids: ['hero'], objective: null } })
+  await put(f.store, 'command:work', { ...command, waiting_for_resume: false })
+  expect(await f.status()).toMatchObject({ activity: { status: 'active' } })
+  await put(f.store, lane_key, { ...lane, lease_until: 1 })
+  expect(await f.status()).toMatchObject({ activity: { status: 'unavailable' } })
+})
+
+test('an activity snapshot race cannot fail the owner connection refresh', async () => {
+  const f = await connected_fixture()
+  const store = {
+    ...f.store,
+    transaction: async () => {
+      throw new Error('control_transaction_conflict')
+    },
+  }
+  expect(await read_owner_activity(store, fixture_bot, [f.grant], Date.now())).toEqual({
+    status: 'unavailable',
+    character_ids: [],
+    objective: null,
+  })
+})
+
+test('blocked behavior retains objective and instruction reason in owner activity', async () => {
+  const f = await connected_fixture()
+  const lane_key = `lane:mainnet:${fixture_bot.address}`
+  await put(f.store, lane_key, {
+    ...empty_lane(fixture_bot),
+    lease_until: Date.now() + 60000,
+    run_ref: { kind: 'behavior', id: 'blocked' },
+  })
+  const objective = { title: 'Authored objective' }
+  await put(f.store, 'behavior:blocked', {
+    id: 'blocked',
+    bot_id: fixture_bot.id,
+    grant_id: f.grant.id,
+    lane_key,
+    status: 'awaiting_ai',
+    issue: 'Supplies unavailable',
+    script: { version: '1', objective, tree: { type: 'replan', reason: 'Supplies unavailable' } },
+  })
+  expect(await f.status()).toMatchObject({
+    activity: { status: 'awaiting_ai', objective, issue: 'Supplies unavailable' },
+  })
 })

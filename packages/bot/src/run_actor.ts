@@ -4,18 +4,18 @@ import type { Command } from './control.ts'
 import type { ControlStore } from './store.ts'
 import type { Bot, BotConfig } from './model.ts'
 import type { GameplayContext } from './gameplay_context.ts'
-import { combat_observation, combat_tick } from './combat_runtime.ts'
-import type { CombatRun } from './combat_control.ts'
-import { profession_observation, profession_tick } from './profession_runtime.ts'
-import type { ProfessionRun } from './profession_control.ts'
+import { run_tick, run_observation } from './run_runtime.ts'
+import type { Run } from './run_plan.ts'
+import type { RunKind } from './run_ref.ts'
 
-/** Both finite objectives borrow the same live actor and durable command lane. */
+/** All retained objectives borrow the same live actor and durable command lane. */
 export const process_bot_run = async (
   key: string,
   options: Readonly<{
     store: ControlStore
     config: BotConfig
     actor_id: string
+    report_failure: (error: unknown) => void
     now: () => number
     session: (
       bot: Bot,
@@ -30,16 +30,22 @@ export const process_bot_run = async (
   }>
 ) => {
   const { store, config, actor_id } = options
-  const run = await store.read<CombatRun | ProfessionRun>(key)
+  const run = await store.read<Run>(key)
   if (!run || !['active', 'waiting'].includes(run.status)) return
   const bot = await store.read<Bot>(`bot:${run.bot_id}`)
   if (!bot) throw new Error('BOT_MISSING')
-  const combat = key.startsWith('combat:')
-  const observation = combat ? combat_observation(run as CombatRun) : profession_observation(run as ProfessionRun)
+  const kind = key.split(':')[0] as RunKind
+  const observation = run_observation(kind, run)
   const session = await options.session(bot, observation)
-  const input = { store, config, actor_id, context: session.context, fence: session.fence, now: options.now() }
-  const status = combat
-    ? await combat_tick({ ...input, run: run as CombatRun })
-    : await profession_tick({ ...input, run: run as ProfessionRun })
+  const input = {
+    store,
+    config,
+    actor_id,
+    report_failure: options.report_failure,
+    context: session.context,
+    fence: session.fence,
+    now: options.now(),
+  }
+  const status = await run_tick(kind, { ...input, run })
   if (['active', 'waiting'].includes(String(status))) await session.connect()
 }

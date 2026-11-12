@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Native Kiosk marketplace actions. The app supplies projected custody and never touches Sui.
 
-import { marketplace_lot_sizes } from '@aresrpg/immutable'
+import { marketplace_lot_sizes, basis_points, marketplace_royalty_bps } from '@aresrpg/immutable'
 import type { Transaction, TransactionArgument, TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import type { Sdk } from './client.ts'
@@ -11,12 +11,18 @@ import { create_kiosk_runner, resolve_kiosk_cap, retry_stale_kiosk_ref, type Kio
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
 
 export const ROYALTY_FLOOR_MIST = 10_000_000n
+export const buyer_total = (ask: bigint): bigint => {
+  const royalty = (ask * BigInt(marketplace_royalty_bps)) / BigInt(basis_points)
+  return ask + (royalty > ROYALTY_FLOOR_MIST ? royalty : ROYALTY_FLOOR_MIST)
+}
 
 export type MarketplaceAsset = Readonly<{
   kind: 'item' | 'character'
   id: string
   kiosk: string
   price_mist: bigint
+  /** Hard ask-plus-royalty cap; transaction gas remains separate. */
+  max_total_mist?: bigint
   amount?: number
   source_amount?: number
   existing?: string | null
@@ -68,7 +74,8 @@ export const resolve_marketplace_transfer = (
   buyer_cap: TransactionObjectArgument,
   purchased: TransactionObjectArgument,
   request: TransactionObjectArgument,
-  seller_kiosk: string
+  seller_kiosk: string,
+  fee_source: TransactionObjectArgument = tx.gas
 ): void => {
   const type = asset_type(sdk, kind)
   const policy = policy_id(sdk, kind)
@@ -79,7 +86,7 @@ export const resolve_marketplace_transfer = (
     typeArguments: [type],
     arguments: [tx.object(policy), tx.pure.u64(price_mist)],
   })
-  const [fee_coin] = tx.splitCoins(tx.gas, [fee])
+  const [fee_coin] = tx.splitCoins(fee_source, [fee])
   tx.moveCall({
     target: `${kiosk_package}::royalty_rule::pay`,
     typeArguments: [type],
@@ -197,12 +204,15 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
       )
       return market_receipt(receipt)
     },
-    buy: async ({ kind, id, kiosk: seller_kiosk, price_mist, existing, destination_kiosk }) => {
+    buy: async ({ kind, id, kiosk: seller_kiosk, price_mist, max_total_mist, existing, destination_kiosk }) => {
       if (price_mist <= 0n) throw new Error('A marketplace price must be positive.')
+      if (max_total_mist !== undefined && max_total_mist < price_mist)
+        throw new Error('Marketplace cap is below the ask.')
       if (existing && !destination_kiosk) throw new Error('A marketplace merge target must name its kiosk.')
       const receipt = await runner.with_kiosk(
         (tx, buyer_kiosk, buyer_cap) => {
-          const [payment] = tx.splitCoins(tx.gas, [price_mist])
+          const budget = max_total_mist === undefined ? tx.gas : tx.splitCoins(tx.gas, [max_total_mist])[0]!
+          const [payment] = tx.splitCoins(budget, [price_mist])
           const [purchased, request] = tx.moveCall({
             target: '0x2::kiosk::purchase',
             typeArguments: [asset_type(sdk, kind)],
@@ -218,8 +228,10 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
             buyer_cap,
             purchased,
             request,
-            seller_kiosk
+            seller_kiosk,
+            budget
           )
+          if (max_total_mist !== undefined) tx.mergeCoins(tx.gas, [budget])
           if (kind === 'item' && existing)
             merge_stacks_ptb(sdk, tx, { kiosk: buyer_kiosk, cap: buyer_cap }, { target_id: existing, source_id: id })
         },

@@ -25,7 +25,7 @@ type Status = {
   runtime_drained: boolean
 }
 integration(
-  'two OS processes route observations and validate_plan to sticky Redis ownership, then fence crash failover',
+  'two OS processes route observations and planning metadata to sticky Redis ownership, then fence crash failover',
   async () => {
     const f = await process_pair(url!)
     try {
@@ -39,7 +39,10 @@ integration(
       const peer = owner === f.first ? f.second : f.first
       await owner.call('admit')
       expect(await peer.call('observe')).toMatchObject({ ready: true, event_fence: initial.fence })
-      expect(await peer.call('validate', { plan })).toEqual(await owner.call('validate', { plan }))
+      const planning = await peer.call<Record<string, unknown>>('planning', { recipes: [plan.recipe_output] })
+      const local = await owner.call<Record<string, unknown>>('planning', { recipes: [plan.recipe_output] })
+      expect(planning.planning_context).toEqual(local.planning_context)
+      expect(planning.planning_context).toBeDefined()
       expect((await peer.call<Status>('status')).sockets).toBe(0)
       await peer.call('tick')
       expect((await f.lane())?.actor_id).toBe(initial.actor_id)

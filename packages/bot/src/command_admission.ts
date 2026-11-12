@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { run_ref_of } from './run_ref.ts'
 import type { Command, Lane } from './control.ts'
 import type { Bot, Grant } from './model.ts'
 
@@ -33,4 +34,4 @@ export const admit_command = (
 
 /** Every autonomous domain shares the same wallet admission slot. */
 export const lane_busy = (lane: Lane) =>
-  [lane.paused, lane.active_command, lane.pending, lane.profession_run_id, lane.combat_run_id].some(Boolean)
+  [lane.paused, lane.active_command, lane.pending, run_ref_of(lane)].some(Boolean)

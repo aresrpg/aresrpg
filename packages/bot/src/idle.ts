@@ -7,11 +7,13 @@ import {
   MOUNT_SPEED_SCALE,
   type ControllerInput,
 } from '@aresrpg/engine/locomotion/controller'
+import { ground_height_below } from '@aresrpg/engine/locomotion/collision'
 import { walking_edge, type WalkPoint, type WalkWorld } from '@aresrpg/engine/locomotion/walkable'
 import { begin_walking } from '@aresrpg/engine/locomotion/walking'
 
 import pet_wings from '../../../seed/content/pet_wings.json'
 
+import { run_ref_of } from './run_ref.ts'
 import { gameplay_observed_ms, travel_destination, type GameplayContext } from './gameplay_context.ts'
 import type { Lane } from './control.ts'
 import { profession_item } from './profession_catalog.ts'
@@ -33,7 +35,7 @@ export const idle_travels = (context: GameplayContext, lane: Lane) => {
       lane.active_command,
       lane.pending,
       lane.reconciliation_command,
-      lane.combat_run_id,
+      run_ref_of(lane),
     ].some(Boolean)
   )
     return null
@@ -140,7 +142,13 @@ export const step_idle = (
       }
     : create_controller_state([...position])
   const next = idle_intent(position, state, now, random, riding, body.on_ground)
-  const footing: WalkPoint = [position[0], world.ground_height(position[0], position[2], position[1]), position[2]]
+  // Spawn clearance searches upward; an airborne anchor is not a supporting floor.
+  const floor = ground_height_below(world.solid_at, position[0], position[1], position[2])
+  const footing: WalkPoint = [
+    position[0],
+    world.ground_height(position[0], position[2], floor ?? undefined),
+    position[2],
+  ]
   const stopped = {
     state: { ...next.state, move_until: now, jump_started: -Infinity },
     motion: null,

@@ -9,6 +9,7 @@
     "./chain-clock": "./src/chain_clock.ts",
     "./fight-phase": "./src/fight_phase.ts",
     "./world-projection": "./src/world_projection.ts",
+    "./equipment": "./src/equipment.ts",
     "./inventory": "./src/inventory.ts"
   },
   "scripts": {

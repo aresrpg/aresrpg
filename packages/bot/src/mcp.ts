@@ -5,6 +5,7 @@ import { MARKET_OBSERVATION_SCHEMA, parse_market_observation, parse_market_price
 import type { create_control_service } from './control.ts'
 import type { Grant } from './model.ts'
 import { profession_recipe } from './profession_catalog.ts'
+import { BEHAVIOR_TOOLS, behavior_calls } from './behavior_mcp.ts'
 import { COMBAT_TOOLS, combat_calls } from './combat_mcp.ts'
 import { PROFESSION_TOOLS } from './profession_mcp.ts'
 import { GAMEPLAY_ACTIONS, parse_gameplay_action, type GameplayActionName } from './gameplay.ts'
@@ -170,7 +171,7 @@ export const create_mcp_handler = (
           false
         )
       )
-  for (const entry of [...PROFESSION_TOOLS, ...COMBAT_TOOLS])
+  for (const entry of [...PROFESSION_TOOLS, ...COMBAT_TOOLS, ...BEHAVIOR_TOOLS])
     if (entry.read_only || play_enabled)
       tools.push(
         tool(entry.name, entry.description, schema(entry.properties, entry.required), entry.scope, entry.read_only)
@@ -178,18 +179,8 @@ export const create_mcp_handler = (
   type Call = (grant: Grant, args: Readonly<Record<string, unknown>>) => Promise<unknown>
   const calls = new Map<string, Call>([
     ...combat_calls(control),
-    ['bot_validate_plan', (grant, args) => control.validate_plan(grant, args.plan)],
+    ...behavior_calls(control),
     ['bot_profession_status', (grant, args) => control.profession_status(grant, string_argument(args.run_id))],
-    [
-      'bot_start_profession',
-      (grant, args) =>
-        control.start_profession(grant, {
-          idempotency_key: string_argument(args.idempotency_key),
-          plan: args.plan,
-          decision_revision: number_argument(args.decision_revision),
-          observation_revision: number_argument(args.observation_revision),
-        }),
-    ],
     [
       'bot_resume_profession',
       (grant, args) =>

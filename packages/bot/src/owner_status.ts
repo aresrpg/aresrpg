@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { HostedOwnerStatus } from '@aresrpg/protocol'
 
+import { read_owner_activity } from './owner_activity.ts'
 import { assert_live_grant, public_bot, type Account, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
 
@@ -74,6 +75,7 @@ export const read_owner_status = async (
     owner: owner.owner,
     status: active.length ? 'connected' : 'disconnected',
     bot: public_bot(bot),
+    activity: await read_owner_activity(store, bot, active, now),
     recovery_bots: [],
     expires_at: active.length ? Math.max(...active.map((grant) => grant.family!.expires_at)) : null,
   }

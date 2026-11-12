@@ -3,13 +3,10 @@
 // Pure equipment intent — the client twin of equipment.move's guards. One gesture creates
 // one immutable slot change, revalidated before the SDK transaction and receipt fold.
 
-import {
-  character_equipment_slots,
-  equipment_slot_accepts,
-  relic_slots,
-  type CharacterEquipmentSlot,
-} from '@aresrpg/immutable'
+import { character_equipment_slots, equipment_slot_accepts, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 import type { CharacterRow, EquippedItem, ItemRow } from '@aresrpg/protocol'
+import { equip_refusal, type EquipRefusal } from '@aresrpg/protocol/equipment'
+export { equip_refusal, type EquipRefusal } from '@aresrpg/protocol/equipment'
 
 export type EquipmentMap = Readonly<Partial<Record<CharacterEquipmentSlot, EquippedItem>>>
 
@@ -30,33 +27,6 @@ export const natural_slot_for = (
   const candidates = character_equipment_slots.filter((slot) => equipment_slot_accepts(slot, item.category))
   if (candidates.length === 0) return null
   return candidates.find((slot) => !equipment[slot]) ?? candidates[0] ?? null
-}
-
-export type EquipRefusal = 'wrong_slot' | 'level_too_low' | 'relic_duplicate' | 'item_listed' | null
-
-/** equipment.move's own guards, predicted client-side — a refused stage never becomes a tx. */
-export const equip_refusal = ({
-  item,
-  slot,
-  character_level,
-  equipment,
-  listed_ids,
-}: Readonly<{
-  item: Readonly<ItemRow>
-  slot: CharacterEquipmentSlot
-  character_level: number
-  equipment: EquipmentMap
-  listed_ids: ReadonlySet<string>
-}>): EquipRefusal => {
-  if (listed_ids.has(item.id)) return 'item_listed'
-  if (!equipment_slot_accepts(slot, item.category)) return 'wrong_slot'
-  if (character_level < item.level) return 'level_too_low'
-  if (
-    slot.startsWith('relic_') &&
-    relic_slots.some((other) => other !== slot && equipment[other]?.item_type === item.item_type)
-  )
-    return 'relic_duplicate'
-  return null
 }
 
 export const stage_equip = (

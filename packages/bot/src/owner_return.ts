@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { same_hosted_bot, type HostedBotDescriptor, type HostedReturnResponse } from '@aresrpg/protocol'
 
+import { cleared_run, run_ref_of, run_key } from './run_ref.ts'
+import type { Run } from './run_plan.ts'
 import type { ControlTransaction } from './store.ts'
-import type { ProfessionRun } from './profession_control.ts'
 import type { Lane } from './control.ts'
 import { public_bot, type Bot } from './model.ts'
 
@@ -37,8 +38,7 @@ export const begin_owner_return = (bot: Bot, lane: Lane, review: HostedBotDescri
       ...lane,
       paused: true,
       needs_resync: true,
-      profession_run_id: null,
-      combat_run_id: null,
+      ...cleared_run,
       decision_revision: lane.decision_revision + 1,
     }
   )
@@ -65,21 +65,11 @@ export const complete_owner_return = (bot: Bot, lane: Lane, review: HostedBotDes
   }
 }
 
-export const stop_return_profession = async (tx: ControlTransaction, bot: Bot, id: string): Promise<void> => {
-  const run = await tx.get<ProfessionRun>(`profession:${id}`)
-  if (run && run.bot_id !== bot.id) throw new Error('profession_run_conflict')
-  if (run) await tx.put(`profession:${id}`, { ...run, status: 'stopped' })
-}
-
-const stop_return_combat = async (tx: ControlTransaction, bot: Bot, previous: Lane, next: Lane) => {
-  if (!previous.combat_run_id || next.combat_run_id !== null) return
-  const run = await tx.get<import('./combat_control.ts').CombatRun>(`combat:${previous.combat_run_id}`)
-  if (!run || run.bot_id !== bot.id) throw new Error('combat_run_conflict')
-  await tx.put(`combat:${run.id}`, { ...run, status: 'stopped' })
-}
-
 export const stop_return_runs = async (tx: ControlTransaction, bot: Bot, previous: Lane, next: Lane) => {
-  if (previous.profession_run_id && next.profession_run_id === null)
-    await stop_return_profession(tx, bot, previous.profession_run_id)
-  await stop_return_combat(tx, bot, previous, next)
+  const ref = run_ref_of(previous)
+  if (!ref || run_ref_of(next)) return
+  const key = run_key(ref)
+  const run = await tx.get<Run>(key)
+  if (!run || run.bot_id !== bot.id) throw new Error('run_reference_conflict')
+  await tx.put(key, { ...run, status: 'stopped' })
 }

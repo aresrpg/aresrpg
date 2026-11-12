@@ -3,7 +3,7 @@
 
 import { suins, SuinsTransaction, type SuinsClient, type PackageInfo } from '@mysten/suins'
 import { bcs } from '@mysten/sui/bcs'
-import type { SuiClientTypes } from '@mysten/sui/client'
+import { ObjectError, type SuiClientTypes } from '@mysten/sui/client'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiNSName, normalizeStructTag, normalizeSuiAddress } from '@mysten/sui/utils'
@@ -126,6 +126,16 @@ const read_default = async (client: SuiGrpcClient, address: string, signal: Abor
 }
 
 type NameRecord = NonNullable<Awaited<ReturnType<SuinsClient['getNameRecord']>>>
+// Core reports absent dynamic fields as typed object errors; SuiNS expects null.
+const read_name_record = async (service: SuinsClient, name: string): Promise<NameRecord | null> => {
+  try {
+    return await service.getNameRecord(name)
+  } catch (error) {
+    if (error instanceof ObjectError && error.reason === 'notFound') return null
+    throw error
+  }
+}
+
 type LeafChange = 'none' | 'create' | 'replace'
 const refuse = (reason: 'invalid_parent' | 'collision' | 'metadata' | 'unsupported'): never => {
   throw new Error(`SuiNS ${reason}`, { cause: reason })
@@ -213,7 +223,7 @@ export const suins_actions = ({
     const [owned, config, record] = await Promise.all([
       read_owned(AbortSignal.timeout(10_000)),
       read_config(client, service.config),
-      service.getNameRecord(name),
+      read_name_record(service, name),
     ])
     current()
     const parent = owned.find((candidate) => candidate.name === name)
@@ -222,7 +232,7 @@ export const suins_actions = ({
       { name: `aresrpg.${name}`, target: player ? normalizeSuiAddress(player) : owner },
       { name: `aresrpgagent.${name}`, target: agent },
     ]
-    const records = await Promise.all(leaves.map((leaf) => service.getNameRecord(leaf.name)))
+    const records = await Promise.all(leaves.map((leaf) => read_name_record(service, leaf.name)))
     current()
     return {
       parent,
@@ -243,7 +253,7 @@ export const suins_actions = ({
       const default_name = await read_default(client, owner, signal)
       if (client.network !== 'mainnet') return { default_name, names: [] }
       const [owned, config] = await Promise.all([read_owned(signal), read_config(client, service.config)])
-      const records = await Promise.all(owned.map((parent) => service.getNameRecord(parent.name)))
+      const records = await Promise.all(owned.map((parent) => read_name_record(service, parent.name)))
       return {
         default_name,
         names: owned.filter((parent, index) => eligible_parent(parent, records[index]!, config, now())),

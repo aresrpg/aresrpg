@@ -6,6 +6,7 @@ import { create_redis_store } from '../src/store.ts'
 import { create_control_service, type Lane } from '../src/control.ts'
 import type { CombatProfileRecord } from '../src/combat_control.ts'
 
+import { stored_combat } from './helpers/legacy_run_fixture.ts'
 import { fixture_redis } from './helpers/redis_fixture.ts'
 import { combat_fixture, character_id, fight_id, profile } from './helpers/combat_runtime_fixture.ts'
 
@@ -34,13 +35,13 @@ integration(
       const lease = await control.acquire(f.bot, 'actor', 10_000)
       await control.observed(f.key, 'actor', lease.fence, true)
       const saved = await control.save_combat_profile(f.grant, { character_id, expected_revision: 0, profile })
-      const run = await control.start_combat(f.grant, {
-        idempotency_key: 'persisted-fight',
-        fight: fight_id,
-        profiles: [{ character_id, revision: saved.revision }],
-        decision_revision: 0,
-        observation_revision: 1,
-      })
+      const run = await stored_combat(
+        original,
+        f.grant,
+        fight_id,
+        [{ character_id, revision: saved.revision, profile: saved.profile }],
+        f.now
+      )
       expect(await original.scan_pending(10)).toEqual([`combat:${run.id}`])
       first.close()
       await replacement.connect()

@@ -701,9 +701,9 @@ airdrop_page:
       description: 상위 100명 여부와 관계없이 상점 구매 기록이 {threshold} SUI를 초과한 모든 연결된 Hytale 지갑이 대상입니다. 칭호는 백업의 Sui 주소로 보냅니다. 기존 Google 계정으로 로그인해 기프트카드를 확인하세요.
 settings_page:
   suins_title: SuiNS 이름
-  suins_hint: '소유한 상위 이름을 선택하세요. 적용하면 호스팅 멀티시그를 만들거나 재사용하고 공개 복구 정보를 저장합니다. 새로운 에이전트 접근이나 게임 권한은 부여하지 않습니다.'
+  suins_hint: '소유한 이름을 선택하세요. 기존 이름은 지갑에 그대로 남습니다.'
   suins_external: '검증된 기존 SuiNS 기본 이름을 표시합니다. 외부 지갑 또는 SuiNS에서 관리하세요.'
-  suins_leaves: '플레이어용 {player} 및 멀티시그용 {agent}를 만듭니다. 멀티시그 기본 이름에는 별도 거래와 SUI가 필요합니다.'
+  suins_leaves: '게임 및 순위표 표시 이름: {name}. {player}을(를) 생성하거나 재사용합니다.'
   suins_pending_funding: '플레이어 이름 적용 완료. 에이전트 이름에는 SUI가 필요합니다. 충전은 선택 사항이며 적용으로 재시도할 수 있습니다.'
   suins_pending_uncertain: '플레이어 이름 적용 완료. 에이전트 거래 결과를 알 수 없습니다. 재시도 전에 결과를 확인하세요. 자동 재전송은 없습니다.'
   suins_pending_refused: '플레이어 이름 적용 완료. 에이전트 서명이 거절되었습니다. 재시도를 원할 때만 다시 적용하세요.'
@@ -719,7 +719,7 @@ settings_page:
   suins_empty: 활성 이름이 없습니다
   suins_choose: 이름 선택
   suins_refresh: 이름 새로고침
-  suins_use: '적용 / 재시도'
+  suins_use: '적용'
   suins_loading: 이름 불러오는 중…
   suins_saving: 기본 이름 설정 중…
   suins_saved: '플레이어와 에이전트 이름을 적용했습니다. 공개 표시 갱신에는 몇 분이 걸릴 수 있습니다.'
@@ -2715,7 +2715,14 @@ title_names:
   title_pug_paladin: '퍼그 성기사'
   title_enforcer: '집행자'
 ui:
+  agent_wallet: '에이전트 지갑'
   agent_activity_label: '에이전트 활동'
+  agent_activity_idle: '목표 대기 중'
+  agent_activity_active: '작업 중'
+  agent_activity_waiting: '대기 중'
+  agent_activity_awaiting_ai: 'AI 대기 중'
+  agent_activity_paused: '일시 중지됨'
+  agent_activity_unavailable: '상태를 확인할 수 없습니다'
   agent_activity_level: '레벨 {level} 달성'
   agent_activity_profession: '직업 경험치 획득'
   agent_activity_travel: '위치 변경'

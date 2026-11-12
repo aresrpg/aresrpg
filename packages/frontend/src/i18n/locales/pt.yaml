@@ -698,9 +698,9 @@ airdrop_page:
       description: Para cada carteira vinculada ao Hytale com mais de {threshold} SUI em compras registradas na loja, independentemente da posição no top 100. O título vai para o endereço Sui do backup. Entre com a conta Google original para encontrar seu vale-presente.
 settings_page:
   suins_title: Nome SuiNS
-  suins_hint: 'Escolha um nome pai que possua. Aplicar cria ou reutiliza sua multisig hospedada e salva os dados públicos de recuperação. Não concede novo acesso a agentes nem autorização de jogo.'
+  suins_hint: 'Escolha um nome que você possui. Seus nomes atuais permanecem na sua carteira.'
   suins_external: 'Seu nome SuiNS padrão verificado aparece aqui. Gerencie-o na carteira externa ou no SuiNS.'
-  suins_leaves: 'Aplicar cria {player} para você e {agent} para sua multisig. O nome padrão da multisig exige uma transação própria e SUI.'
+  suins_leaves: 'No jogo e nas classificações: {name}. Cria ou reutiliza {player}.'
   suins_pending_funding: 'Nome do jogador aplicado; o nome do agente precisa de SUI. Financiar é opcional. Use Aplicar para tentar novamente.'
   suins_pending_uncertain: 'Nome do jogador aplicado; resultado da transação do agente desconhecido. Verifique antes de tentar novamente. Sem reenvio automático.'
   suins_pending_refused: 'Nome do jogador aplicado; assinatura do agente recusada. Aplique novamente apenas para tentar de novo.'
@@ -716,7 +716,7 @@ settings_page:
   suins_empty: Nenhum nome ativo encontrado
   suins_choose: Escolha um nome
   suins_refresh: Atualizar nomes
-  suins_use: 'Aplicar / tentar novamente'
+  suins_use: 'Aplicar'
   suins_loading: Carregando nomes…
   suins_saving: Definindo padrão…
   suins_saved: 'Nomes do jogador e agente aplicados. A exibição pública pode levar alguns minutos.'
@@ -2712,7 +2712,14 @@ title_names:
   title_pug_paladin: 'Paladino Pug'
   title_enforcer: 'O Executor'
 ui:
+  agent_wallet: 'Carteira do agente'
   agent_activity_label: 'Atividade do agente'
+  agent_activity_idle: 'À espera de um objetivo'
+  agent_activity_active: 'A trabalhar'
+  agent_activity_waiting: 'À espera'
+  agent_activity_awaiting_ai: 'À espera da IA'
+  agent_activity_paused: 'Em pausa'
+  agent_activity_unavailable: 'Estado indisponível'
   agent_activity_level: 'Nível {level} alcançado'
   agent_activity_profession: 'XP de profissão obtida'
   agent_activity_travel: 'Localização alterada'

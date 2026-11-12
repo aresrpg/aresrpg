@@ -1439,6 +1439,8 @@ export type {
   HostedBotDescriptor,
   HostedConnectRequest,
   HostedOwnerStatus,
+  HostedObjective,
+  HostedAgentActivity,
   HostedReturnResponse,
   HostedChallengeInput,
   HostedChallengeResponse,

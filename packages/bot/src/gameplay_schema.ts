@@ -3,7 +3,7 @@
 import { world_size } from '@aresrpg/immutable'
 
 export type Schema = Readonly<{
-  type?: 'object' | 'array' | 'string' | 'integer'
+  type?: 'object' | 'array' | 'string' | 'integer' | 'boolean'
   properties?: Readonly<Record<string, Schema>>
   required?: readonly string[]
   additionalProperties?: false
@@ -17,7 +17,7 @@ export type Schema = Readonly<{
   maxLength?: number
   minimum?: number
   maximum?: number
-  const?: string
+  const?: string | number | boolean
   oneOf?: readonly Schema[]
 }>
 export const object_schema = (properties: Readonly<Record<string, Schema>>): Schema => ({
@@ -49,6 +49,7 @@ export const string_matches = (schema: Schema, value: unknown): boolean =>
   value.length <= (schema.maxLength ?? Infinity) &&
   (!schema.pattern || new RegExp(schema.pattern).test(value))
 export const type_matches: Record<NonNullable<Schema['type']>, (schema: Schema, value: unknown) => boolean> = {
+  boolean: (_schema, value) => typeof value === 'boolean',
   object: object_matches,
   string: string_matches,
   array: (schema, value) =>

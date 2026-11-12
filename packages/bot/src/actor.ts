@@ -16,6 +16,7 @@ const reduce_slots = (state: Slots, action: SlotAction): Slots => {
   if ('reset' in action) return { market: null, prices: null }
   const existing = state[action.slot]
   if (existing !== null && existing.owner !== action.owner) throw new Error('OBSERVATION_SLOT_BUSY')
+  if (JSON.stringify(existing?.packet) === JSON.stringify(action.packet)) return state
   return {
     ...state,
     [action.slot]: action.packet.observation === null ? null : { owner: action.owner, packet: action.packet },
@@ -100,6 +101,7 @@ export const create_bot_actor = (options: ActorOptions) => {
       const slot = packet.type === 'packet/market_observe' ? 'market' : 'prices'
       if (packet.observation !== null) await options.authorize_observation?.(owner)
       const next = reduce_slots(slots, { slot, owner, packet })
+      if (next === slots) return true
       if (packet.observation === null) {
         slots = next
         if (connection.state().status !== 'ready') return true

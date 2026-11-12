@@ -65,7 +65,8 @@ const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           </select>
         </label>
         <p className="text-[10px] leading-5 text-muted">
-          {state.draft && t('suins_leaves', { player: `aresrpg.${state.draft}`, agent: `aresrpgagent.${state.draft}` })}
+          {state.draft &&
+            t('suins_leaves', { name: display_suins_name(`aresrpg.${state.draft}`), player: `aresrpg.${state.draft}` })}
         </p>
         <Button type="submit" tone="primary" disabled={!state.draft.trim()}>
           {t('suins_use')}

@@ -61,3 +61,18 @@
     animation: none;
   }
 }
+
+.agent-activity-objective {
+  margin-bottom: 10px;
+  color: #f7f5f1;
+  white-space: pre-wrap;
+}
+.agent-activity-objective strong {
+  display: block;
+  color: #ffd8bf;
+}
+.agent-activity-objective ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  text-align: left;
+}

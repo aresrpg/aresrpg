@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test'
 import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import type { HostedChallengeResponse, HostedAuthorizeResponse } from '@aresrpg/protocol'
 
-import type { Bot } from '../src/model.ts'
+import type { Bot, Grant } from '../src/model.ts'
 import type { ControlStore } from '../src/store.ts'
 import { hash_secret, random_secret } from '../src/security.ts'
 import { empty_lane, lane_key_for, type Command } from '../src/control.ts'
@@ -12,6 +12,7 @@ import { empty_lane, lane_key_for, type Command } from '../src/control.ts'
 import { create_http_fixture } from './helpers/http_fixture.ts'
 import { fixture_bot, memory_store, put } from './helpers/control_fixture.ts'
 import { plan } from './helpers/profession_fixture.ts'
+import { stored_profession } from './helpers/legacy_run_fixture.ts'
 
 const other_google = toZkLoginPublicIdentifier(2n, 'https://accounts.google.com', { legacyAddress: false })
 const other_bot: Bot = {
@@ -176,7 +177,8 @@ test('HTTP tokens and MCP references cannot cross accounts or grants, including 
       'command_not_found'
     )
     expect(
-      (await call(bob, token, 'bot_validate_plan', { plan, observation_command_id: command_id })).result.isError
+      (await call(bob, token, 'bot_validate_behavior', { script: {}, observation_command_id: command_id })).result
+        .isError
     ).toBe(true)
   }
   const lane_key = lane_key_for(fixture_bot)
@@ -187,13 +189,8 @@ test('HTTP tokens and MCP references cannot cross accounts or grants, including 
     observed_at: Date.now(),
     observation_revision: 1,
   })
-  const started = await call(alice, a.access_token, 'bot_start_profession', {
-    idempotency_key: 'run',
-    plan: { ...plan, deadline_ms: Date.now() + 60000 },
-    decision_revision: 0,
-    observation_revision: 1,
-  })
-  const run = started.result.structuredContent.run as { id: string }
+  const grant = (await store.read<Grant>(`grant:${observed.result.structuredContent.grant_id}`))!
+  const run = await stored_profession(store, grant, { ...plan, deadline_ms: Date.now() + 60000 }, Date.now())
   expect(run.id).toBeTruthy()
   for (const token of [b.access_token, c.access_token]) {
     expect((await call(bob, token, 'bot_profession_status', { run_id: run.id })).result.structuredContent.error).toBe(

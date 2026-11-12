@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { expect, test } from 'bun:test'
+import { expect, spyOn, test } from 'bun:test'
 import type { CharacterAppearanceRender, EntityRender } from '@aresrpg/engine'
 import { DEFAULT_ADMIN_ADDRESS, type PresenceRow } from '@aresrpg/protocol'
 
 import { world_presence_rows } from '../../src/modules/engine_selection.ts'
 import { automation_fixture } from '../modules/automation_fixture.ts'
+import { create_follow_addon } from '../../src/game/core/cameras.ts'
 import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 
 const appearance: CharacterAppearanceRender = {
@@ -192,5 +193,105 @@ test('checkpoint-only presence is grounded, while actual position packets preser
     expect(entities[0]?.animation).toMatchObject({ name: 'RUN' })
   } finally {
     renderer.dispose()
+  }
+})
+
+test('observed camera motion follows interpolation and retires on quiet, checkpoints, removal and disposal', async () => {
+  let now = 1000
+  const clock = spyOn(Date, 'now').mockImplementation(() => now)
+  const frames: ((now: number) => void)[] = []
+  const renderer = create_presence_renderer({
+    submit: () => {},
+    pet_ground_height: () => 0,
+    label: () => {},
+    next_frame: (frame) => {
+      frames.push(frame)
+    },
+    appearance_loader: async () => appearance,
+  })
+  const row = (x: number, live = true) => ({ remote: { ...rows_at(x).player_0!, character_id: 'remote', live } })
+  try {
+    renderer.update(row(50_000), null)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(renderer.motion('remote')?.speed).toBe(0)
+    renderer.update(row(50_001), null)
+    const moving = renderer.motion('remote')!
+    expect(moving.speed).toBe(10)
+    expect(moving.velocity).toEqual([10, 0, 0])
+    frames.splice(0).forEach((frame) => frame(performance.now() + 50))
+    expect(renderer.motion('remote')!.speed).toBeLessThan(moving.speed)
+    now += 301
+    expect(renderer.motion('remote')?.speed).toBe(0)
+    renderer.update(row(60_000, false), null)
+    expect(renderer.motion('remote')?.speed).toBe(0)
+    renderer.update(row(60_010), null)
+    expect(renderer.motion('remote')?.speed).toBe(0)
+    renderer.update(row(60_011), null)
+    expect(renderer.motion('remote')!.speed).toBeGreaterThan(0)
+    renderer.update({}, null)
+    expect(renderer.motion('remote')).toBeNull()
+  } finally {
+    renderer.dispose()
+    clock.mockRestore()
+  }
+  expect(renderer.motion('remote')).toBeNull()
+})
+
+test('mounted presence drives the same follow-camera wind and FOV, with no speed from vertical bobbing', async () => {
+  let now = 1000
+  const clock = spyOn(Date, 'now').mockImplementation(() => now)
+  const frames: ((time: number) => void)[] = []
+  const renderer = create_presence_renderer({
+    submit: () => {},
+    label: () => {},
+    pet_ground_height: () => 0,
+    next_frame: (frame) => {
+      frames.push(frame)
+    },
+    appearance_loader: async () => appearance,
+    pet_loader: async () => ({
+      model_url: 'pet',
+      locomotion: 'walk',
+      wings: {
+        shape: 'circuit',
+        trail: 'dashes',
+        primary: [1, 1, 1],
+        secondary: [1, 1, 1],
+        shade: [0, 0, 0],
+        variant: 0,
+        scale: 1,
+      },
+    }),
+  })
+  const camera = create_follow_addon(() => false)
+  const base = { ...rows_at(50_000).player_0!, character_id: 'remote', pet: 'test-pet', riding: true }
+  const anchor = { x: 0, y: 0, z: 0, eye_height: 1.8, on_ground: true, speed: 0 }
+  let time = performance.now()
+  const tick = (row: typeof base) => {
+    now += 1000 / 60
+    time += 1000 / 60
+    renderer.update({ remote: row }, null)
+    frames.splice(0).forEach((frame) => frame(time))
+    return camera.frame({ ...anchor, ...renderer.motion('remote') }, 1 / 60)
+  }
+  try {
+    renderer.update({ remote: base }, null)
+    await Bun.sleep(0)
+    expect(renderer.motion('remote')?.riding).toBeTrue()
+    let view = tick(base)
+    for (let index = 1; index <= 180; index++) view = tick({ ...base, x: base.x + index / 4 })
+    expect(view.fov).toBeGreaterThan(77)
+    expect(view.speed_wind!).toBeGreaterThan(0.9)
+    for (let index = 0; index < 180; index++) view = tick({ ...base, x: base.x + 45, y: Math.sin(index) })
+    expect(renderer.motion('remote')?.speed).toBeLessThan(0.01)
+    expect(view.fov).toBeCloseTo(68, 2)
+    expect(view.speed_wind!).toBeLessThan(0.001)
+    tick({ ...base, x: base.x + 45, riding: false })
+    expect(renderer.motion('remote')?.riding).toBeFalse()
+    renderer.update({}, null)
+    expect(renderer.motion('remote')).toBeNull()
+  } finally {
+    renderer.dispose()
+    clock.mockRestore()
   }
 })

@@ -135,6 +135,43 @@ describe('marketplace SDK', () => {
     expect(calls.at(-1)).toBe(`${id(2)}::transfer_policy::confirm_request`)
   })
 
+  test('a capped purchase funds ask and dynamic royalty from one finite coin and returns its surplus', async () => {
+    const { actions, tx } = harness()
+    await actions.buy({
+      kind: 'item',
+      id: id(10),
+      kiosk: id(11),
+      price_mist: 1_000_000_000n,
+      max_total_mist: 1_200_000_000n,
+      destination_kiosk: id(4),
+    })
+    const { commands } = tx().getData()
+    const cap_index = commands.findIndex((command) => command.SplitCoins?.coin.$kind === 'GasCoin')
+    const capped_coin: { $kind: 'NestedResult'; NestedResult: [number, number] } = {
+      $kind: 'NestedResult',
+      NestedResult: [cap_index, 0],
+    }
+    const splits = commands.flatMap((command) => (command.SplitCoins ? [command.SplitCoins] : []))
+    // Both purchase payment and the policy-computed royalty consume the finite coin. A policy
+    // demanding more than the remaining cap aborts instead of reaching unrestricted gas funds.
+    expect(splits.filter(({ coin }) => coin.$kind === 'GasCoin')).toHaveLength(1)
+    for (const { coin } of splits.filter(({ coin }) => coin.$kind !== 'GasCoin')) expect(coin).toEqual(capped_coin)
+    const surplus = commands.find((command) => command.MergeCoins?.destination.$kind === 'GasCoin')?.MergeCoins
+    expect(surplus?.sources).toEqual([capped_coin])
+    const fee_index = commands.findIndex((command) => command.MoveCall?.function === 'fee_amount')
+    expect(
+      splits.some(({ amounts }) => amounts.some((amount) => amount.$kind === 'Result' && amount.Result === fee_index))
+    ).toBe(true)
+  })
+
+  test('a caller cap below the ask is refused before composing or executing', async () => {
+    const { actions, tx } = harness()
+    await expect(
+      actions.buy({ kind: 'item', id: id(10), kiosk: id(11), price_mist: 10n, max_total_mist: 9n })
+    ).rejects.toThrow('Marketplace cap is below the ask.')
+    expect(tx()).toBeNull()
+  })
+
   test('owned split stacks can merge through the generic custody door', async () => {
     const { stacks, tx } = harness()
     await stacks.merge({ kiosk: id(4), target_id: id(10), source_id: id(14) })

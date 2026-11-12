@@ -19,6 +19,7 @@ const PENDING_STATUSES: Readonly<Record<string, readonly string[]>> = {
   command: ['accepted', 'executing', 'uncertain'],
   profession: ['active', 'waiting'],
   combat: ['active', 'waiting'],
+  behavior: ['active', 'waiting'],
   proof: ['pending'],
 }
 export const has_pending_work = (key: string, value: unknown): boolean => {

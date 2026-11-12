@@ -60,6 +60,7 @@ type PresenceSlot = {
   tz: number
   yaw: number
   moved_at: number
+  live: boolean
   /** actually mounted (the wire's riding flag) — an unridden pet FOLLOWS on foot instead */
   riding: boolean
   gliding: boolean
@@ -88,9 +89,14 @@ export const create_presence_renderer = ({
   label,
   next_frame = raf,
   appearance_loader = load_character_appearance,
+  pet_loader = async (id: string, item_type: string) => {
+    const { load_pet_companion } = await import('../content/pet_models.ts')
+    return load_pet_companion(id, item_type)
+  },
 }: Readonly<{
   next_frame?: typeof raf
   appearance_loader?: typeof load_character_appearance
+  pet_loader?: (id: string, item_type: string) => Promise<LoadedPresence['pet']>
   submit: (entities: readonly EntityRender[]) => void
   pet_ground_height: (x: number, z: number, owner_y: number) => number
   /** the engine's crown-label door — nametags ride the SAME CSS2D pass as every other tag */
@@ -224,8 +230,7 @@ export const create_presence_renderer = ({
     // content modules stay dynamic — pet_models uses Vite's import.meta.glob, a build-only door
     const load_pet = async (): Promise<LoadedPresence['pet']> => {
       if (!pet_type) return null
-      const { load_pet_companion } = await import('../content/pet_models.ts')
-      return load_pet_companion(`${character_id}:pet`, pet_type)
+      return pet_loader(`${character_id}:pet`, pet_type)
     }
     void Promise.all([appearance_loader(presence_render_source(row)), load_pet()])
       .then(([appearance, pet]) => {
@@ -238,6 +243,23 @@ export const create_presence_renderer = ({
   }
 
   return Object.freeze({
+    /** Read the existing interpolation, never animated rider sockets or checkpoint displacement. */
+    motion: (character_id: string) => {
+      const slot = slots.get(character_id)
+      if (!slot?.loaded) return null
+      const moving = slot.live && Date.now() - slot.moved_at < IDLE_AFTER_MS
+      const velocity = [
+        moving ? (slot.tx - slot.x) / MOVE_LERP_SECONDS : 0,
+        0,
+        moving ? (slot.tz - slot.z) / MOVE_LERP_SECONDS : 0,
+      ] as const
+      return {
+        velocity,
+        speed: Math.hypot(velocity[0], velocity[2]),
+        riding: slot.riding && slot.loaded.pet !== null,
+        gliding: slot.gliding,
+      }
+    },
     /** Shown (interpolated, CLIENT-space) positions — the screen-space pick reads these so a
      *  right-click lands on the body the eye sees, not the network target it chases. */
     positions: (): readonly Readonly<{ character_id: string; x: number; y: number; z: number }>[] =>
@@ -246,7 +268,10 @@ export const create_presence_renderer = ({
           .filter(([, slot]) => slot.loaded)
           .map(([character_id, slot]) => Object.freeze({ character_id, x: slot.x, y: slot.y, z: slot.z }))
       ),
-    update: (rows: Readonly<Record<string, PresenceRow & { y: number }>>, own_character_id: string | null): void => {
+    update: (
+      rows: Readonly<Record<string, PresenceRow & { y: number; live?: boolean }>>,
+      own_character_id: string | null
+    ): void => {
       if (disposed) return
       const now = Date.now()
       let changed = false
@@ -256,12 +281,9 @@ export const create_presence_renderer = ({
         slots.delete(stale)
         generations.delete(stale)
         // a gone body takes its tag with it
-        const target = tags.get(stale)
-        if (target) {
-          target.dispose()
-          tags.delete(stale)
-          publish_other_tag(stale, null)
-        }
+        tags.get(stale)?.dispose()
+        tags.delete(stale)
+        publish_other_tag(stale, null)
         changed = true
       }
       for (const [character_id, row] of visible_rows) {
@@ -283,7 +305,7 @@ export const create_presence_renderer = ({
         const x = chain_to_client_coordinate(row.x)
         const z = chain_to_client_coordinate(row.z)
         const slot = slots.get(character_id)
-        if (!slot || slot.source_key !== source_key) {
+        if (slot?.source_key !== source_key) {
           // A new arrival shares one initial pose; gear changes retain the live pose.
           const initial = slot ?? { x, y: row.y, z, yaw: 0, pet_motion: empty_pet_motion() }
           slots.set(character_id, {
@@ -298,6 +320,7 @@ export const create_presence_renderer = ({
             tz: z,
             yaw: initial.yaw,
             moved_at: 0,
+            live: row.live !== false,
             riding: row.riding,
             gliding: row.gliding,
             pet_motion: initial.pet_motion,
@@ -307,27 +330,33 @@ export const create_presence_renderer = ({
           continue
         }
         const aura = character_aura(row.title, row.owner)
-        if (aura !== slot.aura) {
+        if ([aura !== slot.aura, row.riding !== slot.riding, row.gliding !== slot.gliding].some(Boolean)) {
           slot.aura = aura
-          changed = true
-        }
-        if (row.riding !== slot.riding || row.gliding !== slot.gliding) {
           slot.riding = row.riding
           slot.gliding = row.gliding
           changed = true
           wake_tick()
         }
+        const live = row.live !== false
+        if (![live, slot.live].every(Boolean)) {
+          slot.x = slot.tx = x
+          slot.y = slot.ty = row.y
+          slot.z = slot.tz = z
+          slot.moved_at = live ? now : 0
+          slot.live = live
+          changed = true
+          continue
+        }
         const dx = x - slot.tx
         const dz = z - slot.tz
-        if (Math.hypot(dx, row.y - slot.ty, dz) > 0) {
-          slot.yaw = dx * dx + dz * dz > 0.000_1 ? Math.atan2(dx, dz) : slot.yaw
-          slot.tx = x
-          slot.ty = row.y
-          slot.tz = z
-          slot.moved_at = now
-          changed = true
-          wake_tick()
-        }
+        if (Math.hypot(dx, row.y - slot.ty, dz) === 0) continue
+        slot.yaw = dx * dx + dz * dz > 0.000_1 ? Math.atan2(dx, dz) : slot.yaw
+        slot.tx = x
+        slot.ty = row.y
+        slot.tz = z
+        slot.moved_at = now
+        changed = true
+        wake_tick()
       }
       // nametag range rides every presence delta (moves fold here) — shown positions lag the
       // targets by one lerp at most, which no eye can read on a 15-block gate

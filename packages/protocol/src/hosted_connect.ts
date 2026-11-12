@@ -14,6 +14,19 @@ export const same_hosted_bot = (left: HostedBotDescriptor | null, right: HostedB
     (key) => left[key] === right[key]
   )
 
+/** AI-authored presentation only; never executable steps or inferred completion. */
+export type HostedObjective = Readonly<{
+  title: string
+  description?: string
+  steps?: readonly string[]
+}>
+export type HostedAgentActivity = Readonly<{
+  issue?: string
+  status: 'idle' | 'active' | 'waiting' | 'awaiting_ai' | 'paused' | 'unavailable'
+  character_ids: readonly string[]
+  objective: HostedObjective | null
+}>
+
 /** Current owner-authorized connector access, not actor presence or active inference. */
 export type HostedOwnerStatus = Readonly<{
   owner: string
@@ -21,6 +34,7 @@ export type HostedOwnerStatus = Readonly<{
   bot: HostedBotDescriptor | null
   recovery_bots: readonly HostedBotDescriptor[]
   expires_at: number | null
+  activity?: HostedAgentActivity
 }>
 export type HostedConnectRequest = Readonly<{
   authorization_id: string

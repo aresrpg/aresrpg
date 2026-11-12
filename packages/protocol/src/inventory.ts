@@ -239,6 +239,7 @@ export {
   fold_item_packet,
   is_item_packet,
   fold_catalogue,
+  catalogue_departed,
   latest_listings,
   without_relation,
   reconcile_trade_row,

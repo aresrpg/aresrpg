@@ -232,7 +232,12 @@ export const create_world = ({
   let active = false
   let enabled = false
   let control_enabled = true
-  let observed_target: Readonly<{ id: string; position: Vec3 }> | null = null
+  type ObservedTarget = Readonly<{
+    id: string
+    position: Vec3
+    motion?: () => Readonly<Pick<CameraAnchor, 'speed' | 'velocity' | 'riding'> & { gliding: boolean }> | null
+  }>
+  let observed_target: ObservedTarget | null = null
   const interactive = (): boolean => enabled && resources_ready && scene_preparation.ready()
   const controllable = (): boolean => interactive() && control_enabled
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
@@ -699,14 +704,15 @@ export const create_world = ({
   const publish_observed_view = (time_of_day: number): void => {
     if (!observed_target) return
     const [x, y, z] = mode === 'fight' ? observed_target.position : observed_position()
+    const motion = observed_target.motion?.()
     publish_observed_pose({
       character_id: observed_target.id,
       x,
       y,
       z,
       yaw: director.active().get_yaw(),
-      riding: false,
-      gliding: false,
+      riding: Boolean(motion?.riding),
+      gliding: Boolean(motion?.gliding),
       time_of_day,
     })
   }
@@ -719,6 +725,7 @@ export const create_world = ({
       eye_height: CHARACTER_EYE_HEIGHT,
       speed: 0,
       on_ground: true,
+      ...observed_target?.motion?.(),
     }
     engine.set_character_anchor(position)
     return anchor
@@ -878,7 +885,7 @@ export const create_world = ({
       spectate.x = focus[0]
       spectate.z = focus[1]
     },
-    observe_character: (target: Readonly<{ id: string; position: Vec3 }> | null) => {
+    observe_character: (target: ObservedTarget | null) => {
       observed_target = target
       publish_observed_pose(null)
       if (!target) return

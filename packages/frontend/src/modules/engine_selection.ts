@@ -80,7 +80,7 @@ export const selected_character_in_dungeon = (state: AppState): boolean =>
 export const world_presence_rows = (
   state: Readonly<AppState>,
   ground_height: (x: number, z: number) => number
-): Readonly<Record<string, PresenceRow & { y: number }>> => {
+): Readonly<Record<string, PresenceRow & { y: number; live: boolean }>> => {
   const followed = state.session.wallet
     ? owned_character_presence_rows(
         state.session.characters,
@@ -96,18 +96,25 @@ export const world_presence_rows = (
   const fallback =
     request && observed?.world && position && Number.isFinite(position.x) && Number.isFinite(position.z)
       ? {
-          [observed.id]: character_presence_row(observed, request.pairing.address, observed.world, {
-            x: position.x!,
-            y: ground_height(position.x!, position.z!),
-            z: position.z!,
-          }),
+          [observed.id]: {
+            ...character_presence_row(observed, request.pairing.address, observed.world, {
+              x: position.x!,
+              y: 0,
+              z: position.z!,
+            }),
+            y: null,
+          },
         }
       : {}
-  if (stage) return Object.freeze(fallback)
-  const rows: Readonly<Record<string, PresenceRow>> = { ...followed, ...fallback, ...state.world.players }
+  const rows: Readonly<Record<string, PresenceRow>> = stage
+    ? fallback
+    : { ...followed, ...fallback, ...state.world.players }
   return Object.freeze(
     Object.fromEntries(
-      Object.entries(rows).map(([id, row]) => [id, { ...row, y: row.y ?? ground_height(row.x, row.z) }])
+      Object.entries(rows).map(([id, row]) => [
+        id,
+        { ...row, live: row.y !== null, y: row.y ?? ground_height(row.x, row.z) },
+      ])
     )
   )
 }

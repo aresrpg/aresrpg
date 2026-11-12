@@ -95,7 +95,12 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       const selected = displayed_character(state.session)
       world.observe_character(
         selected && position
-          ? { id: selected.id, position: [position.x, world.ground_height(position.x, position.z), position.z] }
+          ? {
+              id: selected.id,
+              position: [position.x, world.ground_height(position.x, position.z), position.z],
+              motion: () =>
+                get_state().session.link_status === 'ready' ? (presence?.motion(selected.id) ?? null) : null,
+            }
           : null
       )
       if (!position) world.release()
@@ -338,7 +343,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     presence = null
     spawns = null
     resources = null
-    // Clear both source lists so the next world cannot inherit a dead crowd.
     presence_entities = Object.freeze([])
     spawn_entities = Object.freeze([])
     unsubscribe_status?.()
@@ -453,7 +457,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           pet_ground_height: created.pet_ground_height,
           label: created.set_entity_caption,
         })
-        // Spawn models use Vite's import.meta.glob. Keep that edge lazy so store/tests remain build-independent.
         void create_spawns(created).then((renderer) => {
           if (signal.aborted || world !== created) {
             renderer.dispose()

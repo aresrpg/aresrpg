@@ -14,7 +14,11 @@ import {
   type CatalogueProjection,
 } from '@aresrpg/protocol/inventory'
 
+import { fold_actor_market, type ActorMarket } from './actor_market.ts'
+
 export type ActorInventory = Readonly<{
+  market?: ActorMarket
+  market_prices?: Extract<ServerPacket, { type: 'packet/market_prices' }>
   claims: readonly ClaimRow[] | null
   items: readonly ItemRow[]
   removed: Readonly<Record<string, string>>
@@ -36,30 +40,57 @@ export const empty_inventory = (): ActorInventory => ({
   trade_tombstones: {},
   loaded: false,
 })
+const snapshot_packet = (state: ActorInventory, packet: ServerPacket): ActorInventory | null => {
+  switch (packet.type) {
+    case 'packet/market_prices':
+      return { ...state, market_prices: packet }
+    case 'packet/market_slice':
+      return fold_actor_market(state, packet)
+    case 'packet/claims':
+      return { ...state, claims: packet.claims }
+    case 'packet/inventory':
+      return {
+        ...state,
+        loaded: true,
+        items: fold_inventory({ inventory: state.items, removed_item_versions: state.removed }, packet.items),
+      }
+    default:
+      return null
+  }
+}
+const fold_owned_listings = (
+  state: ActorInventory,
+  packet: Extract<ServerPacket, { type: 'packet/listings' }>
+): ActorInventory => {
+  const next = fold_catalogue(
+    {
+      listings: state.market?.listings ?? [],
+      own_listings: state.listings ?? [],
+      catalogues: state.catalogues,
+      departures: state.departures,
+    },
+    packet,
+    true,
+    null
+  )
+  return {
+    ...state,
+    listings: next.own_listings,
+    catalogues: { ...state.catalogues, ...next.catalogues },
+    departures: next.departures,
+    market: state.market && { ...state.market, listings: next.listings },
+  }
+}
 /** Adapt the actor's readiness/field names to the same projection used by the game. */
 export const fold_actor_inventory = (state: ActorInventory, packet: ServerPacket): ActorInventory => {
-  if (packet.type === 'packet/claims') return { ...state, claims: packet.claims }
+  const snapshot = snapshot_packet(state, packet)
+  if (snapshot) return snapshot
   const inventory = { inventory: state.items, removed_item_versions: state.removed }
-  if (packet.type === 'packet/inventory')
-    return { ...state, loaded: true, items: fold_inventory(inventory, packet.items) }
   if (is_item_packet(packet)) {
     const next = fold_item_packet(inventory, packet)
     return { ...state, items: next.inventory, removed: next.removed_item_versions }
   }
-  if (packet.type === 'packet/listings') {
-    const next = fold_catalogue(
-      {
-        listings: [],
-        own_listings: state.listings ?? [],
-        catalogues: state.catalogues,
-        departures: state.departures,
-      },
-      packet,
-      true,
-      null
-    )
-    return { ...state, listings: next.own_listings, catalogues: next.catalogues, departures: next.departures }
-  }
+  if (packet.type === 'packet/listings') return fold_owned_listings(state, packet)
   const trades = { rows: state.trades ?? [], tombstones: state.trade_tombstones, awaiting_projection: {} }
   if (packet.type === 'packet/trades') return { ...state, trades: packet_rows_merged(trades, packet.trades) }
   if (packet.type === 'packet/trade_destroyed') {

@@ -8,6 +8,7 @@ import {
   type HostedChallengeEnvelope,
 } from '@aresrpg/protocol'
 
+import { run_keys, same_run } from './run_ref.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
 import {
   public_bot,
@@ -274,13 +275,7 @@ export const create_connect_service = (
     if (!initial) throw new Error('bot_not_owned')
     const lane_key = lane_key_for(initial)
     const initial_lane = (await store.read<Lane>(lane_key)) ?? empty_lane(initial)
-    const keys = [
-      `request:${id}`,
-      `bot:${review.id}`,
-      lane_key,
-      ...(initial_lane.combat_run_id ? [`combat:${initial_lane.combat_run_id}`] : []),
-      ...(initial_lane.profession_run_id ? [`profession:${initial_lane.profession_run_id}`] : []),
-    ]
+    const keys = [`request:${id}`, `bot:${review.id}`, lane_key, ...run_keys(initial_lane)]
     return store.transaction(keys, async (tx) => {
       const request = require_session(
         await tx.get<AuthorizationRequest>(`request:${id}`),
@@ -291,11 +286,7 @@ export const create_connect_service = (
       const bot = owned_bot(await tx.get<Bot>(`bot:${review.id}`), request)
       if (lane_key_for(bot) !== lane_key) throw new Error('connection_changed')
       const lane = (await tx.get<Lane>(lane_key)) ?? empty_lane(bot)
-      if (
-        lane.profession_run_id !== initial_lane.profession_run_id ||
-        lane.combat_run_id !== initial_lane.combat_run_id
-      )
-        throw new Error('connection_changed')
+      if (!same_run(lane, initial_lane)) throw new Error('connection_changed')
       const next = transition(bot, lane, review)
       await stop_return_runs(tx, bot, lane, next.lane)
       if (next.bot !== bot) await tx.put(`bot:${bot.id}`, next.bot)

@@ -11,6 +11,7 @@ import { gameplay_json } from '../src/gameplay.ts'
 import { empty_snapshot } from '../src/actor_snapshot.ts'
 import type { CombatProfile } from '../src/combat_profile.ts'
 
+import { stored_combat } from './helpers/legacy_run_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { put } from './helpers/control_fixture.ts'
 import { character as base_character } from './helpers/profession_fixture.ts'
@@ -107,69 +108,17 @@ test('profiles persist without commands or stat writes, validate availability an
   }
 })
 
-test('one exact fight pins profiles; retries deduplicate and conflicting or incomplete authority fails', async () => {
-  const f = await fixture()
-  try {
-    await f.save()
-    await expect(f.control.start_combat(f.grant, { ...f.input, profiles: [] })).rejects.toThrow(
-      'combat_profiles_mismatch'
-    )
-    await expect(
-      f.control.start_combat(f.grant, { ...f.input, profiles: [...f.input.profiles, ...f.input.profiles] })
-    ).rejects.toThrow('combat_profiles_mismatch')
-    await expect(f.control.start_combat(f.grant, { ...f.input, observation_revision: 0 })).rejects.toThrow(
-      'needs_resync'
-    )
-    const started = await f.control.start_combat(f.grant, f.input)
-    expect(started).toMatchObject({
-      status: 'active',
-      fight: f.input.fight,
-      profiles: [{ character_id: f.character.id, revision: 1, profile }],
-    })
-    expect(await f.control.start_combat(f.grant, f.input)).toEqual(started)
-    await expect(f.control.start_combat(f.grant, { ...f.input, decision_revision: 1 })).rejects.toThrow(
-      'idempotency_conflict'
-    )
-    await f.control.save_combat_profile(f.grant, {
-      character_id: f.character.id,
-      expected_revision: 1,
-      profile: { ...profile, intent: 'Revised for next fight.' },
-    })
-    expect((await f.control.combat_status(f.grant, started.id)).profiles[0]!.profile.intent).toEqual(profile.intent)
-    expect((await f.store.read<Lane>(f.lane_key))?.combat_run_id).toBe(started.id)
-    await expect(
-      f.control.start_combat(f.grant, {
-        ...f.input,
-        idempotency_key: 'other',
-        decision_revision: 1,
-        profiles: [{ character_id: f.character.id, revision: 2 }],
-      })
-    ).rejects.toThrow('bot_busy_or_paused')
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('unsupported modes and profession occupancy cannot be admitted', async () => {
-  const f = await fixture()
-  try {
-    await f.save()
-    const original = f.live.fights[f.input.fight]!
-    f.live.fights[f.input.fight] = { ...original, contract: { ...(original.contract as object), managed: true } }
-    await expect(f.control.start_combat(f.grant, f.input)).rejects.toThrow('unsupported_fight_mode')
-    f.live.fights[f.input.fight] = original
-    await put(f.store, f.lane_key, { ...(await f.store.read<Lane>(f.lane_key))!, profession_run_id: 'busy' })
-    await expect(f.control.start_combat(f.grant, f.input)).rejects.toThrow('bot_busy_or_paused')
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
 test('stop fences new work while preserving uncertain envelopes, cannot resume stopped work', async () => {
   const f = await fixture()
   try {
     await f.save()
-    const run = await f.control.start_combat(f.grant, f.input)
+    const run = await stored_combat(
+      f.store,
+      f.grant,
+      f.input.fight,
+      [{ character_id: f.character.id, revision: 1, profile }],
+      f.clock.now
+    )
     const lane = (await f.store.read<Lane>(f.lane_key))!
     const pending = {
       command_id: 'pending',
@@ -201,7 +150,13 @@ test('resume requires a fresh idle lane and never replaces failed child work', a
   const f = await fixture()
   try {
     await f.save()
-    const run = await f.control.start_combat(f.grant, f.input)
+    const run = await stored_combat(
+      f.store,
+      f.grant,
+      f.input.fight,
+      [{ character_id: f.character.id, revision: 1, profile }],
+      f.clock.now
+    )
     const lane = (await f.store.read<Lane>(f.lane_key))!
     await put(f.store, `combat:${run.id}`, { ...run, status: 'paused' })
     await put(f.store, f.lane_key, { ...lane, combat_run_id: null })
@@ -220,7 +175,13 @@ test('profile preferences are bot-shared but active run control is grant-scoped'
   const f = await fixture()
   try {
     await f.save()
-    const run = await f.control.start_combat(f.grant, f.input)
+    const run = await stored_combat(
+      f.store,
+      f.grant,
+      f.input.fight,
+      [{ character_id: f.character.id, revision: 1, profile }],
+      f.clock.now
+    )
     const other = { ...f.grant, id: 'other' }
     await put(f.store, 'grant:other', other)
     expect((await f.control.combat_profile(other, f.character.id))?.revision).toBe(1)
@@ -256,7 +217,7 @@ test('combat tools validate complete schemas before control and explain strategy
     expect(COMBAT_TOOLS.find(({ name }) => name === 'bot_save_combat_profile')?.description).toContain(
       'spends no stat points'
     )
-    expect(await calls.get('bot_start_combat')!(f.grant, f.input)).toMatchObject({ status: 'active' })
+    expect(calls.has('bot_start_combat')).toBe(false)
   } finally {
     await f.runtime.stop()
   }
@@ -303,7 +264,6 @@ test('a changed observation between profile validation and commit fails closed',
       race.save_combat_profile(f.grant, { character_id: f.character.id, expected_revision: 0, profile })
     ).rejects.toThrow('needs_resync')
     expect(await f.control.combat_profile(f.grant, f.character.id)).toBeNull()
-    await expect(f.control.start_combat(f.grant, f.input)).rejects.toThrow('needs_resync')
   } finally {
     await f.runtime.stop()
   }

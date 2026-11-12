@@ -10,13 +10,15 @@ import type {
 import { receipt_digest } from '@aresrpg/sdk/cache'
 import { gas_mist_from_receipt } from '@aresrpg/sdk'
 
+import { assert_run_admission } from './run_admission.ts'
+import { settled_market_receipts } from './market_recovery.ts'
 import { settled_fight_replays } from './fight_runtime.ts'
-import { assert_combat_admission } from './combat_admission.ts'
-import type { CombatRun } from './combat_control.ts'
-import type { ProfessionRun } from './profession_control.ts'
+import { run_keys } from './run_ref.ts'
 import { assert_lease, type Command, type Envelope, type Lane } from './control.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
+
+export { assert_profession_admission } from './run_admission.ts'
 
 export type EnvelopeCipher = Readonly<{
   encrypt: (plaintext: string, context: string) => Promise<string>
@@ -40,8 +42,7 @@ export const create_transaction_journal = (
     `command:${command.id}`,
     `grant:${command.grant_id}`,
     `bot:${command.bot_id}`,
-    ...(command.combat_run_id ? [`combat:${command.combat_run_id}`] : []),
-    ...(command.profession_run_id ? [`profession:${command.profession_run_id}`] : []),
+    ...run_keys(command),
   ]
   const lane_for = async (tx: ControlTransaction) =>
     assert_lease(await tx.get<Lane>(command.lane_key), actor_id, fence, now())
@@ -64,15 +65,7 @@ export const create_transaction_journal = (
       ].some(Boolean)
     )
       throw new Error('execution_not_authorized')
-    if (command.combat_run_id)
-      assert_combat_admission(await tx.get<CombatRun>(`combat:${command.combat_run_id}`), command, lane)
-    if (command.profession_run_id)
-      assert_profession_admission(
-        await tx.get<ProfessionRun>(`profession:${command.profession_run_id}`),
-        command,
-        lane,
-        now()
-      )
+    await assert_run_admission(tx, command, lane, now())
     return { lane, grant }
   }
   const change_envelope = async (record: SignedTransaction, phase: 'signed' | 'submitting') => {
@@ -255,6 +248,7 @@ const settled_lane = (lane: Lane, command: Command, receipt: Receipt, completed:
   return {
     ...lane,
     fight_replays: settled_fight_replays(lane, command, receipt, completed),
+    catalogue_receipts: settled_market_receipts(lane, command, receipt),
     reconciliation_command: completed ? command.id : lane.reconciliation_command,
     pending: null,
     active_command: null,
@@ -270,18 +264,4 @@ const receipt_outcome = (receipt: Receipt): Readonly<{ status: 'completed' | 'fa
   const failure = status.error
   const error = typeof failure === 'string' ? failure : (failure?.message ?? 'chain_execution_failed')
   return { status: 'failed', error }
-}
-
-export const assert_profession_admission = (run: ProfessionRun | null, command: Command, lane: Lane, now: number) => {
-  if (!run) throw new Error('profession_execution_not_authorized')
-  const valid = [
-    run.grant_id === command.grant_id,
-    run.bot_id === command.bot_id,
-    run.last_command_id === command.id,
-    lane.profession_run_id === run.id,
-    ['active', 'waiting'].includes(run.status),
-    run.plan.deadline_ms > now,
-    run.actions_started <= run.plan.max_actions,
-  ]
-  if (!valid.every(Boolean)) throw new Error('profession_execution_not_authorized')
 }

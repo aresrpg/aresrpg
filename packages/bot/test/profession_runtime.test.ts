@@ -4,31 +4,28 @@ import { expect, test } from 'bun:test'
 import { job_xp_for_level } from '@aresrpg/immutable'
 
 import { create_control_service, lane_key_for, type Lane, type Command } from '../src/control.ts'
+import { stale_run_draft } from '../src/run_refresh.ts'
+import { ready_gameplay_command } from '../src/command_wait.ts'
 import { create_transaction_journal } from '../src/transaction_journal.ts'
-import { profession_tick, receipt_projected } from '../src/profession_runtime.ts'
+import { run_tick } from '../src/run_runtime.ts'
+import { receipt_projected } from '../src/action_receipts.ts'
 import type { ProfessionRun } from '../src/profession_control.ts'
-import { create_mcp_handler } from '../src/mcp.ts'
 
+import { stored_profession } from './helpers/legacy_run_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { put } from './helpers/control_fixture.ts'
 import { profession_context, plan, character, item, recipe, resource } from './helpers/profession_fixture.ts'
 
-const fixture = async () => {
+const fixture = async (accepted_plan = plan) => {
   const f = await runtime_fixture()
   const control = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
   const lane = await control.acquire(f.bot, 'actor', 10000)
   const key = lane_key_for(f.bot)
   await control.observed(key, 'actor', lane.fence, true)
-  const start = await control.start_profession(f.grant, {
-    idempotency_key: 'plan',
-    plan,
-    decision_revision: 0,
-    observation_revision: 1,
-  })
-  if (!('run' in start)) throw new Error('fixture start failed')
-  const get_run = () => f.store.read<ProfessionRun>(`profession:${start.run!.id}`)
+  const start = await stored_profession(f.store, f.grant, accepted_plan, f.clock.now)
+  const get_run = () => f.store.read<ProfessionRun>(`profession:${start.id}`)
   const tick = async (context = profession_context()) =>
-    profession_tick({
+    run_tick('profession', {
       store: f.store,
       config: f.options.config,
       actor_id: 'actor',
@@ -158,32 +155,6 @@ test('run limits, pause, revocation and uncertain execution never admit replacem
   }
 })
 
-test('MCP validator performs no control writes, returns declared limits and works with play disabled', async () => {
-  const f = await runtime_fixture()
-  const control = create_control_service(
-    f.store,
-    f.options.config,
-    60000,
-    () => f.clock.now,
-    async () => ({ status: 'pending' })
-  )
-  const mcp = create_mcp_handler(control, false, 'https://fixture/.well-known/oauth-protected-resource')
-  const before = await f.store.scan_keys('', 1000)
-  const result = await mcp(f.grant, {
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'tools/call',
-    params: { name: 'bot_validate_plan', arguments: { plan } },
-  })
-  expect(JSON.stringify(result)).toContain('"valid":true')
-  expect(JSON.stringify(result)).toContain('not_run')
-  expect(await f.store.scan_keys('', 1000)).toEqual(before)
-  const tools = await mcp(f.grant, { jsonrpc: '2.0', id: 2, method: 'tools/list' })
-  expect(JSON.stringify(tools)).toContain('bot_validate_plan')
-  expect(JSON.stringify(tools)).not.toContain('bot_start_profession')
-  await f.runtime.stop()
-})
-
 test('a queued profession action cannot prepare, sign or submit after its deadline', async () => {
   const f = await fixture()
   await f.tick()
@@ -218,17 +189,10 @@ test('actor scheduler publishes an actionable missing-loot state through the sam
   await f.runtime.settle()
   const control = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
   expect(await f.runtime.observe(f.grant, {})).toMatchObject({ state: 'awaiting_ai' })
-  const lane = (await f.store.read<Lane>(lane_key_for(f.bot)))!
-  const started = await control.start_profession(f.grant, {
-    idempotency_key: 'scheduler',
-    plan,
-    decision_revision: lane.decision_revision,
-    observation_revision: lane.observation_revision,
-  })
-  if (!('run' in started)) throw new Error('run missing')
+  const started = await stored_profession(f.store, f.grant, plan, f.clock.now)
   await f.runtime.tick()
   await f.runtime.settle()
-  const status = await control.profession_status(f.grant, started.run.id)
+  const status = await control.profession_status(f.grant, started.id)
   expect(status).toMatchObject({ status: 'awaiting_ai', actions_started: 0, issue: { code: 'acquisition_required' } })
   expect(status.issue?.requirements).toBeDefined()
   expect(status.last_command_id).toBeNull()
@@ -294,7 +258,7 @@ test('a heartbeat or unrelated projection cannot repeat a completed craft agains
   await put(f.store, f.key, { ...(await f.store.read<Lane>(f.key))!, needs_resync: true })
   // Projection-before-receipt order must also reconcile without another packet.
   // A restarted runner uses the durable step baseline and retained receipt, not an in-memory flag.
-  await profession_tick({
+  await run_tick('profession', {
     store: f.store,
     config: f.options.config,
     actor_id: 'actor',
@@ -304,29 +268,6 @@ test('a heartbeat or unrelated projection cannot repeat a completed craft agains
     now: f.clock.now,
   })
   expect((await f.get_run())!.actions_started).toBe(2)
-  await f.runtime.stop()
-})
-
-test('live plan validation uses actor monotonic time while deadlines use epoch time', async () => {
-  const f = await runtime_fixture()
-  const epoch = 1_800_000_000_000
-  const context = profession_context()
-  const control = create_control_service(
-    f.store,
-    f.options.config,
-    60000,
-    () => epoch,
-    async () => ({
-      ...context.snapshot,
-      decision_revision: 0,
-      sampled_at: context.now,
-    })
-  )
-  const result = await control.validate_plan(f.grant, { ...plan, deadline_ms: epoch + 100000 })
-  expect(result.live.next?.state).toBe('action')
-  expect(result.live.executable_now).toBe(true)
-  const expired = await control.validate_plan(f.grant, { ...plan, deadline_ms: epoch - 1 })
-  expect(expired.valid).toBe(false)
   await f.runtime.stop()
 })
 
@@ -418,4 +359,185 @@ test('certified craft reconciles an unchanged merge destination without inventin
       },
     })
   ).toBe(true)
+})
+
+test('accepted profession drafts replan fresh observations before journal admission without another action', async () => {
+  const f = await fixture()
+  await f.tick()
+  const run = (await f.get_run())!
+  const command = (await f.store.read<Command>(`command:${run.last_command_id}`))!
+  await f.control.observed(f.key, 'actor', f.lane.fence, true)
+  const context = profession_context()
+  const fresh = {
+    ...context,
+    snapshot: {
+      ...context.snapshot,
+      observation_revision: 2,
+      inventory: {
+        ...context.snapshot.inventory!,
+        items: Object.entries(recipe.inputs).map(([type, amount], index) => item(type, amount, 30 + index)),
+      },
+    },
+  }
+  const binding = { command, actor_id: 'actor', fence: f.lane.fence }
+  await expect(
+    create_transaction_journal(f.store, f.options.config, f.options.cipher, binding, () => f.clock.now).admit('prepare')
+  ).rejects.toThrow('execution_not_authorized')
+  const refreshed = await ready_gameplay_command(f.store, f.options.config, binding, fresh, f.clock.now)
+  expect(refreshed).toMatchObject({
+    id: command.id,
+    kind: 'craft',
+    observation_revision: 2,
+    status: 'accepted',
+    fingerprint: command.fingerprint,
+  })
+  await create_transaction_journal(
+    f.store,
+    f.options.config,
+    f.options.cipher,
+    { ...binding, command: refreshed! },
+    () => f.clock.now
+  ).admit('prepare')
+  expect((await f.get_run())!.actions_started).toBe(1)
+  expect((await f.get_run())!.last_observation?.zone).toBeUndefined()
+  expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
+  await f.runtime.stop()
+})
+
+test('profession refresh never replaces an envelope or reopens terminal commands', async () => {
+  const f = await fixture()
+  await f.tick()
+  const run = (await f.get_run())!
+  const command = (await f.store.read<Command>(`command:${run.last_command_id}`))!
+  await f.control.observed(f.key, 'actor', f.lane.fence, true)
+  const lane = (await f.store.read<Lane>(f.key))!
+  const context = profession_context()
+  const fresh = { ...context, snapshot: { ...context.snapshot, observation_revision: 2 } }
+  const binding = { command, actor_id: 'actor', fence: f.lane.fence }
+  expect(stale_run_draft(command, lane, new Error('execution_not_authorized'))).toBe(true)
+  for (const status of ['failed', 'uncertain', 'cancelled', 'completed'] as const) {
+    const terminal = { ...command, status }
+    await put(f.store, `command:${command.id}`, terminal)
+    expect(stale_run_draft(terminal, lane, new Error('execution_not_authorized'))).toBe(false)
+    await expect(ready_gameplay_command(f.store, f.options.config, binding, fresh, f.clock.now)).rejects.toThrow(
+      'execution_not_authorized'
+    )
+    expect(await f.store.read<Command>(`command:${command.id}`)).toEqual(terminal)
+  }
+  await put(f.store, `command:${command.id}`, command)
+  for (const phase of ['prepared', 'signed', 'submitting'] as const) {
+    const pending = {
+      command_id: command.id,
+      grant_id: command.grant_id,
+      digest: 'fixed',
+      phase,
+      encrypted: 'exact-bytes',
+      gas_budget_mist: '1',
+    }
+    await put(f.store, f.key, { ...lane, pending })
+    expect(stale_run_draft(command, { ...lane, pending }, new Error('execution_not_authorized'))).toBe(false)
+    await expect(ready_gameplay_command(f.store, f.options.config, binding, fresh, f.clock.now)).rejects.toThrow(
+      'execution_not_authorized'
+    )
+    expect((await f.store.read<Lane>(f.key))!.pending).toEqual(pending)
+  }
+  await f.runtime.stop()
+})
+
+test('unbounded profession intent persists and admits beyond former caller limits while stop still fences it', async () => {
+  const { max_actions: _max, deadline_ms: _deadline, ...unbounded } = plan
+  const f = await fixture(unbounded)
+  const run = (await f.get_run())!
+  await put(f.store, `profession:${run.id}`, { ...run, actions_started: 201 })
+  f.clock.now = 10_000_000
+  const lease = await f.control.acquire(f.bot, 'actor', 10000)
+  const lane = (await f.store.read<Lane>(f.key))!
+  await put(f.store, f.key, { ...lane, needs_resync: false, observed_at: f.clock.now, observation_revision: 1 })
+  const persisted = (await f.get_run())!
+  expect(await f.store.scan_pending(100)).toContain(`profession:${run.id}`)
+  await run_tick('profession', {
+    store: f.store,
+    config: f.options.config,
+    run: persisted,
+    actor_id: 'actor',
+    fence: lease.fence,
+    context: profession_context(),
+    now: f.clock.now,
+  })
+  const next = (await f.get_run())!
+  expect(next.actions_started).toBe(202)
+  const command = (await f.store.read<Command>(`command:${next.last_command_id}`))!
+  const journal = create_transaction_journal(
+    f.store,
+    f.options.config,
+    f.options.cipher,
+    { command, actor_id: 'actor', fence: lease.fence },
+    () => f.clock.now
+  )
+  await journal.admit('prepare')
+  await put(f.store, f.key, { ...(await f.store.read<Lane>(f.key))!, paused: true })
+  await expect(journal.admit('prepare')).rejects.toThrow('execution_not_authorized')
+  await f.runtime.stop()
+})
+
+test('a refreshed unprepared blocker can explicitly resume without replaying its cancelled draft', async () => {
+  const f = await fixture()
+  await f.tick()
+  const run = (await f.get_run())!
+  const command = (await f.store.read<Command>(`command:${run.last_command_id}`))!
+  await f.control.observed(f.key, 'actor', f.lane.fence, true)
+  const context = profession_context()
+  const fresh = { ...context, snapshot: { ...context.snapshot, observation_revision: 2, zones: {} } }
+  const result = await ready_gameplay_command(
+    f.store,
+    f.options.config,
+    { command, actor_id: 'actor', fence: f.lane.fence },
+    fresh,
+    f.clock.now
+  )
+  expect(result).toBeNull()
+  expect((await f.get_run())!.status).toBe('awaiting_ai')
+  expect(await f.store.read<Command>(`command:${command.id}`)).toMatchObject({ status: 'cancelled' })
+  const lane = (await f.store.read<Lane>(f.key))!
+  await f.control.resume_profession(f.grant, run.id, lane.decision_revision, lane.observation_revision)
+  await f.tick({
+    ...context,
+    snapshot: { ...context.snapshot, observation_revision: 2 },
+    command: { ...context.command, observation_revision: 2 },
+  })
+  const resumed = (await f.get_run())!
+  expect(resumed.status).toBe('active')
+  expect(resumed.last_command_id).not.toBe(command.id)
+  expect(await f.store.read<Command>(`command:${resumed.last_command_id}`)).toMatchObject({
+    status: 'accepted',
+    kind: 'gather',
+  })
+  await f.runtime.stop()
+})
+
+test('historical blocked transition releases admission for explicit correction and resume', async () => {
+  const f = await fixture()
+  try {
+    const context = profession_context()
+    await f.tick({ ...context, snapshot: { ...context.snapshot, characters: [] } })
+    const run = (await f.get_run())!
+    expect(run.status).toBe('awaiting_ai')
+    const lane = (await f.store.read<Lane>(f.key))!
+    await expect(
+      f.control.resume_profession(f.grant, run.id, lane.decision_revision, lane.observation_revision)
+    ).resolves.toMatchObject({ resumed: true })
+    await f.tick({ ...context, snapshot: { ...context.snapshot, characters: [] } })
+    const released = (await f.store.read<Lane>(f.key))!
+    await expect(
+      f.control.accept(f.grant, {
+        idempotency_key: 'explicit-correction',
+        kind: 'craft',
+        payload: { character_id: character.id, output_type: recipe.output_type, attempts: 1 },
+        decision_revision: released.decision_revision,
+        observation_revision: released.observation_revision,
+      })
+    ).resolves.toMatchObject({ status: 'accepted' })
+  } finally {
+    await f.runtime.stop()
+  }
 })
