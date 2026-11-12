@@ -11,6 +11,8 @@ import { receipt_digest } from '@aresrpg/sdk/cache'
 import { gas_mist_from_receipt } from '@aresrpg/sdk'
 
 import { settled_fight_replays } from './fight_runtime.ts'
+import { assert_combat_admission } from './combat_admission.ts'
+import type { CombatRun } from './combat_control.ts'
 import type { ProfessionRun } from './profession_control.ts'
 import { assert_lease, type Command, type Envelope, type Lane } from './control.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
@@ -38,6 +40,7 @@ export const create_transaction_journal = (
     `command:${command.id}`,
     `grant:${command.grant_id}`,
     `bot:${command.bot_id}`,
+    ...(command.combat_run_id ? [`combat:${command.combat_run_id}`] : []),
     ...(command.profession_run_id ? [`profession:${command.profession_run_id}`] : []),
   ]
   const lane_for = async (tx: ControlTransaction) =>
@@ -61,6 +64,8 @@ export const create_transaction_journal = (
       ].some(Boolean)
     )
       throw new Error('execution_not_authorized')
+    if (command.combat_run_id)
+      assert_combat_admission(await tx.get<CombatRun>(`combat:${command.combat_run_id}`), command, lane)
     if (command.profession_run_id)
       assert_profession_admission(
         await tx.get<ProfessionRun>(`profession:${command.profession_run_id}`),

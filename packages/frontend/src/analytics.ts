@@ -7,7 +7,7 @@ import { env } from './env.ts'
 import type { AnalyticsProperties } from './analytics/context.ts'
 import { REPLAY_CONFIG, replay_properties } from './analytics/replay.ts'
 
-export const DEMO_VERSION = 3
+export const DEMO_VERSION = 4
 export const ANALYTICS_VERSION = 2
 export type AnalyticsEvent = Readonly<{ name: string; properties?: AnalyticsProperties }>
 export type AnalyticsCapture = (event: string, properties?: AnalyticsProperties) => void

@@ -10,7 +10,7 @@ test('a reducer-opened demo fight remains placeable and Ready starts the shared 
   const stop = app.observe(['adventure', 'fight'])
   try {
     app.dispatch({ type: 'adventure/entered' })
-    app.dispatch({ type: 'adventure/challenge' })
+    expect(app.store.getState().adventure.phase).toBe('fighting')
     const placement = app.store.getState().fight.checkpoint!
     expect(placement.contract.round).toBe(0n)
     expect(placement.contract.fighters[0]!.ready).toBeFalse()

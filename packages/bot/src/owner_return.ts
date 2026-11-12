@@ -38,6 +38,7 @@ export const begin_owner_return = (bot: Bot, lane: Lane, review: HostedBotDescri
       paused: true,
       needs_resync: true,
       profession_run_id: null,
+      combat_run_id: null,
       decision_revision: lane.decision_revision + 1,
     }
   )
@@ -68,4 +69,17 @@ export const stop_return_profession = async (tx: ControlTransaction, bot: Bot, i
   const run = await tx.get<ProfessionRun>(`profession:${id}`)
   if (run && run.bot_id !== bot.id) throw new Error('profession_run_conflict')
   if (run) await tx.put(`profession:${id}`, { ...run, status: 'stopped' })
+}
+
+const stop_return_combat = async (tx: ControlTransaction, bot: Bot, previous: Lane, next: Lane) => {
+  if (!previous.combat_run_id || next.combat_run_id !== null) return
+  const run = await tx.get<import('./combat_control.ts').CombatRun>(`combat:${previous.combat_run_id}`)
+  if (!run || run.bot_id !== bot.id) throw new Error('combat_run_conflict')
+  await tx.put(`combat:${run.id}`, { ...run, status: 'stopped' })
+}
+
+export const stop_return_runs = async (tx: ControlTransaction, bot: Bot, previous: Lane, next: Lane) => {
+  if (previous.profession_run_id && next.profession_run_id === null)
+    await stop_return_profession(tx, bot, previous.profession_run_id)
+  await stop_return_combat(tx, bot, previous, next)
 }

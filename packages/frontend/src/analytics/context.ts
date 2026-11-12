@@ -10,7 +10,8 @@ import type { AppState } from '../store.ts'
 export type AnalyticsProperties = Readonly<Record<string, string | number | boolean | null>>
 
 const onboarding_stage = ({ session, navigation, adventure, analytics }: AppState): string => {
-  if (adventure.character && adventure.phase !== 'entered') return `demo_${adventure_quest(adventure)}`
+  if (adventure.character && !['onboarding', 'entered'].includes(adventure.phase))
+    return `demo_${adventure_quest(adventure)}`
   if (!session.wallet) return 'login'
   const creation = character_creation_surface(session, navigation)
   if (creation) return creation

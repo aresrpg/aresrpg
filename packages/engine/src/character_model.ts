@@ -75,6 +75,12 @@ export const find_character_bone = (origin: Object3D, name: string): Object3D | 
   return bone
 }
 
+export const find_character_attachment = (origin: Object3D, slot: CharacterPartSlot): Object3D | null => {
+  const bone = find_character_bone(origin, slot === 'back' ? 'cape' : 'head')
+  if (slot !== 'head' || !bone) return bone
+  return bone.children.find(({ name }) => name === 'Helmet') ?? bone
+}
+
 export const mount_character_part = ({
   body,
   part,
@@ -83,10 +89,10 @@ export const mount_character_part = ({
 }: Readonly<{
   body: Object3D
   part: Object3D
-  slot: 'head' | 'back'
+  slot: CharacterPartSlot
   hair: Object3D | null
 }>): boolean => {
-  const bone = find_character_bone(body, slot === 'head' ? 'head' : 'cape')
+  const bone = find_character_attachment(body, slot)
   if (!bone) return false
   if (slot === 'head' && hair) hair.visible = false
   if (slot === 'back') part.rotation.set(Math.PI, 0, 0)
@@ -348,11 +354,10 @@ export const create_character_model = async (
   let hair: Object3D | null = null
   const attach = async (slot: CharacterPartSlot, spec: WornModelRender | null): Promise<void> => {
     if (!spec) return
-    const mount = slot === 'back' ? 'back' : 'head'
     try {
       const part = await load_character_part(slot, spec)
-      if (!mount_character_part({ body: root, part: part.root, slot: mount, hair })) {
-        console.warn(`Character body ${appearance.body_url} has no ${mount} attachment bone.`)
+      if (!mount_character_part({ body: root, part: part.root, slot, hair })) {
+        console.warn(`Character body ${appearance.body_url} has no ${slot} attachment.`)
         part.dispose()
         return
       }

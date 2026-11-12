@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore } from './store.ts'
+import { lane_busy } from './command_admission.ts'
 import type { Command, Lane, Observe } from './control.ts'
 import { hash_secret } from './security.ts'
 import type { ActorSnapshot } from './actor_snapshot.ts'
@@ -163,8 +164,7 @@ const assert_run_start = (
   freshness_ms: number
 ) => {
   if (!lane) throw new Error('needs_resync')
-  if ([lane.paused, lane.pending, lane.active_command, lane.profession_run_id].some(Boolean))
-    throw new Error('bot_busy_or_paused')
+  if (lane_busy(lane)) throw new Error('bot_busy_or_paused')
   if (
     [
       lane.needs_resync,

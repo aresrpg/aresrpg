@@ -173,13 +173,14 @@ test('demo fights and duplicate state updates produce only real milestone change
   const initial = app.store.getState()
   app.dispatch({ type: 'adventure/entered' })
   const entered = app.store.getState()
-  expect(analytics_events(entered, initial)).toEqual([{ name: 'demo_started' }])
+  expect(analytics_events(entered, initial)).toEqual([
+    { name: 'demo_started' },
+    { name: 'demo_fight_started', properties: { encounter: 1 } },
+  ])
   app.dispatch({ type: 'adventure/entered' })
   expect(analytics_events(app.store.getState(), entered)).toEqual([])
   app.dispatch({ type: 'adventure/challenge' })
-  expect(analytics_events(app.store.getState(), entered)).toEqual([
-    { name: 'demo_fight_started', properties: { encounter: 1 } },
-  ])
+  expect(analytics_events(app.store.getState(), entered)).toEqual([])
 })
 
 test('demo combat starts only when placement advances into a real turn', () => {
@@ -309,7 +310,7 @@ test('each of the three tutorial fights keeps its encounter number on start and 
   app.dispatch({ type: 'adventure/entered' })
   const base = app.store.getState()
   for (const encounter of [0, 1, 2]) {
-    const before = { ...base, adventure: { ...base.adventure, encounter } }
+    const before = { ...base, adventure: { ...base.adventure, encounter, phase: 'explore' as const } }
     const started = { ...before, adventure: { ...before.adventure, phase: 'fighting' as const } }
     const completed = { ...started, adventure: { ...started.adventure, phase: 'reward' as const } }
     expect(analytics_events(started, before).filter(({ name }) => name === 'demo_fight_started')).toEqual([

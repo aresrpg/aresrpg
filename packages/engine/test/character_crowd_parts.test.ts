@@ -298,3 +298,39 @@ test('splitting and merging poses retains shader compatibility with independent 
   }
   expect(disposed).toHaveLength(loads)
 })
+
+test('crowd equipment uses the authored Helmet socket without scaling the separate hair batch', async () => {
+  const scene = new Scene()
+  const source = body()
+  const socket = new Group()
+  socket.name = 'Helmet'
+  socket.scale.set(1.6, 1.1, 1.3)
+  socket.position.y = -0.02
+  const head = source.root.getObjectByName('Head')!
+  head.add(socket)
+  const crowd = create_character_crowd_layer({
+    scene,
+    load_model: async () => source,
+    load_part: async (_slot, spec) => part(spec.url, []),
+  })
+  try {
+    crowd.set([actor('a', 'hat'), actor('b', null)] as never)
+    await settle()
+    crowd.tick(performance.now())
+    const hat = mesh(scene, 'hat')
+    const hair = mesh(scene, 'hair')
+    expect(hat.parent!.parent).toBe(socket)
+    expect(hair.parent!.parent).toBe(head)
+    expect(hair.geometry.instanceCount).toBe(1)
+    expect(hat.geometry.instanceCount).toBe(1)
+    expect(hair.getWorldScale(new Vector3()).toArray()).toEqual([1, 1, 1])
+    expect(hat.getWorldScale(new Vector3()).toArray()).toEqual([1.6, 1.1, 1.3])
+    head.rotation.z = 0.4
+    crowd.tick(performance.now() + 100)
+    const expected = new Matrix4().makeRotationY(0.7).setPosition(5, 2, 3).multiply(hat.matrixWorld)
+    const actual = hat.matrixWorld.clone().multiply(new Matrix4().fromArray(hat.instance_matrix.array, 0))
+    actual.elements.forEach((value, index) => expect(value).toBeCloseTo(expected.elements[index]!, 5))
+  } finally {
+    crowd.dispose()
+  }
+})

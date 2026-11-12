@@ -31,6 +31,7 @@ import { selected_adventurer } from './quest.ts'
 import { useDemoAnalytics } from './useDemoAnalytics.ts'
 import { CompanionInteraction } from './CompanionInteraction.tsx'
 import { load_adventure_scene } from './scene.ts'
+import { read_adventure_choice } from './visit.ts'
 
 export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }>) => {
   const copy = useAppStore((state) => state.copy ?? initial_copy)
@@ -40,7 +41,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
   const route_unlocked = useAppStore((state) => state.adventure.encounter > 0)
   const encounter = useAppStore((state) => state.adventure.encounter)
   const phase = useAppStore((state) => state.adventure.phase)
-  const finale = ['ending', 'complete', 'entered'].includes(phase)
+  const finale = ['ending', 'complete', 'onboarding', 'entered'].includes(phase)
   const page = useAppStore((state) => state.navigation.page)
   const dialog = useAppStore((state) => state.navigation.dialog)
   const mounted = useAppStore((state) => state.fight.mounted)
@@ -58,7 +59,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
   const demo_loading = useDemoAnalytics(world, adventure.character)
   const display_status: EngineStatus = model_failed ? { state: 'failed', backend: status.backend } : status
 
-  useEffect(() => dispatch_app({ type: 'adventure/entered' }), [])
+  useEffect(() => dispatch_app({ type: 'adventure/entered', choice: read_adventure_choice() }), [])
 
   useEffect(() => {
     if (!canvas) return

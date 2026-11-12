@@ -234,18 +234,18 @@ test('replay never starts after an account transition while its code is loading'
 
 test('feedback belongs to the stalled stage and can be answered only once', () => {
   const app = create_app()
-  app.dispatch({ type: 'adventure/entered' })
+  app.dispatch({ type: 'adventure/entered', choice: 'continue' })
   const base = { ...app.store.getState(), copy: {} as AppCopy }
   const available = reduce_app_state(base, { type: 'analytics/feedback_loaded', seen: false })
   expect(reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'funding' })).toBe(available)
-  const offered = reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'demo_goblins' })
+  const offered = reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'demo_equip' })
   expect(analytics_events(offered, available)).toContainEqual({
     name: 'onboarding_feedback_shown',
-    properties: { onboarding_step: 'demo_goblins' },
+    properties: { onboarding_step: 'demo_equip' },
   })
   const answered = reduce_app_state(offered, { type: 'analytics/feedback_answered', answer: 'controls' })
   expect(analytics_events(answered, offered)).toEqual([
-    { name: 'onboarding_feedback', properties: { onboarding_step: 'demo_goblins', answer: 'controls' } },
+    { name: 'onboarding_feedback', properties: { onboarding_step: 'demo_equip', answer: 'controls' } },
   ])
   expect(reduce_app_state(answered, { type: 'analytics/feedback_answered', answer: 'funding' })).toBe(answered)
 })

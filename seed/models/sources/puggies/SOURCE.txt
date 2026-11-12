@@ -14,6 +14,10 @@ status-effect or ability rule. Runtime gameplay behavior remains in game content
 
 Production contract
 Native 26-bone rig, mixamorig:Head and cape anchors, Rider parented to Hips.
+The nondeforming Helmet child of Head authors one fit for all headgear. Hair stays
+on Head. Head and hair are uniformly enlarged about the chin; facial proportions,
+palettes, non-head anatomy, rig and animation remain intact. The exporter
+includes both sockets, and rebuilds copy their authored frames from the reference rig.
 IDLE, WALK, RUN, JUMP, JUMP_RUN, FALL, SIT, DANCE and DEATH are native clips.
 DEATH remains exactly one second. ATTACK is individually choreographed.
 Body and removable head layer export separately. Hair uses the actual exported
@@ -21,7 +25,13 @@ Head transform. Flat palettes are packed; three transparent customization masks
 retain the four-material contract while preserving this collection's fixed colors.
 No external texture files, linked library or scratch workspace is required.
 
+Head proportion review
+Senshi measures 29.83% bare Head height after body-only game normalization.
+The authored head uses 1.314286x uniform enlargement to approximately 30%.
+Helmet receives the same affine transform; hair remains on Head.
+
 Supported embedded scripts
+- proportions.py applies the authored chin-centered enlargement during a rebuild.
 - build_*.py rebuilds this character's geometry from the native rig already in
   this source, reauthors its ATTACK, saves the source and exports both GLBs.
 - authoring.py contains mesh/export preparation helpers, not a template character.

@@ -21,12 +21,7 @@ import {
 } from './model.ts'
 import { hash_secret, random_secret, secret_matches } from './security.ts'
 import { empty_lane, lane_key_for, type Lane } from './control.ts'
-import {
-  begin_owner_return,
-  complete_owner_return,
-  stop_return_profession,
-  type ReturnTransition,
-} from './owner_return.ts'
+import { begin_owner_return, complete_owner_return, stop_return_runs, type ReturnTransition } from './owner_return.ts'
 import { validate_owner, type OwnerVerifier } from './owner_proof.ts'
 
 const require_session = (
@@ -283,6 +278,7 @@ export const create_connect_service = (
       `request:${id}`,
       `bot:${review.id}`,
       lane_key,
+      ...(initial_lane.combat_run_id ? [`combat:${initial_lane.combat_run_id}`] : []),
       ...(initial_lane.profession_run_id ? [`profession:${initial_lane.profession_run_id}`] : []),
     ]
     return store.transaction(keys, async (tx) => {
@@ -295,10 +291,13 @@ export const create_connect_service = (
       const bot = owned_bot(await tx.get<Bot>(`bot:${review.id}`), request)
       if (lane_key_for(bot) !== lane_key) throw new Error('connection_changed')
       const lane = (await tx.get<Lane>(lane_key)) ?? empty_lane(bot)
-      if (lane.profession_run_id !== initial_lane.profession_run_id) throw new Error('connection_changed')
+      if (
+        lane.profession_run_id !== initial_lane.profession_run_id ||
+        lane.combat_run_id !== initial_lane.combat_run_id
+      )
+        throw new Error('connection_changed')
       const next = transition(bot, lane, review)
-      if (lane.profession_run_id && next.lane.profession_run_id === null)
-        await stop_return_profession(tx, bot, lane.profession_run_id)
+      await stop_return_runs(tx, bot, lane, next.lane)
       if (next.bot !== bot) await tx.put(`bot:${bot.id}`, next.bot)
       if (next.lane !== lane) await tx.put(lane_key, next.lane)
       return next.result

@@ -45,6 +45,39 @@ describe('character model legacy contract', () => {
     expect(hat.parent).toBe(head)
   })
 
+  test('only worn headwear uses the authored Helmet child while hair retains its Head frame', () => {
+    const body = new Group()
+    const head = new Bone()
+    head.name = 'mixamorig:Head'
+    head.position.set(0, 1.8, 0)
+    const socket = new Group()
+    socket.name = 'Helmet'
+    socket.scale.set(1.6, 1.1, 1.3)
+    socket.position.set(0, -0.02, 0.01)
+    head.add(socket)
+    const unrelated = new Group()
+    unrelated.name = 'Helmet'
+    unrelated.scale.setScalar(4)
+    body.add(unrelated, head)
+    const hair = new Group()
+    const hat = new Group()
+    expect(mount_character_part({ body, part: hair, slot: 'hair', hair: null })).toBeTrue()
+    expect(mount_character_part({ body, part: hat, slot: 'head', hair })).toBeTrue()
+    expect(hair.parent).toBe(head)
+    expect(hat.parent).toBe(socket)
+    expect(hair.getWorldScale(new Vector3()).toArray()).toEqual([1, 1, 1])
+    expect(hat.getWorldScale(new Vector3()).toArray()).toEqual([1.6, 1.1, 1.3])
+    expect(hair.visible).toBeFalse()
+    const relative = hat.getWorldPosition(new Vector3()).sub(hair.getWorldPosition(new Vector3()))
+    expect(relative.distanceTo(socket.position)).toBeLessThan(1e-6)
+    head.rotation.z = 0.4
+    expect(hat.getWorldPosition(new Vector3()).distanceTo(hair.getWorldPosition(new Vector3()))).toBeCloseTo(
+      socket.position.length(),
+      6
+    )
+    expect(hat.parent).toBe(socket)
+  })
+
   test('a cloak mounts on cape with the exact legacy pi flip', () => {
     const body = new Group()
     const cape = new Bone()

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { ClientPacket } from '@aresrpg/protocol'
+
+import type { create_bot_actor } from './actor.ts'
+import type { Command } from './control.ts'
 import { observation_events } from './actor_snapshot.ts'
 import { gameplay_knowledge } from './gameplay_knowledge.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, type GameplayContext } from './gameplay.ts'
@@ -38,5 +42,21 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
         .map(([id, row]) => [id, zone_checkpoint_id(row)])
     ),
     planning_context: gameplay_knowledge(context, payload.recipes as readonly string[] | undefined),
+  }
+}
+
+export const apply_actor_watches = async (
+  actor: Pick<ReturnType<typeof create_bot_actor>, 'observe'>,
+  command: Pick<Command, 'grant_id' | 'payload'>
+) => {
+  for (const [name, type] of [
+    ['market', 'packet/market_observe'],
+    ['prices', 'packet/market_prices_observe'],
+  ] as const) {
+    if (Object.hasOwn(command.payload, name))
+      await actor.observe(command.grant_id, { type, observation: command.payload[name] } as Extract<
+        ClientPacket,
+        { type: typeof type }
+      >)
   }
 }

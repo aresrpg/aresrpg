@@ -32,7 +32,7 @@ export const replay_eligible = (state: AppState, pathname: string): boolean =>
   state.session.wallet === null &&
   state.session.auth_status !== 'connecting' &&
   state.adventure.character !== null &&
-  !['ending', 'complete', 'entered'].includes(state.adventure.phase)
+  !['ending', 'complete', 'onboarding', 'entered'].includes(state.adventure.phase)
 
 export const replay_properties = (properties: Readonly<Record<string, unknown>>): Record<string, unknown> =>
   Object.fromEntries(

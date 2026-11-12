@@ -10,7 +10,7 @@ import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import { create_actor_locomotion } from './actor_locomotion.ts'
 import { gameplay_observation_ready } from './gameplay_context.ts'
-import { wait_for_contract } from './command_wait.ts'
+import { wait_for_contract, ready_gameplay_command } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
 import { empty_snapshot, actor_snapshot_transition, type ActorSnapshot } from './actor_snapshot.ts'
@@ -28,9 +28,11 @@ import { assert_live_grant, type Bot, type Grant } from './model.ts'
 import { run_pairing_proof, run_provisioning, type ProvisionRequest } from './provisioning.ts'
 import { has_pending_work } from './store.ts'
 import { abandon_unsubmitted, create_transaction_journal } from './transaction_journal.ts'
-import { profession_tick, profession_observation } from './profession_runtime.ts'
-import { active_profession_id, type ProfessionRun } from './profession_control.ts'
-import { actor_observation } from './actor_observation.ts'
+import { stale_combat_draft } from './combat_refresh.ts'
+import { process_bot_run } from './run_actor.ts'
+import { active_combat_id } from './combat_control.ts'
+import { active_profession_id } from './profession_control.ts'
+import { actor_observation, apply_actor_watches } from './actor_observation.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
 export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
 export type { ActorRuntimeOptions } from './actor_runtime_options.ts'
@@ -129,8 +131,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
           return member.sign_transaction(bytes)
         }),
       })
-    const reconcile = () =>
-      reconcile_action(
+    const reconcile = async () => {
+      await reconcile_action(
         store,
         lane_key,
         options.actor_id,
@@ -144,6 +146,9 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         },
         now()
       )
+      const lane = await store.read<Lane>(lane_key)
+      if (lane?.combat_run_id) void schedule_key(`combat:${lane.combat_run_id}`, true).catch(options.report_failure)
+    }
     let sdk = build_sdk()
     let recovered = false
     let terminal_server = lease.transport_stopped === true
@@ -230,6 +235,11 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         command = next
         connector_grants.add(next.grant_id)
       },
+      send_gameplay: async (packet: ClientPacket) => {
+        // Rollback must survive a refused draft; the authenticated transport still owns delivery.
+        if (packet.type !== 'packet/fight_resync') await journal.admit('prepare')
+        return actor.send(packet)
+      },
       walk: locomotion.walk,
       idle: locomotion.idle,
       settle_idle: locomotion.settle_idle,
@@ -277,6 +287,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       const lane = assert_lease(await tx.get<Lane>(command.lane_key), options.actor_id, session.lease.fence, now())
       const current = await tx.get<Command>(`command:${command.id}`)
       if (!current || ['completed', 'failed', 'cancelled'].includes(current.status)) return
+      if (stale_combat_draft(current, lane, error)) return
       await tx.put(`command:${command.id}`, {
         ...current,
         status: lane.pending ? 'uncertain' : 'failed',
@@ -289,37 +300,23 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       })
     })
   }
-  const apply_watches = async (
-    session: Pick<Session, 'actor' | 'lease' | 'bot'>,
-    command: Pick<Command, 'grant_id' | 'payload'>
-  ) => {
-    for (const [name, type] of [
-      ['market', 'packet/market_observe'],
-      ['prices', 'packet/market_prices_observe'],
-    ] as const) {
-      if (Object.hasOwn(command.payload, name)) {
-        await session.actor.observe(command.grant_id, { type, observation: command.payload[name] } as Extract<
-          ClientPacket,
-          { type: typeof type }
-        >)
-      }
-    }
-  }
   const observe_session = async (session: Session, command: Command) => {
     if (session.terminal_server()) throw new Error('ACTOR_TERMINAL')
     await session.actor.connect()
     await session.actor.settle_observations()
     const snapshot = session.snapshot()
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
-    await apply_watches(session, command)
+    await apply_actor_watches(session.actor, command)
     const lane = await store.read<Lane>(command.lane_key)
+    const combat_run_id = await active_combat_id(store, lane, command)
     return {
       ...actor_observation({ ...session_context(session, command), snapshot }, session.lease.fence),
       decision_revision: lane?.decision_revision,
       profession_run_id: await active_profession_id(store, lane, command),
       event_fence: session.lease.fence,
       sampled_at: monotonic_now(),
-      state: 'awaiting_ai',
+      combat_run_id,
+      state: combat_run_id ? 'running' : 'awaiting_ai',
     }
   }
   const session_context = (session: Session, command: Command) => ({
@@ -430,38 +427,39 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       await session.actor.connect()
       await session.actor.settle_observations()
       const binding = { command, actor_id: options.actor_id, fence: session.lease.fence }
-      const ready = await wait_for_contract(store, binding, session_context(session, command), now())
+      const ready = await ready_gameplay_command(store, config, binding, session_context(session, command), now())
       if (!ready) return
       if (session.actor.state().status !== 'ready') throw new Error('needs_resync')
       session.refresh_execution()
       bind_execution(session, ready, lane)
       if (!(await session.walk())) return
-      await execute_gameplay({ ...session_context(session, ready), sdk: session.sdk, send: session.actor.send })
+      await execute_gameplay({ ...session_context(session, ready), sdk: session.sdk, send: session.send_gameplay })
     } catch (error) {
       if (!recovering) await fail_command(session, command, error)
       options.report_failure(error)
     }
   }
-  const process_profession = async (key: string) => {
-    const run = await store.read<ProfessionRun>(key)
-    if (!run || !['active', 'waiting'].includes(run.status)) return
-    const bot = await store.read<Bot>(`bot:${run.bot_id}`)
-    if (!bot) throw new Error('BOT_MISSING')
-    const command = profession_observation(run)
-    const session = await session_for(bot, command)
-    const status = await profession_tick({
+  const process_run = (key: string) =>
+    process_bot_run(key, {
       store,
       config,
-      run,
       actor_id: options.actor_id,
-      fence: session.lease.fence,
-      context: session_context(session, { ...command, observation_revision: session.snapshot().observation_revision }),
-      now: now(),
+      now,
+      session: async (bot, command) => {
+        const session = await session_for(bot, command)
+        return {
+          fence: session.lease.fence,
+          connect: session.actor.connect,
+          context: session_context(session, {
+            ...command,
+            observation_revision: session.snapshot().observation_revision,
+          }),
+        }
+      },
     })
-    if (['active', 'waiting'].includes(String(status))) await session.actor.connect()
-  }
   const processors: Readonly<Record<string, (key: string) => Promise<void>>> = {
-    profession: process_profession,
+    profession: process_run,
+    combat: process_run,
     provision: async (key) => {
       const request = await store.read<ProvisionRequest>(key)
       if (!request || request.status === 'ready') return

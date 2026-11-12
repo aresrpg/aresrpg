@@ -3,7 +3,7 @@
 import { InstancedInterleavedBuffer, Matrix4, type Mesh, type Object3D } from 'three'
 
 import {
-  find_character_bone,
+  find_character_attachment,
   mount_character_part,
   type CharacterPart,
   type CharacterPartSlot,
@@ -135,15 +135,14 @@ export const create_crowd_parts = (body: Object3D, scale: number, load_part: Cha
         }
         const slot: PartSlot = { source, specs: rows, loaded: null }
         slots.set(key, slot)
-        const mount = source.slot === 'back' ? 'back' : 'head'
-        if (!find_character_bone(body, mount === 'head' ? 'head' : 'cape')) return
+        if (!find_character_attachment(body, source.slot)) return
         void load_part(source.slot, source.model)
           .then((part) => {
             if (disposed || slots.get(key) !== slot) {
               part.dispose()
               return
             }
-            if (!mount_character_part({ body, part: part.root, slot: mount, hair: null })) {
+            if (!mount_character_part({ body, part: part.root, slot: source.slot, hair: null })) {
               part.dispose()
               return
             }

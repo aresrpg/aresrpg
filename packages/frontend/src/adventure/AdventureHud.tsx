@@ -32,6 +32,7 @@ import {
   adventure_roster,
   selected_adventurer,
 } from './quest.ts'
+import { AdventureChoiceModal } from './AdventureChoiceModal.tsx'
 import { AdventureRebirth } from './AdventureRebirth.tsx'
 import { AdventureJourneySource } from './JourneySource.tsx'
 import { adventure_group, adventure_mob, adventure_item, ADVENTURE_ITEMS, ADVENTURE_PET_ITEM } from './content.ts'
@@ -102,7 +103,12 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
   usePromptKey({ enabled: nearby && encounter_visible, activate: challenge })
   const acknowledge = (screen: 'result' | 'level'): void =>
     dispatch_app({ type: 'adventure/result_acknowledged', screen })
-  if (phase === 'complete') return <AdventureRebirth copy={copy} />
+  const Modal = (
+    { choice: AdventureChoiceModal, onboarding: AdventureChoiceModal, complete: AdventureRebirth } as Partial<
+      Record<typeof phase, typeof AdventureRebirth>
+    >
+  )[phase]
+  if (Modal) return <Modal copy={copy} />
   if (!row || phase === 'ending') return null
   return (
     <>

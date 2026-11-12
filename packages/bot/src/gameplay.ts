@@ -228,7 +228,7 @@ export type GameplayPlan =
   | Plan<'fight_turn', 'commit_turn'>
   | Plan<'fight_settle', 'settle'>
 
-const owned_fight = (payload: FightPayload, context: GameplayContext) => {
+export const owned_fight = (payload: FightPayload, context: GameplayContext) => {
   const row = context.snapshot.fights[payload.fight]
   if (!row || fight_checkpoint_id(row) !== payload.checkpoint_id) throw new Error('needs_resync')
   const checkpoint = hydrate_gameplay_fight(row)

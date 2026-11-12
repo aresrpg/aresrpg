@@ -5,6 +5,7 @@ import { Suspense, useEffect, type ComponentType } from 'react'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { AdventureChoiceModal } from './AdventureChoiceModal.tsx'
 import { AdventurePage } from './AdventurePage.tsx'
 
 /** Keep the ending scene through authentication; the entry owns the player observer lifetime. */
@@ -19,15 +20,16 @@ export const AdventureRuntime = ({
 }>) => {
   const phase = useAppStore((state) => state.adventure.phase)
   const wallet = useAppStore((state) => state.session.wallet)
-  const login_available = phase === 'complete' || phase === 'entered'
+  const login_available = phase === 'complete' || phase === 'onboarding' || phase === 'entered'
   useEffect(() => {
     if (login_available) return activate_player()
   }, [activate_player, login_available])
   useEffect(() => {
-    if (phase !== 'complete' || !wallet) return
+    if (!['complete', 'onboarding'].includes(phase) || !wallet) return
     dispatch_app({ type: 'adventure/game_entered' })
     dispatch_app({ type: 'path/open', pathname: '/' })
   }, [phase, wallet])
+  if (phase === 'onboarding') return <AdventureChoiceModal copy={copy} />
   if (phase !== 'entered') return <AdventurePage copy={copy} />
   return (
     <Suspense

@@ -61,7 +61,8 @@ test('native Blast Girl anchors retain equipment through chest motion and mounte
   const cloak = new Group()
   expect(mount_character_part({ body: clone, part: hat, slot: 'head', hair: null })).toBeTrue()
   expect(mount_character_part({ body: clone, part: cloak, slot: 'back', hair: null })).toBeTrue()
-  expect(hat.parent?.name).toBe('mixamorig:Head')
+  expect(hat.parent?.name).toBe('Helmet')
+  expect(hat.parent?.parent?.name).toBe('mixamorig:Head')
   expect(cloak.parent).toBe(cape)
   const before = cloak.getWorldPosition(new Vector3())
   clone.getObjectByName('mixamorig:Spine2')!.rotation.z = 0.5

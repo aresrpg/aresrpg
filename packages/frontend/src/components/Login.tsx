@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { WalletCards } from 'lucide-react'
 
 import { MainMenu } from '../menu/MainMenu.tsx'
-import { demo_played } from '../adventure/visit.ts'
+import { demo_played, forget_adventure_choice } from '../adventure/visit.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
 import { useAppStore } from '../store.ts'
@@ -79,7 +79,7 @@ export const Login = ({
               </>
             )}
             {played && !gift && (
-              <a className="main-menu-replay" href="/play-demo">
+              <a className="main-menu-replay" href="/play-demo" onClick={forget_adventure_choice}>
                 {copy.replay_demo}
               </a>
             )}

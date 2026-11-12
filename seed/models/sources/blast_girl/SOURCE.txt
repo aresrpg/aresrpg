@@ -1,0 +1,39 @@
+Blast Girl — original identity on the native community body
+
+Open blast_girl_review.blend in Blender 5.2 or newer. This is the editable
+canonical source, with packed palettes and all rebuild inputs embedded.
+
+The face and hair retain the actual Blast Girl geometry and palette from
+repository commit 43cb5b18a613d3d308e7956772664796204552e0: amber eyes,
+tiny nose, curved smile, tapered chin, five forehead locks and orange curls.
+The original head is uniformly mapped into the community body's head space;
+the outward hair curls are brought closer to the cheeks while retaining depth.
+Three shallow stepped temple locks connect the crown to those curls, covering
+the scalp gap inherited from the original helmet-era hair. add_shell.py owns
+this local correction and reuses the original packed hair palette/material.
+The native community body, outfit, rig and locomotion remain unchanged.
+
+Run packed build_blast_girl.py to rebuild and export the body/hair pair.
+Packed restore_identity.py consumes blast_identity_geometry.json, an exact
+snapshot of the original identity vertices, faces, UVs and material slots.
+The packed original palette remains editable. authoring.py and
+author_attacks.py supply mesh and animation helpers. Run export_curated.py
+to export manual edits without rebuilding. Rebuilding replaces manual edits.
+From this canonical directory exports go to seed/models/characters;
+elsewhere they go beside the source.
+
+Head owns the face and removable hair. One nondeforming Helmet child of Head
+fits every helmet; hair remains on Head. Cape follows Neck and Rider follows
+Hips. All twelve playable clips remain, and DEATH lasts exactly one second.
+The exporter enforces unit animation scales with a 0.0001 numerical-drift
+guard and rejects accessors shared with non-scale data.
+
+Verified source rebuild: exact vertices, faces, UVs, material slots and skin
+weights; decoded GLB positions, normals, UVs, joints and weights are identical.
+Clip durations and unit animation scales are identical after rebuilding.
+Original, front, side, back and face renders were compared during review.
+
+validate_hair.py runs during both rebuilding and manual exporting. Its 112
+lateral rays check the reported temple region on both sides, preserving the
+intentional face opening. The reported mesh failed at 54 scalp samples; the
+corrected source passes all 112. Body geometry and animation data are unchanged.

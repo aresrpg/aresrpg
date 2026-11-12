@@ -15,20 +15,17 @@ export type ControlStore = Readonly<{
   transaction: <T>(keys: readonly string[], operation: (tx: ControlTransaction) => Promise<T>) => Promise<T>
 }>
 // Pending membership is disposable scheduling metadata, never execution authority.
+const PENDING_STATUSES: Readonly<Record<string, readonly string[]>> = {
+  command: ['accepted', 'executing', 'uncertain'],
+  profession: ['active', 'waiting'],
+  combat: ['active', 'waiting'],
+  proof: ['pending'],
+}
 export const has_pending_work = (key: string, value: unknown): boolean => {
   const status = (value as { status?: string } | null)?.status
-  switch (key.split(':')[0]) {
-    case 'command':
-      return ['accepted', 'executing', 'uncertain'].includes(status ?? '')
-    case 'profession':
-      return ['active', 'waiting'].includes(status ?? '')
-    case 'provision':
-      return status !== 'ready'
-    case 'proof':
-      return status === 'pending'
-    default:
-      return false
-  }
+  const kind = key.split(':')[0]!
+  if (kind === 'provision') return status !== 'ready'
+  return (PENDING_STATUSES[kind] ?? []).includes(status ?? '')
 }
 // This fails if expiry can disappear between owner verification and consent commit.
 // Compare every declared record in the same script that consumes consent and mints authority.

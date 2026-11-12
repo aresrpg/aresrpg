@@ -1,5 +1,5 @@
 {
-  "version": "44a0ec06e2de2808",
+  "version": "944e1b296e3717b6",
   "source_commit": "f188e94774fa0ad56a4ec5240d9f00b70793cbac",
   "portraits": {
     "asobi_female": {
@@ -48,7 +48,7 @@
         0.86
       ],
       "model_sha256": "535841d71a639d9f293cc21db222c9dc679825fe92229a80f1e9b4a88d942a8c",
-      "hair_sha256": "142abfc09e4a54c5b5deed14d2ff8770218a98e8a6b0692272e7f4869b87f884"
+      "hair_sha256": "069d6dd687ba214b37906c0558fa4387b01be2bfea59284f2d1692bb4af19035"
     },
     "ikari_male": {
       "source_sha256": "1a0246a6df5b367490c692e23461c90cc43420debbdb96fe3a526f1368daa918",
@@ -64,7 +64,7 @@
         0.86
       ],
       "model_sha256": "f8c3d277076582f063d6a7dc62575c1e4437dd0d1f30b20e134654aad54fb065",
-      "hair_sha256": "a2b66a65bd008b37f2026f44bf8aacbb11d2845a40a40b0d58b1bd711364ad7d"
+      "hair_sha256": "2b7208638872374d2f685fab208d72a30ac1c1b1ec7d395333cee77a9a24a20e"
     },
     "iyashi_female": {
       "source_sha256": "cc39713464c5991bce803e7d40d6613638d37dddf17df88d506dac56bf1f543c",

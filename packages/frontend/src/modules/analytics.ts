@@ -20,7 +20,7 @@ import { is_admin_address } from '../admin_access.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { report_error } from '../reporting.ts'
 import type { AuthSession } from '../auth.ts'
-import { adventure_completed_quests } from '../adventure/quest.ts'
+import { adventure_observed_quests } from '../adventure/quest.ts'
 import { character_creation_insufficient } from '../character_creation_funding.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { next_quest } from '../journey/model.ts'
@@ -101,16 +101,18 @@ const companion_milestones = ({ adventure }: AppState): readonly Milestone[] => 
 
 const completed_events = (
   name: string,
-  next: readonly string[],
-  previous: readonly string[]
+  next: readonly string[] | null,
+  previous: readonly string[] | null
 ): readonly AnalyticsEvent[] =>
-  next.filter((id) => !previous.includes(id)).map((quest_id) => ({ name, properties: { quest_id } }))
+  previous === null
+    ? []
+    : (next ?? []).filter((id) => !previous.includes(id)).map((quest_id) => ({ name, properties: { quest_id } }))
 
 const quest_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => [
   ...completed_events(
     'demo_quest_completed',
-    adventure_completed_quests(state.adventure),
-    adventure_completed_quests(previous.adventure)
+    adventure_observed_quests(state.adventure),
+    adventure_observed_quests(previous.adventure)
   ),
   ...(previous.journey.ready && state.journey.identity === previous.journey.identity
     ? completed_events('quest_completed', state.journey.completed, previous.journey.completed)

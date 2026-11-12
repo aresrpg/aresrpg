@@ -89,7 +89,7 @@ test.each(['IDLE', 'WALK', 'RUN', 'JUMP', 'JUMP_RUN', 'FALL'])(
     const reference = read_model('aeon')
     const clip = model.source.animations.find((clip) => clip.name === name)!
     const donor = reference.source.animations.find((clip) => clip.name === name)!
-    // Sources sample at 60fps and 24fps; their exporter rounds the final frame.
+    // Allow final-frame rounding when the exporter resamples the native clips.
     expect(Math.abs(model.duration(clip) - reference.duration(donor))).toBeLessThan(1 / 24 + 1 / 60)
     const rest = model.pose({ name: '', samplers: [], channels: [] }, 0)
     const donor_rest = reference.pose({ name: '', samplers: [], channels: [] }, 0)
@@ -106,28 +106,26 @@ test.each(['IDLE', 'WALK', 'RUN', 'JUMP', 'JUMP_RUN', 'FALL'])(
       const target = displacement(expected, donor_rest)
       // Measured 24→60fps resampling error: <0.016 hip heights and <0.072 radians.
       expect(position.distanceTo(target)).toBeLessThan(0.02)
-      // Compare visible directions against independently specified physical-side pairs.
-      for (const [joint, mapped] of [
-        ['Hips', 'Hips'],
-        ['Spine2', 'Spine2'],
-        ['LeftArm', 'RightArm'],
-        ['RightArm', 'LeftArm'],
-        ['LeftForeArm', 'RightForeArm'],
-        ['RightForeArm', 'LeftForeArm'],
-        ['LeftUpLeg', 'RightUpLeg'],
-        ['LeftLeg', 'RightLeg'],
+      // The rebuilt Blast body uses the same native handedness as the community rig.
+      // Compare matching physical limbs; the retired custom rig needed mirrored names.
+      for (const joint of [
+        'Hips',
+        'Spine2',
+        'LeftArm',
+        'RightArm',
+        'LeftForeArm',
+        'RightForeArm',
+        'LeftUpLeg',
+        'LeftLeg',
       ] as const) {
         const aim = new Vector3(0, 1, 0).transformDirection(actual(joint))
-        const target_aim = new Vector3(0, 1, 0).transformDirection(expected(mapped))
+        const target_aim = new Vector3(0, 1, 0).transformDirection(expected(joint))
         expect(aim.angleTo(target_aim)).toBeLessThan(0.08)
       }
-      // Boots have authored flat sole/forward axes; their bone +Y axes differ between rigs.
-      for (const [foot, mapped] of [
-        ['LeftFoot', 'RightFoot'],
-        ['RightFoot', 'LeftFoot'],
-      ] as const) {
+      // Retain the sole/forward deformation checks as well as the limb-direction checks.
+      for (const foot of ['LeftFoot', 'RightFoot'] as const) {
         const deformation = actual(foot).multiply(rest(foot).invert())
-        const target_deformation = expected(mapped).multiply(donor_rest(mapped).invert())
+        const target_deformation = expected(foot).multiply(donor_rest(foot).invert())
         for (const axis of [new Vector3(0, 1, 0), new Vector3(0, 0, 1)]) {
           expect(
             axis.clone().transformDirection(deformation).angleTo(axis.clone().transformDirection(target_deformation))

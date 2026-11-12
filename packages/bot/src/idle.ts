@@ -26,7 +26,16 @@ const JUMP_PRESSES = [
   ],
 ] as const
 export const idle_travels = (context: GameplayContext, lane: Lane) => {
-  if ([lane.paused, lane.needs_resync, lane.active_command, lane.pending, lane.reconciliation_command].some(Boolean))
+  if (
+    [
+      lane.paused,
+      lane.needs_resync,
+      lane.active_command,
+      lane.pending,
+      lane.reconciliation_command,
+      lane.combat_run_id,
+    ].some(Boolean)
+  )
     return null
   const chain_ms = gameplay_observed_ms(context)
   return context.snapshot.characters

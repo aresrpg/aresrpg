@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { refresh_combat_command } from './combat_refresh.ts'
+import type { BotConfig } from './model.ts'
 import { assert_lease, type Command, type Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
 import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
 import { assert_profession_admission, type JournalBinding } from './transaction_journal.ts'
+import { assert_combat_admission } from './combat_admission.ts'
+import type { CombatRun } from './combat_control.ts'
 import type { ProfessionRun } from './profession_control.ts'
 
 /** Retain an accepted intent, never an execution retry. The existing scheduler samples the
@@ -20,6 +24,7 @@ export const wait_for_contract = async (
   const keys = [
     command.lane_key,
     `command:${command.id}`,
+    ...(command.combat_run_id ? [`combat:${command.combat_run_id}`] : []),
     ...(command.profession_run_id ? [`profession:${command.profession_run_id}`] : []),
   ]
   return store.transaction(keys, async (tx) => {
@@ -34,6 +39,8 @@ export const wait_for_contract = async (
       !lane.pending,
     ].every(Boolean)
     if (!valid) throw new Error('execution_not_authorized')
+    if (command.combat_run_id)
+      assert_combat_admission(await tx.get<CombatRun>(`combat:${command.combat_run_id}`), command, lane)
     if (command.profession_run_id)
       assert_profession_admission(
         await tx.get<ProfessionRun>(`profession:${command.profession_run_id}`),
@@ -49,4 +56,15 @@ export const wait_for_contract = async (
     await tx.put(`command:${command.id}`, next)
     return next
   })
+}
+
+export const ready_gameplay_command = async (
+  store: ControlStore,
+  config: BotConfig,
+  binding: JournalBinding,
+  context: GameplayContext,
+  now: number
+) => {
+  const command = await wait_for_contract(store, binding, context, now)
+  return command ? refresh_combat_command(store, config, { ...binding, command }, context, now) : null
 }

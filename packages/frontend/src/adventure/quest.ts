@@ -42,7 +42,7 @@ export const adventure_completed_quests = (state: Readonly<AdventureState>): rea
     ? []
     : ADVENTURE_QUESTS.slice(
         0,
-        ['complete', 'entered'].includes(state.phase)
+        ['complete', 'entered'].includes(state.phase) && adventure_has_ending(state)
           ? ADVENTURE_QUESTS.length
           : ADVENTURE_QUESTS.indexOf(adventure_quest(state))
       )
@@ -50,3 +50,7 @@ export const adventure_completed_quests = (state: Readonly<AdventureState>): rea
 /** The ordinary immediate equipment actions complete the quest once every reward is worn. */
 export const adventure_rewards_equipped = (loadout: Readonly<Record<string, string>>): boolean =>
   ADVENTURE_LOOT.every(({ item_type }) => Object.values(loadout).includes(item_type))
+
+/** A missing hero is an uninitialized observation, not an empty completion baseline. */
+export const adventure_observed_quests = (state: AdventureState): readonly AdventureQuest[] | null =>
+  state.character === null ? null : adventure_completed_quests(state)

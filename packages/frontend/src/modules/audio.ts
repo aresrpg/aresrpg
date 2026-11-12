@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Observe immutable presentation facts, never receipt/packet arrival counts.
 
-import { adventure_completed_quests, adventure_has_ending } from '../adventure/quest.ts'
+import { adventure_observed_quests, adventure_has_ending } from '../adventure/quest.ts'
 import { dispose_audio, play_audio } from '../game/audio/audio_registry.ts'
 import type { AppModule, AppState } from '../store.ts'
 
@@ -19,7 +19,7 @@ export type AudioSnapshot = Readonly<{
   worlds: Readonly<Record<string, string | null>>
   invitations: readonly string[]
   trade_invitations: readonly string[] | null
-  adventure_quests: readonly string[]
+  adventure_quests: readonly string[] | null
   completed_fights: readonly string[]
   levels: readonly string[]
   job_level: string | null
@@ -96,7 +96,7 @@ export const audio_snapshot = (state: AppState): AudioSnapshot => {
     ),
     trade_invitations: trade_invitation_ids(state, identity),
     ...result_notices(state),
-    adventure_quests: adventure_completed_quests(state.adventure),
+    adventure_quests: adventure_observed_quests(state.adventure),
     job_level: state.job_level_up.current?.id ?? null,
     mastery: mastery_snapshot(mastery),
     inventory_open:

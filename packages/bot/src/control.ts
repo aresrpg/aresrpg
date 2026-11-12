@@ -6,9 +6,13 @@ import type { ActionBaseline } from './action_reconciliation.ts'
 import type { FightReplay } from './fight_runtime.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import { parse_gameplay_action, type GameplayActionName } from './gameplay.ts'
+import { admit_command, lane_key_for } from './command_admission.ts'
+import { create_combat_control } from './combat_control.ts'
 import { create_profession_control } from './profession_control.ts'
 import { hash_secret } from './security.ts'
 import type { ControlStore } from './store.ts'
+
+export { admit_command, lane_busy, lane_key_for } from './command_admission.ts'
 
 export type Envelope = Readonly<{
   command_id: string
@@ -35,6 +39,7 @@ export type Lane = Readonly<{
   observed_at: number
   needs_resync: boolean
   paused: boolean
+  combat_run_id?: string | null
   profession_run_id?: string | null
   active_command: string | null
   pending: Envelope | null
@@ -43,6 +48,7 @@ export type Command = Readonly<{
   waiting_for_resume?: boolean
   action_baseline?: ActionBaseline
   fight_baseline?: FightStateRow
+  combat_run_id?: string
   profession_run_id?: string
   id: string
   grant_id: string
@@ -57,7 +63,6 @@ export type Command = Readonly<{
   result?: unknown
   error?: string
 }>
-export const lane_key_for = (bot: Pick<Bot, 'network' | 'address'>) => `lane:${bot.network}:${bot.address}`
 export const empty_lane = (bot: Pick<Bot, 'network' | 'address'>): Lane => ({
   network: bot.network,
   address: bot.address,
@@ -229,31 +234,6 @@ export const create_control_service = (
     pause,
     resume,
     ...create_profession_control(store, config, now, observe),
+    ...create_combat_control(store, config, now, observe),
   }
-}
-export const admit_command = (
-  grant: Grant,
-  lane: Lane,
-  input: Readonly<{
-    kind: Command['kind']
-    decision_revision: number
-    observation_revision: number
-  }>,
-  now: number,
-  freshness_ms: number
-) => {
-  if (input.kind === 'observe') throw new Error('invalid_action')
-  if (!grant.scopes.includes('bot:play')) throw new Error('insufficient_scope')
-  if ([lane.paused, lane.active_command, lane.pending, lane.profession_run_id].some(Boolean))
-    throw new Error('bot_busy_or_paused')
-  if (
-    [
-      lane.needs_resync,
-      lane.observed_at + freshness_ms <= now,
-      lane.lease_until <= now,
-      input.decision_revision !== lane.decision_revision,
-      input.observation_revision !== lane.observation_revision,
-    ].some(Boolean)
-  )
-    throw new Error('needs_resync')
 }

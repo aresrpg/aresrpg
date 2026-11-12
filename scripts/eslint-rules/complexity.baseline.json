@@ -1728,11 +1728,6 @@
         10
       ]
     },
-    "packages/frontend/src/modules/adventure.ts": {
-      "transition": [
-        9
-      ]
-    },
     "packages/frontend/src/modules/duel.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [
         10

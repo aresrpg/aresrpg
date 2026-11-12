@@ -2,6 +2,34 @@
 
 Combat is a deterministic state machine with committed randomness. Move enforces it; `@aresrpg/fight` is the TypeScript twin. Use the twin to inspect legal actions and simulate drafts. Never replace it with an approximate damage calculator for transaction planning.
 
+## Tell your assistant how to fight
+
+Describe the character's role and the order that matters: "Play this character strength-based. Place traps first, then retreat." You can also ask "Use this spell combination before attacking", "Focus the lowest-health enemy", or "If nothing is useful, stop and ask me." The assistant should explain the saved tactics in ordinary language and name any spell or behavior it cannot support. A strength preference does not allocate points or equip items; those are separate actions.
+
+Hosted assistants can remember a profile with `bot_save_combat_profile`, after reading its revision with `bot_combat_profile` and checking it with `bot_validate_combat_profile`. Start automatic combat using `bot_start_combat` for an existing ordinary PvE fight, supplying the saved revision for every owned participant. The bot keeps their current placements, readies them, plays their turns, and settles the fight through normal game actions. It needs no assistant call for each turn. It never chooses the next fight by itself. Dungeon, tournament, wagered and other unsupported modes remain unavailable through this hosted action surface.
+
+A profile uses this finite JSON vocabulary (example for a Yajin who can use Tricky Trap):
+
+```json
+{
+  "version": "1",
+  "intent": "Strength-based; place traps then retreat.",
+  "combos": [
+    {"name": "traps", "steps": [{"type": "cast", "spell": "Tricky Trap", "target": "trap_near_enemy"}]},
+    {"name": "escape", "steps": [{"type": "move", "direction": "retreat"}]}
+  ],
+  "rules": [
+    {"when": {"type": "always"}, "combo": "traps"},
+    {"when": {"type": "always"}, "combo": "escape"}
+  ],
+  "fallback": "end_turn"
+}
+```
+
+Each rule runs once per turn against the updated simulation. An unavailable combo step stops that combo and keeps its legal prefix; later rules continue, so retreat can still happen when a trap is unavailable. Conditions also support `{"type":"hp_below","percent":40}` and `{"type":"enemy_within","cells":3}`. Cast targets are `self`, `nearest_enemy`, `lowest_hp_enemy`, or `trap_near_enemy`; weapon strikes support the two enemy selectors. Movement is `approach` or `retreat`. Names refer to actual game spells, with current class, unlock level and invested spell level checked. A trap's empty-cell choice is a simple deterministic heuristic, not a prediction that enemies must walk onto it. Retreat prefers survival and remaining HP before greater distance from the nearest enemy; walls, tackle and traps can prevent escape.
+
+Use `fallback: "awaiting_ai"` to ask for a new decision when the entire turn has no legal configured action; `end_turn` passes instead. Check `bot_combat_status` for the exact blocker and last command. Do not silently switch strategy after a failed or uncertain transaction. To change active play, say "Stop this fight's automation; replace the trap combo with ..." The assistant stops the run, saves a new profile revision, observes fresh state and starts a new authorized run. Saving alone never changes the active run's pinned tactics. `bot_stop_combat` stops automation without forfeiting; admitted transactions may still settle. Owner Disconnect/Recall remains the asset-return operation. Wallet funding is the spending limit.
+
 ## Before engagement
 
 Inspect the actual mob group: identities, scaled levels, HP, resistances, AP/MP, and spell kits. Archimobs are separate stronger identities, not cosmetic names. Check your current HP, equipped weapon, allocated stats, raised spells, consumables for later recovery, and available gas for the whole fight including settlement.
