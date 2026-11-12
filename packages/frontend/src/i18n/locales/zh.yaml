@@ -631,7 +631,7 @@ airdrop_page:
   empty: 此钱包中没有礼品卡
   claim_all: 领取奖励
   catalogue_title: 支持的空投
-  check_wallet: 符合以下空投条件？请检查快照时使用的钱包。在下方连接外部钱包可导入礼品卡。如果奖励发往游戏钱包，请使用相同的Google账户登录。实体卡请扫描二维码领取。
+  check_wallet: 'NFT持有者称号以2026年11月11日的快照为准，每个符合条件的钱包可获得一个称号。连接快照时使用的钱包以导入礼品卡；游戏钱包奖励请使用同一Google账号领取。实体卡请扫描卡上的二维码。'
   rank_reward: 第{from}–{to}名：每种箱子{amount}个
   delivery:
     wallet: 钱包空投
@@ -641,34 +641,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: '计划为 Blast 提供船员称号。钱包白名单尚待确认；领取资格尚未确定，分发尚未开始。'
+      description: 'Blast发售白名单中的钱包可获得“船员”称号。尚未开始发放。'
     title_tater_champion:
       title: 'Pawtato'
-      description: '在2026年11月11日快照中经链上核实的Pawtato持有者钱包，每个钱包获得一个“土豆冠军”称号，与NFT等级和数量无关。由游戏桥托管的NFT不在发放范围内。'
+      description: '符合条件的Pawtato持有者可获得“土豆冠军”称号。'
     title_rootwarden:
       title: 'Rootlets'
-      description: '在2026年11月11日快照中已核实且可用的Rootlets钱包，每个钱包获得一个“根须守卫”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+      description: '符合条件的Rootlets持有者可获得“根须守卫”称号。'
     title_pug_paladin:
       title: 'Puggies'
-      description: '在2026年11月11日快照中已核实且可用的Puggies钱包，每个钱包获得一个“巴哥圣骑士”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+      description: '符合条件的Puggies持有者可获得“巴哥圣骑士”称号。'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: '在2026年11月11日快照中已核实且可用的Mystic Yetis钱包，每个钱包获得一个“霜寒领主”称号，与当时持有的NFT数量无关。托管归属未明确的情况不在发放范围内。'
+      description: '符合条件的Mystic Yetis持有者可获得“霜寒领主”称号。'
     title_chosen_one:
       title: 'The Ones'
-      description: '在2026年11月11日快照中符合资格的The Ones钱包，每个钱包获得一个“天选之人”称号，与当时持有的NFT数量无关。'
+      description: '符合条件的The Ones持有者可获得“天选之人”称号。'
     title_aeonkeeper:
       title: 'AEON'
-      description: '在2026年11月11日快照中符合资格的AEON钱包，每个钱包获得一个“永恒守护者”称号，与当时持有的NFT数量无关。'
+      description: '符合条件的AEON持有者可获得“永恒守护者”称号。'
     title_suimilionaire:
       title: 'Suimilios'
-      description: '在2026年11月11日快照中符合资格的Suimilios钱包，每个钱包获得一个“Sui百万富翁”称号，与当时持有的NFT数量无关。'
+      description: '符合条件的Suimilios持有者可获得“Sui百万富翁”称号。'
     title_fudbuster:
       title: 'Fuddies'
-      description: '在2026年11月11日快照中符合资格的Fuddies钱包，每个钱包获得一个“FUD克星”称号，与当时持有的NFT数量无关。'
+      description: '符合条件的Fuddies持有者可获得“FUD克星”称号。'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: '在2026年11月11日快照中符合资格的Enforcer Machin钱包，每个钱包获得一个“执法者”称号，与当时持有的NFT数量无关。'
+      description: '符合条件的Enforcer Machin持有者可获得“执法者”称号。'
     blast_crew:
       title: 'Crew 头盔'
       description: '送给 Blast 上 KARES 发售参与者的外观礼物。发放后，请连接参与时使用的钱包。'
@@ -2715,6 +2715,15 @@ title_names:
   title_pug_paladin: '巴哥圣骑士'
   title_enforcer: '执法者'
 ui:
+  agent_activity_label: '代理活动'
+  agent_activity_level: '达到{level}级'
+  agent_activity_profession: '获得职业经验'
+  agent_activity_travel: '位置已改变'
+  agent_activity_fight_entered: '进入战斗'
+  agent_activity_fight_left: '离开战斗'
+  agent_activity_fight: '战斗中'
+  agent_activity_dungeon: '在地下城中'
+  agent_activity_world: '在世界中'
   add_funds_agent: '为代理充值'
   agent_needs_sui: '你的代理需要一些 SUI 才能游玩。充值后，请重试操作。'
   agent_funding_unverified: '无法验证收款方。请先刷新召回，再添加资金。'

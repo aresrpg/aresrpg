@@ -629,7 +629,7 @@ airdrop_page:
   empty: 'このウォレットにギフトカードはありません'
   claim_all: '報酬を受け取る'
   catalogue_title: '対応エアドロップ'
-  check_wallet: '対象のエアドロップがあれば、スナップショット時のウォレットを確認してください。下で外部ウォレットを接続するとギフト券を取り込めます。ゲーム内ウォレット宛ての報酬は、同じGoogleアカウントでログインしてください。紙のギフトカードはQRコードから受け取れます。'
+  check_wallet: 'NFT保有者向け称号は2026年11月11日のスナップショットが対象です。対象ウォレットごとに称号を1つ受け取れます。当時のウォレットを接続してギフトカードを取り込むか、ゲーム内ウォレットの報酬には同じGoogleアカウントを使用してください。紙のカードはQRコードを読み取ってください。'
   rank_reward: '{from}〜{to}位：各クレート{amount}個'
   delivery:
     wallet: 'ウォレット宛て'
@@ -639,34 +639,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'Blast向けに「クルーメンバー」の称号を予定しています。対象ウォレットのホワイトリストは確認待ちです。受取資格は未確定で、配布はまだ開始していません。'
+      description: 'Blastセールのホワイトリストに登録されたウォレットに称号「クルーメンバー」。配布はまだ始まっていません。'
     title_tater_champion:
       title: 'Pawtato'
-      description: '2026年11月11日のスナップショットでオンチェーンの保有が確認されたPawtatoのウォレットには、NFTのレベルや保有数にかかわらず、ウォレットごとに称号「ポテト王者」が1つ付与されます。ゲームのブリッジが管理するNFTは対象外です。'
+      description: '対象のPawtato保有者に称号「ポテト王者」。'
     title_rootwarden:
       title: 'Rootlets'
-      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたRootletsのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「根の守護者」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+      description: '対象のRootlets保有者に称号「根の守護者」。'
     title_pug_paladin:
       title: 'Puggies'
-      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたPuggiesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「パグの聖騎士」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+      description: '対象のPuggies保有者に称号「パグの聖騎士」。'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: '2026年11月11日のスナップショットで利用可能な受取先として確認できたMystic Yetisのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「霜の覇王」が1つ付与されます。管理者を特定できなかったケースは対象外です。'
+      description: '対象のMystic Yetis保有者に称号「霜の覇王」。'
     title_chosen_one:
       title: 'The Ones'
-      description: '2026年11月11日のスナップショットで対象となったThe Onesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「選ばれし者」が1つ付与されます。'
+      description: '対象のThe Ones保有者に称号「選ばれし者」。'
     title_aeonkeeper:
       title: 'AEON'
-      description: '2026年11月11日のスナップショットで対象となったAEONのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「悠久の守り手」が1つ付与されます。'
+      description: '対象のAEON保有者に称号「悠久の守り手」。'
     title_suimilionaire:
       title: 'Suimilios'
-      description: '2026年11月11日のスナップショットで対象となったSuimiliosのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「スイミリオネア」が1つ付与されます。'
+      description: '対象のSuimilios保有者に称号「スイミリオネア」。'
     title_fudbuster:
       title: 'Fuddies'
-      description: '2026年11月11日のスナップショットで対象となったFuddiesのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「FUDバスター」が1つ付与されます。'
+      description: '対象のFuddies保有者に称号「FUDバスター」。'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: '2026年11月11日のスナップショットで対象となったEnforcer Machinのウォレットには、その時点のNFT保有数にかかわらず、ウォレットごとに称号「執行者」が1つ付与されます。'
+      description: '対象のEnforcer Machin保有者に称号「執行者」。'
     blast_crew:
       title: 'Crewヘルメット'
       description: 'BlastのKARES販売参加者向けの外見アイテムです。配布後に参加時のウォレットを接続してください。'
@@ -2726,6 +2726,15 @@ title_names:
   title_pug_paladin: 'パグの聖騎士'
   title_enforcer: '執行者'
 ui:
+  agent_activity_label: 'エージェントの活動'
+  agent_activity_level: 'レベル{level}に到達'
+  agent_activity_profession: '職業経験値を獲得'
+  agent_activity_travel: '場所を移動'
+  agent_activity_fight_entered: '戦闘に参加'
+  agent_activity_fight_left: '戦闘から退出'
+  agent_activity_fight: '戦闘中'
+  agent_activity_dungeon: 'ダンジョン内'
+  agent_activity_world: 'ワールド内'
   add_funds_agent: 'エージェントに入金'
   agent_needs_sui: 'エージェントがプレイするにはSUIが必要です。入金してから操作を再試行してください。'
   agent_funding_unverified: '送金先を確認できません。資金を追加する前に呼び戻しを更新してください。'

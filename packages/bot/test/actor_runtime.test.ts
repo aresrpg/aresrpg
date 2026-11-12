@@ -303,3 +303,54 @@ test('unsigned validation failure allows corrected intent after an unchanged fre
     await f.runtime.stop()
   }
 })
+
+test('observation discovers the current connector profession run without exposing another grant run', async () => {
+  const f = await fixture()
+  try {
+    await f.observe()
+    await f.admit()
+    const key = lane_key_for(f.bot)
+    const lane = (await f.store.read<Lane>(key))!
+    await put(f.store, key, { ...lane, profession_run_id: 'retained-run' })
+    await put(f.store, 'profession:retained-run', { id: 'retained-run', grant_id: f.grant.id, bot_id: f.bot.id })
+    expect(await f.observe()).toMatchObject({ profession_run_id: 'retained-run' })
+    await put(f.store, 'profession:retained-run', { id: 'retained-run', grant_id: 'other-grant' })
+    expect(await f.observe()).toMatchObject({ profession_run_id: null })
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+test('changes observations require a valid baseline and retain exact ordered events without repeated planning state', async () => {
+  const f = await fixture()
+  try {
+    await f.observe()
+    await f.admit()
+    const full = (await f.observe()) as { cursor: number; event_fence: number; characters: unknown }
+    expect(full.characters).toEqual([])
+    expect(await f.observe({ view: 'full' })).toEqual(full)
+    for (const payload of [
+      { view: 'changes' },
+      { view: 'changes', after_cursor: full.cursor },
+      { view: 'changes', after_cursor: full.cursor, after_fence: full.event_fence + 1 },
+      { view: 'changes', after_cursor: full.cursor + 1, after_fence: full.event_fence },
+    ])
+      await expect(f.observe(payload)).rejects.toThrow('needs_resync')
+    const payload = { view: 'changes', after_cursor: full.cursor, after_fence: full.event_fence }
+    const empty = await f.observe(payload)
+    expect(empty).toMatchObject({ view: 'changes', cursor: full.cursor, event_fence: full.event_fence, events: [] })
+    expect(empty).not.toHaveProperty('characters')
+    expect(empty).not.toHaveProperty('zones')
+    expect(empty).not.toHaveProperty('planning_context')
+    const packet = { type: 'packet/characters', characters: [] }
+    await f.send(packet)
+    const changed = await f.observe(payload)
+    expect(changed).toMatchObject({ events: [{ cursor: full.cursor + 1, packet }] })
+    expect(await f.observe(payload)).toEqual(changed)
+    for (let index = 0; index < f.options.event_limit; index++) await f.send(packet)
+    await expect(f.observe(payload)).rejects.toThrow('needs_resync')
+    expect(await f.observe()).toHaveProperty('planning_context')
+  } finally {
+    await f.runtime.stop()
+  }
+})

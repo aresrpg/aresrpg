@@ -54,7 +54,7 @@ export const character_presence_row = (
   owner: string,
   world: string,
   position: Readonly<{ x: number; y: number; z: number }>
-): PresenceRow =>
+): PresenceRow & { y: number } =>
   Object.freeze({
     character_id: character.id,
     world,

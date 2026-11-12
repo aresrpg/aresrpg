@@ -10,6 +10,8 @@ import { gameplay_observed_ms } from '../src/gameplay_context.ts'
 import {
   GAMEPLAY_ACTIONS,
   execute_fight_turn,
+  execute_gameplay_actions,
+  type GameplayActions,
   fight_checkpoint_id,
   gameplay_json,
   parse_fight_turn,
@@ -99,6 +101,8 @@ test('canonical catalog exposes the complete bounded PvE lifecycle and strict ne
     'gather',
     'craft',
     'resolve_ambush',
+    'open_loot_boxes',
+    'claim_loot',
     'raise_stats',
     'world_search',
     'fight_engage',
@@ -231,4 +235,84 @@ test('bot freshness cannot extend the shared chain clock expiry', () => {
   expect(gameplay_observed_ms({ ...context, snapshot: boundary, freshness_ms: 60000 })).toBe(
     BigInt(chain_now(boundary.clock, context.now)!)
   )
+})
+
+test('validated draft packets precede the one SDK commit without a pacing timer', async () => {
+  const context = fixture()
+  const events: unknown[] = []
+  let finish!: () => void
+  const finalized = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const executing = execute_gameplay_actions(
+    context,
+    {
+      commit_turn: async (input: Parameters<GameplayActions['commit_turn']>[0]) => {
+        events.push({ submit: input })
+        await finalized
+        events.push('finalized')
+        return { digest: 'certified' }
+      },
+    } as unknown as GameplayActions,
+    async (packet) => {
+      events.push(packet)
+      return true
+    }
+  )
+  for (let i = 0; i < 10; i++) await Promise.resolve()
+  expect(events).toEqual([
+    {
+      type: 'packet/fight_action',
+      fight: fight_id,
+      action: { type: 'move_to', fighter: '0', path: ['1'], observed_ms: '63000' },
+    },
+    { submit: { fight: fight_id, actions: [{ type: 'move', path: [1n] }] } },
+  ])
+  finish()
+  expect(await executing).toEqual({ digest: 'certified' })
+  expect(events.at(-1)).toBe('finalized')
+})
+
+test('illegal drafts emit nothing; a lost draft connection cannot submit', async () => {
+  let submissions = 0
+  const packets: unknown[] = []
+  const actions = {
+    commit_turn: async () => {
+      submissions++
+      return { digest: 'unused' }
+    },
+  } as unknown as GameplayActions
+  const send = async (packet: unknown) => {
+    packets.push(packet)
+    return false
+  }
+  await expect(
+    execute_gameplay_actions(change_payload(fixture(), { actions: [{ type: 'move', path: ['9999'] }] }), actions, send)
+  ).rejects.toThrow('illegal_fight_action')
+  expect(packets).toEqual([])
+  await expect(execute_gameplay_actions(fixture(), actions, send)).rejects.toThrow('fight_connection_not_ready')
+  expect(submissions).toBe(0)
+})
+
+test('failed submission rolls back courtesy presentation without retrying the transaction', async () => {
+  const packets: unknown[] = []
+  let submissions = 0
+  const failure = new Error('uncertain digest')
+  await expect(
+    execute_gameplay_actions(
+      fixture(),
+      {
+        commit_turn: async () => {
+          submissions++
+          throw failure
+        },
+      } as unknown as GameplayActions,
+      async (packet) => {
+        packets.push(packet)
+        return true
+      }
+    )
+  ).rejects.toBe(failure)
+  expect(submissions).toBe(1)
+  expect(packets.at(-1)).toEqual({ type: 'packet/fight_resync', fight: fight_id })
 })

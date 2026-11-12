@@ -912,7 +912,8 @@ export const create_webgpu_backend = async (
       set_world_label: (id, element, position) =>
         entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
       entity_height: entity_anchors.entity_height,
-      entity_position: entities.entity_position,
+      entity_position: (id, height) =>
+        entities.entity_position(id, height) ?? character_crowd.entity_position(id, height),
       upsert_fight_blob: fight_board.upsert_blob,
       remove_fight_blob: fight_board.remove_blob,
       pick_fight_cell: fight_board.pick,

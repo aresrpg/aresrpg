@@ -109,6 +109,7 @@ export default {
               failed: true,
             })
           })
+        return
       }
       if (current && current.characters !== previous.agent_watch?.characters)
         send({

@@ -7,6 +7,9 @@ export type Schema = Readonly<{
   properties?: Readonly<Record<string, Schema>>
   required?: readonly string[]
   additionalProperties?: false
+  minItems?: number
+  maxItems?: number
+  uniqueItems?: boolean
   items?: Schema
   pattern?: string
   minProperties?: number
@@ -48,7 +51,12 @@ export const string_matches = (schema: Schema, value: unknown): boolean =>
 export const type_matches: Record<NonNullable<Schema['type']>, (schema: Schema, value: unknown) => boolean> = {
   object: object_matches,
   string: string_matches,
-  array: (schema, value) => Array.isArray(value) && value.every((entry) => matches(schema.items!, entry)),
+  array: (schema, value) =>
+    Array.isArray(value) &&
+    value.length >= (schema.minItems ?? 0) &&
+    value.length <= (schema.maxItems ?? Infinity) &&
+    (!schema.uniqueItems || new Set(value).size === value.length) &&
+    value.every((entry) => matches(schema.items!, entry)),
   integer: (schema, value) =>
     typeof value === 'number' &&
     [Number.isSafeInteger(value), value >= schema.minimum!, value <= schema.maximum!].every(Boolean),

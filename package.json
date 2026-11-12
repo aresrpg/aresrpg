@@ -35,7 +35,7 @@
     "social:cards": "bun scripts/social_cards/render.mjs",
     "validate:assets": "bun scripts/generate_spell_effects.mjs --check && bun scripts/generate_adventure.mjs --check && bun scripts/generate_cities.mjs --check && bun scripts/generate_main_menu.mjs --check && bun scripts/generate_asset_workshop.mjs --check && node scripts/generate_portrait_masks.mjs --check",
     "generate:portraits": "node scripts/generate_portrait_masks.mjs",
-    "build:bot": "bun build packages/bot/src/index.ts --target=bun --outfile=.dev/bot/bot.js"
+    "build:bot": "bun packages/bot/build.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

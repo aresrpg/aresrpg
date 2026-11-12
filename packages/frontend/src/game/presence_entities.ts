@@ -246,7 +246,7 @@ export const create_presence_renderer = ({
           .filter(([, slot]) => slot.loaded)
           .map(([character_id, slot]) => Object.freeze({ character_id, x: slot.x, y: slot.y, z: slot.z }))
       ),
-    update: (rows: Readonly<Record<string, PresenceRow>>, own_character_id: string | null): void => {
+    update: (rows: Readonly<Record<string, PresenceRow & { y: number }>>, own_character_id: string | null): void => {
       if (disposed) return
       const now = Date.now()
       let changed = false

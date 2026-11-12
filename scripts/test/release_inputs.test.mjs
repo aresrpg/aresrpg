@@ -24,12 +24,12 @@ test('scene compiler inputs invalidate the frontend artifact', () => {
     })
 })
 
-test('engine is frontend-owned and server/indexer releases stay independent', () => {
+test('engine is shared by frontend and bot while server/indexer releases stay independent', () => {
   expect(classify_release(['packages/engine/src/terrain.ts'])).toEqual({
     frontend: true,
     server: false,
     indexer: false,
-    bot: false,
+    bot: true,
     discord: false,
   })
   expect(classify_release(['packages/indexer/src/main.rs'])).toEqual({
@@ -337,6 +337,12 @@ test('hosted bot runtime closure invalidates its artifact independently', () => 
     bot: true,
   })
   for (const path of [
+    'packages/engine/src/locomotion/controller.ts',
+    'packages/engine/src/cities/generated/thebes.json',
+    'seed/content/worlds.json',
+    'seed/content/structure_packs.json',
+    'seed/structures/types.json',
+    'seed/scenes/thebes.recipe.json',
     'packages/bot/Dockerfile',
     'packages/bot/Dockerfile.dockerignore',
     'packages/sdk/src/client.ts',
@@ -347,6 +353,7 @@ test('hosted bot runtime closure invalidates its artifact independently', () => 
     'packages/new-workspace/package.json',
     'seed/content/items.json',
     'seed/content/recipes.json',
+    'seed/content/pet_wings.json',
     'seed/content/mobs.json',
     'seed/content/spells.json',
     'seed/portraits/manifest.json',

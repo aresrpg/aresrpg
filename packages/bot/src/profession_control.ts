@@ -38,8 +38,14 @@ type StartProfessionResult =
   | Readonly<{ accepted: false; validation: ReturnType<typeof validate_profession_plan> }>
 const owned_record = <T extends Readonly<{ grant_id: string; bot_id: string }>>(
   record: T | null,
-  grant: Grant
+  grant: Pick<Grant, 'id' | 'bot_id'>
 ): record is T => !!record && [record.grant_id === grant.id, record.bot_id === grant.bot_id].every(Boolean)
+/** Discover only the current connector's lane run; run records retain authority. */
+export const active_profession_id = async (store: ControlStore, lane: Lane | null, command: Command) => {
+  if (!lane?.profession_run_id) return null
+  const run = await store.read<ProfessionRun>(`profession:${lane.profession_run_id}`)
+  return owned_record(run, { id: command.grant_id, bot_id: command.bot_id }) ? run.id : null
+}
 export const create_profession_control = (
   store: ControlStore,
   config: BotConfig,

@@ -80,7 +80,7 @@ export const selected_character_in_dungeon = (state: AppState): boolean =>
 export const world_presence_rows = (
   state: Readonly<AppState>,
   ground_height: (x: number, z: number) => number
-): Readonly<Record<string, PresenceRow>> => {
+): Readonly<Record<string, PresenceRow & { y: number }>> => {
   const followed = state.session.wallet
     ? owned_character_presence_rows(
         state.session.characters,
@@ -104,7 +104,12 @@ export const world_presence_rows = (
         }
       : {}
   if (stage) return Object.freeze(fallback)
-  return Object.freeze({ ...followed, ...fallback, ...state.world.players })
+  const rows: Readonly<Record<string, PresenceRow>> = { ...followed, ...fallback, ...state.world.players }
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(rows).map(([id, row]) => [id, { ...row, y: row.y ?? ground_height(row.x, row.z) }])
+    )
+  )
 }
 
 export const selected_dungeon_position = (state: AppState) => {

@@ -434,7 +434,7 @@ export default {
             color_3: character.color_3 as number,
             ...visuals,
             x: (character.x as number) ?? 0,
-            y: 0,
+            y: null,
             z: (character.z as number) ?? 0,
             riding: false,
             gliding: false,

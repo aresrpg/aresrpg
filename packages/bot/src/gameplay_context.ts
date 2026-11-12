@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { chain_now } from '@aresrpg/protocol/chain-clock'
-import { PLAYABLE_INDEXING_LAG, travel_proof_ready, type CharacterRow } from '@aresrpg/protocol'
+import { character_checkpoint, PLAYABLE_INDEXING_LAG, travel_proof_ready, type CharacterRow } from '@aresrpg/protocol'
 
+import type { Travel } from './locomotion.ts'
 import type { ActorSnapshot } from './actor_snapshot.ts'
 import type { Command } from './control.ts'
 import { identifier, matches } from './gameplay_schema.ts'
 
 export type GameplayContext = Readonly<{
   address: string
+  pins?: import('@aresrpg/sdk/pins').Pins
   command: Command
   snapshot: ActorSnapshot
   now: number
@@ -36,6 +38,17 @@ export const gameplay_observed_ms = ({
   if (chain_ms === null) throw new Error('needs_resync')
   return BigInt(Math.floor(chain_ms))
 }
+
+export const gameplay_observation_ready = (context: GameplayContext) => {
+  try {
+    gameplay_observed_ms(context)
+    return true
+  } catch (error) {
+    if (error instanceof Error && error.message === 'needs_resync') return false
+    throw error
+  }
+}
+
 export const assert_fresh = (context: GameplayContext) => {
   if (context.command.observation_revision !== context.snapshot.observation_revision) throw new Error('needs_resync')
   return gameplay_observed_ms(context)
@@ -90,4 +103,18 @@ export const assert_tracked_zone = (
   const window = context.snapshot.tracked_zones[character_id]
   if (window?.world !== world || !window.zones.some((zone) => zone.zx === zx && zone.zz === zz))
     throw new Error('needs_resync')
+}
+
+export const travel_destination = (character: CharacterRow, x: number, z: number): Travel => {
+  const checkpoint = character_checkpoint(character)
+  if (!checkpoint || !character.world || character.x == null || character.z == null) throw new Error('needs_resync')
+  return {
+    character_id: character.id,
+    checkpoint,
+    world: character.world,
+    x: character.x,
+    z: character.z,
+    target_x: x,
+    target_z: z,
+  }
 }

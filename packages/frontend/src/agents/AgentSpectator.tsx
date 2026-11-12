@@ -14,6 +14,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { displayed_character } from './observation.ts'
+import { AgentActivity } from './AgentActivity.tsx'
 import './spectator.css'
 
 export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
@@ -28,6 +29,7 @@ export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <PlayerCharacterTabs copy={copy} create_character={null} />
         </WorldStatus>
         <CompassStrip copy={copy} />
+        <AgentActivity copy={copy} />
         <aside className="world-social-dock agent-spectator-map">
           <div className="world-account">
             <WalletCard

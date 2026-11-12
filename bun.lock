@@ -27,6 +27,7 @@
       "name": "@aresrpg/bot",
       "version": "0.1.0",
       "dependencies": {
+        "@aresrpg/engine": "workspace:*",
         "@aresrpg/fight": "workspace:*",
         "@aresrpg/immutable": "workspace:*",
         "@aresrpg/protocol": "workspace:*",
@@ -58,6 +59,8 @@
       "name": "@aresrpg/engine",
       "version": "0.0.0",
       "dependencies": {
+        "@aresrpg/immutable": "workspace:*",
+        "@aresrpg/protocol": "workspace:*",
         "simplex-noise": "4.0.3",
         "three": "0.187.0",
       },

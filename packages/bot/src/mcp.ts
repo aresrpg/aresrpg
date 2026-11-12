@@ -50,6 +50,10 @@ const parse_observe = (args: Readonly<Record<string, unknown>>) => {
   const payload: Record<string, unknown> = {}
   for (const key of ['after_cursor', 'after_fence'])
     if (Object.hasOwn(args, key)) payload[key] = number_argument(args[key])
+  if (Object.hasOwn(args, 'view')) {
+    if (!['full', 'changes'].includes(string_argument(args.view))) throw new Error('invalid_argument')
+    payload.view = args.view
+  }
   if (Object.hasOwn(args, 'recipes')) payload.recipes = recipe_arguments(args.recipes)
   if (Object.hasOwn(args, 'market')) payload.market = parse_market_observation(args.market)
   if (Object.hasOwn(args, 'prices')) payload.prices = parse_market_price_observation(args.prices)
@@ -97,6 +101,12 @@ export const create_mcp_handler = (
             items: { type: 'string' },
             description:
               'Omit for live state only. An empty array lists recipe output IDs; selected output IDs return recipe details and acquisition sources.',
+          },
+          view: {
+            type: 'string',
+            enum: ['full', 'changes'],
+            description:
+              'Default full. Changes requires after_cursor and after_fence from a retained full baseline; returns only events and current control/clock metadata. Request full for fresh planning or after needs_resync.',
           },
           after_cursor: { type: 'integer', minimum: 0 },
           after_fence: { type: 'integer', minimum: 0 },

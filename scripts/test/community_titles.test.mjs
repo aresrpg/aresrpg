@@ -89,7 +89,7 @@ test.each(allocations)(
   }
 )
 
-test('only the four approved subsets opt into custody exclusions; Blast remains blocked', () => {
+test('only the four approved holder subsets opt into custody exclusions', () => {
   expect(
     airdrop.campaigns
       .filter(({ exclude_unresolved }) => exclude_unresolved)
@@ -106,7 +106,6 @@ test('only the four approved subsets opt into custody exclusions; Blast remains 
   expect(pawtato.gameplay_level_filter).toBeNull()
   expect(pawtato.eligible_object_count).toBe(3305)
   expect(pawtato.exclusion_counts).toEqual({ game_bridge_custody: 26695 })
-  expect(airdrop.giftcard_batches.some(({ item_type }) => item_type === 'title_crew_member')).toBe(false)
   expect(airdrop.giftcards.some(({ item_type }) => item_type === 'title_crew_member')).toBe(false)
   expect(airdrop.campaigns.find(({ id }) => id === 'title_crew_member')).toEqual({
     id: 'title_crew_member',
@@ -124,4 +123,19 @@ test('every community title preview has its authored thumbnail and HD artwork', 
       expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
     }
   }
+})
+
+// Final sale awards verified 2026-11-12 against the retained 2026-10-31 export.
+test('Blast title uses the complete finalized sale whitelist, once per wallet on mainnet', () => {
+  const batches = airdrop.giftcard_batches.filter(({ item_type }) => item_type === 'title_crew_member')
+  expect(batches).toHaveLength(1)
+  const [batch] = batches
+  expect(batch.id).toBe('title_crew_member_sale_whitelist_20261112')
+  expect(batch.campaign).toBe('title_crew_member')
+  expect(batch.network).toBe('mainnet')
+  expect(batch.amount).toBe(1)
+  expect(batch.recipients).toHaveLength(164)
+  expect(new Set(batch.recipients).size).toBe(164)
+  expect(batch.recipients.every((address) => /^0x[0-9a-f]{64}$/u.test(address))).toBe(true)
+  expect(recipient_set_hash(batch.recipients)).toBe('e9acb45b269d4d17683269c242eb6d75fae6c2386d604e625ee26ab6239fd307')
 })

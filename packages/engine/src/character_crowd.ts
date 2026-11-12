@@ -34,7 +34,7 @@ import {
   type CharacterModel,
 } from './character_model.ts'
 import { entity_animation_loops, resolve_entity_animation_clip } from './entities.ts'
-import type { CharacterAnimationRender, CharacterAppearanceRender, CharacterEntityRender } from './types.ts'
+import type { CharacterAnimationRender, CharacterAppearanceRender, CharacterEntityRender, Vec3 } from './types.ts'
 
 type CrowdAnimation = CharacterAnimationRender
 type LoadedBatch = Readonly<{
@@ -321,6 +321,10 @@ export const create_character_crowd_layer = ({
     },
     live_crown: (id: string): Vector3 | null => anchors.get(id)?.clone() ?? null,
     world_anchor: (id: string): Vector3 | null => anchors.get(id)?.clone() ?? null,
+    entity_position: (id: string, height = 0): Vec3 | null => {
+      const crown = anchors.get(id)
+      return crown ? [crown.x, crown.y - CHARACTER_HEIGHT + height, crown.z] : null
+    },
     entity_height: (id: string): number | null => (anchors.has(id) ? CHARACTER_HEIGHT : null),
     stats: () =>
       Object.freeze({

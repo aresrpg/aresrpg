@@ -149,9 +149,15 @@
     }
   ],
   "blast_fun": {
-    "status": "blocked_no_verified_onchain_collection",
-    "reason": "Official terms describe server-side Season Zero profile crew cards; no verified on-chain collection or complete public export found.",
-    "source": "https://www.blast.fun/terms"
+    "status": "sale_whitelist_prepared",
+    "eligibility": "Finalized AresRPG sale whitelist, replacing Crew card eligibility by owner instruction on 2026-11-12.",
+    "verified_at": "2026-11-12T06:21:30Z",
+    "verification": "All retained export addresses exactly match the current finalized sale awards.",
+    "sale_export_sha256": "1d8bfc9032e6c3faadf8c7918e790584bd7c5405f0b89887d482f2bef6c42205",
+    "recipient_count": 164,
+    "recipient_set_sha256": "e9acb45b269d4d17683269c242eb6d75fae6c2386d604e625ee26ab6239fd307",
+    "batch_id": "title_crew_member_sale_whitelist_20261112",
+    "transactions_submitted": false
   },
   "limitations": [
     "A holder snapshot is not a claim of identity or unique humans.",

@@ -78,7 +78,7 @@ test('one live actor completes consecutive journaled commands without rereading 
         decision_revision: lane.decision_revision,
         observation_revision: lane.observation_revision,
       })
-      await runtime.tick()
+      await Promise.all([runtime.wake(`command:${command.id}`), runtime.wake(`command:${command.id}`), runtime.tick()])
       await runtime.settle()
       expect(await f.store.read<Command>(`command:${command.id}`)).toMatchObject({ status: 'completed' })
       expect((await f.store.read<Lane>(key))?.pending).toBeNull()

@@ -91,14 +91,14 @@ test('owned discovery retains captured registration identity and follows paginat
   })
   expect(state.reads).toBe(4)
 })
-test('external wallet reads only a forward-verified default and refuses every write door', async () => {
+test('external wallet verifies its default and requires an explicit player target for leaf writes', async () => {
   const { actions, state } = setup(false)
   state.defaults.set(owner, 'deep.other.sui')
   state.targets.set('deep.other.sui', owner)
-  expect(await actions.snapshot()).toEqual({ default_name: 'deep.other.sui', names: [] })
+  expect((await actions.snapshot()).default_name).toBe('deep.other.sui')
   await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('unsupported')
   await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('unsupported')
-  expect(state.reads).toBe(0)
+  expect(state.reads).toBe(4)
   expect(state.executions).toHaveLength(0)
   state.targets.set('deep.other.sui', agent)
   expect((await actions.snapshot()).default_name).toBeNull()
@@ -247,4 +247,53 @@ test('captured expired application node cannot lose its avatar during replacemen
     data: { avatar: '0x71465c22cf9ccb25e60e1a3f6bc5381899825a3bde0e7ab1e067145ba8c01509' },
   }
   expect(() => leaf_change(captured, registration.objectId, owner, timestamp)).toThrow('metadata')
+})
+
+test('external parent signer creates player-targeted leaves without changing its own default', async () => {
+  const { actions, state } = setup(false)
+  const player = normalizeSuiAddress('0xb')
+  expect((await actions.snapshot()).names.map(({ name }) => name)).toEqual(['sceat.sui'])
+  await actions.validate_parent('sceat.sui', current, player)
+  await actions.apply_parent('sceat.sui', agent, current, player)
+  expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf'])
+  const { inputs } = state.executions[0]!.getData()
+  expect(inputs.some((input) => input.Pure?.bytes === Buffer.from(player.slice(2), 'hex').toString('base64'))).toBe(
+    true
+  )
+})
+
+test('player reverse record is signed separately and refuses a foreign target', async () => {
+  const { actions, state } = setup()
+  await expect(actions.set_default('aresrpg.sceat.sui', current)).rejects.toThrow('invalid_parent')
+  state.targets.set('aresrpg.sceat.sui', owner)
+  await actions.set_default('aresrpg.sceat.sui', current)
+  expect(commands(state.executions[0]!)).toEqual(['set_reverse_lookup'])
+  await expect(actions.set_default('aresrpgagent.sceat.sui', current)).rejects.toThrow('invalid_parent')
+})
+
+test('external parent keeps ownership, collision and cancellation checks', async () => {
+  const { actions, state } = setup(false)
+  const player = normalizeSuiAddress('0xb')
+  state.records.set('aresrpg.sceat.sui', leaf(owner, { avatar: 'keep' }))
+  await expect(actions.validate_parent('sceat.sui', current, player)).rejects.toThrow('metadata')
+  state.records.delete('aresrpg.sceat.sui')
+  await actions.validate_parent('sceat.sui', current, player)
+  state.owned = []
+  await expect(actions.apply_parent('sceat.sui', agent, current, player)).rejects.toThrow('invalid_parent')
+  state.owned = [registration]
+  let active = true
+  state.before_execute = () => {
+    active = false
+  }
+  await expect(
+    actions.apply_parent(
+      'sceat.sui',
+      agent,
+      () => {
+        if (!active) throw new Error('cancelled')
+      },
+      player
+    )
+  ).rejects.toThrow('cancelled')
+  expect(state.executions).toHaveLength(0)
 })

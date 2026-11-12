@@ -281,3 +281,21 @@ test('MCP reports unavailable observation runtime and rejects retired command pa
   }
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })
+
+test('MCP forwards changes view and its cursor pair while rejecting invalid view types', async () => {
+  const f = await authenticated_http(undefined, async (_grant, payload) => payload)
+  const call = async (args: unknown) =>
+    f.json<{ result: { isError: boolean; structuredContent: unknown } }>(
+      '/mcp',
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'bot_observe', arguments: args } },
+      f.access_token
+    )
+  const payload = { view: 'changes', after_cursor: 8, after_fence: 2 }
+  expect((await call(payload)).result.structuredContent).toEqual(payload)
+  for (const view of ['unknown', ['changes'], null, 1]) {
+    expect((await call({ view })).result).toMatchObject({
+      isError: true,
+      structuredContent: { error: 'invalid_argument' },
+    })
+  }
+})

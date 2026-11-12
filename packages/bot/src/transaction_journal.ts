@@ -267,7 +267,7 @@ const receipt_outcome = (receipt: Receipt): Readonly<{ status: 'completed' | 'fa
   return { status: 'failed', error }
 }
 
-const assert_profession_admission = (run: ProfessionRun | null, command: Command, lane: Lane, now: number) => {
+export const assert_profession_admission = (run: ProfessionRun | null, command: Command, lane: Lane, now: number) => {
   if (!run) throw new Error('profession_execution_not_authorized')
   const valid = [
     run.grant_id === command.grant_id,

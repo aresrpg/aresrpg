@@ -8,6 +8,8 @@ import { display_suins_name } from '@aresrpg/immutable'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { WalletControl } from '../wallet/WalletControl.tsx'
+import { external_wallet_view } from '../wallet/view.ts'
 import { AgentTransferFunding } from '../agents/AgentTransferFunding.tsx'
 
 const SuinsMessages = ({ copy }: Readonly<{ copy: AppCopy }>) => {
@@ -32,6 +34,7 @@ const SuinsMessages = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const connecting = useAppStore(({ external_wallet }) => external_wallet.request !== null)
   const state = useAppStore(({ suins }) => suins)
   const t = copy_text(copy.settings_page)
   const names = state.snapshot?.names ?? []
@@ -44,7 +47,7 @@ const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         dispatch_app({ type: 'suins/use' })
       }}
     >
-      <fieldset disabled={state.request !== null} className="space-y-3">
+      <fieldset disabled={state.request !== null || connecting} className="space-y-3">
         <label className="block text-[10px] text-muted">
           {t('suins_owned')}
           <select
@@ -96,6 +99,7 @@ const NameFunding = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
 export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const state = useAppStore(({ suins }) => suins)
+  const external = useAppStore(({ external_wallet }) => external_wallet)
   const wallet = useAppStore(({ session }) => session.wallet)
   const t = copy_text(copy.settings_page)
   const managed = !!wallet?.suins.managed
@@ -127,7 +131,16 @@ export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <p hidden={!!wallet} className="mt-3 text-[10px] text-muted">
         {t('suins_wallet_required')}
       </p>
-      {managed && <ParentSelector copy={copy} />}
+      {managed && (
+        <div className="mt-4">
+          <WalletControl
+            copy={copy.kares_page}
+            wallet={external_wallet_view(external)}
+            locked={state.request !== null}
+          />
+          <ParentSelector copy={copy} />
+        </div>
+      )}
       <SuinsMessages copy={copy} />
       <NameFunding copy={copy} />
     </section>

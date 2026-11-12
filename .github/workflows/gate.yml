@@ -122,7 +122,7 @@ jobs:
           bun run "${{ matrix.check }}"
       - name: bundle the hosted bot entry
         if: matrix.check == 'typecheck'
-        run: bun build packages/bot/src/index.ts --target=bun --outfile="$RUNNER_TEMP/bot.js"
+        run: bun packages/bot/build.ts "$RUNNER_TEMP/bot"
   tests_move:
     needs: changes
     if: needs.changes.outputs.move == 'true'

@@ -27,10 +27,12 @@ export const start_service_runtime = async (
   let tick_timer: ReturnType<typeof setInterval> | undefined
   let lease_timer: ReturnType<typeof setInterval> | undefined
   let stopping: Promise<void> | undefined
+  let unsubscribe_pending: (() => void) | undefined
   let stopped = false
   const stop = () => {
     if (stopping) return stopping
     stopped = true
+    unsubscribe_pending?.()
     clearInterval(tick_timer)
     clearInterval(lease_timer)
     stopping = (async () => {
@@ -61,6 +63,9 @@ export const start_service_runtime = async (
       await router.stop()
       throw new Error('observation_unavailable')
     }
+    unsubscribe_pending = options.store.subscribe_pending?.((keys) => {
+      for (const key of keys) void runtime.wake(key).catch(options.report_failure)
+    })
     await runtime.tick()
     if (stopped) throw new Error('observation_unavailable')
     tick_timer = setInterval(() => {

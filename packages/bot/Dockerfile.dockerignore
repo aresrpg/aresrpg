@@ -9,6 +9,9 @@
 !packages/*/
 packages/*/**
 !packages/*/package.json
+!packages/bot/build.ts
+!packages/engine/src/
+!packages/engine/src/**
 !packages/bot/src/
 !packages/bot/src/**
 !packages/sdk/src/
@@ -23,8 +26,16 @@ packages/*/**
 seed/*
 !seed/content/
 seed/content/*
+!seed/content/worlds.json
+!seed/content/structure_packs.json
+!seed/structures/
+!seed/structures/**
+!seed/scenes/
+seed/scenes/*
+!seed/scenes/thebes.recipe.json
 !seed/content/spells.json
 !seed/content/items.json
+!seed/content/pet_wings.json
 !seed/content/recipes.json
 !seed/content/mobs.json
 !seed/portraits/

@@ -8,7 +8,8 @@
     "./spell-audio": "./src/spell_audio.ts",
     "./data": "./src/data.ts",
     "./recipe": "./src/world_recipe.ts",
-    "./biomes": "./src/biome_grid.ts"
+    "./biomes": "./src/biome_grid.ts",
+    "./locomotion/*": "./src/locomotion/*.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -16,7 +17,9 @@
   },
   "dependencies": {
     "simplex-noise": "4.0.3",
-    "three": "0.187.0"
+    "three": "0.187.0",
+    "@aresrpg/immutable": "workspace:*",
+    "@aresrpg/protocol": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",

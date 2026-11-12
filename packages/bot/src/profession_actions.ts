@@ -19,6 +19,7 @@ import {
   owned_character,
   custody_of,
   assert_travel,
+  travel_destination,
   assert_tracked_zone,
   type GameplayContext,
 } from './gameplay_context.ts'
@@ -81,6 +82,7 @@ export const PROFESSION_ACTIONS = Object.freeze({
 })
 type Plan<K extends keyof typeof PROFESSION_ACTIONS, M extends keyof CharacterActions> = Readonly<{
   kind: K
+  travel?: import('./locomotion.ts').Travel
   input: Parameters<CharacterActions[M]>[0]
 }>
 export type ProfessionActionPlan =
@@ -126,6 +128,7 @@ const gather_plan = (context: GameplayContext): Plan<'gather', 'gather'> => {
   assert_travel(character, payload, pack!.x, pack!.z, context.snapshot.clock!.chain_ms)
   return {
     kind: 'gather',
+    travel: travel_destination(character, pack!.x, pack!.z),
     input: {
       ...payload,
       rare_item_type: resource!.rare_item_type,

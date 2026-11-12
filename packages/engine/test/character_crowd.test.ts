@@ -117,6 +117,11 @@ test('compatible world characters become one skinned instance batch with retaine
   expect(color_3.data).toBe(color_1.data)
   expect(crowd.world_anchor('0xb')).toMatchObject({ x: 4, y: 4, z: 3 })
   expect(crowd.entity_height('0xb')).toBe(2)
+  expect(crowd.entity_position('0xb')).toEqual([4, 2, 3])
+  expect(crowd.entity_position('0xb', 1)).toEqual([4, 3, 3])
+  crowd.set([character('0xb', 8, ['#ffffff', '#888888', '#111111'])] as never)
+  expect(crowd.entity_position('0xb')).toEqual([8, 2, 3])
+  expect(crowd.entity_position('0xa')).toBeNull()
 
   crowd.dispose()
   expect(scene.children).toHaveLength(0)

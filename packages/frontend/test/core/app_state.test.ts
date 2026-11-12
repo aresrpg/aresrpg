@@ -27,6 +27,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     },
     suins: {
       managed: false,
+      set_default: unsupported,
       snapshot: async () => ({ default_name: null, names: [] }),
       validate_parent: async () => {
         throw new Error('Not used')

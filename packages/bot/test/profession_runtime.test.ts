@@ -5,7 +5,7 @@ import { job_xp_for_level } from '@aresrpg/immutable'
 
 import { create_control_service, lane_key_for, type Lane, type Command } from '../src/control.ts'
 import { create_transaction_journal } from '../src/transaction_journal.ts'
-import { profession_tick } from '../src/profession_runtime.ts'
+import { profession_tick, receipt_projected } from '../src/profession_runtime.ts'
 import type { ProfessionRun } from '../src/profession_control.ts'
 import { create_mcp_handler } from '../src/mcp.ts'
 
@@ -328,4 +328,94 @@ test('live plan validation uses actor monotonic time while deadlines use epoch t
   const expired = await control.validate_plan(f.grant, { ...plan, deadline_ms: epoch - 1 })
   expect(expired.valid).toBe(false)
   await f.runtime.stop()
+})
+
+test('contract freeze waits without spending the plan bounds and resume admits one step', async () => {
+  const f = await fixture()
+  const context = profession_context()
+  const frozen = { ...context, snapshot: { ...context.snapshot, frozen: true, ready: false } }
+  try {
+    await f.tick(frozen)
+    await f.tick(frozen)
+    expect(await f.get_run()).toMatchObject({ status: 'waiting', actions_started: 0, plan })
+    await f.tick(context)
+    expect(await f.get_run()).toMatchObject({ status: 'active', actions_started: 1, plan })
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+test('contract freeze cannot extend a profession deadline', async () => {
+  const f = await fixture()
+  const context = profession_context()
+  const run = (await f.get_run())!
+  await put(f.store, `profession:${run.id}`, { ...run, plan: { ...plan, deadline_ms: f.clock.now } })
+  try {
+    await f.tick({ ...context, snapshot: { ...context.snapshot, frozen: true, ready: false } })
+    expect(await f.get_run()).toMatchObject({ status: 'stopped', actions_started: 0 })
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+// Normalized semantic excerpt from mainnet capture 2026-11-12: Aahf2cnpU3NKAUPeH5nzMpjW1M1aLuM57uKKZ1Cn6Wad,
+// Lamport 1068218214. Merge + spend leaves water at 19 with no object write.
+test('certified craft reconciles an unchanged merge destination without inventing a newer version', () => {
+  const context = profession_context()
+  const water = { ...item('water', 19), version: '1068218213' }
+  const receipt = {
+    Transaction: {
+      digest: 'Aahf2cnpU3NKAUPeH5nzMpjW1M1aLuM57uKKZ1Cn6Wad',
+      effects: { lamportVersion: '1068218214', changedObjects: [] },
+      objectTypes: {},
+      events: [
+        { type: 'capture::item::AmountChanged', json: { item: water.id, amount: 20 } },
+        { type: 'capture::item::AmountChanged', json: { item: water.id, amount: 19 } },
+        { type: 'capture::crafting::Crafted', json: { job_xp_gained: '10' } },
+      ],
+    },
+  }
+  const command: Command = {
+    ...context.command,
+    kind: 'craft',
+    status: 'completed',
+    payload: { character_id: character.id },
+    result: { digest: receipt.Transaction.digest },
+  }
+  const fresh = {
+    ...context,
+    snapshot: {
+      ...context.snapshot,
+      characters: [{ ...character, jobs: { HERBALIST: '220' } }],
+      inventory: { ...context.snapshot.inventory!, items: [water] },
+    },
+  }
+  const before = { job: 'HERBALIST', xp: '210', checkpoint_ms: 0 }
+  expect(receipt_projected(before, command, receipt, fresh)).toBe(true)
+  expect(
+    receipt_projected(before, command, receipt, {
+      ...fresh,
+      snapshot: { ...fresh.snapshot, inventory: { ...fresh.snapshot.inventory, items: [{ ...water, amount: 20 }] } },
+    })
+  ).toBe(false)
+  const written = {
+    Transaction: {
+      ...receipt.Transaction,
+      effects: {
+        ...receipt.Transaction.effects,
+        changedObjects: [{ objectId: water.id, outputVersion: '1068218214' }],
+      },
+      objectTypes: { [water.id]: 'capture::item::Item' },
+    },
+  }
+  expect(receipt_projected(before, command, written, fresh)).toBe(false)
+  expect(
+    receipt_projected(before, command, written, {
+      ...fresh,
+      snapshot: {
+        ...fresh.snapshot,
+        inventory: { ...fresh.snapshot.inventory, items: [{ ...water, version: '1068218214' }] },
+      },
+    })
+  ).toBe(true)
 })

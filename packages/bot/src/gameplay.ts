@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { create_fight, fight_loot_types, type HydratedFightCheckpoint, type FightCommandInput } from '@aresrpg/fight'
-import { live_mob_groups, zone_of, type FightStateRow } from '@aresrpg/protocol'
+import {
+  create_fight,
+  encode_fight_action,
+  fight_loot_types,
+  type HydratedFightCheckpoint,
+  type FightCommandInput,
+} from '@aresrpg/fight'
+import { live_mob_groups, zone_of, type ClientPacket, type FightStateRow } from '@aresrpg/protocol'
 import type { Sdk } from '@aresrpg/sdk'
 import { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
 import spells from '../../../seed/content/spells.json'
 
+import { LOOT_BOX_ACTIONS, validate_open_boxes, validate_claim_loot, type LootBoxPlan } from './loot_boxes.ts'
 import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
 import { zone_key, type ActorWorld } from './actor_world.ts'
 import { hash_secret } from './security.ts'
@@ -25,6 +32,7 @@ import {
   owned_character,
   custody_of,
   assert_travel,
+  travel_destination,
   assert_tracked_zone,
   type GameplayContext,
 } from './gameplay_context.ts'
@@ -38,7 +46,17 @@ import {
 
 type AgentActions = ReturnType<typeof create_agent_actions>
 type Actions = AgentActions['fight'] &
-  Pick<AgentActions['character'], 'search_zone' | 'equip' | 'gather' | 'craft' | 'resolve_ambush' | 'raise_stats'>
+  Pick<
+    AgentActions['character'],
+    | 'search_zone'
+    | 'equip'
+    | 'gather'
+    | 'craft'
+    | 'resolve_ambush'
+    | 'raise_stats'
+    | 'open_loot_boxes'
+    | 'claim_loot_batch'
+  >
 type TurnInput = Parameters<Actions['commit_turn']>[0]
 type FightPayload = Readonly<{ character_id: string; fight: string; fighter_idx: string; checkpoint_id: string }>
 export type FightTurnPayload = FightPayload &
@@ -129,6 +147,7 @@ export const parse_fight_turn = (value: unknown): FightTurnPayload => {
 /** One catalog supplies both MCP descriptions/schemas and admission parsing. */
 export const GAMEPLAY_ACTIONS = Object.freeze({
   ...PROFESSION_ACTIONS,
+  ...LOOT_BOX_ACTIONS,
   raise_stats: RAISE_STATS_ACTION,
   world_search: Object.freeze({
     description:
@@ -193,11 +212,13 @@ export const hydrate_gameplay_fight = (row: FightStateRow): HydratedFightCheckpo
   }).state()
 type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
   kind: K
+  travel?: import('./locomotion.ts').Travel
   input: Parameters<Actions[M]>[0]
 }>
 export type GameplayPlan =
   | ProfessionActionPlan
   | StatAllocationPlan
+  | LootBoxPlan
   | Plan<'world_search', 'search_zone'>
   | Plan<'fight_engage', 'engage'>
   | Plan<'fight_place', 'place'>
@@ -330,6 +351,7 @@ const validate_search = (context: GameplayContext): Plan<'world_search', 'search
   assert_travel(character, payload, payload.x, payload.z, context.snapshot.clock!.chain_ms)
   return {
     kind: 'world_search',
+    travel: travel_destination(character, payload.x, payload.z),
     input: {
       ...payload,
       custody: custody_of(character),
@@ -352,6 +374,7 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
   assert_travel(character, payload, group.x, group.z, context.snapshot.clock!.chain_ms)
   return {
     kind: 'fight_engage',
+    travel: travel_destination(character, group.x, group.z),
     input: {
       character_id: payload.character_id,
       world: payload.world,
@@ -368,6 +391,8 @@ export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
   const observed_ms = assert_fresh(context)
   const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
     raise_stats: () => validate_stat_allocation(context),
+    open_loot_boxes: () => validate_open_boxes(context),
+    claim_loot: () => validate_claim_loot(context),
     world_search: () => validate_search(context),
     fight_engage: () => validate_engage(context),
     fight_place: () => validate_place(context),
@@ -394,12 +419,21 @@ export type GameplayActions = Pick<
   | 'craft'
   | 'resolve_ambush'
   | 'raise_stats'
+  | 'open_loot_boxes'
+  | 'claim_loot_batch'
 >
-export const execute_gameplay_actions = async (context: GameplayContext, actions: GameplayActions) => {
+export type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
+export const execute_gameplay_actions = async (
+  context: GameplayContext,
+  actions: GameplayActions,
+  send?: GameplayPacketSender
+) => {
   const plan = validate_gameplay(context)
   const executors = {
     ...profession_action_executors(actions),
     raise_stats: actions.raise_stats,
+    open_loot_boxes: actions.open_loot_boxes,
+    claim_loot: actions.claim_loot_batch,
     world_search: actions.search_zone,
     fight_engage: actions.engage,
     fight_place: actions.place,
@@ -410,14 +444,41 @@ export const execute_gameplay_actions = async (context: GameplayContext, actions
     fight_settle: actions.settle,
   } satisfies { [Plan in GameplayPlan as Plan['kind']]: (input: Plan['input']) => ReturnType<Actions['search_zone']> }
   // The mapped type checks each key/input pair; the discriminated plan preserves that correlation at dispatch.
-  return executors[plan.kind](plan.input as never)
+  const execute = () => executors[plan.kind](plan.input as never)
+  if (plan.kind !== 'fight_turn' || !send) return execute()
+  try {
+    const fighter = BigInt(String(context.command.payload.fighter_idx))
+    for (const action of plan.input.actions) {
+      const sent = await send({
+        type: 'packet/fight_action',
+        fight: plan.input.fight,
+        action: encode_fight_action({ ...preview_command(fighter, action), observed_ms: assert_fresh(context) }),
+      })
+      if (!sent) throw new Error('fight_connection_not_ready')
+    }
+    return await execute()
+  } catch (error) {
+    // The normal resync door rolls watchers back after a refused or uncertain draft; it never retries a write.
+    try {
+      await send({ type: 'packet/fight_resync', fight: plan.input.fight })
+    } catch (resync_error) {
+      throw new AggregateError([error, resync_error], 'Fight submission and presentation resync failed', {
+        cause: resync_error,
+      })
+    }
+    throw error
+  }
 }
 export const execute_fight_turn = async (context: GameplayContext, actions: Pick<Actions, 'commit_turn'>) => {
   const plan = validate_gameplay(context)
   if (plan.kind !== 'fight_turn') throw new Error('invalid_action')
   return actions.commit_turn(plan.input)
 }
-export const execute_gameplay = ({ sdk, ...context }: GameplayContext & Readonly<{ sdk: Sdk }>) => {
+export const execute_gameplay = ({
+  sdk,
+  send,
+  ...context
+}: GameplayContext & Readonly<{ sdk: Sdk; send?: GameplayPacketSender }>) => {
   const actions = create_agent_actions(sdk, context.address)
-  return execute_gameplay_actions(context, { ...actions.fight, ...actions.character })
+  return execute_gameplay_actions(context, { ...actions.fight, ...actions.character }, send)
 }

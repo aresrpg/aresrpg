@@ -203,3 +203,27 @@ test('spectator wallet opens and closes owner funding without enabling gameplay 
   )
   expect(reduce_app_state(observing, { type: 'page/open', page: 'characters' }).navigation).toBe(observing.navigation)
 })
+
+test('selecting an indexed agent tab keeps its world during observation authorization', () => {
+  const base = automation_fixture()
+  const pairing = { address: 'paired', multisig_public_key: 'public', signer_mode: 'disposable' as const }
+  const remote = { ...character(), id: 'remote' }
+  const state = reduce_app_state(
+    {
+      ...base,
+      session: {
+        ...base.session,
+        inventory_pairing: pairing,
+        agent_inventory: { ...base.session.agent_inventory, characters: [remote] },
+      },
+    },
+    { type: 'agent/watch', observation: { pairing, public_identifier: 'google', character_id: remote.id } }
+  )
+  expect(displayed_character(state.session)).toBe(remote)
+  expect(
+    displayed_character({ ...state.session, agent_view: { ...state.session.agent_view, status: 'failed' } })
+  ).toBeNull()
+  expect(displayed_character({ ...state.session, inventory_pairing: { ...pairing, address: 'foreign' } })).toBeNull()
+  expect(selected_character(state.session)).toBeNull()
+  expect(selected_position(state)).toEqual({ x: 0, z: 0 })
+})

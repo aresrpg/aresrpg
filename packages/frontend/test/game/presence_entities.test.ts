@@ -4,6 +4,8 @@ import { expect, test } from 'bun:test'
 import type { CharacterAppearanceRender, EntityRender } from '@aresrpg/engine'
 import { DEFAULT_ADMIN_ADDRESS, type PresenceRow } from '@aresrpg/protocol'
 
+import { world_presence_rows } from '../../src/modules/engine_selection.ts'
+import { automation_fixture } from '../modules/automation_fixture.ts'
 import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 
 const appearance: CharacterAppearanceRender = {
@@ -149,6 +151,45 @@ test('equipping and removing a title updates a remote aura without reloading mod
     frame()
     expect(latest()).not.toHaveProperty('aura')
     expect(loads).toBe(1)
+  } finally {
+    renderer.dispose()
+  }
+})
+
+test('checkpoint-only presence is grounded, while actual position packets preserve height and animate', async () => {
+  const frames = new Set<(now: number) => void>()
+  let entities: readonly EntityRender[] = []
+  const renderer = create_presence_renderer({
+    submit: (next) => {
+      entities = next
+    },
+    pet_ground_height: () => 42,
+    label: () => {},
+    next_frame: (frame) => {
+      frames.add(frame)
+    },
+    appearance_loader: async () => appearance,
+  })
+  const frame = () => {
+    const callbacks = [...frames]
+    frames.clear()
+    callbacks.forEach((run) => run(performance.now() + 100))
+  }
+  try {
+    const base = rows_at(50_000).player_0!
+    const state = automation_fixture()
+    const rows = world_presence_rows(
+      { ...state, world: { ...state.world, players: { player_0: { ...base, y: null } } } },
+      () => 42
+    )
+    renderer.update(rows, 'alice')
+    await Bun.sleep(0)
+    frame()
+    expect(entities[0]?.anchor).toMatchObject({ position: [0, 42, 0] })
+    renderer.update({ player_0: { ...base, x: 50_002, y: 48 } }, null)
+    frame()
+    expect(entities[0]?.anchor).toMatchObject({ position: [2, 48, 0] })
+    expect(entities[0]?.animation).toMatchObject({ name: 'RUN' })
   } finally {
     renderer.dispose()
   }

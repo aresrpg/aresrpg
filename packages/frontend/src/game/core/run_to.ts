@@ -1,27 +1,3 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
-import { MOUNT_SPEED_SCALE, RUN_SPEED } from './controller.ts'
-
-export const RUN_TO_ARRIVAL_DISTANCE = 2
-
-export const run_to_remaining_seconds = (distance: number, riding: boolean): number =>
-  Math.ceil(Math.max(0, distance) / (RUN_SPEED * (riding ? MOUNT_SPEED_SCALE : 1)))
-
-export type RunTarget = Readonly<{ x: number; z: number; ride_pet?: boolean }>
-
-/** Automation waits for a following companion to reach the ordinary mount radius. */
-export const run_to_mount = ({
-  requested,
-  available,
-  riding,
-  nearby,
-}: Readonly<{
-  requested: boolean
-  available: boolean
-  riding: boolean
-  nearby: boolean
-}>): 'run' | 'mount' | 'wait' => {
-  if (!requested || !available || riding) return 'run'
-  return nearby ? 'mount' : 'wait'
-}
+export * from '@aresrpg/engine/locomotion/run_to'

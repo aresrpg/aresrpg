@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 import { shutdown_service, start_service_runtime } from '../src/service_runtime.ts'
 
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
+import { put } from './helpers/control_fixture.ts'
 
 test('subscription acknowledgment precedes scheduling and readiness', async () => {
   const f = await runtime_fixture()
@@ -82,4 +83,46 @@ test('shutdown waits for both drains and closes Redis after unsubscribe failure'
   release()
   await stopping
   expect(events).toEqual(['http_drained', 'redis_closed', 'failure_reported'])
+})
+
+test('committed work wakes the scheduler without waiting for its timer and stops on disposal', async () => {
+  const f = await runtime_fixture()
+  const wakes: string[] = []
+  const service = await start_service_runtime({
+    ...f.options,
+    publisher: { publish: async () => 0 },
+    subscriber: {
+      connect: async () => undefined,
+      close: () => undefined,
+      onclose: null,
+      subscribe: async () => 1,
+      unsubscribe: async () => undefined,
+    },
+    tick_ms: 60000,
+    heartbeat_ms: 60000,
+    runtime: {
+      ...f.runtime,
+      wake: async (key) => {
+        wakes.push(key)
+      },
+    },
+  })
+  try {
+    await expect(
+      f.store.transaction(['command:rollback'], async (tx) => {
+        await tx.put('command:rollback', { status: 'accepted' })
+        throw new Error('rollback')
+      })
+    ).rejects.toThrow('rollback')
+    expect(wakes).toEqual([])
+    await put(f.store, 'command:first', { status: 'accepted' })
+    expect(wakes).toEqual(['command:first'])
+    await put(f.store, 'command:first', { status: 'executing' })
+    expect(wakes).toEqual(['command:first'])
+    await service.stop()
+    await put(f.store, 'command:stopped', { status: 'accepted' })
+    expect(wakes).toEqual(['command:first'])
+  } finally {
+    await service.stop()
+  }
 })

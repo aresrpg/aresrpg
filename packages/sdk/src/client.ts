@@ -49,7 +49,6 @@ export * from './gas_budget.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
 export { living_content } from './pins.ts'
-
 const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
   typeof value === 'object' &&
   value !== null &&
@@ -59,6 +58,7 @@ const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_v
 /** Structural Core transport: hydrate, resolve, simulate, execute, and synchronize writes. */
 export interface SuiTransport {
   core: {
+    getTransaction?: SuiGrpcClient['core']['getTransaction']
     resolveTransactionPlugin: () => TransactionPlugin
     getProtocolConfig?: () => Promise<{
       protocolConfig: { protocolVersion: string; attributes: Record<string, string | null> }

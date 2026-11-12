@@ -39,8 +39,11 @@ test('all community title cards render their matching reward caption', async () 
       `<figcaption class="text-[9px] text-muted">${content_catalog.item(item_type)!.item.name}</figcaption>`
     )
   }
-  expect(t('campaigns.title_crew_member.description')).toContain('whitelist is pending')
+  expect(t('campaigns.title_crew_member.description')).toContain('Blast sale whitelist')
   expect(t('campaigns.title_crew_member.description')).toContain('not started')
+  expect(t('campaigns.title_crew_member.description')).not.toContain('Helmet')
+  expect(t('check_wallet')).toContain('11 November 2026')
+  expect(t('check_wallet')).toContain('One title per eligible wallet')
 })
 
 test('claim cards group identical rewards without changing voucher quantities', () => {

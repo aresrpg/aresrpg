@@ -631,7 +631,7 @@ airdrop_page:
   empty: Ví này không có thẻ quà tặng
   claim_all: Nhận thưởng
   catalogue_title: Airdrop được hỗ trợ
-  check_wallet: Đủ điều kiện cho một đợt tặng này? Kiểm tra ví dùng lúc chụp dữ liệu. Kết nối ví bên ngoài phía dưới để nhập thẻ quà. Với thưởng gửi vào ví trò chơi, đăng nhập cùng tài khoản Google. Thẻ giấy được nhận qua mã QR.
+  check_wallet: 'Danh hiệu dành cho người sở hữu NFT dựa trên ảnh chụp ngày 11 tháng 11 năm 2026. Mỗi ví đủ điều kiện nhận một danh hiệu. Kết nối ví trong ảnh chụp để nhập thẻ quà tặng, hoặc dùng cùng tài khoản Google để nhận phần thưởng trong ví trò chơi. Quét mã QR trên thẻ vật lý.'
   rank_reward: 'Hạng {from}–{to}: {amount} mỗi loại rương'
   delivery:
     wallet: Tặng vào ví
@@ -641,34 +641,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'Danh hiệu Thành viên phi hành đoàn được dự kiến dành cho Blast. Danh sách ví được phép đang chờ xác nhận; điều kiện nhận chưa được xác định và việc phân phối chưa bắt đầu.'
+      description: 'Danh hiệu “Thành viên thủy thủ đoàn” dành cho ví trong danh sách cho phép của đợt bán Blast. Chưa bắt đầu phân phối.'
     title_tater_champion:
       title: 'Pawtato'
-      description: 'Các ví nắm giữ Pawtato được xác minh trên chuỗi trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Nhà vô địch khoai tây» cho mỗi ví, bất kể cấp độ hay số lượng NFT. NFT do cầu nối của trò chơi lưu giữ bị loại trừ.'
+      description: 'Danh hiệu “Nhà vô địch khoai tây” dành cho người sở hữu Pawtato đủ điều kiện.'
     title_rootwarden:
       title: 'Rootlets'
-      description: 'Các ví Rootlets khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Vệ binh cội rễ» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+      description: 'Danh hiệu “Vệ binh cội rễ” dành cho người sở hữu Rootlets đủ điều kiện.'
     title_pug_paladin:
       title: 'Puggies'
-      description: 'Các ví Puggies khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Thánh kỵ sĩ Pug» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+      description: 'Danh hiệu “Thánh kỵ sĩ Pug” dành cho người sở hữu Puggies đủ điều kiện.'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: 'Các ví Mystic Yetis khả dụng đã được xác minh trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Chúa tể băng giá» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó. Các trường hợp chưa xác định được bên lưu giữ bị loại trừ.'
+      description: 'Danh hiệu “Chúa tể băng giá” dành cho người sở hữu Mystic Yetis đủ điều kiện.'
     title_chosen_one:
       title: 'The Ones'
-      description: 'Các ví The Ones đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người được chọn» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+      description: 'Danh hiệu “Người được chọn” dành cho người sở hữu The Ones đủ điều kiện.'
     title_aeonkeeper:
       title: 'AEON'
-      description: 'Các ví AEON đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người giữ vĩnh hằng» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+      description: 'Danh hiệu “Người giữ vĩnh hằng” dành cho người sở hữu AEON đủ điều kiện.'
     title_suimilionaire:
       title: 'Suimilios'
-      description: 'Các ví Suimilios đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Triệu phú Sui» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+      description: 'Danh hiệu “Triệu phú Sui” dành cho người sở hữu Suimilios đủ điều kiện.'
     title_fudbuster:
       title: 'Fuddies'
-      description: 'Các ví Fuddies đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Thợ săn FUD» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+      description: 'Danh hiệu “Thợ săn FUD” dành cho người sở hữu Fuddies đủ điều kiện.'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: 'Các ví Enforcer Machin đủ điều kiện trong bản chụp ngày 11 tháng 11 năm 2026 nhận một danh hiệu «Người thực thi» cho mỗi ví, bất kể số lượng NFT nắm giữ tại thời điểm đó.'
+      description: 'Danh hiệu “Người thực thi” dành cho người sở hữu Enforcer Machin đủ điều kiện.'
     blast_crew:
       title: 'Mũ Crew'
       description: 'Quà ngoại hình dành cho người tham gia đợt bán KARES trên Blast. Kết nối ví đã tham gia sau khi quà được phân phối.'
@@ -2715,6 +2715,15 @@ title_names:
   title_pug_paladin: 'Thánh kỵ sĩ Pug'
   title_enforcer: 'Người thực thi'
 ui:
+  agent_activity_label: 'Hoạt động của tác nhân'
+  agent_activity_level: 'Đạt cấp {level}'
+  agent_activity_profession: 'Nhận kinh nghiệm nghề'
+  agent_activity_travel: 'Đã đổi vị trí'
+  agent_activity_fight_entered: 'Đã vào chiến đấu'
+  agent_activity_fight_left: 'Đã rời chiến đấu'
+  agent_activity_fight: 'Đang chiến đấu'
+  agent_activity_dungeon: 'Trong ngục tối'
+  agent_activity_world: 'Trong thế giới'
   add_funds_agent: 'Nạp tiền cho tác nhân'
   agent_needs_sui: 'Agent cần SUI để chơi. Hãy nạp tiền rồi thử lại thao tác.'
   agent_funding_unverified: 'Không thể xác minh người nhận. Hãy làm mới mục thu hồi trước khi nạp tiền.'

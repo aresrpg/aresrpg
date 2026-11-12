@@ -4,6 +4,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { same_fight_turn } from '@aresrpg/fight'
 import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
+import { loot_boxes_projected } from './loot_boxes.ts'
 import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
 import { owned_character } from './gameplay_context.ts'
 import { zone_key } from './actor_world.ts'
@@ -70,6 +71,8 @@ const character_projected = (
   character: CharacterRow
 ): boolean => {
   const checks: Partial<Record<Command['kind'], () => boolean>> = {
+    open_loot_boxes: () => loot_boxes_projected(receipt, { ...context, command }),
+    claim_loot: () => loot_boxes_projected(receipt, { ...context, command }),
     world_search: () => searched_world(command, receipt, context, character),
     raise_stats: () =>
       stats_projected(command.action_baseline?.stats, command.payload.spending as StatSpending, character),

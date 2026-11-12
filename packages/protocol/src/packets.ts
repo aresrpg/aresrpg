@@ -302,7 +302,8 @@ export type PresenceRow = Record<VisibleSlot, string | null> & {
   /** Active mounted descent, rather than the held jump input. */
   gliding: boolean
   x: number
-  y: number
+  /** Null until a live controller supplies elevation; checkpoints contain only x/z. */
+  y: number | null
   z: number
 }
 

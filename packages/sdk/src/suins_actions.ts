@@ -17,9 +17,15 @@ export type SuinsSnapshot = Readonly<{ default_name: string | null; names: reado
 export type SuinsSelection = Readonly<{ name: string; digest?: string }>
 export type SuinsActions = Readonly<{
   managed: boolean
+  set_default: (name: string, before_sign: () => void) => Promise<void>
   snapshot: () => Promise<SuinsSnapshot>
-  validate_parent: (name: string, before_sign: () => void) => Promise<void>
-  apply_parent: (name: string, agent_address: string, before_sign: () => void) => Promise<SuinsSelection>
+  validate_parent: (name: string, before_sign: () => void, player_address?: string) => Promise<void>
+  apply_parent: (
+    name: string,
+    agent_address: string,
+    before_sign: () => void,
+    player_address?: string
+  ) => Promise<SuinsSelection>
 }>
 
 type RegistrationType = Readonly<{ type: string; subname: boolean }>
@@ -177,7 +183,7 @@ export const leaf_change = (
   return leaf && lineage ? 'replace' : 'create'
 }
 
-/** Only managed application leaves are written; external-wallet defaults are read-only. */
+/** Parent custody owns leaf writes; each target signs its own reverse record. */
 export const suins_actions = ({
   client,
   sdk,
@@ -199,9 +205,9 @@ export const suins_actions = ({
     const pages = await Promise.all(types.map((type) => read_registrations(client, owner, type, timestamp, signal)))
     return pages.flat().toSorted((a, b) => a.name.localeCompare(b.name))
   }
-  const inspect = async (input: string, agent: string | undefined, current: () => void) => {
+  const inspect = async (input: string, agent: string | undefined, current: () => void, player?: string) => {
     current()
-    if (!managed) return refuse('unsupported')
+    if (client.network !== 'mainnet' || (!managed && !player)) return refuse('unsupported')
     const name = canonical_suins_name(input)
     if (!isValidSuiNSName(name)) return refuse('invalid_parent')
     const [owned, config, record] = await Promise.all([
@@ -213,7 +219,7 @@ export const suins_actions = ({
     const parent = owned.find((candidate) => candidate.name === name)
     if (!parent || !eligible_parent(parent, record, config, now())) return refuse('invalid_parent')
     const leaves = [
-      { name: `aresrpg.${name}`, target: owner },
+      { name: `aresrpg.${name}`, target: player ? normalizeSuiAddress(player) : owner },
       { name: `aresrpgagent.${name}`, target: agent },
     ]
     const records = await Promise.all(leaves.map((leaf) => service.getNameRecord(leaf.name)))
@@ -228,10 +234,14 @@ export const suins_actions = ({
   }
   return Object.freeze({
     managed,
+    set_default: async (name, before_sign) => {
+      if (!managed) return refuse('unsupported')
+      await set_application_default(client, sdk, owner, name, 'aresrpg.', before_sign)
+    },
     snapshot: async () => {
       const signal = AbortSignal.timeout(10_000)
       const default_name = await read_default(client, owner, signal)
-      if (!managed) return { default_name, names: [] }
+      if (client.network !== 'mainnet') return { default_name, names: [] }
       const [owned, config] = await Promise.all([read_owned(signal), read_config(client, service.config)])
       const records = await Promise.all(owned.map((parent) => service.getNameRecord(parent.name)))
       return {
@@ -239,14 +249,15 @@ export const suins_actions = ({
         names: owned.filter((parent, index) => eligible_parent(parent, records[index]!, config, now())),
       }
     },
-    validate_parent: async (input, before_sign) => {
-      await inspect(input, undefined, before_sign)
+    validate_parent: async (input, before_sign, player_address) => {
+      await inspect(input, undefined, before_sign, player_address)
     },
-    apply_parent: async (input, agent_address, before_sign) => {
+    apply_parent: async (input, agent_address, before_sign, player_address) => {
       const agent = normalizeSuiAddress(agent_address)
-      const { parent, leaves } = await inspect(input, agent, before_sign)
+      const { parent, leaves } = await inspect(input, agent, before_sign, player_address)
       const { name } = leaves[0]!
-      const current_default = await read_default(client, owner, AbortSignal.timeout(10_000))
+      const own_default = leaves[0]!.target === owner
+      const current_default = own_default ? await read_default(client, owner, AbortSignal.timeout(10_000)) : name
       before_sign()
       if (leaves.every((leaf) => leaf.change === 'none') && current_default === name) return { name }
       const transaction = new Transaction()
@@ -256,24 +267,25 @@ export const suins_actions = ({
         if (leaf.change === 'replace') builder.removeLeafSubName({ parentNft: parent.object_id, name: leaf.name })
         builder.createLeafSubName({ parentNft: parent.object_id, name: leaf.name, targetAddress: leaf.target! })
       }
-      if (current_default !== name || leaves[0]!.change !== 'none') builder.setDefault(name)
+      if (own_default && (current_default !== name || leaves[0]!.change !== 'none')) builder.setDefault(name)
       const receipt = await sdk.execute(transaction, { budget: 'estimate', before_sign })
       return { name, digest: receipt_digest(receipt) }
     },
   })
 }
 
-/** The retained multisig executor signs its own reverse record; no parent NFT or transfer is involved. */
-export const set_agent_suins_default = async (
+/** Each target executor signs its reverse record after verifying the forward target. */
+const set_application_default = async (
   client: SuiGrpcClient,
   sdk: Pick<Sdk, 'execute'>,
   address: string,
   input: string,
+  prefix: 'aresrpg.' | 'aresrpgagent.',
   before_sign: () => void
 ): Promise<void> => {
   before_sign()
   const name = canonical_suins_name(input)
-  if (!isValidSuiNSName(name) || !name.startsWith('aresrpgagent.')) return refuse('invalid_parent')
+  if (!isValidSuiNSName(name) || !name.startsWith(prefix)) return refuse('invalid_parent')
   const owner = normalizeSuiAddress(address)
   const signal = AbortSignal.timeout(10_000)
   const target = await client.core.resolveNameServiceAddress({ name, signal })
@@ -286,3 +298,11 @@ export const set_agent_suins_default = async (
   new SuinsTransaction(client.$extend(suins()).suins, transaction).setDefault(name)
   await sdk.execute(transaction, { budget: 'estimate', before_sign })
 }
+
+export const set_agent_suins_default = (
+  client: SuiGrpcClient,
+  sdk: Pick<Sdk, 'execute'>,
+  address: string,
+  input: string,
+  before_sign: () => void
+): Promise<void> => set_application_default(client, sdk, address, input, 'aresrpgagent.', before_sign)

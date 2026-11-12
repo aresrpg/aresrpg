@@ -211,6 +211,15 @@ test('engage binds exact observed population, tracked window, custody and chain 
   const context = context_for('fight_engage')
   expect(validate_gameplay(context)).toEqual({
     kind: 'fight_engage',
+    travel: {
+      character_id,
+      checkpoint: 'incarnam:50000:50000:0',
+      world: 'incarnam',
+      x: 50000,
+      z: 50000,
+      target_x: 50001,
+      target_z: 50000,
+    },
     input: {
       character_id,
       world: 'incarnam',
@@ -270,6 +279,15 @@ test('first-fight discovery uses canonical search with derived refresh and trave
   }
   expect(validate_gameplay(context)).toEqual({
     kind: 'world_search',
+    travel: {
+      character_id,
+      checkpoint: 'incarnam:50000:50000:0',
+      world: 'incarnam',
+      x: 50000,
+      z: 50000,
+      target_x: 50001,
+      target_z: 50000,
+    },
     input: {
       character_id,
       world: 'incarnam',
@@ -344,6 +362,12 @@ test('unsupported managed modes and foreign seats cannot reach any SDK door', as
     return { digest: 'bad' }
   }
   const actions: GameplayActions = {
+    open_loot_boxes: async () => {
+      throw new Error('unexpected box opening')
+    },
+    claim_loot_batch: async () => {
+      throw new Error('unexpected loot claim')
+    },
     raise_stats: async () => {
       throw new Error('unexpected stat allocation')
     },
@@ -393,6 +417,12 @@ test('one complete PvE lifecycle uses injected SDK doors and the actual twin, in
     if (result.error) throw new Error(result.error.code)
   }
   const actions: GameplayActions = {
+    open_loot_boxes: async () => {
+      throw new Error('unexpected box opening')
+    },
+    claim_loot_batch: async () => {
+      throw new Error('unexpected loot claim')
+    },
     raise_stats: async () => {
       throw new Error('unexpected stat allocation')
     },

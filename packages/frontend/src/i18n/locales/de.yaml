@@ -629,7 +629,7 @@ airdrop_page:
   empty: 'Keine Geschenkkarten in dieser Wallet'
   claim_all: 'Belohnungen abholen'
   catalogue_title: 'Unterstützte Airdrops'
-  check_wallet: 'Für einen dieser Drops berechtigt? Prüfe die beim Snapshot verwendete Wallet. Verbinde unten eine externe Wallet, um ihre Gutscheine zu importieren. Melde dich für Belohnungen in deiner Spiel-Wallet mit demselben Google-Konto an. Physische Karten werden über ihren QR-Code eingelöst.'
+  check_wallet: 'NFT-Besitzertitel basieren auf dem Snapshot vom 11. November 2026. Ein Titel pro berechtigter Wallet. Verbinde deine damalige Wallet, um Geschenkkarten zu importieren, oder nutze dasselbe Google-Konto für Belohnungen deiner Spiel-Wallet. Scanne bei physischen Karten den QR-Code.'
   rank_reward: 'Plätze {from}–{to}: {amount} von jeder Kiste'
   delivery:
     wallet: 'Wallet-Airdrop'
@@ -639,34 +639,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'Der Titel Crewmitglied ist für Blast vorgesehen. Die Wallet-Zulassungsliste muss noch bestätigt werden; die Berechtigung steht noch nicht fest und die Verteilung hat noch nicht begonnen.'
+      description: 'Der Titel „Crewmitglied“ für Wallets auf der Whitelist des Blast-Verkaufs. Die Verteilung hat noch nicht begonnen.'
     title_tater_champion:
       title: 'Pawtato'
-      description: 'On-Chain-verifizierte Wallets von Pawtato-Besitzern im Snapshot vom 11. November 2026 erhalten je einen Titel „Kartoffelchampion“, unabhängig von NFT-Level und Anzahl. NFTs in Verwahrung der Spiel-Bridge sind ausgeschlossen.'
+      description: 'Der Titel „Kartoffelchampion“ für berechtigte Pawtato-Besitzer.'
     title_rootwarden:
       title: 'Rootlets'
-      description: 'Verfügbare, verifizierte Rootlets-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Wurzelhüter“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+      description: 'Der Titel „Wurzelhüter“ für berechtigte Rootlets-Besitzer.'
     title_pug_paladin:
       title: 'Puggies'
-      description: 'Verfügbare, verifizierte Puggies-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Mops-Paladin“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+      description: 'Der Titel „Mops-Paladin“ für berechtigte Puggies-Besitzer.'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: 'Verfügbare, verifizierte Mystic Yetis-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Frostfürst“, unabhängig von der Anzahl ihrer damaligen NFTs. Ungeklärte Verwahrungsverhältnisse sind ausgeschlossen.'
+      description: 'Der Titel „Frostfürst“ für berechtigte Mystic Yetis-Besitzer.'
     title_chosen_one:
       title: 'The Ones'
-      description: 'Berechtigte The Ones-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Der Auserwählte“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+      description: 'Der Titel „Der Auserwählte“ für berechtigte The Ones-Besitzer.'
     title_aeonkeeper:
       title: 'AEON'
-      description: 'Berechtigte AEON-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Äonenhüter“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+      description: 'Der Titel „Äonenhüter“ für berechtigte AEON-Besitzer.'
     title_suimilionaire:
       title: 'Suimilios'
-      description: 'Berechtigte Suimilios-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Suimillionär“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+      description: 'Der Titel „Suimillionär“ für berechtigte Suimilios-Besitzer.'
     title_fudbuster:
       title: 'Fuddies'
-      description: 'Berechtigte Fuddies-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „FUD-Jäger“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+      description: 'Der Titel „FUD-Jäger“ für berechtigte Fuddies-Besitzer.'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: 'Berechtigte Enforcer Machin-Wallets im Snapshot vom 11. November 2026 erhalten je einen Titel „Der Vollstrecker“, unabhängig von der Anzahl ihrer damaligen NFTs.'
+      description: 'Der Titel „Der Vollstrecker“ für berechtigte Enforcer Machin-Besitzer.'
     blast_crew:
       title: 'Crew-Helm'
       description: 'Ein kosmetisches Geschenk für Teilnehmer am KARES-Verkauf auf Blast. Verbinde nach der Verteilung die verwendete Wallet.'
@@ -2749,6 +2749,15 @@ title_names:
   title_pug_paladin: 'Mops-Paladin'
   title_enforcer: 'Der Vollstrecker'
 ui:
+  agent_activity_label: 'Agentenaktivität'
+  agent_activity_level: 'Stufe {level} erreicht'
+  agent_activity_profession: 'Berufs-EP erhalten'
+  agent_activity_travel: 'Standort gewechselt'
+  agent_activity_fight_entered: 'Kampf betreten'
+  agent_activity_fight_left: 'Kampf verlassen'
+  agent_activity_fight: 'Im Kampf'
+  agent_activity_dungeon: 'In einem Dungeon'
+  agent_activity_world: 'In der Welt'
   add_funds_agent: 'Agenten aufladen'
   agent_needs_sui: 'Dein Agent braucht SUI zum Spielen. Lade Guthaben auf und wiederhole deine Aktion.'
   agent_funding_unverified: 'Der Empfänger kann nicht überprüft werden. Aktualisiere den Rückruf, bevor du Guthaben hinzufügst.'

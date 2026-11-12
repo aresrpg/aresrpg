@@ -22,7 +22,8 @@ export type PlayerPosition = Readonly<{
   character_id: string
   world: string
   x: number
-  y: number
+  /** Null until a live controller supplies elevation; checkpoints contain only x/z. */
+  y: number | null
   z: number
   riding: boolean
   gliding: boolean

@@ -8,6 +8,7 @@ import { application_suins_name } from '@aresrpg/immutable'
 import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
 import type { AuthSession } from '../auth.ts'
 import { env } from '../env.ts'
+import { sui_session } from '../wallet/external_session.ts'
 import { create_hosted_client, prepare_standalone_hosted } from '../agents/hosted_client.ts'
 
 type Request =
@@ -75,7 +76,9 @@ const complete = (state: SuinsState, input: Extract<SuinsInput, { request: Reque
   if (input.request !== state.request) return state
   switch (input.type) {
     case 'suins/loaded': {
-      const loaded = { ...state, snapshot: input.snapshot, draft: applied_parent(input.snapshot), request: null }
+      const parent = applied_parent(input.snapshot)
+      const draft = input.snapshot.names.some(({ name }) => name === parent) ? parent : ''
+      const loaded = { ...state, snapshot: input.snapshot, draft, request: null }
       return state.setup ? setup_request(loaded, state.setup) : loaded
     }
     case 'suins/applied':
@@ -88,7 +91,7 @@ const complete = (state: SuinsState, input: Extract<SuinsInput, { request: Reque
 }
 type Intent = Exclude<SuinsInput, { request: Request }>
 const intents: { [K in Intent['type']]: (state: SuinsState, input: Extract<Intent, { type: K }>) => SuinsState } = {
-  'suins/reset': initial_suins_state,
+  'suins/reset': (state) => ({ ...initial_suins_state(), completed: [...state.completed, ...state.waiters] }),
   'suins/close': (state) =>
     state.request?.kind === 'set' && state.request.source === 'settings' ? finish(state) : state,
   'suins/cancel_setup': (state, input) => {
@@ -148,19 +151,22 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 const reconcile = async (
   context: AppContext,
   wallet: AuthSession,
+  parent_wallet: AuthSession,
   request: Extract<Request, { kind: 'set' }>,
   before_sign: () => void,
   signal: Readonly<AbortSignal>
 ): Promise<Pending | null> => {
   before_sign()
-  await wallet.suins.validate_parent(request.name, before_sign)
+  await parent_wallet.suins.validate_parent(request.name, before_sign, wallet.address)
   before_sign()
   const pairing =
     request.pairing ??
     (await prepare_standalone_hosted(create_hosted_client(env.bot_service_url, signal, context), wallet)).pairing
   before_sign()
   // apply_parent freshly revalidates authority and collisions after durable setup.
-  const human = await wallet.suins.apply_parent(request.name, pairing.address, before_sign)
+  const human = await parent_wallet.suins.apply_parent(request.name, pairing.address, before_sign, wallet.address)
+  before_sign()
+  if (parent_wallet !== wallet) await wallet.suins.set_default(human.name, before_sign)
   before_sign()
   context.dispatch({ type: 'suins/applied', request, name: human.name })
   try {
@@ -189,13 +195,20 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       controller.abort()
       return
     }
-    if (wallet !== previous.session.wallet) {
+    const identity_changed = [
+      wallet !== previous.session.wallet,
+      state.external_wallet.session !== previous.external_wallet.session,
+      state.external_wallet.sequence !== previous.external_wallet.sequence,
+    ].some(Boolean)
+    if (identity_changed) {
       dispatch({ type: 'suins/reset' })
       dispatch({ type: 'suins/refresh' })
       return
     }
     if ([state.navigation.page === 'settings', previous.navigation.page !== 'settings'].every(Boolean))
       dispatch({ type: 'suins/refresh' })
+    const parent_wallet = sui_session(state.external_wallet.session) ?? wallet
+    const source = state.external_wallet
     const { request } = state.suins
     if (request === previous.suins.request) return
     controller.abort()
@@ -203,14 +216,26 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     controller = new AbortController()
     const lifetime = AbortSignal.any([signal, controller.signal])
     const current = () =>
-      [!lifetime.aborted, get_state().session.wallet === wallet, get_state().suins.request === request].every(Boolean)
+      [
+        !lifetime.aborted,
+        get_state().session.wallet === wallet,
+        get_state().suins.request === request,
+        get_state().external_wallet.session === source.session,
+        get_state().external_wallet.sequence === source.sequence,
+      ].every(Boolean)
     const before_sign = () => {
-      if (!current()) throw new Error('SuiNS request cancelled')
+      if (!current() || source.request !== null) throw new Error('SuiNS request cancelled')
     }
     const operation: Promise<SuinsInput> =
       request.kind === 'load'
-        ? wallet.suins.snapshot().then((snapshot) => ({ type: 'suins/loaded', request, snapshot }))
-        : reconcile(context, wallet, request, before_sign, lifetime).then((pending) => ({
+        ? Promise.all([wallet.suins.snapshot(), parent_wallet === wallet ? null : parent_wallet.suins.snapshot()]).then(
+            ([snapshot, parent]) => ({
+              type: 'suins/loaded',
+              request,
+              snapshot: { ...snapshot, names: parent?.names ?? snapshot.names },
+            })
+          )
+        : reconcile(context, wallet, parent_wallet, request, before_sign, lifetime).then((pending) => ({
             type: 'suins/used',
             request,
             pending,

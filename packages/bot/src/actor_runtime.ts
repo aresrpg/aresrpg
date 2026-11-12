@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { SDK, type SdkOptions } from '@aresrpg/sdk'
+import { SDK } from '@aresrpg/sdk'
 import { create_agent_multisig } from '@aresrpg/sdk/agent-multisig'
 import { create_agent_transaction_signer } from '@aresrpg/sdk/agent-transactions'
-import type { AgentTransport } from '@aresrpg/sdk/agent-connection'
 import type { TransactionJournal } from '@aresrpg/sdk/transaction-execution'
-import { chain_now } from '@aresrpg/protocol/chain-clock'
 import type { ClientPacket } from '@aresrpg/protocol'
 import { fromBase64 } from '@mysten/sui/utils'
 import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
+import { create_actor_locomotion } from './actor_locomotion.ts'
+import { gameplay_observation_ready } from './gameplay_context.ts'
+import { wait_for_contract } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
-import { empty_snapshot, observation_events, actor_snapshot_transition, type ActorSnapshot } from './actor_snapshot.ts'
-export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
+import { empty_snapshot, actor_snapshot_transition, type ActorSnapshot } from './actor_snapshot.ts'
 import { create_bot_actor, bun_transport } from './actor.ts'
 import {
   assert_lease,
@@ -24,34 +24,17 @@ import {
   type Lane,
   type Observe,
 } from './control.ts'
-import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
-import type { ManagedProvider } from './managed_signer.ts'
+import { assert_live_grant, type Bot, type Grant } from './model.ts'
 import { run_pairing_proof, run_provisioning, type ProvisionRequest } from './provisioning.ts'
-import { has_pending_work, type ControlStore } from './store.ts'
-import { abandon_unsubmitted, create_transaction_journal, type EnvelopeCipher } from './transaction_journal.ts'
+import { has_pending_work } from './store.ts'
+import { abandon_unsubmitted, create_transaction_journal } from './transaction_journal.ts'
 import { profession_tick, profession_observation } from './profession_runtime.ts'
-import type { ProfessionRun } from './profession_control.ts'
-import { gameplay_knowledge } from './gameplay_knowledge.ts'
-import { execute_gameplay, validate_gameplay, fight_checkpoint_id, zone_checkpoint_id } from './gameplay.ts'
-export type ActorRuntimeOptions = Readonly<{
-  store: ControlStore
-  config: BotConfig
-  provider: ManagedProvider
-  cipher: EnvelopeCipher
-  endpoint: string
-  origin: string
-  actor_id: string
-  lease_ms: number
-  event_limit: number
-  scan_limit: number
-  observation_freshness_ms: number
-  sdk_options: Pick<SdkOptions, 'client' | 'rpc_url' | 'pins'>
-  transport?: AgentTransport
-  monotonic_now?: () => number
-  now?: () => number
-  report_failure: (error: unknown) => void
-}>
-/** Fenced backend actors retain disposable indexed projections, never game truth or inference. */
+import { active_profession_id, type ProfessionRun } from './profession_control.ts'
+import { actor_observation } from './actor_observation.ts'
+import { execute_gameplay, validate_gameplay } from './gameplay.ts'
+export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
+export type { ActorRuntimeOptions } from './actor_runtime_options.ts'
+import type { ActorRuntimeOptions } from './actor_runtime_options.ts'
 export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const { store, config } = options
   const now = options.now ?? Date.now
@@ -65,19 +48,20 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   let stopped = false
   let ticking: Promise<void> | null = null
   let renewing: Promise<void> | null = null
-  const live_bot = async (bot_id: string, grant_id: string) => {
+  const live_bot = async (bot_id: string, grant_id: string, scope?: string) => {
     const bot = await store.read<Bot>(`bot:${bot_id}`)
     const grant = await store.read<Grant>(`grant:${grant_id}`)
     if (!grant) throw new Error('invalid_token')
     assert_live_grant(config, grant, bot, now())
+    if (scope && !grant.scopes.includes(scope)) throw new Error('insufficient_scope')
     return bot!
   }
-  const grant_is_live = async (bot_id: string, grant_id: string) => {
+  const grant_is_live = async (bot_id: string, grant_id: string, scope?: string) => {
     try {
-      await live_bot(bot_id, grant_id)
+      await live_bot(bot_id, grant_id, scope)
       return true
     } catch (error) {
-      if (error instanceof Error && error.message === 'invalid_token') return false
+      if (error instanceof Error && ['invalid_token', 'insufficient_scope'].includes(error.message)) return false
       throw error
     }
   }
@@ -97,6 +81,14 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     let command = first_command
     const connector_grants = new Set([first_command.grant_id])
     let snapshot = empty_snapshot()
+    const gameplay_context = () => ({
+      address: bot.address,
+      pins: options.sdk_options.pins,
+      command,
+      snapshot,
+      now: monotonic_now(),
+      freshness_ms: options.observation_freshness_ms,
+    })
     const authorize = async () => {
       const lane = assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
       if (lane.transport_stopped) throw new Error('ACTOR_TERMINAL')
@@ -115,14 +107,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       read: () => journal_for().read(),
       admit: async (stage) => {
         await journal_for().admit(stage)
-        if (stage !== 'prepare')
-          validate_gameplay({
-            address: bot.address,
-            command,
-            snapshot,
-            now: monotonic_now(),
-            freshness_ms: options.observation_freshness_ms,
-          })
+        if (stage !== 'prepare') validate_gameplay(gameplay_context())
       },
       prepared: (record) => journal_for().prepared(record),
       signed: (record) => journal_for().signed(record),
@@ -175,6 +160,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       },
       needs_resync: () => control.observed(lane_key, options.actor_id, lease.fence, false),
       observe: async (state) => {
+        locomotion.observe(state.status)
         const transition = actor_snapshot_transition(snapshot, state, monotonic_now(), options.event_limit)
         ;({ snapshot } = transition)
         await control.observed(lane_key, options.actor_id, lease.fence, snapshot.ready, transition.changed)
@@ -198,6 +184,26 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
           })
       },
       report_failure: options.report_failure,
+    })
+    const locomotion = create_actor_locomotion({
+      context: gameplay_context,
+      available: () => !stopped && actor.state().status === 'ready',
+      admit: () => journal.admit('sign'),
+      send: actor.send,
+      report_failure: options.report_failure,
+      idle_lane: async () => {
+        if (stopped || work.has(lane_key)) return null
+        const valid = await Promise.all([...connector_grants].map((id) => grant_is_live(bot.id, id, 'bot:play')))
+        if (!valid.some(Boolean)) return null
+        return assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
+      },
+      wait_for_resume: () =>
+        wait_for_contract(
+          store,
+          { command, actor_id: options.actor_id, fence: lease.fence },
+          gameplay_context(),
+          now()
+        ),
     })
     return {
       bot,
@@ -224,6 +230,9 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         command = next
         connector_grants.add(next.grant_id)
       },
+      walk: locomotion.walk,
+      idle: locomotion.idle,
+      settle_idle: locomotion.settle_idle,
       snapshot: () => snapshot,
     }
   }
@@ -301,36 +310,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     await session.actor.connect()
     await session.actor.settle_observations()
     const snapshot = session.snapshot()
-    if (
-      ![
-        snapshot.ready,
-        chain_now(snapshot.clock, monotonic_now()) !== null,
-        (snapshot.clock?.observed_at ?? 0) + options.observation_freshness_ms > monotonic_now(),
-      ].every(Boolean)
-    )
-      return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
+    if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
     await apply_watches(session, command)
+    const lane = await store.read<Lane>(command.lane_key)
     return {
-      ...snapshot,
-      decision_revision: (await store.read<Lane>(command.lane_key))?.decision_revision,
-      events: observation_events(
-        snapshot,
-        command.payload.after_cursor,
-        session.lease.fence,
-        command.payload.after_fence
-      ),
-      checkpoint_ids: Object.fromEntries(
-        Object.entries(snapshot.fights).map(([id, row]) => [id, fight_checkpoint_id(row)])
-      ),
-      zone_checkpoints: Object.fromEntries(
-        Object.entries(snapshot.zones)
-          .filter(([, row]) => row.spawns !== null)
-          .map(([id, row]) => [id, zone_checkpoint_id(row)])
-      ),
-      planning_context: gameplay_knowledge(
-        session_context(session, command),
-        command.payload.recipes as readonly string[] | undefined
-      ),
+      ...actor_observation({ ...session_context(session, command), snapshot }, session.lease.fence),
+      decision_revision: lane?.decision_revision,
+      profession_run_id: await active_profession_id(store, lane, command),
       event_fence: session.lease.fence,
       sampled_at: monotonic_now(),
       state: 'awaiting_ai',
@@ -338,6 +324,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   }
   const session_context = (session: Session, command: Command) => ({
     address: session.bot.address,
+    pins: session.sdk.pins,
     command,
     snapshot: session.snapshot(),
     now: monotonic_now(),
@@ -411,7 +398,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (invalidated) return cancel()
     await session.actor.connect()
     await session.actor.settle_observations()
-    if (!session.snapshot().ready) return
+    if (!gameplay_observation_ready(session_context(session, original))) return
     session.bind(await refresh_signed_command(session, original, envelope.digest))
     if (await session.sdk.resume_pending_transaction()) session.recovered()
   }
@@ -429,6 +416,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     const bot = await store.read<Bot>(`bot:${command.bot_id}`)
     if (!bot) throw new Error('BOT_MISSING')
     const session = await session_for(bot, command)
+    await session.settle_idle()
     session.bind(command)
     let recovering = false
     try {
@@ -439,11 +427,16 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         return
       }
       await live_bot(bot.id, command.grant_id)
+      await session.actor.connect()
       await session.actor.settle_observations()
+      const binding = { command, actor_id: options.actor_id, fence: session.lease.fence }
+      const ready = await wait_for_contract(store, binding, session_context(session, command), now())
+      if (!ready) return
       if (session.actor.state().status !== 'ready') throw new Error('needs_resync')
       session.refresh_execution()
-      bind_execution(session, command, lane)
-      await execute_gameplay({ ...session_context(session, command), sdk: session.sdk })
+      bind_execution(session, ready, lane)
+      if (!(await session.walk())) return
+      await execute_gameplay({ ...session_context(session, ready), sdk: session.sdk, send: session.actor.send })
     } catch (error) {
       if (!recovering) await fail_command(session, command, error)
       options.report_failure(error)
@@ -508,7 +501,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       renewing = null
     }
   }
-  const schedule_key = async (key: string) => {
+  const schedule_key = async (key: string, wait_for_lane = false): Promise<void> => {
     const record = await store.read<{ lane_key?: string; bot_id?: string; status?: string }>(key)
     if (!record || !has_pending_work(key, record)) return
     if (record.lane_key) {
@@ -516,7 +509,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       if (lane_owned_elsewhere(owner, options.actor_id, now())) return
     }
     const lane = record.lane_key ?? record.bot_id ?? key
-    if ([work.has(lane), work.size >= options.scan_limit].some(Boolean)) return
+    const running = work.get(lane)
+    if (running) {
+      if (!wait_for_lane) return
+      await running
+      return schedule_key(key, true)
+    }
+    if (stopped || work.size >= options.scan_limit) return
     const task = process_key(key)
       .catch(options.report_failure)
       .finally(() => {
@@ -537,6 +536,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         options.report_failure(error)
       }
     }
+    for (const session of sessions.values()) session.idle()
   }
   const observe: Observe = async (grant, payload, expected) => {
     if ([stopped, config.recovery_mode].some(Boolean)) throw new Error('observation_unavailable')
@@ -566,10 +566,10 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (stopped) throw new Error('observation_unavailable')
     return result
   }
-
   return {
     observe,
     renew,
+    wake: (key: string) => (stopped || config.recovery_mode ? Promise.resolve() : schedule_key(key, true)),
     settle: async () => {
       await Promise.all([...work.values()])
       await Promise.all([...sessions.values()].map((session) => session.actor.settle_observations()))
@@ -590,6 +590,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       await Promise.all([...work.values()])
       await Promise.allSettled([...opening.values()])
       for (const session of sessions.values()) await session.actor.stop()
+      await Promise.all([...sessions.values()].map((session) => session.settle_idle()))
     },
   }
 }

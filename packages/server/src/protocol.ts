@@ -74,7 +74,7 @@ export type MeshFact =
       character_id: string
       address: string
       x: number
-      y: number
+      y: number | null
       z: number
       riding: boolean
       gliding: boolean

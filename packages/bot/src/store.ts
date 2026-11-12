@@ -7,6 +7,8 @@ export type ControlTransaction = Readonly<{
   put: (key: string, value: unknown) => Promise<void>
 }>
 export type ControlStore = Readonly<{
+  /** Local post-commit wakeups only; cross-process discovery still uses the durable pending index. */
+  subscribe_pending?: (listener: (keys: readonly string[]) => void) => () => void
   read: <T>(key: string) => Promise<T | null>
   scan_keys: (prefix: string, limit: number, after?: string) => Promise<readonly string[]>
   scan_pending: (limit: number, after?: string) => Promise<readonly string[]>
@@ -103,6 +105,7 @@ export const create_redis_store = (redis: RedisClient, namespace = 'bot:control'
   const record_prefix = `${namespace}:record:`
   const physical = (key: string) => `${record_prefix}${key}`
   const check_schema = () => redis.send('EVAL', [schema_script + 'return 1', '1', namespace])
+  const listeners = new Set<(keys: readonly string[]) => void>()
   const pending = new Map<string, Promise<unknown>>()
   const serialize = <T>(keys: readonly string[], operation: () => Promise<T>): Promise<T> => {
     const previous = keys.map((key) => pending.get(key))
@@ -118,6 +121,12 @@ export const create_redis_store = (redis: RedisClient, namespace = 'bot:control'
     return result
   }
   return {
+    subscribe_pending: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     read: async <T>(key: string): Promise<T | null> => {
       await check_schema()
       return decode<T>(await redis.send('GET', [physical(key)]))
@@ -192,6 +201,12 @@ export const create_redis_store = (redis: RedisClient, namespace = 'bot:control'
           ]),
         ])
         if (committed !== 1) throw new Error('control_transaction_conflict')
+        const added = [...writes].flatMap(([key, encoded]) =>
+          has_pending_work(key, decode(encoded)) && !has_pending_work(key, decode(snapshot[position(key)]!))
+            ? [key]
+            : []
+        )
+        if (added.length) for (const listener of listeners) listener(added)
         return result
       }),
   }

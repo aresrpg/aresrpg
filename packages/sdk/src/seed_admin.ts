@@ -20,7 +20,8 @@ import {
   slice_chunks,
   type SeedContent,
 } from './seed.ts'
-import { giftcard_claim_id, giftcard_id } from './seed_ids.ts'
+import { giftcard_claim_id, giftcard_id, item_template_id } from './seed_ids.ts'
+import { SEED_GIFT_RECEIPT_INCLUDE, verified_seed_gift_keys } from './seed_gift_receipt.ts'
 import {
   seed_ledger_after_batch,
   created_seed_row_keys,
@@ -99,6 +100,8 @@ export type SeedAdminSession = Readonly<{
   apply_changes: (ledger: SeedLedger, hooks: SeedApplyHooks) => Promise<SeedApplyResult>
   /** the ledger entries covering rows the publish lane just created — persisted by the caller */
   created_ledger: (ledger: SeedLedger, batch: string) => Promise<SeedLedger>
+  /** Recover only receipt-proven gift creation; uncertain submissions and mutable writes remain blocked. */
+  recover_created_ledger: (ledger: SeedLedger, batch: string, digest: string) => Promise<SeedLedger>
   /** the endgame: permanently freezes EVERY content door — cold-key-only on chain, irreversible */
   freeze_forever: () => Promise<Readonly<{ digest: string; snapshot: SeedAdminSnapshot }>>
   release?: () => Promise<void>
@@ -413,6 +416,33 @@ export const create_seed_admin = async ({
         ledger: applied.ledger,
         view: seed_sync_view(sync_rows, applied.ledger, exists, content.boards.length, revision),
       })
+    },
+    recover_created_ledger: async (ledger, batch_id, digest) => {
+      const batch = plan.batches.find(({ id }) => id === batch_id)
+      if (!batch || batch.phase !== 'supply') throw new Error('Only gift creation receipts can recover this ledger')
+      const targets = new Set(batch.target_ids)
+      const rows = sync_rows.filter(({ key }) => targets.has(key))
+      if (rows.some((row) => ledger[row.key] && ledger[row.key]!.hash !== row.hash))
+        throw new Error('An issued gift allocation differs from its recorded fingerprint')
+      const allocations = giftcards_for_network(sdk.network, content)
+        .map((card) => ({
+          key: giftcard_id(config.content_root, game_type_of(sdk), card.id),
+          template: item_template_id(config.content_root, String(sdk.pins.seed_package_original), card.item_type),
+          amount: card.amount,
+          custody: card.custody,
+        }))
+        .filter(({ key }) => targets.has(key))
+      if (!sdk.sui_client.core.getTransaction) throw new Error('Receipt recovery is unavailable on this transport')
+      const receipt = await sdk.sui_client.core.getTransaction({ digest, include: SEED_GIFT_RECEIPT_INCLUDE })
+      const written = verified_seed_gift_keys(game_type_of(sdk), digest, allocations, receipt)
+      if (rows.some(({ key }) => !ledger[key] && !written.includes(key)))
+        throw new Error('The receipt does not account for every unrecorded gift in this batch')
+      return seed_ledger_after_batch(
+        sync_rows,
+        ledger,
+        written.filter((key) => !ledger[key]),
+        revision
+      )
     },
     created_ledger: async (ledger, batch_id) => {
       await hydrate_ids(sync_addresses)

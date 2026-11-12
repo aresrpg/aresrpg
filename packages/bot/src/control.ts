@@ -40,6 +40,7 @@ export type Lane = Readonly<{
   pending: Envelope | null
 }>
 export type Command = Readonly<{
+  waiting_for_resume?: boolean
   action_baseline?: ActionBaseline
   fight_baseline?: FightStateRow
   profession_run_id?: string

@@ -13,7 +13,7 @@ const copy = {
     agent_kiosk: 'Agent kiosk',
     agent_inventory_demo: 'Offline transfers unavailable',
   },
-  loading_universe: 'Loading',
+  loading_universe: 'Loading the universe',
 } as unknown as AppCopy
 const controller = (phase: 'failed' | 'loading') =>
   ({
@@ -107,3 +107,32 @@ test('agent inventory has no character selection, recall, claim or setup control
   for (const label of ['Select a character', 'Withdraw to player', 'Connect your agent', 'Agent hero'])
     expect(html).not.toContain(label)
 })
+
+test.each(['ready', 'loading'] as const)(
+  '%s inventory keeps incoming item feedback without world-loading prose',
+  (phase) => {
+    const item = {
+      id: 'incoming-hat',
+      kiosk: 'player-kiosk',
+      version: '1',
+      item_type: 'hat',
+      name: 'Incoming hat',
+      category: 'hat',
+      level: 1,
+      amount: 1,
+    }
+    const kiosk = {
+      ...controller('loading'),
+      state: { phase },
+      busy: true,
+      agent_pending: [item],
+      snapshot: { inventory: { items: [], sui_mist: '1', kares_mist: null } },
+    } as unknown as AgentKioskController
+    const html = renderToStaticMarkup(<AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />)
+    expect(html).toContain(
+      'class="chr-cell is-incoming" aria-label="Incoming hat" aria-busy="true" type="button" disabled=""'
+    )
+    expect(html).toContain('<span class="inventory-item-pending" aria-hidden="true"></span>')
+    expect(html).not.toContain(copy.loading_universe)
+  }
+)

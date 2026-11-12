@@ -168,3 +168,33 @@ integration('old snapshots cannot silently hide unresolved work behind a missing
     redis.close()
   }
 })
+
+integration('local pending notifications follow successful Redis commits only and unsubscribe cleanly', async () => {
+  const redis = fixture_redis(url!)
+  await redis.connect()
+  const namespace = `bot:fixture:${crypto.randomUUID()}`
+  const store = create_redis_store(redis, namespace)
+  const recorded: string[][] = []
+  const unsubscribe = store.subscribe_pending!((keys) => recorded.push([...keys]))
+  try {
+    expect(await store.scan_pending(10)).toEqual([])
+    await expect(
+      store.transaction(['command:rollback'], async (tx) => {
+        await tx.put('command:rollback', { status: 'accepted' })
+        throw new Error('rollback')
+      })
+    ).rejects.toThrow('rollback')
+    expect(recorded).toEqual([])
+    await store.transaction(['command:first'], (tx) => tx.put('command:first', { status: 'accepted' }))
+    expect(await store.read('command:first')).toEqual({ status: 'accepted' })
+    expect(recorded).toEqual([['command:first']])
+    await store.transaction(['command:first'], (tx) => tx.put('command:first', { status: 'executing' }))
+    expect(recorded).toEqual([['command:first']])
+    unsubscribe()
+    await store.transaction(['command:stopped'], (tx) => tx.put('command:stopped', { status: 'accepted' }))
+    expect(recorded).toEqual([['command:first']])
+  } finally {
+    unsubscribe()
+    redis.close()
+  }
+})

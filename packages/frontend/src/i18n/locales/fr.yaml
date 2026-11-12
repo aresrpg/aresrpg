@@ -629,7 +629,7 @@ airdrop_page:
   empty: 'Aucune carte cadeau dans ce portefeuille'
   claim_all: 'Récupérer les récompenses'
   catalogue_title: 'Airdrops pris en charge'
-  check_wallet: 'Éligible à un de ces airdrops ? Vérifiez le portefeuille utilisé lors du snapshot. Connectez un portefeuille externe ci-dessous pour importer ses bons. Pour les récompenses envoyées au portefeuille de jeu, connectez-vous avec le même compte Google. Les cartes physiques se récupèrent via leur QR code.'
+  check_wallet: 'Les titres pour détenteurs de NFT se basent sur l’instantané du 11 novembre 2026. Un titre par portefeuille éligible. Connectez le portefeuille concerné pour importer ses bons, ou utilisez le même compte Google pour les récompenses du portefeuille de jeu. Scannez le QR code des cartes physiques.'
   rank_reward: 'Rangs {from}–{to} : {amount} exemplaire(s) de chaque caisse'
   delivery:
     wallet: 'Envoi au portefeuille'
@@ -639,34 +639,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'Le titre Membre d’équipage est prévu pour Blast. La liste des portefeuilles autorisés reste à confirmer ; l’éligibilité n’est pas encore établie et la distribution n’a pas commencé.'
+      description: 'Le titre « Membre d’équipage » pour les portefeuilles sur la liste blanche de la vente Blast. La distribution n’a pas commencé.'
     title_tater_champion:
       title: 'Pawtato'
-      description: 'Les portefeuilles de détenteurs de Pawtato vérifiés sur la chaîne dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Champion de la patate », quels que soient le niveau et le nombre de NFT. Les NFT sous la garde du pont du jeu sont exclus.'
+      description: 'Le titre « Champion de la patate » pour les détenteurs éligibles de Pawtato.'
     title_rootwarden:
       title: 'Rootlets'
-      description: 'Les portefeuilles Rootlets disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Gardien des racines », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+      description: 'Le titre « Gardien des racines » pour les détenteurs éligibles de Rootlets.'
     title_pug_paladin:
       title: 'Puggies'
-      description: 'Les portefeuilles Puggies disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Paladin carlin », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+      description: 'Le titre « Paladin carlin » pour les détenteurs éligibles de Puggies.'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: 'Les portefeuilles Mystic Yetis disponibles et vérifiés dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Seigneur du givre », quel que soit le nombre de NFT détenus. Les cas de garde non résolus sont exclus.'
+      description: 'Le titre « Seigneur du givre » pour les détenteurs éligibles de Mystic Yetis.'
     title_chosen_one:
       title: 'The Ones'
-      description: 'Les portefeuilles The Ones éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « L’Élu », quel que soit le nombre de NFT détenus.'
+      description: 'Le titre « L’Élu » pour les détenteurs éligibles de The Ones.'
     title_aeonkeeper:
       title: 'AEON'
-      description: 'Les portefeuilles AEON éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Gardien des éons », quel que soit le nombre de NFT détenus.'
+      description: 'Le titre « Gardien des éons » pour les détenteurs éligibles d’AEON.'
     title_suimilionaire:
       title: 'Suimilios'
-      description: 'Les portefeuilles Suimilios éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Suimillionnaire », quel que soit le nombre de NFT détenus.'
+      description: 'Le titre « Suimillionnaire » pour les détenteurs éligibles de Suimilios.'
     title_fudbuster:
       title: 'Fuddies'
-      description: 'Les portefeuilles Fuddies éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « Chasseur de FUD », quel que soit le nombre de NFT détenus.'
+      description: 'Le titre « Chasseur de FUD » pour les détenteurs éligibles de Fuddies.'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: 'Les portefeuilles Enforcer Machin éligibles dans l’instantané du 11 novembre 2026 reçoivent chacun un titre « L’Exécuteur », quel que soit le nombre de NFT détenus.'
+      description: 'Le titre « L’Exécuteur » pour les détenteurs éligibles d’Enforcer Machin.'
     blast_crew:
       title: 'Casque Crew'
       description: 'Un cadeau cosmétique pour les participants à la vente KARES sur Blast. Connectez le portefeuille utilisé après la distribution.'
@@ -2754,6 +2754,15 @@ title_names:
   title_pug_paladin: 'Paladin carlin'
   title_enforcer: 'L’Exécuteur'
 ui:
+  agent_activity_label: 'Activité de l’agent'
+  agent_activity_level: 'Niveau {level} atteint'
+  agent_activity_profession: 'XP de métier gagnée'
+  agent_activity_travel: 'Position changée'
+  agent_activity_fight_entered: 'Combat rejoint'
+  agent_activity_fight_left: 'Combat quitté'
+  agent_activity_fight: 'En combat'
+  agent_activity_dungeon: 'Dans un donjon'
+  agent_activity_world: 'Dans le monde'
   add_funds_agent: 'Ajouter des fonds à l’agent'
   agent_needs_sui: 'Votre agent a besoin de SUI pour jouer. Ajoutez des fonds, puis réessayez votre action.'
   agent_funding_unverified: 'Le destinataire ne peut pas être vérifié. Actualisez le rappel avant d’ajouter des fonds.'

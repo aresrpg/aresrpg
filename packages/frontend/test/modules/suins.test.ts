@@ -28,6 +28,10 @@ const fixture = () => {
     identity: 'zklogin',
     suins: {
       managed: true,
+      set_default: async (_name: string, guard: () => void) => {
+        guard()
+        calls.push('default')
+      },
       snapshot: async () => snapshot,
       validate_parent: async (name: string, guard: () => void) => {
         expect(name).toBe('child.sceat.sui')
@@ -229,6 +233,114 @@ test('accepted navigation out of Settings retires deferred validation before cus
     paused.resolve()
     await tick()
     expect(f.calls).toEqual(['validate'])
+  } finally {
+    f.stop()
+  }
+})
+
+const connect_parent = (f: ReturnType<typeof fixture>, pause: Promise<void> | null = null) => {
+  const external = {
+    ...f.wallet,
+    address: '0xexternal',
+    wallet_name: 'External',
+    identity: 'wallet',
+    suins: {
+      ...f.wallet.suins,
+      managed: false,
+      snapshot: async () => {
+        if (pause) await pause
+        return {
+          default_name: 'external.sui',
+          names: [{ name: 'child.sceat.sui', object_id: '0x3', nft_id: '0x3', subname: true }],
+        }
+      },
+      apply_parent: async (name: string, agent: string, guard: () => void, player: string) => {
+        expect(player).toBe(f.wallet.address)
+        expect(agent).toBe(pairing.address)
+        guard()
+        f.calls.push('external')
+        return { name: `aresrpg.${name}` }
+      },
+    },
+  }
+  f.app.dispatch({
+    type: 'external_wallet/connected',
+    sequence: f.app.store.getState().external_wallet.sequence,
+    session: external as never,
+  })
+  return external
+}
+
+test('external parent selection preserves gameplay, reads source names and signs each default with its target', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    connect_parent(f)
+    await tick()
+    const state = f.app.store.getState()
+    expect(state.session.wallet).toBe(f.wallet as never)
+    expect(state.suins.snapshot?.default_name).toBe(snapshot.default_name)
+    expect(state.suins.snapshot?.names.map(({ name }) => name)).toEqual(['child.sceat.sui'])
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'external' })
+    await tick()
+    expect(f.calls).toEqual(['validate', 'external', 'default', 'agent'])
+    expect(f.app.store.getState().session.wallet).toBe(f.wallet as never)
+  } finally {
+    f.stop()
+  }
+})
+
+test('external disconnection discards stale names without replacing the gameplay wallet', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    const pause = Promise.withResolvers<void>()
+    const external = connect_parent(f, pause.promise)
+    f.app.dispatch({ type: 'external_wallet/invalidated', session: external as never })
+    await tick()
+    pause.resolve()
+    await tick()
+    expect(f.app.store.getState().session.wallet).toBe(f.wallet as never)
+    expect(f.app.store.getState().suins.snapshot).toEqual(snapshot)
+    expect(f.calls).toEqual([])
+  } finally {
+    f.stop()
+  }
+})
+
+test('external replacement cancels pending validation before any signer and releases setup waiters', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    connect_parent(f)
+    await tick()
+    const pause = Promise.withResolvers<void>()
+    f.state.pause = pause.promise
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'old-source' })
+    await tick()
+    connect_parent(f)
+    expect(() => f.state.guard!()).toThrow('cancelled')
+    pause.resolve()
+    await tick()
+    expect(f.calls).toEqual(['validate'])
+    expect(f.app.store.getState().suins.completed).toContain('old-source')
+  } finally {
+    f.stop()
+  }
+})
+
+test('setup during source disconnection terminates its waiter without signing', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    connect_parent(f)
+    await tick()
+    f.app.dispatch({ type: 'external_wallet/disconnect' })
+    f.app.dispatch({ type: 'suins/setup_started', token: 'disconnecting' })
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'disconnecting' })
+    await tick()
+    expect(f.app.store.getState().suins.completed).toContain('disconnecting')
+    expect(f.calls).toEqual([])
   } finally {
     f.stop()
   }

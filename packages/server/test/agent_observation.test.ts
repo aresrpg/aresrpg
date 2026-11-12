@@ -134,6 +134,7 @@ test('cancelled pending reads cannot restore an observation', async () => {
   try {
     f.watch()
     await settle()
+    expect(f.sent.filter((packet) => packet.type === 'packet/agent_observed')).toEqual([])
     f.watch(2, null)
     const before = f.sent.length
     release()

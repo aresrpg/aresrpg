@@ -122,9 +122,6 @@ const AgentKioskStatus = ({
           {copy.ui.agent_hosted_retry}
         </Button>
       )}
-      <p role="status" hidden={kiosk.state.phase !== 'loading'}>
-        {copy.loading_universe}
-      </p>
     </>
   )
 }

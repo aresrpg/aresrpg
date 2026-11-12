@@ -8,6 +8,7 @@ import { LIFECYCLE_WORLD } from '../../../engine/test/browser_lifecycle.ts'
 import { create_world } from '../../src/game/core/world.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
 import { load_pet_companion } from '../../src/content/pet_models.ts'
+import { world_presence_rows } from '../../src/modules/engine_selection.ts'
 import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 import { create_position_publisher } from '../../src/game/core/position_publication.ts'
 import { read_pose, subscribe_pose } from '../../src/game/core/pose_feed.ts'
@@ -85,7 +86,12 @@ export const create_glide_world_probe = async (canvas: HTMLCanvasElement) => {
       world.point_at({ x, y: world.ground_height(x, z) + 20, z })
       socket.send(JSON.stringify({ type: 'packet/track_character', character_id: id, tracked: true }))
     }
-    presence.update(read_app_state().world.all_players, id)
+    presence.update(
+      world_presence_rows(read_app_state(), (x, z) =>
+        world.ground_height(chain_to_client_coordinate(x), chain_to_client_coordinate(z))
+      ),
+      id
+    )
   })
   let dispose_touch = () => {}
   if (params.has('touch')) {

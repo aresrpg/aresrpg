@@ -7,9 +7,16 @@ import { has_pending_work, type ControlStore } from '../../src/store.ts'
 
 /** Disposable test store with rollback and serialization, never a production fallback. */
 export const memory_store = (): ControlStore => {
+  const listeners = new Set<(keys: readonly string[]) => void>()
   let records = new Map<string, unknown>()
   let pending: Promise<unknown> = Promise.resolve()
   return {
+    subscribe_pending: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     read: async <T>(key: string) => structuredClone(records.get(key) as T | undefined) ?? null,
     scan_pending: async (limit, after = '') =>
       [...records.entries()]
@@ -38,7 +45,11 @@ export const memory_store = (): ControlStore => {
             next.set(key, structuredClone(item))
           },
         })
+        const added = keys.filter(
+          (key) => has_pending_work(key, next.get(key)) && !has_pending_work(key, records.get(key))
+        )
         records = next
+        if (added.length) for (const listener of listeners) listener(added)
         return value
       })
       pending = result.then(

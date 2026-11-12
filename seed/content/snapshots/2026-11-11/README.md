@@ -28,8 +28,13 @@ verified wallets fit below the 5,000-wallet maximum; no sampling or padding occu
 The **26,695 game-bridge NFTs** retain their unresolved IDs and exclusion reason;
 neither the bridge operator nor original depositors are credited as beneficiaries.
 The nine collections total **32,037 eligible NFTs**, **7,400 distinct wallets** and
-**8,971 wallet-collection entitlements**. Blast has no verified snapshot and remains
-unallocated. No distribution transaction has been submitted.
+**8,971 wallet-collection entitlements**. Blast uses a separate sale allocation:
+on 12 November, the owner replaced Crew card eligibility with the finalized sale
+whitelist. All **164 distinct addresses** in the retained 31 October export were
+verified against the current final awards. One Crew Member title per wallet is
+prepared in the existing airdrop batches. This is not an NFT holder snapshot; the
+export and recipient-set hashes are retained in `manifest.json`. The separate Crew
+Helmet campaign is unchanged. No distribution transaction has been submitted.
 Addresses are not unique people.
 
 ## Evidence outside the repository

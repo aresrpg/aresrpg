@@ -1,0 +1,63 @@
+/* Ledger × Trailing: the approved text-only spectator overlay. */
+.agent-activity {
+  position: absolute;
+  right: max(2.1%, var(--safe-right, 0px));
+  bottom: max(3.8%, var(--safe-bottom, 0px));
+  max-width: min(340px, 44cqw);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font: 400 14px/21px var(--font-mono, monospace);
+  letter-spacing: -0.01em;
+  text-align: right;
+  text-shadow:
+    0 1px 2px #0000009e,
+    0 0 7px #0000004d;
+  pointer-events: none;
+}
+.agent-activity p {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px;
+  column-gap: 9px;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.agent-activity svg {
+  width: 14px;
+  height: 14px;
+  filter: drop-shadow(0 1px 1.5px #00000099);
+}
+.agent-activity-done span {
+  color: #f7f5f1cc;
+}
+.agent-activity-done svg {
+  color: #f7f5f19e;
+}
+.agent-activity-now span {
+  color: #ffd8bf;
+  font-weight: 500;
+}
+.agent-activity-now svg {
+  color: #e9a27c;
+  animation: agent-activity-breathe 2.4s ease-in-out infinite;
+}
+@keyframes agent-activity-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@container world-viewport (max-width: 600px) {
+  .agent-activity {
+    bottom: max(100px, var(--safe-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-activity-now svg {
+    animation: none;
+  }
+}

@@ -58,7 +58,7 @@ export const refreshed_roster_anchors = (
                   ...existing.presence,
                   world: character.world!,
                   x: character.x!,
-                  y: 0,
+                  y: null,
                   z: character.z!,
                 },
                 character.at_ms ?? 0

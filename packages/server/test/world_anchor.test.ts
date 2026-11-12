@@ -46,7 +46,7 @@ test('the roster advances the movement anchor before an equipment reread complet
   const next = player_world.reduce(state, { type: 'action/character_roster', characters: [row] } as never)
   expect(next.characters['0xc']).toMatchObject({
     checkpoint: 'nauvis:50000:50000:20',
-    presence: { x: 50_000 },
+    presence: { x: 50_000, y: null },
     move_anchor: { x: 50_000, at_ms: 20 },
   })
   const moved = {

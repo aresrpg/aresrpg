@@ -2,15 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { gatherable_of } from '@aresrpg/immutable'
 import { live_resource_packs } from '@aresrpg/protocol'
-import {
-  changed_object_ids,
-  receipt_digest,
-  receipt_event,
-  receipt_version,
-  spending_receipt,
-  type Receipt,
-} from '@aresrpg/sdk/cache'
+import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
+import { inventory_projected } from './actor_inventory.ts'
 import { assert_lease, admit_command, type Command, type Lane } from './control.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
@@ -187,6 +181,7 @@ const profession_gate = (
         lane.active_command,
         previous ? previous.status !== 'completed' : false,
         lane.needs_resync,
+        !context.snapshot.ready,
         !projected,
         context.snapshot.observation_revision !== lane.observation_revision,
       ].some(Boolean),
@@ -240,24 +235,6 @@ const gather_projected = (before: NonNullable<ProfessionRun['last_observation']>
   const pack = live_resource_packs(row.spawns.resources, row.zone).find(({ index }) => index === target.pack_index)
   return row.zone.seed !== target.seed || (pack?.nodes ?? 0) < target.nodes
 }
-const inventory_projected = (receipt: Receipt, context: GameplayContext) => {
-  const { inventory } = context.snapshot
-  const version = receipt_version(receipt)
-  if (!inventory?.loaded || !version || !receipt.Transaction?.objectTypes) return false
-  const current = (id: string) => inventory.items.find((row) => row.id === id)
-  const newer = (value: string | undefined) => value !== undefined && BigInt(value) >= BigInt(version)
-  const changed = spending_receipt(receipt).inventory_changes.every(({ id, amount }) => {
-    const row = current(id)
-    if (!row) return amount === 0 || newer(inventory.removed[id])
-    return newer(row.version) && (BigInt(row.version!) > BigInt(version) || row.amount === amount)
-  })
-  return (
-    changed &&
-    changed_object_ids(receipt, '::item::Item').every(
-      (id) => newer(current(id)?.version) || newer(inventory.removed[id])
-    )
-  )
-}
 const step_projected = async (
   tx: ControlTransaction,
   digest: string | undefined,
@@ -289,9 +266,12 @@ export const receipt_projected = (
   if (!/^\d+$/.test(gained)) return false
   const xp_ready = BigInt(character.jobs[before.job] ?? '0') >= BigInt(before.xp) + BigInt(gained)
   const checkpoint_ready = !before.zone || Number(character.at_ms) > before.checkpoint_ms
-  return [xp_ready, checkpoint_ready, gather_projected(before, context), inventory_projected(receipt, context)].every(
-    Boolean
-  )
+  return [
+    xp_ready,
+    checkpoint_ready,
+    gather_projected(before, context),
+    inventory_projected(receipt, context.snapshot.inventory),
+  ].every(Boolean)
 }
 
 // Indexed effects may arrive before the receipt. Exact reconciliation, not another packet,

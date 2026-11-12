@@ -629,7 +629,7 @@ airdrop_page:
   empty: 'No giftcards in this wallet'
   claim_all: 'Claim rewards'
   catalogue_title: 'Supported airdrops'
-  check_wallet: 'Eligible for one of these drops? Check the wallet used for the snapshot. Connect an external wallet below to import its giftcards. For rewards sent to your game wallet, sign in with the same Google account. Physical cards are claimed through their QR code.'
+  check_wallet: 'NFT holder titles use the 11 November 2026 snapshot. One title per eligible wallet. Connect your snapshot wallet to import giftcards, or use the same Google account for game-wallet rewards. Scan the QR code on physical cards.'
   rank_reward: 'Ranks {from}–{to}: {amount} of each crate'
   delivery:
     wallet: 'Wallet drop'
@@ -639,34 +639,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'The Crew Member title is planned for Blast. The wallet whitelist is pending confirmation; eligibility is not yet established and distribution has not started.'
+      description: 'Crew Member title for wallets on the Blast sale whitelist. Distribution has not started.'
     title_tater_champion:
       title: 'Pawtato'
-      description: 'Verified on-chain Pawtato holder wallets in the 11 November 2026 snapshot receive one Tater Champion title per wallet, regardless of NFT level or quantity. NFTs in game-bridge custody are excluded.'
+      description: 'Tater Champion title for eligible Pawtato holders.'
     title_rootwarden:
       title: 'Rootlets'
-      description: 'Verified available Rootlets wallets in the 11 November 2026 snapshot receive one Rootwarden title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+      description: 'Rootwarden title for eligible Rootlets holders.'
     title_pug_paladin:
       title: 'Puggies'
-      description: 'Verified available Puggies wallets in the 11 November 2026 snapshot receive one Pug Paladin title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+      description: 'Pug Paladin title for eligible Puggies holders.'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: 'Verified available Mystic Yetis wallets in the 11 November 2026 snapshot receive one Frostlord title per wallet, regardless of how many NFTs they held. Unresolved custody is excluded.'
+      description: 'Frostlord title for eligible Mystic Yetis holders.'
     title_chosen_one:
       title: 'The Ones'
-      description: 'Eligible The Ones wallets in the 11 November 2026 snapshot receive one The Chosen One title per wallet, regardless of how many NFTs they held.'
+      description: 'The Chosen One title for eligible The Ones holders.'
     title_aeonkeeper:
       title: 'AEON'
-      description: 'Eligible AEON wallets in the 11 November 2026 snapshot receive one Aeonkeeper title per wallet, regardless of how many NFTs they held.'
+      description: 'Aeonkeeper title for eligible AEON holders.'
     title_suimilionaire:
       title: 'Suimilios'
-      description: 'Eligible Suimilios wallets in the 11 November 2026 snapshot receive one Suimilionaire title per wallet, regardless of how many NFTs they held.'
+      description: 'Suimilionaire title for eligible Suimilios holders.'
     title_fudbuster:
       title: 'Fuddies'
-      description: 'Eligible Fuddies wallets in the 11 November 2026 snapshot receive one Fudbuster title per wallet, regardless of how many NFTs they held.'
+      description: 'Fudbuster title for eligible Fuddies holders.'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: 'Eligible Enforcer Machin wallets in the 11 November 2026 snapshot receive one The Enforcer title per wallet, regardless of how many NFTs they held.'
+      description: 'The Enforcer title for eligible Enforcer Machin holders.'
     blast_crew:
       title: 'Crew Helmet'
       description: 'A cosmetic gift for KARES sale participants on Blast. Connect your participating wallet after distribution.'
@@ -2752,6 +2752,15 @@ title_names:
   title_pug_paladin: 'Pug Paladin'
   title_enforcer: 'The Enforcer'
 ui:
+  agent_activity_label: 'Agent activity'
+  agent_activity_level: 'Reached level {level}'
+  agent_activity_profession: 'Gained profession XP'
+  agent_activity_travel: 'Changed location'
+  agent_activity_fight_entered: 'Entered combat'
+  agent_activity_fight_left: 'Left combat'
+  agent_activity_fight: 'In combat'
+  agent_activity_dungeon: 'In a dungeon'
+  agent_activity_world: 'In the world'
   add_funds_agent: 'Add funds to agent'
   agent_needs_sui: 'Your agent needs some SUI to play. Add funds, then retry your action.'
   agent_funding_unverified: 'Funding recipient verification is unavailable. Refresh Recall before adding funds.'

@@ -631,7 +631,7 @@ airdrop_page:
   empty: 이 지갑에는 기프트카드가 없습니다
   claim_all: 보상 수령
   catalogue_title: 지원하는 에어드롭
-  check_wallet: 해당 에어드롭 대상이라면 스냅샷 당시의 지갑을 확인하세요. 아래에서 외부 지갑을 연결해 기프트카드를 가져올 수 있습니다. 게임 지갑에 보낸 보상은 같은 Google 계정으로 로그인하세요. 실물 카드는 QR 코드로 수령합니다.
+  check_wallet: 'NFT 보유자 칭호는 2026년 11월 11일 스냅샷을 기준으로 합니다. 조건을 충족한 지갑마다 칭호 하나를 받을 수 있습니다. 당시 지갑을 연결해 기프트카드를 가져오거나, 게임 지갑 보상은 동일한 Google 계정으로 받으세요. 실물 카드는 QR 코드를 스캔하세요.'
   rank_reward: '{from}~{to}위: 상자 종류별 {amount}개'
   delivery:
     wallet: 지갑 에어드롭
@@ -641,34 +641,34 @@ airdrop_page:
   campaigns:
     title_crew_member:
       title: 'Blast'
-      description: 'Blast를 위한 승무원 칭호가 예정되어 있습니다. 지갑 화이트리스트는 확인 대기 중이며, 수령 자격은 아직 확정되지 않았고 배포도 시작되지 않았습니다.'
+      description: 'Blast 판매 화이트리스트에 등록된 지갑을 위한 “선원” 칭호. 아직 배포가 시작되지 않았습니다.'
     title_tater_champion:
       title: 'Pawtato'
-      description: '2026년 11월 11일 스냅샷에서 온체인 보유가 검증된 Pawtato 지갑은 NFT 레벨이나 수량과 관계없이 지갑당 「감자 챔피언」 칭호를 하나씩 받습니다. 게임 브리지에 보관된 NFT는 제외됩니다.'
+      description: '조건을 충족한 Pawtato 보유자를 위한 “감자 챔피언” 칭호.'
     title_rootwarden:
       title: 'Rootlets'
-      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Rootlets 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「뿌리 파수꾼」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+      description: '조건을 충족한 Rootlets 보유자를 위한 “뿌리 파수꾼” 칭호.'
     title_pug_paladin:
       title: 'Puggies'
-      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Puggies 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「퍼그 성기사」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+      description: '조건을 충족한 Puggies 보유자를 위한 “퍼그 성기사” 칭호.'
     title_frostlord:
       title: 'Mystic Yetis'
-      description: '2026년 11월 11일 스냅샷에서 이용 가능한 수령 지갑으로 검증된 Mystic Yetis 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「서리 군주」 칭호를 하나씩 받습니다. 보관 주체가 확인되지 않은 경우는 제외됩니다.'
+      description: '조건을 충족한 Mystic Yetis 보유자를 위한 “서리 군주” 칭호.'
     title_chosen_one:
       title: 'The Ones'
-      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 The Ones 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「선택받은 자」 칭호를 하나씩 받습니다.'
+      description: '조건을 충족한 The Ones 보유자를 위한 “선택받은 자” 칭호.'
     title_aeonkeeper:
       title: 'AEON'
-      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 AEON 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「영겁의 수호자」 칭호를 하나씩 받습니다.'
+      description: '조건을 충족한 AEON 보유자를 위한 “영겁의 수호자” 칭호.'
     title_suimilionaire:
       title: 'Suimilios'
-      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Suimilios 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「수이밀리어네어」 칭호를 하나씩 받습니다.'
+      description: '조건을 충족한 Suimilios 보유자를 위한 “수이밀리어네어” 칭호.'
     title_fudbuster:
       title: 'Fuddies'
-      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Fuddies 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「FUD 사냥꾼」 칭호를 하나씩 받습니다.'
+      description: '조건을 충족한 Fuddies 보유자를 위한 “FUD 사냥꾼” 칭호.'
     title_enforcer:
       title: 'Enforcer Machin'
-      description: '2026년 11월 11일 스냅샷에서 자격을 충족한 Enforcer Machin 지갑은 당시 보유한 NFT 수와 관계없이 지갑당 「집행자」 칭호를 하나씩 받습니다.'
+      description: '조건을 충족한 Enforcer Machin 보유자를 위한 “집행자” 칭호.'
     blast_crew:
       title: 'Crew 헬멧'
       description: 'Blast의 KARES 판매 참여자를 위한 외형 선물입니다. 배포 후 참여에 사용한 지갑을 연결하세요.'
@@ -2715,6 +2715,15 @@ title_names:
   title_pug_paladin: '퍼그 성기사'
   title_enforcer: '집행자'
 ui:
+  agent_activity_label: '에이전트 활동'
+  agent_activity_level: '레벨 {level} 달성'
+  agent_activity_profession: '직업 경험치 획득'
+  agent_activity_travel: '위치 변경'
+  agent_activity_fight_entered: '전투 참가'
+  agent_activity_fight_left: '전투에서 나옴'
+  agent_activity_fight: '전투 중'
+  agent_activity_dungeon: '던전 안'
+  agent_activity_world: '월드 안'
   add_funds_agent: '에이전트에 자금 추가'
   agent_needs_sui: '에이전트가 플레이하려면 SUI가 필요합니다. 충전한 후 작업을 다시 시도하세요.'
   agent_funding_unverified: '수신자를 확인할 수 없습니다. 자금을 추가하기 전에 회수를 새로고침하세요.'

@@ -8,7 +8,7 @@ import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 
 // Exercise real catalog/assets while controlling completion order through the renderer's loader seam.
 export const run_title_presence_probe = async () => {
-  const base: PresenceRow = {
+  const base: PresenceRow & { y: number } = {
     character_id: 'hero',
     owner: 'owner',
     world: 'nauvis',

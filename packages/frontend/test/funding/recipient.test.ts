@@ -17,6 +17,7 @@ const watching = (): SessionState => ({
   selected_character_id: 'remote',
   agent_view: {
     serial: 3,
+    activity: [],
     status: 'ready',
     return_character_id: 'alice',
     characters: [{ ...character(), id: 'remote' }],
