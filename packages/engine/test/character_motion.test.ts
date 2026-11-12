@@ -81,7 +81,7 @@ const read_model = (slug: string) => {
 }
 
 // The reported export contained named jumps with sparse motion, so test the actual
-// signed trajectory and rest-relative limb rotations rather than clip presence.
+// signed trajectory and visible limb directions rather than clip presence.
 test.each(['IDLE', 'WALK', 'RUN', 'JUMP', 'JUMP_RUN', 'FALL'])(
   'Blast %s follows the standard community motion on its fitted rig',
   (name) => {
@@ -93,7 +93,9 @@ test.each(['IDLE', 'WALK', 'RUN', 'JUMP', 'JUMP_RUN', 'FALL'])(
     expect(Math.abs(model.duration(clip) - reference.duration(donor))).toBeLessThan(1 / 24 + 1 / 60)
     const rest = model.pose({ name: '', samplers: [], channels: [] }, 0)
     const donor_rest = reference.pose({ name: '', samplers: [], channels: [] }, 0)
-    for (const phase of [0, 0.2, 0.5, 0.8, 1]) {
+    for (const fraction of [0, 0.2, 0.5, 0.8, 1]) {
+      const reference_frames = Math.round(reference.duration(donor) * 24)
+      const phase = Math.round(fraction * reference_frames) / reference_frames
       const actual = model.pose(clip, phase)
       const expected = reference.pose(donor, phase)
       const displacement = (pose: typeof actual, base: typeof rest) => {
@@ -104,14 +106,48 @@ test.each(['IDLE', 'WALK', 'RUN', 'JUMP', 'JUMP_RUN', 'FALL'])(
       const target = displacement(expected, donor_rest)
       // Measured 24→60fps resampling error: <0.016 hip heights and <0.072 radians.
       expect(position.distanceTo(target)).toBeLessThan(0.02)
-      for (const joint of ['Hips', 'Spine2', 'LeftArm', 'RightArm', 'LeftUpLeg', 'LeftLeg', 'LeftFoot']) {
-        const delta = (pose: typeof actual, base: typeof rest) =>
-          new Quaternion()
-            .setFromRotationMatrix(pose(joint))
-            .multiply(new Quaternion().setFromRotationMatrix(base(joint)).invert())
-            .normalize()
-        expect(delta(actual, rest).angleTo(delta(expected, donor_rest))).toBeLessThan(0.08)
+      // Compare visible directions against independently specified physical-side pairs.
+      for (const [joint, mapped] of [
+        ['Hips', 'Hips'],
+        ['Spine2', 'Spine2'],
+        ['LeftArm', 'RightArm'],
+        ['RightArm', 'LeftArm'],
+        ['LeftForeArm', 'RightForeArm'],
+        ['RightForeArm', 'LeftForeArm'],
+        ['LeftUpLeg', 'RightUpLeg'],
+        ['LeftLeg', 'RightLeg'],
+      ] as const) {
+        const aim = new Vector3(0, 1, 0).transformDirection(actual(joint))
+        const target_aim = new Vector3(0, 1, 0).transformDirection(expected(mapped))
+        expect(aim.angleTo(target_aim)).toBeLessThan(0.08)
+      }
+      // Boots have authored flat sole/forward axes; their bone +Y axes differ between rigs.
+      for (const [foot, mapped] of [
+        ['LeftFoot', 'RightFoot'],
+        ['RightFoot', 'LeftFoot'],
+      ] as const) {
+        const deformation = actual(foot).multiply(rest(foot).invert())
+        const target_deformation = expected(mapped).multiply(donor_rest(mapped).invert())
+        for (const axis of [new Vector3(0, 1, 0), new Vector3(0, 0, 1)]) {
+          expect(
+            axis.clone().transformDirection(deformation).angleTo(axis.clone().transformDirection(target_deformation))
+          ).toBeLessThan(0.08)
+        }
       }
     }
   }
 )
+
+test('Blast idle keeps both wrists below their shoulders instead of the reported T-pose', () => {
+  const model = read_model('blast_girl')
+  const idle = model.source.animations.find(({ name }) => name === 'IDLE')!
+  for (const phase of [0, 0.2, 0.5, 0.8, 1]) {
+    const pose = model.pose(idle, phase)
+    for (const side of ['Left', 'Right']) {
+      const shoulder = new Vector3().setFromMatrixPosition(pose(`${side}Arm`))
+      const wrist = new Vector3().setFromMatrixPosition(pose(`${side}Hand`))
+      expect(wrist.y).toBeLessThan(shoulder.y)
+      expect(Math.sign(wrist.x)).toBe(Math.sign(shoulder.x))
+    }
+  }
+})
