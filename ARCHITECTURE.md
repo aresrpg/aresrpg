@@ -884,7 +884,8 @@ retaining ordinary hat/cloak precedence and attachments. The class, sex, colors,
 portrait identity remain unchanged. Model title changes invalidate the existing appearance load;
 aura-only changes do not alter model asset keys or crowd eligibility. Character assets own their native
 Head/cape equipment bones, Rider contact frame and playable animation clips. An optional nondeforming
-`Helmet` child of Head owns the headwear fit frame; hair stays on Head. Headwear uses that socket
+`Helmet` child of Head owns a rigid pose and uniform scale for headwear; unequal axis scaling
+must never distort helmet geometry. Hair stays on Head. Headwear uses that socket
 when authored and otherwise Head. Individual, crowd, preview and mounted rendering consume the
 same authored anchors without runtime shape inference or character-specific offset tables. Optional
 `title_nameplate` on the same title row names seed-authored PNG artwork. The frontend resolves

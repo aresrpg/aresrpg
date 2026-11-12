@@ -23,7 +23,8 @@ From this canonical directory exports go to seed/models/characters;
 elsewhere they go beside the source.
 
 Head owns the face and removable hair. One nondeforming Helmet child of Head
-fits every helmet; hair remains on Head. Cape follows Neck and Rider follows
+uses uniform scale and rigid placement for all helmets, preserving equipment
+proportions; hair remains on Head. Cape follows Neck and Rider follows
 Hips. All twelve playable clips remain, and DEATH lasts exactly one second.
 The exporter enforces unit animation scales with a 0.0001 numerical-drift
 guard and rejects accessors shared with non-scale data.

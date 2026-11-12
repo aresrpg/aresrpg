@@ -28,7 +28,8 @@ No external texture files, linked library or scratch workspace is required.
 Head proportion review
 Senshi measures 29.83% bare Head height after body-only game normalization.
 The authored head uses 1.343826x uniform enlargement to approximately 30%.
-Helmet receives the same affine transform; hair remains on Head.
+Helmet uses one independently reviewed uniform scale and rigid placement;
+it preserves original equipment proportions. Hair remains on Head.
 
 Supported embedded scripts
 - proportions.py applies the authored chin-centered enlargement during a rebuild.

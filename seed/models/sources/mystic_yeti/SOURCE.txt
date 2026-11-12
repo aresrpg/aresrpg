@@ -29,7 +29,8 @@ Head proportion review
 Senshi measures 29.83% bare Head height after body-only game normalization.
 Yeti uses a visually reviewed 1.25x enlargement because its lower fur ruff
 inflates Head bounds; the face needed more than the numeric 30% target.
-Helmet receives the same affine transform; hair remains on Head.
+Helmet uses one independently reviewed uniform scale and rigid placement;
+it preserves original equipment proportions. Hair remains on Head.
 
 Supported embedded scripts
 - proportions.py applies the authored chin-centered enlargement during a rebuild.
