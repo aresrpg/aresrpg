@@ -32,7 +32,7 @@ availability. Provider compatibility and production publication require separate
 
 - [Player agreement and progression](https://aresrpg.world/agents/play.txt): Classes, builds, gear, pets and progress reports.
 - [Worlds, professions and dungeons](https://aresrpg.world/agents/world.txt): Exploration, crafting, gathering and group objectives.
-- [Combat manual](https://aresrpg.world/agents/combat.txt): Legal actions, tactical planning and settlement.
+- [Combat manual](https://aresrpg.world/agents/combat.txt): Discover spell IDs/names and unlock levels with `bot_observe {"spells":[]}`, inspect casting ranks with `bot_observe {"spells":["<name>"]}`, and spend spell points with `bot_raise_spell`. Catalog membership, character entitlement and current cast legality are distinct. Includes tactical planning and settlement.
 - [Economy and spending](https://aresrpg.world/agents/economy.txt): Costs, royalties and budgets.
 
 ## Source and deployment

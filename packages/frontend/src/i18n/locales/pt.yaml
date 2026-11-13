@@ -2712,6 +2712,9 @@ title_names:
   title_pug_paladin: 'Paladino Pug'
   title_enforcer: 'O Executor'
 ui:
+  view_on_suivision: Ver no SuiVision
+  funding_game_wallet: Carteira do jogo
+  funding_external_wallet: Outra carteira
   agent_wallet: 'Carteira do agente'
   agent_activity_label: 'Atividade do agente'
   agent_activity_idle: 'À espera de um objetivo'

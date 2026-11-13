@@ -2748,6 +2748,9 @@ title_names:
   title_pug_paladin: 'Paladín pug'
   title_enforcer: 'El Ejecutor'
 ui:
+  view_on_suivision: Ver en SuiVision
+  funding_game_wallet: Billetera del juego
+  funding_external_wallet: Otra billetera
   agent_wallet: 'Cartera del agente'
   agent_activity_label: 'Actividad del agente'
   agent_activity_idle: 'Esperando un objetivo'

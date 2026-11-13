@@ -388,3 +388,104 @@ test('failed commands expose safe actionable causes without publishing raw diagn
     }
   }
 })
+
+test('authored recovery and exact balance gates wait, then revalidate the accepted action', async () => {
+  const f = await fixture({
+    ...script,
+    tree: {
+      type: 'selector',
+      children: [
+        {
+          type: 'sequence',
+          children: [
+            {
+              type: 'condition',
+              condition: { fact: { type: 'hp_percent', character_id: character.id }, op: 'gte', value: 100 },
+            },
+            { type: 'condition', condition: { type: 'sui_balance', op: 'gte', value: '9007199254740993' } },
+            {
+              type: 'action',
+              action: { type: 'gather', character_id: character.id, item_type: resource.item_type, order: 'nearest' },
+            },
+          ],
+        },
+        { type: 'wait' },
+      ],
+    },
+  })
+  const context = profession_context()
+  const balance = {
+    address: context.address,
+    balance_mist: '9007199254740993',
+    sampled_at: context.now,
+    expires_at: context.now + 5000,
+  }
+  const injured = {
+    ...context,
+    balance,
+    snapshot: { ...context.snapshot, characters: [{ ...character, hp: '99', hp_ms: context.now }] },
+  }
+  await f.tick(injured)
+  expect((await f.get_run()).status).toBe('waiting')
+  expect(await f.store.scan_keys('command:', 10)).toHaveLength(0)
+  const healed = { ...injured, now: context.now + 1000 }
+  await f.tick(healed)
+  const command = await f.get_command()
+  expect(command.kind).toBe('gather')
+  const ready = await ready_gameplay_command(
+    f.store,
+    f.options.config,
+    { command, actor_id: 'actor', fence: f.lane.fence },
+    healed,
+    f.clock.now
+  )
+  expect(ready?.id).toBe(command.id)
+  const missing = await ready_gameplay_command(
+    f.store,
+    f.options.config,
+    { command: ready!, actor_id: 'actor', fence: f.lane.fence },
+    { ...healed, balance: null },
+    f.clock.now
+  )
+  expect(missing).toBeNull()
+  expect(await f.get_run()).toMatchObject({ status: 'waiting', pending_node: null })
+  await f.runtime.stop()
+})
+
+for (const [patch, issue] of [
+  [{ classe: 'yajin', available_spell_points: 0 }, 'insufficient_spell_points'],
+  [{ classe: 'asobi', available_spell_points: 5 }, 'spell_not_learned'],
+  [{ classe: 'yajin', available_spell_points: 50, spells: { 'Tricky Trap': 6 } }, 'spell_rank_capped'],
+] as const) {
+  test(`spell upgrade refusal retains the actionable ${issue} blocker`, async () => {
+    const f = await fixture({
+      version: '1',
+      objective: { title: 'Upgrade a learned spell' },
+      tree: {
+        type: 'action',
+        action: {
+          type: 'call',
+          kind: 'raise_spell',
+          payload: { character_id: character.id, spell: 'Tricky Trap' },
+        },
+      },
+    })
+    const base = profession_context()
+    const context = {
+      ...base,
+      snapshot: { ...base.snapshot, characters: [{ ...character, ...patch }] },
+    }
+    try {
+      await expect(f.tick(context)).resolves.toBe('awaiting_ai')
+      expect(await f.get_run()).toMatchObject({ status: 'awaiting_ai', issue, actions_started: 0 })
+      await f.tick(context)
+      expect(await f.store.scan_keys('command:', 100)).toEqual([])
+      expect(await owned_run_observation(f.store, await f.store.read<Lane>(f.key), context.command)).toMatchObject({
+        run_status: 'awaiting_ai',
+        issue,
+      })
+    } finally {
+      await f.runtime.stop()
+    }
+  })
+}

@@ -69,6 +69,11 @@ export type Command = Readonly<{
   result?: unknown
   error?: string
 }>
+/** Existing envelope/command work precedes objectives which depend on its reconciliation. */
+export const lane_work_key = (key: string, lane: Lane | null): string => {
+  const command_id = lane?.pending?.command_id ?? lane?.active_command
+  return command_id ? `command:${command_id}` : key
+}
 export const empty_lane = (bot: Pick<Bot, 'network' | 'address'>): Lane => ({
   network: bot.network,
   address: bot.address,

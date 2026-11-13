@@ -195,7 +195,7 @@ test('spectator wallet reuses live agent balance and cannot display another pair
   expect(html).not.toContain('999')
   expect(html).toContain('wallet-trigger')
   expect(html).toContain('Agent wallet')
-  expect(html).not.toContain('<button')
+  expect(html).toContain('aria-haspopup="dialog"')
   expect(render({ ...session, agent_inventory: { ...session.agent_inventory, sui_balance_mist: null } })).toContain('—')
   expect(render({ ...session, inventory_pairing: { ...pairing, address: 'other' } })).toContain('—')
   expect(render({ ...session, agent_view: { ...session.agent_view, request: null } })).toBe('')

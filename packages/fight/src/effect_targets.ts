@@ -4,7 +4,7 @@
 import { zone_rank } from './combat_grid.ts'
 import { TARGET_FILTERS } from './move_contract.gen.ts'
 import type { FightReadState } from './spell_turn.ts'
-import type { FightRuntime, SpellEffect } from './types.ts'
+import type { SpellEffect } from './types.ts'
 
 export const target_allowed = (runtime: FightReadState, caster: bigint, row: SpellEffect, target: bigint): boolean => {
   const { team } = runtime.contract.fighters[Number(caster)]
@@ -15,7 +15,7 @@ export const target_allowed = (runtime: FightReadState, caster: bigint, row: Spe
 }
 
 export const zone_targets = (
-  runtime: FightRuntime,
+  runtime: FightReadState,
   caster: bigint,
   row: SpellEffect,
   anchor: bigint,

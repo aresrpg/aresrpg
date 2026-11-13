@@ -6,8 +6,6 @@ import { Check, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import { useEffect, useEffectEvent, useState, type CSSProperties } from 'react'
 
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
-import { useAppStore } from '../store.ts'
-import { external_wallet_view } from '../wallet/view.ts'
 import { format_token, format_token_usd } from '../wallet_amount.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { crypto_session, type FundingBalance } from '../wallet/external_session.ts'
@@ -467,15 +465,16 @@ export const FundingCheckout = ({
   checkout,
   price_usd,
   close,
+  busy,
 }: Readonly<{
+  busy: boolean
   price_usd: number | null
   address: string
   copy: AppCopy
   checkout: Checkout
   close: () => void
 }>) => {
-  const wallet = useAppStore((state) => state.external_wallet)
-  const source = wallet.session
+  const { source } = checkout
   const text = copy_text(copy.wallet_legacy)
   const available = source !== null && source.address !== address
   return (
@@ -487,7 +486,7 @@ export const FundingCheckout = ({
           <PaymentForm
             checkout={checkout}
             crypto={crypto_session(source) !== null}
-            busy={!!external_wallet_view(wallet).busy}
+            busy={busy}
             price_usd={price_usd}
             text={text}
           />

@@ -354,7 +354,7 @@ export const SendSuiModal = ({
   on_sent: () => void
   open_funds: () => void
   resolve_character: (name: string) => Promise<Readonly<{ address: string; name: string }>>
-  wallet: AuthSession
+  wallet: Pick<AuthSession, 'address' | 'resolve_suins_address' | 'estimate_sui_transfer' | 'send_sui'>
 }>) => {
   const [recipient, set_recipient] = useState<WalletRecipientState>({ input: '', status: 'idle' })
   const [amount_input, set_amount_input] = useState('')

@@ -14,6 +14,7 @@ import { character_render_source } from '../game/character_entities.ts'
 import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { inventory_groups } from '../inventory_stacks.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
+import { ObjectExplorerLink } from '../components/ObjectExplorerLink.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { titleize } from '../content/catalog.ts'
 import { stat_name, type AppCopy } from '../i18n/copy.ts'
@@ -200,6 +201,12 @@ export default function EquipmentTab({
 
         {inspected && (
           <div className="chr-equip__detail" data-item-category={inspected.category}>
+            <ObjectExplorerLink
+              object_id={inspected.id}
+              hidden={Boolean(session)}
+              copy={copy}
+              className="inventory-item-explorer absolute right-12 top-1 z-[2]"
+            />
             <IconButton
               className="inventory-item-close"
               label={copy.wallet_close}

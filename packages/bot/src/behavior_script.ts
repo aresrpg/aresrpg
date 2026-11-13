@@ -32,7 +32,7 @@ export type BehaviorAction =
   | Readonly<{ type: 'engage'; character_id: string; mob_types: readonly string[]; order: 'nearest' }>
   | Readonly<{ type: 'combat'; profiles: readonly Readonly<{ character_id: string; profile: CombatProfile }>[] }>
 export type BehaviorFact = Readonly<{
-  type: 'level' | 'job_level' | 'quantity' | 'custody' | 'ambush' | 'fight'
+  type: 'level' | 'job_level' | 'quantity' | 'hp' | 'max_hp' | 'hp_percent' | 'custody' | 'ambush' | 'fight'
   character_id: string
   key?: string
 }>
@@ -43,6 +43,7 @@ export type StateCondition = Readonly<{
 }>
 export type BehaviorCondition =
   | StateCondition
+  | Readonly<{ type: 'sui_balance'; op: StateCondition['op']; value: string }>
   | (MarketPriceCondition & Readonly<{ type: 'market_price' }>)
   | Readonly<{ type: 'world'; fact: WorldAvailability; op: 'eq' | 'ne'; value: boolean }>
 export type BehaviorScript = Readonly<{

@@ -2,8 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 /* eslint-disable functional/immutable-data -- React refs retain only this modal's effect lifetime and submission latch. */
-import { transaction_signature_refused as payment_rejected } from '@aresrpg/sdk/transaction-error'
-import { useEffect, useReducer, useRef, useState } from 'react'
+import {
+  pre_submission_failure,
+  transaction_signature_refused as payment_rejected,
+} from '@aresrpg/sdk/transaction-error'
+import { useEffect, useEffectEvent, useReducer, useRef, useState } from 'react'
 
 import { capture_analytics } from '../analytics.ts'
 import type { AuthSession } from '../auth.ts'
@@ -12,6 +15,7 @@ import type { ExternalSession, FundingAsset, FundingBalance, FundingBalances } f
 import { crypto_session, sui_session } from '../wallet/external_session.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
+import { funding_source_current } from './source.ts'
 import { funding_recipient_current, type FundingAuthorization } from './recipient.ts'
 import { create_transfer_observer } from './analytics.ts'
 import {
@@ -22,9 +26,12 @@ import {
   NATIVE_SUI_ASSET,
   type FundingQuote,
 } from './near.ts'
-import { initial_checkout, reduce_checkout, checkout_locked } from './checkout_state.ts'
+import { initial_checkout, reduce_checkout, checkout_locked, transfer_visible } from './checkout_state.ts'
 
 export { payment_rejected }
+
+export const payment_uncertain = (error: unknown, submitted: boolean): boolean =>
+  submitted && !payment_rejected(error) && !pre_submission_failure(error)
 
 const message = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
@@ -56,7 +63,7 @@ const suggested_amount = (cost: bigint, balance: bigint | null): string =>
         .replace(/^0$/, '')
 
 // Never simulate a transfer the source cannot cover: resolution fails before any gas estimate.
-const send_sui_source = async (
+export const send_sui_source = async (
   sui: AuthSession,
   recipient: string,
   amount: bigint,
@@ -66,8 +73,7 @@ const send_sui_source = async (
   if (balance < amount) throw new Error('funding_source_balance')
   const gas = await sui.estimate_sui_transfer(recipient, amount, false)
   if (balance < amount + (gas > 0n ? gas : 0n)) throw new Error('funding_source_gas')
-  submitting()
-  return (await sui.send_sui(recipient, amount, false)).digest
+  return (await sui.send_sui(recipient, amount, false, submitting)).digest
 }
 
 // What leaves the source must fit its observed holding: typed SUI directly, or a bridge quote's input.
@@ -120,9 +126,12 @@ export const useFundingCheckout = (
     lifetime.current = controller
     return () => controller.abort()
   }, [recipient, authorization])
+  const reset_unsent = useEffectEvent(() => {
+    if (!transfer_visible(state)) dispatch({ type: 'reset' })
+  })
   useEffect(() => {
     generation.current++
-    dispatch({ type: 'reset' })
+    reset_unsent()
   }, [source, recipient, amount, asset])
 
   const quote = (): void => {
@@ -163,7 +172,7 @@ export const useFundingCheckout = (
     const submitting = (): void => {
       if (
         signal.aborted ||
-        read_app_state().external_wallet.session !== source ||
+        !funding_source_current(read_app_state(), source, recipient, authorization) ||
         !funding_recipient_current(read_app_state().session, recipient, authorization)
       )
         throw new Error('funding_source_changed')
@@ -187,12 +196,13 @@ export const useFundingCheckout = (
         if (sui) {
           dispatch({ type: 'observed', status: 'success' })
           dispatch_app({ type: 'wallet/refresh' })
+          dispatch_app({ type: 'agent/inventory_refresh' })
         }
       })
       .catch((error: unknown) => {
         if (!signal.aborted) {
           console.error('Funding payment failed', error)
-          dispatch({ type: 'error', error: message(error), uncertain: submitted && !payment_rejected(error) })
+          dispatch({ type: 'error', error: message(error), uncertain: payment_uncertain(error, submitted) })
         }
       })
       .finally(() => {
@@ -225,6 +235,7 @@ export const useFundingCheckout = (
     }
   }, [state.quote, state.stage, recipient])
   return {
+    source,
     state,
     dispatch,
     quote,

@@ -69,8 +69,10 @@ export const SendModalShell = ({
   locked,
   title,
   tone = 'default',
+  actions,
 }: Readonly<{
   children: ReactNode
+  actions?: ReactNode
   close: () => void
   close_label: string
   locked: boolean
@@ -81,6 +83,7 @@ export const SendModalShell = ({
     <NativeModal close={locked ? null : close} label={title} className="aui-modal-scrim">
       <GameWindow
         title={title}
+        actions={actions}
         close={locked ? null : close}
         close_label={close_label}
         className="aui-send-window"

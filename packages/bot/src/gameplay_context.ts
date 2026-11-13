@@ -9,6 +9,7 @@ import type { Command } from './control.ts'
 import { identifier, matches } from './gameplay_schema.ts'
 
 export type GameplayContext = Readonly<{
+  balance?: Readonly<{ address: string; balance_mist: string; sampled_at: number; expires_at: number }> | null
   address: string
   pins?: import('@aresrpg/sdk/pins').Pins
   command: Command

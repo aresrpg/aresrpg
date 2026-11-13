@@ -2754,6 +2754,9 @@ title_names:
   title_pug_paladin: 'Paladin carlin'
   title_enforcer: 'L’Exécuteur'
 ui:
+  view_on_suivision: Voir sur SuiVision
+  funding_game_wallet: Portefeuille de jeu
+  funding_external_wallet: Autre portefeuille
   agent_wallet: 'Portefeuille de l’agent'
   agent_activity_label: 'Activité de l’agent'
   agent_activity_idle: 'En attente d’un objectif'

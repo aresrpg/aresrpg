@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import type { ClientPacket } from '@aresrpg/protocol'
 import { create_controller_state } from '@aresrpg/engine/locomotion/controller'
-import { walkable_spawn_height } from '@aresrpg/engine/locomotion/collision'
+import { CHARACTER_RADIUS, walkable_spawn_height } from '@aresrpg/engine/locomotion/collision'
 
 import { create_locomotion } from '../src/locomotion.ts'
 import { begin_idle, idle_travels, step_idle } from '../src/idle.ts'
@@ -90,6 +90,9 @@ test('idle requires a free lane, fresh contract and an unrooted owned overworld 
     { needs_resync: true },
     { active_command: 'work' },
     { reconciliation_command: 'receipt' },
+    { run_ref: { kind: 'behavior' as const, id: 'active-run' } },
+    { profession_run_id: 'profession' },
+    { combat_run_id: 'combat' },
   ])
     expect(idle_travels(context, { ...lane, ...blocked })).toBeNull()
   for (const unavailable of [
@@ -119,7 +122,7 @@ test('idle requires a free lane, fresh contract and an unrooted owned overworld 
 for (const hazard of ['unknown', 'water', 'cliff', 'wall']) {
   test(`idle never advances through ${hazard}`, async () => {
     let time = 0
-    const poses: { x: number; z: number }[] = []
+    const poses: { x: number; y: number; z: number }[] = []
     const movement = create_locomotion({
       now: () => time,
       random: () => 0.75,
@@ -143,7 +146,8 @@ for (const hazard of ['unknown', 'water', 'cliff', 'wall']) {
         return true
       }
     )
-    expect(poses.every((pose) => pose.x < 50000.75 && pose.z === 50000)).toBe(true)
+    // Collision samples voxel cells; the capsule may overhang the last supported cell.
+    expect(poses.every((pose) => pose.x < 50001 + CHARACTER_RADIUS && pose.y >= 0)).toBe(true)
     if (hazard === 'unknown') expect(poses).toEqual([])
   })
 }
@@ -199,7 +203,7 @@ test('mounted momentum cannot carry a published pose outside the idle radius', (
     on_ground: true,
     velocity: [12, 0, 0] as [number, number, number],
   }
-  const state = { ...begin_idle([0, 0, 0], 0, () => 0), yaw: -Math.PI / 2, move_until: 5000, change_at: 10000 }
+  const state = { ...begin_idle([0, 0, 0], 0, () => 0), yaw: -Math.PI / 2, change_at: 10000 }
   const step = step_idle(
     { solid_at: (_x, y) => y < 0, liquid_at: () => false, ready: () => true, ground_height: () => 0 },
     body,
@@ -210,7 +214,7 @@ test('mounted momentum cannot carry a published pose outside the idle radius', (
     () => 0.25,
     true
   )
-  expect(step.position).toEqual(position)
+  expect(step.position).toEqual([...position])
   expect(step.gliding).toBe(false)
   expect(body.position).toEqual([...position])
 })

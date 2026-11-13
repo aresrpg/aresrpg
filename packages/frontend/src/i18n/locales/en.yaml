@@ -2752,6 +2752,9 @@ title_names:
   title_pug_paladin: 'Pug Paladin'
   title_enforcer: 'The Enforcer'
 ui:
+  view_on_suivision: View on SuiVision
+  funding_game_wallet: Game wallet
+  funding_external_wallet: Another wallet
   agent_wallet: 'Agent wallet'
   agent_activity_label: 'Agent activity'
   agent_activity_idle: 'Waiting for an objective'

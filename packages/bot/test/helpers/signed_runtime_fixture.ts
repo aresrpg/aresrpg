@@ -130,6 +130,7 @@ export const signed_fixture = async (store?: ControlStore) => {
   }
   const client = {
     core: {
+      getBalance: async () => ({ balance: { balance: '10000000000' } }),
       resolveTransactionPlugin: () => resolve,
       getObjects: async ({ objectIds: object_ids }: { objectIds: string[] }) => ({
         objects: object_ids.map((object_id) => ({

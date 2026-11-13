@@ -35,15 +35,20 @@ type ObjectOwner =
 
 type ChangedObject = {
   objectId?: string
+  inputState?: string
+  inputVersion?: string | number | bigint | null
+  inputDigest?: string | null
+  inputOwner?: ObjectOwner
   outputState?: string
-  outputVersion?: string | number | bigint
-  outputDigest?: string
+  outputVersion?: string | number | bigint | null
+  outputDigest?: string | null
   outputOwner?: ObjectOwner
   idOperation?: string
 }
 
 /** A TransactionResult / SimulateTransactionResult, whatever branch carries the effects. */
 type Effects = {
+  transactionDigest?: string
   lamportVersion?: string | null
   gasObject?: ChangedObject | null
   changedObjects?: ChangedObject[]
@@ -58,8 +63,20 @@ type Effects = {
 export type Receipt = {
   $kind?: string
   digest?: string
-  Transaction?: { digest?: string; effects?: Effects; objectTypes?: Record<string, string>; events?: unknown }
-  FailedTransaction?: { digest?: string; effects?: Effects; objectTypes?: Record<string, string>; events?: unknown }
+  Transaction?: {
+    digest?: string
+    checkpoint?: string | null
+    effects?: Effects
+    objectTypes?: Record<string, string>
+    events?: unknown
+  }
+  FailedTransaction?: {
+    digest?: string
+    checkpoint?: string | null
+    effects?: Effects
+    objectTypes?: Record<string, string>
+    events?: unknown
+  }
   effects?: Effects
 }
 
@@ -129,6 +146,7 @@ export const changed_object_ids = (receipt: Receipt, suffix: string): readonly s
 
 /** A fetched core-client Object (a hydrate row). */
 export type FetchedObject = {
+  previousTransaction?: string | null
   objectId?: string
   version?: string | number | bigint
   digest?: string
@@ -153,21 +171,21 @@ const changed_rows = (receipt: Receipt | null | undefined): ChangedObject[] => {
   return effects?.gasObject ? [effects.gasObject, ...(effects.changedObjects ?? [])] : (effects?.changedObjects ?? [])
 }
 
-const is_newer = (known: string | undefined, candidate: string | number | bigint | undefined): boolean =>
-  candidate !== undefined && (known === undefined || BigInt(known) < BigInt(candidate))
+const is_newer = (known: string | undefined, candidate: string | number | bigint | null | undefined): boolean =>
+  candidate != null && (known === undefined || BigInt(known) < BigInt(candidate))
 
 const absorb_shared = (
   cache: ResolutionCache,
   object_id: string,
   initial_version: string | number | bigint,
-  version?: string | number | bigint,
-  digest?: string
+  version?: string | number | bigint | null,
+  digest?: string | null
 ): void => {
   const known = cache.shared.get(object_id)
   if (known && !is_newer(known.version, version)) return
   cache.shared.set(object_id, {
     initialSharedVersion: known?.initialSharedVersion ?? String(initial_version),
-    ...(version !== undefined ? { version: String(version) } : {}),
+    ...(version != null ? { version: String(version) } : {}),
     ...(digest ? { digest } : {}),
   })
 }
@@ -175,8 +193,8 @@ const absorb_shared = (
 const absorb_owned = (
   cache: ResolutionCache,
   object_id: string,
-  version?: string | number | bigint,
-  digest?: string
+  version?: string | number | bigint | null,
+  digest?: string | null
 ): void => {
   if (!version || !digest || !is_newer(cache.owned.get(object_id)?.version, version)) return
   cache.owned.set(object_id, { objectId: object_id, version: String(version), digest })

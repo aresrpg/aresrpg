@@ -8,6 +8,7 @@ import { consumable_baseline, consumable_projected, type ConsumableBaseline } fr
 import { EQUIPMENT_ACTIONS, equipment_projected } from './equipment_actions.ts'
 import { market_sell_projected } from './market_actions.ts'
 import { loot_boxes_projected } from './loot_boxes.ts'
+import { spell_projected } from './spell_allocation.ts'
 import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
 import { owned_character } from './gameplay_context.ts'
 import { zone_key } from './actor_world.ts'
@@ -31,13 +32,21 @@ export const bind_action_baseline = (command: Command, context: GameplayContext)
     checkpoint_ms: Number(
       context.snapshot.characters.find(({ id }) => id === command.payload.character_id)?.at_ms ?? 0
     ),
-    ...(command.kind === 'raise_stats'
-      ? { stats: stat_baseline(owned_character(context, String(command.payload.character_id))) }
-      : {}),
-    ...(command.kind === 'use_consumable' ? { consumable: consumable_baseline({ ...context, command }) } : {}),
-    ...(['gather', 'craft'].includes(command.kind) ? { profession: step_observation(command, context) } : {}),
+    ...action_baseline(command, context),
   },
 })
+
+const action_baseline = (command: Command, context: GameplayContext): Partial<ActionBaseline> => {
+  const character = () => owned_character(context, String(command.payload.character_id))
+  const profession = () => ({ profession: step_observation(command, context) })
+  const baselines: Partial<Record<Command['kind'], () => Partial<ActionBaseline>>> = {
+    raise_stats: () => ({ stats: stat_baseline(character()) }),
+    use_consumable: () => ({ consumable: consumable_baseline({ ...context, command }) }),
+    gather: profession,
+    craft: profession,
+  }
+  return baselines[command.kind]?.() ?? {}
+}
 
 const projected_fight = (command: Command, context: GameplayContext): boolean => {
   const row = context.snapshot.fights[String(command.payload.fight)]
@@ -83,6 +92,7 @@ const character_projected = (
     open_loot_boxes: () => loot_boxes_projected(receipt, { ...context, command }),
     claim_loot: () => loot_boxes_projected(receipt, { ...context, command }),
     world_search: () => searched_world(command, receipt, context, character),
+    raise_spell: () => spell_projected(receipt, character),
     raise_stats: () =>
       stats_projected(command.action_baseline?.stats, command.payload.spending as StatSpending, character),
     equip_tool: () => character.equipment.some(({ slot, id }) => slot === 'tool' && id === command.payload.item_id),

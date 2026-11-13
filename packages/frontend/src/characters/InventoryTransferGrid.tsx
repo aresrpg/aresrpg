@@ -5,6 +5,7 @@ import type { ItemRow } from '@aresrpg/protocol'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
+import { ObjectExplorerLink } from '../components/ObjectExplorerLink.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { SendModalShell } from '../components/SendModalShell.tsx'
 import { inventory_groups } from '../inventory_stacks.ts'
@@ -102,6 +103,7 @@ export const InventoryTransferGrid = ({
       {inspected && (
         <SendModalShell
           title={inspected.name}
+          actions={<ObjectExplorerLink object_id={inspected.id} copy={copy} />}
           close={() => inspect(null)}
           close_label={copy.wallet_close}
           locked={false}

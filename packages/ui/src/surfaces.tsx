@@ -16,6 +16,7 @@ export const GameWindow = ({
   icon,
   hotkey,
   meta,
+  actions,
   close,
   close_label,
   children,
@@ -29,6 +30,7 @@ export const GameWindow = ({
     draggable?: boolean
     icon?: ReactNode
     hotkey?: string
+    actions?: ReactNode
     meta?: ReactNode
     close: (() => void) | null
     close_label: string
@@ -50,6 +52,7 @@ export const GameWindow = ({
           <h1>{title}</h1>
           {hotkey && <KeyHint>{hotkey}</KeyHint>}
         </div>
+        {actions && <div className="aui-window-actions">{actions}</div>}
         {close && (
           <>
             <IconButton label={close_label} onClick={close} icon={<span aria-hidden="true">×</span>} />

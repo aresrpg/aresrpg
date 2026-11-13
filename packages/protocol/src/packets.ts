@@ -82,6 +82,8 @@ export type ItemRow = {
  *  struct + the hp/spellbook/jobs/world/checkpoint dynamic fields) + custody context. */
 export type CharacterRow = {
   id: string
+  /** Native root version, published only after all transaction projection writes complete. */
+  version?: string
   name: string
   classe: string
   sex: string

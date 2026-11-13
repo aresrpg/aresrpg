@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Check, Copy, CreditCard, ExternalLink, Wallet } from 'lucide-react'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { NativeModal, GameWindow, Button } from '@aresrpg/ui'
 
 import { env, type Network } from '../env.ts'
@@ -13,10 +13,11 @@ import { FUNDING_CUSHION_MIST } from '../funding/near.ts'
 import { format_sui, format_token_usd } from '../wallet_amount.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
-import { WalletSources } from '../wallet/WalletSources.tsx'
+import { FundingSources } from '../funding/FundingSources.tsx'
+import { funding_owner_source, selected_funding_source } from '../funding/source.ts'
 import { external_wallet_view } from '../wallet/view.ts'
 import type { WalletView } from '../wallet/model.ts'
-import type { ExternalSession } from '../wallet/external_session.ts'
+import { crypto_session, type ExternalSession } from '../wallet/external_session.ts'
 import { useAppStore } from '../store.ts'
 import { capture_analytics } from '../analytics.ts'
 import { funding_recipient_current, type FundingAuthorization } from '../funding/recipient.ts'
@@ -129,20 +130,21 @@ const FundingForm = ({
   close,
   wallet,
   recipient_label,
+  sources,
 }: FundingProps &
   Readonly<{
+    sources: ReactNode
     cost: bigint
     balance: bigint | null
     checkout: ReturnType<typeof useFundingCheckout>
     close: () => void
     wallet: WalletView
   }>) => {
-  const { locked } = checkout
   const price = useSuiUsd(true)
   const locale = useLocale()
   const minimum = cost + FUNDING_CUSHION_MIST
   const delivered = checkout.state.stage === 'success'
-  useFundingAnalytics(wallet.state.session ? 'bridge' : 'direct', env.network)
+  useFundingAnalytics(crypto_session(checkout.source) ? 'bridge' : 'direct', env.network)
   return (
     <>
       <WalletAddressBlock address={address} copy={copy} method="direct" recipient_label={recipient_label} />
@@ -170,11 +172,18 @@ const FundingForm = ({
           )}
         </p>
       )}
-      <WalletSources wallet={wallet} copy={copy} locked={locked} />
+      {sources}
       <Suspense fallback={<p className="text-xs text-muted">{copy.kares_page.loading}</p>}>
-        <FundingCheckout address={address} copy={copy} checkout={checkout} price_usd={price} close={close} />
+        <FundingCheckout
+          address={address}
+          copy={copy}
+          checkout={checkout}
+          price_usd={price}
+          close={close}
+          busy={!!wallet.busy}
+        />
       </Suspense>
-      <CardFunding copy={copy} locked={locked} />
+      <CardFunding copy={copy} locked={checkout.locked} />
     </>
   )
 }
@@ -205,7 +214,11 @@ export const FundingModal = ({
 }: FundingModalProps & Readonly<{ funding: FundingSource }>) => {
   const testnet = network === 'testnet'
   const recipient = address ?? ''
-  const checkout = useFundingCheckout(source, recipient, cost_mist, balance, !testnet, authorization)
+  const session = useAppStore((state) => state.session)
+  const owner = funding_owner_source(session, recipient, authorization)
+  const [external, select_external] = useState(false)
+  const selected_source = selected_funding_source(owner, source, external)
+  const checkout = useFundingCheckout(selected_source, recipient, cost_mist, balance, !testnet, authorization)
   const close = on_close
   const title = recipient_label ?? wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
   const content = (
@@ -235,6 +248,17 @@ export const FundingModal = ({
             checkout={checkout}
             close={close}
             wallet={wallet}
+            sources={
+              <FundingSources
+                owner={owner}
+                balance={session.sui_balance_mist}
+                external={external}
+                select_external={select_external}
+                wallet={wallet}
+                copy={copy}
+                locked={checkout.locked}
+              />
+            }
           />
         )}
       </div>

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import type { CharacterRow } from '@aresrpg/protocol'
-import { TransactionDataBuilder } from '@mysten/sui/transactions'
+import { Transaction, TransactionDataBuilder } from '@mysten/sui/transactions'
 
 import { action_projected, reconcile_action } from '../src/action_reconciliation.ts'
 import { empty_snapshot } from '../src/actor_snapshot.ts'
@@ -10,10 +10,11 @@ import { abandon_unsubmitted, create_transaction_journal } from '../src/transact
 import { create_envelope_cipher } from '../src/envelope_cipher.ts'
 import { create_control_service, empty_lane, lane_key_for, type Command, type Lane } from '../src/control.ts'
 import type { Grant } from '../src/model.ts'
+import { gas, captured } from '../../sdk/test/helpers/transaction_conflict.ts'
 
 import { fixture_bot, fixture_config, memory_store, put } from './helpers/control_fixture.ts'
 
-const fixture = async () => {
+const fixture = async (bytes = new Uint8Array([1, 2, 3])) => {
   const store = memory_store()
   const lane_key = lane_key_for(fixture_bot)
   const grant: Grant = {
@@ -69,7 +70,6 @@ const fixture = async () => {
     { command, actor_id: 'actor', fence: 1 },
     () => 1000
   )
-  const bytes = new Uint8Array([1, 2, 3])
   const digest = TransactionDataBuilder.getDigestFromBytes(bytes)
   const prepared = { digest, bytes, gas_budget_mist: '100' }
   const signed = { ...prepared, signatures: ['fixture-signature-not-usable'] }
@@ -415,4 +415,82 @@ test('ordinary successful action reconciles its domain projection in either rece
     await reconcile_action(f.store, f.lane_key, 'actor', 1, projected, 1000)
     expect(await f.store.read<Lane>(f.lane_key)).toMatchObject({ needs_resync: false, reconciliation_command: null })
   }
+})
+
+const conflict_fixture = async () => {
+  const tx = new Transaction()
+  tx.setSender(captured.Transaction.effects.changedObjects[0]!.inputOwner.AddressOwner)
+  tx.setGasPayment([gas])
+  tx.setGasBudget(100)
+  tx.setGasPrice(1)
+  const f = await fixture(await tx.build())
+  await f.journal.prepared(f.prepared)
+  await f.journal.signed(f.signed)
+  await f.journal.mark_submitting(f.signed)
+  return { ...f, record: { digest: f.prepared.digest, phase: 'submitted' as const } }
+}
+
+test('certified conflict fails the exact command atomically, preserves stopped control and retains proof', async () => {
+  const f = await conflict_fixture()
+  const lane = (await f.store.read<Lane>(f.lane_key))!
+  await put(f.store, f.lane_key, { ...lane, paused: true, transport_stopped: true })
+  await put(f.store, 'behavior:stopped', { status: 'stopped', issue: 'explicit_stop' })
+  await put(f.store, 'command:command', {
+    ...(await f.store.read<Command>('command:command'))!,
+    run_ref: { kind: 'behavior', id: 'stopped' },
+  })
+  await put(f.store, 'grant:grant', { ...f.grant, revoked: true })
+  await f.journal.conflicted!(captured, f.record)
+  await f.journal.conflicted!(captured, f.record)
+  expect(await f.store.read<Command>('command:command')).toMatchObject({
+    status: 'failed',
+    error: 'transaction_input_consumed',
+    result: { digest: f.prepared.digest, executed: false, conflicting_receipt: captured },
+  })
+  expect(await f.store.read<Lane>(f.lane_key)).toMatchObject({
+    paused: true,
+    transport_stopped: true,
+    needs_resync: true,
+    pending: null,
+    active_command: null,
+    decision_revision: lane.decision_revision + 1,
+  })
+  expect(await f.store.read('behavior:stopped')).toEqual({ status: 'stopped', issue: 'explicit_stop' })
+  expect(await f.store.read(`receipt:${f.prepared.digest}`)).toBeNull()
+  expect(await f.store.read(`receipt:${captured.Transaction.digest}`)).toBeNull()
+})
+
+for (const mismatch of ['fence', 'lease', 'phase', 'command', 'grant', 'digest', 'active', 'proof'] as const) {
+  test(`conflict journal refuses ${mismatch} mismatch without clearing pending`, async () => {
+    const f = await conflict_fixture()
+    const lane = (await f.store.read<Lane>(f.lane_key))!
+    const proof = structuredClone(captured)
+    const pending = { ...lane.pending! }
+    const corrupt = {
+      fence: () => ({ ...lane, fence: 2 }),
+      lease: () => ({ ...lane, lease_until: 999 }),
+      active: () => ({ ...lane, active_command: 'other' }),
+      phase: () => ({ ...lane, pending: { ...pending, phase: 'signed' } }),
+      command: () => ({ ...lane, pending: { ...pending, command_id: 'other' } }),
+      grant: () => ({ ...lane, pending: { ...pending, grant_id: 'other' } }),
+      digest: () => ({ ...lane, pending: { ...pending, digest: captured.Transaction.digest } }),
+      proof: () => {
+        proof.Transaction.effects.changedObjects[0]!.inputDigest = captured.Transaction.digest
+        return lane
+      },
+    }
+    await put(f.store, f.lane_key, corrupt[mismatch]())
+    await expect(f.journal.conflicted!(proof, f.record)).rejects.toThrow()
+    expect((await f.store.read<Lane>(f.lane_key))?.pending).not.toBeNull()
+    expect((await f.store.read<Command>('command:command'))?.status).toBe('executing')
+  })
+}
+
+test('idempotent conflict acknowledgment still requires the live actor fence and exact proof', async () => {
+  const f = await conflict_fixture()
+  await f.journal.conflicted!(captured, f.record)
+  await expect(f.journal.conflicted!(captured, { ...f.record, digest: captured.Transaction.digest })).rejects.toThrow()
+  const lane = (await f.store.read<Lane>(f.lane_key))!
+  await put(f.store, f.lane_key, { ...lane, fence: 2 })
+  await expect(f.journal.conflicted!(captured, f.record)).rejects.toThrow('actor_fenced')
 })

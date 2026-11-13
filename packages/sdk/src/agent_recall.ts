@@ -17,6 +17,7 @@ import type { TransactionStorage } from './transaction_execution.ts'
 import { set_agent_suins_default } from './suins_actions.ts'
 import { read_agent_recovery_assets } from './agent_inventory.ts'
 import { check_agent_return, read_agent_returns, read_agent_item_returns } from './agent_returns.ts'
+import { sui_transfer_actions } from './sui_transfer.ts'
 
 export { owner_agent_identity } from './agent_pairing.ts'
 
@@ -34,8 +35,8 @@ type RecallContext = Readonly<{
 const recall_sdk = (options: RecallContext, identity: ReturnType<typeof owner_agent_identity>, network: 'mainnet') => {
   const sign_transaction = create_google_transaction_signer(
     identity,
-    async (bytes) => {
-      const proof = await options.sign_transaction(Transaction.from(bytes))
+    async (bytes, before_sign) => {
+      const proof = await options.sign_transaction(Transaction.from(bytes), before_sign)
       return {
         bytes: typeof proof.bytes === 'string' ? proof.bytes : toBase64(proof.bytes),
         signature: proof.signature,
@@ -89,6 +90,11 @@ const read_recall = (
     },
   })
   return Object.freeze({
+    sui_transfer: (before_sign: () => void) =>
+      sui_transfer_actions(sdk, identity.address, () => {
+        before_sign()
+        current_owner()
+      }),
     read_pending_characters: () => read_agent_returns(options.client, sdk, identity.address, request.owner),
     transfer,
     read_recovery_assets: () => read_agent_recovery_assets(options.client, sdk, identity.address),

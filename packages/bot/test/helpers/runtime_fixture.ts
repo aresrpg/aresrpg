@@ -8,6 +8,7 @@ import { create_envelope_cipher } from '../../src/envelope_cipher.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../../src/control.ts'
 import type { ControlStore } from '../../src/store.ts'
 import type { Grant } from '../../src/model.ts'
+import { fake_client } from '../../../sdk/test/helpers/transport.ts'
 
 import { fixture_config, fixture_google, memory_store, put } from './control_fixture.ts'
 import { managed_provider_fixture } from './managed_provider_fixture.ts'
@@ -56,7 +57,7 @@ export const runtime_fixture = async (store: ControlStore = memory_store()) => {
     event_limit: 20,
     scan_limit: 100,
     observation_freshness_ms: 60000,
-    sdk_options: { rpc_url: 'http://127.0.0.1:0/' },
+    sdk_options: { client: fake_client({ simulate_ok: true }) },
     now: () => clock.now,
     monotonic_now: () => clock.monotonic,
     report_failure: (error: unknown) => {

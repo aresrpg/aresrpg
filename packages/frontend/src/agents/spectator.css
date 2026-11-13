@@ -127,6 +127,18 @@
   justify-content: flex-end;
   gap: 6px;
 }
-.agent-spectator-map .world-account > div.wallet-trigger {
-  cursor: default;
+.agent-spectator-map .world-account .wallet-trigger {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  min-height: 38px;
+  flex-wrap: wrap;
+}
+.agent-spectator-map .world-account .wallet-trigger__balance {
+  flex-shrink: 0;
+}
+.agent-spectator-map .world-account .wallet-trigger__balance > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

@@ -2715,6 +2715,9 @@ title_names:
   title_pug_paladin: 'Мопс-паладин'
   title_enforcer: 'Исполнитель'
 ui:
+  view_on_suivision: Посмотреть в SuiVision
+  funding_game_wallet: Игровой кошелёк
+  funding_external_wallet: Другой кошелёк
   agent_wallet: 'Кошелёк агента'
   agent_activity_label: 'Действия агента'
   agent_activity_idle: 'Ожидание цели'

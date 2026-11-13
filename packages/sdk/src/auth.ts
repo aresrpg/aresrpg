@@ -5,7 +5,6 @@ import { registerEnokiWallets } from '@mysten/enoki'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
-import { isValidSuiAddress } from '@mysten/sui/utils'
 import type { AgentPairingIdentity, GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 import { registerSlushWallet, SLUSH_WALLET_NAME } from '@mysten/slush-wallet'
@@ -19,11 +18,10 @@ import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.
 import { create_agent_recall_reader, type AgentRecall } from './agent_recall.ts'
 import { read_personal_kiosks } from './kiosk_discovery.ts'
 import { check_agent_return, read_agent_returns, type AgentReturnOffer } from './agent_returns.ts'
-import { gas_mist_from_receipt } from './gas.ts'
 import { agent_transfer_actions, type AgentTransferActions } from './agent_transfer_actions.ts'
 import { agent_deposit_actions } from './agent_deposit.ts'
 import { SDK, sui_transport, type TransactionSigner, type Pins } from './client.ts'
-import { sui_transfer_ptb } from './sui_transfer.ts'
+import { sui_transfer_actions } from './sui_transfer.ts'
 import type { MarketplaceRoyalty, claim_marketplace_royalties as claim_royalties } from './marketplace_admin.ts'
 import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
 import { stack_actions, type StackActions } from './stacks.ts'
@@ -45,7 +43,6 @@ import {
   request_wallet_accounts,
   selectable_wallet,
 } from './wallet_standard.ts'
-import { receipt_digest } from './cache.ts'
 import { create_personal_kiosk_runner } from './kiosk_runner.ts'
 import { create_gift_actions, type GiftActions } from './gift_actions.ts'
 
@@ -116,7 +113,12 @@ export type AuthSession = Readonly<{
   trade: (trade: TradeRow) => TradeActions
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
-  send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string }>>
+  send_sui: (
+    recipient: string,
+    amount_mist: bigint,
+    drain: boolean,
+    before_sign?: () => void
+  ) => Promise<Readonly<{ digest: string }>>
   read_giftcards: () => Promise<readonly GiftcardRow[]>
   gift: GiftActions
   inspect_giftcard_link: (url: string) => Promise<GiftcardRow | null>
@@ -302,32 +304,7 @@ const create_wallet_session = (
       const { address } = await client.core.resolveNameServiceAddress({ name: canonical_suins_name(name) })
       return address
     },
-    estimate_sui_transfer: async (recipient: string, amount_mist: bigint, drain: boolean) => {
-      if (!isValidSuiAddress(recipient)) throw new Error('Enter a valid Sui address')
-      if (amount_mist <= 0n) throw new Error('The SUI amount must be positive')
-      const transaction = sui_transfer_ptb({
-        sender: account.address,
-        recipient,
-        amount_mist: drain ? null : amount_mist,
-      })
-      const simulation = await sdk.simulate(transaction)
-      if (simulation.$kind === 'FailedTransaction') throw new Error('The transfer cannot be built')
-      const estimate = gas_mist_from_receipt(simulation)
-      if (estimate === null) throw new Error('The simulation carried no gas figures — cannot estimate the transfer')
-      return estimate
-    },
-    send_sui: async (recipient: string, amount_mist: bigint, drain: boolean) => {
-      if (!isValidSuiAddress(recipient)) throw new Error('Enter a valid Sui address')
-      if (amount_mist <= 0n) throw new Error('The SUI amount must be positive')
-      const transaction = sui_transfer_ptb({
-        sender: account.address,
-        recipient,
-        amount_mist: drain ? null : amount_mist,
-      })
-      const receipt = await sdk.execute(transaction)
-      if (receipt.$kind === 'FailedTransaction') throw new Error('The SUI transfer failed on-chain')
-      return Object.freeze({ digest: receipt_digest(receipt) })
-    },
+    ...sui_transfer_actions(sdk, account.address),
     read_giftcards: async () => {
       const { read_giftcards } = await import('./distribution.ts')
       return read_giftcards(resolution_client, sdk, account.address)

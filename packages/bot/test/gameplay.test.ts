@@ -104,6 +104,7 @@ test('canonical catalog exposes the complete bounded PvE lifecycle and strict ne
     'open_loot_boxes',
     'claim_loot',
     'raise_stats',
+    'raise_spell',
     'equip_item',
     'use_consumable',
     'market_buy',

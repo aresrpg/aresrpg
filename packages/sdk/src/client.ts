@@ -76,7 +76,7 @@ export interface SuiTransport {
       cursor?: string | null
       hasNextPage?: boolean
     }>
-    getObjects: (input: { objectIds: string[]; include?: { json?: boolean } }) => Promise<{ objects: FetchedObject[] }>
+    getObjects: NonNullable<ExecutionCore['getObjects']>
     simulateTransaction: (input: { transaction: Uint8Array; include?: object }) => Promise<Receipt>
     executeTransaction: ExecutionCore['executeTransaction']
     waitForTransaction: ExecutionCore['waitForTransaction']
@@ -94,16 +94,16 @@ export type TransactionExecution = Readonly<{
   outcome: 'success' | 'failure'
   gas_mist?: string
 }>
-
 export type TransactionSigner = (
-  transaction: Transaction
+  transaction: Transaction,
+  before_sign?: () => void
 ) => Promise<Readonly<{ bytes: string | Uint8Array; signature: string }>>
 
 const signing_method =
   (signer: Signer | undefined, callback: TransactionSigner | undefined): TransactionSigner =>
-  (tx) => {
+  (tx, before_sign) => {
     if (signer) return tx.sign({ signer })
-    if (callback) return callback(tx)
+    if (callback) return callback(tx, before_sign)
     throw new Error('[sdk] execute needs a signer')
   }
 
@@ -487,7 +487,7 @@ export function SDK({
     try {
       await execution.before_sign(await tx.build(), String(tx.getData().gasData.budget ?? ''), { include, gas_scope })
       before_sign?.()
-      signed = await sign(tx)
+      signed = await sign(tx, before_sign)
     } catch (error) {
       if (transaction_journal) throw new Error('[sdk] durable transaction requires reconciliation', { cause: error })
       throw transaction_resolution_error(error)
@@ -566,10 +566,8 @@ export function SDK({
     synchronize_transactions: () => execution.enqueue(execution.before_next),
     resume_pending_transaction: () => execution.enqueue(execution.resume_pending),
     execute_personal_kiosk,
-    read_sui_balance: () => {
-      if (!sender) throw new Error('[sdk] balance reads need an address')
-      return balance.read(sender)
-    },
+    read_sui_balance_snapshot: () => balance.read_snapshot(sender ?? ''),
+    read_sui_balance: () => balance.read(sender ?? ''),
     read_kares_balance: async (): Promise<bigint | null> => {
       if (!sender) throw new Error('[sdk] balance reads need an address')
       if (!pins.kares_coin_type) return null

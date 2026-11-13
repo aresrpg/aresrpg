@@ -43,6 +43,9 @@ const blocked = new Set([
   'level_too_low',
   'relic_duplicate',
   'item_listed',
+  'spell_not_learned',
+  'spell_rank_capped',
+  'insufficient_spell_points',
 ])
 /** Only explicit domain errors are user-facing; implementation messages may contain secrets. */
 export const planning_issue = (error: unknown) => {

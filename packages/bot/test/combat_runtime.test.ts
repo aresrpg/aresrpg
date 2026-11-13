@@ -140,6 +140,7 @@ test('one autonomous fight selects ready, lethal turn and settlement through exi
     open_loot_boxes: unexpected,
     claim_loot_batch: unexpected,
     raise_stats: unexpected,
+    raise_spell: unexpected,
     equip: unexpected,
     gather: unexpected,
     craft: unexpected,

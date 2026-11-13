@@ -21,6 +21,7 @@ import {
   type EquipmentActionPlan,
 } from './equipment_actions.ts'
 import { LOOT_BOX_ACTIONS, validate_open_boxes, validate_claim_loot, type LootBoxPlan } from './loot_boxes.ts'
+import { RAISE_SPELL_ACTION, validate_spell_allocation, type SpellAllocationPlan } from './spell_allocation.ts'
 import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
 import { zone_key, type ActorWorld } from './actor_world.ts'
 import { hash_secret } from './security.ts'
@@ -70,6 +71,7 @@ type Actions = AgentActions['fight'] &
     | 'craft'
     | 'resolve_ambush'
     | 'raise_stats'
+    | 'raise_spell'
     | 'open_loot_boxes'
     | 'claim_loot_batch'
     | 'use_consumable'
@@ -166,6 +168,7 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
   ...PROFESSION_ACTIONS,
   ...LOOT_BOX_ACTIONS,
   raise_stats: RAISE_STATS_ACTION,
+  raise_spell: RAISE_SPELL_ACTION,
   ...EQUIPMENT_ACTIONS,
   market_buy: MARKET_BUY_ACTION,
   market_sell: MARKET_SELL_ACTION,
@@ -241,6 +244,7 @@ export type GameplayPlan =
   | MarketSellPlan
   | ProfessionActionPlan
   | StatAllocationPlan
+  | SpellAllocationPlan
   | LootBoxPlan
   | Plan<'world_search', 'search_zone'>
   | Plan<'fight_engage', 'engage'>
@@ -296,6 +300,9 @@ const preview_command = (fighter: bigint, action: TurnInput['actions'][number]):
       return { type: 'weapon_strike', fighter, target_cell: action.target_cell }
   }
 }
+export const fight_turn_inputs = (payload: FightTurnPayload): readonly FightCommandInput[] =>
+  turn_input(payload).actions.map((action) => preview_command(u64(payload.fighter_idx), action))
+
 const preview = (checkpoint: HydratedFightCheckpoint, input: FightCommandInput) => {
   const result = create_fight({ state: checkpoint, mode: 'remote' }).apply(input)
   if (result.error) throw new Error('illegal_fight_action:' + result.error.code)
@@ -309,8 +316,8 @@ const validate_turn = (context: GameplayContext, observed_ms: bigint): Plan<'fig
   if (observed_ms < contract.turn_started_ms) throw new Error('needs_resync')
   const input = turn_input(payload)
   const runtime = create_fight({ state: checkpoint, mode: 'remote' })
-  for (const action of input.actions) {
-    const result = runtime.apply({ ...preview_command(seat, action), observed_ms })
+  for (const action of fight_turn_inputs(payload)) {
+    const result = runtime.apply({ ...action, observed_ms })
     if (result.error) throw new Error('illegal_fight_action:' + result.error.code)
   }
   // The SDK terminal door seals lethal drafts. Twin end_turn only accepts live fights.
@@ -418,6 +425,7 @@ export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
     market_buy: () => validate_market_buy(context),
     market_sell: () => validate_market_sell(context),
     raise_stats: () => validate_stat_allocation(context),
+    raise_spell: () => validate_spell_allocation(context),
     open_loot_boxes: () => validate_open_boxes(context),
     claim_loot: () => validate_claim_loot(context),
     world_search: () => validate_search(context),
@@ -446,6 +454,7 @@ export type GameplayActions = Pick<
   | 'craft'
   | 'resolve_ambush'
   | 'raise_stats'
+  | 'raise_spell'
   | 'open_loot_boxes'
   | 'claim_loot_batch'
   | 'use_consumable'
@@ -470,6 +479,7 @@ export const execute_gameplay_actions = async (
       return actions.list(input)
     },
     raise_stats: actions.raise_stats,
+    raise_spell: actions.raise_spell,
     open_loot_boxes: actions.open_loot_boxes,
     claim_loot: actions.claim_loot_batch,
     world_search: actions.search_zone,

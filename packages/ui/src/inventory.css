@@ -411,6 +411,9 @@
 .game-character-body .chr-equip__detail [data-item-detail-view] {
   padding-top: 28px;
 }
+.game-character-body .chr-equip__detail:has(.inventory-item-explorer) [data-item-detail-view] {
+  padding-top: 48px;
+}
 .game-character-body .chr-equip__detail > .aui-button:not(.inventory-item-close) {
   margin-top: auto;
   align-self: flex-end;

@@ -459,3 +459,26 @@ test('Recall explicit kiosk lookup uses the exact cap and refuses a missing ID w
   expect(objects).toContain(id(12))
   expect(objects).not.toContain(id(11))
 })
+
+test('ordinary multisig SUI transfer revalidates the canonical Google owner without agent keys', async () => {
+  let current_request = request
+  let active = true
+  const reader = create_agent_recall_reader({
+    read_request: () => current_request,
+    client: {} as never,
+    sign_transaction: async () => {
+      throw new Error('No test may request a signature')
+    },
+  })
+  const recall = await reader.read(pairing)
+  const actions = recall.sui_transfer(() => {
+    if (!active) throw new Error('Observation changed')
+  })
+  active = false
+  await expect(actions.send_sui(request.owner, 1n, false)).rejects.toThrow('Observation changed')
+  active = true
+  const other = toZkLoginPublicIdentifier(2n, 'https://accounts.google.com', { legacyAddress: false })
+  current_request = { ...request, owner: other.toSuiAddress(), zklogin_public_identifier: other.toBase64() }
+  await expect(actions.estimate_sui_transfer(request.owner, 1n, false)).rejects.toThrow('recovery member')
+  await expect(actions.send_sui(request.owner, 1n, false)).rejects.toThrow('recovery member')
+})

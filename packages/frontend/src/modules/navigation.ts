@@ -139,12 +139,18 @@ const arrived_fight = (state: AppState, reason: string): AppState => {
   return open_dialog(state, `fight:${run.fight_id}`)
 }
 
+const roster_navigation = (state: AppState, has_agent_characters: boolean): AppState => {
+  if (state.navigation.dialog === 'agent_setup') return state
+  if (state.session.characters.length === 0 && !has_agent_characters) return open_dialog(state, 'welcome')
+  // Roster updates also carry equipment changes; only roster onboarding owns automatic dismissal.
+  return state.navigation.dialog === 'welcome' ? open_dialog(state, null) : state
+}
+
 const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): AppState => {
   if (state.session.agent_view.request) return state
   const has_agent_characters = agent_tab_source(state.session).characters.length > 0
   if (has_agent_characters && state.navigation.dialog === 'welcome') return open_dialog(state, null)
-  if (packet.type === 'packet/characters' && state.navigation.dialog !== 'agent_setup')
-    return open_dialog(state, state.session.characters.length === 0 && !has_agent_characters ? 'welcome' : null)
+  if (packet.type === 'packet/characters') return roster_navigation(state, has_agent_characters)
   if (
     packet.type === 'packet/fight_phase' &&
     packet.phase === 'ended' &&

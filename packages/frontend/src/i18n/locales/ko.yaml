@@ -2715,6 +2715,9 @@ title_names:
   title_pug_paladin: '퍼그 성기사'
   title_enforcer: '집행자'
 ui:
+  view_on_suivision: SuiVision에서 보기
+  funding_game_wallet: 게임 지갑
+  funding_external_wallet: 다른 지갑
   agent_wallet: '에이전트 지갑'
   agent_activity_label: '에이전트 활동'
   agent_activity_idle: '목표 대기 중'

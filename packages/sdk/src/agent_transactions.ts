@@ -18,15 +18,19 @@ type AgentIdentity = ReturnType<typeof create_agent_identity>
 const create_member_transaction_signer =
   (
     identity: AgentIdentity,
-    sign_bytes: (bytes: Uint8Array) => Promise<Readonly<{ bytes: string; signature: string }>>,
+    sign_bytes: (
+      bytes: Uint8Array,
+      before_sign?: () => void
+    ) => Promise<Readonly<{ bytes: string; signature: string }>>,
     member_index: 0 | 1,
     verification: Parameters<typeof verifyTransactionSignature>[2] = {}
   ): TransactionSigner =>
-  async (transaction) => {
+  async (transaction, before_sign) => {
     const snapshot = Transaction.from(transaction)
     if (snapshot.getData().sender !== identity.address) throw new Error('Agent transaction sender mismatch.')
     const bytes = await snapshot.build()
-    const proof = await sign_bytes(bytes.slice())
+    before_sign?.()
+    const proof = await sign_bytes(bytes.slice(), before_sign)
     if (toBase64(fromBase64(proof.bytes)) !== toBase64(bytes))
       throw new Error('Agent signer changed transaction bytes.')
     const member = identity.public_key.getPublicKeys()[member_index]!.publicKey

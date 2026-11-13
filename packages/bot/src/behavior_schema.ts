@@ -71,6 +71,9 @@ export const BEHAVIOR_ACTION_SCHEMA: Schema = {
 const numeric: Schema = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }
 const fact_types = {
   level: numeric,
+  hp: numeric,
+  max_hp: numeric,
+  hp_percent: numeric,
   job_level: numeric,
   quantity: numeric,
   custody: { oneOf: [literal('kiosk'), literal('fight')] },
@@ -94,6 +97,11 @@ const world_fields = { character_id: identifier, world: nonempty, region: WORLD_
 export const BEHAVIOR_CONDITION_SCHEMA: Schema = {
   oneOf: [
     STATE_CONDITION_SCHEMA,
+    object_schema({
+      type: literal('sui_balance'),
+      op: { oneOf: ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'].map(literal) },
+      value: decimal,
+    }),
     object_schema({ type: literal('market_price'), ...MARKET_PRICE_CONDITION_SCHEMA.properties! }),
     object_schema({
       type: literal('world'),

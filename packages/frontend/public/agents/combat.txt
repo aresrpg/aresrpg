@@ -2,6 +2,58 @@
 
 Combat is a deterministic state machine with committed randomness. Move enforces it; `@aresrpg/fight` is the TypeScript twin. Use the twin to inspect legal actions and simulate drafts. Never replace it with an approximate damage calculator for transaction planning.
 
+## Discover spells and spend spell points through MCP
+
+Use `bot_observe` with `{"spells":[]}` (the default full view) before authoring tactics. Read
+`planning_context.spells.catalog`: every row has `name`, `classe`, and `unlock_level` from the
+same authored spell corpus used by the executor. `name` is the exact, case-sensitive spell ID
+for cast steps and upgrades; there is no separate numeric ID to look up. No source checkout is needed.
+
+Then call `bot_observe` with `{"spells":["Tricky Trap","Mass Trap"]}`. The response's
+`planning_context.spells.definitions` contains all authored ranks in `levels` (rank 1 is index 0),
+including AP cost, minimum/maximum and modifiable range, line of sight, line launch, per-turn/per-target cast limits, cooldown, critical rate, and
+normal/critical effects. `free_cell` is retained wire metadata, not a universal empty-target rule;
+occupied-cell legality follows the effect kind and fight twin.
+The accompanying `effect_kinds`, `area_shapes`, `target_filters`, and `stat_channels` maps decode
+the numeric effect fields directly from the Move-derived fight vocabulary. A zero cast limit means
+no limit beyond other rules such as AP; `crit_1_in` is a one-in-X rate, not a percentage.
+
+Each definition also has `characters` keyed by `character_id`. Match the intended character from
+the observation's owned roster: `learned_rank` is null for a wrong class, insufficient character
+level, or unavailable rank. A missing investment in the character's spell book means rank 1 once
+unlocked, not an unlearned spell. Catalog membership does not grant entitlement, and a learned spell
+may still be illegal this turn because of AP, range, targets, cooldown or fight state. Use
+`bot_validate_combat_profile` for the selected character before saving tactics; live fight-seat
+`planning_context.fights` and the fight twin remain the owners of current casting legality.
+
+`available_spell_points` is the observed balance. `upgrade` is a one-rank quote `{cost,next_rank}`,
+or null when no upgrade exists (locked/wrong-class/invalid rank or already at the authored cap).
+Rank n to n+1 costs n points. A quote is not permission: the character must still be owned by the
+agent, in kiosk custody without an active fight, and have at least that many available spell points.
+
+To perform an explicitly authorized upgrade, call `bot_raise_spell` with:
+
+```json
+{
+  "idempotency_key": "<unique upgrade intent>",
+  "decision_revision": 0,
+  "observation_revision": 0,
+  "action": {"character_id":"<owned character ID>","spell":"Tricky Trap"}
+}
+```
+
+Replace both revision placeholders with the latest full observation's revisions. This requires
+`bot:play` and submits one ordinary SDK transaction, raising exactly one rank. It also works as
+a behavior `call` action with `kind: "raise_spell"` and that same action object as `payload`.
+Read `bot_status` with the returned command ID and observe the new rank and spent points before
+planning another upgrade. Preserve the same idempotency key for the same intent. An executed
+failure or uncertain transaction is never automatically retried; use the existing status/recovery flow.
+Spell-point spending is separate from saving combat preferences or allocating characteristic points.
+
+Omit `spells` for ordinary live observations without the static catalog. A changes-only observation
+omits planning context; request full for discovery. If observation returns pending, repeat the read;
+if planning context is unavailable/needs_resync, obtain a fresh observation before planning.
+
 ## Tell your assistant how to fight
 
 Describe the character's role and the order that matters: "Play this character strength-based. Place traps first, then retreat." You can also ask "Use this spell combination before attacking", "Focus the lowest-health enemy", or "If nothing is useful, stop and ask me." The assistant should explain the saved tactics in ordinary language and name any spell or behavior it cannot support. A strength preference does not allocate points or equip items; those are separate actions.
@@ -26,7 +78,11 @@ A profile uses this finite JSON vocabulary (example for a Yajin who can use Tric
 }
 ```
 
-Each rule runs once per turn against the updated simulation. An unavailable combo step stops that combo and keeps its legal prefix; later rules continue, so retreat can still happen when a trap is unavailable. Conditions also support `{"type":"hp_below","percent":40}` and `{"type":"enemy_within","cells":3}`. Cast targets are `self`, `nearest_enemy`, `lowest_hp_enemy`, or `trap_near_enemy`; weapon strikes support the two enemy selectors. Movement is `approach` or `retreat`. Names refer to actual game spells, with current class, unlock level and invested spell level checked. A trap's empty-cell choice is a simple deterministic heuristic, not a prediction that enemies must walk onto it. Retreat prefers survival and remaining HP before greater distance from the nearest enemy; walls, tackle and traps can prevent escape.
+Each rule runs once per turn against the updated simulation. An unavailable combo step stops that combo and keeps its legal prefix; later rules continue, so retreat can still happen when a trap is unavailable. Conditions also support `{"type":"hp_below","percent":40}` and `{"type":"enemy_within","cells":3}`. Cast targets are `self`, `nearest_enemy`, `lowest_hp_enemy`, `highest_damage_enemy`, `trap_near_enemy`, or `most_allies`; weapon strikes support the three enemy selectors. Movement is `approach` or `retreat`. Names refer to actual game spells, with current class, unlock level and invested spell level checked. A trap's empty-cell choice is a simple deterministic heuristic, not a prediction that enemies must walk onto it. Retreat prefers survival and remaining HP before greater distance from the nearest enemy; walls, tackle and traps can prevent escape.
+
+For wall-aware pushing in an autonomous sequence, use `{"type":"cast","spell":"Tricky Blow","target":"highest_damage_enemy"}`. This selector simulates each legal enemy aim from the current position and chooses the greatest total enemy HP loss, including wall, body and board-edge collision damage. Overkill counts only HP actually lost. Ties keep nearest-enemy order, then fighter index. Subsequent steps see the resulting displaced fighters and spent AP. By default it does not move. Add `"position":"best_damage"` to a cast or strike step to compare its current aim with move-then-attack sequences over canonical reachable cells. For example: `{"type":"cast","spell":"Tricky Blow","target":"highest_damage_enemy","position":"best_damage"}`. The target selector still applies at each position; use `highest_damage_enemy` to compare every legal enemy aim rather than only the nearest or lowest-HP enemy. Each route and attack use the real simulator, including tackle, traps, AP/MP, line of sight and occupancy. It chooses total enemy HP loss, then acting-fighter HP, remaining MP and fewer actions. A route that kills the actor or leaves no legal attack is rejected. Search uses one canonical shortest path per reachable endpoint, not every possible route, and does not optimize future turns or penalize allied damage. Existing `approach` and `retreat` steps remain separate heuristics.
+
+For ally support, use `{"type":"cast","spell":"Pack Totem","target":"most_allies"}`. The selector simulates every legal cast cell from the current position. It counts distinct living, non-forfeited same-team recipients, including the caster. Immediate support counts actual net HP/AP/MP gains or increased positive stat-add totals. New glyphs count potential positive-add payload coverage at current occupied cells, using the canonical turn-start target geometry and filters. Pack Totem therefore prefers covering allies rather than aiming at the nearest enemy. Placement does not apply its buff immediately: it triggers when a fighter starts a turn inside the glyph. Future occupancy, survival, expiration, rolls and healing need can change the result; this coverage is not guaranteed future benefit. Existing glyphs and buffs do not count as new support. Zero recipients skips the step; equal counts retain canonical legal-cell order. This is a coverage objective, not a magnitude, shield, dispel, trap, damage-risk or general utility score. It performs no movement and cannot combine with `position: "best_damage"`.
 
 Use `fallback: "awaiting_ai"` to request a new external decision when the entire turn has no legal configured action; `end_turn` passes instead. Check `bot_behavior_status` for the exact blocker and last command. `awaiting_ai` does not call an AI service. After admitted work reconciles, the assistant may explicitly `bot_replace_behavior` with the current run revision and fresh lane revisions. Saving a profile alone never changes the active tree's embedded tactics. Failed or uncertain transactions require review; a selector cannot hide them by submitting another branch. `bot_stop_behavior` fences new admissions without forfeiting; signed work can be cancelled only before submission wins, and already submitting work keeps exact receipt recovery. Owner Disconnect/Recall remains the asset-return operation. Wallet funding remains the spending limit.
 
@@ -64,12 +120,22 @@ The normal base pools are 6 AP and 3 MP, but gear and effects change them. The c
 For every spell, inspect:
 
 - Learned level, AP cost, minimum/maximum range, and whether range is modifiable.
-- Line launch, line of sight, and free-cell requirements.
+- Line launch, line of sight, and effect-specific target occupancy through the fight twin.
 - Casts per turn, casts per target, and cooldown.
 - Area shape, size, target filters, normal effects, and critical effects.
 - Push/pull/swap, healing, shields, buffs, removals, traps, glyphs, summons, or other state changes.
 
 Use `spell_target_cells`, `weapon_target_cells`, `preview_spell_cast`, and `preview_weapon_strike` for legal targeting and explanation. Use `project_spell_turn` and `project_weapon_turn` or a cloned `create_fight` runtime for actual sequential outcomes. A preview is neither submission nor authority.
+
+## Hosted MCP cast and collision analysis
+
+Call `bot_observe` with `fight_plan: { character_id, fight, fighter_idx, checkpoint_id, actions: [] }`, using IDs from a fresh full observation. The optional full-view result lists the board cells and legal next targets for each learned spell and the weapon. An empty target list means no legal cast now, not an unlearned spell.
+
+To inspect a candidate, pass the same object with ordered `move`, `cast`, or `strike` actions in the `bot_fight_turn` vocabulary. The remote fight twin replays that prefix and returns predicted events and resulting fighters, then recalculates next casts. Compare separate requests to explore movement-before-cast and alternative aims. `fighter_moved` records each actual step; `push_collided` reports the target, remaining blocked cells and collision damage. A failed action reports its index and engine reason; remaining actions are not run and no continuation targets are offered. Returned events and fighters then describe only the successful prefix.
+
+For example, inspect Tricky Blow from the current square, then from a reachable adjacent approach square. Push direction derives from the caster and target positions, so changing the caster's side changes which wall the target approaches. Closed cells, living bodies and board edges can stop a push. Use the returned collision events rather than inferring damage from distance or spell text.
+
+This is a read-only current-turn prediction based on the observed checkpoint and the twin's authored sources. It performs no transaction simulation/signing and confirms no execution; it supplies no future turn entropy. Reobserve before any submission. For autonomous execution, put `highest_damage_enemy` in the combat profile embedded in your behavior tree; the bot evaluates it each turn without contacting an AI. Explicit action previews remain useful for comparing a particular path or aim, but do not alter an accepted behavior.
 
 ## Damage, defense, and effects
 

@@ -8,8 +8,10 @@ import type { ControlStore } from './store.ts'
 import type { Run } from './run_plan.ts'
 import { run_ref_of, run_key } from './run_ref.ts'
 import { observation_events } from './actor_snapshot.ts'
+import { fight_planning } from './fight_planning.ts'
+import { character_observability, observed_balance } from './character_observability.ts'
 import { gameplay_knowledge } from './gameplay_knowledge.ts'
-import { fight_checkpoint_id, zone_checkpoint_id, type GameplayContext } from './gameplay.ts'
+import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay.ts'
 
 /** Full snapshots remain the planning baseline; changes reuse the same fenced event ring. */
 export const actor_observation = (context: GameplayContext, fence: number) => {
@@ -23,6 +25,7 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
     const { ready, cursor, observation_revision, observed_at, clock, frozen, indexing_lag } = snapshot
     return {
       view: 'changes' as const,
+      balance: observed_balance(context),
       ready,
       cursor,
       observation_revision,
@@ -35,7 +38,11 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
   }
   return {
     ...snapshot,
+    ...character_observability(context),
     events,
+    ...(payload.fight_plan === undefined
+      ? {}
+      : { fight_plan: JSON.parse(gameplay_json(fight_planning(context, payload.fight_plan))) }),
     checkpoint_ids: Object.fromEntries(
       Object.entries(snapshot.fights).map(([id, row]) => [id, fight_checkpoint_id(row)])
     ),
@@ -44,7 +51,11 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
         .filter(([, row]) => row.spawns !== null)
         .map(([id, row]) => [id, zone_checkpoint_id(row)])
     ),
-    planning_context: gameplay_knowledge(context, payload.recipes as readonly string[] | undefined),
+    planning_context: gameplay_knowledge(
+      context,
+      payload.recipes as readonly string[] | undefined,
+      payload.spells as readonly string[] | undefined
+    ),
   }
 }
 

@@ -328,7 +328,7 @@ test('changes observations require a valid baseline and retain exact ordered eve
     await f.admit()
     const full = (await f.observe()) as { cursor: number; event_fence: number; characters: unknown }
     expect(full.characters).toEqual([])
-    expect(await f.observe({ view: 'full' })).toEqual(full)
+    expect({ ...((await f.observe({ view: 'full' })) as object), balance: null }).toEqual({ ...full, balance: null })
     for (const payload of [
       { view: 'changes' },
       { view: 'changes', after_cursor: full.cursor },
@@ -346,10 +346,52 @@ test('changes observations require a valid baseline and retain exact ordered eve
     await f.send(packet)
     const changed = await f.observe(payload)
     expect(changed).toMatchObject({ events: [{ cursor: full.cursor + 1, packet }] })
-    expect(await f.observe(payload)).toEqual(changed)
+    expect({ ...((await f.observe(payload)) as object), balance: null }).toEqual({
+      ...(changed as object),
+      balance: null,
+    })
     for (let index = 0; index < f.options.event_limit; index++) await f.send(packet)
     await expect(f.observe(payload)).rejects.toThrow('needs_resync')
     expect(await f.observe()).toHaveProperty('planning_context')
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+test('spell discovery works before a fight and exposes authored unlock levels and casting ranks', async () => {
+  const f = await fixture()
+  try {
+    await f.observe()
+    await f.admit()
+    expect(await f.observe()).not.toHaveProperty('planning_context.spells')
+    const catalog = await f.observe({ spells: [] })
+    expect(catalog).toHaveProperty('planning_context.spells.catalog')
+    expect(catalog).toMatchObject({
+      planning_context: {
+        spells: {
+          catalog: expect.arrayContaining([
+            { name: 'Topkaj', classe: 'asobi', unlock_level: 26 },
+            { name: 'Tricky Trap', classe: 'yajin', unlock_level: 1 },
+          ]),
+        },
+      },
+    })
+    expect(await f.observe({ spells: ['Topkaj'] })).toMatchObject({
+      planning_context: {
+        spells: {
+          definitions: [
+            {
+              name: 'Topkaj',
+              unlock_level: 26,
+              levels: expect.arrayContaining([
+                expect.objectContaining({ ap_cost: 5, range_min: 1, range_max: 5, effects: expect.any(Array) }),
+              ]),
+              characters: [],
+            },
+          ],
+        },
+      },
+    })
   } finally {
     await f.runtime.stop()
   }

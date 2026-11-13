@@ -176,6 +176,32 @@ describe('character receipt folds', () => {
     ])
   })
 
+  test('equipment receipts and repeated roster refreshes retain the open inventory and selected character', () => {
+    const title = item()
+    const boots = item({ id: '0xboots', category: 'boots', item_type: 'boots' })
+    const roster = seeded_state([character({ id: '0xaaa' }), character()], [title, boots])
+    const selected = '0xchar'
+    const selecting = reduce_app_state(roster, { type: 'character/select', character_id: selected })
+    let state = reduce_app_state(selecting, { type: 'dialog/open', dialog: 'character_equipment' })
+    expect(state.session.characters[0]!.id).not.toBe(selected)
+    for (const change of [
+      { equipped: [{ slot: 'title' as const, item_id: title.id }], unequipped: [] },
+      { equipped: [{ slot: 'boots' as const, item_id: boots.id }], unequipped: [] },
+      { equipped: [], unequipped: [{ slot: 'title' as const, item_id: title.id }] },
+      { equipped: [], unequipped: [{ slot: 'boots' as const, item_id: boots.id }] },
+    ]) {
+      state = reduce_app_state(state, { type: 'character/equip_folded', character_id: '0xchar', ...change })
+      const refreshed = { type: 'packet/characters' as const, characters: [...state.session.characters] }
+      for (const packet of [refreshed, refreshed]) {
+        state = reduce_app_state(state, { type: 'server/packet', packet })
+        expect(state.navigation.dialog).toBe('character_equipment')
+        expect(state.session.selected_character_id).toBe(selected)
+      }
+    }
+    expect(state.session.characters.find(({ id }) => id === selected)!.equipment).toEqual([])
+    expect(state.session.inventory.map(({ id }) => id).sort()).toEqual([boots.id, title.id].sort())
+  })
+
   test('stat fold mirrors class costs across a boundary and Ikari double vitality', () => {
     const state = seeded_state([character({ intelligence: 19 })], [])
     const next = reduce_app_state(state, {

@@ -16,6 +16,7 @@ import {
   type GameplayContext,
 } from './gameplay.ts'
 import { profession_knowledge } from './profession_catalog.ts'
+import { spell_knowledge } from './spell_catalog.ts'
 
 type Context = Pick<GameplayContext, 'snapshot' | 'address' | 'now' | 'freshness_ms'>
 type Definition = Readonly<Record<string, unknown>>
@@ -27,6 +28,7 @@ type Seat = Readonly<{
 }>
 type Knowledge = Readonly<{
   professions?: ReturnType<typeof profession_knowledge>
+  spells?: ReturnType<typeof spell_knowledge>
   available: boolean
   reason?: string
   guides: typeof guides
@@ -76,7 +78,11 @@ const owned_seats = (context: Context, checkpoint: HydratedFightCheckpoint): rea
   })
 /** Read-only planning context from the same authored content and fight twin used for validation.
  * It grants no authority; every write is independently rechecked at signing and submission. */
-export const gameplay_knowledge = (context: Context, recipes?: readonly string[]): Knowledge => {
+export const gameplay_knowledge = (
+  context: Context,
+  recipes?: readonly string[],
+  spells?: readonly string[]
+): Knowledge => {
   try {
     gameplay_observed_ms(context)
   } catch {
@@ -91,5 +97,12 @@ export const gameplay_knowledge = (context: Context, recipes?: readonly string[]
       return [[id, { checkpoint_id: fight_checkpoint_id(row), active_fighter_idx: active?.toString() ?? null, seats }]]
     })
   )
-  return { available: true, guides, timing, fights, professions: profession_knowledge(context.snapshot, recipes) }
+  return {
+    available: true,
+    guides,
+    timing,
+    fights,
+    professions: profession_knowledge(context.snapshot, recipes),
+    ...(spells ? { spells: spell_knowledge(context.snapshot.characters, spells) } : {}),
+  }
 }

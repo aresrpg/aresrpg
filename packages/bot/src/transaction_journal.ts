@@ -8,6 +8,7 @@ import type {
   JournalTransaction,
 } from '@aresrpg/sdk/transaction-execution'
 import { receipt_digest } from '@aresrpg/sdk/cache'
+import { proves_transaction_conflict } from '@aresrpg/sdk/transaction-execution'
 import { gas_mist_from_receipt } from '@aresrpg/sdk'
 
 import { assert_run_admission } from './run_admission.ts'
@@ -155,6 +156,63 @@ export const create_transaction_journal = (
     },
     signed: (record) => change_envelope(record, 'signed'),
     mark_submitting: (record) => change_envelope(record, 'submitting'),
+    conflicted: async (proof, record) =>
+      store.transaction(keys, async (tx) => {
+        const lane = await lane_for(tx)
+        const current = await tx.get<Command>(`command:${command.id}`)
+        if (!current) throw new Error('envelope_transition_conflict')
+        const result = (current.result ?? {}) as { digest?: string; conflicting_receipt?: Receipt }
+        if (
+          [
+            !lane.pending,
+            current.status === 'failed',
+            current.error === 'transaction_input_consumed',
+            current.lane_key === command.lane_key,
+            current.grant_id === command.grant_id,
+            result.digest === record.digest,
+            as_json(result.conflicting_receipt) === as_json(proof),
+          ].every(Boolean)
+        )
+          return
+        const { pending } = lane
+        if (
+          !pending ||
+          ![
+            pending.phase === 'submitting',
+            pending.digest === record.digest,
+            pending.command_id === command.id,
+            pending.grant_id === command.grant_id,
+            current.lane_key === command.lane_key,
+            current.grant_id === command.grant_id,
+            lane.active_command === command.id,
+            ['executing', 'uncertain'].includes(current.status),
+          ].every(Boolean)
+        )
+          throw new Error('envelope_transition_conflict')
+        const envelope = JSON.parse(await cipher.decrypt(pending.encrypted, context(pending.digest))) as {
+          bytes: string
+        }
+        if (
+          !proves_transaction_conflict(
+            { digest: pending.digest, bytes: new Uint8Array(Buffer.from(envelope.bytes, 'base64')) },
+            proof
+          )
+        )
+          throw new Error('transaction_conflict_unproven')
+        await tx.put(`command:${command.id}`, {
+          ...current,
+          status: 'failed',
+          error: 'transaction_input_consumed',
+          result: { digest: pending.digest, executed: false, conflicting_receipt: JSON.parse(as_json(proof)) },
+        })
+        await tx.put(command.lane_key, {
+          ...lane,
+          pending: null,
+          active_command: null,
+          needs_resync: true,
+          decision_revision: lane.decision_revision + 1,
+        })
+      }),
     settled: async (receipt, record) => {
       const digest = receipt_digest(receipt)
       if (digest !== record.digest) throw new Error('receipt_digest_mismatch')

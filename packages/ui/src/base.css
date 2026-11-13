@@ -348,6 +348,14 @@
   font-size: 10px;
   color: #b0b2c0;
 }
+.aui-window-actions {
+  position: absolute;
+  right: 35px;
+  top: 0;
+}
+.aui-window-header:has(.aui-window-actions) {
+  padding-right: 80px;
+}
 .aui-window-header > .aui-icon-button {
   position: absolute;
   right: 5px;

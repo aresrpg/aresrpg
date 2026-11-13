@@ -8,7 +8,7 @@ import { watch_agent_character } from '../../src/agents/watch_character.ts'
 import { displayed_character } from '../../src/agents/observation.ts'
 import { read_character_recall } from '../../src/agents/character_recall.ts'
 import { selected_character } from '../../src/modules/session.ts'
-import { CharacterTabs } from '../../src/components/CharacterTabs.tsx'
+import { CharacterTabs, CharacterTabMenu } from '../../src/components/CharacterTabs.tsx'
 import { agent_tab_source } from '../../src/agents/character_tabs.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import type { AuthSession } from '../../src/auth.ts'
@@ -139,4 +139,28 @@ test('Recall resumes a verified pending character and gear claim rather than off
     unequip: [{ item_id: 'equipped-tool', slot: 'tool' }],
   })
   expect(fresh.handover?.claim).toBe(claim)
+})
+
+test('spectator-owned menus retain read-only actions without mounting player write actions', () => {
+  const menu_copy = {
+    ...copy,
+    ui: { ...copy.ui, view_on_suivision: 'View on SuiVision', portrait_share: 'Share portrait' },
+  }
+  const id = `0x${'ab'.repeat(32)}`
+  const render_menu = (read_only: boolean) =>
+    renderToStaticMarkup(
+      <CharacterTabMenu character_id={id} copy={menu_copy} can_manage={!read_only} portrait={() => {}} close={() => {}}>
+        <button>Send or setup agent</button>
+        <button>Invite</button>
+        <button>Delete</button>
+      </CharacterTabMenu>
+    )
+  const spectator = render_menu(true)
+  expect(spectator).toContain(`/object/${id}`)
+  expect(spectator).toContain('View on SuiVision')
+  expect(spectator).toContain('Share portrait')
+  for (const label of ['Send or setup agent', 'Invite', 'Delete']) {
+    expect(spectator).not.toContain(label)
+    expect(render_menu(false)).toContain(label)
+  }
 })

@@ -145,6 +145,19 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
             ts = stamp.ts_ms,
         ));
     }
+    // Publish native Character versions only after all dependent fields and custody writes.
+    // Root writes clear the old marker so partial replay cannot certify mixed state.
+    for output in view
+        .outputs
+        .iter()
+        .filter(|output| is_game(output.type_key, game, "character", "Character"))
+    {
+        cypher.push(format!(
+            "MATCH (c:Character {{id: {id}}}) SET c.version = {version}",
+            id = q_id(&output.id),
+            version = q(&output.version.to_string()),
+        ));
+    }
     Ok(cypher)
 }
 
@@ -369,6 +382,7 @@ fn emit_object(
             &c.id,
             ckpt,
             &[
+                "v.version = NULL".into(),
                 format!("v.name = {}", q(&c.name)),
                 format!("v.classe = {}", q(&c.classe)),
                 format!("v.sex = {}", q(&c.sex)),
@@ -1698,7 +1712,9 @@ mod tests {
             bytes: &bytes,
         }];
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 1);
+        assert_eq!(cypher.len(), 2);
+        assert!(cypher[0].contains("v.version = NULL"));
+        assert!(cypher[1].contains("SET c.version = '1'"));
         assert!(cypher[0].starts_with("MERGE (v:Character {id: '0x"));
         assert!(cypher[0].contains("v.name = 'aiden'"));
         assert!(cypher[0].contains("v.experience = '10'"));
@@ -1816,6 +1832,13 @@ mod tests {
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
         let hp_write = cypher.iter().find(|c| c.contains("v.hp = '137'")).unwrap();
         assert!(hp_write.contains("v.hp_ms = 5"));
+        // Every prefix before the final write must be unable to certify this root version.
+        // Clearing the marker with the root write also fences partial checkpoint replay.
+        assert!(cypher[0].contains("v.version = NULL"));
+        assert!(cypher.last().unwrap().contains("SET c.version = '1'"));
+        assert!(cypher[..cypher.len() - 1]
+            .iter()
+            .all(|write| !write.contains("SET c.version =")));
     }
 
     #[test]

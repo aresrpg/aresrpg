@@ -371,6 +371,9 @@ test('unsupported managed modes and foreign seats cannot reach any SDK door', as
     claim_loot_batch: async () => {
       throw new Error('unexpected loot claim')
     },
+    raise_spell: async () => {
+      throw new Error('unexpected spell allocation')
+    },
     raise_stats: async () => {
       throw new Error('unexpected stat allocation')
     },
@@ -428,6 +431,9 @@ test('one complete PvE lifecycle uses injected SDK doors and the actual twin, in
     },
     claim_loot_batch: async () => {
       throw new Error('unexpected loot claim')
+    },
+    raise_spell: async () => {
+      throw new Error('unexpected spell allocation')
     },
     raise_stats: async () => {
       throw new Error('unexpected stat allocation')

@@ -299,3 +299,50 @@ test('MCP forwards changes view and its cursor pair while rejecting invalid view
     })
   }
 })
+
+test('MCP forwards spell discovery and rejects invalid or unknown spell IDs', async () => {
+  const f = await authenticated_http(undefined, async (_grant, payload) => payload)
+  const call = async (spells: unknown) =>
+    f.json<{ result: { isError: boolean; structuredContent: unknown } }>(
+      '/mcp',
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'bot_observe', arguments: { spells } } },
+      f.access_token
+    )
+  expect((await call([])).result.structuredContent).toEqual({ spells: [] })
+  expect((await call(['Tricky Trap', 'Tricky Trap'])).result.structuredContent).toEqual({ spells: ['Tricky Trap'] })
+  for (const spells of [null, 'Tricky Trap', [1], ['']])
+    expect((await call(spells)).result).toMatchObject({
+      isError: true,
+      structuredContent: { error: 'invalid_argument' },
+    })
+  expect((await call(['invented spell'])).result).toMatchObject({
+    isError: true,
+    structuredContent: { error: 'unknown_combat_spell' },
+  })
+  expect(await f.store.scan_keys('command:', 100)).toEqual([])
+})
+
+test('MCP forwards read-only fight prefixes and rejects malformed or changes-only planning', async () => {
+  const f = await authenticated_http(undefined, async (_grant, payload) => payload)
+  const fight_plan = {
+    character_id: `0x${'2'.repeat(64)}`,
+    fight: `0x${'3'.repeat(64)}`,
+    fighter_idx: '0',
+    checkpoint_id: 'observed',
+    actions: [],
+  }
+  const call = async (args: unknown) =>
+    f.json<{ result: { isError: boolean; structuredContent: unknown } }>(
+      '/mcp',
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'bot_observe', arguments: args } },
+      f.access_token
+    )
+  expect((await call({ fight_plan })).result.structuredContent).toEqual({ fight_plan })
+  for (const args of [
+    { fight_plan: null },
+    { fight_plan: { ...fight_plan, actions: [{ type: 'end_turn' }] } },
+    { view: 'changes', fight_plan },
+  ])
+    expect((await call(args)).result.isError).toBe(true)
+  expect(await f.store.scan_keys('command:', 100)).toEqual([])
+})

@@ -5,7 +5,7 @@ import type { PortraitAppearance } from '@aresrpg/immutable/portrait'
 import { Button, IconButton } from '@aresrpg/ui'
 import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 import { Plus, UsersRound } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 
 import { send_character_to_agent } from '../agents/send_character.ts'
 import { AgentSetup } from '../agents/AgentSetup.tsx'
@@ -14,11 +14,43 @@ import { crafting_lock_id } from '../modules/craft_character_lock.ts'
 import { owned_party_invite_view } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { ObjectExplorerLink } from './ObjectExplorerLink.tsx'
 import { CharacterTab } from './CharacterTab.tsx'
 import { CharacterDeleteModal } from './CharacterDeleteModal.tsx'
 import './character_tabs.css'
 import { ContextMenu } from './ContextMenu.tsx'
 import { PortraitShareModal } from './PortraitShare.tsx'
+
+export const CharacterTabMenu = ({
+  character_id,
+  copy,
+  can_manage,
+  agent,
+  portrait,
+  close,
+  children,
+}: Readonly<{
+  character_id: string
+  copy: AppCopy
+  can_manage: boolean
+  agent?: boolean
+  portrait: () => void
+  close: () => void
+  children: ReactNode
+}>) => (
+  <div className="grid" data-character-tab-menu="">
+    <ObjectExplorerLink object_id={character_id} copy={copy} menu onClick={close} />
+    <button
+      type="button"
+      role="menuitem"
+      className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
+      onClick={portrait}
+    >
+      {copy.ui.portrait_share}
+    </button>
+    {(can_manage || agent) && children}
+  </div>
+)
 
 export const character_tab_invite_enabled = (
   character_id: string,
@@ -219,7 +251,6 @@ export const CharacterTabs = ({
                 }}
                 onContextMenu={(event: Readonly<ReactMouseEvent<HTMLButtonElement>>) => {
                   event.preventDefault()
-                  if (!create_character && !delegated) return
                   set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })
                 }}
                 title={locked ? copy.settings_page.always_craft_from_hint : undefined}
@@ -232,19 +263,18 @@ export const CharacterTabs = ({
       </div>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y}>
-          <div className="grid" data-character-tab-menu="">
-            <button
-              type="button"
-              role="menuitem"
-              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
-              onClick={() => {
-                const target = tabs.find(({ id }) => id === menu.character_id)
-                if (target) set_dialog({ kind: 'portrait', appearance: target })
-                set_menu(null)
-              }}
-            >
-              {copy.ui.portrait_share}
-            </button>
+          <CharacterTabMenu
+            character_id={menu.character_id}
+            copy={copy}
+            can_manage={Boolean(create_character)}
+            agent={Boolean(agent_target)}
+            close={() => set_menu(null)}
+            portrait={() => {
+              const target = tabs.find(({ id }) => id === menu.character_id)
+              if (target) set_dialog({ kind: 'portrait', appearance: target })
+              set_menu(null)
+            }}
+          >
             {agent_target ? (
               <button
                 type="button"
@@ -295,7 +325,7 @@ export const CharacterTabs = ({
                 </button>{' '}
               </>
             )}
-          </div>
+          </CharacterTabMenu>
         </ContextMenu>
       )}
       <CharacterTabDialog dialog={dialog} close={() => set_dialog(null)} copy={copy} />

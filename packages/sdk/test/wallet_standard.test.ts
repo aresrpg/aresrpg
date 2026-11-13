@@ -89,3 +89,38 @@ test('disposed wallet bindings reject signing and detach provider events once', 
   expect(() => binding.sign_transaction({} as never)).toThrow('disconnected')
   expect(signatures).toBe(0)
 })
+
+test('funding guard runs after deferred Google session lookup and before the wallet signs', async () => {
+  const { create_wallet_binding } = await import('../src/wallet_standard.ts')
+  const { promise, resolve } = Promise.withResolvers<{ jwt: string; expiresAt: number }>()
+  let current = true,
+    signatures = 0
+  const wallet = {
+    features: {
+      'standard:events': { on: () => () => undefined },
+      'enoki:getSession': { getSession: () => promise },
+      'sui:signPersonalMessage': { signPersonalMessage: async () => ({ bytes: '', signature: '' }) },
+      'sui:signTransaction': {
+        signTransaction: async () => {
+          signatures += 1
+          return { bytes: '', signature: '' }
+        },
+      },
+    },
+  } as unknown as Wallet
+  const account: WalletAccount = {
+    address: id(200),
+    publicKey: new Uint8Array(32),
+    chains: ['sui:mainnet'],
+    features: [],
+  }
+  const binding = create_wallet_binding(wallet, account, 'mainnet')
+  const pending = binding.sign_transaction({} as never, () => {
+    if (!current) throw new Error('Funding retired')
+  })
+  current = false
+  resolve({ jwt: 'synthetic-test-session', expiresAt: Date.now() + 60_000 })
+  await expect(pending).rejects.toThrow('Funding retired')
+  expect(signatures).toBe(0)
+  binding.dispose()
+})

@@ -10,6 +10,7 @@
     "./fight-phase": "./src/fight_phase.ts",
     "./world-projection": "./src/world_projection.ts",
     "./equipment": "./src/equipment.ts",
+    "./character-stats": "./src/character_stats.ts",
     "./inventory": "./src/inventory.ts"
   },
   "scripts": {

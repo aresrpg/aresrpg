@@ -103,3 +103,31 @@ Set a reachable target and estimate the gap from measured score gain per activit
 - [Profession math](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/immutable/src/experience.ts)
 - [Gathering authority](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move/sources/gathering.move)
 - [Mastery actions](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/mastery.ts)
+
+OBSERVING GEAR, RECOVERY AND SUI
+
+Full observe returns the existing inventory.items and characters[].equipment rows: exact
+item IDs, categories, levels, rolled stats, damage lines and pet power. Stats are centered
+raw values; inventory_bonuses and equipment_bonuses expose signed, pet-scaled contributions
+using the same projection as player tooltips. Unknown rolls remain null. Choose an exact
+item with equip_item; equip_owned is a deterministic selector, not a gear-quality policy.
+
+health[character_id] reports current/maximum HP and its source. In fight custody this is
+the owned fight seat, with no passive recovery projected. Outside fights it uses the
+persistent HP/timestamp and fresh chain clock through the shared lazy-regeneration rule:
+whole ticks at regen_ms_per_hp, clamped to current maximum HP. Missing initialized HP
+fields together mean full health; partial or stale observations remain null. Settlement
+supplies post-fight HP; level-up restores maximum HP. This read never writes health.
+
+Tree state facts hp, max_hp and hp_percent take character_id; hp_percent is floored to an
+integer. Compose a priority selector with a sequence testing hp_percent >= your threshold
+and your next action, followed by a wait leaf. Unknown conditions wait rather than selecting
+a negative branch. Do not schedule a guessed recovery delay from an old snapshot.
+
+balance belongs to the current agent multisig, never the human Google wallet. balance_mist
+is an exact decimal string: 1000000000 MIST = 1 SUI. sampled_at and expires_at use the same
+monotonic-millisecond clock as actor observation; expiry preserves the existing SDK cache's
+sample age. Missing, failed, invalidated or expired reads are null, never zero. A tree
+condition {"type":"sui_balance","op":"gte","value":"1000000000"} tests one SUI exactly.
+This observation is not a fee quote or a spending reservation; ordinary SDK simulation and
+on-chain balance checks still govern writes.

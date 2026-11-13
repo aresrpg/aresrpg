@@ -12,11 +12,12 @@ import {
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
 
+import { support_beneficiaries } from './combat_support.ts'
 import type { FightTurnPayload } from './gameplay.ts'
 import type { CombatCondition, CombatProfile, CombatStep } from './combat_profile.ts'
 
 type Action = FightTurnPayload['actions'][number]
-type Candidate = Readonly<{ action: Action; state: HydratedFightCheckpoint }>
+type Candidate = Readonly<{ actions: readonly Action[]; state: HydratedFightCheckpoint }>
 type Context = Readonly<{ checkpoint: HydratedFightCheckpoint; seat: bigint; observed_ms: bigint }>
 const compare = (left: bigint, right: bigint) => (left < right ? -1 : Number(left > right))
 const enemies = ({ checkpoint, seat }: Context) => {
@@ -47,7 +48,7 @@ const command_input = (action: Action, fighter: bigint): FightCommandInput => {
 const simulate = (context: Context, action: Action): Candidate | null => {
   const runtime = create_fight({ state: context.checkpoint, mode: 'remote' })
   const result = runtime.apply({ ...command_input(action, context.seat), observed_ms: context.observed_ms })
-  return result.error ? null : { action, state: result.state }
+  return result.error ? null : { actions: [action], state: result.state }
 }
 const target_cells = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): readonly bigint[] => {
   const { checkpoint, seat } = context
@@ -55,6 +56,7 @@ const target_cells = (context: Context, step: Exclude<CombatStep, { type: 'move'
     step.type === 'cast'
       ? spell_target_cells(checkpoint, seat, step.spell).targetable
       : weapon_target_cells(checkpoint, seat).targetable
+  if (step.target === 'most_allies') return legal
   if (step.target === 'self') return legal.filter((cell) => cell === checkpoint.contract.fighters[Number(seat)]!.cell)
   const opponents = enemy_order(context, step.target === 'lowest_hp_enemy')
   if (step.target !== 'trap_near_enemy')
@@ -66,16 +68,69 @@ const target_cells = (context: Context, step: Exclude<CombatStep, { type: 'move'
     .filter((cell) => !occupied.includes(cell))
     .toSorted((left, right) => compare(manhattan(left, target), manhattan(right, target)) || compare(left, right))
 }
+/** Score observed HP loss, not raw damage events: overkill and collision chains share the twin's result. */
+const enemy_hp_loss = (context: Context, candidate: Candidate): bigint =>
+  enemies(context).reduce(
+    (total, { fighter, seat }) => total + fighter.hp - candidate.state.contract.fighters[seat]!.hp,
+    0n
+  )
+const attack_score = (context: Context, step: Exclude<CombatStep, { type: 'move' }>, candidate: Candidate) => {
+  switch (step.target) {
+    case 'highest_damage_enemy':
+      return enemy_hp_loss(context, candidate)
+    case 'most_allies': {
+      const count = support_beneficiaries(context.checkpoint, candidate.state, context.seat)
+      return count > 0 ? BigInt(count) : null
+    }
+    default:
+      return undefined
+  }
+}
 const cast_candidate = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): Candidate | null => {
+  let best: Readonly<{ candidate: Candidate | null; score: bigint | null }> = { candidate: null, score: null }
   for (const cell of target_cells(context, step)) {
     const action: Action =
       step.type === 'cast'
         ? { type: 'cast', spell: step.spell, target_cell: String(cell) }
         : { type: 'strike', target_cell: String(cell) }
     const candidate = simulate(context, action)
-    if (candidate) return candidate
+    const score = candidate && attack_score(context, step, candidate)
+    if (score === null) continue
+    if (score === undefined) return candidate
+    if (best.score === null || score > best.score) best = { candidate, score }
   }
-  return null
+  return best.candidate
+}
+const movement_candidates = (context: Context): readonly Candidate[] =>
+  reachable_fight_cells(context.checkpoint, context.seat).flatMap((cell) => {
+    const path = fight_path_to(context.checkpoint, context.seat, cell)
+    const candidate = path && simulate(context, { type: 'move', path: path.map(String) })
+    return candidate ? [candidate] : []
+  })
+const damage_order = (context: Context, left: Candidate, right: Candidate): number => {
+  const seat = Number(context.seat)
+  const left_fighter = left.state.contract.fighters[seat]!
+  const right_fighter = right.state.contract.fighters[seat]!
+  return (
+    compare(enemy_hp_loss(context, right), enemy_hp_loss(context, left)) ||
+    compare(right_fighter.hp, left_fighter.hp) ||
+    compare(right_fighter.mp, left_fighter.mp) ||
+    left.actions.length - right.actions.length
+  )
+}
+/** One canonical route per reachable cell, never a promised endpoint after tackle or traps. */
+const attack_candidate = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): Candidate | null => {
+  const stationary = cast_candidate(context, step)
+  if (!step.position) return stationary
+  const moved = movement_candidates(context).flatMap((movement) => {
+    const { state } = movement
+    if (state.contract.ended || state.contract.fighters[Number(context.seat)]!.dead) return []
+    const attack = cast_candidate({ ...context, checkpoint: state }, step)
+    return attack ? [{ ...attack, actions: [...movement.actions, ...attack.actions] }] : []
+  })
+  return (
+    [...(stationary ? [stationary] : []), ...moved].sort((left, right) => damage_order(context, left, right))[0] ?? null
+  )
 }
 const enemy_distance = (context: Context, state: HydratedFightCheckpoint): bigint => {
   const { cell } = state.contract.fighters[Number(context.seat)]!
@@ -91,11 +146,7 @@ const movement_candidate = (context: Context, direction: 'retreat' | 'approach')
   const { checkpoint, seat } = context
   const before = checkpoint.contract.fighters[Number(seat)]!
   const baseline = enemy_distance(context, checkpoint)
-  const candidates = reachable_fight_cells(checkpoint, seat).flatMap((cell) => {
-    const path = fight_path_to(checkpoint, seat, cell)
-    if (!path) return []
-    const candidate = simulate(context, { type: 'move', path: path.map(String) })
-    if (!candidate) return []
+  const candidates = movement_candidates(context).flatMap((candidate) => {
     const after = candidate.state.contract.fighters[Number(seat)]!
     const distance = enemy_distance(context, candidate.state)
     const improves = direction === 'retreat' ? distance > baseline : distance < baseline
@@ -135,11 +186,11 @@ const apply_combo = (draft: Draft, combo: CombatProfile['combos'][number]): Draf
   for (const step of combo.steps) {
     if (turn_finished(result.context)) break
     const candidate =
-      step.type === 'move' ? movement_candidate(result.context, step.direction) : cast_candidate(result.context, step)
+      step.type === 'move' ? movement_candidate(result.context, step.direction) : attack_candidate(result.context, step)
     if (!candidate) return { ...result, skipped: [...result.skipped, `${combo.name}:${step.type}`] }
     result = {
       context: { ...result.context, checkpoint: candidate.state },
-      actions: [...result.actions, candidate.action],
+      actions: [...result.actions, ...candidate.actions],
       skipped: result.skipped,
     }
   }

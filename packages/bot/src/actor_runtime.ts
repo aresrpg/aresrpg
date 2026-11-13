@@ -9,6 +9,7 @@ import { fromBase64 } from '@mysten/sui/utils'
 import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import { create_actor_locomotion } from './actor_locomotion.ts'
+import { read_actor_balance } from './actor_balance.ts'
 import { gameplay_observation_ready } from './gameplay_context.ts'
 import { wait_for_contract, ready_gameplay_command, refresh_signed_command } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
@@ -18,6 +19,7 @@ import { create_bot_actor, bun_transport } from './actor.ts'
 import {
   assert_lease,
   lane_owned_elsewhere,
+  lane_work_key,
   create_control_service,
   lane_key_for,
   type Command,
@@ -115,6 +117,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       prepared: (record) => journal_for().prepared(record),
       signed: (record) => journal_for().signed(record),
       mark_submitting: (record) => journal_for().mark_submitting(record),
+      conflicted: (proof, record) => journal_for().conflicted!(proof, record).finally(invalidate_execution),
       settled: async (receipt, record) => {
         await journal_for().settled(receipt, record)
         await reconcile()
@@ -203,6 +206,10 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       },
       report_failure: options.report_failure,
     })
+    const invalidate_execution = () => {
+      recovered = true
+      actor.disconnect()
+    }
     const locomotion = create_actor_locomotion({
       context: gameplay_context,
       available: () => !stopped && actor.state().status === 'ready',
@@ -231,10 +238,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       get sdk() {
         return sdk
       },
-      recovered: () => {
-        recovered = true
-        actor.disconnect()
-      },
+      recovered: invalidate_execution,
       refresh_execution: () => {
         if (!recovered) return
         if (!snapshot.ready) throw new Error('needs_resync')
@@ -317,13 +321,15 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (session.terminal_server()) throw new Error('ACTOR_TERMINAL')
     await session.actor.connect()
     await session.actor.settle_observations()
+    if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' }
+    const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
     const snapshot = session.snapshot()
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
     await apply_actor_watches(session.actor, command)
     const lane = await store.read<Lane>(command.lane_key)
     return {
       ...(await owned_run_observation(store, lane, command)),
-      ...actor_observation({ ...session_context(session, command), snapshot }, session.lease.fence),
+      ...actor_observation({ ...session_context(session, command), snapshot, balance }, session.lease.fence),
       decision_revision: lane?.decision_revision,
       event_fence: session.lease.fence,
       sampled_at: monotonic_now(),
@@ -414,7 +420,9 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       await session.actor.connect()
       await session.actor.settle_observations()
       const binding = { command, actor_id: options.actor_id, fence: session.lease.fence }
-      const ready = await ready_gameplay_command(store, config, binding, session_context(session, command), now())
+      const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
+      const context = { ...session_context(session, command), balance }
+      const ready = await ready_gameplay_command(store, config, binding, context, now())
       if (!ready) return
       if (session.actor.state().status !== 'ready') throw new Error('needs_resync')
       session.refresh_execution()
@@ -435,16 +443,20 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       now,
       session: async (bot, command) => {
         const session = await session_for(bot, command)
+        const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
         return {
           fence: session.lease.fence,
           connect: async () => {
             await session.actor.connect()
             if (session.actor.state().status === 'ready') await apply_actor_watches(session.actor, command)
           },
-          context: session_context(session, {
-            ...command,
-            observation_revision: session.snapshot().observation_revision,
-          }),
+          context: {
+            ...session_context(session, {
+              ...command,
+              observation_revision: session.snapshot().observation_revision,
+            }),
+            balance,
+          },
         }
       },
     })
@@ -494,9 +506,11 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const schedule_key = async (key: string, wait_for_lane = false): Promise<void> => {
     const record = await store.read<{ lane_key?: string; bot_id?: string; status?: string }>(key)
     if (!record || !has_pending_work(key, record)) return
+    let dispatch = key
     if (record.lane_key) {
       const owner = await store.read<Lane>(record.lane_key)
       if (lane_owned_elsewhere(owner, options.actor_id, now())) return
+      dispatch = lane_work_key(key, owner)
     }
     const lane = record.lane_key ?? record.bot_id ?? key
     const running = work.get(lane)
@@ -506,7 +520,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       return schedule_key(key, true)
     }
     if (stopped || work.size >= options.scan_limit) return
-    const task = process_key(key)
+    const task = process_key(dispatch)
       .catch(options.report_failure)
       .finally(() => {
         work.delete(lane)

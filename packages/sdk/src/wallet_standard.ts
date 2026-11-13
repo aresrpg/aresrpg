@@ -107,14 +107,15 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
         zklogin_public_identifier: google.toBase64(),
       })
     },
-    sign_transaction: (transaction: Transaction) =>
-      with_active_session(() =>
-        signing.signTransaction({
+    sign_transaction: (transaction: Transaction, before_sign?: () => void) =>
+      with_active_session(() => {
+        before_sign?.()
+        return signing.signTransaction({
           transaction,
           account: account as Parameters<typeof signing.signTransaction>[0]['account'],
           chain: `sui:${network}`,
         })
-      ),
+      }),
     sign_personal_message: (message: Uint8Array) =>
       with_active_session(() =>
         personal.signPersonalMessage({

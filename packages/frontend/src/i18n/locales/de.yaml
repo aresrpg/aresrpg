@@ -2749,6 +2749,9 @@ title_names:
   title_pug_paladin: 'Mops-Paladin'
   title_enforcer: 'Der Vollstrecker'
 ui:
+  view_on_suivision: Auf SuiVision ansehen
+  funding_game_wallet: Spiel-Wallet
+  funding_external_wallet: Andere Wallet
   agent_wallet: 'Agent-Wallet'
   agent_activity_label: 'Agentenaktivität'
   agent_activity_idle: 'Wartet auf ein Ziel'

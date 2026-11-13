@@ -6,10 +6,14 @@ import { isValidTransactionDigest } from '@mysten/sui/utils'
 import { verifyTransactionSignature } from '@mysten/sui/verify'
 
 import { receipt_digest, type Receipt } from './cache.ts'
+import { read_transaction_conflict, type ConflictReader } from './transaction_conflict.ts'
+
+export { proves_transaction_conflict } from './transaction_conflict.ts'
 
 export type ReceiptOptions = Readonly<{ include?: object; gas_scope?: string; gas_payer?: string }>
 export type PendingTransaction = ReceiptOptions &
   Readonly<{ digest: string; phase: 'submitted' | 'visible' | 'recovered' }>
+type ExecutionPending = PendingTransaction & Readonly<{ bytes?: Uint8Array }>
 export type PreparedTransaction = ReceiptOptions &
   Readonly<{
     digest: string
@@ -31,24 +35,26 @@ export type TransactionJournal = Readonly<{
   signed: (record: SignedTransaction) => Promise<void>
   mark_submitting: (record: SignedTransaction) => Promise<void>
   settled: (receipt: Receipt, record: PendingTransaction) => Promise<void>
+  conflicted?: (proof: Receipt, record: PendingTransaction) => Promise<void>
 }>
 export type { Receipt } from './cache.ts'
 export type TransactionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
-export type ExecutionCore = Readonly<{
-  executeTransaction: (input: {
-    transaction: Uint8Array
-    signatures: string[]
-    include?: object
-    signal?: AbortSignal
-  }) => Promise<Receipt>
-  waitForTransaction: (input: {
-    digest: string
-    include?: object
-    signal?: AbortSignal
-    timeout?: number
-    pollSchedule?: number[]
-  }) => Promise<Receipt>
-}>
+export type ExecutionCore = ConflictReader &
+  Readonly<{
+    executeTransaction: (input: {
+      transaction: Uint8Array
+      signatures: string[]
+      include?: object
+      signal?: AbortSignal
+    }) => Promise<Receipt>
+    waitForTransaction: (input: {
+      digest: string
+      include?: object
+      signal?: AbortSignal
+      timeout?: number
+      pollSchedule?: number[]
+    }) => Promise<Receipt>
+  }>
 
 /** The browser tab retains uncertain submissions across reloads. No signatures or transaction bytes persist. */
 export const browser_transaction_storage = (): TransactionStorage | null =>
@@ -138,7 +144,7 @@ export const create_transaction_execution = ({
   response_timeout_ms?: number
   recovery_timeout_ms?: number
 }>) => {
-  let pending: PendingTransaction | null = null
+  let pending: ExecutionPending | null = null
   let prepared: PreparedTransaction | null = null
   let journal_loaded = !journal
   let queued = 0
@@ -148,7 +154,7 @@ export const create_transaction_execution = ({
     const stored = storage?.getItem(storage_key)
     return stored ? decode_pending(stored) : pending
   }
-  const load_pending = async (): Promise<PendingTransaction | null> => {
+  const load_pending = async (): Promise<ExecutionPending | null> => {
     if (!journal) return read_pending()
     const record = await journal.read()
     journal_loaded = true
@@ -159,7 +165,20 @@ export const create_transaction_execution = ({
     }
     return pending
   }
-  const recover = async (record: PendingTransaction): Promise<Receipt> => {
+  const resolve_conflict = async (record: ExecutionPending): Promise<boolean> => {
+    if (!journal?.conflicted || !record.bytes) return false
+    const envelope = { digest: record.digest, bytes: record.bytes }
+    const proof = await bounded_request(
+      (signal) => read_transaction_conflict(core, envelope, signal),
+      recovery_timeout_ms
+    )
+    if (!proof) return false
+    await journal.conflicted(proof, record)
+    pending = { digest: record.digest, phase: 'recovered' }
+    storage?.removeItem(storage_key)
+    return true
+  }
+  const recover = async (record: ExecutionPending): Promise<Receipt | null> => {
     try {
       const receipt = await bounded_request(
         (signal) =>
@@ -173,10 +192,13 @@ export const create_transaction_execution = ({
       )
       return verify_receipt(receipt, record)
     } catch (cause) {
-      throw new Error(
-        `[sdk] transaction outcome unknown: ${record.digest}; check this transaction before trying again`,
-        { cause }
-      )
+      const message = `[sdk] transaction outcome unknown: ${record.digest}; check this transaction before trying again`
+      try {
+        if (await resolve_conflict(record)) return null
+      } catch (failure) {
+        throw new AggregateError([cause, failure], message, { cause: failure })
+      }
+      throw new Error(message, { cause })
     }
   }
   const accept = async (receipt: Receipt, record: PendingTransaction): Promise<void> => {
@@ -193,7 +215,8 @@ export const create_transaction_execution = ({
   ): Promise<Receipt> => {
     // Storage failure is a pre-submission refusal, never a reason to send without recovery evidence.
     storage?.setItem(storage_key, JSON.stringify(record))
-    pending = record
+    const retained: ExecutionPending = journal ? { ...record, bytes: raw.slice() } : record
+    pending = retained
     const receipt = await bounded_request(
       (signal) =>
         core.executeTransaction({ transaction: raw, signatures: [...signatures], include: record.include, signal }),
@@ -202,15 +225,17 @@ export const create_transaction_execution = ({
       .then((receipt) => verify_receipt(receipt, record))
       .catch((error: unknown) => {
         console.warn('[sdk] submission response unavailable; recovering transaction', record.digest, error)
-        return recover(record)
+        return recover(retained)
       })
+    if (!receipt) throw new Error(`[sdk] transaction not executable: ${record.digest}; refresh before a new intent`)
     await accept(receipt, record)
     return receipt
   }
   const recover_pending = async (): Promise<boolean> => {
     const record = await load_pending()
     if (!record || record.phase !== 'submitted') return false
-    await accept(await recover(record), record)
+    const receipt = await recover(record)
+    if (receipt) await accept(receipt, record)
     pending = { digest: record.digest, phase: 'recovered' }
     return true
   }

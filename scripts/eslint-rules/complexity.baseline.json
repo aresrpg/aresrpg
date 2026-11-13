@@ -1266,7 +1266,7 @@
     },
     "packages/frontend/src/components/WalletCard.tsx": {
       "WalletCard": [
-        10
+        9
       ]
     },
     "packages/frontend/src/components/FightPrompt.tsx": {
@@ -1536,9 +1536,6 @@
       ]
     },
     "packages/frontend/src/modules/navigation.ts": {
-      "packet_navigation": [
-        11
-      ],
       "reduce": [
         9
       ]
@@ -2559,6 +2556,14 @@
     "packages/bot/src/actor_runtime.ts": {
       "create_actor_runtime > schedule_key": [
         12
+      ]
+    },
+    "packages/sdk/src/transaction_conflict.ts": {
+      "proves_transaction_conflict": [
+        10
+      ],
+      "read_transaction_conflict": [
+        9
       ]
     }
   }
