@@ -5,12 +5,13 @@ import { DragScroll } from '@aresrpg/ui'
 import type { ItemRow } from '@aresrpg/protocol'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
+import { item_is_pet_food } from '../content/item_resource_filters.ts'
 import { item_resource_kind } from '../content/resource_kind.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 export const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 export type BagCategory = (typeof BAG_CATEGORIES)[number]
-const RESOURCE_FILTERS = ['all', 'raw', 'gatherable', 'intermediary', 'keys', 'runes'] as const
+const RESOURCE_FILTERS = ['all', 'raw', 'gatherable', 'intermediary', 'pet_food', 'keys', 'runes'] as const
 export type ResourceFilter = (typeof RESOURCE_FILTERS)[number]
 
 export const bag_category_of = (item: Readonly<ItemRow>): BagCategory => {
@@ -23,7 +24,11 @@ const resource_filter_of = (item: Readonly<ItemRow>) => {
   if (item.category === 'key') return 'keys'
   if (item.category === 'rune') return 'runes'
   if (item.category !== 'resource') return null
-  return item_resource_kind(item.item_type, !!encyclopedia_catalog.item(item.item_type)?.recipe)
+  return item_resource_kind(
+    item.item_type,
+    !!encyclopedia_catalog.item(item.item_type)?.recipe,
+    item_is_pet_food(item.item_type)
+  )
 }
 
 export const bag_item_matches = (item: Readonly<ItemRow>, category: BagCategory, filter: ResourceFilter): boolean =>
@@ -55,7 +60,9 @@ export const InventoryResourceFilters = ({
           onClick={() => select(key)}
           className="inventory-resource-filter"
         >
-          {text(`bag_filter_${key}`)}
+          {key === 'pet_food'
+            ? copy_text(copy.encyclopedia_page)('group_pet_food_resources')
+            : text(`bag_filter_${key}`)}
           <span className="ml-2 tabular-nums opacity-60">
             {items.filter(({ item }) => bag_item_matches(item, 'resources', key)).length}
           </span>

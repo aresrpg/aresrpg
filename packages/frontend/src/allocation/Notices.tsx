@@ -20,13 +20,7 @@ export const Notices = ({
     if (state.error) dialog.current?.showModal()
     else dialog.current?.close()
   }, [state.error, state.sequence])
-  const recovery: Readonly<Record<string, 'reconnect' | 'load'>> = {
-    connection_failed: 'reconnect',
-    connection_replaced: 'reconnect',
-    connection_timeout: 'reconnect',
-    x_changed: 'load',
-  }
-  const action = recovery[state.error ?? '']
+  const reconnectable = ['connection_failed', 'connection_replaced', 'connection_timeout'].includes(state.error ?? '')
   return (
     <dialog className="wallet-picker allocation-error-dialog" ref={dialog} role="alertdialog" aria-labelledby={title}>
       <header>
@@ -41,14 +35,14 @@ export const Notices = ({
         <button type="button" className="btn" onClick={() => dialog.current?.close()}>
           {text('close')}
         </button>
-        {action && (
+        {reconnectable && (
           <button
             type="button"
             className="btn btn-ink"
             disabled={!!state.task}
-            onClick={() => runtime.dispatch({ type: 'request', task: { kind: action } })}
+            onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'reconnect' } })}
           >
-            {text(action === 'reconnect' ? 'reconnect' : 'refresh')}
+            {text('reconnect')}
           </button>
         )}
       </footer>

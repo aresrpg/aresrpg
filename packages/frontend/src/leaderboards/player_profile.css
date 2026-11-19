@@ -28,14 +28,14 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 12px;
-  color: #c1c5cd;
+  color: var(--aui-soft);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .player-profile-body h2 > span {
-  color: #e8bc6b;
+  color: var(--aui-brass);
   font-variant-numeric: tabular-nums;
 }
 .player-profile-main {
@@ -59,19 +59,19 @@
   text-align: left;
   cursor: pointer;
   background: transparent;
-  border: 1px solid #59617055;
+  border: 1px solid color-mix(in srgb, var(--aui-steel) 33.3%, transparent);
   border-left: 3px solid transparent;
 }
 .player-profile-character[aria-pressed='true'] {
-  border-left-color: #e8bc6b;
-  background: #4b454044;
+  border-left-color: var(--aui-brass);
+  background: color-mix(in srgb, var(--aui-peak) 26.7%, transparent);
 }
 .player-profile-character strong {
   font-size: 15px;
   overflow-wrap: anywhere;
 }
 .player-profile-character > span {
-  color: #c1c5cd;
+  color: var(--aui-soft);
   font-size: 12px;
 }
 .player-profile-items {
@@ -79,13 +79,13 @@
   grid-auto-rows: 48px;
 }
 .player-profile-empty {
-  color: #c1c5cd;
+  color: var(--aui-soft);
   font-size: 13px;
 }
 .player-profile-jobs {
   margin-top: 24px;
   padding-top: 18px;
-  border-top: 1px solid #59617066;
+  border-top: 1px solid color-mix(in srgb, var(--aui-steel) 40%, transparent);
 }
 .player-profile-jobs dl {
   display: grid;
@@ -104,7 +104,7 @@
 }
 .player-profile-jobs dd {
   margin: 0;
-  color: #e8bc6b;
+  color: var(--aui-brass);
   font-variant-numeric: tabular-nums;
 }
 @container (max-width: 480px) {

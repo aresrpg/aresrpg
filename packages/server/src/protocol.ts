@@ -60,6 +60,10 @@ export const mesh = {
   chat_user: (address: string) => `chat:user:${address}`,
   /** live fight-turn intents relayed between fighters/spectators */
   fight_actions: (fight: string) => `act:fight:${fight}`,
+  /** a hosted bot's own status, published by the pod holding its socket for the pods of its owner */
+  agent_status: (address: string) => `agent:status:${address}`,
+  /** an owner's pod asks the pod holding that bot's socket for its current status */
+  agent_status_wanted: (address: string) => `agent:status_wanted:${address}`,
   /** cluster-wide connect beacon — cross-pod duplicate eviction (legacy player_connect) */
   player_connect: 'player_connect',
 } as const

@@ -12,10 +12,10 @@ import {
   character_creation_insufficient,
 } from '../../src/character_creation_funding.ts'
 
-test('character creation retains the full SDK gas reserve after its 1 SUI payment', () => {
-  expect(character_creation_insufficient(1_000_000_000n)).toBeTrue()
-  expect(character_creation_insufficient(1_049_999_999n)).toBeTrue()
-  expect(character_creation_insufficient(1_050_000_000n)).toBeFalse()
+test('character creation retains the full SDK gas reserve after its 10 SUI payment', () => {
+  expect(character_creation_insufficient(10_000_000_000n)).toBeTrue()
+  expect(character_creation_insufficient(10_049_999_999n)).toBeTrue()
+  expect(character_creation_insufficient(10_050_000_000n)).toBeFalse()
   expect(character_creation_insufficient(null)).toBeFalse()
 })
 

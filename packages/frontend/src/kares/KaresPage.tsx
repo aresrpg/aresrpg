@@ -1,23 +1,97 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useEffect } from 'react'
-import { WalletCards } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Gamepad2, WalletCards } from 'lucide-react'
+import { StakingWalletRow, type StakingRowFigure } from '@aresrpg/ui'
 
 import { external_wallet_view } from '../wallet/view.ts'
 import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { WalletControl } from '../wallet/WalletControl.tsx'
 import type { WalletView } from '../wallet/model.ts'
 
-import type { FinanceSession } from './model.ts'
+import type { FinanceSession, FinanceState } from './model.ts'
+import { staking_gains } from './staking_model.ts'
 import { StakingAccount } from './StakingAccount.tsx'
 import { useFinance } from './useFinance.ts'
 
 import './staking.css'
 
+type Finance = ReturnType<typeof useFinance>
+type Source = 'game' | 'external'
+
+/** A wallet's stake and daily rates as row figures; null while it has no snapshot. */
+const useRowFigures = (copy: AppCopy['kares_page']) => {
+  const { amount, daily } = useNumbers()
+  return ({ snapshot }: FinanceState): readonly StakingRowFigure[] | null => {
+    if (!snapshot) return null
+    const gains = staking_gains(snapshot)
+    return [
+      { value: amount(gains.stake), label: 'KARES' },
+      { value: daily(gains.kares), label: copy.daily_kares, hue: 'gold' },
+      { value: daily(gains.sui), label: copy.daily_sui, hue: 'sky' },
+    ]
+  }
+}
+
+/** Why an external wallet has no line of figures: it is not connected, or it is the game account itself. */
+const external_status = (text: AppCopy['kares_page'], connected: boolean, same_account: boolean): string | null => {
+  if (connected) return null
+  return same_account ? text.same_account : text.external_wallet_hint
+}
+
+/** Both wallets as two single lines. The external one is selectable only while a distinct wallet is connected. */
+const WalletRows = ({
+  text,
+  account,
+  external,
+  wallet,
+  source,
+  connected,
+  same_account,
+  pick,
+}: Readonly<{
+  text: AppCopy['kares_page']
+  account: Finance
+  external: Finance
+  wallet: WalletView
+  source: Source
+  connected: boolean
+  same_account: boolean
+  pick: (source: Source) => void
+}>) => {
+  const figures = useRowFigures(text)
+  return (
+    <div className="staking-rows">
+      <StakingWalletRow
+        icon={<Gamepad2 size={15} />}
+        name={text.game_account}
+        selected={source === 'game'}
+        on_select={() => pick('game')}
+        figures={figures(account.state)}
+      />
+      <StakingWalletRow
+        icon={<WalletCards size={15} />}
+        name={text.external_wallet}
+        selected={source === 'external'}
+        on_select={connected ? () => pick('external') : undefined}
+        figures={connected ? figures(external.state) : null}
+        status={external_status(text, connected, same_account)}
+        control={<WalletControl copy={text} wallet={wallet} locked={external.state.request?.kind === 'execute'} />}
+      />
+    </div>
+  )
+}
+
+/**
+ * The staking desk. Both wallets stay visible as two single lines, so they compare at a glance; the
+ * selected line opens its stake and its form below. An external wallet that is not connected, or is
+ * the game account itself, cannot be selected: its line says why and offers the wallet control.
+ */
 export const KaresPageView = ({
   copy,
   account,
@@ -26,52 +100,36 @@ export const KaresPageView = ({
   wallet,
 }: Readonly<{
   copy: AppCopy
-  account: ReturnType<typeof useFinance>
-  external: ReturnType<typeof useFinance>
+  account: Finance
+  external: Finance
   wallet: WalletView
   account_balance: bigint | null
 }>) => {
+  const text = copy.kares_page
+  const [picked, set_picked] = useState<Source>('game')
   const same_account = wallet.state.session?.address === account.state.address
   const connected = external.state.address !== null && !same_account
-  const wallet_control = (
-    <WalletControl copy={copy.kares_page} wallet={wallet} locked={external.state.request?.kind === 'execute'} />
-  )
+  const source: Source = picked === 'external' && connected ? 'external' : 'game'
+  const desks = {
+    game: { finance: account, balance: account_balance },
+    external: { finance: external, balance: external.state.balances?.kares_balance ?? null },
+  }
+  const { finance, balance } = desks[source]
   return (
     <section className="staking-page">
-      <header className="staking-page-header">
-        <div className="staking-eyebrow">KARES / {copy.kares}</div>
-        <h1>{copy.kares_page.staking_title}</h1>
-        <p>{copy.kares_page.staking_revenue}</p>
-      </header>
-      <div className="staking-account-pair">
-        <StakingAccount
-          copy={copy}
-          title={copy.kares_page.game_account}
-          state={account.state}
-          dispatch={account.dispatch}
-          balance={account_balance}
-        />
-        <StakingAccount
-          copy={copy}
-          title={copy.kares_page.external_wallet}
-          state={external.state}
-          dispatch={external.dispatch}
-          balance={external.state.balances ? external.state.balances.kares_balance : null}
-          external
-          wallet_control={connected ? wallet_control : undefined}
-          empty={
-            connected ? undefined : (
-              <div className="staking-wallet-placeholder">
-                <WalletCards size={28} />
-                <h3>{copy.kares_page.external_wallet}</h3>
-                <p>{same_account ? copy.kares_page.same_account : copy.kares_page.external_wallet_hint}</p>
-                {wallet_control}
-              </div>
-            )
-          }
-        />
-      </div>
-      <p className="staking-daily-note">{copy.kares_page.daily_estimate_note}</p>
+      <p className="staking-lede">{text.staking_revenue}</p>
+      <WalletRows
+        text={text}
+        account={account}
+        external={external}
+        wallet={wallet}
+        source={source}
+        connected={connected}
+        same_account={same_account}
+        pick={set_picked}
+      />
+      <StakingAccount key={source} copy={copy} state={finance.state} dispatch={finance.dispatch} balance={balance} />
+      <p className="staking-daily-note">{text.daily_estimate_note}</p>
     </section>
   )
 }

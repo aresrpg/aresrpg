@@ -204,6 +204,26 @@ export const player_max_hp = (source: Readonly<PlayerSource>): bigint => {
   return malus >= base ? 1n : base - malus
 }
 
+/**
+ * Health of one wallet's hero seated in a fight. A fight owns its fighters' health, so every client
+ * reads it here. Null when that seat is not this live hero: another owner, settled, forfeited or unknown.
+ */
+export const seated_player_health = (
+  { contract, sources }: Readonly<Pick<HydratedFightCheckpoint, 'contract' | 'sources'>>,
+  seated: Readonly<{ character: string; owner: string; seat: number }>
+): Readonly<{ current: bigint; maximum: bigint }> | null => {
+  const fighter = contract.fighters[seated.seat]
+  const player = sources.players[seated.character]
+  if (!fighter || !player || fighter.kind.type !== 'player') return null
+  const live = [
+    fighter.kind.character === seated.character,
+    fighter.kind.owner === seated.owner,
+    !fighter.settled,
+    !fighter.forfeited,
+  ].every(Boolean)
+  return live ? { current: fighter.hp, maximum: player_max_hp(player) } : null
+}
+
 const closed_mask = (board: FightBoard): bigint[] => {
   const off_shape = Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter(
     (cell) => !mask_get(board.shape_mask, cell)

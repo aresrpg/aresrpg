@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import './styles.css'
+
+// Components: raw building blocks.
 export {
   Button,
   NavigationRow,
@@ -12,43 +14,123 @@ export {
   Field,
   Select,
   Slider,
-} from './controls.tsx'
+} from './components/controls.tsx'
 export {
   NativeModal,
   focus_modal,
   active_modal,
   observe_window_changes,
   suspend_native_modals,
-} from './NativeModal.tsx'
-export { Panel, GameWindow, ConfirmDialog } from './surfaces.tsx'
-export { CombatHud, ProgressBar, MobDetails, ProgressionCard } from './game.tsx'
-export type { StatView, ItemView } from './game.tsx'
+} from './components/NativeModal.tsx'
+export { Panel, GameWindow, ConfirmDialog } from './components/surfaces.tsx'
 
-export { Vitals, vital_art } from './Vitals.tsx'
+export { PreviewSurface } from './components/PreviewSurface.tsx'
 
-export { PreviewSurface } from './PreviewSurface.tsx'
+export { SelectionGrid } from './components/SelectionGrid.tsx'
 
-export { SelectionGrid } from './SelectionGrid.tsx'
+export { Workspace, ValueBadge, ChoiceRail } from './components/workspaces.tsx'
+export type { WorkspaceHeader, ChoiceRow } from './components/workspaces.tsx'
 
-export { Workspace, ValueBadge, ChoiceRail } from './workspaces.tsx'
-export type { WorkspaceHeader, ChoiceRow } from './workspaces.tsx'
+export { Collection, CollectionTile } from './components/Collection.tsx'
+export type { CollectionEntry } from './components/Collection.tsx'
 
-export { MinimapView, MapView, MapInteraction } from './maps.tsx'
+export { FilterMenu } from './components/FilterMenu.tsx'
+export type { FilterOption } from './components/FilterMenu.tsx'
 
-export { SettingsView, SettingRow, WalletBalances, LanguageView } from './account.tsx'
+export { DragScroll } from './components/DragScroll.tsx'
 
-export { Collection, CollectionTile } from './Collection.tsx'
-export type { CollectionEntry } from './Collection.tsx'
+export { CarvedIcon, type CarvedSymbol } from './components/CarvedIcon.tsx'
 
-export { FilterMenu } from './FilterMenu.tsx'
-export type { FilterOption } from './FilterMenu.tsx'
+export { FloatingWindow } from './components/FloatingWindow.tsx'
+export { useWindowDrag } from './components/useWindowDrag.ts'
 
-export { DragScroll } from './DragScroll.tsx'
+export { NotificationCard } from './components/NotificationCard.tsx'
+export type { NotificationCardProps } from './components/NotificationCard.tsx'
 
-export { CarvedIcon, type CarvedSymbol } from './CarvedIcon.tsx'
+// Prebuilt: composed game surfaces.
+export { CombatHud, ProgressBar, MobDetails, ProgressionCard } from './prebuilt/game.tsx'
+export type { StatView, ItemView } from './prebuilt/game.tsx'
 
-export { FloatingWindow } from './FloatingWindow.tsx'
-export { useWindowDrag } from './useWindowDrag.ts'
+export { Vitals, vital_art } from './prebuilt/Vitals.tsx'
+export { StakingRewards, StakingWalletRow } from './prebuilt/StakingRewards.tsx'
+export { WalletView, WalletTransfer } from './prebuilt/Wallet.tsx'
+export type { WalletAmount, TransferLeg } from './prebuilt/Wallet.tsx'
+export type { StakingRewardLane, StakingRowFigure } from './prebuilt/StakingRewards.tsx'
+export { SpellRow } from './prebuilt/SpellRow.tsx'
+export { ItemSheet, ItemStatLine, StatGlyph, StatDelta, item_stat_display_range } from './prebuilt/ItemSheet.tsx'
+export type { ItemSheetProps, ItemSheetStat, ItemSheetDamage, ItemSheetField } from './prebuilt/ItemSheet.tsx'
 
-export { NotificationCard } from './NotificationCard.tsx'
-export type { NotificationCardProps } from './NotificationCard.tsx'
+export { MinimapView, MapView, MapInteraction } from './prebuilt/maps.tsx'
+
+export { SettingsView, SettingRow, WalletBalances, LanguageView } from './prebuilt/account.tsx'
+
+export { SpellCard } from './prebuilt/SpellCard.tsx'
+export type { SpellCardProps, SpellCardLevel, SpellCardLabels, SpellCardIcons } from './prebuilt/SpellCard.tsx'
+export { SpellEffectList } from './prebuilt/SpellEffects.tsx'
+export type {
+  SpellArea,
+  SpellCritical,
+  SpellEffectDraft,
+  SpellEffectIcon,
+  SpellEffectListProps,
+  SpellEffectRead,
+  SpellEffectView,
+  SpellGlyph,
+} from './prebuilt/SpellEffects.tsx'
+
+export {
+  SuiMark,
+  MarketCurrency,
+  MarketListingIcon,
+  MarketCategoryGlyph,
+  MarketCount,
+  MarketEmpty,
+  MarketVolume,
+  MarketCapitalization,
+  MarketDisclaimer,
+  MarketPage,
+} from './prebuilt/MarketParts.tsx'
+export type { MarketArt, MarketGlyph, MarketNotice, MarketTabs } from './prebuilt/MarketParts.tsx'
+export {
+  MarketBrowse,
+  MarketCharacterBrowse,
+  MarketItemBrowse,
+  MarketItemDetail,
+  MarketItemSummary,
+  MarketLotColumns,
+  MarketAskList,
+  MarketLotTable,
+  MarketAskRow,
+  MarketAskItem,
+} from './prebuilt/MarketBrowse.tsx'
+export type {
+  MarketFilter,
+  MarketPagerProps,
+  MarketLevelInput,
+  MarketChoice,
+  MarketTemplate,
+  MarketSelection,
+  MarketLot,
+  MarketSeller,
+} from './prebuilt/MarketBrowse.tsx'
+export {
+  MarketSell,
+  MarketOwnListings,
+  MarketOwnListingStack,
+  MarketListingHoverIcon,
+  MarketSaleForm,
+  MarketSaleSummary,
+  MarketSaleAmount,
+  MarketFloor,
+} from './prebuilt/MarketSell.tsx'
+export type {
+  MarketOwnListing,
+  MarketWithdraw,
+  MarketListingSection,
+  MarketSellableCharacter,
+} from './prebuilt/MarketSell.tsx'
+export { MarketHistory } from './prebuilt/MarketHistory.tsx'
+export type { MarketSale, MarketHistoryLabels } from './prebuilt/MarketHistory.tsx'
+
+export { InventoryCell } from './prebuilt/InventoryCell.tsx'
+export type { InventoryCellProps } from './prebuilt/InventoryCell.tsx'

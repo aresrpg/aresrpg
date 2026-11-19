@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { campaign, cap_mist, nominal_tokens, sui_amount } from '@aresrpg/immutable/allocation'
+import { cap_mist, nominal_tokens, sui_amount } from '@aresrpg/immutable/allocation'
 
 import type { CopyText } from '../i18n/copy.ts'
 import type { KaresCopy } from '../kares/copy.ts'
@@ -22,38 +22,17 @@ export const Blast = ({ text }: Readonly<{ text: CopyText }>) => (
 )
 export const Results = ({
   text,
-  final,
-  open,
   locale,
   kares_copy,
-}: Readonly<{ text: CopyText; final: boolean; open: boolean; locale: Locale; kares_copy: KaresCopy }>) => (
-  <section className={`step ${final ? 'is-done' : ''}`}>
+}: Readonly<{ text: CopyText; locale: Locale; kares_copy: KaresCopy }>) => (
+  <section className="step is-done">
     <div className="step-head">
-      <span className="step-num">{final ? '✓' : '3'}</span>
+      <span className="step-num">✓</span>
       <div>
         <h2>{text('results_title')}</h2>
         <p>{text('results_note')}</p>
       </div>
     </div>
-    <ol className="when">
-      <li className={open ? 'is-now' : ''}>
-        <b>{text('entries_close')}</b>
-        <span>
-          {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
-            new Date(campaign.submissions_close_at)
-          )}{' '}
-          · {text('your_time')}
-        </span>
-      </li>
-      <li className={!open && !final ? 'is-now' : ''}>
-        <b>{text('cards_revealed')}</b>
-        <span>{text('results_time')}</span>
-      </li>
-      <li className={final ? 'is-now' : ''}>
-        <b>{text('sale_title')}</b>
-        <span>{text('sale_time')}</span>
-      </li>
-    </ol>
     <div className="tiers">
       <p className="kicker">{text('spot_gives')}</p>
       {(['veteran', 'member'] as const).map((tier) => (

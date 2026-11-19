@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { PROFESSION_SELECTION_SCHEMA } from './behavior_profession.ts'
+import { target_schema } from './target_constraints.ts'
 import { ITEM_ACTION_SCHEMAS } from './behavior_items.ts'
+import { ALLIES_SCHEMA, TEAM_LEAF_SCHEMAS } from './behavior_team.ts'
+import { SPEND_ACTION_SCHEMA } from './behavior_growth.ts'
 import { WORLD_ACTION_SCHEMAS, WORLD_REGION_SCHEMA } from './behavior_world.ts'
 import { MARKET_PRICE_CONDITION_SCHEMA, MARKET_PRICE_OBSERVATION_SCHEMA } from './market_prices.ts'
 import { OBJECTIVE_SCHEMA } from './objective.ts'
@@ -17,10 +21,27 @@ const offer = object_schema({
   request: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
   cursor: nonempty,
 })
+const numeric: Schema = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }
+const engage = {
+  type: literal('engage'),
+  character_id: identifier,
+  mob_types: { type: 'array', items: nonempty, minItems: 1, uniqueItems: true },
+} as const
+const combat = {
+  type: literal('combat'),
+  profiles: {
+    type: 'array',
+    minItems: 1,
+    items: object_schema({ character_id: identifier, profile: COMBAT_PROFILE_SCHEMA }),
+  },
+} as const
 export const BEHAVIOR_ACTION_SCHEMA: Schema = {
   oneOf: [
     ...WORLD_ACTION_SCHEMAS,
+    PROFESSION_SELECTION_SCHEMA,
     ...ITEM_ACTION_SCHEMAS,
+    ...TEAM_LEAF_SCHEMAS,
+    SPEND_ACTION_SCHEMA,
     object_schema({ type: literal('observe_prices'), observation: MARKET_PRICE_OBSERVATION_SCHEMA }),
     object_schema({
       type: literal('sell'),
@@ -52,23 +73,11 @@ export const BEHAVIOR_ACTION_SCHEMA: Schema = {
       item_type: nonempty,
       order: literal('nearest'),
     }),
-    object_schema({
-      type: literal('engage'),
-      character_id: identifier,
-      mob_types: { type: 'array', items: nonempty, minItems: 1, uniqueItems: true },
-      order: literal('nearest'),
-    }),
-    object_schema({
-      type: literal('combat'),
-      profiles: {
-        type: 'array',
-        minItems: 1,
-        items: object_schema({ character_id: identifier, profile: COMBAT_PROFILE_SCHEMA }),
-      },
-    }),
+    target_schema({ ...engage, order: literal('nearest') }),
+    target_schema({ ...engage, order: literal('best_xp'), level_margin: numeric }),
+    { ...target_schema({ ...combat, allies: ALLIES_SCHEMA }), required: Object.keys(combat) },
   ],
 }
-const numeric: Schema = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }
 const fact_types = {
   level: numeric,
   hp: numeric,
@@ -127,7 +136,7 @@ const shape = (properties: Record<string, unknown>) => ({
   additionalProperties: false,
 })
 const node = { $ref: '#/properties/script/properties/tree' }
-export const BEHAVIOR_SCRIPT_SCHEMA = shape({
+const script = shape({
   version: literal('1'),
   objective: OBJECTIVE_SCHEMA,
   tree: {
@@ -144,3 +153,5 @@ export const BEHAVIOR_SCRIPT_SCHEMA = shape({
     ],
   },
 })
+/** `strategy` is optional: a tree bound from the shared catalogue names its entry, an authored tree has none. */
+export const BEHAVIOR_SCRIPT_SCHEMA = { ...script, properties: { ...script.properties, strategy: nonempty } }

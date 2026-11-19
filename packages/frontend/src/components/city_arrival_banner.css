@@ -11,7 +11,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #f4d58a;
+  color: var(--aui-brass-hi);
   text-align: center;
   pointer-events: none;
   transform: translateX(-50%);
@@ -19,7 +19,7 @@
 }
 
 .city-arrival__title {
-  background: linear-gradient(180deg, #fff1bf 0%, #e8b94f 58%, #9d6220 100%);
+  background: linear-gradient(180deg, var(--aui-brass-hi) 0%, var(--aui-brass) 58%, var(--aui-brass-lo) 100%);
   background-clip: text;
   color: transparent;
   font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
@@ -29,13 +29,18 @@
   letter-spacing: 0.055em;
   text-wrap: balance;
   text-shadow: 0 4px 18px rgba(0, 0, 0, 0.78);
-  filter: drop-shadow(0 0 18px rgba(214, 158, 54, 0.24));
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--aui-brass) 24%, transparent));
 }
 
 .city-arrival__ornament {
   width: min(62vw, 520px);
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(244, 213, 138, 0.72), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--aui-brass-hi) 72%, transparent),
+    transparent
+  );
   transform: scaleX(0.35);
   animation: city-arrival-rule 4.8s ease-in-out forwards;
 }

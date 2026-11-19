@@ -30,8 +30,6 @@ continue_google: 使用Google继续
 wallet_session_ended: 钱包会话已结束。请重新登录。
 connect_wallet: 连接钱包
 no_wallet: 未安装兼容钱包
-play_demo: '试玩演示'
-replay_demo: '再次试玩演示'
 sign_in: 登录开始游戏
 drag_hint: 拖动平移 · 滚动缩放
 navigation: 导航
@@ -58,7 +56,7 @@ server_connected: 已连接
 server_violation: 已断开：违反规则。即将重试。
 server_replaced: 已在其他位置连接
 session_replaced_title: 账户已在其他位置登录
-session_replaced_body: 你的账户已在其他位置打开游戏，因此此窗口已断开。关闭其他会话，或在此重新连接以继续游戏。
+session_replaced_body: '你的账户已在另一个窗口连接：3D 游戏或网页应用。同一时间只能连接一个窗口，因此此窗口已断开。在此重新连接即可使用此窗口。'
 session_replaced_reconnect: 在此重新连接
 latency_unit: 毫秒
 indexing_health: 索引状态
@@ -700,6 +698,17 @@ airdrop_page:
       title: Hytale支持者 · Mark of the Unbroken
       description: 所有已关联且商店购买记录超过{threshold} SUI的Hytale钱包均可获得，不受前100名排名限制。称号发往备份中的Sui地址。请使用原Google账户登录查收礼品卡。
 settings_page:
+  suins_confirm_title: '确认更改名称'
+  suins_confirm_erase: '{names} 的现有资料（包括头像）将被删除。'
+  suins_confirm_player: '{name} 将指向下方的 Google（zkLogin）钱包，并成为其默认名称。'
+  suins_confirm_agent: '{name} 将指向下方的代理钱包，并成为其默认名称。可能需要另行确认，且该钱包需要有 SUI。'
+  suins_confirm_parent: '{name} 将保留在当前钱包中。其地址和资料不会改变。'
+  suins_confirm_apply: '确认更改'
+  suins_player_default_funding: '名称已更新，但 Google 钱包需要 SUI 才能设置默认名称。'
+  suins_player_default_refused: '名称已更新，但您拒绝了 Google 钱包的默认名称更改。'
+  suins_player_default_failed: '名称已更新，但 Google 钱包的默认名称更改失败。请先检查钱包再重试。'
+  suins_player_default_uncertain: '名称已更新。Google 钱包默认名称交易的结果未知。请先在钱包中检查，再刷新。'
+  suins_stale_review: '名称在您查看期间发生了变化。请刷新后重新查看更改内容。'
   suins_title: SuiNS名称
   suins_hint: '选择你拥有的名称。现有名称将保留在你的钱包中。'
   suins_external: '此处显示已验证的现有 SuiNS 默认名称。请在外部钱包或 SuiNS 中管理。'
@@ -708,9 +717,8 @@ settings_page:
   suins_pending_uncertain: '玩家名称已应用；代理交易结果未知。重试前请检查结果，不会自动重发交易。'
   suins_pending_refused: '玩家名称已应用；代理签名已拒绝。仅在希望重试时再次应用。'
   suins_pending_failed: '玩家名称已应用；代理名称尚未完成。再次应用前请检查交易结果。'
-  suins_invalid_parent: '你已不再拥有此父名称，或它已过期或不符合条件。请刷新并重新选择。'
-  suins_collision: '请求的名称已有有效注册。请选择其他父名称。'
-  suins_metadata: '此修复会删除现有元数据，因此记录未更改。请选择其他父名称。'
+  suins_invalid_parent: '你的钱包已无法使用此名称。请刷新并选择名称。'
+  suins_collision: '此 AresRPG 名称已被占用。请选择其他名称。'
   suins_unsupported: '此钱包或网络不支持托管名称。'
   suins_fund: '为代理钱包充值'
   suins_current: 当前默认名称
@@ -2481,6 +2489,11 @@ kares_page:
   inactive: '奖励储备注资后开放质押。'
   position: 仓位
   tokenomics: KARES代币经济
+  tabs_label: 'KARES 栏目'
+  tab_tokenomics: '代币经济'
+  tab_staking: '质押'
+  signin_title: '登录后质押'
+  signin_body: '质押使用你的游戏账户。使用 Google 登录即可查看你的质押并领取奖励。'
   community: 'PvP 竞赛与赛季排行榜'
   team: 团队分配
   five_years: 社区质押奖励
@@ -2719,6 +2732,17 @@ ui:
   funding_game_wallet: 游戏钱包
   funding_external_wallet: 其他钱包
   agent_wallet: '代理钱包'
+  wallet_tabs: '钱包'
+  wallet_game: '游戏'
+  wallet_bot: '机器人'
+  wallet_you_sign: '由你签名'
+  wallet_bot_signs: '由你的机器人签名'
+  wallet_transfer: '划转'
+  wallet_from: '从'
+  wallet_to: '到'
+  wallet_swap: '交换转出和转入'
+  wallet_coin: '币种'
+  wallet_transfer_to: '划转 {{amount}} {{token}} 到{{wallet}}'
   agent_activity_label: '代理活动'
   agent_activity_idle: '等待目标'
   agent_activity_active: '执行中'
@@ -2767,9 +2791,6 @@ ui:
   agent_label: '代理'
   agent_kiosk_badge: '货亭'
   agent_kiosk: '代理货亭'
-  agent_deposit: '存入代理'
-  agent_withdraw: '提取到玩家'
-  agent_coin_transfer: '转账 {{token}}'
   agent_coin_direct: '代币通过一笔交易直接转账，由发送方支付燃气费。'
   agent_pair_for_deposit: '存入前请验证代理的持久签名方。'
   agent_inventory_connect: '验证代理的完整地址后即可使用其物品栏。'
@@ -2805,6 +2826,9 @@ ui:
   agent_copy_failed: '复制失败。请选中上方请求并手动复制。'
   agent_handoff_request: '请按照 {{url}} 为 {{provider}} 准备 Connect Your Agent。报告缺失的签名配置，必要时请求临时设置链接。此请求不授权创建凭据、转移资产或游戏操作。'
   agent_connect_your: '连接你的智能体'
+  agent_page_body: '让 AI 助手替你操控英雄。它使用自己的机器人钱包（多签）游玩，你的 Google 账户随时可以取回其中的资产。'
+  agent_page_signin: '使用 Google 登录以设置你的代理及其机器人钱包。'
+  agent_page_world: '打开 3D 世界'
   agent_bootstrap: '打开设置说明'
   agent_character_offer_hint: '此操作会发送一份要约。智能体需另行领取角色。适用正常费用。'
   agent_connected: '智能体已连接'
@@ -2829,6 +2853,7 @@ ui:
   agent_hosted_authenticate: '使用Google钱包验证'
   agent_hosted_ready: '设置完成'
   agent_hosted_consent: '连接你的助手'
+  agent_hosted_review: '有助手请求访问你的机器人。继续以查看其请求；在你连接之前不会共享任何内容。'
   agent_hosted_authority: '可以游戏并使用此机器人的资产。'
   agent_hosted_read_access: '可以查看此机器人。'
   agent_hosted_pause_access: '可以暂停和恢复此机器人。'
@@ -2892,6 +2917,11 @@ ui:
   design_no_title: '无称号'
   design_library: '设计工坊'
   design_controls: '控件'
+  design_components: '组件'
+  design_prebuilt: '预制'
+  design_windows: '窗口'
+  design_feedback: '反馈'
+  design_tokens: '令牌'
   design_dialog: '打开对话框'
   design_disabled: '不可用'
   design_details: '详情'
@@ -2951,12 +2981,6 @@ ui:
   formula_drop: 掉率 = min(100%, 基础值 × 怪物等级段系数 × (600 + 队伍平均幸运) / 600)
   formula_xp: 经验 = 基础经验池 × 队伍系数 × 等级平衡 × 玩家等级 / 队伍总等级 × (100 + 智慧) / 100
 
-menu_subtitle: 'AresRPG 是一款基于 Sui 的全链回合制 MMORPG。'
-menu_start: '按 Enter 开始'
-menu_start_touch: '轻触开始'
-menu_music_on: '开启音乐'
-menu_music_off: '关闭音乐'
-
 menu_build: '版本'
 
 world_loading_assets: '正在加载场景…'
@@ -2964,48 +2988,6 @@ world_loading_graphics: '正在准备图形…'
 world_loading_terrain: '正在构建世界…'
 world_loading_sky: '正在准备天空和光照…'
 world_loading_finishing: '正在准备第一帧…'
-
-adventure:
-  choice_title: '你的首次胜利'
-  choice_body: '哥布林已被击败，奖励正在等你。接下来想如何继续冒险？'
-  start_playing: '开始游戏'
-  play_description: '使用 Google 登录，然后创建或选择正式角色。创建角色和游玩需要 SUI。'
-  continue_tutorial: '继续教程'
-  continue_description: '装备奖励，结识 Sceat，学习组队战斗。'
-  goblins_title: '清理道路'
-  goblins_objective: '击败哥布林。'
-  equip_title: '整装出发'
-  equip_objective: '装备所有奖励，包括宠物。'
-  equip_body: '打开背包并装备所有奖励。双击物品、将其拖到装备栏，或选择装备。在正式游戏中，每次更改都会发起一笔 Sui 交易；在这里，所有操作都是免费的模拟。'
-  speak_title: '桥上的陌生人'
-  speak_objective: '找到桥上的Sceat并与他交谈。'
-  invite_title: '携手同行'
-  invite_objective: '右键点击Sceat并选择邀请入队。'
-  switch_title: '操控你的夜刃'
-  switch_objective: '选择Sceat的角色标签。你能操控两位英雄，各有不同的法术和装备。'
-  follow_title: '跟随队长'
-  follow_objective: '选择队长Senshi，在队伍面板开启跟随队长。'
-  guards_title: '皇家卫兵'
-  guards_objective: '过桥击败皇家卫兵。用夜刃布置陷阱，再将敌人推入其中。'
-  boss_title: '哥巴多克的遗物'
-  boss_objective: '挑战哥布林之王哥巴多克，寻找他的遗物。他远比卫兵强大。'
-  dialogue_greeting: '你是新来的吧！我是Sceat。'
-  dialogue_danger: '这个世界非常危险，独自一人走不远。我们一起冒险吧。'
-  dialogue_relic: '哥布林之王哥巴多克守着一件强大的遗物。帮我突破卫兵，我们去找他。'
-  journal: '苔木林冒险'
-  chapter: '哥布林之王'
-  speak_action: '与Sceat交谈'
-  invite_action: '邀请Sceat'
-  rebirth_title: '你因伤重而亡……'
-  rebirth_victory: '你击败了哥巴多克，干得漂亮！但他的攻击让你中了毒。你失去了意识，他的军队随后吞噬了你毫无防备的身体。这场胜利让你付出了生命的代价。'
-  rebirth_body: '使用Google登录，重获新生，进入真正的游戏。'
-  goblins_body: '你将直接进入战斗。选择站位，点击准备就绪，运用法术和移动击败哥布林。胜利后可获得首批装备并升至200级。'
-  speak_body: '哥布林倒下了，但森林的危险远未结束。一位名叫Sceat的亚津一直在桥上观战，看起来并不想独自过桥。去和他聊聊吧。他正在寻找哥布林王戈巴多克持有的遗物，需要一位懂得还击的伙伴。'
-  invite_body: 'Sceat有个计划。可惜，这个计划是去找森林里最大的哥布林。两位各有所长的冒险者，总比孤身一人更有胜算。右键点击Sceat，邀请他加入队伍。在这段冒险中，你将控制两位英雄，亲自决定如何配合他们的能力。'
-  switch_body: '多一个伙伴，不只是多一条生命值。Sceat是亚津，擅长用陷阱和站位解决问题；森士则更喜欢直接用力量。在角色切换器中选择他，接管他的行动。每位英雄都有自己的法术和装备，选择谁行动与选择什么法术同样重要。'
-  follow_body: '队伍已经组好了，接下来要一起行动。选择森士作为队长，然后在队伍控制中开启跟随队长。探索时Sceat会跟着你，不必把同一条路走两遍。进入战斗后，你仍然需要亲自选择每位英雄的移动和法术。'
-  guards_body: '戈巴多克不会让自己的门口无人把守。卫兵已经准备好迎战，这次你需要协调两位英雄。挑战前先检查新装备，把森士的力量与Sceat的陷阱结合起来。有时，把敌人引到有利的位置，比一味追着它打更容易获胜。'
-  boss_body: '卫兵后方，戈巴多克正守着Sceat寻找的遗物。哥布林王可不是靠输掉战斗赢得这个称号的。你们已经学会并肩作战，但眼前的对手非同寻常。带上伙伴靠近他，看看这份新结成的同盟究竟能走多远。'
 
 discord_marketplace:
   rare_loot_title: '稀有首领掉落'
@@ -3113,29 +3095,16 @@ allocation_page:
   error_connection_failed: '与服务器的连接已断开。请重新连接。'
   error_connection_replaced: '该钱包已在其他标签页连接。准备好后可在此重新连接。'
   error_restore_timeout: '钱包恢复超时。请重新连接钱包。'
-  error_x_changed: '提交时 X 账户发生变化。请刷新申请并提交新账户的帖子。'
-  open_x: '打开 X'
-  replace_x_note: '先在 X 切换到另一个账户，再继续。成功更换后，旧申请将被移除。请提交新账户的帖子。'
-  replace_x: '更换 X 账户'
-  edit_note: '截止前可随时编辑并重新提交你的 1–3 篇帖子。'
-  edit_posts: '编辑或添加帖子'
-  checking_posts: '正在检查 X 帖子'
   connecting: '正在连接并验证钱包'
   restoring: '正在恢复钱包'
   reconnect: '重新连接'
   error_title: '无法完成操作'
-  pending_note: '结果将在报名截止并完成审核后确认。目前尚未保证名额。'
-  current_rank: '你的当前排名'
-  projected_tier: '目前有望获得 {{tier}}'
-  rank_warning: '暂定：其他玩家可能在快照前超过你。继续游戏以保持排名。'
-  share_pending: '我的 KARES 白名单申请正在等待最终审核。查看你的申请：'
   share_post: '我获得了 @blastdotfun 上 KARES 发售的 {{tier}} 白名单名额。查看你的名额：'
   menu_title: '查看你的白名单名额'
   menu_note: 'KARES 发售的资深玩家与成员配额。'
   menu_action: '查看配额'
   before: 超额认购调整前
   buy_up_to: 最高可购买
-  pending: 等待结果
   no_spot: 本次未获得名额
   source_reserved: 预留名额
   source_pending: 等待评选
@@ -3149,66 +3118,28 @@ allocation_page:
   signature_note: 签署免费消息，不会发起交易或付款。
   no_wallet_app: 请安装 Sui 钱包。
   wallet_failed: 钱包连接失败，请重试。
-  x_entry: 你的 X 报名
-  x_connect_note: 关联 X 以提交帖子。
-  closed: 报名已截止
   edit: 编辑
-  saved_posts: 已保存 · {{count}} / {{max}} 篇帖子
-  metrics_note: '我们在最终审核时统计互动数据。'
-  recipient_locked: 首次提交后锁定。
-  post_number: 帖子 {{number}}
-  optional: 选填
-  post_limit: 每个 X 账户最多 {{max}} 篇帖子
   cancel: 取消
   save: 保存
-  get_spot: 获取名额
-  get_spot_note: 提升排行榜名次或在 X 发帖。
-  leaderboard_title: 提升排行榜名次
-  leaderboard_note: '我们将在报名截止后对排行榜进行快照。游戏钱包获得积分；关联钱包不会影响资格。'
-  veteran_boards: 每个榜单前 1 或 2 位符合条件的玩家获得 Veteran。
-  member_boards: 接下来的 7 位获得 Member。
-  skip_duplicates: 已入选的钱包会被跳过。
   board_legend: 各榜单名额：Veteran / Member
   play: 游玩 AresRPG
-  x_title: 在 X 发帖
-  x_note: 发布关于 AresRPG 的帖子并提交链接。
-  one_entry: 提交 1–3 篇帖子，每个 X 账户限一份报名。
-  score_rule: 平均分：点赞 + 3×转帖 + 3×引用。回复和浏览量不计入。
-  x_winners: 前 {{veteran}} 位获得 Veteran，随后 {{member}} 位获得 Member。
-  leftovers: 排行榜剩余名额按相同等级转给 X 参与者。
-  quality_rule: 购买的互动和抄袭帖子可能在审核后被排除。
   sale_title: 发售将在 Blast 进行
   sale_time: '发售日期和时间将另行公布。'
   results_title: '活动结果'
   results_note: 发售前在卡片上查看结果。
-  entries_close: 报名截止
-  your_time: 你的当地时间
-  cards_revealed: 揭晓卡片
-  results_time: '报名截止并完成审核后。'
   spot_gives: 名额权益
-  days: 天
-  hours: 小时
-  minutes: 分
-  seconds: 秒
   signing: 请在钱包中确认签名…
-  close_in: 距离报名截止
   no_spot_yet: 尚未获得名额
   your_allocation: 你的分配
   total_cap: '{{count}} 个名额合计最高 {{sui}} SUI'
   allocation_note: 登录并关联钱包以查看名额。
-  card_placeholder: 你的卡片将在这里显示
-  one_card: 每个已验证钱包一张卡片。
-  share_x: 分享到 X
   footer: 名额规定的是出资上限，而非固定代币数量。
-  entry_note: 首次提交会锁定钱包。编辑将替换帖子并重置提交时间。同分时依次按较早提交时间、X 账户 ID 排序。
   error_wallet_limit: 最多关联十个钱包，包含 Google 钱包。
   title: KARES 白名单
   veteran: Veteran
   member: Member
   public_note: 公开参与遵循 Blast 的销售条款。结果可能仍在等待审核。
-  connect_x: 连接 X
   recipient: 接收钱包
-  choose_wallet: 选择已连接的钱包
   preview: 预览链接
   share: 分享
   dilution: 认购上限不代表保证获得的代币数量。超额认购时，所有买家按相同比例稀释。
@@ -3258,43 +3189,24 @@ allocation_page:
   sale_dilution: '如果发售超过目标，每位买家获得的 KARES 会减少，多余的 SUI 在领取时退回。'
   google_wallet: Google 游戏钱包
   loading: 正在加载活动
-  registration: 投稿开放中
   final: 最终名单 · 等待 Blast 导入
-  refresh: 刷新
   wallet: 钱包
   error_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
-  error_wallet_locked: 首次投稿已固定接收钱包。请重新连接该钱包修改帖子。
   error_wallet_taken: 此钱包已绑定其他 X 账号。
   error_invalid_address: 请输入以 0x 开头的有效 Sui 地址。
-  error_closed: 投稿已关闭，正在准备快照。
-  metric_xp: 战斗经验
   board_xp: 战斗经验 · 排行榜
-  metric_kills: 击杀怪物
   board_kills: 击杀怪物 · 排行榜
-  metric_dungeons: 地下城
   board_dungeons: 地下城 · 排行榜
-  metric_jobs: 专业经验
   board_jobs: 专业经验 · 排行榜
-  metric_marketplace: 市场
   board_marketplace: 市场 · 排行榜
-  metric_kolizeum: 竞技场
   board_kolizeum: 竞技场 · 排行榜
-  metric_zones: 发现区域
   board_zones: 发现区域 · 排行榜
-  metric_feeding: 宠物喂养
   board_feeding: 宠物喂养 · 排行榜
-  metric_gathering: 采集
   board_gathering: 采集 · 排行榜
   source_leaderboard: 提升排行榜名次
   source_social: 在 X 发帖
-  spots_count: '{{count}} 个名额'
   error_unauthorized: 请先连接并验证接收钱包。
-  error_invalid_post: 请使用 1–3 个不同的 X 帖子链接。
   error_rate_limited: 请求过多，请稍后重试。
-  error_foreign_post: '帖子必须由已连接的 X 账户发布。请更换账户或链接。'
-  error_missing_post: '找不到部分帖子。请检查链接，并确认帖子为公开状态。'
-  error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
-
 tournament_page:
   level_limit_label: '报名等级上限'
   level_unrestricted: '不限'
@@ -3542,116 +3454,560 @@ tournament_page:
   versus: 对阵 {{team}}
 
 landing_page:
-  sound_on: '开启音乐'
-  sound_off: '关闭音乐'
-  new_tab: ' (opens a new tab)'
+  sound_on: 开启音乐
+  sound_off: 关闭音乐
+  new_tab: ' (在新标签页中打开)'
   sign_alt: AresRPG
-  nav_label: Resources
+  nav_label: 资源
   nav:
-    encyclopedia: Encyclopedia
-    journal: Journal
+    docs: 文档
+    journal: 日志
     discord: Discord
   kares:
     trigger: $KARES
-    trigger_detail: Tokenomics
-    modal_label: $KARES tokenomics
-    close: Close
+    trigger_detail: 代币经济
+  account:
+    login: 登录
+    logging_in: 正在登录…
+    signed_in: 已登录为 {{address}}
+    failed: 登录未完成，请重试。
+    logout: 退出登录
   hero:
+    eyebrow:
+      - 战术MMORPG协议
+      - 运行在Sui链上
     title:
-      - Explore planets.
-      - Fight in turns.
-      - Keep what you find.
-    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
-      craft and trade with other players, and compete when tournaments run. Or hand the controls to
-      your agent and watch it play.
-    play: Play
-    let_ai_play: Let AI play
+      - '一个世界，尽在链上。'
+      - '按你的方式游玩。'
+      - '找到的都归你。'
+    lede: AresRPG是Sui上的战术MMORPG协议。角色、战利品和市场都在链上，任何界面都能用来游玩。与队伍一起通关地下城，与其他玩家制作和交易，或者把操作交给代理。
+    play: '3D 游玩'
+    play_bots: '用机器人游玩'
+    ways:
+      - 一个世界
+      - 无限玩法
+  chooser:
+    section: 界面
+    title: 选择你的玩法。
+    intro: AresRPG是一款没有唯一入口的链上游戏。同样的角色、同样的战利品、同样的市场。这里有五种界面供你起步，任何人都可以打造下一个。
+    interface: 界面
+    specs:
+      runs_in: 运行环境
+      role: 你的职责
+      good_for: 适合
+      status: 状态
+    play:
+      manual: 手动
+      automated: 自动
+    items:
+      world:
+        name: 体素世界
+        line: 浏览器里的完整3D游戏。画面要求高，每一步都由你操作。
+        tech: 基于three.js
+        status: 可游玩
+        body: 浏览器中的完整游戏。漫游星球、组建队伍，亲自在网格上战斗。在手机上，同一客户端会切换为触屏操作。
+        runs_in: 配备高性能GPU的浏览器
+        role: 每一步都由你来走
+        good_for: 探索与组队战斗
+        cta: 开始游戏
+        preview: 一名角色走在穿过Mosswood体素蘑菇森林的土路上，前方有悬崖、瀑布和哥布林。
+      dapp:
+        name: Web dapp
+        line: 没有3D。用任何手机派队伍去做任务、袭击地下城。
+        tech: 任何设备均可运行
+        status: 可游玩
+        body: 去掉3D引擎的游戏版本。派角色去做任务、与队伍一起袭击地下城并交易战利品，全部在一个任何手机都能运行的轻量页面中完成。
+        runs_in: 任何浏览器、任何手机
+        role: 派出队伍，收取战利品
+        good_for: 低配设备、碎片时间
+        cta: 打开 dapp
+        preview: Web dapp设计预览：一个正在做任务的角色及其生命条、一场等待钥匙的地下城袭击，以及派去做任务、袭击地下城和打开市场的按钮。
+      agent:
+        name: 你的代理
+        line: 由Claude、ChatGPT或Grok操作，你只需观看。
+        tech: Claude / ChatGPT / Grok
+        status: 进行中
+        body: 将Claude、ChatGPT或Grok连接到托管的AresRPG机器人。商定目标后，在游戏内观看它操作你的角色。
+        runs_in: ChatGPT、Claude或Grok
+        role: 设定目标，然后观看
+        good_for: 放手托管
+        cta: 连接你的代理
+        preview: 示例会话：你让代理清理路上的哥布林，它一边调用托管机器人工具一边向你汇报。
+      telegram:
+        name: Telegram
+        line: '在聊天中指挥你的英雄。选择策略、批准，然后跟进。'
+        tech: Telegram聊天
+        status: 等候名单
+        body: '你的托管机器人就在 Telegram 聊天里。为英雄选择一个经过审核的策略，了解它会做什么，然后批准。之后可在同一聊天中查看进度或将其停止。'
+        runs_in: Telegram聊天
+        role: 选择策略并批准
+        good_for: '用手机轻松托管游玩'
+        cta: 加入等候名单
+        preview: 示例聊天：选择策略，查看其作用并批准，然后查看状态或停止它。
+      sdk:
+        name: 你自己的客户端
+        line: 基于公开SDK打造客户端、工具或机器人。
+        tech: 公开SDK
+        status: 源码可用
+        body: 使用游戏本身所用的公开SDK进行开发。许可证允许在官方部署上运行的商业客户端、重制版、粉丝工具和机器人。 你的客户端或机器人使用自己的 Sui 钱包签名。
+        runs_in: 你打造的任何东西
+        role: 由你编写客户端
+        good_for: 自定义客户端、工具、机器人
+        cta: 阅读手册
+        preview: 终端中列出的公开代理手册目录：SDK构建模块、状态与交易规范、源码仓库和部署锚定。
+    waitlist:
+      joining: 正在加入等候名单…
+      joined: 你已加入等候名单
+      failed: 无法加入等候名单。请重试。
+    agent_guide: 阅读指南
+    source: 查看源码
+    previews:
+      keys_then: 然后
+      dapp:
+        title: Web dapp
+        label: 设计预览
+        character: Senshi
+        questing: 任务中
+        dungeon: Ivory Rampart
+        needs_key: 需要钥匙
+        raid: 队伍地下城袭击
+        actions:
+          - 派去做任务
+          - 袭击地下城
+          - 市场
+      agent:
+        title: 托管机器人 / MCP
+        label: 示例会话
+        you: 你
+        agent: 代理
+        call: 调用
+        lines:
+          - 清理路上的哥布林。
+          - 收到。在这里看着就好。
+          - 前方路上有哥布林。我去挑战它们。
+          - 战斗开始。正在网格上选择格子。
+      telegram:
+        choose: 选择策略
+        patrol: 城市巡逻 · 1只怪物
+        gather: 采集与制作
+        review: 查看此策略
+        review_detail: 在本城市与单只怪物的怪物群战斗，直到停止。
+        approve: 批准
+        menu: 菜单
+        running: 策略运行中
+        status: 状态
+        stop: 停止策略
+      sdk:
+        label: 手册目录
+        build: 构建机器人
+        build_lines:
+          - SDK构建模块：动作组合、离线规划和战斗模拟。
+          - 状态与交易规范：新鲜度、回执和恢复。
+        source: 源码与部署
+        source_lines:
+          - 源码仓库：SDK源码、许可证和对应版本。
+          - 部署锚定：对照目标部署进行验证。
   earn:
-    title: Three ways to earn as you play
-    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
-      them.'
-    bays:
-      - Key of Ivory Rampart
-      - Tidal Horn Core and Amberwood Recurve
-      - Tournaments
+    section: 经济
+    title: 赚取SUI。三种方式。
+    intro: 付钱给你的是其他玩家。你卖给他们、为他们制作，或者击败他们。
     paths:
-      - title: Sell your dungeon drops
-        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
-          the marketplace, and receive SUI when another player buys.
-      - title: Gather, craft and trade
-        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
-          or sell the materials themselves.
-        link: Browse the item encyclopedia
-      - title: Win tournament prizes
-        body: When a tournament runs, play for its announced prizes. Your final placement decides your
-          share.
-  world:
-    title: Inside the Mosswood tutorial
-    label: Real gameplay captures from the Mosswood tutorial
-    beats:
-      - title: Explore the planets
-        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
-          the locals.
-      - title: Walk up and challenge
-        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
-      - title: Fight in turns
-        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
-          marks the goblins. Plan every move.
-    keys_label: Press W to walk up, then F to challenge
-    keys_then: then
-    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
-      waterfalls and goblins ahead.
-    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
-    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
-      reachable positions; orange tiles mark the goblins.
-    marks:
-      you: You
-      tiles: Tiles you can reach
-      goblins: Goblins
-  agent:
-    title: Your agent plays. You watch.
-    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
-      run while you watch, and you can stop watching whenever you like.
-    character: Senshi
-    status_connecting: Connecting…
-    status_watching: Watching Senshi
-    stop: Stop watching
-    you: You
-    your_agent: Your agent
-    said:
-      - Clear
-      - the
-      - goblins
-      - on
-      - the
-      - path.
-    bubbles:
-      - On it. Watch from here.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    call_title: Voice call
-    call_detail: with your agent
-    log:
-      - Clear the goblins on the path.
-      - On it. Watch from here.
-      - Following the path through Mosswood.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    replay: Replay
-    note: Filmed in Mosswood. Your agent’s lines are an example.
+      - tag: 市场
+        title: 袭击地下城。
+        accent: 出售战利品。
+        body: 与队伍通关地下城并上架掉落物。买家以SUI向你付款。
+      - tag: 生活职业
+        title: 采集与制作。
+        accent: 出售装备。
+        body: 提升生活职业等级，制作战斗者需要的物品，出售成品或原材料。
+        link: 浏览所有物品
+      - tag: 锦标赛
+        title: 赢下战斗。
+        accent: 拿走奖金。
+        body: 锦标赛举行时，你的最终名次决定你的奖金份额。
+  control:
+    section: 操控
+    title: 自动托管，或每步亲自签名。
+    intro: 两种掌控方式。两者都运行在同一个链上游戏中，你可以让不同角色各用一种。
+    you: 你
+    holds: 持有角色
+    used_by: 使用者
+    automated:
+      tag: 自动
+      title: 托管代理替你游玩。
+      body: 把角色交给一个共享账户并设定目标。我们的托管代理全天候游玩，你可以观看，也可以去做别的事。
+      figure: 示意图：你和托管代理各持有共享多签账户两把密钥中的一把，该账户持有角色。
+      you_detail: Google登录
+      vault: 1-of-2多签
+      agent: 托管代理
+      agent_detail: 执行操作
+      points:
+        - 代理永远拿不到你的钱包密钥。
+        - 开始前，你会确切批准使用哪个机器人以及它能做什么。
+        - 随时可从背包召回你的角色，即使代理离线也可以。
+    self:
+      tag: 非托管
+      title: 每一步都由你亲自签名。
+      body: 使用 Google 登录。角色和物品留在你的账户中，没有你的签名什么都不会发生。
+      figure: 示意图：你用 Google 账户签名，你自己的账户持有角色。
+      you_detail: Google登录
+      vault: 你的账户
+      points:
+        - 其他人无法移动你的角色或花费你的SUI。
+        - 每场战斗、每次制作和每笔出售都是你签名的交易。
+        - 之后可将角色切换给托管代理，想要时再收回。
   end:
-    title: Start in Mosswood
-    body: The tutorial takes you from the first path to your first turn-based fight.
-    play: Play
-    discord: Join the Discord
+    title: 开始你的冒险
+    body: 登录、创建角色，然后迎接第一场回合制战斗。
+    play: 开始游戏
+    discord: 加入Discord
+    pick: 你的选择：
   footer:
     wordmark: AresRPG
-    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
-    game: Game
-    community: Community
-    play: Play
-    encyclopedia: Item encyclopedia
-    journal: Journal
+    tagline: 横跨多个星球的Sui战术体素MMORPG。
+    game: 游戏
+    community: 社区
+    play: 开始游戏
+    encyclopedia: 物品百科
+    journal: 日志
     discord: Discord
     telegram: Telegram
     x: X
+    allocation: 查看你的白名单名额
+    colophon: 一个世界，无限界面
+
+telegram_companion:
+  connect_google: '🔑 Google'
+  waiting: '你的游戏账号尚未获得 Telegram 使用权限。加入等候名单即可申请。'
+  on_waitlist: '✅ 你已加入等候名单。点击“检查访问权限”查看游戏账号是否已通过。'
+  join_waitlist: '加入等候名单'
+  check_access: '检查访问权限'
+  inventory: '🎒 背包'
+  inventory_empty: '背包为空'
+  observation_unknown: '暂时无法确认'
+  no_strategy: '当前没有角色在运行策略。'
+  strategy_active: '策略已启用'
+  strategy_waiting: '策略等待中'
+  replace_strategy: '这会替换该角色正在运行的策略。已提交的操作可能仍会完成。'
+  fight: '⚔️ 战斗中'
+  ambush: '🛡 守护者等待中'
+  idle: '可开始策略'
+  external_strategy: '来自其他应用的策略'
+  menu: '🧙 选择你的角色'
+  loading: '⏳ 正在加载角色'
+  empty: '🧙 暂无可玩的代理角色'
+  play: '▶️ 开始'
+  back: '☰ 菜单'
+  status: '📍 状态'
+  approve: '✅ 批准'
+  link: '🔑 使用 /link 在浏览器中关联Google'
+  linked: '✅ Google已关联 · /menu'
+  unlinked: '🔓 已解除关联'
+  confirm: '在你的 Telegram 聊天中发送下面的命令以完成绑定。'
+  confirm_warning: '请勿分享此代码。只确认你本人发起的登录。'
+  browser_expired: '此页面已过期。请返回Telegram，使用 /link 重新登录。'
+  check_status: '📍 查看状态'
+  log_in_again: '🔑 重新登录'
+  balance: '💰 代理余额'
+  pause: '⏸ 暂停代理'
+  resume: '▶️ 恢复代理'
+  wallet_scope: '这会影响整个代理钱包及其他连接 · 已提交的交易仍可能完成'
+  paused: '⏸ 代理已暂停'
+  resumed: '▶️ 代理已恢复'
+  choose_strategy: '选择策略'
+  failure_changed: '内容已更新。以下是当前状态。'
+  failure_reconnect: '你的登录已过期。请重新登录：'
+  failure_unlink_first: '此聊天或Google账号已连接，或仍有未完成的登录。请使用 /unlink 后再试。'
+  failure_temporary: '这次没有成功。请稍后再试。'
+  failure_busy: '该角色仍在完成一项操作，或代理已暂停。如果是你暂停的，请使用 /resume，然后查看状态。'
+  failure_run_limit: '你的代理已在运行其所能支持的最多角色。请先停止一个，再启动这个角色。'
+  review: '确认此策略'
+  effects: '停止前会在这座城市战斗仅含1只怪物的怪物组。每次操作消耗SUI燃气费，没有总额上限。不保证胜利；重启可能重复步骤。停止不会取消已提交的操作。'
+  stop: '停止策略'
+  stop_scope: '选择要停止的角色。其他角色继续游玩；已提交的交易仍可能完成。'
+  stop_all: '全部停止'
+  stopped: '策略已停止'
+  completed: '策略已完成'
+  attention: '策略需要处理。请在游戏中查看角色，然后查看状态或停止。'
+  unknown: '结果尚未确认。请先查看状态。'
+  city_review: '城市：{city}'
+  city_required: '请先在游戏中进入城市，再用 /menu 重新确认。'
+  enable_agent: '🔑 启用代理'
+  play_consent: '你的游戏账号已获准使用。请授权代理以继续。'
+  world_review: '世界：{world}'
+  gather_effects: '使用现有材料制作有助于职业升级的配方；否则使用可用工具采集并探索这个世界。以基础战术对抗守护者。持续运行至停止。SUI燃气费和材料没有总额上限，制作和战斗可能失败。 重启可能重复步骤。停止不会取消已提交的操作。'
+  strategies:
+    fight_nearby: '⚔️ 城市巡逻 · 1只怪物'
+    gather_craft: '🌿 采集与制作'
+
+docs_page:
+  title: '文档'
+  nav_label: '文档章节'
+  home: '首页'
+  play: '开始游戏'
+  menu: '菜单'
+  previous: '上一页'
+  next: '下一页'
+  search: '搜索指南、物品和怪物'
+  search_empty: '没有与此搜索匹配的页面。'
+  new_tab: ' (在新标签页中打开)'
+  data_note: '这些页面上的数值来自与游戏相同的内容文件。'
+  kinds:
+    guide: '指南'
+    item: '物品'
+    mob: '怪物'
+  groups:
+    start: '从这里开始'
+    mechanics: '游戏机制'
+    automated: '自动游玩'
+    reference: '参考资料'
+    economy: '经济'
+    build: '开发'
+  guides:
+    overview: 'AresRPG是什么'
+    first_hour: '新手指南'
+    market: '市场'
+    agents: '连接助手'
+    build: '基于AresRPG开发'
+    kares: 'KARES代币'
+    ways: '游玩方式'
+    bots: '托管机器人'
+  overview:
+    lede: 'AresRPG 是一款作为协议运行在 Sui 上的战术 MMORPG。角色、物品、战斗和市场都是链上对象和交易。你看到的游戏只是该协议的客户端之一，还有其他几种。'
+    counts:
+      items: '物品'
+      spells: '技能'
+      mobs: '怪物'
+      recipes: '配方'
+      classes: '职业'
+      jobs: '专业'
+    protocol_title: '是协议，不是单一客户端'
+    protocol:
+      - '游戏规则是智能合约。一场战斗、一次制作、一次采集或一笔出售都是一笔交易，无论由哪个界面发出，结果都相同。'
+      - '你的账户拥有你的角色和物品。没有任何界面替你保管，除非你选择把角色交给托管机器人。'
+      - '所有界面读取同一份状态。在 3D 世界发起的战斗可以在其他页面观看，机器人赢得的战利品会出现在你的背包里。'
+    loop_title: '你在游戏里做什么'
+    loop:
+      - '在网格上与成群的怪物回合制战斗。每回合用行动点施放法术，用移动点走位。'
+      - '采集资源，并用你的职业制作工具、装备和消耗品。'
+      - '与队伍一起逐个房间通关地下城，争夺首领战利品。'
+      - '在市场上用 SUI 与其他玩家交易。'
+  ways:
+    lede: '这个协议没有唯一的入口。下面每个界面玩的都是同一批角色、同样的战利品和同一个市场。区别在于由谁来操作，以及运行它需要什么。'
+    note: '你可以使用多个界面，但有一个限制：每个账户只有一个活动连接。打开 3D 游戏会取代同一账户的网页 dapp 会话。'
+  bots:
+    lede: '托管机器人在 AresRPG 的服务器上替你操控英雄。网页 dapp、Telegram 和已连接的助手驱动的是同一个机器人。'
+    wallet_title: '机器人钱包'
+    wallet:
+      - '机器人使用自己的钱包游玩，与你的游戏钱包分开。它是一个 1/2 多签：托管服务可以为它签名，你的 Google 账户也可以。'
+      - '你交出的英雄和物品会转入该钱包。在那里游玩属于托管模式：由服务签署操作。'
+      - '你可以随时从自己的账户取回一切，即使机器人离线。取回只需要你的签名。'
+      - '机器人自行支付网络费用。请在机器人钱包里留一些 SUI。“转账”可在你的两个钱包之间转移 SUI 和 KARES。'
+    does_title: '机器人做什么'
+    does:
+      - '每个英雄一次只进行一项活动，例如在城市周围战斗、采集与制作，或通关地下城。由你选择，机器人会执行到结束或你叫停为止。'
+      - '同一机器人钱包的英雄可以组队战斗。'
+      - '你可以随时暂停机器人或停止某个英雄。已发送到链上的操作仍会完成。'
+      - '没有已批准的事可做，或钱包里没有支付费用的 SUI 时，机器人会等待。'
+    control_title: '谁可以指挥它'
+    control:
+      - '网页 dapp：开始和停止活动、提升属性和法术，并以机器人身份在市场交易。'
+      - 'Telegram：选择一个经过审核的策略并批准。'
+      - '助手（ChatGPT、Claude 或 Grok）：在对话中约定目标。它在你批准的范围内调用机器人的工具。'
+  first_hour:
+    lede: '第一个小时的目标：一个角色、几场胜利，以及一件亲手制作的工具。下方的掉落概率和配方都是真实数据。'
+    drop_chance: '掉落概率 {{chance}}%'
+    steps:
+      - title: '创建角色。'
+        body: '创建需要{{price}} SUI外加Gas费。职业决定你的技能，请谨慎选择。'
+      - title: '赢下第一场战斗。'
+        body: '这些怪物在第一座城市附近游荡。走到一群怪物面前发起挑战。'
+      - title: '收集工具材料。'
+        body: '你的第一件农具由怪物掉落物制成。每种材料都列出了最佳来源。'
+      - title: '制作工具。'
+        body: '打开{{job}}专业并制作工具。制作可能失败，失败时仍会消耗材料，所以请多备一些。'
+      - title: '前往第一个地下城。'
+        body: '有了队伍和这把钥匙，你就能进入第一座城市的地下城。'
+  market:
+    lede: '玩家之间相互买卖。物品和资源通过链上挂单交易，卖家以SUI收款。'
+    royalty: '版税'
+    royalty_floor: '最低版税'
+    lot_sizes: '每组数量'
+    points:
+      - '买家支付挂单价格，外加版税和Gas费。'
+      - '卖家获得挂单价格，并需通过单独操作领取。'
+      - '低价挂单时，最低版税影响很大。请比较整组的总成本，而不只是挂单价格。'
+  kares:
+    lede: 'KARES尚未就绪。它很快就会加入。'
+    note: '代币上线后，本页将介绍代币、供应量和奖励池。在此之前，不公布任何余额、价格或奖励数字。'
+  agents:
+    lede: '将ChatGPT、Claude或Grok连接到托管的AresRPG机器人。你们商定一个目标，助手就在目标范围内操作你的角色。此功能仍在开发中。'
+    steps:
+      - '选择你的助手，并将AresRPG连接地址添加为自定义连接器。'
+      - '用Google登录，然后确切批准使用哪个机器人以及它能做什么。'
+      - '从背包中交出一个角色。你可以随时召回。'
+    points:
+      - '助手永远拿不到钱包密钥，也绝不会在聊天中索要。'
+      - '托管游玩采用托管式模式，而非自托管。一个共享的1-of-2账户持有角色，托管代理为操作签名。你的Google登录仍是你的身份验证和恢复方式。'
+      - '已连接的机器人不一定在运行。没有已批准的下一步时，它会等待。'
+    guide: '阅读连接指南'
+    index: '打开代理手册'
+  build:
+    lede: '游戏客户端基于公开SDK构建。你可以用同样的操作打造自己的客户端、工具或机器人。'
+    source_title: '源码仓库'
+    source_body: 'SDK源码、许可证和对应版本。'
+    playbook_title: '代理手册'
+    playbook_body: '面向开发者的指南：连接、托管、SDK、协议、战斗和经济。'
+    blocks_title: '构建模块'
+    blocks:
+      - '动作组合：构建与游戏发送的相同交易。'
+      - '离线规划：无需签名者即可查看配方和成长进度。'
+      - '战斗模拟：在提交回合前先做规划。'
+      - '部署锚定：确认你连接的是官方部署。'
+    license_title: '许可证'
+    allowed_title: '允许'
+    allowed:
+      - '发布和运营商业客户端、游戏重制版、粉丝工具、服务和机器人。'
+      - '以盈利为目的自动游玩。'
+    forbidden_title: '禁止'
+    forbidden:
+      - '在任何区块链上部署或重新发布游戏合约或其衍生作品。'
+      - '将AresRPG的名称或标志用作你自己的品牌。'
+    license_note: '本页仅为摘要，具有约束力的是许可证原文。再分发时请保留许可证和版权声明。'
+    license_link: '阅读许可证'
+
+dapp_page:
+  brand: '远征'
+  mode_label: '界面模式'
+  mode_basic: '基础'
+  mode_advanced: '高级'
+  nav_label: '分区'
+  nav_play: '游玩'
+  nav_market: '市场'
+  bot_balance: '机器人：{amount} SUI'
+  bot_balance_hint: '托管机器人持有的 SUI，用于支付英雄的网络手续费和你在市场上的购买。'
+  loading: '加载中…'
+  signing_in: '正在登录…'
+  signin_title: '派你的英雄去远征'
+  signin_body: '使用 Google 登录，查看你的英雄并让托管机器人替他们游玩。与 3D 世界使用同一账户、同一批英雄和物品。'
+  signin_failed: '登录未完成。请重试。'
+  google_title: '需要使用 Google 登录'
+  google_body: '托管英雄属于你的 Google 账户。请退出登录，然后使用 Google 继续以使用此页面。'
+  unavailable_title: '自动服务没有响应'
+  unavailable_body: '请暂时使用 3D 世界。'
+  unavailable_action: '打开 3D 世界'
+  connect_title: '连接你的托管机器人'
+  connect_body: '机器人替你操作英雄。请允许此页面开始和停止它的活动。'
+  connect_custody: '机器人账户由你的 Google 账户与 AresRPG 共同持有：任一方都能签名，你随时可以取回你的英雄。'
+  connect_fees: '每个动作都是一笔从机器人余额支付的 Sui 交易。活动会一直进行，直到你停止或余额用完。'
+  connect_stop: '此页面可以让机器人游玩和暂停，并用它的余额在市场上交易。它无法提取你的 SUI。'
+  connect_action: '连接'
+  connect_busy: '正在连接…'
+  reading_heroes: '正在读取你的英雄…'
+  syncing: '机器人正在追赶世界状态。此页面会自动更新。'
+  observe_failed_title: '机器人没有响应'
+  observe_failed: '无法联系你的机器人。请刷新页面重试。'
+  empty_title: '机器人还没有英雄'
+  empty_body: '在 3D 世界中创建英雄，右键点击其头像并选择“移交给智能体”。英雄到达后会显示在这里。'
+  empty_action: '打开 3D 世界'
+  heroes_title: '你的英雄'
+  hero_level: '等级 {level}'
+  hero_xp: '经验'
+  status_free: '就绪'
+  status_activity: '活动中'
+  status_fight: '战斗中'
+  status_dungeon: '地下城中'
+  activities_title: '活动'
+  activities_team: '每个按钮都会派出所有空闲的英雄。同一座城市的英雄会组队行动。'
+  activities_hero: '这些按钮只对 {name} 生效。'
+  activities_build: '在基础模式下，{classe}职业的英雄还会自行成长：属性点加到{stat}，法术点优先加到{spell}，并穿上自己拥有的最好装备。'
+  activity_ready: '就绪：{names}'
+  activity_out: '进行中：{names}'
+  activity_other: '活动'
+  activity_train: '训练'
+  activity_train_body: '在每位英雄当前所在的城市与怪物战斗，获取经验和战利品。单独行动时英雄只挑单只怪物；同一座城市的英雄会组队狩猎。'
+  activity_train_action: '开始训练'
+  activity_gather: '采集'
+  activity_gather_body: '用英雄拥有的工具在其所在世界采集和制作，提升职业等级。'
+  activity_gather_action: '开始采集'
+  activity_raid: '突袭'
+  activity_raid_body: '进入这位英雄所在城市的地下城，争夺最稀有的战利品。英雄消耗一把钥匙。'
+  activity_raid_body_basic: '派出最强的空闲英雄（最多 {size} 位）进入{dungeon}，争夺最稀有的战利品。每位英雄消耗一把钥匙。'
+  activity_raid_action: '开始突袭'
+  blocker_command_pending: '正在等待机器人回应…'
+  blocker_no_free_hero: '现在没有空闲的英雄可以做这件事。'
+  blocker_hero_busy: '{names}：正在战斗或身处地下城。'
+  blocker_hero_unknown: '{names}：机器人还在读取这位英雄。请稍后再试。'
+  blocker_city_required: '{names}：不在城市中。请先在 3D 世界中把英雄带进城市。'
+  blocker_world_required: '{names}：与这座地下城不在同一个世界。'
+  blocker_key_missing: '{names}：没有这座地下城的钥匙。'
+  blocker_team_full: '{names}：突袭队伍已满。'
+  key_missing: '缺少：{count} × {item}'
+  key_find: '在市场上寻找{item}'
+  key_unsold: '现在没有人出售{item}。'
+  raid_short_title: '钥匙不够全队使用'
+  raid_short_body: '你的钥匙只够 {count} 位英雄使用，所以只有{names}会进入地下城。想派出更多英雄，请找到或购买缺少的钥匙。'
+  raid_short_action: '以 {count} 位英雄开始突袭'
+  cancel: '取消'
+  close: '关闭'
+  command_uncertain: '无法确认机器人的回应。此页面会自动重新检查，不会重复发送。'
+  command_refused: '{names}：{reason}'
+  positions_title: '仓位'
+  positions_empty: '开始一项活动后，可在这里查看进度。'
+  position_running: '进行中'
+  position_waiting: '机器人正在等待：目前无法继续此活动。'
+  position_stopping: '正在停止…'
+  position_finished: '已完成'
+  position_ended_issue: '机器人停止了此活动。请检查其余额和你的英雄，然后重新开始。'
+  position_hp: '生命'
+  position_xp: '获得经验'
+  position_levels: '+{count} 级'
+  position_job_xp: '职业经验'
+  position_fights: '战斗'
+  position_dungeon: '{dungeon} · 第 {room} 间'
+  position_team: '与 {names} 并肩作战'
+  position_loot: '找到的物品'
+  position_no_loot: '还没有找到物品。'
+  position_stop: '停止'
+  position_dismiss: '移除'
+  haul_title: '带回的收获'
+  haul_spent: '已用 SUI：{amount}'
+  haul_spent_hint: '英雄外出期间从机器人钱包转出的 SUI：包括网络手续费、购买和转出。'
+  found_toast: '你的英雄找到了'
+  hero_action_sent: '已发送给机器人。'
+  detail_title: '{name} 详情'
+  detail_locked: '只要这个英雄不在战斗中，且机器人没有其他未完成的请求，就可以修改属性和法术。'
+  detail_stats: '属性'
+  detail_spells: '法术'
+  detail_equipment: '装备'
+  equipment_empty: '未穿戴装备。'
+  market_account: '这个市场以你的机器人身份交易：用机器人的余额付款，购买的物品进入英雄们共用的背包。目前无法在此页面撤下挂单，出售所得会留在机器人的售货亭中。'
+  market_queued: '机器人已收到你对 {item} 的订单，会在当前操作完成后签名。'
+  market_bought: '已购买：{amount} × {item}。它在英雄们的背包里。'
+  market_listed: '已挂单出售：{amount} × {item}。'
+  error_unknown: '出了点问题。请重试。'
+  error_expired: '与机器人的连接已过期。请重新连接。'
+  error_google_required: '请使用 Google 继续以连接托管机器人。'
+  error_consent_failed: '连接未获批准。请重试。'
+  error_owner_mismatch: '该机器人属于另一个账户。请使用正确的 Google 账户登录。'
+  error_storage_unavailable: '此浏览器阻止了连接所需的存储。请允许网站数据后重试。'
+  error_bot_busy_or_paused: '机器人已暂停，或仍在完成这位英雄的上一个动作。请稍后再试。'
+  error_run_limit_reached: '机器人能同时操控的英雄已达上限。请先停止一位再试。'
+  error_needs_resync: '机器人仍在同步。请几秒后再试。'
+  error_start_unconfirmed: '没有活动在进行：机器人没有接受该活动。你可以重新开始。'
+  error_unavailable: '机器人没有响应。请稍后再试。'
+  error_invalid_token: '与机器人的连接已过期。请重新连接。'
+  error_insufficient_scope: '此连接无权执行该操作。请重新连接以授权。'
+  error_behavior_run_not_found: '这位英雄已经没有正在进行的活动。'
+  error_insufficient_character_points: '点数不足。'
+  error_spell_rank_capped: '该法术已达到最高等级。'
+  error_tool_failed: '机器人无法完成此操作。请稍后再试。'
+  error_insufficient_funds: '机器人的 SUI 不足。请先为机器人充值 SUI，然后再试。'
+  error_listing_changed_or_ineligible: '这个报价已变更或已不存在。请查看当前价格后再试。'
+  error_character_not_available: '现在没有空闲的英雄可以携带它：他们都在战斗中。请稍后再试。'
+  error_sale_source_changed_or_unavailable: '该物品已变更，或没有足够大的一组。请重新选择。'
+  error_order_failed: '订单未能完成。再次尝试前，请检查机器人的余额和背包。'
+  error_order_unconfirmed: '无法确认这笔订单，背包也没有变化。再次尝试前，请检查机器人的余额。'
+  disconnect_action: '断开此页面'
+  disconnect_body: '移除此页面对机器人的访问。它开始的活动将不再接受新的动作。退出登录也是如此。'
+  disconnect_failed: '机器人未确认。此页面仍有访问权限。请重试。'

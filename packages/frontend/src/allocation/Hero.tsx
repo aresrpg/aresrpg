@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ReactNode } from 'react'
-import { campaign } from '@aresrpg/immutable/allocation'
 import type { BlastSnapshot } from '@aresrpg/sdk/blast'
 
 import type { CopyText } from '../i18n/copy.ts'
@@ -10,7 +9,6 @@ import type { KaresCopy } from '../kares/copy.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
 import type { allocation_view } from './view.ts'
-import { Timer } from './clock.tsx'
 import { TierCard } from './TierCard.tsx'
 import { SaleHero } from './SaleHero.tsx'
 
@@ -28,7 +26,7 @@ const Total = ({ view, text, locale }: Readonly<{ view: View; text: CopyText; lo
             <b>{text('before')}</b> · {text('total_cap', { sui: view.sui, count: view.spots })}
           </>
         ) : (
-          text(view.final ? 'no_spot' : 'allocation_note')
+          text(view.loaded ? 'no_spot' : 'allocation_note')
         )}
       </small>
     </p>
@@ -45,28 +43,10 @@ const Share = ({ url, text }: Readonly<{ url: string | null; text: CopyText }>) 
     </div>
   )
 }
-const CampaignHead = ({
-  view,
-  text,
-  locale,
-  open,
-}: Readonly<{ view: View; text: CopyText; locale: Locale; open: boolean }>) => (
+const CampaignHead = ({ view, text, locale }: Readonly<{ view: View; text: CopyText; locale: Locale }>) => (
   <>
-    <p className="hero-label">{text(view.final ? 'title' : open ? 'close_in' : 'closed')}</p>
-    {view.final ? <p className="done-title">{text('final')}</p> : <Timer text={text} closed={!open} />}
-    <p className="deadline">
-      {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
-        new Date(campaign.submissions_close_at)
-      )}{' '}
-      · {text('your_time')} ·{' '}
-      {new Intl.DateTimeFormat(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-        timeZone: 'UTC',
-      }).format(new Date(campaign.submissions_close_at))}{' '}
-      UTC
-    </p>
+    <p className="hero-label">{text('title')}</p>
+    <p className="done-title">{text('final')}</p>
     <span className="rule" />
     <Total view={view} text={text} locale={locale} />
   </>
@@ -77,7 +57,6 @@ export const Hero = ({
   runtime,
   text,
   locale,
-  open,
   sale,
   now,
   kares,
@@ -88,7 +67,6 @@ export const Hero = ({
   runtime: AllocationRuntime
   text: CopyText
   locale: Locale
-  open: boolean
   sale: BlastSnapshot | null
   now: number
   kares: KaresCopy
@@ -98,7 +76,7 @@ export const Hero = ({
     {sale ? (
       <SaleHero sale={sale} spots={view.spots} now={now} text={text} kares={kares} locale={locale} />
     ) : (
-      <CampaignHead view={view} text={text} locale={locale} open={open} />
+      <CampaignHead view={view} text={text} locale={locale} />
     )}
     {view.cards.length > 0 && (
       <div className={`stage ${view.cards.length < 2 ? 'is-one' : ''}`}>

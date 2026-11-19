@@ -24,6 +24,7 @@ const queued_gather = async (scan_limit: number) => {
     bot_id: f.bot.id,
     grant_id: f.grant.id,
     lane_key: key,
+    character_id: character.id,
     fingerprint: 'objective',
     revision: 1,
     script: {
@@ -59,12 +60,17 @@ const queued_gather = async (scan_limit: number) => {
     status: 'accepted',
     decision_revision: lane.decision_revision,
     observation_revision: lane.observation_revision,
-    run_ref: { kind: 'behavior', id: run.id },
+    run_id: run.id,
     behavior_binding: { revision: 1, node: 'root' },
   }
   await put(f.store, 'behavior:objective', run)
   await put(f.store, 'command:gather', command)
-  await put(f.store, key, { ...lane, run_ref: command.run_ref, active_command: command.id })
+  await put(f.store, key, {
+    ...lane,
+    runs: { [character.id]: run.id },
+    active_command: command.id,
+    latest_command: command.id,
+  })
   return { ...f, runtime, key }
 }
 for (const scan_limit of [100, 1]) {
@@ -129,6 +135,48 @@ test('dependency priority cannot bypass another actor lease', async () => {
     await f.runtime.settle()
     expect((await f.store.read<Command>('command:gather'))!.waiting_for_resume).toBeUndefined()
     expect((await f.store.read<Lane>(f.key))!.active_command).toBe('gather')
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+test('an observation wakes the whole signing queue even when its first hero is blocked', async () => {
+  const f = await runtime_fixture()
+  try {
+    await f.runtime.observe(f.grant, {})
+    await f.admit()
+    const key = lane_key_for(f.bot)
+    const hero = (id: string, status: BehaviorRun['status']): BehaviorRun => ({
+      id,
+      bot_id: f.bot.id,
+      grant_id: f.grant.id,
+      lane_key: key,
+      character_id: id,
+      fingerprint: id,
+      revision: 1,
+      script: { version: '1', objective: { title: id }, tree: { type: 'wait' } },
+      memory: empty_behavior_memory(),
+      pending_node: null,
+      activation: null,
+      consumed_command_id: null,
+      status,
+      actions_started: 0,
+      last_command_id: null,
+      created_at: 0,
+    })
+    // The blocked hero is the lane's first hosted run; its neighbour still claims work.
+    await put(f.store, 'behavior:a-blocked', hero('a-blocked', 'awaiting_ai'))
+    await put(f.store, 'behavior:b-playing', hero('b-playing', 'active'))
+    await put(f.store, key, {
+      ...(await f.store.read<Lane>(key))!,
+      runs: { 'a-blocked': 'a-blocked', 'b-playing': 'b-playing' },
+    })
+    // No scheduler tick: only the observation may wake the queue.
+    await f.send({ type: 'packet/characters', characters: [] })
+    await f.runtime.settle()
+    await f.runtime.settle()
+    expect((await f.store.read<BehaviorRun>('behavior:b-playing'))?.status).toBe('waiting')
+    expect((await f.store.read<BehaviorRun>('behavior:a-blocked'))?.status).toBe('awaiting_ai')
   } finally {
     await f.runtime.stop()
   }

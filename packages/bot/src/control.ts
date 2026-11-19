@@ -1,34 +1,42 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { FightStateRow } from '@aresrpg/protocol'
+import type { Receipt } from '@aresrpg/sdk/cache'
 
 import { create_behavior_control } from './behavior_control.ts'
-import type { RunRef } from './run_ref.ts'
 import type { ActionBaseline } from './action_reconciliation.ts'
 import type { FightReplay } from './fight_runtime.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import { parse_gameplay_action, type GameplayActionName } from './gameplay.ts'
-import { admit_command, lane_key_for } from './command_admission.ts'
+import { lane_key_for, public_command, queue_command } from './command_admission.ts'
 import { create_combat_control } from './combat_control.ts'
-import { create_profession_control } from './profession_control.ts'
 import { hash_secret } from './security.ts'
 import type { ControlStore } from './store.ts'
+import { route_owner_controls, type OwnerControl } from './owner_control.ts'
 
-export { admit_command, lane_busy, lane_key_for } from './command_admission.ts'
+export { admit_command, lane_key_for } from './command_admission.ts'
 
 export type Envelope = Readonly<{
   command_id: string
   grant_id: string
   digest: string
   phase: 'prepared' | 'signed' | 'submitting'
-  encrypted: string
+  bytes: string
+  signatures?: readonly string[]
   gas_budget_mist: string
   include?: object
   gas_scope?: string
   gas_payer?: string
 }>
 export type Lane = Readonly<{
-  run_ref?: RunRef | null
+  execution_busy?: boolean
+  /** One behavior run per character: character ID to run ID. */
+  runs?: Readonly<Record<string, string>>
+  /** Run key to the last command that run admitted. */
+  run_commands?: Readonly<Record<string, string>>
+  /** The wallet's one direct command: a one-shot queue entry until it takes the signing slot, then
+   * readable until the next direct command is accepted. */
+  direct?: string | null
   reconciliation_command?: string | null
   transport_stopped?: boolean
   fight_replays?: Readonly<Record<string, FightReplay>>
@@ -43,19 +51,18 @@ export type Lane = Readonly<{
   observed_at: number
   needs_resync: boolean
   paused: boolean
-  combat_run_id?: string | null
-  profession_run_id?: string | null
   active_command: string | null
+  /** The last admitted command; it stays readable until the lane admits the next one. */
+  latest_command?: string | null
   pending: Envelope | null
 }>
 export type Command = Readonly<{
-  run_ref?: RunRef
+  /** The hero run that issued this command; absent on a direct command. */
+  run_id?: string
   behavior_binding?: Readonly<{ revision: number; node: string }>
   waiting_for_resume?: boolean
   action_baseline?: ActionBaseline
   fight_baseline?: FightStateRow
-  combat_run_id?: string
-  profession_run_id?: string
   id: string
   grant_id: string
   bot_id: string
@@ -67,6 +74,8 @@ export type Command = Readonly<{
   observation_revision: number
   status: 'accepted' | 'executing' | 'completed' | 'failed' | 'uncertain' | 'cancelled'
   result?: unknown
+  /** The certified receipt, settled with result; process-local and never returned to a client. */
+  receipt?: Receipt
   error?: string
 }>
 /** Existing envelope/command work precedes objectives which depend on its reconciliation. */
@@ -108,7 +117,8 @@ export const create_control_service = (
   now = Date.now,
   read_observation: Observe = async () => {
     throw new Error('observation_unavailable')
-  }
+  },
+  routed_control?: OwnerControl
 ) => {
   const observe: Observe = async (grant, payload) => {
     const current = await store.read<Grant>(`grant:${grant.id}`)
@@ -125,6 +135,16 @@ export const create_control_service = (
       if (previous.lease_until > now() && previous.actor_id !== actor_id) throw new Error('actor_owned')
       const lane = {
         ...previous,
+        execution_busy: false,
+        active_command: null,
+        pending: null,
+        reconciliation_command: null,
+        run_commands: undefined,
+        direct: null,
+        fight_replays: undefined,
+        catalogue_receipts: undefined,
+        observed_at: 0,
+        decision_revision: previous.decision_revision + Number(previous.fence > 0),
         actor_id,
         fence: previous.fence + 1,
         lease_until: now() + lease_ms,
@@ -165,7 +185,10 @@ export const create_control_service = (
     const id = hash_secret(`${grant.id}:${input.idempotency_key}`)
     const lane_key = lane_key_for(grant)
     const fingerprint = hash_secret(JSON.stringify(input))
-    return store.transaction([`grant:${grant.id}`, `bot:${grant.bot_id}`, lane_key, `command:${id}`], async (tx) => {
+    // The held command's key is locked with the lane; a lane that names another one by then is busy.
+    const held = (await store.read<Lane>(lane_key))?.direct
+    const keys = [`grant:${grant.id}`, `bot:${grant.bot_id}`, lane_key, `command:${id}`]
+    return store.transaction(held ? [...keys, `command:${held}`] : keys, async (tx) => {
       const current = await tx.get<Grant>(`grant:${grant.id}`)
       if (!current) throw new Error('invalid_token')
       const bot = await tx.get<Bot>(`bot:${grant.bot_id}`)
@@ -173,11 +196,13 @@ export const create_control_service = (
       const prior = await tx.get<Command>(`command:${id}`)
       if (prior) {
         if (prior.fingerprint !== fingerprint) throw new Error('idempotency_conflict')
-        return prior
+        return public_command(prior)
       }
       const lane = (await tx.get<Lane>(lane_key)) ?? empty_lane(grant)
-      admit_command(current, lane, input, now(), freshness_ms)
-      const revision = lane.decision_revision + 1
+      if (lane.direct && lane.direct !== held) throw new Error('bot_busy_or_paused')
+      const waiting = held ? await tx.get<Command>(`command:${held}`) : null
+      queue_command(current, lane, waiting, input, now(), freshness_ms)
+      // Like a hero's run, a queued command never advances the wallet decision: it must not fence a neighbour.
       const command: Command = {
         id,
         grant_id: grant.id,
@@ -186,12 +211,12 @@ export const create_control_service = (
         fingerprint,
         kind: input.kind,
         payload: input.payload,
-        decision_revision: revision,
+        decision_revision: lane.decision_revision,
         observation_revision: lane.observation_revision,
         status: 'accepted',
       }
       await tx.put(`command:${id}`, command)
-      await tx.put(lane_key, { ...lane, decision_revision: command.decision_revision, active_command: command.id })
+      await tx.put(lane_key, { ...lane, direct: command.id })
       return command
     })
   }
@@ -199,7 +224,7 @@ export const create_control_service = (
     const command = await store.read<Command>(`command:${id}`)
     if (!command || command.grant_id !== grant.id || command.bot_id !== grant.bot_id)
       throw new Error('command_not_found')
-    return command
+    return public_command(command)
   }
   const pause = async (grant: Grant) => {
     const key = lane_key_for(grant)
@@ -235,17 +260,19 @@ export const create_control_service = (
     })
     return { paused: false }
   }
-  return {
-    observe,
-    acquire,
-    heartbeat,
-    observed,
-    accept,
-    status,
-    pause,
-    resume,
-    ...create_behavior_control(store, config, now),
-    ...create_profession_control(store, config, now),
-    ...create_combat_control(store, config, now, observe),
-  }
+  return route_owner_controls(
+    {
+      observe,
+      acquire,
+      heartbeat,
+      observed,
+      accept,
+      status,
+      pause,
+      resume,
+      ...create_behavior_control(store, config, now),
+      ...create_combat_control(store, config, now, observe),
+    },
+    routed_control
+  )
 }

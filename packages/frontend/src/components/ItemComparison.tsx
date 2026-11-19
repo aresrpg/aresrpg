@@ -13,14 +13,6 @@ export const comparison_values = (stats: Stats = { min: {}, max: {} }, compariso
   return { deltas, stats: { min: { ...missing, ...stats.min }, max: { ...missing, ...stats.max } } }
 }
 
-export const StatDelta = ({ stat, delta = 0 }: Readonly<{ stat: string; delta?: number }>) =>
-  delta === 0 ? null : (
-    <strong className="aui-stat-delta" data-equipment-delta={stat} data-gain={delta > 0}>
-      {delta > 0 ? '+' : '−'}
-      {Math.abs(delta)}
-    </strong>
-  )
-
 export const ComparisonHeading = ({ comparison }: Readonly<{ comparison?: Comparison }>) => {
   const text = useText()
   if (!comparison) return null

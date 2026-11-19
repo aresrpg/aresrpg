@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import type { CombatRun } from '../src/combat_control.ts'
+import type { BehaviorRun } from '../src/behavior_script.ts'
+import { empty_behavior_memory } from '../src/behavior_tree.ts'
 import type { Command, Lane } from '../src/control.ts'
 
 import { memory_store, put } from './helpers/control_fixture.ts'
@@ -25,46 +26,53 @@ test('an observation change after action relay refuses preparation but still rol
     await f.admit()
     await f.runtime.settle()
     const lane = (await store.read<Lane>(f.lane_key))!
+    const character_id = String(f.command.payload.character_id)
     const command: Command = {
       ...f.command,
       id: 'combat-relay',
-      combat_run_id: 'combat-relay',
+      run_id: 'combat-relay',
+      behavior_binding: { revision: 1, node: 'root' },
       status: 'accepted',
       observation_revision: lane.observation_revision,
-      decision_revision: lane.decision_revision + 1,
+      decision_revision: lane.decision_revision,
     }
-    const run: CombatRun = {
-      id: command.combat_run_id!,
+    const approach = {
+      version: '1' as const,
+      intent: 'Approach the enemy',
+      combos: [{ name: 'approach', steps: [{ type: 'move' as const, direction: 'approach' as const }] }],
+      rules: [{ when: { type: 'always' as const }, combo: 'approach' }],
+      fallback: 'end_turn' as const,
+    }
+    const run: BehaviorRun = {
+      id: 'combat-relay',
       bot_id: f.bot.id,
       grant_id: f.grant.id,
       lane_key: f.lane_key,
+      character_id,
       fingerprint: 'accepted-fight',
-      fight: String(command.payload.fight),
-      profiles: [
-        {
-          character_id: String(command.payload.character_id),
-          revision: 1,
-          profile: {
-            version: '1',
-            intent: 'Approach the enemy',
-            combos: [{ name: 'approach', steps: [{ type: 'move', direction: 'approach' }] }],
-            rules: [{ when: { type: 'always' }, combo: 'approach' }],
-            fallback: 'end_turn',
-          },
-        },
-      ],
+      script: {
+        version: '1',
+        objective: { title: 'Fight' },
+        tree: { type: 'action', action: { type: 'combat', profiles: [{ character_id, profile: approach }] } },
+      },
+      revision: 1,
+      execution_fence: lane.fence,
+      memory: empty_behavior_memory(),
+      pending_node: 'root',
+      activation: { node: 'root', fight: String(command.payload.fight) },
+      consumed_command_id: null,
       status: 'active',
       actions_started: 1,
       last_command_id: command.id,
       created_at: f.clock.now,
     }
-    await put(store, `combat:${run.id}`, run)
+    await put(store, `behavior:${run.id}`, run)
     await put(store, `command:${command.id}`, command)
     await put(store, f.lane_key, {
       ...lane,
       active_command: command.id,
-      combat_run_id: run.id,
-      decision_revision: command.decision_revision,
+      runs: { [character_id]: run.id },
+      run_commands: { [`behavior:${run.id}`]: command.id },
     })
     let changed_after_relay = false
     before_transaction = async () => {

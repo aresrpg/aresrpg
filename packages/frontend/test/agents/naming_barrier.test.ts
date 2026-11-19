@@ -41,10 +41,10 @@ test('Connect cannot proceed until naming terminates, but naming refusal release
     f.app.dispatch({ type: 'suins/loaded', request, snapshot: { default_name: 'aresrpg.sceat.sui', names: [] } })
     await Bun.sleep(0)
     expect(navigable).toBeFalse()
-    f.app.dispatch({ type: 'suins/failed', request: f.app.store.getState().suins.request!, error: 'metadata' })
+    f.app.dispatch({ type: 'suins/failed', request: f.app.store.getState().suins.request!, error: 'stale_review' })
     await result
     expect(navigable).toBeTrue()
-    expect(f.app.store.getState().suins.error).toBe('metadata')
+    expect(f.app.store.getState().suins.error).toBe('stale_review')
   } finally {
     f.cleanup()
   }

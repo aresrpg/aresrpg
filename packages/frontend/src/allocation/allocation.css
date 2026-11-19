@@ -20,34 +20,34 @@
 
 :root {
   color-scheme: light;
-  --paper: #faf8f2;
-  --paper-deep: #f2eee5;
-  --card: #fffdf8;
-  --ink: #30283c;
-  --ink-soft: #4a4056;
-  --muted: #817889;
-  --line: #dfd9df;
-  --purple: #685174;
+  --paper: var(--aui-ink);
+  --paper-deep: var(--aui-ink);
+  --card: var(--aui-ink);
+  --ink: var(--aui-lifted);
+  --ink-soft: var(--aui-peak);
+  --muted: var(--aui-faint);
+  --line: var(--aui-ink);
+  --purple: var(--aui-steel);
   --teal: #579b87;
   --vet: #1d7f55;
   --vet-hi: #65e5ac;
-  --vet-soft: #e3f3ea;
+  --vet-soft: var(--aui-ink);
   --mem: #2a5fbf;
-  --mem-hi: #7cb6ff;
-  --mem-soft: #e4ecfa;
+  --mem-hi: var(--aui-blue);
+  --mem-soft: var(--aui-ink);
   --blast: #ff4f9e;
   --blast-deep: #c01f69;
-  --blast-soft: #ffeaf3;
-  --blast-plum: #2b1530;
+  --blast-soft: var(--aui-ink);
+  --blast-plum: var(--aui-surface);
   --bad: #b3413a;
   /* game HUD tokens (packages/ui) */
-  --hud: #1b2026;
-  --hud-head: #26323e;
-  --hud-cell: #20232e;
-  --hud-border: #11131c;
-  --hud-gold: #e2c895;
-  --hud-orange: #e9ac58;
-  --hud-muted: #a9bdcd;
+  --hud: var(--aui-surface);
+  --hud-head: var(--aui-lifted);
+  --hud-cell: var(--aui-raised);
+  --hud-border: var(--aui-bg);
+  --hud-gold: var(--aui-brass);
+  --hud-orange: var(--aui-brass);
+  --hud-muted: var(--aui-soft);
   --game: 'Ares UI', 'Nunito', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --serif: Georgia, 'Times New Roman', serif;
@@ -65,7 +65,7 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background-color: var(--paper);
-  background-image: radial-gradient(#7462801a 0.7px, transparent 0.7px);
+  background-image: radial-gradient(color-mix(in srgb, var(--aui-faint) 10.2%, transparent) 0.7px, transparent 0.7px);
   background-size: 5px 5px;
   font: 14px/1.55 var(--mono);
   -webkit-font-smoothing: antialiased;
@@ -88,13 +88,7 @@ a {
   outline-offset: 3px;
 }
 ::selection {
-  background: #dfd1e7;
-}
-.t-vet {
-  color: var(--vet);
-}
-.t-mem {
-  color: var(--mem);
+  background: var(--aui-ink);
 }
 
 /* masthead, like the journal */
@@ -178,12 +172,12 @@ a {
   cursor: not-allowed;
 }
 .btn-ink {
-  border-color: #4c371d;
-  background: #dea855;
-  color: #231e19;
+  border-color: var(--aui-brass-deep);
+  background: var(--aui-brass);
+  color: var(--aui-brass-ink);
   box-shadow:
-    inset 0 1px #ffe3a566,
-    inset 0 -2px #754e3266;
+    inset 0 1px color-mix(in srgb, var(--aui-brass-hi) 40%, transparent),
+    inset 0 -2px color-mix(in srgb, var(--aui-brass-deep) 40%, transparent);
 }
 .btn-google .g {
   display: grid;
@@ -220,46 +214,6 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-/* timer: just big numbers */
-.t-clock {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: clamp(6px, 1.4vw, 18px);
-  font-variant-numeric: tabular-nums;
-}
-.t-unit {
-  display: grid;
-  justify-items: center;
-  min-width: 0;
-}
-.t-unit b {
-  display: block;
-  min-width: 2ch;
-  font: 800 clamp(58px, 12vw, 136px)/0.9 var(--game);
-  color: var(--ink);
-  letter-spacing: -0.03em;
-  text-align: center;
-}
-.t-unit:last-of-type b {
-  color: #c97d22;
-}
-.t-unit small {
-  margin-top: 8px;
-  color: var(--muted);
-  font: 700 10px var(--mono);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-.t-sep {
-  font: 800 clamp(40px, 8vw, 92px)/1 var(--game);
-  font-style: normal;
-  color: #cfc7d4;
-}
-.t-clock.is-done b {
-  color: #c9c1cf;
 }
 .deadline {
   margin: 10px 0 0;
@@ -306,48 +260,6 @@ a {
   color: var(--ink-soft);
   font: 15px/1.6 var(--serif);
 }
-.way-icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 20px;
-  font-weight: 800;
-}
-.way-icon svg {
-  width: 24px;
-  height: 24px;
-}
-.way-count {
-  margin: 2px 0 0;
-  color: var(--muted);
-  font-size: 11.5px;
-}
-.way-count b {
-  color: var(--ink);
-}
-.way-steps {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12.5px;
-}
-.way-steps li {
-  position: relative;
-  padding-left: 18px;
-}
-.way-steps li::before {
-  content: '→';
-  position: absolute;
-  left: 0;
-  color: var(--purple);
-}
 .boards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
@@ -376,112 +288,18 @@ a {
   text-align: center;
   font-size: 10.5px;
 }
-.board b.t-vet {
-  background: var(--vet-soft);
-}
-.board b.t-mem {
-  background: var(--mem-soft);
-}
-.way-legend,
+
 .way-fine {
   margin: 0;
   color: var(--muted);
   font-size: 10.5px;
 }
-/* X entry, nested in the X way card */
-.way .xpanel {
-  margin-top: 4px;
-  padding: 14px 0 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: none;
-}
-.xpanel {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--ink);
-  border-radius: 10px;
-  background: var(--card);
-}
-.xp-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.xp-head > div {
-  flex: 1;
-  min-width: 0;
-}
-.xp-head h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.xp-head p {
-  margin: 1px 0 0;
-  color: var(--muted);
-  font-size: 11.5px;
-}
-.xp-head p b {
-  color: var(--ink);
-}
-.xp-logo {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  background: #111;
-  color: #fff;
-  font-weight: 800;
-}
-.xp-ok {
-  margin: 0;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
-}
-.xp-posts {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0 0 0 20px;
-  font-size: 11.5px;
-}
-.xp-posts a {
-  overflow-wrap: anywhere;
-  text-underline-offset: 3px;
-}
-.xp-wallet {
-  margin: 0;
-  font-size: 12px;
-}
-.xp-wallet code,
+
 .message code {
   color: var(--purple);
 }
-.xp-fine,
-.xp-closed {
+.xp-fine {
   margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-.xp-fields {
-  display: grid;
-  gap: 8px;
-}
-.xp-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.xp-max {
-  margin-right: auto;
   color: var(--muted);
   font-size: 11px;
 }
@@ -516,7 +334,7 @@ a {
 .field select:focus {
   outline: none;
   border-color: var(--ink);
-  box-shadow: 0 0 0 3px #68517422;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aui-steel) 13.3%, transparent);
 }
 .error {
   margin: 0;

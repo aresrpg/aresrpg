@@ -1,7 +1,7 @@
 # Mobile presentation
 
 The existing frontend serves this package automatically on compact gameplay viewports.
-Use the running app at `http://127.0.0.1:5173/`. Login, Play Demo, environment, assets,
+Use the running app at `http://127.0.0.1:5173/`. Login, environment, assets,
 service worker and deployment belong to the frontend. This package has no separate app entry.
 
 ```sh

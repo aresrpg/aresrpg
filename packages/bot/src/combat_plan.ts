@@ -3,13 +3,21 @@
 import { CONTRACT_CONSTANTS, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import type { CombatRun } from './combat_control.ts'
-type CombatIntent = Pick<CombatRun, 'fight' | 'profiles'>
-import { validate_profile_checkpoint } from './combat_profile.ts'
+import { target_fields, type TargetOptions } from './target_constraints.ts'
+import { joinable_team } from './team_actions.ts'
+import { validate_profile_checkpoint, type CombatProfile } from './combat_profile.ts'
 import { plan_combat_turn } from './combat_tactics.ts'
 import { gameplay_observation_ready, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
 import { owned_fight, fight_checkpoint_id, validate_gameplay, type GameplayActionName } from './gameplay.ts'
 
+/** `allies` are teammates whose own trees may join this fight; `dungeon` names the run a room belongs to. */
+type CombatIntent = Readonly<{
+  fight: string
+  profiles: readonly Readonly<{ character_id: string; profile: CombatProfile }>[]
+  target_options?: TargetOptions
+  allies?: readonly string[]
+  dungeon?: string
+}>
 export type CombatNext = Readonly<{
   state: 'action' | 'waiting' | 'awaiting_ai' | 'completed'
   issue?: string
@@ -27,8 +35,28 @@ const action = (kind: GameplayActionName, payload: Readonly<Record<string, unkno
   state: 'action',
   action: { kind, payload },
 })
-const placement_action = ({ checkpoint: { contract }, context, characters, payload }: Selection): CombatNext => {
+/** A free teammate who may still take a seat. Nobody leads: every hero gives the others the chain's
+ * own placement window before readying, so a team gathers without a coordinator. */
+const gathering = ({ run, checkpoint: { contract }, context }: Selection) =>
+  context.snapshot.characters.some((ally) =>
+    [
+      run.allies?.includes(ally.id),
+      ally.custody === 'kiosk',
+      !ally.active_fight,
+      !ally.ambush,
+      run.dungeon
+        ? ally.dungeon_run?.dungeon === run.dungeon && ally.dungeon_run.room === Number(contract.dungeon_room)
+        : !ally.dungeon_run && ally.world === contract.world,
+      joinable_team(contract, context.address, ally.id) !== null,
+    ].every(Boolean)
+  )
+const placement_action = (selection: Selection): CombatNext => {
+  const { contract } = selection.checkpoint
+  const { context, characters, payload } = selection
   const unready = characters.find((character) => !contract.fighters[character.active_fight!.seat]!.ready)
+  const expired =
+    BigInt(context.snapshot.clock!.chain_ms) >= contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
+  if (!expired && gathering(selection)) return { state: 'waiting' }
   if (unready)
     return action('fight_ready', {
       ...payload,
@@ -38,18 +66,20 @@ const placement_action = ({ checkpoint: { contract }, context, characters, paylo
   const all_ready = contract.fighters.every(
     (fighter) => fighter.kind.type !== 'player' || fighter.ready || fighter.dead
   )
-  const expired =
-    BigInt(context.snapshot.clock!.chain_ms) >= contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
   return all_ready || expired ? action('fight_start', payload) : { state: 'waiting' }
 }
-const active_action = ({ run, checkpoint, context, payload }: Selection): CombatNext => {
+/** A hero plays only its own turn, even late: the chain lets a turn end at any time until someone
+ * passes it. It passes a dead seat at once and anyone else's turn only after the turn window. */
+const active_action = (selection: Selection): CombatNext => {
+  const { run, checkpoint, context, payload } = selection
   const { contract } = checkpoint
   const seat = contract.queue[Number(contract.turn_ptr)]!
   const fighter = contract.fighters[Number(seat)]!
+  const hero = fighter.kind.type === 'player' && fighter.kind.owner === context.address && fighter.kind.character
+  if (!fighter.dead && run.profiles.some(({ character_id }) => character_id === hero))
+    return owned_turn_action(selection, seat, hero as string)
   const expired = BigInt(context.snapshot.clock!.chain_ms) >= contract.turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms
-  if (fighter.dead || expired) return action('fight_crank', payload)
-  if (fighter.kind.type !== 'player' || fighter.kind.owner !== context.address) return { state: 'waiting' }
-  return owned_turn_action({ run, checkpoint, context, payload, characters: [] }, seat, fighter.kind.character)
+  return fighter.dead || expired ? action('fight_crank', payload) : { state: 'waiting' }
 }
 const owned_turn_action = (
   { run, checkpoint, context, payload }: Selection,
@@ -57,8 +87,7 @@ const owned_turn_action = (
   character_id: string
 ): CombatNext => {
   const { contract } = checkpoint
-  const configured = run.profiles.find((profile) => profile.character_id === character_id)
-  if (!configured) return { state: 'awaiting_ai', issue: 'missing_character_profile' }
+  const configured = run.profiles.find((profile) => profile.character_id === character_id)!
   const unavailable = validate_profile_checkpoint(configured.profile, checkpoint, seat)
   if (unavailable.length) return { state: 'awaiting_ai', issue: `unavailable_spells:${unavailable.join(',')}` }
   const observed_ms = gameplay_observed_ms(context)
@@ -90,6 +119,8 @@ export const next_combat_action = (run: CombatIntent, context: GameplayContext):
   const remaining = characters.filter((character) => character.active_fight?.id === run.fight)
   if (!remaining.length) return { state: 'awaiting_ai', issue: 'fight_changed' }
   const payload = {
+    ...target_fields(run.target_options),
+    ...(run.dungeon ? { dungeon: run.dungeon } : {}),
     character_id: remaining[0]!.id,
     fight: run.fight,
     fighter_idx: String(remaining[0]!.active_fight!.seat),

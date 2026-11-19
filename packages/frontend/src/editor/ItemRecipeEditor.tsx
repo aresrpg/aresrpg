@@ -42,7 +42,7 @@ const range_duration = (value: AcquisitionRange): string =>
 const acquisition_class = (status: ReturnType<typeof acquisition_target_status>): string => {
   if (status === 'within') return 'text-[#65c993]'
   if (status === 'unavailable') return 'text-[#ff8caa]'
-  return 'text-[#ffca57]'
+  return 'text-gold'
 }
 const AcquisitionSummary = ({
   acquisition,
@@ -66,7 +66,7 @@ const AcquisitionSummary = ({
 }
 const IngredientAcquisition = ({ row }: Readonly<{ row?: AcquisitionIngredient }>) => (
   <span
-    className="w-24 shrink-0 text-right text-[7px] tabular-nums text-[#8c82a5]"
+    className="w-24 shrink-0 text-right text-[7px] tabular-nums text-faint"
     title={row?.unit ? `${average_duration(row.unit)} each` : 'No obtainable source'}
   >
     {row?.total ? `~${average_duration(row.total)}` : 'unavailable'}
@@ -129,10 +129,10 @@ export const ItemRecipeEditor = ({
             <span className="tracking-[0.12em] text-[#65c993] uppercase">{titleize_field(derived_job)}</span>
           ) : (
             <label className="flex items-center gap-2">
-              <span className="tracking-[0.12em] text-[#737883] uppercase">Profession</span>
+              <span className="tracking-[0.12em] text-faint uppercase">Profession</span>
               <select
                 aria-label="Profession"
-                className="border-b border-white/15 bg-transparent py-1 text-[9px] text-[#d8d3ca] outline-none focus:border-[#65c993]/60"
+                className="border-b border-white/15 bg-transparent py-1 text-[9px] text-soft outline-none focus:border-[#65c993]/60"
                 onChange={(event) => recipe.change(['job'], event.target.value)}
                 value={job}
               >
@@ -145,19 +145,19 @@ export const ItemRecipeEditor = ({
               </select>
             </label>
           )}
-          <span className="text-[#8a909b]">
+          <span className="text-faint">
             Requires{' '}
-            <strong className="font-normal text-[#d8c17d]">
+            <strong className="font-normal text-gold">
               {titleize_field(job)} Lv. {required_level}
             </strong>
           </span>
-          <span className="text-[#737985]">
+          <span className="text-faint">
             Craft XP{' '}
-            <strong className="font-normal text-[#67adff]">
+            <strong className="font-normal text-cyan">
               {craft_xp_from_ingredient_count(ingredients.length).toLocaleString()}
             </strong>
           </span>
-          <span className="text-[#737985]">
+          <span className="text-faint">
             {ingredients.length} / {craft_max_ingredients} ingredients
           </span>
           <AcquisitionSummary acquisition={acquisition} category={category} level={level} />
@@ -181,7 +181,7 @@ export const ItemRecipeEditor = ({
                 data-recipe-ingredient-row=""
                 key={item_type}
               >
-                <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-[#4f5560]">{index + 1}</span>
+                <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-steel">{index + 1}</span>
                 <ItemReferencePicker
                   class_name="flex-1 !h-12 !border-0 !bg-transparent !px-1 hover:!border-0"
                   excluded={excluded_types(item_type)}
@@ -190,15 +190,15 @@ export const ItemRecipeEditor = ({
                   select={(next_type) => replace_ingredient(item_type, next_type, amount)}
                   value={item_type}
                 />
-                <span className="w-20 shrink-0 text-right text-[7px] tracking-[0.08em] text-[#666d78] uppercase">
+                <span className="w-20 shrink-0 text-right text-[7px] tracking-[0.08em] text-faint uppercase">
                   Job Lv. {craft_required_level(index + 1)}
                 </span>
                 <IngredientAcquisition row={acquisition?.ingredients[index]} />
-                <label className="ml-3 flex shrink-0 items-center gap-1 text-[10px] text-[#737985]">
+                <label className="ml-3 flex shrink-0 items-center gap-1 text-[10px] text-faint">
                   <span aria-hidden="true">×</span>
                   <input
                     aria-label={`${item_type} quantity`}
-                    className="h-7 w-16 border border-white/10 bg-bg px-2 text-right text-[10px] tabular-nums text-[#d8d3ca] outline-none focus:border-[#65c993]/60"
+                    className="h-7 w-16 border border-white/10 bg-bg px-2 text-right text-[10px] tabular-nums text-soft outline-none focus:border-[#65c993]/60"
                     min={1}
                     onChange={(event) => {
                       const next = Number(event.target.value)
@@ -224,10 +224,10 @@ export const ItemRecipeEditor = ({
 
           {ingredients.length < craft_max_ingredients && (
             <div
-              className="flex min-w-0 items-center border-b border-dashed border-white/7 text-[#68707b] transition-colors hover:bg-white/[0.015]"
+              className="flex min-w-0 items-center border-b border-dashed border-white/7 text-faint transition-colors hover:bg-white/[0.015]"
               data-recipe-ingredient-placeholder=""
             >
-              <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-[#414751]">
+              <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-steel">
                 {ingredients.length + 1}
               </span>
               <ItemReferencePicker

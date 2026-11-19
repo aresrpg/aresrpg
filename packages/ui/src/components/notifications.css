@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Mirrors the Discord PNG renderer: one 550px attachment, framed by its accent with brighter corners. */
+.aui-notification {
+  --notification-accent: var(--aui-orange);
+  position: relative;
+  width: 100%;
+  max-width: 550px;
+  min-width: 0;
+  border: 1.5px solid color-mix(in srgb, var(--notification-accent) 40%, transparent);
+  border-radius: 8px;
+  background:
+    radial-gradient(
+      circle 260px at 66px 66px,
+      color-mix(in srgb, var(--notification-accent) 14%, transparent),
+      transparent
+    ),
+    url('../assets/panel_grain.webp') repeat,
+    linear-gradient(var(--aui-surface), var(--aui-bg));
+  background-size: auto, 256px, auto;
+  background-blend-mode: normal, soft-light, normal;
+  color: var(--aui-ink);
+  font: 400 14px/1.35 var(--aui-font);
+  text-align: left;
+}
+.aui-notification::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border: 2.5px solid var(--notification-accent);
+  border-radius: inherit;
+  pointer-events: none;
+  --corner: linear-gradient(#000 0 0) no-repeat;
+  mask:
+    var(--corner) top left / 22px 22px,
+    var(--corner) top right / 22px 22px,
+    var(--corner) bottom left / 22px 22px,
+    var(--corner) bottom right / 22px 22px;
+}
+.aui-notification--blue {
+  --notification-accent: var(--aui-blue);
+}
+.aui-notification *,
+.aui-notification *::before,
+.aui-notification *::after {
+  box-sizing: border-box;
+}
+.aui-notification__hero {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+.aui-notification__art {
+  width: 100px;
+  height: 100px;
+  padding: 8px;
+  border: 1px solid #ffffff14;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--aui-bg) 80%, transparent);
+  object-fit: contain;
+}
+.aui-notification__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  color: var(--notification-accent);
+}
+.aui-notification__meta > span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.aui-notification__meta > strong {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Sale amounts use the same SUI mark as wallet and marketplace prices. */
+.aui-notification__amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--aui-blue) 12%, transparent);
+  color: var(--aui-blue);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.aui-notification__amount svg {
+  flex: none;
+}
+.aui-notification__amount small {
+  font-size: 11px;
+  font-weight: 700;
+}
+.aui-notification__identity h2 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aui-notification__identity p {
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: var(--aui-muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aui-notification__details {
+  margin: 0 16px;
+  padding: 10px 0 12px;
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, #ffffff1f, transparent) 1;
+}
+.aui-notification__party {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.aui-notification__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

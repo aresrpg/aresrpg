@@ -4,12 +4,21 @@ import { expect, test } from 'bun:test'
 import { create_fight } from '@aresrpg/fight'
 
 import { create_control_service, type Lane } from '../src/control.ts'
+import { run_tick } from '../src/run_runtime.ts'
 import { next_combat_action } from '../src/combat_plan.ts'
-import { create_transaction_journal } from '../src/transaction_journal.ts'
+import { create_transaction_lifecycle } from '../src/transaction_lifecycle.ts'
 import { execute_gameplay_actions, hydrate_gameplay_fight, type GameplayActions } from '../src/gameplay.ts'
 
 import { put } from './helpers/control_fixture.ts'
-import { combat_fixture, fight_id, placement, row_of, started } from './helpers/combat_runtime_fixture.ts'
+import {
+  character_id,
+  combat_fixture,
+  fight_id,
+  placement,
+  profile,
+  row_of,
+  started,
+} from './helpers/combat_runtime_fixture.ts'
 
 test('combat admission is atomic and replaying the same tick cannot issue another command', async () => {
   const f = await combat_fixture()
@@ -17,20 +26,27 @@ test('combat admission is atomic and replaying the same tick cannot issue anothe
   await Promise.all([f.tick(f.context, original), f.tick(f.context, original)])
   const accepted = await f.get_run()
   expect(accepted.actions_started).toBe(1)
-  expect(await f.get_command()).toMatchObject({ kind: 'fight_ready', combat_run_id: original.id, status: 'accepted' })
+  expect(await f.get_command()).toMatchObject({
+    kind: 'fight_ready',
+    run_id: original.id,
+    status: 'accepted',
+  })
   await f.tick()
   await f.tick(f.context, original)
   expect((await f.get_run()).actions_started).toBe(1)
   expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
-  await expect(
-    f.control.accept(f.grant, {
-      idempotency_key: 'competing',
-      kind: 'fight_ready',
-      payload: (await f.get_command()).payload,
-      decision_revision: 1,
-      observation_revision: 1,
-    })
-  ).rejects.toThrow('bot_busy_or_paused')
+  // A competing direct command queues behind the hero's admitted command; it never replaces it.
+  const lane = (await f.store.read<Lane>(f.key))!
+  const admitted = await f.get_command()
+  const competing = await f.control.accept(f.grant, {
+    idempotency_key: 'competing',
+    kind: 'fight_ready',
+    payload: admitted.payload,
+    decision_revision: lane.decision_revision,
+    observation_revision: lane.observation_revision,
+  })
+  expect(competing.status).toBe('accepted')
+  expect(await f.store.read<Lane>(f.key)).toMatchObject({ active_command: admitted.id, direct: competing.id })
 })
 
 test('receipt reconciliation blocks a completed turn until its canonical successor is observed', async () => {
@@ -55,18 +71,17 @@ test('stopped combat cannot prepare, sign or submit an already accepted child co
   const f = await combat_fixture()
   await f.tick()
   const command = await f.get_command()
-  const journal = create_transaction_journal(
+  const journal = create_transaction_lifecycle(
     f.store,
     f.config,
-    f.cipher,
-    { command, actor_id: 'actor', fence: f.lease.fence },
+    () => ({ command, actor_id: 'actor', fence: f.lease.fence }),
     () => f.now
   )
   for (const stage of ['prepare', 'sign', 'submit'] as const) await journal.admit(stage)
   // Retain the lane pointer: the durable run status itself must veto every admission.
-  await put(f.store, 'combat:fixture-run', { ...(await f.get_run()), status: 'stopped' })
+  await put(f.store, 'behavior:fixture-run', { ...(await f.get_run()), status: 'stopped' })
   for (const stage of ['prepare', 'sign', 'submit'] as const)
-    await expect(journal.admit(stage)).rejects.toThrow('combat_execution_not_authorized')
+    await expect(journal.admit(stage)).rejects.toThrow('behavior_execution_not_authorized')
   expect((await f.store.read<Lane>(f.key))!.pending).toBeNull()
 })
 
@@ -78,7 +93,7 @@ test('failed, uncertain and cancelled combat children never admit replacement tr
     await put(f.store, `command:${command.id}`, { ...command, status, error: 'fixture failure' })
     await f.tick()
     await f.tick()
-    expect(await f.get_run()).toMatchObject({ status: 'failed', actions_started: 1, issue: 'fixture failure' })
+    expect(await f.get_run()).toMatchObject({ status: 'awaiting_ai', actions_started: 1, issue: `command_${status}` })
     expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
     expect((await f.store.read<Lane>(f.key))!.active_command).toBe(command.id)
   }
@@ -123,8 +138,9 @@ test('combat respects the actual turn clock instead of submitting a premature en
       clock: { chain_ms: Number(hydrate_gameplay_fight(row).contract.turn_started_ms), observed_at: f.now },
     },
   }
-  expect(next_combat_action(await f.get_run(), early)).toEqual({ state: 'waiting' })
-  expect(next_combat_action(await f.get_run(), f.context).state).toBe('action')
+  const intent = { fight: fight_id, profiles: [{ character_id, revision: 1, profile }] }
+  expect(next_combat_action(intent, early)).toEqual({ state: 'waiting' })
+  expect(next_combat_action(intent, f.context).state).toBe('action')
 })
 
 test('one autonomous fight selects ready, lethal turn and settlement through existing SDK doors and twin', async () => {
@@ -191,26 +207,5 @@ test('one autonomous fight selects ready, lethal turn and settlement through exi
   expect(calls).toEqual(['ready', 'turn', 'settle'])
   expect(packets).toHaveLength(1)
   expect(packets[0]).toMatchObject({ type: 'packet/fight_action', fight: fight_id })
-  expect((await f.store.read<Lane>(f.key))!.combat_run_id).toBeNull()
-})
-
-test('historical combat blocker resumes through the real shared-run transition', async () => {
-  const f = await combat_fixture()
-  const context = { ...f.context, snapshot: { ...f.context.snapshot, characters: [] } }
-  await f.tick(context)
-  const run = await f.get_run()
-  expect(run.status).toBe('awaiting_ai')
-  const lane = (await f.store.read<Lane>(f.key))!
-  const control = create_control_service(
-    f.store,
-    f.config,
-    f.config.observation_freshness_ms,
-    () => f.now,
-    async () => ({ ...f.context.snapshot, decision_revision: lane.decision_revision, sampled_at: f.now })
-  )
-  await expect(
-    control.resume_combat(f.grant, run.id, lane.decision_revision, lane.observation_revision)
-  ).resolves.toMatchObject({ status: 'active' })
-  await f.tick()
-  expect((await f.get_command()).status).toBe('accepted')
+  expect((await f.store.read<Lane>(f.key))!.runs).toEqual({})
 })

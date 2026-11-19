@@ -38,7 +38,7 @@ const parse = (value: unknown) => {
 }
 export const MARKET_BUY_ACTION = Object.freeze({
   description:
-    'Buy one exact observed item lot into the selected owned character kiosk. Exact price and royalty-inclusive maximum are checked before preparation. Native Sui kiosk purchase checks asset and price on chain; listing version is a local freshness check, not an on-chain compare-and-swap. Receipt-proven inventory must reconcile before another action.',
+    'Buy one exact item lot into the selected owned character kiosk. The bot reads the current offers of that item itself before it signs, then gives the market view back. Exact price and royalty-inclusive maximum are checked before preparation. Native Sui kiosk purchase checks asset and price on chain; listing version is a local freshness check, not an on-chain compare-and-swap. Receipt-proven inventory must reconcile before another action.',
   input_schema: schema,
   parse,
 })

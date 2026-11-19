@@ -38,6 +38,31 @@ test('the shared wallet dropdown retains both balances and funding actions', asy
   expect(html).toContain('data-kares-logo')
   expect(html).toContain('Add funds')
   expect(html).toContain('Send')
+  // One wallet has no switch and nothing to transfer to.
+  expect(html).not.toContain('Transfer')
+  expect(html).not.toContain('aui-segments')
+})
+
+test('a verified bot adds a second wallet tab and the transfer between the two', async () => {
+  const copy = await load_app_copy('en')
+  const pairing = {
+    address: `0x${'b'.repeat(64)}`,
+    multisig_public_key: 'key',
+    signer_mode: 'host-persistent' as const,
+  }
+  const session = {
+    ...initial_session_state(),
+    wallet: { address: '0x123456789' } as AuthSession,
+    sui_balance_mist: 1_250_000_000n,
+    inventory_pairing: pairing,
+  }
+  const html = renderToStaticMarkup(<WalletCard copy={copy} disconnect={() => undefined} session={session} />)
+  for (const text of ['aui-segments', '>Game<', '>Bot<', 'Transfer', 'You sign', '1.25']) expect(html).toContain(text)
+  // A recovery signer is not the owner's bot wallet: it gets no tab.
+  const recovery = { ...session, inventory_pairing: { ...pairing, signer_mode: 'disposable' as const } }
+  expect(
+    renderToStaticMarkup(<WalletCard copy={copy} disconnect={() => undefined} session={recovery} />)
+  ).not.toContain('aui-segments')
 })
 
 test('compact connection status retains link phases and indexing thresholds', async () => {

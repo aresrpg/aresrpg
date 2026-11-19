@@ -465,20 +465,32 @@ const recipe_acquisition_seconds = (
   return rows.some((seconds) => seconds === null) ? null : rows.reduce<number>((sum, seconds) => sum + seconds!, 0)
 }
 
+/** Shared deterministic ordering for same-job and cross-job progression candidates. */
+export const compare_recipe_progress = (
+  left: RecipeProgressRecommendation,
+  right: RecipeProgressRecommendation
+): number =>
+  right.xp_per_second - left.xp_per_second ||
+  right.xp - left.xp ||
+  left.acquisition_seconds - right.acquisition_seconds ||
+  left.output_type.localeCompare(right.output_type)
+
 /** One removable recommendation: reachable now, still grants XP, and maximizes XP per expected
- * active second spent obtaining one attempt's inputs. Owned inventory deliberately does not enter. */
+ * active second spent obtaining one attempt's inputs. Optional live feasibility filters candidates
+ * only after the complete authored dependency graph is evaluated. */
 export const best_recipe_for_job_progression = (
   recipes: readonly RecipeProgressionInput[],
   job: string,
   level: number,
-  input_seconds: (item_type: string) => number | null
+  input_seconds: (item_type: string) => number | null,
+  feasible: (recipe: RecipeProgressionInput) => boolean = () => true
 ): RecipeProgressRecommendation | null => {
   if (level >= job_max_level) return null
   const job_recipes = recipes.filter((recipe) => recipe.job === job)
   const reachable = unlocked_recipe_chains(job_recipes, { [job]: level })
   return (
     job_recipes
-      .filter((recipe) => reachable.has(recipe.output_type))
+      .filter((recipe) => reachable.has(recipe.output_type) && feasible(recipe))
       .flatMap((recipe): readonly RecipeProgressRecommendation[] => {
         const xp = craft_xp_at_level(Object.keys(recipe.inputs).length, level)
         const acquisition_seconds = recipe_acquisition_seconds(recipe, input_seconds)
@@ -492,13 +504,7 @@ export const best_recipe_for_job_progression = (
           }),
         ]
       })
-      .sort(
-        (left, right) =>
-          right.xp_per_second - left.xp_per_second ||
-          right.xp - left.xp ||
-          left.acquisition_seconds - right.acquisition_seconds ||
-          left.output_type.localeCompare(right.output_type)
-      )[0] ?? null
+      .sort(compare_recipe_progress)[0] ?? null
   )
 }
 

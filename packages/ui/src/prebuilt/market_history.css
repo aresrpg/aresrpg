@@ -1,0 +1,215 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Marketplace history: revenue, unclaimed profits and sale rows. `:where()` keeps these at zero specificity so ports and hosts refine them. */
+:where(.aui-market-history) {
+  margin-inline: auto;
+  display: flex;
+  min-height: 0px;
+  width: 100%;
+  max-width: 1200px;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: var(--aui-raised);
+}
+:where(.aui-market-history-summary) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-inline: 1rem;
+  padding-block: 1rem;
+}
+:where(.aui-market-revenue) {
+  min-width: 260px;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--aui-market-line, var(--aui-high));
+  background-color: var(--aui-surface);
+  padding-inline: 1.25rem;
+  padding-block: 1rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+}
+:where(.aui-market-profits) {
+  min-width: 260px;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: color-mix(in oklab, var(--aui-brass) 35%, transparent);
+  background-color: var(--aui-surface);
+  padding-inline: 1.25rem;
+  padding-block: 1rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+}
+:where(.aui-market-revenue-label) {
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: var(--aui-faint);
+  text-transform: uppercase;
+}
+:where(.aui-market-revenue-value) {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--aui-brass);
+  font-variant-numeric: tabular-nums;
+}
+:where(.aui-market-revenue-count) {
+  margin-top: 0.5rem;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--aui-faint);
+  text-transform: uppercase;
+}
+:where(.aui-market-profits-label) {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: var(--aui-faint);
+  text-transform: uppercase;
+}
+:where(.aui-market-gold) {
+  color: var(--aui-brass);
+}
+:where(.aui-market-profits-row) {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+:where(.aui-market-profits-value) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 22px;
+  color: var(--aui-brass);
+  font-variant-numeric: tabular-nums;
+}
+:where(.aui-market-collect) {
+  height: 2.25rem;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 1px;
+  border-color: color-mix(in oklab, var(--aui-brass) 50%, transparent);
+  background-color: color-mix(in oklab, var(--aui-brass) 10%, transparent);
+  padding-inline: 1rem;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--aui-brass);
+  text-transform: uppercase;
+}
+:where(.aui-market-collect:disabled) {
+  opacity: 40%;
+}
+:where(.aui-market-history-empty) {
+  display: grid;
+  flex: 1;
+  place-items: center;
+}
+:where(.aui-market-history-table) {
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-color: var(--aui-market-line, var(--aui-high));
+  background-color: var(--aui-surface);
+}
+:where(.aui-market-history-heading) {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.6fr) 80px minmax(90px, 120px) minmax(100px, 1fr);
+  gap: 0.75rem;
+  padding-inline: 0.75rem;
+  padding-block: 0.5rem;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--aui-faint);
+  text-transform: uppercase;
+}
+:where(.aui-market-end) {
+  text-align: right;
+}
+:where(.aui-market-history-row) {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.6fr) 80px minmax(90px, 120px) minmax(100px, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-color: color-mix(in oklab, #fff 7%, transparent);
+  padding-inline: 0.75rem;
+  padding-block: 0.5rem;
+}
+:where(.aui-market-history-item) {
+  display: flex;
+  min-width: 0px;
+  align-items: center;
+  gap: 0.625rem;
+}
+:where(.aui-market-history-art) {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+}
+:where(.aui-market-history-fallback) {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-style: solid;
+  border-width: 1px;
+  border-color: color-mix(in oklab, #fff 10%, transparent);
+  color: var(--aui-brass);
+}
+:where(.aui-market-history-name) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+:where(.aui-market-history-date) {
+  font-size: 9px;
+  color: var(--aui-faint);
+  text-transform: uppercase;
+}
+:where(.aui-market-history-price) {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+:where(.aui-market-history-buyer) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--aui-blue);
+}
+:where(.aui-market-load-more) {
+  margin-inline: auto;
+  margin-block: 0.75rem;
+  display: block;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 1px;
+  border-color: color-mix(in oklab, #fff 10%, transparent);
+  padding-inline: 1rem;
+  padding-block: 0.5rem;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  color: var(--aui-muted);
+  text-transform: uppercase;
+}

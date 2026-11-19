@@ -11,7 +11,7 @@ import { create_agent_identity } from '@aresrpg/sdk/agent-multisig'
 import inventory_observation from '../src/modules/player_inventory_observation.ts'
 import { create_inventory_reader } from '../src/inventory_reader.ts'
 import type { PlayerContext } from '../src/player.ts'
-import { channels } from '../src/protocol.ts'
+import { channels, mesh } from '../src/protocol.ts'
 
 import { wire, flush } from './helpers/world_wire.ts'
 
@@ -94,6 +94,12 @@ test('verified inventory uses indexed baseline and streams the same item deltas 
         items: [{ ...item, kiosk: 'kiosk' }],
       },
     })
+    // What locks items of the bag travels with it: the account's trades, beside its own listings.
+    expect(f.sent).toContainEqual({
+      type: 'packet/inventory_observed',
+      id: 1,
+      packet: { type: 'packet/trades', trades: [] },
+    })
     const delta = { type: 'packet/item_removed' as const, item: item.id, version: '2' }
     f.pubsub.emitter.emit(channels.social(identity.address), { type: 'ItemProjected', data: { packet: delta } })
     expect(f.sent.at(-1)).toEqual({ type: 'packet/inventory_observed', id: 1, packet: delta })
@@ -145,5 +151,64 @@ test('shared baseline rereads when an item delta overtakes its pending graph rea
   } finally {
     pending.resolve()
     controller.abort()
+  }
+})
+
+test('a bot status reaches the owner watching that wallet, and only under the address of its own socket', async () => {
+  const f = fixture()
+  const status = { ready: true, event_fence: 3, sampled_at: 10, state: 'idle' as const, runs: [], direct: null }
+  const socket = (address: string) => {
+    const events = new EventEmitter()
+    const controller = new AbortController()
+    const received: ServerPacket[] = []
+    inventory_observation.observe({
+      events,
+      signal: controller.signal,
+      address,
+      pubsub: f.pubsub,
+      send: (packet: ServerPacket) => {
+        received.push(packet)
+      },
+    } as unknown as PlayerContext)
+    return { events, controller, received }
+  }
+  const observed = () => f.sent.filter((packet) => packet.type === 'packet/inventory_observed').at(-1)
+  try {
+    const bot = socket(identity.address)
+    f.watch()
+    await settle()
+    // The stream has no stored snapshot: a new watcher asks the wallet's own socket.
+    expect(f.published).toContainEqual({ channel: mesh.agent_status_wanted(identity.address), payload: null })
+    // A socket that never shared a status is not a bot: it is asked nothing.
+    expect(bot.received).toEqual([])
+    const before = f.sent.length
+    socket(`0x${'9'.repeat(64)}`).events.emit('packet/agent_status', { status })
+    await settle()
+    expect(f.sent.length).toBe(before)
+    bot.events.emit('packet/agent_status', { status })
+    await settle()
+    expect(f.published).toContainEqual({ channel: mesh.agent_status(identity.address), payload: status })
+    expect(observed()).toEqual({
+      type: 'packet/inventory_observed',
+      id: 1,
+      packet: { type: 'packet/agent_status', status },
+    })
+    // A second owner session starts watching: the bot's socket is asked, and never told its own status.
+    f.watch(2)
+    await settle()
+    expect(bot.received).toEqual([{ type: 'packet/agent_status_wanted' }])
+    // The bot's socket closes: the watcher is told, and asks whichever socket holds the wallet now.
+    const asked = () => f.published.filter(({ channel }) => channel === mesh.agent_status_wanted(identity.address))
+    const requests = asked().length
+    bot.controller.abort()
+    await settle()
+    expect(observed()).toEqual({
+      type: 'packet/inventory_observed',
+      id: 2,
+      packet: { type: 'packet/agent_status', status: null },
+    })
+    expect(asked()).toHaveLength(requests + 1)
+  } finally {
+    f.controller.abort()
   }
 })

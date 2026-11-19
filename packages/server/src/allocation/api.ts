@@ -3,7 +3,6 @@
 import type { Redis } from 'ioredis'
 
 import { allocation_error, type AllocationOptions } from './service.ts'
-import { start_x, finish_x, redirect } from './x.ts'
 import { share_preview } from './preview.ts'
 
 const json = (body: unknown, status = 200): Response =>
@@ -11,7 +10,7 @@ const json = (body: unknown, status = 200): Response =>
     status,
     headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' },
   })
-/** Public reads and X account-link callback only. No cookie authenticates campaign requests. */
+/** Public card previews only. No cookie authenticates campaign requests. */
 export const serve_allocation = async (
   request: Request,
   redis: Redis,
@@ -22,8 +21,6 @@ export const serve_allocation = async (
   try {
     if (request.method !== 'GET') throw new Error('unauthorized')
     const routes = new Map([
-      ['oauth', () => start_x(request, redis, options)],
-      ['callback', () => finish_x(request, redis, options)],
       ['preview', () => share_preview(request, redis, options.origin)],
       ['image', () => share_preview(request, redis, options.origin)],
     ])
@@ -33,7 +30,6 @@ export const serve_allocation = async (
   } catch (error) {
     const code = allocation_error(error)
     console.warn('Allocation HTTP refused', { code })
-    if (action === 'callback') return redirect(`${options.origin}/allocation?error=${code}`)
-    return json({ error: code }, code === 'unavailable' || code === 'x_unavailable' ? 503 : 400)
+    return json({ error: code }, code === 'unavailable' ? 503 : 400)
   }
 }

@@ -139,7 +139,7 @@ export const MetricChart = ({
     <div aria-label={label} className={`grid min-w-0 grid-cols-[42px_minmax(0,1fr)] gap-2 ${className}`} role="img">
       <div
         aria-hidden="true"
-        className="flex flex-col justify-between py-1 text-right text-[8px] text-[#6b7280] tabular-nums"
+        className="flex flex-col justify-between py-1 text-right text-[8px] text-faint tabular-nums"
       >
         {visible_ticks.map((value, index) => (
           <span key={index}>{value === null ? '' : metric_number(value, value_kind)}</span>
@@ -212,18 +212,18 @@ export const MetricChart = ({
             }}
           >
             <time
-              className="mb-1.5 block border-b border-white/8 pb-1.5 text-[#b8b4ac] tabular-nums"
+              className="mb-1.5 block border-b border-white/8 pb-1.5 text-muted tabular-nums"
               dateTime={new Date(hovered.at_ms).toISOString()}
             >
               {format_chart_timestamp(hovered.at_ms)}
             </time>
             {hovered.values.map(({ label: series_label, color, value }) => (
               <div className="flex items-center justify-between gap-4" key={series_label}>
-                <span className="inline-flex items-center gap-1.5 text-[#8d929c]">
+                <span className="inline-flex items-center gap-1.5 text-faint">
                   <i className="size-1.5" style={{ background: color }} />
                   {series_label}
                 </span>
-                <strong className="font-medium text-[#e8e4dc] tabular-nums">{exact_number(value, value_kind)}</strong>
+                <strong className="font-medium text-text tabular-nums">{exact_number(value, value_kind)}</strong>
               </div>
             ))}
           </div>

@@ -13,7 +13,7 @@ import type { Receipt } from '@aresrpg/sdk/transaction-execution'
 import { hydrate_gameplay_fight, parse_fight_turn, gameplay_json, type FightTurnPayload } from './gameplay.ts'
 import type { Command, Lane } from './control.ts'
 
-/** Durable adapter state for the same session and submitted-turn latch used by the client. */
+/** Process-local adapter state for the same session and submitted-turn latch used by the client. */
 export type FightReplay = Readonly<{
   settled_characters?: readonly string[]
   row: FightStateRow

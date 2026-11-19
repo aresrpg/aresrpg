@@ -96,7 +96,7 @@ public fun merge_stacks(
   target.merge(source);
 }
 
-/// Mint a character for exactly 1 SUI, join it to the first world, and LOCK it into the
+/// Mint a character for exactly 10 SUI, join it to the first world, and LOCK it into the
 /// sender's personal kiosk — one act. A character is never world-less and never wallet-loose:
 /// it is born inside the market constitution (personal-kiosk, royalty, lock rules).
 public fun create_character(

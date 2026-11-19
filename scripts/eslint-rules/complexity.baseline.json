@@ -1,11 +1,6 @@
 {
   "version": 1,
   "cognitive": {
-    "scripts/main_menu_landmarks.mjs": {
-      "dress_harbor": [
-        13
-      ]
-    },
     "scripts/validate_seed.mjs": {
       "check_effect": [
         37
@@ -187,35 +182,14 @@
         17
       ]
     },
-    "packages/engine/src/locomotion/walking_route.ts": {
-      "advance_walking_search": [
-        12
-      ]
-    },
     "packages/frontend/src/game/core/cameras.ts": {
       "create_follow_addon > frame": [
         21
       ]
     },
-    "packages/engine/src/locomotion/collision.ts": {
-      "resolve_movement": [
-        25
-      ],
-      "try_corner_nudge": [
-        14
-      ]
-    },
     "packages/frontend/src/game/core/pet_follow.ts": {
       "step_pet_follow": [
         31
-      ]
-    },
-    "packages/engine/src/locomotion/controller.ts": {
-      "classify_anim": [
-        19
-      ],
-      "step_controller": [
-        56
       ]
     },
     "packages/frontend/src/game/core/world.ts": {
@@ -269,9 +243,6 @@
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
       "effect_words": [
         23
-      ],
-      "SpellEffectLine": [
-        19
       ]
     },
     "packages/frontend/src/components/Toasts.tsx": {
@@ -347,9 +318,6 @@
       ]
     },
     "packages/frontend/src/modules/session.ts": {
-      "observe > events.on[1](state,previous)": [
-        21
-      ],
       "reduce": [
         26
       ]
@@ -458,14 +426,14 @@
         12
       ]
     },
-    "packages/server/src/request_limiter.ts": {
-      "create_request_limiter > take": [
-        18
-      ]
-    },
     "packages/protocol/src/packets.ts": {
       "parse_client_packet": [
         29
+      ]
+    },
+    "packages/protocol/src/request_limiter.ts": {
+      "create_request_limiter > take": [
+        18
       ]
     },
     "packages/sdk/test/resolver_roundtrips.test.ts": {
@@ -506,16 +474,6 @@
         11
       ]
     },
-    "packages/bot/test/profession_runtime.test.ts": {
-      "test[1]()": [
-        13
-      ]
-    },
-    "packages/bot/src/profession_plan.ts": {
-      "next_profession_action": [
-        12
-      ]
-    },
     "packages/engine/test/greedy_mesher.test.ts": {
       "describe[1]() > test[1]()": [
         20
@@ -553,6 +511,27 @@
       ],
       "create_entity_layer > tick > beats.forEach[0](beat,id)": [
         11
+      ]
+    },
+    "packages/engine/src/locomotion/walking_route.ts": {
+      "advance_walking_search": [
+        12
+      ]
+    },
+    "packages/engine/src/locomotion/collision.ts": {
+      "resolve_movement": [
+        25
+      ],
+      "try_corner_nudge": [
+        14
+      ]
+    },
+    "packages/engine/src/locomotion/controller.ts": {
+      "classify_anim": [
+        19
+      ],
+      "step_controller": [
+        56
       ]
     },
     "packages/engine/src/scatter.ts": {
@@ -602,11 +581,6 @@
     }
   },
   "cyclomatic": {
-    "scripts/main_menu_landmarks.mjs": {
-      "dress_harbor": [
-        10
-      ]
-    },
     "scripts/validate_seed.mjs": {
       "check_effect": [
         34
@@ -676,7 +650,7 @@
         10
       ]
     },
-    "packages/ui/src/SelectionGrid.tsx": {
+    "packages/ui/src/components/SelectionGrid.tsx": {
       "SelectionGrid > move": [
         9
       ]
@@ -890,11 +864,6 @@
         11
       ]
     },
-    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "BrowsePanel": [
-        14
-      ]
-    },
     "packages/frontend/src/marketplace/useMarketSell.ts": {
       "useMarketSell": [
         10
@@ -946,9 +915,14 @@
         10
       ]
     },
-    "packages/frontend/src/agents/inventory_state.ts": {
-      "fold_observed_packet": [
+    "packages/frontend/src/agents/AgentSetup.tsx": {
+      "AgentSetupButton": [
         9
+      ]
+    },
+    "packages/frontend/src/agents/activity.ts": {
+      "fold_agent_activity": [
+        12
       ]
     },
     "packages/frontend/src/agents/disconnect_agent.ts": {
@@ -1079,25 +1053,9 @@
         9
       ]
     },
-    "packages/engine/src/locomotion/collision.ts": {
-      "eject_from_solid": [
-        10
-      ],
-      "resolve_movement": [
-        16
-      ]
-    },
     "packages/frontend/src/game/core/pet_follow.ts": {
       "step_pet_follow": [
         30
-      ]
-    },
-    "packages/engine/src/locomotion/controller.ts": {
-      "classify_anim": [
-        14
-      ],
-      "step_controller": [
-        36
       ]
     },
     "packages/frontend/src/game/core/world.ts": {
@@ -1189,34 +1147,9 @@
         9
       ]
     },
-    "packages/frontend/src/adventure/actors.ts": {
-      "create_adventure_actors > update": [
-        11
-      ]
-    },
-    "packages/frontend/src/adventure/AdventurePage.tsx": {
-      "AdventurePage > useEffect[0]()": [
-        9
-      ]
-    },
-    "packages/frontend/src/adventure/CompanionInteraction.tsx": {
-      "CompanionInteraction": [
-        9
-      ]
-    },
-    "packages/frontend/src/adventure/AdventureHud.tsx": {
-      "AdventureHud": [
-        10
-      ]
-    },
     "packages/frontend/src/encyclopedia/ClassesTab.tsx": {
       "ClassesTab": [
         12
-      ]
-    },
-    "packages/frontend/src/encyclopedia/SpellCard.tsx": {
-      "SpellCard": [
-        13
       ]
     },
     "packages/frontend/src/encyclopedia/MobsTab.tsx": {
@@ -1228,14 +1161,8 @@
       "effect_words": [
         25
       ],
-      "ReadEffect": [
-        10
-      ],
       "spell_effect_line_view": [
         10
-      ],
-      "SpellEffectLine": [
-        42
       ]
     },
     "packages/frontend/src/encyclopedia/JobsTab.tsx": {
@@ -1252,21 +1179,13 @@
       ]
     },
     "packages/frontend/src/components/WorldLoading.tsx": {
-      "WorldLoading": [
-        9
-      ],
       "WorldLoading > useEffect[0]() > sample": [
-        12
+        11
       ]
     },
     "packages/frontend/src/components/TravelModal.tsx": {
       "TravelModal > world_card_rows().map[0](world)": [
         11
-      ]
-    },
-    "packages/frontend/src/components/WalletCard.tsx": {
-      "WalletCard": [
-        9
       ]
     },
     "packages/frontend/src/components/FightPrompt.tsx": {
@@ -1283,11 +1202,6 @@
     "packages/frontend/src/components/MobCoreStats.tsx": {
       "MobCoreStats > mob_stat_identities .filter(({ key, derived }) => !derived || typeof values[key] === 'number') .map[0]({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint })": [
         10
-      ]
-    },
-    "packages/frontend/src/components/Login.tsx": {
-      "Login": [
-        9
       ]
     },
     "packages/frontend/src/components/DungeonLobby.tsx": {
@@ -1326,9 +1240,6 @@
     },
     "packages/frontend/src/components/ItemDetailBody.tsx": {
       "ItemDetailBody": [
-        18
-      ],
-      "StatLine": [
         10
       ]
     },
@@ -1369,6 +1280,11 @@
     "packages/frontend/src/components/CharacterCreateModal.tsx": {
       "CharacterCreateModal": [
         9
+      ]
+    },
+    "packages/frontend/src/components/CharacterTabs.tsx": {
+      "CharacterTabs": [
+        12
       ]
     },
     "packages/frontend/src/components/EffectLine.tsx": {
@@ -1516,6 +1432,11 @@
         20
       ]
     },
+    "packages/frontend/src/modules/hosted_agent.ts": {
+      "observe_hosted_agent > run": [
+        9
+      ]
+    },
     "packages/frontend/src/modules/kolizeum.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1]({ kolizeum, side, character_id })": [
         10
@@ -1626,6 +1547,11 @@
         11
       ]
     },
+    "packages/frontend/src/modules/suins.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [
+        10
+      ]
+    },
     "packages/frontend/src/modules/distribution.ts": {
       "observe: NonNullable<AppModule['observe']>": [
         9
@@ -1655,7 +1581,7 @@
         10
       ],
       "observe > events.on[1](state,previous)": [
-        17
+        11
       ],
       "reduce": [
         27
@@ -1811,7 +1737,7 @@
     },
     "packages/frontend/src/boot_loading.ts": {
       "prepare_boot_loading": [
-        10
+        9
       ]
     },
     "packages/frontend/src/airdrop/gift_state.ts": {
@@ -1974,17 +1900,11 @@
       ]
     },
     "packages/frontend/src/allocation/runtime.ts": {
-      "create_allocation_runtime > observe > authenticate": [
-        10
-      ],
       "create_allocation_runtime > observe > bind": [
         9
       ],
       "create_allocation_runtime > observe > run": [
         11
-      ],
-      "operate": [
-        9
       ],
       "reduce_allocation": [
         12
@@ -2084,7 +2004,7 @@
       "observe > track": [
         11
       ],
-      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: null, z: (character.z as number) ?? 0, riding: false, gliding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet — nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: null, z: (character.z as number) ?? 0, riding: false, gliding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position — a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
         12
       ],
       "reduce": [
@@ -2120,19 +2040,9 @@
         11
       ]
     },
-    "packages/server/src/request_limiter.ts": {
-      "create_request_limiter > take": [
-        9
-      ]
-    },
-    "packages/server/src/allocation/service.ts": {
-      "allocation_request": [
-        9
-      ]
-    },
     "packages/server/src/allocation/preview.ts": {
       "share_preview": [
-        11
+        9
       ]
     },
     "packages/protocol/src/packets.ts": {
@@ -2150,6 +2060,11 @@
     },
     "packages/protocol/src/marketplace.ts": {
       "parse_market_observation": [
+        9
+      ]
+    },
+    "packages/protocol/src/request_limiter.ts": {
+      "create_request_limiter > take": [
         9
       ]
     },
@@ -2199,17 +2114,12 @@
         12
       ]
     },
-    "packages/frontend/src/modules/suins.ts": {
-      "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [
-        10
-      ]
-    },
     "packages/sdk/src/suins_actions.ts": {
-      "suins_actions > apply_parent": [
-        10
-      ],
       "registration_name": [
         10
+      ],
+      "suins_actions > apply_parent": [
+        9
       ]
     },
     "packages/sdk/src/seed_admin.ts": {
@@ -2278,6 +2188,14 @@
         11
       ]
     },
+    "packages/sdk/src/transaction_conflict.ts": {
+      "proves_transaction_conflict": [
+        10
+      ],
+      "read_transaction_conflict": [
+        9
+      ]
+    },
     "packages/sdk/src/cache.ts": {
       "created_object_id": [
         9
@@ -2331,9 +2249,14 @@
         9
       ]
     },
-    "packages/bot/src/profession_plan.ts": {
-      "next_profession_action": [
-        12
+    "packages/sdk/src/agent_handover.ts": {
+      "complete_agent_handover": [
+        10
+      ]
+    },
+    "packages/bot/src/stat_allocation.ts": {
+      "validate_stat_allocation": [
+        10
       ]
     },
     "packages/engine/test/greedy_mesher.test.ts": {
@@ -2415,6 +2338,22 @@
     "packages/engine/src/frame_renderer.ts": {
       "create_pipeline": [
         14
+      ]
+    },
+    "packages/engine/src/locomotion/collision.ts": {
+      "eject_from_solid": [
+        10
+      ],
+      "resolve_movement": [
+        16
+      ]
+    },
+    "packages/engine/src/locomotion/controller.ts": {
+      "classify_anim": [
+        14
+      ],
+      "step_controller": [
+        36
       ]
     },
     "packages/engine/src/character_preview.ts": {
@@ -2521,49 +2460,6 @@
     "packages/engine/src/character_model.ts": {
       "compose_pixels": [
         10
-      ]
-    },
-    "packages/sdk/src/agent_handover.ts": {
-      "complete_agent_handover": [
-        10
-      ]
-    },
-    "packages/frontend/src/agents/AgentSetup.tsx": {
-      "AgentSetupButton": [
-        9
-      ]
-    },
-    "packages/frontend/src/components/CharacterTabs.tsx": {
-      "CharacterTabs": [
-        12
-      ]
-    },
-    "packages/frontend/src/modules/hosted_agent.ts": {
-      "observe_hosted_agent > run": [
-        9
-      ]
-    },
-    "packages/bot/src/stat_allocation.ts": {
-      "validate_stat_allocation": [
-        10
-      ]
-    },
-    "packages/frontend/src/agents/activity.ts": {
-      "fold_agent_activity": [
-        12
-      ]
-    },
-    "packages/bot/src/actor_runtime.ts": {
-      "create_actor_runtime > schedule_key": [
-        12
-      ]
-    },
-    "packages/sdk/src/transaction_conflict.ts": {
-      "proves_transaction_conflict": [
-        10
-      ],
-      "read_transaction_conflict": [
-        9
       ]
     }
   }

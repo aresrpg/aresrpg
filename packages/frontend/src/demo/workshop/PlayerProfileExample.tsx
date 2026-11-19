@@ -7,7 +7,7 @@ import { job_slugs, character_equipment_slots, equipment_slot_accepts } from '@a
 
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { content_catalog } from '../../content/catalog.ts'
-import { adventure_inventory } from '../../adventure/projection.ts'
+import { sample_inventory } from '../sample.ts'
 import { PlayerProfileWindow } from '../../leaderboards/PlayerProfileModal.tsx'
 import { LeaderboardSourceContext } from '../../leaderboards/LeaderboardSource.tsx'
 import { initial_leaderboards_state, reduce_leaderboards, type LeaderboardsState } from '../../modules/leaderboards.ts'
@@ -34,7 +34,7 @@ export const PlayerProfileExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const gear = useMemo(
     () =>
       character_equipment_slots.flatMap((slot) =>
-        adventure_inventory(
+        sample_inventory(
           content_catalog.items.filter((item) => equipment_slot_accepts(slot, item.category)).slice(0, 1)
         ).map((item) => ({ ...item, id: `profile-${slot}`, slot }))
       ),

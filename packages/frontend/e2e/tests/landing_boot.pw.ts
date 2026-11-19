@@ -3,6 +3,7 @@
 import { expect, test } from '@playwright/test'
 
 import deployment from '../../vercel.json' with { type: 'json' }
+import { remember_signed_in } from '../support/landing_session.ts'
 
 const policy = deployment.headers
   .flatMap((row) => row.headers)
@@ -54,29 +55,28 @@ for (const width of [1280, 390]) {
   })
 }
 
-for (const agent of [false, true])
-  test(`${agent ? 'Let AI Play' : 'Play'} restores the postcard through the same game entry`, async ({ page }) => {
-    const gate = Promise.withResolvers<void>()
-    await page.route(game_chunk, async (route) => {
-      await gate.promise
-      await route.fulfill({
-        contentType: 'application/javascript',
-        body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Game ready"))',
-      })
+test('Play restores the postcard through the game entry', async ({ page }) => {
+  const gate = Promise.withResolvers<void>()
+  await page.route(game_chunk, async (route) => {
+    await gate.promise
+    await route.fulfill({
+      contentType: 'application/javascript',
+      body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Game ready"))',
     })
-    await page.goto('/')
-    await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
-    if (agent) await page.getByRole('link', { name: 'Let AI play', exact: true }).click()
-    else await page.getByRole('button', { name: 'Play', exact: true }).first().click()
-    expect(new URL(page.url()).searchParams.get('intent')).toBe(agent ? 'connect-agent' : null)
-    try {
-      await expect(page.locator('#root [data-boot-loading]')).toBeVisible()
-      await expect(page.locator('#root .landing')).toHaveCount(0)
-    } finally {
-      gate.resolve()
-    }
-    await expect(page.locator('#root')).toHaveText('Game ready')
   })
+  await remember_signed_in(page)
+  await page.goto('/')
+  await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
+  await expect(page.locator('.landing-account[data-signed-in]')).toBeVisible()
+  await page.getByRole('button', { name: 'Play', exact: true }).first().click()
+  try {
+    await expect(page.locator('#root [data-boot-loading]')).toBeVisible()
+    await expect(page.locator('#root .landing')).toHaveCount(0)
+  } finally {
+    gate.resolve()
+  }
+  await expect(page.locator('#root')).toHaveText('Game ready')
+})
 
 test('failed landing startup restores explicit reload recovery', async ({ page }) => {
   await page.route(/\/assets\/app_boot-[^/]+\.js$/, (route) => route.fulfill({ status: 503, body: 'unavailable' }))
@@ -85,8 +85,10 @@ test('failed landing startup restores explicit reload recovery', async ({ page }
   await expect(page.getByRole('button', { name: 'Reload', exact: true })).toBeVisible()
 })
 
-test('connector keeps its postcard and OAuth stays passive before startup', async ({ page }) => {
-  for (const path of ['/connect-agent?intent=connect-agent', '/enoki']) {
+test('engine-less pages show their skeleton shell, never the game postcard, and OAuth stays passive', async ({
+  page,
+}) => {
+  for (const path of ['/connect-agent', '/world?intent=connect-agent', '/kares', '/enoki']) {
     const gate = Promise.withResolvers<void>()
     await page.route(app_chunk, async (route) => {
       await gate.promise
@@ -95,8 +97,10 @@ test('connector keeps its postcard and OAuth stays passive before startup', asyn
     const navigation = page.goto(path)
     try {
       await expect.poll(() => new URL(page.url()).pathname).toBe(path.split('?')[0])
+      // A light page shows its own skeleton shell at once; the OAuth callback stays empty.
       if (path === '/enoki') await expect(page.locator('#root')).toBeEmpty()
-      else await expect(page.locator('#root [data-boot-loading]')).toBeVisible()
+      else await expect(page.locator('#root [data-boot-light] .aui-skeleton').first()).toBeVisible()
+      await expect(page.locator('#root [data-boot-loading]')).toHaveCount(0)
       await expect(page.locator('#root .landing')).toHaveCount(0)
     } finally {
       gate.resolve()

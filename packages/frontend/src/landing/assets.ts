@@ -4,7 +4,16 @@ import portrait from '../../../../seed/icons/characters/senshi_male_hd.png'
 import item_key from '../../../../seed/icons/items/key_of_ivory_rampart_hd.png'
 import item_horn from '../../../../seed/icons/items/tidal_horn_core_hd.png'
 import item_bow from '../../../../seed/icons/items/amberwood_recurve_hd.png'
+import podium_first from '../assets/leaderboards/podium-1.png'
+import podium_second from '../assets/leaderboards/podium-2.png'
+import podium_third from '../assets/leaderboards/podium-3.png'
 
 import { create_landing_assets } from './presentation.ts'
 
-export const landing_assets = create_landing_assets({ portrait, item_key, item_horn, item_bow })
+export const landing_assets = create_landing_assets({
+  portrait,
+  item_key,
+  item_horn,
+  item_bow,
+  podium: [podium_first, podium_second, podium_third],
+})

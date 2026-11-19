@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { ItemRow } from '@aresrpg/protocol'
+import { InventoryCell } from '@aresrpg/ui'
 import type { ButtonHTMLAttributes } from 'react'
 
 import { useItemClick } from '../components/useItemClick.ts'
@@ -19,36 +20,25 @@ type InventoryItemCellProps = Readonly<Omit<ButtonHTMLAttributes<HTMLButtonEleme
 
 /** The canonical compact inventory item. Every inventory subset reuses this exact cell. */
 export const InventoryItemCell = ({
-  class_name = '',
   item,
   show_level = false,
-  pending,
   amount = item.amount,
   title: _title,
-  type = 'button',
-  ...button_props
+  ...cell_props
 }: InventoryItemCellProps) => {
-  const on_click = useItemClick(button_props.onClick, !!button_props.onDoubleClick)
+  const on_click = useItemClick(cell_props.onClick, !!cell_props.onDoubleClick)
   return (
     <ItemDetailHover item={item}>
-      <button
-        data-selection-id={item.id}
-        className={`chr-cell ${class_name}`.trim()}
-        aria-label={item.name}
-        aria-busy={pending}
-        type={type}
-        {...button_props}
+      <InventoryCell
+        {...cell_props}
+        id={item.id}
+        label={item.name}
+        icon={item_icon(item.item_type)}
+        fallback={item.name.slice(0, 1).toUpperCase()}
+        amount={amount}
+        level={show_level ? item.level : null}
         onClick={on_click}
-      >
-        {item_icon(item.item_type) ? (
-          <img alt="" className="chr-cell__art" draggable={false} src={item_icon(item.item_type)!} />
-        ) : (
-          <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
-        )}
-        <span className="inventory-item-pending" hidden={!pending} aria-hidden="true" />
-        {amount > 1 && <span className="chr-cell__amount tabular-nums">×{amount}</span>}
-        {show_level && <span className="chr-cell__lvl tabular-nums">{item.level}</span>}
-      </button>
+      />
     </ItemDetailHover>
   )
 }

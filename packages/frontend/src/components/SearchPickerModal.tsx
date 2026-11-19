@@ -74,7 +74,7 @@ const PickerIcon = ({ src }: Readonly<{ src: string }>) => {
   const [failed, set_failed] = useState(false)
   useEffect(() => set_failed(false), [src])
   return failed ? (
-    <Package aria-hidden="true" className="mt-0.5 shrink-0 text-[#6b7280]/50" size={16} />
+    <Package aria-hidden="true" className="mt-0.5 shrink-0 text-faint/50" size={16} />
   ) : (
     <img
       alt=""
@@ -187,9 +187,9 @@ export const SearchPickerModal = ({
     >
       <section className="flex h-[90dvh] max-h-[min(700px,100%)] w-full max-w-[1000px] flex-col border border-border bg-surface text-text sm:h-[70dvh] sm:w-[70vw]">
         <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
-          <Search className="shrink-0 text-[#6b7280]" size={14} />
+          <Search className="shrink-0 text-faint" size={14} />
           <input
-            className="min-h-11 min-w-0 flex-1 bg-transparent font-mono text-base tracking-[0.15em] text-[#e8e4dc] uppercase outline-none sm:text-[11px]"
+            className="min-h-11 min-w-0 flex-1 bg-transparent font-mono text-base tracking-[0.15em] text-text uppercase outline-none sm:text-[11px]"
             onChange={(event) => set_search(event.target.value)}
             placeholder={copy.search(title.toUpperCase())}
             ref={search_ref}
@@ -197,7 +197,7 @@ export const SearchPickerModal = ({
           />
           <button
             aria-label={close_label}
-            className="grid size-11 shrink-0 cursor-pointer place-items-center text-[#6b7280] hover:text-red-400"
+            className="grid size-11 shrink-0 cursor-pointer place-items-center text-faint hover:text-red-400"
             onClick={on_close}
             type="button"
           >
@@ -233,7 +233,7 @@ export const SearchPickerModal = ({
               {categories.map(({ id, label, count, section, parent }) => (
                 <div key={id}>
                   {section && (
-                    <p className="border-t border-white/6 px-3 pt-3 pb-1 text-[7px] tracking-[0.18em] text-[#555b66] uppercase first:border-t-0">
+                    <p className="border-t border-white/6 px-3 pt-3 pb-1 text-[7px] tracking-[0.18em] text-faint uppercase first:border-t-0">
                       {section}
                     </p>
                   )}
@@ -251,7 +251,7 @@ export const SearchPickerModal = ({
           )}
           <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
             {filtered.length === 0 && (
-              <div className="px-4 py-8 text-center text-[10px] tracking-[0.2em] text-[#6b7280] uppercase">
+              <div className="px-4 py-8 text-center text-[10px] tracking-[0.2em] text-faint uppercase">
                 {empty_label ?? copy.no_results}
               </div>
             )}
@@ -334,7 +334,7 @@ export const SearchPickerModal = ({
                         <span className="text-[7px] tracking-wider text-[#5ee38d] uppercase">{copy.new_label}</span>
                       )}
                       {item.category && (
-                        <span className="text-[8px] tracking-wide text-[#6b7280] uppercase">
+                        <span className="text-[8px] tracking-wide text-faint uppercase">
                           {category_name(item.category)}
                         </span>
                       )}
@@ -347,8 +347,8 @@ export const SearchPickerModal = ({
           </div>
         </div>
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-[9px] tracking-wide uppercase">
-          <span className="text-[#6b7280]">{copy.results(filtered.length, items.length)}</span>
-          {selected_label && <span className="text-[#c8963c]">{copy.selected(selected_label)}</span>}
+          <span className="text-faint">{copy.results(filtered.length, items.length)}</span>
+          {selected_label && <span className="text-gold">{copy.selected(selected_label)}</span>}
         </footer>
       </section>
       {render_tooltip && hovered_id && (

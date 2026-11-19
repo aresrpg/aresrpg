@@ -73,9 +73,9 @@
   font-size: 13px;
 }
 .tourney-pedestal.is-place-1 {
-  --podium-accent: #e5bb68;
+  --podium-accent: var(--aui-brass);
   min-height: 350px;
-  box-shadow: 0 0 28px #e5bb6809;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--aui-brass) 3.5%, transparent);
 }
 .tourney-pedestal.is-place-1 .tourney-rank strong {
   font-size: 52px;
@@ -85,7 +85,7 @@
   min-height: 300px;
 }
 .tourney-pedestal.is-place-3 {
-  --podium-accent: #cc9877;
+  --podium-accent: var(--aui-brass);
 }
 .tourney-pedestal:is(.is-place-4, .is-place-5) {
   min-height: 0;

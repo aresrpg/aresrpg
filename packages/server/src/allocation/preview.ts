@@ -4,9 +4,9 @@ import { readFile, readdir } from 'node:fs/promises'
 
 import type { Redis } from 'ioredis'
 import { allocation_locale } from '@aresrpg/immutable/locale'
-import { cap_mist, sui_amount, nominal_tokens, share_version, campaign } from '@aresrpg/immutable/allocation'
+import { cap_mist, sui_amount, nominal_tokens, share_version } from '@aresrpg/immutable/allocation'
 
-import { read_campaign } from './store.ts'
+import { read_awards } from './store.ts'
 import { shared_address } from './wallets.ts'
 import { render_card } from './share_image.ts'
 
@@ -28,16 +28,12 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
       await readFile(new URL(`../../../frontend/src/i18n/locales/${locale}.yaml`, import.meta.url), 'utf8')
     ) as { allocation_page: Record<string, string> }
   )
-  const current = await read_campaign(redis)
-  const award = current.awards.find((row) => row.address === address)
-  const tier = award?.tier ?? (current.phase === 'final' ? 'no_spot' : 'pending')
-  const review: Readonly<Partial<Record<string, string>>> = {
-    pending: `${copy.entries_close} · ${new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(campaign.submissions_close_at))}`,
-  }
+  const award = (await read_awards(redis)).find((row) => row.address === address)
+  const tier = award?.tier ?? 'no_spot'
   const title = `${copy[tier]} · KARES · AresRPG`
   const amount = award
     ? `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`
-    : copy.pending
+    : ''
   const cap = award ? `${sui_amount(cap_mist(award.tier))} SUI` : ''
   const summary = award ? `${amount} · ${copy.before} · ${copy.buy_up_to} ${cap}` : copy[tier]
   const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' }
@@ -46,11 +42,10 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
       await render_card({
         tier,
         title: copy[tier],
-        amount: award ? amount : '',
+        amount,
         cap,
         before: copy.before,
         buy_up_to: copy.buy_up_to,
-        review: review[tier],
       }),
       { headers: { ...headers, 'content-type': 'image/png' } }
     )
@@ -58,7 +53,7 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
     action: 'preview',
     token: params.get('token')!,
     locale,
-    v: share_version(current.phase, award),
+    v: share_version(award),
   })
   const canonical = `${origin}/api/allocation?${query}`
   query.set('action', 'image')

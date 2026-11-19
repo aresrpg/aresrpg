@@ -17,8 +17,9 @@ export const step_walking_follower = (
   previous: FollowerMotion | null | undefined,
   position: WalkPoint,
   target: RunTarget,
-  elapsed_ms: number
-): Readonly<{ motion: FollowerMotion; position: WalkPoint; arrived: boolean }> => {
+  elapsed_ms: number,
+  allows_segment?: (from: WalkPoint, to: WalkPoint) => boolean
+): Readonly<{ motion: FollowerMotion; position: WalkPoint; arrived: boolean; blocked?: boolean }> => {
   const body = previous
     ? {
         ...previous.body,
@@ -35,6 +36,12 @@ export const step_walking_follower = (
     walking = step.state
     arrived = step.status === 'arrived'
     if (step.status === 'planning') break
+    const before: WalkPoint = [...body.position]
+    const prior_body = {
+      ...body,
+      position: [...before] as [number, number, number],
+      velocity: [...body.velocity] as [number, number, number],
+    }
     step_controller(
       body,
       {
@@ -50,6 +57,8 @@ export const step_walking_follower = (
       world,
       dt
     )
+    if (allows_segment && !allows_segment(before, body.position))
+      return { motion: { body: prior_body, walking }, position: before, arrived: false, blocked: true }
   }
   return { motion: { body, walking }, position: body.position, arrived }
 }

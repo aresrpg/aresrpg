@@ -68,11 +68,11 @@ export const EngineNotice = ({
   return (
     <section className="fixed inset-0 z-[200] grid place-items-center bg-bg/88 p-5 backdrop-blur-lg">
       <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-bg p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
-        <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">{view.title}</h2>
-        <p className="mb-5 text-xs leading-6 text-[#a3a5ad]">{view.body}</p>
-        {view.hint && <p className="mb-2 text-[11px] leading-5 text-[#d0ccd0]">{view.hint}</p>}
+        <h2 className="mb-4 text-base font-semibold text-text">{view.title}</h2>
+        <p className="mb-5 text-xs leading-6 text-muted">{view.body}</p>
+        {view.hint && <p className="mb-2 text-[11px] leading-5 text-soft">{view.hint}</p>}
         <button
-          className="mt-5 h-10 w-full cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[10px] tracking-[0.18em] text-[#67adff] uppercase"
+          className="mt-5 h-10 w-full cursor-pointer border border-cyan/40 bg-cyan/8 text-[10px] tracking-[0.18em] text-cyan uppercase"
           onClick={view.action.run}
           type="button"
         >

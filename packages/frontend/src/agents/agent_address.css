@@ -3,14 +3,14 @@
   flex-direction: column;
   gap: 10px;
   font-size: 11px;
-  color: #b9bdc5;
+  color: var(--aui-soft);
 }
 .agent-address-confirmation__address {
   padding: 10px;
   overflow-wrap: anywhere;
   font-family: monospace;
-  color: #d8d9df;
-  background: #101820;
+  color: var(--aui-ink);
+  background: var(--aui-bg);
   border: 1px solid #ffffff18;
 }
 .agent-address-confirmation label {
@@ -22,6 +22,6 @@
 }
 .agent-address-confirmation input {
   margin-top: 3px;
-  accent-color: #d8b574;
+  accent-color: var(--aui-brass);
   flex: none;
 }

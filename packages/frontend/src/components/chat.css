@@ -5,38 +5,38 @@
    lines use a restrained charcoal highlight. Retune colors HERE only. */
 
 .chat {
-  --chat-name: #e4c58e;
-  --chat-target: #85bedb;
-  --chat-verb: #aeb7c4;
+  --chat-name: var(--aui-brass);
+  --chat-target: var(--aui-blue);
+  --chat-verb: var(--aui-muted);
   --chat-spell: #bea5dd;
   --chat-num: #ed9292;
-  --chat-num-crit: #e8bb72;
+  --chat-num-crit: var(--aui-brass);
   --chat-num-heal: #ff6bb0;
-  --chat-num-ap: #85bedb;
+  --chat-num-ap: var(--aui-blue);
   --chat-num-mp: #94c5a2;
   --chat-num-shield: #9aa7ff;
   --chat-num-gain: #94c5a2;
-  --chat-stat: #d8c9a3;
+  --chat-stat: var(--aui-brass-hi);
   --chat-death: #ed9292;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid rgba(216, 201, 163, 0.14);
-  background: #1b2027f2;
+  border: 1px solid color-mix(in srgb, var(--aui-brass-hi) 14%, transparent);
+  background: color-mix(in srgb, var(--aui-surface) 94.9%, transparent);
   font-size: 10px;
 }
 
 .chat > header {
-  background: #2b303af0;
+  background: color-mix(in srgb, var(--aui-lifted) 94.1%, transparent);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 4px 8px;
-  border-bottom: 1px solid rgba(216, 201, 163, 0.12);
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-brass-hi) 12%, transparent);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-size: 8px;
-  color: rgba(216, 201, 163, 0.65);
+  color: color-mix(in srgb, var(--aui-brass-hi) 65%, transparent);
 }
 
 .chat__lines {
@@ -56,7 +56,7 @@
 
 .chat__line--party span,
 .chat-tok--party {
-  color: #e0a33a;
+  color: var(--aui-brass);
 }
 
 .chat__line--whisper,
@@ -78,7 +78,7 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  color: rgba(216, 201, 163, 0.55);
+  color: color-mix(in srgb, var(--aui-brass-hi) 55%, transparent);
   font-size: 8px;
   text-transform: uppercase;
 }
@@ -104,24 +104,24 @@
 }
 
 .chat__filter input:checked + .chat__box {
-  background: var(--color-gold, #c8963c);
-  border-color: var(--color-gold, #c8963c);
-  box-shadow: 0 0 6px rgba(200, 150, 60, 0.5);
+  background: var(--color-gold, var(--aui-brass));
+  border-color: var(--color-gold, var(--aui-brass));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aui-brass) 50%, transparent);
 }
 
 .chat__filter:has(input:checked) {
-  color: var(--color-gold, #c8963c);
+  color: var(--color-gold, var(--aui-brass));
 }
 
 .chat > footer {
   display: flex;
   gap: 5px;
-  border-top: 1px solid rgba(216, 201, 163, 0.12);
+  border-top: 1px solid color-mix(in srgb, var(--aui-brass-hi) 12%, transparent);
   padding: 4px 6px;
 }
 
 .chat__scope {
-  border: 1px solid rgba(216, 201, 163, 0.14);
+  border: 1px solid color-mix(in srgb, var(--aui-brass-hi) 14%, transparent);
   background: rgba(255, 255, 255, 0.03);
   padding: 0 7px;
   color: var(--color-muted);
@@ -130,7 +130,7 @@
   cursor: pointer;
 }
 .chat__scope.is-party {
-  border-color: rgba(200, 150, 60, 0.45);
+  border-color: color-mix(in srgb, var(--aui-brass) 45%, transparent);
   color: var(--color-gold);
 }
 .chat__scope:disabled {
@@ -141,10 +141,10 @@
 .chat__input {
   min-width: 0;
   flex: 1;
-  border: 1px solid rgba(216, 201, 163, 0.14);
+  border: 1px solid color-mix(in srgb, var(--aui-brass-hi) 14%, transparent);
   background: rgba(255, 255, 255, 0.03);
   padding: 4px 7px;
-  color: #e8e4dc;
+  color: var(--aui-ink);
   font: inherit;
   font-size: 10px;
   outline: none;
@@ -155,7 +155,7 @@
 }
 
 .chat-tok--says {
-  color: #cfd3da;
+  color: var(--aui-soft);
 }
 
 .chat-tok--name {
@@ -179,7 +179,7 @@
 }
 
 .chat-tok--item {
-  color: #efbd45;
+  color: var(--aui-brass);
 }
 
 /* the speaker's OWN name — blue sets your lines apart from the gold of everyone else */
@@ -248,7 +248,7 @@
 .gw-worldchat .chat {
   flex: 1;
   min-width: 0;
-  background: #1b2027f2;
+  background: color-mix(in srgb, var(--aui-surface) 94.9%, transparent);
   background-image: url('../../../ui/src/assets/panel_grain.webp');
   background-blend-mode: soft-light;
   border: 1px solid var(--color-border);
@@ -281,7 +281,7 @@
 }
 
 .gw-worldchat .chat__input:focus {
-  border-color: var(--color-gold, #c8963c);
+  border-color: var(--color-gold, var(--aui-brass));
 }
 
 .chat__resize {
@@ -368,18 +368,18 @@
   flex: none;
   border: 0;
   background: transparent;
-  color: #e4c58e;
+  color: var(--aui-brass);
   cursor: pointer;
 }
 .chat__toggle:focus-visible {
-  outline: 2px solid #e4c58e;
+  outline: 2px solid var(--aui-brass);
   outline-offset: -3px;
 }
 .chat__unread {
   border-radius: 10px;
   padding: 2px 5px;
-  background: #e4bf84;
-  color: #191e25;
+  background: var(--aui-brass);
+  color: var(--aui-surface);
   font-size: 11px;
   font-weight: 700;
 }

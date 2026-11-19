@@ -1,0 +1,129 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.light-page {
+  min-height: 100dvh;
+  background: var(--aui-bg);
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+  overflow-x: hidden;
+}
+/* A floating bar: inset from the page edges, over the content that scrolls under it. */
+.light-page-header {
+  position: sticky;
+  top: 12px;
+  z-index: 5;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: calc(100% - 24px);
+  max-width: 1120px;
+  margin: 12px auto 0;
+  padding: 10px 16px;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background: var(--aui-glass);
+  box-shadow: var(--aui-shadow);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+.light-page-brand {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--aui-ink);
+  text-decoration: none;
+  font-family: var(--aui-font-display);
+}
+.light-page-brand span {
+  color: var(--aui-muted);
+  font-family: var(--aui-font);
+  font-size: 0.85rem;
+}
+.light-page-main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.light-page-card {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 8vh auto 0;
+  padding: 24px;
+}
+.light-page-card h1 {
+  margin: 0;
+  font: 700 1.4rem/1.2 var(--aui-font-title);
+}
+.light-page-card p {
+  margin: 0;
+  color: var(--aui-muted);
+  line-height: 1.5;
+}
+.light-page-card .aui-button {
+  justify-self: start;
+}
+.light-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* A page's own content on the shared panel, at the content width. */
+.light-page-panel {
+  min-width: 0;
+}
+/* Mood: the page takes a hue. Its header and panels are glass over the radiance, the weave and the seal. */
+.light-page[data-aura] {
+  --aura-strength: 40%;
+  background: transparent;
+}
+.light-page[data-aura='sky'] {
+  --aura: var(--aui-sui);
+}
+.light-page[data-aura='ember'] {
+  --aura: var(--aui-orange);
+}
+.light-page[data-aura='moss'] {
+  --aura: var(--aui-hue-green);
+}
+.light-page[data-aura] :is(.light-page-header, .light-page-panel, .light-page-card) {
+  background: color-mix(in srgb, var(--aui-surface) 70%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+}
+/* One small lit scene at the foot of the page. Its black is dropped by the blend, so only the light stays. */
+.light-page-scene {
+  position: fixed;
+  z-index: -1;
+  inset: auto 0 0;
+  height: min(78vh, 760px);
+  background: center bottom / auto 100% no-repeat;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: light-page-scene 9s var(--aui-ease) infinite alternate;
+}
+[data-aura='sky'] > .light-page-scene {
+  background-image: url('/pages/staking-shrine.webp');
+}
+[data-aura='ember'] > .light-page-scene {
+  background-image: url('/pages/agent-forge.webp');
+}
+[data-aura='moss'] > .light-page-scene {
+  background-image: url('/pages/dapp-camp.webp');
+}
+@keyframes light-page-scene {
+  from {
+    opacity: 0.78;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .light-page-scene {
+    animation: none;
+  }
+}

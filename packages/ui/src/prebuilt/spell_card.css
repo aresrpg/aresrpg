@@ -1,0 +1,287 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Spell card layout. `:where()` keeps these at zero specificity so spells.css and host surfaces refine them. */
+:where(.aui-spell-card) {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+:where(.aui-spell-card > :not(:last-child)) {
+  margin-block-end: 1rem;
+}
+:where(.aui-spell-head) {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+:where(.aui-spell-art) {
+  display: contents;
+}
+:where(.aui-spell-identity) {
+  flex: 1;
+  min-width: 0;
+}
+:where(.aui-spell-name-fill) {
+  display: block;
+  max-width: 100%;
+}
+:where(.aui-spell-name) {
+  color: var(--aui-brass-hi);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+:where(.aui-spell-caster-fill) {
+  display: block;
+  width: fit-content;
+  margin-top: 0.5rem;
+}
+:where(.aui-spell-body) {
+  border: 1px solid rgb(255 255 255 / 9%);
+  background-color: rgb(0 0 0 / 10%);
+}
+:where(.aui-spell-content) {
+  padding: 1rem;
+}
+:where(.aui-spell-content > :not(:last-child)) {
+  margin-block-end: 1.25rem;
+}
+:where(.aui-spell-metrics) {
+  display: grid;
+  gap: 0.5rem;
+}
+:where(.aui-spell-metric) {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 1.8%);
+}
+/* The accent colours arrive inline; the border takes the authored tint. */
+:where(.aui-spell-metric-icon) {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid;
+}
+:where(.aui-spell-metric-text) {
+  min-width: 0;
+  white-space: nowrap;
+}
+:where(.aui-spell-metric-label) {
+  display: block;
+  color: var(--aui-faint);
+  font-size: 8px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+:where(.aui-spell-metric-value) {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+:where(.aui-spell-range-fill) {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+:where(.aui-spell-effects-section > :not(:last-child)) {
+  margin-block-end: 0.5rem;
+}
+:where(.aui-spell-section-title) {
+  color: var(--aui-faint);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+:where(.aui-spell-constraints) {
+  padding-top: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+:where(.aui-spell-constraints > :not(:last-child)) {
+  margin-block-end: 0.5rem;
+}
+:where(.aui-spell-facts) {
+  display: grid;
+  gap: 1px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 8%);
+}
+:where(.aui-spell-fact) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding-inline: 0.75rem;
+  background-color: var(--aui-sunk);
+}
+:where(.aui-spell-rule) {
+  width: 100%;
+}
+/* An authoring field wraps a rule in a button; it keeps the editor's hover wash. */
+@media (hover: hover) {
+  :where(button.aui-spell-fact:hover) {
+    background-color: rgb(255 255 255 / 3.5%);
+  }
+}
+:where(.aui-spell-rule-label) {
+  color: var(--aui-muted);
+  font-size: 9px;
+}
+:where(.aui-spell-fact-label) {
+  color: var(--aui-faint);
+  font-size: 9px;
+}
+:where(.aui-spell-fact-value) {
+  color: var(--aui-soft);
+  font-size: 10px;
+  font-weight: 600;
+}
+/* Rule verdict colours are authored, not tokens. */
+:where(.aui-spell-yes) {
+  color: #68d391;
+}
+:where(.aui-spell-no) {
+  color: #ff7d8f;
+}
+@media (width >= 40rem) {
+  :where(.aui-spell-metrics) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  :where(.aui-spell-facts) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Effect lines: spell cards and fight tooltips. */
+:where(.aui-spell-effects > :not(:last-child)) {
+  margin-block-end: 0.5rem;
+}
+:where(.aui-spell-effects-compact > :not(:last-child)) {
+  margin-block-end: 0.125rem;
+}
+:where(.aui-spell-effect) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.25rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  font-size: 10px;
+}
+:where(.aui-spell-effect:last-child) {
+  border-bottom-width: 0;
+}
+/* Compact lines must beat the spell card's own row sizing in spells.css. */
+:where(.aui-spell-effects-compact > div) {
+  min-height: 0 !important;
+  padding-block: 0.25rem !important;
+  border-bottom-width: 0 !important;
+}
+:where(.aui-spell-effect-art) {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+:where(.aui-spell-effect-glyph) {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+:where(.aui-spell-effect-dot) {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+:where(.aui-spell-prose) {
+  color: var(--aui-muted);
+}
+:where(.aui-spell-words) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--aui-muted);
+}
+:where(.aui-spell-amount) {
+  font-weight: 600;
+}
+:where(.aui-spell-note) {
+  color: var(--aui-faint);
+  font-size: 8px;
+}
+:where(.aui-spell-turns) {
+  color: var(--aui-brass);
+  font-size: 9px;
+  font-weight: 600;
+}
+:where(.aui-spell-turns-idle) {
+  color: var(--aui-faint);
+}
+:where(.aui-spell-area-label) {
+  color: var(--aui-blue);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:where(.aui-spell-area) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+:where(.aui-spell-area-grid) {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+}
+:where(.aui-spell-area-cell) {
+  width: 0.25rem;
+  height: 0.25rem;
+  background-color: rgb(255 255 255 / 8%);
+}
+:where(.aui-spell-area-on) {
+  background-color: var(--aui-blue);
+}
+:where(.aui-spell-area-size) {
+  color: var(--aui-blue);
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* The critical wash is the authored critical gold; inside spell cards spells.css flattens it. */
+:where(.aui-spell-critical) {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 35%, transparent);
+  background-image: linear-gradient(90deg, rgb(232 180 79 / 12%), rgb(232 180 79 / 3%));
+  white-space: nowrap;
+}
+:where(.aui-spell-critical-label) {
+  color: var(--aui-brass);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+:where(.aui-spell-critical-value) {
+  color: var(--aui-brass-hi);
+  font-size: 9px;
+  font-weight: 600;
+}

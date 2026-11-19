@@ -15,12 +15,12 @@
   padding: 3px 9px 3px 3px;
   gap: 8px;
   flex-shrink: 0;
-  background: #191e25e8;
+  background: color-mix(in srgb, var(--aui-surface) 91%, transparent);
   border: 0;
   border-radius: 3px;
 }
 .character-tabs .character-tab[aria-pressed='true'] {
-  background: #303640ee;
+  background: color-mix(in srgb, var(--aui-high) 93.3%, transparent);
   color: var(--aui-ink);
 }
 .character-tab-name {
@@ -37,7 +37,7 @@
   font-variant-numeric: tabular-nums;
 }
 .character-tab[aria-pressed='true'] .character-tab-name {
-  color: #ecd19c;
+  color: var(--aui-brass-hi);
 }
 .character-tabs .character-tab .character-tab-portrait {
   width: 36px;
@@ -71,8 +71,8 @@
     flex-direction: column;
     overflow-y: auto;
     padding: 5px;
-    background: #191e25;
-    border: 1px solid #57505f;
+    background: var(--aui-surface);
+    border: 1px solid var(--aui-peak);
     border-radius: 5px;
     box-shadow: 0 8px 24px #0008;
   }
@@ -95,7 +95,7 @@
   right: -2px;
   bottom: 0;
   color: #8fb9cf;
-  background: #191e25;
+  background: var(--aui-surface);
   border-radius: 2px;
 }
 /* Approved option 2: claude.ai/artifact/7hEXb24TFa5BTTTKGdYuKQ */
@@ -126,7 +126,7 @@
   filter: sepia(1) saturate(1.6) hue-rotate(-15deg);
 }
 .character-tab[data-delegated='recall'] .character-tab-bot {
-  color: #d9b07a;
+  color: var(--aui-brass);
 }
 
 [data-character-tab-menu] > button {

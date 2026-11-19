@@ -90,9 +90,7 @@ test('idle requires a free lane, fresh contract and an unrooted owned overworld 
     { needs_resync: true },
     { active_command: 'work' },
     { reconciliation_command: 'receipt' },
-    { run_ref: { kind: 'behavior' as const, id: 'active-run' } },
-    { profession_run_id: 'profession' },
-    { combat_run_id: 'combat' },
+    { runs: { hero: 'active-run' } },
   ])
     expect(idle_travels(context, { ...lane, ...blocked })).toBeNull()
   for (const unavailable of [

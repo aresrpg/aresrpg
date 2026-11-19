@@ -72,13 +72,13 @@ test('unexpected planning failure commits a visible blocker and reports once aft
       committed.push(f.get_run())
     },
   }
-  await run_tick('behavior', input)
+  await run_tick(input)
   expect((await committed[0])?.status).toBe('awaiting_ai')
   const run = await f.get_run()
   expect(run).toMatchObject({ status: 'awaiting_ai', issue: 'internal_error', actions_started: 0 })
-  expect((await f.store.read<Lane>(f.key))?.run_ref).toEqual({ kind: 'behavior', id: run.id })
+  expect(Object.values((await f.store.read<Lane>(f.key))?.runs ?? {})).toEqual([run.id])
   expect(await f.store.scan_pending(20)).not.toContain(`behavior:${run.id}`)
-  await run_tick('behavior', { ...input, run })
+  await run_tick({ ...input, run })
   expect(reports).toHaveLength(1)
   expect(String(reports[0])).toContain(run.id)
   expect(String(reports[0])).toContain('"revision":1')
@@ -88,7 +88,7 @@ test('unexpected planning failure commits a visible blocker and reports once aft
 })
 test('unexpected refresh failure retires only the unsent draft before surfacing its diagnostic', async () => {
   const f = await fixture()
-  await run_tick('behavior', f.input)
+  await run_tick(f.input)
   const run = await f.get_run()
   const command = (await f.store.read<Command>(`command:${run.last_command_id}`))!
   await expect(
@@ -105,7 +105,7 @@ test('unexpected refresh failure retires only the unsent draft before surfacing 
   expect(await f.store.read<Lane>(f.key)).toMatchObject({
     pending: null,
     active_command: null,
-    run_ref: { kind: 'behavior', id: run.id },
+    runs: { [run.character_id!]: run.id },
   })
   await f.runtime.stop()
 })

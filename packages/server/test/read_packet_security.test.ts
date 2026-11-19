@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import { LEADERBOARD_METRICS } from '@aresrpg/protocol'
-
-import { create_request_limiter } from '../src/request_limiter.ts'
+import { create_request_limiter } from '@aresrpg/protocol/request-limiter'
 
 import { create_player } from './helpers/player.ts'
 import { wire } from './helpers/world_wire.ts'

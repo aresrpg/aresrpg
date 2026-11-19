@@ -1,0 +1,284 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* Character spell list, shared simulator rows, and the spell upgrade controls.
+   SpellCard owns detail presentation. */
+
+.sb {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ── header: identity + spell-points capital ── */
+.sb__top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+.sb__crest {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.sb__sigil {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aui-brass) 12%, transparent), transparent);
+  color: var(--color-gold);
+}
+.sb__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+}
+.sb__sub {
+  font-size: 0.5rem;
+  letter-spacing: 0.28em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+/* ── main split: list | detail ── */
+.sb__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 38fr 62fr;
+  gap: var(--s-4);
+}
+
+/* ── LIST ── */
+.sb__list {
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--aui-void) 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sb__lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 15px;
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-brass) 8%, transparent);
+  flex: none;
+}
+.sb__lhead-t {
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+.sb__lhead-n {
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  color: var(--color-muted);
+}
+.sb__rows {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.sb__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px 11px 13px;
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-brass) 6%, transparent);
+  border-left: 2px solid transparent;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+.sb__row:hover {
+  background: color-mix(in srgb, var(--aui-brass) 4%, transparent);
+}
+
+/* DENSE list — a build editor lists a whole class at once (~20 spells). The grimoire's two-line row spends
+   three viewports on that, so the dense variant folds the element·kind subline INLINE after the name and
+   halves the art: same row, same facts, one line. The hover card is where the full detail already lives. */
+.sb__rows--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  column-gap: 22px;
+  overflow: visible;
+}
+.sb__row--dense {
+  gap: 9px;
+  padding: 5px 4px 5px 6px;
+}
+.sb__row--dense .sb__ic {
+  width: 26px;
+  height: 26px;
+}
+.sb__row--dense .sb__meta {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+.sb__row--dense .sb__nm {
+  flex: 0 1 auto;
+  font-size: 0.66rem;
+}
+.sb__row--dense .sb__rl {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+  font-size: 0.44rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb__row.is-sel {
+  border-left-color: var(--color-gold);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--aui-brass) 10%, transparent),
+    color-mix(in srgb, var(--aui-brass) 1%, transparent)
+  );
+}
+.sb__ic {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+  background: var(--color-bg);
+}
+.sb__art--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--el, var(--color-gold));
+  background: var(--color-bg);
+}
+.sb__meta {
+  flex: 1;
+  min-width: 0;
+  /* #17c — STACK the name over the element·type subline. Without this the two spans are inline and run
+     together ("FIRE STRIKE" + "FIRE · RANGED" → "…STRIKEFIRE · RANGED"); a prior margin-top on .sb__rl was a
+     no-op (vertical margin does nothing on an inline span). Flex-column makes the gap effective. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sb__nm {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb__row.is-sel .sb__nm {
+  color: var(--color-gold-light);
+}
+.sb__rl {
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.sb__right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+.sb__lvbadge {
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  color: var(--color-gold);
+  border: 1px solid var(--color-border);
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--aui-brass) 5%, transparent);
+  white-space: nowrap;
+}
+/* locked rows stay clickable (aspirational browsing), so the cursor stays the row's normal pointer;
+   only the dimmed art/name/sub + the lock chip signal "not yet unlocked". */
+.sb__row.is-locked .sb__ic {
+  filter: grayscale(1) brightness(0.4);
+  opacity: 0.6;
+}
+.sb__row.is-locked .sb__nm {
+  color: var(--aui-peak);
+}
+.sb__row.is-locked .sb__rl {
+  color: var(--aui-high);
+}
+.sb__lockchip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--aui-steel);
+  border: 1px dashed color-mix(in srgb, var(--aui-faint) 40%, transparent);
+  padding: 3px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── DETAIL ── */
+.sb__detail {
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--aui-void) 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.sb__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+/* upgrade block — current → current+1 (D49b) */
+.sb__lup {
+  margin: 16px 22px 20px;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--aui-brass) 5%, transparent), transparent);
+}
+/* actions */
+.sb__actions {
+  padding: 15px;
+  display: flex;
+  justify-content: flex-end;
+}
+.sb__mastered {
+  margin: 16px 22px 20px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid var(--color-gold);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--aui-brass) 14%, transparent), transparent);
+  color: var(--color-gold);
+  font-size: 0.66rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--aui-brass) 40%, transparent);
+}

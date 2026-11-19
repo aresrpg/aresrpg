@@ -43,7 +43,7 @@ export const FacetRail = ({
     {options.map(({ value, label, count, section, indent }) => (
       <div key={value}>
         {section && (
-          <p className="mt-3 border-t border-white/7 px-3 pt-3 pb-1 text-[6px] tracking-[0.16em] text-[#4f5560] uppercase">
+          <p className="mt-3 border-t border-white/7 px-3 pt-3 pb-1 text-[6px] tracking-[0.16em] text-steel uppercase">
             {section}
           </p>
         )}

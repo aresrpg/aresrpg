@@ -3,13 +3,8 @@
 import { createStore } from 'zustand/vanilla'
 import { GiftError } from '@aresrpg/sdk/gift'
 
-import {
-  browser_auth_storage,
-  clear_auth_wallet,
-  read_auth_wallet,
-  remember_auth_wallet,
-  type AuthStorage,
-} from '../auth_storage.ts'
+import { browser_auth_storage, type AuthStorage } from '../auth_storage.ts'
+import { create_remembered_auth } from '../remembered_auth.ts'
 import { report_error } from '../reporting.ts'
 
 import {
@@ -51,20 +46,13 @@ export const create_gift_runtime = ({
 
   const observe = (): (() => void) => {
     const controller = new AbortController()
-    let auth: GiftAuth | null = null
+    const account = create_remembered_auth<GiftWallet>(async () => (await load_auth())(), storage)
     let release_wallet = (): void => {}
-    const connected = (wallet: GiftWallet, advance: GiftTask['advance']): GiftResult => {
-      if (wallet.identity !== 'zklogin') {
-        wallet.dispose?.()
-        return { kind: 'ready' }
-      }
-      remember_auth_wallet(storage, wallet.wallet_name)
-      return { kind: 'connected', wallet, advance }
-    }
-    const require_auth = (): GiftAuth => {
-      if (!auth) throw new GiftError('unavailable')
-      return auth
-    }
+    const connected = (wallet: GiftWallet, advance: GiftTask['advance']): GiftResult => ({
+      kind: 'connected',
+      wallet,
+      advance,
+    })
     const require_wallet = (state: GiftState): GiftWallet => {
       if (!state.wallet) throw new GiftError('unauthorized')
       return state.wallet
@@ -73,7 +61,7 @@ export const create_gift_runtime = ({
       const wallet = require_wallet(state)
       // The shared SDK owns uncertain submissions. Reload its session after it accepts a receipt.
       if (await wallet.gift.recover()) {
-        const restored = await require_auth().restore(wallet.wallet_name)
+        const restored = await account.restore()
         if (!restored) throw new GiftError('unauthorized')
         return connected(restored, state.task!.advance)
       }
@@ -93,23 +81,20 @@ export const create_gift_runtime = ({
       }
     const tasks: Record<GiftTask['kind'], (state: GiftState) => Promise<GiftResult>> = {
       boot: async () => {
-        const factory = await load_auth()
-        if (controller.signal.aborted) return { kind: 'ready' }
-        auth = factory()
-        const remembered = read_auth_wallet(storage)
-        const wallet = remembered
-          ? await auth.restore(remembered).catch((error: unknown) => {
-              report_error(error, { area: 'gift-auth-restore' })
-              return null
-            })
-          : null
+        const wallet = await account.restore().catch((error: unknown) => {
+          report_error(error, { area: 'gift-auth-restore' })
+          return null
+        })
+        if (controller.signal.aborted) {
+          wallet?.dispose?.()
+          return { kind: 'ready' }
+        }
         return wallet ? connected(wallet, false) : { kind: 'ready' }
       },
-      login: async () => connected(await require_auth().connect_google(), true),
+      login: async () => connected(await account.connect(), true),
       check,
       logout: async (state) => {
-        clear_auth_wallet(storage)
-        await require_wallet(state).disconnect()
+        await account.sign_out(require_wallet(state))
         return { kind: 'disconnected' }
       },
       transfer: async (state) => {
@@ -142,7 +127,7 @@ export const create_gift_runtime = ({
         const { wallet } = state
         if (wallet) {
           const stop_invalidation = wallet.on_invalidated?.(() => {
-            clear_auth_wallet(storage)
+            account.forget()
             dispatch({ type: 'invalidated', wallet })
           })
           release_wallet = () => {
@@ -161,7 +146,7 @@ export const create_gift_runtime = ({
       stop()
       release_wallet()
       store.getState().wallet?.dispose?.()
-      auth?.dispose()
+      account.dispose()
     }
   }
   return { store, dispatch, observe }

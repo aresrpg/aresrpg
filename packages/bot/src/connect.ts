@@ -269,7 +269,7 @@ export const create_connect_service = (
     id: string,
     session: string,
     review: HostedBotDescriptor,
-    transition: (bot: Bot, lane: Lane, review: HostedBotDescriptor) => ReturnTransition
+    transition: (bot: Bot, lane: Lane, review: HostedBotDescriptor, now: number) => ReturnTransition
   ) => {
     const initial = await store.read<Bot>(`bot:${review.id}`)
     if (!initial) throw new Error('bot_not_owned')
@@ -287,7 +287,7 @@ export const create_connect_service = (
       if (lane_key_for(bot) !== lane_key) throw new Error('connection_changed')
       const lane = (await tx.get<Lane>(lane_key)) ?? empty_lane(bot)
       if (!same_run(lane, initial_lane)) throw new Error('connection_changed')
-      const next = transition(bot, lane, review)
+      const next = transition(bot, lane, review, now())
       await stop_return_runs(tx, bot, lane, next.lane)
       if (next.bot !== bot) await tx.put(`bot:${bot.id}`, next.bot)
       if (next.lane !== lane) await tx.put(lane_key, next.lane)

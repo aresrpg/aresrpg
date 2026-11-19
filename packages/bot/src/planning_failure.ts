@@ -13,6 +13,9 @@ const waiting = new Set([
   'market_unavailable',
 ])
 const blocked = new Set([
+  'invalid_target_options',
+  'target_outside_area',
+  'target_group_mismatch',
   'character_not_available',
   'character_authority_mismatch',
   'fight_authority_mismatch',
@@ -20,6 +23,8 @@ const blocked = new Set([
   'not_active_turn',
   'fight_not_ended',
   'mob_group_unavailable',
+  'fight_not_joinable',
+  'dungeon_unavailable',
   'item_unavailable',
   'item_already_equipped',
   'unsupported_consumable',
@@ -85,4 +90,13 @@ export const command_issue = (status: string, error: unknown): string => {
   const known = planning_issue(failure)
   if (known) return known.issue
   return transaction_failure_kind(failure) === 'funding' ? 'funding_required' : 'command_failed'
+}
+
+/**
+ * What a client may read of a command's error. A stored domain code passes as it is; any other stored
+ * text is an implementation message and leaves the service only as its classification.
+ */
+export const public_command_error = (status: string, error: string | undefined): string | undefined => {
+  if (error === undefined) return undefined
+  return /^[a-z_]+(:[a-z_]+)?$/.test(error) ? error : command_issue(status, error)
 }

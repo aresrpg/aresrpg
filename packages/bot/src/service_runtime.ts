@@ -4,6 +4,7 @@ import type { RedisClient } from 'bun'
 
 import type { create_actor_runtime } from './actor_runtime.ts'
 import { create_observation_router } from './observation_router.ts'
+import { create_owner_dispatch } from './owner_dispatch.ts'
 import type { BotConfig } from './model.ts'
 import type { ControlStore } from './store.ts'
 
@@ -57,6 +58,7 @@ export const start_service_runtime = async (
     router = await create_observation_router({
       ...options,
       local: runtime.observe,
+      local_control: create_owner_dispatch(options.store, options.config, runtime.observe),
       timeout_ms: options.lease_ms,
     })
     if (stopped) {
@@ -74,7 +76,7 @@ export const start_service_runtime = async (
     lease_timer = setInterval(() => {
       void runtime.renew().catch(options.report_failure)
     }, options.heartbeat_ms)
-    return { observe: router.observe, ready: () => !stopped && router!.ready(), stop }
+    return { observe: router.observe, dispatch: router.dispatch, ready: () => !stopped && router!.ready(), stop }
   } catch (error) {
     await stop()
     throw error

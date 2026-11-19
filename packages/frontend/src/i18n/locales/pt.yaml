@@ -27,8 +27,6 @@ continue_google: Continuar com Google
 wallet_session_ended: Sua sessão da carteira terminou. Entre novamente.
 connect_wallet: Conectar carteira
 no_wallet: Nenhuma carteira compatível instalada
-play_demo: 'Jogar demo'
-replay_demo: 'Jogar a demo novamente'
 sign_in: Entre para jogar
 drag_hint: Arraste para mover · Role para ampliar
 navigation: Navegação
@@ -55,7 +53,7 @@ server_connected: Conectado
 server_violation: Desconectado — violação de regra. Nova tentativa em breve.
 server_replaced: Conectado em outro lugar
 session_replaced_title: Conexão em outro lugar
-session_replaced_body: Sua conta abriu o jogo em outro lugar e esta janela foi desconectada. Feche a outra sessão ou reconecte aqui para jogar nesta janela.
+session_replaced_body: 'Sua conta se conectou em outra janela: o jogo 3D ou o aplicativo web. Só uma pode ficar conectada por vez, então esta janela foi desconectada. Reconecte aqui para usar esta janela.'
 session_replaced_reconnect: Reconectar aqui
 latency_unit: ms
 indexing_health: Estado da indexação
@@ -697,6 +695,17 @@ airdrop_page:
       title: Apoiadores do Hytale · Marca dos Inabaláveis
       description: Para cada carteira vinculada ao Hytale com mais de {threshold} SUI em compras registradas na loja, independentemente da posição no top 100. O título vai para o endereço Sui do backup. Entre com a conta Google original para encontrar seu vale-presente.
 settings_page:
+  suins_confirm_title: 'Confirmar alteração do nome'
+  suins_confirm_erase: 'Os dados existentes de {names}, incluindo qualquer avatar, serão apagados.'
+  suins_confirm_player: '{name} apontará para a sua carteira Google (zkLogin) abaixo e será o nome predefinido dela.'
+  suins_confirm_agent: '{name} apontará para a carteira do seu agente abaixo e será o nome predefinido dela. Pode ser necessária outra confirmação e SUI nessa carteira.'
+  suins_confirm_parent: '{name} permanece na carteira atual. O endereço e os dados não serão alterados.'
+  suins_confirm_apply: 'Confirmar alteração'
+  suins_player_default_funding: 'Os seus nomes foram atualizados, mas a carteira Google precisa de SUI para definir o nome predefinido.'
+  suins_player_default_refused: 'Os seus nomes foram atualizados, mas recusou a alteração do nome predefinido da carteira Google.'
+  suins_player_default_failed: 'Os seus nomes foram atualizados, mas a alteração do nome predefinido da carteira Google falhou. Verifique a carteira antes de tentar novamente.'
+  suins_player_default_uncertain: 'Os seus nomes foram atualizados. O resultado da transação do nome predefinido da carteira Google é desconhecido. Verifique-a na carteira antes de atualizar.'
+  suins_stale_review: 'O nome mudou durante a revisão. Atualize e reveja a alteração.'
   suins_title: Nome SuiNS
   suins_hint: 'Escolha um nome que você possui. Seus nomes atuais permanecem na sua carteira.'
   suins_external: 'Seu nome SuiNS padrão verificado aparece aqui. Gerencie-o na carteira externa ou no SuiNS.'
@@ -705,9 +714,8 @@ settings_page:
   suins_pending_uncertain: 'Nome do jogador aplicado; resultado da transação do agente desconhecido. Verifique antes de tentar novamente. Sem reenvio automático.'
   suins_pending_refused: 'Nome do jogador aplicado; assinatura do agente recusada. Aplique novamente apenas para tentar de novo.'
   suins_pending_failed: 'Nome do jogador aplicado; nome do agente pendente. Verifique a transação antes de tentar novamente.'
-  suins_invalid_parent: 'Este pai não é mais seu, está expirado ou não é elegível. Atualize e escolha outro.'
-  suins_collision: 'Um registro ativo ocupa um nome solicitado. Escolha outro pai.'
-  suins_metadata: 'Este reparo apagaria metadados existentes. O registro não foi alterado. Escolha outro pai.'
+  suins_invalid_parent: 'Este nome não está mais disponível na sua carteira. Atualize e escolha um nome.'
+  suins_collision: 'Este nome do AresRPG já está em uso. Escolha outro nome.'
   suins_unsupported: 'Nomes gerenciados não estão disponíveis para esta carteira ou rede.'
   suins_fund: 'Financiar carteira do agente'
   suins_current: Padrão atual
@@ -2478,6 +2486,11 @@ kares_page:
   inactive: 'O staking abre quando as reservas estiverem financiadas.'
   position: Posição
   tokenomics: Economia do token KARES
+  tabs_label: 'Seções de KARES'
+  tab_tokenomics: 'Tokenomics'
+  tab_staking: 'Staking'
+  signin_title: 'Entre para fazer staking'
+  signin_body: 'O staking usa sua conta de jogo. Entre com o Google para ver seu stake e resgatar suas recompensas.'
   community: 'Competições PvP e rankings sazonais'
   team: Alocação da equipe
   five_years: Recompensas comunitárias de staking
@@ -2716,6 +2729,17 @@ ui:
   funding_game_wallet: Carteira do jogo
   funding_external_wallet: Outra carteira
   agent_wallet: 'Carteira do agente'
+  wallet_tabs: 'Carteira'
+  wallet_game: 'Jogo'
+  wallet_bot: 'Bot'
+  wallet_you_sign: 'Você assina'
+  wallet_bot_signs: 'Seu bot assina'
+  wallet_transfer: 'Transferir'
+  wallet_from: 'De'
+  wallet_to: 'Para'
+  wallet_swap: 'Inverter De e Para'
+  wallet_coin: 'Moeda'
+  wallet_transfer_to: 'Transferir {{amount}} {{token}} para {{wallet}}'
   agent_activity_label: 'Atividade do agente'
   agent_activity_idle: 'À espera de um objetivo'
   agent_activity_active: 'A trabalhar'
@@ -2784,9 +2808,6 @@ ui:
   agent_label: 'Agente'
   agent_kiosk_badge: 'QUIOSQUE'
   agent_kiosk: 'Quiosque do agente'
-  agent_deposit: 'Depositar no agente'
-  agent_withdraw: 'Retirar para o jogador'
-  agent_coin_transfer: 'Transferir {{token}}'
   agent_coin_direct: 'As moedas são transferidas diretamente numa transação. O remetente paga o gas.'
   agent_pair_for_deposit: 'Verifique um assinante persistente do agente antes de depositar.'
   agent_inventory_connect: 'Verifique o endereço completo do agente para usar o inventário.'
@@ -2822,6 +2843,9 @@ ui:
   agent_copy_failed: 'Falha ao copiar. Selecione e copie manualmente o pedido acima.'
   agent_handoff_request: 'Prepare {{provider}} para Connect Your Agent seguindo {{url}}. Informe a configuração de assinatura em falta e peça a ligação temporária se necessário. Este pedido não autoriza criar credenciais, transferir ativos nem jogar.'
   agent_connect_your: 'Conecte seu agente'
+  agent_page_body: 'Deixe um assistente de IA jogar heróis por você. Ele joga a partir da própria carteira de bot, uma multisig da qual sua conta Google sempre pode retirar os ativos.'
+  agent_page_signin: 'Entre com o Google para configurar seu agente e a carteira de bot dele.'
+  agent_page_world: 'Abrir o mundo 3D'
   agent_bootstrap: 'Abrir instruções'
   agent_character_offer_hint: 'Isso envia uma oferta. Seu agente resgata o personagem separadamente. As taxas normais se aplicam.'
   agent_connected: 'Agente conectado'
@@ -2845,6 +2869,7 @@ ui:
   agent_hosted_authenticate: 'Autenticar com carteira Google'
   agent_hosted_ready: 'Configuração concluída'
   agent_hosted_consent: 'Conecte seu assistente'
+  agent_hosted_review: 'Um assistente pede acesso ao seu bot. Continue para ver o que ele pede; nada é partilhado antes de ligar.'
   agent_hosted_authority: 'Pode jogar e gastar os ativos deste bot.'
   agent_hosted_read_access: 'Pode visualizar este bot.'
   agent_hosted_pause_access: 'Pode pausar e retomar este bot.'
@@ -2908,6 +2933,11 @@ ui:
   design_no_title: 'Sem título'
   design_library: 'Oficina de design'
   design_controls: 'Controles'
+  design_components: 'Componentes'
+  design_prebuilt: 'Pré-construídos'
+  design_windows: 'Janelas'
+  design_feedback: 'Avisos'
+  design_tokens: 'Tokens'
   design_dialog: 'Abrir diálogo'
   design_disabled: 'Indisponível'
   design_details: 'Detalhes'
@@ -2967,12 +2997,6 @@ ui:
   formula_drop: saque = min(100%, base × faixa do monstro × (600 + Sorte média da equipe) / 600)
   formula_xp: XP = reserva de XP base × coeficiente de grupo × equilíbrio de nível × nível do jogador / nível do grupo × (100 + SAB) / 100
 
-menu_subtitle: 'AresRPG é um MMORPG por turnos totalmente on-chain, desenvolvido na Sui.'
-menu_start: 'Pressione Enter para começar'
-menu_start_touch: 'Toque para começar'
-menu_music_on: 'Ativar música'
-menu_music_off: 'Silenciar música'
-
 menu_build: 'VERSÃO'
 
 world_loading_assets: 'Carregando o cenário…'
@@ -2980,48 +3004,6 @@ world_loading_graphics: 'Preparando os gráficos…'
 world_loading_terrain: 'Construindo o mundo…'
 world_loading_sky: 'Preparando o céu e a iluminação…'
 world_loading_finishing: 'Preparando o primeiro quadro…'
-
-adventure:
-  choice_title: 'Sua primeira vitória'
-  choice_body: 'Os goblins foram derrotados. Suas recompensas esperam por você. Como sua aventura vai continuar?'
-  start_playing: 'Começar a jogar'
-  play_description: 'Entre com o Google e crie ou selecione seu personagem real. Criar personagens e jogar requer SUI.'
-  continue_tutorial: 'Continuar o tutorial'
-  continue_description: 'Equipe suas recompensas, conheça Sceat e aprenda a lutar em grupo.'
-  goblins_title: 'Abra o caminho'
-  goblins_objective: 'Derrote os goblins.'
-  equip_title: 'Prepare-se para a jornada'
-  equip_objective: 'Equipe todas as recompensas, incluindo seu mascote.'
-  equip_body: 'Abra o inventário e equipe todas as recompensas. Clique duas vezes num item, arraste-o para um espaço ou escolha Equipar. No jogo real, cada alteração inicia uma transação Sui; aqui, tudo é gratuito e simulado.'
-  speak_title: 'Um estranho na ponte'
-  speak_objective: 'Encontre Sceat na ponte e converse com ele.'
-  invite_title: 'Mais fortes juntos'
-  invite_objective: 'Clique com o botão direito em Sceat e escolha Convidar para o grupo.'
-  switch_title: 'Conheça seu Yajin'
-  switch_objective: 'Selecione a aba de Sceat. Você controla os dois heróis, cada um com suas magias e equipamentos.'
-  follow_title: 'Siga o líder'
-  follow_objective: 'Selecione Senshi, o líder. Ative Seguir o líder no painel do grupo.'
-  guards_title: 'A guarda real'
-  guards_objective: 'Atravesse a ponte e derrote os guardas reais. Arme armadilhas Yajin e empurre os inimigos para elas.'
-  boss_title: 'A relíquia de Gobadoc'
-  boss_objective: 'Enfrente Gobadoc, o rei Goblin, pela relíquia. Ele é muito mais poderoso que seus guardas.'
-  dialogue_greeting: 'Você é novo aqui! Sou Sceat.'
-  dialogue_danger: 'Este mundo é perigoso. Sozinho, você não vai longe. Vamos viajar juntos.'
-  dialogue_relic: 'Gobadoc, o rei Goblin, guarda uma relíquia poderosa. Ajude-me a passar pelos guardas e vamos encontrá-lo.'
-  journal: 'Aventura em Mosswood'
-  chapter: 'O rei Goblin'
-  speak_action: 'Falar com Sceat'
-  invite_action: 'Convidar Sceat'
-  rebirth_title: 'Você morreu devido aos seus ferimentos…'
-  rebirth_victory: 'Você derrotou Gobadoc. Muito bem! Mas o ataque dele havia envenenado você. Você perdeu a consciência, e o exército dele devorou seu corpo indefeso. A vitória custou sua vida.'
-  rebirth_body: 'Continue com o Google para renascer e entrar no jogo de verdade.'
-  goblins_body: 'Você começa em combate. Escolha sua posição, pressione Pronto e use seus feitiços e movimentos para derrotar os goblins. A vitória traz seu primeiro equipamento e o nível 200.'
-  speak_body: 'Os goblins caíram, mas a floresta ainda tem dentes. Um Yajin chamado Sceat assistiu à luta da ponte e parece pouco disposto a atravessá-la sozinho. Vá conversar com ele. Ele procura uma relíquia de Gobadoc, o rei goblin, e precisa de alguém que saiba revidar.'
-  invite_body: 'Sceat tem um plano. Infelizmente, ele envolve encontrar o maior goblin da floresta. Dois aventureiros têm mais chances, principalmente com habilidades diferentes. Clique com o botão direito em Sceat e convide-o para o grupo. Nesta aventura você controlará os dois heróis e decidirá como combinar suas habilidades.'
-  switch_body: 'Um companheiro é mais que outra barra de vida. Sceat é um Yajin: usa armadilhas e posicionamento onde Senshi prefere a força. Selecione-o no seletor de personagens para controlá-lo. Cada herói mantém seus próprios feitiços e equipamentos. Escolher quem age importa tanto quanto escolher o feitiço.'
-  follow_body: 'Você tem um grupo. Agora precisa mantê-lo unido. Selecione Senshi como líder e ative Seguir líder nos controles do grupo. Sceat seguirá você durante a exploração, evitando percorrer a mesma estrada duas vezes. No combate, você continuará escolhendo os movimentos e feitiços de cada herói.'
-  guards_body: 'Gobadoc não deixa sua entrada desprotegida. Os guardas estão prontos, e agora há dois heróis para coordenar. Confira seu novo equipamento antes de desafiá-los. Combine a força de Senshi com as armadilhas de Sceat. Um inimigo bem posicionado costuma ser mais fácil de derrotar que um perseguido sem pensar.'
-  boss_body: 'Depois dos guardas espera Gobadoc, com a relíquia que Sceat procura. O rei goblin não ganhou seu título perdendo lutas. Vocês aprenderam a lutar juntos, mas este adversário é diferente. Aproxime-se com seu companheiro e descubra até onde essa nova parceria pode levar vocês.'
 
 discord_marketplace:
   rare_loot_title: 'Saque raro de chefe'
@@ -3129,29 +3111,16 @@ allocation_page:
   error_connection_failed: 'A conexão com o servidor foi perdida. Reconecte.'
   error_connection_replaced: 'Esta carteira foi conectada em outra aba. Reconecte aqui quando estiver pronto.'
   error_restore_timeout: 'A restauração demorou demais. Conecte sua carteira novamente.'
-  error_x_changed: 'Sua conta do X mudou durante o envio. Recarregue e envie publicações da nova conta.'
-  open_x: 'Abrir X'
-  replace_x_note: 'Entre na outra conta no X e continue. Após a troca bem-sucedida, sua inscrição anterior será removida. Envie publicações da nova conta.'
-  replace_x: 'Trocar conta do X'
-  edit_note: 'Você pode editar e reenviar suas 1–3 publicações até o encerramento.'
-  edit_posts: 'Editar ou adicionar publicações'
-  checking_posts: 'Verificando publicações no X'
   connecting: 'Conectando e verificando carteira'
   restoring: 'Restaurando carteira'
   reconnect: 'Reconectar'
   error_title: 'Não foi possível concluir a ação'
-  pending_note: 'Os resultados serão confirmados após o encerramento das inscrições e a revisão. Nenhuma vaga está garantida ainda.'
-  current_rank: 'Sua posição atual'
-  projected_tier: 'Atualmente a caminho de {{tier}}'
-  rank_warning: 'Provisório: outros jogadores podem ultrapassar você antes do registro. Continue jogando.'
-  share_pending: 'Minha inscrição na whitelist KARES aguarda a revisão final. Confira a sua:'
   share_post: 'Tenho uma vaga {{tier}} na whitelist para a venda de KARES na @blastdotfun. Confira a sua:'
   menu_title: 'Confira sua vaga na whitelist'
   menu_note: 'Alocações de Veterano e Membro para a venda de KARES.'
   menu_action: 'Ver alocações'
   before: Antes da sobressubscrição
   buy_up_to: Comprar até
-  pending: Resultados pendentes
   no_spot: Sem spot desta vez
   source_reserved: Spot reservado
   source_pending: Seleção pendente
@@ -3165,66 +3134,28 @@ allocation_page:
   signature_note: Assine uma mensagem gratuita. Nenhuma transação ou pagamento é enviado.
   no_wallet_app: Instale uma carteira Sui para continuar.
   wallet_failed: Falha na conexão. Tente novamente.
-  x_entry: Sua inscrição no X
-  x_connect_note: Conecte o X para enviar publicações.
-  closed: Inscrições encerradas
   edit: Editar
-  saved_posts: Salvo · {{count}} de {{max}} publicações
-  metrics_note: 'Medimos o engajamento durante a revisão final.'
-  recipient_locked: Fixada após a primeira inscrição.
-  post_number: Publicação {{number}}
-  optional: opcional
-  post_limit: Até {{max}} publicações por conta X
   cancel: Cancelar
   save: Salvar
-  get_spot: Consiga um spot
-  get_spot_note: Suba nos rankings ou publique no X.
-  leaderboard_title: Suba nos rankings
-  leaderboard_note: 'Registramos os rankings após o encerramento das inscrições. Sua carteira do jogo acumula pontos; vinculá-la não altera a elegibilidade.'
-  veteran_boards: Os primeiros 1 ou 2 jogadores elegíveis de cada ranking recebem Veteran.
-  member_boards: Os próximos 7 recebem Member.
-  skip_duplicates: Carteiras já selecionadas são ignoradas.
   board_legend: 'Spots por ranking: Veteran / Member'
   play: Jogar AresRPG
-  x_title: Publique no X
-  x_note: Publique sobre AresRPG e envie seus links.
-  one_entry: Envie 1–3 publicações. Uma inscrição por conta X.
-  score_rule: 'Média: curtidas + 3× reposts + 3× citações. Respostas e visualizações não contam.'
-  x_winners: Os primeiros {{veteran}} recebem Veteran; os próximos {{member}}, Member.
-  leftovers: Spots não utilizados dos rankings passam ao X no mesmo nível.
-  quality_rule: Interações compradas e publicações copiadas podem ser excluídas após revisão.
   sale_title: A venda acontece na Blast
   sale_time: 'A data e o horário da venda serão anunciados.'
   results_title: 'Resultados da campanha'
   results_note: Suas cartas revelam os resultados antes da venda.
-  entries_close: Encerramento das inscrições
-  your_time: seu horário local
-  cards_revealed: Cartas reveladas
-  results_time: 'Após o encerramento das inscrições e a revisão.'
   spot_gives: O que um spot oferece
-  days: dias
-  hours: horas
-  minutes: min
-  seconds: s
   signing: Confirme a assinatura na carteira…
-  close_in: Inscrições encerram em
   no_spot_yet: Ainda sem spot
   your_allocation: Sua alocação
   total_cap: Até {{sui}} SUI em {{count}} spots
   allocation_note: Entre e vincule carteiras para consultar seus spots.
-  card_placeholder: Sua carta aparecerá aqui
-  one_card: Uma carta por carteira verificada.
-  share_x: Compartilhar no X
   footer: Um spot define o limite de contribuição, não uma quantidade fixa de tokens.
-  entry_note: 'A primeira inscrição fixa a carteira. Editar substitui publicações e reinicia a data. Empates: envio mais antigo, depois ID do X.'
   error_wallet_limit: Até dez carteiras, incluindo a carteira Google.
   title: Lista de acesso KARES
   veteran: Veteran
   member: Member
   public_note: O acesso público segue os termos do Blast. Os resultados podem estar pendentes.
-  connect_x: Conectar X
   recipient: Carteira destinatária
-  choose_wallet: Escolha uma carteira conectada
   preview: Prévia do link
   share: Compartilhar
   dilution: Os limites não garantem tokens. Se houver excesso de demanda, todos os compradores serão diluídos proporcionalmente.
@@ -3274,43 +3205,24 @@ allocation_page:
   sale_dilution: 'Se a venda arrecadar mais que a meta, cada comprador recebe menos KARES e recupera o SUI excedente no resgate.'
   google_wallet: Carteira de jogo Google
   loading: Carregando campanha
-  registration: Inscrições abertas
   final: Lista final · aguardando importação no Blast
-  refresh: Atualizar
   wallet: Carteira
   error_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
-  error_wallet_locked: O primeiro envio fixa a carteira destinatária. Reconecte-a para atualizar suas publicações.
   error_wallet_taken: Esta carteira já está vinculada a outra conta X.
   error_invalid_address: Insira um endereço Sui válido começando com 0x.
-  error_closed: Inscrições encerradas para o snapshot.
-  metric_xp: XP de combate
   board_xp: XP de combate · Classificação
-  metric_kills: Monstros derrotados
   board_kills: Monstros derrotados · Classificação
-  metric_dungeons: Masmorras
   board_dungeons: Masmorras · Classificação
-  metric_jobs: XP de profissão
   board_jobs: XP de profissão · Classificação
-  metric_marketplace: Mercado
   board_marketplace: Mercado · Classificação
-  metric_kolizeum: Kolizeum
   board_kolizeum: Kolizeum · Classificação
-  metric_zones: Descobertas
   board_zones: Descobertas · Classificação
-  metric_feeding: Alimentação de mascotes
   board_feeding: Alimentação de mascotes · Classificação
-  metric_gathering: Coleta
   board_gathering: Coleta · Classificação
   source_leaderboard: Suba nos rankings
   source_social: Publique no X
-  spots_count: '{{count}} spots'
   error_unauthorized: Conecte e verifique primeiro a carteira destinatária.
-  error_invalid_post: Use 1–3 links diferentes de publicações do X.
   error_rate_limited: Muitas solicitações. Tente novamente em instantes.
-  error_foreign_post: 'As publicações devem ser da conta do X conectada. Troque a conta ou os links.'
-  error_missing_post: 'Algumas publicações não foram encontradas. Confira os links e se elas são públicas.'
-  error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
-
 tournament_page:
   level_limit_label: 'Nível máximo na inscrição'
   level_unrestricted: 'Sem limite'
@@ -3558,116 +3470,593 @@ tournament_page:
   versus: contra {{team}}
 
 landing_page:
-  sound_on: 'Ativar música'
-  sound_off: 'Silenciar música'
-  new_tab: ' (opens a new tab)'
+  sound_on: Ativar música
+  sound_off: Silenciar música
+  new_tab: ' (abre em uma nova aba)'
   sign_alt: AresRPG
-  nav_label: Resources
+  nav_label: Recursos
   nav:
-    encyclopedia: Encyclopedia
-    journal: Journal
+    docs: Docs
+    journal: Diário
     discord: Discord
   kares:
     trigger: $KARES
     trigger_detail: Tokenomics
-    modal_label: $KARES tokenomics
-    close: Close
+  account:
+    login: Entrar
+    logging_in: Entrando…
+    signed_in: Conectado como {{address}}
+    failed: O login não foi concluído. Tente novamente.
+    logout: Sair
   hero:
+    eyebrow:
+      - Protocolo de MMORPG tático
+      - On-chain na Sui
     title:
-      - Explore planets.
-      - Fight in turns.
-      - Keep what you find.
-    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
-      craft and trade with other players, and compete when tournaments run. Or hand the controls to
-      your agent and watch it play.
-    play: Play
-    let_ai_play: Let AI play
+      - 'Um mundo, on-chain.'
+      - 'Jogue do seu jeito.'
+      - 'Fique com o que encontrar.'
+    lede: AresRPG é um protocolo de MMORPG tático na Sui. Personagens, saque e mercado vivem on-chain, e
+      qualquer interface pode jogá-los. Conclua masmorras com seu grupo, fabrique e negocie com
+      outros jogadores ou passe o controle para um agente.
+    play: 'Jogar em 3D'
+    play_bots: 'Jogar com bots'
+    ways:
+      - Um mundo
+      - Infinitas formas de jogar
+  chooser:
+    section: Interfaces
+    title: Escolha como jogar.
+    intro: AresRPG é um único jogo on-chain, sem uma única porta de entrada. Os mesmos personagens, o
+      mesmo saque, o mesmo mercado. Aqui estão cinco interfaces para começar, e qualquer pessoa pode
+      criar a próxima.
+    interface: Interface
+    specs:
+      runs_in: Roda em
+      role: Seu papel
+      good_for: Ideal para
+      status: Status
+    play:
+      manual: Manual
+      automated: Automático
+    items:
+      world:
+        name: Mundo voxel
+        line: O jogo 3D completo no seu navegador. Gráficos pesados, cada movimento é seu.
+        tech: Feito com three.js
+        status: Jogável
+        body: O jogo completo no seu navegador. Percorra os planetas, forme um grupo e lute você mesmo no
+          tabuleiro. No celular, o mesmo cliente muda para controles por toque.
+        runs_in: Navegador com uma GPU potente
+        role: Você joga cada movimento
+        good_for: Exploração e lutas em grupo
+        cta: Jogar
+        preview: Um personagem percorre uma trilha de terra pela floresta de cogumelos voxel de Mosswood,
+          com penhascos, cachoeiras e goblins à frente.
+      dapp:
+        name: Dapp web
+        line: Sem 3D. Mande sua equipe em missões e incursões em masmorras de qualquer celular.
+        tech: Roda em qualquer dispositivo
+        status: Jogável
+        body: O jogo sem o motor 3D. Mande seus personagens em missões, invada masmorras com sua equipe e
+          negocie o saque, tudo em uma página leve que roda em qualquer celular.
+        runs_in: Qualquer navegador, qualquer celular
+        role: Mande a equipe, colete o saque
+        good_for: Aparelhos simples, sessões curtas
+        cta: Abrir o dapp
+        preview: 'Prévia do design da dapp web: um personagem em missão com sua barra de vida, uma incursão
+          em masmorra aguardando uma chave e botões para enviar em missão, invadir uma masmorra ou
+          abrir o mercado.'
+      agent:
+        name: Seu agente
+        line: Claude, ChatGPT ou Grok assume o controle enquanto você assiste.
+        tech: Claude / ChatGPT / Grok
+        status: Em andamento
+        body: Conecte Claude, ChatGPT ou Grok a um bot hospedado do AresRPG. Combine um objetivo com ele e
+          assista enquanto ele joga com seu personagem dentro do jogo.
+        runs_in: ChatGPT, Claude ou Grok
+        role: Defina o objetivo e assista
+        good_for: Partidas sem intervenção
+        cta: Conecte seu agente
+        preview: 'Sessão de exemplo: você pede ao seu agente para eliminar os goblins do caminho, e ele
+          chama ferramentas do bot hospedado enquanto relata o andamento.'
+      telegram:
+        name: Telegram
+        line: 'Comande seus heróis por um chat. Escolha uma estratégia, aprove e acompanhe.'
+        tech: Um chat do Telegram
+        status: Lista de espera
+        body: 'Seu bot hospedado em um chat do Telegram. Escolha uma estratégia revisada para um herói, leia o que ela fará e aprove. Depois acompanhe o progresso ou pare-a no mesmo chat.'
+        runs_in: Um chat do Telegram
+        role: Escolha uma estratégia e aprove
+        good_for: 'Jogar sem as mãos pelo celular'
+        cta: Entrar na lista de espera
+        preview: 'Chat de exemplo: escolha uma estratégia, revise o que ela faz, aprove e depois confira o
+          status ou pare-a.'
+      sdk:
+        name: Seu próprio cliente
+        line: Crie um cliente, uma ferramenta ou um bot com o SDK público.
+        tech: SDK público
+        status: Código disponível
+        body: Construa sobre o SDK público que o próprio jogo usa. A licença permite clientes comerciais,
+          remakes, ferramentas de fãs e bots que rodam na implantação oficial. Seu cliente ou bot
+          assina com a própria carteira Sui.
+        runs_in: Tudo o que você construir
+        role: Você escreve o cliente
+        good_for: Clientes próprios, ferramentas, bots
+        cta: Leia o playbook
+        preview: 'Terminal com o índice do playbook público para agentes: blocos do SDK, disciplina de
+          estado e transações, o repositório do código e os pins da implantação.'
+    waitlist:
+      joining: Entrando na lista de espera…
+      joined: Você está na lista de espera
+      failed: Não foi possível entrar na lista de espera. Tente de novo.
+    agent_guide: Leia o guia
+    source: Ver o código
+    previews:
+      keys_then: depois
+      dapp:
+        title: Dapp web
+        label: Prévia do design
+        character: Senshi
+        questing: Em missão
+        dungeon: Ivory Rampart
+        needs_key: Precisa de chave
+        raid: Incursão para sua equipe
+        actions:
+          - Enviar em missão
+          - Invadir masmorra
+          - Mercado
+      agent:
+        title: Bot hospedado / MCP
+        label: Sessão de exemplo
+        you: você
+        agent: agente
+        call: call
+        lines:
+          - Elimine os goblins do caminho.
+          - Deixa comigo. Assista daqui.
+          - Goblins no caminho à frente. Vou desafiá-los.
+          - Luta iniciada. Escolhendo uma casa no tabuleiro.
+      telegram:
+        choose: Escolha uma estratégia
+        patrol: Patrulha urbana · 1 monstro
+        gather: Coletar e fabricar
+        review: Revise esta estratégia
+        review_detail: Luta contra grupos de um só monstro nesta cidade até ser parada.
+        approve: Aprovar
+        menu: Menu
+        running: Estratégia em execução
+        status: Status
+        stop: Parar estratégia
+      sdk:
+        label: Índice do playbook
+        build: Construa o bot
+        build_lines:
+          - 'Blocos do SDK: composição de ações, planejamento offline e simulação de combate.'
+          - 'Disciplina de estado e transações: atualidade, recibos e recuperação.'
+        source: Código e implantação
+        source_lines:
+          - 'Repositório do código: código do SDK, licença e versão correspondente.'
+          - 'Pins de implantação: confira com a implantação pretendida.'
   earn:
-    title: Three ways to earn as you play
-    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
-      them.'
-    bays:
-      - Key of Ivory Rampart
-      - Tidal Horn Core and Amberwood Recurve
-      - Tournaments
+    section: Economia
+    title: Receba em SUI. De três formas.
+    intro: Outros jogadores pagam você. Você vende para eles, fabrica para eles ou os vence.
     paths:
-      - title: Sell your dungeon drops
-        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
-          the marketplace, and receive SUI when another player buys.
-      - title: Gather, craft and trade
-        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
-          or sell the materials themselves.
-        link: Browse the item encyclopedia
-      - title: Win tournament prizes
-        body: When a tournament runs, play for its announced prizes. Your final placement decides your
-          share.
-  world:
-    title: Inside the Mosswood tutorial
-    label: Real gameplay captures from the Mosswood tutorial
-    beats:
-      - title: Explore the planets
-        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
-          the locals.
-      - title: Walk up and challenge
-        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
-      - title: Fight in turns
-        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
-          marks the goblins. Plan every move.
-    keys_label: Press W to walk up, then F to challenge
-    keys_then: then
-    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
-      waterfalls and goblins ahead.
-    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
-    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
-      reachable positions; orange tiles mark the goblins.
-    marks:
-      you: You
-      tiles: Tiles you can reach
-      goblins: Goblins
-  agent:
-    title: Your agent plays. You watch.
-    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
-      run while you watch, and you can stop watching whenever you like.
-    character: Senshi
-    status_connecting: Connecting…
-    status_watching: Watching Senshi
-    stop: Stop watching
-    you: You
-    your_agent: Your agent
-    said:
-      - Clear
-      - the
-      - goblins
-      - on
-      - the
-      - path.
-    bubbles:
-      - On it. Watch from here.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    call_title: Voice call
-    call_detail: with your agent
-    log:
-      - Clear the goblins on the path.
-      - On it. Watch from here.
-      - Following the path through Mosswood.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    replay: Replay
-    note: Filmed in Mosswood. Your agent’s lines are an example.
+      - tag: Mercado
+        title: Invada masmorras.
+        accent: Venda o saque.
+        body: Conclua uma masmorra com sua equipe e anuncie os drops. O comprador paga você em SUI.
+      - tag: Profissões
+        title: Colete e fabrique.
+        accent: Venda o equipamento.
+        body: Suba uma profissão de nível, fabrique o que os lutadores precisam e venda isso ou as
+          matérias-primas.
+        link: Explore todos os itens
+      - tag: Torneios
+        title: Vença lutas.
+        accent: Leve o prêmio.
+        body: Quando houver um torneio, sua colocação final decide sua parte do prêmio.
+  control:
+    section: Controle
+    title: Automatize ou assine cada movimento.
+    intro: Duas formas de assumir o controle. Ambas rodam no mesmo jogo on-chain, e você pode usar um
+      personagem de cada forma.
+    you: Você
+    holds: detém o personagem
+    used_by: Usado por
+    automated:
+      tag: Automático
+      title: Um agente hospedado joga por você.
+      body: Entregue um personagem a uma conta compartilhada e defina um objetivo. Nosso agente hospedado
+        joga com ele dia e noite enquanto você assiste ou faz outra coisa.
+      figure: 'Diagrama: você e o agente hospedado têm, cada um, uma de duas chaves de uma conta multisig
+        compartilhada que detém o personagem.'
+      you_detail: Login com Google
+      vault: 1-of-2 multisig
+      agent: Agente hospedado
+      agent_detail: joga os movimentos
+      points:
+        - O agente nunca recebe a chave da sua carteira.
+        - Você aprova o bot exato e o que ele pode fazer antes de começar.
+        - Recupere seu personagem pelo inventário quando quiser, mesmo com o agente offline.
+    self:
+      tag: Não custodial
+      title: Você assina cada movimento.
+      body: Entre com o Google. Seus personagens e itens ficam na sua conta, e nada acontece sem a sua
+        assinatura.
+      figure: 'Diagrama: você assina com sua conta Google, e sua própria conta guarda o personagem.'
+      you_detail: Login com Google
+      vault: Sua conta
+      points:
+        - Ninguém mais pode mover seus personagens ou gastar seus SUI.
+        - Cada luta, fabricação e venda é uma transação que você assina.
+        - Passe um personagem para um agente hospedado depois e pegue-o de volta quando quiser.
   end:
-    title: Start in Mosswood
-    body: The tutorial takes you from the first path to your first turn-based fight.
-    play: Play
-    discord: Join the Discord
+    title: Comece sua aventura
+    body: Entre, crie seu personagem e parta para sua primeira luta por turnos.
+    play: Jogar
+    discord: Entre no Discord
+    pick: 'Sua escolha:'
   footer:
     wordmark: AresRPG
-    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
-    game: Game
-    community: Community
-    play: Play
-    encyclopedia: Item encyclopedia
-    journal: Journal
+    tagline: Um MMORPG voxel tático na Sui, espalhado por vários planetas.
+    game: Jogo
+    community: Comunidade
+    play: Jogar
+    encyclopedia: Enciclopédia de itens
+    journal: Diário
     discord: Discord
     telegram: Telegram
     x: X
+    allocation: Confira sua vaga na whitelist
+    colophon: um mundo, interfaces ilimitadas
+
+telegram_companion:
+  connect_google: '🔑 Google'
+  waiting: 'Sua conta de jogo ainda não tem acesso pelo Telegram. Entre na lista de espera para pedir.'
+  on_waitlist: '✅ Você está na lista de espera. Use “Verificar acesso” para ver se sua conta de jogo foi admitida.'
+  join_waitlist: 'Entrar na lista de espera'
+  check_access: 'Verificar acesso'
+  inventory: '🎒 Inventário'
+  inventory_empty: 'Sua bolsa está vazia'
+  observation_unknown: 'Ainda indisponível'
+  no_strategy: 'Nenhum personagem está executando uma estratégia.'
+  strategy_active: 'Estratégia ativa'
+  strategy_waiting: 'Estratégia aguardando'
+  replace_strategy: 'Isto substitui a estratégia que este personagem está executando. Ações enviadas ainda podem terminar.'
+  fight: '⚔️ Em combate'
+  ambush: '🛡 Protetor aguardando'
+  idle: 'Pronto para uma estratégia'
+  external_strategy: 'Estratégia de outro aplicativo'
+  menu: '🧙 Escolha seu personagem'
+  loading: '⏳ Carregando personagens'
+  empty: '🧙 Nenhum personagem de agente jogável'
+  play: '▶️ Jogar'
+  back: '☰ Menu'
+  status: '📍 Estado'
+  approve: '✅ Autorizar'
+  link: '🔑 Use /link para conectar Google no navegador'
+  linked: '✅ Google vinculado · /menu'
+  unlinked: '🔓 Desvinculado'
+  confirm: 'Envie o comando abaixo no seu chat do Telegram para concluir a vinculação.'
+  confirm_warning: 'Não compartilhe este código. Confirme apenas um login que você mesmo iniciou.'
+  browser_expired: 'Esta página expirou. Volte ao Telegram e use /link para entrar novamente.'
+  check_status: '📍 Ver status'
+  log_in_again: '🔑 Entrar novamente'
+  balance: '💰 Saldo do agente'
+  pause: '⏸ Pausar agente'
+  resume: '▶️ Retomar agente'
+  wallet_scope: 'Afeta toda a carteira do agente e outros conectores · Transações enviadas ainda podem terminar'
+  paused: '⏸ Agente pausado'
+  resumed: '▶️ Agente retomado'
+  choose_strategy: 'Escolha uma estratégia'
+  failure_changed: 'Isso foi atualizado. Este é o estado atual.'
+  failure_reconnect: 'Seu login expirou. Entre novamente:'
+  failure_unlink_first: 'Este chat ou esta conta Google já está conectado, ou há um login em aberto. Use /unlink e tente de novo.'
+  failure_temporary: 'Desta vez não funcionou. Tente novamente em instantes.'
+  failure_busy: 'Este personagem ainda está concluindo uma ação, ou o agente está pausado. Se você o pausou, use /resume e depois confira o status.'
+  failure_run_limit: 'Seu agente já conduz todos os personagens que consegue. Pare um e depois inicie este.'
+  review: 'Revise esta estratégia'
+  effects: 'Combate grupos de um monstro nesta cidade até parar. Cada ação gasta gás SUI, sem limite total. Sem garantia de vitória; reiniciar pode repetir uma etapa. Parar não cancela ações enviadas.'
+  stop: 'Parar estratégia'
+  stop_scope: 'Escolha o personagem a parar. Os outros continuam jogando; transações enviadas ainda podem terminar.'
+  stop_all: 'Parar todos'
+  stopped: 'Estratégia parada'
+  completed: 'Estratégia concluída'
+  attention: 'A estratégia precisa de atenção. Confira seu personagem no jogo e use Status ou Parar.'
+  unknown: 'O resultado ainda não foi confirmado. Confira primeiro o status.'
+  city_review: 'Cidade: {city}'
+  city_required: 'Entre em uma cidade no jogo e revise novamente com /menu.'
+  enable_agent: '🔑 Ativar agente'
+  play_consent: 'Sua conta de jogo foi admitida. Autorize o agente para continuar.'
+  world_review: 'Mundo: {world}'
+  gather_effects: 'Fabrica receitas úteis com ingredientes disponíveis para avançar nas profissões; senão coleta com ferramentas disponíveis e explora este mundo. Enfrenta protetores com táticas básicas. Continua até parar. Gás SUI e ingredientes sem limite total; pode falhar. Reiniciar pode repetir uma etapa. Parar não cancela ações enviadas.'
+  strategies:
+    fight_nearby: '⚔️ Patrulha urbana · 1 monstro'
+    gather_craft: '🌿 Coletar e fabricar'
+
+docs_page:
+  title: Docs
+  nav_label: Seções da documentação
+  home: Início
+  play: Jogar
+  menu: Menu
+  previous: Anterior
+  next: Próximo
+  search: Busque guias, itens e monstros
+  search_empty: Nenhuma página corresponde a esta busca.
+  new_tab: ' (abre em uma nova aba)'
+  data_note: Os números destas páginas vêm dos mesmos arquivos de conteúdo do jogo.
+  kinds:
+    guide: Guia
+    item: Item
+    mob: Monstro
+  groups:
+    start: Comece aqui
+    mechanics: 'Mecânicas de jogo'
+    automated: 'Jogo automatizado'
+    reference: 'Referência'
+    economy: Economia
+    build: Construir
+  guides:
+    overview: O que é o AresRPG
+    first_hour: 'Guia do iniciante'
+    market: Mercado
+    agents: 'Conectar um assistente'
+    build: Construa sobre o AresRPG
+    kares: Token KARES
+    ways: 'Formas de jogar'
+    bots: 'Bots hospedados'
+  overview:
+    lede: 'AresRPG é um MMORPG tático que funciona como um protocolo na Sui. Personagens, itens, lutas e o mercado são objetos e transações on-chain. O jogo que você vê é um cliente desse protocolo, e existem vários.'
+    counts:
+      items: Itens
+      spells: Feitiços
+      mobs: Monstros
+      recipes: Receitas
+      classes: Classes
+      jobs: Profissões
+    protocol_title: 'Um protocolo, não um único cliente'
+    protocol:
+      - 'As regras do jogo são contratos inteligentes. Uma luta, uma criação, uma colheita ou uma venda é uma transação, e o resultado é o mesmo seja qual for a interface que a enviou.'
+      - 'Sua conta é dona dos seus personagens e itens. Nenhuma interface os guarda por você, exceto um bot hospedado ao qual você decide entregar um personagem.'
+      - 'Toda interface lê o mesmo estado. Uma luta iniciada no mundo 3D pode ser acompanhada de outra página, e o saque ganho por um bot aparece no seu inventário.'
+    loop_title: 'O que você faz no jogo'
+    loop:
+      - 'Lute por turnos contra grupos de monstros em uma grade. A cada turno você gasta pontos de ação em feitiços e pontos de movimento em passos.'
+      - 'Colete recursos e crie ferramentas, equipamentos e consumíveis nas suas profissões.'
+      - 'Conclua masmorras em grupo, sala após sala, pelo saque do chefe.'
+      - 'Negocie com outros jogadores no mercado, em SUI.'
+  ways:
+    lede: 'O protocolo não tem uma única porta de entrada. Cada interface abaixo joga com os mesmos personagens, o mesmo saque e o mesmo mercado. Elas diferem em quem faz as jogadas e no que você precisa para usá-las.'
+    note: 'Você pode usar várias interfaces, com um limite: uma conexão ativa por conta. Abrir o jogo 3D substitui uma sessão da dapp web da mesma conta.'
+  bots:
+    lede: 'Um bot hospedado joga com seus heróis por você nos servidores da AresRPG. A dapp web, o Telegram e um assistente conectado controlam o mesmo bot.'
+    wallet_title: 'A carteira do bot'
+    wallet:
+      - 'Um bot joga a partir da própria carteira, separada da sua carteira de jogo. É uma multisig 1 de 2: o serviço hospedado pode assinar por ela, e sua conta Google também.'
+      - 'Heróis e itens que você entrega vão para essa carteira. Lá o jogo é custodial: o serviço assina as jogadas.'
+      - 'Você pode retomar tudo pela sua própria conta a qualquer momento, mesmo com o bot offline. Um resgate só precisa da sua assinatura.'
+      - 'O bot paga as próprias taxas de rede. Mantenha um pouco de SUI na carteira dele. Transferir move SUI e KARES entre suas duas carteiras.'
+    does_title: 'O que um bot faz'
+    does:
+      - 'Cada herói executa uma atividade por vez, como lutar ao redor de uma cidade, coletar e criar, ou concluir uma masmorra. Você escolhe, e o bot segue até terminar ou até você parar.'
+      - 'Heróis da mesma carteira de bot podem lutar em equipe.'
+      - 'Você pode pausar o bot ou parar um herói a qualquer momento. Uma ação já enviada à rede ainda termina.'
+      - 'Um bot espera quando não tem nada aprovado para fazer, ou quando a carteira não tem SUI para taxas.'
+    control_title: 'Quem pode comandá-lo'
+    control:
+      - 'A dapp web: iniciar e parar atividades, subir atributos e feitiços, e negociar no mercado como o bot.'
+      - 'Telegram: escolher uma estratégia revisada e aprová-la.'
+      - 'Um assistente (ChatGPT, Claude ou Grok): combine um objetivo no chat. Ele chama as ferramentas do bot dentro do que você aprovou.'
+  first_hour:
+    lede: 'O objetivo da sua primeira hora: um personagem, algumas lutas vencidas e uma ferramenta
+      fabricada por você. As taxas de drop e a receita abaixo são as reais.'
+    drop_chance: '{{chance}}% de chance de drop'
+    steps:
+      - title: Crie um personagem.
+        body: A criação custa {{price}} SUI mais gas. Sua classe define seus feitiços, então escolha
+          com cuidado.
+      - title: Vença suas primeiras lutas.
+        body: Estes monstros rondam a primeira cidade. Aproxime-se de um grupo e desafie-o.
+      - title: Reúna as peças de uma ferramenta.
+        body: Sua primeira ferramenta de coleta é feita com drops de monstros. Cada peça aparece com sua
+          melhor fonte.
+      - title: Fabrique-a.
+        body: Abra a profissão {{job}} e fabrique a ferramenta. Uma fabricação pode falhar e ainda
+          consome os ingredientes, então leve peças extras.
+      - title: Mire na primeira masmorra.
+        body: Com um grupo e esta chave, você pode entrar na masmorra da primeira cidade.
+  market:
+    lede: Jogadores vendem para jogadores. Itens e recursos são negociados por anúncios on-chain, e o
+      vendedor recebe em SUI.
+    royalty: Royalty
+    royalty_floor: Royalty mínimo
+    lot_sizes: Tamanhos de lote
+    points:
+      - O comprador paga o preço anunciado, mais o royalty, mais o gas.
+      - O vendedor recebe o preço anunciado e o retira em uma ação separada.
+      - Em um anúncio barato, o royalty mínimo faz diferença. Compare o custo total de um lote, não só
+        o preço anunciado.
+  kares:
+    lede: O KARES ainda não está pronto. Ele será adicionado em breve.
+    note: Esta página vai descrever o token, sua oferta e seus fundos de recompensas quando ele for
+      lançado. Nenhum saldo, preço ou valor de recompensa é publicado antes disso.
+  agents:
+    lede: Conecte ChatGPT, Claude ou Grok a um bot hospedado do AresRPG. Você combina um objetivo, e o
+      assistente joga com seu personagem dentro dele. Este recurso está em desenvolvimento.
+    steps:
+      - Escolha seu assistente e adicione o endereço de conexão do AresRPG como conector personalizado.
+      - Entre com o Google e depois aprove o bot exato e o que ele pode fazer.
+      - Entregue um personagem do seu inventário. Você pode recuperá-lo a qualquer momento.
+    points:
+      - O assistente nunca recebe uma chave de carteira e nunca pede uma no chat.
+      - O jogo hospedado é custodial. Uma conta compartilhada 1 de 2 guarda o personagem e o agente
+        hospedado assina os movimentos. Seu login com o Google continua sendo sua autenticação e sua
+        recuperação.
+      - Um bot conectado nem sempre está ativo. Ele espera quando não tem um próximo passo aprovado.
+    guide: Leia o guia de conexão
+    index: Abra o playbook para agentes
+  build:
+    lede: O cliente do jogo é construído sobre um SDK público. Você pode criar seu próprio cliente,
+      ferramenta ou bot com as mesmas ações.
+    source_title: Repositório do código
+    source_body: Código do SDK, licença e versão correspondente.
+    playbook_title: Playbook para agentes
+    playbook_body: 'Os guias para desenvolvedores: conexão, custódia, SDK, protocolo, combate e
+      economia.'
+    blocks_title: Blocos básicos
+    blocks:
+      - 'Composição de ações: monte as mesmas transações que o jogo envia.'
+      - 'Planejamento offline: consulte receitas e progressão sem assinante.'
+      - 'Simulação de combate: planeje um turno antes de confirmá-lo.'
+      - 'Pins de implantação: confira se você está falando com a implantação oficial.'
+    license_title: Licença
+    allowed_title: Permitido
+    allowed:
+      - Publicar e operar clientes comerciais, remakes do jogo, ferramentas de fãs, serviços e bots.
+      - Automação que joga para lucrar.
+    forbidden_title: Não permitido
+    forbidden:
+      - Implantar ou republicar os contratos do jogo, ou derivados deles, em qualquer blockchain.
+      - Usar o nome ou o logo AresRPG como sua marca.
+    license_note: Esta página é um resumo. O texto da licença é o que vale. Mantenha a licença e os
+      avisos de copyright ao redistribuir.
+    license_link: Leia a licença
+
+dapp_page:
+  brand: 'Expedições'
+  mode_label: 'Modo da interface'
+  mode_basic: 'Básico'
+  mode_advanced: 'Avançado'
+  nav_label: 'Seções'
+  nav_play: 'Jogar'
+  nav_market: 'Mercado'
+  bot_balance: 'Bot: {amount} SUI'
+  bot_balance_hint: 'SUI que o seu bot hospedado guarda. Com eles ele paga as taxas de rede dos seus heróis e o que você compra no mercado.'
+  loading: 'Carregando…'
+  signing_in: 'Entrando…'
+  signin_title: 'Envie seus heróis em expedições'
+  signin_body: 'Entre com o Google para ver seus heróis e deixar seu bot hospedado jogar por eles. A mesma conta, heróis e itens do mundo 3D.'
+  signin_failed: 'O login não terminou. Tente de novo.'
+  google_title: 'Login com Google necessário'
+  google_body: 'Os heróis hospedados pertencem à sua conta Google. Saia e continue com o Google para usar esta página.'
+  unavailable_title: 'O serviço automatizado não está respondendo'
+  unavailable_body: 'Use o mundo 3D por enquanto.'
+  unavailable_action: 'Abrir o mundo 3D'
+  connect_title: 'Conecte seu bot hospedado'
+  connect_body: 'Seu bot joga com seus heróis por você. Permita que esta página inicie e pare as atividades dele.'
+  connect_custody: 'A conta do seu bot é compartilhada entre a sua conta Google e a AresRPG: qualquer uma pode assinar, e você sempre pode recuperar seus heróis.'
+  connect_fees: 'Cada ação é uma transação Sui paga com o saldo do bot. As atividades continuam até você pará-las ou o saldo acabar.'
+  connect_stop: 'Esta página pode fazer seu bot jogar e pausar, e negociar no mercado com o saldo dele. Ela não pode sacar seus SUI.'
+  connect_action: 'Conectar'
+  connect_busy: 'Conectando…'
+  reading_heroes: 'Lendo seus heróis…'
+  syncing: 'Seu bot está se atualizando com o mundo. Esta página se atualiza sozinha.'
+  observe_failed_title: 'Seu bot não está respondendo'
+  observe_failed: 'Não conseguimos falar com seu bot. Recarregue esta página para tentar de novo.'
+  empty_title: 'Seu bot ainda não tem heróis'
+  empty_body: 'Crie um herói no mundo 3D, clique com o botão direito no retrato dele e escolha Enviar ao agente. Ele aparece aqui quando chegar.'
+  empty_action: 'Abrir o mundo 3D'
+  heroes_title: 'Seus heróis'
+  hero_level: 'Nível {level}'
+  hero_xp: 'Experiência'
+  status_free: 'Pronto'
+  status_activity: 'Em atividade'
+  status_fight: 'Em combate'
+  status_dungeon: 'Em uma masmorra'
+  activities_title: 'Atividades'
+  activities_team: 'Cada botão envia todos os heróis livres. Heróis na mesma cidade vão em equipe.'
+  activities_hero: 'Estes botões agem apenas sobre {name}.'
+  activities_build: 'No modo Básico, os heróis da classe {classe} também evoluem sozinhos: os pontos de características vão para {stat}, os pontos de feitiço primeiro para {spell}, e eles usam o melhor equipamento que possuem.'
+  activity_ready: 'Prontos: {names}'
+  activity_out: 'Em andamento: {names}'
+  activity_other: 'Atividade'
+  activity_train: 'Treinar'
+  activity_train_body: 'Lutar contra monstros na cidade atual de cada herói por experiência e espólio. Sozinho, um herói escolhe monstros solitários; heróis na mesma cidade caçam em equipe.'
+  activity_train_action: 'Começar a treinar'
+  activity_gather: 'Coletar'
+  activity_gather_body: 'Coletar e fabricar no mundo do herói com as ferramentas dele, evoluindo suas profissões.'
+  activity_gather_action: 'Começar a coletar'
+  activity_raid: 'Incursão'
+  activity_raid_body: 'Entrar na masmorra da cidade deste herói pelo espólio mais raro. O herói usa uma chave.'
+  activity_raid_body_basic: 'Enviar seus heróis livres mais fortes, no máximo {size}, para {dungeon} pelo espólio mais raro. Cada herói usa uma chave.'
+  activity_raid_action: 'Começar incursão'
+  blocker_command_pending: 'Aguardando a resposta do seu bot…'
+  blocker_no_free_hero: 'Nenhum herói está livre para isso agora.'
+  blocker_hero_busy: '{names}: em combate ou em uma masmorra agora.'
+  blocker_hero_unknown: '{names}: seu bot ainda está lendo este herói. Tente de novo em instantes.'
+  blocker_city_required: '{names}: não está em uma cidade. Leve o herói para uma cidade no mundo 3D primeiro.'
+  blocker_world_required: '{names}: em outro mundo que não o desta masmorra.'
+  blocker_key_missing: '{names}: sem chave para esta masmorra.'
+  blocker_team_full: '{names}: a equipe de incursão já está completa.'
+  key_missing: 'Falta: {count} × {item}'
+  key_find: 'Procurar {item} no mercado'
+  key_unsold: 'Ninguém está vendendo {item} agora.'
+  raid_short_title: 'Não há chaves para a equipe toda'
+  raid_short_body: 'Você só tem chaves para {count}. Na masmorra só entra: {names}. Se quiser enviar mais heróis, encontre ou compre as chaves que faltam.'
+  raid_short_action: 'Começar incursão com {count}'
+  cancel: 'Cancelar'
+  close: 'Fechar'
+  command_uncertain: 'Não conseguimos confirmar a resposta do seu bot. Esta página verifica de novo sozinha; nada será enviado duas vezes.'
+  command_refused: '{names}: {reason}'
+  positions_title: 'Posições'
+  positions_empty: 'Comece uma atividade para acompanhar o progresso aqui.'
+  position_running: 'Em andamento'
+  position_waiting: 'Seu bot está esperando: ele não pode continuar esta atividade agora.'
+  position_stopping: 'Parando…'
+  position_finished: 'Concluída'
+  position_ended_issue: 'Seu bot parou esta atividade. Verifique o saldo dele e o seu herói e comece de novo.'
+  position_hp: 'Vida'
+  position_xp: 'Experiência ganha'
+  position_levels: '+{count} níveis'
+  position_job_xp: 'Experiência de profissão'
+  position_fights: 'Combates'
+  position_dungeon: '{dungeon} · sala {room}'
+  position_team: 'Lutando com {names}'
+  position_loot: 'Itens encontrados'
+  position_no_loot: 'Nenhum item encontrado ainda.'
+  position_stop: 'Parar'
+  position_dismiss: 'Dispensar'
+  haul_title: 'Trazido de volta'
+  haul_spent: 'SUI usados: {amount}'
+  haul_spent_hint: 'SUI que saíram da carteira do seu bot enquanto seus heróis estavam fora: taxas de rede, compras e transferências de saída.'
+  found_toast: 'Seu herói encontrou'
+  hero_action_sent: 'Enviado ao seu bot.'
+  detail_title: '{name} em detalhe'
+  detail_locked: 'Características e feitiços podem mudar enquanto este herói não estiver em combate e seu bot não tiver outro pedido em aberto.'
+  detail_stats: 'Características'
+  detail_spells: 'Feitiços'
+  detail_equipment: 'Equipamento'
+  equipment_empty: 'Nenhum equipamento em uso.'
+  market_account: 'Este mercado opera como o seu bot: ele paga com o saldo do bot, e o que você compra vai para a bolsa que seus heróis dividem. Uma oferta ainda não pode ser retirada por esta página, e o valor de uma venda fica no quiosque do bot.'
+  market_queued: 'Seu bot recebeu seu pedido de {item}. Ele assina depois da ação em andamento.'
+  market_bought: 'Comprado: {amount} × {item}. Está na bolsa dos seus heróis.'
+  market_listed: 'Colocado à venda: {amount} × {item}.'
+  error_unknown: 'Algo deu errado. Tente de novo.'
+  error_expired: 'A conexão com seu bot expirou. Conecte de novo.'
+  error_google_required: 'Continue com o Google para conectar um bot hospedado.'
+  error_consent_failed: 'A conexão não foi aprovada. Tente de novo.'
+  error_owner_mismatch: 'Esse bot pertence a outra conta. Entre com a conta Google correta.'
+  error_storage_unavailable: 'Este navegador bloqueia o armazenamento que a conexão precisa. Permita os dados do site e tente de novo.'
+  error_bot_busy_or_paused: 'Seu bot está pausado ou ainda termina a última ação deste herói. Tente de novo em instantes.'
+  error_run_limit_reached: 'Seu bot já joga com todos os heróis que consegue. Pare um e tente de novo.'
+  error_needs_resync: 'Seu bot ainda estava se atualizando. Tente de novo em alguns segundos.'
+  error_start_unconfirmed: 'Nada está em andamento: seu bot não aceitou a atividade. Você pode começá-la de novo.'
+  error_unavailable: 'Seu bot não está respondendo. Tente de novo em instantes.'
+  error_invalid_token: 'A conexão com seu bot expirou. Conecte de novo.'
+  error_insufficient_scope: 'Esta conexão não permite isso. Conecte de novo para autorizar.'
+  error_behavior_run_not_found: 'Não há mais nada em andamento para este herói.'
+  error_insufficient_character_points: 'Pontos insuficientes.'
+  error_spell_rank_capped: 'Este feitiço já está no nível máximo.'
+  error_tool_failed: 'Seu bot não conseguiu fazer isso. Tente mais tarde.'
+  error_insufficient_funds: 'Seu bot não tem SUI suficientes para isso. Adicione SUI ao seu bot e tente de novo.'
+  error_listing_changed_or_ineligible: 'Esta oferta mudou ou não existe mais. Confira o preço atual e tente de novo.'
+  error_character_not_available: 'Nenhum dos seus heróis está livre para carregar isso agora: eles estão em combate. Tente de novo em instantes.'
+  error_sale_source_changed_or_unavailable: 'Este item mudou, ou nenhuma pilha dele é grande o bastante. Escolha-o de novo.'
+  error_order_failed: 'O pedido não foi concluído. Confira o saldo e a bolsa do seu bot antes de tentar de novo.'
+  error_order_unconfirmed: 'Não foi possível confirmar este pedido e a bolsa não mudou. Confira o saldo do seu bot antes de tentar de novo.'
+  disconnect_action: 'Desconectar esta página'
+  disconnect_body: 'Remove o acesso desta página ao seu bot. As atividades que ela iniciou deixam de aceitar novas ações. Terminar sessão faz o mesmo.'
+  disconnect_failed: 'O seu bot não confirmou. Esta página ainda tem acesso. Tente novamente.'

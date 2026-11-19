@@ -1,55 +1,34 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
-/* Draft authored by Claude Opus 5.5 (claude-opus-5-5): accepted V19 landing styles, scoped.
-   Every rule is scoped to the .landing root, except the NativeModal portal, which carries its own landing-owned class
-   (.landing-modal) because @aresrpg/ui mounts dialogs on document.body. No html/body rule exists here. The accepted
-   html.pin / html[data-motion] states are attributes on .landing ([data-pin], [data-motion]) set by landing_motion.ts.
-   Typography uses @aresrpg/ui's 'Ares UI' faces (byte-identical Nunito 400/700/800). */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 
-.landing,
-.aui-native-modal.landing-modal {
-  --night: #12161e;
-  --ink: #efe8dc;
-  --ink-soft: #d6d0c4;
-  --ink-faint: #b2aea5;
-  --ink-hi: #f4efe6;
-  --gold: #f2b552;
-  --gold-ink: #2b1a05;
-  --rune: #76c8ff;
-  --rune-ink: #06213a;
-  --plate: #ecd19c;
-  --font: 'Ares UI', Nunito, ui-rounded, system-ui, sans-serif;
-  --halo: 0 0 2px #090b10, 0 0 10px #090b10, 0 0 22px rgb(9 11 16 / 0.85);
-  --carve: 0 -2px 0 #05070c, 0 2px 0 #343c4c, 0 0 18px #090b10, 0 14px 34px #000;
-  color-scheme: dark;
-}
-/* The landing is its own full-viewport native scroll container, independent of the game shell's overflow policy. */
+/* Every rule is scoped to the .landing root. Colours resolve to the shared --aui-* tokens; the only landing-owned
+   colours are the $KARES plaque artwork. Typography uses @aresrpg/ui's 'Ares UI' faces. */
 .landing {
-  --wide: min(1120px, calc(100vw - 40px));
-  --text: min(720px, calc(100vw - 40px));
-  --nav-r: clamp(16px, 3.2vw, 60px);
-  --dock-w: 128px;
+  --hue: var(--aui-orange);
+  --if-world: var(--aui-hue-green);
+  --if-dapp: var(--aui-hue-gold);
+  --if-agent: var(--aui-hue-clay);
+  --if-telegram: var(--aui-hue-sky);
+  --if-sdk: var(--aui-hue-lilac);
+  --mono: var(--aui-font-mono);
+  --grain: url('../../../ui/src/assets/panel_grain.webp');
+  --sec: clamp(72px, 11vw, 152px);
+  /* The landing is its own full-viewport native scroll container, independent of the game shell's overflow policy. */
   position: fixed;
   inset: 0;
   z-index: 0;
   isolation: isolate;
   overflow-x: clip;
   overflow-y: auto;
+  scroll-behavior: smooth;
   scroll-padding-top: 16px;
-  background: var(--night);
-  color: var(--ink);
-  font-family: var(--font);
-  font-size: 18px;
-  line-height: 1.62;
-  font-weight: 400;
+  background: var(--aui-void);
+  color: var(--aui-ink);
+  color-scheme: dark;
+  font: 400 17px/1.6 var(--aui-font);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
-}
-@media (min-width: 720px) {
-  .landing {
-    --wide: min(1120px, calc(100vw - 96px));
-    --text: min(720px, calc(100vw - 96px));
-  }
 }
 .landing *,
 .landing *::before,
@@ -59,516 +38,615 @@
 .landing [hidden] {
   display: none !important;
 }
-.landing :is(h1, h2, h3, h4, h5, p, figure, ol, ul, dl, dd) {
+:where(.landing) :is(h1, h2, h3, p, figure, ol, ul, dl, dd) {
   margin: 0;
 }
-.landing :is(ol, ul) {
+:where(.landing) :is(ol, ul) {
   padding: 0;
   list-style: none;
 }
-.landing img {
+:where(.landing) img {
   display: block;
   max-width: 100%;
 }
-.landing a {
+:where(.landing) a {
   color: inherit;
 }
-.landing button {
+:where(.landing) button {
   font: inherit;
   color: inherit;
   cursor: pointer;
 }
-.landing ::selection {
-  background: var(--rune);
-  color: var(--rune-ink);
-}
 .landing :focus-visible {
-  outline: 3px solid var(--rune);
-  outline-offset: 4px;
+  outline: 2px solid var(--aui-blue);
+  outline-offset: 3px;
 }
-.landing .sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
+.landing ::selection {
+  background: var(--aui-orange);
+  color: var(--aui-orange-ink);
 }
-.landing .wide {
-  width: var(--wide);
-  margin-inline: auto;
-}
-.landing .text {
-  width: var(--text);
-  margin-inline: auto;
-}
-.landing .tone-defs {
-  position: absolute;
-}
-.landing .n {
-  --s: 6px;
-  clip-path: polygon(
-    var(--s) 0,
-    calc(100% - var(--s)) 0,
-    calc(100% - var(--s)) var(--s),
-    100% var(--s),
-    100% calc(100% - var(--s)),
-    calc(100% - var(--s)) calc(100% - var(--s)),
-    calc(100% - var(--s)) 100%,
-    var(--s) 100%,
-    var(--s) calc(100% - var(--s)),
-    0 calc(100% - var(--s)),
-    0 var(--s),
-    var(--s) var(--s)
-  );
-}
-.landing .arch {
-  --a: 16px;
-  clip-path: polygon(
-    0 100%,
-    0 calc(var(--a) * 3),
-    var(--a) calc(var(--a) * 3),
-    var(--a) calc(var(--a) * 2),
-    calc(var(--a) * 2.5) calc(var(--a) * 2),
-    calc(var(--a) * 2.5) var(--a),
-    calc(var(--a) * 4.5) var(--a),
-    calc(var(--a) * 4.5) 0,
-    calc(100% - var(--a) * 4.5) 0,
-    calc(100% - var(--a) * 4.5) var(--a),
-    calc(100% - var(--a) * 2.5) var(--a),
-    calc(100% - var(--a) * 2.5) calc(var(--a) * 2),
-    calc(100% - var(--a)) calc(var(--a) * 2),
-    calc(100% - var(--a)) calc(var(--a) * 3),
-    100% calc(var(--a) * 3),
-    100% 100%
-  );
-}
-
-/* ---------- The surface: one raster, one uniform scale, edge to edge ---------- */
-.landing .surface {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-  background: var(--night);
-}
-.landing .pan {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translate3d(-50%, 0, 0);
-}
-.landing .pan picture {
-  display: block;
-}
-.landing .surface img {
-  display: block;
-  max-width: none;
-  height: auto;
-  width: max(100vw, calc(100vh * 973 / 1616));
-  filter: url(#aresrpg-landing-tone);
-}
-@media (min-width: 973px) {
-  .landing .surface img {
-    image-rendering: pixelated;
-  }
-}
-@media (max-width: 719px) {
-  .landing .surface img {
-    width: max(100vw, calc(100vh * 921 / 1708 * 1.12));
-  }
-}
-.landing[data-motion='on'] .pan {
-  will-change: transform;
-}
-
-/* ---------- Ambient life (art-registered; every colour <= the 102-per-channel cap) ---------- */
-.landing .fx {
-  position: absolute;
-  inset: 0;
-  display: none;
-  pointer-events: none;
-}
-@media (min-width: 720px) {
-  .landing[data-motion='on'] .fx-d {
-    display: block;
-  }
-}
-@media (max-width: 719px) {
-  .landing[data-motion='on'] .fx-p {
-    display: block;
-  }
-}
-.landing .fx i {
-  position: absolute;
-  left: calc(var(--x) * 1%);
-  top: calc(var(--y) * 1%);
-  display: block;
-}
-.landing .glow {
-  width: calc(var(--r, 3.2) * 1%);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(102 84 48 / 0.95), rgb(102 80 44 / 0.45) 50%, transparent);
-  mix-blend-mode: lighten;
-  opacity: 0.8;
-  animation: landing-flicker var(--d, 5.2s) ease-in-out var(--dl, 0s) infinite;
-}
-.landing .glow::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 320%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(102 80 44 / 0.48), rgb(102 80 44 / 0.17) 55%, transparent);
-}
-.landing .glow.cy {
-  background: radial-gradient(closest-side, rgb(64 98 102 / 0.95), rgb(58 94 102 / 0.45) 50%, transparent);
-  animation-name: landing-pulse;
-}
-.landing .glow.cy::before {
-  background: radial-gradient(closest-side, rgb(58 94 102 / 0.48), rgb(58 94 102 / 0.17) 55%, transparent);
-}
-@keyframes landing-flicker {
-  0%,
-  100% {
-    opacity: 0.62;
-  }
-  12% {
-    opacity: 0.95;
-  }
-  15% {
-    opacity: 0.55;
-  }
-  18% {
-    opacity: 0.9;
-  }
-  46% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 0.7;
-  }
-  84% {
-    opacity: 0.92;
-  }
-}
-@keyframes landing-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.landing .fall {
-  width: calc(var(--w) * 1%);
-  height: calc(var(--h) * 1%);
-  transform: translateX(-50%);
-  background:
-    repeating-linear-gradient(180deg, transparent 0 3px, rgb(98 102 102 / 0.95) 3px 5px, transparent 5px 9px),
-    repeating-linear-gradient(180deg, transparent 0 6px, rgb(80 96 102 / 0.8) 6px 8px, transparent 8px 14px);
-  background-size:
-    100% 9px,
-    100% 14px;
-  mix-blend-mode: lighten;
-  animation: landing-pour 0.7s linear infinite;
-}
-.landing .fall::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -3px;
-  width: 260%;
-  height: 7px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(98 102 102 / 0.9), transparent);
-  animation: landing-foam 1.4s ease-in-out infinite alternate;
-}
-@keyframes landing-pour {
-  to {
-    background-position:
-      0 9px,
-      0 28px;
-  }
-}
-@keyframes landing-foam {
-  from {
-    opacity: 0.45;
-    transform: translateX(-50%) scaleX(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) scaleX(1.1);
-  }
-}
-.landing .glint {
-  width: calc(var(--w) * 1%);
-  height: 2px;
-  transform: translateX(-50%) scaleX(0.5);
-  background: rgb(102 84 48);
-  mix-blend-mode: lighten;
-  opacity: 0;
-  animation: landing-glint var(--d, 3.6s) ease-in-out var(--dl, 0s) infinite;
-}
-.landing .glint.cy {
-  background: rgb(64 98 102);
-}
-@keyframes landing-glint {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) scaleX(0.5);
-  }
-  45% {
-    opacity: 1;
-    transform: translateX(-50%) scaleX(1.15);
-  }
-  60% {
-    opacity: 0.7;
-  }
-}
-@media (max-width: 719px) {
-  .landing .glow {
-    --r: 5;
-  }
-}
-.landing .rain,
-.landing .wind {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.landing .rain i {
-  position: absolute;
-  top: 0;
-  left: var(--x);
-  width: 1px;
-  height: var(--l);
-  background: linear-gradient(180deg, transparent, rgb(92 100 102));
-  opacity: 0.9;
-  animation: landing-fall var(--d) linear var(--dl) infinite;
-}
-.landing .rain i.h {
-  width: 2px;
-  opacity: 0.6;
-}
-@keyframes landing-fall {
-  from {
-    transform: translateY(-20vh);
-  }
-  to {
-    transform: translateY(110vh);
-  }
-}
-.landing .leaf {
-  position: absolute;
-  left: -4vw;
-  top: var(--y);
-  animation: landing-gust var(--d) linear var(--dl) infinite;
-}
-.landing .leaf b {
-  display: block;
-  width: var(--p, 3px);
-  height: var(--p, 3px);
-  background: #4a6436;
-  box-shadow:
-    var(--p, 3px) 0 #56643a,
-    var(--p, 3px) calc(var(--p, 3px) * -1) #3c5530,
-    calc(var(--p, 3px) * 2) calc(var(--p, 3px) * -1) #4a6436;
-  animation: landing-tumble var(--t, 1.8s) ease-in-out infinite alternate;
-}
-@keyframes landing-gust {
-  0% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(55vw, var(--dy1, 6vh));
-  }
-  100% {
-    transform: translate(112vw, var(--dy2, 14vh));
-  }
-}
-@keyframes landing-tumble {
-  from {
-    transform: translateY(-10px) rotate(-25deg);
-  }
-  to {
-    transform: translateY(10px) rotate(35deg);
-  }
-}
-.landing .fly {
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  width: 3px;
-  height: 3px;
-  background: rgb(102 88 46);
-  box-shadow: 0 0 6px 2px rgb(102 84 44 / 0.7);
-  animation:
-    landing-wander var(--d) ease-in-out var(--dl) infinite alternate,
-    landing-blink var(--b) ease-in-out var(--dl) infinite;
-}
-.landing .fly.cy {
-  background: rgb(70 100 102);
-  box-shadow: 0 0 6px 2px rgb(58 94 102 / 0.7);
-}
-@keyframes landing-wander {
-  0% {
-    transform: translate(0, 0);
-  }
-  33% {
-    transform: translate(var(--wx), calc(var(--wy) * -1));
-  }
-  66% {
-    transform: translate(calc(var(--wx) * -0.6), var(--wy));
-  }
-  100% {
-    transform: translate(calc(var(--wx) * 0.4), calc(var(--wy) * -0.5));
-  }
-}
-@keyframes landing-blink {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  30%,
-  70% {
-    opacity: 1;
-  }
-}
-@media (min-width: 973px) {
-  .landing .leaf {
-    --p: 4px;
-  }
-}
-
-/* ---------- Buttons ---------- */
-.landing .slab {
-  display: inline-flex;
+.landing-flow {
   position: relative;
-  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 12px 18px rgb(0 0 0 / 0.55));
+  isolation: isolate;
+  overflow-x: clip;
+  min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.landing .slab-gold {
-  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 0 18px rgb(242 181 82 / 0.3));
+.landing .wrap {
+  width: min(1200px, 100%);
+  margin-inline: auto;
 }
-.landing .slab:has(:focus-visible) {
-  outline: 3px solid var(--ink);
-  outline-offset: 7px;
+
+/* Backdrop: the approved Mosswood night surface, sunk under a vignette. */
+.landing .backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: min(1180px, 160vh);
+  overflow: hidden;
+  pointer-events: none;
 }
-.landing .btn {
-  --s: 6px;
+.landing .backdrop picture {
+  position: absolute;
+  inset: 0;
+}
+.landing .backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.landing .backdrop picture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 78% at 50% 0%, transparent 24%, var(--aui-void) 94%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--aui-void) 30%, transparent) 0%,
+      color-mix(in srgb, var(--aui-void) 58%, transparent) 52%,
+      var(--aui-void) 100%
+    );
+}
+
+/* Shared type */
+.landing .micro {
+  font: 700 12px/1.3 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--aui-faint);
+}
+.landing .micro i {
+  font-style: normal;
+  color: var(--aui-steel);
+  padding-inline: 0.35em;
+}
+.landing .h2 {
+  font: 700 clamp(28px, 4.2vw, 52px) / 1.06 var(--aui-font-title);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Light: one thin bright rim on the top edge. The hue comes from the nearest --hue. */
+.landing .rim {
+  position: relative;
+}
+.landing .rim::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 2%,
+    color-mix(in srgb, var(--hue) 72%, var(--aui-ink)) 22%,
+    color-mix(in srgb, var(--hue) 30%, transparent) 56%,
+    transparent 82%
+  );
+}
+/* Pixel bracket trim, on the frame only. */
+.landing .brackets::after {
+  --b: linear-gradient(var(--aui-brass) 0 0);
+  content: '';
+  position: absolute;
+  inset: 5px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    var(--b) 0 0 / 10px 2px no-repeat,
+    var(--b) 0 0 / 2px 10px no-repeat,
+    var(--b) 100% 0 / 10px 2px no-repeat,
+    var(--b) 100% 0 / 2px 10px no-repeat,
+    var(--b) 0 100% / 10px 2px no-repeat,
+    var(--b) 0 100% / 2px 10px no-repeat,
+    var(--b) 100% 100% / 10px 2px no-repeat,
+    var(--b) 100% 100% / 2px 10px no-repeat;
+}
+
+/* Calls to action: the shared @aresrpg/ui button, at page scale and sized by its label. */
+.landing .cta {
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+/* A main action: a raised button in the hue of the interface it opens (the hue of its section by default). The hue is pushed to a
+   richer chroma, lit from the top, with a pixel weave that shows at both ends. */
+.landing .cta:is([data-hue], .aui-button--primary) {
+  --cta-hue: var(--hue);
+  --cta-rich: oklch(from var(--cta-hue) calc(l - 0.03) calc(c * 1.55) h);
+  --cta-light: oklch(from var(--cta-hue) calc(l + 0.07) calc(c * 1.2) h);
+  --cta-deep: oklch(from var(--cta-hue) calc(l - 0.2) calc(c * 1.5) h);
+  border-color: color-mix(in srgb, var(--cta-deep) 55%, var(--aui-void));
+  background-color: var(--cta-hue);
+  background-image:
+    linear-gradient(90deg, transparent, var(--cta-rich) 24%, var(--cta-rich) 76%, transparent),
+    repeating-conic-gradient(color-mix(in srgb, var(--cta-deep) 55%, transparent) 0 25%, transparent 0 50%),
+    linear-gradient(180deg, var(--cta-light), var(--cta-rich) 46%, var(--cta-deep));
+  background-size:
+    auto,
+    4px 4px,
+    auto;
+  background-blend-mode: normal, multiply, normal;
+  color: var(--aui-brass-ink);
+  text-shadow: 0 1px #ffffff59;
+  box-shadow:
+    inset 0 1px #ffffffa6,
+    inset 0 -3px color-mix(in srgb, var(--cta-deep) 80%, var(--aui-void)),
+    0 0 22px color-mix(in srgb, var(--cta-rich) 38%, transparent),
+    0 2px 3px #0009;
+}
+.landing .cta:is([data-hue], .aui-button--primary):hover {
+  filter: brightness(1.08) saturate(1.1);
+}
+.landing .cta[data-hue='green'] {
+  --cta-hue: var(--if-world);
+}
+.landing .cta[data-hue='gold'] {
+  --cta-hue: var(--if-dapp);
+}
+.landing .cta svg {
+  flex: none;
+}
+/* The document shell paints inert controls before startup; they keep full contrast while they wait. */
+.landing .aui-button:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+.landing .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--aui-soft);
+  font: 700 14.5px/1.2 var(--aui-font);
+  text-decoration: underline;
+  text-decoration-color: var(--aui-steel);
+  text-underline-offset: 5px;
+  transition:
+    color 0.14s var(--aui-ease),
+    text-decoration-color 0.14s var(--aui-ease);
+}
+.landing .link::after {
+  content: '->';
+  font: 500 12px/1 var(--mono);
+  color: var(--aui-faint);
+}
+@media (hover: hover) {
+  .landing .link:hover {
+    color: var(--aui-ink);
+    text-decoration-color: var(--aui-brass);
+  }
+}
+
+/* Top bar */
+.landing .top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 24px;
+}
+.landing .sign {
+  flex: none;
+  width: clamp(176px, 22vw, 288px);
+}
+.landing .sign img {
+  width: 100%;
+  height: auto;
+}
+.landing .topnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding-top: 14px;
+  font: 700 13px/1 var(--aui-font);
+}
+.landing .topnav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 11px;
+  border-radius: var(--aui-radius);
+  color: var(--aui-muted);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color 0.14s var(--aui-ease),
+    background-color 0.14s var(--aui-ease);
+}
+@media (hover: hover) {
+  .landing .topnav a:hover {
+    color: var(--aui-ink);
+    background-color: #ffffff0a;
+  }
+}
+/* $KARES: the riveted plum plaque with the canonical coin. Its colours are artwork, not interface chrome. */
+.landing .kares-dock {
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  min-height: 64px;
-  padding: 2px 30px 6px;
+  gap: 8px;
+  height: 44px;
+  margin-inline: 10px 6px;
+  padding: 0 16px 0 14px;
   border: 0;
-  font-weight: 800;
-  font-size: 19px;
-  line-height: 1.1;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: filter 0.15s ease;
-}
-.landing .btn:focus-visible {
-  outline: none;
-}
-.landing .btn svg {
-  flex: none;
-}
-.landing .btn-gold {
-  color: var(--gold-ink);
-  background: linear-gradient(180deg, #ffd98c 0%, #f4b851 46%, #de9634 100%);
+  background:
+    repeating-linear-gradient(180deg, #00000024 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, #7d525b 0%, #5e3d46 55%, #47303a 100%);
   box-shadow:
-    inset 0 3px 0 #fff3cc,
-    inset 0 -6px 0 #a5641f,
-    inset 3px 0 0 #ffd995,
-    inset -3px 0 0 #c27c2c;
+    inset 5px 0 0 #565b66,
+    inset 6px 0 0 #7a808b,
+    inset -5px 0 0 #565b66,
+    inset 0 2px 0 #9a6c74,
+    inset 0 -3px 0 #2a1a20,
+    0 0 0 2px #1a1014;
+  filter: drop-shadow(0 3px 0 var(--aui-void)) drop-shadow(0 8px 12px #0000008c);
 }
-.landing .btn-rune {
-  color: var(--ink);
-  background: linear-gradient(180deg, #38424f 0%, #242b36 100%);
-  box-shadow:
-    inset 0 2px 0 #56606e,
-    inset 0 -6px 0 #13171e;
-}
-.landing .btn-rune::before {
+.landing .kares-dock::before,
+.landing .kares-dock::after {
   content: '';
   position: absolute;
-  inset: 5px 5px 9px;
-  --s: 4px;
-  border: 1.5px solid rgb(118 200 255 / 0.62);
-  clip-path: polygon(
-    var(--s) 0,
-    calc(100% - var(--s)) 0,
-    calc(100% - var(--s)) var(--s),
-    100% var(--s),
-    100% calc(100% - var(--s)),
-    calc(100% - var(--s)) calc(100% - var(--s)),
-    calc(100% - var(--s)) 100%,
-    var(--s) 100%,
-    var(--s) calc(100% - var(--s)),
-    0 calc(100% - var(--s)),
-    0 var(--s),
-    var(--s) var(--s)
-  );
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin-top: -1px;
+  background: #a9aeb7;
   pointer-events: none;
 }
-.landing .btn-rune svg {
-  color: var(--rune);
-  filter: drop-shadow(0 0 6px rgb(118 200 255 / 0.7));
+.landing .kares-dock::before {
+  left: 1px;
 }
-.landing .btn:hover {
-  filter: brightness(1.08);
+.landing .kares-dock::after {
+  right: 1px;
 }
-.landing .btn:active {
-  filter: brightness(0.93);
+.landing .kares-dock [data-kares-logo] {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 0 #2a1a20);
+}
+.landing .dock-name {
+  font: 800 16px/1 var(--aui-font);
+  letter-spacing: 0.05em;
+  color: #c9ecff;
+  text-shadow:
+    0 0 6px #76c8ffbf,
+    0 2px 0 #1a1014;
+}
+.landing .dock-sub {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (hover: hover) {
+  .landing .kares-dock:hover {
+    filter: drop-shadow(0 3px 0 var(--aui-void)) drop-shadow(0 8px 12px #0000008c) brightness(1.12);
+  }
+}
+/* A 44px sound target on every width. */
+.landing .landing-sound {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--aui-radius);
+  background: none;
+  color: var(--aui-muted);
+}
+.landing .landing-sound[aria-pressed='true'] {
+  color: var(--aui-brass-hi);
+}
+@media (hover: hover) {
+  .landing .landing-sound:hover {
+    color: var(--aui-ink);
+    background-color: #ffffff0a;
+  }
+}
+@media (max-width: 560px) {
+  .landing .topnav {
+    padding-top: 0;
+    margin-left: -7px;
+  }
+  .landing .topnav a {
+    padding: 0 7px;
+  }
+  .landing .kares-dock {
+    margin-inline: 8px 4px;
+  }
+}
+
+/* Hero */
+.landing .hero {
+  padding-block: 0 clamp(24px, 4vw, 48px);
+}
+.landing .hero > .micro {
+  margin-top: clamp(28px, 6vw, 72px);
+}
+.landing .display {
+  margin-top: 18px;
+  font: 700 clamp(32px, 7.4vw, 88px) / 1 var(--aui-font-title);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  text-shadow:
+    0 2px 0 #000000cc,
+    0 0 34px #000000cc;
+}
+.landing .display span {
+  display: block;
+}
+.landing .display span:last-child {
+  color: var(--aui-brass-hi);
+}
+.landing .hero-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 448px);
+  gap: clamp(32px, 6vw, 88px);
+  align-items: start;
+  margin-top: clamp(28px, 4vw, 44px);
+}
+.landing .lede {
+  max-width: 58ch;
+  font-size: clamp(17px, 1.5vw, 19px);
+  color: var(--aui-soft);
 }
 .landing .ctas {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
-  gap: 22px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+/* Hero panel: the interfaces, each in its own hue. */
+.landing .via {
+  --hue: var(--aui-ink);
+  padding: 16px 18px 10px;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background:
+    var(--grain) 0 0 / 256px 256px,
+    var(--aui-glass);
+  background-blend-mode: soft-light, normal;
+  box-shadow:
+    inset 0 0 0 1px var(--aui-hair),
+    0 38px 70px -38px #000000cc;
+}
+.landing .via ol {
+  margin-top: 8px;
+}
+.landing .via li + li {
+  border-top: 1px solid var(--aui-hair);
+}
+.landing .via a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding-block: 8px;
+  color: var(--aui-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  font: 700 16px/1.2 var(--aui-font);
+  transition: color 0.14s var(--aui-ease);
+}
+.landing .via-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--aui-radius);
+  color: var(--hue);
+  background: color-mix(in srgb, var(--hue) 14%, var(--aui-sunk));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue) 34%, transparent);
+}
+.landing .via-logo svg {
+  width: 20px;
+  height: 20px;
+}
+.landing .via-lead {
+  flex: 1;
+  min-width: 12px;
+  border-bottom: 1px dotted var(--aui-steel);
+}
+.landing .via a[aria-current='true'] {
+  color: var(--aui-ink);
+}
+.landing .via a[aria-current='true'] .via-logo {
+  background: var(--hue);
+  color: var(--aui-void);
+}
+@media (hover: hover) {
+  .landing .via a:hover {
+    color: var(--aui-ink);
+  }
+  .landing .via a:hover .via-lead {
+    border-bottom-color: var(--aui-brass-lo);
+  }
+}
+.landing :is([data-if='world'], [data-active='world']) {
+  --hue: var(--if-world);
+}
+.landing :is([data-if='dapp'], [data-active='dapp']) {
+  --hue: var(--if-dapp);
+}
+.landing :is([data-if='agent'], [data-active='agent']) {
+  --hue: var(--if-agent);
+}
+.landing :is([data-if='telegram'], [data-active='telegram']) {
+  --hue: var(--if-telegram);
+}
+.landing :is([data-if='sdk'], [data-active='sdk']) {
+  --hue: var(--if-sdk);
+}
+.landing .state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 12px/1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--aui-muted);
+}
+.landing .state i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--aui-steel);
+}
+.landing .state[data-state='open'] i {
+  background: var(--if-world);
+  box-shadow: 0 0 8px var(--if-world);
+}
+.landing .state[data-state='soon'] i {
+  background: var(--aui-brass);
+}
+@media (max-width: 900px) {
+  .landing .hero-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing .via {
+    max-width: 520px;
+  }
+  .landing .via .state {
+    display: none;
+  }
 }
 
-/* ---------- Type ---------- */
-.landing .h2 {
-  color: var(--ink-hi);
-  font-weight: 800;
-  font-size: clamp(32px, 3.4vw, 50px);
-  line-height: 1.04;
-  letter-spacing: -0.02em;
-  text-shadow: var(--carve);
-  text-wrap: balance;
+/* Section scaffolding: an ASCII rule carries the dossier marker. */
+.landing .sec {
+  padding-top: var(--sec);
 }
-.landing .h3 {
-  font-weight: 800;
-  font-size: 23px;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+.landing .rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 700 12px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--aui-faint);
+  white-space: nowrap;
+}
+.landing .rule-n {
+  color: var(--aui-brass);
+}
+.landing .rule-l {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--aui-peak);
+  letter-spacing: 0;
+  mask-image: linear-gradient(90deg, #000 40%, transparent);
+}
+.landing .rule-l::before {
+  content: '+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -';
 }
 .landing .sec-head {
-  text-align: center;
-  margin-bottom: clamp(30px, 5vh, 48px);
+  display: grid;
+  gap: 16px;
+  max-width: 780px;
+  margin-top: 28px;
 }
 .landing .sec-head p {
-  margin: 14px auto 0;
-  max-width: 52ch;
-  color: var(--ink-hi);
-  text-shadow: var(--halo);
+  max-width: 62ch;
+  color: var(--aui-muted);
+}
+
+/* Motion: small, and only when the visitor allows it. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing[data-motion='on'] [data-reveal] {
+    transition:
+      opacity 0.3s var(--aui-ease),
+      transform 0.3s var(--aui-ease);
+  }
+  .landing[data-motion='on'] [data-reveal]:not([data-in]) {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing {
+    scroll-behavior: auto;
+  }
+}
+
+/* One sign-in for every interface. Signed in, the control shows the account and a live dot. */
+.landing .landing-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background-color: var(--aui-high);
+  box-shadow:
+    inset 0 1px #ffffff24,
+    inset 0 -2px #0000004d,
+    0 1px 2px #0000008c;
+  color: var(--aui-ink);
+  font: 800 13px/1 var(--aui-font);
+  white-space: nowrap;
+}
+.landing .landing-account:disabled {
+  cursor: progress;
+  color: var(--aui-muted);
+}
+.landing .landing-account[data-signed-in] {
+  font: 700 12px/1 var(--mono);
+  color: var(--aui-soft);
+}
+.landing .landing-account i {
+  width: 8px;
+  height: 8px;
+  background: var(--if-world);
+  box-shadow: 0 0 8px var(--if-world);
+}
+.landing .landing-account-error {
+  flex-basis: 100%;
+  text-align: right;
+  color: var(--aui-danger);
+  font: 600 13px/1.4 var(--aui-font);
+}
+@media (hover: hover) {
+  .landing .landing-account:hover:not(:disabled) {
+    filter: brightness(1.14);
+  }
 }

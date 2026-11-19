@@ -1,27 +1,52 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { character_checkpoint, type CharacterRow, type HostedAgentActivity } from '@aresrpg/protocol'
+import { character_checkpoint, type AgentStatus, type CharacterRow, type HostedObjective } from '@aresrpg/protocol'
 
 import type { SessionState } from '../modules/session.ts'
 
 import { owner_connected } from './owner_state.ts'
 
-/** Owner status is scoped to the exact observed wallet and character, never the last displayed task. */
-export const current_agent_activity = (session: SessionState): HostedAgentActivity | null => {
-  const { request, status } = session.agent_view
-  const { selected_character_id } = session
-  const { response, phase } = session.agent_connection
-  if (![status === 'ready', session.link_status === 'ready', ['ready', 'checking'].includes(phase)].every(Boolean))
-    return null
-  if (!owner_connected(session)) return null
-  if (request?.pairing.address !== response!.bot!.address) return null
-  const { activity } = response!
-  if (
-    !activity ||
-    (activity.character_ids.length && !activity.character_ids.some((id) => id === selected_character_id))
-  )
-    return null
-  return activity
+type WalletState = AgentStatus['state']
+export type HeroActivity = Readonly<{ status: WalletState; objective: HostedObjective | null; issue?: string }>
+/** Run statuses that say a hero is being played. An ended run says nothing. */
+const PLAYED: readonly string[] = ['active', 'waiting', 'awaiting_ai', 'paused'] satisfies readonly WalletState[]
+const stopped = ({ ready, state }: AgentStatus): WalletState | null => {
+  if (!ready) return 'unavailable'
+  return state === 'paused' || state === 'unavailable' ? state : null
+}
+
+/** The hero a direct command in flight acts for; null when none is in flight or it acts for the wallet. */
+const commanded = ({ direct }: AgentStatus): string | null => {
+  const hero = direct && ['accepted', 'executing'].includes(direct.status) ? direct.payload.character_id : null
+  return typeof hero === 'string' ? hero : null
+}
+/** The wallet's work belongs to other heroes: their runs, or a direct command for one of them. */
+const others_work = (status: AgentStatus, played: number, hero: string | null): boolean => {
+  const target = commanded(status)
+  return target === null ? played > 0 : target !== hero
+}
+
+/**
+ * What the bot's pushed status says about one hero. A stopped wallet is said first; then the hero's
+ * own run with its objective; the wallet's state describes a hero with no run only when the wallet's
+ * work is not another hero's: a direct command in flight for this hero, or no hero played at all.
+ */
+export const hero_activity = (status: AgentStatus, hero: string | null): HeroActivity | null => {
+  const halted = stopped(status)
+  const played = status.runs.filter((run) => PLAYED.includes(run.status))
+  const run = played.find(({ character_id }) => character_id === hero)
+  if (run) return { status: halted ?? (run.status as WalletState), objective: run.objective ?? null, issue: run.issue }
+  if (halted) return { status: halted, objective: null }
+  return others_work(status, played.length, hero) ? null : { status: status.state, objective: null }
+}
+
+/** The bot's own status, scoped to the exact observed wallet and character, never the last displayed task. */
+export const current_agent_activity = (session: SessionState): HeroActivity | null => {
+  const { request, status: view } = session.agent_view
+  const { status } = session.agent_inventory
+  if (![view === 'ready', session.link_status === 'ready', owner_connected(session)].every(Boolean)) return null
+  if (!status || request?.pairing.address !== session.inventory_pairing?.address) return null
+  return hero_activity(status, session.selected_character_id)
 }
 
 export type AgentActivity =

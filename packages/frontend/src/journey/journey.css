@@ -517,7 +517,7 @@
   gap: 6px;
   min-height: 44px;
   padding: 4px 6px;
-  border: 1px solid #c8963c33;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 20%, transparent);
   cursor: pointer;
   font-size: 11px;
 }
@@ -529,7 +529,7 @@
 .journey-ingredients strong {
   margin-left: auto;
   white-space: nowrap;
-  color: #e8b654;
+  color: var(--aui-brass);
 }
 
 @media (max-width: 1023px), (pointer: coarse) {

@@ -82,7 +82,7 @@ export const LoadoutSection = ({
           render_tooltip={(item_type) => {
             const item = encyclopedia_catalog.items.find((candidate) => candidate.item_type === item_type)
             return item ? (
-              <div className="w-[296px] border border-[#c8963c]/30 bg-surface p-4 shadow-2xl">
+              <div className="w-[296px] border border-gold/30 bg-surface p-4 shadow-2xl">
                 <ItemDetailView
                   category={item.category}
                   damages={item.damages ?? []}
@@ -97,7 +97,7 @@ export const LoadoutSection = ({
                   name={item.name}
                   stats={item.stats}
                 >
-                  <span className="text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">{text.max_roll}</span>
+                  <span className="text-[8px] tracking-[0.18em] text-gold uppercase">{text.max_roll}</span>
                 </ItemDetailView>
               </div>
             ) : null

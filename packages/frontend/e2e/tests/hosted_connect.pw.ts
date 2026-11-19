@@ -7,12 +7,15 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_agent_identity } from '../../../sdk/src/agent_multisig.ts'
 import { service, owner, connector_fixture, mock_hosted } from '../fixtures/hosted_service.ts'
 
-const open = async (page: Page, query = '') => {
+const arrive = async (page: Page, query = '') => {
   await page.goto(`/e2e/fixtures/agent_pairing.html${query}`)
   await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
-  if (!new URLSearchParams(query).has('authorization_id')) {
-    await page.getByRole('button', { name: 'Claude', exact: true }).click()
-  }
+}
+/** An assistant's request waits for Continue; the provider guide needs a provider. */
+const open = async (page: Page, query = '') => {
+  await arrive(page, query)
+  const requested = new URLSearchParams(query).has('authorization_id')
+  await page.getByRole('button', { name: requested ? 'Continue' : 'Claude', exact: true }).click()
 }
 const verify = async (page: Page) => {
   await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'ready')
@@ -29,6 +32,19 @@ test('standalone provider installation never starts owner proof, provisioning, o
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
   await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'idle')
   await page.keyboard.press('Escape')
+  expect(requests).toEqual([])
+  expect(
+    await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)
+  ).toBeNull()
+})
+
+// Regression: arriving with a request signed an owner proof and created a custody wallet by itself.
+test('an assistant request asks the service and the wallet for nothing before Continue', async ({ page }) => {
+  const { requests } = await mock_hosted(page)
+  await arrive(page, '?authorization_id=fixture-auth')
+  await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'idle')
+  await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible()
+  await page.waitForTimeout(200)
   expect(requests).toEqual([])
   expect(
     await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)

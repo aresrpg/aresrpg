@@ -26,6 +26,7 @@ const fixture = () => {
   const wallet = {
     address: '0x1',
     identity: 'zklogin',
+    read_agent_pairing_request: () => ({ owner: '0x1' }),
     suins: {
       managed: true,
       set_default: async (_name: string, guard: () => void) => {
@@ -40,6 +41,15 @@ const fixture = () => {
         if (state.pause) await state.pause
         guard()
         if (state.refuse) throw new Error('collision', { cause: 'collision' })
+      },
+      review_parent: async (_name: string, agent: string, guard: () => void, player: string) => {
+        guard()
+        return {
+          fingerprint: 'review',
+          player_address: player,
+          agent_address: agent,
+          erased_names: ['aresrpg.child.sceat.sui'],
+        }
       },
       apply_parent: async (name: string, agent: string, guard: () => void) => {
         guard()
@@ -63,23 +73,33 @@ const fixture = () => {
   return { app, calls, state, stop, wallet }
 }
 
+// Existing reconciliation scenarios explicitly accept the new review before continuing.
+const advance = async (f: ReturnType<typeof fixture>) => {
+  await tick()
+  const { request } = f.app.store.getState().suins
+  if (request?.kind === 'set' && request.stage === 'review') {
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+  }
+}
+
 test('explicit setup awaits both senders and coalesces duplicate proofs without replay', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     const pause = Promise.withResolvers<void>()
     f.state.pause = pause.promise
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'first' })
-    await tick()
+    await advance(f)
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'duplicate' })
     expect(f.app.store.getState().suins.completed).toEqual([])
     pause.resolve()
-    await tick()
+    await advance(f)
     expect(f.calls).toEqual(['validate', 'human', 'agent'])
     expect(f.app.store.getState().suins.completed).toEqual(['first', 'duplicate'])
     // A new explicit intent can repair the same identity; status changes cannot.
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'fresh' })
-    await tick()
+    await advance(f)
     expect(f.calls).toHaveLength(6)
   } finally {
     f.stop()
@@ -91,16 +111,16 @@ test.each(['collision', 'funding'] as const)(
   async (reason) => {
     const f = fixture()
     try {
-      await tick()
+      await advance(f)
       f.state.refuse = reason === 'collision'
       f.state.no_gas = reason === 'funding'
       const pause = Promise.withResolvers<void>()
       f.state.pause = pause.promise
       f.app.dispatch({ type: 'suins/setup', pairing, token: 'first' })
-      await tick()
+      await advance(f)
       f.app.dispatch({ type: 'suins/setup', pairing, token: 'overlap' })
       pause.resolve()
-      await tick()
+      await advance(f)
       const result = f.app.store.getState().suins
       expect(result.completed).toEqual(['first', 'overlap'])
       expect(result.request).toBeNull()
@@ -118,15 +138,15 @@ test.each(['collision', 'funding'] as const)(
 test('wallet replacement invalidates unsigned work before the next sender', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     const pause = Promise.withResolvers<void>()
     f.state.pause = pause.promise
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'first' })
-    await tick()
+    await advance(f)
     f.app.dispatch({ type: 'auth/disconnected' })
     expect(() => f.state.guard!()).toThrow('cancelled')
     pause.resolve()
-    await tick()
+    await advance(f)
     expect(f.calls).toEqual(['validate'])
     expect(f.app.store.getState().suins).toEqual(initial_suins_state())
   } finally {
@@ -157,12 +177,12 @@ test('setup overlapping Apply attaches a waiter without changing or replaying it
 test('external wallets refresh existing defaults but never admit managed writes', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     const external = { ...f.wallet, identity: 'wallet', suins: { ...f.wallet.suins, managed: false } }
     f.app.dispatch({ type: 'auth/disconnected' })
     f.app.dispatch({ type: 'auth/connecting' })
     f.app.dispatch({ type: 'auth/connected', session: external as never })
-    await tick()
+    await advance(f)
     f.app.dispatch({ type: 'suins/name_changed', name: 'child.sceat.sui' })
     f.app.dispatch({ type: 'suins/use' })
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'ignored' })
@@ -203,14 +223,14 @@ test.each([
 ] as const)('agent %s remains distinct despite zero balance after human success', async (reason, error) => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     f.state.agent_error = error
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'setup' })
-    await tick()
+    await advance(f)
     expect(f.app.store.getState().suins.pending?.reason).toBe(reason)
     expect(f.app.store.getState().suins.snapshot?.default_name).toBe(snapshot.default_name)
     expect(f.calls).toEqual(['validate', 'human', 'agent'])
-    await tick()
+    await advance(f)
     expect(f.calls).toHaveLength(3)
   } finally {
     f.stop()
@@ -221,7 +241,7 @@ test('accepted navigation out of Settings retires deferred validation before cus
   const f = fixture()
   try {
     f.app.dispatch({ type: 'page/open', page: 'settings' })
-    await tick()
+    await advance(f)
     const paused = Promise.withResolvers<void>()
     f.state.pause = paused.promise
     f.app.dispatch({ type: 'suins/name_changed', name: 'child.sceat.sui' })
@@ -231,7 +251,7 @@ test('accepted navigation out of Settings retires deferred validation before cus
     expect(f.app.store.getState().navigation.page).toBe('world')
     expect(f.app.store.getState().suins.request).toBeNull()
     paused.resolve()
-    await tick()
+    await advance(f)
     expect(f.calls).toEqual(['validate'])
   } finally {
     f.stop()
@@ -274,15 +294,15 @@ const connect_parent = (f: ReturnType<typeof fixture>, pause: Promise<void> | nu
 test('external parent selection preserves gameplay, reads source names and signs each default with its target', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     connect_parent(f)
-    await tick()
+    await advance(f)
     const state = f.app.store.getState()
     expect(state.session.wallet).toBe(f.wallet as never)
     expect(state.suins.snapshot?.default_name).toBe(snapshot.default_name)
     expect(state.suins.snapshot?.names.map(({ name }) => name)).toEqual(['child.sceat.sui'])
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'external' })
-    await tick()
+    await advance(f)
     expect(f.calls).toEqual(['validate', 'external', 'default', 'agent'])
     expect(f.app.store.getState().session.wallet).toBe(f.wallet as never)
   } finally {
@@ -293,13 +313,13 @@ test('external parent selection preserves gameplay, reads source names and signs
 test('external disconnection discards stale names without replacing the gameplay wallet', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     const pause = Promise.withResolvers<void>()
     const external = connect_parent(f, pause.promise)
     f.app.dispatch({ type: 'external_wallet/invalidated', session: external as never })
-    await tick()
+    await advance(f)
     pause.resolve()
-    await tick()
+    await advance(f)
     expect(f.app.store.getState().session.wallet).toBe(f.wallet as never)
     expect(f.app.store.getState().suins.snapshot).toEqual(snapshot)
     expect(f.calls).toEqual([])
@@ -311,17 +331,17 @@ test('external disconnection discards stale names without replacing the gameplay
 test('external replacement cancels pending validation before any signer and releases setup waiters', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     connect_parent(f)
-    await tick()
+    await advance(f)
     const pause = Promise.withResolvers<void>()
     f.state.pause = pause.promise
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'old-source' })
-    await tick()
+    await advance(f)
     connect_parent(f)
     expect(() => f.state.guard!()).toThrow('cancelled')
     pause.resolve()
-    await tick()
+    await advance(f)
     expect(f.calls).toEqual(['validate'])
     expect(f.app.store.getState().suins.completed).toContain('old-source')
   } finally {
@@ -332,15 +352,123 @@ test('external replacement cancels pending validation before any signer and rele
 test('setup during source disconnection terminates its waiter without signing', async () => {
   const f = fixture()
   try {
-    await tick()
+    await advance(f)
     connect_parent(f)
-    await tick()
+    await advance(f)
     f.app.dispatch({ type: 'external_wallet/disconnect' })
     f.app.dispatch({ type: 'suins/setup_started', token: 'disconnecting' })
     f.app.dispatch({ type: 'suins/setup', pairing, token: 'disconnecting' })
-    await tick()
+    await advance(f)
     expect(f.app.store.getState().suins.completed).toContain('disconnecting')
     expect(f.calls).toEqual([])
+  } finally {
+    f.stop()
+  }
+})
+
+test('existing-name review waits for consent, cancel retires it and repeated confirmation applies once', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'cancel' })
+    await tick()
+    expect(f.calls).toEqual(['validate'])
+    expect(f.app.store.getState().suins.request).toMatchObject({ stage: 'review' })
+    f.app.dispatch({ type: 'suins/cancel' })
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    expect(f.calls).toEqual(['validate'])
+    expect(f.app.store.getState().suins.completed).toEqual(['cancel'])
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'apply' })
+    await tick()
+    f.app.dispatch({ type: 'suins/confirm' })
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    expect(f.calls).toEqual(['validate', 'validate', 'human', 'agent'])
+  } finally {
+    f.stop()
+  }
+})
+
+test('changing the parent account discards the visible review and its consent', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'old' })
+    await tick()
+    expect(f.app.store.getState().suins.request).toMatchObject({ stage: 'review' })
+    connect_parent(f)
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    expect(f.calls).toEqual(['validate'])
+    expect(f.app.store.getState().suins.completed).toContain('old')
+  } finally {
+    f.stop()
+  }
+})
+
+test('a managed flag cannot substitute for a verified zkLogin owner', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    const foreign = { ...f.wallet, read_agent_pairing_request: () => ({ owner: '0xwrong' }) }
+    f.app.dispatch({ type: 'auth/disconnected' })
+    f.app.dispatch({ type: 'auth/connecting' })
+    f.app.dispatch({ type: 'auth/connected', session: foreign as never })
+    await tick()
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'foreign' })
+    await tick()
+    expect(f.calls).toEqual([])
+    expect(f.app.store.getState().suins.error).toBe('unsupported')
+  } finally {
+    f.stop()
+  }
+})
+
+test('a different hosted destination invalidates the reviewed target', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'first' })
+    await tick()
+    f.app.dispatch({ type: 'suins/setup', pairing: { ...pairing, address: '0x3' }, token: 'changed' })
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    expect(f.calls).toEqual(['validate'])
+    expect(f.app.store.getState().suins.error).toBe('stale_review')
+    expect(f.app.store.getState().suins.completed).toEqual(['first', 'changed'])
+  } finally {
+    f.stop()
+  }
+})
+
+test.each([
+  ['refused', Object.assign(new Error('Declined'), { code: 4001 })],
+  ['uncertain', new Error('[sdk] transaction outcome unknown: digest; check this transaction before trying again')],
+  ['failed', new Error('[sdk] transaction digest failed on-chain: abort')],
+  ['funding', new Error('[sdk] transaction resolution failed — NOT submitted: InsufficientGas')],
+] as const)('external leaf success survives a %s player-default outcome', async (reason, error) => {
+  const f = fixture()
+  try {
+    await tick()
+    connect_parent(f)
+    await tick()
+    f.wallet.suins.set_default = async (_name, guard) => {
+      guard()
+      f.calls.push('default')
+      throw error
+    }
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'partial' })
+    await tick()
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    const state = f.app.store.getState().suins
+    expect(f.calls).toEqual(['validate', 'external', 'default'])
+    expect(state.error).toBe(`player_default_${reason}`)
+    expect(state.confirmed).toBe(false)
+    expect(state.completed).toEqual(['partial'])
+    await tick()
+    expect(f.calls).toHaveLength(3)
   } finally {
     f.stop()
   }

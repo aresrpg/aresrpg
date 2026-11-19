@@ -7,12 +7,12 @@ import { Handshake } from 'lucide-react'
 import { TradeDialog } from '../../components/TradeDialog.tsx'
 import { TradeSourceContext } from '../../components/TradeSource.tsx'
 import type { TradeInput } from '../../modules/trade.ts'
-import { adventure_inventory } from '../../adventure/projection.ts'
+import { sample_inventory } from '../sample.ts'
 import { content_catalog } from '../../content/catalog.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 
 import { WorkshopSurface } from './shared.tsx'
-const PEER_ITEMS: readonly ItemRow[] = adventure_inventory(
+const PEER_ITEMS: readonly ItemRow[] = sample_inventory(
   content_catalog.items.filter((item) => item.category === 'ring').slice(0, 2)
 ).map((item, index) => ({ ...item, id: `peer-${index}`, kiosk: 'peer-kiosk' }))
 const initial_trade = (): TradeRow => ({
@@ -75,7 +75,7 @@ export const TradeExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [trade, dispatch] = useReducer(preview_trade, undefined, initial_trade)
   const inventory = useMemo(
     () =>
-      adventure_inventory(
+      sample_inventory(
         ['hat', 'ring', 'consumable', 'resource'].flatMap((category) =>
           content_catalog.items.filter((item) => item.category === category).slice(0, 6)
         )

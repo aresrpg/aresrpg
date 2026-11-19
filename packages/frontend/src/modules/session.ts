@@ -23,16 +23,11 @@ import { fold_owner_connection, type OwnerConnection, type OwnerConnectionInput 
 import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
 import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
 import type { AgentView, AgentViewInput } from '../agents/observation.ts'
-import type { Auth, AuthSession } from '../auth.ts'
+import type { AuthSession } from '../auth.ts'
 import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
-import {
-  browser_auth_storage,
-  clear_auth_wallet,
-  read_auth_wallet,
-  remember_auth_wallet,
-  remember_selected_character_change,
-} from '../auth_storage.ts'
+import { remember_selected_character_change } from '../auth_storage.ts'
 import { env } from '../env.ts'
+import { create_remembered_auth } from '../remembered_auth.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -81,6 +76,7 @@ export type SessionState = Readonly<{
   inventory: readonly ItemRow[]
   removed_item_versions: Readonly<Record<string, string>>
   claims: readonly ClaimRow[]
+  redeemed_claims: readonly string[]
   redeemed_giftcards: readonly string[]
   giftcards: readonly GiftcardRow[]
   selected_character_id: string | null
@@ -218,7 +214,11 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   if (packet.type === 'packet/inventory')
     return Object.freeze({ ...session, inventory: fold_inventory(session, packet.items) })
   if (is_item_packet(packet)) return Object.freeze({ ...session, ...fold_item_packet(session, packet) })
-  if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
+  if (packet.type === 'packet/claims')
+    return Object.freeze({
+      ...session,
+      claims: packet.claims.filter(({ id }) => !session.redeemed_claims.includes(id)),
+    })
   if (packet.type === 'packet/giftcards')
     return Object.freeze({
       ...session,
@@ -342,7 +342,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 }
 const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let link: ServerLink | null = null
-  let auth: Auth | null = null
   let balance_request_id = 0
   let next_request_id = 1
   const next_id = (): number => {
@@ -358,21 +357,20 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       reject: (error: Readonly<Error>) => void
     }>
   >()
-  const storage = browser_auth_storage()
+  // The installed-wallet picker exists in development builds only (owner ruling); players sign in with Google.
+  const account = create_remembered_auth(undefined, undefined, { wallets: import.meta.env.DEV })
 
-  void import('../auth.ts')
-    .then(({ create_auth }) => {
+  void account
+    .provider()
+    .then((auth) => {
       if (signal.aborted) return
-      auth = create_auth()
-      const wallets = auth.wallets().map(({ name }) => name)
-      const remembered_wallet = read_auth_wallet(storage)
-      dispatch({ type: 'auth/ready', wallets })
-      if (remembered_wallet) dispatch({ type: 'auth/connecting' })
+      dispatch({ type: 'auth/ready', wallets: auth.wallets?.().map(({ name }) => name) ?? [] })
+      if (account.returning) dispatch({ type: 'auth/connecting' })
     })
     .catch((error) => {
       if (signal.aborted) return
       console.error('Remembered authentication could not be restored.', error)
-      clear_auth_wallet(storage)
+      account.forget()
       dispatch({ type: 'auth/ready', wallets: [] })
       dispatch({ type: 'auth/failed', error: error instanceof Error ? error.message : String(error) })
     })
@@ -386,7 +384,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       .catch((error) => {
         if (signal.aborted || get_state().session.auth_request !== request) return
         console.error('Login failed.', error)
-        if (request === 'restore') clear_auth_wallet(storage)
         dispatch({ type: 'auth/failed', error: error instanceof Error ? error.message : String(error) })
       })
   }
@@ -450,8 +447,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   }
   const forget_session = (connected: AuthSession | null): void => {
     dispose_link()
-    clear_auth_wallet(storage)
-    void connected?.disconnect().catch((error) => console.warn('Wallet disconnect failed.', error))
+    void account.sign_out(connected).catch((error) => console.warn('Wallet disconnect failed.', error))
   }
   events.on('server/packet', ({ packet }) => {
     if (packet.type === 'packet/character_owner_response') {
@@ -527,19 +523,11 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     )
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
-      if (request === 'restore' && auth) {
-        const remembered_wallet = read_auth_wallet(storage)
-        if (remembered_wallet) login(request, () => auth!.restore(remembered_wallet))
-        else dispatch({ type: 'auth/failed', error: 'The remembered wallet is unavailable' })
-      } else if (request === 'google' && auth) login(request, auth.connect_google)
-      else if (request && typeof request === 'object') {
-        const wallet = auth?.wallets().find(({ name }) => name === request.wallet)
-        if (wallet) login(request, wallet.connect)
-        else dispatch({ type: 'auth/failed', error: `${request.wallet} is unavailable` })
-      }
+      if (request === 'restore') login(request, account.restore)
+      else if (request === 'google') login(request, () => account.connect())
+      else if (request) login(request, () => account.connect(request.wallet))
     }
     if (state.session.wallet !== previous.session.wallet && state.session.wallet) {
-      remember_auth_wallet(storage, state.session.wallet.wallet_name)
       link?.dispose()
       link = connect_server({ session: state.session.wallet, dispatch })
       dispatch({ type: 'wallet/refresh' })
@@ -575,7 +563,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   signal.addEventListener('abort', () => {
     clearInterval(balance_timer)
     dispose_link()
-    auth?.dispose()
+    account.dispose()
     globalThis.removeEventListener('focus', refresh_on_focus)
     globalThis.document?.removeEventListener('visibilitychange', refresh_on_focus)
   })

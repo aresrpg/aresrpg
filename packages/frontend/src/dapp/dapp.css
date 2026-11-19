@@ -1,0 +1,375 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Engine-less dapp surface. Colours resolve only through the shared --aui-* tokens; ember marks actions. */
+/* The dapp's content. Its shell (bar, wallet, mood) is the shared LightPage. */
+.dapp {
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+}
+.dapp-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dapp-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  color: var(--aui-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+/* The market uses the full page width. */
+.light-page-main:has(.dapp-market) {
+  max-width: none;
+}
+.dapp-notice {
+  max-width: 560px;
+  margin: 8vh auto 0;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+.dapp-notice h1 {
+  margin: 0;
+  font-family: var(--aui-font-display);
+  font-size: 1.5rem;
+}
+.dapp-notice p {
+  margin: 0;
+  color: var(--aui-soft);
+  line-height: 1.5;
+}
+.dapp-notice .aui-button {
+  justify-self: start;
+}
+.dapp-points {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--aui-muted);
+  line-height: 1.5;
+}
+.dapp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12vh;
+  color: var(--aui-muted);
+}
+.dapp-note {
+  margin: 0;
+  color: var(--aui-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.dapp-error,
+.dapp-warning {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--aui-radius);
+  border: 1px solid currentcolor;
+  font-size: 0.9rem;
+}
+.dapp-error {
+  color: var(--aui-danger);
+}
+.dapp-warning {
+  color: var(--aui-blue);
+}
+.dapp-board {
+  display: grid;
+  gap: 20px;
+}
+.dapp-section {
+  display: grid;
+  gap: 10px;
+}
+.dapp-section h2 {
+  margin: 0;
+  font-family: var(--aui-font-display);
+  font-size: 1.1rem;
+  color: var(--aui-brass-hi);
+}
+.dapp-heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+.dapp-hero {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px;
+  background: var(--aui-raised);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  color: var(--aui-ink);
+  text-align: left;
+  font: inherit;
+}
+button.dapp-hero {
+  cursor: pointer;
+}
+.dapp-hero[aria-pressed='true'] {
+  border-color: var(--aui-brass);
+  background: var(--aui-lifted);
+}
+.dapp-hero img,
+.dapp-hero-fallback {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  object-fit: contain;
+}
+.dapp-hero-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.dapp-hero-text strong {
+  overflow-wrap: anywhere;
+}
+.dapp-hero-text > span {
+  color: var(--aui-muted);
+  font-size: 0.85rem;
+}
+.dapp-hero-status {
+  color: var(--aui-soft);
+}
+.dapp-hero[data-status='activity'] .dapp-hero-status {
+  color: var(--aui-success);
+}
+.dapp-activities {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+.dapp-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--aui-raised);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+}
+.dapp-activity header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--aui-brass-hi);
+}
+.dapp-activity h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.dapp-activity p {
+  margin: 0;
+  color: var(--aui-soft);
+  line-height: 1.45;
+}
+.dapp-activity-state {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--aui-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.dapp-activity-state [data-line='out'] {
+  color: var(--aui-success);
+}
+.dapp-fix {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 8px 10px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  font-size: 0.85rem;
+}
+.dapp-confirm-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 0;
+  color: var(--aui-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.dapp-confirm-body p {
+  margin: 0;
+}
+.dapp-confirm .aui-confirm-actions {
+  flex-wrap: wrap;
+}
+.dapp-confirm .aui-button {
+  min-height: 44px;
+}
+.dapp-activity footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.dapp-activity .aui-button {
+  min-height: 44px;
+}
+.dapp-positions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+}
+.dapp-position {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  background: var(--aui-surface);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+}
+.dapp-position[data-running] {
+  border-color: var(--aui-line-strong);
+}
+.dapp-position header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.dapp-position h3,
+.dapp-haul h3 {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.dapp-position-time,
+.dapp-position-status,
+.dapp-position-where,
+.dapp-haul header span {
+  margin: 0;
+  color: var(--aui-muted);
+  font-size: 0.85rem;
+}
+.dapp-position-where {
+  color: var(--aui-soft);
+  overflow-wrap: anywhere;
+}
+.dapp-haul {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+}
+.dapp-haul header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.dapp-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+.dapp-facts div {
+  display: grid;
+  gap: 1px;
+}
+.dapp-facts dt {
+  color: var(--aui-muted);
+  font-size: 0.8rem;
+}
+.dapp-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.dapp-loot,
+.dapp-equipment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dapp-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: var(--aui-sunk);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  color: var(--aui-soft);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.dapp-item:disabled {
+  cursor: default;
+}
+.dapp-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.dapp-item-count {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 0.7rem;
+  color: var(--aui-ink);
+  text-shadow: 0 1px 2px var(--aui-void);
+}
+.dapp-loot-more {
+  align-self: center;
+  color: var(--aui-muted);
+}
+.dapp-position footer {
+  display: flex;
+  justify-content: flex-end;
+}
+.dapp-detail {
+  padding-top: 4px;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-sheet {
+  max-width: min(92vw, 420px);
+  max-height: 80dvh;
+  overflow: auto;
+  background: var(--aui-surface);
+}
+.dapp-market {
+  display: grid;
+  gap: 10px;
+  min-height: calc(100dvh - 120px);
+}
+.dapp-link-button {
+  text-decoration: none;
+  justify-self: start;
+}
+@media (max-width: 560px) {
+  .dapp-brand span {
+    display: none;
+  }
+}
+.dapp-disconnect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--aui-line);
+}

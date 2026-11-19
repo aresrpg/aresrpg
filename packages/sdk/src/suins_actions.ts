@@ -11,20 +11,34 @@ import { isValidSuiNSName, normalizeStructTag, normalizeSuiAddress } from '@myst
 import type { Sdk } from './client.ts'
 import { receipt_digest } from './cache.ts'
 import { canonical_suins_name } from './suins.ts'
+import { assert_name_record, type NameRecord } from './suins_record.ts'
 
 export type OwnedSuinsName = Readonly<{ name: string; object_id: string; nft_id: string; subname: boolean }>
 export type SuinsSnapshot = Readonly<{ default_name: string | null; names: readonly OwnedSuinsName[] }>
 export type SuinsSelection = Readonly<{ name: string; digest?: string }>
+export type SuinsReview = Readonly<{
+  fingerprint: string
+  player_address: string
+  agent_address: string
+  erased_names: readonly string[]
+}>
 export type SuinsActions = Readonly<{
   managed: boolean
   set_default: (name: string, before_sign: () => void) => Promise<void>
   snapshot: () => Promise<SuinsSnapshot>
   validate_parent: (name: string, before_sign: () => void, player_address?: string) => Promise<void>
-  apply_parent: (
+  review_parent: (
     name: string,
     agent_address: string,
     before_sign: () => void,
     player_address?: string
+  ) => Promise<SuinsReview>
+  apply_parent: (
+    name: string,
+    agent_address: string,
+    before_sign: () => void,
+    player_address?: string,
+    review?: SuinsReview
   ) => Promise<SuinsSelection>
 }>
 
@@ -125,7 +139,6 @@ const read_default = async (client: SuiGrpcClient, address: string, signal: Abor
   }
 }
 
-type NameRecord = NonNullable<Awaited<ReturnType<SuinsClient['getNameRecord']>>>
 // Core reports absent dynamic fields as typed object errors; SuiNS expects null.
 const read_name_record = async (service: SuinsClient, name: string): Promise<NameRecord | null> => {
   try {
@@ -136,8 +149,16 @@ const read_name_record = async (service: SuinsClient, name: string): Promise<Nam
   }
 }
 
+// Official suins-contracts df19300b, packages/{subdomains,temp_subdomain_proxy}/Move.lock.
+// Mainnet v2 ABI verified 2026-11-14. Config and authorization types retain their original IDs.
+const SUBNAME_WRITES = {
+  subNamesPackageId: '0xe0108df96c8dfac6d285e5b8afbeafc9a205002a3ec7807329929c8b4d53a8a0',
+  tempSubdomainsProxyPackageId: '0xf4d2e4ff2b8a4c23aad0414976f034c5ebb23eee5e0f66e7a322a63909fdf5d5',
+}
 type LeafChange = 'none' | 'create' | 'replace'
-const refuse = (reason: 'invalid_parent' | 'collision' | 'metadata' | 'unsupported'): never => {
+const refuse = (
+  reason: 'invalid_parent' | 'collision' | 'confirmation_required' | 'stale_review' | 'unsupported'
+): never => {
   throw new Error(`SuiNS ${reason}`, { cause: reason })
 }
 
@@ -176,7 +197,7 @@ const eligible_parent = (
     'aresrpg'.length >= config.min_label_size,
   ].every(Boolean)
 
-/** Deployed leaf replacement resets metadata, so all unknown keys are protected too. */
+/** A clean, correctly targeted leaf is already reconciled; replacements discard every old detail. */
 export const leaf_change = (
   record: NameRecord | null,
   parent_nft: string,
@@ -187,9 +208,8 @@ export const leaf_change = (
   const leaf = record.expirationTimestampMs === 0
   const lineage = normalizeSuiAddress(record.nftId) === parent_nft
   const targeted = target === undefined || normalizeSuiAddress(record.targetAddress) === target
-  if ([leaf, lineage, targeted].every(Boolean)) return 'none'
+  if ([leaf, lineage, targeted, Object.keys(record.data).length === 0].every(Boolean)) return 'none'
   if ([!leaf, record.expirationTimestampMs >= now].every(Boolean)) return refuse('collision')
-  if (Object.keys(record.data).length) return refuse('metadata')
   return leaf && lineage ? 'replace' : 'create'
 }
 
@@ -217,7 +237,7 @@ export const suins_actions = ({
   }
   const inspect = async (input: string, agent: string | undefined, current: () => void, player?: string) => {
     current()
-    if (client.network !== 'mainnet' || (!managed && !player)) return refuse('unsupported')
+    if (![client.network === 'mainnet', managed || !!player].every(Boolean)) return refuse('unsupported')
     const name = canonical_suins_name(input)
     if (!isValidSuiNSName(name)) return refuse('invalid_parent')
     const [owned, config, record] = await Promise.all([
@@ -239,9 +259,16 @@ export const suins_actions = ({
       leaves: leaves.map((leaf, index) => ({
         ...leaf,
         change: leaf_change(records[index]!, parent.nft_id, leaf.target, now()),
+        record: records[index] ?? null,
       })),
     }
   }
+  const review_of = (inspection: Awaited<ReturnType<typeof inspect>>): SuinsReview => ({
+    fingerprint: JSON.stringify({ owner, ...inspection }),
+    player_address: inspection.leaves[0]!.target!,
+    agent_address: inspection.leaves[1]!.target!,
+    erased_names: inspection.leaves.filter((leaf) => leaf.record && leaf.change !== 'none').map((leaf) => leaf.name),
+  })
   return Object.freeze({
     managed,
     set_default: async (name, before_sign) => {
@@ -262,22 +289,31 @@ export const suins_actions = ({
     validate_parent: async (input, before_sign, player_address) => {
       await inspect(input, undefined, before_sign, player_address)
     },
-    apply_parent: async (input, agent_address, before_sign, player_address) => {
+    review_parent: async (input, agent_address, before_sign, player_address) =>
+      review_of(await inspect(input, normalizeSuiAddress(agent_address), before_sign, player_address)),
+    apply_parent: async (input, agent_address, before_sign, player_address, review) => {
       const agent = normalizeSuiAddress(agent_address)
-      const { parent, leaves } = await inspect(input, agent, before_sign, player_address)
+      const inspection = await inspect(input, agent, before_sign, player_address)
+      const fresh = review_of(inspection)
+      if (review?.fingerprint !== fresh.fingerprint) return refuse(review ? 'stale_review' : 'confirmation_required')
+      const { parent, leaves } = inspection
       const { name } = leaves[0]!
       const own_default = leaves[0]!.target === owner
       const current_default = own_default ? await read_default(client, owner, AbortSignal.timeout(10_000)) : name
       before_sign()
-      if (leaves.every((leaf) => leaf.change === 'none') && current_default === name) return { name }
+      const changes = leaves.filter((leaf) => leaf.change !== 'none')
+      if ([!changes.length, current_default === name].every(Boolean)) return { name }
       const transaction = new Transaction()
-      const builder = new SuinsTransaction(service, transaction)
-      for (const leaf of leaves) {
-        if (leaf.change === 'none') continue
-        if (leaf.change === 'replace') builder.removeLeafSubName({ parentNft: parent.object_id, name: leaf.name })
-        builder.createLeafSubName({ parentNft: parent.object_id, name: leaf.name, targetAddress: leaf.target! })
+      const writer = client.$extend(suins({ packageInfo: { ...service.config, ...SUBNAME_WRITES } })).suins
+      const builder = new SuinsTransaction(writer, transaction)
+      const parent_object = transaction.object(parent.object_id)
+      leaves.forEach((leaf) => assert_name_record(transaction, service.config, leaf.name, leaf.record))
+      for (const leaf of changes) {
+        if (leaf.change === 'replace') builder.removeLeafSubName({ parentNft: parent_object, name: leaf.name })
+        builder.createLeafSubName({ parentNft: parent_object, name: leaf.name, targetAddress: leaf.target! })
       }
-      if (own_default && (current_default !== name || leaves[0]!.change !== 'none')) builder.setDefault(name)
+      if ([own_default, [current_default !== name, leaves[0]!.change !== 'none'].some(Boolean)].every(Boolean))
+        builder.setDefault(name)
       const receipt = await sdk.execute(transaction, { budget: 'estimate', before_sign })
       return { name, digest: receipt_digest(receipt) }
     },

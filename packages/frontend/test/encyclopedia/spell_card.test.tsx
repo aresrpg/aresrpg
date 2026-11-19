@@ -16,7 +16,7 @@ beforeEach(async () => {
 })
 
 test('the editor authors Châtiment duration from the generated Move constant', () => {
-  const source = readFileSync(new URL('../../src/encyclopedia/SpellCardEffects.tsx', import.meta.url), 'utf8')
+  const source = readFileSync(new URL('../../src/encyclopedia/SpellCardEditors.tsx', import.meta.url), 'utf8')
   expect(source).toContain('Number(CONTRACT_CONSTANTS.chatiment_turns)')
   expect(source).not.toMatch(/chatiment\).*turns !== 5/)
 })
@@ -110,10 +110,9 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(small_html).toContain('1 / 3')
   expect(small_html).toContain('data-spell-effects=""')
   expect(small_html).toContain('data-spell-effects-compact=""')
-  // the compact wrapper KILLS the row separators via its override — assert the mechanism, not
-  // the absence of the underlying utility (which legitimately remains on the shared row)
-  expect(small_html).toContain('data-spell-effects-compact')
-  expect(small_html).toContain('!border-b-0')
+  // the compact list KILLS the row separators through its own class — assert the mechanism, not
+  // the absence of the shared row rule
+  expect(small_html).toContain('class="aui-spell-effects aui-spell-effects-compact"')
   expect(small_html).not.toContain('/spell.webp')
   expect(small_html).not.toContain('data-spell-level-tabs=""')
   expect(small_html).toContain('data-spell-ap-cost=')

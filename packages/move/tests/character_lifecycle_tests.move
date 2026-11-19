@@ -16,7 +16,7 @@ fun paid_names_are_normalized_reserved_and_delivered_to_the_treasury() {
   scenario.next_tx(OWNER);
   let mut registry = scenario.take_shared<NameRegistry>();
   let expected = character::test_derived_address(&registry, b"luna".to_string());
-  let payment = coin::mint_for_testing<SUI>(1_000_000_000, scenario.ctx());
+  let payment = coin::mint_for_testing<SUI>(10_000_000_000, scenario.ctx());
   let first = character::create_character(&mut registry, payment, b"LuNa".to_string(), b"senshi".to_string(), true,
     0, 16777215, 123, scenario.ctx());
   assert!(object::id_address(&first) == expected);
@@ -27,10 +27,10 @@ fun paid_names_are_normalized_reserved_and_delivered_to_the_treasury() {
   test_scenario::return_shared(registry);
   scenario.next_tx(@treasury);
   let proceeds = scenario.take_from_sender<Coin<SUI>>();
-  assert!(proceeds.value() == 1_000_000_000);
+  assert!(proceeds.value() == 10_000_000_000);
   coin::burn_for_testing(proceeds);
   let mut registry = scenario.take_shared<NameRegistry>();
-  let payment = coin::mint_for_testing<SUI>(1_000_000_000, scenario.ctx());
+  let payment = coin::mint_for_testing<SUI>(10_000_000_000, scenario.ctx());
   let female = character::create_character(&mut registry, payment, b"nineteen_characters".to_string(), b"ikari".to_string(), false,
     1, 2, 3, scenario.ctx());
   assert!(female.name() == b"nineteen_characters".to_string());
@@ -88,30 +88,30 @@ fun invalid_mint(payment: u64, name: vector<u8>, classe: vector<u8>, colors: vec
 }
 
 #[test, expected_failure(abort_code = 105, location = aresrpg::character)]
-fun mint_rejects_wrong_payment() { invalid_mint(999_999_999, b"valid", b"senshi", vector[0, 0, 0]); }
+fun mint_rejects_wrong_payment() { invalid_mint(1_000_000_000, b"valid", b"senshi", vector[0, 0, 0]); }
 #[test, expected_failure(abort_code = 103, location = aresrpg::character)]
-fun mint_rejects_unknown_class() { invalid_mint(1_000_000_000, b"valid", b"mage", vector[0, 0, 0]); }
+fun mint_rejects_unknown_class() { invalid_mint(10_000_000_000, b"valid", b"mage", vector[0, 0, 0]); }
 #[test, expected_failure(abort_code = 102, location = aresrpg::character)]
-fun mint_rejects_short_name() { invalid_mint(1_000_000_000, b"abc", b"senshi", vector[0, 0, 0]); }
+fun mint_rejects_short_name() { invalid_mint(10_000_000_000, b"abc", b"senshi", vector[0, 0, 0]); }
 #[test, expected_failure(abort_code = 102, location = aresrpg::character)]
-fun mint_rejects_long_name() { invalid_mint(1_000_000_000, b"abcdefghijklmnopqrst", b"senshi", vector[0, 0, 0]); }
+fun mint_rejects_long_name() { invalid_mint(10_000_000_000, b"abcdefghijklmnopqrst", b"senshi", vector[0, 0, 0]); }
 #[test, expected_failure(abort_code = 102, location = aresrpg::character)]
-fun mint_rejects_control_bytes() { invalid_mint(1_000_000_000, b"bad\nname", b"senshi", vector[0, 0, 0]); }
+fun mint_rejects_control_bytes() { invalid_mint(10_000_000_000, b"bad\nname", b"senshi", vector[0, 0, 0]); }
 #[test, expected_failure(abort_code = 104, location = aresrpg::character)]
-fun mint_rejects_first_color_overflow() { invalid_mint(1_000_000_000, b"valid", b"senshi", vector[16777216, 0, 0]); }
+fun mint_rejects_first_color_overflow() { invalid_mint(10_000_000_000, b"valid", b"senshi", vector[16777216, 0, 0]); }
 #[test, expected_failure(abort_code = 104, location = aresrpg::character)]
-fun mint_rejects_second_color_overflow() { invalid_mint(1_000_000_000, b"valid", b"senshi", vector[0, 16777216, 0]); }
+fun mint_rejects_second_color_overflow() { invalid_mint(10_000_000_000, b"valid", b"senshi", vector[0, 16777216, 0]); }
 #[test, expected_failure(abort_code = 104, location = aresrpg::character)]
-fun mint_rejects_third_color_overflow() { invalid_mint(1_000_000_000, b"valid", b"senshi", vector[0, 0, 16777216]); }
+fun mint_rejects_third_color_overflow() { invalid_mint(10_000_000_000, b"valid", b"senshi", vector[0, 0, 16777216]); }
 
 #[test, expected_failure(abort_code = sui::derived_object::EObjectAlreadyExists)]
 fun deleting_a_paid_character_never_releases_its_name() {
   let mut ctx = tx_context::dummy();
   let mut registry = character::test_registry(&mut ctx);
-  let first = character::create_character(&mut registry, coin::mint_for_testing<SUI>(1_000_000_000, &mut ctx),
+  let first = character::create_character(&mut registry, coin::mint_for_testing<SUI>(10_000_000_000, &mut ctx),
     b"reserved".to_string(), b"senshi".to_string(), true, 0, 0, 0, &ctx);
   character::destroy(first);
-  let second = character::create_character(&mut registry, coin::mint_for_testing<SUI>(1_000_000_000, &mut ctx),
+  let second = character::create_character(&mut registry, coin::mint_for_testing<SUI>(10_000_000_000, &mut ctx),
     b"RESERVED".to_string(), b"senshi".to_string(), false, 0, 0, 0, &ctx);
   character::destroy(second);
   std::unit_test::destroy(registry);

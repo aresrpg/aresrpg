@@ -44,10 +44,10 @@ type KpiTone = 'gold' | 'blue' | 'green' | 'violet'
 const DASHBOARD_TONES = Object.freeze({
   revenue: Object.freeze({
     group:
-      'border-[#c8963c]/30 bg-[radial-gradient(circle_at_12%_0%,rgba(200,150,60,0.14),transparent_46%),repeating-linear-gradient(135deg,rgba(200,150,60,0.025)_0,rgba(200,150,60,0.025)_1px,transparent_1px,transparent_9px)]',
-    heading: 'border-[#c8963c]/20 text-[#d6aa58]',
+      'border-gold/30 bg-[radial-gradient(circle_at_12%_0%,rgba(200,150,60,0.14),transparent_46%),repeating-linear-gradient(135deg,rgba(200,150,60,0.025)_0,rgba(200,150,60,0.025)_1px,transparent_1px,transparent_9px)]',
+    heading: 'border-gold/20 text-gold',
     chart:
-      'border-[#c8963c]/25 bg-[radial-gradient(circle_at_8%_0%,rgba(200,150,60,0.09),transparent_42%),rgba(18,18,26,0.96)]',
+      'border-gold/25 bg-[radial-gradient(circle_at_8%_0%,rgba(200,150,60,0.09),transparent_42%),rgba(18,18,26,0.96)]',
   }),
   activity: Object.freeze({
     group:
@@ -65,22 +65,22 @@ const DASHBOARD_TONES = Object.freeze({
   }),
   transactions: Object.freeze({
     group:
-      'border-[#70bdf2]/28 bg-[radial-gradient(circle_at_12%_0%,rgba(112,189,242,0.13),transparent_48%),repeating-linear-gradient(0deg,rgba(112,189,242,0.024)_0,rgba(112,189,242,0.024)_1px,transparent_1px,transparent_9px)]',
-    heading: 'border-[#70bdf2]/18 text-[#83c8f7]',
+      'border-cyan/28 bg-[radial-gradient(circle_at_12%_0%,rgba(112,189,242,0.13),transparent_48%),repeating-linear-gradient(0deg,rgba(112,189,242,0.024)_0,rgba(112,189,242,0.024)_1px,transparent_1px,transparent_9px)]',
+    heading: 'border-cyan/18 text-cyan',
     chart:
-      'border-[#70bdf2]/22 bg-[radial-gradient(circle_at_8%_0%,rgba(112,189,242,0.08),transparent_42%),rgba(18,18,26,0.96)]',
+      'border-cyan/22 bg-[radial-gradient(circle_at_8%_0%,rgba(112,189,242,0.08),transparent_42%),rgba(18,18,26,0.96)]',
   }),
 })
 const kpi_value_color = (tone?: KpiTone): string =>
   tone === 'gold'
-    ? 'text-[#c8963c]'
+    ? 'text-gold'
     : tone === 'blue'
-      ? 'text-[#70bdf2]'
+      ? 'text-cyan'
       : tone === 'green'
         ? 'text-[#77d99a]'
         : tone === 'violet'
           ? 'text-[#bd9ee9]'
-          : 'text-[#e8e4dc]'
+          : 'text-text'
 
 const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; label: string; tone: DashboardTone }>) => {
   const colors = DASHBOARD_TONES[tone]
@@ -103,8 +103,8 @@ const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; lab
 
 const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
   <div className="min-w-0 border-r border-border px-3 last:border-r-0">
-    <span className="block truncate text-[7px] tracking-[0.14em] text-[#6b7280] uppercase">{label}</span>
-    <strong className="mt-1 block truncate text-[11px] font-medium text-[#e8e4dc] tabular-nums">{value}</strong>
+    <span className="block truncate text-[7px] tracking-[0.14em] text-faint uppercase">{label}</span>
+    <strong className="mt-1 block truncate text-[11px] font-medium text-text tabular-nums">{value}</strong>
   </div>
 )
 
@@ -115,11 +115,11 @@ const KpiCard = ({
   value,
 }: Readonly<{ detail: string; label: string; tone?: KpiTone; value: string }>) => (
   <article className="flex h-full w-max max-w-64 min-w-40 flex-col justify-between bg-black/10 px-4 py-3.5">
-    <span className="truncate text-[8px] tracking-[0.15em] text-[#777d89] uppercase">{label}</span>
+    <span className="truncate text-[8px] tracking-[0.15em] text-faint uppercase">{label}</span>
     <strong className={`mt-2 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
       {value}
     </strong>
-    <span className="mt-0.5 truncate text-[8px] text-[#5f6570]">{detail}</span>
+    <span className="mt-0.5 truncate text-[8px] text-faint">{detail}</span>
   </article>
 )
 
@@ -133,13 +133,11 @@ export const TimelineKpiCard = ({
   tone?: KpiTone
 }>) => (
   <article className="flex h-full w-max max-w-full flex-col bg-black/10 px-4 py-3.5">
-    <span className="text-[8px] tracking-[0.15em] text-[#777d89] uppercase">{label}</span>
+    <span className="text-[8px] tracking-[0.15em] text-faint uppercase">{label}</span>
     <div className="mt-2 grid flex-1 grid-cols-[repeat(3,max-content)] items-end">
       {entries.map((row, index) => (
         <div className={index === 0 ? 'pr-3' : 'border-l border-white/[0.07] px-3'} key={row.label}>
-          <span className="block text-[8px] tracking-[0.12em] whitespace-nowrap text-[#5f6570] uppercase">
-            {row.label}
-          </span>
+          <span className="block text-[8px] tracking-[0.12em] whitespace-nowrap text-faint uppercase">{row.label}</span>
           <strong
             className={`mt-1 block text-base font-semibold whitespace-nowrap tabular-nums ${kpi_value_color(tone)}`}
           >
@@ -181,13 +179,13 @@ const ChartPanel = ({
   >
     <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
       <div className="min-w-0">
-        <h2 className="truncate text-[10px] font-semibold tracking-[0.16em] text-[#d9d5cd] uppercase">{title}</h2>
-        <p className="mt-1 truncate text-[8px] text-[#6b7280]">{subtitle}</p>
+        <h2 className="truncate text-[10px] font-semibold tracking-[0.16em] text-soft uppercase">{title}</h2>
+        <p className="mt-1 truncate text-[8px] text-faint">{subtitle}</p>
       </div>
       <AdminRangeSelector change={change} copy={copy} days={days} />
     </header>
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3">
-      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[7px] tracking-[0.08em] text-faint uppercase">
         {series.map((row) => (
           <span className="inline-flex items-center gap-1" key={row.label}>
             <i className="size-1.5" style={{ background: row.color }} />
@@ -195,7 +193,7 @@ const ChartPanel = ({
           </span>
         ))}
       </span>
-      <span className="text-[7px] tracking-[0.12em] text-[#555b66] uppercase">
+      <span className="text-[7px] tracking-[0.12em] text-faint uppercase">
         {loading ? text(copy, 'loading', 'Loading…') : bucket_label(copy, bucket)}
       </span>
     </div>
@@ -318,10 +316,8 @@ export const TreasuryStrip = ({
   return (
     <section className={`${PANEL} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
       <div className="mr-auto min-w-0">
-        <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-          {text(copy, 'treasury', 'Treasury')}
-        </span>
-        <strong className="ml-3 text-[12px] font-medium text-[#c8963c] tabular-nums">{treasury_value(revenue)}</strong>
+        <span className="text-[8px] tracking-[0.15em] text-faint uppercase">{text(copy, 'treasury', 'Treasury')}</span>
+        <strong className="ml-3 text-[12px] font-medium text-gold tabular-nums">{treasury_value(revenue)}</strong>
       </div>
       <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 2)} SUI`} />
       <Stat
@@ -329,7 +325,7 @@ export const TreasuryStrip = ({
         value={`${format_sui(character, 2)} SUI`}
       />
       <button
-        className="h-8 shrink-0 border border-[#c8963c]/40 bg-[#c8963c]/8 px-4 text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:opacity-30"
+        className="h-8 shrink-0 border border-gold/40 bg-gold/8 px-4 text-[8px] tracking-[0.12em] text-gold uppercase disabled:opacity-30"
         disabled={claim_disabled(revenue)}
         onClick={revenue.claim}
         type="button"
@@ -344,7 +340,7 @@ const LoadingOverview = ({
   copy,
   overview,
 }: Readonly<{ copy: Readonly<Record<string, string>>; overview: AdminOverviewState }>) => (
-  <div className="grid min-h-0 flex-1 place-items-center bg-surface/50 text-[9px] tracking-[0.14em] text-[#6b7280] uppercase">
+  <div className="grid min-h-0 flex-1 place-items-center bg-surface/50 text-[9px] tracking-[0.14em] text-faint uppercase">
     <div className="text-center">
       <p>
         {overview.status === 'failed'
@@ -354,7 +350,7 @@ const LoadingOverview = ({
       {overview.error && <p className="mt-2 text-[#ff8caa]">{overview.error}</p>}
       {overview.status === 'failed' && (
         <button
-          className="mt-4 border border-border px-3 py-2 text-[#c8963c]"
+          className="mt-4 border border-border px-3 py-2 text-gold"
           onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
           type="button"
         >
@@ -398,13 +394,13 @@ export const OverviewPageView = ({
   const { revenue, players, transactions, online, addresses, characters } = result
   return (
     <div className="admin-overview min-h-0 flex-1 bg-surface/50">
-      <div className="flex items-center gap-3 px-1 text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">
+      <div className="flex items-center gap-3 px-1 text-[8px] tracking-[0.12em] text-faint uppercase">
         <span className="text-[#77d99a]">● {text(copy, 'all_systems_current', 'All systems current')}</span>
         <span>
           {text(copy, 'checkpoint', 'Checkpoint')} {result.as_of_checkpoint?.toLocaleString() ?? '—'}
         </span>
         <button
-          className="ml-auto text-[#c8963c]"
+          className="ml-auto text-gold"
           onClick={() => dispatch({ type: 'admin/overview_refresh' })}
           type="button"
         >

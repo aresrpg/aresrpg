@@ -5,14 +5,8 @@
 // expiring LRU, no store, no cross-pod sync: a banned client that lands on another pod just
 // gets caught again by the same laws there.
 
-import { VIOLATION_DROP_REASONS } from '@aresrpg/protocol'
-
 const DEFAULT_TTL_MS = 10 * 60 * 1000
 const DEFAULT_CAPACITY = 10_000
-
-/** The drop reasons that earn a cool-off — the ONE violation set the wire contract declares
- *  (the client's red connection state keys on the same home). */
-export const BANNABLE_REASONS: ReadonlySet<string> = VIOLATION_DROP_REASONS
 
 export type BanList = Readonly<{
   ban: (address: string) => void

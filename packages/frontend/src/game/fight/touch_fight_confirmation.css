@@ -15,7 +15,7 @@
   height: 44px;
   border: 1px solid currentColor;
   border-radius: 4px;
-  background: #171b23;
+  background: var(--aui-sunk);
   cursor: pointer;
 }
 .fight-touch-cancel {
@@ -25,5 +25,5 @@
   color: #80d49b;
 }
 .fight-touch-confirm button:active {
-  background: #30343e;
+  background: var(--aui-high);
 }

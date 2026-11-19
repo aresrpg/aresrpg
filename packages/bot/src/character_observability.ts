@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { CONTRACT_CONSTANTS, player_max_hp } from '@aresrpg/fight'
+import { CONTRACT_CONSTANTS, seated_player_health } from '@aresrpg/fight'
 import { stat_names } from '@aresrpg/immutable'
 import { character_max_hp, projected_hp, item_stat_offset } from '@aresrpg/protocol/character-stats'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
@@ -12,23 +12,15 @@ const fight_health = (character: CharacterRow, context: GameplayContext, chain_m
   const active = character.active_fight!
   const row = context.snapshot.fights[active.id]
   if (!row || character.custody !== 'fight') return null
-  const fight = hydrate_gameplay_fight(row)
-  const fighter = fight.contract.fighters[active.seat]
-  if (!fighter || fighter.kind.type !== 'player') return null
-  if (
-    [
-      fighter.kind.character !== character.id,
-      fighter.kind.owner !== context.address,
-      fighter.settled,
-      fighter.forfeited,
-    ].some(Boolean)
-  )
-    return null
-  const player = fight.sources.players[character.id]
-  if (!player) return null
+  const health = seated_player_health(hydrate_gameplay_fight(row), {
+    character: character.id,
+    owner: context.address,
+    seat: active.seat,
+  })
+  if (!health) return null
   return {
-    current: Number(fighter.hp),
-    maximum: Number(player_max_hp(player)),
+    current: Number(health.current),
+    maximum: Number(health.maximum),
     source: 'fight' as const,
     chain_ms,
     regen_ms_per_hp: null,

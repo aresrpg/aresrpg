@@ -2,46 +2,41 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { Grant } from './model.ts'
 import type { create_behavior_control } from './behavior_control.ts'
-import { nonempty } from './gameplay_schema.ts'
+import { identifier, nonempty } from './gameplay_schema.ts'
 import { BEHAVIOR_SCRIPT_SCHEMA } from './behavior_schema.ts'
 
 const revision = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER } as const
 const revisions = { decision_revision: revision, observation_revision: revision }
 const definitions = {
   bot_validate_behavior: {
-    read_only: true,
     scope: 'bot:observe',
     description:
-      'Validate an AI-authored behavior tree without executing it. Conditions are reactive; unknown facts wait. Sequences retain reconciled actions until failure or traversal reset; selectors choose the first non-failing child. A successful root repeats on the next existing scheduler tick; complete terminates. No default action/time cutoff.',
+      'Validate an AI-authored behavior tree without executing it. A tree acts for exactly one hero: every action names the same character_id, while conditions may read teammates. Conditions are reactive; unknown facts wait. Sequences retain reconciled actions until failure or traversal reset; selectors choose the first non-failing child. A successful root repeats on the next existing scheduler tick; complete terminates. No default action/time cutoff.',
     properties: { script: BEHAVIOR_SCRIPT_SCHEMA },
   },
   bot_start_behavior: {
-    read_only: false,
     scope: 'bot:play',
     description:
-      'Persist and execute a behavior tree through the existing single wallet lane. Author priorities, resource thresholds and recipe changes explicitly. Completed transactions require observed effects before advancing; uncertain work never falls through a selector. Objective metadata is descriptive. Runs survive service restarts and pause on owner stop/disconnect.',
+      'Set and run the behavior tree of one hero. Each hero has its own run; a wallet hosts at most 30 at once and signs one transaction at a time, serving the hero whose fight turn expires first. Heroes whose trees lead them into the same fight play it together. Author priorities, resource thresholds and recipe changes explicitly. Completed transactions require observed effects before advancing; uncertain work never falls through a selector. Objective metadata is descriptive. The tree survives service restarts and then starts again from its root after fresh observations; traversal progress does not survive. Runs pause on owner stop/disconnect.',
     properties: { script: BEHAVIOR_SCRIPT_SCHEMA, idempotency_key: nonempty, ...revisions },
   },
   bot_replace_behavior: {
-    read_only: false,
     scope: 'bot:play',
     description:
-      'Explicitly replace/replan a tree using its current revision and fresh lane revisions. Refuses active commands, pending envelopes or unreconciled effects. Starts a new traversal; funds remain the spending limit. Stop/pause is never automatically undone.',
-    properties: { script: BEHAVIOR_SCRIPT_SCHEMA, run_id: nonempty, expected_revision: revision, ...revisions },
+      'Explicitly replace/replan one hero’s tree using its current revision. Refuses while that hero’s own command is signing, pending or unreconciled. Starts a new traversal under your authorization; funds remain the spending limit. Stop/pause is never automatically undone.',
+    properties: { script: BEHAVIOR_SCRIPT_SCHEMA, character_id: identifier, expected_revision: revision, ...revisions },
   },
   bot_behavior_status: {
-    read_only: true,
     scope: 'bot:observe',
     description:
-      'Read your exact retained tree, revision, progress, pending command ID and durable issue. awaiting_ai requires external AI replanning; this service does not invoke an inference provider.',
-    properties: { run_id: nonempty },
+      'Read one hero’s retained tree, revision, progress, pending command ID and current issue. script.strategy names the shared catalogue entry the tree was bound from, when any. Every authorized connector of this owner reads the same run. Progress and issue are process-local and reset when the service restarts. awaiting_ai requires external AI replanning; this service does not invoke an inference provider.',
+    properties: { character_id: identifier },
   },
   bot_stop_behavior: {
-    read_only: false,
     scope: 'bot:pause',
     description:
-      'Stop this behavior tree and fence new execution. An already submitting transaction remains subject to exact receipt recovery.',
-    properties: { run_id: nonempty },
+      'Stop one hero’s behavior tree and fence its new execution; other heroes keep playing. An already submitting transaction remains subject to exact receipt recovery.',
+    properties: { character_id: identifier },
   },
 } as const
 export const BEHAVIOR_TOOLS = Object.entries(definitions).map(([name, entry]) => ({
@@ -61,8 +56,8 @@ export const behavior_calls = (
   control: ReturnType<typeof create_behavior_control>
 ): readonly (readonly [string, (grant: Grant, args: Readonly<Record<string, unknown>>) => Promise<unknown>])[] => [
   ['bot_validate_behavior', (grant, args) => control.validate_behavior(grant, args.script)],
-  ['bot_behavior_status', (grant, args) => control.behavior_status(grant, text(args.run_id))],
-  ['bot_stop_behavior', (grant, args) => control.stop_behavior(grant, text(args.run_id))],
+  ['bot_behavior_status', (grant, args) => control.behavior_status(grant, text(args.character_id))],
+  ['bot_stop_behavior', (grant, args) => control.stop_behavior(grant, text(args.character_id))],
   [
     'bot_start_behavior',
     (grant, args) =>
@@ -78,7 +73,7 @@ export const behavior_calls = (
     (grant, args) =>
       control.replace_behavior(grant, {
         script: args.script,
-        run_id: text(args.run_id),
+        character_id: text(args.character_id),
         expected_revision: integer(args.expected_revision),
         decision_revision: integer(args.decision_revision),
         observation_revision: integer(args.observation_revision),

@@ -337,6 +337,7 @@ test('settlement derives canonical loot, custody, boss and final-seat facts with
       settlements: [{ fighter_idx: 0n, loot: [{ item_type: 'silk', existing: null }] }],
       last: true,
       boss_rewards: true,
+      dungeon: null,
     },
   })
   expect(() => validate_gameplay(context_for('fight_settle', started()))).toThrow('fight_not_ended')

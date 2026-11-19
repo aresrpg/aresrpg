@@ -102,7 +102,6 @@ export const observe_engine_reporting = (
 ): (() => void) => {
   let previous: EngineStatus['state'] | null = null
   const started_at = performance.now()
-  const surface = globalThis.location?.pathname === '/play-demo' ? 'tutorial' : 'world'
   return engine.subscribe_status((status) => {
     const changed = status.state !== previous
     previous = status.state
@@ -115,7 +114,7 @@ export const observe_engine_reporting = (
     if (issue.stack) error.stack = issue.stack
     capture_exception(error, {
       level: issue.code === 'webgpu_unavailable' ? 'warning' : 'error',
-      tags: { area: 'engine', engine_issue: issue.code, surface },
+      tags: { area: 'engine', engine_issue: issue.code, surface: 'world' },
       fingerprint: ['engine', issue.code, '{{ default }}'],
       contexts: {
         telemetry: reporting_analytics_context(),

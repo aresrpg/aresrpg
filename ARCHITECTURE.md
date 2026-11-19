@@ -61,9 +61,10 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/sdk`         | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state                                                       |
 | `packages/indexer`     | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                                                             |
 | `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                             |
-| `packages/bot`         | Hosted OAuth/MCP control, durable bot custody descriptors, grants, fenced actor lanes and encrypted SDK transaction journals                                                       | Independent game truth, inference, arbitrary transaction signing endpoints                   |
+| `packages/bot`         | Hosted OAuth/MCP control, durable bot custody descriptors, grants, authored scripts and fenced actor lanes; process-local SDK execution                                            | Independent game truth, inference, arbitrary transaction signing endpoints                   |
+| `packages/telegram`    | Telegram ingress/delivery, the chat-to-owner link and its encrypted records, the waitlist card, live allowlist admission and reviewed seed-authored strategies per hero            | Google identity, game truth, custody, hero runs, execution or durable navigation history     |
 | `packages/discord`     | Live Redis notification forwarding and PNG cards                                                                                                                                   | Game authority, graph writes, realtime connections                                           |
-| `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                                   |
+| `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections; the hosted Redis key grammar, Telegram access lists and the one request limiter           | Independent gameplay state                                                                   |
 | `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                            |
 | `packages/ui`          | Shared visual tokens, accessible React controls, windows, and responsive game layouts                                                                                              | Stores, wallet/SDK calls, gameplay calculations, or authored content                         |
 | `packages/mobile`      | Landscape player presentation, touch adapters, and fullscreen management overlays using the shared frontend runtime and controllers                                                | Separate game state, transaction execution, authored content, or duplicated page controllers |
@@ -107,7 +108,7 @@ input ──▶ pure reducer ──▶ new state ──▶ observer ──▶ ef
 The frontend has one entry, build, environment and authentication lifecycle. That entry selects
 `packages/mobile` for compact or touch-capable gameplay viewports; demo and finance retain their responsive surfaces.
 Printed gifts select a portrait-friendly DOM entry before gameplay imports. That entry reuses Wallet Standard
-authentication and shared UI materials, mounts no canvas, and defers the game and its offline cache until handoff. `PlayerRuntime.tsx` owns the canvas, shared login (including Play Demo), and
+authentication and shared UI materials, mounts no canvas, and defers the game and its offline cache until handoff. `PlayerRuntime.tsx` owns the canvas, shared login, and
 global recovery. Desktop and mobile share the full-viewport canvas HUD and `GamePageWindow` feature host.
 The mobile surface adds touch input beneath the shared HUD in the same canvas stacking context.
 Feature windows consume the same equipment, allocation, spell, crafting, forge and marketplace
@@ -117,8 +118,7 @@ nearby-fight browser remain overworld-only. Portrait blocks gameplay
 controls without replacing the canvas. Pending confirmations use compact dialogs.
 
 The existing world input device accepts bounded touch axes and jump alongside keyboard and mouse input.
-The mobile joystick and jump button serve both the signed-in world and the local adventure; each scene
-supplies its existing input device. Touch-capable tablets retain controls regardless of viewport width.
+The mobile joystick and jump button drive the signed-in world through its existing input device. Touch-capable tablets retain controls regardless of viewport width.
 The joystick and jump button remain faintly visible at rest and brighten during a press.
 The canvas camera adapter owns mouse and touch dragging across exposed game space;
 HUD controls never enter that adapter. Releasing a touch clears its manual input without cancelling an automated run.
@@ -144,11 +144,25 @@ Stateful core edits restart the app to rebuild reducer and observer lifecycles t
 Game boot consumes engine data through `@aresrpg/engine/data`; its static dependency graph never
 loads Three.js. Surface lifecycles import rendering. Fight cue projection chooses movement gait;
 the engine consumes that cue rather than exporting a renderer-bound helper for the choice.
-Let AI Play enters the same player startup, home screen, Google login and service-worker lifecycle as Play.
-`/world?intent=connect-agent` opens the existing agent modal once after authentication. The old
-`/connect-agent` URL is a modal-intent alias, consumed into `/world` without a separate surface.
-Modal consumption preserves unrelated query fields, fragments and history state; dismissal and logout
-follow ordinary player navigation. There is no separate agent entry or renderer handoff.
+Connect Your Agent is an engine-less page. `/world?intent=connect-agent`, an assistant's consent link and
+the old `/connect-agent` path boot `ConnectAgentRoute` with the account and owner observers: a sign-in
+card, then the game's own `AgentSetup`, opened on arrival. An assistant's request waits there for the
+player's click: arriving signs no owner proof and provisions nothing. It mounts no canvas and never
+downloads the renderer. `LightPage` is the shared shell of the pages that need the account but no world; `/kares` uses
+it too. Its `aura` option gives a page its mood from tokens
+and one small pixel-art scene: a radiance in the hue, a pixel weave (`aui-aura` in the UI package) and
+the scene at the foot of the page, blended so only its light stays. `/kares` is `sky`, the agent page is
+`ember`. The same `aui-aura` surface, in a quiet neutral, sits behind the docs.
+An engine-less page never shows a blank document: the document carries a `boot-light` template, a
+skeleton of the shell in the page's mood, which the parser-blocking shell script paints before any
+module loads and React replaces. The home page opens these pages in place (no document reload, Back
+reloads the home page). Content that waits on the chain holds its shape with `aui-skeleton` blocks.
+The docs are the one written explanation of the protocol for people: what is on-chain, the ways to play,
+a beginner guide, one page per game mechanic (their text is the encyclopedia copy's `gameplay` block, the
+numbers come from the contract constants), hosted bots, the market and the SDK. The in-game encyclopedia
+keeps only the reference views it shares with the docs (classes, jobs, worlds, items, mobs); it has no
+gameplay tab.
+The page owns its sign-in.
 Deployment headers give content-hashed `/assets/` files immutable browser caching. Stable asset
 names, HTML and the service worker retain revalidation.
 Page navigations bypass the service-worker cache so reloads fetch the current app shell and its
@@ -161,6 +175,13 @@ Build-time markup and the interactive landing use the same presentation, artwork
 parser-blocking entry selects inert landing or game-loader templates; the OAuth callback stays empty.
 Play and failed startup restore the document-owned game loader, while a no-JavaScript document
 retains browser-reload guidance. Root landing visits do not import the game renderer.
+The landing header owns the one sign-in control: Google through Enoki, loaded on demand, sharing the
+game's remembered wallet so the game restores the session on boot. Signed in, Play enters the game;
+signed out, Play signs in first. There is no free playable demo: play starts with a signed-in account and a
+created character. `/docs` and `/dapp`
+are engine-less routes that never show the game loader.
+The Telegram card's action joins the Telegram waitlist as that signed-in account, signing in first when
+needed: the browser signs the hosted bot's session challenge and the bot stores the proven address.
 The landing owns one looping HTML audio element and a persistent landing-only sound preference.
 Its navbar control stays available on mobile. Browser gesture retries respect that preference;
 leaving the landing releases the player before game boot. The website soundtrack lives in frontend public assets.
@@ -202,10 +223,7 @@ with unavailable ingredient recipes; its explanation also appears in item detail
 recommendation keeps its green border. These hints preserve recipe order and ordinary crafting authority.
 
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
-the demo owns content editing and local simulation. The public adventure remains local until the player chooses Start playing after the first victory or its
-ending modal is ready, then activates the same player observers for direct Google sign-in. The
-ending scene stays mounted during authentication; successful login replaces it with the player
-runtime in the same app store, without showing the home screen. One ordered registry in
+the demo owns content editing and local simulation. One ordered registry in
 `packages/frontend/src/store.ts` declares each module’s player, demo, or shared observer lifetime.
 Activation lists derive from that registry; reducers retain the same shared order.
 The world demo exposes Hillaire preview controls through the ordinary world and engine API.
@@ -214,9 +232,7 @@ retains the latest preview through backend startup and quality changes; Hillaire
 and rebuilds its existing LUTs only when physical parameters change. Reset and panel teardown
 restore the world's preset. These controls never write seed content or persisted player settings.
 Localization
-observation is shared by player, demo and adventure. Adventure feature windows use real pages
-with their actual session state; public finance reads may run, but opening a page never creates
-a wallet or submits a transaction.
+observation is shared by player and demo.
 
 The read-only `/demo#assets` workshop presents the complete seed-authored kit in one grass-grid
 world, through the ordinary world runtime, camera, terrain, detail-cell and plant renderers.
@@ -258,48 +274,14 @@ rooted wind. Campfire assets place bounded GPU flame/smoke batches under the exi
 `validate:assets` checks the single workshop artifact. City-specific compilers remain the
 owners of production cities; the module workshop does not introduce another runtime generation path.
 
-The public adventure owns its local hero, recruited companion, selection, dialogue and combat progress in
-one adventure reducer. New visits enter the first goblin fight directly at placement. After its victory
-presentation drains, a shared native modal offers Start playing or Continue tutorial. Start playing
-uses the existing authenticated handoff, retaining live funding and character requirements; Continue
-opens the equipment lesson with earned rewards. An opening defeat retains encounter zero and its
-result acknowledgment starts a fresh fight. One device-local opening-choice checkpoint restores
-sign-in or the equipment lesson on reload; later tutorial progress stays session-local. Finishing
-the final encounter saves the sign-in checkpoint. Storage failures leave the current session playable.
-`seed/content/adventure.json` authors its encounters, companion and quest order;
-these never enter the published catalogue. `scripts/adventure_scene.ts` compiles its deterministic
-terrain and decoration offline from those inputs and `adventure_environment.json`.
-`generate_adventure.mjs` partitions raw construction into ordinary 32³ named structures in
-`seed/structures/types.json` and emits the height grid, placements and resources in
-`seed/scenes/adventure.json`. The scene and shared catalogue use the existing voxel format;
-explicit air, material identity and placement order remain unchanged. Asset freshness checks both
-outputs. Runtime retains only coordinate and movement rules, loads the scene through one abortable
-request, and initializes the ordinary world lifecycle after success. Cancellation cannot mount a late
-world; failed requests use the shared loading recovery and emit a loading failure. Workers receive
-named placements and the height grid, never raw construction tuples or an adventure generator.
-Quest progress derives from those facts. After the first
-victory, the equipment quest requires equipping every earned item, including the pet, through the
-ordinary immediate inventory actions before Sceat becomes interactive. Its completion is
-retained even if equipment later changes. The tutorial explains that each equipment change starts a Sui transaction
-in the real game; local equipment changes stay free and never initialize a wallet. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
+Live gameplay and `/demo#ui` share the same character selector and quest journal. The lab's sample
+hero, items and local fight live in `packages/frontend/src/demo/sample.ts`; they are never published.
 The journey source boundary changes facts and actions, never markup; the existing production `JourneyPanel`
-owns both the compact tracker and full journal, including progress, quest art, milestones and checklist. The local source also reuses party controls, speech captions and the ordinary multi-character fight resolver.
-Recruiting Sceat requires an explicit context-menu invitation; the talk shortcut cannot recruit him.
-The local party uses the shared social dock. Speaking actors face the listener, and caption context-menu
-picking uses the caption renderer’s own projected bounds. Speech wraps whole words, with grapheme
-fallback for long unbroken text.
-The world owns disposable actor positions; selection restores each actor once, while equipment changes
-preserve its position. Companion following uses the shared automatic-travel navigator and locomotion controller.
-The quest tracker and compass supply objective guidance. Local fight presentation takes its encounter anchor from the active fight identity, including its authored floor height; it never falls back to the simulator origin. The first victory advances level 199 to 200; the boss fight ends the local adventure regardless of the combat winner. Local fight sources derive experience from their authored level, so every participant
-retains the same level in result projections. The final result waits for the fight animation queue
-to drain. A victory then orbits the two heroes, gradually blurs the view as poison takes hold, and
-awaits both ordinary entity death animations before opening the rebirth modal. Defeat opens that
-modal directly. Its shared Continue with Google button uses the existing authentication reducer
-and provider; cancellation stays in the modal and permits retry. Only an authenticated session
-can hand off to the real player runtime. Local adventure progress never becomes live character data.
+owns both the compact tracker and full journal, including progress, quest art, milestones and checklist.
+Speaking actors face the listener, and caption context-menu picking uses the caption renderer’s own
+projected bounds. Speech wraps whole words, with grapheme fallback for long unbroken text.
 
-The `/kares` staking route uses the same app entry, navigation reducer and shared feature-window host as
-other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one optional selected wallet shared by funding, admin royalties,
+The `/kares` page uses the same app entry as other routes and the `LightPage` shell. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one optional selected wallet shared by funding, admin royalties,
 staking, tournament administration, and gift import. Sui Wallet Standard, including Slush's web wallet,
 provides Sui sessions; Privy connects existing EVM and Solana wallets without authenticating the game or
 creating embedded wallets. Privy’s wallet picker owns the Ethereum and Solana selection. Disconnect waits for the Solana provider to finish and clears remembered selection.
@@ -325,27 +307,20 @@ The journal renders complete HTML at build time and initializes analytics only o
 Telemetry strips URL queries and fragments before sending, so
 claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
 The frontend also initializes PostHog product analytics in production, excluding the editor and OAuth
-callback. Explicit state-delta events describe anonymous visits, demo fights, login and character creation.
+callback. Explicit state-delta events describe anonymous visits, login and character creation.
 Certified game-wallet transactions feed the analytics reducer through the SDK's shared receipt observer;
 `transaction_executed` reports success or failure and certified net gas without sending its digest.
 Craft outcome deltas report the recipe, attempts and successes. Both carry the loaded beginner journey
 step to measure early crafting friction without identifying characters or wallets. Simulations and unsigned
 refusals emit no transaction event. Live fight analytics folds a small per-fight slice of accepted
 canonical checkpoints, never the speculative combat cache. Starts, observed owned-turn advancement and
-completion count once per transition rather than per character. Spectators, local demos, restored
+completion count once per transition rather than per character. Spectators, local fights, restored
 baselines and duplicate or regressing checkpoints emit nothing.
-Demo request capture precedes the lazy game/demo download. The existing loading observer reports
-playability only after terrain, rendering and the hero model are ready; navigation-to-playable duration
-and playable-to-first-horizontal-movement duration use the monotonic browser clock. Initial failures
-report only a bounded loading stage. Quality changes and repeated samples do not replay startup events.
-Demo fight entry retains the historical `demo_fight_started` event at placement; `demo_combat_started`
-observes that same fight advancing from placement into its first turn. Completion retains the encounter
-number and outcome. Quest completion uses authored quest
-IDs and real progress deltas, including the confirmed equipment quest; restored journey progress emits
+Quest completion uses authored quest
+IDs and real progress deltas; restored journey progress emits
 nothing. Funding captures modal opens, method views, successful address copies and deduplicated funding
 execution transitions. Viewing direct deposit is not a payment; a balance change cannot infer its source.
-The first-character funding welcome and creation form have separate events. Shared telemetry metadata
-marks the tutorial revision so the equipment-quest funnel can be compared with earlier cohorts.
+The first-character funding welcome and creation form have separate events.
 The session retains the submitted creation outcome; only the SDK's certified receipt marks character
 creation, never an acquired roster member. Activation measures creation followed by meaningful gameplay.
 The analytics reducer scopes its measurements to the observed wallet lifetime. Async identity results
@@ -367,13 +342,10 @@ events; they do not independently establish player activity. Shared metadata inc
 release, deployment, onboarding step, journey step, quality and automation presence. Each gameplay event
 classifies its own control source; background automation cannot erase unrelated manual activity.
 
-An anonymous `/play-demo` replay pilot samples ten percent of sessions. Its bundled recorder loads lazily
-and stops before authentication or the ending. It masks text and inputs, blocks canvases and iframes,
-and excludes network payloads, URLs and console output. The analytics reducer also owns an optional,
-localized feedback question after two minutes on an unchanged eligible tutorial or first-character
+Session replay is disabled. The analytics reducer owns an optional,
+localized feedback question after two minutes on an unchanged first-character
 welcome step. It offers bounded answers once per browser; there is no free-text collection or remote
-survey renderer. Autocapture and remote feature-flag evaluation remain disabled. JSON remote configuration
-supplies replay settings; external script loading remains disabled.
+survey renderer. Autocapture, remote feature-flag evaluation and external script loading remain disabled.
 Events use the same-origin `/ingest` Vercel proxy, with static and remote-config routes sent to
 PostHog's US asset host before the US ingestion route. Both the deployment and service-worker page
 fallbacks exclude that namespace. The document referrer policy is origin-only, including same-origin
@@ -409,16 +381,16 @@ available for reads; its capped event pages cannot supply complete business rece
 receipts remain uncertain; no retry handler may treat them as an unsubmitted transaction.
 A hosted submitting envelope can instead terminate as non-executable when another checkpointed
 transaction's certified effects prove consumption of its exact owned gas object ID, version and digest.
-The SDK checks that proof against the retained bytes; the fenced journal atomically retains the proof,
+The SDK checks that proof against the live retained bytes; the fenced process-local lifecycle retains the proof,
 fails the original command and releases its envelope for fresh observation. It creates no execution
 receipt, charges no competing gas and never resumes stopped behavior or retries the old intent.
 Missing receipts, newer snapshots, timeout and rejection text alone cannot establish this outcome.
 One pending record owns both submission recovery and explicit ledger visibility synchronization. Browser
 tabs persist uncertain digests and receipt requirements in session storage, scoped by network and
 account, before submission; browser storage never contains signatures or transaction bytes. Reloading
-cannot erase uncertainty. The hosted backend adapter instead awaits encrypted exact unsigned/signed
-envelopes and fenced transitions in this same execution owner. Only the trusted backend has the envelope
-decryption key; the public TLS proxy and browser persistence remain outside that custody boundary. Recovery before a later write rejects that stale intent and earlier queued
+cannot erase uncertainty in that browser scope. The hosted backend instead keeps exact unsigned/signed
+bytes only in memory and awaits fenced lifecycle transitions in the same execution owner. Its restart
+loses that evidence and relies on fresh game state; the public TLS proxy has no signing authority. Recovery before a later write rejects that stale intent and earlier queued
 intents; that SDK session requires a refresh after resolving the previous outcome. The normal
 visibility barrier remains lazy for explicit read synchronization and pre-resolved transactions. A next
 write with unresolved gas payment proceeds from its certified predecessor receipt through Core’s
@@ -581,7 +553,8 @@ character entering the visible six already has its known window. Rendering proje
 window; the six-character interface is not a fixed memory-footprint guarantee. Combat and party
 limits remain independent. Realtime input retains a 150-packet/second floor and scales above six tracked actors
 at twenty packets per actor plus thirty control packets per second. Graph-read and socket-output
-budgets remain account-scoped; larger rosters are not a promise of unlimited throughput. The graph Redis carries
+budgets remain account-scoped; larger rosters are not a promise of unlimited throughput. These allowances
+and the HTTP door's use the one limiter in `@aresrpg/protocol/request-limiter`. The graph Redis carries
 `evt:*` chain projections. The mesh Redis carries only ephemeral presence, chat, heartbeats, and
 fight-action courtesy relays.
 
@@ -666,16 +639,24 @@ optional external Sui wallet. Settings reuses its provider/account picker withou
 and child collisions before hosted custody creation, reuses the existing standalone hosted setup and
 recovery descriptor, then freshly validates again. The parent owner signs one transaction reconciling
 `aresrpg.<parent>.sui` to the game wallet and `aresrpgagent.<parent>.sui` to the final multisig, and sets the player default in that transaction only when it is the same signer.
-Otherwise the game wallet verifies the forward target and signs its own default separately. The retained Recall executor signs the multisig's separate default transaction. This setup
+Otherwise the game wallet verifies the forward target and signs its own default separately. A failed, declined, unfunded or uncertain separate default retains an explicit partial outcome: the leaves were already updated. The retained Recall executor signs the multisig's separate default transaction. This setup
 creates no external-agent grant or gameplay activation and changes no inventory selection. Existing
 grants remain unchanged. Unfunded multisigs leave honest partial completion, with optional
 sender-bound funding and explicit retry; there is no automatic transfer, sponsorship or transaction retry.
 
 Root registration inputs and nested wrapper inputs remain distinct from the embedded NFT identity
-used for registry authority and lineage. Correct-target valid-lineage leaves are untouched. Live nodes
-collide; supported expired-node and invalid-lineage replacements require current parent authority.
-Any replacement that would erase a nonempty metadata map is refused, including unknown keys.
-The configured deployment has no leaf-metadata restoration operation. There is no migration,
+used for registry authority and lineage. Clean, correct-target valid-lineage leaves are untouched.
+Live nodes collide; expired nodes and invalid-lineage replacements require current parent authority.
+The naming reducer pauses for explicit confirmation of the exact player and agent destinations,
+default-name changes and every existing profile that will be erased. The player destination is the
+current Enoki account, verified against its zkLogin public identifier. Confirmation never restores an
+avatar or other old detail. Cancelling or changing accounts retires unsigned work; changed records or
+destinations require a fresh review. Hosted setup shares this confirmation through the global modal.
+The SDK compares the reviewed plan with a fresh inspection before constructing the transaction.
+Before either leaf changes, the transaction compares both complete optional registry records against
+their captured BCS snapshots; concurrent metadata, target, identity, expiry or presence changes abort
+atomically. The deployed SuiNS subdomains/proxy v2 writers retain parent authority and expiry checks.
+Original package IDs still define configuration types. There is no migration,
 arbitrary managed-name entry, legacy alias or background rewriting. External parent selection never changes
 the external wallet default or provisions custody under that wallet. Parent account changes and disconnection
 retire unsigned work and stale name reads; every signer retains the same request lifetime guard.
@@ -709,19 +690,27 @@ server issues a challenge and verifies the personal-message signature. Until
 connection; replacement is terminal until the player explicitly reconnects. Login reads no game
 state from chain—the app becomes ready only after the server's indexed snapshot.
 
-Connect Your Agent uses the ordinary world startup and Google login. The first-party modal verifies a fresh, purpose-, network-, issuer-, authority-generation- and browser-session-bound owner signature before listing or provisioning hosted bots. The trusted backend serves Connect/OAuth/MCP and runs wallet actors. It creates an Ed25519 member, encrypts its private seed with a separate encryption key, verifies possession, and persists the encrypted seed plus canonical threshold-one-of-two Google recovery descriptor before publishing a funding destination. Provisioning atomically reserves one request identity in the verified Google owner account; provider changes and retries reuse it. No caller-supplied creation ID can create another wallet. Its encrypted key, bot descriptor and address binding commit together before a funding destination is published. Competing or uncertain commits reconcile that same request; no uncommitted candidate is published and no committed wallet identity is replaced. Either member can spend unilaterally. Managed-key custody is not noncustodial, and access to Redis plus its decryption key is spending authority.
+Connect Your Agent uses the ordinary Google login on its own engine-less page. The first-party modal verifies a fresh, purpose-, network-, issuer-, authority-generation- and browser-session-bound owner signature before listing or provisioning hosted bots. The trusted backend serves Connect/OAuth/MCP and runs wallet actors. It creates an Ed25519 member, encrypts its private seed with a separate encryption key, verifies possession, and persists the encrypted seed plus canonical threshold-one-of-two Google recovery descriptor before publishing a funding destination. Provisioning atomically reserves one request identity in the verified Google owner account; provider changes and retries reuse it. No caller-supplied creation ID can create another wallet. Its encrypted key, bot descriptor and address binding commit together before a funding destination is published. Competing or uncertain commits reconcile that same request; no uncommitted candidate is published and no committed wallet identity is replaced. Either member can spend unilaterally. Managed-key custody is not noncustodial, and access to Redis plus its decryption key is spending authority.
 
-The `packages/bot` HTTP handlers and actor runtime share one trust boundary. Multiple processes share sticky wallet ownership through Redis leases; adding a process never rebalances live actors. Signing and envelope encryption keys are distinct and remain separate from encrypted records. Untrusted routing components must have no storage credentials or signing secrets. Compromise of the backend is full authority over its hosted wallets. Application owner checks isolate users, not a fictitious privilege boundary between HTTP and actor code. Redis retains encrypted private signing seeds, control aggregates, verified owner identity, public descriptors, grants and policy, accepted commands, signing-address leases, encrypted exact transaction envelopes and certified receipts. It does not own game state. Observations, including plan-validation reads, route over ephemeral Redis pub/sub to the current actor owner; mutations never use that transport. Subscription acknowledgment precedes wallet claims. Both ends recheck current grants and exact actor/fence ownership, and the remaining lease bounds each routed read, including stalled publication. Acquisition losers reread the winner instead of stealing its lease. Subscriber failure removes readiness and stops the local runtime; shutdown retires pending replies and drains actor work. Terminal takeover and validation errors remain errors across routing. Observations are direct authenticated reads of the live actor, not durable commands or result rows. Their snapshots and watches are disposable, never action authority. Full observations remain the default planning baseline. An explicit changes view requires the retained cursor/fence pair and returns the existing ordered event stream with current clock/readiness and control metadata, omitting repeated snapshots and derived planning data. Cursor gaps and actor replacement require a fresh full baseline; event retention and gameplay admission remain unchanged. Versioned aggregates use individual Redis string keys; atomic Lua comparison and one MSET commit declared keys together. The same script applies native absolute expiry to temporary OAuth requests, challenges, unexchanged codes and provisional client registrations. Consent promotes the client to persistent registration, and code exchange makes the active grant persistent. Durable identity, replay and transaction evidence never expire. Provisional registrations reuse the request lifetime; admission-rate controls remain necessary against floods. Per-key local queues serialize overlapping callbacks; cross-process conflicts fail closed without callback replay. Acknowledged fencing and journal state must remain durable, without eviction or rollback by failover. One transaction-maintained pending set schedules only unfinished command, provisioning, proof and profession work; completed history is never scanned by the runtime. Local commits that add pending work wake the existing fenced scheduler immediately after routing becomes ready; periodic scans retain cross-process discovery and recovery. Old hash snapshots fail closed until an explicitly paused conversion preserves every durable record and revision, applies temporary deadlines, and rebuilds pending membership under the new schema. Each actor holds one ordinary root game WebSocket shared by all connectors and owned characters; normal multisig wallet authentication, Origin, TLS, admission, rate and capacity rules remain in force. Lease loss and address takeover terminate that actor. Successful ordinary actions keep the authenticated connection open. Reconnection requires fresh roster, fight and clock state and restores live arbitrated observations without claiming transient-event replay; after process restart a new read recreates idle watches.
+The `packages/bot` HTTP handlers and actor runtime share one trust boundary. Multiple processes share sticky wallet ownership through Redis leases; adding a process never rebalances live actors. The signing-key encryption keyring remains separate from encrypted records. Untrusted routing components must have no storage credentials or signing secrets. Backend compromise is full authority over hosted wallets. Redis retains encrypted private signing seeds, verified owner identity, public descriptors, grants and policy, authored scripts and profiles, and lease/fence/stop control, including a lease-scoped busy bit with no command or transaction identity. It never owns game truth or transaction history. Commands, unsigned/signed bytes, receipts, reconciliation baselines, behavior traversal and live observations belong only to the owning process. Each command is one process-local record that carries its own settled receipt. A lane retains only the commands it names as latest, in flight, unreconciled, market proof or its one direct command, plus the last command of each hero run it hosts; admitting the next command releases the rest. Clients see a command's digest and outcome, never the receipt body. While a process holds a submitted envelope it keeps renewing that lease regardless of socket authority; if the lease is lost anyway, the command reports uncertain. Authenticated owner RPC over ephemeral Redis pub/sub routes live reads and execution-dependent control to that actor, never a persisted command queue. Current grants, exact actor/fence ownership and remaining-lease deadlines bind requests; routing failure never retries a mutation on another owner. Subscription acknowledgment precedes wallet claims. Subscriber failure removes readiness and stops local actors. Terminal human takeover remains stopped across restart.
+
+Versioned durable aggregates use individual Redis string keys and atomic Lua compare-and-set. Temporary OAuth requests, challenges, unexchanged codes and provisional clients retain their native absolute expiry; consent and code exchange promote durable authority. Per-key local queues serialize overlapping operations and cross-process conflicts fail closed without callback replay. Fencing and consent must not be evicted or rolled back by failover. Durable pending intent and local pending execution feed the same scheduler. The store projects legacy records through explicit durable-field allowlists and ignores historical command/receipt rows; it neither restores their execution nor deletes a live database. Old and new actor versions must not overlap during deployment. Each actor holds one ordinary authenticated root game WebSocket; successful actions keep it open, and reconnection requires fresh roster, fight and clock state. Observations, watches and retained event cursors are disposable; an actor replacement requires a fresh full baseline.
+
+Every key of the permanent Redis follows one grammar, `<namespace>:<collection>[:<id>]`, owned by `@aresrpg/protocol/hosted-keys` and built nowhere else. The hosted bot (`bot:control`) and Telegram (`telegram`) each have one namespace, whose bare name is reserved for that service's layout marker; a collection has one Redis type and one meaning; a collection that is one value has no id. Bot aggregates are the `record` collection, whose id is the bot's own `<kind>:<identity>`, beside the `pending` index. One limiter, `@aresrpg/protocol/request-limiter`, is taken only at a service's public door: per visitor address before authentication and per verified identity after it, 600 requests a minute, counted per process in memory. The visitor is the visitor address the Cloudflare edge reports (`CF-Connecting-IP`), because every public request reaches a service from the tunnel's pod addresses; a request without it came from inside the cluster, is one of our own services and is never limited. No allowance is shared between callers, so capacity grows with pods. On the hosted bot every route takes the visitor allowance except `/health`, which is never refused, and `/mcp`, which authenticates its bearer token first and takes the verified owner's allowance, because one caller such as Telegram or an AI provider serves many owners. A refused request answers 429 `rate_limited`. `POST /connect/waitlist` records the verified owner of a first-party session on the Telegram waitlist; the request names only its session, so no caller can enroll an address it did not prove with the signed session challenge, and joining grants nothing.
 
 OAuth authorization-code flow uses S256 PKCE, registered exact redirects and the exact MCP resource. Consent signs the reviewed bot's address, descriptor and generation along with owner, client, scopes, policy revision. Access and refresh credentials are opaque; only their hashes persist. Refresh rotation detects reuse and revokes the family. Every objective boundary and SDK prepare/sign/submit rechecks the live grant, policy and actor fence. Proposals bind both observation and decision revisions. Wallet funding is the only SUI spending limit; there is no extra grant allowance. The SDK still requires a positive valid per-transaction gas budget and chain execution enforces available funds. The canonical typed gameplay catalog composes existing SDK actions; there is no inference, arbitrary code or arbitrary PTB/signing endpoint. External AI authors and revises a hierarchical JSON behavior tree through MCP; the bot never calls an AI provider. The accepted script is immutable within its revision. Sequences retain reconciled action completion while reevaluating conditions; priority selectors reevaluate from the first child and clear abandoned subtree memory when switching. Unknown conditions wait and preserve traversal state instead of falling through a negative branch. Root success resets traversal memory for the next existing scheduler tick; explicit loops reset their child after success, and only a complete leaf terminates normally. Explicit wait and replan leaves retain the objective or yield to the external assistant. Unhandled failure yields awaiting_ai; failed or uncertain transactions never become selector fallback. Descriptive objective metadata never executes.
 
-Behavior runs persist node completion, selected branches, exact child command consumption and any active combat lifecycle in the existing Redis control store. The shared run reducer and transaction-indexed pending scheduler admit one ordinary gameplay command at a time through the existing fenced lane, action relays, SDK executor and encrypted journal. There is no default action/time cutoff or hidden profession strategy. Typed predicates expose observed progression, available inventory, custody, fights, regional world availability and prices. Typed live selectors choose only authored targets for gathering, encounters, discovery, owned equipment/consumables and market actions; exact catalog calls supply the remaining supported actions. The external AI writes priorities, thresholds, recipes and acquisition routes. Missing information remains unknown. Legacy profession/combat record identities, pending envelopes, original bounds and profile snapshots remain readable for recovery/drain; their start and plan-authoring paths are retired. Existing status/stop/resume adapters do not create a second execution engine.
+Each bot's AI-authored script definition and lifecycle decisions are durable. Node completion, selected branches, child command consumption, action counts and combat activation are process-local. After restart or ownership change, an active script loads from its root and waits for fresh authoritative game observations before selecting an action. Explicit stop, completion, pause, revoked consent and terminal takeover are not undone by that restart. The shared run reducer admits one ordinary command at a time through the fenced lane and SDK execution lifecycle. There is no default action/time cutoff or hidden profession strategy. Typed predicates and live selectors consume observed progression, inventory, custody, fights, world availability and prices. The external AI authors priorities, thresholds, recipes and acquisition routes; missing facts remain unknown. A stored run of a retired shape (a profession or combat run, or a tree saved before runs belonged to one hero) is never executed: the actor stops it on sight, which removes it from the pending index, and reports it once. Nothing is deleted, and a stored lane forgets its retired wallet-wide run reference when it is read.
+
+One behavior tree acts for exactly one hero, and a hero has at most one run: its record key derives from the bot and the character, and MCP status, replace and stop address it by `character_id`. A wallet lane hosts at most 30 such runs, the owner's limit; wallet funding remains the only spending limit. The lane is the signing queue, and it holds heroes, never prebuilt transactions. Each scheduler pass asks the hosted runs in order: first a hero whose own live turn another wallet seated in its fight could pass, soonest deadline first (`turn_started_ms + TURN_MAX_MS`), then the others in a ring after the last signer. A fight seated only by this wallet earns no priority, because nobody else can pass its turns. Settlements and observations wake the lane itself, never one of its runs. The first tree that selects an action against fresh observations takes the single signing slot, and the next hero signs only after that command settles and reconciles. A hero plays only its own turn, even after the turn window, because the chain accepts a late turn until another seated player passes it; it passes a dead seat at once and another fighter's turn only after the window. When more heroes are due than one turn window can serve, a late hero loses nothing in a fight seated only by this wallet, and loses that turn when another player passes it. A direct command of the typed catalogue (`bot_<action>`) is a one-shot entry of that same queue and never needs an idle wallet. It is accepted beside the hosted runs under the wallet decision revision its client observed, with an observation revision no newer than the lane's, and the lane names it as `direct`. It waits for the signature in flight and for the heroes whose contested turn is live, then takes the single signing slot before the other heroes; there it binds to the fresh observation, is validated by the ordinary typed gates and executes through the ordinary command lifecycle, so a stale payload fails unsigned and an unknown outcome stays uncertain and is never sent again. A wallet holds one direct command at a time: a second is refused `bot_busy_or_paused` until the first has signed or failed, which bounds the queue by construction; there is no timeout. A pause, an owner return or a dead grant while it waits fails it unsigned. It stays readable until the next direct command is accepted, and `bot_observe` reports it as `direct` (id, kind, status, error, payload), so a client follows a sent command from observations. Starting, replacing, stopping or ending one run, and queueing a direct command, never advance the wallet decision revision, so none can fence a neighbour's admitted command; pause, owner return and revoked authority still fence every run and every waiting direct command. A stop is durable authority any process may write, so it writes only that hero's run record; the owner process's next queue pass frees the slot, and only the owner process writes the lane while it signs. Recovery mode is a service state, not a grant fault: every grant is answered `service_unavailable` (503) and keeps its consent, while a revoked grant, an obsolete authority generation or an obsolete bounded consent stays `invalid_token` (401). A run executes under the grant that last set its tree. Any live grant of the same verified owner holding the scope reads, replaces or stops it, and a replacement transfers that authority; revoking the grant a run executes under stops that run at its next evaluation. `bot_observe` lists every hosted run. A wallet has one market view: the first hosted hero whose tree asks for it holds it, and the others wait their turn. A connector that asks through `bot_observe` holds it the same way, and releasing a view another connector holds changes nothing.
+
+Team play emerges from per-hero trees; there is no leader or team controller. A `join` leaf seats a hero in a placement that a listed teammate of the same wallet opened. Combat and dungeon leaves give free listed teammates the chain placement window before readying. Combat profiles add ally-present and ally-health conditions and a most-wounded-ally cast target beside `most_allies`. A `dungeon` leaf advances one run from the observed `dungeon_run`: it enters with an owned key, then for each room joins the fight a teammate opened, otherwise opens it. It enters only when every listed teammate can follow: each is already in that dungeon run, or its kiosk holds one usable key per hero still outside, a key being usable when it is certified and neither listed nor in a trade. `raid_entrants` in `@aresrpg/protocol/strategies` is that one rule: the bot enters when it names the whole team, and a client trims its team to it. Room turns and settlement reuse the ordinary fight commands. A room is playable only by a command that names its dungeon; the `dungeon` leaf emits such commands, and so can a `call` leaf or a direct `bot_fight_*` / `bot_dungeon_*` action. Naming the dungeon is a guard against a tree written for ordinary fights acting in a room, not a per-dungeon approval: every grant with the play scope can enter a dungeon, which burns a key, and leave one. Seed-derived orders choose the richest observed group within an authored level margin. A ranked `equip_owned` order wears the best owned item of a slot, by item level or by an authored list of item stats where an earlier stat outweighs every later one; it reuses the equip refusals, replaces a worn item only with a strictly better one, and fails instead of blocking while its hero cannot change gear or its list is empty. A `spend_points` leaf follows authored priority lists: stat points go to the first listed stat they can raise, and spell points wait for the first listed spell that still has a rank to gain. A cast marked `if_learned` is skipped until its hero has learned the spell; any other unlearned cast still stops the hero. `seed/content/strategies.json` owns the offered trees, the one growth block they share (the spending leaf and one ranked equip leaf per gear slot, inert while bound with empty lists) and the Basic build (the archer class, its stat, spell and gear priorities, its combat profile, and the Basic raid dungeon). `@aresrpg/protocol/strategies` owns their one binder, where a hero stands (`hero_place`, which takes the engine's city lookup because the engine imports protocol) and the raid key rule; a team is one bound tree per hero, each with its own build. A bound script declares its catalogue entry as `strategy`; the bot stores it with the run and reports it in `bot_observe` `runs` and in the run status, never executes or checks it, and a tree authored by hand has none.
 
 The existing full bot observation exposes opt-in spell catalog summaries and selected rank definitions
 from authored seed, with Move-derived effect vocabulary. Canonical spell names are cast and upgrade IDs;
 character entitlement shares the combat-profile lookup, while current cast legality remains in the fight twin.
 Spell-point upgrades use the existing typed gameplay catalog, SDK raise-spell action and fenced transaction
-journal. One upgrade raises one rank; reconciliation waits for the exact Character's certified
+lifecycle. One upgrade raises one rank; reconciliation waits for the exact Character's certified
 output version or a later indexed native version. The indexer clears the Character version with its
 root write and publishes it only after that transaction's dependent field and custody writes finish.
 Partial projection or replay cannot certify completion; later owner upgrades or resets need no
@@ -734,21 +723,34 @@ Actor observations and behavior decisions read the existing SDK multisig balance
 its sample age and exact decimal MIST units. The read binds to the actor account, stays disposable,
 and never becomes a fee quote or spending authority.
 
-Revisioned combat profiles retain descriptive intent, finite named combinations, ordered health/distance conditions, target selectors and a pass-or-yield fallback. Saving changes neither stats/equipment nor active intent. A tree's combat leaf pins explicit profile snapshots and one existing supported PvE fight across placement, ready/start, owned turns, timing waits and settlement. The pure planner applies candidates through the remote fight twin and emits the existing complete-turn payload. Combos retain legal prefixes and movement scores simulated endpoints; profile loops and recursive combos are unsupported. Selecting a subsequent encounter belongs to the authored tree. Existing receipts, turn latches and projection reconciliation remain the only execution path. A temporarily waiting combat leaf retains its activation. Editing active tactics requires an explicitly authorized tree revision after unresolved work drains. Cast-only `most_allies` ranks legal stationary casts by distinct living same-team recipients, including the caster: observed net pool gains or increased positive stat-add totals, plus current potential positive-add coverage from newly placed glyphs. Glyph coverage reuses canonical zone geometry and per-occupant payload targeting without advancing turns or inventing entropy; future occupancy, survival, expiration, rolls and healing need remain unknown. Existing effects and zones add no score. Zero coverage skips the step; ties retain canonical cell order. This bounded coverage policy does not score shield or general utility, and cannot combine with damage positioning.
+A combat profile holds descriptive intent, finite named combinations, ordered health/distance/ally conditions, target selectors and a pass-or-yield fallback. It lives only inside the combat or dungeon leaf of a hero's tree; there is no saved profile record, and the validation tool stores nothing. A tree's combat leaf pins its hero's profile snapshot and one existing supported PvE fight across placement, ready/start, that hero's turns, timing waits and settlement. The pure planner applies candidates through the remote fight twin and emits the existing complete-turn payload. Combos retain legal prefixes and movement scores simulated endpoints; profile loops and recursive combos are unsupported. Selecting a subsequent encounter belongs to the authored tree. Existing receipts, turn latches and projection reconciliation remain the only execution path. A temporarily waiting combat leaf retains its activation. Editing active tactics requires an explicitly authorized tree revision after unresolved work drains. Cast-only `most_allies` ranks legal stationary casts by distinct living same-team recipients, including the caster: observed net pool gains or increased positive stat-add totals, plus current potential positive-add coverage from newly placed glyphs. Glyph coverage reuses canonical zone geometry and per-occupant payload targeting without advancing turns or inventing entropy; future occupancy, survival, expiration, rolls and healing need remain unknown. Existing effects and zones add no score. Zero coverage skips the step; ties retain canonical cell order. This bounded coverage policy does not score shield or general utility, and cannot combine with damage positioning.
 
-Marketplace observations use the same arbitrated game subscriptions as other reads. One actor inventory projection owns public offers, owned listings, catalogue versions and departures. Cursor metadata retains no competing row authority. A complete sweep follows all returned pages, then returns the existing subscription to the first page for continuous observation. Partial sweeps cannot select purchases. The server exposes only three cheapest listings per offer group and pages are not an atomic snapshot. Buy selection compares exact integer ratios and shared buyer royalty quotes, then binds listing identity/version, quantity and ask. The SDK enforces the authored maximum against actual ask plus royalty through a finite payment coin, returns surplus and pays gas separately. Sell selection binds owned unencumbered source/version/quantity and an authored legal lot and price through the existing SDK list action. Certified receipts invalidate affected sweeps and reconcile the bought inventory or exact newly listed lot. Journal settlement retains the latest successful market receipt per kiosk; replay restores its catalogue watermark before market pages after restart. History or supply that cannot be observed remains unknown, never zero.
+Optional target constraints on engagement and combat leaves reuse one canonical count/type/area rule.
+Areas bind an authored world and either city identity or published biome classification; city population
+membership overrides biomes. The engine owns the shared city and biome projections. Constraints survive
+selection and accepted-draft refresh into command payloads, and fresh prepare/sign/submit validation
+checks actual group size, fight roster/origin and current character position. The existing locomotion
+follower checks every movement segment, including detours, against the same area before publishing it.
+The profession leaf emits one ordinary equip, gather or craft action from fresh observations; receipt
+barriers and the existing tree loop own repetition. Feasibility filters shared progression candidates
+without truncating recipe-chain reachability. Onward discovery follows a deterministic adjacent-zone
+cycle derived from the canonical world grid; it keeps no visited/action history. City research retains
+its cooldown policy. An active behavior already suppresses unrelated idle wandering. These options add no bounds to existing
+unconstrained scripts and create no separate policy store, execution history or scheduler.
 
-Every child command retains its run identity and revision; SDK preparation, signing and submission recheck current authority. Accepted unprepared drafts may reselect against fresh observations with the same command identity and an atomically replaced reconciliation baseline. Prepared/signed envelopes are never rewritten. Contract freeze waits through the existing scheduler; pause, revocation, takeover and explicit stop fence further admissions. Signed work may be cancelled only before the consuming submission transition; already submitting ambiguity remains exact receipt recovery. Replacement refuses active commands, pending envelopes and unreconciled effects. Restart cannot consume a retained command twice or release a projection barrier through unrelated observations. Gather/craft still require receipt-proven inventory, quantities and job XP, with the gathering checkpoint and node consumption; inventory stack selection remains a shared protocol helper. Equipment, stats, consumables and loot actions retain their normal SDK rules and receipt/indexed-effect barriers. Behavior validation is read-only and cannot replace execution-time simulation or fresh authority checks. Full MCP observations optionally analyze a checkpoint-bound current-turn action prefix through the same remote fight twin, exposing predicted movement/collision events, resulting fighters, board cells and legal next casts. Analysis stops at the first illegal action, draws no future turn entropy and never submits or confirms a transaction. Autonomous combat profiles may rank legal enemy aims by total enemy HP loss from that same remote twin, including push collisions and capped overkill. Selection uses the current simulated position by default. An explicit best-damage positioning option compares stationary attacks with one canonical path per reachable cell followed by a legal attack, using actual movement, tackle and trap outcomes. It searches no future turns or alternative routes to the same endpoint.
+Marketplace observations use the same arbitrated game subscriptions as other reads. One actor inventory projection owns public offers, owned listings, catalogue versions and departures. Cursor metadata retains no competing row authority. A complete sweep follows all returned pages, then returns the existing subscription to the first page for continuous observation. Partial sweeps cannot select purchases. The server exposes only three cheapest listings per offer group and pages are not an atomic snapshot. Buy selection compares exact integer ratios and shared buyer royalty quotes, then binds listing identity/version, quantity and ask. The SDK enforces the authored maximum against actual ask plus royalty through a finite payment coin, returns surplus and pays gas separately. Sell selection binds owned unencumbered source/version/quantity and an authored legal lot and price through the existing SDK list action. Certified receipts invalidate affected sweeps and reconcile the bought inventory or exact newly listed lot. Live settlement retains catalogue evidence only in memory; restart rebuilds the inventory and catalogue from fresh authoritative observations, not retained receipts. History or supply that cannot be observed remains unknown, never zero.
 
-Bot search, gather and engage plans derive their destination from the same validated observed target used for the SDK action. Before transaction preparation, the actor walks there with the shared engine locomotion/controller and authored world collision, publishing ordinary checkpoint-bound `packet/position` packets at the existing position cadence. The session owns only transient feet; reconnect invalidates them and a changed checkpoint replaces them. Every step reuses command-journal admission and fresh gameplay validation. Pause, authority loss, stale observations or failed transport stop the walk before execution; contract freeze retains the unsubmitted intent through the existing resume gate. No post-transaction animation or second renderer is synthesized.
+Every child command retains its run identity and revision; SDK preparation, signing and submission recheck current authority. Accepted unprepared drafts may reselect against fresh observations with the same command identity and an atomically replaced reconciliation baseline. Prepared/signed envelopes are never rewritten. Contract freeze waits through the existing scheduler; pause, revocation, takeover and explicit stop fence further admissions. Signed work may be cancelled only before the consuming submission transition; already submitting ambiguity remains exact receipt recovery. Replacement refuses active commands, pending envelopes and unreconciled effects. Within one actor lifetime, unrelated observations cannot release a projection barrier or consume a command twice. Restart discards that execution memory and evaluates the saved script anew. Gather/craft still require receipt-proven inventory, quantities and job XP, with the gathering checkpoint and node consumption; inventory stack selection remains a shared protocol helper. Equipment, stats, consumables and loot actions retain their normal SDK rules and receipt/indexed-effect barriers. Behavior validation is read-only and cannot replace execution-time simulation or fresh authority checks. Full MCP observations optionally analyze a checkpoint-bound current-turn action prefix through the same remote fight twin, exposing predicted movement/collision events, resulting fighters, board cells and legal next casts. Analysis stops at the first illegal action, draws no future turn entropy and never submits or confirms a transaction. Autonomous combat profiles may rank legal enemy aims by total enemy HP loss from that same remote twin, including push collisions and capped overkill. Selection uses the current simulated position by default. An explicit best-damage positioning option compares stationary attacks with one canonical path per reachable cell followed by a legal attack, using actual movement, tackle and trap outcomes. It searches no future turns or alternative routes to the same endpoint.
+
+Bot search, gather and engage plans derive their destination from the same validated observed target used for the SDK action. Before transaction preparation, the actor walks there with the shared engine locomotion/controller and authored world collision, publishing ordinary checkpoint-bound `packet/position` packets at the existing position cadence. The session owns only transient feet; reconnect invalidates them and a changed checkpoint replaces them. Every step reuses execution-lifecycle admission and fresh gameplay validation. Pause, authority loss, stale observations or failed transport stop the walk before execution; contract freeze retains the unsubmitted intent through the existing resume gate. No post-transaction animation or second renderer is synthesized.
 
 Between commands, a connected actor with a live play grant uses those same transient feet and position packets for idle presence. Eligible, unrooted overworld characters continuously vary ordinary walking, running and curved legs, with occasional jumps within fifty blocks of where they became idle. Unsafe horizontal steps turn away while the shared controller continues gravity and landing collision; idle does not schedule stationary pauses. A supported equipped pet enables mounted walking and occasional tap/release/hold gestures through the player's controller for double jumps and gliding. Packets carry the controller's actual mounted flight state; retirement clears flight flags at the last valid pose while transport authority remains live. Idle uses collision-checked ground only, without automatic travel's direct passage fallback, and validates each resulting step against safe ground and the roaming radius before publication. The existing lane, grant, lease and fresh contract observation gate every update; queued work retires idle before execution. Pause, unavailable terrain, contract freeze, disconnect and authority loss suppress movement. The existing connection heartbeat owns permitted reconnects; terminal takeover remains stopped. Idle creates no transaction, durable command, gameplay objective or separate position owner.
 
-The interactive client and bot share `@aresrpg/fight`’s stateful session and submitted-turn latch. Before signing a turn, its canonical baseline is retained with the exact command. Certified `TurnSeedUsed` witnesses replay through that same session, and receipt settlement atomically retains the replayed checkpoint and submitted-turn identity in the wallet lane. Restart, socket replacement, heartbeats and unrelated inventory changes cannot authorize another submission of that turn. The bot waits for a canonical next-turn projection before further action; it does not publish speculative replay as a server checkpoint or add an indexer version protocol. Terminal turns remain latched while the existing settlement action handles custody. Validated bot turn drafts send the ordinary movement, cast and strike courtesy packets in order before the SDK commit, without animation delays. Failed or uncertain submissions request ordinary presentation resync and never retry the transaction.
+The interactive client and bot share `@aresrpg/fight`’s stateful session and submitted-turn latch. Before signing a turn, its canonical baseline is retained with the exact command. Certified `TurnSeedUsed` witnesses replay through that same session, and receipt settlement atomically retains the replayed checkpoint and submitted-turn identity in the wallet lane. Within the live execution lifetime, socket updates, heartbeats and unrelated inventory changes cannot authorize another submission of that turn. Process restart discards the latch and relies on fresh authoritative fight state. The bot waits for a canonical next-turn projection before further action; it does not publish speculative replay as a server checkpoint or add an indexer version protocol. Terminal turns remain latched while the existing settlement action handles custody. Validated bot turn drafts send the ordinary movement, cast and strike courtesy packets in order before the SDK commit, without animation delays. Failed or uncertain submissions request ordinary presentation resync and never retry the transaction.
 
-The awaited journal is part of the existing SDK executor. One unresolved envelope occupies each `(network, multisig address)` lane across replicas. Preparation atomically retains encrypted exact unsigned bytes and the SDK transaction gas budget; signatures become durable before the consuming submission transition. Restart may submit only the same retained signed bytes under fresh original-action validation and current authority. Prepared-only envelopes have not crossed the durable signing/submission gates; fenced cancellation fails the original command and requires fresh state and a new intent. Signed envelopes invalidated by pause, revocation or a superseding decision can be cancelled only before the consuming submission transition. Passive receipt recovery retains lease ownership independently of stopped sockets and revoked gameplay authority. Already-submitting ambiguity reconciles the digest; absence is not proof of nonexecution. Certified receipt, actual gas, command outcome and pending-envelope clearance settle atomically and deduplicate by digest, including chain failures and revoked grants. Pause/revoke cannot cancel signatures already beyond final admission. Backups start paused; authority generation lives outside the restored snapshot, and mapping/receipt reconciliation precedes explicit resume.
+The SDK executor uses an awaited process-local transaction lifecycle. It retains exact prepared bytes, signatures, digest and receipt only while that process lives, with durable grant/lease/stop checks before preparation, signing and submission. An uncertain submission is not automatically rebuilt or retried in that lifetime; receipt lookup can reconcile its known digest. Pause/revoke cannot cancel signatures already beyond final admission. On restart there is no saved envelope, receipt, cursor or transaction log to recover. The new actor rereads game state and evaluates the durable script from its root. A non-idempotent leaf can therefore repeat after a crash, including when the prior transaction settled but its effect is not yet reflected in the fresh projection. This is an intentional stateless-execution tradeoff, not exactly-once execution or proof of nonexecution. Backups start paused with a new authority generation; custody mappings and current chain state require verification before explicit resume.
 
-The browser supplies its own fresh fixed pairing request. The backend signs and returns the existing fixed pairing message, and the browser verifies it before saving recovery metadata and publishing the unconfirmed custody candidate. After OAuth returns, the owner UI reads current renewable grant authority through an owner-scoped lookup, verifies the unique backend wallet and installs that exact inventory target internally. Successful code exchange maintains the lookup atomically; an existing owner initializes missing lookup metadata once from authoritative grants. The UI rechecks on tab return and every five seconds while visible, with a fifteen-second HTTP deadline. Connected describes authorization, not actor presence. The connection reducer retains its verified pairing proof independently of the selected recovery inventory target and expires active display with the owner authorization. Transient HTTP/network failures clear active proof and remain eligible for the existing visible five-second refresh. Invalid proof, owner refusal and explicit cancellation require a fresh explicit retry; confirmed disconnected or revoked status remains disconnected. Ambiguous wallets are never silently selected. Saved public descriptors are recovery-only and never restore a current service signing claim. The old Redis setup exchange, copy-prompt bootstrap and local file-key CLI are retired. Existing public recovery descriptors are preserved, with no private-key import or wallet migration. Owner-signed recovery continues independently of the bot database and managed signer.
+The browser supplies its own fresh fixed pairing request. The backend signs and returns the existing fixed pairing message, and the browser verifies it before saving recovery metadata and publishing the unconfirmed custody candidate. After OAuth returns, the owner UI reads current renewable grant authority through an owner-scoped lookup, verifies the unique backend wallet and installs that exact inventory target internally. Successful code exchange maintains the lookup atomically; an existing owner initializes missing lookup metadata once from authoritative grants. The UI rechecks at sign-in, on window focus and when another tab saves an identity, never on a clock, with a fifteen-second HTTP deadline. Connected describes authorization, not actor presence. The connection reducer retains its verified pairing proof independently of the selected recovery inventory target and expires active display with the owner authorization. Transient HTTP/network failures clear active proof and remain eligible for the next recheck on window focus. Invalid proof, owner refusal and explicit cancellation require a fresh explicit retry; confirmed disconnected or revoked status remains disconnected. Ambiguous wallets are never silently selected. Saved public descriptors are recovery-only and never restore a current service signing claim. The old Redis setup exchange, copy-prompt bootstrap and local file-key CLI are retired. Existing public recovery descriptors are preserved, with no private-key import or wallet migration. Owner-signed recovery continues independently of the bot database and managed signer.
 The SDK exposes non-executing exclusive-offer, claim and capability-return builders, reusing marketplace
 policy settlement in either custody direction. Its separate transaction-signing adapters verify already-resolved bytes and an externally supplied
 ordinary-member or Google-member signature; Google verification uses an explicit network client. They own no credentials.
@@ -771,7 +773,7 @@ remains authoritative at execution. Browser and agent connections share SDK logi
 public multisig construction is independent from signing adapters. Gas refusals reuse FundingModal
 for the actual SDK sender; a distinct multisig payer has an unknown balance rather than the human balance.
 Owner-authenticated resolution and fresh signer proof select the wallet-bound inventory target in session state,
-independent from observation and character-provider selection; wallet disconnect clears it and any unconfirmed candidate. Current-agent inventory and character returns remain available even when the player owns no characters. The connected modal exposes only connected status, Disconnect and Close; there is no saved-wallet or technical recovery screen. Disconnect opens one explicit confirmation covering asset return, fight forfeiture, dungeon abandonment and fees. The owner-authenticated stop transition increments the bot generation, pauses its existing wallet lane and retires its active behavior or legacy run. Old grants cannot admit new work; the existing journal drains active or uncertain transactions without resubmission. The idempotent stop response is the drain barrier, not a second job or status registry. After draining, the existing Google-member Recall executor exits or settles custody, completes interrupted handovers, collects proceeds and staking positions, delists public listings, and returns characters with their gear and standalone items. Composition explicitly refreshes externally mutable equipment references in the existing SDK cache before building Receiving inputs. Staking recovery withdraws positive principal and claims both reward coins in one PTB; zero-principal positions only claim. The complete audit permits a retained nontransferable staking shell only after canonical type, ID and pool checks show zero principal and less than one base unit of either claimable reward. Multiple assets share offer and claim PTBs within current network protocol limits; each character and its gear remain indivisible. Claims necessarily follow the offers that create their caps. Each step quotes fees before signing. An ordinary approved SUI transfer can fund either signer from the other; insufficient usable funds open the existing owner funding modal. This is not gas sponsorship. KARES returns before the final SUI sweep. Certified execution and reconciled indexed custody plus the SDK's complete asset audit precede return completion. Unsupported custody stays stopped with explicit resume; uncertain or executed submissions never retry automatically. Completion releases only the return barrier, preserves the wallet identity and leaves old grants invalid. A subsequent provider connection requires fresh authorization. The equipment
+independent from observation and character-provider selection; wallet disconnect clears it and any unconfirmed candidate. Current-agent inventory and character returns remain available even when the player owns no characters. The connected modal exposes only connected status, Disconnect and Close; there is no saved-wallet or technical recovery screen. Disconnect opens one explicit confirmation covering asset return, fight forfeiture, dungeon abandonment and fees. The owner-authenticated stop transition increments the bot generation, pauses its existing wallet lane and stops every hero run. Old grants cannot admit new work; the live execution lifecycle drains known active or uncertain transactions without resubmission. A lease-scoped busy bit preserves that barrier across routing processes. A stopped response describes the live control boundary, not proof that a pre-crash submission cannot still settle; after process loss there is no retained transaction history. It is not a second job or status registry. After draining, the existing Google-member Recall executor exits or settles custody, completes interrupted handovers, collects proceeds and staking positions, delists public listings, and returns characters with their gear and standalone items. Composition explicitly refreshes externally mutable equipment references in the existing SDK cache before building Receiving inputs. Staking recovery withdraws positive principal and claims both reward coins in one PTB; zero-principal positions only claim. The complete audit permits a retained nontransferable staking shell only after canonical type, ID and pool checks show zero principal and less than one base unit of either claimable reward. Multiple assets share offer and claim PTBs within current network protocol limits; each character and its gear remain indivisible. Claims necessarily follow the offers that create their caps. Each step quotes fees before signing. An ordinary approved SUI transfer can fund either signer from the other; insufficient usable funds open the existing owner funding modal. This is not gas sponsorship. KARES returns before the final SUI sweep. Certified execution and reconciled indexed custody plus the SDK's complete asset audit precede return completion. Unsupported custody stays stopped with explicit resume; uncertain or executed submissions never retry automatically. Completion releases only the return barrier, preserves the wallet identity and leaves old grants invalid. A subsequent provider connection requires fresh authorization. The equipment
 window extends its existing player bag with a compact agent kiosk, preserving its original profile,
 filters and section corners. Both bags share selection and touch gestures; a dragged visual stack
 expands to every represented object revision and kiosk, while locked fragments remain separate.
@@ -780,7 +782,7 @@ in a generation-bound read-only envelope. The session reducer reuses the shared 
 folds; observed items and characters never become player signing authority. The existing balance observer
 refreshes both accounts through the SDK. There is no chain-scanned game inventory or second inventory screen.
 Agent reads and pending actions are bound to the exact wallet and pairing; stale results cannot cross
-an account change. Dismissing the inventory retires unsigned preparation. Each item drop immediately shows an unavailable destination placeholder and then runs the SDK's offer-and-claim sequence with the existing authorized signers. Character Send and Recall use that same sequence. The SDK resumes an exact matching on-chain offer instead of offering it again. A failed or uncertain submission never retries automatically. Item recovery verifies the unchanged zero-price capability creation receipt, source kiosk and intended recipient, then completes one exact receipt group through the existing SDK signers without manual claim or cancellation controls. The offer sender’s existing transaction visibility barrier precedes capability discovery; the recipient’s barrier precedes preparation. A session-scoped per-cap attempt fence prevents failure replay across rerenders, inventory dismissal and reload. Certified success stays fenced until a fresh capability read retires it; fence persistence failure cannot replace the receipt’s outcome. Only a fresh user retry can re-admit a stopped attempt, and the SDK journal still blocks unresolved submissions. Character Send and Recall live in the existing character-tab context menu. Both inventories omit character controls, connection controls and technical recovery copy. The live inventory has no permanent refresh control; actual read or transfer failures expose their cause and an explicit retry. All agent transfer shapes use the shared SDK estimator unless a caller explicitly supplies a budget; item drops impose no coin-transfer reserve. Coin-only transfers retain their visible reserve. Source cells are dimmed and desaturated; incoming cells retain the approved dashed blue border and translucent art. Both use the approved 12px blue bottom-right loader. Indexed ownership retires placeholders; placeholders never enter inventory truth or transaction selection. The existing single-transfer preview remains active through that reconciliation, so another drag or automatic receipt group cannot replace unresolved cells. The shared drag owner keeps the pressed item under the pointer above native windows. Existing loading toasts become successful only after the final certified receipt, with concise localized failures. There is no custom Check transaction or Transfer review surface. Inventory and equipment sections keep square top corners and their existing bottom corners, material and decoration. Coin balances open the existing Send-style shell with Deposit or Withdraw, an amount, Max and the retained SUI reserve. Submission shows the existing transaction loader; coin-only transfers are one transaction. Max quotes the SDK fee budget before deducting it and the retained reserve (the existing GAS_BUDGET_MIST default), and SDK preparation checks the actual amount again. Missing KARES configuration disables
+an account change. Dismissing the inventory retires unsigned preparation. Each item drop immediately shows an unavailable destination placeholder and then runs the SDK's offer-and-claim sequence with the existing authorized signers. Character Send and Recall use that same sequence. The SDK resumes an exact matching on-chain offer instead of offering it again. A failed or uncertain submission never retries automatically. Item recovery verifies the unchanged zero-price capability creation receipt, source kiosk and intended recipient, then completes one exact receipt group through the existing SDK signers without manual claim or cancellation controls. The offer sender’s existing transaction visibility barrier precedes capability discovery; the recipient’s barrier precedes preparation. A session-scoped per-cap attempt fence prevents failure replay across rerenders, inventory dismissal and reload. Certified success stays fenced until a fresh capability read retires it; fence persistence failure cannot replace the receipt’s outcome. Only a fresh user retry can re-admit a stopped attempt, and the SDK journal still blocks unresolved submissions. Character Send and Recall live in the existing character-tab context menu. Both inventories omit character controls, connection controls and technical recovery copy. The live inventory has no permanent refresh control; actual read or transfer failures expose their cause and an explicit retry. All agent transfer shapes use the shared SDK estimator unless a caller explicitly supplies a budget; item drops impose no coin-transfer reserve. Coin-only transfers retain their visible reserve. Source cells are dimmed and desaturated; incoming cells retain the approved dashed blue border and translucent art. Both use the approved 12px blue bottom-right loader. Indexed ownership retires placeholders; placeholders never enter inventory truth or transaction selection. The existing single-transfer preview remains active through that reconciliation, so another drag or automatic receipt group cannot replace unresolved cells. The shared drag owner keeps the pressed item under the pointer above native windows. Existing loading toasts become successful only after the final certified receipt, with concise localized failures. There is no custom Check transaction or Transfer review surface. Inventory and equipment sections keep square top corners and their existing bottom corners, material and decoration. Coin balances open the one Transfer form: From and To with a swap button, the coin, an amount, Max and the retained SUI reserve. Submission shows the existing transaction loader; coin-only transfers are one transaction. Max quotes the SDK fee budget before deducting it and the retained reserve (the existing GAS_BUDGET_MIST default), and SDK preparation checks the actual amount again. Missing KARES configuration disables
 submission rather than inventing a balance or coin type. Owner deposits use an SDK action factory
 that revalidates the canonical current Google owner and a freshly verified host-persistent pairing
 at preparation and confirmation. Restored identities remain recovery-only and cannot receive new
@@ -812,8 +814,8 @@ displayed-pose feed supplies those widgets without notifying controlled-pose sub
 membership uses the existing party read/subscription owner and never joins party chat or control rosters.
 The bottom-right activity overlay retains the two latest confirmed character changes from accepted
 observation snapshots. Initial reads, duplicate snapshots, failed observations and identity changes
-remain silent. The existing owner-status refresh projects the current wallet lane and its referenced
-behavior or legacy run. Optional AI-authored objective title, description and steps belong to that
+remain silent. The current line and objective come from the status the bot pushes on the game
+socket (`packet/agent_status`), read for the observed hero: a stopped wallet first, then that hero's run. Optional AI-authored objective title, description and steps belong to that
 accepted run and its idempotency fingerprint; the overlay displays them verbatim above the event log.
 These steps are descriptive text, never executable instructions or inferred completion. A separate
 current line shows the observed execution state or waiting for an objective, without appending idle
@@ -822,9 +824,135 @@ retains the character's location/custody presentation. Account and character ide
 The same follow camera consumes remote horizontal interpolation and mounted state from the presence
 renderer for FOV and wind. Checkpoint placement, initial arrivals and animated rider sockets supply
 no travel speed; quiet streams, unmounting and disconnect retire the effect through its ordinary damping.
-The portrait uses the shared appearance resolver. The spectator HUD retains the original owner wallet card in its top-right account dock, beside an agent SUI card using the same wallet menu and the existing agent inventory balance. Both cards retain natural widths and wrap before squeezing amounts. The agent card opens the shared Send and funding modals, bound to the admitted observation and current wallet. Ordinary SUI transfers reuse the per-multisig Google-member executor and shared player transfer composition, with observation and canonical owner checks immediately before signing. Unknown or mismatched balances remain unknown; SUI shows at most two decimals. It omits separate stop, watching-status and funding controls; owned tabs restore play. The wallet uses the ordinary owner funding modal, which remains available during observation while gameplay windows stay blocked. Recall funding proves the canonical multisig's
+The portrait uses the shared appearance resolver. The spectator HUD retains the one wallet card in its top-right account dock; the bot's balance is that card's Bot tab, never a second card. The Bot tab opens the shared funding checkout and the Transfer between the owner's two wallets, bound to the current wallet and verified pairing; the bot wallet has no Send to another address. Ordinary SUI transfers reuse the per-multisig Google-member executor and shared player transfer composition, with observation and canonical owner checks immediately before signing. Unknown or mismatched balances remain unknown; SUI shows at most two decimals. It omits separate stop, watching-status and funding controls; owned tabs restore play. The wallet uses the ordinary owner funding modal, which remains available during observation while gameplay windows stay blocked. Recall funding proves the canonical multisig's
 Google member from the current wallet's public identifier, binds the exact recipient and wallet generation,
 and uses the same checkout and asynchronous signing guard. Self-funding retains its existing owner-address check. Authorized agent top-ups select the current Google game wallet first, show its live SUI balance, and retain external wallets as an alternative in the same funding checkout. Direct funding checks the source amount and estimated fee, then revalidates the source, recipient and modal lifetime at the SDK signing boundary.
+
+### Telegram strategy selection
+
+Telegram links Google through existing PKCE/owner consent before anything else. Initial consent
+is observe-only. A linked owner that is not admitted sees the waitlist card; Join the waitlist stores
+only its verified zkLogin owner address and never admits. The operator's allowlist alone admits an owner.
+Both lists live in the permanent Redis behind `@aresrpg/protocol/telegram-access`: `telegram:admitted` is
+a set and `telegram:waitlist` a sorted set scored by joining time, kept once per owner. Telegram reads
+them on every update and the hosted bot writes the waitlist for the home page, so admitting or removing an
+owner takes effect at the next request with no restart and no boot-time check. The operator command lists
+who waits and who is admitted, admits, and removes; removing refuses the owner at once, then revokes its
+Telegram login so nothing it started keeps running. Enabling gameplay requires a second explicit consent
+for that same owner. Sender IDs bind private chats to verified accounts but never grant admission. The
+agent multisig signs gameplay; the personal Google wallet remains authentication/recovery. Connect Your
+Agent stays separate.
+
+Telegram is a thin client of the hosted bot's per-hero contract: it turns one update into one card or
+one behaviour-tree request and keeps nothing about runs. A player selects one hero and Play; Telegram
+offers the two solo trees of the shared catalogue and binds the chosen one to that hero through the shared binder.
+City patrol binds one reviewed city and exact-one-mob targeting to engagement, combat and city research.
+Gather/craft binds the current world and uses the canonical profession selector: shared positive-XP
+recipe ranking with current ingredient feasibility, otherwise eligible harvesting with available tools,
+protector handling and adjacent-zone onward discovery. Shared immutable ranking and engine world data
+remain the only rule owners. No model, private scheduler or copied execution store is involved.
+
+Each hero has its own strategy, status and Stop, and heroes of one wallet run different strategies at
+once. The review names the hero, the fixed scope, a replacement of a running strategy and the ongoing
+gas/ingredient costs. Approval binds the tree again from that update's own observation and sends it only
+when the hero still stands in the reviewed area and the card's start or replacement still holds; a start names its hero through
+its tree, and a replacement reads that hero's revision right before it is sent. The hosted bot owns
+validation, the one run per hero, the run limit and all execution, and Telegram checks none of them
+first. The menu is the status: the balance and one line per run the wallet hosts, whichever client
+started it. A run is named by the catalogue entry the bot reports for it; an authored tree, or an
+entry Telegram does not offer, is listed under one generic label and can be stopped all the same. Stop is chosen per hero on one card that states its scope, with Stop all when several heroes
+run; it fences new work but cannot cancel a submitted transaction. Pause and Resume act on the whole
+wallet, other connectors included, and are confirmed on their own card. Telegram has no provider call,
+prompt, allowance, unlock purchase or subsidy.
+
+Telegram keeps one process-local record per linked sender (its button revision, login binding, selected hero and the one open review), and one reducer writes it: an update and one fresh `bot_observe` give a card, requests or a refusal by its code. Every update takes the next revision, so a button acts only as the next update after its card. No run, outcome or pending request is remembered: a request is sent once and settled from the shared client's result, where `uncertain` alone is an unknown outcome and any other code is a refusal that changed nothing. One code-to-kind table owns player-facing failures. A stale action re-renders the current state; read-only hosted reads retry once, and a read still unanswered is temporarily unavailable, never an unknown outcome, which is also how the bot's recovery mode appears, with the login kept; an unknown outcome only points to Status, which asks the bot again; the run limit names Stop and a busy or paused agent names Status; an expired, revoked or refused login offers one Log in again step. Webhooks answer 200 once the player received a reply, and for an authentic update the bot never acts on (group, edited, forwarded, media, membership), because Telegram redelivers every update not answered 2xx; they answer 5xx only when a supported update was neither processed nor answered. A refused callback acknowledgment never decides an update. Browser link pages use the starting chat's locale, else Accept-Language. The sender record is disposable, so the service runs as a single
+replica; an unlinked sender leaves no navigation state. One listener exists, with no preview mode; it ends when its Redis connection is lost for good, so its supervisor starts a fresh one. Durable data lives in Telegram's own namespace of
+the hosted bot service's persistent Redis: the allowlist, the waitlist and one encrypted record per
+entity (a sender's established link, an owner's sender index, each link attempt and a sender's attempt
+list). Each change compares the stored ciphertext and commits every touched record atomically; a conflict
+fails closed. Every link attempt ends at the deadline set when it was created (the `link_ttl_ms` limit),
+whatever its phase. Redis expires an unopened attempt then; one that may hold tokens has no Redis expiry
+and is retired, revoking its tokens, on the sender's next interaction or by the startup pass. Tokens
+that arrive after their attempt ended are revoked at once. A consumed attempt is deleted; an established
+link never expires. The browser login pages take the shared limiter per visitor address. The webhook takes it per Telegram sender,
+60 updates a minute, after its secret is verified; an update past that allowance is acknowledged 200 and
+dropped, because Telegram redelivers everything else. There is no update deduplication: every mutating
+input is guarded by its phase or revision, so a redelivered update acts once. Unknown acceptance never replays;
+restart cannot reconstruct lost execution evidence. Hosted script reevaluation keeps its existing
+possible-repeat tradeoff. No team hunt, dungeon lifecycle, paid entry or financial automation is introduced.
+
+### Web dapp
+
+`/dapp` is an engine-less surface in the same app entry, store and Google/Enoki login; it mounts no canvas
+and its static graph reaches no Three.js. The registry's `account` lifetime (session, chain clock,
+marketplace) serves both the player and the dapp; the `dapp` module owns its one reducer. The dapp is an
+ordinary public PKCE OAuth client of the hosted bot, exactly like Telegram or an AI client. The bot's
+consent redirect to `/world?intent=connect-agent` boots the dapp only in the tab whose session storage holds
+that pending request, and reuses the existing consent modal. The grant persists per owner in device
+storage. The bot shows a hero's run to every live grant of that owner, and a run stops when the grant it executes under is revoked; Disconnect revokes it.
+Heroes, bag, own listings, trades and balance are chain facts: the dapp reads them from the game socket it
+already holds, never from the bot. A connected grant names the bot wallet and its multisig key; the dapp
+installs that as the session's one read-only account target, so `packet/inventory_observe` pushes the
+same `agent_inventory` fold the 3D game shows, and the dapp reducer takes that fold as an argument and keeps
+no copy of it. A hero's health is the chain's regeneration rule over its own row. A hero seated in a fight
+shows its fighter's health: the account subscription also watches each fight a hero is seated in and pushes
+that fight state on every fight event, and `seated_player_health` in `@aresrpg/fight` is the one rule the
+dapp and the bot read it with. What the bot alone knows is what its wallet is doing as a whole (`state`), its
+`runs` with the objective each was authored with, and its one direct command. That status
+(`packet/agent_status`) is the one owner-facing status of a bot: the 3D game's activity line and the dapp
+both read it, and the bot service's HTTP owner status carries authorization only. The bot sends it on its
+own game socket when it differs from the last one sent: after each pass of the wallet's signing queue and
+at its lease heartbeat (a stop or a pause written by another process wakes no pass). A new socket baseline
+is always told. The game server publishes it on the mesh for the bot's address, relays it
+inside the owner's account subscription and keeps nothing. Because nothing is stored, an owner who starts
+watching asks for it: the server relays `packet/agent_status_wanted` to the socket that shared a status
+for that address, and the bot answers with its current one. When that socket closes the watchers receive a
+`null` status and ask again, so a replaced socket answers and a dead bot shows nothing. No client reads the
+bot on a clock. The dapp reads `bot_observe` once when its link
+connects, once before each command for the wallet revisions, and once after each answered command. A
+pushed status can show a run or a command, but only a read requested after the last answered command proves
+one is absent; until that read, a pushed status finishes no position and fails no order. Statuses are
+ordered by the bot's own lease fence, then its process clock. The dapp is per hero throughout: one command and at
+most one running position per hero, so heroes start, stop and recover independently; Basic mode sends every
+free hero and Advanced mode acts on one. Train, Gather and Raid bind the seed-authored trees through the shared
+binder, one tree per hero: heroes that share a city train as one team (`team_hunt`) and a hero alone trains
+with `fight_nearby`. A raid team is the strongest free heroes (level, then experience, then id), at most one
+fight side (`CONTRACT_CONSTANTS.start_cells`), trimmed by the shared key rule to the heroes that can enter;
+the bound trees name exactly those heroes as allies, so the bot's entry rule holds by construction. A team
+short of keys is confirmed in a modal that names who enters and links to the key's market listing without a
+price; with no usable key nothing is sent. Advanced raids the dungeon of the city its hero stands in. Basic
+raids the dungeon authored in seed from anywhere in its world, and binds the seed's build to every hero of
+its class, so that hero spends its points and wears its best gear by itself; a hero of another class and
+every Advanced start bind no build, and their growth leaves list nothing. Positions are the browser-local
+view of hero runs: a fresh observation (one requested after the last command reply) opens a position for
+every run, finishes the ones whose run is gone, and resolves unknown replies, which are observed and never
+resent. A position's activity is the `strategy` the bot reports for its run, so no tree is read back or
+recognised by shape. A position folds what its hero won; the shared bag and the wallet's fees fold once into
+one haul. Both fold the pushed account by value on every input, so a repeated row or bag counts nothing twice. None of it is chain or bot truth. Stat and spell changes and market orders are direct bot
+commands. The bot holds one at a time and signs it in turn with its heroes, so the dapp sends one at a time
+and never waits for a hosted run.
+
+The dapp's market trades as the bot account, because that account holds the heroes and their bag. It is the
+game's own marketplace presentation behind `MarketSourceContext`, the seam that says whose bag, balance and
+listings are shown and how that account trades; the 3D game mounts the same components with no source and
+keeps trading with the player's wallet. The `marketplace` module still owns public browsing (types, counts,
+floor, price history, volume) over the player's own socket. The bag, balance and own listings are the
+session's pushed account fold. The offers on screen are the `marketplace` module's own, from the same socket;
+the dapp never asks the bot to watch them. A waiting purchase takes the wallet's one market view ahead of the
+hosted heroes, reads every current offer of its item under the order's own identity, and only then is
+validated and signed; it gives the view back once it holds the signing slot or is refused. A view another
+connector holds refuses the order `market_unavailable` instead of leaving it waiting. An offer another buyer
+took first therefore fails `listing_changed_or_ineligible` unsigned; if it is taken after that read, the
+SDK's dry run refuses the transaction unsent, or the kiosk purchase aborts whole, and the price is never paid.
+A purchase or a listing is one order of the dapp reducer, sent once as `bot_market_buy` or
+`bot_market_sell`. A purchase names the exact offer and carries the total the player saw as
+`max_total_mist`; a hero standing free in its kiosk carries the lot, and an order the bot would refuse
+anyway (offer not watched, balance too low, no free hero, no single stack large enough) is refused before
+it is sent. After that the observation's `direct` command is the order's only truth: accepted, bought,
+refused with the bot's code, or uncertain; with no command left at the bot only the bag proves a purchase,
+and nothing is ever sent again. The source's capabilities hide what the bot account cannot do: character
+trades, withdrawing a listing and the sales ledger, because the bot has no delist or collect action.
+Nothing of the Google account's bag, balance or listings is shown, and the dapp signs nothing.
 
 ### Funding
 
@@ -865,7 +993,7 @@ an incomplete-read notice. Execution still rechecks the selected asset balance a
 Connected sources may deposit any positive amount their observed holding covers. A Sui source lists its native SUI
 balance as its single asset row, and execution rereads that balance before any gas simulation, so an
 unaffordable transfer is refused instead of failing resolution. The initial suggestion covers the shortfall, so an
-empty wallet creating its first character suggests 1.2 SUI. The cushion is neither a mandatory gameplay
+empty wallet creating its first character suggests 10.2 SUI. The cushion is neither a mandatory gameplay
 balance nor the SDK gas budget. Marketplace funding includes its canonical buyer total. Existing action
 affordability and simulation remain authoritative.
 
@@ -897,7 +1025,7 @@ carry that set without changing it; touch uses a Select toggle and a held item d
 swipes scroll. Double-click, an equipment-slot drop, and the existing Equip action each submit one
 change immediately through the SDK, preserving wallet approval. The current character custody,
 loadout, item revision and listing/trade exclusions are revalidated before submission. Pending slots
-show a loader; rejected changes restore the authoritative projection. Local demo adapters apply the
+show a loader; rejected changes restore the authoritative projection. The composition lab applies the
 same gesture directly without a wallet. There is no separate equipment Confirm/Cancel staging bar.
 
 The Character's existing equipment map owns both stat gear and the statless `cosmetic_hat` and
@@ -991,7 +1119,7 @@ uncertain actions stop further automated writes. Executed transactions never ret
 retains its separate progress and Stop control on other pages. Reload never resumes a run.
 
 One automatic-travel navigator owns run-to for position links, party snapshots, nearby fights and
-gathering, plus owned-party and adventure following. Open ground uses a one-block clearance probe
+gathering, plus owned-party following. Open ground uses a one-block clearance probe
 without a route search. Obstacles trigger an incremental local search capped at 128 retained cells,
 16 expansions per update and an eight-block leg. Easy routes retain full body collision, ordinary
 one-block steps and bridge/tunnel layers. Steering targets the furthest clear point among at most
@@ -1245,10 +1373,9 @@ are owned per accepted cast so a following cast cannot silence an earlier impact
 Effect travel is independent of the body gesture. Named spells play through the ordered fight cue edge;
 unmapped spells retain their elemental fallback. Game feedback observes copied state slices,
 not receipt or packet arrivals. The fight-over cue follows the newly visible result once, for
-both player and local-demo fights, regardless of outcome or boss rewards. Payout updates do not replay it. Craft and consumable
+every player fight, regardless of outcome or boss rewards. Payout updates do not replay it. Craft and consumable
 receipts retain their latest digest and outcome in the session so duplicate delivery cannot repeat
-the feedback or the receipt fold. Adventure quest cues diff the same completed-ID projection used
-by the journal, including the final encounter. Level-up audio shares the dialog’s eligibility rule,
+the feedback or the receipt fold. Level-up audio shares the dialog’s eligibility rule,
 even when that dialog overlays an open result. The quest chime restarts one voice on rapid completions
 instead of dropping cues or stacking them. Observer initialization and account changes establish silent baselines.
 Trusted DOM control activation has separate local feedback in the shared settings lifecycle, so
@@ -1266,23 +1393,10 @@ Descending air-to-water contact emits one presentation pulse across fixed physic
 the shared audio registry plays the owner-provided water-entry recording once. Spawning,
 teleporting and shallow wading do not invent an entry splash. Jumping itself has no sound.
 
-The anonymous main menu mounts one bounded camera view through the normal engine and chunk manager;
-it does not mount the gameplay canvas. Its authored winter scene lives in `seed/scenes/main_menu.recipe.json`,
-compiled by `scripts/generate_main_menu.mjs` into the validated scene recipe. Harbor houses reference the original workshop architecture and the newer townhouse family through
-`seed/structures/main_menu_houses.recipe.json`; the former wing grammar and diagonal timber meshes
-are removed. The menu adapter adds only a winter palette and half-block snow caps. Tower roofs
-use the same strict kit; heraldry reads the canonical workshop banner, including its larger quay standard. Catalogue firs replace the bespoke menu tree builder. `tree_placement.ts` owns the
-shared grounded placement used by both the menu compiler and cities. Harbor dressing samples the
-compiled height grid, so it follows the same surface as rendering and collision. That recipe is an abortable
-static-asset fetch scoped to the mounted menu, rather than part of the shared gameplay JavaScript bundle. The aerial camera follows
-a bounded orbit around the authored harbor focus. That subject anchors chunk residency, the far-shell
-opening, water, and sunlight shadows; the camera stays inside the loaded area on a clearance-tested route. The scene pauses while the document is hidden
-and releases its engine and workers on unmount. Existing demo-visit storage selects the start prompt or
-existing sign-in actions. Seed also authors three slow, collision-checked resident routes. The menu
-projects these into ordinary character world anchors and animation clips; it creates no gameplay
-actors or network observers. Reduced motion pins the camera and keeps residents idle.
-Menu and biome music share the mounted `MusicBed` media lifecycle and volume settings.
-Menu, gameplay, adventure and editor stages share one opaque, viewport-sized postcard loading presentation.
+There is no in-game menu scene. Sign-in lives on the home page; a signed-out visit to an app route shows a plain
+sign-in card. `tree_placement.ts` owns the grounded placement used by cities. Biome music uses the mounted
+`MusicBed` media lifecycle and volume settings.
+Gameplay and editor stages share one opaque, viewport-sized postcard loading presentation.
 A native modal contains focus while the world prepares. Six AI-retouched engine captures live under
 `seed/icons/loading/`; `seed/content/loading_screens.json` selects two views per home/demo/world context.
 Artwork changes only after decoding, rotates within its context, and respects reduced motion.
@@ -1330,7 +1444,7 @@ Authored plant vertex expansion runs once in one existing meshing worker and tra
 Renderer construction yields between resource groups so loading UI tasks can run; GPU and DOM resources remain on the main thread.
 Scenery appears after terrain, hides during fights and dungeon stages, and releases its buffers,
 materials and lights with the world. These are presentation assets; fixed voxel structures retain
-ordinary residency and collision. The public adventure remains authored in `seed/content/adventure_environment.json`.
+ordinary residency and collision.
 
 Authored architectural detail uses one offline mesh compiler for thin trim, railings, rigging,
 lantern housings, canvas and snow caps. It clips triangles into 32-block cells and writes bounded,
@@ -1353,9 +1467,7 @@ baked details allocate no detail material or geometry. Generated cities publish 
 load only occupancy; the presentation owner loads decoration once and selects the requested column.
 Vertex validation and decoding occur together inside bounded detail admission, not during archive loading.
 The existing layer retains details across vertical layers and releases them at final column eviction.
-Occupancy, decoration and maps share one provenance; the current version is required rather than accepting an older geometry path. The home screen authors its lantern kit in
-`seed/structures/harbor_details.json`; its old voxel lamp, railing, rigging and window-trim emitters
-are replaced rather than retained as quality alternatives.
+Occupancy, decoration and maps share one provenance; the current version is required rather than accepting an older geometry path.
 
 The runtime owner validates and compiles a world once, then passes that compiled world to the renderer
 and its terrain, water and material consumers. Character collision initializes at the requested world
@@ -1382,8 +1494,8 @@ share the viewport-copy lifecycle helper; every material releases its private co
 The origin arch uses the local terrain filler palette. Ordinary fixed-structure residency owns both
 frame types; explicit portal frames bypass the reserved origin clearing. A scenery recipe may disable the origin
 `portal`; the same switch removes the frame, effect, and structure-clearance cutout.
-The frontend world composes dungeon guides into its ordinary entity list using the tutorial's
-seed-authored Sceat appearance. Guides and their labels use the portal’s authored terrain height,
+The frontend world composes dungeon guides into its ordinary entity list using the
+Sceat appearance authored in `seed/content/guide.json`. Guides and their labels use the portal’s authored terrain height,
 so preparing remote guides never requests city collision. Guide yaw continuously tracks the local controlled player's world position,
 independently of dialogue. Facing changes reuse loaded appearance and stationary anchors without resampling
 terrain; unchanged player positions do not resubmit entities. Guide labels retain the existing dungeon interaction range and
@@ -1798,8 +1910,19 @@ verifies the package and KARES/SUI type pair, and projects authoritative lifecyc
 Without a presale pin it shows an upcoming sale and performs no network request. Failed reads hide
 progress; an expired open window shows settlement pending, never an invented successful launch.
 The card's reducer rejects older object versions; its observer stops polling on disposal or a final
-sale state. Before the sale it links to the allocation campaign. The encyclopedia owns tokenomics.
-Token art lives in seed and the game's public metadata
+sale state. Before the sale it links to the allocation campaign. The encyclopedia owns the tokenomics view.
+The wallet card (`WalletCard`) is one component on the 3D game, the web dapp and the KARES page: the game
+wallet, plus the bot wallet as a second tab when `inventory_pairing` is the owner's verified hosted signer.
+Its funding step is the shared checkout with the wallet on screen as recipient, and its Transfer step mounts
+the kiosk controller only while open and reuses the one coin transfer form (`AgentCoinTransfer`).
+`/kares` is the token's one page: an engine-less route with two tabs, that same tokenomics view and the
+staking desk (`KaresPage`), which the 3D game also shows in its own window. Staking signs as the game
+account, so the tab asks for the Google sign-in first. Staking is the first tab; `/kares#tokenomics` opens the other. The home page
+links to `/kares` and has no token modal. The staking desk shows both wallets as two single lines
+(`StakingWalletRow`: name, stake, daily rates) and opens the selected one below: its stake and accrued
+rewards (`StakingRewards`) beside the stake and withdraw form, which is always open. Both are prebuilt
+components of `@aresrpg/ui`, so the page and the game window share one look. The Sui droplet is always the
+brand blue `--aui-sui` with a light upper edge, whatever the text colour around it. Token art lives in seed and the game's public metadata
 asset uses that same image; there is no separate token website.
 
 Whitelisted wallets buy on `/allocation`, because a zkLogin address is bound to the app that issued it.
@@ -1810,37 +1933,25 @@ derives from the complete final award list in the Blast CSV order; after launch 
 claims with Blast's permissionless `claim`. Max keeps the funding gas cushion, and a short wallet
 opens the shared funding window instead of signing.
 
-The temporary `/allocation` campaign uses a canvas-free entry with normal Google or Wallet Standard
-sign-in from one wallet chooser on the full campaign page. The chooser always offers Google alongside
-installed wallets; linking Google preserves the current login. Both use the same signed server admission;
-Google is not required inside wallet browsers. Its paper layout follows the approved standalone HTML
-reference. The shared allocation module owns quotas, scoring and the cutoff in
+The temporary `/allocation` page uses a canvas-free entry with normal Google or Wallet Standard
+sign-in from one wallet chooser. The chooser always offers Google alongside installed wallets;
+linking Google preserves the current login. Both use the same signed server admission; Google is
+not required inside wallet browsers. Its paper layout follows the approved standalone HTML
+reference. The campaign is closed: the page shows the published allocations and the sale, and
+accepts no entries. The shared allocation module owns the tier caps in
 `packages/immutable/src/allocation_campaign.json`. The normal wallet-authenticated WebSocket is its private request door;
-a temporary server module owns a separate persistent Redis, never the disposable game index.
+a temporary server module reads the published list from a separate persistent Redis, never the disposable game index.
 The admitted wallet proof establishes the portfolio owner. Up to ten distinct wallets, including
 that wallet, belong to the account's retained portfolio. Adding another requires a fresh,
 expiring, one-use signature challenge binding the account, address and campaign. Redis enforces
-the limit atomically. Verified wallets stay listed even without an award. Game wallets and submitted X
-recipients receive pending cards until review; confirmed totals count awards only. Fresh leaderboard
-predictions reuse the final selection rules, including reservations and cross-board duplicate exclusion.
-The server shares a bounded thirty-second snapshot read across users and exposes only verified wallets’
-ranks. Predictions never enter confirmed totals or public share metadata.
-
-X is a uniquely linked identity, not another application login. An authenticated one-use ticket
-starts browser-bound PKCE. The callback returns a short-lived result that only the original game
-account can confirm. Post submissions use that admitted connection, prove X authorship and require
-a verified receiving wallet. The first submission locks its recipient. Before the cutoff, users may edit their current posts or
-replace X through a fresh OAuth proof. Replacement atomically removes the old entry and recipient lock;
-the submission write rechecks the linked author to reject in-flight old-account results. Redis time enforces the
-cutoff atomically. Manual tools freeze admissions, capture consistent leaderboards and metrics,
-then produce reproducible results and the Blast CSV. Unfilled leaderboard slots retain their tier
-when passed to social selection. Reserved records precede leaderboard and social selection.
+the limit atomically. Verified wallets stay listed even without an allocation; only an allocated
+wallet has a card. `allocation_campaign.ts export` writes the published list as the Blast CSV.
 
 Public HTTP has no address lookup or private-session access. Only an authenticated verified owner
-can issue an opaque share link. Its HTML metadata and server-rendered PNG show tier, pending state
-and allocation without wallet addresses, X identity, ranks or operator notes. Account cards expose
-only a validated leaderboard name or a generic reserved/social source. Vercel proxies these public
-share and linking callbacks to the existing HTTPS server; it has no campaign credentials. The
+can issue an opaque share link. Its HTML metadata and server-rendered PNG show the tier
+and allocation without wallet addresses or operator notes. Account cards expose
+only a validated leaderboard name or a generic reserved/social source. Vercel proxies the public
+share previews to the existing HTTPS server; it has no campaign credentials. The
 server image includes the same localized copy, fonts and frontend-owned campaign artwork, and its release inputs track
 those dependencies. The campaign accepts no sale payments until real sale pins and allowlist proof
 delivery have been verified. Snapshot files and CSV exports outlive the temporary database.
@@ -1925,6 +2036,11 @@ fingerprint includes its SDK/protocol/fight/immutable and engine source closure,
 workspace manifests, lockfile, dedicated Docker context policy and runtime pins, excluding the
 publication ledger. Its shared build packages city occupancy beside the bundled entry for lazy collision reads. Native CI supplies an isolated loopback Redis fixture for durable bot tests
 and bundles the bot entry; release CI builds the production container from its dedicated context.
+The Telegram companion image has its own dedicated context and runs from source. Preparation builds,
+publishes and attests it when its own input closure changed: its source, the engine, protocol and
+immutable sources it imports, the four seed files and structures behind them, and the locale documents.
+It is a certified manifest identity like the server, indexer, Discord and hosted bot images: an unchanged
+release aliases the previous digest, and activation verifies it.
 Backend locale fingerprints use the same Bun YAML parser and immutable field projections as the
 server allocation previews and Discord notifications. Browser-only copy does not rebuild those
 services; consumed sections, locale additions/removals and consumer code remain release inputs.

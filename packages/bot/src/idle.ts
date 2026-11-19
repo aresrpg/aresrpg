@@ -13,7 +13,7 @@ import { begin_walking } from '@aresrpg/engine/locomotion/walking'
 
 import pet_wings from '../../../seed/content/pet_wings.json'
 
-import { run_ref_of } from './run_ref.ts'
+import { run_keys } from './run_ref.ts'
 import { gameplay_observed_ms, travel_destination, type GameplayContext } from './gameplay_context.ts'
 import type { Lane } from './control.ts'
 import { profession_item } from './profession_catalog.ts'
@@ -40,7 +40,7 @@ export const idle_travels = (context: GameplayContext, lane: Lane) => {
       lane.active_command,
       lane.pending,
       lane.reconciliation_command,
-      run_ref_of(lane),
+      run_keys(lane).length,
     ].some(Boolean)
   )
     return null

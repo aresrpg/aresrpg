@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { AnalyticsEvent } from '../analytics.ts'
-import { adventure_quest } from '../adventure/quest.ts'
 import { character_creation_surface } from '../modules/character_creation.ts'
 import type { AppContext, AppState } from '../store.ts'
 
@@ -17,10 +16,7 @@ export type FeedbackInput =
 
 export const feedback_target = (state: AppState): string | null => {
   if (!state.copy || state.fight.mounted || state.session.auth_status === 'connecting') return null
-  if (character_creation_surface(state.session, state.navigation) === 'welcome') return 'funding'
-  if (state.adventure.phase === 'explore' && state.adventure.character && !state.navigation.dialog)
-    return `demo_${adventure_quest(state.adventure)}`
-  return null
+  return character_creation_surface(state.session, state.navigation) === 'welcome' ? 'funding' : null
 }
 
 export const feedback_events = (current: FeedbackState, previous: FeedbackState): readonly AnalyticsEvent[] => {

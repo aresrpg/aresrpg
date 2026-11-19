@@ -15,7 +15,7 @@ export const encyclopedia_layout = Object.freeze({
   body: 'flex min-h-0 flex-1 flex-col',
   filters: 'enc-filters flex shrink-0 flex-col gap-2 border-b border-border p-3',
   list: 'min-h-0 flex-1 overflow-y-auto',
-  empty: 'flex h-full flex-col items-center justify-center gap-3 py-16 text-[#6b7280]',
+  empty: 'flex h-full flex-col items-center justify-center gap-3 py-16 text-faint',
 })
 
 /** One mounted list preserves filters while narrow layouts show its routed detail. */
@@ -81,9 +81,7 @@ export const EntityIcon = ({
   src ? (
     <img alt="" className={`${size} shrink-0 object-contain drop-shadow-[0_0_10px_rgba(200,150,60,0.18)]`} src={src} />
   ) : (
-    <span
-      className={`${size} grid shrink-0 place-items-center border border-white/8 bg-white/3 text-xs text-[#c8963c]`}
-    >
+    <span className={`${size} grid shrink-0 place-items-center border border-white/8 bg-white/3 text-xs text-gold`}>
       {label.slice(0, 1).toUpperCase()}
     </span>
   )
@@ -120,7 +118,7 @@ export const EntityGrid = ({ children }: Readonly<{ children: ReactNode }>) => (
 
 export const Section = ({ title, children }: Readonly<{ title: string; children: ReactNode }>) => (
   <section className="space-y-2">
-    <h3 className="border-b border-border pb-1.5 text-[9px] font-semibold tracking-[0.2em] text-[#6b7280] uppercase">
+    <h3 className="border-b border-border pb-1.5 text-[9px] font-semibold tracking-[0.2em] text-faint uppercase">
       {title}
     </h3>
     {children}
@@ -129,15 +127,15 @@ export const Section = ({ title, children }: Readonly<{ title: string; children:
 
 export const Fact = ({ label, value, color }: Readonly<{ label: string; value: ReactNode; color?: string }>) => (
   <div className="flex min-h-8 items-center justify-between gap-3 border border-border bg-white/2 px-2.5 py-1.5">
-    <span className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">{label}</span>
-    <span className="text-right text-[10px] text-[#e8e4dc]" style={color ? { color } : undefined}>
+    <span className="text-[8px] tracking-[0.12em] text-faint uppercase">{label}</span>
+    <span className="text-right text-[10px] text-text" style={color ? { color } : undefined}>
       {value}
     </span>
   </div>
 )
 
 export const Empty = ({ children }: Readonly<{ children: ReactNode }>) => (
-  <div className="grid min-h-40 place-items-center p-8 text-center text-[9px] tracking-[0.14em] text-[#6e727e] uppercase">
+  <div className="grid min-h-40 place-items-center p-8 text-center text-[9px] tracking-[0.14em] text-faint uppercase">
     {children}
   </div>
 )

@@ -16,8 +16,19 @@ import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 import type { TournamentLink, TournamentRow } from './tournament.ts'
 import { valid_allocation_request, type AllocationRequest, type AllocationResult } from './allocation.ts'
-import { valid_agent_observation, type AgentObservation } from './agent_identity.ts'
-export type { AgentSignerMode, AgentPairingIdentity, AgentObservation } from './agent_identity.ts'
+import {
+  valid_agent_observation,
+  valid_agent_status,
+  type AgentObservation,
+  type AgentStatus,
+} from './agent_identity.ts'
+export type {
+  AgentSignerMode,
+  AgentPairingIdentity,
+  AgentObservation,
+  AgentStatus,
+  HostedObjective,
+} from './agent_identity.ts'
 export type { TournamentLink, TournamentRow, TournamentTeam, TournamentSeat, TournamentMatch } from './tournament.ts'
 export { coin_share, tournament_coin_claims, TOURNAMENT_RESULTS_MS, recent_tournament_result } from './tournament.ts'
 export type { AllocationRequest, AllocationResult } from './allocation.ts'
@@ -735,6 +746,8 @@ export const DEFAULT_ADMIN_ADDRESS = '0x3d1342fb7de99c69ce821183bcfc5b6374d81453
 export type ClientPackets = {
   'packet/agent_observe': { id: number; observation: AgentObservation | null }
   'packet/inventory_observe': { id: number; observation: AgentObservation | null }
+  /** A hosted bot's own status, relayed to the owner observing its account. Never stored. */
+  'packet/agent_status': { status: AgentStatus }
   'packet/allocation_request': { id: number; request: AllocationRequest }
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
@@ -803,9 +816,11 @@ export type InventoryPacket = {
       | 'packet/item_updated'
       | 'packet/item_removed'
       | 'packet/listings'
+      | 'packet/trades'
       | 'packet/characters'
       | 'packet/fight_state'
       | 'packet/fight_resolutions'
+      | 'packet/agent_status'
   ]: {
     type: K
   } & ServerPackets[K]
@@ -814,12 +829,18 @@ export type InventoryPacket = {
   | 'packet/item_updated'
   | 'packet/item_removed'
   | 'packet/listings'
+  | 'packet/trades'
   | 'packet/characters'
   | 'packet/fight_state'
-  | 'packet/fight_resolutions']
+  | 'packet/fight_resolutions'
+  | 'packet/agent_status']
 
 export type ServerPackets = {
   'packet/inventory_observed': { id: number; packet: InventoryPacket | null }
+  /** Only ever carried inside `packet/inventory_observed`. `null` says the bot's socket closed. */
+  'packet/agent_status': { status: AgentStatus | null }
+  /** To a hosted bot only: an owner started watching its wallet, so it sends its current status. */
+  'packet/agent_status_wanted': Record<never, never>
   'packet/agent_observed': {
     id: number
     characters: readonly CharacterRow[]
@@ -994,6 +1015,8 @@ export type Packet = ClientPacket | ServerPacket
 
 export const SESSION_PACKETS = [
   'packet/inventory_observed',
+  'packet/agent_status',
+  'packet/agent_status_wanted',
   'packet/agent_observed',
   'packet/signature_request',
   'packet/connection_accepted',
@@ -1116,6 +1139,7 @@ void UNROUTED_SERVER_PACKETS
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
   'packet/inventory_observe',
+  'packet/agent_status',
   'packet/agent_observe',
   'packet/market_floor_request',
   'packet/allocation_request',
@@ -1347,6 +1371,13 @@ const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<stri
 
 const REQUEST_PARSERS = new Map<string, (packet: Record<string, unknown>) => ClientPacket>([
   [
+    'packet/agent_status',
+    (packet) => {
+      if (!valid_agent_status(packet.status)) throw new Error('Invalid agent status')
+      return { type: 'packet/agent_status', status: packet.status }
+    },
+  ],
+  [
     'packet/market_floor_request',
     (packet) => {
       const query = parse_market_price_observation({ id: packet.id, item_type: packet.item_type })!
@@ -1441,8 +1472,6 @@ export type {
   HostedBotDescriptor,
   HostedConnectRequest,
   HostedOwnerStatus,
-  HostedObjective,
-  HostedAgentActivity,
   HostedReturnResponse,
   HostedChallengeInput,
   HostedChallengeResponse,

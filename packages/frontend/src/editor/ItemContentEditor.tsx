@@ -210,7 +210,7 @@ const ConsumableEditor = ({
                   select={(next) => on_change(['consumable', 'rewards', index, 'item_type'], next)}
                   value={item_type}
                 />
-                <label className="flex items-center gap-1 text-[8px] text-[#777b86]">
+                <label className="flex items-center gap-1 text-[8px] text-faint">
                   Weight
                   <input
                     aria-label="Reward weight"
@@ -222,7 +222,7 @@ const ConsumableEditor = ({
                     value={typeof reward.weight === 'number' ? reward.weight : 0}
                   />
                 </label>
-                <label className="flex items-center gap-1 text-[8px] text-[#777b86]">
+                <label className="flex items-center gap-1 text-[8px] text-faint">
                   ×
                   <input
                     aria-label="Reward amount"

@@ -1,5 +1,23 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 @font-face {
+  font-family: Ares Title;
+  src: url('./assets/font/space-grotesk.ttf') format('truetype');
+  font-weight: 300 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: Ares Mono;
+  src: url('./assets/font/jetbrains-mono.ttf') format('truetype');
+  font-weight: 100 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: Ares Pixel;
+  src: url('./assets/font/pixelify-sans.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
   font-family: Ares UI;
   src: url('./assets/font/nunito-400.ttf') format('truetype');
   font-weight: 400;
@@ -23,19 +41,151 @@
   font-weight: 800;
   font-display: swap;
 }
+/* Bone & Ash: neutral near-black glass with bone trim. Ember (--aui-orange) is reserved for actions. Every colour in this package resolves here. */
 :root {
-  --aui-bg: #101317;
-  --aui-surface: #1b2026;
-  --aui-raised: #343c46;
-  --aui-border: #11131c;
-  --aui-ink: #f0eff2;
-  --aui-muted: #b2b2bd;
-  --aui-orange: #e9ac58;
-  --aui-blue: #8abde1;
-  --aui-danger: #e9817c;
+  --aui-void: #040404;
+  --aui-bg: #070707;
+  --aui-sunk: #0a0a0a;
+  --aui-surface: #0f0f10;
+  --aui-raised: #151516;
+  --aui-lifted: #1b1b1d;
+  --aui-high: #242426;
+  --aui-peak: #313134;
+  --aui-steel: #4a4a4e;
+  --aui-faint: #85837d;
+  --aui-muted: #a8a59d;
+  --aui-soft: #cbc8bf;
+  --aui-ink: #f0eee8;
+  --aui-brass-ink: #121110;
+  --aui-brass-deep: #2a2926;
+  --aui-brass-lo: #5e5b54;
+  --aui-brass: #a9a59b;
+  --aui-brass-hi: #ebe7dc;
+  --aui-orange: #f4b987;
+  --aui-orange-lo: #9a6a44;
+  --aui-orange-ink: #1c1509;
+  --aui-blue: #9dc6ee;
+  --aui-danger: #f09891;
+  --aui-success: #a5dcb4;
+  /* Saturated accents that tell interfaces and entry paths apart on the engine-less pages. */
+  --aui-hue-green: #8fdc9c;
+  --aui-hue-gold: #f5cf6e;
+  --aui-hue-clay: #ec9370;
+  --aui-hue-sky: #68baf5;
+  --aui-hue-lilac: #c3b4f0;
+  /* The Sui droplet's own blue. It is a brand colour: only the Sui logo uses it. */
+  --aui-sui: #4da2ff;
+  --aui-border: #020304;
+  --aui-line: color-mix(in srgb, var(--aui-brass) 16%, transparent);
+  --aui-line-strong: color-mix(in srgb, var(--aui-brass) 40%, transparent);
+  --aui-hair: #ffffff0f;
+  /* Translucent, never blurred: backdrop blur over the live scene cost about 30% of frames in the 2026-11-16 benchmark. */
+  --aui-glass: color-mix(in srgb, var(--aui-surface) 92%, transparent);
   --aui-font: 'Ares UI', Arial, sans-serif;
-  --aui-radius: 5px;
-  --aui-shadow: 0 5px 12px #0005, inset 0 1px #ffffff20;
+  --aui-font-display: 'Ares Pixel', var(--aui-font);
+  /* Page headlines and technical labels. Scripts these faces lack fall back to the interface font. */
+  --aui-font-title: 'Ares Title', var(--aui-font);
+  --aui-font-mono: 'Ares Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --aui-radius: 3px;
+  --aui-shadow: 0 18px 44px #000c, 0 0 0 1px #ffffff0d, inset 0 1px #ffffff1c;
+  --aui-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Pixelify Sans has no Vietnamese or CJK glyphs; those locales keep one face per word. */
+:root:lang(vi),
+:root:lang(ja),
+:root:lang(ko),
+:root:lang(zh) {
+  --aui-font-display: var(--aui-font);
+}
+/* A page surface with a mood: radiance in one hue, and a pixel weave that fades with it. `--aura` picks the hue. */
+.aui-aura {
+  --aura: var(--aui-brass);
+  /* How strong the top radiance is: quiet for reading pages, brighter for a page with a mood. */
+  --aura-strength: 20%;
+  isolation: isolate;
+}
+.aui-aura::before,
+.aui-aura::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+.aui-aura::before {
+  background:
+    radial-gradient(
+      78vmax 50vmax at 50% -12%,
+      color-mix(in srgb, var(--aura) var(--aura-strength), transparent),
+      transparent 66%
+    ),
+    radial-gradient(64vmax 44vmax at 104% 108%, color-mix(in srgb, var(--aura) 12%, transparent), transparent 62%),
+    var(--aui-bg);
+}
+.aui-aura::after {
+  background: repeating-conic-gradient(color-mix(in srgb, var(--aura) 16%, transparent) 0 25%, transparent 0 50%) 0 0 /
+    8px 8px;
+  mask-image:
+    radial-gradient(74vmax 48vmax at 50% -10%, #000, transparent 72%),
+    radial-gradient(56vmax 38vmax at 104% 108%, #000, transparent 66%);
+  opacity: 0.55;
+}
+/* A placeholder for content that is still loading: it holds the content's place and breathes slowly. */
+.aui-skeleton {
+  display: block;
+  height: 14px;
+  border-radius: var(--aui-radius);
+  background: color-mix(in srgb, var(--aui-brass) 14%, transparent);
+  animation: aui-skeleton 1.6s var(--aui-ease) infinite alternate;
+}
+.aui-skeleton--title {
+  width: min(280px, 60%);
+  height: 24px;
+}
+.aui-skeleton--short {
+  width: 55%;
+}
+.aui-skeleton--chip {
+  width: 96px;
+  height: 30px;
+}
+.aui-skeleton--block {
+  height: 46px;
+}
+@keyframes aui-skeleton {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aui-skeleton {
+    animation: none;
+  }
+}
+/* The Sui droplet: bright blue with a light upper edge, independent of the text colour around it. */
+.sui-logo-light {
+  stop-color: color-mix(in srgb, var(--aui-sui) 45%, var(--aui-ink));
+}
+.sui-logo-blue {
+  stop-color: var(--aui-sui);
+}
+.sui-logo-deep {
+  stop-color: color-mix(in srgb, var(--aui-sui) 82%, var(--aui-void));
+}
+/* Text for assistive technology only. */
+.aui-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 .aui-panel,
 .aui-surface,
@@ -57,8 +207,10 @@
 .aui-window {
   border: 1px solid var(--aui-border);
   border-radius: var(--aui-radius);
-  background: var(--aui-surface);
+  background: var(--aui-glass);
   box-shadow: var(--aui-shadow);
+  scrollbar-color: var(--aui-steel) transparent;
+  scrollbar-width: thin;
 }
 .aui-panel {
   padding: 12px;
@@ -68,10 +220,16 @@
 .aui-panel h3,
 .aui-window h1 {
   margin: 0;
+  font-family: var(--aui-font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--aui-ink);
+}
+.aui-panel h3 {
   font-family: var(--aui-font);
   font-weight: 800;
-  line-height: 1.2;
-  color: var(--aui-ink);
+  letter-spacing: 0;
 }
 .aui-panel h2 {
   font-size: 19px;
@@ -91,32 +249,39 @@
   min-height: 30px;
   min-width: 30px;
   padding: 5px 12px;
-  border: 1px solid #141620;
-  border-radius: 4px;
-  background: #343b44;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background-color: var(--aui-high);
   box-shadow:
-    inset 0 1px #a1a1b440,
-    inset 0 -2px #0003;
+    inset 0 1px #ffffff1f,
+    inset 0 -2px #0005,
+    0 1px 2px #0006;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
   touch-action: manipulation;
-  text-shadow: 0 1px #0006;
-  transition: filter 0.12s;
+  text-shadow: 0 1px #0008;
+  transition:
+    filter 0.14s var(--aui-ease),
+    background-color 0.14s var(--aui-ease),
+    box-shadow 0.14s var(--aui-ease),
+    translate 0.08s;
 }
 .aui-button--primary {
-  background: #dea855;
-  border-color: #4c371d;
-  color: #231e19;
-  text-shadow: none;
+  background-color: var(--aui-orange);
+  border-color: var(--aui-orange-ink);
+  color: var(--aui-orange-ink);
+  text-shadow: 0 1px #ffffff40;
   box-shadow:
-    inset 0 1px #ffe3a566,
-    inset 0 -2px #754e3266;
+    inset 0 1px #ffffff80,
+    inset 0 -3px color-mix(in srgb, var(--aui-orange-lo) 55%, transparent),
+    0 0 14px color-mix(in srgb, var(--aui-orange) 22%, transparent),
+    0 1px 2px #0008;
 }
 .aui-button--danger {
-  background: #754342;
-  border-color: #281c20;
-  color: #ffe0dc;
+  background-color: color-mix(in srgb, var(--aui-danger) 26%, var(--aui-raised));
+  border-color: var(--aui-border);
+  color: color-mix(in srgb, var(--aui-danger) 55%, var(--aui-ink));
 }
 .aui-button:disabled {
   opacity: 0.4;
@@ -127,17 +292,31 @@
   display: none;
 }
 .aui-button[aria-pressed='true'] {
-  background: #806746;
-  color: #ffe2a7;
-  border-color: #bc955a;
+  background-color: var(--aui-brass-deep);
+  color: var(--aui-brass-hi);
+  border-color: var(--aui-brass-lo);
+  box-shadow:
+    inset 0 1px #ffffff14,
+    inset 0 -2px var(--aui-brass);
 }
 @media (hover: hover) {
   .aui-button:hover:not(:disabled) {
-    filter: brightness(1.12);
+    filter: brightness(1.14);
+    box-shadow:
+      inset 0 1px #ffffff2e,
+      inset 0 -2px #0005,
+      0 0 0 1px var(--aui-line-strong);
+  }
+  .aui-button--primary:hover:not(:disabled) {
+    box-shadow:
+      inset 0 1px #ffffff99,
+      inset 0 -3px color-mix(in srgb, var(--aui-orange-lo) 55%, transparent),
+      0 0 20px color-mix(in srgb, var(--aui-orange) 38%, transparent);
   }
 }
 .aui-button:active:not(:disabled) {
-  box-shadow: inset 0 2px #0004;
+  box-shadow: inset 0 2px 3px #0008;
+  translate: 0 1px;
 }
 .aui-button:focus-visible,
 .aui-input:focus-visible,
@@ -151,33 +330,42 @@
   aspect-ratio: 1;
   flex: none;
 }
+.aui-icon-button--small {
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
 .aui-icon-button img {
   width: 24px;
   height: 24px;
   object-fit: contain;
 }
 .aui-key {
-  font: 10px/1.3 var(--aui-font);
-  font-weight: 700;
-  border: 1px solid #a4a4ac66;
-  border-radius: 3px;
-  padding: 1px 4px;
-  color: #cccbd3;
+  font: 500 10px/1.3 var(--aui-font-display);
+  border: 1px solid var(--aui-steel);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  padding: 0 4px;
+  color: var(--aui-soft);
 }
 .aui-icon-button .aui-key {
   position: absolute;
   right: 1px;
   bottom: 1px;
-  background: #20232cd9;
+  background: color-mix(in srgb, var(--aui-void) 88%, transparent);
 }
 .aui-segments {
   display: flex;
   align-items: stretch;
   gap: 4px;
   padding: 4px;
-  background: #101a25;
-  border: 1px solid #7183982c;
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--aui-void) 70%, transparent);
+  border: 1px solid var(--aui-hair);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 5px #0009;
 }
 .aui-segments .aui-button {
   flex: 1;
@@ -188,12 +376,20 @@
   text-transform: none;
 }
 .aui-segments .aui-button[aria-pressed='true'] {
-  background-color: #675235;
-  border-color: #c3a26a;
-  color: #ffe3b1;
+  background-color: var(--aui-brass-deep);
+  border-color: var(--aui-brass-lo);
+  color: var(--aui-brass-hi);
   box-shadow:
-    inset 0 1px #ffdeb22b,
-    0 2px 3px #0005;
+    inset 0 1px #ffffff1a,
+    inset 0 -2px var(--aui-brass),
+    0 2px 3px #0006;
+}
+.aui-segments .aui-button:not([aria-pressed='true']) {
+  background-color: transparent;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--aui-muted);
 }
 .aui-segments img {
   width: 22px;
@@ -219,15 +415,23 @@
   min-width: 0;
   min-height: 30px;
   padding: 5px 8px;
-  border: 1px solid #151722;
-  border-radius: 4px;
-  background: #20232e;
+  border: 1px solid var(--aui-hair);
+  border-radius: var(--aui-radius);
+  background: color-mix(in srgb, var(--aui-void) 78%, transparent);
   color: var(--aui-ink);
   font: 400 13px var(--aui-font);
-  box-shadow: inset 0 1px 3px #0004;
+  box-shadow: inset 0 2px 4px #0009;
+  transition: border-color 0.14s var(--aui-ease);
+}
+.aui-input::placeholder {
+  color: var(--aui-faint);
+}
+.aui-input:hover,
+.aui-input:focus {
+  border-color: var(--aui-line-strong);
 }
 .aui-input option {
-  background: #282b37;
+  background: var(--aui-raised);
 }
 .aui-error {
   color: var(--aui-danger);
@@ -237,20 +441,29 @@
   appearance: none;
   width: 100%;
   height: 6px;
-  background: #585964;
-  border: 1px solid #171821;
-  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--aui-peak) 0 3px, transparent 3px 5px) var(--aui-void);
+  border: 1px solid var(--aui-border);
+  border-radius: 1px;
   margin: 12px 0;
   accent-color: var(--aui-orange);
 }
 .aui-range::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
+  width: 12px;
   height: 18px;
-  background: #a6a7b2;
-  border: 1px solid #1e202b;
-  border-radius: 3px;
-  box-shadow: inset 0 1px #e3e1e8;
+  background: linear-gradient(var(--aui-brass-hi), var(--aui-brass) 45%, var(--aui-brass-lo));
+  border: 1px solid var(--aui-brass-ink);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px #fff8,
+    0 0 8px color-mix(in srgb, var(--aui-orange) 35%, transparent);
+}
+.aui-range::-moz-range-thumb {
+  width: 12px;
+  height: 18px;
+  background: linear-gradient(var(--aui-brass-hi), var(--aui-brass) 45%, var(--aui-brass-lo));
+  border: 1px solid var(--aui-brass-ink);
+  border-radius: 2px;
 }
 .aui-toggle {
   position: relative;
@@ -271,11 +484,14 @@
   position: relative;
   width: 40px;
   height: 22px;
-  border: 1px solid #48515b;
-  border-radius: 12px;
-  background: #14191f;
-  box-shadow: inset 0 2px 4px #0006;
+  border: 1px solid var(--aui-peak);
+  border-radius: 4px;
+  background: var(--aui-void);
+  box-shadow: inset 0 2px 4px #0009;
   flex: none;
+  transition:
+    border-color 140ms var(--aui-ease),
+    background-color 140ms var(--aui-ease);
 }
 .aui-toggle-track::after {
   content: '';
@@ -284,22 +500,25 @@
   height: 14px;
   left: 3px;
   top: 3px;
-  border-radius: 50%;
-  background: #959eaa;
+  border-radius: 2px;
+  background: var(--aui-steel);
   box-shadow:
     0 1px 3px #0008,
     inset 0 1px #ffffff50;
   transition:
-    transform 120ms,
-    background-color 120ms;
+    transform 140ms var(--aui-ease),
+    background-color 140ms var(--aui-ease);
 }
 .aui-toggle input:checked + .aui-toggle-track {
-  border-color: #b69b62;
-  background: #514329;
+  border-color: var(--aui-brass-lo);
+  background: var(--aui-brass-deep);
 }
 .aui-toggle input:checked + .aui-toggle-track::after {
   transform: translateX(18px);
-  background: #f0cd83;
+  background: var(--aui-orange);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--aui-orange) 55%, transparent),
+    inset 0 1px #fff9;
 }
 .aui-toggle input:focus-visible + .aui-toggle-track {
   outline: 2px solid var(--aui-blue);
@@ -323,14 +542,26 @@
   justify-content: center;
   min-height: 44px;
   padding: 7px 38px;
-  background: #2b3139;
-  border-bottom: 1px solid #20222c;
-  box-shadow: inset 0 1px #d4d1de24;
+  background-color: color-mix(in srgb, var(--aui-lifted) 88%, transparent);
+  border-bottom: 1px solid var(--aui-line);
+  box-shadow: inset 0 1px #ffffff1a;
 }
 .aui-window-title {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+/* Title pips: two brass pixels that frame the name. */
+.aui-window-title::before,
+.aui-window-title::after {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 4px;
+  rotate: 45deg;
+  background: var(--aui-brass);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aui-brass-hi) 45%, transparent);
+  opacity: 0.8;
 }
 .aui-window-title > img {
   width: 26px;
@@ -339,14 +570,14 @@
 }
 .aui-window-header h1 {
   font-size: 20px;
-  text-shadow: 0 2px #16182288;
+  text-shadow: 0 2px #000a;
 }
 .aui-window-meta {
   position: absolute;
   left: 10px;
   bottom: 5px;
   font-size: 10px;
-  color: #b0b2c0;
+  color: var(--aui-faint);
 }
 .aui-window-actions {
   position: absolute;
@@ -367,9 +598,16 @@
   font-size: 22px;
   line-height: 1;
   padding: 0;
-  background: #545765;
-  box-shadow: inset 0 1px #b4b4c033;
-  color: #d6d6df;
+  background-color: transparent;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--aui-muted);
+}
+.aui-window-header > .aui-icon-button:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--aui-danger) 22%, transparent);
+  box-shadow: none;
+  color: var(--aui-ink);
 }
 .aui-native-modal {
   container: aui-viewport / size;
@@ -386,7 +624,7 @@
 }
 .aui-modal-scrim {
   padding: 12px;
-  background: #090c154d;
+  background: #0000004d;
 }
 .aui-native-modal::backdrop {
   background: transparent;
@@ -442,7 +680,7 @@
   padding: 0;
   gap: 0;
   border-radius: 4px;
-  background: #171923ed;
+  background: color-mix(in srgb, var(--aui-void) 88%, transparent);
   font:
     10px/1.4 'JetBrains Mono',
     monospace;
@@ -454,10 +692,10 @@
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  color: #969ba8;
+  color: var(--aui-faint);
 }
 .aui-performance-reading output {
-  color: #8fc0e9;
+  color: var(--aui-blue);
   width: 24px;
   text-align: right;
 }
@@ -468,11 +706,11 @@
   border: 0;
   border-left: 1px solid #ffffff12;
   background: transparent;
-  color: #a6c8e4;
+  color: var(--aui-blue);
   font: inherit;
 }
 .aui-performance option {
-  background: #242631;
+  background: var(--aui-raised);
 }
 .aui-performance .aui-button {
   min-height: 28px;
@@ -483,7 +721,7 @@
   box-shadow: none;
   border-radius: 0;
   font: inherit;
-  color: #d9b275;
+  color: var(--aui-brass);
 }
 @media (pointer: coarse) {
   .aui-button {
@@ -529,7 +767,7 @@
   height: 100%;
   container: aui-viewport / size;
   overflow: hidden;
-  background: #222735;
+  background: var(--aui-lifted);
 }
 .aui-preview-surface .aui-native-modal {
   position: absolute;
@@ -638,11 +876,11 @@
   width: max-content;
   max-width: 230px;
   padding: 5px 8px;
-  border: 1px solid #a78c5755;
-  border-radius: 4px;
-  background: #151a21f7;
-  box-shadow: 0 3px 9px #0008;
-  color: #ead4ae;
+  border: 1px solid var(--aui-line-strong);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--aui-void) 94%, transparent);
+  box-shadow: 0 3px 9px #000a;
+  color: var(--aui-brass-hi);
   font: 500 12px var(--aui-font);
   letter-spacing: normal;
   text-transform: none;
@@ -670,7 +908,7 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  color: #c3cbd5;
+  color: var(--aui-soft);
   text-align: left;
   font: 500 12px/1.3 var(--aui-font);
   cursor: pointer;
@@ -679,11 +917,12 @@
   background: #ffffff07;
 }
 .aui-navigation-row[aria-pressed='true'] {
-  background: #c4a16b1a;
-  color: #efcf8e;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--aui-brass) 16%, transparent), transparent 85%);
+  box-shadow: inset 2px 0 var(--aui-brass-hi);
+  color: var(--aui-brass-hi);
 }
 .aui-navigation-row:focus-visible {
-  outline: 2px solid #89b9d2;
+  outline: 2px solid var(--aui-blue);
   outline-offset: -2px;
 }
 .aui-navigation-row > img {

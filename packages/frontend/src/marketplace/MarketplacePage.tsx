@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useEffect, useState } from 'react'
-import { SegmentedControl } from '@aresrpg/ui'
+import { MarketPage } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -12,10 +12,9 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { BrowsePanel } from './BrowsePanel.tsx'
 import { HistoryPanel } from './HistoryPanel.tsx'
 import { MarketplaceDisclaimer } from './MarketplaceDisclaimer.tsx'
+import { useMarketCapabilities } from './MarketSource.tsx'
 import { SellPanel } from './SellPanel.tsx'
 import { MarketVolumeBadge } from './marketplace_model.tsx'
-
-import './marketplace.css'
 
 type Tab = 'BUY' | 'SELL' | 'HISTORY'
 const tabs: readonly Tab[] = ['BUY', 'SELL', 'HISTORY']
@@ -57,33 +56,30 @@ export const MarketplacePageView = ({
 }>) => {
   const text = copy_text(copy.marketplace_page)
   const [tab, set_tab] = useState<Tab>('BUY')
+  const { history } = useMarketCapabilities()
+  const offered = tabs.filter((value) => history || value !== 'HISTORY')
   return (
-    <section className="market-page pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98 shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
-      <i className="pointer-events-none absolute top-1 left-1 size-3 border-t border-l border-[#c8963c]/45" />
-      <i className="pointer-events-none absolute top-1 right-1 size-3 border-t border-r border-[#c8963c]/45" />
-      <i className="pointer-events-none absolute bottom-1 left-1 size-3 border-b border-l border-[#c8963c]/45" />
-      <i className="pointer-events-none absolute right-1 bottom-1 size-3 border-r border-b border-[#c8963c]/45" />
-      <header className="market-toolbar">
-        <SegmentedControl
-          label={text('title')}
-          value={tab}
-          on_change={set_tab}
-          options={tabs.map((value) => ({ value, label: text(`tab_${value.toLowerCase()}`) }))}
-        />
-        <div className="market-volumes">
+    <MarketPage
+      tabs={{
+        label: text('title'),
+        value: tab,
+        on_change: set_tab,
+        options: offered.map((value) => ({ value, label: text(`tab_${value.toLowerCase()}`) })),
+      }}
+      volumes={
+        <>
           <MarketVolumeBadge window="24h" partial={volume.history_days < 1} mist={volume.day_mist} text={text} />
           <MarketVolumeBadge window="30d" partial={volume.history_days < 30} mist={volume.month_mist} text={text} />
-        </div>
-      </header>
-      <div className="flex min-h-0 flex-1">
-        {tab === 'BUY' ? (
-          <BrowsePanel text={text} />
-        ) : tab === 'SELL' ? (
-          <SellPanel text={text} />
-        ) : (
-          <HistoryPanel locale={locale} text={text} />
-        )}
-      </div>
-    </section>
+        </>
+      }
+    >
+      {tab === 'BUY' ? (
+        <BrowsePanel text={text} />
+      ) : tab === 'SELL' ? (
+        <SellPanel text={text} />
+      ) : (
+        <HistoryPanel locale={locale} text={text} />
+      )}
+    </MarketPage>
   )
 }

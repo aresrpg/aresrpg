@@ -20,20 +20,6 @@ test('placement cells are transient overlays rather than static board state', ()
   expect(fight_placement_overlays(board, false)).toEqual([])
 })
 
-test('authored encounter anchors keep local fights on their exact floor, not the simulator origin or canopy', async () => {
-  const { grounded_fight_board } = await import('../../../src/game/fight/FightViewport.tsx')
-  const { adventure_fight_position, ADVENTURE_ENCOUNTERS } = await import('../../../src/adventure/content.ts')
-  const board = generate_board(1n)
-  for (let index = 0; index < ADVENTURE_ENCOUNTERS.length; index++) {
-    const anchor = adventure_fight_position(`adventure_${index}`)!
-    const rendered = grounded_fight_board(board, () => 150, anchor)
-    expect(rendered.origin.x + (rendered.width * rendered.cell_size) / 2).toBe(anchor.x)
-    expect(rendered.origin.z + (rendered.height * rendered.cell_size) / 2).toBe(anchor.z)
-    expect(rendered.origin.y).toBe(anchor.y + 1)
-  }
-  expect(adventure_fight_position('other-fight')).toBeNull()
-})
-
 test('ambient presentation appends fighters without claiming presence and removes only its own entities', () => {
   const calls: unknown[] = []
   const scene = {

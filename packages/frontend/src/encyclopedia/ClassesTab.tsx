@@ -62,17 +62,15 @@ export const ClassesTab = ({
                 <h2 className="bg-[linear-gradient(135deg,#fad9b3,#d4a145,#f0c474)] bg-clip-text text-[14px] font-semibold tracking-[0.25em] text-transparent uppercase">
                   {titleize(detail.id)}
                 </h2>
-                <p className="mt-1 text-[9px] tracking-[0.15em] text-[#6b7280] uppercase">
+                <p className="mt-1 text-[9px] tracking-[0.15em] text-faint uppercase">
                   {text('spells_count', { count: detail.spells.length })}
                 </p>
               </header>
               {classe && (
                 <section className="border border-border bg-black/10" data-characteristic-costs="">
                   <div className="border-b border-border px-3 py-2">
-                    <h3 className="text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
-                      {text('characteristic_costs')}
-                    </h3>
-                    <p className="mt-1 text-[8px] text-[#777b86]">{text('characteristic_costs_desc')}</p>
+                    <h3 className="text-[9px] tracking-[0.18em] text-gold uppercase">{text('characteristic_costs')}</h3>
+                    <p className="mt-1 text-[8px] text-faint">{text('characteristic_costs_desc')}</p>
                   </div>
                   <div>
                     {characteristic_names.map((stat) => (
@@ -81,7 +79,7 @@ export const ClassesTab = ({
                         data-characteristic={stat}
                         key={stat}
                       >
-                        <span className="text-[8px] tracking-[0.12em] text-[#b7bbc4] uppercase">
+                        <span className="text-[8px] tracking-[0.12em] text-soft uppercase">
                           {text(`gameplay.stat_${stat}`)}
                         </span>
                         <span className="flex flex-wrap gap-1.5">
@@ -89,7 +87,7 @@ export const ClassesTab = ({
                             const cap = rows[index + 1]?.from
                             return (
                               <span
-                                className="border border-white/8 bg-white/3 px-2 py-1 text-[7px] text-[#9298a3]"
+                                className="border border-white/8 bg-white/3 px-2 py-1 text-[7px] text-muted"
                                 data-cost={step.cost}
                                 data-from={step.from}
                                 key={step.from}
@@ -132,7 +130,7 @@ export const ClassesTab = ({
                         <span className="min-w-0 flex-1 truncate text-[9px] tracking-[0.1em] uppercase">
                           {display_spell_name(row.name)}
                         </span>
-                        <span className="shrink-0 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
+                        <span className="shrink-0 text-[7px] tracking-[0.08em] text-faint uppercase">
                           <Text path="encyclopedia_page.level_short" values={{ level: row.unlock_level }} />
                         </span>
                       </NavigationRow>

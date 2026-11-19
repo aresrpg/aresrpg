@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, expect, mock, spyOn, test } from 'bun:test'
+import { bcs } from '@mysten/sui/bcs'
 import { ObjectError } from '@mysten/sui/client'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuinsClient } from '@mysten/suins'
 import type { Transaction } from '@mysten/sui/transactions'
 import { normalizeSuiAddress } from '@mysten/sui/utils'
 
+import { name_record_bytes } from '../src/suins_record.ts'
 import { leaf_change, set_agent_suins_default, subdomain_config, suins_actions } from '../src/suins_actions.ts'
 
 import registration from './fixtures/suins_registration.json'
@@ -74,7 +76,21 @@ const setup = (managed = true) => {
 }
 const current = () => {}
 const commands = (transaction: Transaction) =>
-  transaction.getData().commands.map((command) => command.MoveCall?.function)
+  transaction
+    .getData()
+    .commands.map((command) => command.MoveCall?.function)
+    .filter((name) => ['new_leaf', 'remove_leaf', 'add_leaf_metadata', 'set_reverse_lookup'].includes(name!))
+
+const apply_reviewed = async (
+  actions: ReturnType<typeof suins_actions>,
+  name: string,
+  agent_address: string,
+  guard: () => void,
+  player?: string
+) => {
+  const review = await actions.review_parent(name, agent_address, guard, player)
+  return actions.apply_parent(name, agent_address, guard, player, review)
+}
 
 test('captured config bytes pin deployed mutable child constraints', () => {
   expect(subdomain_config.parse(config_bytes)).toEqual({
@@ -98,13 +114,13 @@ test('external wallet verifies its default and requires an explicit player targe
   state.targets.set('deep.other.sui', owner)
   expect((await actions.snapshot()).default_name).toBe('deep.other.sui')
   await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('unsupported')
-  await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('unsupported')
+  await expect(apply_reviewed(actions, 'sceat.sui', agent, current)).rejects.toThrow('unsupported')
   expect(state.reads).toBe(4)
   expect(state.executions).toHaveLength(0)
   state.targets.set('deep.other.sui', agent)
   expect((await actions.snapshot()).default_name).toBeNull()
 })
-test('preflight refuses live nodes, invalid lineage metadata, expired parents and changed ownership', async () => {
+test('preflight refuses live nodes, expired parents and changed ownership but permits profile review', async () => {
   const { actions, state } = setup()
   state.records.set('aresrpgagent.sceat.sui', node())
   await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('collision')
@@ -112,7 +128,7 @@ test('preflight refuses live nodes, invalid lineage metadata, expired parents an
     ...leaf(agent, { unknown: 'retain' }),
     nftId: normalizeSuiAddress('0xb'),
   })
-  await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('metadata')
+  await actions.validate_parent('sceat.sui', current)
   state.records.delete('aresrpgagent.sceat.sui')
   state.records.set('sceat.sui', { ...node(), expirationTimestampMs: 1 })
   await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('invalid_parent')
@@ -125,18 +141,18 @@ test('root application creates two final-target leaves and only the human defaul
   const { actions, state } = setup()
   await actions.validate_parent('sceat.sui', current)
   expect(state.executions).toHaveLength(0)
-  expect(await actions.apply_parent('sceat.sui', agent, current)).toEqual({
+  expect(await apply_reviewed(actions, 'sceat.sui', agent, current)).toEqual({
     name: 'aresrpg.sceat.sui',
     digest: 'confirmed',
   })
   expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf', 'set_reverse_lookup'])
 })
-test('identical application performs no write and preserves arbitrary existing metadata', async () => {
+test('identical clean application performs no write', async () => {
   const { actions, state } = setup()
-  state.records.set('aresrpg.sceat.sui', leaf(owner, { unknown: 'keep' }))
-  state.records.set('aresrpgagent.sceat.sui', leaf(agent, { avatar: 'keep' }))
+  state.records.set('aresrpg.sceat.sui', leaf(owner))
+  state.records.set('aresrpgagent.sceat.sui', leaf(agent))
   state.defaults.set(owner, 'aresrpg.sceat.sui')
-  expect(await actions.apply_parent('sceat.sui', agent, current)).toEqual({ name: 'aresrpg.sceat.sui' })
+  expect(await apply_reviewed(actions, 'sceat.sui', agent, current)).toEqual({ name: 'aresrpg.sceat.sui' })
   expect(state.executions).toHaveLength(0)
 })
 test('retargeting recreates a same-lineage leaf; stale lineage and expired nodes use direct creation', () => {
@@ -148,19 +164,17 @@ test('retargeting recreates a same-lineage leaf; stale lineage and expired nodes
   expect(() =>
     leaf_change({ ...node(), expirationTimestampMs: timestamp }, registration.objectId, agent, timestamp)
   ).toThrow('collision')
-  expect(() => leaf_change(leaf(owner, { unknown: 'keep' }), registration.objectId, agent, timestamp)).toThrow(
-    'metadata'
-  )
-  expect(() =>
+  expect(leaf_change(leaf(owner, { unknown: 'keep' }), registration.objectId, agent, timestamp)).toBe('replace')
+  expect(
     leaf_change({ ...leaf(owner, { unknown: 'keep' }), nftId: agent }, registration.objectId, undefined, timestamp)
-  ).toThrow('metadata')
+  ).toBe('create')
 })
-test('wrong target with metadata is refused after final multisig identity becomes known', async () => {
+test('wrong target with details can be reset after the final multisig is reviewed', async () => {
   const { actions, state } = setup()
   state.records.set('aresrpgagent.sceat.sui', leaf(owner, { unknown: 'keep' }))
   await actions.validate_parent('sceat.sui', current)
-  await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('metadata')
-  expect(state.executions).toHaveLength(0)
+  await apply_reviewed(actions, 'sceat.sui', agent, current)
+  expect(commands(state.executions[0]!)).not.toContain('add_leaf_metadata')
 })
 test('nested parent passes wrapper to proxy while registry lineage uses embedded NFT', async () => {
   const { actions, state } = setup()
@@ -176,9 +190,11 @@ test('nested parent passes wrapper to proxy while registry lineage uses embedded
   state.records.set('child.sceat.sui', node('child.sceat.sui', { S_AC: '' }))
   const snapshot = await actions.snapshot()
   expect(snapshot.names[0]).toMatchObject({ object_id: wrapper, nft_id: registration.objectId })
-  await actions.apply_parent('child.sceat.sui', agent, current)
+  await apply_reviewed(actions, 'child.sceat.sui', agent, current)
   const data = state.executions[0]!.getData()
-  expect(data.commands[0]!.MoveCall?.module).toBe('subdomain_proxy')
+  expect(data.commands.find((command) => command.MoveCall?.function === 'new_leaf')!.MoveCall?.module).toBe(
+    'subdomain_proxy'
+  )
   expect(data.inputs.some((input) => input.UnresolvedObject?.objectId === wrapper)).toBe(true)
   state.records.set('child.sceat.sui', node('child.sceat.sui'))
   expect((await actions.snapshot()).names).toEqual([])
@@ -187,14 +203,14 @@ test('fresh apply refuses a parent changed since preflight and SDK before_sign c
   const { actions, state } = setup()
   await actions.validate_parent('sceat.sui', current)
   state.records.set('sceat.sui', { ...node(), nftId: agent })
-  await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('invalid_parent')
+  await expect(apply_reviewed(actions, 'sceat.sui', agent, current)).rejects.toThrow('invalid_parent')
   state.records.set('sceat.sui', node())
   let active = true
   state.before_execute = () => {
     active = false
   }
   await expect(
-    actions.apply_parent('sceat.sui', agent, () => {
+    apply_reviewed(actions, 'sceat.sui', agent, () => {
       if (!active) throw new Error('cancelled')
     })
   ).rejects.toThrow('cancelled')
@@ -229,7 +245,7 @@ test('failed and uncertain submissions are not retried by either naming operatio
     throw new Error('uncertain receipt')
   }
   const actions = suins_actions({ client, sdk, address: owner, managed: true, now: () => timestamp })
-  await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('uncertain receipt')
+  await expect(apply_reviewed(actions, 'sceat.sui', agent, current)).rejects.toThrow('uncertain receipt')
   state.targets.set('aresrpgagent.sceat.sui', agent)
   await expect(set_agent_suins_default(client, sdk, agent, 'aresrpgagent.sceat.sui', current)).rejects.toThrow(
     'uncertain receipt'
@@ -238,8 +254,8 @@ test('failed and uncertain submissions are not retried by either naming operatio
 })
 
 // Mainnet getNameRecord("aresrpg.sceat.sui"), 2026-11-11. This existing expired node's
-// avatar is a real reason the reviewed preservation policy must refuse replacement.
-test('captured expired application node cannot lose its avatar during replacement', () => {
+// avatar is deliberately erased under the owner's confirmed replacement policy.
+test('captured expired application node erases its avatar with consent and an exact record guard', async () => {
   const captured: RecordValue = {
     name: 'aresrpg.sceat.sui',
     nftId: '0x0ca9dac0e81fabdf0d750a571c1dd81420f040eea5fbf197455473f0bfdf5091',
@@ -247,7 +263,32 @@ test('captured expired application node cannot lose its avatar during replacemen
     expirationTimestampMs: 1736548310642,
     data: { avatar: '0x71465c22cf9ccb25e60e1a3f6bc5381899825a3bde0e7ab1e067145ba8c01509' },
   }
-  expect(() => leaf_change(captured, registration.objectId, owner, timestamp)).toThrow('metadata')
+  const { actions, state } = setup(false)
+  state.records.set('aresrpg.sceat.sui', captured)
+  await apply_reviewed(actions, 'sceat.sui', agent, current, agent)
+  expect(state.records.get('aresrpg.sceat.sui')).toBe(captured)
+  expect(state.executions).toHaveLength(1)
+  const data = state.executions[0]!.getData()
+  expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf'])
+  expect(data.commands.findIndex((command) => command.MoveCall?.function === 'remove')).toBeLessThan(
+    data.commands.findIndex((command) => command.MoveCall?.function === 'new_leaf')
+  )
+  expect(
+    data.inputs.some(
+      (input) => input.Pure?.bytes === Buffer.from([66, ...Buffer.from(captured.data.avatar!)]).toString('base64')
+    )
+  ).toBe(false)
+  expect(
+    data.commands
+      .filter((command) => ['new_leaf', 'add_leaf_metadata'].includes(command.MoveCall?.function ?? ''))
+      .every(
+        (command) => command.MoveCall?.package === '0xe0108df96c8dfac6d285e5b8afbeafc9a205002a3ec7807329929c8b4d53a8a0'
+      )
+  ).toBe(true)
+  state.records.set('aresrpg.sceat.sui', leaf(agent))
+  state.records.set('aresrpgagent.sceat.sui', leaf(agent))
+  await apply_reviewed(actions, 'sceat.sui', agent, current, agent)
+  expect(state.executions).toHaveLength(1)
 })
 
 test('external parent signer creates player-targeted leaves without changing its own default', async () => {
@@ -255,7 +296,7 @@ test('external parent signer creates player-targeted leaves without changing its
   const player = normalizeSuiAddress('0xb')
   expect((await actions.snapshot()).names.map(({ name }) => name)).toEqual(['sceat.sui'])
   await actions.validate_parent('sceat.sui', current, player)
-  await actions.apply_parent('sceat.sui', agent, current, player)
+  await apply_reviewed(actions, 'sceat.sui', agent, current, player)
   expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf'])
   const { inputs } = state.executions[0]!.getData()
   expect(inputs.some((input) => input.Pure?.bytes === Buffer.from(player.slice(2), 'hex').toString('base64'))).toBe(
@@ -276,18 +317,19 @@ test('external parent keeps ownership, collision and cancellation checks', async
   const { actions, state } = setup(false)
   const player = normalizeSuiAddress('0xb')
   state.records.set('aresrpg.sceat.sui', leaf(owner, { avatar: 'keep' }))
-  await expect(actions.validate_parent('sceat.sui', current, player)).rejects.toThrow('metadata')
+  await actions.validate_parent('sceat.sui', current, player)
   state.records.delete('aresrpg.sceat.sui')
   await actions.validate_parent('sceat.sui', current, player)
   state.owned = []
-  await expect(actions.apply_parent('sceat.sui', agent, current, player)).rejects.toThrow('invalid_parent')
+  await expect(apply_reviewed(actions, 'sceat.sui', agent, current, player)).rejects.toThrow('invalid_parent')
   state.owned = [registration]
   let active = true
   state.before_execute = () => {
     active = false
   }
   await expect(
-    actions.apply_parent(
+    apply_reviewed(
+      actions,
       'sceat.sui',
       agent,
       () => {
@@ -314,12 +356,12 @@ test('missing application leaves are creatable through the real SuiNS reader', a
   )
   await actions.validate_parent('sceat.sui', current)
   expect(state.executions).toHaveLength(0)
-  await actions.apply_parent('sceat.sui', agent, current)
+  await apply_reviewed(actions, 'sceat.sui', agent, current)
   expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf', 'set_reverse_lookup'])
   state.records.set('aresrpg.sceat.sui', leaf())
   state.records.set('aresrpgagent.sceat.sui', leaf(agent))
   state.defaults.set(owner, 'aresrpg.sceat.sui')
-  await actions.apply_parent('sceat.sui', agent, current)
+  await apply_reviewed(actions, 'sceat.sui', agent, current)
   expect(state.executions).toHaveLength(1)
 })
 
@@ -328,7 +370,7 @@ test.each([new ObjectError('unknown', 'Unavailable record', { reason: 'unknown' 
   async (failure) => {
     const { actions, state } = setup()
     spyOn(SuinsClient.prototype, 'getNameRecord').mockRejectedValue(failure)
-    await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow(failure)
+    await expect(apply_reviewed(actions, 'sceat.sui', agent, current)).rejects.toThrow(failure)
     expect(state.executions).toHaveLength(0)
   }
 )
@@ -341,3 +383,55 @@ test('a missing parent record is invalid authority, not an available leaf', asyn
   await expect(actions.validate_parent('sceat.sui', current)).rejects.toThrow('invalid_parent')
   expect(state.executions).toHaveLength(0)
 })
+
+test.each(['S_TE', 'S_AC', 'unknown'])('confirmed expired profiles discard %s along with the avatar', async (key) => {
+  const { actions, state } = setup()
+  state.records.set('aresrpg.sceat.sui', {
+    ...node(),
+    expirationTimestampMs: timestamp - 1,
+    data: { avatar: 'keep', [key]: 'keep' },
+  })
+  await apply_reviewed(actions, 'sceat.sui', agent, current)
+  expect(commands(state.executions[0]!)).not.toContain('add_leaf_metadata')
+})
+
+test('every changed leaf compares the complete captured record before mutating it', async () => {
+  const { actions, state } = setup()
+  const captured = { ...node('aresrpg.sceat.sui', { avatar: 'keep' }), expirationTimestampMs: timestamp - 1 }
+  state.records.set('aresrpg.sceat.sui', captured)
+  await apply_reviewed(actions, 'sceat.sui', agent, current)
+  const data = state.executions[0]!.getData()
+  const guards = data.commands.filter((command) => command.MoveCall?.function === 'remove')
+  expect(guards).toHaveLength(2)
+  for (const expected of [captured, null]) {
+    const bytes = name_record_bytes(expected)
+    const encoded = bcs.vector(bcs.u8()).serialize(bytes).toBase64()
+    expect(data.inputs.some((input) => input.Pure?.bytes === encoded)).toBe(true)
+  }
+})
+
+test('replacement needs consent and never restores the existing avatar', async () => {
+  const { actions, state } = setup()
+  state.records.set('aresrpg.sceat.sui', leaf(owner, { avatar: 'old-avatar' }))
+  await expect(actions.apply_parent('sceat.sui', agent, current)).rejects.toThrow('confirmation_required')
+  expect(state.executions).toHaveLength(0)
+  const review = await actions.review_parent('sceat.sui', agent, current)
+  expect(review.erased_names).toEqual(['aresrpg.sceat.sui'])
+  await actions.apply_parent('sceat.sui', agent, current, undefined, review)
+  expect(commands(state.executions[0]!)).toEqual(['remove_leaf', 'new_leaf', 'new_leaf', 'set_reverse_lookup'])
+})
+
+test.each(['avatar', 'target', 'presence', 'agent'])(
+  'changed %s invalidates reviewed consent before execution',
+  async (change) => {
+    const { actions, state } = setup()
+    state.records.set('aresrpg.sceat.sui', leaf(owner, { avatar: 'before' }))
+    const review = await actions.review_parent('sceat.sui', agent, current)
+    if (change === 'avatar') state.records.set('aresrpg.sceat.sui', leaf(owner, { avatar: 'after' }))
+    if (change === 'target') state.records.set('aresrpg.sceat.sui', leaf(agent, { avatar: 'before' }))
+    if (change === 'presence') state.records.delete('aresrpg.sceat.sui')
+    const target = change === 'agent' ? normalizeSuiAddress('0xb') : agent
+    await expect(actions.apply_parent('sceat.sui', target, current, undefined, review)).rejects.toThrow('stale_review')
+    expect(state.executions).toHaveLength(0)
+  }
+)

@@ -9,11 +9,11 @@ import { EventEmitter } from 'node:events'
 
 import { describe, expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
+import { create_request_limiter } from '@aresrpg/protocol/request-limiter'
 
 import { ZERO_TOTALS } from '../src/reads/get_analytics_totals.ts'
 import { item_updates } from '../src/item_updates.ts'
 import type { EventEnvelope } from '../src/protocol.ts'
-import { create_request_limiter } from '../src/request_limiter.ts'
 
 import { create_player } from './helpers/player.ts'
 

@@ -47,7 +47,7 @@ test('return fences every old grant while retaining an uncertain envelope and it
       grant_id: 'grant',
       digest: 'digest',
       phase: 'submitting',
-      encrypted: 'retained',
+      bytes: 'cmV0YWluZWQ=',
       gas_budget_mist: '10',
     },
   }
@@ -88,12 +88,36 @@ test('idempotent stop waits for receipt drain and cannot finish while a command 
   await expect(f.connect.begin_return(f.id, f.session, review)).rejects.toThrow('connection_changed')
 })
 
-test('owner stop retires the existing profession run without clearing a pending transaction', async () => {
+test('owner stop stops every hero run without clearing a pending transaction', async () => {
   const f = await fixture(),
     key = lane_key_for(fixture_bot)
-  await put(f.store, 'profession:run', { id: 'run', bot_id: fixture_bot.id, status: 'waiting' })
-  await put(f.store, key, { ...empty_lane(fixture_bot), profession_run_id: 'run', active_command: 'step' })
+  for (const hero of ['first', 'second'])
+    await put(f.store, `behavior:${hero}`, { id: hero, character_id: hero, bot_id: fixture_bot.id, status: 'waiting' })
+  await put(f.store, key, {
+    ...empty_lane(fixture_bot),
+    runs: { first: 'first', second: 'second' },
+    active_command: 'step',
+  })
   expect((await f.connect.begin_return(f.id, f.session, public_bot(fixture_bot))).phase).toBe('draining')
-  expect(await f.store.read(key)).toMatchObject({ profession_run_id: null, active_command: 'step' })
-  expect(await f.store.read('profession:run')).toMatchObject({ status: 'stopped' })
+  expect(await f.store.read(key)).toMatchObject({ runs: {}, active_command: 'step' })
+  for (const hero of ['first', 'second'])
+    expect(await f.store.read(`behavior:${hero}`)).toMatchObject({ status: 'stopped' })
+})
+
+test('foreign ingress waits for live owner execution coordination, not an expired process', async () => {
+  const f = await fixture()
+  const key = lane_key_for(fixture_bot)
+  await put(f.store, key, {
+    ...empty_lane(fixture_bot),
+    actor_id: 'remote',
+    fence: 4,
+    execution_busy: true,
+    lease_until: 2000,
+  })
+  const first = await f.connect.begin_return(f.id, f.session, public_bot(fixture_bot))
+  expect(first.phase).toBe('draining')
+  await expect(f.connect.complete_return(f.id, f.session, first.bot)).rejects.toThrow('return_not_ready')
+  const lane = (await f.store.read<Lane>(key))!
+  await put(f.store, key, { ...lane, lease_until: 1000 })
+  expect((await f.connect.begin_return(f.id, f.session, first.bot)).phase).toBe('stopped')
 })

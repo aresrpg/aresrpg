@@ -73,36 +73,36 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         >
           <div className="relative rounded-[11px] bg-surface-low p-5" data-dungeon-entry-card>
             <div className="flex items-start gap-3 border-b border-white/8 pb-4">
-              <div className="grid size-12 shrink-0 place-items-center border border-[#c8963c]/30 bg-[#c8963c]/7">
-                <DoorOpen className="text-[#c8963c]" size={24} strokeWidth={1.35} />
+              <div className="grid size-12 shrink-0 place-items-center border border-gold/30 bg-gold/7">
+                <DoorOpen className="text-gold" size={24} strokeWidth={1.35} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[8px] tracking-[0.24em] text-[#c8963c] uppercase">{text('dungeon_portal')}</p>
-                <h2 className="mt-1 text-[16px] tracking-[0.1em] text-[#e8e4dc] uppercase">
+                <p className="text-[8px] tracking-[0.24em] text-gold uppercase">{text('dungeon_portal')}</p>
+                <h2 className="mt-1 text-[16px] tracking-[0.1em] text-text uppercase">
                   {text('dungeon_city', { city: titleize(portal.city) })}
                 </h2>
-                <p className="mt-1 text-[8px] tracking-[0.14em] text-[#626975]">
+                <p className="mt-1 text-[8px] tracking-[0.14em] text-faint">
                   [{portal.zx}, {portal.zz}]
                 </p>
-                <p className="mt-2 max-w-md text-[9px] leading-4 text-[#858b95]">{text('dungeon_entry_body')}</p>
+                <p className="mt-2 max-w-md text-[9px] leading-4 text-faint">{text('dungeon_entry_body')}</p>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-3 border-l-2 border-[#c8963c] bg-white/[0.025] p-3">
+            <div className="mt-4 flex items-center gap-3 border-l-2 border-gold bg-white/[0.025] p-3">
               {item_icon(dungeon.key) ? (
                 <img alt="" className="size-9 object-contain" src={item_icon(dungeon.key)!} />
               ) : (
-                <KeyRound className="text-[#c8963c]" size={20} />
+                <KeyRound className="text-gold" size={20} />
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[7px] tracking-[0.18em] text-[#6f747e] uppercase">{text('dungeon_required_key')}</p>
-                <p className="mt-1 truncate text-[10px] text-[#e2c98f]">
+                <p className="text-[7px] tracking-[0.18em] text-faint uppercase">{text('dungeon_required_key')}</p>
+                <p className="mt-1 truncate text-[10px] text-gold-light">
                   {content_catalog.item(dungeon.key)?.item.name ?? dungeon.key}
                 </p>
               </div>
             </div>
             <div className="mt-5 flex items-center justify-end gap-2 border-t border-white/8 pt-4">
               <button
-                className="h-9 cursor-pointer px-4 text-[8px] tracking-[0.16em] text-[#777f89] uppercase hover:text-[#c7c9ce]"
+                className="h-9 cursor-pointer px-4 text-[8px] tracking-[0.16em] text-faint uppercase hover:text-soft"
                 onClick={() => set_open_id(null)}
                 type="button"
               >
@@ -110,7 +110,7 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               </button>
               {entry_key && (
                 <button
-                  className="h-10 min-w-40 cursor-pointer border border-[#c8963c]/55 bg-[#c8963c]/10 px-5 text-[8px] font-semibold tracking-[0.17em] text-[#dcb766] uppercase shadow-[inset_0_1px_rgba(255,255,255,.05)] hover:bg-[#c8963c]/15 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 min-w-40 cursor-pointer border border-gold/55 bg-gold/10 px-5 text-[8px] font-semibold tracking-[0.17em] text-gold uppercase shadow-[inset_0_1px_rgba(255,255,255,.05)] hover:bg-gold/15 disabled:cursor-not-allowed disabled:opacity-45"
                   disabled={pending !== null}
                   onClick={() => {
                     dispatch_app({ type: 'dungeon/enter', portal })

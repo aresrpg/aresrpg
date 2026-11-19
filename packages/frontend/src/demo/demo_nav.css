@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* Lab navigation: one row of shared controls. Every lab view reserves 56px for it. */
+.demo-nav {
+  position: fixed;
+  top: calc(8px + var(--safe-top));
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  transform: translateX(-50%);
+}
+.demo-nav > * {
+  flex: none;
+}
+.demo-nav .aui-button {
+  flex: none;
+  white-space: nowrap;
+  text-decoration: none;
+}

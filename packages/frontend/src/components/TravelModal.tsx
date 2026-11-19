@@ -60,10 +60,10 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               <button
                 className={`group relative min-h-72 overflow-hidden rounded-xl border text-left transition duration-300 ${
                   current
-                    ? 'cursor-pointer border-[#4a9eff]/80 shadow-[0_0_34px_rgba(74,158,255,0.16)]'
+                    ? 'cursor-pointer border-cyan/80 shadow-[0_0_34px_rgba(74,158,255,0.16)]'
                     : locked
                       ? 'cursor-not-allowed border-white/8 opacity-50'
-                      : 'cursor-pointer border-white/12 hover:-translate-y-0.5 hover:border-[#c8963c]/65 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)]'
+                      : 'cursor-pointer border-white/12 hover:-translate-y-0.5 hover:border-gold/65 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)]'
                 }`}
                 data-world-card={world.id}
                 disabled={locked || travelling}
@@ -78,25 +78,25 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                     src={world.art}
                   />
                 )}
-                <span className="absolute inset-0 bg-gradient-to-t from-[#080b12] via-[#080b12]/28 to-black/8" />
+                <span className="absolute inset-0 bg-gradient-to-t from-void via-void/28 to-black/8" />
                 <span className="absolute inset-x-0 bottom-0 block p-5">
                   <span className="flex items-end justify-between gap-3">
                     <span>
                       <span className="block text-xl font-bold tracking-[0.12em] text-white uppercase drop-shadow-lg">
                         {world.label}
                       </span>
-                      <span className="mt-1 flex items-center gap-1.5 text-[9px] tracking-[0.14em] text-[#c4c8d0] uppercase">
+                      <span className="mt-1 flex items-center gap-1.5 text-[9px] tracking-[0.14em] text-soft uppercase">
                         <ClimateIcon size={12} />
                         {world.biomes.join(' · ')}
                       </span>
                     </span>
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[8px] tracking-[0.12em] text-[#f5d0a9] uppercase backdrop-blur-md">
+                    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[8px] tracking-[0.12em] text-gold-light uppercase backdrop-blur-md">
                       {locked ? <Lock size={10} /> : <MapPin size={10} />}
                       {text('travel_entry_level', { level: world.entry_level })}
                     </span>
                   </span>
                   {current && (
-                    <span className="mt-3 block w-fit rounded-full border border-[#4a9eff]/45 bg-[#07182d]/70 px-2.5 py-1 text-[8px] tracking-[0.14em] text-[#67adff] uppercase">
+                    <span className="mt-3 block w-fit rounded-full border border-cyan/45 bg-[#07182d]/70 px-2.5 py-1 text-[8px] tracking-[0.14em] text-cyan uppercase">
                       {text('travel_selected', { label: world.label })}
                     </span>
                   )}

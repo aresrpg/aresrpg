@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Observe immutable presentation facts, never receipt/packet arrival counts.
 
-import { adventure_observed_quests, adventure_has_ending } from '../adventure/quest.ts'
 import { dispose_audio, play_audio } from '../game/audio/audio_registry.ts'
 import type { AppModule, AppState } from '../store.ts'
 
@@ -19,7 +18,6 @@ export type AudioSnapshot = Readonly<{
   worlds: Readonly<Record<string, string | null>>
   invitations: readonly string[]
   trade_invitations: readonly string[] | null
-  adventure_quests: readonly string[] | null
   completed_fights: readonly string[]
   levels: readonly string[]
   job_level: string | null
@@ -28,10 +26,7 @@ export type AudioSnapshot = Readonly<{
 }>
 
 const result_notices = (state: AppState) => {
-  const results = [
-    ...Object.values(state.fight_result.current_by_character),
-    ...(state.adventure.result && !adventure_has_ending(state.adventure) ? [state.adventure.result] : []),
-  ]
+  const results = Object.values(state.fight_result.current_by_character)
   const visible = results.filter((result) => fight_result_available(state.fight, result.fight))
   const result_surfaces = visible.filter((result) => fight_result_surface(result) === 'result')
   return Object.freeze({
@@ -96,7 +91,6 @@ export const audio_snapshot = (state: AppState): AudioSnapshot => {
     ),
     trade_invitations: trade_invitation_ids(state, identity),
     ...result_notices(state),
-    adventure_quests: adventure_observed_quests(state.adventure),
     job_level: state.job_level_up.current?.id ?? null,
     mastery: mastery_snapshot(mastery),
     inventory_open:
@@ -124,7 +118,6 @@ const reward_cues = (before: AudioSnapshot, after: AudioSnapshot): readonly stri
   return selected_cues([
     ['fight_over', has_added(before.completed_fights, after.completed_fights)],
     ['level_up', has_added(before.levels, after.levels)],
-    ['quest_completed', has_added(before.adventure_quests, after.adventure_quests)],
     ['job_level_up', after.job_level !== null && after.job_level !== before.job_level],
   ])
 }

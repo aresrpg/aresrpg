@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
+import { VIOLATION_DROP_REASONS } from '@aresrpg/protocol'
 
-import { BANNABLE_REASONS, create_ban_list } from '../src/ban_list.ts'
+import { create_ban_list } from '../src/ban_list.ts'
 
 test('a banned address stays out for the ttl and expires back in — no permanent state', () => {
   let clock = 0
@@ -35,8 +36,8 @@ test('the LRU cap evicts the oldest offender, and a repeat offense refreshes rec
 })
 
 test('lifecycle closes never earn a cool-off — only protocol violations do', () => {
-  expect(BANNABLE_REASONS.has('SPEED')).toBeTrue()
-  expect(BANNABLE_REASONS.has('RATE_LIMIT')).toBeTrue()
-  expect(BANNABLE_REASONS.has('REPLACED')).toBeFalse()
-  expect(BANNABLE_REASONS.has('ALREADY_CONNECTED')).toBeFalse()
+  expect(VIOLATION_DROP_REASONS.has('SPEED')).toBeTrue()
+  expect(VIOLATION_DROP_REASONS.has('RATE_LIMIT')).toBeTrue()
+  expect(VIOLATION_DROP_REASONS.has('REPLACED')).toBeFalse()
+  expect(VIOLATION_DROP_REASONS.has('ALREADY_CONNECTED')).toBeFalse()
 })

@@ -16,7 +16,7 @@ import { OnboardingFeedback } from './analytics/OnboardingFeedback.tsx'
 import { selected_world as selected_world_name } from './modules/engine_selection.ts'
 import { character_creation_failure_message, character_creation_insufficient } from './character_creation_funding.ts'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
-import { AgentSetupDialog } from './agents/AgentSetup.tsx'
+import { SuinsConfirmation } from './settings/SuinsConfirmation.tsx'
 import { Login } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
@@ -159,7 +159,7 @@ export function PlayerRuntime({
 
   return (
     <LocaleScope locale={locale}>
-      <main className="app-ui fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
+      <main className="app-ui fixed inset-0 overflow-hidden bg-bg font-mono text-text">
         {in_app && (
           <>
             <div
@@ -259,7 +259,7 @@ export function PlayerRuntime({
           />
         )}
         <OwnedGameplay>{in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}</OwnedGameplay>
-        <AgentSetupDialog copy={copy} />
+        <SuinsConfirmation copy={copy} />
         <Toasts />
         <OwnedGameplay>
           <OnboardingFeedback />

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { PointerEvent, ReactNode } from 'react'
-import { campaign, nominal_tokens, cap_mist, sui_amount } from '@aresrpg/immutable/allocation'
+import { nominal_tokens, cap_mist, sui_amount } from '@aresrpg/immutable/allocation'
 
 import type { CopyText } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
@@ -10,29 +10,14 @@ import { helmet, kares, card_relief, card_veteran, card_member } from './assets.
 import type { CardView } from './view.ts'
 import type { AllocationRuntime } from './runtime.ts'
 
-const describe_card = (card: CardView, text: CopyText, locale: Locale) => {
-  const { award } = card
-  const review = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
-    new Date(campaign.submissions_close_at)
-  )
-  if (!award)
-    return {
-      tier: 'pending',
-      face: 'cc-pending',
-      source: text(card.pending_source === 'social' ? 'x_entry' : 'leaderboard_title'),
-      label: text('entries_close'),
-      value: review,
-      cap: null,
-    }
-  return {
-    tier: award.tier,
-    face: `cc-spot ${award.tier}`,
-    source: award.board ? text(`board_${award.board}`) : text(`source_${award.source}`),
-    label: text('before'),
-    value: `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`,
-    cap: `${sui_amount(cap_mist(award.tier))} SUI`,
-  }
-}
+const describe_card = ({ award }: CardView, text: CopyText, locale: Locale) => ({
+  tier: award.tier,
+  face: `cc-spot ${award.tier}`,
+  source: award.board ? text(`board_${award.board}`) : text(`source_${award.source}`),
+  label: text('before'),
+  value: `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`,
+  cap: `${sui_amount(cap_mist(award.tier))} SUI`,
+})
 
 const stop_tilt = (element: Readonly<HTMLElement>): void => {
   element.classList.remove('tilting')
@@ -104,32 +89,14 @@ export const TierCard = ({
             <small>{description.label}</small>
             <b>{description.value}</b>
           </div>
-          {description.cap && (
-            <div>
-              <small>{text('buy_up_to')}</small>
-              <b>{description.cap}</b>
-            </div>
-          )}
+          <div>
+            <small>{text('buy_up_to')}</small>
+            <b>{description.cap}</b>
+          </div>
           <img className="cc-logo" src={kares} alt="" />
         </div>
         <span className="cc-sheen" />
       </article>
-      {!card.award && (
-        <div className="card-outlook">
-          {card.prediction && (
-            <>
-              <p className="card-rank">
-                <span>{text('current_rank')}</span>
-                <b>#{card.prediction.rank}</b>
-              </p>
-              <p>{text(`board_${card.prediction.board}`)}</p>
-              {card.prediction.tier && <p>{text('projected_tier', { tier: text(card.prediction.tier) })}</p>}
-              <small>{text('rank_warning')}</small>
-            </>
-          )}
-          <p>{text('pending_note')}</p>
-        </div>
-      )}
       {children ?? (
         <div className="slot-actions">
           <button
@@ -142,7 +109,7 @@ export const TierCard = ({
                   kind: 'share',
                   address: wallet.address,
                   locale,
-                  text: card.award ? text('share_post', { tier: text(card.award.tier) }) : text('share_pending'),
+                  text: text('share_post', { tier: text(card.award.tier) }),
                 },
               })
             }

@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import type { ListingRow } from '@aresrpg/protocol'
 
-import { content_catalog } from '../../src/content/catalog.ts'
+import { content_catalog, encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { browse_types, cheapest_offers } from '../../src/marketplace/browse_types.ts'
 
 test('a listed resource remains discoverable without any row in the bounded listing window', () => {
@@ -47,4 +47,17 @@ test('one cheapest exact offer per server group retains unknown objects and adva
   expect(cheapest_offers(rows.filter(({ id }) => id !== 'best')).at(-1)?.id).toBe('backup')
   expect(cheapest_offers([...rows].reverse())).toEqual(cheapest_offers(rows))
   expect(rows).toHaveLength(5)
+})
+
+test('pet food browsing intersects the canonical facet, category and search without requiring offers', () => {
+  const foods = encyclopedia_catalog.item_filters.find(
+    ({ group, id }) => group === 'resource' && id === 'pet_food'
+  )!.item_types
+  const rows = content_catalog.items.filter(({ category }) => category === 'resource')
+  const filtered = browse_types(rows, [], 'resource', '', true)
+  expect(filtered.length).toBeGreaterThan(0)
+  expect(filtered.map(({ item_type }) => item_type).toSorted()).toEqual([...foods].toSorted())
+  expect(browse_types(rows, [], 'resource', 'not-a-real-item', true)).toEqual([])
+  expect(browse_types(rows, [], 'hat', '', true)).toEqual([])
+  expect(browse_types(rows, [], 'resource', '').length).toBeGreaterThan(filtered.length)
 })

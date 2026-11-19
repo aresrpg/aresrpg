@@ -1,35 +1,43 @@
 /* Foundation first; component rules refine it without specificity escalation. */
 @import './base.css';
-@import './game.css';
-@import './game_mobile.css';
-@import './inspection.css';
-@import './inventory.css';
-@import './inventory_mobile.css';
-@import './vitals.css';
-@import './stats.css';
-@import './items.css';
-@import './progression.css';
-@import './materials.css';
-@import './carved_icons.css';
+@import './prebuilt/game.css';
+@import './prebuilt/game_mobile.css';
+@import './prebuilt/inspection.css';
+@import './prebuilt/inventory.css';
+@import './prebuilt/inventory_mobile.css';
+@import './prebuilt/vitals.css';
+@import './prebuilt/staking_rewards.css';
+@import './prebuilt/wallet.css';
+@import './prebuilt/stats.css';
+@import './prebuilt/items.css';
+@import './prebuilt/progression.css';
+@import './components/materials.css';
+@import './components/carved_icons.css';
 
-@import './selection.css';
+@import './components/selection.css';
 
-@import './spells.css';
+@import './prebuilt/spells.css';
+@import './prebuilt/spellbook.css';
 
-@import './workspaces.css';
+@import './components/workspaces.css';
 
-@import './maps.css';
+@import './prebuilt/maps.css';
 
-@import './account.css';
+@import './prebuilt/account.css';
 
-@import './port_base.css';
-@import './port_professions.css';
-@import './port_admin.css';
-@import './port_arena.css';
+@import './prebuilt/port_base.css';
+@import './prebuilt/port_professions.css';
+@import './prebuilt/port_admin.css';
+@import './prebuilt/port_arena.css';
 
-@import './collection.css';
-@import './port_codex.css';
+@import './components/collection.css';
+@import './prebuilt/port_codex.css';
 
-@import './trade.css';
+@import './prebuilt/trade.css';
 
-@import './marketplace.css';
+@import './prebuilt/marketplace.css';
+@import './prebuilt/spell_card.css';
+@import './prebuilt/market_parts.css';
+@import './prebuilt/market_browse.css';
+@import './prebuilt/market_sell.css';
+@import './prebuilt/market_history.css';

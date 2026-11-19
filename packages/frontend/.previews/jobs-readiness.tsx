@@ -6,8 +6,7 @@ import { job_slugs, job_xp_for_level } from '@aresrpg/immutable'
 import { Pickaxe } from 'lucide-react'
 
 import JobsTab from '../src/characters/JobsTab.tsx'
-import { adventure_character } from '../src/adventure/character.ts'
-import { adventure_character_row } from '../src/adventure/projection.ts'
+import { sample_character, sample_character_row } from '../src/demo/sample.ts'
 import { load_app_copy } from '../src/i18n/copy.ts'
 import { dispatch_app } from '../src/store.ts'
 import '../src/tailwind.css'
@@ -18,7 +17,7 @@ import './jobs-readiness.css'
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 const levels: Readonly<Record<string, number>> = { JEWELER: 8, FARMER: 28, HERBALIST: 28, MINER: 20 }
-const base_character = adventure_character_row(adventure_character())
+const base_character = sample_character_row(sample_character())
 type Mode = 'beginner' | 'experienced'
 const Preview = () => {
   const [mode, set_mode] = useState<Mode>('beginner')

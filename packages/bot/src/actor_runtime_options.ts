@@ -6,12 +6,10 @@ import type { AgentTransport } from '@aresrpg/sdk/agent-connection'
 import type { BotConfig } from './model.ts'
 import type { ControlStore } from './store.ts'
 import type { ManagedProvider } from './managed_signer.ts'
-import type { EnvelopeCipher } from './transaction_journal.ts'
 export type ActorRuntimeOptions = Readonly<{
   store: ControlStore
   config: BotConfig
   provider: ManagedProvider
-  cipher: EnvelopeCipher
   endpoint: string
   origin: string
   actor_id: string

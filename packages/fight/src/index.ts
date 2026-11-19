@@ -3,6 +3,7 @@
 
 export { CARDINAL_DIRECTIONS, step_cell, manhattan } from './combat_grid.ts'
 export { create_fight } from './fight.ts'
+export { hydrate_fight_checkpoint } from './normalize.ts'
 export { fight_loot_types } from './loot.ts'
 export { placement_plan } from './placement.ts'
 export type { PlacementMove } from './placement.ts'
@@ -17,6 +18,7 @@ export {
   mob_pool_scaled,
   mob_scalar_for_level,
   player_max_hp,
+  seated_player_health,
 } from './create.ts'
 export { point_removal_chance, tackle_contest } from './fight_math.ts'
 export { generate_board } from './board_gen.ts'

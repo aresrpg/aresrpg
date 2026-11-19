@@ -32,9 +32,9 @@ const swap = (rows: readonly JsonValue[], left: number, right: number): readonly
 
 const RoomMobBand = ({ mob_type }: Readonly<{ mob_type: string }>) => {
   const mob = encyclopedia_catalog.mobs.find((row) => row.mob_type === mob_type)
-  if (!mob) return <span className="px-2 text-[7px] text-[#6b5360]">Unknown level</span>
+  if (!mob) return <span className="px-2 text-[7px] text-faint">Unknown level</span>
   return (
-    <span className="px-2 text-[7px] tabular-nums whitespace-nowrap text-[#858c97]">
+    <span className="px-2 text-[7px] tabular-nums whitespace-nowrap text-faint">
       Random Lv. {mob.level_min}–{mob.level_max}
     </span>
   )
@@ -60,9 +60,9 @@ export const DungeonEditor = ({
         <header className="flex items-end justify-between border-b border-white/8 pb-2">
           <div>
             <h3 className="text-[9px] tracking-[0.15em] text-[#b584e8] uppercase">Dungeon</h3>
-            <p className="mt-1 text-[7px] text-[#626670]">Ordered rooms become consecutive managed fights.</p>
+            <p className="mt-1 text-[7px] text-faint">Ordered rooms become consecutive managed fights.</p>
           </div>
-          <span className="text-[7px] tabular-nums text-[#555b66]">{rooms.length} rooms</span>
+          <span className="text-[7px] tabular-nums text-faint">{rooms.length} rooms</span>
         </header>
         <div className="flex items-center gap-1 border-b border-white/7 py-1">
           <ItemReferencePicker
@@ -90,8 +90,8 @@ export const DungeonEditor = ({
       <section>
         <header className="flex items-end justify-between border-b border-white/8 pb-2">
           <div>
-            <h3 className="text-[9px] tracking-[0.15em] text-[#c8963c] uppercase">Rooms</h3>
-            <p className="mt-1 text-[7px] text-[#626670]">One to six enemies per room; order determines seats.</p>
+            <h3 className="text-[9px] tracking-[0.15em] text-gold uppercase">Rooms</h3>
+            <p className="mt-1 text-[7px] text-faint">One to six enemies per room; order determines seats.</p>
           </div>
         </header>
         {rooms.map((room_value, room_index) => {
@@ -100,12 +100,12 @@ export const DungeonEditor = ({
           return (
             <div className="border-b border-white/8 py-1" data-dungeon-room={room_index + 1} key={room_index}>
               <div className="flex h-8 items-center gap-1 px-1">
-                <strong className="min-w-0 flex-1 text-[8px] tracking-[0.12em] text-[#d6b46f] uppercase">
+                <strong className="min-w-0 flex-1 text-[8px] tracking-[0.12em] text-gold uppercase">
                   Room {room_index + 1} · {members.length} {members.length === 1 ? 'enemy' : 'enemies'}
                 </strong>
                 <button
                   aria-label={`Move room ${room_index + 1} up`}
-                  className="grid size-7 place-items-center text-[#626873] hover:text-[#d8d3ca] disabled:opacity-20"
+                  className="grid size-7 place-items-center text-faint hover:text-soft disabled:opacity-20"
                   disabled={room_index === 0}
                   onClick={() => change_rooms(swap(rooms, room_index, room_index - 1))}
                   type="button"
@@ -114,7 +114,7 @@ export const DungeonEditor = ({
                 </button>
                 <button
                   aria-label={`Move room ${room_index + 1} down`}
-                  className="grid size-7 place-items-center text-[#626873] hover:text-[#d8d3ca] disabled:opacity-20"
+                  className="grid size-7 place-items-center text-faint hover:text-soft disabled:opacity-20"
                   disabled={room_index === rooms.length - 1}
                   onClick={() => change_rooms(swap(rooms, room_index, room_index + 1))}
                   type="button"
@@ -136,7 +136,7 @@ export const DungeonEditor = ({
                 const mob_type = typeof member.mob_type === 'string' ? member.mob_type : ''
                 return (
                   <div className="flex min-w-0 items-center pl-2" data-dungeon-member="" key={member_index}>
-                    <span className="w-5 shrink-0 text-center text-[7px] text-[#414751]">{member_index + 1}</span>
+                    <span className="w-5 shrink-0 text-center text-[7px] text-steel">{member_index + 1}</span>
                     <MobReferencePicker
                       class_name="min-w-0 flex-1 !h-10 !border-0 !bg-transparent !px-1 hover:!border-0"
                       filter_rows={mob_filters}
@@ -166,7 +166,7 @@ export const DungeonEditor = ({
                   className="flex items-center border-t border-dashed border-white/6 pl-2"
                   data-dungeon-placeholder="member"
                 >
-                  <span className="w-5 shrink-0 text-center text-[7px] text-[#414751]">{members.length + 1}</span>
+                  <span className="w-5 shrink-0 text-center text-[7px] text-steel">{members.length + 1}</span>
                   <MobReferencePicker
                     class_name="min-w-0 flex-1 !h-10 !border-0 !bg-transparent !px-1 hover:!border-0"
                     filter_rows={mob_filters}
@@ -183,7 +183,7 @@ export const DungeonEditor = ({
           )
         })}
         <div className="flex items-center border-b border-dashed border-white/8" data-dungeon-placeholder="room">
-          <span className="w-7 shrink-0 text-center text-[7px] text-[#414751]">{rooms.length + 1}</span>
+          <span className="w-7 shrink-0 text-center text-[7px] text-steel">{rooms.length + 1}</span>
           <MobReferencePicker
             class_name="min-w-0 flex-1 !h-11 !border-0 !bg-transparent !px-1 hover:!border-0"
             filter_rows={mob_filters}

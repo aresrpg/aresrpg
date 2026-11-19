@@ -10,9 +10,19 @@ const repo_file = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.u
 const page_card = (name) => [name, `packages/frontend/public/social/${name}.jpg`]
 const OUTPUTS = Object.freeze(
   Object.fromEntries([
-    ...['home', 'gift', 'marketplace', 'leaderboard', 'mastery', 'kares', 'allocation', 'agents', 'links'].map(
-      page_card
-    ),
+    ...[
+      'home',
+      'gift',
+      'marketplace',
+      'leaderboard',
+      'mastery',
+      'kares',
+      'allocation',
+      'agents',
+      'links',
+      'world',
+      'dapp',
+    ].map(page_card),
     ['links_loot', 'packages/frontend/public/links/loot.jpg'],
     ['links_logo', 'packages/frontend/public/links/logo.png'],
     ['github', '.github/assets/social_preview.jpg'],

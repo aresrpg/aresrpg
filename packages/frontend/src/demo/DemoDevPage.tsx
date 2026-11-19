@@ -11,7 +11,7 @@ const BiomePage = import.meta.env.DEV
   : (): null => null
 
 const Loading = ({ children }: Readonly<{ children: string }>) => (
-  <div className="grid flex-1 place-items-center bg-bg text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
+  <div className="grid flex-1 place-items-center bg-bg text-[9px] tracking-[0.18em] text-gold uppercase">
     {children}
   </div>
 )

@@ -15,7 +15,6 @@ import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
 import '../../src/characters/characters.css'
-import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
 // Window-only styles must not change the frameless inventory fixtures.

@@ -3,7 +3,9 @@
 
 import type { StatName } from '@aresrpg/immutable'
 
+import type { DocsCopy } from '../docs/docs_parts.tsx'
 import type { KaresCopy } from '../kares/copy.ts'
+import type { LandingCopy } from '../landing/landing_types.ts'
 
 import type { Locale } from './locale.ts'
 
@@ -76,13 +78,6 @@ export type AppCopy = Readonly<{
   connect_wallet: string
   no_wallet: string
   menu_build: string
-  menu_subtitle: string
-  menu_start: string
-  menu_start_touch: string
-  menu_music_on: string
-  menu_music_off: string
-  play_demo: string
-  replay_demo: string
   sign_in: string
   drag_hint: string
   navigation: string
@@ -92,6 +87,9 @@ export type AppCopy = Readonly<{
   mastery: string
   kares: string
   kares_page: KaresCopy
+  landing_page: LandingCopy
+  docs_page: DocsCopy
+  dapp_page: Readonly<Record<string, string>>
   encyclopedia: string
   marketplace: string
   airdrop: string
@@ -179,7 +177,6 @@ export type AppCopy = Readonly<{
   wallet_close: string
   wallet_legacy: Readonly<Record<string, unknown>>
   tutorial: Readonly<Record<string, string>>
-  adventure: Readonly<Record<string, string>>
   journey: Readonly<Record<string, string>>
   wallet_send_shared: Readonly<Record<string, string>>
   encyclopedia_page: Readonly<Record<string, unknown>>

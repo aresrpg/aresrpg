@@ -201,7 +201,7 @@ test('the default game observer preserves authored volumes instead of passing cu
     signal: new AbortController().signal,
   })
   const result = {
-    fight: 'demo-fight',
+    fight: 'local-fight',
     boss_weight: 0,
     dungeon: null,
     kolizeum: null,
@@ -219,7 +219,7 @@ test('the default game observer preserves authored volumes instead of passing cu
     level_up_open: false,
     level_up_acknowledged: false,
   }
-  state = { ...state, adventure: { ...state.adventure, phase: 'reward', result } }
+  state = { ...state, fight_result: { ...state.fight_result, current_by_character: { character: result } } }
   updated!(state)
   expect(players).toHaveLength(1)
   expect(players[0]?.source).toBe('/sound_effect/fight_over.ogg')
@@ -227,7 +227,10 @@ test('the default game observer preserves authored volumes instead of passing cu
   expect(players[0]?.volume).toBeCloseTo(AUTHORED_AUDIO.fight_over!.volume)
   state = {
     ...state,
-    adventure: { ...state.adventure, result: { ...result, fight: 'another-fight' } },
+    fight_result: {
+      ...state.fight_result,
+      current_by_character: { character: { ...result, fight: 'another-fight' } },
+    },
     job_level_up: {
       current: {
         id: 'job-level',

@@ -66,7 +66,7 @@ const CreateCharacterTab = ({
   return (
     <Button
       aria-label={copy.create_character}
-      className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
+      className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-faint transition-colors duration-200 hover:bg-gold/5 hover:text-gold-light"
       data-character-tab-create=""
       onClick={create}
       title={copy.create_character}
@@ -299,7 +299,7 @@ export const CharacterTabs = ({
                   }}
                 />
                 <button
-                  className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
+                  className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-soft hover:bg-cyan/10 hover:text-cyan disabled:cursor-not-allowed disabled:opacity-35"
                   disabled={!can_invite || !!pending}
                   onClick={() => {
                     const target = tabs.find(({ id }) => id === menu.character_id)

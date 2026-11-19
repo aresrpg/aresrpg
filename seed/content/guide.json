@@ -1,0 +1,11 @@
+{
+  "id": "guide_sceat",
+  "name": "Sceat",
+  "classe": "yajin",
+  "male": true,
+  "colors": ["#e8dfc7", "#433946", "#94704d"],
+  "loadout": {
+    "hat": "solomonk",
+    "cloak": "momaku"
+  }
+}

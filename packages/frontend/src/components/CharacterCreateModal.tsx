@@ -81,45 +81,45 @@ export const CharacterCreateModal = ({
   return (
     <section className="absolute inset-0 z-[160] grid place-items-center bg-bg/72 p-5 backdrop-blur-lg">
       <form
-        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-border border-t-[#c8963c] bg-surface/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
+        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-border border-t-gold bg-surface/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
         onSubmit={submit}
       >
         <h2 className="text-[17px] font-bold tracking-[0.14em] uppercase">{copy.create_title}</h2>
-        <p className="mt-1 text-[10px] tracking-[0.04em] text-[#8d9099]">{copy.create_lead}</p>
+        <p className="mt-1 text-[10px] tracking-[0.04em] text-faint">{copy.create_lead}</p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="relative grid min-h-80 place-items-center overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_50%_42%,rgba(200,150,60,0.12),transparent_58%)]">
             <CharacterPreviewCanvas source={preview_source} />
             <div className="pointer-events-none absolute bottom-5 left-0 w-full text-center uppercase">
               <div className="text-[12px] tracking-[0.25em]">{identity.classe}</div>
-              <div className="mt-1 text-[8px] tracking-[0.18em] text-[#858994]">
+              <div className="mt-1 text-[8px] tracking-[0.18em] text-faint">
                 {copy.simulator_page[`class_${identity.classe}_title`]}
               </div>
             </div>
           </div>
           <div className="space-y-5">
             <fieldset>
-              <legend className="mb-2 text-[9px] tracking-[0.18em] text-[#777b86] uppercase">{copy.class_label}</legend>
+              <legend className="mb-2 text-[9px] tracking-[0.18em] text-faint uppercase">{copy.class_label}</legend>
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
                 {class_names.map((classe) => (
                   <button
                     className={`flex h-12 cursor-pointer flex-col items-center justify-center border uppercase ${
                       identity.classe === classe
-                        ? 'border-[#4a9eff]/55 bg-[#4a9eff]/10 text-[#67adff]'
-                        : 'border-white/8 bg-white/2 text-[#8d9099] hover:border-white/15'
+                        ? 'border-cyan/55 bg-cyan/10 text-cyan'
+                        : 'border-white/8 bg-white/2 text-faint hover:border-white/15'
                     }`}
                     key={classe}
                     onClick={() => set_identity(Object.freeze({ ...identity, classe }))}
                     type="button"
                   >
                     <span className="text-[9px] tracking-[0.12em]">{classe}</span>
-                    <span className="mt-0.5 text-[7px] tracking-[0.08em] text-[#666b76]">
+                    <span className="mt-0.5 text-[7px] tracking-[0.08em] text-faint">
                       {copy.simulator_page[`class_${classe}_title`]}
                     </span>
                   </button>
                 ))}
               </div>
               <button
-                className="mt-2 h-9 w-full cursor-pointer border border-[#4a9eff]/25 bg-[#4a9eff]/5 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/55 hover:bg-[#4a9eff]/10"
+                className="mt-2 h-9 w-full cursor-pointer border border-cyan/25 bg-cyan/5 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/55 hover:bg-cyan/10"
                 data-class-spells-link=""
                 onClick={() => view_spells(identity.classe)}
                 type="button"
@@ -128,14 +128,12 @@ export const CharacterCreateModal = ({
               </button>
             </fieldset>
             <fieldset>
-              <legend className="mb-2 text-[9px] tracking-[0.18em] text-[#777b86] uppercase">{copy.sex_label}</legend>
+              <legend className="mb-2 text-[9px] tracking-[0.18em] text-faint uppercase">{copy.sex_label}</legend>
               <div className="grid grid-cols-2 gap-1.5">
                 {[true, false].map((male) => (
                   <button
                     className={`h-10 cursor-pointer border text-[9px] tracking-[0.14em] uppercase ${
-                      identity.male === male
-                        ? 'border-[#c8963c]/50 bg-[#c8963c]/8 text-[#d9af57]'
-                        : 'border-white/8 text-[#777b86]'
+                      identity.male === male ? 'border-gold/50 bg-gold/8 text-gold' : 'border-white/8 text-faint'
                     }`}
                     key={String(male)}
                     onClick={() => set_identity(Object.freeze({ ...identity, male }))}
@@ -147,7 +145,7 @@ export const CharacterCreateModal = ({
               </div>
             </fieldset>
             <fieldset>
-              <legend className="mb-2 text-[9px] tracking-[0.18em] text-[#777b86] uppercase">
+              <legend className="mb-2 text-[9px] tracking-[0.18em] text-faint uppercase">
                 {copy.appearance_label}
               </legend>
               <div className="flex gap-2">
@@ -175,15 +173,13 @@ export const CharacterCreateModal = ({
               </div>
             </fieldset>
             <label className="block">
-              <span className="mb-2 block text-[9px] tracking-[0.18em] text-[#777b86] uppercase">
-                {copy.name_label}
-              </span>
+              <span className="mb-2 block text-[9px] tracking-[0.18em] text-faint uppercase">{copy.name_label}</span>
               <input
                 aria-invalid={name_error ? true : undefined}
                 className={`h-11 w-full border bg-black/25 px-3 text-[11px] outline-none ${
                   name_error
                     ? 'border-[#ff5a6f]/70 text-[#ff8a98] focus:border-[#ff5a6f]'
-                    : 'border-white/10 focus:border-[#4a9eff]/45'
+                    : 'border-white/10 focus:border-cyan/45'
                 }`}
                 maxLength={CHARACTER_NAME_MAX_LENGTH}
                 placeholder={copy.name_placeholder}
@@ -202,9 +198,9 @@ export const CharacterCreateModal = ({
           </div>
         </div>
         <div className="mt-6 flex items-center gap-2 border-t border-white/8 pt-4">
-          <div className="mr-auto border-l border-[#c8963c]/45 pl-3">
-            <div className="text-[8px] tracking-[0.18em] text-[#777b86] uppercase">{copy.character_price}</div>
-            <div className="mt-1 text-[12px] font-semibold tracking-[0.12em] text-[#d9af57]">
+          <div className="mr-auto border-l border-gold/45 pl-3">
+            <div className="text-[8px] tracking-[0.18em] text-faint uppercase">{copy.character_price}</div>
+            <div className="mt-1 text-[12px] font-semibold tracking-[0.12em] text-gold">
               {localized_numbers.sui(CHARACTER_PRICE_MIST, 0)} SUI
             </div>
             {insufficient && (
@@ -214,7 +210,7 @@ export const CharacterCreateModal = ({
             )}
           </div>
           <button
-            className="h-10 cursor-pointer border border-white/10 px-5 text-[9px] tracking-[0.16em] text-[#8d9099] uppercase"
+            className="h-10 cursor-pointer border border-white/10 px-5 text-[9px] tracking-[0.16em] text-faint uppercase"
             disabled={submitting}
             onClick={cancel}
             type="button"
@@ -222,7 +218,7 @@ export const CharacterCreateModal = ({
             {copy.cancel}
           </button>
           <button
-            className="h-10 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/8 px-5 text-[9px] tracking-[0.16em] text-[#d9af57] uppercase hover:border-[#c8963c]/75 disabled:cursor-not-allowed disabled:border-[#c8963c]/20 disabled:bg-[#c8963c]/5 disabled:text-[#c8963c]/45"
+            className="h-10 cursor-pointer border border-gold/45 bg-gold/8 px-5 text-[9px] tracking-[0.16em] text-gold uppercase hover:border-gold/75 disabled:cursor-not-allowed disabled:border-gold/20 disabled:bg-gold/5 disabled:text-gold/45"
             disabled={!valid || submitting}
             onClick={
               insufficient

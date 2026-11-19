@@ -14,7 +14,6 @@ import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 import { SellFixture } from './market_sell.tsx'
 
 import '../../src/tailwind.css'
-import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
 const bags = new URLSearchParams(location.search).has('bags')

@@ -3,10 +3,9 @@
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { gatherable_of } from '@aresrpg/immutable'
 
-import { profession_recipes, recipe_job } from '../../src/profession_catalog.ts'
+import { profession_recipes } from '../../src/profession_catalog.ts'
 import { empty_snapshot } from '../../src/actor_snapshot.ts'
 import { empty_inventory } from '../../src/actor_inventory.ts'
-import type { ProfessionPlan } from '../../src/profession_plan.ts'
 import type { GameplayContext } from '../../src/gameplay.ts'
 import { id } from '../../../sdk/test/helpers/transport.ts'
 
@@ -70,15 +69,6 @@ export const item = (item_type: string, amount: number, number = 30): ItemRow =>
   kiosk: character.kiosk,
   version: '1',
 })
-export const plan: ProfessionPlan = {
-  character_id: character.id,
-  job: recipe_job(recipe.output_type)!,
-  target_level: 2,
-  recipe_output: recipe.output_type,
-  gather_item_types: [resource.item_type],
-  max_actions: 10,
-  deadline_ms: 1000000,
-}
 export const profession_context = (): GameplayContext => ({
   address: id(99),
   now: 63000,

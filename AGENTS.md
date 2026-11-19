@@ -15,9 +15,29 @@ Do not restate architecture in another document. Amend `ARCHITECTURE.md` when th
 changes. Amend or delete an existing `DECISIONS.md` row when a ruling changes; never retain an
 overruled row.
 
+## One system per job
+
+This is the first law of the repository; every other rule serves it.
+
+- One job has one generic system. Before designing a feature, list what the whole monorepo already
+  has for that job: transport, login, state, storage, protocol, scheduler, limiter, decoder, component.
+  Search every package, not the nearest one.
+- The legal moves are: use the existing system, extend it for every caller, or replace it and delete
+  the old one in the same change. A working, tested second system beside the first is a defect.
+- If none of the three fits, stop before any edit and tell the owner: the existing system, why it does
+  not fit, and the options. Never decide it locally.
+- First-party clients (3D game, web dapp, mobile, hosted actors) speak the realtime server's packet
+  protocol over its WebSocket: one login, snapshot then deltas. Adding request/response or polling
+  between our own clients and services conflicts with that system and is forbidden.
+- A caller that cannot hold that socket (an external AI client through MCP, a chat platform's webhook,
+  a health probe) gets a thin wrapper over the same system. The wrapper owns no logic and no state, and
+  its reason is written in its module header and in `DECISIONS.md`.
+- Optimize for deletion: a change states the concepts it adds and the concepts it removes.
+
 ## Working method
 
 - Keep one active objective. Do not let adjacent discoveries expand it.
+- A question gets an answer. `Check`, `why`, and `how` requests are analysis; edit only when asked.
 - Work inline by default. Delegation is for explicitly requested, independent inspection or
   bounded execution; one agent retains judgment and verifies the result.
 - Start from the owner of the fact, not the nearest call site. Search before creating a function,
@@ -72,6 +92,8 @@ question that would close the evidence gap.
 - Drive real behavior when practical. Exercise sad paths before happy paths.
 - Review the final diff for stale consumers, dead exports, duplicate facts, security problems, and
   unexplained concept growth.
+- Remove superseded mockups, generated assets, and scratch files in the same change. Artifacts that
+  are not part of the product live outside the repository.
 - Completion claims cite direct evidence: loaded file, fired request, transaction digest, log, or
   gate output.
 - Treat net production lines as a review input. Refactors should normally be non-positive.
@@ -80,15 +102,35 @@ question that would close the evidence gap.
 ## Project conventions
 
 - Frontend state: Zustand modules, no prop drilling.
-- Frontend UI: functional React and Tailwind utilities; no component library.
-- Visual language: shared dark-purple surface tokens, gold/cyan semantic accents, JetBrains Mono,
-  uppercase micro-labels, sharp terminal structure, and restrained atmospheric motion.
+- Frontend UI: functional React with the shared `@aresrpg/ui` components and Tailwind utilities;
+  no third-party component library.
+- Visual language: follow the shared tokens and components in `packages/ui` and the current
+  shared-game-UI ruling in `DECISIONS.md`; do not prescribe a competing palette or typography.
 - Every player-facing string ships in all supported YAML locales under
   `packages/frontend/src/i18n/locales/` in the same change.
 - `seed/` is the only authored content home. Do not add frontend content copies.
 - The frontend never imports `@mysten/*`; every client-side chain write goes through the SDK.
 - Commits use conventional subjects, bodies no longer than five lines, and one atomic concern.
 - Changelog entries are player-facing release copy. Follow `CONTRIBUTING.md`'s audience law.
+
+### Player UI quality
+
+- Compose existing shared controls and feedback treatments. Every visible state must be polished,
+  readable, and styled consistently, including explanatory text, loading, success, and errors.
+- Give text, fields, feedback, and actions deliberate spacing and hierarchy. Size buttons to their
+  label and role; full-width actions require an intentional responsive layout, never accidental
+  stretch. Preserve accessible targets and check wrapping in narrow windows and longer translations.
+- Write concise, plain-language copy about the player's goal, what happened, and the available next
+  step. Never render raw exceptions or internal jargon, including metadata and repair terminology.
+  Retain the technical cause in the existing sanitized diagnostics; translate it for the player.
+- Keep failure, partial completion, and uncertain outcomes truthful. Do not hide a blocker or turn
+  it into success to simplify the UI. Offer only a safe, supported next action; an unresolved
+  transaction must not invite resubmission. Apply the locale requirement above to every UI state.
+- Before handoff, inspect the rendered affected surface at desktop and narrow widths. Exercise
+  loading, success, failure, and repeated interactions, plus cancellation or partial completion
+  where applicable. Check readable feedback, spacing, button sizing, and duplicate submissions.
+  Report direct verification evidence and any states that could not be exercised; keep visual
+  judgment in human review and behavioral regressions in the existing test owners.
 
 ## Commands and gates
 
@@ -102,6 +144,9 @@ bun run validate:assets
 bun run test:regression
 bun run coverage:all
 ```
+
+Run package-scoped checks while working. Before handoff, run once the root gates that CI runs; a
+scoped pass does not predict the root result.
 
 `bun run test` is the canonical repository suite and includes Bun's native 60% line / 75% function
 coverage gate over handwritten JS/TS. `bun run coverage:all` additionally runs the Rust indexer's
@@ -126,7 +171,7 @@ indexer decoders, routes, and consumers, then run `cargo test` in `packages/inde
 intentional layout change with `UPDATE_LAYOUTS=1 cargo test`. Every new `event::emit` must be
 routed or explicitly deferred by the indexer gate.
 
-Before opening a PR, run `bun run lint` and `bun run test`, then use the global Codex `$review`
+Before opening a PR, run `bun run lint` and `bun run test`, then use the `review`
 skill over the actual diff. For fight logic changes, verify the Move and TypeScript twins with the
 relevant Move suites and fight package tests; regenerate `move_contract.gen.ts` when its contract
 surface changes.
@@ -134,8 +179,8 @@ surface changes.
 ## Git and deployment
 
 - Agents never stage, branch, tag, or rewrite history for the owner.
-- Exception: when the owner explicitly invokes `$ship` or asks to ship already-staged work, the
-  active agent may commit and push exactly that staged index under the `$ship` skill. The invocation
+- Exception: when the owner explicitly invokes the `ship` skill or asks to ship already-staged work, the
+  active agent may commit and push exactly that staged index under that skill. The invocation
   is the required authorization; execute directly without delegation or duplicate confirmation.
   A changed staged set, secret risk, failed hook, conflict, or destructive recovery still stops the
   operation.

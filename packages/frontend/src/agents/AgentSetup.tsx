@@ -42,7 +42,7 @@ const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: ()
       disabled={!eligible}
       onClick={() => dispatch({ type: 'start', phase: 'authenticating' })}
     >
-      {state.phase === 'failed' ? text.agent_hosted_retry : text.agent_pair_connect}
+      {state.phase === 'failed' ? text.agent_hosted_retry : text.agent_guide_continue}
     </Button>
   )
   const waiting = (
@@ -55,7 +55,12 @@ const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: ()
     restart: { message: text.agent_hosted_restart, action: null },
   }[state.failure ?? 'retry']
   const content = {
-    idle: null,
+    idle: (
+      <section className="agent-consent">
+        <p className="agent-consent-notice">{text.agent_hosted_review}</p>
+        {connect_action}
+      </section>
+    ),
     authenticating: waiting,
     authorizing: waiting,
     ready: <HostedBotPanel copy={copy} state={state} dispatch={dispatch} />,
@@ -194,28 +199,5 @@ export const AgentSetupButton = ({
       />
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>
-  )
-}
-
-/** Route entry uses the same modal, with the ordinary login boundary owned by PlayerRuntime. */
-export const AgentSetupDialog = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const session = useAppStore((state) => state.session)
-  const dialog = useAppStore((state) => state.navigation.dialog)
-  if (!session.wallet || dialog !== 'agent_setup') return null
-  return (
-    <AgentSetup
-      copy={copy}
-      close={() =>
-        dispatch_app({
-          type: 'dialog/open',
-          dialog:
-            session.roster_loaded &&
-            session.characters.length === 0 &&
-            agent_tab_source(session).characters.length === 0
-              ? 'welcome'
-              : null,
-        })
-      }
-    />
   )
 }

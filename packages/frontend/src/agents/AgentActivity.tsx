@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { DoorOpen, Footprints, MapPin, Pickaxe, Sparkles, Swords } from 'lucide-react'
-import type { CharacterRow, HostedAgentActivity } from '@aresrpg/protocol'
+import type { CharacterRow, HostedObjective } from '@aresrpg/protocol'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
-import { current_agent_activity, type AgentActivity as ActivityEntry } from './activity.ts'
+import { current_agent_activity, type AgentActivity as ActivityEntry, type HeroActivity } from './activity.ts'
 import { displayed_character } from './observation.ts'
 import './activity.css'
 
@@ -41,7 +41,7 @@ export const AgentActivityLog = ({
   copy: AppCopy
   character: CharacterRow
   history: readonly ActivityEntry[]
-  activity?: HostedAgentActivity | null
+  activity?: HeroActivity | null
 }>) => {
   const { kind, Icon: CurrentIcon } = [
     { present: character.active_fight, kind: 'fight', Icon: Swords },
@@ -74,10 +74,7 @@ export const AgentActivityLog = ({
   )
 }
 
-const AgentObjective = ({
-  objective,
-  issue,
-}: Readonly<{ objective: NonNullable<HostedAgentActivity['objective']>; issue?: string }>) => (
+const AgentObjective = ({ objective, issue }: Readonly<{ objective: HostedObjective; issue?: string }>) => (
   <div className="agent-activity-objective">
     <strong>{objective.title}</strong>
     {issue && <p className="agent-activity-now">{issue}</p>}

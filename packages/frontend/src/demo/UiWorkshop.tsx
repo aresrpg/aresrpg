@@ -43,14 +43,14 @@ import '../game/fight/fight_hud.css'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { CharacterWindow } from '../game/hud/CharacterWindow.tsx'
 import type { DetailTab } from '../characters/character_navigation.ts'
-import { adventure_character } from '../adventure/character.ts'
-import { adventure_character_row, adventure_inventory, ADVENTURE_INVENTORY } from '../adventure/projection.ts'
 import type { EquipmentMap } from '../characters/equipment_stage.ts'
 import '../characters/characters.css'
 import '../components/character_surfaces.css'
 import inventory_icon from '../assets/quickslots/inventory.png'
 
+import { sample_character, sample_character_row, sample_inventory, SAMPLE_INVENTORY } from './sample.ts'
 import { SERVICE_PANELS, service_options, type ServiceView } from './workshop/catalog.tsx'
+import { RAW_PANELS, raw_options, type RawView } from './workshop/RawExamples.tsx'
 import './ui_workshop.css'
 
 type View =
@@ -64,6 +64,7 @@ type View =
   | 'progression'
   | 'character_progression'
   | ServiceView
+  | RawView
 const image = (src: string) => <img src={src} alt="" />
 
 const Controls = ({ copy }: Readonly<{ copy: AppCopy }>) => {
@@ -143,13 +144,13 @@ const Controls = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 const WORKSHOP_INVENTORY = [
-  ...ADVENTURE_INVENTORY,
-  ...adventure_inventory(
+  ...SAMPLE_INVENTORY,
+  ...sample_inventory(
     content_catalog.items
       .filter(
         (item) =>
           item.level <= 200 &&
-          !ADVENTURE_INVENTORY.some(({ item_type }) => item_type === item.item_type) &&
+          !SAMPLE_INVENTORY.some(({ item_type }) => item_type === item.item_type) &&
           ['hat', 'cloak', 'belt', 'boots', 'amulet', 'ring', 'pet', 'relic', 'weapon'].includes(item.category)
       )
       .slice(0, 44)
@@ -168,12 +169,12 @@ const WORKSHOP_JOB_XP = Object.fromEntries(
 /** These examples use the same controller and stat-cost rules as the live character panels. */
 const useWorkshopCharacter = () => {
   const [source, set_source] = useState(() => ({
-    ...adventure_character(200),
+    ...sample_character(200),
     spell_levels: {} as Readonly<Record<string, number>>,
   }))
   const raise_stats = (spending: CharacteristicValues): void => {
     const quote = characteristic_spending_quote('senshi', source, spending)
-    if (!quote || quote.cost > adventure_character_row(source).available_points) return
+    if (!quote || quote.cost > sample_character_row(source).available_points) return
     set_source({
       ...source,
       ...Object.fromEntries(characteristic_names.map((stat) => [stat, source[stat] + quote.gains[stat]])),
@@ -187,7 +188,7 @@ const useWorkshopCharacter = () => {
       ),
     })
   return {
-    character: { ...adventure_character_row(source, WORKSHOP_INVENTORY), jobs: WORKSHOP_JOB_XP },
+    character: { ...sample_character_row(source, WORKSHOP_INVENTORY), jobs: WORKSHOP_JOB_XP },
     session: {
       inventory: WORKSHOP_INVENTORY,
       commit,
@@ -382,6 +383,7 @@ const PANELS = {
   progression: Progression,
   character_progression: CharacterProgression,
   ...SERVICE_PANELS,
+  ...RAW_PANELS,
 }
 export const UiWorkshop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [view, set_view] = useState<View>('controls')
@@ -403,12 +405,19 @@ export const UiWorkshop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         />
       </header>
       <nav className="ui-workshop-navigation">
+        <h2>{copy.ui.design_components}</h2>
         <SegmentedControl
-          label={copy.ui.design_library}
+          label={copy.ui.design_components}
+          value={view}
+          on_change={set_view}
+          options={[{ value: 'controls', label: copy.ui.design_controls }, ...raw_options(copy)]}
+        />
+        <h2>{copy.ui.design_prebuilt}</h2>
+        <SegmentedControl
+          label={copy.ui.design_prebuilt}
           value={view}
           on_change={set_view}
           options={[
-            { value: 'controls', label: copy.ui.design_controls },
             { value: 'equipment', label: t('tab_equipment') },
             { value: 'stats', label: t('tab_stats') },
             { value: 'spells', label: copy_text(copy.characters_page)('tab_spells') },

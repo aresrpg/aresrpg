@@ -38,11 +38,10 @@ const retained = async () => {
   const { command, receipt, digest } = proof('9')
   const base = empty_lane(fixture_bot)
   const lane = { ...base, catalogue_receipts: settled_market_receipts(base, command, receipt) }
-  await put(store, `command:${command.id}`, command)
-  await put(store, `receipt:${digest}`, { digest, receipt })
+  await put(store, `command:${command.id}`, { ...command, receipt })
   return { store, lane, command, receipt, digest }
 }
-test('restart restores certified catalogue floor before accepting stale pages', async () => {
+test('session reconnect restores certified catalogue floor before accepting stale pages', async () => {
   const { store, lane } = await retained()
   const restored = await restore_market_receipts(store, lane, empty_inventory())
   expect(restored.catalogues.seller?.version).toBe('9')
@@ -65,11 +64,27 @@ test('receipt pointer follows certified version rather than settlement arrival o
   expect(settled_market_receipts(lane, older.command, older.receipt)).toBe(pointers)
   expect(settled_market_receipts(lane, newest.command, newest.receipt)).toBe(pointers)
 })
+test('a proof released by a newer settlement for its kiosk is skipped, not treated as corruption', async () => {
+  const { store, lane } = await retained()
+  const newer = proof('10')
+  // Between this read of the lane and its proofs, a newer settlement replaced and released the pointer.
+  await put(store, lane_key_for(fixture_bot), {
+    ...lane,
+    catalogue_receipts: settled_market_receipts(lane, newer.command, newer.receipt),
+  })
+  await put(store, `command:${newer.command.id}`, { ...newer.command, receipt: newer.receipt })
+  await put(store, `command:command-9`, null)
+  expect((await restore_market_receipts(store, lane, empty_inventory())).catalogues.seller).toBeUndefined()
+})
 for (const corruption of ['lane', 'digest', 'version', 'kiosk', 'missing'] as const) {
-  test(`restart rejects ${corruption} proof corruption`, async () => {
-    const { store, lane, command, receipt, digest } = await retained()
-    if (corruption === 'lane') await put(store, `command:${command.id}`, { ...command, lane_key: 'other' })
-    if (corruption === 'digest') await put(store, `receipt:${digest}`, { digest: 'other', receipt })
+  test(`session reconnect rejects ${corruption} proof corruption`, async () => {
+    const { store, lane, command, receipt } = await retained()
+    if (corruption === 'lane') await put(store, `command:${command.id}`, { ...command, receipt, lane_key: 'other' })
+    if (corruption === 'digest')
+      await put(store, `command:${command.id}`, {
+        ...command,
+        receipt: { Transaction: { ...receipt.Transaction!, digest: 'other' } },
+      })
     const pointer = lane.catalogue_receipts!.seller!
     const pointers = {
       seller: {

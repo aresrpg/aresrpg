@@ -4,101 +4,41 @@ import type { Redis } from 'ioredis'
 import type { AllocationRequest, AllocationResult } from '@aresrpg/protocol'
 import {
   blast_rows,
-  campaign,
   normalize_address,
   public_award,
-  submitted_posts,
   type AllocationStatus,
   type Award,
-  type Submission,
 } from '@aresrpg/immutable/allocation'
 
 import { verify_wallet_message } from '../auth.ts'
 
 import { blast_allowlist } from './blast_allowlist.ts'
-import { predict_leaderboards, type create_campaign_boards } from './leaderboards.ts'
-import {
-  verified_wallets,
-  wallet_challenge,
-  verify_wallet,
-  remove_wallet,
-  share_wallet,
-  require_wallet,
-} from './wallets.ts'
-import { key, phase, read_campaign, save_submission } from './store.ts'
-import { fetch_posts, linked_user, link_ticket, complete_x, type XOptions } from './x.ts'
+import { verified_wallets, wallet_challenge, verify_wallet, remove_wallet, share_wallet } from './wallets.ts'
+import { read_awards } from './store.ts'
 
-export type AllocationOptions = XOptions &
-  Readonly<{
-    redis_url?: string
-    verify?: typeof verify_wallet_message
-    cutoff_ms?: number
-    boards?: ReturnType<typeof create_campaign_boards>
-  }>
-const deadline = (options: AllocationOptions): number => options.cutoff_ms ?? Date.parse(campaign.submissions_close_at)
-export const allocation_status = async (
-  redis: Redis,
-  options: AllocationOptions,
-  owner: string
-): Promise<AllocationStatus> => {
+export type AllocationOptions = Readonly<{
+  origin: string
+  redis_url?: string
+  verify?: typeof verify_wallet_message
+}>
+export const allocation_status = async (redis: Redis, owner: string): Promise<AllocationStatus> => {
   const wallets = await verified_wallets(redis, owner)
   const requested = new Set(wallets.map(({ address }) => address))
-  const user = await linked_user(redis, owner)
-  const submission = user ? await redis.hget(key('submissions'), user.id) : null
-  const current = await read_campaign(redis)
-  const predictions =
-    current.phase === 'registration' && options.boards
-      ? await options
-          .boards()
-          .then((snapshot) => predict_leaderboards(current.awards, snapshot, requested))
-          .catch(() => {
-            console.warn('Allocation leaderboard prediction unavailable')
-            return []
-          })
-      : []
-  const awards = current.awards.filter(({ address }) => requested.has(address))
+  const all = await read_awards(redis)
+  const awards = all.filter(({ address }) => requested.has(address))
   return {
-    predictions,
     wallets,
-    phase: current.phase,
-    submissions_open: current.phase === 'registration' && Date.now() < deadline(options),
     awards: awards.map(public_award),
-    user,
-    submission: submission ? (JSON.parse(submission) as Submission) : null,
-    ...(current.phase === 'final' && awards.length ? { proofs: spot_proofs(current.awards, awards) } : {}),
+    ...(awards.length ? { proofs: spot_proofs(all, awards) } : {}),
   }
 }
-/** Proofs come from the complete final list, in the exact order handed to Blast. */
+/** Proofs come from the complete list, in the exact order handed to Blast. */
 const spot_proofs = (all: readonly Award[], own: readonly Award[]) => {
   const allowlist = blast_allowlist(blast_rows(all))
   return own.flatMap(({ address }) => {
     const proof = allowlist.proof(normalize_address(address))
     return proof ? [{ address, proof }] : []
   })
-}
-const submit = async (
-  redis: Redis,
-  owner: string,
-  request: Extract<AllocationRequest, { action: 'submit' }>,
-  options: AllocationOptions
-): Promise<AllocationResult> => {
-  const user = await linked_user(redis, owner)
-  if (!user) throw new Error('unauthorized')
-  if ((await phase(redis)) !== 'registration' || Date.now() >= deadline(options)) throw new Error('closed')
-  const address = normalize_address(request.address)
-  await require_wallet(redis, owner, address)
-  const posts = submitted_posts(request.urls)
-  const found = await fetch_posts(posts, options.bearer)
-  if (found.some((post) => post.author_id !== user.id)) throw new Error('foreign_post')
-  const submission: Submission = {
-    user_id: user.id,
-    username: user.username,
-    address,
-    posts,
-    submitted_at: new Date().toISOString(),
-  }
-  await save_submission(redis, owner, submission, deadline(options))
-  return { action: 'submit', submission }
 }
 
 /** owner comes exclusively from the admitted game connection, never request JSON. */
@@ -110,7 +50,7 @@ export const allocation_request = async (
 ): Promise<AllocationResult> => {
   switch (request.action) {
     case 'status':
-      return { action: 'status', status: await allocation_status(redis, options, owner) }
+      return { action: 'status', status: await allocation_status(redis, owner) }
     case 'wallet_challenge':
       return wallet_challenge(redis, owner, request.address, request.label, options.origin)
     case 'wallet_verify':
@@ -124,29 +64,15 @@ export const allocation_request = async (
         action: 'share',
         url: await share_wallet(redis, owner, normalize_address(request.address), options.origin),
       }
-    case 'link_x':
-      return { action: 'link_x', url: await link_ticket(redis, owner, options.origin) }
-    case 'complete_x':
-      await complete_x(redis, owner, request.token, deadline(options))
-      return { action: 'complete_x' }
-    case 'submit':
-      return submit(redis, owner, request, options)
   }
 }
 const PUBLIC_ERRORS = new Set([
   'invalid_request',
   'invalid_address',
-  'invalid_post',
   'unauthorized',
-  'closed',
   'wallet_limit',
   'wallet_taken',
-  'wallet_locked',
-  'missing_post',
-  'foreign_post',
-  'x_changed',
   'rate_limited',
-  'x_unavailable',
 ])
 export const allocation_error = (error: unknown): string =>
   error instanceof Error && PUBLIC_ERRORS.has(error.message) ? error.message : 'unavailable'

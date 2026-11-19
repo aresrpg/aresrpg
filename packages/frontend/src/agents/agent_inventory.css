@@ -19,10 +19,10 @@
   gap: 7px;
   padding: 6px;
   overflow: hidden;
-  background: #151a20;
-  border: 1px solid #161c29;
-  box-shadow: inset 0 1px #b9c0d32a;
-  color: #b9bdc5;
+  background: var(--aui-sunk);
+  border: 1px solid var(--aui-surface);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--aui-soft) 16.5%, transparent);
+  color: var(--aui-soft);
   font-size: 10px;
 }
 .agent-kiosk__header {
@@ -38,12 +38,12 @@
 .agent-kiosk__header strong {
   flex: 1;
   font-size: 13px;
-  color: #d8d9df;
+  color: var(--aui-ink);
 }
 .agent-kiosk__badge {
   font-size: 8px;
   padding: 2px 3px;
-  border: 1px solid #343b47;
+  border: 1px solid var(--aui-high);
   color: #8caec0;
 }
 .agent-kiosk__header .aui-button {
@@ -58,14 +58,14 @@
   flex: 1;
   min-width: 0;
   padding: 6px 3px;
-  background: #202632;
-  border: 1px solid #343b47;
-  color: #e4bb79;
+  background: var(--aui-raised);
+  border: 1px solid var(--aui-high);
+  color: var(--aui-brass);
   cursor: pointer;
 }
 .agent-kiosk__balances b {
   display: block;
-  color: #dddce2;
+  color: var(--aui-ink);
   font-variant-numeric: tabular-nums;
 }
 .agent-kiosk .inventory-search {
@@ -153,9 +153,9 @@
     display: block;
     writing-mode: vertical-rl;
     align-self: stretch;
-    background: #202632;
-    color: #e4bb79;
-    border: 1px solid #343b47;
+    background: var(--aui-raised);
+    color: var(--aui-brass);
+    border: 1px solid var(--aui-high);
   }
   .game-character-body .chr-equip--agent > .chr-equip__side {
     display: none;
@@ -169,14 +169,14 @@
     width: 280px;
     z-index: 10;
     padding: 8px;
-    background: #181d23;
-    border: 1px solid #343b47;
+    background: var(--aui-surface);
+    border: 1px solid var(--aui-high);
     box-shadow: 8px 0 20px #0009;
   }
 }
 
 .agent-sui-mark {
-  color: #4da2ff;
+  color: var(--aui-blue);
   display: inline-flex;
 }
 .agent-kiosk__balances button {
@@ -201,15 +201,15 @@
   flex: 0 0 48px;
   height: 42px;
   padding: 5px;
-  border: 1px solid #343b47;
-  background: #202632;
-  color: #b9bdc5;
+  border: 1px solid var(--aui-high);
+  background: var(--aui-raised);
+  color: var(--aui-soft);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   cursor: pointer;
 }
 .agent-kiosk__categories button[aria-pressed='true'] {
-  background: #3a3430;
-  color: #e4bb79;
+  background: var(--aui-lifted);
+  color: var(--aui-brass);
 }
 .agent-kiosk__categories img {
   display: block;
@@ -243,83 +243,9 @@
   display: block;
   width: 100%;
   margin-top: 5px;
-  background: #101820;
-  border: 1px solid #343b47;
-  color: #d8d9df;
-}
-.agent-coin-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.agent-coin-directions {
-  display: flex;
-  gap: 8px;
-}
-.agent-coin-directions .aui-button {
-  flex: 1;
-}
-.agent-coin-directions [aria-pressed='true'] {
-  border-color: #d8b574;
-  color: #e4bb79;
-  background: #d8b57412;
-}
-.agent-coin-amount-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-.agent-coin-amount-heading > span:first-child {
-  flex: 1;
-  color: #b9bdc5;
-}
-.agent-coin-amount-heading > span:nth-child(2) {
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: #8e929a;
-}
-.agent-coin-amount-heading .aui-button {
-  min-height: 24px;
-  padding: 3px 8px;
-  font-size: 10px;
-}
-.agent-coin-amount {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 12px;
-  border: 1px solid #ffffff18;
-  background: #101820;
-}
-.aui-send-body .agent-coin-amount input {
-  flex: 1;
-  width: 0;
-  min-width: 0;
-  border: 0;
-  padding: 14px 0;
-  background: transparent;
-  font-size: 22px;
-  outline: none;
-}
-.agent-coin-amount > span:last-child {
-  font-size: 12px;
-  color: #8e929a;
-}
-.agent-coin-reserve {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #8e929a;
-  font-size: 10px;
-}
-.agent-coin-actions {
-  display: flex;
-  gap: 10px;
-}
-.agent-coin-actions .aui-button:first-child {
-  flex: 1;
+  background: var(--aui-bg);
+  border: 1px solid var(--aui-high);
+  color: var(--aui-ink);
 }
 .agent-transfer-note,
 .agent-transfer-error {
@@ -329,7 +255,7 @@
   overflow-wrap: anywhere;
 }
 .agent-transfer-note {
-  color: #b9bdc5;
+  color: var(--aui-soft);
 }
 .agent-transfer-error {
   color: #f19b91;

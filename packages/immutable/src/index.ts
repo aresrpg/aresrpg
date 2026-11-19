@@ -105,6 +105,7 @@ export {
   acquisition_target_status,
   item_acquisition,
   best_recipe_for_job_progression,
+  compare_recipe_progress,
   recipe_progression_issues,
   unlocked_recipe_chains,
   type AcquisitionContent,

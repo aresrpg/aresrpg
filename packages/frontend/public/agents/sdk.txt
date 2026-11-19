@@ -27,7 +27,7 @@ In the browser, use the existing authenticated `AuthSession` from `@aresrpg/sdk/
 
 Inside the hosted execution service only, the managed signing adapter composes the existing SDK
 action builders. It is not returned by OAuth or MCP. Service configuration supplies matching
-network/pins, a compatible gRPC endpoint and durable transaction recovery storage.
+network/pins, a compatible gRPC endpoint and the fenced process-local transaction lifecycle.
 
 This fragment assumes `managed_signer`, `network`, `pins`, `rpc_url` and `transaction_journal` have
 been configured internally by the execution service, never by the assistant:
@@ -47,9 +47,9 @@ Paths above are for a script at the repository root. Inside a workspace, use dec
 
 `create_agent_actions` demonstrates construction of existing domain builders with a personal-kiosk loader. It adds no budget enforcement, wallet permission UI, autonomous loop, or general read client. Its methods perform real transactions. Merely constructing it or calling the offline preview does not.
 
-The hosted backend actor supplies the awaited `TransactionJournal` seam exported by `@aresrpg/sdk/transaction-execution` through `SDK({ transaction_journal })`. Its durable journal encrypts exact prepared/signed transaction envelopes and retains receipts across actor failures. Signing and submission must await the journal transitions; storage failures stop execution. Recovery belongs to the same SDK executor under current authorization and a fenced wallet lane, not an assistant retry loop. See the [journal implementation](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/src/transaction_journal.ts) and [operator README](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/README.md).
+The hosted backend actor supplies the awaited `TransactionJournal` seam exported by `@aresrpg/sdk/transaction-execution` through `SDK({ transaction_journal })`. Its lifecycle retains exact prepared/signed bytes and receipts only in process memory, never in Redis. Restart reloads the saved script from its root against fresh game state; a non-idempotent action may repeat after an ambiguous crash. Signing and submission must await the lifecycle transitions; storage failures stop execution. Recovery belongs to the same SDK executor under current authorization and a fenced wallet lane, not an assistant retry loop. See the [lifecycle implementation](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/src/transaction_lifecycle.ts) and [operator README](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/bot/README.md).
 
-Browser `transaction_storage` is a different, synchronous digest-only recovery seam (`getItem`, `setItem`, `removeItem`); it does not retain signed bytes and is not the hosted actor journal. Keep signatures and exact envelopes out of chat, logs and activity ledgers. Only the trusted backend can decrypt its envelope journal. External assistants never receive keys or signing adapters.
+Browser `transaction_storage` is a different, synchronous digest-only recovery seam (`getItem`, `setItem`, `removeItem`); it does not retain signed bytes and is not the hosted actor journal. Keep signatures and exact envelopes out of chat, logs and activity ledgers. The trusted backend alone holds its live transaction bytes; no envelope journal survives restart. External assistants never receive keys or signing adapters.
 
 ## Chain-native read adapter reference
 

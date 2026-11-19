@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { expect, test } from 'bun:test'
+
+import { render_english as renderToStaticMarkup } from '../i18n/render.ts'
+import { MechanicBody } from '../../src/docs/DocsMechanics.tsx'
+import { DOCS_MECHANICS } from '../../src/docs/routes.ts'
+import { encyclopedia_text, type EncyclopediaText } from '../../src/encyclopedia/copy.ts'
+import { load_app_copy } from '../../src/i18n/copy.ts'
+import { LOCALES } from '../../src/i18n/locale.ts'
+
+/** Every mechanics page of the docs, rendered one after another. */
+const mechanics_html = (text: EncyclopediaText): string =>
+  renderToStaticMarkup(
+    <>
+      {DOCS_MECHANICS.map((mechanic) => (
+        <MechanicBody key={mechanic} mechanic={mechanic} text={text} />
+      ))}
+    </>
+  )
+
+test('the mechanics pages explain the chain Retro XP law and its six-player coefficient', async () => {
+  const copy = await load_app_copy('en')
+  const html = mechanics_html(encyclopedia_text(copy))
+
+  expect(html).toContain('base-XP pool')
+  expect(html).toContain('player level / party level')
+  expect(html).toContain('×3.6')
+  expect(html).toContain('Every point of effective Wisdom')
+  expect(html).toContain('active effects, adds 1%')
+  expect(html).toContain('(100 + WIS) / 100')
+  expect(html).not.toContain('(600 + WIS) / 600')
+  expect(html).not.toContain('splits evenly')
+  expect(html).toContain('60% to 160%')
+  expect(html).toContain('Negative resistance reverses that curve')
+  expect(html).toContain('Each active fighter turn has its own cap')
+  expect(html).toContain('Player-sourced damage and its cap are halved')
+  expect(html).toContain('Ares does not use erosion')
+  expect(html).toContain('80% to 120%')
+  expect(html).toContain('including active effects')
+  expect(html).toContain('(600 + average team Chance) / 600')
+  expect(html).toContain('one shared loot roll')
+  expect(html).not.toContain('700 Chance')
+  expect(html).toContain('Each dungeon has one live staging lobby')
+  expect(html).toContain('Dungeon lobby with public or group fights')
+  expect(html).not.toContain('not playable yet')
+  expect(html).not.toContain('converge')
+  expect(html).not.toContain('from anywhere in the world')
+  expect(html).toContain('100 − min(RES, 50)')
+})
+
+test.each(LOCALES.map(({ code }) => code))('rune tiers render translated prose in %s', async (locale) => {
+  const copy = await load_app_copy(locale)
+  const text = encyclopedia_text(copy)
+  const description = text('gameplay.rune_tiers_desc')
+  const html = mechanics_html(text)
+
+  expect(description).not.toBe('gameplay.rune_tiers_desc')
+  expect(description).toContain('Ba/Pa/Ra')
+  expect(html).toContain(renderToStaticMarkup(<>{description}</>))
+  expect(html).not.toContain('gameplay.rune_tiers_desc')
+})

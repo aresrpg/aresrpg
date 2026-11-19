@@ -346,3 +346,32 @@ test('MCP forwards read-only fight prefixes and rejects malformed or changes-onl
     expect((await call(args)).result.isError).toBe(true)
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })
+
+test('MCP identity derives solely from the current scoped grant and exposes no credentials', async () => {
+  const f = await authenticated_http()
+  const request = { jsonrpc: '2.0', id: 99, method: 'tools/call', params: { name: 'bot_identity', arguments: {} } }
+  const reply = await f.json<{ result: { structuredContent: Record<string, unknown> } }>(
+    '/mcp',
+    request,
+    f.access_token
+  )
+  expect(reply.result.structuredContent).toEqual({
+    owner: fixture_bot.owner,
+    bot_id: fixture_bot.id,
+    address: fixture_bot.address,
+    descriptor: fixture_bot.multisig_public_key,
+    generation: fixture_bot.generation,
+    grant_id: f.access_token.split('.')[0],
+    network: 'mainnet',
+    expires_at: expect.any(Number),
+  })
+  expect((await f.request('/mcp', request)).status).toBe(401)
+  const substituted = await f.json<{ result: { isError: boolean } }>(
+    '/mcp',
+    { ...request, params: { ...request.params, arguments: { owner: 'attacker' } } },
+    f.access_token
+  )
+  expect(substituted.result.isError).toBe(true)
+  await f.json('/oauth/revoke', { token: f.refresh_token, client_id: f.client.client_id })
+  expect((await f.request('/mcp', request, f.access_token)).status).toBe(401)
+})

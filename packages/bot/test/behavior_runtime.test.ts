@@ -5,12 +5,11 @@ import { expect, test } from 'bun:test'
 import { create_control_service, lane_key_for, type Lane, type Command } from '../src/control.ts'
 import { run_tick } from '../src/run_runtime.ts'
 import { ready_gameplay_command } from '../src/command_wait.ts'
-import { create_transaction_journal } from '../src/transaction_journal.ts'
+import { create_transaction_lifecycle } from '../src/transaction_lifecycle.ts'
 import { bind_action_baseline, reconcile_action } from '../src/action_reconciliation.ts'
 import { parse_behavior_script, type BehaviorRun, type BehaviorScript } from '../src/behavior_script.ts'
-import { owned_run_observation } from '../src/actor_observation.ts'
-import { read_owner_activity } from '../src/owner_activity.ts'
-import { run_ref_of } from '../src/run_ref.ts'
+import { owned_run_observation, run_observation, told_run } from '../src/actor_observation.ts'
+import { wallet_state } from '../src/owner_activity.ts'
 import { create_mcp_handler } from '../src/mcp.ts'
 
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
@@ -55,7 +54,7 @@ const fixture = async (tree = script) => {
   const get_run = async () => (await f.store.read<BehaviorRun>(run_key))!
   const get_command = async () => (await f.store.read<Command>(`command:${(await get_run()).last_command_id}`))!
   const tick = async (context = profession_context(), requested?: BehaviorRun) =>
-    run_tick('behavior', {
+    run_tick({
       store: f.store,
       config: f.options.config,
       actor_id: 'actor',
@@ -65,16 +64,15 @@ const fixture = async (tree = script) => {
       now: f.clock.now,
     })
   const journal = (command: Command) =>
-    create_transaction_journal(
+    create_transaction_lifecycle(
       f.store,
       f.options.config,
-      f.options.cipher,
-      { command, actor_id: 'actor', fence: lane.fence },
+      () => ({ command, actor_id: 'actor', fence: lane.fence }),
       () => f.clock.now
     )
   return { ...f, control, lane, key, run_key, get_run, get_command, tick, journal }
 }
-test('tree admission, restart and competing control share the existing single lane', async () => {
+test('tree admission and competing controls share the same session lane', async () => {
   const f = await fixture()
   await Promise.all([f.tick(), f.tick()])
   expect(await f.get_run()).toMatchObject({ actions_started: 1, pending_node: 'root/0', revision: 1 })
@@ -85,7 +83,7 @@ test('tree admission, restart and competing control share the existing single la
     behavior_binding: { revision: 1, node: 'root/0' },
   })
   const restarted = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
-  expect((await restarted.behavior_status(f.grant, (await f.get_run()).id)).last_command_id).toBe(command.id)
+  expect((await restarted.behavior_status(f.grant, character.id)).last_command_id).toBe(command.id)
   await f.tick()
   expect((await f.get_run()).actions_started).toBe(1)
   await expect(
@@ -96,18 +94,17 @@ test('tree admission, restart and competing control share the existing single la
       observation_revision: 1,
     })
   ).rejects.toThrow('bot_busy_or_paused')
-  await expect(
-    f.control.accept(f.grant, {
-      idempotency_key: 'compete',
-      kind: 'craft',
-      payload: { character_id: character.id, output_type: recipe.output_type, attempts: 1 },
-      decision_revision: 2,
-      observation_revision: 1,
-    })
-  ).rejects.toThrow('bot_busy_or_paused')
-  await expect(f.control.behavior_status({ ...f.grant, id: 'other' }, (await f.get_run()).id)).rejects.toThrow(
-    'invalid_token'
-  )
+  // A direct command no longer needs an idle wallet: it queues behind the tree's admitted command.
+  const lane = (await f.store.read<Lane>(f.key))!
+  const direct = await f.control.accept(f.grant, {
+    idempotency_key: 'compete',
+    kind: 'craft',
+    payload: { character_id: character.id, output_type: recipe.output_type, attempts: 1 },
+    decision_revision: lane.decision_revision,
+    observation_revision: lane.observation_revision,
+  })
+  expect(await f.store.read<Lane>(f.key)).toMatchObject({ active_command: command.id, direct: direct.id })
+  await expect(f.control.behavior_status({ ...f.grant, id: 'other' }, character.id)).rejects.toThrow('invalid_token')
   await f.runtime.stop()
 })
 test('receipt and projection gate advancement; consumed completion cannot skip a later traversal', async () => {
@@ -126,8 +123,8 @@ test('receipt and projection gate advancement; consumed completion cannot skip a
     status: 'completed' as const,
     result: { digest: 'fixture' },
   }
-  await put(f.store, `command:${command.id}`, command)
-  await put(f.store, 'receipt:fixture', {
+  await put(f.store, `command:${command.id}`, {
+    ...command,
     receipt: {
       Transaction: {
         digest: 'fixture',
@@ -186,15 +183,21 @@ test('failed or uncertain execution is never selector failure or automatic repla
     const blocked = await f.get_run()
     expect(blocked).toMatchObject({ status: 'awaiting_ai', actions_started: 1, issue: `command_${status}` })
     const lane = (await f.store.read<Lane>(f.key))!
-    expect(await owned_run_observation(f.store, lane, command)).toMatchObject({
-      run_ref: { kind: 'behavior', id: blocked.id },
+    expect(await owned_run_observation(f.store, lane, command)).toEqual({
+      runs: [
+        {
+          id: blocked.id,
+          character_id: character.id,
+          status: 'awaiting_ai',
+          issue: `command_${status}`,
+          strategy: undefined,
+        },
+      ],
       state: 'awaiting_ai',
-      issue: `command_${status}`,
+      direct: null,
     })
-    expect(await read_owner_activity(f.store, f.bot, [f.grant], f.clock.now)).toMatchObject({
-      objective: script.objective,
-      issue: `command_${status}`,
-    })
+    const told = await run_observation(f.store, await f.store.read<Lane>(f.key), { bot_id: f.bot.id }, told_run)
+    expect(told.runs).toMatchObject([{ objective: script.objective, issue: `command_${status}` }])
     await f.tick()
     expect((await f.get_run()).actions_started).toBe(1)
     expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
@@ -216,7 +219,7 @@ test('script replacement and stop preserve every prepared envelope phase', async
     const run = await f.get_run()
     await expect(
       f.control.replace_behavior(f.grant, {
-        run_id: run.id,
+        character_id: character.id,
         expected_revision: run.revision,
         script,
         decision_revision: command.decision_revision,
@@ -232,7 +235,7 @@ test('script replacement and stop preserve every prepared envelope phase', async
         f.clock.now
       )
     ).rejects.toThrow('execution_not_authorized')
-    await f.control.stop_behavior(f.grant, run.id)
+    await f.control.stop_behavior(f.grant, character.id)
     expect((await f.store.read<Lane>(f.key))!.pending).toEqual(envelope)
     expect(await journal.read()).toMatchObject({ phase, digest: prepared.digest, bytes: prepared.bytes })
     await expect(journal.admit('submit')).rejects.toThrow('execution_not_authorized')
@@ -249,9 +252,6 @@ test('tree has no service action or time cutoff; pause and conflicting authority
   await f.control.pause(f.grant)
   await f.tick()
   expect((await f.get_run()).status).toBe('paused')
-  expect(() => run_ref_of({ run_ref: { kind: 'behavior', id: 'a' }, combat_run_id: 'b' })).toThrow(
-    'run_reference_conflict'
-  )
   await f.runtime.stop()
 })
 test('public MCP exposes one authored behavior start and strict shared script validation', async () => {
@@ -280,29 +280,29 @@ test('idempotent script admission preserves metadata and replacement fences revi
   expect((await f.control.start_behavior(f.grant, input)).id).toBe((await f.get_run()).id)
   await expect(
     f.control.start_behavior(f.grant, { ...input, script: { ...script, objective: { title: 'Different' } } })
-  ).rejects.toThrow('idempotency_conflict')
+  ).rejects.toThrow('bot_busy_or_paused')
   const run = await f.get_run()
   await expect(
     f.control.replace_behavior(f.grant, {
-      run_id: run.id,
+      character_id: character.id,
       expected_revision: 0,
       script,
-      decision_revision: 1,
+      decision_revision: 0,
       observation_revision: 1,
     })
   ).rejects.toThrow('behavior_revision_conflict')
   const replacement = { ...script, objective: { title: 'Revised', description: 'External AI authored' } }
   const next = await f.control.replace_behavior(f.grant, {
-    run_id: run.id,
+    character_id: character.id,
     expected_revision: 1,
     script: replacement,
-    decision_revision: 1,
+    decision_revision: 0,
     observation_revision: 1,
   })
   expect(next).toMatchObject({ revision: 2, script: replacement, actions_started: 0 })
   await f.runtime.stop()
 })
-test('terminal failure fences and cancels signed recovery without consuming submission', async () => {
+test('actor reacquisition drops unsigned submission state while explicit stop and pause remain', async () => {
   const f = await fixture()
   await f.tick()
   const command = await f.get_command()
@@ -313,13 +313,24 @@ test('terminal failure fences and cancels signed recovery without consuming subm
   await put(f.store, `command:${command.id}`, { ...command, status: 'uncertain', error: 'interrupted_before_submit' })
   await f.tick()
   const lane = (await f.store.read<Lane>(f.key))!
-  expect(lane.decision_revision).toBeGreaterThan(command.decision_revision)
+  // The blocked run fences its own envelope; a hero never advances the wallet decision of its neighbours.
+  expect(lane.decision_revision).toBe(command.decision_revision)
+  await expect(journal.admit('submit')).rejects.toThrow('behavior_execution_not_authorized')
   expect(lane.pending?.phase).toBe('signed')
+  const run = await f.get_run()
+  await f.control.stop_behavior(f.grant, character.id)
+  await f.control.pause(f.grant)
   await f.runtime.tick()
   await f.runtime.settle()
   expect((await f.store.read<Lane>(f.key))!.pending).toBeNull()
-  expect((await f.store.read<Command>(`command:${command.id}`))!.status).toBe('cancelled')
-  expect(f.sockets).toHaveLength(0)
+  expect(await f.store.read<Lane>(f.key)).toMatchObject({ paused: true, active_command: null })
+  expect(await f.get_run()).toMatchObject({ status: 'stopped', issue: 'explicit_stop' })
+  await expect(journal.mark_submitting({ ...prepared, signatures: ['signature'] })).rejects.toThrow('actor_fenced')
+  await f.runtime.tick()
+  await f.runtime.settle()
+  expect(await f.store.scan_keys('command:', 10)).toEqual([`command:${command.id}`])
+  expect(await f.store.read(`receipt:${prepared.digest}`)).toBeNull()
+  expect(f.sockets.flatMap(({ sent }) => sent)).toEqual([])
   await f.runtime.stop()
 })
 
@@ -341,14 +352,14 @@ test('a submitting blocker keeps its exact envelope and cannot replace the objec
     const lane = (await f.store.read<Lane>(f.key))!
     expect(blocked).toMatchObject({ status: 'awaiting_ai', issue: 'command_uncertain' })
     expect(lane.pending).toEqual(envelope)
-    expect(await read_owner_activity(f.store, f.bot, [f.grant], f.clock.now)).toMatchObject({
-      status: 'unavailable',
-      objective: script.objective,
-      issue: 'command_uncertain',
-    })
+    // The owner is told the wallet is unavailable while its command in flight is uncertain.
+    const held = lane.active_command ? await f.store.read<Command>(`command:${lane.active_command}`) : null
+    expect(wallet_state(f.bot, lane, held, [blocked.status], f.clock.now)).toBe('unavailable')
+    const told = await run_observation(f.store, lane, { bot_id: f.bot.id }, told_run)
+    expect(told.runs).toMatchObject([{ objective: script.objective, issue: 'command_uncertain' }])
     await expect(
       f.control.replace_behavior(f.grant, {
-        run_id: blocked.id,
+        character_id: character.id,
         expected_revision: blocked.revision,
         script,
         decision_revision: lane.decision_revision,
@@ -380,8 +391,10 @@ test('failed commands expose safe actionable causes without publishing raw diagn
       await put(f.store, `command:${command.id}`, { ...command, status: 'failed', error })
       await f.tick()
       const lane = (await f.store.read<Lane>(f.key))!
-      expect(await owned_run_observation(f.store, lane, command)).toMatchObject({ state: 'awaiting_ai', issue })
-      expect(await read_owner_activity(f.store, f.bot, [f.grant], f.clock.now)).toMatchObject({ issue })
+      expect(await owned_run_observation(f.store, lane, command)).toMatchObject({
+        state: 'awaiting_ai',
+        runs: [{ character_id: character.id, issue }],
+      })
       expect((await f.get_command()).error).toBe(error)
     } finally {
       await f.runtime.stop()
@@ -481,11 +494,74 @@ for (const [patch, issue] of [
       await f.tick(context)
       expect(await f.store.scan_keys('command:', 100)).toEqual([])
       expect(await owned_run_observation(f.store, await f.store.read<Lane>(f.key), context.command)).toMatchObject({
-        run_status: 'awaiting_ai',
-        issue,
+        runs: [{ status: 'awaiting_ai', issue }],
       })
     } finally {
       await f.runtime.stop()
     }
   })
 }
+
+test('new lease reevaluates the saved script from root only after fresh observations', async () => {
+  const f = await fixture()
+  try {
+    await f.tick()
+    const old_command = await f.get_command()
+    const prior = await f.get_run()
+    await put(f.store, f.run_key, {
+      ...prior,
+      memory: { completed: ['root/0'] },
+      pending_node: 'root/1',
+      consumed_command_id: old_command.id,
+      actions_started: 42,
+    })
+    f.clock.now += 10001
+    const lease = await f.control.acquire(f.bot, 'replacement', 10000)
+    const tick = async (context = profession_context()) =>
+      run_tick({
+        store: f.store,
+        config: f.options.config,
+        actor_id: 'replacement',
+        fence: lease.fence,
+        run: await f.get_run(),
+        context,
+        now: f.clock.now,
+      })
+    expect(await tick()).toBe('waiting')
+    expect(await f.get_run()).toMatchObject({
+      execution_fence: lease.fence,
+      actions_started: 0,
+      last_command_id: null,
+      memory: { completed: [] },
+      pending_node: null,
+      activation: null,
+      consumed_command_id: null,
+    })
+    await f.control.observed(f.key, 'replacement', lease.fence, true)
+    const lane = (await f.store.read<Lane>(f.key))!
+    const context = profession_context()
+    await tick({
+      ...context,
+      command: { ...context.command, observation_revision: lane.observation_revision },
+      snapshot: { ...context.snapshot, observation_revision: lane.observation_revision },
+    })
+    expect(await f.get_run()).toMatchObject({ actions_started: 1, pending_node: 'root/0' })
+    expect((await f.get_command()).kind).toBe('gather')
+    expect((await f.get_command()).id).not.toBe(old_command.id)
+    await f.control.stop_behavior(f.grant, character.id)
+    f.clock.now += 10001
+    const stopped_lease = await f.control.acquire(f.bot, 'third', 10000)
+    await run_tick({
+      store: f.store,
+      config: f.options.config,
+      actor_id: 'third',
+      fence: stopped_lease.fence,
+      run: prior,
+      context,
+      now: f.clock.now,
+    })
+    expect((await f.get_run()).status).toBe('stopped')
+  } finally {
+    await f.runtime.stop()
+  }
+})

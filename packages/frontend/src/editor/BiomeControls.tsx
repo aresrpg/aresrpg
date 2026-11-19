@@ -9,10 +9,9 @@ import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 /* eslint-disable functional/immutable-data -- Pointer-drag drafts are local UI effect boundaries. */
 
-const input_class =
-  'h-8 border border-white/12 bg-bg px-2 text-[9px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
+const input_class = 'h-8 border border-white/12 bg-bg px-2 text-[9px] text-soft outline-none focus:border-cyan/60'
 const button_class =
-  'h-7 border border-white/12 px-2 text-[8px] tracking-[0.12em] text-[#858994] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45] disabled:opacity-30'
+  'h-7 border border-white/12 px-2 text-[8px] tracking-[0.12em] text-faint uppercase hover:border-gold/50 hover:text-gold disabled:opacity-30'
 const as_record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
   value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
     ? (value as Readonly<Record<string, JsonValue>>)
@@ -60,12 +59,12 @@ export const MaterialEditor = ({
               type="color"
               value={material.color}
             />
-            <strong className="truncate text-[8px] tracking-[0.08em] text-[#d8d4cb] uppercase" title={name}>
+            <strong className="truncate text-[8px] tracking-[0.08em] text-soft uppercase" title={name}>
               {name}
             </strong>
             <input
               aria-label={`${name} hex color`}
-              className="h-7 min-w-0 border border-white/10 bg-bg px-1.5 text-[7px] text-[#aaaeb6] outline-none focus:border-[#4a9eff]/60"
+              className="h-7 min-w-0 border border-white/10 bg-bg px-1.5 text-[7px] text-muted outline-none focus:border-cyan/60"
               onChange={(event) => change([name, 'color'], event.target.value)}
               value={material.color}
             />
@@ -82,7 +81,7 @@ export const MaterialEditor = ({
               ))}
             </select>
             <button
-              className="grid size-7 place-items-center border border-white/8 text-[8px] text-[#626670] hover:text-[#ff8caa] disabled:opacity-20"
+              className="grid size-7 place-items-center border border-white/8 text-[8px] text-faint hover:text-[#ff8caa] disabled:opacity-20"
               disabled={referenced}
               onClick={() => remove(name)}
               title={referenced ? 'Used by terrain or liquid' : 'Remove material'}
@@ -194,8 +193,8 @@ export const SplineEditor = ({
     <section className={`border border-white/10 bg-black/15 p-3 ${fill ? 'flex min-h-48 flex-1 flex-col' : ''}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-[9px] tracking-[0.14em] text-[#c8963c] uppercase">{name.replaceAll('_', ' ')}</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">
+          <h3 className="text-[9px] tracking-[0.14em] text-gold uppercase">{name.replaceAll('_', ' ')}</h3>
+          <p className="mt-1 text-[7px] text-faint">
             {disabled ? 'Rebuilding the exact voxel field…' : 'Drag a blue knot; release once to rebuild terrain.'}
           </p>
         </div>
@@ -250,7 +249,7 @@ export const SplineEditor = ({
         <polyline fill="none" points={curve} stroke="#c8963c" strokeWidth="2" vectorEffect="non-scaling-stroke" />
         {draft_knots.map(([x, y], index) => (
           <path
-            className={`cursor-grab ${selected === index ? 'stroke-[#efc15a]' : 'stroke-[#67adff]'}`}
+            className={`cursor-grab ${selected === index ? 'stroke-gold' : 'stroke-cyan'}`}
             d={`M ${to_x(x)} ${to_y(y)} h 0.01`}
             fill="none"
             key={`${index}-${x}`}
@@ -266,7 +265,7 @@ export const SplineEditor = ({
           />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[6px] tabular-nums text-[#555a64] uppercase">
+      <div className="mt-1 flex justify-between text-[6px] tabular-nums text-faint uppercase">
         <span>
           Elevation {y_min}–{y_max}
         </span>
@@ -278,7 +277,7 @@ export const SplineEditor = ({
         <div className="mt-2 flex flex-wrap gap-2">
           {draft_knots.map(([x, y], index) => (
             <div className="flex items-center gap-1 border border-white/7 bg-black/20 p-1" key={`${index}-fields`}>
-              <span className="px-1 text-[7px] text-[#5f636d]">{index + 1}</span>
+              <span className="px-1 text-[7px] text-faint">{index + 1}</span>
               <input
                 className={`${input_class} w-14`}
                 disabled={disabled}

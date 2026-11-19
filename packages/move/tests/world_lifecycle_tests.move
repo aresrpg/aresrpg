@@ -31,7 +31,7 @@ fun paid_birth_travel_return_and_deletion_preserve_the_name_reservation() {
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
   let personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
   let id = object::id_from_address(character::test_derived_address(&names, b"traveller".to_string()));
-  api::create_character(&mut names, coin::mint_for_testing(1_000_000_000, scenario.ctx()), &mut kiosk,
+  api::create_character(&mut names, coin::mint_for_testing(10_000_000_000, scenario.ctx()), &mut kiosk,
     personal.borrow(), &policy, b"Traveller".to_string(), b"senshi".to_string(), true, 1, 2, 3,
     &nauvis, &version, &clock, scenario.ctx());
   assert!(kiosk.is_locked(id) && kiosk.item_count() == 1, 0);

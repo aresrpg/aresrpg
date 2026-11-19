@@ -55,19 +55,19 @@ export const GatherProgress = ({
   const icon = item_icon(progress.item_type)
   return (
     <HudPanel
-      className={`pointer-events-none ${PROGRESS_POSITION[position]} w-[min(360px,calc(100vw-48px))] border-t-[#c8963c]/70 px-5 py-4`}
+      className={`pointer-events-none ${PROGRESS_POSITION[position]} w-[min(360px,calc(100vw-48px))] border-t-gold/70 px-5 py-4`}
     >
       <div className="flex items-center gap-3">
         {icon && <img alt="" aria-hidden="true" className="size-9 shrink-0 object-contain" src={icon} />}
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-[7px] tracking-[0.2em] text-[#7d828b] uppercase">
+          <p className="mb-1 text-[7px] tracking-[0.2em] text-faint uppercase">
             {progress.collect_all
               ? text('resource_collect_all_progress', { completed: progress.completed, total: progress.total })
               : text('resource_gathering')}
           </p>
           <div className="flex items-center justify-between gap-4 text-[9px] tracking-[0.16em] uppercase">
-            <span className="truncate text-[#e8e4dc]">{name}</span>
-            <span className="shrink-0 text-[#c8963c]">
+            <span className="truncate text-text">{name}</span>
+            <span className="shrink-0 text-gold">
               {progress.collect_all && '≈ '}
               <Text path="ui.seconds" values={{ count: progress.remaining_seconds }} />
             </span>

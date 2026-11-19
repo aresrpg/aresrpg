@@ -30,11 +30,14 @@ const setup = () => {
 
 test('private campaign traffic waits for normal admission and correlates replies', async () => {
   const connection = setup()
-  const result = connection.client.request({ action: 'link_x' })
+  const result = connection.client.request({ action: 'share', address: '0x1' })
   expect(connection.sent).toHaveLength(0)
   connection.receive({ type: 'server/packet', packet: { type: 'packet/connection_accepted', address: '0x1' } })
   await Promise.resolve()
-  expect(connection.sent[0]).toMatchObject({ type: 'packet/allocation_request', request: { action: 'link_x' } })
+  expect(connection.sent[0]).toMatchObject({
+    type: 'packet/allocation_request',
+    request: { action: 'share', address: '0x1' },
+  })
   const [packet] = connection.sent
   if (packet.type !== 'packet/allocation_request') throw new Error('missing request')
   connection.receive({
@@ -42,10 +45,10 @@ test('private campaign traffic waits for normal admission and correlates replies
     packet: {
       type: 'packet/allocation_response',
       id: packet.id,
-      result: { action: 'link_x', url: 'https://example.test/link' },
+      result: { action: 'share', url: 'https://example.test/link' },
     },
   })
-  expect(await result).toEqual({ action: 'link_x', url: 'https://example.test/link' })
+  expect(await result).toEqual({ action: 'share', url: 'https://example.test/link' })
   connection.client.dispose()
   expect(connection.disposed()).toBe(true)
 })
@@ -53,7 +56,7 @@ test('private campaign traffic waits for normal admission and correlates replies
 test('disconnect rejects pending private operations without replaying writes', async () => {
   const connection = setup()
   connection.receive({ type: 'server/packet', packet: { type: 'packet/connection_accepted', address: '0x1' } })
-  const result = connection.client.request({ action: 'submit', address: '0x1', urls: ['https://x.com/test/status/1'] })
+  const result = connection.client.request({ action: 'wallet_remove', address: '0x1' })
   const refused = result.then(
     () => null,
     (error: unknown) => error

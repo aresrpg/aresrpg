@@ -7,12 +7,11 @@ import { createRoot } from 'react-dom/client'
 import { AgentSetupButton } from '../../src/agents/AgentSetup.tsx'
 import { CharacterTab } from '../../src/components/CharacterTab.tsx'
 import { CharacterTabs } from '../../src/components/CharacterTabs.tsx'
-import { adventure_character, adventure_companion } from '../../src/adventure/character.ts'
-import { adventure_character_row } from '../../src/adventure/projection.ts'
+import { sample_character, sample_companion, sample_character_row } from '../../src/demo/sample.ts'
 import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
 import '../../src/tailwind.css'
 
-const rows = [adventure_character_row(adventure_character()), adventure_character_row(adventure_companion())]
+const rows = [sample_character_row(sample_character()), sample_character_row(sample_companion())]
 const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [selected, select] = useState(rows[0]!.id)
   return (

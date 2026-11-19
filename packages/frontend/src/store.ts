@@ -12,7 +12,6 @@ import tournament, {
 } from './modules/tournament.ts'
 import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
 import { initial_analytics_state } from './analytics/state.ts'
-import adventure, { initial_adventure_state, type AdventureState, type AdventureInput } from './modules/adventure.ts'
 import type { GameSettings } from './game/core/settings.ts'
 import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
 import journey, { type JourneyInput } from './modules/journey.ts'
@@ -85,11 +84,11 @@ import external_wallet, {
   type ExternalWalletState,
   type ExternalWalletInput,
 } from './modules/external_wallet.ts'
+import dapp, { initial_dapp_state, type DappInput, type DappState } from './modules/dapp.ts'
 
 export type AppState = Readonly<{
   practice: PracticeState
   analytics: AnalyticsState
-  adventure: AdventureState
   claim_failures: readonly string[]
   journey: JourneyState
   chain_clock: ChainClock
@@ -122,12 +121,12 @@ export type AppState = Readonly<{
   distribution: DistributionState
   job_level_up: JobLevelUpState
   suins: SuinsState
+  dapp: DappState
 }>
 
 export type AppInput =
   | PracticeInput
   | AnalyticsInput
-  | AdventureInput
   | JourneyInput
   | ChainClockInput
   | SessionInput
@@ -160,6 +159,7 @@ export type AppInput =
   | ClaimsInput
   | JobLevelUpInput
   | SuinsInput
+  | DappInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -185,12 +185,14 @@ export type AppModule = Readonly<{
 // Registration owns observer availability. Keep reducer order explicit: session folds first.
 const MODULE_REGISTRY = [
   [practice, 'practice'],
-  [adventure, 'adventure'],
-  [session, 'player'],
-  [hosted_agent, 'player'],
-  [suins, 'player'],
-  [chain_clock, 'player'],
-  [external_wallet, 'player'],
+  [session, 'account'],
+  // `owner` modules serve the 3D game and the light account pages. The web dapp stays out: it names the
+  // bot from its own grant and never arms a second wallet.
+  [hosted_agent, 'owner'],
+  // Hosted-bot consent names the agent wallet through SuiNS, so every signed-in surface runs its observer.
+  [suins, 'account'],
+  [chain_clock, 'account'],
+  [external_wallet, 'owner'],
   [navigation, 'player'],
   [analytics, 'public'],
   [settings, 'shared'],
@@ -207,7 +209,7 @@ const MODULE_REGISTRY = [
   [duel, 'player'],
   [fight_chain, 'player'],
   [claims, 'player'],
-  [marketplace, 'player'],
+  [marketplace, 'account'],
   [leaderboards, 'player'],
   [dungeon, 'player'],
   [kolizeum, 'player'],
@@ -224,16 +226,29 @@ const MODULE_REGISTRY = [
   [mastery, 'player'],
   [distribution, 'player'],
   [job_level_up, 'player'],
+  [dapp, 'dapp'],
 ] as const satisfies readonly (readonly [
   AppModule,
-  'player' | 'demo' | 'adventure' | 'shared' | 'public' | 'practice',
+  'player' | 'account' | 'owner' | 'dapp' | 'demo' | 'shared' | 'public' | 'practice',
 ])[]
 
 const MODULES = MODULE_REGISTRY.map(([module]) => module)
 export type AppModuleName = (typeof MODULES)[number]['name']
 
+// `account` modules serve every signed-in surface: the 3D player and the engine-less web dapp.
 export const PLAYER_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'player' || runtime === 'shared' || runtime === 'public').map(
+  MODULE_REGISTRY.filter(([, runtime]) => ['player', 'account', 'owner', 'shared', 'public'].includes(runtime)).map(
+    ([module]) => module.name
+  )
+)
+export const DAPP_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => ['dapp', 'account', 'shared', 'public'].includes(runtime)).map(
+    ([module]) => module.name
+  )
+)
+/** A light page that only needs the signed-in account: the KARES page. */
+export const ACCOUNT_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => ['account', 'owner', 'shared', 'public'].includes(runtime)).map(
     ([module]) => module.name
   )
 )
@@ -245,17 +260,10 @@ export const DEMO_APP_MODULES = Object.freeze(
   MODULE_REGISTRY.filter(([, runtime]) => runtime === 'demo' || runtime === 'shared').map(([module]) => module.name)
 )
 
-export const ADVENTURE_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'adventure' || runtime === 'shared' || runtime === 'public').map(
-    ([module]) => module.name
-  )
-)
-
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
     practice: initial_practice_state(),
     claim_failures: [],
-    adventure: initial_adventure_state(),
     chain_clock: null,
     journey: initial_journey_state(),
     session: initial_session_state(),
@@ -288,6 +296,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     mastery: initial_mastery_state(),
     distribution: initial_distribution_state(),
     job_level_up: initial_job_level_up_state(),
+    dapp: initial_dapp_state(),
   })
 
 const create_events = () => {

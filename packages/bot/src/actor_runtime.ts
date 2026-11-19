@@ -11,7 +11,7 @@ import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_actor_locomotion } from './actor_locomotion.ts'
 import { read_actor_balance } from './actor_balance.ts'
 import { gameplay_observation_ready } from './gameplay_context.ts'
-import { wait_for_contract, ready_gameplay_command, refresh_signed_command } from './command_wait.ts'
+import { wait_for_contract, ready_gameplay_command } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
 import { empty_snapshot, actor_snapshot_transition, type ActorSnapshot } from './actor_snapshot.ts'
@@ -29,13 +29,15 @@ import {
 import { assert_live_grant, type Bot, type Grant } from './model.ts'
 import { run_pairing_proof, run_provisioning, type ProvisionRequest } from './provisioning.ts'
 import { has_pending_work } from './store.ts'
-import { abandon_unsubmitted, create_transaction_journal } from './transaction_journal.ts'
+import { abandon_unsubmitted, create_transaction_lifecycle } from './transaction_lifecycle.ts'
 import { stale_run_draft } from './run_refresh.ts'
-import { process_bot_run } from './run_actor.ts'
+import { process_lane_runs, retire_run } from './run_actor.ts'
+import { retired_run } from './store_projection.ts'
 import { read_market_receipts, fold_market_receipts } from './market_recovery.ts'
 import { empty_inventory } from './actor_inventory.ts'
 import { run_keys } from './run_ref.ts'
 import { actor_observation, apply_actor_watches, owned_run_observation } from './actor_observation.ts'
+import { create_status_sharer } from './status_sharer.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
 export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
 export type { ActorRuntimeOptions } from './actor_runtime_options.ts'
@@ -100,26 +102,24 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       const valid = await Promise.all([...connector_grants].map((grant_id) => grant_is_live(bot.id, grant_id)))
       if (!valid.some(Boolean)) throw new Error('invalid_token')
     }
-    const journal_for = () =>
-      create_transaction_journal(
-        store,
-        config,
-        options.cipher,
-        { command, actor_id: options.actor_id, fence: lease.fence },
-        now
-      )
+    const lifecycle = create_transaction_lifecycle(
+      store,
+      config,
+      () => ({ command, actor_id: options.actor_id, fence: lease.fence }),
+      now
+    )
     const journal: TransactionJournal = {
-      read: () => journal_for().read(),
+      read: () => lifecycle.read(),
       admit: async (stage) => {
-        await journal_for().admit(stage)
+        await lifecycle.admit(stage)
         if (stage !== 'prepare') validate_gameplay(gameplay_context())
       },
-      prepared: (record) => journal_for().prepared(record),
-      signed: (record) => journal_for().signed(record),
-      mark_submitting: (record) => journal_for().mark_submitting(record),
-      conflicted: (proof, record) => journal_for().conflicted!(proof, record).finally(invalidate_execution),
+      prepared: (record) => lifecycle.prepared(record),
+      signed: (record) => lifecycle.signed(record),
+      mark_submitting: (record) => lifecycle.mark_submitting(record),
+      conflicted: (proof, record) => lifecycle.conflicted!(proof, record).finally(invalidate_execution),
       settled: async (receipt, record) => {
-        await journal_for().settled(receipt, record)
+        await lifecycle.settled(receipt, record)
         await reconcile()
       },
     }
@@ -162,7 +162,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         now()
       )
       const lane = await store.read<Lane>(lane_key)
-      for (const key of lane ? run_keys(lane) : []) void schedule_key(key, true).catch(options.report_failure)
+      if (lane && [run_keys(lane).length, lane.direct].some(Boolean))
+        void schedule_lane(lane_key, true).catch(options.report_failure)
     }
     let sdk = build_sdk()
     let recovered = false
@@ -203,6 +204,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
             const current = assert_lease(await tx.get<Lane>(lane_key), options.actor_id, lease.fence, now())
             await tx.put(lane_key, { ...current, paused: true, needs_resync: true, transport_stopped: true })
           })
+        await status.observed(state.last_packet)
       },
       report_failure: options.report_failure,
     })
@@ -230,10 +232,12 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
           now()
         ),
     })
+    const status = create_status_sharer(store, bot, lease.fence, () => snapshot.ready, now, monotonic_now, actor.send)
     return {
       bot,
       lease,
       actor,
+      share_status: () => status.share().catch(options.report_failure),
       terminal_server: () => terminal_server,
       get sdk() {
         return sdk
@@ -263,9 +267,10 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       snapshot: () => snapshot,
     }
   }
-  const session_reusable = (session: Session, lane: Lane | null) =>
+  const session_reusable = (session: Session, lane: Lane | null, command: Command) =>
     [
-      session.actor.state().status !== 'stopped',
+      // A stopped socket does not retire this process's unresolved SDK receipt tracking.
+      session.actor.state().status !== 'stopped' || lane?.pending?.command_id === command.id,
       lane?.actor_id === options.actor_id,
       lane?.fence === session.lease.fence,
       (lane?.lease_until ?? 0) > now(),
@@ -276,13 +281,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (existing) {
       await existing.actor.settle_observations()
       const lane = await store.read<Lane>(key)
-      if (session_reusable(existing, lane)) return existing
+      if (session_reusable(existing, lane, command)) return existing
       const recovery = lane?.pending?.command_id === command.id
       const explicit_read = [!existing.terminal_server(), command.kind === 'observe'].every(Boolean)
       if ([!recovery, !explicit_read].every(Boolean)) return existing
       if (!recovery) await live_bot(bot.id, command.grant_id)
       // Receipt reconciliation owns a lease even when gameplay/socket authority is revoked.
-      // The pending phase still decides cancellation versus receipt-only recovery.
+      // Only this process retains transaction evidence; new owners re-evaluate the saved tree.
       await existing.actor.stop()
       sessions.delete(key)
     }
@@ -305,9 +310,11 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       const current = await tx.get<Command>(`command:${command.id}`)
       if (!current || ['completed', 'failed', 'cancelled'].includes(current.status)) return
       if (stale_run_draft(current, lane, error)) return
+      // A prepared command whose envelope is gone may still have executed.
+      const unknown = [lane.pending, current.status !== 'accepted'].some(Boolean)
       await tx.put(`command:${command.id}`, {
         ...current,
-        status: lane.pending ? 'uncertain' : 'failed',
+        status: unknown ? 'uncertain' : 'failed',
         error: String(error),
       })
       await tx.put(command.lane_key, {
@@ -326,13 +333,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     const snapshot = session.snapshot()
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
     await apply_actor_watches(session.actor, command)
-    const lane = await store.read<Lane>(command.lane_key)
+    const [sampled_at, lane] = [monotonic_now(), await store.read<Lane>(command.lane_key)] // Stamped before its reads.
     return {
       ...(await owned_run_observation(store, lane, command)),
       ...actor_observation({ ...session_context(session, command), snapshot, balance }, session.lease.fence),
       decision_revision: lane?.decision_revision,
       event_fence: session.lease.fence,
-      sampled_at: monotonic_now(),
+      sampled_at,
     }
   }
   const session_context = (session: Session, command: Command) => ({
@@ -351,47 +358,21 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     const original = await store.read<Command>(`command:${envelope.command_id}`)
     if (!original || original.grant_id !== envelope.grant_id) throw new Error('PENDING_COMMAND_MISSING')
     session.bind(original)
-    if (envelope.phase === 'prepared') {
-      const binding = { command: original, actor_id: options.actor_id, fence: session.lease.fence }
-      await abandon_unsubmitted(store, binding, envelope.digest, 'prepared', now())
-      session.recovered()
-      return
-    }
-    if (envelope.phase !== 'signed') {
+    if (envelope.phase === 'submitting') {
       await reconcile_receipt(session)
       return
     }
-    const cancel = async () => {
-      await abandon_unsubmitted(
-        store,
-        { command: original, actor_id: options.actor_id, fence: session.lease.fence },
-        envelope.digest,
-        'signed',
-        now()
-      )
-      session.recovered()
-    }
-    const invalidated = [
-      lane.paused,
-      lane.decision_revision !== original.decision_revision,
-      !(await grant_is_live(original.bot_id, original.grant_id)),
-    ].some(Boolean)
-    if (invalidated) return cancel()
-    await session.actor.connect()
-    await session.actor.settle_observations()
-    if (!gameplay_observation_ready(session_context(session, original))) return
-    session.bind(
-      await refresh_signed_command(
-        store,
-        config,
-        { command: original, actor_id: options.actor_id, fence: session.lease.fence },
-        session_context(session, original),
-        envelope.digest,
-        now()
-      )
+    // These local phases never crossed submission. Discard them, never replay a signed action.
+    await abandon_unsubmitted(
+      store,
+      { command: original, actor_id: options.actor_id, fence: session.lease.fence },
+      envelope.digest,
+      envelope.phase,
+      now()
     )
-    if (await session.sdk.resume_pending_transaction()) session.recovered()
+    session.recovered()
   }
+
   const bind_execution = (session: Session, command: Command, lane: Lane) => {
     const context = session_context(session, command)
     validate_gameplay(context)
@@ -434,8 +415,14 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       options.report_failure(error)
     }
   }
-  const process_run = (key: string) =>
-    process_bot_run(key, {
+  /** One queue pass; a direct command that took the signing slot executes in that same turn. */
+  const process_lane = async (key: string) => {
+    const direct = await ask_lane(key)
+    if (direct) await process_command(direct)
+  }
+  const ask_lane = (key: string) =>
+    process_lane_runs(key, {
+      snapshot: () => sessions.get(key)?.snapshot(),
       report_failure: options.report_failure,
       store,
       config,
@@ -461,9 +448,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       },
     })
   const processors: Readonly<Record<string, (key: string) => Promise<void>>> = {
-    profession: process_run,
-    combat: process_run,
-    behavior: process_run,
+    lane: process_lane,
     provision: async (key) => {
       const request = await store.read<ProvisionRequest>(key)
       if (!request || request.status === 'ready') return
@@ -475,17 +460,23 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     },
     command: async (key) => {
       const command = await store.read<Command>(key)
-      if (!command) return
-      if (['accepted', 'executing', 'uncertain'].includes(command.status)) await process_command(command)
+      if (!command || !has_pending_work(key, command)) return
+      // Only a retained envelope can resolve uncertainty; without one the outcome stays uncertain.
+      const lane = command.status === 'uncertain' ? await store.read<Lane>(command.lane_key) : null
+      if (command.status === 'uncertain' && lane?.pending?.command_id !== command.id) return
+      await process_command(command)
     },
   }
   const process_key = (key: string) => processors[key.split(':')[0]!]!(key)
   const renew_sessions = async () => {
-    for (const session of sessions.values()) {
+    for (const [key, session] of sessions) {
       try {
-        if ([session.actor.state().status === 'stopped', session.terminal_server()].some(Boolean)) continue
-        await control.heartbeat(lane_key_for(session.bot), options.actor_id, session.lease.fence, options.lease_ms)
-        await session.actor.check_lease()
+        const live = [session.actor.state().status !== 'stopped', !session.terminal_server()].every(Boolean)
+        // Only this process can reconcile its envelope, so the lease outlives socket authority until it settles.
+        if (!live && !(await store.read<Lane>(key))?.pending) continue
+        await control.heartbeat(key, options.actor_id, session.lease.fence, options.lease_ms)
+        if (!live) continue
+        await Promise.all([session.actor.check_lease(), session.share_status()]) // Another process may have stopped or paused it.
         if (['disconnected', 'failed'].includes(session.actor.state().status)) await session.actor.connect()
       } catch (error) {
         await session.actor.stop()
@@ -503,29 +494,38 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       renewing = null
     }
   }
-  const schedule_key = async (key: string, wait_for_lane = false): Promise<void> => {
-    const record = await store.read<{ lane_key?: string; bot_id?: string; status?: string }>(key)
-    if (!record || !has_pending_work(key, record)) return
-    let dispatch = key
-    if (record.lane_key) {
-      const owner = await store.read<Lane>(record.lane_key)
-      if (lane_owned_elsewhere(owner, options.actor_id, now())) return
-      dispatch = lane_work_key(key, owner)
-    }
-    const lane = record.lane_key ?? record.bot_id ?? key
-    const running = work.get(lane)
+  /** What this process may do next for a lane: its in-flight command first, otherwise a queue pass. */
+  const owned_work = async (lane_key: string) => {
+    const owner = await store.read<Lane>(lane_key)
+    return lane_owned_elsewhere(owner, options.actor_id, now()) ? null : lane_work_key(lane_key, owner)
+  }
+  /** One task per slot. A waiting caller runs again after the task that held the slot. */
+  const enqueue = async (slot: string, dispatch: string | null, again: (() => Promise<void>) | null) => {
+    if (!dispatch) return
+    const running = work.get(slot)
     if (running) {
-      if (!wait_for_lane) return
+      if (!again) return
       await running
-      return schedule_key(key, true)
+      return again()
     }
     if (stopped || work.size >= options.scan_limit) return
     const task = process_key(dispatch)
       .catch(options.report_failure)
       .finally(() => {
-        work.delete(lane)
+        work.delete(slot)
+        void sessions.get(slot)?.share_status()
       })
-    work.set(lane, task)
+    work.set(slot, task)
+  }
+  /** The lane is the signing queue, so the lane is what is woken and scheduled, never one of its runs. */
+  const schedule_lane = async (lane_key: string, wait = false): Promise<void> =>
+    enqueue(lane_key, await owned_work(lane_key), wait ? () => schedule_lane(lane_key, true) : null)
+  const schedule_key = async (key: string, wait = false): Promise<void> => {
+    const record = await store.read<{ lane_key?: string; bot_id?: string; status?: string }>(key)
+    if (retired_run(key, record)) return retire_run(store, key, options.report_failure)
+    if (!record || !has_pending_work(key, record)) return
+    if (record.lane_key) return schedule_lane(record.lane_key, wait)
+    return enqueue(record.bot_id ?? key, key, wait ? () => schedule_key(key, true) : null)
   }
   const run_tick = async () => {
     if (stopped || config.recovery_mode) return

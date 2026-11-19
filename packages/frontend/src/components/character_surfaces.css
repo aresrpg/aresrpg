@@ -8,27 +8,27 @@
   --surface-2: var(--color-surface);
   --surface-3: var(--color-surface-high);
   --steel: var(--color-border);
-  --slate: #2a2a3a;
-  --fg: #e8e4dc;
-  --fg-muted: #9a9488;
-  --fg-faint: #6b7280;
-  --accent: #c8963c;
-  --accent-strong: #f5d0a9;
+  --slate: var(--aui-lifted);
+  --fg: var(--aui-ink);
+  --fg-muted: var(--aui-faint);
+  --fg-faint: var(--aui-faint);
+  --accent: var(--aui-brass);
+  --accent-strong: var(--aui-brass-hi);
   --accent-ink: var(--color-bg);
-  --accent-dim: rgba(200, 150, 60, 0.14);
-  --accent-glow: rgba(200, 150, 60, 0.35);
-  --cyan: #4a9eff;
-  --cyan-strong: #7bb8ff;
-  --cyan-dim: rgba(74, 158, 255, 0.14);
-  --gold: #c8963c;
+  --accent-dim: color-mix(in srgb, var(--aui-brass) 14%, transparent);
+  --accent-glow: color-mix(in srgb, var(--aui-brass) 35%, transparent);
+  --cyan: var(--aui-blue);
+  --cyan-strong: var(--aui-blue);
+  --cyan-dim: color-mix(in srgb, var(--aui-blue) 14%, transparent);
+  --gold: var(--aui-brass);
   --hair: rgba(255, 255, 255, 0.07);
   --hair-strong: rgba(255, 255, 255, 0.16);
   --edge: rgba(255, 255, 255, 0.06);
   --edge-top: rgba(255, 255, 255, 0.1);
-  --glass: rgba(18, 18, 26, 0.55);
-  --glass-hi: rgba(30, 30, 42, 0.6);
+  --glass: color-mix(in srgb, var(--aui-bg) 55%, transparent);
+  --glass-hi: color-mix(in srgb, var(--aui-raised) 60%, transparent);
   --good: #4ade80;
-  --warn: #fbbf24;
+  --warn: var(--aui-brass);
   --bad: #ef4444;
   --danger: #ef4444;
   --r-1: 0;
@@ -60,7 +60,7 @@
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #fad9b3 0%, #d4a145 50%, #f0c474 100%);
+  background: linear-gradient(135deg, var(--aui-brass-hi) 0%, var(--aui-brass) 50%, var(--aui-brass) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -78,7 +78,7 @@
 }
 
 .template-input:focus {
-  border-color: rgba(200, 150, 60, 0.4);
+  border-color: color-mix(in srgb, var(--aui-brass) 40%, transparent);
 }
 
 .stats__prow {
@@ -154,7 +154,7 @@
   align-items: center;
   gap: 12px;
   padding: 11px 15px 11px 13px;
-  border-bottom: 1px solid rgba(200, 150, 60, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-brass) 6%, transparent);
   border-left: 2px solid transparent;
   background: none;
   text-align: left;
@@ -162,7 +162,7 @@
 }
 
 .sb__row:hover {
-  background: rgba(200, 150, 60, 0.04);
+  background: color-mix(in srgb, var(--aui-brass) 4%, transparent);
 }
 
 .sb__row--dense {
@@ -381,7 +381,7 @@
 }
 
 .inv__slot--weapon {
-  background: linear-gradient(150deg, rgba(93, 180, 255, 0.1), rgba(0, 0, 0, 0.26));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--aui-blue) 10%, transparent), rgba(0, 0, 0, 0.26));
 }
 
 .inv__slot.is-filled {

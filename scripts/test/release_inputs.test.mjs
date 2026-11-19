@@ -1,7 +1,8 @@
-import { readFileSync, mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { globSync, readFileSync, mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { test, expect } from 'bun:test'
 
@@ -14,23 +15,25 @@ import {
 } from '../release_inputs.mjs'
 
 test('scene compiler inputs invalidate the frontend artifact', () => {
-  for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
+  for (const path of ['seed/scenes/asset_workshop.json', ...SCENE_COMPILER_FILES])
     expect(classify_release([path])).toEqual({
       frontend: true,
       server: false,
       indexer: false,
       bot: false,
       discord: false,
+      telegram: false,
     })
 })
 
-test('engine is shared by frontend and bot while server/indexer releases stay independent', () => {
+test('engine is shared by frontend, bot and Telegram while server/indexer releases stay independent', () => {
   expect(classify_release(['packages/engine/src/terrain.ts'])).toEqual({
     frontend: true,
     server: false,
     indexer: false,
     bot: true,
     discord: false,
+    telegram: true,
   })
   expect(classify_release(['packages/indexer/src/main.rs'])).toEqual({
     frontend: false,
@@ -38,6 +41,7 @@ test('engine is shared by frontend and bot while server/indexer releases stay in
     indexer: true,
     bot: false,
     discord: false,
+    telegram: false,
   })
   expect(classify_release(['packages/server/src/index.ts'])).toEqual({
     frontend: false,
@@ -45,6 +49,7 @@ test('engine is shared by frontend and bot while server/indexer releases stay in
     indexer: false,
     bot: false,
     discord: false,
+    telegram: false,
   })
 })
 
@@ -60,6 +65,7 @@ test('journal prose and artwork do not invalidate game artifacts', () => {
     indexer: false,
     bot: false,
     discord: false,
+    telegram: false,
   })
   expect(
     fingerprint_runtime_files(
@@ -143,6 +149,7 @@ test('mobile presentation changes invalidate the shared frontend artifact', () =
     indexer: false,
     bot: false,
     discord: false,
+    telegram: false,
   })
 })
 
@@ -153,6 +160,7 @@ test('shared UI changes invalidate browser artifacts and its manifest participat
     indexer: false,
     bot: false,
     discord: false,
+    telegram: false,
   })
   expect(classify_release(['packages/ui/package.json'])).toEqual({
     frontend: true,
@@ -160,6 +168,7 @@ test('shared UI changes invalidate browser artifacts and its manifest participat
     indexer: false,
     bot: true,
     discord: true,
+    telegram: true,
   })
 })
 
@@ -178,6 +187,7 @@ test('Discord artwork, typography, and identity changes rebuild the backend imag
       indexer: false,
       bot: false,
       discord: true,
+      telegram: false,
     })
   }
 })
@@ -189,6 +199,7 @@ test('notification implementation changes rebuild only the independently deploye
     indexer: false,
     bot: false,
     discord: true,
+    telegram: false,
   })
   expect(classify_release(['packages/server/src/suins.ts'])).toEqual({
     frontend: false,
@@ -196,6 +207,7 @@ test('notification implementation changes rebuild only the independently deploye
     indexer: false,
     bot: false,
     discord: true,
+    telegram: false,
   })
 })
 
@@ -334,6 +346,7 @@ test('hosted bot runtime closure invalidates its artifact independently', () => 
     server: false,
     indexer: false,
     discord: false,
+    telegram: false,
     bot: true,
   })
   for (const path of [
@@ -366,6 +379,70 @@ test('hosted bot runtime closure invalidates its artifact independently', () => 
       fingerprint_runtime_files([[path, 'after']], '{}').bot
     )
   }
+})
+
+test('the Telegram companion closure invalidates its artifact independently', () => {
+  expect(classify_release(['packages/telegram/src/index.ts'])).toEqual({
+    frontend: false,
+    server: false,
+    indexer: false,
+    discord: false,
+    bot: false,
+    telegram: true,
+  })
+  for (const path of [
+    'packages/telegram/Dockerfile',
+    'packages/telegram/Dockerfile.dockerignore',
+    'packages/telegram/package.json',
+    'packages/engine/src/world_catalog.ts',
+    'packages/protocol/src/hosted_bot_client.ts',
+    'packages/protocol/src/strategies.ts',
+    'packages/immutable/src/index.ts',
+    'packages/frontend/src/i18n/locales/en.yaml',
+    'packages/frontend/src/i18n/locales/new.yaml',
+    'packages/new-workspace/package.json',
+    'seed/content/strategies.json',
+    'seed/content/mobs.json',
+    'seed/content/worlds.json',
+    'seed/content/structure_packs.json',
+    'seed/structures/types.json',
+    'bun.lock',
+    'patches/dependency.patch',
+  ]) {
+    expect({ path, telegram: classify_release([path]).telegram }).toEqual({ path, telegram: true })
+    expect(fingerprint_runtime_files([[path, 'before']], '{}').telegram).not.toBe(
+      fingerprint_runtime_files([[path, 'after']], '{}').telegram
+    )
+  }
+  // What the image never contains does not rebuild it: its tests and README, browser code, the bot.
+  for (const path of [
+    'packages/telegram/test/connected.test.ts',
+    'packages/telegram/README.md',
+    'packages/frontend/src/App.tsx',
+    'packages/bot/src/index.ts',
+    'packages/sdk/src/client.ts',
+    'packages/fight/src/index.ts',
+    'seed/content/items.json',
+    'pins.json',
+  ])
+    expect({ path, telegram: classify_release([path]).telegram }).toEqual({ path, telegram: false })
+})
+
+test('the bot fingerprint covers every seed JSON its source closure imports', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url))
+  const files = ['bot', 'sdk', 'protocol', 'immutable', 'fight'].flatMap((component) =>
+    globSync(`packages/${component}/src/**/*.ts`, { cwd: root })
+  )
+  const imported = /^(?:import|export) [^;]*? from ['"]([^'"]*seed\/[^'"]+\.json)['"]/gm
+  const assets = new Set(
+    files.flatMap((file) =>
+      [...readFileSync(resolve(root, file), 'utf8').matchAll(imported)].map((match) =>
+        relative(root, resolve(root, dirname(file), match[1]))
+      )
+    )
+  )
+  expect(assets).toContain('seed/content/dungeons.json')
+  for (const asset of assets) expect({ asset, bot: classify_release([asset]).bot }).toEqual({ asset, bot: true })
 })
 
 test('bot fingerprints bind runtime pins but ignore publication ledger changes', async () => {

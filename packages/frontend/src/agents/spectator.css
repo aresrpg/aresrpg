@@ -16,7 +16,7 @@
   display: block;
   padding: 8px 12px;
   background: var(--color-surface-low);
-  color: #ecd19c;
+  color: var(--aui-brass-hi);
   font-size: 12px;
   overflow-wrap: anywhere;
 }

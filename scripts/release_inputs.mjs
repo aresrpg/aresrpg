@@ -8,9 +8,6 @@ import { promisify } from 'node:util'
 export const JOURNAL_CONTENT_PREFIXES = ['packages/journal/content/', 'packages/journal/artwork/']
 
 export const SCENE_COMPILER_FILES = Object.freeze([
-  'scripts/generate_main_menu.mjs',
-  'scripts/generate_adventure.mjs',
-  'scripts/adventure_scene.ts',
   'scripts/encode_voxel_runs.mjs',
   'scripts/generate_asset_workshop.mjs',
   'scripts/bake_schematic.mjs',
@@ -23,9 +20,6 @@ export const SCENE_COMPILER_FILES = Object.freeze([
   'scripts/constraint_layout.mjs',
   'scripts/compile_neighborhood.mjs',
   'scripts/townhouse.mjs',
-  'scripts/main_menu_buildings.mjs',
-  'scripts/main_menu_landmarks.mjs',
-  'scripts/harbor_details.mjs',
 ])
 
 export const RELEASE_INPUTS = Object.freeze({
@@ -59,6 +53,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/frontend/public/branding/helmet-favicon.png',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/bot/package.json',
+    'packages/telegram/package.json',
     'packages/engine/package.json',
     'packages/ui/package.json',
     'packages/discord/package.json',
@@ -110,6 +105,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/mobile/package.json',
     'packages/sdk/package.json',
     'packages/bot/package.json',
+    'packages/telegram/package.json',
     'packages/engine/package.json',
   ]),
   bot: Object.freeze([
@@ -128,8 +124,28 @@ export const RELEASE_INPUTS = Object.freeze({
     'seed/content/pet_wings.json',
     'seed/content/mobs.json',
     'seed/content/spells.json',
+    'seed/content/strategies.json',
+    'seed/content/dungeons.json',
     'seed/portraits/manifest.json',
     'pins.json',
+    'bun.lock',
+    'patches/',
+    'scripts/release_inputs.mjs',
+  ]),
+  // The Telegram companion runs from source: its image definition, its import closure and the
+  // locale documents it reads. Its tests and README are not in the image.
+  telegram: Object.freeze([
+    'packages/telegram/Dockerfile',
+    'packages/telegram/src/',
+    'packages/engine/src/',
+    'packages/protocol/src/',
+    'packages/immutable/src/',
+    'packages/frontend/src/i18n/locales/',
+    'seed/content/worlds.json',
+    'seed/content/structure_packs.json',
+    'seed/content/mobs.json',
+    'seed/content/strategies.json',
+    'seed/structures/',
     'bun.lock',
     'patches/',
     'scripts/release_inputs.mjs',
@@ -137,8 +153,9 @@ export const RELEASE_INPUTS = Object.freeze({
   indexer: Object.freeze(['packages/indexer/', 'scripts/release_inputs.mjs']),
 })
 
+// A dedicated image context admits every workspace manifest for its frozen install.
 export const component_owns_path = (component, path) =>
-  (component === 'bot' && /^packages\/[^/]+\/package\.json$/.test(path)) ||
+  (['bot', 'telegram'].includes(component) && /^packages\/[^/]+\/package\.json$/.test(path)) ||
   RELEASE_INPUTS[component].includes(path) ||
   (!JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
     RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix)))

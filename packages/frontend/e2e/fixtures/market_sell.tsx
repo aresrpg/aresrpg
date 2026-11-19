@@ -4,8 +4,7 @@
 import { useReducer } from 'react'
 import { item_stat_center } from '@aresrpg/immutable'
 
-import { adventure_character } from '../../src/adventure/character.ts'
-import { adventure_character_row, adventure_inventory } from '../../src/adventure/projection.ts'
+import { sample_character, sample_character_row, sample_inventory } from '../../src/demo/sample.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, type AppCopy } from '../../src/i18n/copy.ts'
 import {
@@ -18,7 +17,7 @@ import { MarketSourceContext } from '../../src/marketplace/MarketSource.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
 import { item_listing } from '../../src/marketplace/useMarketSell.ts'
 
-const inventory = adventure_inventory(
+const inventory = sample_inventory(
   ['hat', 'resource', 'consumable', 'rune', 'key'].map((category) =>
     content_catalog.items.find((item) => item.category === category)!
   )
@@ -29,7 +28,7 @@ const inventory = adventure_inventory(
   stats: index === 0 ? { strength: item_stat_center + 27 } : row.stats,
 }))
 const character = {
-  ...adventure_character_row(adventure_character()),
+  ...sample_character_row(sample_character()),
   id: '0xmarket-hero',
   name: 'Market Hero',
   level: 30,
@@ -84,7 +83,7 @@ export const SellFixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         market,
         dispatch,
         account: { inventory, characters, wallet: { address: 'seller' }, sui_balance_mist: 10000000000n },
-        craft_session: { character: adventure_character_row(adventure_character()), inventory },
+        craft_session: { character: sample_character_row(sample_character()), inventory },
       }}
     >
       <div className="aui-market-port flex h-full min-h-0 flex-1" data-floor-item={market.floor?.item_type ?? ''}>

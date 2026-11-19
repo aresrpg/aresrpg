@@ -100,19 +100,19 @@ export const public_bot = (bot: Bot) => ({
   policy_revision: bot.policy.revision,
   status: bot.status,
 })
+/** A fault of the grant itself. Obsolete bounded consent must never silently gain the new authority semantics. */
+const grant_fault = (config: BotConfig, grant: Grant, now: number) =>
+  [
+    Object.hasOwn(grant, 'budget_mist'),
+    grant.revoked,
+    grant.authority_generation !== config.authority_generation,
+    grant.family && grant.family.expires_at <= now,
+  ].some(Boolean)
 export const assert_live_grant = (config: BotConfig, grant: Grant, bot: Bot | null, now = Date.now()) => {
-  // Obsolete bounded consent must never silently gain the new authority semantics.
-  if (
-    [
-      Object.hasOwn(grant, 'budget_mist'),
-      config.recovery_mode,
-      grant.revoked,
-      grant.authority_generation !== config.authority_generation,
-    ].some(Boolean)
-  )
-    throw new Error('invalid_token')
-  if (grant.family && grant.family.expires_at <= now) throw new Error('invalid_token')
-  if (!bot) throw new Error('invalid_token')
+  // Recovery is a temporary state of the whole service and says nothing about this grant: a client
+  // keeps its grant and retries later. Only a fault of the grant itself asks for a new consent.
+  if (config.recovery_mode) throw new Error('service_unavailable')
+  if (grant_fault(config, grant, now) || !bot) throw new Error('invalid_token')
   const live = [
     bot.id,
     bot.status,

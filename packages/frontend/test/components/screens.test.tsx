@@ -35,7 +35,7 @@ test('each modal exposes its own initial surface', async () => {
   expect(create).toContain('maxLength="19"')
   expect(copy).not.toHaveProperty('create_unavailable')
   expect(create).not.toContain('next published game package')
-  expect(create).toContain('1 SUI')
+  expect(create).toContain('10 SUI')
   expect(create).toContain(copy.character_price)
   expect(create).toContain('data-class-spells-link=""')
   expect(create).toContain('See the spells for that class')

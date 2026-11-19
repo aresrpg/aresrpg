@@ -30,14 +30,12 @@ test('staking combines every position into one stake and one accrued-rewards sec
   )
   expect(html).not.toContain('0xstake-one')
   expect(html).not.toContain('0xstake-two')
-  expect(html).toContain('4 KARES')
-  expect(html).toContain('6 SUI')
-  expect(html).toContain('staking-claim')
+  expect(html).toContain('<b>4</b> <small>KARES</small>')
+  expect(html).toContain('<b>6</b> <small>SUI</small>')
+  expect(html).toContain('aui-reward-claim')
   expect(occurrences(html, copy.kares_page.claim_rewards)).toBe(1)
   expect(occurrences(html, copy.kares_page.withdraw)).toBe(1)
-  expect(html).toContain('>30 <small')
-  expect(html).toContain('>1.500</strong>')
-  expect(html).toContain('>0.750</strong>')
+  expect(html).toContain('>30</strong>')
   expect(html).not.toContain(copy.kares_page.rewards_note)
   expect(html).not.toContain(copy.kares_page.combat_rewards)
   expect(html).not.toContain('<select')
@@ -163,7 +161,10 @@ test('staking always shows both panels and keeps external signing separate', asy
   expect(hidden).toContain(copy.kares_page.external_wallet)
   expect(hidden).toContain(copy.kares_page.staking_revenue)
   expect(hidden).toContain(copy.kares_page.daily_estimate_note)
-  expect(occurrences(hidden, 'data-staking-account=')).toBe(2)
+  // One desk shows at a time; an unconnected external wallet is a line that cannot be selected.
+  expect(occurrences(hidden, 'data-staking-account=')).toBe(1)
+  expect(occurrences(hidden, 'aui-stake-row-pick')).toBe(2)
+  expect(hidden).toContain(copy.kares_page.external_wallet_hint)
 
   const external = {
     state: finance_state({ ...account.state.snapshot!, address: '0xexternal' }),
@@ -179,7 +180,9 @@ test('staking always shows both panels and keeps external signing separate', asy
     />
   )
   expect(shown).toContain('data-staking-account="0xparticipant"')
-  expect(shown).toContain('data-staking-account="0xexternal"')
+  expect(shown).not.toContain('data-staking-account="0xexternal"')
+  expect(shown).toContain('<b>1.500</b>')
+  expect(shown).toContain('<b>0.750</b>')
   expect(shown).toContain(copy.kares_page.external_wallet)
   expect(occurrences(shown, copy.kares_page.daily_kares)).toBe(2)
   expect(occurrences(shown, copy.kares_page.daily_sui)).toBe(2)
@@ -193,7 +196,7 @@ test('staking always shows both panels and keeps external signing separate', asy
       external={account}
     />
   )
-  expect(occurrences(duplicate, 'data-staking-account=')).toBe(2)
+  expect(occurrences(duplicate, 'data-staking-account=')).toBe(1)
   expect(duplicate).toContain(copy.kares_page.same_account)
 })
 

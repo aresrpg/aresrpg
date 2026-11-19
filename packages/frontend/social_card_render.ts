@@ -16,18 +16,19 @@ const PROBE = 64
 const TEXT_X = 540
 const TEXT_WIDTH = SOCIAL_CARD_WIDTH - PAD - TEXT_X
 const TITLE_SIZES = Object.freeze([52, 46, 40, 34])
-const PALETTE_NAMES = Object.freeze([
-  'bg',
-  'surface',
-  'surface-raised',
-  'border',
-  'gold',
-  'gold-light',
-  'text',
-  'muted',
-])
+// Card colour name -> the `--aui-*` token in packages/ui/src/base.css that owns it.
+const PALETTE_TOKENS = Object.freeze({
+  bg: 'bg',
+  surface: 'surface',
+  'surface-raised': 'lifted',
+  border: 'high',
+  gold: 'brass',
+  'gold-light': 'brass-hi',
+  text: 'ink',
+  muted: 'muted',
+})
 
-type Palette = Readonly<Record<(typeof PALETTE_NAMES)[number], string>>
+type Palette = Readonly<Record<keyof typeof PALETTE_TOKENS, string>>
 type Type = Readonly<{ size: number; weight: number; tracking?: number }>
 export type EntityCard = Readonly<{
   accent: string
@@ -136,9 +137,9 @@ export const create_social_renderer = async ({
 }: Readonly<{ font_path: string; logo_path: string; tokens_path: string }>) => {
   const tokens = await readFile(tokens_path, 'utf8')
   const palette = Object.fromEntries(
-    PALETTE_NAMES.map((name) => {
-      const value = tokens.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]+);`, 'i'))?.[1]
-      if (!value) throw new Error(`Missing frontend color token: ${name}`)
+    Object.entries(PALETTE_TOKENS).map(([name, token]) => {
+      const value = tokens.match(new RegExp(`--aui-${token}:\\s*(#[0-9a-f]+);`, 'i'))?.[1]
+      if (!value) throw new Error(`Missing UI color token: ${token}`)
       return [name, value]
     })
   ) as Palette

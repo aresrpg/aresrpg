@@ -5,9 +5,7 @@ import posthog, { type CaptureResult } from 'posthog-js'
 
 import { env } from './env.ts'
 import type { AnalyticsProperties } from './analytics/context.ts'
-import { REPLAY_CONFIG, replay_properties } from './analytics/replay.ts'
 
-export const DEMO_VERSION = 4
 export const ANALYTICS_VERSION = 2
 export type AnalyticsEvent = Readonly<{ name: string; properties?: AnalyticsProperties }>
 export type AnalyticsCapture = (event: string, properties?: AnalyticsProperties) => void
@@ -53,7 +51,6 @@ const SAFE_PROPERTIES = new Set([
   'outcome',
   'method',
   'surface',
-  'demo_version',
   'duration_ms',
   'stage',
   'onboarding_step',
@@ -106,7 +103,7 @@ export const analytics_event = (capture: Readonly<CaptureResult> | null): Captur
     event,
     ...(timestamp ? { timestamp } : {}),
     ...analytics_properties({ $set, $set_once }),
-    properties: event === '$snapshot' ? replay_properties(properties) : analytics_properties(properties),
+    properties: analytics_properties(properties),
   }
 }
 
@@ -117,12 +114,11 @@ export const analytics_available = (): boolean =>
   analytics_enabled(import.meta.env?.MODE ?? 'test', globalThis.location?.pathname ?? '/', env.posthog_project_token)
 
 const shared_properties = (): AnalyticsProperties => ({
-  surface: globalThis.location?.pathname === '/play-demo' ? 'demo' : 'game',
+  surface: 'game',
   onboarding_step: 'boot',
   authenticated: false,
   ...context_source.read(),
   network: env.network,
-  demo_version: DEMO_VERSION,
   analytics_version: ANALYTICS_VERSION,
   release: import.meta.env?.VITE_RELEASE ?? 'local',
   deployment: import.meta.env?.VITE_DEPLOY_ENV ?? 'local',
@@ -178,7 +174,6 @@ export const init_analytics = (): void => {
     enable_recording_console_log: false,
     capture_exceptions: false,
     disable_session_recording: true,
-    session_recording: REPLAY_CONFIG,
     disable_surveys: true,
     disable_external_dependency_loading: true,
     advanced_disable_feature_flags: true,
@@ -193,16 +188,5 @@ export const init_analytics = (): void => {
   })
   // A restored login will identify again. Pre-login events must not inherit a previous account.
   if (posthog.get_property('$user_id')) posthog.reset()
-  const demo = globalThis.location.pathname.replace(/\/+$/, '') === '/play-demo'
-  capture_analytics('site_visited', { surface: demo ? 'demo' : 'game' })
-  if (demo) capture_analytics('demo_requested')
-}
-
-/** Boot failures occur before the adventure observer can mount; never send raw exception text. */
-export const capture_demo_boot_failure = (stage: 'entry' | 'boot'): void => {
-  if (globalThis.location?.pathname.replace(/\/+$/, '') !== '/play-demo') return
-  capture_analytics('demo_load_failed', {
-    stage,
-    duration_ms: Math.round(performance.now()),
-  })
+  capture_analytics('site_visited', { surface: 'game' })
 }

@@ -8,11 +8,11 @@ import type { Bot, Grant } from '../src/model.ts'
 import type { ControlStore } from '../src/store.ts'
 import { hash_secret, random_secret } from '../src/security.ts'
 import { empty_lane, lane_key_for, type Command } from '../src/control.ts'
+import { create_behavior_control } from '../src/behavior_control.ts'
 
 import { create_http_fixture } from './helpers/http_fixture.ts'
 import { fixture_bot, memory_store, put } from './helpers/control_fixture.ts'
-import { plan } from './helpers/profession_fixture.ts'
-import { stored_profession } from './helpers/legacy_run_fixture.ts'
+import { character, resource } from './helpers/profession_fixture.ts'
 
 const other_google = toZkLoginPublicIdentifier(2n, 'https://accounts.google.com', { legacyAddress: false })
 const other_bot: Bot = {
@@ -152,7 +152,7 @@ const call = (f: ReturnType<typeof create_http_fixture>, token: string, name: st
     token
   )
 
-test('HTTP tokens and MCP references cannot cross accounts or grants, including same-wallet connectors', async () => {
+test('HTTP tokens and MCP references cannot cross accounts, and same-wallet connectors share only hero runs', async () => {
   const { store, alice, bob } = await accounts()
   const sibling = await browser_session(store, fixture_bot)
   const a = await alice.tokens()
@@ -190,22 +190,31 @@ test('HTTP tokens and MCP references cannot cross accounts or grants, including 
     observation_revision: 1,
   })
   const grant = (await store.read<Grant>(`grant:${observed.result.structuredContent.grant_id}`))!
-  const run = await stored_profession(store, grant, { ...plan, deadline_ms: Date.now() + 60000 }, Date.now())
-  expect(run.id).toBeTruthy()
-  for (const token of [b.access_token, c.access_token]) {
-    expect((await call(bob, token, 'bot_profession_status', { run_id: run.id })).result.structuredContent.error).toBe(
-      'profession_run_not_found'
-    )
-    expect(
-      (
-        await call(bob, token, 'bot_resume_profession', {
-          run_id: run.id,
-          decision_revision: 1,
-          observation_revision: 1,
-        })
-      ).result.isError
-    ).toBe(true)
-  }
+  const run = await create_behavior_control(store, alice.config, Date.now).start_behavior(grant, {
+    idempotency_key: 'alice-hero',
+    decision_revision: 0,
+    observation_revision: 1,
+    script: {
+      version: '1',
+      objective: { title: 'Gather' },
+      tree: {
+        type: 'action',
+        action: { type: 'gather', character_id: character.id, item_type: resource.item_type, order: 'nearest' },
+      },
+    },
+  })
+  expect(run.character_id).toBe(character.id)
+  const hero = { character_id: character.id }
+  expect((await call(alice, a.access_token, 'bot_behavior_status', hero)).result.structuredContent.id).toBe(run.id)
+  // Another account never reaches it; a second connector of the same wallet shares its owner's run.
+  expect((await call(bob, b.access_token, 'bot_behavior_status', hero)).result.structuredContent.error).toBe(
+    'behavior_run_not_found'
+  )
+  expect((await call(bob, b.access_token, 'bot_stop_behavior', hero)).result.isError).toBe(true)
+  expect((await call(sibling, c.access_token, 'bot_behavior_status', hero)).result.structuredContent.id).toBe(run.id)
+  expect((await call(sibling, c.access_token, 'bot_stop_behavior', hero)).result.structuredContent.status).toBe(
+    'stopped'
+  )
   expect(
     (await call(alice, a.access_token, 'bot_pause', { bot_id: other_bot.id })).result.structuredContent.error
   ).toBe('invalid_argument')

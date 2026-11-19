@@ -120,7 +120,6 @@ test('remote analytics is absent from development, tests, editor and OAuth callb
   for (const mode of ['development', 'test']) expect(analytics_enabled(mode, '/', 'public')).toBe(false)
   for (const path of ['/enoki', '/enoki/', '/demo']) expect(analytics_enabled('production', path, 'public')).toBe(false)
   expect(analytics_enabled('production', '/', '')).toBe(false)
-  expect(analytics_enabled('production', '/play-demo', 'public')).toBe(true)
 })
 
 test('outbound allowlist removes bearer URLs, nested person data, names and wallet addresses', () => {
@@ -168,44 +167,6 @@ test('failed creation and stale account completions cannot become activation', (
   expect(app.store.getState()).toBe(disconnected)
 })
 
-test('demo fights and duplicate state updates produce only real milestone changes', () => {
-  const app = create_app()
-  const initial = app.store.getState()
-  app.dispatch({ type: 'adventure/entered' })
-  const entered = app.store.getState()
-  expect(analytics_events(entered, initial)).toEqual([
-    { name: 'demo_started' },
-    { name: 'demo_fight_started', properties: { encounter: 1 } },
-  ])
-  app.dispatch({ type: 'adventure/entered' })
-  expect(analytics_events(app.store.getState(), entered)).toEqual([])
-  app.dispatch({ type: 'adventure/challenge' })
-  expect(analytics_events(app.store.getState(), entered)).toEqual([])
-})
-
-test('demo combat starts only when placement advances into a real turn', () => {
-  const app = create_app()
-  const stop = app.observe(['adventure', 'fight'])
-  try {
-    app.dispatch({ type: 'adventure/entered' })
-    const exploring = app.store.getState()
-    app.dispatch({ type: 'adventure/challenge' })
-    const placement = app.store.getState()
-    expect(analytics_events(placement, exploring).map(({ name }) => name)).not.toContain('demo_combat_started')
-    app.dispatch({ type: 'fight/input', fight: null, origin: 'local', input: { type: 'ready', fighter: 0n } })
-    const fighting = app.store.getState()
-    expect(analytics_events(fighting, placement)).toContainEqual({
-      name: 'demo_combat_started',
-      properties: { encounter: 1 },
-    })
-    expect(analytics_events(fighting, fighting)).toEqual([])
-    expect(analytics_events({ ...fighting, fight: { ...fighting.fight } }, fighting)).toEqual([])
-    expect(analytics_events(fighting, { ...placement, fight: { ...placement.fight, checkpoint: null } })).toEqual([])
-  } finally {
-    stop()
-  }
-})
-
 test('restored authentication completes login without inventing an interactive start', () => {
   const app = create_app()
   const initial = app.store.getState()
@@ -238,46 +199,6 @@ test('analytics proxy routes precede the app fallback and keep SDK assets on the
   expect(referrer.value).toBe('strict-origin')
 })
 
-test('tutorial quests complete only after all rewards are confirmed', async () => {
-  const { create_fight_state } = await import('@aresrpg/fight')
-  const { adventure_fight_setup } = await import('../src/adventure/fight_setup.ts')
-  const { natural_slot_for, stage_equip } = await import('../src/characters/equipment_stage.ts')
-  const { ADVENTURE_INVENTORY } = await import('../src/adventure/projection.ts')
-  const app = create_app()
-  app.dispatch({ type: 'adventure/entered' })
-  app.dispatch({ type: 'adventure/challenge' })
-  const fighting = app.store.getState()
-  const checkpoint = create_fight_state(adventure_fight_setup(fighting.adventure.character!, 0))
-  app.dispatch({
-    type: 'adventure/settled',
-    checkpoint: { ...checkpoint, contract: { ...checkpoint.contract, ended: true, winner: 0n, ended_ms: 10_000n } },
-  })
-  const rewarded = app.store.getState()
-  expect(analytics_events(rewarded, fighting)).toContainEqual({
-    name: 'demo_fight_completed',
-    properties: { encounter: 1, outcome: 'victory' },
-  })
-  expect(analytics_events(rewarded, fighting)).toContainEqual({
-    name: 'demo_quest_completed',
-    properties: { quest_id: 'goblins' },
-  })
-  const hat = ADVENTURE_INVENTORY.find(({ category }) => category === 'hat')!
-  app.dispatch({ type: 'adventure/equipment_changed', equipment: stage_equip({}, hat, 'hat') })
-  const equipped = app.store.getState()
-  expect(analytics_events(equipped, rewarded)).toEqual([])
-  const equipment = ADVENTURE_INVENTORY.reduce(
-    (equipment, item) => stage_equip(equipment, item, natural_slot_for(item, equipment)!),
-    {}
-  )
-  app.dispatch({ type: 'adventure/equipment_changed', equipment })
-  const confirmed = app.store.getState()
-  expect(analytics_events(confirmed, equipped)).toEqual([
-    { name: 'demo_quest_completed', properties: { quest_id: 'equip' } },
-  ])
-  app.dispatch({ type: 'adventure/equipment_changed', equipment })
-  expect(analytics_events(app.store.getState(), confirmed)).toEqual([])
-})
-
 test('loading saved journey progress never replays quest completion analytics', () => {
   const app = connected_app()
   const before = app.store.getState()
@@ -303,23 +224,6 @@ test('the funded onboarding screen and the actual creation form are different mi
   expect(analytics_events(welcome, before)).toContainEqual({ name: 'character_creation_welcome_opened' })
   app.dispatch({ type: 'dialog/open', dialog: 'character_create' })
   expect(analytics_events(app.store.getState(), welcome)).toContainEqual({ name: 'character_creation_opened' })
-})
-
-test('each of the three tutorial fights keeps its encounter number on start and completion', () => {
-  const app = create_app()
-  app.dispatch({ type: 'adventure/entered' })
-  const base = app.store.getState()
-  for (const encounter of [0, 1, 2]) {
-    const before = { ...base, adventure: { ...base.adventure, encounter, phase: 'explore' as const } }
-    const started = { ...before, adventure: { ...before.adventure, phase: 'fighting' as const } }
-    const completed = { ...started, adventure: { ...started.adventure, phase: 'reward' as const } }
-    expect(analytics_events(started, before).filter(({ name }) => name === 'demo_fight_started')).toEqual([
-      { name: 'demo_fight_started', properties: { encounter: encounter + 1 } },
-    ])
-    expect(analytics_events(completed, started).filter(({ name }) => name === 'demo_fight_completed')).toEqual([
-      { name: 'demo_fight_completed', properties: { encounter: encounter + 1, outcome: 'defeat' } },
-    ])
-  }
 })
 
 test('the new property allowlist retains only bounded onboarding measurements', () => {

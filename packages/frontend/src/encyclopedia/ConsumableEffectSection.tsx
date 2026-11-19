@@ -21,7 +21,7 @@ export const ConsumableEffectSection = ({
   if (!consumable) return null
   return (
     <section className="flex flex-col gap-2" data-consumable-effect="">
-      <span className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">{text('effects')}</span>
+      <span className="text-[9px] font-semibold tracking-[0.25em] text-faint uppercase">{text('effects')}</span>
       <div className="border-l-2 border-l-[#ff66b2]/40 bg-white/3 px-3 py-2 text-[10px] tracking-wide text-[#ff66b2]">
         {consumable_effect_text(consumable, text)}
       </div>

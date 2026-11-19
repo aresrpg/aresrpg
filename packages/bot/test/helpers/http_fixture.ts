@@ -12,12 +12,19 @@ import { fixture_config, memory_store } from './control_fixture.ts'
 export const create_http_fixture = (
   store: ControlStore = memory_store(),
   config: BotConfig = fixture_config,
-  observe?: Observe
+  observe?: Observe,
+  door: Partial<Pick<Parameters<typeof create_ingress>[0], 'visitor_limiter' | 'owner_limiter' | 'join_waitlist'>> = {}
 ) => {
+  const waitlisted: string[] = []
   const ingress = create_ingress({
     store,
     config,
     observe,
+    join_waitlist: async (owner) => {
+      // eslint-disable-next-line fp-law/no-mutating-methods -- The fixture owns this recorder for assertions.
+      waitlisted.push(owner)
+    },
+    ...door,
     verify_owner: async (challenge, signature) => {
       if (signature !== `fixture:${hash_secret(challenge.message)}`) throw new Error('invalid_owner_signature')
     },
@@ -61,6 +68,7 @@ export const create_http_fixture = (
     store,
     config,
     ingress,
+    waitlisted,
     request,
     json,
     cookie,

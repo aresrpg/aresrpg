@@ -19,5 +19,3 @@ The JSON catalog is the runtime geometry source. Original `.schem` files are mig
 - `thebes_castle.recipe.json` authors the full fortress: great keep, offset donjon, chapel and solar wings, octagonal towers, curtain walks, bridge gate, galleries, courts and stair flights. Repeated vertical runs share schematic assets; the previous native castle builders are removed.
 
 - `thebes_castle_ward.recipe.json` replaces the former right-bank house grid with 25 varied hillside homes, the shared workshop manor, two roofed outposts and connected ramparts. Its castle-side passage and bridge approach use explicit-air carving and supported stone paths.
-
-- `main_menu_houses.recipe.json` stores the harbor’s newer townhouse variants. Main-menu placements also reference the original workshop `house_architecture` directly. The menu compiler adds winter materials and supported slab snow caps; it does not retain the former wing-and-diagonal-beam house generator.

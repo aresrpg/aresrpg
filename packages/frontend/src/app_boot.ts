@@ -4,10 +4,11 @@
 import { inject } from '@vercel/analytics'
 import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insights'
 
-import { capture_demo_boot_failure, init_analytics } from './analytics.ts'
+import { init_analytics } from './analytics.ts'
 import { init_reporting, report_error } from './reporting.ts'
 import { is_gift_entry, saved_gift_route } from './airdrop/gift_intent.ts'
 import { show_boot_failure } from './boot_loading.ts'
+import { is_docs_path } from './docs/routes.ts'
 
 import './tailwind.css'
 
@@ -32,6 +33,9 @@ const boot = async (): Promise<void> => {
   if (location.pathname.replace(/\/+$/, '') === '/allocation') {
     const { boot_allocation } = await import('./allocation/entry.tsx')
     await boot_allocation()
+  } else if (is_docs_path(location.pathname)) {
+    const { boot_docs } = await import('./docs/entry.tsx')
+    await boot_docs()
   } else if (is_gift_entry(location.pathname, location.hash, saved_gift_route())) {
     const { boot_gift } = await import('./airdrop/gift_entry.tsx')
     await boot_gift()
@@ -48,7 +52,6 @@ export const boot_app = async (): Promise<void> => {
   try {
     await boot()
   } catch (error) {
-    capture_demo_boot_failure('entry')
     report_error(error, { area: 'entry' })
     show_boot_failure()
   }

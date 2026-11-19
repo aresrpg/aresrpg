@@ -29,6 +29,9 @@ const auth_session = (address = '0xowner'): AuthSession =>
       managed: false,
       set_default: unsupported,
       snapshot: async () => ({ default_name: null, names: [] }),
+      review_parent: async () => {
+        throw new Error('not available')
+      },
       validate_parent: async () => {
         throw new Error('Not used')
       },

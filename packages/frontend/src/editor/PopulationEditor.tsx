@@ -34,9 +34,9 @@ const MembershipChips = ({
         className={`h-6 px-2 text-[7px] tracking-[0.06em] uppercase ${
           selected.includes(name)
             ? kind === 'cities'
-              ? 'bg-[#c8963c]/12 text-[#e0b86b]'
-              : 'bg-[#4a9eff]/12 text-[#8fc4ff]'
-            : 'text-[#565d68] hover:text-[#9ba2ad]'
+              ? 'bg-gold/12 text-gold'
+              : 'bg-cyan/12 text-cyan'
+            : 'text-faint hover:text-muted'
         }`}
         key={name}
         onClick={() =>
@@ -68,7 +68,7 @@ const InlineNumber = ({
     <input
       aria-label={label}
       autoFocus
-      className="h-7 w-16 border border-white/10 bg-bg px-1.5 text-right text-[8px] tabular-nums outline-none focus:border-[#4a9eff]/60"
+      className="h-7 w-16 border border-white/10 bg-bg px-1.5 text-right text-[8px] tabular-nums outline-none focus:border-cyan/60"
       max={maximum}
       min={minimum}
       onBlur={() => set_editing(false)}
@@ -79,7 +79,7 @@ const InlineNumber = ({
   ) : (
     <button
       aria-label={`Edit ${label}`}
-      className="h-7 cursor-text px-2 text-[8px] tabular-nums text-[#858c97] hover:bg-white/[0.035] hover:text-[#d8d3ca]"
+      className="h-7 cursor-text px-2 text-[8px] tabular-nums text-faint hover:bg-white/[0.035] hover:text-soft"
       onClick={() => set_editing(true)}
       type="button"
     >
@@ -110,10 +110,10 @@ const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationPro
     <section>
       <header className="flex items-end justify-between border-b border-white/8 pb-2">
         <div>
-          <h3 className="text-[9px] tracking-[0.15em] text-[#c8963c] uppercase">Mobs</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">Spawn weight, biome and city membership.</p>
+          <h3 className="text-[9px] tracking-[0.15em] text-gold uppercase">Mobs</h3>
+          <p className="mt-1 text-[7px] text-faint">Spawn weight, biome and city membership.</p>
         </div>
-        <span className="text-[7px] tabular-nums text-[#555b66]">{rows.length}</span>
+        <span className="text-[7px] tabular-nums text-faint">{rows.length}</span>
       </header>
       {rows.map((value, index) => {
         const row = as_record(value)
@@ -122,7 +122,7 @@ const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationPro
         return (
           <div className="border-b border-white/7 py-1" data-population-row="mob" key={`${mob_type}-${index}`}>
             <div className="flex min-w-0 items-center">
-              <span className="w-6 shrink-0 text-center text-[7px] tabular-nums text-[#414751]">{index + 1}</span>
+              <span className="w-6 shrink-0 text-center text-[7px] tabular-nums text-steel">{index + 1}</span>
               <MobReferencePicker
                 class_name="flex-1 !h-11 !border-0 !bg-transparent !px-1 hover:!border-0"
                 excluded={new Set(used.filter((candidate) => candidate !== mob_type))}
@@ -147,7 +147,7 @@ const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationPro
               </button>
             </div>
             <div className="flex items-start gap-2 pl-7 pb-1">
-              <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#4f5560] uppercase">Biomes</span>
+              <span className="pt-1.5 text-[6px] tracking-[0.1em] text-steel uppercase">Biomes</span>
               <MembershipChips
                 change={(next) => change(['mobs', index, 'biomes'], next)}
                 kind="biomes"
@@ -157,7 +157,7 @@ const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationPro
             </div>
             {city_names.length > 0 && (
               <div className="flex items-start gap-2 pl-7 pb-1">
-                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#665a45] uppercase">Cities</span>
+                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-gold-dark uppercase">Cities</span>
                 <MembershipChips
                   change={(next) => change(['mobs', index, 'cities'], next)}
                   kind="cities"
@@ -170,7 +170,7 @@ const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationPro
         )
       })}
       <div className="flex items-center border-b border-dashed border-white/8" data-population-placeholder="mob">
-        <span className="w-6 shrink-0 text-center text-[7px] text-[#414751]">{rows.length + 1}</span>
+        <span className="w-6 shrink-0 text-center text-[7px] text-steel">{rows.length + 1}</span>
         <MobReferencePicker
           class_name="flex-1 !h-11 !border-0 !bg-transparent !px-1 hover:!border-0"
           empty_sublabel="Choose once to append"
@@ -196,9 +196,9 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
       <header className="flex items-end justify-between border-b border-white/8 pb-2">
         <div>
           <h3 className="text-[9px] tracking-[0.15em] text-[#65c993] uppercase">Resources</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">Assign immutable gatherables to biome and city pools.</p>
+          <p className="mt-1 text-[7px] text-faint">Assign immutable gatherables to biome and city pools.</p>
         </div>
-        <span className="text-[7px] tabular-nums text-[#555b66]">{rows.length}</span>
+        <span className="text-[7px] tabular-nums text-faint">{rows.length}</span>
       </header>
       {rows.map((value, index) => {
         const row = as_record(value)
@@ -208,7 +208,7 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
         return (
           <div className="border-b border-white/7 py-1" data-population-row="resource" key={`${item_type}-${index}`}>
             <div className="flex min-w-0 items-center">
-              <span className="w-6 shrink-0 text-center text-[7px] tabular-nums text-[#414751]">{index + 1}</span>
+              <span className="w-6 shrink-0 text-center text-[7px] tabular-nums text-steel">{index + 1}</span>
               <ItemReferencePicker
                 categories={RESOURCE_CATEGORIES}
                 class_name="flex-1 !h-11 !border-0 !bg-transparent !px-1 hover:!border-0"
@@ -220,7 +220,7 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
               />
               <span
                 aria-label="Derived resource identity"
-                className="shrink-0 px-2 text-[7px] tracking-[0.06em] text-[#69717c]"
+                className="shrink-0 px-2 text-[7px] tracking-[0.06em] text-faint"
               >
                 {gatherable ? `${gatherable.job} · T${gatherable.tier}` : 'UNKNOWN'}
               </span>
@@ -234,7 +234,7 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
               </button>
             </div>
             <div className="flex items-start gap-2 pl-7 pb-1">
-              <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#4f5560] uppercase">Biomes</span>
+              <span className="pt-1.5 text-[6px] tracking-[0.1em] text-steel uppercase">Biomes</span>
               <MembershipChips
                 change={(next) => change(['resources', index, 'biomes'], next)}
                 kind="biomes"
@@ -244,7 +244,7 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
             </div>
             {city_names.length > 0 && (
               <div className="flex items-start gap-2 pl-7 pb-1">
-                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#665a45] uppercase">Cities</span>
+                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-gold-dark uppercase">Cities</span>
                 <MembershipChips
                   change={(next) => change(['resources', index, 'cities'], next)}
                   kind="cities"
@@ -257,7 +257,7 @@ const ResourcesPopulation = ({ rows, biome_names, city_names, change }: Populati
         )
       })}
       <div className="flex items-center border-b border-dashed border-white/8" data-population-placeholder="resource">
-        <span className="w-6 shrink-0 text-center text-[7px] text-[#414751]">{rows.length + 1}</span>
+        <span className="w-6 shrink-0 text-center text-[7px] text-steel">{rows.length + 1}</span>
         <ItemReferencePicker
           categories={RESOURCE_CATEGORIES}
           class_name="flex-1 !h-11 !border-0 !bg-transparent !px-1 hover:!border-0"

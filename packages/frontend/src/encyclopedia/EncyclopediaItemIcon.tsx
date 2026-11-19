@@ -9,7 +9,7 @@ export const EncyclopediaItemIcon = ({ item_type, label }: Readonly<{ item_type:
     <img alt="" className="size-8 shrink-0 object-contain" data-encyclopedia-item-icon={item_type} src={icon} />
   ) : (
     <span
-      className="grid size-8 shrink-0 place-items-center border border-white/8 bg-white/3 text-[9px] text-[#c8963c]"
+      className="grid size-8 shrink-0 place-items-center border border-white/8 bg-white/3 text-[9px] text-gold"
       data-encyclopedia-item-icon={item_type}
     >
       {label.slice(0, 1).toUpperCase()}

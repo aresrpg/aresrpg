@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
+import { remember_signed_in } from '../support/landing_session.ts'
+
 const SOUND_KEY = 'aresrpg.landing.music_enabled'
 const game_chunk = /\/assets\/game_entry-[^/]+\.js$/
 test.use({ serviceWorkers: 'block', launchOptions: { args: ['--autoplay-policy=document-user-activation-required'] } })
@@ -24,6 +26,7 @@ for (const width of [1280, 390]) {
         return play.call(this)
       }
     })
+    await remember_signed_in(page)
     await page.goto('/')
     await expect(page.locator('.landing')).toHaveAttribute('data-motion', /.+/)
     const sound = page.locator('[data-landing-sound]')
@@ -43,8 +46,6 @@ for (const width of [1280, 390]) {
       expect(Math.abs(dock!.y + dock!.height / 2 - box!.y - box!.height / 2)).toBeLessThan(1)
       const link = await page.locator('.topnav a').first().boundingBox()
       expect(Math.abs(dock!.y + dock!.height / 2 - link!.y - link!.height / 2)).toBeLessThan(1)
-    } else {
-      expect(dock!.y + dock!.height).toBeLessThan(box!.y)
     }
     await page.locator('.hero h1').click()
     await expect(player).toHaveJSProperty('paused', false)
@@ -74,6 +75,7 @@ for (const width of [1280, 390]) {
         body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Game ready"))',
       })
     })
+    await expect(page.locator('.landing-account[data-signed-in]')).toBeVisible()
     await page.getByRole('button', { name: 'Play', exact: true }).first().click()
     try {
       await expect(page.locator('[data-boot-loading]')).toBeVisible()

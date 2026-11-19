@@ -125,19 +125,19 @@ export const TerrainPreview = ({
         onWheel={(event) => preview.current?.zoom(event.deltaY)}
         ref={canvas}
       />
-      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-faint uppercase">
         Left-drag orbit · Right-drag pan · Scroll zoom
       </span>
       <label className="absolute bottom-3 left-3 w-64 border border-white/10 bg-bg/88 px-3 py-2 backdrop-blur-sm">
         <span className="mb-1.5 flex items-center justify-between text-[7px] tracking-[0.1em] uppercase">
-          <span className="text-[#858b96]">Exact voxel field</span>
-          <strong className="tabular-nums text-[#efbd45]">
+          <span className="text-faint">Exact voxel field</span>
+          <strong className="tabular-nums text-gold">
             {radius} radius · {radius * 2 + 1}²
           </strong>
         </span>
         <input
           aria-label="Exact voxel preview radius"
-          className="h-3 w-full cursor-ew-resize accent-[#c8963c]"
+          className="h-3 w-full cursor-ew-resize accent-gold"
           max="384"
           min="64"
           onBlur={() => preview.current?.set_exact_radius(exact_radius.current)}
@@ -154,7 +154,7 @@ export const TerrainPreview = ({
         />
       </label>
       {error && (
-        <span className="absolute inset-x-4 bottom-4 border border-[#ff5a8b]/35 bg-[#16090e]/94 p-3 text-[8px] text-[#ff8caa]">
+        <span className="absolute inset-x-4 bottom-4 border border-[#ff5a8b]/35 bg-void/94 p-3 text-[8px] text-[#ff8caa]">
           {error}
         </span>
       )}
@@ -217,7 +217,7 @@ export const BiomeMap = ({
         }}
         ref={canvas}
       />
-      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-faint uppercase">
         Click a zone to focus the height preview · 196² authored zones
       </span>
     </div>
@@ -241,15 +241,15 @@ export const BiomeCoverage = ({
       {selected && (
         <div className="mb-3 grid grid-cols-3 gap-2 border-b border-white/8 pb-3 text-[8px]">
           <span>
-            <strong className="block text-[#666b75] uppercase">Biome</strong>
+            <strong className="block text-faint uppercase">Biome</strong>
             {selected.biome.name}
           </span>
           <span>
-            <strong className="block text-[#666b75] uppercase">Height</strong>
+            <strong className="block text-faint uppercase">Height</strong>
             {selected.surface_y}
           </span>
           <span>
-            <strong className="block text-[#666b75] uppercase">Position</strong>
+            <strong className="block text-faint uppercase">Position</strong>
             {selected.x}, {selected.z}
           </span>
         </div>
@@ -260,11 +260,11 @@ export const BiomeCoverage = ({
             <span className="size-2.5" style={{ backgroundColor: biome_map_color(recipe, biome) }} />
             <span className="truncate">
               {biome.name}{' '}
-              <small className="text-[#5f636d]">
+              <small className="text-faint">
                 · {mob_count(biome.name)}M {resource_count(biome.name)}R
               </small>
             </span>
-            <span className="tabular-nums text-[#777b86]">
+            <span className="tabular-nums text-faint">
               {((preview.coverage[index] / preview.cells.length) * 100).toFixed(1)}%
             </span>
           </div>

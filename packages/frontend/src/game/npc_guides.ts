@@ -9,7 +9,7 @@ import type {
   Vec3,
 } from '@aresrpg/engine'
 
-import source from '../../../../seed/content/adventure.json'
+import source from '../../../../seed/content/guide.json'
 
 import { npc_caption } from './npc_caption.ts'
 import { actor_facing } from './actor_facing.ts'
@@ -24,11 +24,7 @@ export const create_npc_guides = ({
   caption,
   ground_height,
   load = load_character_appearance,
-  character_source = {
-    ...source.companion,
-    male: true,
-    colors: source.companion.colors as [string, string, string],
-  },
+  character_source = { ...source, colors: source.colors as [string, string, string] },
 }: Readonly<{
   submit: (entities: readonly EntityRender[]) => void
   caption: (id: string, value: WorldCaption | null) => void

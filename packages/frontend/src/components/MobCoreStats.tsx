@@ -92,14 +92,14 @@ export const MobCoreStats = ({
                 ) : null}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[7px] tracking-[0.13em] text-[#737883] uppercase" title={hint}>
+                <span className="block text-[7px] tracking-[0.13em] text-faint uppercase" title={hint}>
                   {label}
                 </span>
                 <span className="mt-1 flex items-center gap-2">
                   {change && !derived ? (
                     <input
                       aria-label={label}
-                      className="h-7 w-full max-w-24 border border-white/10 bg-bg px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-[#4a9eff]/60"
+                      className="h-7 w-full max-w-24 border border-white/10 bg-bg px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-cyan/60"
                       onChange={(event) => change(key, Number(event.target.value))}
                       style={{ color }}
                       type="number"
@@ -112,10 +112,7 @@ export const MobCoreStats = ({
                     </span>
                   )}
                   {range && (
-                    <span
-                      className="whitespace-nowrap text-[7px] tabular-nums text-[#666b75]"
-                      data-mob-stat-range={key}
-                    >
+                    <span className="whitespace-nowrap text-[7px] tabular-nums text-faint" data-mob-stat-range={key}>
                       min {numbers.number(range.minimum)}
                       {suffix} · max {numbers.number(range.maximum)}
                       {suffix}

@@ -7,8 +7,7 @@ import { item_is_stackable } from '@aresrpg/immutable'
 
 import { CraftControls } from '../../src/characters/CraftControls.tsx'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
-import { adventure_character_row } from '../../src/adventure/projection.ts'
-import { adventure_character } from '../../src/adventure/character.ts'
+import { sample_character_row, sample_character } from '../../src/demo/sample.ts'
 import { copy_text, type AppCopy } from '../../src/i18n/copy.ts'
 import en from '../../src/i18n/locales/en.yaml'
 import { read_app_state, type AppState } from '../../src/store.ts'
@@ -42,7 +41,7 @@ test.each([false, true])('craft attempt controls are visible only for stackable 
 
 test('local ingredient projections cannot enable a chain craft even with a connected wallet', () => {
   const recipe = encyclopedia_catalog.recipes[0]!
-  const character = adventure_character_row(adventure_character())
+  const character = sample_character_row(sample_character())
   const inventory = Object.entries(recipe.inputs).map(([item_type, amount]) => ({
     id: item_type,
     item_type,

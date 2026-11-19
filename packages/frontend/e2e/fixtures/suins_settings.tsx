@@ -5,6 +5,7 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
+import { SuinsConfirmation } from '../../src/settings/SuinsConfirmation.tsx'
 import SettingsPage from '../../src/settings/SettingsPage.tsx'
 import { dispatch_app, observe_app, read_app_state, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
@@ -43,6 +44,15 @@ const wallet = {
       if (parameters.get('hold') === 'validation') await held.promise
       before_sign()
     },
+    review_parent: async (_name: string, agent: string, before_sign: () => void) => {
+      before_sign()
+      return {
+        fingerprint: 'fixture-review',
+        player_address: wallet.address,
+        agent_address: agent,
+        erased_names: parameters.get('state') === 'metadata' ? ['aresrpg.branch.mine.sui'] : [],
+      }
+    },
     apply_parent: async (name: string, agent: string, before_sign: () => void) => {
       before_sign()
       metric('human-target', wallet.address)
@@ -73,7 +83,10 @@ dispatch_app({ type: 'page/open', page: 'settings' })
 const Probe = () => {
   const page = useAppStore(({ navigation }) => navigation.page)
   return page === 'settings' ? (
-    <SettingsPage copy={copy} settings={read_app_state().settings} />
+    <>
+      <SettingsPage copy={copy} settings={read_app_state().settings} />
+      <SuinsConfirmation copy={copy} />
+    </>
   ) : (
     <p>Settings closed</p>
   )

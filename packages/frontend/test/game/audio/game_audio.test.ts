@@ -280,13 +280,6 @@ test('every completed fight uses the former boss reward sound, without requiring
   }
 })
 
-test('demo fight-over presentation plays without a wallet', () => {
-  const before = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
-  const completed = { ...before, adventure: { ...before.adventure, phase: 'reward' as const, result: result() } }
-  expect(cues(before, completed)).toEqual(['fight_over'])
-  expect(cues(completed, { ...completed, adventure: { ...completed.adventure, result: { ...result() } } })).toEqual([])
-})
-
 test('the visible level-up overlay sounds even while the result underneath remains open', () => {
   const before = initial()
   const shown = with_results(before, {
@@ -302,13 +295,4 @@ test('the visible level-up overlay sounds even while the result underneath remai
       })
     )
   ).not.toContain('level_up')
-})
-
-test('adventure quest progress sounds once, independent of journal opening or a wallet', async () => {
-  const { adventure_character } = await import('../../../src/adventure/character.ts')
-  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
-  const before = { ...base, adventure: { ...base.adventure, character: adventure_character() } }
-  const completed = { ...before, adventure: { ...before.adventure, encounter: 1 } }
-  expect(cues(before, completed)).toEqual(['quest_completed'])
-  expect(cues(completed, { ...completed, adventure: { ...completed.adventure, journal_open: true } })).toEqual([])
 })

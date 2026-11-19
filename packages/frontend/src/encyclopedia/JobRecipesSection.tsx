@@ -23,7 +23,7 @@ export const JobRecipesSection = ({
   return (
     <section className="flex flex-col gap-2">
       <div className="h-px w-full bg-white/6" />
-      <span className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">
+      <span className="text-[9px] font-semibold tracking-[0.25em] text-faint uppercase">
         {text('craftable_items')} ({rows.length})
       </span>
       <EntityGrid>

@@ -43,6 +43,27 @@ test('hosted setup uses a loader and exposes no internal bot controls', async ()
   expect(html).not.toContain('Verify hosted signer')
 })
 
+test('an assistant request first shows what is asked and one action; no work starts by itself', async () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { search: '?authorization_id=request' } })
+  const hook = spyOn(hosted, 'useHostedConnect').mockReturnValue({
+    state: empty_hosted<HostedBotDescriptor>(),
+    dispatch: () => {},
+    eligible: true,
+  })
+  try {
+    const copy = await load_app_copy('en')
+    const html = render_english(<AgentSetup copy={copy} close={() => {}} />)
+    expect(html).toContain(copy.ui.agent_hosted_review)
+    expect(html).toContain(`>${copy.ui.agent_guide_continue}<`)
+    expect(html).not.toContain('aria-busy="true"')
+  } finally {
+    hook.mockRestore()
+    if (previous) Object.defineProperty(globalThis, 'location', previous)
+    else Reflect.deleteProperty(globalThis, 'location')
+  }
+})
+
 test.each(['authenticating', 'authorizing'] as const)(
   'pending %s renders only an accessible spinner, not wait prose',
   async (phase) => {

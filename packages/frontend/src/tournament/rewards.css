@@ -12,7 +12,9 @@
   place-items: center;
   padding: 12px;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 35%, #b47a2838, transparent 65%), #0e1119f5;
+  background:
+    radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--aui-brass-lo) 22%, transparent), transparent 65%),
+    color-mix(in srgb, var(--aui-bg) 96.1%, transparent);
   isolation: isolate;
 }
 .tourney-reveal-surface::before {
@@ -21,7 +23,11 @@
   width: 150vmax;
   height: 150vmax;
   z-index: -1;
-  background: repeating-conic-gradient(from 0deg, #f2c36e0b 0deg 10deg, transparent 10deg 30deg);
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--aui-brass) 4.3%, transparent) 0deg 10deg,
+    transparent 10deg 30deg
+  );
   animation: tourney-reward-rays 45s linear infinite;
   pointer-events: none;
 }
@@ -31,14 +37,14 @@
   width: min(880px, 100%);
   max-height: calc(100dvh - 24px);
   min-height: 0;
-  border: 1px solid #e9ac5870;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 43.9%, transparent);
   border-radius: 8px;
   overflow: hidden;
-  background: linear-gradient(160deg, #30323b, var(--aui-surface) 45%);
+  background: linear-gradient(160deg, var(--aui-lifted), var(--aui-surface) 45%);
   box-shadow:
     0 30px 100px #000b,
-    0 0 70px #e9ac5815,
-    inset 0 1px #ffe4ac33;
+    0 0 70px color-mix(in srgb, var(--aui-brass) 8.2%, transparent),
+    inset 0 1px color-mix(in srgb, var(--aui-brass-hi) 20%, transparent);
   animation: tourney-reward-arrive 400ms ease-out both;
 }
 .tourney-reveal-heading {
@@ -46,18 +52,18 @@
   flex: none;
   padding: 24px 24px 18px;
   text-align: center;
-  background: radial-gradient(ellipse at 50% 0, #e9ac5833, transparent 70%);
+  background: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--aui-brass) 20%, transparent), transparent 70%);
 }
 .tourney-reveal-emblem {
   display: inline-grid;
   place-items: center;
   width: 62px;
   height: 62px;
-  border: 1px solid #e9ac5855;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 33.3%, transparent);
   border-radius: 50%;
   color: var(--aui-orange);
-  background: #e9ac5810;
-  box-shadow: 0 0 30px #e9ac5826;
+  background: color-mix(in srgb, var(--aui-brass) 6.3%, transparent);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--aui-brass) 14.9%, transparent);
 }
 .tourney-reveal-heading p {
   margin: 10px 0 5px;
@@ -70,7 +76,7 @@
   margin: 0 0 8px;
   font-size: clamp(23px, 4vw, 34px);
   font-weight: 800;
-  color: #ffe3a5;
+  color: var(--aui-brass-hi);
   text-shadow: 0 2px 0 #0005;
 }
 .tourney-reveal-heading > span:last-child {
@@ -96,18 +102,22 @@
   gap: 8px;
   min-height: 190px;
   padding: 20px 12px;
-  border: 1px solid #e9ac5845;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 27.1%, transparent);
   border-radius: 6px;
   overflow: hidden;
   text-align: center;
-  background: radial-gradient(ellipse at 50% 15%, #e9ac5826, transparent 70%), #14191f;
+  background:
+    radial-gradient(ellipse at 50% 15%, color-mix(in srgb, var(--aui-brass) 14.9%, transparent), transparent 70%),
+    var(--aui-sunk);
   box-shadow:
     inset 0 1px #fff1,
     0 6px 16px #0004;
 }
 .tourney-reveal-reward[data-asset='sui'] {
-  border-color: #8abde166;
-  background: radial-gradient(ellipse at 50% 15%, #8abde12e, transparent 70%), #14191f;
+  border-color: color-mix(in srgb, var(--aui-blue) 40%, transparent);
+  background:
+    radial-gradient(ellipse at 50% 15%, color-mix(in srgb, var(--aui-blue) 18%, transparent), transparent 70%),
+    var(--aui-sunk);
 }
 .tourney-reveal-reward[data-visible='false'] {
   visibility: hidden;
@@ -134,7 +144,7 @@
   place-items: center;
   width: 90px;
   height: 90px;
-  filter: drop-shadow(0 0 13px #f7c47535);
+  filter: drop-shadow(0 0 13px color-mix(in srgb, var(--aui-brass) 20.8%, transparent));
 }
 .tourney-reveal-art img {
   max-width: 100%;
@@ -143,7 +153,7 @@
 }
 .tourney-reveal-reward strong {
   font-size: clamp(17px, 2.5vw, 25px);
-  color: #ffe3a5;
+  color: var(--aui-brass-hi);
   overflow-wrap: anywhere;
 }
 .tourney-reveal-reward > span:last-child {
@@ -159,7 +169,7 @@
   gap: 10px;
   padding: 14px 20px;
   border-top: 1px solid #ffffff12;
-  background: #11151b;
+  background: var(--aui-bg);
 }
 @media (max-width: 450px) {
   .tourney-reveal-footer > span {

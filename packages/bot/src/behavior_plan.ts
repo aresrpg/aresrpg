@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { MarketObservation, MarketPriceObservation } from '@aresrpg/protocol'
 
+import { select_profession } from './behavior_profession.ts'
 import { planning_issue, planning_blocker } from './planning_failure.ts'
 import { select_owned_item } from './behavior_items.ts'
 import { select_purchase, select_sale } from './behavior_market.ts'
@@ -12,7 +13,10 @@ import type { Command } from './control.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import { validate_gameplay } from './gameplay.ts'
 import { next_combat_action, type CombatNext } from './combat_plan.ts'
-import { nearest_gather, nearest_group, type SelectedAction } from './behavior_targets.ts'
+import { nearest_gather, select_group, type SelectedAction } from './behavior_targets.ts'
+import { select_dungeon_step, select_join } from './behavior_team.ts'
+import { select_spending } from './behavior_growth.ts'
+import { hydrate_gameplay_fight } from './gameplay.ts'
 import { evaluate_behavior, empty_behavior_memory, type BehaviorResult } from './behavior_tree.ts'
 import { behavior_condition } from './behavior_facts.ts'
 import type { BehaviorAction, BehaviorRun } from './behavior_script.ts'
@@ -25,23 +29,30 @@ type Resolution = Readonly<{
   observation?: MarketObservation
   prices?: MarketPriceObservation
 }>
-const combat_resolution = (
-  action: Extract<BehaviorAction, { type: 'combat' }>,
-  run: BehaviorRun,
-  context: GameplayContext,
-  previous: Command | null
-): Resolution => {
+type CombatLeaf = Pick<Extract<BehaviorAction, { type: 'combat' }>, 'profiles' | 'target_options' | 'allies'> &
+  Readonly<{ dungeon?: string }>
+/** The fight this leaf plays: its activation, else the one its hero sits in. A room belongs to the
+ * dungeon leaf and an ordinary fight to the combat leaf, so the other kind falls through. */
+const leaf_fight = (action: CombatLeaf, run: BehaviorRun, context: GameplayContext) => {
   const fights = new Set(
     action.profiles
       .map(({ character_id }) => context.snapshot.characters.find(({ id }) => id === character_id)?.active_fight?.id)
       .filter(Boolean)
   )
-  const fight = run.activation?.fight ?? (fights.size === 1 ? [...fights][0] : null)
+  const fight = run.activation?.fight ?? (fights.size === 1 ? [...fights][0]! : null)
+  const row = fight ? context.snapshot.fights[fight] : undefined
+  const foreign = row && (hydrate_gameplay_fight(row).contract.dungeon ?? undefined) !== action.dungeon
+  return foreign ? null : fight
+}
+const combat_resolution = (
+  action: CombatLeaf,
+  run: BehaviorRun,
+  context: GameplayContext,
+  previous: Command | null
+): Resolution => {
+  const fight = leaf_fight(action, run, context)
   if (!fight) return { status: 'failure', issue: 'fight_unavailable' }
-  const next = next_combat_action(
-    { fight, profiles: action.profiles.map((row) => ({ ...row, revision: run.revision })) },
-    context
-  )
+  const next = next_combat_action({ ...action, fight }, context)
   if (
     [
       next.state === 'completed',
@@ -56,6 +67,18 @@ const combat_resolution = (
     awaiting_ai: 'replan',
   }
   return { status: statuses[next.state], action: next.action, issue: next.issue, fight }
+}
+const dungeon_resolution = (
+  action: Extract<BehaviorAction, { type: 'dungeon' }>,
+  run: BehaviorRun,
+  context: GameplayContext,
+  previous: Command | null
+): Resolution => {
+  const { character_id, profile, allies, dungeon } = action
+  const hero = context.snapshot.characters.find(({ id }) => id === character_id)
+  return (run.activation ?? hero?.active_fight)
+    ? combat_resolution({ profiles: [{ character_id, profile }], allies, dungeon }, run, context, previous)
+    : world_resolution(select_dungeon_step(action, context), context)
 }
 const world_resolution = (selection: WorldSelection, context: GameplayContext): Resolution => {
   if (selection.status !== 'action')
@@ -89,15 +112,20 @@ const resolve_action = (
     const resolvers = {
       observe_market: (value) => observation_resolution(value, context),
       observe_prices: (value) => observation_resolution(value, context),
+      profession: (value) => world_resolution(select_profession(value, context), context),
       discover: (value) => world_resolution(select_discovery(value, context), context),
       equip_owned: (value) => world_resolution(select_owned_item(value, context), context),
       consume_owned: (value) => world_resolution(select_owned_item(value, context), context),
       combat: (value) => combat_resolution(value, run, context, previous),
+      dungeon: (value) => dungeon_resolution(value, run, context, previous),
+      join: (value) => world_resolution(select_join(value, context), context),
+      spend_points: (value) => world_resolution(select_spending(value, context), context),
       buy: (value) => selected(select_purchase(value, context)),
       sell: (value) => selected(select_sale(value, context)),
       call: (value) => selected({ kind: value.kind, payload: value.payload }),
       gather: (value) => selected(nearest_gather(value.character_id, value.item_type, context)),
-      engage: (value) => selected(nearest_group(value.character_id, value.mob_types, context)),
+      engage: (value) =>
+        selected(select_group(value.character_id, value.mob_types, context, value.target_options, value)),
     } satisfies { [Action in BehaviorAction as Action['type']]: (value: Action) => Resolution }
     return resolvers[action.type](action as never)
   } catch (error) {
@@ -134,7 +162,7 @@ const states = {
   replan: 'awaiting_ai',
   action: 'action',
 } as const
-/** Called only after the durable command and its receipt projection have reconciled. */
+/** Called only after the live command and its receipt projection have reconciled. */
 const evaluate_behavior_action = (run: BehaviorRun, previous: Command | null, context: GameplayContext) => {
   const completed = consume_completion(run, previous)
   const consumed = completed.observation

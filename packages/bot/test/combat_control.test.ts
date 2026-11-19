@@ -4,14 +4,13 @@ import { expect, test } from 'bun:test'
 import type { FightStateRow } from '@aresrpg/protocol'
 
 import { create_fixture } from '../../fight/test/helpers.ts'
-import { create_combat_control, type CombatRun } from '../src/combat_control.ts'
+import { create_combat_control } from '../src/combat_control.ts'
 import { COMBAT_TOOLS, combat_calls } from '../src/combat_mcp.ts'
 import { empty_lane, lane_key_for, type Command, type Lane } from '../src/control.ts'
 import { gameplay_json } from '../src/gameplay.ts'
 import { empty_snapshot } from '../src/actor_snapshot.ts'
 import type { CombatProfile } from '../src/combat_profile.ts'
 
-import { stored_combat } from './helpers/legacy_run_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { put } from './helpers/control_fixture.ts'
 import { character as base_character } from './helpers/profession_fixture.ts'
@@ -66,204 +65,41 @@ const fixture = async () => {
     () => f.clock.now,
     async () => live
   )
-  const save = () => control.save_combat_profile(f.grant, { character_id: character.id, expected_revision: 0, profile })
-  const input = {
-    idempotency_key: 'fight',
-    fight,
-    profiles: [{ character_id: character.id, revision: 1 }],
-    decision_revision: 0,
-    observation_revision: 1,
-  }
-  return { ...f, control, character, live, lane_key, save, input }
+  return { ...f, control, character, live, lane_key }
 }
 
-test('profiles persist without commands or stat writes, validate availability and use revision CAS', async () => {
+test('a profile is validated against the hero and never stored: the tree is its only owner', async () => {
   const f = await fixture()
   try {
-    const before = await f.store.read<Lane>(f.lane_key)
-    expect(await f.control.validate_combat_profile(f.grant, f.character.id, profile)).toMatchObject({ valid: true })
-    expect(await f.control.combat_profile(f.grant, f.character.id)).toBeNull()
-    await f.save()
-    expect(await f.control.combat_profile(f.grant, f.character.id)).toMatchObject({ revision: 1, profile })
-    expect(await f.store.read<Lane>(f.lane_key)).toEqual(before)
-    expect(await f.store.scan_keys('command:', 100)).toEqual([])
-    await expect(f.save()).rejects.toThrow('combat_profile_conflict')
-    await expect(
-      f.control.save_combat_profile(f.grant, {
-        character_id: f.character.id,
-        expected_revision: 1,
-        profile: {
-          ...profile,
-          combos: [{ name: 'retreat', steps: [{ type: 'cast', spell: 'Tricky Trap', target: 'trap_near_enemy' }] }],
-        },
-      })
-    ).rejects.toThrow('combat_spells_unavailable')
-    await expect(
-      f.control.save_combat_profile(f.grant, { character_id: `0x${'0'.repeat(64)}`, expected_revision: 0, profile })
-    ).rejects.toThrow('character_authority_mismatch')
-    await put(f.store, `grant:${f.grant.id}`, { ...f.grant, revoked: true })
-    await expect(f.control.combat_profile(f.grant, f.character.id)).rejects.toThrow('invalid_token')
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('stop fences new work while preserving uncertain envelopes, cannot resume stopped work', async () => {
-  const f = await fixture()
-  try {
-    await f.save()
-    const run = await stored_combat(
-      f.store,
-      f.grant,
-      f.input.fight,
-      [{ character_id: f.character.id, revision: 1, profile }],
-      f.clock.now
-    )
-    const lane = (await f.store.read<Lane>(f.lane_key))!
-    const pending = {
-      command_id: 'pending',
-      grant_id: f.grant.id,
-      phase: 'submitting' as const,
-      digest: 'uncertain',
-      encrypted: 'retained',
-      gas_budget_mist: '1000',
-    }
-    await put(f.store, f.lane_key, { ...lane, pending, active_command: 'pending' })
-    expect((await f.control.stop_combat(f.grant, run.id)).status).toBe('stopped')
-    expect(await f.store.read<Lane>(f.lane_key)).toMatchObject({
-      pending,
-      active_command: 'pending',
-      combat_run_id: null,
-      decision_revision: lane.decision_revision + 1,
+    expect(await f.control.validate_combat_profile(f.grant, f.character.id, profile)).toMatchObject({
+      valid: true,
+      unavailable_spells: [],
+      observation_revision: 1,
     })
-    await f.control.stop_combat(f.grant, run.id)
-    expect((await f.store.read<Lane>(f.lane_key))?.decision_revision).toBe(lane.decision_revision + 1)
-    await expect(f.control.resume_combat(f.grant, run.id, lane.decision_revision + 1, 1)).rejects.toThrow(
-      'combat_not_resumable'
+    await expect(f.control.validate_combat_profile(f.grant, 'nobody', profile)).rejects.toThrow('invalid_argument')
+    await expect(f.control.validate_combat_profile(f.grant, f.character.id, { version: '2' })).rejects.toThrow()
+    await put(f.store, 'grant:grant', { ...f.grant, scopes: ['bot:pause'] })
+    await expect(f.control.validate_combat_profile(f.grant, f.character.id, profile)).rejects.toThrow(
+      'insufficient_scope'
     )
+    expect(await f.store.scan_keys('combat_profile:', 10)).toEqual([])
+    expect(await f.store.scan_keys('command:', 10)).toEqual([])
   } finally {
     await f.runtime.stop()
   }
 })
 
-test('resume requires a fresh idle lane and never replaces failed child work', async () => {
-  const f = await fixture()
-  try {
-    await f.save()
-    const run = await stored_combat(
-      f.store,
-      f.grant,
-      f.input.fight,
-      [{ character_id: f.character.id, revision: 1, profile }],
-      f.clock.now
-    )
-    const lane = (await f.store.read<Lane>(f.lane_key))!
-    await put(f.store, `combat:${run.id}`, { ...run, status: 'paused' })
-    await put(f.store, f.lane_key, { ...lane, combat_run_id: null })
-    await expect(f.control.resume_combat(f.grant, run.id, 0, 1)).rejects.toThrow('needs_resync')
-    expect((await f.control.resume_combat(f.grant, run.id, 1, 1)).status).toBe('active')
-    await put(f.store, `combat:${run.id}`, { ...run, status: 'awaiting_ai', last_command_id: 'failed' })
-    await put(f.store, f.lane_key, { ...lane, combat_run_id: null })
-    await put(f.store, 'command:failed', { status: 'uncertain' } as Command)
-    await expect(f.control.resume_combat(f.grant, run.id, 1, 1)).rejects.toThrow('combat_not_resumable')
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('profile preferences are bot-shared but active run control is grant-scoped', async () => {
-  const f = await fixture()
-  try {
-    await f.save()
-    const run = await stored_combat(
-      f.store,
-      f.grant,
-      f.input.fight,
-      [{ character_id: f.character.id, revision: 1, profile }],
-      f.clock.now
-    )
-    const other = { ...f.grant, id: 'other' }
-    await put(f.store, 'grant:other', other)
-    expect((await f.control.combat_profile(other, f.character.id))?.revision).toBe(1)
-    await expect(f.control.combat_status(other, run.id)).rejects.toThrow('combat_run_not_found')
-    await expect(f.control.stop_combat(other, run.id)).rejects.toThrow('combat_run_not_found')
-    await put(f.store, 'grant:other', { ...other, scopes: ['bot:observe'] })
-    await expect(
-      f.control.save_combat_profile(other, { character_id: f.character.id, expected_revision: 1, profile })
-    ).rejects.toThrow('insufficient_scope')
-    expect((await f.store.read<CombatRun>(`combat:${run.id}`))?.status).toBe('active')
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('combat tools validate complete schemas before control and explain strategy revision', async () => {
+test('the one combat tool validates a complete schema before control', async () => {
   const f = await fixture()
   try {
     const calls = new Map(combat_calls(f.control))
-    await expect(
-      calls.get('bot_save_combat_profile')!(f.grant, {
-        character_id: f.character.id,
-        expected_revision: 0,
-        profile,
-        arbitrary: true,
-      })
-    ).rejects.toThrow('invalid_gameplay_payload')
-    await calls.get('bot_save_combat_profile')!(f.grant, {
-      character_id: f.character.id,
-      expected_revision: 0,
-      profile,
-    })
-    expect(COMBAT_TOOLS.find(({ name }) => name === 'bot_save_combat_profile')?.description).toContain(
-      'spends no stat points'
+    expect([...calls.keys()]).toEqual(['bot_validate_combat_profile'])
+    expect(COMBAT_TOOLS.map(({ name }) => name)).toEqual(['bot_validate_combat_profile'])
+    const validate = calls.get('bot_validate_combat_profile')!
+    await expect(validate(f.grant, { character_id: f.character.id, profile, arbitrary: true })).rejects.toThrow(
+      'invalid_gameplay_payload'
     )
-    expect(calls.has('bot_start_combat')).toBe(false)
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('concurrent profile writes have one winner and revoked observation cannot save a profile', async () => {
-  const f = await fixture()
-  try {
-    const results = await Promise.allSettled([f.save(), f.save()])
-    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1)
-    expect(results.filter(({ status }) => status === 'rejected')).toHaveLength(1)
-    expect((await f.control.combat_profile(f.grant, f.character.id))?.revision).toBe(1)
-    const race = create_combat_control(
-      f.store,
-      f.options.config,
-      () => f.clock.now,
-      async () => {
-        await put(f.store, `grant:${f.grant.id}`, { ...f.grant, revoked: true })
-        return f.live
-      }
-    )
-    await expect(
-      race.save_combat_profile(f.grant, { character_id: f.character.id, expected_revision: 1, profile })
-    ).rejects.toThrow('invalid_token')
-    expect((await f.store.read<{ revision: number }>(`combat_profile:${f.bot.id}:${f.character.id}`))?.revision).toBe(1)
-  } finally {
-    await f.runtime.stop()
-  }
-})
-
-test('a changed observation between profile validation and commit fails closed', async () => {
-  const f = await fixture()
-  try {
-    const race = create_combat_control(
-      f.store,
-      f.options.config,
-      () => f.clock.now,
-      async () => {
-        await put(f.store, f.lane_key, { ...(await f.store.read<Lane>(f.lane_key))!, observation_revision: 2 })
-        return f.live
-      }
-    )
-    await expect(
-      race.save_combat_profile(f.grant, { character_id: f.character.id, expected_revision: 0, profile })
-    ).rejects.toThrow('needs_resync')
-    expect(await f.control.combat_profile(f.grant, f.character.id)).toBeNull()
+    expect(await validate(f.grant, { character_id: f.character.id, profile })).toMatchObject({ valid: true })
   } finally {
     await f.runtime.stop()
   }

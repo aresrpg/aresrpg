@@ -18,7 +18,7 @@ import { create_actor_runtime } from '../src/actor_runtime.ts'
 import { create_redis_store, type ControlStore } from '../src/store.ts'
 import { hash_secret, random_secret } from '../src/security.ts'
 import { gameplay_json, fight_checkpoint_id } from '../src/gameplay.ts'
-import type { Command, Lane } from '../src/control.ts'
+import { create_control_service, type Command, type Lane } from '../src/control.ts'
 
 import { fixture_redis } from './helpers/redis_fixture.ts'
 import { signed_fixture } from './helpers/signed_runtime_fixture.ts'
@@ -286,9 +286,42 @@ redis_test('Redis vertical owner/provision/proof/OAuth/MCP/actor/SDK/receipt pat
       await recovery.runtime.tick()
       await recovery.runtime.settle()
       expect(recovery.errors).toEqual([])
-      expect(recovery.submissions).toEqual([recovery.bytes])
-      expect((await recovery_store.read<Command>('command:signed'))!.status).toBe('completed')
+      expect(recovery.submissions).toEqual([])
       expect((await recovery_store.read<Lane>(recovery.lane_key))!.pending).toBeNull()
+      expect((await recovery_store.read<Command>('command:signed'))!.status).toBe('cancelled')
+      const control = create_control_service(recovery_store, recovery.options.config, 60000, () => recovery.clock.now)
+      await control.pause(recovery.grant)
+      await recovery.runtime.stop()
+      const restarted = create_redis_store(redis, recovery_namespace)
+      expect(await restarted.read<Command>('command:signed')).toBeNull()
+      expect((await restarted.read<Lane>(recovery.lane_key))!.pending).toBeNull()
+      expect((await restarted.read<Lane>(recovery.lane_key))!.paused).toBe(true)
+      const physical_lane = await redis.send('GET', [`${recovery_namespace}:record:${recovery.lane_key}`])
+      expect(physical_lane).not.toContain(recovery.digest)
+      expect(physical_lane).not.toContain(Buffer.from(recovery.bytes).toString('base64'))
+      recovery.clock.now += recovery.options.lease_ms + 1
+      const replacement_control = create_control_service(
+        restarted,
+        recovery.options.config,
+        60000,
+        () => recovery.clock.now
+      )
+      const lease = await replacement_control.acquire(recovery.bot, 'replacement', recovery.options.lease_ms)
+      expect(lease).toMatchObject({ paused: true, needs_resync: true, pending: null, active_command: null })
+      const replacement = create_actor_runtime({
+        ...recovery.options,
+        actor_id: 'replacement',
+        store: restarted,
+        sdk_options: { client: recovery.client },
+      })
+      try {
+        await replacement.tick()
+        await replacement.settle()
+        expect(recovery.submissions).toEqual([])
+        expect(await restarted.scan_keys('command:', 100)).toEqual([])
+      } finally {
+        await replacement.stop()
+      }
     } finally {
       await recovery.runtime.stop()
     }

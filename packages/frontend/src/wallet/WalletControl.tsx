@@ -109,9 +109,10 @@ export const WalletControl = ({
 }: Readonly<{ wallet: WalletView; copy: KaresCopy; subtitle?: string; locked?: boolean; require_sui?: boolean }>) => {
   const [open, set_open] = useState(false)
   const { state, dispatch } = wallet
+  // The picker closes when a wallet answers: its accounts arrive, or its session is selected.
   useEffect(() => {
-    if (state.accounts.length) set_open(false)
-  }, [state.accounts])
+    if (state.accounts.length || state.session) set_open(false)
+  }, [state.accounts, state.session])
   const busy = locked || (wallet.busy ?? state.request !== null)
   const error = state.error && (
     <p className="text-[10px] text-rose-300" role="alert">

@@ -8,7 +8,7 @@ const Stat = ({ label, value, color }: Readonly<{ label: string; value: number; 
     <p className="text-[7px] tracking-[0.12em] uppercase" style={{ color }}>
       {label}
     </p>
-    <p className="mt-1 text-[13px] font-semibold tabular-nums text-[#e6e0d8]">{value.toLocaleString('en-US')}</p>
+    <p className="mt-1 text-[13px] font-semibold tabular-nums text-text">{value.toLocaleString('en-US')}</p>
   </div>
 )
 
@@ -25,7 +25,7 @@ export const MobPowerPanel = ({ reference }: Readonly<{ reference: MobPowerSumma
     <section className="border-l-2 border-[#a78bfa]/55 bg-[#a78bfa]/[0.025] px-4 py-3" data-mob-power="">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[9px] tracking-[0.16em] text-[#a78bfa] uppercase">Dofus reference</h2>
-        <p className="text-[7px] text-[#666b75]">
+        <p className="text-[7px] text-faint">
           Requested Lv {reference.level} · {cohort} · donors {donor_levels} · {reference.sample_count} grades
         </p>
       </div>
@@ -34,7 +34,7 @@ export const MobPowerPanel = ({ reference }: Readonly<{ reference: MobPowerSumma
         <Stat color="#65c993" label="Average base XP" value={reference.xp} />
         <Stat color="#e8b44f" label="Average damage" value={reference.damage} />
       </div>
-      <p className="mt-2 text-[7px] text-[#5f646e]">
+      <p className="mt-2 text-[7px] text-faint">
         Base XP is the monster pool before Dofus applies player level, party, wisdom, and star modifiers.
       </p>
     </section>

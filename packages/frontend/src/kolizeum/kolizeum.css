@@ -10,7 +10,11 @@
   margin: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(160deg, rgba(23, 23, 32, 0.96), rgba(12, 12, 18, 0.98));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--aui-sunk) 96%, transparent),
+    color-mix(in srgb, var(--aui-void) 98%, transparent)
+  );
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
 }
 
@@ -31,7 +35,7 @@
   font-size: 11px;
   letter-spacing: 0.4em;
   text-transform: uppercase;
-  text-shadow: 0 0 18px rgba(200, 150, 60, 0.4);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--aui-brass) 40%, transparent);
 }
 .kz-header > span {
   color: var(--color-muted);
@@ -67,7 +71,7 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #6b7280;
+  color: var(--aui-faint);
   font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -90,15 +94,15 @@
   padding: 4px 7px;
   border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.02);
-  color: #6b7280;
+  color: var(--aui-faint);
   font-size: 8px;
   letter-spacing: 0.12em;
   cursor: pointer;
 }
 .kz-chips button:not(.aui-button):hover,
 .kz-chips button:not(.aui-button).is-active {
-  border-color: rgba(200, 150, 60, 0.55);
-  background: rgba(200, 150, 60, 0.1);
+  border-color: color-mix(in srgb, var(--aui-brass) 55%, transparent);
+  background: color-mix(in srgb, var(--aui-brass) 10%, transparent);
   color: var(--color-gold);
 }
 .kz-table {
@@ -140,7 +144,7 @@
   transition: box-shadow 0.2s ease;
 }
 .kz-lobby:hover {
-  box-shadow: inset 0 0 20px rgba(200, 150, 60, 0.08);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--aui-brass) 8%, transparent);
 }
 
 .kz-lobby strong {
@@ -163,7 +167,7 @@
   white-space: nowrap;
 }
 .kz-lobby > em {
-  color: #f59e0b;
+  color: var(--aui-brass);
   font-size: 8px;
   font-style: normal;
   letter-spacing: 0.12em;
@@ -235,7 +239,7 @@
 }
 .kz-join-side.is-a {
   color: var(--color-cyan);
-  background: rgba(74, 158, 255, 0.08);
+  background: color-mix(in srgb, var(--aui-blue) 8%, transparent);
 }
 .kz-join-side.is-b {
   color: #e0533a;
@@ -303,7 +307,7 @@
   color: var(--color-gold);
   font-size: 15px;
   font-weight: 500;
-  text-shadow: 0 0 18px rgba(200, 150, 60, 0.35);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--aui-brass) 35%, transparent);
 }
 .kz-create {
   display: flex;
@@ -341,7 +345,7 @@
   gap: 2px 8px;
   padding: 7px 9px;
   border: 1px solid var(--color-gold);
-  background: rgba(200, 150, 60, 0.08);
+  background: color-mix(in srgb, var(--aui-brass) 8%, transparent);
 }
 .kz-character b {
   overflow: hidden;

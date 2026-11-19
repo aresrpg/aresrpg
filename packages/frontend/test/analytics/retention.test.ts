@@ -12,13 +12,6 @@ import {
   type MovementSample,
 } from '../../src/analytics/activity.ts'
 import { error_analytics, correlate_error } from '../../src/analytics/errors.ts'
-import {
-  create_replay_observer,
-  replay_eligible,
-  replay_properties,
-  replay_sampled,
-  REPLAY_CONFIG,
-} from '../../src/analytics/replay.ts'
 import { analytics_events } from '../../src/modules/analytics.ts'
 import { create_app, reduce_app_state } from '../../src/store.ts'
 import type { AuthSession } from '../../src/auth.ts'
@@ -173,7 +166,7 @@ test('error correlation keeps the capture-time session without sending raw excep
         telemetry: {
           posthog_distinct_id: 'original-player',
           posthog_session_id: 'original-session',
-          onboarding_step: 'demo_equip',
+          onboarding_step: 'world_loading',
         },
       },
     },
@@ -185,7 +178,7 @@ test('error correlation keeps the capture-time session without sending raw excep
     properties: {
       distinct_id: 'original-player',
       $session_id: 'original-session',
-      onboarding_step: 'demo_equip',
+      onboarding_step: 'world_loading',
       error_kind: 'network_failed',
       sentry_event_id: 'error-id',
     },
@@ -199,53 +192,20 @@ test('error correlation keeps the capture-time session without sending raw excep
   ).toBeNull()
 })
 
-test('replay never starts after an account transition while its code is loading', async () => {
-  const calls: string[] = []
-  let resolve!: () => void
-  const loading = new Promise<void>((done) => {
-    resolve = done
-  })
-  const observe = create_replay_observer(
-    () => loading,
-    () => calls.push('start'),
-    () => calls.push('stop'),
-    () => true
-  )
-  observe(true)
-  observe(false)
-  resolve()
-  await loading
-  expect(calls).toEqual(['stop'])
-  expect(replay_eligible(connected().store.getState(), '/play-demo')).toBe(false)
-  expect(REPLAY_CONFIG.maskCapturedNetworkRequestFn()).toBeNull()
-  expect(REPLAY_CONFIG.maskAttributeFn('href', '/claim#private')).toBe('')
-  expect(REPLAY_CONFIG.captureCanvas.recordCanvas).toBe(false)
-  expect(replay_sampled('00000000-0000-0000-0000-000000000000')).toBe(true)
-  expect(replay_sampled('ffffffff-ffff-ffff-ffff-ffffffffffff')).toBe(false)
-  expect(
-    replay_properties({
-      $snapshot_data: [{ masked: true }],
-      $session_id: 'session',
-      $current_url: 'private',
-      name: 'private',
-    })
-  ).toEqual({ $snapshot_data: [{ masked: true }], $session_id: 'session' })
-})
-
 test('feedback belongs to the stalled stage and can be answered only once', () => {
-  const app = create_app()
-  app.dispatch({ type: 'adventure/entered', choice: 'continue' })
+  const app = connected()
+  app.dispatch({ type: 'dialog/open', dialog: 'welcome' })
   const base = { ...app.store.getState(), copy: {} as AppCopy }
   const available = reduce_app_state(base, { type: 'analytics/feedback_loaded', seen: false })
-  expect(reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'funding' })).toBe(available)
-  const offered = reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'demo_equip' })
+  expect(reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'gameplay' })).toBe(available)
+  const offered = reduce_app_state(available, { type: 'analytics/feedback_offered', stage: 'funding' })
   expect(analytics_events(offered, available)).toContainEqual({
     name: 'onboarding_feedback_shown',
-    properties: { onboarding_step: 'demo_equip' },
+    properties: { onboarding_step: 'funding' },
   })
   const answered = reduce_app_state(offered, { type: 'analytics/feedback_answered', answer: 'controls' })
   expect(analytics_events(answered, offered)).toEqual([
-    { name: 'onboarding_feedback', properties: { onboarding_step: 'demo_equip', answer: 'controls' } },
+    { name: 'onboarding_feedback', properties: { onboarding_step: 'funding', answer: 'controls' } },
   ])
   expect(reduce_app_state(answered, { type: 'analytics/feedback_answered', answer: 'funding' })).toBe(answered)
 })

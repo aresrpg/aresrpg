@@ -55,7 +55,7 @@ export const Wallets = ({
       <div className="wallets">
         {state.status?.wallets.map((wallet) => {
           const card = cards.find((card) => card.wallet.address === wallet.address)
-          const allocation = card ? (card.award?.tier ?? 'pending') : 'none'
+          const allocation = card ? card.award.tier : 'none'
           return (
             <div
               className="wrow"

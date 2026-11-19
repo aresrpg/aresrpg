@@ -1,0 +1,476 @@
+{
+  "profile": {
+    "version": "1",
+    "intent": "Strike the nearest legal enemy, moving for damage when possible, then approach. End the turn when no action is legal.",
+    "combos": [
+      {
+        "name": "attack",
+        "steps": [
+          {
+            "type": "strike",
+            "target": "highest_damage_enemy",
+            "position": "best_damage"
+          }
+        ]
+      },
+      {
+        "name": "approach",
+        "steps": [
+          {
+            "type": "move",
+            "direction": "approach"
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "when": {
+          "type": "always"
+        },
+        "combo": "attack"
+      },
+      {
+        "when": {
+          "type": "always"
+        },
+        "combo": "approach"
+      }
+    ],
+    "fallback": "end_turn"
+  },
+  "growth": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "action",
+        "action": {
+          "type": "spend_points",
+          "character_id": "$character",
+          "stats": "$stats",
+          "spells": "$spells"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "hat",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "amulet",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "cloak",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "weapon",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "left_ring",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "right_ring",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "belt",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "equip_owned",
+          "character_id": "$character",
+          "slot": "boots",
+          "order": "best_stats",
+          "stats": "$equipment"
+        }
+      }
+    ]
+  },
+  "basic": {
+    "dungeon": "gilded_lorito",
+    "build": {
+      "classe": "yogan",
+      "stats": [
+        "intelligence"
+      ],
+      "spells": [
+        "Magic Arrow",
+        "Distant Shooting",
+        "Critical Shooting",
+        "Powerful Shooting"
+      ],
+      "equipment": [
+        "intelligence",
+        "vitality",
+        "wisdom"
+      ],
+      "profile": {
+        "version": "1",
+        "intent": "Shoot Magic Arrow at the enemy it hurts most, moving for damage when possible. Spend what is left on the learned shooting buffs, then approach. End the turn when no action is legal.",
+        "combos": [
+          {
+            "name": "attack",
+            "steps": [
+              {
+                "type": "cast",
+                "spell": "Magic Arrow",
+                "target": "highest_damage_enemy",
+                "position": "best_damage"
+              }
+            ]
+          },
+          {
+            "name": "range",
+            "steps": [
+              {
+                "type": "cast",
+                "spell": "Distant Shooting",
+                "target": "self",
+                "if_learned": true
+              }
+            ]
+          },
+          {
+            "name": "critical",
+            "steps": [
+              {
+                "type": "cast",
+                "spell": "Critical Shooting",
+                "target": "self",
+                "if_learned": true
+              }
+            ]
+          },
+          {
+            "name": "power",
+            "steps": [
+              {
+                "type": "cast",
+                "spell": "Powerful Shooting",
+                "target": "self",
+                "if_learned": true
+              }
+            ]
+          },
+          {
+            "name": "approach",
+            "steps": [
+              {
+                "type": "move",
+                "direction": "approach"
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "type": "always"
+            },
+            "combo": "attack"
+          },
+          {
+            "when": {
+              "type": "always"
+            },
+            "combo": "range"
+          },
+          {
+            "when": {
+              "type": "always"
+            },
+            "combo": "critical"
+          },
+          {
+            "when": {
+              "type": "always"
+            },
+            "combo": "power"
+          },
+          {
+            "when": {
+              "type": "always"
+            },
+            "combo": "approach"
+          }
+        ],
+        "fallback": "end_turn"
+      }
+    }
+  },
+  "strategies": [
+    {
+      "id": "fight_nearby",
+      "tree": {
+        "type": "loop",
+        "child": {
+          "type": "selector",
+          "children": [
+            {
+              "type": "action",
+              "action": {
+                "type": "combat",
+                "target_options": {
+                  "min_size": 1,
+                  "max_size": 1,
+                  "mob_types": "$mob_types",
+                  "area": "$area"
+                },
+                "profiles": [
+                  {
+                    "character_id": "$character",
+                    "profile": "$profile"
+                  }
+                ]
+              }
+            },
+            "$growth",
+            {
+              "type": "action",
+              "action": {
+                "type": "engage",
+                "character_id": "$character",
+                "mob_types": "$mob_types",
+                "order": "nearest",
+                "target_options": {
+                  "min_size": 1,
+                  "max_size": 1,
+                  "mob_types": "$mob_types",
+                  "area": "$area"
+                }
+              }
+            },
+            {
+              "type": "action",
+              "action": {
+                "type": "discover",
+                "character_id": "$character",
+                "world": "$world",
+                "area": "$area",
+                "order": "nearest"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gather_craft",
+      "tree": {
+        "type": "loop",
+        "child": {
+          "type": "selector",
+          "children": [
+            {
+              "type": "action",
+              "action": {
+                "type": "combat",
+                "target_options": {
+                  "area": "$area"
+                },
+                "profiles": [
+                  {
+                    "character_id": "$character",
+                    "profile": "$profile"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "ambush",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "resolve_ambush",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
+            "$growth",
+            {
+              "type": "action",
+              "action": {
+                "type": "profession",
+                "character_id": "$character",
+                "world": "$world",
+                "order": "best_progress"
+              }
+            },
+            {
+              "type": "action",
+              "action": {
+                "type": "discover",
+                "character_id": "$character",
+                "world": "$world",
+                "order": "onward"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "team_hunt",
+      "tree": {
+        "type": "loop",
+        "child": {
+          "type": "selector",
+          "children": [
+            {
+              "type": "action",
+              "action": {
+                "type": "combat",
+                "target_options": {
+                  "mob_types": "$mob_types",
+                  "area": "$area"
+                },
+                "allies": "$allies",
+                "profiles": [
+                  {
+                    "character_id": "$character",
+                    "profile": "$profile"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "action",
+              "action": {
+                "type": "join",
+                "character_id": "$character",
+                "allies": "$allies"
+              }
+            },
+            "$growth",
+            {
+              "type": "action",
+              "action": {
+                "type": "engage",
+                "character_id": "$character",
+                "mob_types": "$mob_types",
+                "order": "best_xp",
+                "level_margin": 3,
+                "target_options": {
+                  "mob_types": "$mob_types",
+                  "area": "$area"
+                }
+              }
+            },
+            {
+              "type": "action",
+              "action": {
+                "type": "discover",
+                "character_id": "$character",
+                "world": "$world",
+                "area": "$area",
+                "order": "nearest"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dungeon_raid",
+      "tree": {
+        "type": "loop",
+        "child": {
+          "type": "selector",
+          "children": [
+            "$growth",
+            {
+              "type": "action",
+              "action": {
+                "type": "dungeon",
+                "character_id": "$character",
+                "world": "$world",
+                "dungeon": "$dungeon",
+                "profile": "$profile",
+                "allies": "$allies"
+              }
+            },
+            {
+              "type": "action",
+              "action": {
+                "type": "combat",
+                "allies": "$allies",
+                "profiles": [
+                  {
+                    "character_id": "$character",
+                    "profile": "$profile"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "complete"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

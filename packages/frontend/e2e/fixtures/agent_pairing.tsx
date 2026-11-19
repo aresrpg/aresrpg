@@ -102,6 +102,8 @@ const connect = (index: number) => {
   const session = {
     address: identity.address,
     identity: 'zklogin',
+    // A wallet without managed names: setup names nothing, so the naming step is a no-op here.
+    suins: { managed: false },
     read_agent_pairing_request: binding.read_agent_pairing_request,
     read_agent_recall: async (pairing: AgentPairingIdentity) => {
       const { session } = read_app_state()

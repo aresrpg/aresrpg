@@ -68,13 +68,13 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
   if (!power || power.level <= 0) return null
   const status = status_facts[power.status]
   return (
-    <section className="border-l-2 border-[#c8963c]/55 bg-[#c8963c]/[0.025] px-4 py-3" data-item-power="">
+    <section className="border-l-2 border-gold/55 bg-gold/[0.025] px-4 py-3" data-item-power="">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[9px] tracking-[0.16em] text-[#c8963c] uppercase">Dofus item power</h2>
-          <p className="mt-1 text-[8px] text-[#666b75]">Maximum-roll rune weight · Ares-supported Retro stats</p>
+          <h2 className="text-[9px] tracking-[0.16em] text-gold uppercase">Dofus item power</h2>
+          <p className="mt-1 text-[8px] text-faint">Maximum-roll rune weight · Ares-supported Retro stats</p>
         </div>
-        <span className="text-[8px] tracking-[0.12em] text-[#6f747e] uppercase">
+        <span className="text-[8px] tracking-[0.12em] text-faint uppercase">
           LVL {power.level} · {power.category || '?'}
         </span>
       </div>
@@ -92,11 +92,11 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
         <div className="grid grid-cols-2 gap-px bg-white/8">
           <div className="bg-surface-low px-2 py-2 text-center">
             <p className="text-[7px] tracking-[0.14em] text-[#a78bfa] uppercase">Authored max power</p>
-            <p className="mt-1 text-[9px] tabular-nums text-[#9da1ab]">{power.stat_power}</p>
+            <p className="mt-1 text-[9px] tabular-nums text-muted">{power.stat_power}</p>
           </div>
           <div className="bg-surface-low px-2 py-2 text-center">
-            <p className="text-[7px] tracking-[0.14em] text-[#c8963c] uppercase">Retro max-roll median</p>
-            <p className="mt-1 text-[9px] tabular-nums text-[#d5d0c8]">{power.median}</p>
+            <p className="text-[7px] tracking-[0.14em] text-gold uppercase">Retro max-roll median</p>
+            <p className="mt-1 text-[9px] tabular-nums text-soft">{power.median}</p>
           </div>
         </div>
         <div className="text-right">
@@ -104,7 +104,7 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
           <p className={`mt-1 text-lg font-semibold tabular-nums ${status.text}`}>
             <span className="mr-1 text-[7px] tracking-[0.14em] uppercase">Retro percentile</span>P{power.percentile}
           </p>
-          <p className="mt-1 text-[7px] tabular-nums text-[#666b75]">
+          <p className="mt-1 text-[7px] tabular-nums text-faint">
             {power.exact_level_power_donors > 0 && (
               <>
                 {power.exact_level_power_donors} exact level/power donor
@@ -121,7 +121,7 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
           <div className="mb-2 flex items-end justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.14em] text-[#ef6b6b] uppercase">Weapon output</p>
-              <p className="mt-1 text-[7px] text-[#666b75]">Damage stays separate from rune power</p>
+              <p className="mt-1 text-[7px] text-faint">Damage stays separate from rune power</p>
             </div>
             <p className={`text-[8px] tracking-[0.12em] uppercase ${status_facts[power.weapon.status].text}`}>
               {status_facts[power.weapon.status].label}
@@ -134,7 +134,7 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
             status={power.weapon.status}
             value={power.weapon.average_per_ap}
           />
-          <p className="mt-2 text-[8px] tabular-nums text-[#9da1ab]">
+          <p className="mt-2 text-[8px] tabular-nums text-muted">
             average/AP {power.weapon.average_per_ap} · maximum/AP {power.weapon.maximum_per_ap} ·{' '}
             {power.weapon.sample_count} {power.weapon.donor_family} donors
           </p>

@@ -13,6 +13,7 @@ const run_for = (script: BehaviorScript): BehaviorRun => ({
   bot_id: 'bot',
   grant_id: 'grant',
   lane_key: 'lane',
+  character_id: character.id,
   fingerprint: 'fixture',
   script: parse_behavior_script(script),
   revision: 1,

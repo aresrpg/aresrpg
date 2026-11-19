@@ -13,7 +13,6 @@ import { CatalogueItemDetails } from './CatalogueItemDetails.tsx'
 import { ClassesTab } from './ClassesTab.tsx'
 import { encyclopedia_layout } from './components.tsx'
 import { encyclopedia_text } from './copy.ts'
-import { GameplayTab } from './GameplayTab.tsx'
 import { ItemsTab } from './ItemsTab.tsx'
 import { JobsTab } from './JobsTab.tsx'
 import { MobsTab } from './MobsTab.tsx'
@@ -21,7 +20,7 @@ import { WorldsTab } from './WorldsTab.tsx'
 
 import './encyclopedia.css'
 
-type Tab = 'items' | 'bestiary' | 'classes' | 'jobs' | 'worlds' | 'gameplay' | 'kares'
+type Tab = 'items' | 'bestiary' | 'classes' | 'jobs' | 'worlds' | 'kares'
 
 export const ENCYCLOPEDIA_TABS: readonly Readonly<{ id: Tab; label: string }>[] = Object.freeze([
   { id: 'items', label: 'items' },
@@ -29,7 +28,6 @@ export const ENCYCLOPEDIA_TABS: readonly Readonly<{ id: Tab; label: string }>[] 
   { id: 'classes', label: 'classes' },
   { id: 'jobs', label: 'jobs_tab' },
   { id: 'worlds', label: 'worlds_tab' },
-  { id: 'gameplay', label: 'gameplay_tab' },
   { id: 'kares', label: 'tokenomics_tab' },
 ])
 
@@ -134,7 +132,6 @@ export const EncyclopediaContent = ({
       />
     ),
     kares: <TokenomicsTab copy={copy.kares_page} />,
-    gameplay: <GameplayTab text={text} />,
   }
   return (
     <div ref={root} className={encyclopedia_layout.body} data-encyclopedia-tab={view.tab}>

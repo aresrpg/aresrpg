@@ -6,7 +6,6 @@ import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
 import type { FundingAuthorization } from '../funding/recipient.ts'
 import { agent_tab_source } from '../agents/character_tabs.ts'
-import { consumed_agent_entry_url } from '../agents/entry_intent.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -27,7 +26,6 @@ export const pages = [
 
 export type Page = (typeof pages)[number]
 export type AppDialog =
-  | 'agent_setup'
   | 'welcome'
   | 'character_create'
   | 'top_up'
@@ -101,7 +99,6 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
 }
 
 const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
-  if (dialog === 'agent_setup' && !state.session.wallet) return state
   if (dialog === 'top_up')
     return {
       ...state,
@@ -140,7 +137,6 @@ const arrived_fight = (state: AppState, reason: string): AppState => {
 }
 
 const roster_navigation = (state: AppState, has_agent_characters: boolean): AppState => {
-  if (state.navigation.dialog === 'agent_setup') return state
   if (state.session.characters.length === 0 && !has_agent_characters) return open_dialog(state, 'welcome')
   // Roster updates also carry equipment changes; only roster onboarding owns automatic dismissal.
   return state.navigation.dialog === 'welcome' ? open_dialog(state, null) : state
@@ -216,23 +212,7 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
   if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') return
   let initial_route_read = false
   let initial_route_scheduled = false
-  const open_agent_entry = (state: AppState): void => {
-    if (!state.session.wallet || state.session.agent_view.request) return
-    const consumed = consumed_agent_entry_url(globalThis.location)
-    if (consumed === null) return
-    // Consume before dispatch: nested state updates and repeated roster packets cannot replay it.
-    globalThis.history.replaceState(globalThis.history.state, '', consumed)
-    dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
-    dispatch({ type: 'dialog/open', dialog: 'agent_setup' })
-  }
-  const read_route = (): void => {
-    dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
-    open_agent_entry(get_state())
-  }
-  const pop_route = (): void => {
-    if (get_state().navigation.dialog === 'agent_setup') dispatch({ type: 'dialog/open', dialog: null })
-    read_route()
-  }
+  const read_route = (): void => dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
   const schedule_initial_route = (): void => {
     if (initial_route_read || initial_route_scheduled || signal.aborted) return
     initial_route_scheduled = true
@@ -247,7 +227,6 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     schedule_initial_route()
-    open_agent_entry(state)
     if (state.fight.mounted && !previous.fight.mounted && state.navigation.page === 'kolizeum') {
       dispatch({ type: 'page/open', page: 'world' })
       return
@@ -260,7 +239,7 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
       return
     globalThis.history.pushState(null, '', next_pathname)
   })
-  globalThis.addEventListener('popstate', pop_route, { signal })
+  globalThis.addEventListener('popstate', read_route, { signal })
   schedule_initial_route()
 }
 

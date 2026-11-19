@@ -56,19 +56,19 @@ export const CharacterPicker = ({
     <div className="pointer-events-auto fixed inset-0 z-[9998]" onClick={close} role="presentation">
       <section
         aria-label={text.pick_character}
-        className="absolute flex max-h-80 w-[268px] flex-col overflow-y-auto border border-[#c8963c] bg-surface-low shadow-[0_0_24px_rgba(0,0,0,0.7)]"
+        className="absolute flex max-h-80 w-[268px] flex-col overflow-y-auto border border-gold bg-surface-low shadow-[0_0_24px_rgba(0,0,0,0.7)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         style={position}
       >
-        <header className="border-b border-white/6 px-3 py-2 text-[9px] font-semibold tracking-[0.2em] text-[#c8963c] uppercase">
+        <header className="border-b border-white/6 px-3 py-2 text-[9px] font-semibold tracking-[0.2em] text-gold uppercase">
           {text.pick_character}
         </header>
         {characters.map((character) => {
           const active = seated.has(character.id)
           return (
             <button
-              className="flex min-h-[52px] cursor-pointer items-center gap-2.5 border-b border-white/6 px-3 py-2 text-left hover:bg-[#c8963c]/10"
+              className="flex min-h-[52px] cursor-pointer items-center gap-2.5 border-b border-white/6 px-3 py-2 text-left hover:bg-gold/10"
               key={character.id}
               onClick={() => pick(character.id)}
               style={{ borderLeft: `2px solid ${active ? '#c8963c' : 'transparent'}` }}

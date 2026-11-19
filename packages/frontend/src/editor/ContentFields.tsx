@@ -6,10 +6,10 @@ import type { ReactNode } from 'react'
 import type { JsonValue } from './seed_editor.ts'
 
 export const input_class =
-  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:opacity-45'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-text outline-none focus:border-cyan/70 disabled:cursor-not-allowed disabled:opacity-45'
 
 export const button_class =
-  'h-7 cursor-pointer border border-white/12 bg-white/[0.025] px-2 text-[8px] tracking-[0.12em] text-[#8c919c] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45] disabled:cursor-not-allowed disabled:opacity-35'
+  'h-7 cursor-pointer border border-white/12 bg-white/[0.025] px-2 text-[8px] tracking-[0.12em] text-faint uppercase hover:border-gold/50 hover:text-gold disabled:cursor-not-allowed disabled:opacity-35'
 
 export const as_record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
   value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
@@ -38,16 +38,16 @@ export const SheetSection = ({
       <h2 className="text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ color: accent }}>
         {title}
       </h2>
-      {note && <p className="mt-1 text-[8px] text-[#686d77]">{note}</p>}
+      {note && <p className="mt-1 text-[8px] text-faint">{note}</p>}
     </header>
     {children}
   </section>
 )
 
 export const FieldLabel = ({ label, hint }: Readonly<{ label: string; hint?: string }>) => (
-  <span className="mb-1.5 block text-[7px] tracking-[0.13em] text-[#737883] uppercase">
+  <span className="mb-1.5 block text-[7px] tracking-[0.13em] text-faint uppercase">
     {label}
-    {hint && <span className="ml-2 normal-case tracking-normal text-[#50545d]">{hint}</span>}
+    {hint && <span className="ml-2 normal-case tracking-normal text-steel">{hint}</span>}
   </span>
 )
 

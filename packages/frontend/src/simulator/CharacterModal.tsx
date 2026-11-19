@@ -11,11 +11,11 @@ import {
   max_level,
   stat_names,
 } from '@aresrpg/immutable'
+import { SpellRow } from '@aresrpg/ui'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
-import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'

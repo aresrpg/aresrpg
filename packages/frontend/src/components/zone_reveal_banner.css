@@ -9,28 +9,28 @@
   align-items: center;
   gap: 7px;
   padding: 18px 46px;
-  color: #e8e4dc;
+  color: var(--aui-ink);
   text-align: center;
   pointer-events: none;
   background: linear-gradient(165deg, var(--color-surface), var(--color-bg));
-  border: 1px solid #c8963c;
+  border: 1px solid var(--aui-brass);
   border-radius: 0;
   box-shadow:
-    0 0 44px rgba(200, 150, 60, 0.34),
+    0 0 44px color-mix(in srgb, var(--aui-brass) 34%, transparent),
     0 18px 52px rgba(0, 0, 0, 0.6);
   transform: translateX(-50%);
   animation: gw-reveal-flash 2.5s ease-out forwards;
 }
 .gw-reveal__title {
-  color: #c8963c;
+  color: var(--aui-brass);
   font-size: 21px;
   font-weight: 700;
   letter-spacing: 0.32em;
-  text-shadow: 0 0 20px rgba(200, 150, 60, 0.6);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--aui-brass) 60%, transparent);
   text-transform: uppercase;
 }
 .gw-reveal__coords {
-  color: #6b7280;
+  color: var(--aui-faint);
   font-size: 10px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
@@ -43,7 +43,7 @@
   text-transform: uppercase;
 }
 .gw-reveal__findings {
-  color: #f5d0a9;
+  color: var(--aui-brass-hi);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.16em;

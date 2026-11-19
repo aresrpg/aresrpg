@@ -6,7 +6,7 @@ import { lane_key_for } from '../src/control.ts'
 
 import { process_pair, start_process, until } from './helpers/router_process_fixture.ts'
 import { put } from './helpers/control_fixture.ts'
-import { plan } from './helpers/profession_fixture.ts'
+import { recipe } from './helpers/profession_fixture.ts'
 import { fixture_redis } from './helpers/redis_fixture.ts'
 
 const url = process.env.TEST_BOT_REDIS_URL
@@ -39,8 +39,8 @@ integration(
       const peer = owner === f.first ? f.second : f.first
       await owner.call('admit')
       expect(await peer.call('observe')).toMatchObject({ ready: true, event_fence: initial.fence })
-      const planning = await peer.call<Record<string, unknown>>('planning', { recipes: [plan.recipe_output] })
-      const local = await owner.call<Record<string, unknown>>('planning', { recipes: [plan.recipe_output] })
+      const planning = await peer.call<Record<string, unknown>>('planning', { recipes: [recipe.output_type] })
+      const local = await owner.call<Record<string, unknown>>('planning', { recipes: [recipe.output_type] })
       expect(planning.planning_context).toEqual(local.planning_context)
       expect(planning.planning_context).toBeDefined()
       expect((await peer.call<Status>('status')).sockets).toBe(0)

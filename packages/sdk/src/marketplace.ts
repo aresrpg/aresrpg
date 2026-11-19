@@ -10,7 +10,12 @@ import { created_object_id, receipt_digest, receipt_version, type Receipt } from
 import { create_kiosk_runner, resolve_kiosk_cap, retry_stale_kiosk_ref, type KioskCapLoader } from './kiosk_runner.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
 
-export const ROYALTY_FLOOR_MIST = 10_000_000n
+/**
+ * The minimum royalty of a purchase, as the live transfer policies hold it. The chain is the owner of
+ * this number: a purchase pays what `royalty_rule::fee_amount` returns, and this copy only predicts it
+ * for prices shown before a transaction exists. The indexer keeps the same value for revenue analytics.
+ */
+export const ROYALTY_FLOOR_MIST = 1_000_000n
 export const buyer_total = (ask: bigint): bigint => {
   const royalty = (ask * BigInt(marketplace_royalty_bps)) / BigInt(basis_points)
   return ask + (royalty > ROYALTY_FLOOR_MIST ? royalty : ROYALTY_FLOOR_MIST)

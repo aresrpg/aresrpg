@@ -10,9 +10,9 @@ import { TOAST_CONTAINER_CLASS, toast as toast_api, toast_glass_class, type Toas
 
 const PART_TONE_CLASS = Object.freeze({
   default: '',
-  gold: 'text-[#e8b654]',
-  primary: 'text-[#e8e4dc]',
-  sui: 'text-[#67adff]',
+  gold: 'text-gold',
+  primary: 'text-text',
+  sui: 'text-cyan',
 })
 
 const ToastMessage = ({ toast }: Readonly<{ toast: Toast }>) => (
@@ -99,7 +99,7 @@ export const Toasts = () => {
             toast.type === 'error'
               ? 'text-red-400'
               : toast.type === 'pending'
-                ? 'text-[#f5d0a9]'
+                ? 'text-gold-light'
                 : toast.type === 'success'
                   ? 'text-emerald-400'
                   : 'text-[#4de3ff]'
@@ -110,14 +110,14 @@ export const Toasts = () => {
             {toast.icon ? (
               <img alt="" aria-hidden="true" className="size-8 shrink-0 object-contain" src={toast.icon} />
             ) : toast.type === 'pending' ? (
-              <span className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-[#c8963c]/30 border-t-[#c8963c]" />
+              <span className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
             ) : toast.type === 'success' ? (
               <span className="shrink-0 text-[13px] leading-none">✓</span>
             ) : null}
             <ToastMessage toast={toast} />
             {toast.actions?.map((action) => (
               <button
-                className="shrink-0 cursor-pointer border border-[#c8963c]/45 px-3 py-1.5 font-mono text-[9px] leading-none font-semibold tracking-[0.15em] text-[#c8963c] uppercase hover:border-[#c8963c] hover:bg-[#c8963c]/10"
+                className="shrink-0 cursor-pointer border border-gold/45 px-3 py-1.5 font-mono text-[9px] leading-none font-semibold tracking-[0.15em] text-gold uppercase hover:border-gold hover:bg-gold/10"
                 key={action.label}
                 onClick={action.onClick}
                 type="button"

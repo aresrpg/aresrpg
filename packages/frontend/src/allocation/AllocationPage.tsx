@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useMemo } from 'react'
 import { useStore } from 'zustand'
-import { campaign } from '@aresrpg/immutable/allocation'
 
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
@@ -13,12 +12,11 @@ import { env } from '../env.ts'
 import { useBlastSale } from '../kares/useBlastSale.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
-import { allocation_view, campaign_phase } from './view.ts'
+import { allocation_view } from './view.ts'
 import { Wallets } from './Wallets.tsx'
-import { Entries } from './Entries.tsx'
 import { Hero } from './Hero.tsx'
 import { Results } from './Results.tsx'
-import { useCampaignClosed, useCampaignRefresh, useMinuteClock } from './clock.tsx'
+import { useMinuteClock } from './clock.tsx'
 import { useWalletFeedback } from './wallet_feedback.ts'
 import { Notices } from './Notices.tsx'
 import { helmet } from './assets.ts'
@@ -36,7 +34,6 @@ const CampaignStatus = ({
   const labels: Readonly<Record<string, string>> = {
     verify: 'signing',
     link_google: 'signing',
-    submit: 'checking_posts',
   }
   const label = pending ? text(labels[state.task!.kind] ?? state.progress ?? 'loading') : text(phase)
   return (
@@ -55,8 +52,6 @@ export const AllocationPage = ({
   const state = useStore(runtime.store)
   const feedback = useWalletFeedback(state)
   const text = copy_text(copy.allocation_page)
-  const closed = useCampaignClosed()
-  useCampaignRefresh(runtime, !!state.session && !state.error)
   const external = useMemo(
     () =>
       create_wallet_runtime<AuthSession>({
@@ -67,9 +62,8 @@ export const AllocationPage = ({
     []
   )
   const external_state = useStore(external.store)
-  const view = allocation_view(state.status, closed ? Date.parse(campaign.submissions_close_at) : 0, state.session)
-  const open = !closed && (state.status?.submissions_open ?? true)
-  // A pinned sale snapshot switches the page to buying; without one the campaign page is unchanged.
+  const view = allocation_view(state.status)
+  // A pinned sale snapshot switches the page to buying; without one the page shows the published spots.
   const sale = useBlastSale().snapshot
   const now = useMinuteClock()
   const wallet = { state: external_state, dispatch: external.dispatch }
@@ -93,11 +87,7 @@ export const AllocationPage = ({
           <img src={helmet} alt="" />
           AresRPG <span>{text('title')}</span>
         </a>
-        <CampaignStatus
-          state={state}
-          phase={sale ? `sale_${sale.phase}` : campaign_phase(view.final, open)}
-          text={text}
-        />
+        <CampaignStatus state={state} phase={sale ? `sale_${sale.phase}` : 'final'} text={text} />
         {state.session && (
           <button
             className="btn btn-small"
@@ -116,7 +106,6 @@ export const AllocationPage = ({
           runtime={runtime}
           text={text}
           locale={locale}
-          open={open}
           sale={sale}
           now={now}
           kares={copy.kares_page}
@@ -131,8 +120,7 @@ export const AllocationPage = ({
             google_label={copy.continue_google}
             text={text}
           />
-          <Entries state={state} runtime={runtime} text={text} open={open} />
-          <Results text={text} final={view.final} open={open} locale={locale} kares_copy={copy.kares_page} />
+          <Results text={text} locale={locale} kares_copy={copy.kares_page} />
         </div>
         <p className="fine">{text('footer')}</p>
       </main>

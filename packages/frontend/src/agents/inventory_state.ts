@@ -2,11 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type {
   AgentPairingIdentity,
+  AgentStatus,
   CharacterRow,
   InventoryPacket,
   ClientPacket,
   FightStateRow,
   FightResolutionRow,
+  TradeRow,
 } from '@aresrpg/protocol'
 import {
   fold_inventory,
@@ -27,7 +29,11 @@ export type AgentInventoryView = InventoryProjection &
     characters: readonly CharacterRow[]
     fights: Readonly<Record<string, FightStateRow>>
     resolutions: readonly FightResolutionRow[]
+    /** Trades of this account: with its own listings, what locks items of the bag. */
+    trades: readonly TradeRow[]
     catalogue: CatalogueProjection
+    /** What the account's own hosted bot last said about itself; null until it speaks. */
+    status: AgentStatus | null
     sui_balance_mist: bigint | null
     kares_balance: bigint | null
   }>
@@ -49,7 +55,9 @@ export const initial_agent_inventory = (serial = 0): AgentInventoryView => ({
   characters: [],
   fights: {},
   resolutions: [],
+  trades: [],
   catalogue: { listings: [], own_listings: [], catalogues: {}, departures: {} },
+  status: null,
   sui_balance_mist: null,
   kares_balance: null,
 })
@@ -58,28 +66,39 @@ const inventory_identity = (pairing: AgentPairingIdentity | null) =>
 export const same_inventory_pairing = (left: AgentPairingIdentity | null, right: AgentPairingIdentity | null) =>
   JSON.stringify(inventory_identity(left)) === JSON.stringify(inventory_identity(right))
 
+type Observed<K extends InventoryPacket['type']> = (
+  view: AgentInventoryView,
+  packet: Readonly<Extract<InventoryPacket, { type: K }>>,
+  address: string
+) => AgentInventoryView
+/** One fold per packet of the observed account; the last packet of a snapshot is its inventory. */
+const OBSERVED: { readonly [K in InventoryPacket['type']]: Observed<K> } = {
+  'packet/inventory': (view, { items }) => ({ ...view, inventory: fold_inventory(view, items), phase: 'ready' }),
+  // A pushed snapshot of an account already read keeps it readable while its packets arrive.
+  'packet/characters': (view, { characters }) => ({
+    ...view,
+    phase: view.phase === 'ready' ? 'ready' : 'loading',
+    characters,
+  }),
+  'packet/fight_state': (view, { fight, state }) => ({ ...view, fights: { ...view.fights, [fight]: state } }),
+  'packet/fight_resolutions': (view, { resolutions }) => ({ ...view, resolutions }),
+  'packet/listings': (view, packet, address) => ({
+    ...view,
+    catalogue: fold_catalogue(view.catalogue, packet, true, address),
+  }),
+  'packet/trades': (view, { trades }) => ({ ...view, trades }),
+  'packet/item_updated': (view, packet) => ({ ...view, ...fold_item_packet(view, packet) }),
+  'packet/item_removed': (view, packet) => ({ ...view, ...fold_item_packet(view, packet) }),
+  'packet/agent_status': (view, { status }) => ({ ...view, status }),
+}
 const fold_observed_packet = (
   view: AgentInventoryView,
   packet: Readonly<InventoryPacket> | null,
   address: string
-): AgentInventoryView => {
-  if (!packet) return { ...view, phase: 'failed' }
-  switch (packet.type) {
-    case 'packet/inventory':
-      return { ...view, inventory: fold_inventory(view, packet.items), phase: 'ready' }
-    case 'packet/characters':
-      return { ...view, phase: 'loading', characters: packet.characters }
-    case 'packet/fight_state':
-      return { ...view, fights: { ...view.fights, [packet.fight]: packet.state } }
-    case 'packet/fight_resolutions':
-      return { ...view, resolutions: packet.resolutions }
-    case 'packet/listings':
-      return { ...view, catalogue: fold_catalogue(view.catalogue, packet, true, address) }
-    case 'packet/item_updated':
-    case 'packet/item_removed':
-      return { ...view, ...fold_item_packet(view, packet) }
-  }
-}
+): AgentInventoryView =>
+  packet
+    ? (OBSERVED[packet.type] as Observed<InventoryPacket['type']>)(view, packet, address)
+    : { ...view, phase: 'failed' }
 const fold_inventory_input = (
   view: AgentInventoryView,
   session: SessionState,

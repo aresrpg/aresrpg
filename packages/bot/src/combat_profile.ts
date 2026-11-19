@@ -6,14 +6,16 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { catalog_spell, learned_spell_rank } from './spell_catalog.ts'
 import { decode, nonempty, object_schema, type Schema } from './gameplay_schema.ts'
 
+/** A cast marked `if_learned` is skipped while its hero has not learned the spell; any other cast of
+ * an unlearned spell stops the hero, so its author hears about it. */
+type Cast = Readonly<{ type: 'cast'; spell: string; if_learned?: true }>
 export type CombatStep =
-  | Readonly<{
-      type: 'cast'
-      spell: string
-      position?: 'best_damage'
-      target: 'self' | 'nearest_enemy' | 'lowest_hp_enemy' | 'highest_damage_enemy' | 'trap_near_enemy'
-    }>
-  | Readonly<{ type: 'cast'; spell: string; target: 'most_allies'; position?: never }>
+  | (Cast &
+      Readonly<{
+        position?: 'best_damage'
+        target: 'self' | 'nearest_enemy' | 'lowest_hp_enemy' | 'highest_damage_enemy' | 'trap_near_enemy'
+      }>)
+  | (Cast & Readonly<{ target: 'most_allies' | 'lowest_hp_ally'; position?: never }>)
   | Readonly<{
       type: 'strike'
       position?: 'best_damage'
@@ -24,6 +26,8 @@ export type CombatCondition =
   | Readonly<{ type: 'always' }>
   | Readonly<{ type: 'hp_below'; percent: number }>
   | Readonly<{ type: 'enemy_within'; cells: number }>
+  | Readonly<{ type: 'ally_present' }>
+  | Readonly<{ type: 'ally_hp_below'; percent: number }>
 export type CombatProfile = Readonly<{
   version: '1'
   intent: string
@@ -33,18 +37,18 @@ export type CombatProfile = Readonly<{
 }>
 const choices = (...values: readonly string[]): Schema => ({ oneOf: values.map((value) => ({ const: value })) })
 const enemy_target = choices('nearest_enemy', 'lowest_hp_enemy', 'highest_damage_enemy')
+const cast = { type: { const: 'cast' }, spell: nonempty, if_learned: { const: true } } as const
+const cast_schema = (properties: Readonly<Record<string, Schema>>): Schema => ({
+  ...object_schema({ ...cast, ...properties }),
+  required: ['type', 'spell', 'target'],
+})
 const step_schema: Schema = {
   oneOf: [
-    {
-      ...object_schema({
-        type: { const: 'cast' },
-        spell: nonempty,
-        target: choices('self', 'nearest_enemy', 'lowest_hp_enemy', 'highest_damage_enemy', 'trap_near_enemy'),
-        position: { const: 'best_damage' },
-      }),
-      required: ['type', 'spell', 'target'],
-    },
-    object_schema({ type: { const: 'cast' }, spell: nonempty, target: { const: 'most_allies' } }),
+    cast_schema({
+      target: choices('self', 'nearest_enemy', 'lowest_hp_enemy', 'highest_damage_enemy', 'trap_near_enemy'),
+      position: { const: 'best_damage' },
+    }),
+    cast_schema({ target: choices('most_allies', 'lowest_hp_ally') }),
     {
       ...object_schema({ type: { const: 'strike' }, target: enemy_target, position: { const: 'best_damage' } }),
       required: ['type', 'target'],
@@ -52,10 +56,13 @@ const step_schema: Schema = {
     object_schema({ type: { const: 'move' }, direction: choices('retreat', 'approach') }),
   ],
 }
+const percent: Schema = { type: 'integer', minimum: 1, maximum: 100 }
 const condition_schema: Schema = {
   oneOf: [
     object_schema({ type: { const: 'always' } }),
-    object_schema({ type: { const: 'hp_below' }, percent: { type: 'integer', minimum: 1, maximum: 100 } }),
+    object_schema({ type: { const: 'hp_below' }, percent }),
+    object_schema({ type: { const: 'ally_present' } }),
+    object_schema({ type: { const: 'ally_hp_below' }, percent }),
     object_schema({
       type: { const: 'enemy_within' },
       cells: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
@@ -73,27 +80,27 @@ export const COMBAT_PROFILE_SCHEMA = object_schema({
   rules: { type: 'array', minItems: 1, items: object_schema({ when: condition_schema, combo: nonempty }) },
   fallback: choices('end_turn', 'awaiting_ai'),
 })
-export const profile_spell_names = (profile: CombatProfile): readonly string[] => [
-  ...new Set(
-    profile.combos.flatMap(({ steps }) => steps.flatMap((step) => (step.type === 'cast' ? [step.spell] : [])))
-  ),
-]
+const casts = (profile: CombatProfile) =>
+  profile.combos.flatMap(({ steps }) => steps.filter((step) => step.type === 'cast'))
+const spell_names = (steps: readonly Cast[]): readonly string[] => [...new Set(steps.map(({ spell }) => spell))]
+/** The spells whose absence stops the hero: every cast not marked `if_learned`. */
+const required_spells = (profile: CombatProfile) => spell_names(casts(profile).filter((step) => !step.if_learned))
 
 /** Saved preferences are data. They never allocate capital, equip gear or authorize a fight. */
 export const parse_combat_profile = (value: unknown): CombatProfile => {
   const profile = decode<CombatProfile>(COMBAT_PROFILE_SCHEMA, value)
   const names = new Set(profile.combos.map(({ name }) => name))
   if (names.size !== profile.combos.length) throw new Error('duplicate_combo')
-  if (profile_spell_names(profile).some((name) => !catalog_spell(name))) throw new Error('unknown_combat_spell')
+  if (spell_names(casts(profile)).some((name) => !catalog_spell(name))) throw new Error('unknown_combat_spell')
   if (profile.rules.some(({ combo }) => !names.has(combo))) throw new Error('unknown_combo')
   return profile
 }
 export const validate_profile_character = (
   profile: CombatProfile,
   character: Readonly<Pick<CharacterRow, 'classe' | 'level' | 'spells'>>
-): readonly string[] => profile_spell_names(profile).filter((name) => learned_spell_rank(name, character) === null)
+): readonly string[] => required_spells(profile).filter((name) => learned_spell_rank(name, character) === null)
 export const validate_profile_checkpoint = (
   profile: CombatProfile,
   checkpoint: Readonly<HydratedFightCheckpoint>,
   seat: bigint
-): readonly string[] => profile_spell_names(profile).filter((name) => !spell_level_of(checkpoint, seat, name))
+): readonly string[] => required_spells(profile).filter((name) => !spell_level_of(checkpoint, seat, name))

@@ -107,3 +107,30 @@ test('failed or underfunded simulation never signs and invalid amounts fail befo
   await expect(actions.send_sui('invalid', 1n, false)).rejects.toThrow('valid Sui address')
   expect(executions).toBe(0)
 })
+
+test('a per-transfer guard can cancel after SDK preparation without requesting a signature', async () => {
+  const { promise, resolve } = Promise.withResolvers<void>()
+  let current = true,
+    signatures = 0
+  const actions = sui_transfer_actions(
+    {
+      simulate: async () => ({}),
+      execute: async (_tx, options) => {
+        await promise
+        options?.before_sign?.()
+        signatures += 1
+        return { digest: 'certified' }
+      },
+    },
+    address('3')
+  )
+  const pending = actions.send_sui(address('4'), 123n, false, () => {
+    if (!current) throw new Error('funding_source_changed')
+  })
+  current = false
+  resolve()
+  await expect(pending).rejects.toThrow('funding_source_changed')
+  expect(signatures).toBe(0)
+  expect(await actions.send_sui(address('4'), 123n, false)).toEqual({ digest: 'certified' })
+  expect(signatures).toBe(1)
+})

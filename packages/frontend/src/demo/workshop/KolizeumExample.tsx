@@ -6,8 +6,7 @@ import { Workspace, ConfirmDialog, Button } from '@aresrpg/ui'
 import { Swords } from 'lucide-react'
 
 import { KolizeumView } from '../../kolizeum/KolizeumPage.tsx'
-import { adventure_character } from '../../adventure/character.ts'
-import { adventure_character_row } from '../../adventure/projection.ts'
+import { sample_character, sample_character_row } from '../sample.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 
 import { WorkshopSurface } from './shared.tsx'
@@ -26,10 +25,7 @@ const lobbies: readonly KolizeumLobbyRow[] = ([1, 3, 6] as const).map((format, i
   fighters: [{ seat: 0, team: 0, character_id: 'rin', name: 'Rin', classe: 'rojin', level: 170, settled: false }],
 }))
 export const KolizeumExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const character = useMemo(
-    () => ({ ...adventure_character_row(adventure_character()), custody: 'kiosk' as const }),
-    []
-  )
+  const character = useMemo(() => ({ ...sample_character_row(sample_character()), custody: 'kiosk' as const }), [])
   const [review, set_review] = useState(false)
   return (
     <WorkshopSurface copy={copy} title={copy.kolizeum} icon={<Swords />}>

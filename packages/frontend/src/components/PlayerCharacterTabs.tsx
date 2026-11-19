@@ -12,7 +12,7 @@ import { AgentTransferFunding } from '../agents/AgentTransferFunding.tsx'
 
 import { CharacterTabs } from './CharacterTabs.tsx'
 
-/** Live custody augments display only; demo/adventure tabs continue using their own supplied roster. */
+/** Live custody augments display only; the composition lab's tabs keep their own supplied roster. */
 export const PlayerCharacterTabs = ({
   copy,
   create_character,

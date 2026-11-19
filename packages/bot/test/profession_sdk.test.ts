@@ -11,23 +11,49 @@ import { recipe_id, item_template_id } from '@aresrpg/sdk/seed-ids'
 
 import { fake_client, pins, id, digest } from '../../sdk/test/helpers/transport.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../src/control.ts'
-import { create_transaction_journal } from '../src/transaction_journal.ts'
+import { create_transaction_lifecycle } from '../src/transaction_lifecycle.ts'
 import { run_tick } from '../src/run_runtime.ts'
 import { execute_gameplay } from '../src/gameplay.ts'
-import type { ProfessionRun } from '../src/profession_control.ts'
+import { bind_action_baseline, reconcile_action } from '../src/action_reconciliation.ts'
+import type { BehaviorRun } from '../src/behavior_script.ts'
 import type { ProvisionRequest } from '../src/provisioning.ts'
 
-import { stored_profession } from './helpers/legacy_run_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
-import { profession_context, plan, character, item, recipe, resource } from './helpers/profession_fixture.ts'
+import { profession_context, character, item, recipe, resource } from './helpers/profession_fixture.ts'
 
-test('profession plan reaches real SDK gather and craft PTBs through the durable journal using only fixture transport', async () => {
+test('a hero tree reaches real SDK gather and craft PTBs through the session lifecycle using only fixture transport', async () => {
   const f = await runtime_fixture()
   const control = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
   const lease = await control.acquire(f.bot, 'actor', 10000)
   const lane_key = lane_key_for(f.bot)
   await control.observed(lane_key, 'actor', lease.fence, true)
-  const started = await stored_profession(f.store, f.grant, plan, f.clock.now)
+  const started = await control.start_behavior(f.grant, {
+    idempotency_key: 'gather-craft',
+    decision_revision: 0,
+    observation_revision: 1,
+    script: {
+      version: '1',
+      objective: { title: 'Gather, then craft' },
+      tree: {
+        type: 'sequence',
+        children: [
+          {
+            type: 'action',
+            action: { type: 'gather', character_id: character.id, item_type: resource.item_type, order: 'nearest' },
+          },
+          {
+            type: 'action',
+            action: {
+              type: 'call',
+              kind: 'craft',
+              payload: { character_id: character.id, output_type: recipe.output_type, attempts: 1 },
+            },
+          },
+          { type: 'complete' },
+        ],
+      },
+    },
+  })
   const source = profession_context()
   const provision = (await f.store.read<ProvisionRequest>('provision:bot'))!
   const member = f.options.provider.signer(provision.key!)
@@ -91,7 +117,7 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
     },
   } as unknown as SuiTransport
   for (const revision of [1, 2]) {
-    const run = (await f.store.read<ProfessionRun>(`profession:${started.id}`))!
+    const run = (await f.store.read<BehaviorRun>(`behavior:${started.id}`))!
     const snapshot = {
       ...source.snapshot,
       observation_revision: revision,
@@ -121,7 +147,9 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
       snapshot,
       command: { ...source.command, observation_revision: revision },
     }
-    await run_tick('profession', {
+    // The previous signature's effect must be observed before the tree advances.
+    await reconcile_action(f.store, lane_key, 'actor', lease.fence, context, f.clock.now)
+    await run_tick({
       store: f.store,
       config: f.options.config,
       run,
@@ -130,14 +158,13 @@ test('profession plan reaches real SDK gather and craft PTBs through the durable
       context,
       now: f.clock.now,
     })
-    const admitted = (await f.store.read<ProfessionRun>(`profession:${run.id}`))!
+    const admitted = (await f.store.read<BehaviorRun>(`behavior:${run.id}`))!
     expect(admitted.actions_started).toBe(revision)
-    const command = (await f.store.read<Command>(`command:${admitted.last_command_id}`))!
-    const journal = create_transaction_journal(
+    const command = bind_action_baseline((await f.store.read<Command>(`command:${admitted.last_command_id}`))!, context)
+    const journal = create_transaction_lifecycle(
       f.store,
       f.options.config,
-      f.options.cipher,
-      { command, actor_id: 'actor', fence: lease.fence },
+      () => ({ command, actor_id: 'actor', fence: lease.fence }),
       () => f.clock.now
     )
     const sdk = SDK({

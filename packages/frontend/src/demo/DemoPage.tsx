@@ -5,7 +5,8 @@
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 import { type CharacterAnimationRender, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
-import { FlaskConical, UserRound } from 'lucide-react'
+import { SegmentedControl } from '@aresrpg/ui'
+import { ArrowLeft, FlaskConical, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { WorldLoading } from '../components/WorldLoading.tsx'
@@ -37,6 +38,7 @@ import { DemoCheckbox } from './DemoCheckbox.tsx'
 import { DemoDevPage } from './DemoDevPage.tsx'
 import { DEMO_VIEWS, VIEW_ICONS, demo_view, type DemoView } from './demo_views.ts'
 import { demo_world_coordinate } from './world_target.ts'
+import './demo_nav.css'
 
 const initial_target = (): string => globalThis.location.hash.slice(1).split('/')[1] ?? ''
 type DemoWorld = ReturnType<typeof create_world>
@@ -72,10 +74,10 @@ const WorldCrowdLab = ({
 }
 
 const field_class =
-  'h-9 min-w-0 border border-white/10 bg-bg px-2 text-[9px] text-[#d5d2cb] outline-none focus:border-[#4a9eff]/45'
-const label_class = 'grid gap-1.5 text-[7px] tracking-[0.16em] text-[#777b86] uppercase'
+  'h-9 min-w-0 border border-white/10 bg-bg px-2 text-[9px] text-soft outline-none focus:border-cyan/45'
+const label_class = 'grid gap-1.5 text-[7px] tracking-[0.16em] text-faint uppercase'
 const button_class =
-  'flex h-9 cursor-pointer items-center justify-center gap-2 border border-[#4a9eff]/30 bg-[#4a9eff]/7 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/60 disabled:cursor-not-allowed disabled:opacity-30'
+  'flex h-9 cursor-pointer items-center justify-center gap-2 border border-cyan/30 bg-cyan/7 px-3 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/60 disabled:cursor-not-allowed disabled:opacity-30'
 
 const FightLabSurface = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const surface = fight_lab_surface(useAppStore((state) => state.fight.mounted))
@@ -249,7 +251,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
           />
         </>
       )}
-      <div className="pointer-events-none absolute inset-0 z-10 p-3">
+      <div className="pointer-events-none absolute inset-x-0 top-14 bottom-0 z-10 p-3">
         <FpsPanel
           active={active}
           change_quality={change_quality}
@@ -261,10 +263,10 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
         />
         <HudPanel className="pointer-events-auto absolute top-3 right-3 flex max-h-[calc(100%-24px)] w-[270px] flex-col overflow-y-auto p-3">
           <div className="flex items-center gap-2 border-b border-white/8 pb-3">
-            <FlaskConical className="text-[#c8963c]" size={14} />
+            <FlaskConical className="text-gold" size={14} />
             <div className="min-w-0 flex-1">
               <h1 className="text-[10px] font-semibold tracking-[0.18em] uppercase">{text.title}</h1>
-              <p className="mt-1 text-[7px] tracking-[0.12em] text-[#6b7280] uppercase">
+              <p className="mt-1 text-[7px] tracking-[0.12em] text-faint uppercase">
                 {status.backend} · {status.state}
               </p>
             </div>
@@ -288,7 +290,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
               <label className={label_class}>
                 {text.time}
                 <input
-                  className="h-9 cursor-pointer accent-[#4a9eff]"
+                  className="h-9 cursor-pointer accent-cyan"
                   disabled={live_time}
                   max={1}
                   min={0}
@@ -304,7 +306,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
           </div>
 
           <div className="grid gap-3 border-b border-white/8 py-3">
-            <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">
+            <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-gold uppercase">
               <UserRound size={12} /> {copy.characters}
             </h2>
             <div className="grid grid-cols-2 gap-2">
@@ -416,20 +418,20 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
         </HudPanel>
         {character_enabled && pet ? (
           <button
-            className="pointer-events-auto absolute bottom-24 left-1/2 flex -translate-x-1/2 cursor-pointer items-center gap-2 border border-[#c8963c]/35 bg-[linear-gradient(165deg,var(--color-surface),var(--color-bg))] px-3.5 py-2 font-mono text-[9px] tracking-[0.18em] uppercase shadow-[0_0_0_1px_rgba(200,150,60,0.08)] transition hover:border-[#c8963c] hover:shadow-[0_0_20px_rgba(200,150,60,0.35)]"
+            className="pointer-events-auto absolute bottom-24 left-1/2 flex -translate-x-1/2 cursor-pointer items-center gap-2 border border-gold/35 bg-[linear-gradient(165deg,var(--color-surface),var(--color-bg))] px-3.5 py-2 font-mono text-[9px] tracking-[0.18em] uppercase shadow-[0_0_0_1px_rgba(200,150,60,0.08)] transition hover:border-gold hover:shadow-[0_0_20px_rgba(200,150,60,0.35)]"
             onClick={() => {
               world_api?.set_riding(!riding)
               set_riding(world_api?.riding() ?? false)
             }}
             type="button"
           >
-            <kbd className="flex h-5 min-w-5 items-center justify-center border border-[#c8963c] px-1 text-[9px] font-semibold text-[#c8963c] shadow-[inset_0_0_8px_rgba(200,150,60,0.2)]">
+            <kbd className="flex h-5 min-w-5 items-center justify-center border border-gold px-1 text-[9px] font-semibold text-gold shadow-[inset_0_0_8px_rgba(200,150,60,0.2)]">
               X
             </kbd>
-            <span className="text-[#e8c878]">{riding ? text.dismount_pet : text.ride_pet}</span>
+            <span className="text-gold-light">{riding ? text.dismount_pet : text.ride_pet}</span>
           </button>
         ) : (
-          <HudPanel className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-2 text-[8px] tracking-[0.15em] text-[#a3a5ad] uppercase">
+          <HudPanel className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-2 text-[8px] tracking-[0.15em] text-muted uppercase">
             {character_enabled ? text.control_hint : copy.drag_hint}
           </HudPanel>
         )}
@@ -488,7 +490,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     })[candidate]
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
+    <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-text">
       <WorldLab active={view === 'world'} copy={copy} />
       {view === 'fight' && (
         <section className="absolute inset-0">
@@ -501,29 +503,21 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {view === 'boards' && <BoardGallery text={text} />}
       <DemoDevPage view={view} />
       {view === 'ui' && <UiWorkshop copy={copy} />}
-      <HudPanel
-        className={`pointer-events-auto fixed top-3 left-1/2 z-50 flex max-w-[calc(100vw-16px)] -translate-x-1/2 overflow-x-auto text-[8px] tracking-[0.16em] uppercase`}
-      >
-        {DEMO_VIEWS.map((candidate) => {
-          const ViewIcon = VIEW_ICONS[candidate]
-          return (
-            <button
-              className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 px-4 py-2.5 ${
-                view === candidate ? 'bg-[#4a9eff]/12 text-[#67adff]' : 'text-[#777b86] hover:text-[#d5d2cb]'
-              }`}
-              key={candidate}
-              onClick={() => select_view(candidate)}
-              type="button"
-            >
-              <ViewIcon size={11} />
-              {view_label(candidate)}
-            </button>
-          )
-        })}
-        <a className="border-l border-white/10 px-4 py-2.5 text-[#c8963c] hover:bg-[#c8963c]/8" href="/">
+      <nav className="demo-nav">
+        <SegmentedControl
+          label={text.title}
+          value={view}
+          on_change={select_view}
+          options={DEMO_VIEWS.map((candidate) => {
+            const ViewIcon = VIEW_ICONS[candidate]
+            return { value: candidate, label: view_label(candidate), icon: <ViewIcon size={14} aria-hidden /> }
+          })}
+        />
+        <a className="aui-button" href="/">
+          <ArrowLeft size={14} aria-hidden />
           {text.back}
         </a>
-      </HudPanel>
+      </nav>
       <div
         hidden={view === 'ui'}
         className="pointer-events-none fixed inset-0 z-40 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]"

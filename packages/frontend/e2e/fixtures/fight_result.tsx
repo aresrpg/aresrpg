@@ -7,13 +7,15 @@ import { item_stat_center } from '@aresrpg/immutable'
 import { create_app, dispatch_app } from '../../src/store.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
-import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
-import { ADVENTURE_INVENTORY, adventure_character_row } from '../../src/adventure/projection.ts'
+import {
+  SAMPLE_ITEMS,
+  SAMPLE_PET_ITEM,
+  sample_character,
+  sample_character_row,
+  sample_fight_setup,
+} from '../../src/demo/sample.ts'
 import '../../src/characters/characters.css'
-import { adventure_result } from '../../src/adventure/result.ts'
-import { ADVENTURE_ITEMS, ADVENTURE_PET_ITEM, ADVENTURE_MOBS, adventure_item } from '../../src/adventure/content.ts'
-import { MobDetailsDialog } from '../../src/game/hud/MobDetailsDialog.tsx'
-import { CharacterLevelUpView } from '../../src/game/fight/CharacterLevelUpView.tsx'
+import { merge_checkpoint } from '../../src/modules/fight_result.ts'
 import { FightResultCard } from '../../src/game/fight/FightResultCard.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import '../../src/tailwind.css'
@@ -21,21 +23,38 @@ import '@aresrpg/ui/styles.css'
 
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
+// A local sample fight, ended by hand: the card reads the ordinary result shape of a won fight.
 const app = create_app()
-const stop = app.observe(['adventure', 'fight'])
-app.dispatch({ type: 'adventure/entered' })
-app.dispatch({ type: 'adventure/challenge' })
+const hero = sample_character()
+const stop = app.observe(['fight'])
+app.dispatch({ type: 'fight/opened', mode: 'local', setup: sample_fight_setup(hero), seed: 42n })
+stop()
 const state = app.store.getState(),
   checkpoint = state.fight.checkpoint!
-const preview_result = adventure_result(
+const merged = merge_checkpoint(
   state,
+  hero.id,
   { ...checkpoint, contract: { ...checkpoint.contract, winner: 0n, ended: true, ended_ms: 10000n } },
-  199
-)
-stop()
+  10_000,
+  0n
+)!
+const preview_result = {
+  ...merged,
+  settlement_confirmed: true,
+  progression_synced: true,
+  participants: merged.participants.map((participant) =>
+    participant.character_id === hero.id
+      ? {
+          ...participant,
+          settled: true,
+          loot: [...SAMPLE_ITEMS, SAMPLE_PET_ITEM].map(({ item_type }) => ({ item_type, qty: 1 })),
+        }
+      : participant
+  ),
+}
 const params = new URLSearchParams(location.search)
 const rolled = params.has('rolled')
-const character = adventure_character_row(state.adventure.character!)
+const character = sample_character_row(hero)
 const companion = { ...character, id: 'other-character', name: 'Other hero' }
 const seed = content_catalog.item('gravebrand')!.item
 const received = [
@@ -108,49 +127,13 @@ if (rolled) {
 }
 const Fixture = () => {
   const [open, set_open] = useState(true)
-  if (new URLSearchParams(location.search).has('mob'))
-    return (
-      <LocaleScope locale="en">
-        <MobDetailsDialog
-          mob={ADVENTURE_MOBS[0]!}
-          item_for={adventure_item}
-          copy={copy}
-          close={() => set_open(false)}
-        />
-      </LocaleScope>
-    )
-  if (new URLSearchParams(location.search).has('level'))
-    return (
-      <LocaleScope locale="en">
-        <CharacterLevelUpView
-          copy={copy}
-          name="Senshi"
-          classe="senshi"
-          before={198}
-          after={199}
-          close={() => set_open(false)}
-        />
-      </LocaleScope>
-    )
-  if (new URLSearchParams(location.search).has('equipment'))
-    return (
-      <LocaleScope locale="en">
-        <main className="game-character-body" style={{ position: 'fixed', inset: 0 }}>
-          <EquipmentTab
-            copy={copy}
-            character={adventure_character_row({ ...state.adventure.character!, level: 199 })}
-            session={{ inventory: ADVENTURE_INVENTORY, commit: () => undefined, raise_stats: () => undefined }}
-          />
-        </main>
-      </LocaleScope>
-    )
   return (
     <LocaleScope locale="en">
       {open ? (
         <FightResultCard
           copy={copy}
           result={result}
-          items={[...ADVENTURE_ITEMS, ADVENTURE_PET_ITEM]}
+          items={[...SAMPLE_ITEMS, SAMPLE_PET_ITEM]}
           on_close={() => set_open(false)}
         />
       ) : (

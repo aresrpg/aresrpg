@@ -208,9 +208,7 @@ const TeamColumn = ({
   unknown_name: string
 }>) => (
   <div className="grid content-start gap-2">
-    <p className="border-b border-white/8 pb-1.5 font-mono text-[8px] tracking-[0.16em] text-[#c8963c] uppercase">
-      {label}
-    </p>
+    <p className="border-b border-white/8 pb-1.5 font-mono text-[8px] tracking-[0.16em] text-gold uppercase">{label}</p>
     {fighters.map((fighter, index) => {
       const player = fighter.kind.type === 'player' && fighter.kind.character ? players[fighter.kind.character] : null
       const mob = fighter.kind.type === 'mob' ? fighter.kind.snapshot : null
@@ -223,22 +221,22 @@ const TeamColumn = ({
           data-fight-fighter={fighter.kind.type}
           key={`${name}-${index}`}
         >
-          <span className="grid size-9 shrink-0 place-items-center overflow-hidden border border-white/10 bg-surface-high text-[#777b86]">
+          <span className="grid size-9 shrink-0 place-items-center overflow-hidden border border-white/10 bg-surface-high text-faint">
             {portrait ? (
               <img alt="" className="size-full object-contain" src={portrait} />
             ) : (
               <UserRound aria-hidden="true" size={19} strokeWidth={1.3} />
             )}
           </span>
-          <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[#d8d3ca]">{name}</span>
-          <span className="shrink-0 font-mono text-[8px] tracking-[0.1em] text-[#777b86] uppercase">
+          <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-soft">{name}</span>
+          <span className="shrink-0 font-mono text-[8px] tracking-[0.1em] text-faint uppercase">
             <Text path="encyclopedia_page.level_short" values={{ level: String(level) }} />
           </span>
         </div>
       )
     })}
     {fighters.length === 0 && (
-      <p className="py-2 text-center font-mono text-[9px] text-[#555b66] uppercase">{empty_label}</p>
+      <p className="py-2 text-center font-mono text-[9px] text-faint uppercase">{empty_label}</p>
     )}
     {action}
   </div>
@@ -274,7 +272,7 @@ export const FightTeams = ({
       players={players}
       unknown_name={unknown_name}
     />
-    <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-[#c8963c]/70">
+    <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-gold/70">
       <Text path="ui.versus" />
     </div>
     <TeamColumn
@@ -304,8 +302,8 @@ const JoinButton = ({
   <button
     className={`mt-auto flex h-10 items-center justify-center gap-2 border font-mono text-[10px] tracking-[0.16em] uppercase transition ${
       team === 0
-        ? 'border-[#c8963c]/40 bg-[#c8963c]/8 text-[#e0b86b] enabled:hover:border-[#c8963c] enabled:hover:bg-[#c8963c]/14'
-        : 'border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[#67adff] enabled:hover:border-[#4a9eff] enabled:hover:bg-[#4a9eff]/14'
+        ? 'border-gold/40 bg-gold/8 text-gold enabled:hover:border-gold enabled:hover:bg-gold/14'
+        : 'border-cyan/40 bg-cyan/8 text-cyan enabled:hover:border-cyan enabled:hover:bg-cyan/14'
     } enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-35`}
     disabled={!enabled}
     onClick={on_join}
@@ -438,9 +436,9 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
     >
       <div className="grid gap-4 p-6">
         <header className="flex items-center gap-3">
-          <Swords className="text-[#c8963c]" size={18} />
+          <Swords className="text-gold" size={18} />
           <div>
-            <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-[#777b86] uppercase">
+            <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-faint uppercase">
               {phase === 'active'
                 ? `${text.fight_started_ago} ${elapsed_label(started_ms, now)}`
                 : `${text.fight_placement} · ${now === null ? '—' : ui('seconds', { count: Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - now) / 1000)) })}`}
@@ -482,7 +480,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
           />
         ) : (
           <div
-            className="grid min-h-32 place-items-center border border-white/8 bg-black/20 font-mono text-[9px] tracking-[0.16em] text-[#777b86] uppercase"
+            className="grid min-h-32 place-items-center border border-white/8 bg-black/20 font-mono text-[9px] tracking-[0.16em] text-faint uppercase"
             data-fight-roster-loading=""
           >
             {copy.loading_universe}
@@ -492,7 +490,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
         <footer className="grid gap-2">
           {phase !== 'ended' ? (
             <button
-              className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14 disabled:cursor-wait disabled:opacity-35"
+              className="h-10 cursor-pointer border border-cyan/40 bg-cyan/8 font-mono text-[10px] tracking-[0.16em] text-cyan uppercase transition hover:border-cyan hover:bg-cyan/14 disabled:cursor-wait disabled:opacity-35"
               disabled={!checkpoint}
               onClick={spectate}
               type="button"
@@ -501,7 +499,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
             </button>
           ) : null}
           {!wallet && (
-            <p className="text-center font-mono text-[8px] tracking-[0.12em] text-[#777b86] uppercase">
+            <p className="text-center font-mono text-[8px] tracking-[0.12em] text-faint uppercase">
               {text.fight_wallet_hint}
             </p>
           )}

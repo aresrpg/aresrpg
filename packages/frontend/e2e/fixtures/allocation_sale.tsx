@@ -59,8 +59,6 @@ const runtime = create_allocation_runtime()
 runtime.store.setState({
   session,
   status: {
-    phase: 'final',
-    submissions_open: false,
     wallets: [
       { address: google, label: 'Sign in with Google', game_wallet: true },
       { address: slush, label: 'Slush' },
@@ -69,8 +67,6 @@ runtime.store.setState({
       { address: google, tier: 'veteran', source: 'leaderboard', board: 'xp' },
       { address: slush, tier: 'member', source: 'social' },
     ],
-    user: null,
-    submission: null,
     proofs: [{ address: google, proof }],
   },
 })
@@ -95,7 +91,7 @@ const external = {
 
 const Page = () => {
   const state = useStore(runtime.store)
-  const view = allocation_view(state.status, 0, state.session)
+  const view = allocation_view(state.status)
   const { spot, overlays } = useSaleSpots({
     sale,
     cards: view.cards,
@@ -116,7 +112,6 @@ const Page = () => {
           runtime={runtime}
           text={text}
           locale="en"
-          open={false}
           sale={sale}
           now={now}
           kares={copy.kares_page}

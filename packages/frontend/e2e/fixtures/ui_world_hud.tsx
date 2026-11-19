@@ -6,7 +6,7 @@ import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
 import { dispatch_app, read_app_state } from '../../src/store.ts'
-import { adventure_character_row, adventure_inventory } from '../../src/adventure/projection.ts'
+import { sample_character, sample_character_row, sample_inventory } from '../../src/demo/sample.ts'
 import { MobileWorldHud } from '../../../mobile/src/MobileWorldHud.tsx'
 import '../../../mobile/src/mobile.css'
 import { toast } from '../../src/toast.ts'
@@ -30,8 +30,7 @@ const mobile = new URLSearchParams(location.search).has('mobile')
 const Hud = mobile ? MobileWorldHud : DesktopWorldHud
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
-dispatch_app({ type: 'adventure/entered' })
-const seed = adventure_character_row(read_app_state().adventure.character!)
+const seed = sample_character_row(sample_character())
 const characters = ['Senshi', 'Rin', 'Kaori'].map((name, index) => ({
   ...seed,
   id: `character-${index}`,
@@ -165,7 +164,7 @@ if (new URLSearchParams(location.search).has('listings'))
     packet: {
       type: 'packet/listings',
       kiosk_versions: { kiosk: '1' },
-      listings: adventure_inventory(content_catalog.items.slice(0, 60)).map((item, index) => ({
+      listings: sample_inventory(content_catalog.items.slice(0, 60)).map((item, index) => ({
         ...item,
         id: `listing-${index}`,
         kind: 'item' as const,

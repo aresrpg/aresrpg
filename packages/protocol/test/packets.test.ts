@@ -165,6 +165,7 @@ describe('the wire contract', () => {
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
       'packet/inventory_observe',
+      'packet/agent_status',
       'packet/agent_observe',
       'packet/market_floor_request',
       'packet/allocation_request',
@@ -391,4 +392,32 @@ test('market floor requests validate identity and canonical item type', () => {
     { item_type: 'a'.repeat(129) },
   ])
     expect(() => parse_client_packet(JSON.stringify({ ...packet, ...invalid }))).toThrow()
+})
+
+test('a hosted bot status is parsed at the door and refused when malformed', () => {
+  const status = {
+    ready: true,
+    event_fence: 3,
+    sampled_at: 12.5,
+    state: 'active' as const,
+    runs: [{ id: 'r', character_id: '0x1', status: 'active', objective: { title: 'Gather' } }],
+    direct: null,
+  }
+  expect(parse_client_packet(JSON.stringify({ type: 'packet/agent_status', status, extra: 1 }))).toEqual({
+    type: 'packet/agent_status',
+    status,
+  })
+  for (const broken of [
+    { ...status, ready: 'yes' },
+    { ...status, state: undefined },
+    { ...status, runs: ['r'] },
+    { ...status, runs: [{ ...status.runs[0], objective: { title: 'Gather', steps: 'one' } }] },
+    { ...status, runs: [{ id: 'r', character_id: '0x1' }] },
+    { ...status, direct: 'c' },
+    { ...status, direct: { id: 'c', kind: 'gather', status: 'accepted' } },
+    null,
+  ])
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/agent_status', status: broken }))).toThrow(
+      'Invalid agent status'
+    )
 })

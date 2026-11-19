@@ -39,7 +39,7 @@ const job_crafts = (category_name: (category: string) => string, job: Job): stri
 
 const Divider = () => <div className="h-px w-full bg-white/6" />
 const SectionTitle = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <span className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">{children}</span>
+  <span className="text-[9px] font-semibold tracking-[0.25em] text-faint uppercase">{children}</span>
 )
 
 export const JobsTab = ({
@@ -94,20 +94,20 @@ export const JobsTab = ({
       <div className="flex w-full flex-col gap-6">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <CategoryIcon className="text-[#c8963c]" size={18} />
-            <h2 className="text-[16px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
+            <CategoryIcon className="text-gold" size={18} />
+            <h2 className="text-[16px] font-semibold tracking-[0.15em] text-gold uppercase">
               {vocabulary.job(detail.id)}
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="border border-[#c8963c]/30 px-2 py-0.5 text-[8px] tracking-[0.15em] text-[#c8963c]/70 uppercase">
+            <span className="border border-gold/30 px-2 py-0.5 text-[8px] tracking-[0.15em] text-gold/70 uppercase">
               {text(`job_category.${category}`)}
             </span>
-            <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+            <span className="text-[8px] tracking-[0.15em] text-faint uppercase">
               {text('crafts')}: {job_crafts(category_name, detail) || '—'}
             </span>
           </div>
-          <p className="mt-1 text-[10px] leading-relaxed text-[#e8e4dc]/80">{text(`job_desc.${detail.id}`)}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-text/80">{text(`job_desc.${detail.id}`)}</p>
         </header>
 
         {detail.resources.length > 0 && (
@@ -115,7 +115,7 @@ export const JobsTab = ({
             <Divider />
             <SectionTitle>{text('gathering_tiers')}</SectionTitle>
             <div className="flex flex-col">
-              <div className="enc-gather-row enc-gather-heading border-b border-border bg-white/3 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+              <div className="enc-gather-row enc-gather-heading border-b border-border bg-white/3 text-[8px] tracking-[0.15em] text-faint uppercase">
                 <span>{text('tier')}</span>
                 <span>{text('required_level')}</span>
                 <span>{text('resource')}</span>

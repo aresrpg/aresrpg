@@ -13,8 +13,8 @@ pub const HOURLY_RETENTION_MS: u64 = 8 * DAY_MS;
 pub const WEEKLY_RETENTION_MS: u64 = 105 * DAY_MS;
 pub const MONTHLY_RETENTION_MS: u64 = 400 * DAY_MS;
 pub const DAILY_ACTIVITY_RETENTION_MS: u64 = 400 * DAY_MS;
-pub const ROYALTY_FLOOR_MIST: u64 = 10_000_000;
-pub const CHARACTER_CREATION_MIST: u64 = 1_000_000_000;
+pub const ROYALTY_FLOOR_MIST: u64 = 1_000_000;
+pub const CHARACTER_CREATION_MIST: u64 = 10_000_000_000;
 
 pub const ADDRESS_FIRST_SEEN_KEY: &str = "analytics:addresses";
 
@@ -147,7 +147,8 @@ mod tests {
 
     #[test]
     fn royalty_uses_ten_percent_with_the_floor() {
-        assert_eq!(royalty_mist(1), 10_000_000);
+        assert_eq!(royalty_mist(1), 1_000_000);
+        assert_eq!(royalty_mist(10_000_000), 1_000_000);
         assert_eq!(royalty_mist(100_000_000), 10_000_000);
         assert_eq!(royalty_mist(1_000_000_000), 100_000_000);
     }

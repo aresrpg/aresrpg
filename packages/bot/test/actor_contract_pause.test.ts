@@ -4,8 +4,10 @@ import { expect, test } from 'bun:test'
 
 import { create_actor_runtime } from '../src/actor_runtime.ts'
 import { create_control_service, type Command, type Lane } from '../src/control.ts'
+import { live_value, volatile_record } from '../src/store_projection.ts'
 
 import { signed_fixture } from './helpers/signed_runtime_fixture.ts'
+import { memory_store, put } from './helpers/control_fixture.ts'
 
 const accepted_fixture = async () => {
   const f = await signed_fixture()
@@ -76,11 +78,9 @@ test('explicit pause wins over contract resume', async () => {
   }
 })
 
-test('signed recovery waits through a contract pause without replacing the retained bytes', async () => {
+test('contract resume cannot replay discarded local signed bytes', async () => {
   const f = await signed_fixture()
   try {
-    await f.runtime.tick()
-    await f.runtime.settle()
     await f.admit()
     await f.send({ type: 'packet/game_state', frozen: true })
     await f.runtime.settle()
@@ -88,12 +88,14 @@ test('signed recovery waits through a contract pause without replacing the retai
     await f.runtime.settle()
     expect(f.errors).toEqual([])
     expect(f.submissions).toHaveLength(0)
-    expect((await f.store.read<Lane>(f.lane_key))!.pending?.digest).toBe(f.digest)
-    await f.send({ type: 'packet/game_state', frozen: false })
+    expect((await f.store.read<Lane>(f.lane_key))!.pending).toBeNull()
+    expect(await f.store.read<Command>('command:signed')).toMatchObject({ status: 'cancelled' })
+    await f.runtime.renew()
+    await f.admit()
     await f.runtime.settle()
     await f.runtime.tick()
     await f.runtime.settle()
-    expect(f.submissions).toEqual([f.bytes])
+    expect(f.submissions).toEqual([])
   } finally {
     await f.runtime.stop()
   }
@@ -131,23 +133,30 @@ for (const reason of ['revoked', 'takeover', 'stale_checkpoint'] as const) {
 }
 
 for (const sampled of [false, true]) {
-  test(`restart retains an accepted intent before or after sampling freeze: ${sampled}`, async () => {
+  test(`restart discards a one-shot accepted intent before or after sampling freeze: ${sampled}`, async () => {
     const f = await accepted_fixture()
     await f.freeze(true)
     if (sampled) await f.tick()
     await f.runtime.stop()
     f.clock.now += f.options.lease_ms + 1
-    const restarted = create_actor_runtime({ ...f.options, sdk_options: { client: f.client } })
+    // Model a new process using the production persistence boundary, not its old RAM records.
+    const restored = memory_store()
+    for (const key of await f.store.scan_keys('', 100)) {
+      if (!volatile_record(key)) await put(restored, key, live_value(key, await f.store.read(key)))
+    }
+    const restarted = create_actor_runtime({ ...f.options, store: restored, sdk_options: { client: f.client } })
     try {
       await restarted.tick()
       await restarted.settle()
       expect(f.submissions).toHaveLength(0)
+      await restarted.observe(f.grant, {})
       await f.admit()
       await restarted.settle()
       await restarted.tick()
       await restarted.settle()
       expect(f.errors).toEqual([])
-      expect(f.submissions).toHaveLength(1)
+      expect(await restored.read(`command:${f.command.id}`)).toBeNull()
+      expect(f.submissions).toHaveLength(0)
     } finally {
       await restarted.stop()
     }
@@ -157,8 +166,6 @@ for (const sampled of [false, true]) {
 test('a contract pause does not block receipt recovery or replay submitted work', async () => {
   const f = await signed_fixture()
   try {
-    await f.runtime.tick()
-    await f.runtime.settle()
     await f.admit()
     await f.send({ type: 'packet/game_state', frozen: true })
     await f.runtime.settle()
@@ -204,11 +211,9 @@ test('resume waits for a fresh clock before revalidating an accepted intent', as
   }
 })
 
-test('signed recovery silently waits for a fresh heartbeat after contract resume', async () => {
+test('fresh heartbeat after contract resume never revives discarded signed work', async () => {
   const f = await signed_fixture()
   try {
-    await f.runtime.tick()
-    await f.runtime.settle()
     await f.admit()
     await f.send({ type: 'packet/game_state', frozen: true })
     await f.runtime.settle()
@@ -219,6 +224,9 @@ test('signed recovery silently waits for a fresh heartbeat after contract resume
     await f.runtime.settle()
     expect(f.errors).toEqual([])
     expect(f.submissions).toHaveLength(0)
+    await f.runtime.renew()
+    await f.admit()
+    await f.runtime.settle()
     await f.send({
       type: 'packet/server_info',
       online: 1,
@@ -232,7 +240,9 @@ test('signed recovery silently waits for a fresh heartbeat after contract resume
     await f.runtime.tick()
     await f.runtime.settle()
     expect(f.errors).toEqual([])
-    expect(f.submissions).toEqual([f.bytes])
+    expect(f.submissions).toEqual([])
+    expect(await f.store.read<Command>('command:signed')).toMatchObject({ status: 'cancelled' })
+    expect((await f.store.read<Lane>(f.lane_key))!.pending).toBeNull()
   } finally {
     await f.runtime.stop()
   }

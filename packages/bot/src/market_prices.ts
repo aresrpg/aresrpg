@@ -41,7 +41,10 @@ export type MarketPriceCondition = Readonly<{
   value: string
 }>
 type Price = Readonly<{ mist: bigint; units: bigint }>
-export const market_prices_observed = (observation: MarketPriceObservation, context: GameplayContext) => {
+export const market_prices_observed = (
+  observation: MarketPriceObservation,
+  context: Pick<GameplayContext, 'snapshot'>
+) => {
   const current = context.snapshot.inventory?.market_prices?.observation
   return current?.item_type === observation.item_type && current.id === observation.id
 }

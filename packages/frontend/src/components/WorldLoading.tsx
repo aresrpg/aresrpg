@@ -31,6 +31,9 @@ type Input =
   | Readonly<{ type: 'sample'; identity: object; progress: LoadingProgress }>
   | Readonly<{ type: 'dismiss'; identity: object }>
 const always_ready = () => true
+/** A caller's failure wins over healthy progress; the engine's own failure keeps its cause for the player. */
+const with_failure = (failed: boolean, progress: LoadingProgress): LoadingProgress =>
+  failed && progress.stage !== 'failed' ? { stage: 'failed', fraction: null } : progress
 const initial = (identity: object): Presentation => ({
   identity,
   progress: { stage: 'assets', fraction: null },
@@ -95,7 +98,7 @@ export const WorldLoading = ({
     const sample = (): void => {
       if (!live) return
       const state = source?.state()
-      const progress = failed ? { stage: 'failed' as const, fraction: null } : loading_progress(state ?? null)
+      const progress = with_failure(failed, loading_progress(state ?? null))
       const next: LoadingProgress =
         progress.stage === 'ready' && !is_assets_ready() ? { stage: 'finishing', fraction: null } : progress
       dispatch({ type: 'sample', identity, progress: next })
@@ -138,7 +141,7 @@ export const WorldLoading = ({
         context={context}
         {...art}
         wordmark={loading_wordmark}
-        progress={failed ? { stage: 'failed', fraction: null } : view.progress}
+        progress={with_failure(failed, view.progress)}
         phase={view.phase}
         fraction={view.fraction}
         tip={tip}

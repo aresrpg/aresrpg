@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* What the document needs before any script runs: the shared tokens and fonts, then the shell of the
+   engine-less pages. The document links this one file from inside the frontend root; a link that
+   points outside the root is not served as CSS by the dev server. */
+@import '../../ui/src/base.css';
+@import './components/light_page.css';

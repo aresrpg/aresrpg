@@ -5,8 +5,8 @@
 
 import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
+import { HTTP_DOOR, admit_visitor, create_request_limiter } from '@aresrpg/protocol/request-limiter'
 
-import { create_campaign_boards } from './allocation/leaderboards.ts'
 import { create_allocation } from './allocation/runtime.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
@@ -19,7 +19,7 @@ import {
   ALLOCATION_OPTIONS,
   SUI_NETWORK,
 } from './env.ts'
-import { BANNABLE_REASONS, create_ban_list } from './ban_list.ts'
+import { create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
@@ -30,7 +30,6 @@ import { mesh } from './protocol.ts'
 import { MAX_BUFFERED_BYTES } from './player_output.ts'
 import { create_player, type Player } from './player.ts'
 import logger from './logger.ts'
-import { create_request_limiter } from './request_limiter.ts'
 import { latest_checkpoint, sui_client } from './sui.ts'
 import { create_pending_admission } from './admission.ts'
 import { create_suins_resolver } from './suins.ts'
@@ -47,11 +46,8 @@ const public_market = create_public_market(graph, pubsub.graph)
 const pending = create_pending_admission()
 const handlers = new Map<Connection, AuthenticatedConnection>()
 const request_limiter = create_request_limiter()
-const allocation = create_allocation({
-  ...ALLOCATION_OPTIONS,
-  boards: create_campaign_boards((observation, address) => pubsub.graph.leaderboard!(observation, address)),
-})
-const http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
+const allocation = create_allocation(ALLOCATION_OPTIONS)
+const http_limiter = create_request_limiter(HTTP_DOOR)
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
 const indexing_health = create_indexing_health({
@@ -90,9 +86,8 @@ const http_routes = new Map<
   ['/health', () => new Response('ok')],
   [
     '/api/allocation',
-    (request, server) => {
-      const peer = server.requestIP(request)?.address ?? 'unknown'
-      if (!http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
+    (request) => {
+      if (!admit_visitor(http_limiter, request)) return new Response('rate limited', { status: 429 })
       return allocation.http(request)
     },
   ],
@@ -154,6 +149,7 @@ const server = Bun.serve<ConnectionData>({
               indexing_health,
               request_limiter,
               resolve_name,
+              penalize: () => bans.ban(address),
             })
             connections.set(address, { ws, player })
             void pubsub.mesh.publish(mesh.player_connect, { address, server_id: SERVER_ID })
@@ -166,8 +162,8 @@ const server = Bun.serve<ConnectionData>({
     message(ws: Connection, raw) {
       void handlers.get(ws)?.on_message(raw)
     },
-    close(ws: Connection, code: number, reason: string) {
-      if (code === 1008 && BANNABLE_REASONS.has(reason)) bans.ban(ws.data.address)
+    // A close frame is the peer's word. It never bans: the cool-off is recorded where the server drops a player.
+    close(ws: Connection) {
       const { address } = ws.data
       const handler = handlers.get(ws)
       if (handler) handler.on_close()

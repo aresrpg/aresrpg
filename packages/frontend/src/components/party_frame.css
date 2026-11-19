@@ -13,7 +13,7 @@
   overflow: hidden auto;
   border: 1px solid var(--color-border);
   border-radius: 9px;
-  background: rgba(10, 10, 15, 0.9);
+  background: color-mix(in srgb, var(--aui-void) 90%, transparent);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
 }
 main:has(.party-frame) .trade-hud {
@@ -65,7 +65,7 @@ main:has(.party-frame) .trade-hud {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 .party-frame__member.is-selected {
-  background: rgba(74, 158, 255, 0.07);
+  background: color-mix(in srgb, var(--aui-blue) 7%, transparent);
 }
 .party-frame__member.is-invited {
   opacity: 0.5;
@@ -74,7 +74,7 @@ main:has(.party-frame) .trade-hud {
   cursor: pointer;
 }
 .party-frame__member.can-run:hover {
-  background: rgba(103, 173, 255, 0.1);
+  background: color-mix(in srgb, var(--aui-blue) 10%, transparent);
 }
 .party-frame__member svg {
   color: var(--color-gold);
@@ -82,7 +82,7 @@ main:has(.party-frame) .trade-hud {
 .party-frame__member b {
   max-width: 120px;
   overflow: hidden;
-  color: #d6d1c8;
+  color: var(--aui-soft);
   font-size: 9px;
   font-weight: 400;
   text-overflow: ellipsis;
@@ -95,7 +95,7 @@ main:has(.party-frame) .trade-hud {
   place-items: center;
   border: 0;
   background: transparent;
-  color: #666b72;
+  color: var(--aui-faint);
   cursor: pointer;
 }
 .party-frame__member button:hover {
@@ -106,7 +106,7 @@ main:has(.party-frame) .trade-hud {
   align-items: center;
   justify-content: flex-end;
   gap: 5px;
-  color: #7d838d;
+  color: var(--aui-faint);
   cursor: pointer;
   font-size: 7px;
   letter-spacing: 0.08em;
@@ -129,15 +129,15 @@ main:has(.party-frame) .trade-hud {
   margin: 1px;
   content: '';
   border-radius: 50%;
-  background: #6b7280;
+  background: var(--aui-faint);
   transition: transform 120ms ease;
 }
 .party-follow-toggle input:checked {
-  border-color: rgba(74, 158, 255, 0.5);
-  background: rgba(74, 158, 255, 0.14);
+  border-color: color-mix(in srgb, var(--aui-blue) 50%, transparent);
+  background: color-mix(in srgb, var(--aui-blue) 14%, transparent);
 }
 .party-follow-toggle input:checked::before {
-  background: #67adff;
+  background: var(--aui-blue);
   transform: translateX(10px);
 }
 .party-distance-progress {
@@ -155,15 +155,15 @@ main:has(.party-frame) .trade-hud {
 .party-distance-progress em {
   display: block;
   height: 100%;
-  background: #67adff;
-  box-shadow: 0 0 6px rgba(74, 158, 255, 0.45);
+  background: var(--aui-blue);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aui-blue) 45%, transparent);
 }
 .party-distance-progress.is-running em {
   background: #4fd6a0;
   box-shadow: 0 0 6px rgba(79, 214, 160, 0.45);
 }
 .party-distance-progress small {
-  color: #7d838d;
+  color: var(--aui-faint);
   font-size: 7px;
   font-style: normal;
   text-align: right;
@@ -176,15 +176,15 @@ main:has(.party-frame) .trade-hud {
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  border: 1px solid rgba(74, 158, 255, 0.35);
+  border: 1px solid color-mix(in srgb, var(--aui-blue) 35%, transparent);
   border-radius: 9px;
-  background: rgba(10, 10, 15, 0.94);
+  background: color-mix(in srgb, var(--aui-void) 94%, transparent);
   padding: 8px 10px;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
 }
 .party-invite-card span {
   flex: 1 0 100%;
-  color: #d6d1c8;
+  color: var(--aui-soft);
   font-size: 9px;
   line-height: 1.5;
 }

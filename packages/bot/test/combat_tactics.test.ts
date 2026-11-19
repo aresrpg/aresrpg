@@ -96,6 +96,7 @@ test('accepted behavior combat sequences select and validate collision-aware ord
     })
     const run: BehaviorRun = {
       ...(await f.get_run()),
+      character_id,
       script,
       revision: 1,
       memory: empty_behavior_memory(),

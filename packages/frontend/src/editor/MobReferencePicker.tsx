@@ -123,7 +123,7 @@ export const MobReferencePicker = ({
     <>
       <button
         aria-label={`Choose ${label}`}
-        className={`flex h-10 min-w-0 items-center gap-2 border border-white/10 bg-bg px-2 text-left hover:border-[#c8963c]/45 ${class_name}`}
+        className={`flex h-10 min-w-0 items-center gap-2 border border-white/10 bg-bg px-2 text-left hover:border-gold/45 ${class_name}`}
         data-mob-reference-picker={label}
         onClick={() => set_open(true)}
         type="button"
@@ -132,20 +132,20 @@ export const MobReferencePicker = ({
           {mob_icon(value) && <img alt="" className="size-7 object-contain" src={mob_icon(value)!} />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[9px] text-[#d8d3ca]">
+          <span className="block truncate text-[9px] text-soft">
             {selected?.name ?? (titleize(value) || placeholder)}
           </span>
           {selected ? (
-            <span className="block truncate text-[7px] text-[#5f646e]">
+            <span className="block truncate text-[7px] text-faint">
               {titleize(selected.element)} · Level {selected.level_min}–{selected.level_max}
             </span>
           ) : (
             (empty_sublabel || value) && (
-              <span className="block truncate text-[7px] text-[#5f646e]">{empty_sublabel || value}</span>
+              <span className="block truncate text-[7px] text-faint">{empty_sublabel || value}</span>
             )
           )}
         </span>
-        <ChevronDown className="shrink-0 text-[#666b75]" size={12} />
+        <ChevronDown className="shrink-0 text-faint" size={12} />
       </button>
       {open && (
         <SearchPickerModal

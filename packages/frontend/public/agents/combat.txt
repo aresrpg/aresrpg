@@ -58,7 +58,19 @@ if planning context is unavailable/needs_resync, obtain a fresh observation befo
 
 Describe the character's role and the order that matters: "Play this character strength-based. Place traps first, then retreat." You can also ask "Use this spell combination before attacking", "Focus the lowest-health enemy", or "If nothing is useful, stop and ask me." The assistant should explain the saved tactics in ordinary language and name any spell or behavior it cannot support. A strength preference does not allocate points or equip items; those are separate actions.
 
-Hosted assistants can remember a profile with `bot_save_combat_profile`, after reading its revision with `bot_combat_profile` and checking it with `bot_validate_combat_profile`. To execute it, author a behavior tree with a `combat` action containing explicit profile snapshots for every owned participant, validate it with `bot_validate_behavior`, then call `bot_start_behavior` with fresh observation/decision revisions. The leaf binds one existing ordinary PvE fight, keeps the current legal placements, readies participants, plays their turns and settles through normal game actions. Its durable activation survives waiting and restart. The assistant can compose an explicit `engage` action and reactive conditions to choose subsequent fights. Dungeon, tournament, wagered and other unsupported modes remain unavailable through this hosted leaf. The bot executes accepted trees while the assistant is offline; it never contacts an AI provider. Planning and replanning happen only when an external assistant calls MCP.
+Hosted assistants can remember a profile with `bot_save_combat_profile`, after reading its revision with `bot_combat_profile` and checking it with `bot_validate_combat_profile`. To execute it, author a behavior tree with a `combat` action containing explicit profile snapshots for every owned participant, validate it with `bot_validate_behavior`, then call `bot_start_behavior` with fresh observation/decision revisions. The leaf binds one existing ordinary PvE fight, keeps the current legal placements, readies participants, plays their turns and settles through normal game actions. Its process-local activation survives ordinary waits, not actor restart. Restart reloads the saved script from its root and derives any current fight from fresh authoritative state. The assistant can compose an explicit `engage` action and reactive conditions to choose subsequent fights. Dungeon, tournament, wagered and other unsupported modes remain unavailable through this hosted leaf. The bot executes accepted trees while the assistant is offline; it never contacts an AI provider. Planning and replanning happen only when an external assistant calls MCP.
+
+Both `engage` and `combat` accept optional `target_options`: `min_size`, `max_size`, `mob_types`,
+and `area` as `{ "world": "nauvis", "city": "thebes" }` or a named `biome` instead of `city`.
+Use `min_size: 1` and `max_size: 1` for exactly one mob. The existing engagement `mob_types` filter
+still applies; an optional target type list narrows it further and also constrains combat recovery.
+Unknown areas/types and inverted bounds are rejected. City membership takes precedence over biome
+membership. Copy the same options to the combat leaf so restart or an already active fight cannot
+bypass encounter selection. Actual roster counts include dead mobs. The constraints remain on generated
+commands and are checked again before signing/submission. The existing movement follower rejects any
+segment leaving the area, including detours; a rejected route yields rather than silently relaxing bounds.
+No eligible observed group means waiting. These options do not discover new zones, guarantee victory,
+cap total gas or constrain unrelated activity after the script is stopped. Unconstrained trees remain compatible.
 
 A profile uses this finite JSON vocabulary (example for a Yajin who can use Tricky Trap):
 

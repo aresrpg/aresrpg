@@ -92,7 +92,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     social_image_url: new URL('social/home.jpg', app_url).href,
     server_ws_url: normalize_ws_url(VITE_SERVER_WS_URL),
     discord_url: 'https://discord.gg/aresrpg',
-    theme_color: '#0a0a0f',
+    theme_color: '#070707',
   })
 }
 

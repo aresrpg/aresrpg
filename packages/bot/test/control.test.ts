@@ -78,26 +78,78 @@ test('unchanged fresh observations retain pending envelopes and receipt/takeover
       grant_id: f.grant.id,
       phase: 'submitting' as const,
       digest: 'fixture',
-      encrypted: 'fixture',
+      bytes: 'fixture',
       gas_budget_mist: '100',
     }
     await put(f.store, key, { ...lease, pending })
     await control.observed(key, 'test', lease.fence, true, false)
     expect((await f.store.read<Lane>(key))?.pending).toEqual(pending)
-    await expect(
+    const direct = (index: number) =>
       control.accept(f.grant, {
-        idempotency_key: 'must-not-replace-pending',
+        idempotency_key: `must-not-replace-pending-${index}`,
         kind: 'equip_tool',
         payload: { character_id: `0x${'1'.repeat(64)}`, item_id: `0x${'2'.repeat(64)}` },
         decision_revision: 0,
         observation_revision: 0,
       })
-    ).rejects.toThrow('bot_busy_or_paused')
+    // A direct command queues behind the envelope in flight; it never replaces it, and one waits at a time.
+    const queued = await direct(1)
+    expect(queued.status).toBe('accepted')
+    expect(await f.store.read<Lane>(key)).toMatchObject({ pending, active_command: null, direct: queued.id })
+    await expect(direct(2)).rejects.toThrow('bot_busy_or_paused')
     for (const barrier of [{ reconciliation_command: 'receipt' }, { transport_stopped: true }]) {
       await put(f.store, key, { ...lease, ...barrier })
       await control.observed(key, 'test', lease.fence, true, false)
       expect((await f.store.read<Lane>(key))?.needs_resync).toBe(true)
     }
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+test('lease takeover forgets execution but preserves stop authority and fences the previous owner', async () => {
+  const f = await runtime_fixture()
+  const control = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
+  const key = lane_key_for(f.bot)
+  try {
+    const first = await control.acquire(f.bot, 'first', 10000)
+    const dirty = {
+      ...first,
+      active_command: 'old-command',
+      reconciliation_command: 'old-command',
+      pending: {
+        command_id: 'old-command',
+        grant_id: f.grant.id,
+        phase: 'submitting' as const,
+        digest: 'old-digest',
+        bytes: 'signed-bytes',
+        gas_budget_mist: '100',
+      },
+      paused: true,
+      transport_stopped: true,
+      runs: { hero: 'tree' },
+      observed_at: f.clock.now,
+    }
+    await put(f.store, key, dirty)
+    await expect(control.acquire(f.bot, 'second', 10000)).rejects.toThrow('actor_owned')
+    expect(await f.store.read<Lane>(key)).toEqual(dirty)
+    f.clock.now += 10001
+    const next = await control.acquire(f.bot, 'second', 10000)
+    expect(next).toMatchObject({
+      actor_id: 'second',
+      fence: first.fence + 1,
+      paused: true,
+      transport_stopped: true,
+      active_command: null,
+      pending: null,
+      reconciliation_command: null,
+      observed_at: 0,
+      needs_resync: true,
+      runs: dirty.runs,
+      decision_revision: first.decision_revision + 1,
+    })
+    await expect(control.heartbeat(key, 'first', first.fence, 10000)).rejects.toThrow('actor_fenced')
+    await expect(control.observed(key, 'first', first.fence, true)).rejects.toThrow('actor_fenced')
   } finally {
     await f.runtime.stop()
   }

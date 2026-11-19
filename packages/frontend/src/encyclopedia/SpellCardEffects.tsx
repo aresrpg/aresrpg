@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity, max-lines -- this exhaustive effect presenter keeps the effect-kind mapping in one visible home. */
-import { AREA_SHAPES, CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
-import { element_names } from '@aresrpg/immutable'
+// Maps seed spell effects to the shared effect list: player prose, or authoring lines with their editors.
+
+import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
+import {
+  SpellEffectList,
+  type SpellArea,
+  type SpellCritical,
+  type SpellEffectDraft,
+  type SpellEffectIcon,
+  type SpellEffectListProps,
+  type SpellEffectRead,
+} from '@aresrpg/ui'
 import { Crosshair, Footprints, Shield, Sparkles, Zap, type LucideIcon } from 'lucide-react'
-import { useState, type FocusEvent, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { useText } from '../i18n/useText.ts'
 import type { CopyText } from '../i18n/copy.ts'
@@ -14,48 +23,25 @@ import { titleize } from '../content/catalog.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
 import { critical_effect_text, effect_target_text, spell_effect_text } from './spell_effect_text.ts'
-export type SpellCardPath = readonly (string | number)[]
-export type SpellCardValue =
-  string | number | boolean | null | readonly SpellCardValue[] | Readonly<{ [key: string]: SpellCardValue }>
-export type SpellCardEdit = Readonly<{
-  change: (path: SpellCardPath, value: SpellCardValue) => void
-  save: () => void
-}>
-const field_class =
-  'h-7 border border-white/12 bg-bg px-1.5 text-[9px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+import {
+  AddEffects,
+  duration_editable_for,
+  effect_editors,
+  InlineEffectField,
+  RowActions,
+  type EffectEditor,
+  type EffectUpdate,
+  type SpellCardEdit,
+} from './SpellCardEditors.tsx'
+
+export type { SpellCardEdit, SpellCardPath, SpellCardValue } from './SpellCardEditors.tsx'
+
 const reverse = (values: Readonly<Record<string, bigint>>): Readonly<Record<number, string>> =>
   Object.freeze(Object.fromEntries(Object.entries(values).map(([name, value]) => [Number(value), name])))
 const effect_kinds = reverse(EFFECT_KINDS)
 const area_shapes = reverse(AREA_SHAPES)
 const channels = reverse(CHANNELS)
 const target_filters = reverse(TARGET_FILTERS)
-const effect_options = Object.entries(EFFECT_KINDS).map(([name, value]) => [titleize(name), Number(value)] as const)
-const shape_options = Object.entries(AREA_SHAPES).map(([name, value]) => [titleize(name), Number(value)] as const)
-const target_options = Object.entries(TARGET_FILTERS).map(([name, value]) => [titleize(name), Number(value)] as const)
-const stat_options = Object.entries(CHANNELS).map(([name, value]) => [titleize(name), Number(value)] as const)
-const element_options = ['', ...element_names].map((value) => [value ? titleize(value) : 'None', value] as const)
-const CHATIMENT_TURNS = Number(CONTRACT_CONSTANTS.chatiment_turns)
-const instant_effect_kinds = Object.freeze([
-  Number(EFFECT_KINDS.damage),
-  Number(EFFECT_KINDS.pct_life),
-  Number(EFFECT_KINDS.caster_damage),
-  Number(EFFECT_KINDS.punishment),
-  Number(EFFECT_KINDS.push),
-  Number(EFFECT_KINDS.pull),
-  Number(EFFECT_KINDS.teleport),
-  Number(EFFECT_KINDS.swap),
-  Number(EFFECT_KINDS.trap),
-  Number(EFFECT_KINDS.dispel),
-])
-const timed_effect_kinds = Object.freeze([
-  Number(EFFECT_KINDS.chatiment),
-  Number(EFFECT_KINDS.glyph),
-  Number(EFFECT_KINDS.reduce),
-  Number(EFFECT_KINDS.reflect),
-  Number(EFFECT_KINDS.invis),
-  Number(EFFECT_KINDS.return),
-  Number(EFFECT_KINDS.redirect),
-])
 const stat_effect_kinds = Object.freeze([
   Number(EFFECT_KINDS.add),
   Number(EFFECT_KINDS.remove),
@@ -71,24 +57,6 @@ const effect_icon = (effect: SpellEffect, channel: string): LucideIcon | undefin
   universal_shield(effect) ? Shield : channel_icons[channel]
 const effect_icon_title = (effect: SpellEffect, channel: string): string =>
   universal_shield(effect) ? 'All elements' : titleize(channel)
-const element_options_for = (kind: string | undefined): readonly (readonly [string, string])[] =>
-  kind === 'reduce'
-    ? element_options.map(([label, value]) => [value === '' ? 'All elements' : label, value] as const)
-    : element_options
-const duration_editable_for = (kind: number): boolean =>
-  kind !== Number(EFFECT_KINDS.chatiment) && !instant_effect_kinds.includes(kind)
-const blank_effect: SpellEffect = Object.freeze({
-  kind: Number(EFFECT_KINDS.damage),
-  element: 'earth',
-  value: 1,
-  value_max: 1,
-  area_shape: Number(AREA_SHAPES.point),
-  area_size: 0,
-  target_filter: Number(TARGET_FILTERS.not_team),
-  chance_bp: 10_000,
-  turns: 0,
-  stat: 0,
-})
 export const effect_color = (element: string): string => element_colors[element] ?? '#b8b4ac'
 const element_stats: Readonly<Record<string, string>> = Object.freeze({
   earth: 'strength',
@@ -113,126 +81,6 @@ const area_masks: Readonly<Record<string, readonly string[]>> = Object.freeze({
   podium: Object.freeze(['00100', '00100', '01110', '11111', '00000']),
   blob: Object.freeze(['00100', '01110', '01110', '00100', '00000']),
 })
-const NumberField = ({
-  value,
-  change,
-  label,
-  auto_focus = true,
-  width = 'w-12',
-}: Readonly<{
-  value: number
-  change: (value: number) => void
-  label: string
-  auto_focus?: boolean
-  width?: string
-}>) => (
-  <input
-    aria-label={label}
-    autoFocus={auto_focus}
-    className={`${field_class} ${width} tabular-nums`}
-    onChange={(event) => change(Number(event.target.value))}
-    type="number"
-    value={value}
-  />
-)
-
-const SelectField = ({
-  value,
-  options,
-  change,
-  label,
-  width = 'w-28',
-}: Readonly<{
-  value: string | number
-  options: readonly (readonly [string, string | number])[]
-  change: (value: string | number) => void
-  label: string
-  width?: string
-}>) => (
-  <select
-    aria-label={label}
-    autoFocus
-    className={`${field_class} ${width}`}
-    onChange={(event) => {
-      const option = options.find(([, option_value]) => String(option_value) === event.target.value)
-      if (option) change(option[1])
-    }}
-    value={value}
-  >
-    {options.map(([option_label, option_value]) => (
-      <option key={String(option_value)} value={option_value}>
-        {option_label}
-      </option>
-    ))}
-  </select>
-)
-
-const InlineEffectField = ({
-  label,
-  edit,
-  display,
-  editor,
-  class_name = '',
-}: Readonly<{
-  label: string
-  edit?: SpellCardEdit
-  display: ReactNode
-  editor: ReactNode
-  class_name?: string
-}>) => {
-  const [editing, set_editing] = useState(false)
-  const finish = (event: Readonly<FocusEvent<HTMLSpanElement>>): void => {
-    if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return
-    set_editing(false)
-    edit?.save()
-  }
-  if (!edit) return <span className={class_name || undefined}>{display}</span>
-  if (editing)
-    return (
-      <span className={`inline-flex items-center gap-1 ${class_name}`} onBlur={finish}>
-        {editor}
-      </span>
-    )
-  return (
-    <button
-      aria-label={`Edit ${label}`}
-      className={`inline-flex cursor-text items-center gap-1 text-left hover:bg-white/[0.05] ${class_name}`}
-      data-spell-effect-field={label}
-      onClick={() => set_editing(true)}
-      type="button"
-    >
-      {display}
-    </button>
-  )
-}
-
-const AreaGlyph = ({ shape, size }: Readonly<{ shape: number; size: number }>) => {
-  const text = useText()
-  const name = area_shapes[shape]
-  const mask = name ? area_masks[name] : null
-  if (!mask || (name !== 'allmap' && size <= 0))
-    return (
-      <span className="text-[8px] font-semibold tracking-[0.08em] text-[#8fc4ff] uppercase">
-        {text(`spell_effects.shape_${name ?? 'point'}`, { size })}
-      </span>
-    )
-  return (
-    <span className="inline-flex items-center gap-1" title={text(`spell_effects.shape_${name}`, { size })}>
-      <span aria-hidden="true" className="grid grid-cols-5 gap-px">
-        {mask.flatMap((row, row_index) =>
-          [...row].map((cell, column_index) => (
-            <span
-              className={`size-1 ${cell === '1' ? 'bg-[#8fc4ff]' : 'bg-white/8'}`}
-              key={`${column_index}:${row_index}`}
-            />
-          ))
-        )}
-      </span>
-      <span className="text-[9px] font-semibold tabular-nums text-[#8fc4ff]">{size}</span>
-    </span>
-  )
-}
-
 const effect_identity = (effect: SpellEffect): Readonly<{ icon: string; label: string; tint: string }> | null => {
   const channel = effect_channel(effect)
   const identity = stat_identities[element_stats[effect.element] ?? channel]
@@ -304,72 +152,6 @@ const target_note = (filter: number): string | null => {
   return null
 }
 
-type EffectUpdate = (field: keyof SpellEffect, value: SpellCardValue) => void
-
-const CriticalEditor = ({ critical, update }: Readonly<{ critical: SpellEffect; update: EffectUpdate }>) => {
-  const change_kind = (value: string | number): void => {
-    const next = Number(value)
-    update('kind', next)
-    if (instant_effect_kinds.includes(next) && critical.turns !== 0) update('turns', 0)
-    if (next === Number(EFFECT_KINDS.chatiment) && critical.turns !== CHATIMENT_TURNS) update('turns', CHATIMENT_TURNS)
-    else if (timed_effect_kinds.includes(next) && critical.turns === 0) update('turns', 1)
-  }
-  return (
-    <>
-      <SelectField change={change_kind} label="Critical effect kind" options={effect_options} value={critical.kind} />
-      <SelectField
-        change={(value) => update('element', value)}
-        label="Critical element"
-        options={element_options}
-        value={critical.element}
-      />
-      <NumberField change={(value) => update('value', value)} label="Critical power from" value={critical.value} />
-      <span className="text-[#777b86]">to</span>
-      <NumberField
-        auto_focus={false}
-        change={(value) => update('value_max', value)}
-        label="Critical power to"
-        value={critical.value_max}
-      />
-      <SelectField
-        change={(value) => update('stat', value)}
-        label="Critical stat"
-        options={stat_options}
-        value={critical.stat}
-      />
-      <SelectField
-        change={(value) => update('area_shape', value)}
-        label="Critical area shape"
-        options={shape_options}
-        value={critical.area_shape}
-      />
-      <NumberField
-        change={(value) => update('area_size', value)}
-        label="Critical area size"
-        value={critical.area_size}
-      />
-      {duration_editable_for(critical.kind) && (
-        <NumberField change={(value) => update('turns', value)} label="Critical turns" value={critical.turns} />
-      )}
-      <NumberField
-        change={(value) => update('chance_bp', value)}
-        label="Critical chance basis points"
-        value={critical.chance_bp}
-        width="w-16"
-      />
-    </>
-  )
-}
-type SpellEffectLineProps = Readonly<{
-  effect: SpellEffect
-  critical?: SpellEffect
-  critical_only?: boolean
-  edit?: SpellCardEdit
-  update: EffectUpdate
-  update_critical?: EffectUpdate
-  remove?: () => void
-  add_critical?: () => void
-}>
 export const spell_effect_line_view = (effect: SpellEffect, text: CopyText, critical_only = false): EffectLineView => {
   const identity = effect_identity(effect)
   const channel = effect_channel(effect)
@@ -383,390 +165,213 @@ export const spell_effect_line_view = (effect: SpellEffect, text: CopyText, crit
   })
 }
 
-const SpellEffectIcon = ({ effect }: Readonly<{ effect: SpellEffect }>) => {
+const effect_tone = (effect: SpellEffect): string =>
+  effect_identity(effect)?.tint ?? stat_colors[effect_channel(effect)] ?? effect_color(effect.element)
+
+const effect_icon_view = (effect: SpellEffect): SpellEffectIcon => {
   const identity = effect_identity(effect)
   const channel = effect_channel(effect)
-  const ChannelIcon = effect_icon(effect, channel)
-  const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
-  return identity ? (
-    <img alt="" className="size-5 object-contain" src={identity.icon} title={identity.label} />
-  ) : ChannelIcon ? (
-    <span className="grid size-5 place-items-center" style={{ color }} title={effect_icon_title(effect, channel)}>
-      <ChannelIcon size={15} strokeWidth={1.6} />
-    </span>
-  ) : (
-    <span
-      aria-hidden="true"
-      className="size-2 rounded-full"
-      style={{ backgroundColor: effect_color(effect.element) }}
-    />
-  )
+  const glyph = effect_icon(effect, channel)
+  if (identity) return { kind: 'art', src: identity.icon, title: identity.label }
+  if (glyph) return { kind: 'glyph', glyph, color: effect_tone(effect), title: effect_icon_title(effect, channel) }
+  return { kind: 'dot', color: effect_color(effect.element) }
 }
 
-const effect_row_class =
-  'flex min-h-11 w-full flex-wrap items-center gap-2 border-b border-white/6 px-1 py-2.5 text-[10px] last:border-b-0'
+const shows_area = (effect: SpellEffect): boolean => effect.area_size > 0 || area_shapes[effect.area_shape] === 'allmap'
 
-const CriticalBadge = ({ label, value }: Readonly<{ label: string; value?: string }>) => (
-  <span
-    className="inline-flex min-h-8 shrink-0 items-center whitespace-nowrap gap-2 border border-[#e8b44f]/35 bg-[linear-gradient(90deg,rgba(232,180,79,0.12),rgba(232,180,79,0.03))] px-2.5 py-1"
-    data-spell-critical-badge
-  >
-    <span className="text-[7px] font-semibold tracking-[0.12em] text-[#e8b44f] uppercase">{label}</span>
-    {value && <span className="text-[9px] font-semibold text-[#f2cf84]">{value}</span>}
-  </span>
-)
-
-const ReadEffect = ({
-  effect,
-  critical,
-  critical_only,
-}: Readonly<{ effect: SpellEffect; critical?: SpellEffect; critical_only: boolean }>) => {
-  const text = useText()
-  const view = spell_effect_line_view(effect, text)
-  const target = effect_target_text(effect, text)
-  const difference = critical ? critical_effect_text(effect, critical, text) : null
-  return (
-    <div className={effect_row_class} data-spell-effect-row>
-      <SpellEffectIcon effect={effect} />
-      <span className="text-[#bbb7b0]">
-        {view.pre}
-        {view.value !== null && <b style={{ color: view.tone }}>{view.value}</b>}
-        {view.post}
-      </span>
-      {(effect.area_size > 0 || area_shapes[effect.area_shape] === 'allmap') && (
-        <AreaGlyph shape={effect.area_shape} size={effect.area_size} />
-      )}
-      {target && (
-        <span className="text-[8px] text-[#858994]" data-spell-effect-target>
-          ({target})
-        </span>
-      )}
-      {effect.turns > 0 && (
-        <span className="text-[9px] font-semibold text-[#d9b86c]">
-          {text('spell_effects.turns', { count: effect.turns })}
-        </span>
-      )}
-      {effect.chance_bp < 10000 && <span className="text-[8px] text-[#858994]">· {effect.chance_bp / 100}%</span>}
-      {critical_only ? (
-        <CriticalBadge label={text('spell_effects.critical_only')} />
-      ) : (
-        difference && <CriticalBadge label={text('encyclopedia_page.critical')} value={difference} />
-      )}
-    </div>
-  )
-}
-
-const SpellEffectLine = ({
-  effect,
-  critical,
-  critical_only = false,
-  edit,
-  update,
-  update_critical,
-  remove,
-  add_critical,
-}: SpellEffectLineProps) => {
-  const text = useText()
-  const identity = effect_identity(effect)
-  const channel = effect_channel(effect)
-  const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
-  const words = effect_words(effect)
-  const kind = effect_kinds[effect.kind]
-  const target_editable = kind !== 'caster_damage'
-  const target = target_editable ? target_note(effect.target_filter) : null
-  const difference = critical ? critical_effect_text(effect, critical, text) : null
-  const duration_editable = duration_editable_for(effect.kind)
-  const change_kind = (value: string | number): void => {
-    const next = Number(value)
-    update('kind', next)
-    if (instant_effect_kinds.includes(next) && effect.turns !== 0) update('turns', 0)
-    if (next === Number(EFFECT_KINDS.chatiment) && effect.turns !== CHATIMENT_TURNS) update('turns', CHATIMENT_TURNS)
-    else if (timed_effect_kinds.includes(next) && effect.turns === 0) update('turns', 1)
+const area_view = ({ area_shape, area_size }: SpellEffect, text: CopyText): SpellArea => {
+  const name = area_shapes[area_shape]
+  const mask = name ? area_masks[name] : undefined
+  return {
+    label: text(`spell_effects.shape_${name ?? 'point'}`, { size: area_size }),
+    size: area_size,
+    mask: mask && (name === 'allmap' || area_size > 0) ? mask : null,
   }
-  return (
-    <div className={effect_row_class}>
-      <InlineEffectField
-        display={<SpellEffectIcon effect={effect} />}
-        edit={edit}
-        editor={
-          <SelectField
-            change={(value) => update('element', value)}
-            label="Element"
-            options={element_options_for(kind)}
-            value={effect.element}
-          />
-        }
-        label="element"
-      />
-      <span className="inline-flex items-center gap-1 text-[#bbb7b0]">
-        <InlineEffectField
-          display={words.action}
-          edit={edit}
-          editor={<SelectField change={change_kind} label="Effect kind" options={effect_options} value={effect.kind} />}
-          label="effect kind"
-        />
-        {words.amount && (
-          <InlineEffectField
-            class_name="font-semibold"
-            display={
-              <span style={{ color }}>
-                {effect_range(effect)}
-                {effect_value_suffix(effect)}
-              </span>
-            }
-            edit={edit}
-            editor={
-              <>
-                <NumberField change={(value) => update('value', value)} label="Power from" value={effect.value} />
-                <span className="font-normal text-[#777b86]">to</span>
-                <NumberField
-                  auto_focus={false}
-                  change={(value) => update('value_max', value)}
-                  label="Power to"
-                  value={effect.value_max}
-                />
-              </>
-            }
-            label="effect power"
-          />
-        )}
-        {words.stat && (
-          <InlineEffectField
-            display={titleize(channel)}
-            edit={edit}
-            editor={
-              <SelectField
-                change={(value) => update('stat', value)}
-                label="Stat"
-                options={stat_options}
-                value={effect.stat}
-              />
-            }
-            label="stat"
-          />
-        )}
-        {words.suffix && (
-          <InlineEffectField
-            display={words.suffix}
-            edit={edit}
-            editor={
-              <SelectField change={change_kind} label="Effect kind" options={effect_options} value={effect.kind} />
-            }
-            label="effect kind"
-          />
-        )}
-      </span>
-      {(edit || effect.area_size > 0 || area_shapes[effect.area_shape] === 'allmap') && (
-        <InlineEffectField
-          display={<AreaGlyph shape={effect.area_shape} size={effect.area_size} />}
-          edit={edit}
-          editor={
-            <>
-              <SelectField
-                change={(value) => update('area_shape', value)}
-                label="Area shape"
-                options={shape_options}
-                value={effect.area_shape}
-              />
-              <NumberField change={(value) => update('area_size', value)} label="Area size" value={effect.area_size} />
-            </>
-          }
-          label="area"
-        />
-      )}
-      {target_editable && (target || edit) && (
-        <InlineEffectField
-          class_name="text-[8px] text-[#858994]"
-          display={`(${target ?? 'any target'})`}
-          edit={edit}
-          editor={
-            <SelectField
-              change={(value) => update('target_filter', value)}
-              label="Target"
-              options={target_options}
-              value={effect.target_filter}
-            />
-          }
-          label="target"
-        />
-      )}
-      {(effect.turns > 0 || (edit && duration_editable)) && (
-        <InlineEffectField
-          class_name={`text-[9px] font-semibold ${effect.turns > 0 ? 'text-[#d9b86c]' : 'text-[#777b86]'}`}
-          display={effect.turns > 0 ? `for ${effect.turns} turn${effect.turns === 1 ? '' : 's'}` : 'Instant'}
-          edit={duration_editable ? edit : undefined}
-          editor={<NumberField change={(value) => update('turns', value)} label="Turns" value={effect.turns} />}
-          label="duration"
-        />
-      )}
-      {(edit || effect.chance_bp < 10000) && (
-        <InlineEffectField
-          class_name="text-[8px] text-[#858994]"
-          display={`· ${effect.chance_bp / 100}%`}
-          edit={edit}
-          editor={
-            <NumberField
-              change={(value) => update('chance_bp', value)}
-              label="Chance basis points"
-              value={effect.chance_bp}
-              width="w-16"
-            />
-          }
-          label="chance"
-        />
-      )}
-      {(critical_only || difference || (edit && critical)) && (
-        <InlineEffectField
-          display={<CriticalBadge label="Critical" value={difference ?? (critical_only ? 'Only' : 'Same')} />}
-          edit={critical && update_critical ? edit : undefined}
-          editor={critical && update_critical ? <CriticalEditor critical={critical} update={update_critical} /> : null}
-          label="critical effect"
-        />
-      )}
-      {edit && !critical && add_critical && (
-        <button
-          className="h-7 border border-[#e8b44f]/30 bg-[#e8b44f]/5 px-2 text-[7px] tracking-[0.1em] text-[#e8b44f] uppercase hover:border-[#e8b44f]/60"
-          data-spell-add-critical-for=""
-          onClick={add_critical}
-          type="button"
-        >
-          + Crit
-        </button>
-      )}
-      {edit && remove && (
-        <button
-          aria-label={critical_only ? 'Remove critical effect' : 'Remove effect'}
-          className="ml-auto grid size-7 shrink-0 place-items-center text-[#873f55] hover:text-[#ff5a8b]"
-          onClick={remove}
-          type="button"
-        >
-          ×
-        </button>
-      )}
-    </div>
-  )
 }
 
-const EffectRow = (props: SpellEffectLineProps) =>
-  props.edit ? (
-    <SpellEffectLine {...props} />
-  ) : (
-    <ReadEffect effect={props.effect} critical={props.critical} critical_only={props.critical_only ?? false} />
-  )
+/** One displayed effect: a normal row with its aligned critical, or a critical-only row. */
+type EffectSource = Readonly<{
+  key: string
+  list: 'effects' | 'crit_effects'
+  index: number
+  effect: SpellEffect
+  critical?: SpellEffect
+  critical_only: boolean
+}>
 
-export const EffectLines = ({
-  effects,
-  critical_effects,
-  level_index,
-  compact = false,
-  edit,
-}: Readonly<{
+const effect_sources = (
+  effects: SpellLevel['effects'],
+  critical_effects: SpellLevel['crit_effects']
+): readonly EffectSource[] => [
+  ...effects.map((effect, index) => ({
+    key: `effect-${index}`,
+    list: 'effects' as const,
+    index,
+    effect,
+    critical: critical_effects[index],
+    critical_only: false,
+  })),
+  ...critical_effects.slice(effects.length).map((effect, offset) => ({
+    key: `critical-${effects.length + offset}`,
+    list: 'crit_effects' as const,
+    index: effects.length + offset,
+    effect,
+    critical_only: true,
+  })),
+]
+
+const read_row = ({ key, effect, critical, critical_only }: EffectSource, text: CopyText): SpellEffectRead => {
+  const view = spell_effect_line_view(effect, text)
+  const difference = critical ? critical_effect_text(effect, critical, text) : null
+  return {
+    kind: 'read',
+    key,
+    icon: effect_icon_view(effect),
+    pre: view.pre,
+    value: view.value,
+    tone: view.tone,
+    post: view.post,
+    area: shows_area(effect) ? area_view(effect, text) : null,
+    target: effect_target_text(effect, text),
+    turns: effect.turns > 0 ? text('spell_effects.turns', { count: effect.turns }) : null,
+    chance: effect.chance_bp < 10000 ? effect.chance_bp / 100 : null,
+    critical: critical_only
+      ? { label: text('spell_effects.critical_only') }
+      : difference
+        ? { label: text('encyclopedia_page.critical'), value: difference }
+        : null,
+  }
+}
+
+const draft_critical = ({ effect, critical, critical_only }: EffectSource, text: CopyText): SpellCritical | null => {
+  const difference = critical ? critical_effect_text(effect, critical, text) : null
+  return critical_only || difference || critical
+    ? { label: 'Critical', value: difference ?? (critical_only ? 'Only' : 'Same') }
+    : null
+}
+
+/** A timed effect states its turns; an instant one stays authorable when its kind allows a duration. */
+const draft_duration = ({ kind, turns }: SpellEffect): SpellEffectDraft['duration'] =>
+  turns > 0 || duration_editable_for(kind)
+    ? { text: turns > 0 ? `for ${turns} turn${turns === 1 ? '' : 's'}` : 'Instant', active: turns > 0 }
+    : null
+
+const draft_row = (source: EffectSource, text: CopyText): SpellEffectDraft => {
+  const { key, effect } = source
+  const words = effect_words(effect)
+  const target_editable = effect_kinds[effect.kind] !== 'caster_damage'
+  return {
+    kind: 'draft',
+    key,
+    icon: effect_icon_view(effect),
+    action: words.action,
+    amount: words.amount
+      ? { text: `${effect_range(effect)}${effect_value_suffix(effect)}`, color: effect_tone(effect) }
+      : null,
+    stat: words.stat ? titleize(effect_channel(effect)) : null,
+    suffix: words.suffix || null,
+    area: area_view(effect, text),
+    target: target_editable ? `(${target_note(effect.target_filter) ?? 'any target'})` : null,
+    duration: draft_duration(effect),
+    chance: `· ${effect.chance_bp / 100}%`,
+    critical: draft_critical(source, text),
+  }
+}
+
+type EffectLinesProps = Readonly<{
   effects: SpellLevel['effects']
   critical_effects: SpellLevel['crit_effects']
   level_index: number
   compact?: boolean
   edit?: SpellCardEdit
-}>) => {
+}>
+
+/** Authoring commands of one line: field updates, critical alignment and removal. */
+const source_commands = (props: EffectLinesProps & { edit: SpellCardEdit }, source: EffectSource) => {
+  const { effects, critical_effects, level_index, edit } = props
   const update =
-    (key: 'effects' | 'crit_effects', index: number): EffectUpdate =>
+    (list: EffectSource['list'], index: number): EffectUpdate =>
     (field, value) => {
-      edit?.change(['levels', level_index, key, index, field], value)
+      edit.change(['levels', level_index, list, index, field], value)
       if (
-        key === 'effects' &&
+        list === 'effects' &&
         field === 'target_filter' &&
         effects.length === critical_effects.length &&
         critical_effects[index]
       )
-        edit?.change(['levels', level_index, 'crit_effects', index, field], value)
+        edit.change(['levels', level_index, 'crit_effects', index, field], value)
     }
-  return (
-    <div
-      className={compact ? 'space-y-0.5 [&>div]:!min-h-0 [&>div]:!border-b-0 [&>div]:!py-1' : 'space-y-2'}
-      {...(compact ? { 'data-spell-effects-compact': '' } : {})}
-    >
-      {effects.map((effect, index) => (
-        <EffectRow
-          critical={critical_effects[index]}
-          add_critical={
-            edit && !critical_effects[index]
-              ? () =>
-                  edit.change(
-                    ['levels', level_index, 'crit_effects'],
-                    [
-                      ...critical_effects,
-                      ...effects
-                        .slice(critical_effects.length, index + 1)
-                        .map((normal_effect) => ({ ...normal_effect })),
-                    ]
-                  )
-              : undefined
-          }
-          edit={edit}
-          effect={effect}
-          key={`effect-${index}`}
-          remove={
-            edit
-              ? () => {
-                  edit.change(
-                    ['levels', level_index, 'effects'],
-                    effects.filter((_, effect_index) => effect_index !== index)
-                  )
-                  if (critical_effects[index])
-                    edit.change(
-                      ['levels', level_index, 'crit_effects'],
-                      critical_effects.filter((_, effect_index) => effect_index !== index)
-                    )
-                }
-              : undefined
-          }
-          update={update('effects', index)}
-          update_critical={critical_effects[index] ? update('crit_effects', index) : undefined}
-        />
-      ))}
-      {critical_effects.slice(effects.length).map((effect, offset) => {
-        const index = effects.length + offset
-        return (
-          <EffectRow
-            critical_only
-            edit={edit}
-            effect={effect}
-            key={`critical-${index}`}
-            remove={
-              edit
-                ? () =>
-                    edit.change(
-                      ['levels', level_index, 'crit_effects'],
-                      critical_effects.filter((_, effect_index) => effect_index !== index)
-                    )
-                : undefined
-            }
-            update={update('crit_effects', index)}
-          />
-        )
-      })}
-      {edit && !compact && (
-        <div className="flex items-center gap-2 border-t border-dashed border-white/8 pt-2">
-          <button
-            className="h-8 border border-[#4a9eff]/25 bg-[#4a9eff]/5 px-3 text-[8px] tracking-[0.12em] text-[#67adff] uppercase hover:border-[#4a9eff]/55"
-            data-spell-add-effect=""
-            onClick={() => edit.change(['levels', level_index, 'effects'], [...effects, blank_effect])}
-            type="button"
-          >
-            + Effect
-          </button>
-          <button
-            className="h-8 border border-[#e8b44f]/25 bg-[#e8b44f]/5 px-3 text-[8px] tracking-[0.12em] text-[#e8b44f] uppercase hover:border-[#e8b44f]/55"
-            data-spell-add-critical-effect=""
-            onClick={() => {
-              const source = effects[critical_effects.length] ?? blank_effect
-              edit.change(['levels', level_index, 'crit_effects'], [...critical_effects, { ...source }])
-            }}
-            type="button"
-          >
-            + Critical effect
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  const without = (list: EffectSource['list']) =>
+    (list === 'effects' ? effects : critical_effects).filter((_, index) => index !== source.index)
+  return {
+    update: update(source.list, source.index),
+    update_critical: source.critical ? update('crit_effects', source.index) : undefined,
+    add_critical:
+      source.list === 'effects' && !source.critical
+        ? () =>
+            edit.change(
+              ['levels', level_index, 'crit_effects'],
+              [
+                ...critical_effects,
+                ...effects.slice(critical_effects.length, source.index + 1).map((normal) => ({ ...normal })),
+              ]
+            )
+        : undefined,
+    remove: () => {
+      edit.change(['levels', level_index, source.list], without(source.list))
+      if (source.list === 'effects' && source.critical)
+        edit.change(['levels', level_index, 'crit_effects'], without('crit_effects'))
+    },
+  }
 }
+
+const effect_authoring = (
+  props: EffectLinesProps & { edit: SpellCardEdit },
+  sources: readonly EffectSource[],
+  text: CopyText
+): SpellEffectListProps => {
+  const { edit, compact = false } = props
+  const lines = sources.map((source) => ({ source, commands: source_commands(props, source) }))
+  const editors: Readonly<Record<string, EffectEditor>> = Object.fromEntries(
+    lines.flatMap(({ source, commands }) =>
+      Object.entries(effect_editors(source, commands.update, commands.update_critical))
+    )
+  )
+  const actions: Readonly<Record<string, ReactNode>> = Object.fromEntries(
+    lines.map(({ source, commands }) => [
+      source.key,
+      <RowActions add_critical={commands.add_critical} critical_only={source.critical_only} remove={commands.remove} />,
+    ])
+  )
+  return {
+    compact,
+    rows: sources.map((source) => draft_row(source, text)),
+    field: ({ slot, display, class_name }) => {
+      const entry = editors[slot]
+      return entry ? (
+        <InlineEffectField
+          class_name={class_name}
+          display={display}
+          edit={entry.editable === false ? undefined : edit}
+          editor={entry.editor}
+          label={entry.label}
+        />
+      ) : (
+        display
+      )
+    },
+    row_action: (key) => actions[key],
+    footer: compact ? undefined : <AddEffects {...props} />,
+  }
+}
+
+/** The effect list of one spell level, read-only or authored through `edit`. */
+export const useSpellEffects = (props: EffectLinesProps): SpellEffectListProps => {
+  const text = useText()
+  const sources = effect_sources(props.effects, props.critical_effects)
+  return props.edit
+    ? effect_authoring({ ...props, edit: props.edit }, sources, text)
+    : { compact: props.compact, rows: sources.map((source) => read_row(source, text)) }
+}
+
+export const EffectLines = (props: EffectLinesProps) => <SpellEffectList {...useSpellEffects(props)} />

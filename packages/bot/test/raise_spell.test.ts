@@ -231,8 +231,7 @@ test('reconnect reconciles a completed spell receipt after later upgrades or res
       effects: { changedObjects: [{ objectId: character.id, outputState: 'ObjectWrite', outputVersion: '101' }] },
     },
   }
-  await put(f.store, 'command:upgrade', command)
-  await put(f.store, 'receipt:fixture-upgrade', { receipt })
+  await put(f.store, 'command:upgrade', { ...command, receipt })
   const lane = (await f.store.read<Lane>(key))!
   try {
     for (const [rank, points, version, complete] of [
@@ -241,7 +240,12 @@ test('reconnect reconciles a completed spell receipt after later upgrades or res
       [3, 2, '102', true], // First reconnect already includes another upgrade.
       [1, 5, '103', true], // First reconnect already includes a reset.
     ] as const) {
-      await put(f.store, key, { ...lane, needs_resync: true, reconciliation_command: command.id })
+      await put(f.store, key, {
+        ...lane,
+        needs_resync: true,
+        reconciliation_command: command.id,
+        latest_command: command.id,
+      })
       const observed = {
         ...base,
         snapshot: {

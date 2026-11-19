@@ -1,0 +1,18 @@
+{
+  "captured_at": "2026-11-14T06:46:39.161Z",
+  "field_id": "0x01c174d9112d32a10d43f7d7edac03f11e690ca10709ec3247308b57056f975c",
+  "version": "295886369",
+  "digest": "2qYDFM1NTbVPWRcwJAhM4HPmZgNLjPM9v8qNtoUMKzc6",
+  "name": "aresrpg.sceat.sui",
+  "record": {
+    "name": "aresrpg.sceat.sui",
+    "nftId": "0x0ca9dac0e81fabdf0d750a571c1dd81420f040eea5fbf197455473f0bfdf5091",
+    "targetAddress": "0x3d1342fb7de99c69ce821183bcfc5b6374d81453bf5ca9bf7e383e75b3722983",
+    "expirationTimestampMs": 1736548310642,
+    "data": {
+      "avatar": "0x71465c22cf9ccb25e60e1a3f6bc5381899825a3bde0e7ab1e067145ba8c01509"
+    },
+    "avatar": "0x71465c22cf9ccb25e60e1a3f6bc5381899825a3bde0e7ab1e067145ba8c01509"
+  },
+  "option_bcs_base64": "AQyp2sDoH6vfDXUKVxwd2BQg8EDupfvxl0VUc/C/31CRcl5YUpQBAAABPRNC+33pnGnOghGDvPxbY3TYFFO/XKm/fjg+dbNyKYMBBmF2YXRhckIweDcxNDY1YzIyY2Y5Y2NiMjVlNjBlMWEzZjZiYzUzODE4OTk4MjVhM2JkZTBlN2FiMWUwNjcxNDViYThjMDE1MDk="
+}

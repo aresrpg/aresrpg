@@ -57,7 +57,7 @@ export default function MasteryPage({ copy }: Readonly<{ copy: AppCopy }>) {
               className="relative mt-4 grid min-h-52 gap-3 overflow-hidden border border-cyan/25 bg-cover bg-center p-4 md:grid-cols-[1fr_auto] md:items-center"
               style={world_art_style(quest_world_card?.art)}
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-[#080b12]/96 via-[#080b12]/78 to-[#080b12]/52" />
+              <span className="absolute inset-0 bg-gradient-to-r from-void/96 via-void/78 to-void/52" />
               <div className="relative">
                 <div className="text-[8px] tracking-[0.2em] text-muted uppercase">
                   {titleize(mastery.row.quest_world)}
@@ -108,7 +108,7 @@ export default function MasteryPage({ copy }: Readonly<{ copy: AppCopy }>) {
                         src={card.art}
                       />
                     )}
-                    <span className="absolute inset-0 bg-gradient-to-t from-[#080b12] via-[#080b12]/48 to-black/12" />
+                    <span className="absolute inset-0 bg-gradient-to-t from-void via-void/48 to-black/12" />
                     <div className="mastery-world-heading">
                       <div>
                         <div className="text-[11px] font-semibold tracking-[0.16em] text-text uppercase">

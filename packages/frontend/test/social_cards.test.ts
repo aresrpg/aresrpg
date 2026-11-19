@@ -32,6 +32,8 @@ test('every shareable route owns one card whose image is authored or painted fro
     if (card.entity) expect(existsSync(card.entity.art_path)).toBeTrue()
     else if (card.image !== '/social/encyclopedia.jpg') expect(existsSync(authored(card.image))).toBeTrue()
   }
+  // The entry points the home page links to each carry their own preview, never the home card.
+  for (const route of ['/world', '/dapp', '/docs', '/docs/items']) expect(routes).toContain(route)
   expect(catalog.encyclopedia.art_paths.length).toBeGreaterThan(0)
   expect(catalog.encyclopedia.art_paths.every((path) => existsSync(path))).toBeTrue()
 })
@@ -78,7 +80,7 @@ test('painted cards are JPEGs at the declared preview size', async () => {
   const renderer = await create_social_renderer({
     font_path: resolve(repo_dir, 'packages/journal/public/assets/jetbrains-mono.woff2'),
     logo_path: resolve(repo_dir, 'seed/scenes/aresrpg_text_logo.png'),
-    tokens_path: resolve(frontend_dir, 'src/tailwind.css'),
+    tokens_path: resolve(frontend_dir, '../ui/src/base.css'),
   })
   const entity = catalog.cards.find((card) => card.entity)!.entity!
   for (const bytes of [await renderer.entity(entity), await renderer.encyclopedia(catalog.encyclopedia)]) {

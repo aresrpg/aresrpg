@@ -86,20 +86,20 @@ const TokenIdentity = ({ copy, token }: Readonly<{ copy: KaresCopy; token: strin
     }
   }
   return (
-    <div className="token">
-      <div className="token-id">
-        <span id={id}>{copy.token_type}</span>
-        <div className="token-row">
-          <output aria-labelledby={id}>{token ?? copy.token_pending}</output>
-          <button className="copy" type="button" disabled={!token} onClick={() => void copy_token()}>
-            {copy.copy_token}
-          </button>
-        </div>
-        <small role="status">
-          {result === 'copied' ? copy.token_copied : result === 'failed' ? copy.error_generic : copy.token_hint}
-        </small>
+    <section className="token-id">
+      <h3 className="tk-h" id={id}>
+        {copy.token_type}
+      </h3>
+      <div className="token-row">
+        <output aria-labelledby={id}>{token ?? copy.token_pending}</output>
+        <button className="aui-button" type="button" disabled={!token} onClick={() => void copy_token()}>
+          {copy.copy_token}
+        </button>
       </div>
-    </div>
+      <small role="status">
+        {result === 'copied' ? copy.token_copied : result === 'failed' ? copy.error_generic : copy.token_hint}
+      </small>
+    </section>
   )
 }
 
@@ -134,33 +134,31 @@ export const TokenomicsPanel = ({
     combat_pot: { balance: null },
   }
   return (
-    <section className="kares-ledger" aria-labelledby={title_id}>
-      <div className="ledger-in n">
-        <header className="tk-head">
-          <img className="tk-coin" data-kares-logo src={kares_logo} width={52} height={52} alt="" />
-          <h2 id={title_id}>$KARES</h2>
-          <p>{copy.ledger_intro}</p>
-          <div className="buy">
-            <span className="slab">
-              <a
-                className="btn btn-rune btn-sm n"
-                href="https://aftermath.finance/trade"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {copy.buy_aftermath}
-              </a>
-            </span>
-            <small>{copy.swap_note}</small>
-          </div>
-        </header>
-        <div className="tk-status" data-state={phase} role="status">
-          <b>{status[phase]}</b>
-          {time && <span>{copy.read_at.replace('{{time}}', time)}</span>}
-          <button className="tk-retry" type="button" disabled={phase === 'loading'} onClick={refresh}>
-            {copy.refresh}
-          </button>
+    <div className="kares-ledger" role="region" aria-labelledby={title_id}>
+      <header className="tk-head">
+        <img className="tk-coin" data-kares-logo src={kares_logo} width={52} height={52} alt="" />
+        <h2 id={title_id}>$KARES</h2>
+        <p>{copy.ledger_intro}</p>
+        <div className="buy">
+          <a
+            className="aui-button aui-button--primary"
+            href="https://aftermath.finance/trade"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {copy.buy_aftermath}
+          </a>
+          <small>{copy.swap_note}</small>
         </div>
+      </header>
+      <div className="tk-status" data-state={phase} role="status">
+        <b>{status[phase]}</b>
+        {time && <span>{copy.read_at.replace('{{time}}', time)}</span>}
+        <button className="aui-button" type="button" disabled={phase === 'loading'} onClick={refresh}>
+          {copy.refresh}
+        </button>
+      </div>
+      <section>
         <h3 className="tk-h">{copy.supply_heading}</h3>
         <div className="supply-row">
           <div className="metric">
@@ -185,6 +183,8 @@ export const TokenomicsPanel = ({
             <small>{copy.circulating_unknown}</small>
           </div>
         </div>
+      </section>
+      <section>
         <h3 className="tk-h">{copy.pools_heading}</h3>
         <div className="pools">
           <article className="pool pool-staking">
@@ -226,6 +226,8 @@ export const TokenomicsPanel = ({
             </dl>
           </article>
         </div>
+      </section>
+      <section>
         <h3 className="tk-h">{copy.uses_heading}</h3>
         <ul className="uses">
           <li>
@@ -244,9 +246,9 @@ export const TokenomicsPanel = ({
             <span>{copy.compete_note}</span>
           </li>
         </ul>
-        <TokenIdentity key={values.coin_type} copy={copy} token={values.coin_type} />
-      </div>
-    </section>
+      </section>
+      <TokenIdentity key={values.coin_type} copy={copy} token={values.coin_type} />
+    </div>
   )
 }
 

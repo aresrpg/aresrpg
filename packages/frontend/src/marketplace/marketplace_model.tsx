@@ -3,10 +3,10 @@
 
 import { marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
+import { MarketCurrency, MarketListingIcon, MarketVolume, type MarketArt } from '@aresrpg/ui'
 
 export { buyer_total } from './price.ts'
 
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useText } from '../i18n/useText.ts'
@@ -23,43 +23,33 @@ export const listing_item = (listing: Readonly<Pick<ListingRow, 'item_type'>>) =
 export const listing_name = (listing: Readonly<Pick<ListingRow, 'name' | 'item_type'>>): string =>
   listing_item(listing)?.name ?? listing.name
 
+/** The listing art: the item picture, a character's class initials, or a neutral mark. */
+export const listing_art = (listing: Readonly<Pick<ListingRow, 'item_type' | 'kind' | 'classe'>>): MarketArt => ({
+  icon: listing.item_type ? item_icon(listing.item_type) : null,
+  fallback: listing.kind === 'character' ? listing.classe?.slice(0, 2) : '◇',
+})
+
 export const ListingIcon = ({
   listing,
   size = 34,
-}: Readonly<{ listing: Pick<ListingRow, 'item_type' | 'kind' | 'classe'>; size?: number }>) => {
-  const icon = listing.item_type ? item_icon(listing.item_type) : null
-  return (
-    <span
-      className="market-listing-icon grid shrink-0 place-items-center text-gold"
-      style={{ width: size, height: size }}
-    >
-      {icon ? (
-        <img alt="" className="size-full object-contain" src={icon} />
-      ) : listing.kind === 'character' ? (
-        listing.classe?.slice(0, 2)
-      ) : (
-        '◇'
-      )}
-    </span>
-  )
-}
+}: Readonly<{ listing: Pick<ListingRow, 'item_type' | 'kind' | 'classe'>; size?: number }>) => (
+  <MarketListingIcon art={listing_art(listing)} size={size} />
+)
 
-export const CategoryName = ({ category }: Readonly<{ category: string | null }>) => {
+/** A listing's category name; character listings have none. */
+export const useCategoryLabel = () => {
   const text = useText()
   const category_name = useItemCategoryName()
-  return category ? category_name(category) : text('ui.character')
+  return (category: string | null): string => (category ? category_name(category) : text('ui.character'))
 }
+
+export const CategoryName = ({ category }: Readonly<{ category: string | null }>) => useCategoryLabel()(category)
 
 export const short_address = (address: string | null): string =>
   address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '—'
 
 /** Compact Sui currency mark from the official droplet geometry; color follows its price label. */
-export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => (
-  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[#4a9eff]">
-    <SuiLogo size={size} />
-    <span>SUI</span>
-  </span>
-)
+export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => <MarketCurrency size={size} />
 
 export const MarketVolumeBadge = ({
   window,
@@ -79,19 +69,15 @@ export const MarketVolumeBadge = ({
     period.value
   )
   return (
-    <div
-      className="flex shrink-0 items-center gap-3 rounded-sm border border-[#4a9eff]/25 bg-[linear-gradient(110deg,rgba(74,158,255,.08),rgba(200,150,60,.06))] px-3 py-2"
-      data-marketplace-volume={window}
+    <MarketVolume
+      window={window}
       title={text(mist === null ? 'volume_unavailable' : partial ? 'volume_partial' : 'volume_window', {
         window: duration,
       })}
-      data-volume-partial={(mist !== null && partial) || undefined}
-    >
-      <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text(`volume_${window}`)}</span>
-      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold tabular-nums">
-        {mist === null ? '—' : `${partial ? '≥ ' : ''}${numbers.sui(BigInt(mist), 2)}`} <SuiUnit size={12} />
-      </span>
-    </div>
+      partial={mist !== null && partial}
+      label={text(`volume_${window}`)}
+      value={mist === null ? '—' : `${partial ? '≥ ' : ''}${numbers.sui(BigInt(mist), 2)}`}
+    />
   )
 }
 

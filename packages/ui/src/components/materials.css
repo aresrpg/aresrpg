@@ -1,0 +1,164 @@
+/* One material for every surface: fine grain under a top-lit glass sheen. Colour stays with each semantic surface. */
+.aui-mob-pack,
+.aui-inspection,
+.game-character-body .chr-equip__detail,
+.item-detail-view .jobs__craft,
+.aui-panel,
+.aui-surface,
+.aui-window,
+.aui-window-header,
+.aui-button,
+.aui-character-sheet,
+.aui-character-identity,
+.aui-character-statistics,
+.aui-character-statistics > h3,
+.aui-combat-vitals,
+.aui-combat-spells,
+.aui-combat-controls,
+.aui-mob-overview,
+.aui-mob > header,
+.aui-mob > footer,
+.aui-reward,
+.game-character-window,
+.game-character-window > .aui-window-header,
+.game-character-body .chr-equip__bag,
+.game-character-body .inv__doll--portrait,
+.game-character-body .chr-cell,
+.game-character-body .inv__slot {
+  background-image: url('../assets/panel_grain.webp'), linear-gradient(180deg, #ffffff0b, transparent 62%);
+  background-size:
+    256px 256px,
+    100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: soft-light, normal;
+}
+
+/* Pixel trim belongs to the shared window, never the page backdrop. */
+.aui-window-header,
+.aui-mob > header,
+.aui-progression > header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+/* Header light: a soft sweep from the top-left corner, then a dotted trim rule that fades at both ends. */
+.aui-window-header::before,
+.aui-mob > header::before,
+.aui-progression > header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 180% at 0 0, #ffffff12, transparent 46%),
+    radial-gradient(90% 160% at 100% 0, #ffffff0a, transparent 42%);
+  pointer-events: none;
+  z-index: -1;
+}
+.aui-window-header::after,
+.aui-mob > header::after,
+.aui-progression > header::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--aui-brass) 0 2px, transparent 2px 5px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: -1;
+}
+.game-character-body .inv__doll--portrait {
+  box-shadow:
+    inset 0 0 0 1px var(--aui-hair),
+    inset 0 0 24px #0006;
+  border-radius: 0 0 var(--aui-radius) var(--aui-radius);
+}
+.game-character-body .chr-equip__bag {
+  border-color: var(--aui-hair);
+}
+
+.aui-window {
+  position: relative;
+  isolation: isolate;
+}
+/* Frame light sits on the edge only: a lit top rim, one trim pixel per corner, a pale line under the foot. */
+.aui-window::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent 4%, #ffffff40 28%, #ffffff73 50%, #ffffff26 72%, transparent 96%) 0 0 / 100% 1px
+      no-repeat,
+    linear-gradient(var(--aui-brass) 0 0) 1px 1px / 2px 2px no-repeat,
+    linear-gradient(var(--aui-brass) 0 0) calc(100% - 1px) 1px / 2px 2px no-repeat,
+    linear-gradient(var(--aui-brass) 0 0) 1px calc(100% - 1px) / 2px 2px no-repeat,
+    linear-gradient(var(--aui-brass) 0 0) calc(100% - 1px) calc(100% - 1px) / 2px 2px no-repeat;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.aui-window::after {
+  content: '';
+  position: absolute;
+  inset: auto 18% 0;
+  height: 1px;
+  z-index: 2;
+  background: linear-gradient(90deg, transparent, var(--aui-brass-hi), transparent);
+  box-shadow: 0 0 16px 1px color-mix(in srgb, var(--aui-brass-hi) 35%, transparent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.aui-window > * {
+  z-index: 1;
+}
+.game-character-body .chr-equip__bag {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--aui-radius);
+}
+/* Buttons: four corner pixels over the shared material. */
+.aui-button {
+  --tick: color-mix(in srgb, var(--aui-brass) 22%, transparent);
+  background-image:
+    linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0),
+    linear-gradient(var(--tick) 0 0), url('../assets/panel_grain.webp'),
+    linear-gradient(180deg, #ffffff12, transparent 62%);
+  background-position:
+    2px 2px,
+    calc(100% - 2px) 2px,
+    2px calc(100% - 2px),
+    calc(100% - 2px) calc(100% - 2px),
+    0 0,
+    0 0;
+  background-size:
+    2px 2px,
+    2px 2px,
+    2px 2px,
+    2px 2px,
+    256px 256px,
+    100% 100%;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+  background-blend-mode: normal, normal, normal, normal, soft-light, normal;
+}
+/* Primary: dithered end caps fade into a clean peach face. */
+.aui-button--primary {
+  --cap: color-mix(in srgb, var(--aui-orange-lo) 46%, transparent);
+  background-image:
+    linear-gradient(90deg, transparent, var(--aui-orange) 16px, var(--aui-orange) calc(100% - 16px), transparent),
+    repeating-conic-gradient(var(--cap) 0 25%, transparent 0 50%), linear-gradient(180deg, #ffffff38, transparent 60%);
+  background-position: 0 0;
+  background-size:
+    100% 100%,
+    4px 4px,
+    100% 100%;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-blend-mode: normal;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-window-title::before,
+  .aui-window-title::after {
+    display: none;
+  }
+}

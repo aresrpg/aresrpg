@@ -23,7 +23,7 @@ const LeaderboardPage = lazy(() => import('../leaderboards/LeaderboardPage.tsx')
 const KolizeumPage = lazy(() => import('../kolizeum/KolizeumPage.tsx'))
 
 const PageFallback = ({ label }: Readonly<{ label: string }>) => (
-  <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-surface-low/96 text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
+  <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-surface-low/96 text-[9px] tracking-[0.18em] text-gold uppercase">
     {label}
   </section>
 )

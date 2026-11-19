@@ -48,7 +48,7 @@ export const PortraitStyleControls = ({
                 checked={style.background === background}
                 onChange={() => choose({ ...style, background })}
               />
-              <span className="portrait-share-checkerboard block h-full w-full overflow-hidden rounded border border-white/15 peer-checked:border-2 peer-checked:border-[#c8963c] peer-checked:shadow-[inset_0_0_0_1px_#e8c07a] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#e8c07a]">
+              <span className="portrait-share-checkerboard block h-full w-full overflow-hidden rounded border border-white/15 peer-checked:border-2 peer-checked:border-gold peer-checked:shadow-[inset_0_0_0_1px_#e8c07a] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-gold-light">
                 {background && (
                   <img
                     className="h-full w-full"

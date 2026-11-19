@@ -9,6 +9,7 @@ import {
   player_max_hp,
   manhattan,
   type FightCommandInput,
+  type Fighter,
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
 
@@ -35,6 +36,21 @@ const enemy_order = (context: Context, lowest_hp = false) => {
       left.seat - right.seat
   )
 }
+/** Living teammates other than the caster, most wounded first: a hero alone has none. */
+const allies = ({ checkpoint, seat }: Context) => {
+  const { team } = checkpoint.contract.fighters[Number(seat)]!
+  const wounded = (fighter: Fighter) => {
+    const source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : undefined
+    return { hp: fighter.hp, max: source ? player_max_hp(source) : fighter.hp }
+  }
+  return checkpoint.contract.fighters
+    .map((fighter, index) => ({ fighter, seat: index, ...wounded(fighter) }))
+    .filter(
+      ({ fighter, seat: index }) =>
+        !fighter.dead && !fighter.forfeited && fighter.team === team && BigInt(index) !== seat
+    )
+    .sort((left, right) => compare(left.hp * right.max, right.hp * left.max) || left.seat - right.seat)
+}
 const command_input = (action: Action, fighter: bigint): FightCommandInput => {
   switch (action.type) {
     case 'cast':
@@ -57,6 +73,10 @@ const target_cells = (context: Context, step: Exclude<CombatStep, { type: 'move'
       ? spell_target_cells(checkpoint, seat, step.spell).targetable
       : weapon_target_cells(checkpoint, seat).targetable
   if (step.target === 'most_allies') return legal
+  if (step.target === 'lowest_hp_ally')
+    return allies(context)
+      .map(({ fighter }) => fighter.cell)
+      .filter((cell) => legal.includes(cell))
   if (step.target === 'self') return legal.filter((cell) => cell === checkpoint.contract.fighters[Number(seat)]!.cell)
   const opponents = enemy_order(context, step.target === 'lowest_hp_enemy')
   if (step.target !== 'trap_near_enemy')
@@ -162,20 +182,23 @@ const movement_candidate = (context: Context, direction: 'retreat' | 'approach')
   )
   return candidates[0] ?? null
 }
-const condition_matches = (context: Context, condition: CombatCondition): boolean => {
-  switch (condition.type) {
-    case 'always':
-      return true
-    case 'enemy_within':
-      return enemies(context).length > 0 && enemy_distance(context, context.checkpoint) <= BigInt(condition.cells)
-    case 'hp_below': {
-      const fighter = context.checkpoint.contract.fighters[Number(context.seat)]!
-      if (fighter.kind.type !== 'player') return false
-      const source = context.checkpoint.sources.players[fighter.kind.character]
-      return !!source && fighter.hp * 100n < player_max_hp(source) * BigInt(condition.percent)
-    }
-  }
+const conditions: {
+  [Type in CombatCondition['type']]: (context: Context, when: Extract<CombatCondition, { type: Type }>) => boolean
+} = {
+  always: () => true,
+  enemy_within: (context, when) =>
+    enemies(context).length > 0 && enemy_distance(context, context.checkpoint) <= BigInt(when.cells),
+  ally_present: (context) => allies(context).length > 0,
+  ally_hp_below: (context, when) => allies(context).some(({ hp, max }) => hp * 100n < max * BigInt(when.percent)),
+  hp_below: (context, when) => {
+    const fighter = context.checkpoint.contract.fighters[Number(context.seat)]!
+    if (fighter.kind.type !== 'player') return false
+    const source = context.checkpoint.sources.players[fighter.kind.character]
+    return !!source && fighter.hp * 100n < player_max_hp(source) * BigInt(when.percent)
+  },
 }
+const condition_matches = (context: Context, when: CombatCondition): boolean =>
+  (conditions[when.type] as (context: Context, when: CombatCondition) => boolean)(context, when)
 
 type Draft = Readonly<{ context: Context; actions: readonly Action[]; skipped: readonly string[] }>
 const turn_finished = ({ checkpoint, seat }: Context) =>

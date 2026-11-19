@@ -5,8 +5,9 @@ import type { ClientPacket } from '@aresrpg/protocol'
 import type { create_bot_actor } from './actor.ts'
 import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
-import type { Run } from './run_plan.ts'
-import { run_ref_of, run_key } from './run_ref.ts'
+import type { BehaviorRun } from './behavior_script.ts'
+import { run_keys } from './run_ref.ts'
+import { public_command_error } from './planning_failure.ts'
 import { observation_events } from './actor_snapshot.ts'
 import { fight_planning } from './fight_planning.ts'
 import { character_observability, observed_balance } from './character_observability.ts'
@@ -75,17 +76,41 @@ export const apply_actor_watches = async (
   }
 }
 
-/** Connector visibility derives from the same canonical run reference as execution. */
-export const owned_run_observation = async (store: ControlStore, lane: Lane | null, command: Command) => {
-  const ref = lane && run_ref_of(lane)
-  const run = ref ? await store.read<Run>(run_key(ref)) : null
-  const visible = run && [run.grant_id === command.grant_id, run.bot_id === command.bot_id].every(Boolean) ? ref : null
+/** A stored run of a retired shape holds no script: it is still listed, without a strategy. */
+const script_of = (run: BehaviorRun) => run.script as BehaviorRun['script'] | undefined
+/** The wire shape of a run in `bot_observe`. */
+const observed_run = (run: BehaviorRun) => {
+  const { id, character_id, status, issue } = run
+  return { id, character_id, status, issue, strategy: script_of(run)?.strategy }
+}
+/** A run as its owner is told it: the observed row plus the objective its tree was authored with. */
+export const told_run = (run: BehaviorRun) => ({ ...observed_run(run), objective: script_of(run)?.objective })
+
+/** Every run the wallet hosts, one per hero. Any live grant of this bot reads the same list:
+ * one verified owner holds one wallet. `strategy` is the catalogue entry its tree was bound from,
+ * absent for an authored tree. `state` says whether any run still plays without the AI. `direct` is
+ * the wallet's one direct command with its outcome, so a client follows its request from observations. */
+export const run_observation = async <Row extends Readonly<{ status: string }>>(
+  store: ControlStore,
+  lane: Lane | null,
+  command: Pick<Command, 'bot_id'>,
+  row: (run: BehaviorRun) => Row
+) => {
+  const records = await Promise.all((lane ? run_keys(lane) : []).map((key) => store.read<BehaviorRun>(key)))
+  const runs = records.flatMap((run) => (run?.bot_id === command.bot_id ? [row(run)] : []))
+  const held = lane?.direct ? await store.read<Command>(`command:${lane.direct}`) : null
+  const direct = held?.bot_id === command.bot_id ? held : null
   return {
-    run_ref: visible,
-    ...Object.fromEntries(
-      ['combat', 'profession'].map((kind) => [`${kind}_run_id`, visible && visible.kind === kind ? visible.id : null])
-    ),
-    state: visible && run!.status !== 'awaiting_ai' ? 'running' : 'awaiting_ai',
-    ...(visible ? { run_status: run!.status, issue: run!.issue } : {}),
+    runs,
+    state: runs.some(({ status }) => status !== 'awaiting_ai') ? 'running' : 'awaiting_ai',
+    direct: direct && {
+      id: direct.id,
+      kind: direct.kind,
+      status: direct.status,
+      error: public_command_error(direct.status, direct.error),
+      payload: direct.payload,
+    },
   }
 }
+export const owned_run_observation = (store: ControlStore, lane: Lane | null, command: Pick<Command, 'bot_id'>) =>
+  run_observation(store, lane, command, observed_run)

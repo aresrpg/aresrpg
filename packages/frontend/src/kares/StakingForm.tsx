@@ -72,12 +72,12 @@ const StakingAmount = ({
         {estimate && (
           <>
             <span>{copy.additional_daily}</span>
-            <span className="text-gold">+{daily_amount(estimate.additional_kares)} KARES</span>
-            <span className="text-cyan">+{daily_amount(estimate.additional_sui)} SUI</span>
+            <b data-hue="gold">+{daily_amount(estimate.additional_kares)} KARES</b>
+            <b data-hue="sky">+{daily_amount(estimate.additional_sui)} SUI</b>
           </>
         )}
         {validation.error && (
-          <span className="text-rose-300" role="alert">
+          <span className="staking-amount-error" role="alert">
             {copy[validation.error]}
           </span>
         )}
@@ -98,7 +98,7 @@ const StakingAmount = ({
           ))}
         </div>
         <Button className="staking-submit" tone="primary" type="submit" disabled={!can_submit}>
-          <ArrowUpRight size={12} />
+          <ArrowUpRight size={14} />
           {copy[mode]}
         </Button>
       </div>
@@ -120,7 +120,6 @@ export const StakingForm = ({
   dispatch: (input: FinanceInput) => void
 }>) => {
   const [mode, set_mode] = useState<'stake' | 'withdraw'>('stake')
-  const [expanded, set_expanded] = useState(false)
   const withdrawals = staking_withdrawal_batch(snapshot.positions)
   const withdrawal_balance = withdrawals.reduce((sum, position) => sum + position.amount, 0n)
   const targets = {
@@ -131,28 +130,22 @@ export const StakingForm = ({
   const balances = { stake: balance, withdraw: withdrawal_balance }
   const unavailable = { stake: !snapshot.pool.active, withdraw: total_stake === 0n }
   return (
-    <div className="staking-action-box" data-expanded={expanded}>
-      <Button className="staking-form-close" type="button" aria-label={copy.close} onClick={() => set_expanded(false)}>
-        ×
-      </Button>
-      <div className="staking-action-switch" role="group" aria-label={copy.manage_stake}>
+    <div className="staking-action-box">
+      <div className="aui-segments staking-action-switch" role="group" aria-label={copy.manage_stake}>
         {(['stake', 'withdraw'] as const).map((action) => (
           <Button
             type="button"
             key={action}
             aria-pressed={mode === action}
             disabled={locked}
-            onClick={() => {
-              set_mode(action)
-              set_expanded(true)
-            }}
+            onClick={() => set_mode(action)}
           >
             {action === 'stake' ? copy.stake_more : copy.withdraw}
           </Button>
         ))}
       </div>
       {mode === 'withdraw' && withdrawal_balance < total_stake && (
-        <p className="text-xs text-muted">
+        <p className="staking-batch-note">
           {copy.withdraw_batch.replace('{{count}}', String(STAKING_POSITION_BATCH_LIMIT))}
         </p>
       )}

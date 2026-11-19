@@ -1,187 +1,42 @@
-# Allocation campaign operations
+# Allocation page operations
 
 The public entry is `/allocation`. The same-origin endpoint is `/api/allocation`.
 It uses the existing Google and Wallet Standard authentication. It does not publish
 contracts, submit sale transactions, or write the game index.
 
+The campaign is closed. The module only serves the published allocation list, the
+account's verified wallets, their cards and public share previews.
+
 ## Configuration
 
 Configure these private variables on the **game server**, never Vercel or `VITE_*`:
 
-- `ALLOCATION_REDIS_URL`: the private persistent campaign Redis.
+- `ALLOCATION_REDIS_URL`: the private persistent campaign store.
 - `ALLOCATION_ORIGIN`: the exact frontend origin, normally `https://aresrpg.world`.
-- `ALLOCATION_X_CLIENT_ID`, `ALLOCATION_X_CLIENT_SECRET`, `ALLOCATION_X_BEARER`: X linking and read credentials.
-- `ALLOCATION_LEADERBOARD_REDIS_URL`: operator-only access to the active indexer's Redis.
 
-Campaign state must remain durable and isolated from disposable game projections. The game server connects lazily; a campaign database outage does not prevent game boot.
+The game server connects lazily; a campaign store outage does not prevent game boot.
 
-Google sign-in creates the ordinary Enoki wallet; Wallet Standard sign-in supports wallet browsers directly.
-The existing WebSocket challenge admits either wallet through the same game connection. Private campaign requests use
-`packet/allocation_request`; the server takes the owner from that connection, never
-from supplied JSON. The existing global request budget applies, with one in-flight
-campaign operation per connection. Logout disposes that connection.
+## Requests
 
-X is an optional linked identity, not a second login session. An authenticated
-connection issues a five-minute, one-use linking ticket. The public redirect consumes
-it and binds PKCE/state to that owner and the browser's HTTP-only state cookie.
-The callback verifies both and returns a short-lived result token. Only the original
-game account can consume that token over its authenticated connection to finish linking.
-This prevents a shared linking URL from binding a visitor’s X identity to its sender. X accounts and game addresses bind uniquely
-in both directions. Before the cutoff, a successful new OAuth identity atomically replaces the old link and withdraws its old submission. Reauthorizing the same identity preserves the entry. Access tokens are
-discarded after identity verification; no X session cookie exists.
-Register `https://aresrpg.world/api/allocation?action=callback` in the X app.
-The app requests only `tweet.read users.read`; it cannot publish posts for users.
+Private requests use `packet/allocation_request` on the admitted game connection. The
+server takes the owner from that connection, never from supplied JSON. The global
+request budget applies, with one in-flight operation per connection.
 
-An admitted wallet establishes the portfolio owner. Verified wallets remain listed. Confirmed awards receive tier cards; game wallets and submitted X recipients receive pending cards until review. Additional wallets sign a
-five-minute one-use challenge binding their address, campaign and the admitted owner.
-The server stores at most ten distinct verified wallets per account, including the login
-wallet. Card reads never accept caller-selected unverified addresses. Removal affects the
-portfolio, not an existing X entry or an already shared public summary.
+An admitted wallet establishes the portfolio owner. Additional wallets sign a
+five-minute one-use challenge binding their address, the campaign and that owner. The
+server stores at most ten distinct verified wallets per account, including the login
+wallet. Card reads never accept caller-selected unverified addresses.
 
-Post submissions require the linked X author and a verified receiving wallet. The first
-entry locks that recipient. Edits replace the current 1–3 posts and reset submission time. A second author-binding check at the atomic write rejects in-flight posts from an account that was replaced. Redis checks
-its own clock inside the atomic write; a stale browser cannot submit past the deadline.
+Only a verified owner can issue a share link. The link is opaque and its preview shows
+the tier and allocation without the wallet address.
 
-Live leaderboard predictions reuse the final selection rules, excluding reserved wallets and cross-board duplicates.
-A shared thirty-second read rejects inconsistent or stale checkpoints and times out after two seconds.
-Only verified wallets receive ranks; predictions do not increase confirmed totals or enter public share metadata.
+## Operator commands
 
-Public HTTP supports only ticketed X linking and opaque share-token previews/images.
-There is no public address lookup. Share links expose tier, pending state and allocation,
-never addresses, linked wallets, X identity or audit evidence. Public and private responses
-are uncached. Vercel proxies `/api/allocation` to the existing HTTPS server and holds no
-campaign credentials. Request/response packet logging excludes the campaign.
-
-For local development, run the game server with the private variables and set
-`ALLOCATION_ORIGIN=http://localhost:5173`. Vite proxies `/api/allocation` to
-`http://localhost:9800`; `ALLOCATION_API_ORIGIN` overrides that development target.
-Set `VITE_SERVER_WS_URL` to the same server. Register the exact local callback in X.
-Production uses the canonical frontend origin; edge linking returns there.
-
-## Before opening registration
-
-Initialize once. An existing campaign is never reset:
-
-```sh
-bun scripts/allocation_campaign.ts init
+```bash
+bun scripts/allocation_campaign.ts export blast.csv
+bun scripts/allocation_campaign.ts allowlist blast.csv
 ```
 
-Prepare a private JSON array of reserved addresses. Each row has `address`, `tier`,
-`source`, and `evidence`. Allowed reserved sources are `existing`, `community`, and
-`manual`. Example shape only:
-
-```json
-[
-  {
-    "address": "0x…",
-    "tier": "veteran",
-    "source": "community",
-    "evidence": "Chinese community nomination"
-  }
-]
-```
-
-Import replaces the complete reserved list during registration. It rejects duplicate
-addresses and per-source quota overflow:
-
-```sh
-bun scripts/allocation_campaign.ts import /private/path/reserved.json
-```
-
-Rules and quotas come from `packages/immutable/src/allocation_campaign.json`. Keep private
-addresses and operational exports out of seed and Git. `submissions_close_at` is
-2026-10-28 at 15:00 UTC: Wednesday at 23:00 UTC+8. The UI countdown
-must use this exact instant. Redis checks its own clock inside the atomic submission
-write, so a challenge signed before the deadline cannot be submitted afterward.
-The API also reports whether submissions are open. The sale date and time are unannounced.
-
-## Campaign-close snapshot and CSV
-
-Run only when the owner requests the snapshot. This closes submissions before
-reading any inputs. A failed capture remains closed for an explicit retry.
-
-```sh
-bun scripts/allocation_campaign.ts snapshot /private/path/snapshot.json
-bun scripts/allocation_campaign.ts rank /private/path/snapshot.json /private/path/results.json
-```
-
-The leaderboard reader requires the same committed metadata before and after all
-nine reads, with no pending indexer batch. It refuses a checkpoint over five minutes
-old. Category order follows `LEADERBOARD_METRICS`. Selection rotates across boards,
-skips prior winners, and walks below duplicates, within each board's top 100.
-Reserved addresses win first, then leaderboard Veterans, leaderboard Members,
-social Veterans, and social Members. Empty leaderboard places pass to social
-selection at the same tier. Unfilled manual/community reservations do not silently
-become social places.
-
-The script reads X metrics in batches of 100. Each batch records its actual observation
-time; it does not claim historical metrics at an earlier cutoff. Rank uses the
-average weighted score across submitted posts. The tie-break is submission time,
-then lexicographic X user ID. Missing posts or foreign authors stop ranking.
-
-Review `results.json` and its `.scores.json` companion. To exclude reviewed accounts,
-provide a private JSON array of X user ID strings and rank into a **new** result file:
-
-```sh
-bun scripts/allocation_campaign.ts rank /private/path/snapshot.json /private/path/reviewed.json /private/path/excluded-user-ids.json
-```
-
-After reviewing, finalize. This recomputes awards from the retained snapshot,
-checks its SHA-256, writes the CSV, and publishes the same results to the checker:
-
-```sh
-bun scripts/allocation_campaign.ts finalize /private/path/results.json /private/path/snapshot.json /private/path/blast.csv
-```
-
-CSV columns are `address,cap_sui,cap_mist`. Addresses are normalized and sorted.
-Amounts use integer MIST. Veteran caps are 125 SUI; Member caps are 70 SUI.
-Confirm Blast's preferred column names and import the CSV there. Page finalization
-does **not** mean Blast has imported it or that an on-chain allowlist matches it.
-
-Retain the snapshot, exclusions, result, and CSV. Back up Redis until handoff is
-verified. Campaign records have no automatic expiry; only OAuth/ticket/challenge
-keys expire. Retire the temporary database explicitly after the campaign. The checker
-needs its final awards until it is replaced by a static archive or removed.
-
-## Verification
-
-```sh
-bun test packages/immutable/test/allocation.test.ts
-bun test ./packages/server/test/allocation/api.integration.ts
-```
-
-The integration test starts its own temporary Redis Unix socket and requires
-`redis-server`. It is an explicit integration check, separate from the native unit
-suite. Share PNGs render on the server through the existing workspace Canvas library.
-
-## Purchase integration boundary
-
-Wallet sessions expose `blast.simulate`, `blast.purchase` and `blast.claim` through the existing
-SDK executor. `/allocation` switches to buying once the release pins the complete `blast_presale`
-entry: `id`, `package_original`, `package` (reviewed call target), `package_version` (shared
-version guard) and Blast `url`, plus the root `kares_coin_type`.
-
-Final status returns an allowlist proof for each of the account's verified, awarded wallets. The
-server derives it from the complete final award list in the exact Blast CSV order, using Blast's
-leaf format (`0x00 "blast-presale-v1" index wallet cap`) and self-paired odd nodes. Wallet caps
-are MIST. Before pinning, check the sale's on-chain root against the handoff file:
-
-```sh
-bun scripts/allocation_campaign.ts allowlist /private/path/blast.csv
-```
-
-A different root means Blast built the tree from another order or list; every proof would fail.
-Chain simulation remains the authority on eligibility, caps, available SUI and lifecycle.
-
-Unsigned rehearsal against an **existing, already migrated Blast test sale**:
-
-```sh
-bun scripts/simulate_blast_purchase.ts --fixture
-```
-
-This is expected to refuse with `EInvalidLifecycle`, proving the deployed call
-surface without accepting a purchase. It is not a successful KARES rehearsal.
-The script has no signer, execute call, publication or deployment path. A reviewed
-public JSON input can later supply the real `config`, `sender`, and `purchase`
-(`method`, atomic `amount`, and allowlist `proof` when needed). Run a successful
-simulation on the actual configured sale before enabling its confirmation UI.
+`export` writes the published list in the Blast handoff format and refuses to overwrite
+a different file. `allowlist` prints the Merkle root and leaf count of that exact CSV;
+compare it with the sale's on-chain root before enabling purchases.

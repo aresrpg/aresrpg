@@ -45,12 +45,12 @@ const known_keys = new Set([
 ])
 
 const detail_input_class =
-  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-text outline-none focus:border-gold/60'
 
 const StatRange = ({ label, value }: Readonly<{ label: string; value: number }>) => (
   <div className="border border-white/8 bg-black/15 px-3 py-2 text-center">
-    <p className="text-[7px] tracking-[0.12em] text-[#777b86] uppercase">{label}</p>
-    <p className="mt-1 text-[12px] font-semibold tabular-nums text-[#e8b44f]">{value.toLocaleString('en-US')}</p>
+    <p className="text-[7px] tracking-[0.12em] text-faint uppercase">{label}</p>
+    <p className="mt-1 text-[12px] font-semibold tabular-nums text-gold">{value.toLocaleString('en-US')}</p>
   </div>
 )
 
@@ -164,10 +164,10 @@ const Resistances = ({
               type="number"
               value={value}
             />
-            <span className="text-[9px] text-[#777b86]">%</span>
+            <span className="text-[9px] text-faint">%</span>
             {ranges && element in ranges.minimum && (
               <span
-                className="whitespace-nowrap text-[7px] tabular-nums text-[#666b75]"
+                className="whitespace-nowrap text-[7px] tabular-nums text-faint"
                 data-mob-resistance-range={element}
               >
                 min {ranges.minimum[element as keyof typeof ranges.minimum]}% · max{' '}
@@ -203,7 +203,7 @@ const MobSpells = ({
             const spell = as_record(value)
             return (
               <button
-                className={`block w-full border-l-2 px-3 py-2 text-left text-[8px] uppercase ${index === safe_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#e0b86b]' : 'border-transparent text-[#777b86]'}`}
+                className={`block w-full border-l-2 px-3 py-2 text-left text-[8px] uppercase ${index === safe_index ? 'border-gold bg-gold/8 text-gold' : 'border-transparent text-faint'}`}
                 key={`${string_value(spell?.name)}-${index}`}
                 onClick={() => set_selected_index(index)}
                 type="button"
@@ -327,15 +327,12 @@ const LootEditor = ({
                     type="number"
                     value={chance_bp / 100}
                   />
-                  <span className="text-[8px] text-[#777b86]">%</span>
+                  <span className="text-[8px] text-faint">%</span>
                 </span>
-                <span
-                  className="whitespace-nowrap text-[7px] tabular-nums text-[#666b75]"
-                  data-mob-loot-chance-range=""
-                >
+                <span className="whitespace-nowrap text-[7px] tabular-nums text-faint" data-mob-loot-chance-range="">
                   min {chance_percent(chance_range.minimum)}% · max {chance_percent(chance_range.maximum)}%
                 </span>
-                <span className="text-[6px] tracking-[0.08em] text-[#555b66] uppercase">before team Chance</span>
+                <span className="text-[6px] tracking-[0.08em] text-faint uppercase">before team Chance</span>
               </label>
               <input
                 aria-label="Minimum quantity"
@@ -344,7 +341,7 @@ const LootEditor = ({
                 type="number"
                 value={typeof row.min_qty === 'number' ? row.min_qty : 0}
               />
-              <span className="text-[7px] text-[#555b66] uppercase">to</span>
+              <span className="text-[7px] text-faint uppercase">to</span>
               <input
                 aria-label="Maximum quantity"
                 className="h-7 w-full border border-white/10 bg-bg px-2 text-right text-[9px]"
@@ -414,7 +411,7 @@ export const MobContentEditor = ({ value, on_change, save, mob_templates = Objec
             <InlineField
               class_name="min-w-0 flex-1"
               display={
-                <span className="block truncate text-[13px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
+                <span className="block truncate text-[13px] font-semibold tracking-[0.15em] text-gold uppercase">
                   {string_value(mob.name) || 'Add name'}
                 </span>
               }
@@ -433,7 +430,7 @@ export const MobContentEditor = ({ value, on_change, save, mob_templates = Objec
             <InlineField
               class_name="ml-auto shrink-0"
               display={
-                <span className="block border border-[#c8963c]/35 bg-[#c8963c]/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.1em] whitespace-nowrap text-[#c8963c] uppercase">
+                <span className="block border border-gold/35 bg-gold/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.1em] whitespace-nowrap text-gold uppercase">
                   Lv. {median_level}
                 </span>
               }
@@ -448,7 +445,7 @@ export const MobContentEditor = ({ value, on_change, save, mob_templates = Objec
                     type="number"
                     value={level_min}
                   />
-                  <span className="text-[7px] text-[#555b66] uppercase">to</span>
+                  <span className="text-[7px] text-faint uppercase">to</span>
                   <input
                     aria-label="Maximum mob level"
                     className={`${detail_input_class} w-16 text-right`}
@@ -490,7 +487,7 @@ export const MobContentEditor = ({ value, on_change, save, mob_templates = Objec
             <InlineField
               class_name="w-fit"
               display={
-                <span className="text-[8px] tracking-[0.12em] text-[#858b96] uppercase">
+                <span className="text-[8px] tracking-[0.12em] text-faint uppercase">
                   {titleize_field(role) || 'Add role'}
                 </span>
               }
@@ -526,7 +523,7 @@ export const MobContentEditor = ({ value, on_change, save, mob_templates = Objec
               label="mob family"
             />
           </div>
-          <p className="text-[7px] tracking-[0.1em] text-[#555b66] uppercase" data-mob-type={mob_type}>
+          <p className="text-[7px] tracking-[0.1em] text-faint uppercase" data-mob-type={mob_type}>
             {mob_type} · Levels {level_min}–{level_max}
           </p>
         </div>

@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { HostedChallengeInput, HostedBotDescriptor } from '@aresrpg/protocol'
+import {
+  HTTP_DOOR,
+  create_request_limiter,
+  admit_visitor,
+  type RequestLimiter,
+} from '@aresrpg/protocol/request-limiter'
 import { parse_agent_pairing_request } from '@aresrpg/sdk/agent-pairing'
 
 import type { Bot, BotConfig, BotPolicy, OwnerChallenge } from './model.ts'
@@ -11,6 +17,7 @@ import { create_connect_service } from './connect.ts'
 import { read_owner_status } from './owner_status.ts'
 import { create_oauth_service } from './oauth.ts'
 import { create_control_service, type Observe } from './control.ts'
+import type { OwnerControl } from './owner_control.ts'
 import { create_mcp_handler } from './mcp.ts'
 import { require_string } from './security.ts'
 import { request_pairing_proof, request_owner_provisioning } from './provisioning.ts'
@@ -47,12 +54,27 @@ export const create_ingress = (
     play_enabled: boolean
     ready?: () => boolean
     observe?: Observe
+    dispatch?: OwnerControl
+    /** Records a verified owner on the Telegram waitlist. */
+    join_waitlist: (owner: string) => Promise<void>
+    /** One allowance per visitor address before authentication, one per verified owner after it. */
+    visitor_limiter?: RequestLimiter
+    owner_limiter?: RequestLimiter
   }>
 ) => {
   const { store, config } = options
+  const visitor_limiter = options.visitor_limiter ?? create_request_limiter(HTTP_DOOR)
+  const owner_limiter = options.owner_limiter ?? create_request_limiter(HTTP_DOOR)
   const oauth = create_oauth_service(store, config)
   const connect = create_connect_service(store, config, options.verify_owner)
-  const control = create_control_service(store, config, options.observation_freshness_ms, Date.now, options.observe)
+  const control = create_control_service(
+    store,
+    config,
+    options.observation_freshness_ms,
+    Date.now,
+    options.observe,
+    options.dispatch
+  )
   const mcp = create_mcp_handler(control, options.play_enabled, `${config.issuer}/.well-known/oauth-protected-resource`)
   type PostHandler = (request: Request, body: Readonly<Record<string, unknown>>) => Promise<Response>
   // The stored challenge selects its own request binding; a caller cannot substitute another cookie.
@@ -94,6 +116,12 @@ export const create_ingress = (
       require_string(bot.id)
       return response(await operation(id, session_cookie(request, id), bot))
     }
+  /** The grant of an MCP call, from its bearer token. */
+  const authenticated = async (request: Request) => {
+    const token = request.headers.get('authorization')
+    if (!token?.startsWith('Bearer ')) throw new Error('invalid_token')
+    return oauth.authenticate(token.slice(7))
+  }
   const post_routes = new Map<string, PostHandler>([
     ['/connect/disconnect', return_action(connect.begin_return)],
     ['/connect/return-complete', return_action(connect.complete_return)],
@@ -136,6 +164,15 @@ export const create_ingress = (
     ],
     ['/connect/bots', provision],
     ['/connect/proof', pairing_proof],
+    [
+      '/connect/waitlist',
+      async (request, body) => {
+        const id = require_string(body.authorization_id)
+        const { owner } = await connect.owner_session(id, session_cookie(request, id))
+        await options.join_waitlist(owner)
+        return response({ joined: true })
+      },
+    ],
     ['/oauth/register', async (_request, body) => response(await oauth.register(body), 201)],
     ['/oauth/token', async (_request, body) => response(await oauth.exchange(body))],
     [
@@ -151,9 +188,12 @@ export const create_ingress = (
         const version = request.headers.get('mcp-protocol-version')
         if (version && !['2025-03-26', '2025-06-18', '2025-11-25'].includes(version))
           throw new Error('unsupported_protocol_version')
-        const token = request.headers.get('authorization')
-        if (!token?.startsWith('Bearer ')) throw new Error('invalid_token')
-        const grant = await oauth.authenticate(token.slice(7))
+        // A verified call is limited per owner. A call that does not verify is an unauthenticated
+        // visitor like any other: it takes the visitor allowance, so guessing tokens is not free.
+        const grant = await authenticated(request).catch((error: unknown) => {
+          throw admit_visitor(visitor_limiter, request) ? error : new Error('rate_limited')
+        })
+        if (!owner_limiter.take(grant.owner)) throw new Error('rate_limited')
         const result = await mcp(grant, body)
         return result === null ? new Response(null, { status: 202 }) : response(result)
       },
@@ -231,26 +271,27 @@ export const create_ingress = (
   }
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get('origin')
-    const is_connect = new URL(request.url).pathname.startsWith('/connect/')
-    if ((origin && origin !== config.web_origin) || (is_connect && origin !== config.web_origin))
-      return response({ error: 'invalid_origin' }, 403)
+    const path = new URL(request.url).pathname
+    const is_connect = path.startsWith('/connect/')
+    // A browser request, and every Connect request, must come from the first-party site.
+    if ((origin || is_connect) && origin !== config.web_origin) return response({ error: 'invalid_origin' }, 403)
     if (request.method === 'OPTIONS') return cors(new Response(null, { status: 204 }), config.web_origin)
     try {
+      if (!OWN_LIMIT_PATHS.has(path) && !admit_visitor(visitor_limiter, request)) throw new Error('rate_limited')
       return cors(await route(request), origin)
     } catch (error) {
-      const failure = request_error(error, config, new URL(request.url).pathname)
+      const failure = request_error(error, config, path)
       console.error(
         'Hosted request rejected',
-        JSON.stringify({
-          path: new URL(request.url).pathname,
-          status: failure.status,
-          code: public_error_code(error),
-        })
+        JSON.stringify({ path, status: failure.status, code: public_error_code(error) })
       )
       return cors(failure, origin)
     }
   }
 }
+
+/** `/mcp` authenticates first: per verified owner when it succeeds, as a visitor when it fails. A health probe is never refused. */
+const OWN_LIMIT_PATHS: ReadonlySet<string> = new Set(['/mcp', '/health'])
 
 const cors = (reply: Response, origin: string | null) => {
   if (origin) {
@@ -320,7 +361,9 @@ const error_response = (error: unknown, config: BotConfig) => {
     invalid_token: 401,
     insufficient_scope: 403,
     managed_signer_unconfigured: 503,
+    service_unavailable: 503,
     control_transaction_conflict: 409,
+    rate_limited: 429,
   }
   const status = statuses[code] ?? 400
   const reply = response({ error: code }, status)

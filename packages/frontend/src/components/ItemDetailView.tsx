@@ -10,6 +10,7 @@ import { MobInspection, WorldInspection } from './CatalogueInspection.tsx'
 import { ItemDetailContext } from './ItemDetailContext.ts'
 import { ItemAcquisition } from './ItemAcquisition.tsx'
 import { ItemCrafting } from './ItemCrafting.tsx'
+import { ItemPetDiet } from './ItemPetDiet.tsx'
 import { ItemDetailBody, type ItemDetailProps } from './ItemDetailBody.tsx'
 import {
   InspectionContext,
@@ -38,6 +39,9 @@ export const ItemDetailView = (props: ItemDetailProps) => {
     <div ref={root} className="item-sheet-container">
       <ItemDetailBody {...props}>
         {props.children}
+        {!props.edit && props.category === 'pet' && (
+          <ItemPetDiet item_type={props.item_type} select_item={context === 'full' ? open('item') : undefined} />
+        )}
         {!props.edit && context === 'full' && (
           <>
             <ItemCrafting item_type={props.item_type} session={props.craft_session} open_ingredient={open('item')} />

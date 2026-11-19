@@ -8,39 +8,43 @@ import type { KaresCopy } from './copy.ts'
 import { kares_distribution } from './distribution.ts'
 import { Tokenomics } from './TokenomicsPanel.tsx'
 
+/** The token's live ledger, then its fixed distribution. The host supplies the surface it sits on. */
 export const TokenomicsTab = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
   const { amount: format_amount } = useNumbers()
   const allocations = kares_distribution(copy)
   return (
-    <section className="mx-auto w-full max-w-5xl p-3 lg:p-6">
+    <div className="tokenomics-tab">
       <Tokenomics copy={copy} />
-      <details className="mt-6 text-xs text-muted">
-        <summary className="cursor-pointer text-gold">{copy.tokenomics}</summary>
-        <h2 className="mt-10 text-sm text-gold">{copy.fixed_supply}</h2>
-        <p className="mt-4 text-3xl font-semibold tracking-tight text-gold-light">
-          {format_amount(KARES_SUPPLY)} <span className="text-lg text-gold">KARES</span>
-        </p>
-        <div aria-hidden="true" className="mt-8 flex h-3 gap-1">
-          {allocations.map((row) => (
-            <span key={row.label} style={{ width: `${row.share}%`, background: row.color }} />
-          ))}
+      <div className="kares-ledger">
+        <section>
+          <h3 className="tk-h">{copy.fixed_supply}</h3>
+          <p className="tk-total">
+            {format_amount(KARES_SUPPLY)}
+            <small>KARES</small>
+          </p>
+          <div aria-hidden="true" className="tk-bar">
+            {allocations.map((row) => (
+              <span key={row.label} style={{ width: `${row.share}%`, background: row.color }} />
+            ))}
+          </div>
+          <dl className="tk-shares">
+            {allocations.map((row) => (
+              <div key={row.label}>
+                <i style={{ background: row.color }} />
+                <dt>{row.label}</dt>
+                <dd>{format_amount(row.amount)}</dd>
+                <dd>{row.share}%</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+        <div className="tk-notes">
+          <p>{copy.rewards_note}</p>
+          <p>{copy.revenue_note}</p>
+          <p>{copy.emissions_detail}</p>
+          <p>{copy.upgradeability_note}</p>
         </div>
-        <div className="mt-5 divide-y divide-white/7 border-y border-border">
-          {allocations.map((row) => (
-            <div className="flex flex-wrap items-center gap-3 py-4 text-xs" key={row.label}>
-              <span className="size-2" style={{ background: row.color }} />
-              <span className="min-w-40 flex-1 text-muted">{row.label}</span>
-              <span className="text-text tabular-nums">{format_amount(row.amount)}</span>
-              <span className="w-12 text-right text-gold tabular-nums">{row.share}%</span>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-4 leading-6">{copy.rewards_note}</p>
-        <p className="mt-4 leading-6">{copy.revenue_note}</p>
-        <p className="mt-4 leading-6">{copy.emissions_detail}</p>
-        <p className="mt-4 leading-6">{copy.upgradeability_note}</p>
-      </details>
-    </section>
+      </div>
+    </div>
   )
 }

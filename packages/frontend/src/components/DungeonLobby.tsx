@@ -55,27 +55,27 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   return (
     <section
-      className="pointer-events-auto absolute inset-[clamp(12px,3vw,42px)] flex flex-col overflow-hidden rounded-xl border border-[#466070]/50 border-t-[#67b8dc] bg-[linear-gradient(145deg,rgba(8,13,18,0.97),rgba(12,20,25,0.94))] shadow-[0_28px_100px_rgba(0,0,0,0.72),0_0_70px_rgba(43,145,190,0.10)]"
+      className="pointer-events-auto absolute inset-[clamp(12px,3vw,42px)] flex flex-col overflow-hidden rounded-xl border border-peak/50 border-t-cyan bg-[linear-gradient(145deg,rgba(8,13,18,0.97),rgba(12,20,25,0.94))] shadow-[0_28px_100px_rgba(0,0,0,0.72),0_0_70px_rgba(43,145,190,0.10)]"
       data-dungeon-expedition
     >
       <header className="flex shrink-0 items-center gap-4 border-b border-white/8 px-6 py-4">
-        <div className="grid size-12 place-items-center border border-[#67b8dc]/35 bg-[#67b8dc]/8">
-          <DoorOpen className="text-[#67b8dc]" size={25} strokeWidth={1.3} />
+        <div className="grid size-12 place-items-center border border-cyan/35 bg-cyan/8">
+          <DoorOpen className="text-cyan" size={25} strokeWidth={1.3} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[8px] tracking-[0.26em] text-[#67b8dc] uppercase">{text('dungeon_instance')}</p>
-          <h2 className="mt-1 truncate text-lg tracking-[0.1em] text-[#e7e3da] uppercase">
+          <p className="text-[8px] tracking-[0.26em] text-cyan uppercase">{text('dungeon_instance')}</p>
+          <h2 className="mt-1 truncate text-lg tracking-[0.1em] text-text uppercase">
             {authored.dungeon} · {text('dungeon_room').replace('{{room}}', String(run.room))}
           </h2>
         </div>
-        <div className="hidden items-center gap-2 border border-white/8 bg-black/25 px-3 py-2 text-[8px] tracking-[0.16em] text-[#8b949e] uppercase sm:flex">
+        <div className="hidden items-center gap-2 border border-white/8 bg-black/25 px-3 py-2 text-[8px] tracking-[0.16em] text-faint uppercase sm:flex">
           <UsersRound size={13} /> {Math.max(1, current_players.length)} {text('dungeon_explorers')}
         </div>
         <button
           className={`h-9 cursor-pointer border px-4 text-[8px] tracking-[0.16em] uppercase ${
             abandon_armed_for === character.id
               ? 'border-[#ff5a72]/55 bg-[#ff5a72]/10 text-[#ff8292]'
-              : 'border-white/10 text-[#777f89] hover:border-[#ff5a72]/35 hover:text-[#ff8292]'
+              : 'border-white/10 text-faint hover:border-[#ff5a72]/35 hover:text-[#ff8292]'
           }`}
           disabled={pending !== null}
           onClick={() => {
@@ -91,7 +91,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(250px,0.8fr)_minmax(360px,1.35fr)] gap-5 overflow-hidden p-5 max-[850px]:grid-cols-1 max-[850px]:overflow-y-auto">
         <div className="flex min-h-0 flex-col gap-3 overflow-hidden pr-1">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <p className="mb-3 text-[8px] tracking-[0.22em] text-[#7c8790] uppercase">{text('dungeon_route')}</p>
+            <p className="mb-3 text-[8px] tracking-[0.22em] text-faint uppercase">{text('dungeon_route')}</p>
             <div className="grid gap-2">
               {authored.rooms.map((mobs, index) => {
                 const room = index + 1
@@ -101,7 +101,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   <article
                     className={`relative overflow-hidden rounded-md border p-3 ${
                       status === 'current'
-                        ? 'border-[#67b8dc]/45 bg-[#67b8dc]/8'
+                        ? 'border-cyan/45 bg-cyan/8'
                         : status === 'cleared'
                           ? 'border-[#4e9a72]/28 bg-[#4e9a72]/5'
                           : 'border-white/7 bg-black/20'
@@ -110,24 +110,24 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`grid size-8 shrink-0 place-items-center border text-[10px] ${status === 'current' ? 'border-[#67b8dc]/50 text-[#8bd5f7]' : 'border-white/10 text-[#69717b]'}`}
+                        className={`grid size-8 shrink-0 place-items-center border text-[10px] ${status === 'current' ? 'border-cyan/50 text-cyan' : 'border-white/10 text-faint'}`}
                       >
                         {status === 'cleared' ? <Check size={14} /> : room}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] tracking-[0.16em] text-[#c9cbd0] uppercase">
+                        <p className="text-[9px] tracking-[0.16em] text-soft uppercase">
                           {status === 'mysterious'
                             ? text('dungeon_mysterious_room')
                             : text('dungeon_room').replace('{{room}}', String(room))}
                         </p>
-                        <p className="mt-1 text-[8px] text-[#626b74]">
+                        <p className="mt-1 text-[8px] text-faint">
                           {status === 'mysterious'
                             ? text('dungeon_undiscovered')
                             : text('dungeon_creatures').replace('{{count}}', String(mobs.length))}
                         </p>
                       </div>
                       {players.length > 0 && (
-                        <span className="flex items-center gap-1 text-[8px] text-[#8fa2ad]">
+                        <span className="flex items-center gap-1 text-[8px] text-muted">
                           <UsersRound size={11} /> {players.length}
                         </span>
                       )}
@@ -136,7 +136,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {players.map((player) => (
                           <span
-                            className="border border-white/8 bg-black/25 px-2 py-1 text-[7px] text-[#9ca4ab]"
+                            className="border border-white/8 bg-black/25 px-2 py-1 text-[7px] text-muted"
                             key={player.character_id}
                           >
                             {player.name} ·{' '}
@@ -157,7 +157,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
         <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-white/8 bg-black/18">
           <div className="shrink-0 border-b border-white/8 p-4">
-            <p className="text-[8px] tracking-[0.22em] text-[#67b8dc] uppercase">{text('dungeon_current_room')}</p>
+            <p className="text-[8px] tracking-[0.22em] text-cyan uppercase">{text('dungeon_current_room')}</p>
             <div className="mt-3 flex min-h-20 gap-2 overflow-x-auto">
               {authored.rooms[run.room - 1]?.map(({ mob_type }, index) => {
                 const mob = content_catalog.mob(mob_type)?.mob
@@ -171,9 +171,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                     ) : (
                       <span className="h-12" />
                     )}
-                    <span className="mt-1 line-clamp-2 text-[7px] leading-3 text-[#b9bbc0]">
-                      {mob?.name ?? mob_type}
-                    </span>
+                    <span className="mt-1 line-clamp-2 text-[7px] leading-3 text-soft">{mob?.name ?? mob_type}</span>
                   </div>
                 )
               })}
@@ -182,8 +180,8 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[8px] tracking-[0.2em] text-[#8b949e] uppercase">{text('dungeon_open_fights')}</p>
-              <span className="text-[8px] text-[#59636d]">{room_fights.length}</span>
+              <p className="text-[8px] tracking-[0.2em] text-faint uppercase">{text('dungeon_open_fights')}</p>
+              <span className="text-[8px] text-faint">{room_fights.length}</span>
             </div>
             <div className="grid gap-2">
               {room_fights.map((fight) => {
@@ -194,15 +192,15 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                     key={fight.id}
                   >
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 text-[8px] tracking-[0.14em] text-[#c4c6ca] uppercase">
-                        <Swords size={13} className="text-[#c8963c]" />
+                      <div className="flex flex-wrap items-center gap-2 text-[8px] tracking-[0.14em] text-soft uppercase">
+                        <Swords size={13} className="text-gold" />
                         {fight.phase === 'placement' ? text('dungeon_forming_party') : text('dungeon_in_progress')}
-                        <span className="inline-flex items-center gap-1 text-[#b58a45]">
+                        <span className="inline-flex items-center gap-1 text-gold">
                           {fight.access === 1 && <LockKeyhole size={11} />}
                           {text(fight.access === 1 ? 'dungeon_group' : 'dungeon_public')}
                         </span>
                       </div>
-                      <p className="mt-2 truncate text-[8px] text-[#717983]">
+                      <p className="mt-2 truncate text-[8px] text-faint">
                         {fight.players.length > 0
                           ? fight.players
                               .map(({ name, level }) => `${name} · ${ui('encyclopedia_page.level_short', { level })}`)
@@ -211,7 +209,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       </p>
                     </div>
                     <button
-                      className="h-9 min-w-24 cursor-pointer border border-[#67b8dc]/40 bg-[#67b8dc]/8 px-3 text-[8px] tracking-[0.14em] text-[#80cdf0] uppercase disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-transparent disabled:text-[#59616a]"
+                      className="h-9 min-w-24 cursor-pointer border border-cyan/40 bg-cyan/8 px-3 text-[8px] tracking-[0.14em] text-cyan uppercase disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-transparent disabled:text-faint"
                       disabled={!joinable || pending !== null}
                       onClick={() => dispatch_app({ type: 'dungeon/join_fight', fight: fight.id })}
                       type="button"
@@ -226,7 +224,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 )
               })}
               {room_fights.length === 0 && (
-                <div className="grid min-h-24 place-items-center border border-dashed border-white/8 text-[8px] tracking-[0.16em] text-[#565f68] uppercase">
+                <div className="grid min-h-24 place-items-center border border-dashed border-white/8 text-[8px] tracking-[0.16em] text-faint uppercase">
                   {text('dungeon_no_fights')}
                 </div>
               )}
@@ -236,7 +234,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <footer className="shrink-0 border-t border-white/8 p-4">
             <div className="flex justify-end">
               <button
-                className="h-11 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/9 px-6 text-[8px] tracking-[0.17em] text-[#d6ac5e] uppercase disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-11 cursor-pointer border border-gold/45 bg-gold/9 px-6 text-[8px] tracking-[0.17em] text-gold uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={pending !== null}
                 onClick={() =>
                   dispatch_app({

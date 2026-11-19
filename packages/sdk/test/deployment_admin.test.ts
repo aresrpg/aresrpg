@@ -265,7 +265,7 @@ describe('deployment admin', () => {
     ])
     const pure_inputs = transaction.getData().inputs.flatMap((input) => (input.Pure ? [input.Pure.bytes] : []))
     expect(pure_inputs.filter((bytes) => bytes === '6AM=')).toHaveLength(2) // u16 1000 = 10%
-    expect(pure_inputs.filter((bytes) => bytes === 'gJaYAAAAAAA=')).toHaveLength(2) // u64 10M MIST = 0.01 SUI
+    expect(pure_inputs.filter((bytes) => bytes === 'QEIPAAAAAAA=')).toHaveLength(2) // u64 1M MIST = 0.001 SUI
     expect(
       calls.some(({ module, function: called_function }) => module === 'deployment' && called_function === 'bootstrap')
     ).toBe(false)

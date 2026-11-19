@@ -1662,7 +1662,7 @@ mod tests {
 
         assert_eq!(wire.money.len(), 2);
         assert_eq!(wire.money[0].coordinate, "60:4:2");
-        assert_eq!(wire.money[0].delta.character_creation_mist, 1_000_000_000);
+        assert_eq!(wire.money[0].delta.character_creation_mist, 10_000_000_000);
         assert_eq!(
             wire.money[1].coordinate,
             format!("60:4:kolizeum:{}", Id([42; 32]).hex())
@@ -2093,7 +2093,7 @@ mod tests {
             }]
         );
         assert_eq!(wire.money.len(), 1);
-        assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
+        assert_eq!(wire.money[0].delta.item_royalty_mist, 1_000_000);
         assert_eq!(wire.money[0].delta.character_royalty_mist, 0);
         assert_eq!(
             wire.market,
@@ -2275,7 +2275,7 @@ mod tests {
         assert!(wire.sales[0].member.contains("\"exclusive\":true"));
         assert_eq!(wire.market_volume_mist, 0);
         assert!(wire.market_prices.is_empty());
-        assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
+        assert_eq!(wire.money[0].delta.item_royalty_mist, 1_000_000);
         assert!(wire.market.is_empty());
     }
 

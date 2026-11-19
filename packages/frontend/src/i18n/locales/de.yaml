@@ -27,8 +27,6 @@ continue_google: Mit Google fortfahren
 wallet_session_ended: Deine Wallet-Sitzung ist beendet. Melde dich erneut an.
 connect_wallet: Wallet verbinden
 no_wallet: Keine kompatible Wallet installiert
-play_demo: 'Demo spielen'
-replay_demo: 'Demo erneut spielen'
 sign_in: Zum Spielen anmelden
 drag_hint: Ziehen zum Verschieben · Scrollen zum Zoomen
 navigation: Navigation
@@ -55,7 +53,7 @@ server_connected: Verbunden
 server_violation: Getrennt — Regelverstoß. Bald erneuter Versuch.
 server_replaced: Woanders verbunden
 session_replaced_title: Von einem anderen Ort verbunden
-session_replaced_body: Dein Konto hat das Spiel an einem anderen Ort geöffnet, deshalb wurde dieses Fenster getrennt. Schließe die andere Sitzung oder verbinde dich hier neu, um in diesem Fenster zu spielen.
+session_replaced_body: 'Dein Konto hat sich in einem anderen Fenster verbunden: im 3D-Spiel oder in der Web-App. Es kann immer nur eines verbunden sein, deshalb wurde dieses Fenster getrennt. Verbinde dich hier neu, um dieses Fenster zu nutzen.'
 session_replaced_reconnect: Hier neu verbinden
 latency_unit: ms
 indexing_health: Indexierungsstatus
@@ -699,6 +697,17 @@ airdrop_page:
       description: 'Für jede verknüpfte Hytale-Wallet mit mehr als {threshold} SUI an erfassten Shopkäufen, unabhängig von den Top 100. Der Titel geht an die Sui-Adresse im Backup. Melde dich mit dem ursprünglichen Google-Konto an, um deinen Gutschein zu finden.'
 
 settings_page:
+  suins_confirm_title: 'Namensänderung bestätigen'
+  suins_confirm_erase: 'Die vorhandenen Angaben für {names}, einschließlich eines Avatars, werden gelöscht.'
+  suins_confirm_player: '{name} verweist auf deine unten angegebene Google-Wallet (zkLogin) und wird deren Standardname.'
+  suins_confirm_agent: '{name} verweist auf deine unten angegebene Agenten-Wallet und wird deren Standardname. Dafür können eine separate Bestätigung und SUI in dieser Wallet nötig sein.'
+  suins_confirm_parent: '{name} bleibt in der bisherigen Wallet. Adresse und Angaben bleiben unverändert.'
+  suins_confirm_apply: 'Änderung bestätigen'
+  suins_player_default_funding: 'Deine Namen wurden aktualisiert, aber deine Google-Wallet benötigt SUI, um ihren Standardnamen festzulegen.'
+  suins_player_default_refused: 'Deine Namen wurden aktualisiert, aber du hast die Änderung des Standardnamens der Google-Wallet abgelehnt.'
+  suins_player_default_failed: 'Deine Namen wurden aktualisiert, aber die Änderung des Standardnamens der Google-Wallet ist fehlgeschlagen. Prüfe deine Wallet vor einem erneuten Versuch.'
+  suins_player_default_uncertain: 'Deine Namen wurden aktualisiert. Der Ausgang der Transaktion für den Standardnamen der Google-Wallet ist unbekannt. Prüfe sie in deiner Wallet, bevor du aktualisierst.'
+  suins_stale_review: 'Der Name wurde während deiner Prüfung geändert. Aktualisiere und prüfe die Änderung erneut.'
   suins_title: 'SuiNS-Name'
   suins_hint: 'Wähle einen Namen, der dir gehört. Deine bestehenden Namen bleiben in deiner Wallet.'
   suins_external: 'Hier erscheint dein verifizierter SuiNS-Standardname. Verwalte ihn in deiner externen Wallet oder SuiNS.'
@@ -707,9 +716,8 @@ settings_page:
   suins_pending_uncertain: 'Spielername angewendet; Ergebnis der Agententransaktion unbekannt. Prüfe es vor einem neuen Versuch. Keine automatische Wiederholung.'
   suins_pending_refused: 'Spielername angewendet; Agentensignatur abgelehnt. Wende nur für einen bewussten neuen Versuch erneut an.'
   suins_pending_failed: 'Spielername angewendet; Agentenname ausstehend. Prüfe das Transaktionsergebnis vor einem weiteren Versuch.'
-  suins_invalid_parent: 'Dieser übergeordnete Name gehört dir nicht mehr, ist abgelaufen oder ungeeignet. Aktualisiere die Auswahl.'
-  suins_collision: 'Eine aktive Registrierung belegt einen gewünschten Namen. Wähle einen anderen übergeordneten Namen.'
-  suins_metadata: 'Diese Reparatur würde Metadaten löschen. Der Eintrag bleibt unverändert. Wähle einen anderen Namen.'
+  suins_invalid_parent: 'Dieser Name ist in deiner Wallet nicht mehr verfügbar. Aktualisiere und wähle einen Namen.'
+  suins_collision: 'Dieser AresRPG-Name ist bereits vergeben. Wähle einen anderen Namen.'
   suins_unsupported: 'Verwaltete Namen sind für diese Wallet oder dieses Netzwerk nicht verfügbar.'
   suins_fund: 'Agenten-Wallet finanzieren'
   suins_current: 'Aktueller Standardname'
@@ -2507,6 +2515,11 @@ kares_page:
   inactive: 'Staking öffnet, sobald seine Reserven finanziert sind.'
   position: 'Position'
   tokenomics: 'KARES-Tokenökonomie'
+  tabs_label: 'KARES-Bereiche'
+  tab_tokenomics: 'Tokenomics'
+  tab_staking: 'Staking'
+  signin_title: 'Zum Staken anmelden'
+  signin_body: 'Staking nutzt dein Spielkonto. Melde dich mit Google an, um deinen Einsatz zu sehen und deine Belohnungen abzuholen.'
   community: 'PvP-Wettbewerbe und saisonale Ranglisten'
   team: 'Team-Zuteilung'
   five_years: 'Staking-Belohnungen der Gemeinschaft'
@@ -2753,6 +2766,17 @@ ui:
   funding_game_wallet: Spiel-Wallet
   funding_external_wallet: Andere Wallet
   agent_wallet: 'Agent-Wallet'
+  wallet_tabs: 'Wallet'
+  wallet_game: 'Spiel'
+  wallet_bot: 'Bot'
+  wallet_you_sign: 'Du signierst'
+  wallet_bot_signs: 'Dein Bot signiert'
+  wallet_transfer: 'Übertragen'
+  wallet_from: 'Von'
+  wallet_to: 'An'
+  wallet_swap: 'Von und An tauschen'
+  wallet_coin: 'Coin'
+  wallet_transfer_to: '{{amount}} {{token}} an {{wallet}} übertragen'
   agent_activity_label: 'Agentenaktivität'
   agent_activity_idle: 'Wartet auf ein Ziel'
   agent_activity_active: 'In Arbeit'
@@ -2801,9 +2825,6 @@ ui:
   agent_label: 'Agent'
   agent_kiosk_badge: 'KIOSK'
   agent_kiosk: 'Agenten-Kiosk'
-  agent_deposit: 'Beim Agenten einzahlen'
-  agent_withdraw: 'Zum Spieler auszahlen'
-  agent_coin_transfer: '{{token}} übertragen'
   agent_coin_direct: 'Coins werden direkt in einer Transaktion übertragen. Der Absender zahlt die Gasgebühren.'
   agent_pair_for_deposit: 'Bestätige vor einer Einzahlung einen dauerhaften Agenten-Signierer.'
   agent_inventory_connect: 'Prüfe die vollständige Adresse deines Agenten, um sein Inventar zu nutzen.'
@@ -2839,6 +2860,9 @@ ui:
   agent_copy_failed: 'Kopieren fehlgeschlagen. Markiere und kopiere die Anfrage oben manuell.'
   agent_handoff_request: 'Bereite {{provider}} für Connect Your Agent gemäß {{url}} vor. Melde fehlende Signierkonfiguration und frage bei Bedarf nach dem temporären Link. Dies erlaubt weder das Erstellen von Zugangsdaten noch Vermögensübertragungen oder Spielaktionen.'
   agent_connect_your: 'Verbinde deinen Agenten'
+  agent_page_body: 'Lass einen KI-Assistenten Helden für dich spielen. Er spielt aus seiner eigenen Bot-Wallet, einer Multisig, aus der dein Google-Konto Vermögenswerte jederzeit zurückholen kann.'
+  agent_page_signin: 'Melde dich mit Google an, um deinen Agenten und seine Bot-Wallet einzurichten.'
+  agent_page_world: '3D-Welt öffnen'
   agent_bootstrap: 'Einrichtungsanleitung öffnen'
   agent_character_offer_hint: 'Dies sendet ein Angebot. Dein Agent übernimmt den Charakter separat. Es gelten die üblichen Gebühren.'
   agent_connected: 'Agent verbunden'
@@ -2863,6 +2887,7 @@ ui:
   agent_hosted_authenticate: 'Mit Google-Wallet authentifizieren'
   agent_hosted_ready: 'Einrichtung abgeschlossen'
   agent_hosted_consent: 'Assistenten verbinden'
+  agent_hosted_review: 'Ein Assistent bittet um Zugriff auf deinen Bot. Fahre fort, um die Anfrage zu sehen; nichts wird geteilt, bevor du verbindest.'
   agent_hosted_authority: 'Kann spielen und das Vermögen dieses Bots ausgeben.'
   agent_hosted_read_access: 'Kann diesen Bot ansehen.'
   agent_hosted_pause_access: 'Kann diesen Bot pausieren und fortsetzen.'
@@ -2926,6 +2951,11 @@ ui:
   design_no_title: 'Kein Titel'
   design_library: 'Designwerkstatt'
   design_controls: 'Bedienelemente'
+  design_components: 'Komponenten'
+  design_prebuilt: 'Vorgefertigt'
+  design_windows: 'Fenster'
+  design_feedback: 'Rückmeldung'
+  design_tokens: 'Tokens'
   design_dialog: 'Dialog öffnen'
   design_disabled: 'Nicht verfügbar'
   design_details: 'Details'
@@ -2985,12 +3015,6 @@ ui:
   formula_drop: 'Beute = min(100 %, Basiswert × Monsterband × (600 + durchschnittliches Teamglück) / 600)'
   formula_xp: 'EP = Basis-EP-Pool × Gruppenkoeffizient × Stufenausgleich × Spielerstufe / Gruppenstufe × (100 + WEI) / 100'
 
-menu_subtitle: 'AresRPG ist ein vollständig on-chain entwickeltes, rundenbasiertes MMORPG auf Sui.'
-menu_start: 'Zum Starten Enter drücken'
-menu_start_touch: 'Zum Starten tippen'
-menu_music_on: 'Musik einschalten'
-menu_music_off: 'Musik stummschalten'
-
 menu_build: 'BUILD'
 
 world_loading_assets: 'Szenerie wird geladen…'
@@ -2998,48 +3022,6 @@ world_loading_graphics: 'Grafik wird vorbereitet…'
 world_loading_terrain: 'Welt wird aufgebaut…'
 world_loading_sky: 'Himmel und Beleuchtung werden vorbereitet…'
 world_loading_finishing: 'Erstes Bild wird vorbereitet…'
-
-adventure:
-  choice_title: 'Dein erster Sieg'
-  choice_body: 'Die Goblins sind besiegt. Deine Belohnungen warten. Wie geht dein Abenteuer weiter?'
-  start_playing: 'Jetzt spielen'
-  play_description: 'Melde dich mit Google an und erstelle oder wähle deinen echten Charakter. Charaktererstellung und Spielen benötigen SUI.'
-  continue_tutorial: 'Tutorial fortsetzen'
-  continue_description: 'Lege deine Belohnungen an, triff Sceat und lerne den Kampf in einer Gruppe.'
-  goblins_title: 'Den Weg freimachen'
-  goblins_objective: 'Besiege die Goblins.'
-  equip_title: 'Bereit für den Weg'
-  equip_objective: 'Rüste alle Belohnungen aus, auch dein Haustier.'
-  equip_body: 'Öffne das Inventar und rüste alle Belohnungen aus. Doppelklicke einen Gegenstand, ziehe ihn in einen Platz oder wähle Ausrüsten. Im echten Spiel startet jede Änderung eine Sui-Transaktion; hier ist alles kostenlos und simuliert.'
-  speak_title: 'Ein Fremder auf der Brücke'
-  speak_objective: 'Finde Sceat auf der Brücke und sprich mit ihm.'
-  invite_title: 'Gemeinsam stärker'
-  invite_objective: 'Klicke mit der rechten Maustaste auf Sceat und wähle In Gruppe einladen.'
-  switch_title: 'Dein Yajin'
-  switch_objective: 'Wähle Sceats Charakterreiter. Du steuerst beide Helden mit eigenen Zaubern und eigener Ausrüstung.'
-  follow_title: 'Dem Anführer folgen'
-  follow_objective: 'Wähle Senshi, deinen Gruppenführer. Aktiviere Dem Anführer folgen im Gruppenfenster.'
-  guards_title: 'Die königliche Wache'
-  guards_objective: 'Überquere die Brücke und besiege die königlichen Wachen. Lege Yajin-Fallen und stoße Gegner hinein.'
-  boss_title: 'Gobadocs Relikt'
-  boss_objective: 'Stelle dich Gobadoc, dem Goblinkönig, und suche sein Relikt. Er ist viel stärker als seine Wachen.'
-  dialogue_greeting: 'Du bist neu hier! Ich bin Sceat.'
-  dialogue_danger: 'Diese Welt ist gefährlich. Allein kommst du nicht weit. Reisen wir zusammen.'
-  dialogue_relic: 'Gobadoc, der Goblinkönig, bewacht ein mächtiges Relikt. Hilf mir durch seine Wachen, dann finden wir ihn.'
-  journal: 'Mosswood-Abenteuer'
-  chapter: 'Der Goblinkönig'
-  speak_action: 'Mit Sceat sprechen'
-  invite_action: 'Sceat einladen'
-  rebirth_title: 'Du bist deinen Wunden erlegen…'
-  rebirth_victory: 'Du hast Gobadoc besiegt. Gut gemacht! Doch sein Angriff hatte dich vergiftet. Du wurdest bewusstlos, und seine Armee fraß deinen wehrlosen Körper. Dein Sieg kostete dich das Leben.'
-  rebirth_body: 'Fahre mit Google fort, um neu geboren zu werden und das echte Spiel zu betreten.'
-  goblins_body: 'Du beginnst im Kampf. Wähle deine Position, drücke Bereit und besiege die Goblins mit Zaubern und Bewegung. Der Sieg bringt deine erste Ausrüstung und Stufe 200.'
-  speak_body: 'Die Goblins sind besiegt, doch der Wald bleibt gefährlich. Ein Yajin namens Sceat hat den Kampf von der Brücke aus beobachtet. Allein möchte er offenbar nicht weiter. Sprecht ihn an. Er sucht ein Relikt im Besitz von Gobadoc, dem Goblinkönig, und braucht jemanden, der sich wehren kann.'
-  invite_body: 'Sceat hat einen Plan. Leider führt er zum größten Goblin des Waldes. Zwei Abenteurer haben bessere Chancen, besonders mit unterschiedlichen Fähigkeiten. Klickt mit der rechten Maustaste auf Sceat und ladet ihn in eure Gruppe ein. In diesem Abenteuer steuert ihr beide Helden und kombiniert ihre Fähigkeiten selbst.'
-  switch_body: 'Ein Gefährte ist mehr als ein weiterer Lebensbalken. Als Yajin setzt Sceat auf Fallen und geschickte Positionierung, während Senshi rohe Kraft bevorzugt. Wählt ihn im Charakterwechsler aus. Jeder Held behält seine eigenen Zauber und Ausrüstung. Wer handelt, ist genauso wichtig wie die Wahl des Zaubers.'
-  follow_body: 'Ihr habt eine Gruppe. Jetzt soll sie auch zusammenbleiben. Wählt Senshi als Anführer und aktiviert Anführer folgen in den Gruppensteuerungen. Sceat folgt euch beim Erkunden, damit ihr denselben Weg nicht zweimal laufen müsst. Im Kampf bestimmt ihr weiterhin selbst die Bewegungen und Zauber beider Helden.'
-  guards_body: 'Gobadoc lässt seinen Eingang nicht unbewacht. Seine Wachen erwarten euch, und diesmal müsst ihr zwei Helden koordinieren. Prüft eure neue Ausrüstung vor dem Kampf. Verbindet Senshis Stärke mit Sceats Fallen und Positionierung. Ein geschickt platzierter Gegner lässt sich leichter besiegen als einer, dem ihr blind hinterherlauft.'
-  boss_body: 'Hinter den Wachen wartet Gobadoc mit Sceats gesuchtem Relikt. Der Goblinkönig hat seinen Titel nicht durch verlorene Kämpfe erhalten. Ihr habt gelernt, gemeinsam zu kämpfen, doch dieser Gegner spielt in einer anderen Liga. Nähert euch mit eurem Gefährten und entdeckt, wie weit eure neue Partnerschaft euch trägt.'
 
 discord_marketplace:
   rare_loot_title: 'Seltene Bossbeute'
@@ -3147,29 +3129,16 @@ allocation_page:
   error_connection_failed: 'Die Serververbindung wurde unterbrochen. Verbinde dich erneut.'
   error_connection_replaced: 'Diese Wallet wurde in einem anderen Tab verbunden. Verbinde sie hier erneut, wenn du bereit bist.'
   error_restore_timeout: 'Die Wallet-Wiederherstellung dauerte zu lange. Verbinde deine Wallet erneut.'
-  error_x_changed: 'Dein X-Konto hat sich beim Senden geändert. Lade neu und sende Beiträge des neuen Kontos.'
-  open_x: 'X öffnen'
-  replace_x_note: 'Wechsle auf X zu deinem anderen Konto und fahre fort. Nach erfolgreichem Wechsel wird deine alte Einreichung entfernt. Sende Beiträge des neuen Kontos.'
-  replace_x: 'X-Konto wechseln'
-  edit_note: 'Du kannst deine 1–3 Beiträge bis zum Teilnahmeschluss bearbeiten und erneut senden.'
-  edit_posts: 'Beiträge bearbeiten oder hinzufügen'
-  checking_posts: 'X-Beiträge prüfen'
   connecting: 'Wallet verbinden und prüfen'
   restoring: 'Wallet wiederherstellen'
   reconnect: 'Neu verbinden'
   error_title: 'Aktion nicht abgeschlossen'
-  pending_note: 'Die Ergebnisse werden nach Anmeldeschluss und abgeschlossener Prüfung bestätigt. Noch ist kein Platz garantiert.'
-  current_rank: 'Dein aktueller Rang'
-  projected_tier: 'Derzeit auf Kurs für {{tier}}'
-  rank_warning: 'Vorläufig: Andere Spieler können dich vor der Momentaufnahme überholen. Spiele weiter.'
-  share_pending: 'Mein KARES-Whitelist-Eintrag wartet auf die abschließende Prüfung. Prüfe deinen:'
   share_post: 'Ich habe einen {{tier}}-Whitelist-Platz für den KARES-Verkauf auf @blastdotfun. Prüfe deinen:'
   menu_title: 'Prüfe deinen Whitelist-Platz'
   menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
   menu_action: 'Zuteilungen ansehen'
   before: Vor Überzeichnung
   buy_up_to: Kaufen bis zu
-  pending: Ergebnisse ausstehend
   no_spot: Diesmal kein Spot
   source_reserved: Reservierter Spot
   source_pending: Auswahl ausstehend
@@ -3183,66 +3152,28 @@ allocation_page:
   signature_note: Signiere eine kostenlose Nachricht. Keine Transaktion oder Zahlung.
   no_wallet_app: Installiere ein Sui-Wallet.
   wallet_failed: Wallet-Verbindung fehlgeschlagen. Erneut versuchen.
-  x_entry: Dein X-Beitrag
-  x_connect_note: Verbinde X, um Beiträge einzureichen.
-  closed: Teilnahme geschlossen
   edit: Bearbeiten
-  saved_posts: Gespeichert · {{count}} von {{max}} Beiträgen
-  metrics_note: 'Wir messen die Interaktionen während der abschließenden Prüfung.'
-  recipient_locked: Nach der ersten Einreichung festgelegt.
-  post_number: Beitrag {{number}}
-  optional: optional
-  post_limit: Bis zu {{max}} Beiträge pro X-Konto
   cancel: Abbrechen
   save: Speichern
-  get_spot: Einen Spot erhalten
-  get_spot_note: Steige in Ranglisten auf oder poste auf X.
-  leaderboard_title: In Ranglisten aufsteigen
-  leaderboard_note: 'Wir erfassen die Ranglisten nach Anmeldeschluss. Deine Spiel-Wallet sammelt die Punkte; ihre Verknüpfung ändert die Teilnahmeberechtigung nicht.'
-  veteran_boards: Die besten 1 oder 2 berechtigten Spieler jeder Rangliste erhalten Veteran.
-  member_boards: Die nächsten 7 erhalten Member.
-  skip_duplicates: Bereits ausgewählte Wallets werden übersprungen.
   board_legend: 'Spots pro Rangliste: Veteran / Member'
   play: AresRPG spielen
-  x_title: Auf X posten
-  x_note: Poste über AresRPG und reiche die Links ein.
-  one_entry: 1–3 Beiträge. Eine Teilnahme pro X-Konto.
-  score_rule: 'Durchschnitt: Likes + 3× Reposts + 3× Zitate. Antworten und Aufrufe zählen nicht.'
-  x_winners: Die besten {{veteran}} erhalten Veteran; die nächsten {{member}} Member.
-  leftovers: Unbesetzte Ranglisten-Spots gehen mit derselben Stufe an X.
-  quality_rule: Gekaufte Interaktionen und kopierte Beiträge können ausgeschlossen werden.
   sale_title: Der Verkauf findet auf Blast statt
   sale_time: 'Datum und Uhrzeit des Verkaufs werden noch bekannt gegeben.'
   results_title: 'Kampagnenergebnisse'
   results_note: Deine Karten zeigen die Ergebnisse vor dem Verkauf.
-  entries_close: Teilnahmeschluss
-  your_time: deine Ortszeit
-  cards_revealed: Karten werden aufgedeckt
-  results_time: 'Nach Anmeldeschluss und abgeschlossener Prüfung.'
   spot_gives: Was ein Spot bietet
-  days: Tage
-  hours: Stunden
-  minutes: Min
-  seconds: Sek
   signing: Bestätige die Signatur in deinem Wallet…
-  close_in: Teilnahmeschluss in
   no_spot_yet: Noch kein Spot
   your_allocation: Deine Zuteilung
   total_cap: Bis zu {{sui}} SUI für {{count}} Spots
   allocation_note: Melde dich an und verknüpfe Wallets, um deine Spots zu prüfen.
-  card_placeholder: Hier erscheint deine Karte
-  one_card: Eine Karte pro verifiziertem Wallet.
-  share_x: Auf X teilen
   footer: Ein Spot begrenzt deinen Beitrag, nicht eine feste Tokenmenge.
-  entry_note: 'Die erste Einreichung legt das Wallet fest. Bearbeiten ersetzt Beiträge und setzt die Zeit zurück. Gleichstand: frühere Einreichung, dann X-Konto-ID.'
   error_wallet_limit: Bis zu zehn Wallets einschließlich Google-Wallet.
   title: KARES-Whitelist
   veteran: Veteran
   member: Member
   public_note: Der öffentliche Zugang folgt den Blast-Bedingungen. Ergebnisse können noch ausstehen.
-  connect_x: X verbinden
   recipient: Empfangs-Wallet
-  choose_wallet: Verbundene Wallet wählen
   preview: Linkvorschau
   share: Teilen
   dilution: Limits garantieren keine Token. Bei Überzeichnung werden alle Käufer proportional verwässert.
@@ -3292,43 +3223,24 @@ allocation_page:
   sale_dilution: 'Sammelt der Verkauf mehr als sein Ziel, erhält jeder Käufer weniger KARES und bekommt die überschüssigen SUI beim Abholen zurück.'
   google_wallet: Google-Spielwallet
   loading: Kampagne wird geladen
-  registration: Einreichungen offen
   final: Endgültige Liste · Blast-Import ausstehend
-  refresh: Aktualisieren
   wallet: Wallet
   error_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
-  error_wallet_locked: Die erste Einreichung legt die Empfangs-Wallet fest. Verbinde sie erneut, um Beiträge zu ändern.
   error_wallet_taken: Diese Wallet ist bereits mit einem anderen X-Konto verbunden.
   error_invalid_address: Gib eine gültige Sui-Adresse mit 0x ein.
-  error_closed: Einreichungen sind für die Momentaufnahme geschlossen.
-  metric_xp: Kampf-EP
   board_xp: Kampf-EP · Rangliste
-  metric_kills: Besiegte Monster
   board_kills: Besiegte Monster · Rangliste
-  metric_dungeons: Dungeons
   board_dungeons: Dungeons · Rangliste
-  metric_jobs: Berufs-EP
   board_jobs: Berufs-EP · Rangliste
-  metric_marketplace: Marktplatz
   board_marketplace: Marktplatz · Rangliste
-  metric_kolizeum: Kolizeum
   board_kolizeum: Kolizeum · Rangliste
-  metric_zones: Entdeckungen
   board_zones: Entdeckungen · Rangliste
-  metric_feeding: Tierfütterung
   board_feeding: Tierfütterung · Rangliste
-  metric_gathering: Sammeln
   board_gathering: Sammeln · Rangliste
   source_leaderboard: In Ranglisten aufsteigen
   source_social: Auf X posten
-  spots_count: '{{count}} Spots'
   error_unauthorized: Verbinde und verifiziere zuerst das Empfänger-Wallet.
-  error_invalid_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
   error_rate_limited: Zu viele Anfragen. Versuche es gleich erneut.
-  error_foreign_post: 'Die Beiträge müssen vom verbundenen X-Konto stammen. Ändere das Konto oder die Links.'
-  error_missing_post: 'Einige Beiträge wurden nicht gefunden. Prüfe die Links und ob sie öffentlich sind.'
-  error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
-
 tournament_page:
   level_limit_label: 'Höchstlevel bei Anmeldung'
   level_unrestricted: 'Unbegrenzt'
@@ -3576,116 +3488,597 @@ tournament_page:
   versus: gegen {{team}}
 
 landing_page:
-  sound_on: 'Musik einschalten'
-  sound_off: 'Musik stummschalten'
-  new_tab: ' (opens a new tab)'
+  sound_on: Musik einschalten
+  sound_off: Musik stummschalten
+  new_tab: ' (öffnet einen neuen Tab)'
   sign_alt: AresRPG
-  nav_label: Resources
+  nav_label: Ressourcen
   nav:
-    encyclopedia: Encyclopedia
+    docs: Docs
     journal: Journal
     discord: Discord
   kares:
     trigger: $KARES
     trigger_detail: Tokenomics
-    modal_label: $KARES tokenomics
-    close: Close
+  account:
+    login: Anmelden
+    logging_in: Anmeldung läuft…
+    signed_in: Angemeldet als {{address}}
+    failed: Die Anmeldung wurde nicht abgeschlossen. Versuch es erneut.
+    logout: Abmelden
   hero:
+    eyebrow:
+      - Taktisches MMORPG-Protokoll
+      - On-Chain auf Sui
     title:
-      - Explore planets.
-      - Fight in turns.
-      - Keep what you find.
-    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
-      craft and trade with other players, and compete when tournaments run. Or hand the controls to
-      your agent and watch it play.
-    play: Play
-    let_ai_play: Let AI play
+      - 'Eine Welt, on-chain.'
+      - 'Spiel sie auf deine Art.'
+      - 'Behalte, was du findest.'
+    lede: AresRPG ist ein taktisches MMORPG-Protokoll auf Sui. Charaktere, Beute und Marktplatz liegen
+      on-chain, und jede Oberfläche kann sie spielen. Räume Dungeons mit deiner Gruppe, stelle her
+      und handle mit anderen Spielern oder übergib die Steuerung einem Agenten.
+    play: 'In 3D spielen'
+    play_bots: 'Mit Bots spielen'
+    ways:
+      - Eine Welt
+      - Unbegrenzt viele Spielweisen
+  chooser:
+    section: Oberflächen
+    title: Wähle, wie du spielst.
+    intro: AresRPG ist ein On-Chain-Spiel ohne festen Zugang. Dieselben Charaktere, dieselbe Beute,
+      derselbe Markt. Hier sind fünf Oberflächen für den Einstieg, und jeder kann die nächste bauen.
+    interface: Oberfläche
+    specs:
+      runs_in: Läuft in
+      role: Deine Rolle
+      good_for: Ideal für
+      status: Status
+    play:
+      manual: Manuell
+      automated: Automatisch
+    items:
+      world:
+        name: Voxelwelt
+        line: Das komplette 3D-Spiel in deinem Browser. Aufwendige Grafik, jeder Zug gehört dir.
+        tech: Gebaut mit three.js
+        status: Spielbar
+        body: Das komplette Spiel in deinem Browser. Erkunde die Planeten, bilde eine Gruppe und kämpfe
+          selbst auf dem Raster. Auf dem Handy wechselt derselbe Client zur Touch-Steuerung.
+        runs_in: Browser mit starker GPU
+        role: Du spielst jeden Zug
+        good_for: Erkunden und Gruppenkämpfe
+        cta: Spielen
+        preview: Ein Charakter läuft einen Erdweg durch Mosswoods Voxel-Pilzwald, vor ihm Klippen,
+          Wasserfälle und Goblins.
+      dapp:
+        name: Web-dapp
+        line: Kein 3D. Schick dein Team von jedem Handy aus auf Quests und Dungeon-Raids.
+        tech: Läuft auf jedem Gerät
+        status: Spielbar
+        body: Das Spiel ohne 3D-Engine. Schick deine Charaktere auf Quests, raide Dungeons mit deinem Team
+          und handle mit der Beute, alles auf einer leichten Seite, die auf jedem Handy läuft.
+        runs_in: Jeder Browser, jedes Handy
+        role: Team losschicken, Beute einsammeln
+        good_for: Schwache Geräte, kurze Sessions
+        cta: Dapp öffnen
+        preview: 'Designvorschau der Web-dapp: ein Charakter auf Quest mit Lebensleiste, ein Dungeon-Raid,
+          der auf einen Schlüssel wartet, und Buttons, um auf Quest zu schicken, einen Dungeon zu
+          raiden oder den Markt zu öffnen.'
+      agent:
+        name: Dein Agent
+        line: Claude, ChatGPT oder Grok übernimmt die Steuerung, während du zusiehst.
+        tech: Claude / ChatGPT / Grok
+        status: In Arbeit
+        body: Verbinde Claude, ChatGPT oder Grok mit einem gehosteten AresRPG-Bot. Legt gemeinsam ein Ziel
+          fest, dann sieh im Spiel zu, wie er deinen Charakter spielt.
+        runs_in: ChatGPT, Claude oder Grok
+        role: Ziel festlegen, dann zusehen
+        good_for: Spielen ohne Eingreifen
+        cta: Agenten verbinden
+        preview: 'Beispielsitzung: Du bittest deinen Agenten, die Goblins auf dem Weg zu besiegen, und er
+          ruft gehostete Bot-Tools auf, während er dir berichtet.'
+      telegram:
+        name: Telegram
+        line: 'Steuere deine Helden aus einem Chat. Strategie wählen, genehmigen, verfolgen.'
+        tech: Ein Telegram-Chat
+        status: Warteliste
+        body: 'Dein gehosteter Bot in einem Telegram-Chat. Wähle eine geprüfte Strategie für einen Helden, lies, was sie tun wird, und genehmige sie. Verfolge dann ihren Fortschritt oder stoppe sie im selben Chat.'
+        runs_in: Ein Telegram-Chat
+        role: Strategie wählen, bestätigen
+        good_for: 'Freihändiges Spielen vom Handy'
+        cta: Auf die Warteliste
+        preview: 'Beispielchat: Wähle eine Strategie, prüfe, was sie tut, bestätige sie und sieh dann ihren
+          Status ein oder stoppe sie.'
+      sdk:
+        name: Dein eigener Client
+        line: Baue einen Client, ein Tool oder einen Bot auf dem öffentlichen SDK.
+        tech: Öffentliches SDK
+        status: Quellcode verfügbar
+        body: Baue auf dem öffentlichen SDK auf, das auch das Spiel selbst nutzt. Die Lizenz erlaubt
+          kommerzielle Clients, Remakes, Fan-Tools und Bots, die auf dem offiziellen Deployment
+          laufen. Dein Client oder Bot signiert mit seiner eigenen Sui-Wallet.
+        runs_in: Alles, was du baust
+        role: Du schreibst den Client
+        good_for: Eigene Clients, Tools, Bots
+        cta: Playbook lesen
+        preview: 'Terminalansicht des Index des öffentlichen Agenten-Playbooks: SDK-Bausteine, Zustands- und
+          Transaktionsdisziplin, das Quell-Repository und die Deployment-Pins.'
+    waitlist:
+      joining: Eintrag in die Warteliste…
+      joined: Du stehst auf der Warteliste
+      failed: Der Eintrag in die Warteliste hat nicht geklappt. Versuch es noch einmal.
+    agent_guide: Anleitung lesen
+    source: Quellcode ansehen
+    previews:
+      keys_then: dann
+      dapp:
+        title: Web-dapp
+        label: Designvorschau
+        character: Senshi
+        questing: Auf Quest
+        dungeon: Ivory Rampart
+        needs_key: Braucht einen Schlüssel
+        raid: Dungeon-Raid für dein Team
+        actions:
+          - Auf Quest schicken
+          - Dungeon raiden
+          - Markt
+      agent:
+        title: Gehosteter Bot / MCP
+        label: Beispielsitzung
+        you: du
+        agent: agent
+        call: aufruf
+        lines:
+          - Besiege die Goblins auf dem Weg.
+          - Mach ich. Sieh von hier aus zu.
+          - Goblins auf dem Weg vor uns. Ich fordere sie heraus.
+          - Kampf gestartet. Ich wähle ein Feld auf dem Raster.
+      telegram:
+        choose: Strategie wählen
+        patrol: Stadtpatrouille · 1 Monster
+        gather: Sammeln & Herstellen
+        review: Strategie prüfen
+        review_detail: Kämpft in dieser Stadt gegen Gruppen aus einem Monster, bis sie gestoppt wird.
+        approve: Bestätigen
+        menu: Menü
+        running: Strategie läuft
+        status: Status
+        stop: Strategie stoppen
+      sdk:
+        label: Playbook-Index
+        build: Den Bot bauen
+        build_lines:
+          - 'SDK-Bausteine: Aktionskomposition, Offline-Planung und Kampfsimulation.'
+          - 'Zustands- und Transaktionsdisziplin: Aktualität, Belege und Wiederherstellung.'
+        source: Quellcode und Deployment
+        source_lines:
+          - 'Quell-Repository: SDK-Quellcode, Lizenz und passendes Release.'
+          - 'Deployment-Pins: gegen das vorgesehene Deployment prüfen.'
   earn:
-    title: Three ways to earn as you play
-    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
-      them.'
-    bays:
-      - Key of Ivory Rampart
-      - Tidal Horn Core and Amberwood Recurve
-      - Tournaments
+    section: Wirtschaft
+    title: Lass dich in SUI bezahlen. Auf drei Arten.
+    intro: Andere Spieler bezahlen dich. Du verkaufst an sie, stellst für sie her oder schlägst sie.
     paths:
-      - title: Sell your dungeon drops
-        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
-          the marketplace, and receive SUI when another player buys.
-      - title: Gather, craft and trade
-        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
-          or sell the materials themselves.
-        link: Browse the item encyclopedia
-      - title: Win tournament prizes
-        body: When a tournament runs, play for its announced prizes. Your final placement decides your
-          share.
-  world:
-    title: Inside the Mosswood tutorial
-    label: Real gameplay captures from the Mosswood tutorial
-    beats:
-      - title: Explore the planets
-        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
-          the locals.
-      - title: Walk up and challenge
-        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
-      - title: Fight in turns
-        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
-          marks the goblins. Plan every move.
-    keys_label: Press W to walk up, then F to challenge
-    keys_then: then
-    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
-      waterfalls and goblins ahead.
-    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
-    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
-      reachable positions; orange tiles mark the goblins.
-    marks:
-      you: You
-      tiles: Tiles you can reach
-      goblins: Goblins
-  agent:
-    title: Your agent plays. You watch.
-    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
-      run while you watch, and you can stop watching whenever you like.
-    character: Senshi
-    status_connecting: Connecting…
-    status_watching: Watching Senshi
-    stop: Stop watching
-    you: You
-    your_agent: Your agent
-    said:
-      - Clear
-      - the
-      - goblins
-      - on
-      - the
-      - path.
-    bubbles:
-      - On it. Watch from here.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    call_title: Voice call
-    call_detail: with your agent
-    log:
-      - Clear the goblins on the path.
-      - On it. Watch from here.
-      - Following the path through Mosswood.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    replay: Replay
-    note: Filmed in Mosswood. Your agent’s lines are an example.
+      - tag: Marktplatz
+        title: Raide Dungeons.
+        accent: Verkaufe die Beute.
+        body: Räume mit deinem Team einen Dungeon und biete die Drops an. Der Käufer bezahlt dich in SUI.
+      - tag: Berufe
+        title: Sammle und stelle her.
+        accent: Verkaufe die Ausrüstung.
+        body: Level einen Beruf, stelle her, was Kämpfer brauchen, und verkaufe es oder die Rohstoffe.
+        link: Alle Gegenstände ansehen
+      - tag: Turniere
+        title: Gewinne Kämpfe.
+        accent: Hol dir den Preis.
+        body: Wenn ein Turnier läuft, entscheidet deine Endplatzierung über deinen Anteil am Preis.
+  control:
+    section: Steuerung
+    title: Automatisiere es oder signiere jeden Zug.
+    intro: Zwei Arten, die Steuerung zu halten. Beide laufen auf demselben On-Chain-Spiel, und du kannst
+      je einen Charakter auf jede Art spielen.
+    you: Du
+    holds: hält den Charakter
+    used_by: Genutzt von
+    automated:
+      tag: Automatisiert
+      title: Ein gehosteter Agent spielt für dich.
+      body: Übergib einen Charakter an ein gemeinsames Konto und lege ein Ziel fest. Unser gehosteter
+        Agent spielt ihn rund um die Uhr, während du zusiehst oder etwas anderes machst.
+      figure: 'Diagramm: Du und der gehostete Agent haltet je einen von zwei Schlüsseln zu einem
+        gemeinsamen Multisig-Konto, das den Charakter hält.'
+      you_detail: Google-Anmeldung
+      vault: 1-of-2 multisig
+      agent: Gehosteter Agent
+      agent_detail: spielt die Züge
+      points:
+        - Der Agent erhält nie deinen Wallet-Schlüssel.
+        - Du bestätigst den genauen Bot und was er tun darf, bevor er startet.
+        - Hol deinen Charakter jederzeit über dein Inventar zurück, auch wenn der Agent offline ist.
+    self:
+      tag: Selbstverwahrt
+      title: Du signierst jeden Zug selbst.
+      body: Melde dich mit Google an. Deine Charaktere und Gegenstände bleiben in deinem Konto, und nichts
+        geschieht ohne deine Signatur.
+      figure: 'Diagramm: Du signierst mit deinem Google-Konto, und dein eigenes Konto hält den Charakter.'
+      you_detail: Google-Anmeldung
+      vault: Dein Konto
+      points:
+        - Niemand sonst kann deine Charaktere bewegen oder deine SUI ausgeben.
+        - Jeder Kampf, jedes Herstellen und jeder Verkauf ist eine Transaktion, die du signierst.
+        - Übergib einen Charakter später an einen gehosteten Agenten und hol ihn zurück, wann du
+          willst.
   end:
-    title: Start in Mosswood
-    body: The tutorial takes you from the first path to your first turn-based fight.
-    play: Play
-    discord: Join the Discord
+    title: Starte dein Abenteuer
+    body: Melde dich an, erstelle deinen Charakter und ziehe in deinen ersten rundenbasierten Kampf.
+    play: Spielen
+    discord: Discord beitreten
+    pick: 'Deine Wahl:'
   footer:
     wordmark: AresRPG
-    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
-    game: Game
+    tagline: Ein taktisches Voxel-MMORPG auf Sui, über mehrere Planeten hinweg.
+    game: Spiel
     community: Community
-    play: Play
-    encyclopedia: Item encyclopedia
+    play: Spielen
+    encyclopedia: Gegenstands-Enzyklopädie
     journal: Journal
     discord: Discord
     telegram: Telegram
     x: X
+    allocation: Prüfe deinen Whitelist-Platz
+    colophon: eine Welt, unbegrenzt viele Oberflächen
+
+telegram_companion:
+  connect_google: '🔑 Google'
+  waiting: 'Dein Spielkonto hat noch keinen Telegram-Zugang. Trag dich in die Warteliste ein, um ihn anzufragen.'
+  on_waitlist: '✅ Du stehst auf der Warteliste. Mit „Zugang prüfen“ siehst du, ob dein Spielkonto zugelassen wurde.'
+  join_waitlist: 'Auf die Warteliste'
+  check_access: 'Zugang prüfen'
+  inventory: '🎒 Inventar'
+  inventory_empty: 'Deine Tasche ist leer'
+  observation_unknown: 'Noch nicht verfügbar'
+  no_strategy: 'Kein Charakter führt gerade eine Strategie aus.'
+  strategy_active: 'Strategie aktiv'
+  strategy_waiting: 'Strategie wartet'
+  replace_strategy: 'Dies ersetzt die laufende Strategie dieses Charakters. Gesendete Aktionen können noch enden.'
+  fight: '⚔️ Im Kampf'
+  ambush: '🛡 Wächter wartet'
+  idle: 'Bereit für eine Strategie'
+  external_strategy: 'Strategie aus einer anderen App'
+  menu: '🧙 Wähle deinen Charakter'
+  loading: '⏳ Charaktere werden geladen'
+  empty: '🧙 Kein spielbarer Agent-Charakter verfügbar'
+  play: '▶️ Spielen'
+  back: '☰ Menü'
+  status: '📍 Status'
+  approve: '✅ Bestätigen'
+  link: '🔑 Mit /link Google im Browser verbinden'
+  linked: '✅ Google verbunden · /menu'
+  unlinked: '🔓 Verbindung getrennt'
+  confirm: 'Sende den Befehl unten in deinem Telegram-Chat, um die Verknüpfung abzuschließen.'
+  confirm_warning: 'Teile diesen Code nicht. Bestätige nur eine Anmeldung, die du selbst gestartet hast.'
+  browser_expired: 'Diese Seite ist abgelaufen. Geh zurück zu Telegram und melde dich mit /link erneut an.'
+  check_status: '📍 Status prüfen'
+  log_in_again: '🔑 Erneut anmelden'
+  balance: '💰 Agent-Guthaben'
+  pause: '⏸ Agent pausieren'
+  resume: '▶️ Agent fortsetzen'
+  wallet_scope: 'Betrifft das gesamte Agent-Wallet und andere Verbindungen · Gesendete Transaktionen können noch enden'
+  paused: '⏸ Agent pausiert'
+  resumed: '▶️ Agent fortgesetzt'
+  choose_strategy: 'Strategie wählen'
+  failure_changed: 'Das wurde inzwischen aktualisiert. Hier ist der aktuelle Stand.'
+  failure_reconnect: 'Deine Anmeldung ist abgelaufen. Melde dich erneut an:'
+  failure_unlink_first: 'Dieser Chat oder dieses Google-Konto ist schon verbunden, oder eine Anmeldung ist noch offen. Nutze /unlink und versuche es dann erneut.'
+  failure_temporary: 'Das hat diesmal nicht geklappt. Versuche es gleich noch einmal.'
+  failure_busy: 'Dieser Charakter beendet noch eine Aktion, oder der Agent ist pausiert. Falls du ihn pausiert hast, nutze /resume und prüfe dann den Status.'
+  failure_run_limit: 'Dein Agent führt bereits so viele Charaktere, wie er kann. Stoppe einen und starte dann diesen.'
+  review: 'Strategie prüfen'
+  effects: 'Bekämpft Gruppen aus einem Monster in dieser Stadt bis zum Stopp. Jede Aktion kostet SUI-Gas, ohne Gesamtlimit. Kein Sieg garantiert; ein Neustart kann Schritte wiederholen. Stopp widerruft keine gesendeten Aktionen.'
+  stop: 'Strategie stoppen'
+  stop_scope: 'Wähle den Charakter, der stoppen soll. Die anderen spielen weiter; gesendete Transaktionen können noch abgeschlossen werden.'
+  stop_all: 'Alle stoppen'
+  stopped: 'Strategie gestoppt'
+  completed: 'Strategie abgeschlossen'
+  attention: 'Die Strategie braucht Aufmerksamkeit. Prüfe deinen Charakter im Spiel, dann nutze Status oder Stopp.'
+  unknown: 'Das Ergebnis ist noch nicht bestätigt. Prüfe zuerst den Status.'
+  city_review: 'Stadt: {city}'
+  city_required: 'Gehe im Spiel in eine Stadt und prüfe die Auswahl erneut mit /menu.'
+  enable_agent: '🔑 Agent aktivieren'
+  play_consent: 'Dein Spielkonto ist zugelassen. Erteile dem Agenten die Berechtigungen, um fortzufahren.'
+  world_review: 'Welt: {world}'
+  gather_effects: 'Fertigt nützliche Rezepte aus vorhandenen Zutaten für Berufsfortschritt; sonst sammelt es mit verfügbaren Werkzeugen und erkundet diese Welt. Bekämpft Beschützer mit einfachen Taktiken. Läuft bis zum Stopp. SUI-Gas und Zutaten ohne Gesamtlimit; Fehlschläge möglich. Ein Neustart kann Schritte wiederholen. Stopp widerruft keine gesendeten Aktionen.'
+  strategies:
+    fight_nearby: '⚔️ Stadtpatrouille · 1 Monster'
+    gather_craft: '🌿 Sammeln & Herstellen'
+
+docs_page:
+  title: Docs
+  nav_label: Doku-Bereiche
+  home: Startseite
+  play: Spielen
+  menu: Menü
+  previous: Zurück
+  next: Weiter
+  search: Guides, Gegenstände und Monster durchsuchen
+  search_empty: Keine Seite passt zu dieser Suche.
+  new_tab: ' (öffnet einen neuen Tab)'
+  data_note: Die Zahlen auf diesen Seiten stammen aus denselben Inhaltsdateien wie das Spiel.
+  kinds:
+    guide: Guide
+    item: Gegenstand
+    mob: Monster
+  groups:
+    start: Einstieg
+    mechanics: 'Spielmechaniken'
+    automated: 'Automatisches Spiel'
+    reference: 'Referenz'
+    economy: Wirtschaft
+    build: Entwickeln
+  guides:
+    overview: Was AresRPG ist
+    first_hour: 'Einsteigerguide'
+    market: Marktplatz
+    agents: 'Assistenten verbinden'
+    build: Auf AresRPG aufbauen
+    kares: KARES-Token
+    ways: 'Spielweisen'
+    bots: 'Gehostete Bots'
+  overview:
+    lede: 'AresRPG ist ein taktisches MMORPG, das als Protokoll auf Sui läuft. Charaktere, Gegenstände, Kämpfe und der Markt sind On-Chain-Objekte und Transaktionen. Das Spiel, das du siehst, ist ein Client dieses Protokolls, und es gibt mehrere.'
+    counts:
+      items: Gegenstände
+      spells: Zauber
+      mobs: Monster
+      recipes: Rezepte
+      classes: Klassen
+      jobs: Berufe
+    protocol_title: 'Ein Protokoll, nicht ein einzelner Client'
+    protocol:
+      - 'Die Spielregeln sind Smart Contracts. Ein Kampf, eine Herstellung, eine Ernte oder ein Verkauf ist eine Transaktion, und ihr Ergebnis ist gleich, egal welche Oberfläche sie gesendet hat.'
+      - 'Dein Konto besitzt deine Charaktere und Gegenstände. Keine Oberfläche verwahrt sie für dich, außer einem gehosteten Bot, dem du einen Charakter übergibst.'
+      - 'Jede Oberfläche liest denselben Zustand. Einen in der 3D-Welt gestarteten Kampf kannst du von einer anderen Seite verfolgen, und Beute eines Bots erscheint in deinem Inventar.'
+    loop_title: 'Was du im Spiel tust'
+    loop:
+      - 'Kämpfe rundenbasiert auf einem Raster gegen Monstergruppen. In jedem Zug gibst du Aktionspunkte für Zauber und Bewegungspunkte für Schritte aus.'
+      - 'Sammle Ressourcen und stelle in deinen Berufen Werkzeuge, Ausrüstung und Verbrauchsgüter her.'
+      - 'Räume mit einer Gruppe Dungeons, Raum für Raum, für die Beute des Bosses.'
+      - 'Handle mit anderen Spielern auf dem Marktplatz, für SUI.'
+  ways:
+    lede: 'Das Protokoll hat nicht nur einen Zugang. Jede Oberfläche unten spielt dieselben Charaktere, mit derselben Beute und demselben Markt. Sie unterscheiden sich darin, wer die Züge macht und was du zum Ausführen brauchst.'
+    note: 'Du kannst mehrere Oberflächen nutzen, mit einer Grenze: eine aktive Verbindung pro Konto. Das Öffnen des 3D-Spiels ersetzt eine Web-Dapp-Sitzung desselben Kontos.'
+  bots:
+    lede: 'Ein gehosteter Bot spielt deine Helden für dich auf den Servern von AresRPG. Die Web-Dapp, Telegram und ein verbundener Assistent steuern alle denselben Bot.'
+    wallet_title: 'Die Bot-Wallet'
+    wallet:
+      - 'Ein Bot spielt aus seiner eigenen Wallet, getrennt von deiner Spiel-Wallet. Sie ist eine 1-von-2-Multisig: Der gehostete Dienst kann für sie signieren, und dein Google-Konto ebenfalls.'
+      - 'Helden und Gegenstände, die du übergibst, wandern in diese Wallet. Das Spiel ist dort verwahrt: Der Dienst signiert die Züge.'
+      - 'Du kannst jederzeit alles von deinem eigenen Konto zurückholen, auch wenn der Bot offline ist. Ein Rückruf braucht nur deine Signatur.'
+      - 'Der Bot zahlt seine eigenen Netzwerkgebühren. Halte etwas SUI in der Bot-Wallet. Übertragen verschiebt SUI und KARES zwischen deinen beiden Wallets.'
+    does_title: 'Was ein Bot tut'
+    does:
+      - 'Jeder Held führt eine Aktivität zugleich aus, etwa rund um eine Stadt kämpfen, sammeln und herstellen oder einen Dungeon räumen. Du wählst sie, und der Bot folgt ihr, bis sie endet oder du sie stoppst.'
+      - 'Helden derselben Bot-Wallet können als Team kämpfen.'
+      - 'Du kannst den Bot jederzeit pausieren oder einen Helden stoppen. Eine bereits an die Chain gesendete Aktion wird noch abgeschlossen.'
+      - 'Ein Bot wartet, wenn nichts Genehmigtes zu tun ist oder seine Wallet kein SUI für Gebühren hat.'
+    control_title: 'Wer ihn steuern kann'
+    control:
+      - 'Die Web-Dapp: Aktivitäten starten und stoppen, Werte und Zauber steigern und als Bot auf dem Markt handeln.'
+      - 'Telegram: eine geprüfte Strategie wählen und genehmigen.'
+      - 'Ein Assistent (ChatGPT, Claude oder Grok): Vereinbare im Chat ein Ziel. Er ruft die Werkzeuge des Bots im Rahmen deiner Genehmigung auf.'
+  first_hour:
+    lede: 'Das Ziel deiner ersten Stunde: ein Charakter, ein paar gewonnene Kämpfe und ein selbst
+      hergestelltes Werkzeug. Die Dropchancen und das Rezept unten sind die echten Werte.'
+    drop_chance: '{{chance}}% Dropchance'
+    steps:
+      - title: Erstelle einen Charakter.
+        body: Die Erstellung kostet {{price}} SUI plus Gas. Deine Klasse bestimmt deine Zauber, also
+          wähle mit Bedacht.
+      - title: Gewinne deine ersten Kämpfe.
+        body: Diese Monster streifen um die erste Stadt. Geh zu einer Gruppe und fordere sie heraus.
+      - title: Sammle die Teile für ein Werkzeug.
+        body: Dein erstes Sammelwerkzeug wird aus Monster-Drops hergestellt. Jedes Teil steht mit
+          seiner besten Quelle in der Liste.
+      - title: Stelle es her.
+        body: Öffne den Beruf {{job}} und stelle das Werkzeug her. Eine Herstellung kann scheitern und
+          verbraucht trotzdem die Zutaten, also bring Ersatzteile mit.
+      - title: Nimm den ersten Dungeon ins Visier.
+        body: Mit einer Gruppe und diesem Schlüssel kannst du den Dungeon der ersten Stadt betreten.
+  market:
+    lede: Spieler verkaufen an Spieler. Gegenstände und Ressourcen werden über On-Chain-Angebote
+      gehandelt, und der Verkäufer wird in SUI bezahlt.
+    royalty: Gebühr
+    royalty_floor: Mindestgebühr
+    lot_sizes: Losgrößen
+    points:
+      - Der Käufer zahlt den Angebotspreis plus die Gebühr plus Gas.
+      - Der Verkäufer erhält den Angebotspreis und holt ihn in einer eigenen Aktion ab.
+      - Bei einem günstigen Angebot zählt die Mindestgebühr. Vergleiche die Gesamtkosten eines Loses,
+        nicht nur seinen Angebotspreis.
+  kares:
+    lede: KARES ist noch nicht bereit. Er wird bald hinzugefügt.
+    note: Diese Seite beschreibt den Token, sein Angebot und seine Belohnungspools, sobald er startet.
+      Bis dahin werden kein Guthaben, kein Preis und keine Belohnungszahlen veröffentlicht.
+  agents:
+    lede: Verbinde ChatGPT, Claude oder Grok mit einem gehosteten AresRPG-Bot. Ihr legt gemeinsam ein
+      Ziel fest, und der Assistent spielt deinen Charakter innerhalb dieses Ziels. Diese Funktion ist
+      noch in Arbeit.
+    steps:
+      - Wähle deinen Assistenten und füge die AresRPG-Verbindungsadresse als benutzerdefinierten
+        Connector hinzu.
+      - Melde dich mit Google an und bestätige dann den genauen Bot und was er tun darf.
+      - Übergib einen Charakter aus deinem Inventar. Du kannst ihn jederzeit zurückholen.
+    points:
+      - Der Assistent erhält nie einen Wallet-Schlüssel und fragt im Chat nie danach.
+      - Gehostetes Spielen erfolgt in Fremdverwahrung. Ein gemeinsames 1-aus-2-Konto hält den Charakter,
+        und der gehostete Agent signiert die Züge. Deine Google-Anmeldung bleibt deine Authentifizierung
+        und deine Wiederherstellung.
+      - Ein verbundener Bot ist nicht immer aktiv. Er wartet, wenn er keinen bestätigten nächsten
+        Schritt hat.
+    guide: Verbindungsanleitung lesen
+    index: Agenten-Playbook öffnen
+  build:
+    lede: Der Spielclient basiert auf einem öffentlichen SDK. Du kannst deinen eigenen Client, ein Tool
+      oder einen Bot auf denselben Aktionen bauen.
+    source_title: Quell-Repository
+    source_body: SDK-Quellcode, Lizenz und passendes Release.
+    playbook_title: Agenten-Playbook
+    playbook_body: 'Die Anleitungen für Entwickler: Verbindung, Verwahrung, SDK, Protokoll, Kampf und
+      Wirtschaft.'
+    blocks_title: Bausteine
+    blocks:
+      - 'Aktionskomposition: Baue dieselben Transaktionen, die das Spiel sendet.'
+      - 'Offline-Planung: Prüfe Rezepte und Fortschritt ohne Signierer.'
+      - 'Kampfsimulation: Plane eine Runde, bevor du sie abschickst.'
+      - 'Deployment-Pins: Prüfe, dass du mit dem offiziellen Deployment sprichst.'
+    license_title: Lizenz
+    allowed_title: Erlaubt
+    allowed:
+      - Kommerzielle Clients, Remakes des Spiels, Fan-Tools, Dienste und Bots veröffentlichen und
+        betreiben.
+      - Automatisierung, die auf Gewinn spielt.
+    forbidden_title: Nicht erlaubt
+    forbidden:
+      - Die Smart Contracts des Spiels oder davon abgeleitete Werke auf einer beliebigen Blockchain
+        deployen oder neu veröffentlichen.
+      - Den Namen oder das Logo von AresRPG als eigene Marke nutzen.
+    license_note: Diese Seite ist eine Zusammenfassung. Verbindlich ist der Lizenztext. Behalte die
+      Lizenz- und Copyright-Hinweise bei, wenn du weiterverbreitest.
+    license_link: Lizenz lesen
+
+dapp_page:
+  brand: 'Expeditionen'
+  mode_label: 'Oberflächenmodus'
+  mode_basic: 'Einfach'
+  mode_advanced: 'Erweitert'
+  nav_label: 'Bereiche'
+  nav_play: 'Spielen'
+  nav_market: 'Markt'
+  bot_balance: 'Bot: {amount} SUI'
+  bot_balance_hint: 'SUI, die dein gehosteter Bot hält. Damit zahlt er die Netzwerkgebühren deiner Helden und deine Käufe auf dem Markt.'
+  loading: 'Wird geladen…'
+  signing_in: 'Anmeldung läuft…'
+  signin_title: 'Schick deine Helden auf Expedition'
+  signin_body: 'Melde dich mit Google an, um deine Helden zu sehen und deinen gehosteten Bot für sie spielen zu lassen. Gleiches Konto, gleiche Helden und Gegenstände wie in der 3D-Welt.'
+  signin_failed: 'Die Anmeldung wurde nicht abgeschlossen. Versuch es erneut.'
+  google_title: 'Google-Anmeldung erforderlich'
+  google_body: 'Gehostete Helden gehören zu deinem Google-Konto. Melde dich ab und fahre mit Google fort, um diese Seite zu nutzen.'
+  unavailable_title: 'Der automatische Dienst antwortet nicht'
+  unavailable_body: 'Bitte nutze vorerst die 3D-Welt.'
+  unavailable_action: '3D-Welt öffnen'
+  connect_title: 'Verbinde deinen gehosteten Bot'
+  connect_body: 'Dein Bot spielt deine Helden für dich. Erlaube dieser Seite, seine Aktivitäten zu starten und zu stoppen.'
+  connect_custody: 'Das Konto deines Bots gehört gemeinsam deinem Google-Konto und AresRPG: Beide können signieren, und du kannst deine Helden jederzeit zurückholen.'
+  connect_fees: 'Jede Aktion ist eine Sui-Transaktion, bezahlt aus dem Guthaben des Bots. Aktivitäten laufen, bis du sie stoppst oder das Guthaben aufgebraucht ist.'
+  connect_stop: 'Diese Seite kann deinen Bot spielen lassen und pausieren und mit seinem Guthaben auf dem Markt handeln. Sie kann deine SUI nicht abheben.'
+  connect_action: 'Verbinden'
+  connect_busy: 'Verbinde…'
+  reading_heroes: 'Deine Helden werden gelesen…'
+  syncing: 'Dein Bot holt den Weltstand auf. Diese Seite aktualisiert sich von selbst.'
+  observe_failed_title: 'Dein Bot antwortet nicht'
+  observe_failed: 'Dein Bot ist nicht erreichbar. Lade diese Seite neu, um es erneut zu versuchen.'
+  empty_title: 'Dein Bot hat noch keine Helden'
+  empty_body: 'Erstelle einen Helden in der 3D-Welt, klicke dann mit rechts auf sein Porträt und wähle An Agenten übergeben. Er erscheint hier, sobald er angekommen ist.'
+  empty_action: '3D-Welt öffnen'
+  heroes_title: 'Deine Helden'
+  hero_level: 'Stufe {level}'
+  hero_xp: 'Erfahrung'
+  status_free: 'Bereit'
+  status_activity: 'Bei einer Aktivität'
+  status_fight: 'Im Kampf'
+  status_dungeon: 'Im Dungeon'
+  activities_title: 'Aktivitäten'
+  activities_team: 'Jede Schaltfläche schickt alle freien Helden los. Helden in derselben Stadt ziehen als Team los.'
+  activities_hero: 'Diese Schaltflächen wirken nur auf {name}.'
+  activities_build: 'Im Modus Einfach wachsen Helden der Klasse {classe} außerdem von selbst: Eigenschaftspunkte gehen in {stat}, Zauberpunkte zuerst in {spell}, und sie tragen die beste Ausrüstung, die sie besitzen.'
+  activity_ready: 'Bereit: {names}'
+  activity_out: 'Unterwegs: {names}'
+  activity_other: 'Aktivität'
+  activity_train: 'Training'
+  activity_train_body: 'Kämpfe gegen Monster in der aktuellen Stadt jedes Helden für Erfahrung und Beute. Allein wählt ein Held einzelne Monster; Helden in derselben Stadt jagen als Team.'
+  activity_train_action: 'Training starten'
+  activity_gather: 'Sammeln'
+  activity_gather_body: 'Ernte und stelle in der Welt des Helden mit seinen Werkzeugen her und levele seine Berufe.'
+  activity_gather_action: 'Sammeln starten'
+  activity_raid: 'Raid'
+  activity_raid_body: 'Betritt den Dungeon der Stadt dieses Helden für seine seltenste Beute. Der Held verbraucht einen Schlüssel.'
+  activity_raid_body_basic: 'Schicke deine stärksten freien Helden, höchstens {size}, in den Dungeon {dungeon} für seine seltenste Beute. Jeder Held verbraucht einen Schlüssel.'
+  activity_raid_action: 'Raid starten'
+  blocker_command_pending: 'Warte auf die Antwort deines Bots…'
+  blocker_no_free_hero: 'Dafür ist gerade kein Held frei.'
+  blocker_hero_busy: '{names}: gerade im Kampf oder in einem Dungeon.'
+  blocker_hero_unknown: '{names}: Dein Bot liest diesen Helden noch ein. Versuch es gleich noch einmal.'
+  blocker_city_required: '{names}: nicht in einer Stadt. Bring den Helden zuerst in der 3D-Welt in eine Stadt.'
+  blocker_world_required: '{names}: in einer anderen Welt als dieser Dungeon.'
+  blocker_key_missing: '{names}: kein Schlüssel für diesen Dungeon.'
+  blocker_team_full: '{names}: Das Raid-Team ist schon voll.'
+  key_missing: 'Es fehlt: {count} × {item}'
+  key_find: '{item} auf dem Markt suchen'
+  key_unsold: 'Gerade verkauft niemand {item}.'
+  raid_short_title: 'Nicht genug Schlüssel für das ganze Team'
+  raid_short_body: 'Deine Schlüssel reichen nur für {count}. Den Dungeon betreten nur: {names}. Wenn du mehr Helden schicken willst, finde oder kaufe die fehlenden Schlüssel.'
+  raid_short_action: 'Raid mit {count} starten'
+  cancel: 'Abbrechen'
+  close: 'Schließen'
+  command_uncertain: 'Die Antwort deines Bots konnte nicht bestätigt werden. Diese Seite prüft selbst erneut; nichts wird doppelt gesendet.'
+  command_refused: '{names}: {reason}'
+  positions_title: 'Positionen'
+  positions_empty: 'Starte eine Aktivität, um ihren Fortschritt hier zu verfolgen.'
+  position_running: 'Läuft'
+  position_waiting: 'Dein Bot wartet: Er kann diese Aktivität gerade nicht fortsetzen.'
+  position_stopping: 'Wird gestoppt…'
+  position_finished: 'Beendet'
+  position_ended_issue: 'Dein Bot hat diese Aktivität gestoppt. Prüfe sein Guthaben und deinen Helden und starte sie erneut.'
+  position_hp: 'Leben'
+  position_xp: 'Gewonnene Erfahrung'
+  position_levels: '+{count} Stufen'
+  position_job_xp: 'Berufserfahrung'
+  position_fights: 'Kämpfe'
+  position_dungeon: '{dungeon} · Raum {room}'
+  position_team: 'Kämpft mit {names}'
+  position_loot: 'Gefundene Gegenstände'
+  position_no_loot: 'Noch keine Gegenstände gefunden.'
+  position_stop: 'Stoppen'
+  position_dismiss: 'Entfernen'
+  haul_title: 'Mitgebracht'
+  haul_spent: 'Verbrauchte SUI: {amount}'
+  haul_spent_hint: 'SUI, die das Wallet deines Bots verlassen haben, während deine Helden unterwegs waren: Netzwerkgebühren, Käufe und ausgehende Überträge.'
+  found_toast: 'Dein Held hat gefunden'
+  hero_action_sent: 'An deinen Bot gesendet.'
+  detail_title: '{name} im Detail'
+  detail_locked: 'Eigenschaften und Zauber lassen sich ändern, solange dieser Held nicht kämpft und dein Bot keine andere Anfrage offen hat.'
+  detail_stats: 'Eigenschaften'
+  detail_spells: 'Zauber'
+  detail_equipment: 'Ausrüstung'
+  equipment_empty: 'Keine Ausrüstung angelegt.'
+  market_account: 'Dieser Markt handelt als dein Bot: Er zahlt aus dem Guthaben des Bots, und deine Käufe landen in der Tasche, die deine Helden teilen. Ein Angebot lässt sich auf dieser Seite noch nicht zurückziehen, und Verkaufserlöse bleiben im Kiosk des Bots.'
+  market_queued: 'Dein Bot hat deinen Auftrag für {item}. Er signiert ihn nach der laufenden Aktion.'
+  market_bought: 'Gekauft: {amount} × {item}. Es liegt in der Tasche deiner Helden.'
+  market_listed: 'Zum Verkauf angeboten: {amount} × {item}.'
+  error_unknown: 'Etwas ist schiefgelaufen. Versuch es erneut.'
+  error_expired: 'Die Verbindung zu deinem Bot ist abgelaufen. Verbinde dich erneut.'
+  error_google_required: 'Fahre mit Google fort, um einen gehosteten Bot zu verbinden.'
+  error_consent_failed: 'Die Verbindung wurde nicht bestätigt. Versuch es erneut.'
+  error_owner_mismatch: 'Dieser Bot gehört zu einem anderen Konto. Melde dich mit dem richtigen Google-Konto an.'
+  error_storage_unavailable: 'Dieser Browser blockiert den Speicher, den die Verbindung braucht. Erlaube Websitedaten und versuch es erneut.'
+  error_bot_busy_or_paused: 'Dein Bot ist pausiert oder beendet noch die letzte Aktion dieses Helden. Versuch es gleich noch einmal.'
+  error_run_limit_reached: 'Dein Bot spielt bereits so viele Helden, wie er kann. Stoppe einen und versuch es erneut.'
+  error_needs_resync: 'Dein Bot holte noch auf. Versuch es in ein paar Sekunden erneut.'
+  error_start_unconfirmed: 'Nichts läuft: Dein Bot hat die Aktivität nicht übernommen. Du kannst sie erneut starten.'
+  error_unavailable: 'Dein Bot antwortet nicht. Versuch es gleich noch einmal.'
+  error_invalid_token: 'Die Verbindung zu deinem Bot ist abgelaufen. Verbinde dich erneut.'
+  error_insufficient_scope: 'Diese Verbindung erlaubt das nicht. Verbinde dich erneut, um es zu erlauben.'
+  error_behavior_run_not_found: 'Für diesen Helden läuft nichts mehr.'
+  error_insufficient_character_points: 'Nicht genug Punkte übrig.'
+  error_spell_rank_capped: 'Dieser Zauber hat bereits seine höchste Stufe.'
+  error_tool_failed: 'Dein Bot konnte das nicht tun. Versuch es später erneut.'
+  error_insufficient_funds: 'Dein Bot hat dafür nicht genug SUI. Lade SUI auf deinen Bot und versuch es dann erneut.'
+  error_listing_changed_or_ineligible: 'Dieses Angebot hat sich geändert oder ist weg. Prüfe den aktuellen Preis und versuch es dann erneut.'
+  error_character_not_available: 'Gerade ist keiner deiner Helden frei, um das zu tragen: Sie sind im Kampf. Versuch es gleich noch einmal.'
+  error_sale_source_changed_or_unavailable: 'Dieser Gegenstand hat sich geändert, oder kein einzelner Stapel davon ist groß genug. Wähle ihn erneut aus.'
+  error_order_failed: 'Der Auftrag ging nicht durch. Prüfe Guthaben und Tasche deines Bots, bevor du es erneut versuchst.'
+  error_order_unconfirmed: 'Dieser Auftrag ließ sich nicht bestätigen, und die Tasche hat sich nicht geändert. Prüfe das Guthaben deines Bots, bevor du es erneut versuchst.'
+  disconnect_action: 'Diese Seite trennen'
+  disconnect_body: 'Entzieht dieser Seite den Zugriff auf deinen Bot. Von ihr gestartete Aktivitäten nehmen keine neuen Aktionen mehr an. Abmelden bewirkt dasselbe.'
+  disconnect_failed: 'Dein Bot hat nicht bestätigt. Diese Seite hat weiterhin Zugriff. Versuche es erneut.'

@@ -46,7 +46,7 @@
 
 .fxl__txt {
   min-width: 0;
-  color: var(--color-muted, #6b7280);
+  color: var(--color-muted, var(--aui-faint));
   font-family: var(--font-mono, monospace);
   font-size: 0.7rem;
   letter-spacing: 0.05em;

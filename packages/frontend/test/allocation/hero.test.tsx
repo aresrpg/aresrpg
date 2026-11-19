@@ -12,11 +12,10 @@ const render = (session: AuthSession | null) =>
   renderToStaticMarkup(
     <Hero
       state={{ ...initial_allocation(), session }}
-      view={allocation_view(null, 0)}
+      view={allocation_view(null)}
       runtime={create_allocation_runtime()}
       text={(key) => key}
       locale="en"
-      open
       sale={null}
       now={0}
       kares={{} as never}

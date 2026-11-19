@@ -16,19 +16,19 @@
   gap: 10px;
 }
 .tutorial-tip > header > span {
-  color: #b0a58d;
+  color: var(--aui-muted);
   font-size: 11px;
 }
 .tutorial-tip h2 {
   margin: 6px 0;
   font-size: 17px;
-  color: #ead7af;
+  color: var(--aui-brass-hi);
 }
 .tutorial-tip p {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: #c4c8ce;
+  color: var(--aui-soft);
 }
 .tutorial-tip > footer {
   margin-top: 14px;
@@ -48,10 +48,10 @@
 }
 .tutorial-focus {
   position: fixed;
-  border: 1px solid #e8b65499;
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 60%, transparent);
   border-radius: 6px;
   pointer-events: none;
-  box-shadow: 0 0 12px #e8b65420;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--aui-brass) 12.5%, transparent);
 }
 @media (pointer: coarse) {
   .tutorial-tip .aui-button {

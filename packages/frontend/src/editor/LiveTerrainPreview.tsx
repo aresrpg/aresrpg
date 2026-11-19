@@ -55,7 +55,7 @@ export const LiveTerrainPreview = ({ terrain }: Readonly<{ terrain: JsonValue }>
     <div className="relative size-full">
       <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
       <WorldLoading source={world_api} quality={settings.quality} render_distance={settings.render_distance} />
-      <span className="pointer-events-none absolute bottom-3 left-3 text-[7px] tracking-[0.14em] text-[#6b7280] uppercase">
+      <span className="pointer-events-none absolute bottom-3 left-3 text-[7px] tracking-[0.14em] text-faint uppercase">
         {status.backend} · {status.state} · drag to pan · right-drag to orbit · wheel to zoom
       </span>
     </div>

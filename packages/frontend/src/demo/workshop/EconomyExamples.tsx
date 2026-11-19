@@ -13,8 +13,7 @@ import { AirdropPageView } from '../../airdrop/AirdropPage.tsx'
 import MasteryPage from '../../mastery/MasteryPage.tsx'
 import { MasterySourceContext, type MasterySource } from '../../mastery/MasterySource.tsx'
 import { initial_mastery_state } from '../../modules/mastery.ts'
-import { adventure_character } from '../../adventure/character.ts'
-import { adventure_character_row } from '../../adventure/projection.ts'
+import { sample_character, sample_character_row } from '../sample.ts'
 import { content_catalog } from '../../content/catalog.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { rolled_item_types } from '../../modules/claims.ts'
@@ -57,7 +56,7 @@ export const MasteryExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         enabled: true,
       })),
     },
-    characters: [{ ...adventure_character_row(adventure_character()), custody: 'kiosk' }],
+    characters: [{ ...sample_character_row(sample_character()), custody: 'kiosk' }],
     current_epoch: '1',
     connected: true,
     balance: 100n * KARES_UNIT,

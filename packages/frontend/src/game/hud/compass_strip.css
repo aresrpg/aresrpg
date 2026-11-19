@@ -59,9 +59,9 @@
 }
 
 .gw-compass {
-  background: linear-gradient(180deg, rgba(5, 18, 40, 0.82), rgba(6, 12, 27, 0.64));
+  background: linear-gradient(180deg, rgba(5, 18, 40, 0.82), color-mix(in srgb, var(--aui-void) 64%, transparent));
   box-shadow:
-    inset 0 0 0 1px rgba(65, 126, 191, 0.3),
+    inset 0 0 0 1px color-mix(in srgb, var(--aui-blue) 30%, transparent),
     inset 0 0 30px -7px rgba(25, 79, 145, 0.55);
 }
 
@@ -74,21 +74,21 @@
   0%,
   100% {
     box-shadow:
-      inset 0 0 0 1px rgba(200, 150, 60, 0.25),
-      inset 0 0 22px -6px rgba(200, 150, 60, 0.45);
+      inset 0 0 0 1px color-mix(in srgb, var(--aui-brass) 25%, transparent),
+      inset 0 0 22px -6px color-mix(in srgb, var(--aui-brass) 45%, transparent);
   }
   50% {
     box-shadow:
-      inset 0 0 0 1px rgba(200, 150, 60, 0.55),
-      inset 0 0 34px -4px rgba(200, 150, 60, 0.65);
+      inset 0 0 0 1px color-mix(in srgb, var(--aui-brass) 55%, transparent),
+      inset 0 0 34px -4px color-mix(in srgb, var(--aui-brass) 65%, transparent);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .gw-compass--searchable {
     animation: none;
     box-shadow:
-      inset 0 0 0 1px rgba(200, 150, 60, 0.4),
-      inset 0 0 26px -5px rgba(200, 150, 60, 0.5);
+      inset 0 0 0 1px color-mix(in srgb, var(--aui-brass) 40%, transparent),
+      inset 0 0 26px -5px color-mix(in srgb, var(--aui-brass) 50%, transparent);
   }
 }
 
@@ -103,7 +103,7 @@
   right: 0;
   top: 27px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 150, 60, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--aui-brass) 50%, transparent), transparent);
 }
 /* a cardinal = label over its own tick, sliding along the ruler with the camera (170ms ≈ the
    ~20Hz pose cadence, so discrete updates read as continuous motion) */
@@ -125,7 +125,7 @@
   content: '';
   width: 1px;
   height: 7px;
-  background: rgba(200, 150, 60, 0.35);
+  background: color-mix(in srgb, var(--aui-brass) 35%, transparent);
 }
 .gw-compass__card--major {
   top: 4px;
@@ -135,7 +135,7 @@
 }
 .gw-compass__card--major::after {
   height: 10px;
-  background: rgba(200, 150, 60, 0.6);
+  background: color-mix(in srgb, var(--aui-brass) 60%, transparent);
 }
 
 /* center forward indicator — gold caret + fading stem */
@@ -155,7 +155,7 @@
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 7px solid var(--color-gold);
-  filter: drop-shadow(0 0 6px rgba(200, 150, 60, 0.6));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--aui-brass) 60%, transparent));
 }
 .gw-compass__stem {
   width: 1px;
@@ -192,7 +192,7 @@
 }
 .gw-compass__pip--resource .gw-compass__pip-dot {
   background: var(--color-cyan);
-  box-shadow: 0 0 8px rgba(74, 158, 255, 0.8);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--aui-blue) 80%, transparent);
 }
 .gw-compass__pip-count {
   font-size: 7px;
@@ -229,7 +229,7 @@
   flex-direction: column;
   align-items: center;
   color: var(--color-gold-light);
-  filter: drop-shadow(0 0 6px rgba(200, 150, 60, 0.62));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--aui-brass) 62%, transparent));
   transition: left 0.17s linear;
 }
 
@@ -251,7 +251,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 8px;
-  color: #d8b66a;
+  color: var(--aui-brass);
   font-variant-numeric: tabular-nums;
 }
 
@@ -280,13 +280,13 @@
   font-variant-numeric: tabular-nums;
 }
 .gw-compass__edge--undiscovered .gw-compass__edge-tick {
-  background: rgba(200, 150, 60, 0.6);
+  background: color-mix(in srgb, var(--aui-brass) 60%, transparent);
 }
 .gw-compass__edge--undiscovered .gw-compass__edge-label {
   color: var(--color-gold-light);
 }
 .gw-compass__edge--discovered .gw-compass__edge-tick {
-  background: rgba(107, 114, 128, 0.45);
+  background: color-mix(in srgb, var(--aui-faint) 45%, transparent);
 }
 .gw-compass__edge--discovered .gw-compass__edge-label {
   color: var(--color-muted);
@@ -299,7 +299,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 3px 16px 6px;
-  border-top: 1px solid rgba(200, 150, 60, 0.15);
+  border-top: 1px solid color-mix(in srgb, var(--aui-brass) 15%, transparent);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.15em;
@@ -325,10 +325,10 @@
   height: 2px;
   background: linear-gradient(
     90deg,
-    rgba(200, 150, 60, 0.28) 0,
-    rgba(200, 150, 60, 0.28) var(--gw-tod-split, 75%),
-    rgba(74, 158, 255, 0.28) var(--gw-tod-split, 75%),
-    rgba(74, 158, 255, 0.28) 100%
+    color-mix(in srgb, var(--aui-brass) 28%, transparent) 0,
+    color-mix(in srgb, var(--aui-brass) 28%, transparent) var(--gw-tod-split, 75%),
+    color-mix(in srgb, var(--aui-blue) 28%, transparent) var(--gw-tod-split, 75%),
+    color-mix(in srgb, var(--aui-blue) 28%, transparent) 100%
   );
 }
 .gw-compass__tod-mark {
@@ -338,12 +338,12 @@
   height: 8px;
   transform: translate(-50%, -50%);
   background: var(--color-gold-light);
-  box-shadow: 0 0 7px 1px rgba(200, 150, 60, 0.85);
+  box-shadow: 0 0 7px 1px color-mix(in srgb, var(--aui-brass) 85%, transparent);
   transition: left 0.9s linear;
 }
 .gw-compass__tod--night .gw-compass__tod-mark {
   background: #cfe0ff;
-  box-shadow: 0 0 7px 1px rgba(74, 158, 255, 0.7);
+  box-shadow: 0 0 7px 1px color-mix(in srgb, var(--aui-blue) 70%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
   .gw-compass__tod-mark {
@@ -360,8 +360,8 @@
   align-items: center;
   gap: 4px;
   transform: translateX(-50%);
-  color: #ffe49b;
-  filter: drop-shadow(0 0 7px #eab94a);
+  color: var(--aui-brass-hi);
+  filter: drop-shadow(0 0 7px var(--aui-brass));
   white-space: nowrap;
   font-size: 10px;
 }

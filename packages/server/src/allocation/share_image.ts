@@ -20,7 +20,6 @@ export const render_card = async (
     cap: string
     before: string
     buy_up_to: string
-    review?: string
   }>
 ): Promise<ArrayBuffer> => {
   if (!GlobalFonts.has('Allocation'))
@@ -71,7 +70,7 @@ export const render_card = async (
   context.fillStyle = '#ffffff'
   fit(context, card.title, 322, 257, 58, 670)
   context.fillStyle = accent
-  fit(context, card.amount || card.review || card.title, 208, 410, 48, 740)
+  fit(context, card.amount || card.title, 208, 410, 48, 740)
   context.fillStyle = '#ffffffb3'
   fit(context, card.amount ? card.before : 'aresrpg.world/allocation', 208, 450, 23, 740)
   if (card.cap) {

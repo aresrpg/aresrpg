@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 COPY package.json bun.lock ./
 COPY patches ./patches
 COPY packages/bot/package.json packages/bot/
+COPY packages/telegram/package.json packages/telegram/
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/

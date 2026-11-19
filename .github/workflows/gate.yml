@@ -105,6 +105,7 @@ jobs:
       - name: verify
         env:
           TEST_BOT_REDIS_URL: redis://127.0.0.1:16379/15
+          TEST_TELEGRAM_REDIS_URL: redis://127.0.0.1:16379/14
         run: |
           if [ "${{ matrix.check }}" = test ]; then
             fixture=$(mktemp -d)

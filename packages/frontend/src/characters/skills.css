@@ -33,7 +33,7 @@
   font: 700 10px/1 var(--aui-font);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #8d929c;
+  color: var(--aui-faint);
 }
 .chr-profession-group > h4::after {
   content: '';
@@ -55,7 +55,7 @@
   border: 0;
   background: none;
   box-shadow: none;
-  color: #9ea6b1;
+  color: var(--aui-muted);
 }
 .chr-profession .aui-job-emblem svg {
   width: 17px;
@@ -98,7 +98,7 @@
   background: var(--aui-orange);
 }
 .chr-profession > small {
-  color: #8d929c;
+  color: var(--aui-faint);
   font-size: 10.5px;
   text-align: right;
   white-space: nowrap;

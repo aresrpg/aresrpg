@@ -5,19 +5,26 @@
 @import './components/app_layout.css';
 @source '../../mobile/src/**/*.tsx';
 
+/* One palette: every colour name below is an alias of a `--aui-*` token owned by packages/ui/src/base.css. */
 @theme {
-  --color-bg: #0a0a0f;
-  --color-surface-low: #0f0f16;
-  --color-surface: #12121a;
-  --color-surface-high: #171720;
-  --color-surface-raised: #1b1b25;
-  --color-border: #1e1e2e;
-  --color-gold: #c8963c;
-  --color-gold-light: #f5d0a9;
-  --color-gold-dark: #8b6914;
-  --color-cyan: #4a9eff;
-  --color-text: #e8e4dc;
-  --color-muted: #899097;
+  --color-void: var(--aui-void);
+  --color-bg: var(--aui-bg);
+  --color-surface-low: var(--aui-sunk);
+  --color-surface: var(--aui-surface);
+  --color-surface-high: var(--aui-raised);
+  --color-surface-raised: var(--aui-lifted);
+  --color-border: var(--aui-high);
+  --color-high: var(--aui-high);
+  --color-peak: var(--aui-peak);
+  --color-steel: var(--aui-steel);
+  --color-faint: var(--aui-faint);
+  --color-muted: var(--aui-muted);
+  --color-soft: var(--aui-soft);
+  --color-text: var(--aui-ink);
+  --color-gold: var(--aui-brass);
+  --color-gold-light: var(--aui-brass-hi);
+  --color-gold-dark: var(--aui-brass-lo);
+  --color-cyan: var(--aui-blue);
 }
 
 :root {
@@ -84,11 +91,15 @@
 
 .btn-gold {
   border: 0;
-  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
-  color: #0a0a0f;
+  background: linear-gradient(
+    180deg,
+    var(--aui-orange),
+    color-mix(in srgb, var(--aui-orange) 82%, var(--aui-orange-lo))
+  );
+  color: var(--aui-orange-ink);
   box-shadow:
-    0 0 20px rgba(200, 150, 60, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 0 18px color-mix(in srgb, var(--aui-orange) 22%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
   font-weight: 600;
   text-transform: uppercase;
   transition: all 0.3s ease;
@@ -96,9 +107,8 @@
 
 .btn-gold:hover {
   box-shadow:
-    0 0 30px rgba(200, 150, 60, 0.4),
-    0 0 60px rgba(200, 150, 60, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 0 28px color-mix(in srgb, var(--aui-orange) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transform: translateY(-1px);
 }
 
@@ -109,7 +119,7 @@
 }
 
 .btn-outline {
-  border: 1px solid rgba(200, 150, 60, 0.3);
+  border: 1px solid var(--aui-line-strong);
   background: transparent;
   color: var(--color-gold);
   text-transform: uppercase;
@@ -117,9 +127,8 @@
 }
 
 .btn-outline:hover {
-  border-color: rgba(200, 150, 60, 0.6);
-  background: rgba(200, 150, 60, 0.08);
-  box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
+  border-color: var(--aui-brass);
+  background: color-mix(in srgb, var(--aui-brass) 8%, transparent);
 }
 
 /* Native modal ownership also owns scrolling, including terminal and nested dialogs. */

@@ -4,6 +4,7 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import type { Bot, BotConfig } from '../../src/model.ts'
 import { has_pending_work, type ControlStore } from '../../src/store.ts'
+import { released_records } from '../../src/store_projection.ts'
 
 /** Disposable test store with rollback and serialization, never a production fallback. */
 export const memory_store = (): ControlStore => {
@@ -45,6 +46,9 @@ export const memory_store = (): ControlStore => {
             next.set(key, structuredClone(item))
           },
         })
+        // Same release rule as the production store: unreferenced execution records do not survive.
+        for (const key of keys.flatMap((key) => released_records(key, records.get(key), next.get(key))))
+          next.delete(key)
         const added = keys.filter(
           (key) => has_pending_work(key, next.get(key)) && !has_pending_work(key, records.get(key))
         )

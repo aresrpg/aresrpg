@@ -16,13 +16,11 @@ import { MarketSourceContext } from '../../marketplace/MarketSource.tsx'
 import { MarketplacePageView } from '../../marketplace/MarketplacePage.tsx'
 import { item_listing } from '../../marketplace/useMarketSell.ts'
 import { content_catalog } from '../../content/catalog.ts'
-import { adventure_character } from '../../adventure/character.ts'
-import { adventure_character_row, adventure_inventory } from '../../adventure/projection.ts'
+import { sample_character, sample_character_row, sample_inventory } from '../sample.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { useAppStore } from '../../store.ts'
 
 import { WorkshopSurface } from './shared.tsx'
-import '../../marketplace/marketplace.css'
 
 const initial_preview = (): MarketplaceState => ({
   ...initial_marketplace_state(),
@@ -90,7 +88,7 @@ const preview_offers = (market: MarketplaceState): readonly ListingRow[] => {
   if (market.observation?.kind !== 'offers') return []
   const item = content_catalog.item(market.observation.item_type)?.item
   if (!item) return []
-  const row = adventure_inventory([item])[0]!
+  const row = sample_inventory([item])[0]!
   return (item_is_stackable(item.category) ? [1, 10, 100] : [1, 1, 1]).map((amount, index) => ({
     ...item_listing(row, `0x${'be'.repeat(32)}`, BigInt((index + 1) * 1250000000)),
     id: `offer-${index}`,
@@ -102,8 +100,8 @@ const preview_offers = (market: MarketplaceState): readonly ListingRow[] => {
 export const MarketplaceExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [market, dispatch] = useReducer(preview_reduce, undefined, initial_preview)
   const locale = useAppStore((state) => state.locale)
-  const character = useMemo(() => adventure_character_row(adventure_character()), [])
-  const inventory = useMemo(() => adventure_inventory(content_catalog.items.slice(0, 48)), [])
+  const character = useMemo(() => sample_character_row(sample_character()), [])
+  const inventory = useMemo(() => sample_inventory(content_catalog.items.slice(0, 48)), [])
   const text = copy_text(copy.marketplace_page)
   const source = {
     market: { ...market, listings: preview_offers(market) },

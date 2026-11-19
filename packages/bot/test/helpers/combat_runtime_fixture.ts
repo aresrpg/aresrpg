@@ -6,11 +6,11 @@ import type { CharacterRow, FightStateRow } from '@aresrpg/protocol'
 import { create_fixture } from '../../../fight/test/helpers.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../../src/control.ts'
 import { run_tick, run_observation } from '../../src/run_runtime.ts'
-import type { CombatRun } from '../../src/combat_control.ts'
+import type { BehaviorRun } from '../../src/behavior_script.ts'
+import { empty_behavior_memory } from '../../src/behavior_tree.ts'
 import type { CombatProfile } from '../../src/combat_profile.ts'
 import { gameplay_json, type GameplayContext } from '../../src/gameplay.ts'
 import type { Grant } from '../../src/model.ts'
-import { create_envelope_cipher } from '../../src/envelope_cipher.ts'
 
 import { fixture_bot, fixture_config, memory_store, put } from './control_fixture.ts'
 
@@ -109,26 +109,43 @@ export const combat_fixture = async (checkpoint = placement()) => {
   const lease = await control.acquire(bot, 'actor', 10_000)
   const key = lane_key_for(bot)
   await control.observed(key, 'actor', lease.fence, true)
-  const run: CombatRun = {
+  // The fixture hero runs a tree that plays its fight, then completes.
+  const run: BehaviorRun = {
     id: 'fixture-run',
     bot_id: bot.id,
     grant_id: grant.id,
     lane_key: key,
+    character_id,
     fingerprint: 'fixture',
-    fight: fight_id,
-    profiles: [{ character_id, revision: 1, profile }],
+    script: {
+      version: '1',
+      objective: { title: 'Fixture fight' },
+      tree: {
+        type: 'sequence',
+        children: [
+          { type: 'action', action: { type: 'combat', profiles: [{ character_id, profile }] } },
+          { type: 'complete' },
+        ],
+      },
+    },
+    revision: 1,
+    execution_fence: lease.fence,
+    memory: empty_behavior_memory(),
+    pending_node: null,
+    activation: null,
+    consumed_command_id: null,
     status: 'active',
     actions_started: 0,
     last_command_id: null,
     created_at: now,
   }
-  await put(store, 'combat:fixture-run', run)
-  await put(store, key, { ...(await store.read<Lane>(key))!, combat_run_id: run.id })
+  await put(store, 'behavior:fixture-run', run)
+  await put(store, key, { ...(await store.read<Lane>(key))!, runs: { [character_id]: run.id } })
   const context: GameplayContext = {
     address: bot.address,
     now,
     freshness_ms: config.observation_freshness_ms,
-    command: { ...run_observation('combat', run), observation_revision: 1 },
+    command: { ...run_observation(run), observation_revision: 1 },
     snapshot: {
       characters: [character()],
       fights: { [fight_id]: row_of(checkpoint) },
@@ -145,10 +162,10 @@ export const combat_fixture = async (checkpoint = placement()) => {
       events: [],
     },
   }
-  const get_run = async () => (await store.read<CombatRun>('combat:fixture-run'))!
+  const get_run = async () => (await store.read<BehaviorRun>('behavior:fixture-run'))!
   const get_command = async () => (await store.read<Command>(`command:${(await get_run()).last_command_id}`))!
-  const tick = async (current = context, requested?: CombatRun) =>
-    run_tick('combat', {
+  const tick = async (current = context, requested?: BehaviorRun) =>
+    run_tick({
       store,
       config,
       run: requested ?? (await get_run()),
@@ -170,6 +187,5 @@ export const combat_fixture = async (checkpoint = placement()) => {
     get_run,
     get_command,
     tick,
-    cipher: create_envelope_cipher(new Uint8Array(32).fill(7), 'fixture'),
   }
 }

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useState } from 'react'
 import { WalletCards } from 'lucide-react'
 
-import { MainMenu } from '../menu/MainMenu.tsx'
-import { demo_played, forget_adventure_choice } from '../adventure/visit.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
 import { useAppStore } from '../store.ts'
@@ -38,23 +35,17 @@ export const Login = ({
   const auth_status = useAppStore(({ session }) => session.auth_status)
   const error = useAppStore(({ session }) => session.auth_error)
   const loading = auth_status === 'connecting'
-  const [played] = useState(demo_played)
 
   return (
-    <MainMenu copy={copy} first_visit={!gift && !played}>
-      <section data-player-login className="main-menu-login">
-        {gift && <p className="mb-4 text-sm">{login_lead(copy, gift)}</p>}
-        <div className="main-menu-actions">
+    <section className="absolute inset-0 z-[140] grid place-items-center bg-bg p-4" data-player-login>
+      <div className="aui-panel flex w-full max-w-sm flex-col gap-4 p-5">
+        <p className="text-sm leading-relaxed text-soft">{login_lead(copy, gift)}</p>
+        <div className="flex flex-col gap-3">
           <GoogleLoginButton copy={copy} ready={auth_ready} loading={loading} login={login_google} />
           <div className="contents" hidden={gift}>
             {import.meta.env.DEV && auth_ready && (
               <>
-                <button
-                  className="main-menu-wallet"
-                  type="button"
-                  disabled={loading}
-                  onClick={() => set_show_wallets(true)}
-                >
+                <button className="aui-button" type="button" disabled={loading} onClick={() => set_show_wallets(true)}>
                   <WalletCards size={17} aria-hidden="true" />
                   <span>{copy.connect_wallet}</span>
                 </button>
@@ -78,17 +69,14 @@ export const Login = ({
                 )}
               </>
             )}
-            {played && !gift && (
-              <a className="main-menu-replay" href="/play-demo" onClick={forget_adventure_choice}>
-                {copy.replay_demo}
-              </a>
-            )}
           </div>
           {error && (
-            <div className="text-center text-[10px] leading-6 text-[#ff7d7d]">{player_error_text(copy, error)}</div>
+            <p className="text-center text-xs leading-relaxed text-[#ff7d7d]" role="alert">
+              {player_error_text(copy, error)}
+            </p>
           )}
         </div>
-      </section>
-    </MainMenu>
+      </div>
+    </section>
   )
 }

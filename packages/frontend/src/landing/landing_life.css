@@ -1,0 +1,446 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+/* Life: rain drawn drop by drop (landing_rain.ts), a low mist, far lightning, drifting motes,
+   and a Yajin pacing the hero card. Everything moves only when the visitor allows motion. The Yajin's hood and
+   bone colours are character artwork, like the interface hues. */
+.landing {
+  --yj-hood: #2f4bd0;
+  --yj-hood-lo: #1c2f92;
+  --yj-bone: #efe6cf;
+  --yj-bone-lo: #bdb294;
+  --yj-ink: #0b0d14;
+}
+.landing .fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+.landing .fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* The drops take this colour. */
+  color: var(--aui-soft);
+  image-rendering: pixelated;
+}
+.landing .fx::before {
+  content: '';
+  position: absolute;
+  inset: 34% -20% auto;
+  height: 30%;
+  opacity: 0.5;
+  background:
+    radial-gradient(60% 100% at 30% 50%, #ffffff1a, transparent 70%),
+    radial-gradient(50% 90% at 78% 60%, #ffffff0a, transparent 70%);
+}
+.landing .fx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(90% 60% at 72% 0%, var(--aui-blue), transparent 70%);
+  mix-blend-mode: screen;
+}
+.landing .mote {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 3px;
+  height: 3px;
+  background: var(--c, var(--aui-orange));
+  box-shadow: 0 0 8px var(--c, var(--aui-orange));
+  opacity: 0.55;
+}
+.landing .mote[data-cool] {
+  --c: var(--aui-success);
+}
+.landing .yajin {
+  position: absolute;
+  z-index: 3;
+  bottom: calc(100% - 1px);
+  left: 6%;
+  width: 36px;
+  height: 48px;
+  pointer-events: none;
+}
+.landing .yajin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 0 #0000008c);
+}
+.landing .yajin [data-c='hood'] {
+  fill: var(--yj-hood);
+}
+.landing .yajin [data-c='hood-lo'] {
+  fill: var(--yj-hood-lo);
+}
+.landing .yajin [data-c='bone'] {
+  fill: var(--yj-bone);
+}
+.landing .yajin [data-c='bone-lo'] {
+  fill: var(--yj-bone-lo);
+}
+.landing .yajin [data-c='ink'] {
+  fill: var(--yj-ink);
+}
+.landing .yajin [data-frame='stride'] {
+  opacity: 0;
+}
+@keyframes landing-mist {
+  0%,
+  100% {
+    transform: translateX(-4%);
+  }
+  50% {
+    transform: translateX(5%);
+  }
+}
+@keyframes landing-flash {
+  0%,
+  61%,
+  61.9%,
+  63.4%,
+  100% {
+    opacity: 0;
+  }
+  61.3% {
+    opacity: 0.22;
+  }
+  62.4% {
+    opacity: 0.1;
+  }
+  62.8% {
+    opacity: 0.3;
+  }
+}
+@keyframes landing-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(18px, -26px);
+    opacity: 0.7;
+  }
+}
+/* Twenty seconds: walk right, idle, turn, walk back, idle. */
+@keyframes landing-yajin-pace {
+  0% {
+    left: 6%;
+    transform: scaleX(1);
+  }
+  36%,
+  49.9% {
+    left: calc(94% - 36px);
+    transform: scaleX(1);
+  }
+  50% {
+    left: calc(94% - 36px);
+    transform: scaleX(-1);
+  }
+  86%,
+  99.9% {
+    left: 6%;
+    transform: scaleX(-1);
+  }
+  100% {
+    left: 6%;
+    transform: scaleX(1);
+  }
+}
+/* The two leg frames swap every 0.36s while walking and rest on the standing frame while idle. */
+@keyframes landing-yajin-stride {
+  0.0% {
+    opacity: 0;
+  }
+  1.8% {
+    opacity: 1;
+  }
+  3.6% {
+    opacity: 0;
+  }
+  5.4% {
+    opacity: 1;
+  }
+  7.2% {
+    opacity: 0;
+  }
+  9.0% {
+    opacity: 1;
+  }
+  10.8% {
+    opacity: 0;
+  }
+  12.6% {
+    opacity: 1;
+  }
+  14.4% {
+    opacity: 0;
+  }
+  16.2% {
+    opacity: 1;
+  }
+  18.0% {
+    opacity: 0;
+  }
+  19.8% {
+    opacity: 1;
+  }
+  21.6% {
+    opacity: 0;
+  }
+  23.4% {
+    opacity: 1;
+  }
+  25.2% {
+    opacity: 0;
+  }
+  27.0% {
+    opacity: 1;
+  }
+  28.8% {
+    opacity: 0;
+  }
+  30.6% {
+    opacity: 1;
+  }
+  32.4% {
+    opacity: 0;
+  }
+  34.2% {
+    opacity: 1;
+  }
+  36.0% {
+    opacity: 0;
+  }
+  50.0% {
+    opacity: 0;
+  }
+  51.8% {
+    opacity: 1;
+  }
+  53.6% {
+    opacity: 0;
+  }
+  55.4% {
+    opacity: 1;
+  }
+  57.2% {
+    opacity: 0;
+  }
+  59.0% {
+    opacity: 1;
+  }
+  60.8% {
+    opacity: 0;
+  }
+  62.6% {
+    opacity: 1;
+  }
+  64.4% {
+    opacity: 0;
+  }
+  66.2% {
+    opacity: 1;
+  }
+  68.0% {
+    opacity: 0;
+  }
+  69.8% {
+    opacity: 1;
+  }
+  71.6% {
+    opacity: 0;
+  }
+  73.4% {
+    opacity: 1;
+  }
+  75.2% {
+    opacity: 0;
+  }
+  77.0% {
+    opacity: 1;
+  }
+  78.8% {
+    opacity: 0;
+  }
+  80.6% {
+    opacity: 1;
+  }
+  82.4% {
+    opacity: 0;
+  }
+  84.2% {
+    opacity: 1;
+  }
+  86.0% {
+    opacity: 0;
+  }
+}
+@keyframes landing-yajin-stand {
+  0.0% {
+    opacity: 1;
+  }
+  1.8% {
+    opacity: 0;
+  }
+  3.6% {
+    opacity: 1;
+  }
+  5.4% {
+    opacity: 0;
+  }
+  7.2% {
+    opacity: 1;
+  }
+  9.0% {
+    opacity: 0;
+  }
+  10.8% {
+    opacity: 1;
+  }
+  12.6% {
+    opacity: 0;
+  }
+  14.4% {
+    opacity: 1;
+  }
+  16.2% {
+    opacity: 0;
+  }
+  18.0% {
+    opacity: 1;
+  }
+  19.8% {
+    opacity: 0;
+  }
+  21.6% {
+    opacity: 1;
+  }
+  23.4% {
+    opacity: 0;
+  }
+  25.2% {
+    opacity: 1;
+  }
+  27.0% {
+    opacity: 0;
+  }
+  28.8% {
+    opacity: 1;
+  }
+  30.6% {
+    opacity: 0;
+  }
+  32.4% {
+    opacity: 1;
+  }
+  34.2% {
+    opacity: 0;
+  }
+  36.0% {
+    opacity: 1;
+  }
+  50.0% {
+    opacity: 1;
+  }
+  51.8% {
+    opacity: 0;
+  }
+  53.6% {
+    opacity: 1;
+  }
+  55.4% {
+    opacity: 0;
+  }
+  57.2% {
+    opacity: 1;
+  }
+  59.0% {
+    opacity: 0;
+  }
+  60.8% {
+    opacity: 1;
+  }
+  62.6% {
+    opacity: 0;
+  }
+  64.4% {
+    opacity: 1;
+  }
+  66.2% {
+    opacity: 0;
+  }
+  68.0% {
+    opacity: 1;
+  }
+  69.8% {
+    opacity: 0;
+  }
+  71.6% {
+    opacity: 1;
+  }
+  73.4% {
+    opacity: 0;
+  }
+  75.2% {
+    opacity: 1;
+  }
+  77.0% {
+    opacity: 0;
+  }
+  78.8% {
+    opacity: 1;
+  }
+  80.6% {
+    opacity: 0;
+  }
+  82.4% {
+    opacity: 1;
+  }
+  84.2% {
+    opacity: 0;
+  }
+  86.0% {
+    opacity: 1;
+  }
+}
+@keyframes landing-yajin-breathe {
+  0%,
+  49% {
+    transform: translateY(0);
+  }
+  50%,
+  100% {
+    transform: translateY(1px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing .fx::before {
+    animation: landing-mist 31s ease-in-out infinite;
+  }
+  .landing .fx::after {
+    animation: landing-flash 23s linear infinite;
+  }
+  .landing .mote {
+    animation: landing-drift var(--d) ease-in-out var(--dl) infinite;
+  }
+  .landing .yajin {
+    animation: landing-yajin-pace 20s linear infinite;
+  }
+  .landing .yajin [data-frame='stride'] {
+    animation: landing-yajin-stride 20s steps(1) infinite;
+  }
+  .landing .yajin [data-frame='stand'] {
+    animation: landing-yajin-stand 20s steps(1) infinite;
+  }
+  .landing .yajin [data-frame='body'] {
+    animation: landing-yajin-breathe 1.4s steps(1) infinite;
+  }
+}

@@ -26,7 +26,12 @@ export const LanguageCard = ({
   return (
     <>
       {compact ? (
-        <IconButton label={title} icon={<Languages />} onClick={() => set_open(true)} />
+        <IconButton
+          className="aui-icon-button--small"
+          label={title}
+          icon={<Languages size={17} />}
+          onClick={() => set_open(true)}
+        />
       ) : (
         <Button className="language-trigger" aria-label={title} onClick={() => set_open(true)}>
           <span className="aui-language-badge" aria-hidden="true">

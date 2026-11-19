@@ -15,8 +15,6 @@ import { dispatch_app, useAppStore } from '../store.ts'
 
 import { displayed_character } from './observation.ts'
 import { AgentActivity } from './AgentActivity.tsx'
-import { AgentWalletBalance } from './AgentWalletCard.tsx'
-export { AgentWalletBalance } from './AgentWalletCard.tsx'
 import './spectator.css'
 
 export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
@@ -34,7 +32,6 @@ export const AgentSpectator = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         <AgentActivity copy={copy} />
         <aside className="world-social-dock agent-spectator-map">
           <div className="world-account">
-            <AgentWalletBalance copy={copy} session={session} />
             <WalletCard
               key={session.wallet?.address}
               copy={copy}

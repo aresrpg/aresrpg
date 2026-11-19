@@ -36,12 +36,12 @@ test('activation checkout contains every patch required by the locked install', 
   for (const patch of Object.values(manifest.patchedDependencies ?? {})) expect(files).toContain(patch)
 })
 
-const run_baseline_plan = (network, include_discord = true, include_bot = true) => {
+const run_baseline_plan = (network, missing = []) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-release-baseline-'))
   const output = join(directory, 'output')
   const plan = workflow.jobs['backend-plan'].steps.find(({ id }) => id === 'plan').run
-  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false; discord=false; bot=false
-server_digest=''; indexer_digest=''; discord_digest=''; bot_digest=''
+  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false; discord=false; bot=false; telegram=false
+server_digest=''; indexer_digest=''; discord_digest=''; bot_digest=''; telegram_digest=''
 if true; then
 ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER,,}', 'aresrpg')}`
   try {
@@ -54,15 +54,9 @@ ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER
         version: '1.0.0',
         network,
         images: Object.fromEntries(
-          ['server', 'indexer', ...(include_discord ? ['discord'] : []), ...(include_bot ? ['bot'] : [])].map(
-            (name) => [
-              name,
-              {
-                repository: `ghcr.io/aresrpg/${name}`,
-                digest: certified_digest,
-              },
-            ]
-          )
+          ['server', 'indexer', 'discord', 'bot', 'telegram']
+            .filter((name) => !missing.includes(name))
+            .map((name) => [name, { repository: `ghcr.io/aresrpg/${name}`, digest: certified_digest }])
         ),
       })
     )
@@ -94,7 +88,7 @@ cp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/previous-release/release-manifest.
 
 test('a previous testnet release triggers a full mainnet build instead of aborting preparation', () => {
   const output = run_baseline_plan('testnet')
-  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot'])
+  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot', 'telegram'])
     expect(output).toContain(`${component}=true`)
   expect(output).toContain('server_digest=\n')
   expect(output).toContain('indexer_digest=\n')
@@ -102,7 +96,7 @@ test('a previous testnet release triggers a full mainnet build instead of aborti
 
 test('a certified mainnet baseline retains the fast path for unchanged runtime inputs', () => {
   const output = run_baseline_plan('mainnet')
-  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot'])
+  for (const component of ['server', 'indexer', 'frontend', 'discord', 'bot', 'telegram'])
     expect(output).toContain(`${component}=false`)
   expect(output).toContain(`server_digest=${certified_digest}`)
   expect(output).toContain(`indexer_digest=${certified_digest}`)
@@ -182,7 +176,7 @@ printf '"%s"\\n' "$digest"
   }
 }
 
-for (const component of ['server', 'indexer', 'discord', 'bot']) {
+for (const component of ['server', 'indexer', 'discord', 'bot', 'telegram']) {
   test(`${component}: changed images only reuse the exact source revision`, () => {
     expect(() => run_image_step(component, 'image', certified_digest, true, '2'.repeat(40))).toThrow()
     expect(run_image_step(component, 'image', certified_digest, true).output).toContain(`digest=${certified_digest}`)
@@ -323,6 +317,7 @@ test('release builds overlap verification but certification requires the green g
     'build-discord',
     'build-indexer',
     'build-bot',
+    'build-telegram',
   ]) {
     expect(workflow.jobs[name].steps.some(({ run }) => run?.includes('actions/workflows/gate.yml'))).toBe(false)
     expect(workflow.jobs[name].needs).not.toContain('verify-gate')
@@ -357,7 +352,7 @@ for (const conclusion of ['success', 'failure', 'cancelled', ''])
   })
 
 test('an older release without a bot image builds Discord without rebuilding unchanged game backends', () => {
-  const output = run_baseline_plan('mainnet', false)
+  const output = run_baseline_plan('mainnet', ['discord'])
   expect(output).toContain('discord=true')
   expect(output).toContain('server=false')
   expect(output).toContain('indexer=false')
@@ -373,7 +368,7 @@ test('backend planning checks out shared locale selectors and supplies the pinne
 })
 
 test('legacy preparation without hosted bot rebuilds only the missing artifact', () => {
-  const output = run_baseline_plan('mainnet', true, false)
+  const output = run_baseline_plan('mainnet', ['bot'])
   expect(output).toContain('bot=true')
   for (const component of ['server', 'indexer', 'discord']) expect(output).toContain(`${component}=false`)
 })
@@ -389,7 +384,7 @@ test('hosted bot certification includes the image and activation requires it', (
   expect(manifest_script).toContain('repository: "ghcr.io/aresrpg/bot"')
   const verify = activation.jobs.activate.steps.find(({ id }) => id === 'manifest')
   expect(verify.run).toContain('.schema == 2')
-  expect(verify.run).toContain('for image in server indexer discord bot; do')
+  expect(verify.run).toContain('for image in server indexer discord bot telegram; do')
 })
 
 test('both Redis test lanes use the same fixture setup without Ubuntu package mirrors', () => {
@@ -407,6 +402,8 @@ test('CI runs durable bot tests against an explicit disposable loopback fixture'
   const gate = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
   const verify = gate.jobs.source.steps.find(({ name }) => name === 'verify')
   expect(verify.env.TEST_BOT_REDIS_URL).toBe('redis://127.0.0.1:16379/15')
+  // The Telegram link store's Lua compare-and-set runs against the same fixture, in its own database.
+  expect(verify.env.TEST_TELEGRAM_REDIS_URL).toBe('redis://127.0.0.1:16379/14')
   expect(verify.run).toContain('redis-server')
   expect(verify.run).toContain('trap ')
   expect(verify.run).toContain('redis-cli')
@@ -432,7 +429,7 @@ test('the prepared schema2 manifest survives activation checks and rejects a mis
     VERCEL_URL: '',
     FRONTEND_BUILT: 'false',
     ...Object.fromEntries(
-      ['BOT', 'SERVER', 'INDEXER', 'DISCORD'].flatMap((name) => [
+      ['BOT', 'TELEGRAM', 'SERVER', 'INDEXER', 'DISCORD'].flatMap((name) => [
         [`${name}_DIGEST`, certified_digest],
         [`${name}_BUILT`, 'true'],
       ])
@@ -492,7 +489,7 @@ test('the prepared schema2 manifest survives activation checks and rejects a mis
 })
 
 test('release jobs check out their shared immutable artifact scripts', () => {
-  for (const name of ['server', 'indexer', 'discord', 'bot']) {
+  for (const name of ['server', 'indexer', 'discord', 'bot', 'telegram']) {
     const checkout = workflow.jobs[`build-${name}`].steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
     const paths = checkout.with['sparse-checkout']
     expect(paths.includes('/*') || paths.includes('scripts/release_image.sh')).toBe(true)
@@ -500,4 +497,19 @@ test('release jobs check out their shared immutable artifact scripts', () => {
   const checkout = workflow.jobs['release-manifest'].steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
   expect(checkout.with['sparse-checkout']).toContain('scripts/release_manifest.sh')
   expect(checkout.with['sparse-checkout']).toContain('pins.json')
+})
+
+test('the Telegram image is a certified identity built by the hosted bot job under its own name', () => {
+  const bot = JSON.parse(JSON.stringify(workflow.jobs['build-bot']).replaceAll('bot', 'telegram'))
+  expect(workflow.jobs['build-telegram']).toEqual(bot)
+  const manifest = workflow.jobs['release-manifest']
+  expect(manifest.needs).toContain('build-telegram')
+  expect(manifest.if).toContain("needs.build-telegram.result == 'success'")
+  expect(manifest_script).toContain('repository: "ghcr.io/aresrpg/telegram"')
+})
+
+test('a preparation older than the Telegram image builds only that image', () => {
+  const output = run_baseline_plan('mainnet', ['telegram'])
+  expect(output).toContain('telegram=true')
+  for (const component of ['server', 'indexer', 'discord', 'bot']) expect(output).toContain(`${component}=false`)
 })

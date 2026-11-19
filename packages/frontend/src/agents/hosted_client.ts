@@ -17,7 +17,7 @@ import type { AuthSession } from '../auth.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
 import type { AppContext } from '../store.ts'
 
-import { sign_hosted_message, hosted_consent_destination } from './hosted_challenge.ts'
+import { hosted_consent_destination, hosted_owner_identity, sign_hosted_challenge_with } from './hosted_challenge.ts'
 import { complete_agent_pairing } from './pairing_storage.ts'
 
 /** HTTP/network availability is retryable; owner proof and consent failures are not. */
@@ -67,31 +67,20 @@ export const current_wallet = (wallet: AuthSession, client: Readonly<HostedClien
   client.signal.throwIfAborted()
   if (client.get_state().session.wallet !== wallet) throw new Error('Wallet changed')
 }
-export const sign_hosted_challenge = async (
+export const sign_hosted_challenge = (
   client: Readonly<HostedClient>,
   wallet: AuthSession,
   input: HostedChallengeInput,
   retain: (id: string) => void,
   consent: HostedConnectRequest | null
 ) => {
-  current_wallet(wallet, client)
-  const challenge = await client.request<HostedChallengeResponse>('/connect/challenge', input)
-  current_wallet(wallet, client)
-  const { signature } = await sign_hosted_message(
-    challenge,
-    { input, consent, issuer: client.origin, web_origin: window.location.origin },
-    (bytes) => {
-      retain(challenge.authorization_id)
-      return wallet.sign_personal_message(bytes)
-    }
+  return sign_hosted_challenge_with(
+    client.request,
+    wallet,
+    input,
+    () => ({ consent, issuer: client.origin, web_origin: window.location.origin }),
+    { check: () => current_wallet(wallet, client), retain }
   )
-  current_wallet(wallet, client)
-  return { challenge_id: challenge.challenge_id, signature, authorization_id: challenge.authorization_id }
-}
-const pairing_request = (wallet: AuthSession) => {
-  const request = wallet.read_agent_pairing_request?.(crypto.randomUUID())
-  if (wallet.identity !== 'zklogin' || !request) throw new Error('Google wallet required')
-  return request
 }
 const read_hosted_session = async (
   client: Readonly<HostedClient>,
@@ -128,7 +117,7 @@ export const authenticate_hosted = async (
   session_id: string | null = authorization_id
 ) => {
   current_wallet(wallet, client)
-  const pairing = pairing_request(wallet)
+  const pairing = hosted_owner_identity(wallet)
   const consent =
     authorization_id !== null
       ? await client.request<HostedConnectRequest>(
@@ -206,7 +195,7 @@ export const verify_hosted_bot = async (
   bot: HostedBotDescriptor
 ) => {
   current_wallet(wallet, client)
-  const request = pairing_request(wallet)
+  const request = hosted_owner_identity(wallet)
   if (bot.status !== 'ready') throw new Error('Hosted signer unavailable')
   const poll = async (): Promise<AgentPairingResponse> => {
     const result = await client.request<{ status: 'pending' | 'ready'; proof?: AgentPairingResponse }>(
@@ -267,7 +256,7 @@ export const authorize_hosted = async (
 
   consent: HostedConnectRequest
 ) => {
-  const pairing = pairing_request(wallet)
+  const pairing = hosted_owner_identity(wallet)
   const signed = await sign_hosted_challenge(
     client,
     wallet,
@@ -330,7 +319,7 @@ export const refresh_hosted_owner = async (
       multisig_public_key: response.bot.multisig_public_key,
       signer_mode: 'disposable' as const,
     }
-    owner_agent_identity(pairing, pairing_request(wallet))
+    owner_agent_identity(pairing, hosted_owner_identity(wallet))
     return { response, pairing }
   }
   if (response.status !== 'connected' || !response.bot) return { response, pairing: null }

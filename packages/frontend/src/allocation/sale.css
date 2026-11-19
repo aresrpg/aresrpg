@@ -28,7 +28,7 @@
   height: 3px;
   overflow: hidden;
   border-radius: 2px;
-  background: #30283c14;
+  background: color-mix(in srgb, var(--aui-lifted) 7.8%, transparent);
 }
 .sale-track > span {
   display: block;
@@ -94,7 +94,7 @@
   flex: 1;
   min-width: 12px;
   height: 1px;
-  background: repeating-linear-gradient(90deg, #cfc7d2 0 2px, transparent 2px 6px);
+  background: repeating-linear-gradient(90deg, var(--aui-soft) 0 2px, transparent 2px 6px);
   transform: translateY(-3px);
 }
 .sale-action.btn {
@@ -142,7 +142,7 @@
   color: inherit;
 }
 .sale-outcome.is-error {
-  background: #f8e6e4;
+  background: var(--aui-ink);
   color: var(--bad);
 }
 
@@ -150,7 +150,7 @@
   width: min(440px, calc(100% - 32px));
   padding: 0;
   border-radius: 8px;
-  box-shadow: 0 30px 70px -30px #140a1e99;
+  box-shadow: 0 30px 70px -30px color-mix(in srgb, var(--aui-bg) 60%, transparent);
 }
 .sale-buy header {
   margin: 0;
@@ -267,10 +267,10 @@
   outline: 0;
 }
 .sale-amount > span:last-child:focus-within {
-  box-shadow: 0 0 0 3px #dea85580;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aui-brass) 50.2%, transparent);
 }
 .sale-presets button:focus-visible {
-  outline: 3px solid #dea855;
+  outline: 3px solid var(--aui-brass);
   outline-offset: 2px;
 }
 

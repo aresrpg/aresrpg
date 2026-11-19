@@ -5,18 +5,17 @@ import type { AllocationRequest, AllocationResult } from '@aresrpg/protocol'
 import type { AllocationStatus } from '@aresrpg/immutable/allocation'
 
 import type { Auth, AuthSession } from '../auth.ts'
-import { browser_auth_storage, clear_auth_wallet, read_auth_wallet, remember_auth_wallet } from '../auth_storage.ts'
+import { create_remembered_auth } from '../remembered_auth.ts'
 
 import { restore_allocation_wallet } from './restoration.ts'
 import { create_allocation_client } from './client.ts'
 
 export type AllocationTask =
-  | Readonly<{ kind: 'boot' | 'google' | 'link_google' | 'logout' | 'load' | 'reconnect' | 'link_x' }>
+  | Readonly<{ kind: 'boot' | 'google' | 'link_google' | 'logout' | 'load' | 'reconnect' }>
   | Readonly<{ kind: 'wallet'; name: string }>
   | Readonly<{ kind: 'verify'; wallet: AuthSession }>
   | Readonly<{ kind: 'remove'; address: string }>
   | Readonly<{ kind: 'share'; address: string; locale: string; text: string }>
-  | Readonly<{ kind: 'submit'; address: string; urls: readonly string[] }>
 export type AllocationProgress = 'restoring' | 'connecting' | 'loading'
 const INITIAL_PROGRESS: Readonly<Record<string, AllocationProgress>> = {
   boot: 'restoring',
@@ -73,15 +72,6 @@ export const share_intent = (url: string, locale: string, text: string): string 
   preview.searchParams.set('locale', locale)
   return `https://x.com/intent/tweet?${new URLSearchParams({ text, url: preview.href })}`
 }
-export const connect_allocation_account = async (
-  auth: Pick<Auth, 'connect_google' | 'wallets'>,
-  provider: string | null
-): Promise<AuthSession> => {
-  if (provider === null) return auth.connect_google()
-  const wallet = auth.wallets().find(({ name }) => name === provider)
-  if (!wallet) throw new Error('no_wallet_app')
-  return wallet.connect()
-}
 type Request = (request: AllocationRequest) => Promise<AllocationResult>
 const verify = async (request: Request, wallet: AuthSession): Promise<void> => {
   const challenge = await request({ action: 'wallet_challenge', address: wallet.address, label: wallet.wallet_name })
@@ -97,27 +87,10 @@ export const link_game_wallet = async (request: Request, connect: () => Promise<
     wallet.dispose?.()
   }
 }
-const consume_callback_error = (): string | null => {
-  const url = new URL(location.href)
-  const error = url.searchParams.get('error')
-  if (error) {
-    url.searchParams.delete('error')
-    history.replaceState(null, '', url)
-  }
-  return error
-}
-const complete_link = async (request: Request): Promise<void> => {
-  const url = new URL(location.href)
-  const token = url.searchParams.get('linked')
-  if (!token) return
-  url.searchParams.delete('linked')
-  history.replaceState(null, '', url)
-  await request({ action: 'complete_x', token })
-}
 const operate = async (
   request: Request,
   task: AllocationTask,
-  get_auth: () => Promise<Auth>
+  get_auth: () => Promise<Pick<Auth, 'connect_google'>>
 ): Promise<string | null> => {
   switch (task.kind) {
     case 'link_google':
@@ -126,9 +99,6 @@ const operate = async (
     case 'verify':
       await verify(request, task.wallet)
       break
-    case 'submit':
-      await request({ action: 'submit', address: task.address, urls: task.urls })
-      break
     case 'remove':
       await request({ action: 'wallet_remove', address: task.address })
       break
@@ -136,12 +106,6 @@ const operate = async (
       const result = await request({ action: 'share', address: task.address })
       if (result.action !== 'share') throw new Error('unavailable')
       return share_intent(result.url, task.locale, task.text)
-    }
-    case 'link_x': {
-      const result = await request({ action: 'link_x' })
-      if (result.action !== 'link_x') throw new Error('unavailable')
-      location.assign(result.url)
-      break
     }
     default:
       break
@@ -153,11 +117,11 @@ export const create_allocation_runtime = () => {
   const dispatch = (input: Input): void => store.setState((state) => reduce_allocation(state, input), true)
   const observe = (): (() => void) => {
     let active = true
-    let auth: Auth | null = null
+    // Whitelisted wallets buy here (DECISIONS: WHITELISTED WALLETS BUY ON THE ALLOCATION PAGE).
+    const account = create_remembered_auth(undefined, undefined, { wallets: true })
     let client: ReturnType<typeof create_allocation_client> | null = null
     let client_wallet: AuthSession | null = null
     let stop_wallet = (): void => {}
-    const storage = browser_auth_storage()
     const current = (sequence: number): boolean => active && store.getState().sequence === sequence
     const bind = (wallet: AuthSession | null): void => {
       if (wallet === client_wallet) return
@@ -172,31 +136,18 @@ export const create_allocation_runtime = () => {
         : null
       stop_wallet = wallet?.on_invalidated?.(() => dispatch({ type: 'invalidated', wallet })) ?? (() => {})
     }
-    const get_auth = async (): Promise<Auth> => {
-      if (auth) return auth
-      const { create_auth } = await import('../auth.ts')
-      if (!active) throw new Error('unavailable')
-      auth = create_auth()
-      return auth
-    }
     const authenticate = async (task: AllocationTask, wallet: AuthSession | null): Promise<AuthSession | null> => {
       switch (task.kind) {
-        case 'boot': {
-          const name = read_auth_wallet(storage)
-          return name ? restore_allocation_wallet(async () => (await get_auth()).restore(name)) : null
-        }
+        case 'boot':
+          return restore_allocation_wallet(account.restore)
         case 'google':
-        case 'wallet': {
-          const session = await connect_allocation_account(await get_auth(), task.kind === 'wallet' ? task.name : null)
-          remember_auth_wallet(storage, session.wallet_name)
-          return session
-        }
+        case 'wallet':
+          return account.connect(task.kind === 'wallet' ? task.name : null)
         case 'reconnect':
           client?.reconnect()
           return wallet
         case 'logout':
-          await wallet?.disconnect()
-          clear_auth_wallet(storage)
+          await account.sign_out(wallet)
           return null
         default:
           return wallet
@@ -215,8 +166,7 @@ export const create_allocation_runtime = () => {
         let share_intent_url: string | null = null
         if (client) {
           const { request } = client
-          await complete_link(request)
-          share_intent_url = (await operate(request, state.task!, get_auth)) ?? state.share_intent_url
+          share_intent_url = (await operate(request, state.task!, account.provider)) ?? state.share_intent_url
           const result = await request({ action: 'status' })
           if (result.action !== 'status') throw new Error('unavailable')
           ;({ status } = result)
@@ -225,7 +175,7 @@ export const create_allocation_runtime = () => {
           dispatch({
             type: 'result',
             sequence: state.sequence,
-            result: { session, status, share_intent_url, error: consume_callback_error() },
+            result: { session, status, share_intent_url, error: null },
           })
       } catch (error) {
         console.warn('Allocation operation could not be confirmed')
@@ -245,7 +195,7 @@ export const create_allocation_runtime = () => {
     const stop = store.subscribe((state, previous) => {
       if (previous.session && !state.session) {
         bind(null)
-        clear_auth_wallet(storage)
+        account.forget()
       }
       if (state.share_intent_url && state.share_intent_url !== previous.share_intent_url)
         location.assign(state.share_intent_url)
@@ -256,7 +206,7 @@ export const create_allocation_runtime = () => {
       active = false
       stop()
       bind(null)
-      auth?.dispose()
+      account.dispose()
     }
   }
   return { store, dispatch, observe }

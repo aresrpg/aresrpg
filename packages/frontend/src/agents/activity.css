@@ -29,17 +29,17 @@
   filter: drop-shadow(0 1px 1.5px #00000099);
 }
 .agent-activity-done span {
-  color: #f7f5f1cc;
+  color: color-mix(in srgb, var(--aui-ink) 80%, transparent);
 }
 .agent-activity-done svg {
-  color: #f7f5f19e;
+  color: color-mix(in srgb, var(--aui-ink) 62%, transparent);
 }
 .agent-activity-now span {
-  color: #ffd8bf;
+  color: var(--aui-brass-hi);
   font-weight: 500;
 }
 .agent-activity-now svg {
-  color: #e9a27c;
+  color: var(--aui-brass);
   animation: agent-activity-breathe 2.4s ease-in-out infinite;
 }
 @keyframes agent-activity-breathe {
@@ -64,12 +64,12 @@
 
 .agent-activity-objective {
   margin-bottom: 10px;
-  color: #f7f5f1;
+  color: var(--aui-ink);
   white-space: pre-wrap;
 }
 .agent-activity-objective strong {
   display: block;
-  color: #ffd8bf;
+  color: var(--aui-brass-hi);
 }
 .agent-activity-objective ul {
   margin: 4px 0 0;

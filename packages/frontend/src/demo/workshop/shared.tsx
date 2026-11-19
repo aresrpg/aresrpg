@@ -4,8 +4,7 @@ import { Button, type WorkspaceHeader } from '@aresrpg/ui'
 import { useState, useMemo, useContext, createContext, type ReactNode } from 'react'
 
 import { ItemCraftSessionContext } from '../../components/ItemCrafting.tsx'
-import { adventure_character } from '../../adventure/character.ts'
-import { adventure_character_row } from '../../adventure/projection.ts'
+import { sample_character, sample_character_row } from '../sample.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { character_icon } from '../../content/assets.ts'
 
@@ -25,10 +24,7 @@ export const WorkshopSurface = ({
   children: (header: WorkspaceHeader) => ReactNode
 }>) => {
   const close_host = useContext(WorkshopCloseContext)
-  const craft_session = useMemo(
-    () => ({ character: adventure_character_row(adventure_character()), inventory: [] }),
-    []
-  )
+  const craft_session = useMemo(() => ({ character: sample_character_row(sample_character()), inventory: [] }), [])
   const [open, set_open] = useState(true)
   return (
     <ItemCraftSessionContext.Provider value={craft_session}>

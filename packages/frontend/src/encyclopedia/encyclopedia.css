@@ -79,27 +79,6 @@
   .enc-page button > span {
     font-size: inherit;
   }
-  .enc-gameplay {
-    flex-direction: column;
-  }
-  .enc-gameplay > aside {
-    width: 100%;
-    min-width: 0;
-    flex: none;
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .enc-gameplay > aside > div:last-child {
-    display: flex;
-    overflow-x: auto;
-  }
-  .enc-gameplay > aside button {
-    width: auto;
-    flex: none;
-  }
-  .enc-gameplay > div {
-    padding: 16px;
-  }
 }
 
 @container app-content (max-width: 700px) {
@@ -137,9 +116,6 @@
   .enc-page [data-characteristic] {
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
-  }
-  .enc-gameplay > div {
-    padding: 12px;
   }
 }
 

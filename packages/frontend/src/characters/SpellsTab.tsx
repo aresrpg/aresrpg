@@ -7,10 +7,9 @@
 // (n → n+1 costs n points, progression.move law — enabled only when the chain would
 // accept, never a dead click).
 
-import { Button, ValueBadge } from '@aresrpg/ui'
+import { Button, SpellRow, ValueBadge } from '@aresrpg/ui'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import { SpellRow } from '../components/SpellRow.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { titleize, type SpellLevel } from '../content/catalog.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
@@ -19,8 +18,6 @@ import { type AppCopy } from '../i18n/copy.ts'
 
 import type { CharacterSession } from './character_session.ts'
 import { useSpells } from './useSpells.ts'
-
-import './spellbook.css'
 
 const spell_tint = (level: Readonly<SpellLevel> | undefined): string => {
   const damage = level?.effects.find((effect) => effect.element !== '')

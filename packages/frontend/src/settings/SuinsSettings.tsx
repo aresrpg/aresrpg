@@ -20,7 +20,11 @@ const SuinsMessages = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <p hidden={state.request?.kind !== 'load'} className="mt-3 text-[10px] text-muted" role="status">
         {t('suins_loading')}
       </p>
-      <p hidden={state.request?.kind !== 'set'} className="mt-3 text-[10px] text-muted" role="status">
+      <p
+        hidden={state.request?.kind !== 'set' || state.request.stage === 'review'}
+        className="mt-3 text-[10px] text-muted"
+        role="status"
+      >
         {t('suins_saving')}
       </p>
       <p hidden={!state.error} className="mt-3 text-[10px] text-rose-300" role="alert">
@@ -47,8 +51,8 @@ const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         dispatch_app({ type: 'suins/use' })
       }}
     >
-      <fieldset disabled={state.request !== null || connecting} className="space-y-3">
-        <label className="block text-[10px] text-muted">
+      <fieldset disabled={state.request !== null || connecting} className="flex flex-col items-start gap-4">
+        <label className="block w-full text-[10px] text-muted">
           {t('suins_owned')}
           <select
             className="mt-2 w-full border border-border bg-bg px-3 py-2 text-xs text-text disabled:opacity-40"
@@ -68,7 +72,11 @@ const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           {state.draft &&
             t('suins_leaves', { name: display_suins_name(`aresrpg.${state.draft}`), player: `aresrpg.${state.draft}` })}
         </p>
-        <Button type="submit" tone="primary" disabled={!state.draft.trim()}>
+        <Button
+          type="submit"
+          tone="primary"
+          disabled={!state.draft.trim() || state.error === 'player_default_uncertain'}
+        >
           {t('suins_use')}
         </Button>
       </fieldset>
@@ -134,15 +142,19 @@ export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       </p>
       {managed && (
         <div className="mt-4">
-          <WalletControl
-            copy={copy.kares_page}
-            wallet={external_wallet_view(external)}
-            locked={state.request !== null}
-          />
+          <div className="w-fit max-w-full">
+            <WalletControl
+              copy={copy.kares_page}
+              wallet={external_wallet_view(external)}
+              locked={state.request !== null}
+            />
+          </div>
           <ParentSelector copy={copy} />
         </div>
       )}
-      <SuinsMessages copy={copy} />
+      <div className="pt-3">
+        <SuinsMessages copy={copy} />
+      </div>
       <NameFunding copy={copy} />
     </section>
   )

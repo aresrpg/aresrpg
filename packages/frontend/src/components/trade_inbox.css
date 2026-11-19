@@ -21,7 +21,7 @@
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  border: 1px solid rgba(200, 150, 60, 0.38);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 38%, transparent);
   border-radius: 4px;
   background: color-mix(in srgb, var(--color-surface-high) 94%, transparent);
   padding: 8px 10px;
@@ -30,7 +30,7 @@
 
 .trade-invite-card span {
   flex: 1 0 100%;
-  color: #d6d1c8;
+  color: var(--aui-soft);
   font-size: 9px;
   line-height: 1.5;
 }
@@ -50,9 +50,9 @@
   cursor: pointer;
   align-items: center;
   gap: 7px;
-  border: 1px solid rgba(200, 150, 60, 0.18);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 18%, transparent);
   border-radius: 5px;
-  background: rgba(10, 10, 15, 0.72);
+  background: color-mix(in srgb, var(--aui-void) 72%, transparent);
   padding: 6px 8px;
   color: var(--color-muted);
   font-family: inherit;
@@ -66,8 +66,8 @@
 }
 
 .trade-center-button:hover {
-  border-color: rgba(200, 150, 60, 0.36);
-  background: rgba(15, 15, 22, 0.86);
+  border-color: color-mix(in srgb, var(--aui-brass) 36%, transparent);
+  background: color-mix(in srgb, var(--aui-bg) 86%, transparent);
 }
 
 .trade-center-button svg {
@@ -86,7 +86,7 @@
   min-width: 0;
   margin-left: 2px;
   overflow: hidden;
-  border-left: 1px solid rgba(200, 150, 60, 0.16);
+  border-left: 1px solid color-mix(in srgb, var(--aui-brass) 16%, transparent);
   padding-left: 9px;
   color: var(--color-gold-light);
   font-size: 9px;

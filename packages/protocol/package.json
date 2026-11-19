@@ -11,7 +11,12 @@
     "./world-projection": "./src/world_projection.ts",
     "./equipment": "./src/equipment.ts",
     "./character-stats": "./src/character_stats.ts",
-    "./inventory": "./src/inventory.ts"
+    "./inventory": "./src/inventory.ts",
+    "./strategies": "./src/strategies.ts",
+    "./hosted-bot-client": "./src/hosted_bot_client.ts",
+    "./hosted-keys": "./src/hosted_keys.ts",
+    "./telegram-access": "./src/telegram_access.ts",
+    "./request-limiter": "./src/request_limiter.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

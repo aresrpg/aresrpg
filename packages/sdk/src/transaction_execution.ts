@@ -24,8 +24,8 @@ export type SignedTransaction = PreparedTransaction & Readonly<{ signatures: rea
 export type JournalTransaction =
   | (PreparedTransaction & Readonly<{ phase: 'prepared' }>)
   | (SignedTransaction & Readonly<{ phase: 'signed' | 'submitting' }>)
-/** The host owns encryption, lane CAS, fencing and policy. Every effect must be durable before resolving.
- * read returns the exact unresolved phase and decrypted envelope. mark_submitting atomically consumes
+/** The host owns lane CAS, fencing and policy. Every effect must commit to the host's store before resolving;
+ * that store may be process-local. read returns the exact unresolved phase and envelope. mark_submitting atomically consumes
  * only a signed phase under the current fence; it must reject a second transition.
  * settled must retain the unresolved lane until receipt and budget settlement commit atomically. */
 export type TransactionJournal = Readonly<{

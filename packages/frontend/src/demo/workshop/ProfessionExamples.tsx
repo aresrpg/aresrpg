@@ -7,8 +7,7 @@ import { Hammer, Pickaxe } from 'lucide-react'
 
 import JobsTab from '../../characters/JobsTab.tsx'
 import RuneforgeTab from '../../characters/RuneforgeTab.tsx'
-import { adventure_character } from '../../adventure/character.ts'
-import { adventure_character_row, adventure_inventory } from '../../adventure/projection.ts'
+import { sample_character, sample_character_row, sample_inventory } from '../sample.ts'
 import { content_catalog } from '../../content/catalog.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 
@@ -17,9 +16,9 @@ import '../../characters/characters.css'
 
 export const JobsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const character = useMemo(() => {
-    const tools = adventure_inventory(content_catalog.items.filter((item) => item.category === 'tool_herbalist'))
+    const tools = sample_inventory(content_catalog.items.filter((item) => item.category === 'tool_herbalist'))
     return {
-      ...adventure_character_row({ ...adventure_character(), loadout: { tool: tools[0]!.item_type } }, tools),
+      ...sample_character_row({ ...sample_character(), loadout: { tool: tools[0]!.item_type } }, tools),
       jobs: { HERBALIST: String(job_xp_for_level(100)) },
     }
   }, [])
@@ -34,10 +33,9 @@ export const JobsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   )
 }
 export const RuneforgeExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const character = useMemo(() => adventure_character_row(adventure_character()), [])
+  const character = useMemo(() => sample_character_row(sample_character()), [])
   const inventory = useMemo(
-    () =>
-      adventure_inventory(content_catalog.items.filter((item) => item.category === 'hat' || item.category === 'rune')),
+    () => sample_inventory(content_catalog.items.filter((item) => item.category === 'hat' || item.category === 'rune')),
     []
   )
   return (

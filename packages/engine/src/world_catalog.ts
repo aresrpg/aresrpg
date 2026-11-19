@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { world_center } from '@aresrpg/immutable'
+
 import worlds from '../../../seed/content/worlds.json'
+
+import { compile_runtime_world_recipe, type CompiledWorld } from './world_recipe.ts'
+import { sample_biome_cell } from './biome_grid.ts'
 
 export const worlds_source = Object.freeze(worlds)
 
@@ -69,4 +74,16 @@ export const world_terrain = (world_name: string | null): unknown | null => {
     ...world.terrain,
     structure_areas: world_city_areas(world.world),
   })
+}
+
+const biome_worlds = new Map<string, CompiledWorld>()
+
+/** The exact published biome-map value for one zone, compiled lazily from authored terrain. */
+export const world_biome_at_zone = (world_name: string, zone_x: number, zone_z: number): string | null => {
+  const source = worlds_source.find(({ world }) => world === world_name)
+  if (!source?.terrain) return null
+  const world = biome_worlds.get(world_name) ?? compile_runtime_world_recipe(source.terrain, { structures: false })
+  if (!biome_worlds.has(world_name)) biome_worlds.set(world_name, world)
+  const biome = sample_biome_cell(world, zone_x, zone_z, { world_center, cell_size: ZONE_SIZE })
+  return world.biomes[biome]?.name ?? null
 }

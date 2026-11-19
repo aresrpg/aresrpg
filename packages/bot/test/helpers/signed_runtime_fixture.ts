@@ -11,7 +11,7 @@ import { create_fight } from '../../../fight/src/index.ts'
 import { create_fixture } from '../../../fight/test/helpers.ts'
 import { create_actor_runtime } from '../../src/actor_runtime.ts'
 import { fight_checkpoint_id, gameplay_json } from '../../src/gameplay.ts'
-import { create_control_service, empty_lane, lane_key_for, type Command, type Lane } from '../../src/control.ts'
+import { lane_key_for, type Command, type Lane } from '../../src/control.ts'
 import type { ControlStore } from '../../src/store.ts'
 
 import { runtime_fixture } from './runtime_fixture.ts'
@@ -77,25 +77,6 @@ export const signed_fixture = async (store?: ControlStore) => {
   const signature = new MultiSigPublicKey(fromBase64(f.bot.multisig_public_key)).combinePartialSignatures([
     (await key.signTransaction(bytes)).signature,
   ])
-  const encrypted = await f.options.cipher.encrypt(
-    JSON.stringify({ bytes: Buffer.from(bytes).toString('base64'), signatures: [signature] }),
-    JSON.stringify([lane_key, command.id, digest])
-  )
-  await put(f.store, `command:${command.id}`, command)
-  await put(f.store, lane_key, {
-    ...empty_lane(f.bot),
-    observation_revision: 7,
-    decision_revision: 1,
-    active_command: command.id,
-    pending: {
-      command_id: command.id,
-      grant_id: f.grant.id,
-      digest,
-      phase: 'signed',
-      encrypted,
-      gas_budget_mist: '1000',
-    },
-  })
   const submissions: Uint8Array[] = []
   const receipt = {
     Transaction: {
@@ -150,6 +131,26 @@ export const signed_fixture = async (store?: ControlStore) => {
     },
   } as unknown as SuiTransport
   const runtime = create_actor_runtime({ ...f.options, sdk_options: { client } })
+  // Seed interrupted work in the CURRENT process, never as restart recovery history.
+  await runtime.observe(f.grant, {})
+  const lane = (await f.store.read<Lane>(lane_key))!
+  await put(f.store, `command:${command.id}`, command)
+  await put(f.store, lane_key, {
+    ...lane,
+    observation_revision: 7,
+    decision_revision: 1,
+    active_command: command.id,
+    latest_command: command.id,
+    pending: {
+      command_id: command.id,
+      grant_id: f.grant.id,
+      digest,
+      phase: 'signed',
+      bytes: Buffer.from(bytes).toString('base64'),
+      signatures: [signature],
+      gas_budget_mist: '1000',
+    },
+  })
   const admit = async () => {
     await f.send({ type: 'packet/signature_request', payload: '11111111-1111-4111-8111-111111111111' })
     await f.send({ type: 'packet/game_state', frozen: false })

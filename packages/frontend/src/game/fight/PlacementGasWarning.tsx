@@ -38,11 +38,11 @@ const PlacementGasWarning = ({
 }>) => (
   <ModalFrame close={close} close_label={cancel} label={text.placement_gas_title ?? ''} max_width="max-w-sm" soft>
     <div className="p-7">
-      <p className="mt-4 text-[11px] leading-6 text-[#c5c0b8]">{text.placement_gas_body}</p>
-      <label className="mt-5 flex cursor-pointer items-center gap-3 text-[9px] tracking-[0.1em] text-[#a3a5ad] uppercase">
+      <p className="mt-4 text-[11px] leading-6 text-soft">{text.placement_gas_body}</p>
+      <label className="mt-5 flex cursor-pointer items-center gap-3 text-[9px] tracking-[0.1em] text-muted uppercase">
         <input
           checked={checked}
-          className="size-4 accent-[#c8963c]"
+          className="size-4 accent-gold"
           onChange={(event) => set_checked(event.target.checked)}
           type="checkbox"
         />
@@ -57,7 +57,7 @@ const PlacementGasWarning = ({
           {cancel}
         </button>
         <button
-          className="h-11 cursor-pointer rounded-lg border border-[#c8963c]/40 bg-[#241b0d]/90 text-[9px] tracking-[0.16em] text-[#f0c36a] uppercase transition hover:bg-[#342712] disabled:cursor-not-allowed disabled:opacity-45"
+          className="h-11 cursor-pointer rounded-lg border border-gold/40 bg-gold-dark/90 text-[9px] tracking-[0.16em] text-gold uppercase transition hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-45"
           disabled={disabled}
           onClick={confirm}
           type="button"

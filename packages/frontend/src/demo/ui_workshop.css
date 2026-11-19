@@ -9,7 +9,9 @@
   gap: 12px 18px;
   overflow: auto;
   padding: 70px 20px 20px;
-  background: #151821;
+  background:
+    radial-gradient(60vmax 40vmax at 0 0, #ffffff0a, transparent 60%),
+    radial-gradient(50vmax 36vmax at 100% 100%, #ffffff07, transparent 62%), var(--aui-bg);
   color: var(--aui-ink);
   font-family: var(--aui-font);
 }
@@ -19,20 +21,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #ffffff0d;
+  border-bottom: 1px solid var(--aui-hair);
   padding-bottom: 8px;
 }
 .ui-workshop-heading h1 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #b5b8c5;
+  font: 600 16px/1 var(--aui-font-display);
+  letter-spacing: 0.02em;
+  color: var(--aui-soft);
 }
 .ui-workshop-heading > .aui-segments {
   border: 0;
+  padding: 0;
   background: none;
 }
 .ui-workshop-heading .aui-button {
+  white-space: nowrap;
   min-height: 28px;
   font-size: 11px;
   letter-spacing: 0;
@@ -61,8 +65,9 @@
   letter-spacing: 0;
 }
 .ui-workshop-navigation .aui-button[aria-pressed='true'] {
-  background: #4b454033;
-  box-shadow: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--aui-brass) 14%, transparent), transparent 85%);
+  box-shadow: inset 2px 0 var(--aui-brass-hi);
+  color: var(--aui-brass-hi);
 }
 .ui-workshop-preview {
   grid-column: 2;
@@ -75,8 +80,8 @@
   height: auto;
   aspect-ratio: 932/430;
   overflow: hidden;
-  border: 1px solid #62697755;
-  background: #20242e;
+  border: 1px solid var(--aui-hair);
+  background: var(--aui-lifted);
 }
 
 .ui-workshop-grid {
@@ -139,8 +144,8 @@
     z-index: 10;
     padding: 30px;
     text-align: center;
-    background: #151821;
-    color: #b8bdc9;
+    background: var(--aui-bg);
+    color: var(--aui-soft);
   }
 }
 .ui-workshop-pack {
@@ -181,5 +186,51 @@
   }
   .ui-workshop-preview {
     grid-column: 1;
+  }
+}
+/* Two catalogue sections: raw building blocks, then composed game surfaces. */
+.ui-workshop-navigation > h2 {
+  margin: 14px 9px 6px;
+  font: 700 10px/1 var(--aui-font);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--aui-faint);
+}
+.ui-workshop-navigation > h2:first-child {
+  margin-top: 2px;
+}
+.ui-workshop-window-body {
+  display: grid;
+  padding: 8px 0;
+}
+.ui-workshop-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+.ui-workshop-swatches > figure {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.ui-workshop-swatches span {
+  height: 34px;
+  border: 1px solid var(--aui-hair);
+  border-radius: var(--aui-radius);
+}
+.ui-workshop-swatches figcaption {
+  font: 10px/1.2 var(--aui-font);
+  color: var(--aui-muted);
+  overflow-wrap: anywhere;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .ui-workshop-navigation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ui-workshop-navigation > h2 {
+    flex: none;
+    margin: 0 4px;
   }
 }

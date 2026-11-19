@@ -11,6 +11,7 @@ import type {
   FightContract,
   Fighter,
   FightSources,
+  HydratedFightCheckpoint,
   ItemStatField,
   KitSpell,
   MobLoot,
@@ -334,3 +335,10 @@ export const normalize_checkpoint = (input: unknown): FightCheckpoint => {
     sources: normalize_sources(checkpoint.sources),
   }
 }
+
+/**
+ * A fight state as it arrives on the wire, read without building a fight: the same normalization the
+ * fight door applies to a remote state. A reader that only needs the state (a hero's health) uses this.
+ */
+export const hydrate_fight_checkpoint = (input: unknown): HydratedFightCheckpoint =>
+  normalize_checkpoint(input) as HydratedFightCheckpoint

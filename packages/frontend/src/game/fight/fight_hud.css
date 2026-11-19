@@ -2,9 +2,9 @@
    gold active state, red enemy/destructive state, and the gem/socket command bar. */
 .fight-hud {
   container: aui-viewport / size;
-  --fh-gold: #c8963c;
-  --fh-ink: #e8e4dc;
-  --fh-muted: #6b7280;
+  --fh-gold: var(--aui-brass);
+  --fh-ink: var(--aui-ink);
+  --fh-muted: var(--aui-faint);
   --fh-edge: var(--color-border);
   --fh-lane-gap: 12px;
   position: absolute;
@@ -28,7 +28,7 @@
   align-items: center;
   gap: 2px;
   border: 1px solid var(--fh-edge);
-  border-top-color: rgba(200, 150, 60, 0.35);
+  border-top-color: color-mix(in srgb, var(--aui-brass) 35%, transparent);
   /* the same soft corner the HUD's command bar carries — a card here, a card there */
   border-radius: 8px;
   background: linear-gradient(165deg, var(--color-surface), var(--color-bg));
@@ -76,15 +76,15 @@
   position: relative;
   height: 5px;
   overflow: hidden;
-  border: 1px solid rgba(85, 185, 238, 0.42);
+  border: 1px solid color-mix(in srgb, var(--aui-blue) 42%, transparent);
   background: rgba(0, 0, 0, 0.5);
 }
 
 .fight-hud__ready-progress > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #2773ad, #67d4ff);
-  box-shadow: 0 0 10px rgba(85, 185, 238, 0.6);
+  background: linear-gradient(90deg, #2773ad, var(--aui-blue));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--aui-blue) 60%, transparent);
   transition: width 220ms ease;
 }
 
@@ -116,7 +116,7 @@
   gap: 16px;
   border: 1px solid rgba(248, 113, 113, 0.42);
   border-radius: 8px;
-  background: linear-gradient(165deg, #181118, var(--color-bg));
+  background: linear-gradient(165deg, var(--aui-bg), var(--color-bg));
   padding: 10px 12px 10px 18px;
   color: var(--fh-ink);
   font-size: 11px;
@@ -125,7 +125,7 @@
 }
 
 .fight-hud__turn-card {
-  --turn-accent: #4a9eff;
+  --turn-accent: var(--aui-blue);
   position: absolute;
   top: 12px;
   left: 12px;
@@ -155,12 +155,12 @@
   min-height: 0;
   overflow: hidden;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--turn-accent) 55%, #c8963c);
+  border: 1px solid color-mix(in srgb, var(--turn-accent) 55%, var(--aui-brass));
   border-bottom-width: 2px;
   background:
     radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.42), transparent 58%),
-    linear-gradient(145deg, #d4ceb4, #96927d);
-  color: #272a2b;
+    linear-gradient(145deg, var(--aui-soft), var(--aui-faint));
+  color: var(--aui-raised);
 }
 
 .fight-hud__turn-card-portrait img {
@@ -193,9 +193,9 @@
   display: block;
   overflow: hidden;
   border-left: 4px solid var(--turn-accent);
-  background: rgba(232, 228, 220, 0.94);
+  background: color-mix(in srgb, var(--aui-ink) 94%, transparent);
   padding: 11px 14px;
-  color: #17191a;
+  color: var(--aui-sunk);
   font-size: 21px;
   line-height: 1.1;
   letter-spacing: 0.035em;
@@ -209,7 +209,7 @@
 .fight-hud__turn-card-body span {
   display: block;
   border-left: 4px solid var(--fh-gold);
-  background: rgba(7, 9, 10, 0.78);
+  background: color-mix(in srgb, var(--aui-void) 78%, transparent);
   padding: 9px 14px;
   color: var(--fh-gold);
   font-size: 12px;
@@ -270,7 +270,7 @@
   align-items: center;
   gap: 2px;
   border: 1px solid var(--fh-edge);
-  border-top-color: rgba(200, 150, 60, 0.35);
+  border-top-color: color-mix(in srgb, var(--aui-brass) 35%, transparent);
   background: linear-gradient(165deg, var(--color-surface), var(--color-bg));
   padding: 2px;
   color: var(--fh-ink);
@@ -285,26 +285,26 @@
 .fight-hud__turn.active {
   z-index: 2;
   border-color: var(--fh-gold);
-  background: linear-gradient(165deg, #4a3714, #171208);
+  background: linear-gradient(165deg, var(--aui-brass-deep), var(--aui-brass-ink));
   box-shadow:
-    0 0 22px rgba(200, 150, 60, 0.55),
+    0 0 22px color-mix(in srgb, var(--aui-brass) 55%, transparent),
     0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
 .fight-hud__turn.targetable {
   cursor: crosshair;
-  border-color: #55b9ee;
+  border-color: var(--aui-blue);
   box-shadow:
-    0 0 0 1px rgba(85, 185, 238, 0.28),
-    0 0 18px rgba(85, 185, 238, 0.45);
+    0 0 0 1px color-mix(in srgb, var(--aui-blue) 28%, transparent),
+    0 0 18px color-mix(in srgb, var(--aui-blue) 45%, transparent);
 }
 
 .fight-hud__turn.targetable:hover,
 .fight-hud__turn.targetable:focus-visible {
   border-color: #9ddcff;
   box-shadow:
-    0 0 0 2px rgba(85, 185, 238, 0.35),
-    0 0 24px rgba(85, 185, 238, 0.68);
+    0 0 0 2px color-mix(in srgb, var(--aui-blue) 35%, transparent),
+    0 0 24px color-mix(in srgb, var(--aui-blue) 68%, transparent);
 }
 
 .fight-hud__turn.dead {
@@ -321,8 +321,8 @@
   flex: none;
   overflow: hidden;
   place-items: center;
-  border: 1px solid #4a9eff88;
-  background: linear-gradient(150deg, #14141c, var(--color-bg));
+  border: 1px solid color-mix(in srgb, var(--aui-blue) 53.3%, transparent);
+  background: linear-gradient(150deg, var(--aui-bg), var(--color-bg));
   font-size: 24px;
   font-weight: 700;
 }
@@ -340,7 +340,7 @@
 
 .fight-hud__turn.active .fight-hud__portrait {
   border-color: var(--fh-gold);
-  box-shadow: 0 0 12px rgba(200, 150, 60, 0.5);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--aui-brass) 50%, transparent);
 }
 
 .fight-hud__turn-hp {
@@ -372,11 +372,12 @@
   left: 0;
   z-index: 2;
   display: block;
-  border-top: 1px solid rgba(224, 226, 233, 0.78);
+  border-top: 1px solid color-mix(in srgb, var(--aui-ink) 78%, transparent);
   background:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 3px, transparent 3px 7px), rgba(35, 37, 44, 0.74);
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 3px, transparent 3px 7px),
+    color-mix(in srgb, var(--aui-raised) 74%, transparent);
   box-shadow:
-    0 -2px 7px rgba(224, 226, 233, 0.28),
+    0 -2px 7px color-mix(in srgb, var(--aui-ink) 28%, transparent),
     inset 0 1px rgba(255, 255, 255, 0.12);
   backdrop-filter: grayscale(1) brightness(0.58);
   pointer-events: none;
@@ -394,8 +395,12 @@
   max-width: 280px;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid rgba(200, 150, 60, 0.42);
-  background: linear-gradient(165deg, rgba(18, 18, 26, 0.98), rgba(7, 7, 11, 0.99));
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 42%, transparent);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--aui-bg) 98%, transparent),
+    color-mix(in srgb, var(--aui-void) 99%, transparent)
+  );
   padding: 9px 11px;
   color: var(--fh-ink);
   text-align: left;
@@ -460,8 +465,8 @@
   flex: none;
   cursor: pointer;
   place-items: center;
-  border: 1px solid rgba(200, 150, 60, 0.38);
-  background: rgba(7, 7, 11, 0.9);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 38%, transparent);
+  background: color-mix(in srgb, var(--aui-void) 90%, transparent);
   color: var(--fh-gold);
   list-style: none;
   margin-bottom: 8px;
@@ -496,7 +501,7 @@
 .fight-hud__turn-toggle:hover,
 .fight-hud__turn-toggle:focus-visible {
   border-color: var(--fh-gold);
-  background: rgba(74, 55, 20, 0.92);
+  background: color-mix(in srgb, var(--aui-brass-deep) 92%, transparent);
   outline: none;
 }
 
@@ -542,16 +547,16 @@
   flex: none;
   cursor: pointer;
   border: 1px solid var(--fh-gold);
-  background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
+  background: linear-gradient(135deg, var(--aui-brass-deep), var(--aui-brass), var(--aui-brass-deep));
   padding: 8px 12px;
   border-radius: 6px;
-  color: #17130a;
+  color: var(--aui-brass-ink);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 8px 22px rgba(200, 150, 60, 0.25);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--aui-brass) 25%, transparent);
 }
 
 .fight-hud__end-turn {
@@ -563,7 +568,7 @@
 .fight-hud__end-turn:not(:disabled):hover {
   transform: translateY(-1px);
   filter: brightness(1.14);
-  box-shadow: 0 0 20px rgba(200, 150, 60, 0.46);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--aui-brass) 46%, transparent);
 }
 
 .fight-hud__end-turn.queued {
@@ -579,11 +584,11 @@
 .fight-hud__secondary-controls button {
   height: 24px;
   flex: 1;
-  border-color: rgba(85, 185, 238, 0.42);
+  border-color: color-mix(in srgb, var(--aui-blue) 42%, transparent);
   background: linear-gradient(165deg, var(--color-surface), var(--color-bg));
   padding: 0 5px;
   border-radius: 3px;
-  color: #55b9ee;
+  color: var(--aui-blue);
   font-size: 8px;
   font-weight: 600;
 }
@@ -604,7 +609,11 @@
   gap: 12px;
   border: 1px solid rgba(0, 0, 0, 0.6);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(14, 14, 20, 0.96), rgba(7, 7, 11, 0.98));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--aui-void) 96%, transparent),
+    color-mix(in srgb, var(--aui-void) 98%, transparent)
+  );
   padding: 8px 10px;
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.55),
@@ -629,7 +638,7 @@
   height: 14px;
   overflow: hidden;
   border-radius: 4px;
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 28%, transparent);
   background: rgba(0, 0, 0, 0.58);
 }
 
@@ -638,7 +647,7 @@
   inset: 0 auto 0 0;
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #8f3f0a, #f59e0b);
+  background: linear-gradient(90deg, var(--aui-brass-deep), var(--aui-brass));
   transition: width 220ms ease;
 }
 
@@ -648,7 +657,7 @@
   display: grid;
   height: 100%;
   place-items: center;
-  color: #ffd39a;
+  color: var(--aui-brass-hi);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -686,8 +695,15 @@
   position: absolute;
   inset: -2px;
   border-radius: 9px;
-  background: conic-gradient(from 0deg, #6f4310, #fff0a8, #d99622, #fff7cf, #6f4310);
-  box-shadow: 0 0 16px rgba(255, 190, 62, 0.8);
+  background: conic-gradient(
+    from 0deg,
+    var(--aui-brass-deep),
+    var(--aui-brass-hi),
+    var(--aui-brass-lo),
+    var(--aui-brass-hi),
+    var(--aui-brass-deep)
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, var(--aui-brass) 80%, transparent);
   content: '';
   animation: fight-hud-crit-rotate 2.2s linear infinite;
 }
@@ -699,9 +715,9 @@
   height: 50px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid #292936;
+  border: 1px solid var(--aui-lifted);
   border-radius: 7px;
-  background: linear-gradient(145deg, #171721, #09090e);
+  background: linear-gradient(145deg, var(--aui-sunk), var(--aui-void));
   padding: 0;
   color: inherit;
   font: inherit;
@@ -720,7 +736,11 @@
   inset: 0;
   z-index: 5;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 180, 84, 0.22) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    color-mix(in srgb, var(--aui-brass) 22%, transparent) 100%
+  );
   animation: fight-crit-vignette-fade 480ms ease-out forwards;
 }
 
@@ -742,7 +762,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(8, 6, 8, 0.62);
+  background: color-mix(in srgb, var(--aui-void) 62%, transparent);
   color: #ff5a5a;
   font-size: 22px;
   font-style: normal;
@@ -758,8 +778,8 @@
   height: 100%;
   place-items: center;
   border-radius: 22%;
-  background: radial-gradient(circle at 35% 28%, #f5d0a9, #8b6914 75%);
-  color: #17130a;
+  background: radial-gradient(circle at 35% 28%, var(--aui-brass-hi), var(--aui-brass-deep) 75%);
+  color: var(--aui-brass-ink);
   font-size: 15px;
   font-weight: 800;
 }
@@ -790,18 +810,18 @@
 }
 
 .fight-hud__spell.selected {
-  border-color: #55b9ee;
+  border-color: var(--aui-blue);
   box-shadow:
     inset 0 0 0 2px rgba(24, 92, 168, 0.85),
-    0 0 14px rgba(85, 185, 238, 0.45);
+    0 0 14px color-mix(in srgb, var(--aui-blue) 45%, transparent);
 }
 
 .fight-hud__spell.critical {
-  border-color: #ffd369;
+  border-color: var(--aui-brass);
   box-shadow:
-    inset 0 0 10px rgba(255, 201, 74, 0.28),
+    inset 0 0 10px color-mix(in srgb, var(--aui-brass) 28%, transparent),
     inset 0 3px 6px rgba(0, 0, 0, 0.65),
-    0 0 12px rgba(255, 190, 62, 0.72);
+    0 0 12px color-mix(in srgb, var(--aui-brass) 72%, transparent);
 }
 
 @keyframes fight-hud-crit-rotate {
@@ -822,9 +842,9 @@
   width: min(720px, 76vw);
   max-height: calc(100dvh - 16px);
   overflow: auto;
-  border: 1px solid rgba(200, 150, 60, 0.42);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 42%, transparent);
   border-radius: 5px;
-  background: #1b232df5;
+  background: color-mix(in srgb, var(--aui-raised) 96.1%, transparent);
   padding: 12px;
   pointer-events: auto;
   box-shadow: 0 12px 32px #0008;
@@ -834,15 +854,15 @@
   width: min(600px, 92vw);
   max-height: calc(100dvh - 150px);
   padding: 10px;
-  background: #1b232df5;
+  background: color-mix(in srgb, var(--aui-raised) 96.1%, transparent);
   border-radius: 5px;
 }
 
 .fight-hud__spell-detail.critical {
-  border-color: #e8ad37;
+  border-color: var(--aui-brass);
   box-shadow:
-    0 0 0 1px rgba(255, 213, 105, 0.24),
-    0 0 28px rgba(214, 145, 28, 0.24),
+    0 0 0 1px color-mix(in srgb, var(--aui-brass) 24%, transparent),
+    0 0 28px color-mix(in srgb, var(--aui-brass-lo) 24%, transparent),
     0 24px 70px rgba(0, 0, 0, 0.75);
 }
 
@@ -928,29 +948,29 @@
 }
 .aui-combat-spells .fight-hud__spell {
   border-radius: 6px;
-  border-color: #181c28;
+  border-color: var(--aui-surface);
   padding: 0;
-  background: #2a2e3c;
+  background: var(--aui-lifted);
 }
 .aui-combat-spells .fight-hud__spell > img {
   width: 100%;
   height: 100%;
 }
 .fight-hud__placement {
-  background: #363b49;
-  border-color: #141a28;
+  background: var(--aui-high);
+  border-color: var(--aui-surface);
   box-shadow:
-    inset 0 1px #b9bfce33,
+    inset 0 1px color-mix(in srgb, var(--aui-soft) 20%, transparent),
     0 5px 14px #0005;
   font-family: var(--aui-font);
 }
 .fight-hud__placement > span {
-  color: #e4bf84;
+  color: var(--aui-brass);
   font-size: 15px;
   letter-spacing: 0.02em;
 }
 .fight-hud__placement > small {
-  color: #b9becc;
+  color: var(--aui-soft);
   font-size: 12px;
 }
 
@@ -976,9 +996,9 @@
   min-width: 200px;
   max-width: min(440px, calc(100vw - 16px));
   max-height: min(260px, calc(100dvh - 100px));
-  background: #1b2027f5;
+  background: color-mix(in srgb, var(--aui-surface) 96.1%, transparent);
   padding: 10px 12px;
-  border-color: #7c818c55;
+  border-color: color-mix(in srgb, var(--aui-faint) 33.3%, transparent);
 }
 .fight-spell-preview {
   display: flex;
@@ -987,7 +1007,7 @@
   font-family: var(--aui-font);
 }
 .fight-spell-preview > strong {
-  color: #e4c58e;
+  color: var(--aui-brass);
   font-size: 13px;
 }
 .fight-spell-preview [data-spell-effects-compact] {

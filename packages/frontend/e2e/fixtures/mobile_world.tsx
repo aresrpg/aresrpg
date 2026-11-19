@@ -16,7 +16,7 @@ import { create_camera_drag } from '../../src/game/core/camera_drag.ts'
 import { attach_context_menu_input } from '../../src/game/core/context_menu_input.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import '../../src/tailwind.css'
-import '../../../ui/src/inspection.css'
+import '../../../ui/src/prebuilt/inspection.css'
 
 const copy = await load_app_copy('en')
 const controls_only = new URLSearchParams(location.search).has('controls')

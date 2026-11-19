@@ -215,6 +215,18 @@
         "typescript": "~6.0.3",
       },
     },
+    "packages/telegram": {
+      "name": "@aresrpg/telegram",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aresrpg/engine": "workspace:*",
+        "@aresrpg/protocol": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.4",
+        "typescript": "6.0.3",
+      },
+    },
     "packages/ui": {
       "name": "@aresrpg/ui",
       "version": "0.0.0",
@@ -264,6 +276,8 @@
     "@aresrpg/sdk": ["@aresrpg/sdk@workspace:packages/sdk"],
 
     "@aresrpg/server": ["@aresrpg/server@workspace:packages/server"],
+
+    "@aresrpg/telegram": ["@aresrpg/telegram@workspace:packages/telegram"],
 
     "@aresrpg/ui": ["@aresrpg/ui@workspace:packages/ui"],
 

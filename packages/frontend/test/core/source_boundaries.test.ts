@@ -47,12 +47,13 @@ describe('frontend source boundaries', () => {
   })
 
   test('the shared surface palette has one literal home', async () => {
-    const token_file = resolve(source_root, 'tailwind.css')
+    // `packages/ui/src/base.css` owns every surface colour; `tailwind.css` only aliases its tokens.
+    const token_file = resolve(source_root, '../../ui/src/base.css')
     const env_file = resolve(source_root, 'env.ts')
     const tokens = await readFile(token_file, 'utf8')
-    const palette = ['bg', 'surface-low', 'surface', 'surface-high', 'surface-raised', 'border'].map((name) => {
-      const value = new RegExp(`--color-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(tokens)?.[1]
-      if (!value) throw new Error(`Missing --color-${name} in tailwind.css`)
+    const palette = ['bg', 'sunk', 'surface', 'raised', 'lifted', 'high'].map((name) => {
+      const value = new RegExp(`--aui-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(tokens)?.[1]
+      if (!value) throw new Error(`Missing --aui-${name} in base.css`)
       return value.toLowerCase()
     })
     const violations = (

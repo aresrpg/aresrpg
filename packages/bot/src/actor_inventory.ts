@@ -99,8 +99,12 @@ export const fold_actor_inventory = (state: ActorInventory, packet: ServerPacket
   }
   return state
 }
+type ReadInventory = ActorInventory & Readonly<{ listings: readonly ListingRow[]; trades: readonly TradeRow[] }>
+/** Items alone do not say what can be used: the listings and trades that lock some must be read too. */
+export const inventory_read = (state: ActorInventory | undefined): state is ReadInventory =>
+  Boolean(state?.loaded && state.listings && state.trades)
 export const profession_inventory = (state: ActorInventory | undefined, kiosk: string) => {
-  if (!state?.loaded || !state.listings || !state.trades) throw new Error('inventory_unavailable')
+  if (!inventory_read(state)) throw new Error('inventory_unavailable')
   return available_inventory_items(state.items, encumbered_asset_ids(state.listings, state.trades), kiosk)
 }
 

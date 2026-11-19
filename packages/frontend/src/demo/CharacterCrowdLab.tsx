@@ -47,7 +47,7 @@ const PALETTES = Object.freeze([
   Object.freeze(['#c89f7d', '#3ca66b', '#e8e3d5'] as const),
 ])
 const ACTION_CLASS =
-  'flex h-9 cursor-pointer items-center justify-center gap-1 border border-[#4a9eff]/30 bg-[#4a9eff]/7 px-1 text-[7px] tracking-[0.08em] text-[#67adff] uppercase hover:border-[#4a9eff]/60 disabled:cursor-not-allowed disabled:opacity-30'
+  'flex h-9 cursor-pointer items-center justify-center gap-1 border border-cyan/30 bg-cyan/7 px-1 text-[7px] tracking-[0.08em] text-cyan uppercase hover:border-cyan/60 disabled:cursor-not-allowed disabled:opacity-30'
 
 const phase_animation = (phase: BenchmarkPhase): CharacterAnimationName =>
   phase === 'run' ? 'RUN' : phase === 'jump' ? 'JUMP' : phase === 'dance' ? 'DANCE' : 'IDLE'
@@ -171,7 +171,7 @@ const CrowdBenchmarkStatus = ({
 }>) => (
   <>
     {(loading || phase) && (
-      <p className="text-[8px] tracking-[0.12em] text-[#67adff] uppercase">
+      <p className="text-[8px] tracking-[0.12em] text-cyan uppercase">
         {loading ? text.crowd_loading : `${phase} · ${count}`}
       </p>
     )}
@@ -180,16 +180,16 @@ const CrowdBenchmarkStatus = ({
         className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-1 text-[8px] tabular-nums"
         data-crowd-results=""
       >
-        <span className="text-[#777b86]">{text.crowd_result}</span>
-        <span className="text-[#777b86]">FPS</span>
-        <span className="text-[#777b86]">P95</span>
-        <span className="text-[#777b86]">MAX</span>
-        <span className="text-[#777b86]">SWITCH</span>
+        <span className="text-faint">{text.crowd_result}</span>
+        <span className="text-faint">FPS</span>
+        <span className="text-faint">P95</span>
+        <span className="text-faint">MAX</span>
+        <span className="text-faint">SWITCH</span>
         {results.map((result) => (
           <div className="contents" data-crowd-phase={result.phase} key={result.phase}>
-            <span className="text-[#a3a5ad] uppercase">{result.phase}</span>
-            <output className="text-right text-[#67adff]">{result.fps}</output>
-            <output className="text-right text-[#c8963c]">{result.p95_ms}ms</output>
+            <span className="text-muted uppercase">{result.phase}</span>
+            <output className="text-right text-cyan">{result.fps}</output>
+            <output className="text-right text-gold">{result.p95_ms}ms</output>
             <output className="text-right text-[#f87171]">{result.max_ms}ms</output>
             <output className="text-right text-[#d879ff]">{result.switch_ms}ms</output>
           </div>
@@ -273,13 +273,13 @@ export const CharacterCrowdLab = ({
 
   return (
     <div className="grid gap-2 border-b border-white/8 py-3" data-crowd-benchmark-state={phase ?? 'ready'}>
-      <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">
+      <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-gold uppercase">
         <Activity size={12} /> {text.crowd_load}
       </h2>
-      <label className="grid gap-1 text-[7px] tracking-[0.14em] text-[#777b86] uppercase">
+      <label className="grid gap-1 text-[7px] tracking-[0.14em] text-faint uppercase">
         {text.amount}
         <input
-          className="h-9 border border-white/10 bg-bg px-2 text-[9px] text-[#d5d2cb] outline-none"
+          className="h-9 border border-white/10 bg-bg px-2 text-[9px] text-soft outline-none"
           disabled={loading || running}
           max={200}
           min={1}

@@ -96,9 +96,9 @@ export const StructurePackEditor = ({
                 key={`${type}:${index}`}
               >
                 <label className="min-w-0">
-                  <span className="mb-1 block text-[7px] tracking-[0.12em] text-[#737883] uppercase">Type</span>
+                  <span className="mb-1 block text-[7px] tracking-[0.12em] text-faint uppercase">Type</span>
                   <select
-                    className="h-8 w-full min-w-0 border border-white/12 bg-bg px-2 text-[8px] outline-none focus:border-[#4a9eff]/70"
+                    className="h-8 w-full min-w-0 border border-white/12 bg-bg px-2 text-[8px] outline-none focus:border-cyan/70"
                     onChange={(event) =>
                       replace_rows(
                         rows.map((candidate, row_index) =>
@@ -117,7 +117,7 @@ export const StructurePackEditor = ({
                     ))}
                   </select>
                   {source && (
-                    <span className="mt-1 block text-[6px] text-[#595e68]">
+                    <span className="mt-1 block text-[6px] text-faint">
                       {source.size.join(' × ')} · {source.palette.filter((name) => name !== 'air').join(', ')}
                     </span>
                   )}
@@ -136,7 +136,7 @@ export const StructurePackEditor = ({
                 />
                 <button
                   aria-label={`Remove ${type}`}
-                  className="mb-0.5 grid size-7 place-items-center border border-white/8 text-[#666b75] hover:border-[#ff5a8b]/40 hover:text-[#ff8caa]"
+                  className="mb-0.5 grid size-7 place-items-center border border-white/8 text-faint hover:border-[#ff5a8b]/40 hover:text-[#ff8caa]"
                   onClick={() => replace_rows(rows.filter((_, row_index) => row_index !== index))}
                   type="button"
                 >
@@ -155,7 +155,7 @@ export const StructurePackEditor = ({
         </div>
       </SheetSection>
       {save && (
-        <button className={`${button_class} !border-[#c8963c]/45 !text-[#efbd45]`} onClick={save} type="button">
+        <button className={`${button_class} !border-gold/45 !text-gold`} onClick={save} type="button">
           Save structure_packs.json
         </button>
       )}

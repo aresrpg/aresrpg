@@ -11,7 +11,6 @@ import {
 } from '../analytics.ts'
 import { analytics_context, analytics_identity, type AnalyticsProperties } from '../analytics/context.ts'
 import { engagement_activity, movement_sample } from '../analytics/activity.ts'
-import { create_replay_observer, replay_eligible } from '../analytics/replay.ts'
 import { reduce_analytics } from '../analytics/state.ts'
 import { gameplay_events } from '../analytics/gameplay.ts'
 import { feedback_events, observe_feedback } from '../analytics/feedback.ts'
@@ -20,7 +19,6 @@ import { is_admin_address } from '../admin_access.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { report_error } from '../reporting.ts'
 import type { AuthSession } from '../auth.ts'
-import { adventure_observed_quests } from '../adventure/quest.ts'
 import { character_creation_insufficient } from '../character_creation_funding.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { next_quest } from '../journey/model.ts'
@@ -53,52 +51,6 @@ const session_milestones = ({ session, navigation }: AppState): readonly Milesto
   ]
 }
 
-const adventure_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => {
-  const next = state.adventure
-  const before = previous.adventure
-  if (next.phase === before.phase) return []
-  const encounter = before.encounter + 1
-  switch (next.phase) {
-    case 'fighting':
-      return [{ name: 'demo_fight_started', properties: { encounter } }]
-    case 'reward':
-      return [
-        {
-          name: 'demo_fight_completed',
-          properties: {
-            encounter,
-            outcome: next.result?.winner === 0 ? 'victory' : 'defeat',
-          },
-        },
-      ]
-    case 'complete':
-      return [{ name: 'demo_completed' }]
-    default:
-      return []
-  }
-}
-
-const adventure_combat_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => {
-  const current = state.fight.checkpoint
-  const before = previous.fight.checkpoint
-  if (!current || !before) return []
-  if (
-    state.adventure.phase !== 'fighting' ||
-    current.contract.id !== `adventure_${state.adventure.encounter}` ||
-    before.contract.id !== current.contract.id
-  )
-    return []
-  return before.contract.round === 0n && current.contract.round > 0n
-    ? [{ name: 'demo_combat_started', properties: { encounter: state.adventure.encounter + 1 } }]
-    : []
-}
-
-const companion_milestones = ({ adventure }: AppState): readonly Milestone[] => [
-  { reached: adventure.companion !== null, event: { name: 'demo_sceat_recruited' } },
-  { reached: adventure.switched_companion, event: { name: 'demo_character_switched' } },
-  { reached: adventure.followed, event: { name: 'demo_follow_enabled' } },
-]
-
 const completed_events = (
   name: string,
   next: readonly string[] | null,
@@ -109,11 +61,6 @@ const completed_events = (
     : (next ?? []).filter((id) => !previous.includes(id)).map((quest_id) => ({ name, properties: { quest_id } }))
 
 const quest_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => [
-  ...completed_events(
-    'demo_quest_completed',
-    adventure_observed_quests(state.adventure),
-    adventure_observed_quests(previous.adventure)
-  ),
   ...(previous.journey.ready && state.journey.identity === previous.journey.identity
     ? completed_events('quest_completed', state.journey.completed, previous.journey.completed)
     : []),
@@ -156,28 +103,16 @@ const receipt_events = (state: AppState, previous: AppState): readonly Analytics
 }
 
 export const analytics_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => {
-  const domains = [
-    'analytics',
-    'fight',
-    'session',
-    'navigation',
-    'adventure',
-    'journey',
-    'world',
-    'marketplace',
-  ] as const
+  const domains = ['analytics', 'fight', 'session', 'navigation', 'journey', 'world', 'marketplace'] as const
   if (domains.every((domain) => state[domain] === previous[domain])) return []
-  const before = [...session_milestones(previous), ...companion_milestones(previous)]
+  const before = session_milestones(previous)
   return [
     ...feedback_events(state.analytics.feedback, previous.analytics.feedback),
     ...receipt_events(state, previous),
     ...gameplay_events(state, previous),
-    ...[...session_milestones(state), ...companion_milestones(state)]
+    ...session_milestones(state)
       .filter((milestone, index) => milestone.reached && !before[index]!.reached)
       .map(({ event }) => event),
-    ...(state.adventure.character && !previous.adventure.character ? [{ name: 'demo_started' }] : []),
-    ...adventure_events(state, previous),
-    ...adventure_combat_events(state, previous),
     ...quest_events(state, previous),
   ]
 }
@@ -187,10 +122,6 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
   if (analytics_available()) observe_feedback(context)
   let unsubscribe: (() => void) | undefined
   const unbind_context = bind_analytics_context(() => analytics_context(get_state()))
-  const observe_replay = create_replay_observer()
-  const sync_replay = (state: AppState): void =>
-    observe_replay(analytics_available() && replay_eligible(state, globalThis.location?.pathname ?? '/'))
-  sync_replay(get_state())
   const bind = (wallet: AuthSession | null): void => {
     unsubscribe?.()
     unsubscribe = wallet?.on_transaction((execution) =>
@@ -226,12 +157,10 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       unsubscribe?.()
       stop_pose()
       unbind_context()
-      observe_replay(false)
     },
     { once: true }
   )
   events.on('STATE_UPDATED', (state, previous) => {
-    sync_replay(state)
     if (state.session.wallet !== previous.session.wallet) {
       if (previous.session.wallet) reset_analytics_identity()
       bind(state.session.wallet)

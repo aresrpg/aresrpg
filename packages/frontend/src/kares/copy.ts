@@ -102,6 +102,11 @@ export type KaresCopy = ErrorCopy &
     token_sale: string
     locked_liquidity: string
     tokenomics: string
+    tabs_label: string
+    tab_tokenomics: string
+    tab_staking: string
+    signin_title: string
+    signin_body: string
     community: string
     team: string
     five_years: string

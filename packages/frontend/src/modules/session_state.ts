@@ -33,6 +33,7 @@ export const initial_session_state = (serial = 0): SessionState =>
     inventory: [],
     removed_item_versions: {},
     claims: [],
+    redeemed_claims: [],
     giftcards: [],
     redeemed_giftcards: [],
     selected_character_id: read_selected_character(),

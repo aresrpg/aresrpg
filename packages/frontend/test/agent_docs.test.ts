@@ -89,12 +89,15 @@ test('production frontend no longer ships a local signing CLI', () => {
   expect(scripts['build:test']).not.toContain('build_agent_cli')
 })
 
-test('hosted guides separate encrypted actor journals from browser digest-only storage', () => {
+test('hosted guides separate process-local execution from browser digest-only storage', () => {
   for (const path of ['agents/sdk.txt', 'agents/protocol.txt']) {
     const guide = readFileSync(resolve(public_dir, path), 'utf8')
     expect(guide).toContain('transaction_journal')
     expect(guide).toContain('@aresrpg/sdk/transaction-execution')
     expect(guide).toContain('digest-only')
+    expect(guide).toContain('process')
+    expect(guide).not.toContain('packages/bot/src/transaction_journal.ts')
+    expect(guide).not.toContain('encrypted exact-envelope persistence')
     expect(guide).toContain('packages/bot/README.md')
     expect(guide).not.toContain("headless writer's `transaction_storage`")
     expect(guide).not.toContain('headless writer must supply durable `transaction_storage`')

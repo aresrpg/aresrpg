@@ -66,8 +66,8 @@ snapshots.
 9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL. Unchanged images retain the previous certified digest;
    deployment configuration consumes those digests, never mutable semver aliases.
-   New schema-two manifests include server, indexer, Discord and hosted bot images. A legacy
-   manifest without the hosted bot cannot certify its first rollout; preparation builds that image.
+   New schema-two manifests include server, indexer, Discord, hosted bot and Telegram images. A legacy
+   manifest without the hosted bot or Telegram image cannot certify its first rollout; preparation builds it.
    Image publication alone does not satisfy application configuration or security prerequisites.
    Verify those privately before separately authorized activation.
 10. Pause gameplay when content or package work requires it.
@@ -180,6 +180,35 @@ No dashboard-wide Move allowlist or QR reprint is needed. The existing 100 vouch
 Sponsorship failure leaves the gift recoverable and never asks the recipient to fund this claim.
 Release this frontend/API change through the normal preparation and activation workflow above.
 Before activation, verify a zero-SUI claim through reward collection and a reload after interrupted confirmation.
+
+## Telegram companion
+
+The companion is one listener beside the hosted bot. It holds no key and signs nothing. Release CI runs
+none of these steps; each one needs explicit owner approval.
+
+1. Preparation builds, publishes and attests `ghcr.io/aresrpg/telegram:<version>` from
+   `packages/telegram/Dockerfile` when the companion's own inputs changed; an unchanged release aliases the
+   previous certified digest. Deploy the digest the release manifest names, like every other image.
+2. Run exactly one replica, and replace it instead of rolling it: its navigation is process-local.
+3. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_LOCAL_SECRET`, `TELEGRAM_STORAGE_KEY`, `TELEGRAM_REDIS_URL`,
+   `TELEGRAM_LOCAL_PORT`, `TELEGRAM_MAX_REQUEST_BYTES`, `TELEGRAM_CONNECTED_CONFIG`, and
+   `TELEGRAM_BIND_HOST=0.0.0.0` inside a container. `packages/telegram/README.md` owns their meaning.
+   `TELEGRAM_REDIS_URL` and the hosted bot's `BOT_REDIS_URL` must name the same Redis and the same logical
+   database: the hosted bot writes the home page's waitlist joins where the companion reads them.
+   Where Redis users are restricted, the companion's user needs the set and sorted-set commands
+   `SADD SREM SISMEMBER SMEMBERS ZADD ZSCORE ZRANGE` on `telegram:*` beside its record commands, and the
+   hosted bot's user needs `ZADD` on `telegram:waitlist`.
+4. Route `/telegram`, `/link/*` and `/oauth/callback` on the public host to the listener: the webhook, the
+   login link and the Google return. Once it answers behind public TLS, register the webhook with Telegram
+   `setWebhook`: the public
+   `https://<host>/telegram` URL, `secret_token` equal to `TELEGRAM_LOCAL_SECRET` (Telegram accepts 1–256
+   characters of `A-Z a-z 0-9 _ -`), and `allowed_updates` `["message","callback_query"]`. Confirm it with
+   `getWebhookInfo`.
+5. The allowlist starts empty, so every linked owner first meets the waitlist. Admit one owner with
+   `bun run --cwd packages/telegram waitlist admit 0x<64 hex>` in the running container; `waitlist` alone
+   lists who waits. Admission needs no restart.
+6. Before announcing it, exercise one login, one admitted start, Status and Stop against the deployed hosted
+   bot. The local tests use a stand-in bot and prove none of that.
 
 ## Adding and editing worlds
 

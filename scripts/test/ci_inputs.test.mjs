@@ -9,7 +9,7 @@ import { ci_checks_for_diff, browser_checks_required, source_checks_for_diff } f
 import { SCENE_COMPILER_FILES } from '../release_inputs.mjs'
 
 test('scene recipes, artifacts and every scene compiler input launch browser checks', () => {
-  for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
+  for (const path of ['seed/scenes/asset_workshop.json', ...SCENE_COMPILER_FILES])
     expect(browser_checks_required([path], () => false)).toBe(true)
 })
 
@@ -219,7 +219,7 @@ for (const path of [
   'scripts/ci_inputs.mjs',
   'scripts/release_inputs.mjs',
   '.github/workflows/gate.yml',
-  'seed/scenes/main_menu.json',
+  'seed/scenes/asset_workshop.json',
   'README.md',
 ])
   test(`${path} cannot reuse source verification across a version bump`, () => {

@@ -148,8 +148,8 @@
 
 /* Drop-target slot state on the shared doll. */
 .inv__slot.is-valid {
-  border-color: rgba(103, 173, 255, 0.7);
-  box-shadow: 0 0 8px rgba(74, 158, 255, 0.25);
+  border-color: color-mix(in srgb, var(--aui-blue) 70%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--aui-blue) 25%, transparent);
 }
 
 /* ── RUNEFORGE ─────────────────────────────────────────────────────────────── */
@@ -204,7 +204,7 @@
   min-height: 0;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  background: linear-gradient(160deg, rgba(200, 150, 60, 0.03) 0%, transparent 55%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--aui-brass) 3%, transparent) 0%, transparent 55%);
 }
 
 .chr-forge__ptitle {
@@ -236,8 +236,8 @@
 
 .chr-forge__slot.is-filled {
   border-style: solid;
-  border-color: rgba(200, 150, 60, 0.6);
-  background: rgba(200, 150, 60, 0.05);
+  border-color: color-mix(in srgb, var(--aui-brass) 60%, transparent);
+  background: color-mix(in srgb, var(--aui-brass) 5%, transparent);
 }
 
 .chr-forge__clear {
@@ -318,7 +318,7 @@
 
 .sb__rowbtn.is-active {
   border-left-color: var(--color-gold);
-  background: rgba(200, 150, 60, 0.07);
+  background: color-mix(in srgb, var(--aui-brass) 7%, transparent);
 }
 
 .sb__rowbtn.is-locked {

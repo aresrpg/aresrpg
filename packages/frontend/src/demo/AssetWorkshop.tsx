@@ -65,7 +65,7 @@ export const AssetWorkshop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       const element = document.createElement('span')
       element.setAttribute(
         'class',
-        'pointer-events-none border border-white/15 bg-surface/85 px-2 py-1 font-mono text-[10px] text-[#ded4bb] shadow-sm'
+        'pointer-events-none border border-white/15 bg-surface/85 px-2 py-1 font-mono text-[10px] text-gold-light shadow-sm'
       )
       element.append(document.createTextNode(`${String(index + 1).padStart(2, '0')} · ${text[`asset_${id}`]}`))
       outer.append(element)

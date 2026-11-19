@@ -12,15 +12,20 @@ type ObservationPacket = Extract<ClientPacket, { type: 'packet/market_observe' |
 type Watch = Readonly<{ owner: string; packet: ObservationPacket }>
 type Slots = Readonly<{ market: Watch | null; prices: Watch | null }>
 type SlotAction = Readonly<{ slot: keyof Slots; owner: string; packet: ObservationPacket }> | Readonly<{ reset: true }>
+const held_by_another = (existing: Watch | null, owner: string) => existing !== null && existing.owner !== owner
 const reduce_slots = (state: Slots, action: SlotAction): Slots => {
   if ('reset' in action) return { market: null, prices: null }
   const existing = state[action.slot]
-  if (existing !== null && existing.owner !== action.owner) throw new Error('OBSERVATION_SLOT_BUSY')
-  if (JSON.stringify(existing?.packet) === JSON.stringify(action.packet)) return state
-  return {
-    ...state,
-    [action.slot]: action.packet.observation === null ? null : { owner: action.owner, packet: action.packet },
+  const release = action.packet.observation === null
+  if (held_by_another(existing, action.owner)) {
+    // Releasing a view another connector holds changes nothing: only its owner gives it up.
+    if (release) return state
+    throw new Error('OBSERVATION_SLOT_BUSY')
   }
+  // Giving back a view nobody holds changes nothing, like asking again for the view already held.
+  const unchanged = release ? !existing : JSON.stringify(existing?.packet) === JSON.stringify(action.packet)
+  if (unchanged) return state
+  return { ...state, [action.slot]: release ? null : { owner: action.owner, packet: action.packet } }
 }
 export type ActorOptions = Readonly<{
   connection: Omit<AgentConnectionOptions, 'authorize'>

@@ -63,6 +63,11 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
         item_key: `${icon_root}/items/key_of_ivory_rampart_hd.png`,
         item_horn: `${icon_root}/items/tidal_horn_core_hd.png`,
         item_bow: `${icon_root}/items/amberwood_recurve_hd.png`,
+        podium: [
+          './src/assets/leaderboards/podium-1.png',
+          './src/assets/leaderboards/podium-2.png',
+          './src/assets/leaderboards/podium-3.png',
+        ],
       }),
       links: landing_links(env.app_url, env.discord_url),
       agent_connect_url: agent_connect_url(env.app_url),
@@ -173,7 +178,7 @@ export default defineConfig(({ mode, command }) => {
           app_url: env.app_url,
           font_path: resolve(repo_dir, 'packages/journal/public/assets/jetbrains-mono.woff2'),
           logo_path: resolve(repo_dir, 'seed/scenes/aresrpg_text_logo.png'),
-          tokens_path: resolve(frontend_dir, 'src/tailwind.css'),
+          tokens_path: resolve(frontend_dir, '../ui/src/base.css'),
         }
       ),
       ...(mode === 'development'

@@ -13,7 +13,7 @@ export const FightSimulatorExit = ({
   if (!visible || label === null) return null
   return (
     <button
-      className="pointer-events-auto absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase backdrop-blur hover:border-[#c8963c]/40 hover:text-[#c8963c]"
+      className="pointer-events-auto absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[8px] tracking-[0.14em] text-muted uppercase backdrop-blur hover:border-gold/40 hover:text-gold"
       onClick={() => dispatch_app({ type: 'fight/closed', fight: null })}
       type="button"
     >

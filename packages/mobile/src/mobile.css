@@ -10,14 +10,6 @@
 .mobile-rotate {
   display: none;
 }
-.adventure-touch-controls {
-  display: none;
-}
-@media (max-width: 1023px), (any-pointer: coarse) {
-  .adventure-touch-controls {
-    display: block;
-  }
-}
 @media (orientation: portrait) {
   .mobile-rotate {
     display: grid;
@@ -170,7 +162,7 @@
   height: 100px;
   border: 1px solid #ccb6dd35;
   border-radius: 50%;
-  background: #20152d66;
+  background: color-mix(in srgb, var(--aui-surface) 40%, transparent);
   pointer-events: auto;
   touch-action: none;
   display: grid;
@@ -202,8 +194,8 @@
   height: 52px;
   border-radius: 50%;
   border: 1px solid #ccb6dd35;
-  background: #21192dcc;
-  color: #dec79d;
+  background: color-mix(in srgb, var(--aui-surface) 80%, transparent);
+  color: var(--aui-brass-hi);
   pointer-events: auto;
   touch-action: none;
 }

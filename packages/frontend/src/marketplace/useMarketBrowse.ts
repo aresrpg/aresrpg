@@ -26,6 +26,7 @@ export const useMarketBrowse = () => {
   const account = useMarketAccount()
   const address = account.wallet?.address ?? null
   const balance = account.sui_balance_mist
+  const [pet_food_only, set_pet_food_only] = useState(false)
   const [search, set_search] = useState('')
   const [minimum_level, set_minimum_level] = useState('')
   const [maximum_level, set_maximum_level] = useState('')
@@ -48,8 +49,15 @@ export const useMarketBrowse = () => {
   )
   const active_subcategory = market_category(market.observation)
   const types = useMemo(
-    () => browse_types(market.types, listings, active_subcategory, search),
-    [market.types, listings, active_subcategory, search]
+    () =>
+      browse_types(
+        market.types,
+        listings,
+        active_subcategory,
+        search,
+        active_subcategory === 'resource' && pet_food_only
+      ),
+    [market.types, listings, active_subcategory, search, pet_food_only]
   )
   const active_type = market.observation?.kind === 'offers' ? market.observation.item_type : null
   const selected = types.find(({ item_type }) => item_type === active_type) ?? null
@@ -66,6 +74,7 @@ export const useMarketBrowse = () => {
   const item = active_type ? (content_catalog.item(active_type)?.item ?? null) : null
 
   const select_group = (group: MarketGroup): void => {
+    set_pet_food_only(false)
     set_search('')
     dispatch_app({ type: 'market/group_selected', group })
   }
@@ -79,6 +88,8 @@ export const useMarketBrowse = () => {
     balance,
     search,
     set_search,
+    pet_food_only,
+    set_pet_food_only,
     minimum_level,
     set_minimum_level,
     maximum_level,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { character_equipment_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
+import type { CharacterRow } from '@aresrpg/protocol'
 import { equip_refusal } from '@aresrpg/protocol/equipment'
 import type { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
@@ -34,10 +35,12 @@ export const EQUIPMENT_ACTIONS = {
     parse: (value: unknown) => decode<ConsumePayload>(consume_schema, value),
   },
 }
+/** Gear and consumables change only on a free hero: in its kiosk, in no fight and held by no protector. */
+export const character_free = (character: CharacterRow) =>
+  character.custody === 'kiosk' && !character.active_fight && !character.ambush
 const available_character = (context: GameplayContext, character_id: string) => {
   const character = owned_character(context, character_id)
-  if (character.custody !== 'kiosk' || character.active_fight || character.ambush)
-    throw new Error('character_not_available')
+  if (!character_free(character)) throw new Error('character_not_available')
   return character
 }
 export const validate_equip_item = (context: GameplayContext) => {
@@ -72,7 +75,7 @@ const consumable_effect = (item_type: string) => {
   if (!effect || effect.type === 'loot_box') throw new Error('unsupported_consumable')
   return effect
 }
-const consumable_world = (item_type: string, character: import('@aresrpg/protocol').CharacterRow, chain_ms: number) => {
+const consumable_world = (item_type: string, character: CharacterRow, chain_ms: number) => {
   const effect = consumable_effect(item_type)
   if (consumable_noop(effect.type, character)) throw new Error('consumable_no_effect')
   const teleport = ['city', 'recall'].includes(effect.type)
@@ -107,5 +110,5 @@ export const equipment_executors = (actions: Pick<CharacterActions, 'equip' | 'u
   equip_item: actions.equip,
   use_consumable: actions.use_consumable,
 })
-export const equipment_projected = (payload: EquipPayload, character: import('@aresrpg/protocol').CharacterRow) =>
+export const equipment_projected = (payload: EquipPayload, character: CharacterRow) =>
   character.equipment.some(({ slot, id }) => slot === payload.slot && id === payload.item_id)

@@ -16,26 +16,26 @@
     box-shadow 0.2s;
 }
 .google-login {
-  color: #f1e5cd;
-  border: 1px solid #d5b67d88;
-  background: linear-gradient(110deg, #102333e8, #0b1826b8);
+  color: var(--aui-brass-hi);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 53.3%, transparent);
+  background: linear-gradient(110deg, #102333e8, color-mix(in srgb, var(--aui-sunk) 72.2%, transparent));
   box-shadow:
     inset 0 1px #fff2,
-    0 5px 24px #020b1833;
+    0 5px 24px color-mix(in srgb, var(--aui-void) 20%, transparent);
 }
 .google-login span {
   flex: 1;
 }
 .google-login > svg:last-child {
-  color: #d9ba7f;
+  color: var(--aui-brass);
   transition: transform 0.2s;
 }
 .google-login:hover:not(:disabled) {
-  border-color: #e6c990;
+  border-color: var(--aui-brass);
   background: linear-gradient(110deg, #1c3649ed, #172b3bdd);
   box-shadow:
     inset 0 1px #fff2,
-    0 0 22px #b7a07122;
+    0 0 22px color-mix(in srgb, var(--aui-brass) 13.3%, transparent);
 }
 .google-login:hover:not(:disabled) > svg:last-child {
   transform: translateX(3px);

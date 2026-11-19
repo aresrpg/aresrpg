@@ -4,7 +4,6 @@
 import { expect, test } from 'bun:test'
 import { Scene, type Mesh } from 'three'
 
-import environment from '../../../seed/content/adventure_environment.json'
 import { create_scenery } from '../src/scenery.ts'
 import { SCENERY_BUDGET, validate_scenery, type WorldScenery } from '../src/scenery_data.ts'
 
@@ -14,8 +13,8 @@ const scenery: WorldScenery = {
   vines: [{ top: [120, 90, 128], length: 8, yaw: 0 }],
 }
 
-test('authored scenery accepts the demo and refuses unbounded or malformed effects', () => {
-  expect(validate_scenery(environment.scenery)).toEqual([])
+test('scenery accepts bounded effects and refuses unbounded or malformed ones', () => {
+  expect(validate_scenery(scenery)).toEqual([])
   expect(validate_scenery(undefined)).toEqual([])
   for (const invalid of [
     null,

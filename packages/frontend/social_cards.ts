@@ -80,8 +80,25 @@ const PAGE_CARDS: readonly SocialCard[] = Object.freeze([
     'KARES whitelist',
     'Climb a leaderboard or post on X to get a Veteran or Member spot for the KARES sale on Blast.'
   ),
-  ...['', '/items', '/bestiary', '/classes'].map((tab) =>
-    page(`/encyclopedia${tab}`, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
+  page(
+    '/world',
+    'world',
+    'Enter the world',
+    'Explore, fight and trade in a voxel world where every action settles on Sui.'
+  ),
+  page(
+    '/dapp',
+    'dapp',
+    'Send your heroes on expeditions',
+    'Your bot trains, gathers and raids for you. Follow every hero from any browser, with no download.'
+  ),
+  page('/docs', 'encyclopedia', 'Docs', 'Guides and the full reference: every item, mob, class, spell and recipe.'),
+  // The docs show the encyclopedia's views under their own path space; both spaces share one card.
+  ...['/encyclopedia', '/encyclopedia/items', '/encyclopedia/bestiary', '/encyclopedia/classes'].map((route) =>
+    page(route, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
+  ),
+  ...['/docs/items', '/docs/bestiary', '/docs/classes'].map((route) =>
+    page(route, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
   ),
 ])
 

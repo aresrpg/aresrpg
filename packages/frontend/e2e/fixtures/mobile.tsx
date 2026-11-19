@@ -3,8 +3,7 @@
 import { createRoot } from 'react-dom/client'
 
 import { App } from '../../src/app.tsx'
-import { adventure_character } from '../../src/adventure/character.ts'
-import { adventure_fight_setup } from '../../src/adventure/fight_setup.ts'
+import { sample_character, sample_fight_setup } from '../../src/demo/sample.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import { TUTORIAL_IDS } from '../../src/tutorial/tutorial.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -59,7 +58,7 @@ observe_app(['fight'])
 window.mobile_fight = (mounted) =>
   dispatch_app(
     mounted
-      ? { type: 'fight/opened', mode: 'local', setup: adventure_fight_setup(adventure_character(), 0), seed: 42n }
+      ? { type: 'fight/opened', mode: 'local', setup: sample_fight_setup(sample_character()), seed: 42n }
       : { type: 'fight/closed', fight: null }
   )
 window.mobile_fight_active = () => read_app_state().fight.mounted

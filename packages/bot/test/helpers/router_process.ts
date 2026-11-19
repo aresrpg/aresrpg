@@ -110,6 +110,9 @@ const main = async () => {
       verify_owner: async () => {
         throw new Error('no_owner_verification_in_fixture')
       },
+      join_waitlist: async () => {
+        throw new Error('no_waitlist_in_fixture')
+      },
       policy: f.bot.policy,
       observation_freshness_ms: 60000,
       provision_enabled: false,

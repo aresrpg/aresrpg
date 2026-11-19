@@ -27,8 +27,6 @@ continue_google: Google で続行
 wallet_session_ended: ウォレットのセッションが終了しました。もう一度ログインしてください。
 connect_wallet: ウォレットを接続
 no_wallet: 対応ウォレットがインストールされていません
-play_demo: 'デモをプレイ'
-replay_demo: 'デモをもう一度プレイ'
 sign_in: サインインしてプレイ
 drag_hint: ドラッグで移動 · スクロールでズーム
 navigation: ナビゲーション
@@ -55,7 +53,7 @@ server_connected: 接続済み
 server_violation: 切断 — ルール違反。まもなく再試行します。
 server_replaced: 別の場所で接続中
 session_replaced_title: 別の場所から接続されました
-session_replaced_body: アカウントが別の場所でゲームを開いたため、このウィンドウは切断されました。他のセッションを閉じるか、ここで再接続してこのウィンドウでプレイしてください。
+session_replaced_body: 'アカウントが別のウィンドウ（3Dゲームまたはウェブアプリ）で接続されました。同時に接続できるのは1つだけのため、このウィンドウは切断されました。このウィンドウを使うには、ここで再接続してください。'
 session_replaced_reconnect: ここで再接続
 latency_unit: ms
 indexing_health: インデックス状態
@@ -699,6 +697,17 @@ airdrop_page:
       description: '記録されたショップ購入額が{threshold} SUIを超える、連携済みの全Hytaleウォレットが対象です。上位100人への選出は問いません。称号はバックアップ内のSuiアドレスに送られます。元のGoogleアカウントでログインし、ギフト券を確認してください。'
 
 settings_page:
+  suins_confirm_title: '名前の変更を確認'
+  suins_confirm_erase: '{names} の既存の情報（アバターを含む）は削除されます。'
+  suins_confirm_player: '{name} は下記の Google（zkLogin）ウォレットを指すようになり、そのデフォルト名になります。'
+  suins_confirm_agent: '{name} は下記のエージェントウォレットを指すようになり、そのデフォルト名になります。別の確認と、そのウォレット内の SUI が必要になる場合があります。'
+  suins_confirm_parent: '{name} は現在のウォレットに残ります。アドレスや情報は変更されません。'
+  suins_confirm_apply: '変更を確定'
+  suins_player_default_funding: '名前は更新されましたが、Google ウォレットのデフォルト名を設定するには SUI が必要です。'
+  suins_player_default_refused: '名前は更新されましたが、Google ウォレットのデフォルト名の変更は拒否されました。'
+  suins_player_default_failed: '名前は更新されましたが、Google ウォレットのデフォルト名の変更に失敗しました。再試行する前にウォレットを確認してください。'
+  suins_player_default_uncertain: '名前は更新されました。Google ウォレットのデフォルト名の取引結果は不明です。再読み込みの前にウォレットで確認してください。'
+  suins_stale_review: '確認中に名前が変更されました。更新して変更内容をもう一度確認してください。'
   suins_title: 'SuiNS名'
   suins_hint: '所有している名前を選択してください。既存の名前はウォレットに残ります。'
   suins_external: '検証済みの既定SuiNS名を表示します。外部ウォレットまたはSuiNSで管理してください。'
@@ -707,9 +716,8 @@ settings_page:
   suins_pending_uncertain: 'プレイヤー名は適用済みです。エージェント取引の結果は不明です。再試行前に結果を確認してください。自動再送は行いません。'
   suins_pending_refused: 'プレイヤー名は適用済みです。エージェントの署名は拒否されました。再試行したい場合のみ再度適用してください。'
   suins_pending_failed: 'プレイヤー名は適用済みです。エージェント名は未完了です。再試行前に取引結果を確認してください。'
-  suins_invalid_parent: '親名の所有権、有効期限、または利用条件が変わりました。更新して選び直してください。'
-  suins_collision: '要求された名前は有効な登録で使用中です。別の親名を選択してください。'
-  suins_metadata: 'この修復では既存のメタデータが失われるため変更しませんでした。別の親名を選択してください。'
+  suins_invalid_parent: 'この名前はウォレットで利用できなくなりました。更新して名前を選んでください。'
+  suins_collision: 'このAresRPG名はすでに使われています。別の名前を選んでください。'
   suins_unsupported: 'このウォレットまたはネットワークでは管理名を利用できません。'
   suins_fund: 'エージェントウォレットに入金'
   suins_current: '現在のデフォルト名'
@@ -2484,6 +2492,11 @@ kares_page:
   inactive: '報酬準備金の入金後にステーキングが開始されます。'
   position: 'ポジション'
   tokenomics: 'KARESトークン設計'
+  tabs_label: 'KARESのセクション'
+  tab_tokenomics: 'トークノミクス'
+  tab_staking: 'ステーキング'
+  signin_title: 'ステーキングするにはサインイン'
+  signin_body: 'ステーキングにはゲームアカウントを使います。Googleでサインインすると、ステークの確認と報酬の受け取りができます。'
   community: 'PvP大会とシーズンランキング'
   team: 'チーム配分'
   five_years: 'コミュニティのステーキング報酬'
@@ -2730,6 +2743,17 @@ ui:
   funding_game_wallet: ゲームウォレット
   funding_external_wallet: 別のウォレット
   agent_wallet: 'エージェントのウォレット'
+  wallet_tabs: 'ウォレット'
+  wallet_game: 'ゲーム'
+  wallet_bot: 'ボット'
+  wallet_you_sign: 'あなたが署名'
+  wallet_bot_signs: 'ボットが署名'
+  wallet_transfer: '振替'
+  wallet_from: '送金元'
+  wallet_to: '送金先'
+  wallet_swap: '送金元と送金先を入れ替える'
+  wallet_coin: 'コイン'
+  wallet_transfer_to: '{{amount}} {{token}} を{{wallet}}へ振替'
   agent_activity_label: 'エージェントの活動'
   agent_activity_idle: '目標を待っています'
   agent_activity_active: '実行中'
@@ -2778,9 +2802,6 @@ ui:
   agent_label: 'エージェント'
   agent_kiosk_badge: 'キオスク'
   agent_kiosk: 'エージェントのキオスク'
-  agent_deposit: 'エージェントへ入金'
-  agent_withdraw: 'プレイヤーへ出金'
-  agent_coin_transfer: '{{token}}を送金'
   agent_coin_direct: 'コインは1回の取引で直接送金されます。送信者がガス代を支払います。'
   agent_pair_for_deposit: '入金前にエージェントの永続的な署名者を確認してください。'
   agent_inventory_connect: 'エージェントの完全なアドレスを確認すると、所持品を利用できます。'
@@ -2816,6 +2837,9 @@ ui:
   agent_copy_failed: 'コピーできませんでした。上のリクエストを選択して手動でコピーしてください。'
   agent_handoff_request: '{{url}} に従って {{provider}} のConnect Your Agentを準備してください。不足する署名設定を報告し、必要なら一時リンクを求めてください。この依頼は認証情報の作成、資産移転、ゲームプレイを許可しません。'
   agent_connect_your: 'エージェントを接続'
+  agent_page_body: 'AIアシスタントにヒーローを任せましょう。エージェントは専用のボットウォレット（マルチシグ）からプレイし、資産はいつでもGoogleアカウントで取り戻せます。'
+  agent_page_signin: 'Googleでログインして、エージェントとそのボットウォレットを設定してください。'
+  agent_page_world: '3Dワールドを開く'
   agent_bootstrap: '設定手順を開く'
   agent_character_offer_hint: 'オファーを送信します。エージェントは別の操作でキャラクターを受け取ります。通常の手数料がかかります。'
   agent_connected: 'エージェントに接続しました'
@@ -2840,6 +2864,7 @@ ui:
   agent_hosted_authenticate: 'Googleウォレットで認証'
   agent_hosted_ready: '設定が完了しました'
   agent_hosted_consent: 'アシスタントを接続'
+  agent_hosted_review: 'アシスタントがあなたのボットへのアクセスを求めています。続行して内容を確認してください。接続するまで何も共有されません。'
   agent_hosted_authority: 'プレイし、このボットの資産を使用できます。'
   agent_hosted_read_access: 'このボットを閲覧できます。'
   agent_hosted_pause_access: 'このボットを一時停止・再開できます。'
@@ -2903,6 +2928,11 @@ ui:
   design_no_title: '称号なし'
   design_library: 'デザイン工房'
   design_controls: '操作部品'
+  design_components: 'コンポーネント'
+  design_prebuilt: '構築済み'
+  design_windows: 'ウィンドウ'
+  design_feedback: 'フィードバック'
+  design_tokens: 'トークン'
   design_dialog: 'ダイアログを開く'
   design_disabled: '利用不可'
   design_details: '詳細'
@@ -2962,12 +2992,6 @@ ui:
   formula_drop: 'ドロップ率 = min(100%, 基礎値 × モンスター帯補正 × (600 + チーム平均運) / 600)'
   formula_xp: '経験値 = 基礎経験値プール × パーティ係数 × レベル補正 × プレイヤーレベル / パーティ合計レベル × (100 + 知恵) / 100'
 
-menu_subtitle: 'AresRPGは、Sui上で構築された完全オンチェーンのターン制MMORPGです。'
-menu_start: 'Enterキーでスタート'
-menu_start_touch: 'タップしてスタート'
-menu_music_on: '音楽をオンにする'
-menu_music_off: '音楽をミュート'
-
 menu_build: 'ビルド'
 
 world_loading_assets: '風景を読み込み中…'
@@ -2975,48 +2999,6 @@ world_loading_graphics: 'グラフィックスを準備中…'
 world_loading_terrain: 'ワールドを構築中…'
 world_loading_sky: '空と照明を準備中…'
 world_loading_finishing: '最初のフレームを準備中…'
-
-adventure:
-  choice_title: '初めての勝利'
-  choice_body: 'ゴブリンを倒しました。報酬が待っています。次はどんな冒険に進みますか？'
-  start_playing: 'プレイを始める'
-  play_description: 'Googleでログインし、本編のキャラクターを作成または選択します。キャラクター作成とプレイにはSUIが必要です。'
-  continue_tutorial: 'チュートリアルを続ける'
-  continue_description: '報酬を装備し、Sceatに会ってパーティーでの戦い方を学びましょう。'
-  goblins_title: '道を切り開く'
-  goblins_objective: 'ゴブリンを倒す。'
-  equip_title: '旅の身支度'
-  equip_objective: 'ペットを含むすべての報酬を装備しましょう。'
-  equip_body: 'インベントリを開き、すべての報酬を装備してください。ダブルクリック、装備枠へのドラッグ、または「装備」で変更できます。実際のゲームでは変更ごとに Sui トランザクションが始まりますが、ここでは無料のシミュレーションです。'
-  speak_title: '橋の上の旅人'
-  speak_objective: '橋のSceatを見つけて話しましょう。'
-  invite_title: '力を合わせて'
-  invite_objective: 'Sceatを右クリックしてグループに招待しましょう。'
-  switch_title: 'ヤジンを操作'
-  switch_objective: 'Sceatのキャラクタータブを選びましょう。それぞれ異なる魔法と装備を持つ二人を操作できます。'
-  follow_title: 'リーダーを追う'
-  follow_objective: 'リーダーのSenshiを選び、グループ欄でリーダーに追従を有効にしましょう。'
-  guards_title: '王の衛兵'
-  guards_objective: '橋を渡り王の衛兵を倒しましょう。ヤジンの罠を置き、敵を押し込みましょう。'
-  boss_title: 'ゴバドックの遺物'
-  boss_objective: '遺物を求めてゴブリン王ゴバドックに挑みましょう。衛兵とは比べものにならない強敵です。'
-  dialogue_greeting: '初めて見る顔だね！僕はSceat。'
-  dialogue_danger: 'この世界は危険だ。一人では先に進めない。一緒に旅をしよう。'
-  dialogue_relic: 'ゴブリン王ゴバドックは強力な遺物を守っている。衛兵を突破して、王を探そう。'
-  journal: 'モスウッドの冒険'
-  chapter: 'ゴブリン王'
-  speak_action: 'Sceatと話す'
-  invite_action: 'Sceatを招待'
-  rebirth_title: 'あなたは傷がもとで命を落としました…'
-  rebirth_victory: 'ゴバドックを倒した。見事な勝利だ！ しかし、その攻撃には毒があった。意識を失ったあなたの無防備な体を、配下の軍勢が食らい尽くした。勝利の代償は、あなたの命だった。'
-  rebirth_body: 'Googleでログインして生まれ変わり、本当のゲームの世界へ進みましょう。'
-  goblins_body: '戦闘から始まります。配置を選んで準備完了を押し、呪文と移動を使ってゴブリンを倒しましょう。勝利すると最初の装備を獲得し、レベル200になります。'
-  speak_body: 'ゴブリンを倒しても、この森の危険はなくなりません。橋の上から戦いを見ていたヤジンのSceatは、一人で先へ進む気がないようです。話しかけてみましょう。彼が探しているのはゴブリン王ゴバドックの遺物。反撃の仕方を知る仲間が必要なのです。'
-  invite_body: 'Sceatには考えがあります。残念ながら、森で一番大きなゴブリンに会いに行く計画です。違う技を持つ二人なら、一人より勝ち目があります。Sceatを右クリックしてグループに招待しましょう。この冒険では両方の英雄を操作し、能力の組み合わせを自分で決められます。'
-  switch_body: '仲間が増える意味は、体力バーが一本増えるだけではありません。ヤジンのSceatは罠と位置取りを得意とし、力で押すセンシとは違う戦い方をします。キャラクター切り替えから彼を選びましょう。呪文も装備も英雄ごとに別です。誰を動かすかも大事な判断になります。'
-  follow_body: 'グループができたら、はぐれないようにしましょう。センシをリーダーに選び、グループ操作でリーダーへの追従を有効にしてください。探索中はSceatがついてくるので、同じ道を二度歩かずに済みます。戦闘では引き続き、各英雄の移動と呪文を自分で選びます。'
-  guards_body: 'ゴバドックは入口を無防備にはしていません。待ち構える衛兵を相手に、今度は二人を連携させましょう。挑む前に新しい装備を確認してください。センシの力とSceatの罠を組み合わせるのが鍵です。敵を追い回すより、有利な位置に誘い込む方が倒しやすいこともあります。'
-  boss_body: '衛兵の先には、Sceatが探す遺物を持ったゴバドックが待っています。負け続けてゴブリン王になれるはずもありません。二人で戦う術は学びましたが、今度の相手は別格です。仲間とともに近づき、新しい絆でどこまで進めるか確かめましょう。'
 
 discord_marketplace:
   rare_loot_title: 'ボスのレアドロップ'
@@ -3124,29 +3106,16 @@ allocation_page:
   error_connection_failed: 'サーバー接続が切れました。再接続してください。'
   error_connection_replaced: 'このウォレットは別のタブで接続されました。準備ができたらここで再接続してください。'
   error_restore_timeout: 'ウォレットの復元がタイムアウトしました。再接続してください。'
-  error_x_changed: '送信中にXアカウントが変更されました。再読み込みして新しいアカウントの投稿を送信してください。'
-  open_x: 'Xを開く'
-  replace_x_note: 'Xで別のアカウントに切り替えてから続けてください。変更が成功すると以前の応募は削除されます。新しいアカウントの投稿を送信してください。'
-  replace_x: 'Xアカウントを変更'
-  edit_note: '締切まで1〜3件の投稿を編集して再送信できます。'
-  edit_posts: '投稿を編集・追加'
-  checking_posts: 'Xの投稿を確認中'
   connecting: 'ウォレットの接続と確認中'
   restoring: 'ウォレットを復元中'
   reconnect: '再接続'
   error_title: '操作を完了できませんでした'
-  pending_note: '応募締切と審査の完了後に結果が確定します。現時点では枠は保証されません。'
-  current_rank: '現在の順位'
-  projected_tier: '現在は{{tier}}の見込み'
-  rank_warning: '暫定順位です。スナップショット前に他のプレイヤーに抜かれる可能性があります。プレイを続けましょう。'
-  share_pending: 'KARESホワイトリストの応募は最終審査待ちです。あなたの応募も確認：'
   share_post: '@blastdotfun のKARES販売で{{tier}}のホワイトリスト枠を獲得しました。あなたの枠も確認：'
   menu_title: 'ホワイトリストの枠を確認'
   menu_note: 'KARES販売のベテラン・メンバー向け割当。'
   menu_action: '割当を確認'
   before: 超過申込による調整前
   buy_up_to: 購入上限
-  pending: 結果待ち
   no_spot: 今回は枠なし
   source_reserved: 予約済み枠
   source_pending: 選考待ち
@@ -3160,66 +3129,28 @@ allocation_page:
   signature_note: 無料のメッセージに署名します。取引や支払いは行いません。
   no_wallet_app: Suiウォレットをインストールしてください。
   wallet_failed: 接続に失敗しました。再試行してください。
-  x_entry: Xへの応募
-  x_connect_note: 投稿を送るにはXを連携してください。
-  closed: 応募は終了しました
   edit: 編集
-  saved_posts: 保存済み · {{max}}件中{{count}}件
-  metrics_note: '最終審査時に反応数を集計します。'
-  recipient_locked: 最初の応募後は変更できません。
-  post_number: 投稿{{number}}
-  optional: 任意
-  post_limit: Xアカウントごとに最大{{max}}投稿
   cancel: キャンセル
   save: 保存
-  get_spot: 枠を獲得
-  get_spot_note: ランキングを上げるかXに投稿しましょう。
-  leaderboard_title: ランキングを上げる
-  leaderboard_note: '応募締切後にランキングのスナップショットを取得します。スコアはゲームウォレットに紐づき、連携の有無で資格は変わりません。'
-  veteran_boards: 各ランキングの対象者上位1～2名がVeteranを獲得します。
-  member_boards: 次の7名がMemberを獲得します。
-  skip_duplicates: 選出済みのウォレットは除外します。
   board_legend: 各ランキングの枠：Veteran / Member
   play: AresRPGをプレイ
-  x_title: Xに投稿
-  x_note: AresRPGについて投稿し、リンクを送ってください。
-  one_entry: 1～3投稿。Xアカウントごとに応募は1件です。
-  score_rule: 平均スコア：いいね＋3×リポスト＋3×引用。返信と閲覧数は対象外です。
-  x_winners: 上位{{veteran}}名がVeteran、次の{{member}}名がMemberを獲得します。
-  leftovers: ランキングの空き枠は同じティアのX応募者に回ります。
-  quality_rule: 購入した反応やコピー投稿は審査で除外される場合があります。
   sale_title: 販売はBlastで実施
   sale_time: '販売日時は後日発表します。'
   results_title: 'キャンペーン結果'
   results_note: 販売前にカードで結果を確認できます。
-  entries_close: 応募締切
-  your_time: 現地時間
-  cards_revealed: カード公開
-  results_time: '応募締切と審査の完了後。'
   spot_gives: 枠で得られるもの
-  days: 日
-  hours: 時間
-  minutes: 分
-  seconds: 秒
   signing: ウォレットで署名を確認してください…
-  close_in: 応募締切まで
   no_spot_yet: まだ枠はありません
   your_allocation: あなたの割当
   total_cap: '{{count}}枠で最大{{sui}} SUI'
   allocation_note: ログインしてウォレットを連携し、枠を確認してください。
-  card_placeholder: ここにカードが表示されます
-  one_card: 確認済みウォレットごとに1枚。
-  share_x: Xで共有
   footer: 枠は拠出上限であり、固定のトークン数ではありません。
-  entry_note: 最初の応募でウォレットが固定されます。編集すると投稿と応募時刻が更新されます。同点は早い応募、次にXのIDで決まります。
   error_wallet_limit: Googleウォレットを含め最大10個です。
   title: KARES ホワイトリスト
   veteran: Veteran
   member: Member
   public_note: 一般参加は Blast の販売条件に従います。結果は審査待ちの場合があります。
-  connect_x: X を接続
   recipient: 受取ウォレット
-  choose_wallet: 接続済みウォレットを選択
   preview: リンクをプレビュー
   share: 共有
   dilution: 上限はトークンの保証ではありません。申込超過時は全購入者が同じ割合で希薄化されます。
@@ -3269,43 +3200,24 @@ allocation_page:
   sale_dilution: 'セールが目標を超えた場合、各購入者の KARES は減り、超過分の SUI は受け取り時に返金されます。'
   google_wallet: Google ゲームウォレット
   loading: 読み込み中
-  registration: 応募受付中
   final: 最終リスト · Blast への取込待ち
-  refresh: 更新
   wallet: ウォレット
   error_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
-  error_wallet_locked: 初回応募で受取ウォレットが固定されています。そのウォレットを再接続してください。
   error_wallet_taken: このウォレットは別の X アカウントに紐付いています。
   error_invalid_address: 0x で始まる有効な Sui アドレスを入力してください。
-  error_closed: スナップショットのため応募を締め切りました。
-  metric_xp: 戦闘経験値
   board_xp: 戦闘経験値 · ランキング
-  metric_kills: モンスター討伐
   board_kills: モンスター討伐 · ランキング
-  metric_dungeons: ダンジョン
   board_dungeons: ダンジョン · ランキング
-  metric_jobs: 職業経験値
   board_jobs: 職業経験値 · ランキング
-  metric_marketplace: マーケット
   board_marketplace: マーケット · ランキング
-  metric_kolizeum: コロシアム
   board_kolizeum: コロシアム · ランキング
-  metric_zones: 発見
   board_zones: 発見 · ランキング
-  metric_feeding: ペットの餌やり
   board_feeding: ペットの餌やり · ランキング
-  metric_gathering: 採集
   board_gathering: 採集 · ランキング
   source_leaderboard: ランキングを上げる
   source_social: Xに投稿
-  spots_count: '{{count}} 枠'
   error_unauthorized: 先に受取ウォレットを接続して確認してください。
-  error_invalid_post: 異なるX投稿のリンクを1～3件入力してください。
   error_rate_limited: リクエストが多すぎます。少し待って再試行してください。
-  error_foreign_post: '接続中のXアカウントが投稿したリンクを使用してください。アカウントかリンクを変更してください。'
-  error_missing_post: '一部の投稿が見つかりません。リンクと公開設定を確認してください。'
-  error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
-
 tournament_page:
   level_limit_label: '登録時のレベル上限'
   level_unrestricted: '制限なし'
@@ -3553,116 +3465,562 @@ tournament_page:
   versus: 対 {{team}}
 
 landing_page:
-  sound_on: '音楽をオンにする'
-  sound_off: '音楽をミュート'
-  new_tab: ' (opens a new tab)'
+  sound_on: 音楽をオンにする
+  sound_off: 音楽をミュート
+  new_tab: ' (新しいタブで開きます)'
   sign_alt: AresRPG
-  nav_label: Resources
+  nav_label: リソース
   nav:
-    encyclopedia: Encyclopedia
-    journal: Journal
+    docs: ドキュメント
+    journal: ジャーナル
     discord: Discord
   kares:
     trigger: $KARES
-    trigger_detail: Tokenomics
-    modal_label: $KARES tokenomics
-    close: Close
+    trigger_detail: トークノミクス
+  account:
+    login: ログイン
+    logging_in: ログイン中…
+    signed_in: '{{address}} としてログイン中'
+    failed: ログインを完了できませんでした。もう一度お試しください。
+    logout: ログアウト
   hero:
+    eyebrow:
+      - タクティカルMMORPGプロトコル
+      - Sui上のオンチェーン
     title:
-      - Explore planets.
-      - Fight in turns.
-      - Keep what you find.
-    lede: AresRPG is a tactical voxel MMORPG, built on-chain on Sui. Clear dungeons with your party,
-      craft and trade with other players, and compete when tournaments run. Or hand the controls to
-      your agent and watch it play.
-    play: Play
-    let_ai_play: Let AI play
+      - 'ひとつの世界を、オンチェーンで。'
+      - '自分の遊び方で。'
+      - '見つけたものは自分のもの。'
+    lede: AresRPGはSui上のタクティカルMMORPGプロトコルです。キャラクター、戦利品、マーケットはオンチェーンにあり、どのインターフェースからでもプレイできます。パーティーでダンジョンを攻略し、他のプレイヤーと製作や取引をするか、操作をエージェントに任せましょう。
+    play: '3Dでプレイ'
+    play_bots: 'ボットでプレイ'
+    ways:
+      - ひとつの世界
+      - 遊び方は無限
+  chooser:
+    section: インターフェース
+    title: 遊び方を選びましょう。
+    intro: AresRPGは入口がひとつに限られないオンチェーンゲームです。キャラクターも戦利品もマーケットも共通です。まずは5つのインターフェースから始められ、次のインターフェースは誰でも作れます。
+    interface: インターフェース
+    specs:
+      runs_in: 動作環境
+      role: あなたの役割
+      good_for: 向いている用途
+      status: 状態
+    play:
+      manual: 手動
+      automated: 自動
+    items:
+      world:
+        name: ボクセルワールド
+        line: ブラウザで遊べるフル3Dゲーム。グラフィックは重めで、すべての行動を自分で操作します。
+        tech: three.jsで構築
+        status: プレイ可能
+        body: ブラウザで遊べるフル版のゲームです。惑星を歩き、パーティーを組み、グリッド上で自ら戦います。スマートフォンでは同じクライアントがタッチ操作に切り替わります。
+        runs_in: 高性能GPU搭載のブラウザ
+        role: すべての行動を自分で操作
+        good_for: 探索とパーティー戦闘
+        cta: 遊ぶ
+        preview: キャラクターがMosswoodのボクセルのキノコの森を土の道に沿って歩き、その先には崖、滝、ゴブリンが見えます。
+      dapp:
+        name: Web DApp
+        line: 3Dなし。どのスマホからでも、チームをクエストやダンジョン襲撃に送り出せます。
+        tech: あらゆる端末で動作
+        status: プレイ可能
+        body: 3Dエンジンを使わないゲームです。キャラクターをクエストに送り出し、チームでダンジョンを襲撃し、戦利品を取引できます。すべて、どのスマホでも動く軽量なページで行えます。
+        runs_in: あらゆるブラウザ・スマホ
+        role: チームを送り出し、戦利品を回収
+        good_for: 低スペック端末、短時間プレイ
+        cta: dappを開く
+        preview: Web DAppのデザインプレビュー：HPバー付きでクエスト中のキャラクター、鍵を待つダンジョン襲撃、そしてクエスト派遣・ダンジョン襲撃・マーケットを開くボタン。
+      agent:
+        name: あなたのエージェント
+        line: Claude、ChatGPT、Grokが操作を担当し、あなたは見守るだけ。
+        tech: Claude / ChatGPT / Grok
+        status: 制作中
+        body: Claude、ChatGPT、GrokをホストされたAresRPGボットに接続します。目標を決めたら、ゲーム内でキャラクターをプレイする様子を見守りましょう。
+        runs_in: ChatGPT、Claude、Grok
+        role: 目標を決めて見守る
+        good_for: おまかせプレイ
+        cta: エージェントを接続
+        preview: 会話の例：道のゴブリンを倒すようエージェントに頼むと、ホスト型ボットのツールを呼び出しながら状況を報告します。
+      telegram:
+        name: Telegram
+        line: 'チャットからヒーローを動かす。戦略を選び、承認し、見守る。'
+        tech: Telegramチャット
+        status: ウェイトリスト
+        body: 'Telegramのチャットで使うホスト型ボットです。ヒーローの確認済み戦略を選び、内容を読んで承認します。その後は同じチャットで進行を確認したり、停止したりできます。'
+        runs_in: Telegramチャット
+        role: 戦略を選んで承認
+        good_for: 'スマホからの手放しプレイ'
+        cta: ウェイトリストに登録
+        preview: チャットの例：戦略を選び、内容を確認して承認し、その後は状態を確認したり停止したりします。
+      sdk:
+        name: 自作クライアント
+        line: 公開SDKでクライアント、ツール、ボットを作れます。
+        tech: 公開SDK
+        status: ソース公開
+        body:
+          ゲーム自体が使っている公開SDKで開発できます。ライセンスでは、公式デプロイ上で動く商用クライアント、リメイク、ファンツール、ボットが認められています。
+          クライアントやボットは独自のSuiウォレットで署名します。
+        runs_in: 自作のあらゆるもの
+        role: クライアントを自分で書く
+        good_for: 独自クライアント、ツール、ボット
+        cta: プレイブックを読む
+        preview: 公開エージェントプレイブックの目次を表示するターミナル：SDKの構成要素、状態とトランザクションの規律、ソースリポジトリ、デプロイのピン。
+    waitlist:
+      joining: ウェイトリストに登録中…
+      joined: ウェイトリストに登録済みです
+      failed: ウェイトリストに登録できませんでした。もう一度お試しください。
+    agent_guide: ガイドを読む
+    source: ソースを見る
+    previews:
+      keys_then: 次に
+      dapp:
+        title: Web DApp
+        label: デザインプレビュー
+        character: Senshi
+        questing: クエスト中
+        dungeon: Ivory Rampart
+        needs_key: 鍵が必要
+        raid: チームでダンジョン襲撃
+        actions:
+          - クエストに送る
+          - ダンジョンを襲撃
+          - マーケット
+      agent:
+        title: ホスト型ボット / MCP
+        label: 会話の例
+        you: あなた
+        agent: agent
+        call: call
+        lines:
+          - 道のゴブリンを倒して。
+          - 了解です。ここから見ていてください。
+          - この先の道にゴブリンがいます。戦いを挑みます。
+          - 戦闘開始。グリッド上のマスを選んでいます。
+      telegram:
+        choose: 戦略を選択
+        patrol: 街の巡回 · モンスター1体
+        gather: 採集と製作
+        review: この戦略を確認
+        review_detail: 停止するまで、この街でモンスター1体のグループと戦います。
+        approve: 承認
+        menu: メニュー
+        running: 戦略を実行中
+        status: 状態
+        stop: 戦略を停止
+      sdk:
+        label: プレイブック目次
+        build: ボットを作る
+        build_lines:
+          - SDKの構成要素：アクションの組み立て、オフライン計画、戦闘シミュレーション。
+          - 状態とトランザクションの規律：鮮度、レシート、リカバリー。
+        source: ソースとデプロイ
+        source_lines:
+          - ソースリポジトリ：SDKのソース、ライセンス、対応するリリース。
+          - デプロイのピン：意図したデプロイと照合します。
   earn:
-    title: Three ways to earn as you play
-    intro: 'Every path runs through other players: you sell to them, craft for them, or compete against
-      them.'
-    bays:
-      - Key of Ivory Rampart
-      - Tidal Horn Core and Amberwood Recurve
-      - Tournaments
+    section: 経済
+    title: SUIで稼ぐ。3つの方法。
+    intro: 支払うのは他のプレイヤーです。彼らに売るか、彼らのために作るか、彼らに勝つかです。
     paths:
-      - title: Sell your dungeon drops
-        body: Use a key to open a dungeon and clear it with your party. List the tradable drops you keep on
-          the marketplace, and receive SUI when another player buys.
-      - title: Gather, craft and trade
-        body: Gather materials across the planets and craft the gear other players need. Sell what you make,
-          or sell the materials themselves.
-        link: Browse the item encyclopedia
-      - title: Win tournament prizes
-        body: When a tournament runs, play for its announced prizes. Your final placement decides your
-          share.
-  world:
-    title: Inside the Mosswood tutorial
-    label: Real gameplay captures from the Mosswood tutorial
-    beats:
-      - title: Explore the planets
-        body: This is Mosswood, a mushroom forest of voxel cliffs and waterfalls. Follow the path and meet
-          the locals.
-      - title: Walk up and challenge
-        body: Goblins wait on the path ahead. Walk up to them and challenge them to a fight.
-      - title: Fight in turns
-        body: The fight moves onto a grid. Blue marks you, green shows the tiles you can reach, and orange
-          marks the goblins. Plan every move.
-    keys_label: Press W to walk up, then F to challenge
-    keys_then: then
-    alt_world: A character walks a dirt path through Mosswood's voxel mushroom forest, with cliffs,
-      waterfalls and goblins ahead.
-    alt_goblins: Closer view of goblins standing on the path ahead in Mosswood.
-    alt_combat: The character faces three goblins on Mosswood's isometric combat grid. Green tiles show
-      reachable positions; orange tiles mark the goblins.
-    marks:
-      you: You
-      tiles: Tiles you can reach
-      goblins: Goblins
-  agent:
-    title: Your agent plays. You watch.
-    intro: Tell your agent what you’re after, out loud. It takes the controls and talks you through the
-      run while you watch, and you can stop watching whenever you like.
-    character: Senshi
-    status_connecting: Connecting…
-    status_watching: Watching Senshi
-    stop: Stop watching
-    you: You
-    your_agent: Your agent
-    said:
-      - Clear
-      - the
-      - goblins
-      - on
-      - the
-      - path.
-    bubbles:
-      - On it. Watch from here.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    call_title: Voice call
-    call_detail: with your agent
-    log:
-      - Clear the goblins on the path.
-      - On it. Watch from here.
-      - Following the path through Mosswood.
-      - Goblins on the path ahead. I’m challenging them.
-      - Fight started. Picking a tile on the grid.
-    replay: Replay
-    note: Filmed in Mosswood. Your agent’s lines are an example.
+      - tag: マーケット
+        title: ダンジョンを襲撃。
+        accent: 戦利品を売る。
+        body: チームでダンジョンを攻略し、ドロップ品を出品します。購入者からSUIで支払われます。
+      - tag: 生産職
+        title: 採集して製作。
+        accent: 装備を売る。
+        body: 生産職のレベルを上げ、戦う人に必要なものを製作して、それか素材を売りましょう。
+        link: すべてのアイテムを見る
+      - tag: トーナメント
+        title: 戦いに勝つ。
+        accent: 賞金を手に。
+        body: トーナメント開催時は、最終順位で賞金の取り分が決まります。
+  control:
+    section: 操作
+    title: 自動化するか、すべて自分で署名するか。
+    intro: 操作の方法は2つです。どちらも同じオンチェーンゲームで動き、キャラクターごとに方法を選べます。
+    you: あなた
+    holds: がキャラクターを保有
+    used_by: 使用者
+    automated:
+      tag: 自動
+      title: ホスト型エージェントが代わりにプレイ。
+      body: キャラクターを共有アカウントに預けて目標を設定します。ホスト型エージェントが24時間プレイするので、見守っても他のことをしても構いません。
+      figure: 図：あなたとホスト型エージェントが、キャラクターを保有する共有マルチシグアカウントの2つの鍵を1つずつ持ちます。
+      you_detail: Googleログイン
+      vault: 1-of-2マルチシグ
+      agent: ホスト型エージェント
+      agent_detail: 行動を実行
+      points:
+        - エージェントがあなたのウォレットの鍵を受け取ることはありません。
+        - 開始前に、使うボットと許可する内容を正確に承認します。
+        - エージェントがオフラインでも、いつでもインベントリからキャラクターを呼び戻せます。
+    self:
+      tag: ノンカストディアル
+      title: すべての行動に自分で署名。
+      body: Googleでログインします。キャラクターとアイテムはあなたのアカウントに残り、あなたの署名なしには何も起こりません。
+      figure: 図：あなたがGoogleアカウントで署名し、あなた自身のアカウントがキャラクターを保有します。
+      you_detail: Googleログイン
+      vault: あなたのアカウント
+      points:
+        - 他の誰もあなたのキャラクターを動かしたり、SUIを使ったりできません。
+        - 戦闘、製作、販売はすべてあなたが署名するトランザクションです。
+        - あとでキャラクターをホスト型エージェントに切り替え、好きなときに取り戻せます。
   end:
-    title: Start in Mosswood
-    body: The tutorial takes you from the first path to your first turn-based fight.
-    play: Play
-    discord: Join the Discord
+    title: 冒険を始めよう
+    body: ログインしてキャラクターを作成し、初めてのターン制戦闘に挑みましょう。
+    play: 遊ぶ
+    discord: Discordに参加
+    pick: あなたの選択：
   footer:
     wordmark: AresRPG
-    tagline: A tactical voxel MMORPG on Sui, across multiple planets.
-    game: Game
-    community: Community
-    play: Play
-    encyclopedia: Item encyclopedia
-    journal: Journal
+    tagline: 複数の惑星にまたがる、Sui上のタクティカルボクセルMMORPG。
+    game: ゲーム
+    community: コミュニティ
+    play: 遊ぶ
+    encyclopedia: アイテム図鑑
+    journal: ジャーナル
     discord: Discord
     telegram: Telegram
     x: X
+    allocation: ホワイトリストの枠を確認
+    colophon: ひとつの世界、無限のインターフェース
+
+telegram_companion:
+  connect_google: '🔑 Google'
+  waiting: 'あなたのゲームアカウントはまだTelegramを利用できません。ウェイトリストに登録して利用を申請してください。'
+  on_waitlist: '✅ ウェイトリストに登録済みです。「アクセスを確認」でゲームアカウントが承認されたか確認できます。'
+  join_waitlist: 'ウェイトリストに登録'
+  check_access: 'アクセスを確認'
+  inventory: '🎒 所持品'
+  inventory_empty: 'バッグは空です'
+  observation_unknown: 'まだ確認できません'
+  no_strategy: '戦略を実行中のキャラクターはいません。'
+  strategy_active: '戦略は有効です'
+  strategy_waiting: '戦略は待機中です'
+  replace_strategy: 'このキャラクターが実行中の戦略を置き換えます。送信済みの操作は完了する場合があります。'
+  fight: '⚔️ 戦闘中'
+  ambush: '🛡 守護者が待機中'
+  idle: '戦略を開始できます'
+  external_strategy: '別のアプリの戦略'
+  menu: '🧙 キャラクターを選択'
+  loading: '⏳ キャラクターを読み込み中'
+  empty: '🧙 プレイ可能なエージェントのキャラクターがいません'
+  play: '▶️ プレイ'
+  back: '☰ メニュー'
+  status: '📍 状態'
+  approve: '✅ 承認'
+  link: '🔑 /link でブラウザーからGoogleを連携'
+  linked: '✅ Google連携済み · /menu'
+  unlinked: '🔓 連携解除済み'
+  confirm: '下のコマンドをTelegramのチャットに送信して、リンクを完了してください。'
+  confirm_warning: 'このコードは共有しないでください。自分で始めたログインだけを承認してください。'
+  browser_expired: 'このページの有効期限が切れました。Telegramに戻り、/link でもう一度ログインしてください。'
+  check_status: '📍 ステータスを確認'
+  log_in_again: '🔑 もう一度ログイン'
+  balance: '💰 エージェントの残高'
+  pause: '⏸ エージェントを一時停止'
+  resume: '▶️ エージェントを再開'
+  wallet_scope: 'エージェントのウォレット全体と他の接続に影響します · 送信済み取引は完了する場合があります'
+  paused: '⏸ エージェント停止済み'
+  resumed: '▶️ エージェント再開済み'
+  choose_strategy: '戦略を選択'
+  failure_changed: '内容が更新されました。現在の状態はこちらです。'
+  failure_reconnect: 'ログインの有効期限が切れました。もう一度ログインしてください：'
+  failure_unlink_first: 'このチャットまたはGoogleアカウントはすでに接続済みか、ログインの途中です。/unlink してからもう一度お試しください。'
+  failure_temporary: '今回はうまくいきませんでした。少し待ってからもう一度お試しください。'
+  failure_busy: 'このキャラクターはまだ操作を完了していないか、エージェントが一時停止中です。一時停止した場合は /resume を使い、その後ステータスを確認してください。'
+  failure_run_limit: 'エージェントはすでに上限までキャラクターを動かしています。1 体を停止してから、このキャラクターを開始してください。'
+  review: '戦略を確認'
+  effects: '停止するまで、この街で1体のモンスターの群れと戦います。各操作にSUIガス代がかかり、合計上限はありません。勝利の保証はなく、再起動で手順が繰り返される場合があります。送信済みの操作は取り消せません。'
+  stop: '戦略を停止'
+  stop_scope: '停止するキャラクターを選んでください。他のキャラクターは続行します。送信済み取引は完了する場合があります。'
+  stop_all: 'すべて停止'
+  stopped: '戦略を停止しました'
+  completed: '戦略が完了しました'
+  attention: '戦略の確認が必要です。ゲームでキャラクターを確認し、状況確認または停止を選んでください。'
+  unknown: '結果はまだ確認できていません。まずステータスを確認してください。'
+  city_review: '街：{city}'
+  city_required: 'ゲームで街に入り、/menu からもう一度確認してください。'
+  enable_agent: '🔑 エージェントを有効化'
+  play_consent: 'ゲームアカウントの参加が承認されました。続けるにはエージェントの権限を承認してください。'
+  world_review: 'ワールド：{world}'
+  gather_effects: '手持ちの材料で職業の成長に役立つ製作を行い、できなければ使える道具で採集し、このワールドを探索します。守護者とは基本戦術で戦います。停止するまで続きます。SUIガス代と材料の合計上限はなく、製作や戦闘に失敗する場合があります。 再起動で手順が繰り返される場合があります。送信済みの操作は取り消せません。'
+  strategies:
+    fight_nearby: '⚔️ 街の巡回 · モンスター1体'
+    gather_craft: '🌿 採集と製作'
+
+docs_page:
+  title: 'ドキュメント'
+  nav_label: 'ドキュメントのセクション'
+  home: 'ホーム'
+  play: '遊ぶ'
+  menu: 'メニュー'
+  previous: '前へ'
+  next: '次へ'
+  search: 'ガイド、アイテム、モンスターを検索'
+  search_empty: 'この検索に一致するページはありません。'
+  new_tab: ' (新しいタブで開きます)'
+  data_note: 'このページの数値は、ゲームと同じコンテンツファイルから取得しています。'
+  kinds:
+    guide: 'ガイド'
+    item: 'アイテム'
+    mob: 'モンスター'
+  groups:
+    start: 'はじめに'
+    mechanics: 'ゲームの仕組み'
+    automated: '自動プレイ'
+    reference: 'リファレンス'
+    economy: '経済'
+    build: '開発'
+  guides:
+    overview: 'AresRPGとは'
+    first_hour: '初心者ガイド'
+    market: 'マーケット'
+    agents: 'アシスタントを接続'
+    build: 'AresRPGで開発する'
+    kares: 'KARESトークン'
+    ways: '遊び方'
+    bots: 'ホスト型ボット'
+  overview:
+    lede: 'AresRPGは、Sui上でプロトコルとして動くタクティカルMMORPGです。キャラクター、アイテム、戦闘、マーケットはすべてオンチェーンのオブジェクトとトランザクションです。目にするゲームはそのプロトコルのクライアントのひとつで、ほかにも複数あります。'
+    counts:
+      items: 'アイテム'
+      spells: '呪文'
+      mobs: 'モンスター'
+      recipes: 'レシピ'
+      classes: 'クラス'
+      jobs: '職業'
+    protocol_title: 'ひとつのクライアントではなく、プロトコル'
+    protocol:
+      - 'ゲームのルールはスマートコントラクトです。戦闘、クラフト、採集、売買はいずれもトランザクションで、どのインターフェースから送っても結果は同じです。'
+      - 'キャラクターとアイテムはあなたのアカウントが所有します。あなたがキャラクターを預けたホスト型ボットを除き、インターフェースが預かることはありません。'
+      - 'すべてのインターフェースが同じ状態を読みます。3Dワールドで始めた戦闘は別のページからも見られ、ボットが得た戦利品はあなたのインベントリに表示されます。'
+    loop_title: 'ゲームですること'
+    loop:
+      - 'グリッド上でモンスターの群れとターン制で戦います。毎ターン、呪文にアクションポイントを、移動に移動ポイントを使います。'
+      - '資源を集め、職業で道具・装備・消耗品をクラフトします。'
+      - 'パーティでダンジョンを部屋ごとに攻略し、ボスの戦利品を狙います。'
+      - 'マーケットでほかのプレイヤーとSUIで取引します。'
+  ways:
+    lede: 'このプロトコルに入口はひとつではありません。以下のどのインターフェースも、同じキャラクター、同じ戦利品、同じマーケットで遊べます。違いは、誰が操作するかと、動かすのに何が必要かです。'
+    note: '複数のインターフェースを使えますが、制限がひとつあります。アカウントごとに有効な接続はひとつだけです。3Dゲームを開くと、同じアカウントのWeb dappのセッションと入れ替わります。'
+  bots:
+    lede: 'ホスト型ボットは、AresRPGのサーバー上であなたの代わりにヒーローをプレイします。Web dapp、Telegram、接続したアシスタントは、すべて同じボットを動かします。'
+    wallet_title: 'ボットウォレット'
+    wallet:
+      - 'ボットは、ゲームウォレットとは別の専用ウォレットからプレイします。これは1-of-2のマルチシグで、ホストサービスもあなたのGoogleアカウントも署名できます。'
+      - '預けたヒーローとアイテムはそのウォレットに移ります。そこでのプレイはカストディ型で、サービスが操作に署名します。'
+      - 'ボットがオフラインでも、いつでも自分のアカウントからすべてを取り戻せます。回収に必要なのはあなたの署名だけです。'
+      - 'ボットは自分でネットワーク手数料を支払います。ボットウォレットに少しSUIを入れておいてください。「送金」で2つのウォレット間でSUIとKARESを移せます。'
+    does_title: 'ボットがすること'
+    does:
+      - '各ヒーローは一度にひとつの活動を行います。街の周りで戦う、採集とクラフトをする、ダンジョンを攻略する、などです。あなたが選び、終わるか止めるまでボットが続けます。'
+      - '同じボットウォレットのヒーローはチームで戦えます。'
+      - 'いつでもボットを一時停止したり、ヒーローを止めたりできます。すでにチェーンに送られた操作は最後まで実行されます。'
+      - '承認された作業がないとき、またはウォレットに手数料のSUIがないとき、ボットは待機します。'
+    control_title: '誰が指示できるか'
+    control:
+      - 'Web dapp：活動の開始と停止、ステータスと呪文の強化、ボットとしてのマーケット取引。'
+      - 'Telegram：確認済みの戦略を選んで承認します。'
+      - 'アシスタント（ChatGPT、Claude、Grok）：チャットで目標を決めます。承認した範囲内でボットのツールを呼び出します。'
+  first_hour:
+    lede: '最初の1時間の目標は、キャラクター、いくつかの勝利、そして自分で製作した道具です。以下のドロップ率とレシピは実際のものです。'
+    drop_chance: 'ドロップ率 {{chance}}%'
+    steps:
+      - title: 'キャラクターを作成する。'
+        body: '作成には{{price}} SUIとガス代がかかります。クラスによって使える呪文が決まるので、慎重に選びましょう。'
+      - title: '最初の戦闘に勝つ。'
+        body: 'これらのモンスターは最初の街の周辺にいます。グループに近づいて戦いを挑みましょう。'
+      - title: '道具の素材を集める。'
+        body: '最初の農具はモンスターのドロップ品から作ります。素材ごとに、最も良い入手先を載せています。'
+      - title: '製作する。'
+        body: '職業「{{job}}」を開いて道具を製作します。製作は失敗することがあり、失敗しても材料は消費されるので、予備の素材を用意しましょう。'
+      - title: '最初のダンジョンを目指す。'
+        body: 'パーティーとこの鍵があれば、最初の街のダンジョンに入れます。'
+  market:
+    lede: 'プレイヤー同士で売買します。アイテムと資源はオンチェーンの出品で取引され、売り手にはSUIで支払われます。'
+    royalty: 'ロイヤリティ'
+    royalty_floor: '最低ロイヤリティ'
+    lot_sizes: 'ロット数'
+    points:
+      - '購入者は出品価格、ロイヤリティ、ガス代を支払います。'
+      - '売り手は出品価格を受け取り、別の操作で回収します。'
+      - '安い出品では最低ロイヤリティが効いてきます。出品価格だけでなく、ロット全体の費用を比べましょう。'
+  kares:
+    lede: 'KARESはまだ準備中です。近日追加予定です。'
+    note: 'このページでは、ローンチ時にトークン、供給量、報酬プールについて説明します。それまで残高、価格、報酬の数値は公開しません。'
+  agents:
+    lede: 'ChatGPT、Claude、GrokをホストされたAresRPGボットに接続します。目標を決めると、アシスタントがその範囲でキャラクターをプレイします。この機能は制作中です。'
+    steps:
+      - 'アシスタントを選び、AresRPGの接続アドレスをカスタムコネクタとして追加します。'
+      - 'Googleでサインインし、使うボットと許可する内容を正確に承認します。'
+      - 'インベントリからキャラクターを預けます。いつでも呼び戻せます。'
+    points:
+      - 'アシスタントがウォレットの鍵を受け取ることはなく、チャットで求めることもありません。'
+      - 'ホスト型のプレイはカストディアルです。共有の1-of-2アカウントがキャラクターを保持し、ホスト型エージェントが行動に署名します。Googleでのサインインが、引き続き認証と復旧の手段になります。'
+      - '接続中のボットが常に動いているとは限りません。承認された次のステップがないときは待機します。'
+    guide: '接続ガイドを読む'
+    index: 'エージェントプレイブックを開く'
+  build:
+    lede: 'ゲームクライアントは公開SDKで作られています。同じアクションを使って、自分のクライアント、ツール、ボットを作れます。'
+    source_title: 'ソースリポジトリ'
+    source_body: 'SDKのソース、ライセンス、対応するリリース。'
+    playbook_title: 'エージェントプレイブック'
+    playbook_body: '開発者向けのガイド：接続、カストディ、SDK、プロトコル、戦闘、経済。'
+    blocks_title: '構成要素'
+    blocks:
+      - 'アクションの組み立て：ゲームが送るものと同じトランザクションを作ります。'
+      - 'オフライン計画：署名者なしでレシピと成長を確認します。'
+      - '戦闘シミュレーション：確定する前にターンを計画します。'
+      - 'デプロイのピン：公式デプロイと通信していることを確認します。'
+    license_title: 'ライセンス'
+    allowed_title: '許可'
+    allowed:
+      - '商用クライアント、ゲームのリメイク、ファンツール、サービス、ボットの公開と運営。'
+      - '利益を目的として自動でプレイすること。'
+    forbidden_title: '禁止'
+    forbidden:
+      - 'ゲームのコントラクトやその派生物を、いずれかのブロックチェーンにデプロイまたは再公開すること。'
+      - 'AresRPGの名前やロゴを自分のブランドとして使うこと。'
+    license_note: 'このページは要約です。拘束力を持つのはライセンス本文です。再配布するときは、ライセンスと著作権表示を残してください。'
+    license_link: 'ライセンスを読む'
+
+dapp_page:
+  brand: '遠征'
+  mode_label: '表示モード'
+  mode_basic: 'ベーシック'
+  mode_advanced: 'アドバンス'
+  nav_label: 'セクション'
+  nav_play: 'プレイ'
+  nav_market: 'マーケット'
+  bot_balance: 'ボット: {amount} SUI'
+  bot_balance_hint: 'ホスト型ボットが持っている SUI です。ヒーローのネットワーク手数料と、マーケットでの購入代金を支払います。'
+  loading: '読み込み中…'
+  signing_in: 'サインインしています…'
+  signin_title: 'ヒーローを遠征に送り出そう'
+  signin_body: 'Google でサインインすると、ヒーローを確認し、ホスト型ボットに代わりにプレイさせられます。3D ワールドと同じアカウント、ヒーロー、アイテムです。'
+  signin_failed: 'サインインが完了しませんでした。もう一度お試しください。'
+  google_title: 'Google でのサインインが必要です'
+  google_body: 'ホスト型のヒーローは Google アカウントに属します。サインアウトして Google で続けると、このページを使えます。'
+  unavailable_title: '自動サービスが応答していません'
+  unavailable_body: 'しばらくは3Dワールドをご利用ください。'
+  unavailable_action: '3Dワールドを開く'
+  connect_title: 'ホスト型ボットを接続'
+  connect_body: 'ボットがあなたの代わりにヒーローを動かします。このページに活動の開始と停止を許可してください。'
+  connect_custody: 'ボットのアカウントはあなたの Google アカウントと AresRPG の共同管理です。どちらも署名でき、ヒーローはいつでも取り戻せます。'
+  connect_fees: '各アクションはボットの残高から支払う Sui トランザクションです。活動は停止するか残高がなくなるまで続きます。'
+  connect_stop: 'このページはボットのプレイと一時停止、そしてボットの残高でのマーケット取引ができます。SUI を引き出すことはできません。'
+  connect_action: '接続'
+  connect_busy: '接続中…'
+  reading_heroes: 'ヒーローを読み込んでいます…'
+  syncing: 'ボットがワールドに追いついています。このページは自動で更新されます。'
+  observe_failed_title: 'ボットが応答しません'
+  observe_failed: 'ボットに接続できませんでした。ページを再読み込みしてもう一度お試しください。'
+  empty_title: 'ボットにはまだヒーローがいません'
+  empty_body: '3D ワールドでヒーローを作成し、肖像を右クリックして「エージェントに送る」を選んでください。届くとここに表示されます。'
+  empty_action: '3D ワールドを開く'
+  heroes_title: 'あなたのヒーロー'
+  hero_level: 'レベル {level}'
+  hero_xp: '経験値'
+  status_free: '待機中'
+  status_activity: '活動中'
+  status_fight: '戦闘中'
+  status_dungeon: 'ダンジョン内'
+  activities_title: '活動'
+  activities_team: '各ボタンは空いているヒーロー全員を送り出します。同じ街にいるヒーローはチームで行動します。'
+  activities_hero: 'これらのボタンは {name} だけに作用します。'
+  activities_build: 'ベーシックでは、クラスが{classe}のヒーローは自動でも成長します。能力ポイントは{stat}に、呪文ポイントはまず{spell}に使われ、持っている中で最良の装備を身につけます。'
+  activity_ready: '準備完了: {names}'
+  activity_out: '活動中: {names}'
+  activity_other: '活動'
+  activity_train: '訓練'
+  activity_train_body: '各ヒーローが今いる街でモンスターと戦い、経験値と戦利品を得ます。一人なら単独のモンスターを狙い、同じ街のヒーローはチームで狩ります。'
+  activity_train_action: '訓練を始める'
+  activity_gather: '採集'
+  activity_gather_body: '手持ちの道具で、ヒーローのいるワールドで採集と製作を行い、職業を育てます。'
+  activity_gather_action: '採集を始める'
+  activity_raid: 'レイド'
+  activity_raid_body: 'このヒーローのいる街のダンジョンに挑み、最も珍しい戦利品を狙います。ヒーローは鍵を一つ使います。'
+  activity_raid_body_basic: '空いているヒーローのうち強い順に最大{size}人を{dungeon}へ送り、最も珍しい戦利品を狙います。ヒーロー一人につき鍵を一つ使います。'
+  activity_raid_action: 'レイドを始める'
+  blocker_command_pending: 'ボットの応答を待っています…'
+  blocker_no_free_hero: '今これに出せる空いているヒーローがいません。'
+  blocker_hero_busy: '{names}: 現在、戦闘中かダンジョンにいます。'
+  blocker_hero_unknown: '{names}: ボットがこのヒーローをまだ読み込んでいます。少し待ってから再試行してください。'
+  blocker_city_required: '{names}: 街にいません。先に 3D ワールドでヒーローを街へ移動させてください。'
+  blocker_world_required: '{names}: このダンジョンとは別のワールドにいます。'
+  blocker_key_missing: '{names}: このダンジョンの鍵がありません。'
+  blocker_team_full: '{names}: レイドのチームはすでに満員です。'
+  key_missing: '不足: {count} × {item}'
+  key_find: 'マーケットで {item} を探す'
+  key_unsold: '現在 {item} を売っている人はいません。'
+  raid_short_title: 'チーム全員分の鍵がありません'
+  raid_short_body: '鍵は{count}人分しかありません。ダンジョンに入るのは{names}だけです。もっと多くのヒーローを送るには、足りない鍵を見つけるか購入してください。'
+  raid_short_action: '{count}人でレイドを始める'
+  cancel: 'キャンセル'
+  close: '閉じる'
+  command_uncertain: 'ボットの応答を確認できませんでした。このページが自動で再確認します。二重に送信されることはありません。'
+  command_refused: '{names}: {reason}'
+  positions_title: 'ポジション'
+  positions_empty: '活動を始めると、ここで進捗を確認できます。'
+  position_running: '進行中'
+  position_waiting: 'ボットは待機中です。今はこの活動を続けられません。'
+  position_stopping: '停止中…'
+  position_finished: '完了'
+  position_ended_issue: 'ボットがこの活動を止めました。残高とヒーローを確認してから、もう一度始めてください。'
+  position_hp: 'HP'
+  position_xp: '獲得経験値'
+  position_levels: '+{count} レベル'
+  position_job_xp: '職業経験値'
+  position_fights: '戦闘数'
+  position_dungeon: '{dungeon} · 部屋 {room}'
+  position_team: '{names} と共闘中'
+  position_loot: '見つけたアイテム'
+  position_no_loot: 'まだアイテムは見つかっていません。'
+  position_stop: '停止'
+  position_dismiss: '閉じる'
+  haul_title: '持ち帰ったもの'
+  haul_spent: '使用 SUI: {amount}'
+  haul_spent_hint: 'ヒーローの活動中にボットのウォレットから出た SUI です。ネットワーク手数料、購入、外への振替を含みます。'
+  found_toast: 'ヒーローが見つけました'
+  hero_action_sent: 'ボットに送信しました。'
+  detail_title: '{name} の詳細'
+  detail_locked: '特性と呪文は、このヒーローが戦闘中でなく、ボットにほかの依頼が残っていない間に変更できます。'
+  detail_stats: '特性'
+  detail_spells: '呪文'
+  detail_equipment: '装備'
+  equipment_empty: '装備はありません。'
+  market_account: 'このマーケットはあなたのボットとして取引します。代金はボットの残高から支払われ、購入した物はヒーローたちが共有するバッグに入ります。このページではまだ出品を取り下げられず、売上はボットのキオスクに残ります。'
+  market_queued: 'ボットが {item} の注文を受け取りました。進行中のアクションの後に署名します。'
+  market_bought: '購入しました: {amount} × {item}。ヒーローたちのバッグに入っています。'
+  market_listed: '出品しました: {amount} × {item}。'
+  error_unknown: '問題が発生しました。もう一度お試しください。'
+  error_expired: 'ボットとの接続が期限切れです。もう一度接続してください。'
+  error_google_required: 'ホスト型ボットを接続するには Google で続けてください。'
+  error_consent_failed: '接続が承認されませんでした。もう一度お試しください。'
+  error_owner_mismatch: 'このボットは別のアカウントのものです。正しい Google アカウントでサインインしてください。'
+  error_storage_unavailable: 'このブラウザは接続に必要なストレージをブロックしています。サイトデータを許可して再試行してください。'
+  error_bot_busy_or_paused: 'ボットは一時停止中か、このヒーローの最後の行動をまだ処理しています。少し待ってから再試行してください。'
+  error_run_limit_reached: 'ボットはすでに動かせる上限までヒーローを動かしています。一人止めてから再試行してください。'
+  error_needs_resync: 'ボットはまだ同期中でした。数秒後にもう一度お試しください。'
+  error_start_unconfirmed: '何も動いていません。ボットは活動を受け付けませんでした。もう一度始められます。'
+  error_unavailable: 'ボットが応答しません。少し待ってから再試行してください。'
+  error_invalid_token: 'ボットとの接続が期限切れです。もう一度接続してください。'
+  error_insufficient_scope: 'この接続ではその操作はできません。許可するには再接続してください。'
+  error_behavior_run_not_found: 'このヒーローで実行中のものはもうありません。'
+  error_insufficient_character_points: 'ポイントが足りません。'
+  error_spell_rank_capped: 'この呪文はすでに最高レベルです。'
+  error_tool_failed: 'ボットはその操作を実行できませんでした。後でもう一度お試しください。'
+  error_insufficient_funds: 'ボットの SUI が足りません。ボットに SUI を追加してから、もう一度お試しください。'
+  error_listing_changed_or_ineligible: 'この出品は変更されたか、なくなりました。現在の価格を確認してから、もう一度お試しください。'
+  error_character_not_available: '今はどのヒーローも戦闘中で、これを受け取れません。少し待ってからもう一度お試しください。'
+  error_sale_source_changed_or_unavailable: 'このアイテムは変更されたか、十分な数のスタックがありません。もう一度選んでください。'
+  error_order_failed: '注文は完了しませんでした。もう一度試す前に、ボットの残高とバッグを確認してください。'
+  error_order_unconfirmed: 'この注文は確認できず、バッグも変わっていません。もう一度試す前に、ボットの残高を確認してください。'
+  disconnect_action: 'このページの接続を解除'
+  disconnect_body: 'このページからボットへのアクセスを取り消します。このページが始めた活動は新しい行動を受け付けなくなります。サインアウトしても同じです。'
+  disconnect_failed: 'ボットが確認しませんでした。このページはまだアクセスできます。もう一度お試しください。'

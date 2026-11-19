@@ -4,7 +4,6 @@ import type { AgentTransport } from '@aresrpg/sdk/agent-connection'
 
 import { create_actor_runtime } from '../../src/actor_runtime.ts'
 import { request_provisioning, run_provisioning } from '../../src/provisioning.ts'
-import { create_envelope_cipher } from '../../src/envelope_cipher.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../../src/control.ts'
 import type { ControlStore } from '../../src/store.ts'
 import type { Grant } from '../../src/model.ts'
@@ -49,7 +48,6 @@ export const runtime_fixture = async (store: ControlStore = memory_store()) => {
     store,
     config: fixture_config,
     provider,
-    cipher: create_envelope_cipher(new Uint8Array(32).fill(7), 'fixture'),
     endpoint: 'ws://127.0.0.1:0/',
     origin: fixture_config.web_origin,
     actor_id: 'actor',

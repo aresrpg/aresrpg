@@ -175,3 +175,11 @@ Source: generated image artifact `exec-890b9ca8-a9af-414c-a8c5-cba77fdc5b16.png`
 # Painted panel grain
 
 Generated using the built-in imagegen tool as an opaque material, then deterministically resized to a 512px WebP. It is tiled at 256px and soft-light blended over opaque semantic surface colors.
+
+# Pixel display font
+
+`font/pixelify-sans.ttf` is the Pixelify Sans variable font (weights 400-700) from `google/fonts` `ofl/pixelifysans`, fetched 2026-11-16. Licence: `font/OFL-pixelify-sans.txt`. It sets window titles and key caps only; Vietnamese and CJK locales fall back to Nunito.
+
+# Title and mono fonts
+
+`font/space-grotesk.ttf` is the Space Grotesk variable font (weights 300-700) and `font/jetbrains-mono.ttf` is the JetBrains Mono variable font (weights 100-800), both from `google/fonts` (`ofl/spacegrotesk`, `ofl/jetbrainsmono`), fetched 2026-11-17. Licences: `font/OFL-space-grotesk.txt`, `font/OFL-jetbrains-mono.txt`. Space Grotesk sets page headlines; JetBrains Mono sets technical labels. Scripts they lack fall back to Nunito.

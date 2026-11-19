@@ -106,37 +106,33 @@ export const IndexingCatchupModal = ({
       data-indexing-blocker=""
       role="alertdialog"
     >
-      <div className="w-full max-w-lg border border-[#4a9eff]/35 bg-surface p-7 shadow-[0_0_80px_rgba(74,158,255,0.14)]">
-        <p className="text-[8px] tracking-[0.24em] text-[#67adff] uppercase">{copy.indexing_health}</p>
-        <h2 id="indexing-catchup-title" className="mt-3 text-base font-semibold text-[#e8e4dc]">
+      <div className="w-full max-w-lg border border-cyan/35 bg-surface p-7 shadow-[0_0_80px_rgba(74,158,255,0.14)]">
+        <p className="text-[8px] tracking-[0.24em] text-cyan uppercase">{copy.indexing_health}</p>
+        <h2 id="indexing-catchup-title" className="mt-3 text-base font-semibold text-text">
           {copy.indexing_block_title}
         </h2>
-        <p className="mt-3 text-[11px] leading-6 text-[#989da8]">{copy.indexing_block_body}</p>
+        <p className="mt-3 text-[11px] leading-6 text-muted">{copy.indexing_block_body}</p>
 
         <div className="mt-6 h-2 overflow-hidden border border-white/8 bg-black/30">
           <div
-            className="h-full bg-gradient-to-r from-[#4a9eff] to-[#55d6e8] transition-[width] duration-700"
+            className="h-full bg-gradient-to-r from-cyan to-[#55d6e8] transition-[width] duration-700"
             style={{ width: `${view.progress_percent}%` }}
           />
         </div>
         <div className="mt-3 flex items-center justify-between gap-4 text-[9px] tracking-[0.12em] uppercase">
-          <span className="text-[#68707d]">{copy.indexing_block_progress}</span>
-          <span className="font-semibold text-[#67adff] tabular-nums">{view.progress_percent}%</span>
+          <span className="text-faint">{copy.indexing_block_progress}</span>
+          <span className="font-semibold text-cyan tabular-nums">{view.progress_percent}%</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/7 pt-4">
           <div>
-            <span className="block text-[7px] tracking-[0.15em] text-[#68707d] uppercase">
+            <span className="block text-[7px] tracking-[0.15em] text-faint uppercase">
               {copy.indexing_block_remaining}
             </span>
-            <span className="mt-1 block text-sm font-semibold text-[#e8e4dc] tabular-nums">
-              {view.remaining ?? '—'}
-            </span>
+            <span className="mt-1 block text-sm font-semibold text-text tabular-nums">{view.remaining ?? '—'}</span>
           </div>
           <div className="text-right">
-            <span className="block text-[7px] tracking-[0.15em] text-[#68707d] uppercase">
-              {copy.indexing_block_eta}
-            </span>
-            <span className="mt-1 block text-sm font-semibold text-[#e8e4dc] tabular-nums">
+            <span className="block text-[7px] tracking-[0.15em] text-faint uppercase">{copy.indexing_block_eta}</span>
+            <span className="mt-1 block text-sm font-semibold text-text tabular-nums">
               {eta ?? copy.indexing_block_estimating}
             </span>
           </div>

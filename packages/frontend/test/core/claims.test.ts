@@ -71,6 +71,18 @@ test('an opening receipt collects fourteen ready claims in one batch and removes
     expect(calls).toBe(1)
     expect(app.store.getState().session.claims).toEqual([])
     expect(app.store.getState().claim_failures).toEqual([])
+    // A delayed pre-redemption snapshot must not resurrect receipt-consumed claims.
+    app.dispatch({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/claims',
+        claims: [{ id: 'batch-0', kind: 'box', rolled_template, amount: 50 }],
+      },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(app.store.getState().session.claims).toEqual([])
+    expect(app.store.getState().claim_failures).toEqual([])
+    expect(calls).toBe(1)
   } finally {
     stop()
     if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor)
@@ -233,4 +245,29 @@ test('late claim settlement cannot remove another account claim or publish its y
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(app.store.getState().session.claims).toEqual([claim])
   stop()
+})
+
+test('claim consumption survives late opening receipts and reconnects, but remains account scoped', async () => {
+  const { create_app } = await import('../../src/store.ts')
+  const app = create_app()
+  const box = { id: 'consumed-box', kind: 'box' as const, rolled_template: 'template', amount: 50 }
+  const crush = { id: 'consumed-crush', kind: 'crush' as const }
+  const pending = { id: 'pending-box', kind: 'box' as const, rolled_template: 'template', amount: 50 }
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: { address: 'first' } as never })
+  app.dispatch({ type: 'inventory/claims_settled', claim_ids: [box.id, crush.id] })
+  app.dispatch({ type: 'inventory/boxes_opened', claims: [box, pending] })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/claims', claims: [box, crush, pending] } })
+  expect(app.store.getState().session.claims).toEqual([pending])
+  app.dispatch({ type: 'inventory/claims_settled', claim_ids: [box.id] })
+  expect(app.store.getState().session.redeemed_claims).toEqual([box.id, crush.id])
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/claims', claims: [box, crush, pending] } })
+  expect(app.store.getState().session.claims).toEqual([pending])
+  app.dispatch({ type: 'auth/disconnected' })
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: { address: 'second' } as never })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/claims', claims: [pending] } })
+  expect(app.store.getState().session.redeemed_claims).toEqual([])
+  expect(app.store.getState().session.claims).toEqual([pending])
 })

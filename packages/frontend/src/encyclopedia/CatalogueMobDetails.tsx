@@ -55,7 +55,7 @@ export const CatalogueMobDetails = ({
             >
               {detail.mob.name}
             </h2>
-            <p className="mt-1 text-[9px] tracking-[0.12em] text-[#6b7280] uppercase">
+            <p className="mt-1 text-[9px] tracking-[0.12em] text-faint uppercase">
               {text(`world_role.${detail.mob.role === 'normal' ? 'trash' : detail.mob.role}`)} ·{' '}
               {text('level_range', { min: detail.mob.level_min, max: detail.mob.level_max })}
             </p>
@@ -105,14 +105,14 @@ export const CatalogueMobDetails = ({
         </Section>
         <Section title={text('gameplay.section_loot')}>
           {detail.loot.length === 0 ? (
-            <p className="text-[9px] italic text-[#6b7280]">{text('no_drops')}</p>
+            <p className="text-[9px] italic text-faint">{text('no_drops')}</p>
           ) : (
             <div className="flex flex-col gap-1">
               {detail.loot.map(({ drop, item }) => {
                 const { chance, quantity, category, name } = mob_loot_view({ drop, item })
                 return (
                   <button
-                    className="flex cursor-pointer flex-col bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
+                    className="flex cursor-pointer flex-col bg-white/2 px-2 py-1.5 text-left hover:bg-gold/8"
                     key={drop.item_type}
                     onClick={() => select_item(drop.item_type)}
                     type="button"
@@ -120,7 +120,7 @@ export const CatalogueMobDetails = ({
                     <span className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
                         <EncyclopediaItemIcon item_type={drop.item_type} label={name} />
-                        <span className="truncate text-[10px] text-[#e8e4dc]">{name}</span>
+                        <span className="truncate text-[10px] text-text">{name}</span>
                         {category && (
                           <span
                             className="shrink-0 text-[8px] tracking-wide uppercase"
@@ -131,10 +131,10 @@ export const CatalogueMobDetails = ({
                         )}
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="text-[10px] font-semibold tabular-nums text-[#c8963c]">
+                        <span className="text-[10px] font-semibold tabular-nums text-gold">
                           ~{numbers.decimal(chance)}%
                         </span>
-                        <span className="text-[9px] text-[#6b7280]">{quantity}</span>
+                        <span className="text-[9px] text-faint">{quantity}</span>
                       </span>
                     </span>
                     <span className="mt-1 h-[3px] w-full bg-white/5" data-mob-loot-progress="">
@@ -156,18 +156,18 @@ export const CatalogueMobDetails = ({
                 const places = [...location.biomes, ...location.cities]
                 return (
                   <button
-                    className="flex cursor-pointer items-center gap-2 bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
+                    className="flex cursor-pointer items-center gap-2 bg-white/2 px-2 py-1.5 text-left hover:bg-gold/8"
                     key={location.world}
                     onClick={() => select_world(location.world)}
                     type="button"
                   >
-                    <MapPin className="shrink-0 text-[#c8963c]/60" size={11} />
-                    <span className="min-w-0 flex-1 text-[10px] tracking-[0.1em] text-[#c8963c] uppercase">
+                    <MapPin className="shrink-0 text-gold/60" size={11} />
+                    <span className="min-w-0 flex-1 text-[10px] tracking-[0.1em] text-gold uppercase">
                       {titleize(location.world)}
                     </span>
                     {places.length > 0 && (
                       <span
-                        className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase"
+                        className="text-[8px] tracking-[0.12em] text-faint uppercase"
                         data-mob-location-places={location.world}
                       >
                         {places.map(titleize).join(' · ')}

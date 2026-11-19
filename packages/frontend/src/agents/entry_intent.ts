@@ -14,15 +14,7 @@ export const agent_connect_url = (app_url = env.app_url): string => {
   return url.href
 }
 
-/** Null means leave the URL alone; preserve unrelated query fields and the fragment. */
-export const consumed_agent_entry_url = (
-  location: Readonly<Pick<Location, 'pathname' | 'search' | 'hash'>>
-): string | null => {
-  const search = new URLSearchParams(location.search)
-  const legacy = location.pathname.replace(/\/+$/, '') === LEGACY_AGENT_PATH
-  if (!legacy && search.get('intent') !== AGENT_CONNECT_INTENT) return null
-  if (search.get('intent') === AGENT_CONNECT_INTENT) search.delete('intent')
-  const query = search.toString()
-  const pathname = legacy ? '/world' : location.pathname
-  return `${pathname}${query ? `?${query}` : ''}${location.hash ?? ''}`
-}
+/** The public entry link, an assistant's consent link and the old `/connect-agent` path all name this page. */
+export const is_agent_entry = (location: Readonly<Pick<Location, 'pathname' | 'search'>>): boolean =>
+  location.pathname.replace(/\/+$/, '') === LEGACY_AGENT_PATH ||
+  new URLSearchParams(location.search).get('intent') === AGENT_CONNECT_INTENT

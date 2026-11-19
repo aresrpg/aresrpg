@@ -29,10 +29,10 @@
   padding-bottom: 4px;
 }
 .aui-rankings-port .leaderboard-category {
-  border: 1px solid #49515e;
+  border: 1px solid var(--aui-peak);
   border-radius: 6px;
-  background: #2b3039;
-  color: #bfc7d2;
+  background: var(--aui-lifted);
+  color: var(--aui-soft);
   font: 600 11px var(--aui-font);
   padding: 3px 9px;
   min-height: 26px;
@@ -40,9 +40,9 @@
   letter-spacing: normal;
 }
 .aui-rankings-port .leaderboard-category.active {
-  border-color: #b29558;
-  background: #5d4c31;
-  color: #f4d592;
+  border-color: var(--aui-brass);
+  background: var(--aui-brass-deep);
+  color: var(--aui-brass-hi);
 }
 .aui-rankings-port .leaderboard-category-toggle {
   display: none;
@@ -65,8 +65,8 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   padding: 6px;
-  border-color: #5a606d;
-  background-color: #20252d;
+  border-color: var(--aui-steel);
+  background-color: var(--aui-raised);
   box-shadow: 0 8px 22px #0009;
 }
 .aui-rankings-port .leaderboard-category-menu:popover-open {
@@ -105,17 +105,17 @@
   gap: 4px 10px;
   min-height: 91px;
   padding: 12px;
-  border: 1px solid #575e6955;
+  border: 1px solid color-mix(in srgb, var(--aui-steel) 33.3%, transparent);
   border-radius: 7px;
-  background: #20252d url('../../../ui/src/assets/panel_grain.webp');
+  background: var(--aui-raised) url('../../../ui/src/assets/panel_grain.webp');
   background-blend-mode: soft-light;
 }
 .aui-rankings-port .leaderboard-podium[data-rank='1'] {
   min-height: 111px;
   padding-block: 20px;
-  background-color: #363023;
-  border-color: #aa8b5055;
-  border-top-color: #b29558;
+  background-color: var(--aui-brass-deep);
+  border-color: color-mix(in srgb, var(--aui-brass-lo) 33.3%, transparent);
+  border-top-color: var(--aui-brass);
 }
 .aui-rankings-port .leaderboard-podium .leaderboard-medal {
   width: 42px;
@@ -170,14 +170,14 @@
   background: transparent;
 }
 .aui-rankings-port .leaderboard-entries > .leaderboard-row:nth-child(even) {
-  background: #20262f66;
+  background: color-mix(in srgb, var(--aui-raised) 40%, transparent);
 }
 .aui-rankings-port .leaderboard-row:not(.leaderboard-row-filled) {
   min-height: 29px;
 }
 .aui-rankings-port .leaderboard-row.leaderboard-row-self {
-  background: #273340;
-  box-shadow: inset 2px 0 #8ec7d8;
+  background: var(--aui-lifted);
+  box-shadow: inset 2px 0 var(--aui-blue);
 }
 .aui-rankings-port .leaderboard-user {
   display: flex;
@@ -200,7 +200,7 @@
   flex: 1;
 }
 .aui-rankings-port .leaderboard-row-filled > span:last-child {
-  color: #e8bc6b;
+  color: var(--aui-brass);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }

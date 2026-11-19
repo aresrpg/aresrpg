@@ -168,6 +168,8 @@ jobs:
       indexer: ${{ steps.plan.outputs.indexer }}
       indexer_digest: ${{ steps.plan.outputs.indexer_digest }}
       frontend: ${{ steps.plan.outputs.frontend }}
+      telegram: ${{ steps.plan.outputs.telegram }}
+      telegram_digest: ${{ steps.plan.outputs.telegram_digest }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -201,6 +203,8 @@ jobs:
           server=true
           indexer=true
           frontend=true
+          telegram=true
+          telegram_digest=""
           server_digest=""
           indexer_digest=""
           if [ -n "$previous_tag" ]; then
@@ -216,6 +220,7 @@ jobs:
             server=$(jq -r .server "$RUNNER_TEMP/runtime-plan.json")
             indexer=$(jq -r .indexer "$RUNNER_TEMP/runtime-plan.json")
             frontend=$(jq -r .frontend "$RUNNER_TEMP/runtime-plan.json")
+            telegram=$(jq -r .telegram "$RUNNER_TEMP/runtime-plan.json")
             # Build pins are runtime inputs; ledgers are not. A network switch also needs a new frontend.
             git show "$previous_tag:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/before-pins.json"
             git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/after-pins.json"
@@ -242,6 +247,11 @@ jobs:
               else
                 discord=true
               fi
+              if jq -e '.images.telegram.repository == "ghcr.io/aresrpg/telegram" and (.images.telegram.digest | type == "string" and test("^sha256:[0-9a-f]{64}$"))' "$previous_manifest" >/dev/null; then
+                telegram_digest=$(jq -r .images.telegram.digest "$previous_manifest")
+              else
+                telegram=true
+              fi
               server_digest=$(jq -r .images.server.digest "$previous_manifest")
               indexer_digest=$(jq -r .images.indexer.digest "$previous_manifest")
             else
@@ -251,6 +261,7 @@ jobs:
               server=true
               indexer=true
               frontend=true
+              telegram=true
             fi
           fi
           {
@@ -264,6 +275,8 @@ jobs:
             echo "indexer=$indexer"
             echo "indexer_digest=$indexer_digest"
             echo "frontend=$frontend"
+            echo "telegram=$telegram"
+            echo "telegram_digest=$telegram_digest"
           } >> "$GITHUB_OUTPUT"
   build-server:
     needs: backend-plan
@@ -402,6 +415,74 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ghcr.io/${{ github.repository_owner }}/bot
+          subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
+          push-to-registry: true
+  build-telegram:
+    needs: backend-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
+    env:
+      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/telegram
+      IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
+      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.telegram_digest }}
+      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.telegram }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !seed/icons
+            !seed/models
+            !music
+          sparse-checkout-cone-mode: false
+      - name: authenticate to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: create Buildx builder
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: reuse this immutable telegram semver on a preparation rerun
+        id: image
+        run: bash scripts/release_image.sh inspect
+      - name: build and push telegram
+        id: build
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.telegram == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: packages/telegram/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/telegram:${{ needs.backend-plan.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
+            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/telegram:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/telegram:buildcache,mode=max
+          provenance: false
+          sbom: true
+      - name: alias unchanged telegram digest to this release
+        id: alias
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.telegram != 'true'
+        run: bash scripts/release_image.sh alias
+      - name: attest telegram provenance
+        if: needs.backend-plan.outputs.telegram == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/telegram
           subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
           push-to-registry: true
   build-discord:
@@ -553,6 +634,7 @@ jobs:
         build-discord,
         build-indexer,
         build-bot,
+        build-telegram,
         prepare-production,
       ]
     if: >-
@@ -561,6 +643,7 @@ jobs:
       needs.verify-gate.result == 'success' &&
       needs.backend-plan.result == 'success' &&
       needs.build-bot.result == 'success' &&
+      needs.build-telegram.result == 'success' &&
       (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped') &&
       (needs.build-discord.result == 'success' || needs.build-discord.result == 'skipped') &&
       (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&
@@ -582,6 +665,8 @@ jobs:
           PREVIOUS_TAG: ${{ needs.backend-plan.outputs.previous_tag }}
           BOT_BUILT: ${{ needs.backend-plan.outputs.bot }}
           BOT_DIGEST: ${{ needs.build-bot.outputs.digest }}
+          TELEGRAM_BUILT: ${{ needs.backend-plan.outputs.telegram }}
+          TELEGRAM_DIGEST: ${{ needs.build-telegram.outputs.digest }}
           DISCORD_BUILT: ${{ needs.backend-plan.outputs.discord }}
           DISCORD_DIGEST: ${{ needs.build-discord.outputs.digest }}
           SERVER_BUILT: ${{ needs.backend-plan.outputs.server }}

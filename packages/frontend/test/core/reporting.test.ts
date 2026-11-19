@@ -206,7 +206,7 @@ test('Sentry retains browser attribution without retaining credentials or arbitr
       {
         type: undefined,
         request: {
-          url: 'https://aresrpg.world/play-demo#private-bearer',
+          url: 'https://aresrpg.world/world#private-bearer',
           headers: {
             [key]: agent,
             Authorization: 'Bearer private-token',

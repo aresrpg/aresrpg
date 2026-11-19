@@ -13,8 +13,7 @@ import { GamePageWindow } from '../../components/GamePageWindow.tsx'
 import { WorldAccount } from '../../game/hud/WorldAccount.tsx'
 import SettingsPage from '../../settings/SettingsPage.tsx'
 import { CharacterTabs } from '../../components/CharacterTabs.tsx'
-import { adventure_character, adventure_companion } from '../../adventure/character.ts'
-import { adventure_character_row } from '../../adventure/projection.ts'
+import { sample_character, sample_companion, sample_character_row } from '../sample.ts'
 
 import { WorkshopSurface } from './shared.tsx'
 
@@ -79,7 +78,7 @@ export const AccountToolsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 export const CharacterSwitcherExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const characters = [adventure_character_row(adventure_character()), adventure_character_row(adventure_companion())]
+  const characters = [sample_character_row(sample_character()), sample_character_row(sample_companion())]
   const [selected, select] = useState(characters[0]!.id)
   return (
     <CharacterTabs

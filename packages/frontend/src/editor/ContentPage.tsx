@@ -129,7 +129,7 @@ const EntityIcon = ({
       {url ? (
         <img alt="" className="size-full object-contain p-1" decoding="async" loading="lazy" src={url} />
       ) : (
-        <span className="text-[6px] tracking-[0.08em] text-[#555b66] uppercase">No icon</span>
+        <span className="text-[6px] tracking-[0.08em] text-faint uppercase">No icon</span>
       )}
     </div>
   )
@@ -194,12 +194,12 @@ const item_facet_options = (rows: readonly ItemFilterRow[]): readonly FacetOptio
 const content_gate = (status: SeedEditorStatus): Readonly<{ class_name: string; message: string }> | null => {
   if (status === 'loading' || status === 'idle')
     return Object.freeze({
-      class_name: 'grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase',
+      class_name: 'grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-gold uppercase',
       message: 'Loading seed files…',
     })
   if (status === 'unavailable')
     return Object.freeze({
-      class_name: 'grid flex-1 place-items-center p-8 text-center text-[10px] leading-6 text-[#777b86]',
+      class_name: 'grid flex-1 place-items-center p-8 text-center text-[10px] leading-6 text-faint',
       message: 'File editing is available only from the local Vite development server. Production has no write door.',
     })
   return null
@@ -207,11 +207,11 @@ const content_gate = (status: SeedEditorStatus): Readonly<{ class_name: string; 
 const result_row_class = (selected: boolean, effectless: boolean): string => {
   if (selected)
     return effectless
-      ? 'border-[#4a9eff] bg-amber-400/10 text-amber-100 ring-1 ring-inset ring-amber-400/30'
-      : 'border-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]'
+      ? 'border-cyan bg-amber-400/10 text-amber-100 ring-1 ring-inset ring-amber-400/30'
+      : 'border-cyan bg-cyan/6 text-[#b9d8ff]'
   return effectless
     ? 'border-amber-400/70 bg-amber-400/[0.07] text-amber-200 hover:bg-amber-400/[0.12]'
-    : 'border-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'
+    : 'border-transparent text-muted hover:bg-white/[0.045] hover:text-text'
 }
 const is_effectless_spell_row = (domain: string, row: SeedEntityRow): boolean =>
   domain === 'spells' && !spell_row_has_effects(row)
@@ -371,8 +371,8 @@ export const ContentPage = () => {
             <button
               className={`flex w-full items-center justify-between border-l-2 px-3 py-2.5 text-left text-[9px] uppercase ${
                 editor.domain === domain.id
-                  ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#c8963c]'
-                  : 'border-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'
+                  ? 'border-gold bg-gold/7 text-gold'
+                  : 'border-transparent text-faint hover:bg-white/[0.045] hover:text-text'
               }`}
               key={domain.id}
               onClick={() => select_domain(domain.id)}
@@ -382,7 +382,7 @@ export const ContentPage = () => {
                 <DomainIcon size={12} strokeWidth={1.5} />
                 {domain.label}
               </span>
-              <span className={domain_file?.dirty ? 'text-[#ffca57]' : 'text-[#6d7382]'}>
+              <span className={domain_file?.dirty ? 'text-gold' : 'text-faint'}>
                 {domain_file?.dirty ? '●' : count}
               </span>
             </button>
@@ -425,15 +425,15 @@ export const ContentPage = () => {
       <aside className="flex min-h-0 flex-col border-r border-white/10 bg-surface">
         <div className="border-b border-white/10 bg-surface-high p-3">
           <input
-            className="h-8 w-full border border-white/14 bg-bg px-2 text-[9px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/60"
+            className="h-8 w-full border border-white/14 bg-bg px-2 text-[9px] text-text outline-none focus:border-cyan/60"
             onChange={(event) => dispatch_app({ type: 'editor/query_changed', query: event.target.value })}
             placeholder="Search…"
             value={editor.query}
           />
           <div className="mt-2 flex min-h-4 items-center justify-between gap-3">
-            <p className="text-[8px] text-[#5f636d]">
+            <p className="text-[8px] text-faint">
               {filtered.length.toLocaleString()} rows
-              {ladder_reorder && <span className="text-[#626670]"> · drag to move a spell up the unlock ladder</span>}
+              {ladder_reorder && <span className="text-faint"> · drag to move a spell up the unlock ladder</span>}
             </p>
           </div>
         </div>
@@ -484,7 +484,7 @@ export const ContentPage = () => {
                 <span className="min-w-0 flex-1 truncate">{row.label}</span>
                 <EffectlessSpellBadge visible={effectless} />
                 {content_row_level_label(editor.domain, row) !== null && (
-                  <span className="shrink-0 text-[7px] text-[#626670] uppercase">
+                  <span className="shrink-0 text-[7px] text-faint uppercase">
                     {content_row_level_label(editor.domain, row)}
                   </span>
                 )}
@@ -498,17 +498,17 @@ export const ContentPage = () => {
           <div className="flex min-w-0 items-center gap-3">
             {selected && <EntityIcon detail reference={selected_asset} />}
             <div className="min-w-0">
-              <p className="truncate text-[11px] text-[#e8e4dc]">{selected?.label ?? 'No row selected'}</p>
-              <p className="mt-1 text-[8px] tracking-[0.12em] text-[#626670] uppercase">{file.file}</p>
+              <p className="truncate text-[11px] text-text">{selected?.label ?? 'No row selected'}</p>
+              <p className="mt-1 text-[8px] tracking-[0.12em] text-faint uppercase">{file.file}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <ValidationCounters active={validation_kind} report={editor.validation} select={set_validation_kind} />
             <p className="text-[8px] tracking-[0.14em] uppercase">
               {editor.status === 'saving' ? (
-                <span className="animate-pulse text-[#efbd45]">Saving…</span>
+                <span className="animate-pulse text-gold">Saving…</span>
               ) : file.dirty ? (
-                <span className="text-[#efbd45]">● unsaved</span>
+                <span className="text-gold">● unsaved</span>
               ) : (
                 <span className="text-[#65c993]">Saved · autosave on</span>
               )}

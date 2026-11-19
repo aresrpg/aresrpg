@@ -23,43 +23,45 @@ integration('Redis atomically rejects absent-key races without replaying callbac
     })
     const results = await Promise.allSettled(
       stores.map((store) =>
-        store.transaction(['lane', 'receipt'], async (tx) => {
-          expect(await tx.get('lane')).toBeNull()
+        store.transaction(['authority', 'record'], async (tx) => {
+          expect(await tx.get('authority')).toBeNull()
           entered += 1
           if (entered === 2) release()
           await barrier
-          await tx.put('lane', { pending: null })
-          await tx.put('receipt', { digest: 'synthetic' })
+          await tx.put('authority', { pending: null })
+          await tx.put('record', { digest: 'synthetic' })
         })
       )
     )
     expect(entered).toBe(2)
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
-    expect(await stores[0]!.read('receipt')).toEqual({ digest: 'synthetic' })
+    expect(await stores[0]!.read('record')).toEqual({ digest: 'synthetic' })
     await expect(
-      stores[0]!.transaction(['lane', 'receipt'], async (tx) => {
-        await tx.put('lane', 99)
-        await tx.put('receipt', 99)
+      stores[0]!.transaction(['authority', 'record'], async (tx) => {
+        await tx.put('authority', 99)
+        await tx.put('record', 99)
         throw new Error('fixture crash')
       })
     ).rejects.toThrow('fixture crash')
-    expect(await stores[1]!.read('lane')).toEqual({ pending: null })
-    expect(await stores[1]!.read('receipt')).toEqual({ digest: 'synthetic' })
-    await expect(stores[0]!.transaction(['lane'], (tx) => tx.put('unlocked', 1))).rejects.toThrow(
+    expect(await stores[1]!.read('authority')).toEqual({ pending: null })
+    expect(await stores[1]!.read('record')).toEqual({ digest: 'synthetic' })
+    await expect(stores[0]!.transaction(['authority'], (tx) => tx.put('unlocked', 1))).rejects.toThrow(
       'CONTROL_KEY_NOT_LOCKED'
     )
-    await expect(stores[0]!.transaction(['lane'], (tx) => tx.get('unlocked'))).rejects.toThrow('CONTROL_KEY_NOT_LOCKED')
-    await stores[0]!.transaction(['lane'], async (tx) => {
-      await tx.put('lane', { fence: 2 })
-      expect(await tx.get('lane')).toEqual({ fence: 2 })
+    await expect(stores[0]!.transaction(['authority'], (tx) => tx.get('unlocked'))).rejects.toThrow(
+      'CONTROL_KEY_NOT_LOCKED'
+    )
+    await stores[0]!.transaction(['authority'], async (tx) => {
+      await tx.put('authority', { fence: 2 })
+      expect(await tx.get('authority')).toEqual({ fence: 2 })
     })
-    expect(await stores[1]!.read('lane')).toEqual({ fence: 2 })
-    expect(await stores[1]!.scan_keys('', 1)).toEqual(['lane'])
-    expect(await stores[1]!.scan_keys('', 1, 'lane')).toEqual(['receipt'])
-    expect(await stores[1]!.scan_keys('rec', 10)).toEqual(['receipt'])
+    expect(await stores[1]!.read('authority')).toEqual({ fence: 2 })
+    expect(await stores[1]!.scan_keys('', 1)).toEqual(['authority'])
+    expect(await stores[1]!.scan_keys('', 1, 'authority')).toEqual(['record'])
+    expect(await stores[1]!.scan_keys('rec', 10)).toEqual(['record'])
     await expect(stores[0]!.scan_keys('', 0)).rejects.toThrow('INVALID_SCAN_LIMIT')
-    await expect(stores[0]!.transaction(['lane'], (tx) => tx.put('lane', undefined))).rejects.toThrow(
+    await expect(stores[0]!.transaction(['authority'], (tx) => tx.put('authority', undefined))).rejects.toThrow(
       'INVALID_CONTROL_VALUE'
     )
   } finally {
@@ -110,42 +112,43 @@ integration('health rejects a closed Redis connection and a fresh process connec
   }
 })
 
-integration(
-  'pending discovery excludes history, survives restart and settles with the authoritative record',
-  async () => {
-    const redis = fixture_redis(url!)
-    await redis.connect()
-    const namespace = `bot:fixture:${crypto.randomUUID()}`
-    const store = create_redis_store(redis, namespace)
-    try {
-      const keys = Array.from({ length: 1000 }, (_, index) => `command:history-${index}`)
-      await store.transaction([...keys, 'command:pending', 'profession:active'], async (tx) => {
-        for (const key of keys) await tx.put(key, { status: 'completed' })
-        await tx.put('command:pending', { status: 'uncertain' })
-        await tx.put('profession:active', { status: 'waiting' })
-      })
-      const restarted = create_redis_store(redis, namespace)
-      expect(await restarted.scan_pending(1)).toEqual(['command:pending'])
-      expect(await restarted.scan_pending(1, 'command:pending')).toEqual(['profession:active'])
-      await expect(
-        store.transaction(['command:pending'], async (tx) => {
-          await tx.put('command:pending', { status: 'completed' })
-          throw new Error('fixture crash before commit')
-        })
-      ).rejects.toThrow('fixture crash')
-      expect(await restarted.scan_pending(10)).toEqual(['command:pending', 'profession:active'])
-      await store.transaction(['command:pending', 'profession:active'], async (tx) => {
+integration('pending discovery retains definitions across restart but forgets commands', async () => {
+  const redis = fixture_redis(url!)
+  await redis.connect()
+  const namespace = `bot:fixture:${crypto.randomUUID()}`
+  const store = create_redis_store(redis, namespace)
+  try {
+    const keys = Array.from({ length: 1000 }, (_, index) => `command:history-${index}`)
+    await store.transaction([...keys, 'command:pending', 'behavior:hero'], async (tx) => {
+      for (const key of keys) await tx.put(key, { status: 'completed' })
+      await tx.put('command:pending', { status: 'uncertain' })
+      await tx.put('behavior:hero', { id: 'hero', character_id: 'hero', status: 'waiting' })
+    })
+    const restarted = create_redis_store(redis, namespace)
+    // A restarted process finds the hero run and none of the commands, wherever its cursor starts.
+    expect(await restarted.scan_pending(1)).toEqual(['behavior:hero'])
+    expect(await restarted.scan_pending(1, 'behavior:')).toEqual(['behavior:hero'])
+    expect(await restarted.scan_pending(1, 'behavior:hero')).toEqual([])
+    await expect(
+      store.transaction(['command:pending'], async (tx) => {
         await tx.put('command:pending', { status: 'completed' })
-        await tx.put('profession:active', { status: 'awaiting_ai' })
+        throw new Error('fixture crash before commit')
       })
-      expect(await restarted.scan_pending(10)).toEqual([])
-      expect(await restarted.read('command:pending')).toEqual({ status: 'completed' })
-    } finally {
-      await redis.send('DEL', [namespace, `${namespace}:pending`])
-      redis.close()
-    }
+    ).rejects.toThrow('fixture crash')
+    expect(await restarted.scan_pending(10)).toEqual(['behavior:hero'])
+    expect(await store.scan_pending(10)).toEqual(['behavior:hero', 'command:pending'])
+    await store.transaction(['command:pending', 'behavior:hero'], async (tx) => {
+      await tx.put('command:pending', { status: 'completed' })
+      await tx.put('behavior:hero', { id: 'hero', character_id: 'hero', status: 'awaiting_ai' })
+    })
+    expect(await restarted.scan_pending(10)).toEqual([])
+    expect(await restarted.read('command:pending')).toBeNull()
+    expect(await store.read('command:pending')).toEqual({ status: 'completed' })
+  } finally {
+    await redis.send('DEL', [namespace, `${namespace}:pending`])
+    redis.close()
   }
-)
+})
 
 integration('old snapshots cannot silently hide unresolved work behind a missing pending index', async () => {
   const redis = fixture_redis(url!)

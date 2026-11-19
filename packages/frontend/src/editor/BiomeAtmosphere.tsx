@@ -6,9 +6,8 @@ import { useState } from 'react'
 
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
-const input_class =
-  'h-7 border border-white/12 bg-bg px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
-const micro_label = 'block text-[7px] tracking-[0.1em] text-[#6f747e] uppercase'
+const input_class = 'h-7 border border-white/12 bg-bg px-2 text-[8px] text-soft outline-none focus:border-cyan/60'
+const micro_label = 'block text-[7px] tracking-[0.1em] text-faint uppercase'
 
 export const BiomeAtmosphere = ({
   recipe,
@@ -56,10 +55,10 @@ export const BiomeAtmosphere = ({
             ))}
           </select>
         </label>
-        <span className="pb-2 text-[7px] text-[#777b86]">{selected.length} packs active</span>
+        <span className="pb-2 text-[7px] text-faint">{selected.length} packs active</span>
       </section>
       <button
-        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.mountain_passes ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#ead8b3]' : 'border-[#292c34] bg-black/16 text-[#858994] hover:bg-white/[0.025]'}`}
+        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.mountain_passes ? 'border-gold bg-gold/10 text-gold-light' : 'border-surface-raised bg-black/16 text-faint hover:bg-white/[0.025]'}`}
         onClick={() => {
           begin_preview_update()
           replace(['terrain', 'biomes', biome_index, 'mountain_passes'], !biome.mountain_passes)
@@ -68,12 +67,12 @@ export const BiomeAtmosphere = ({
       >
         <span>
           <strong className="block text-[8px] tracking-[0.08em] uppercase">Colossal mountain passes</strong>
-          <span className="mt-0.5 block text-[6px] text-[#666b75]">Rare seeded cuts through tall terrain</span>
+          <span className="mt-0.5 block text-[6px] text-faint">Rare seeded cuts through tall terrain</span>
         </span>
         <span className="text-[7px] tracking-[0.1em] uppercase">{biome.mountain_passes ? 'On' : 'Off'}</span>
       </button>
       <button
-        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.ravines ? 'border-[#a5634d] bg-[#a5634d]/10 text-[#e4c1ad]' : 'border-[#292c34] bg-black/16 text-[#858994] hover:bg-white/[0.025]'}`}
+        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.ravines ? 'border-[#a5634d] bg-[#a5634d]/10 text-gold-light' : 'border-surface-raised bg-black/16 text-faint hover:bg-white/[0.025]'}`}
         onClick={() => {
           begin_preview_update()
           replace(['terrain', 'biomes', biome_index, 'ravines'], !biome.ravines)
@@ -82,7 +81,7 @@ export const BiomeAtmosphere = ({
       >
         <span>
           <strong className="block text-[8px] tracking-[0.08em] uppercase">Colossal ravines</strong>
-          <span className="mt-0.5 block text-[6px] text-[#666b75]">Rare deep fractures with feathered ends</span>
+          <span className="mt-0.5 block text-[6px] text-faint">Rare deep fractures with feathered ends</span>
         </span>
         <span className="text-[7px] tracking-[0.1em] uppercase">{biome.ravines ? 'On' : 'Off'}</span>
       </button>
@@ -91,7 +90,7 @@ export const BiomeAtmosphere = ({
           const active = selected.includes(name)
           return (
             <button
-              className={`grid w-full grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 border-l-2 px-2.5 py-2 text-left ${active ? 'bg-[#4f9b63]/10 text-[#d7e7d9]' : 'bg-black/16 text-[#858994] hover:bg-white/[0.025]'}`}
+              className={`grid w-full grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 border-l-2 px-2.5 py-2 text-left ${active ? 'bg-[#4f9b63]/10 text-text' : 'bg-black/16 text-faint hover:bg-white/[0.025]'}`}
               key={name}
               onClick={() => toggle(name)}
               style={{ borderColor: active ? category_color[pack.category] : '#292c34' }}
@@ -102,11 +101,11 @@ export const BiomeAtmosphere = ({
               />
               <span className="min-w-0">
                 <strong className="block truncate text-[8px] tracking-[0.08em] uppercase">{name}</strong>
-                <span className="mt-0.5 block text-[6px] text-[#666b75]">
+                <span className="mt-0.5 block text-[6px] text-faint">
                   {pack.types.length} types · {pack.category} · {pack.density_bp / 100}% slots
                 </span>
               </span>
-              <span className="text-right text-[6px] leading-3 text-[#686d77]">
+              <span className="text-right text-[6px] leading-3 text-faint">
                 {pack.spacing}m spacing
                 <br />≤ {pack.max_slope} slope
               </span>
@@ -114,7 +113,7 @@ export const BiomeAtmosphere = ({
           )
         })}
       </div>
-      <p className="px-1 text-[6px] leading-3 text-[#5f636d]">
+      <p className="px-1 text-[6px] leading-3 text-faint">
         Geometry comes from preprocessed type names. Pack weights and placement rules live in structure_packs.json.
       </p>
     </div>

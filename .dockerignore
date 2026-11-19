@@ -10,6 +10,10 @@
 !patches/**
 !packages
 packages/*
+!packages/telegram
+packages/telegram/*
+!packages/telegram/package.json
+
 !packages/bot
 packages/bot/*
 !packages/bot/package.json

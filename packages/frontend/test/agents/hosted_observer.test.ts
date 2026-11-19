@@ -24,12 +24,8 @@ const fixture = () => {
   )
   for (const [key, value] of Object.entries(globals))
     Object.defineProperty(globalThis, key, { configurable: true, value })
-  let pulse = () => {}
-  const interval = spyOn(globalThis, 'setInterval').mockImplementation(((callback: () => void) => {
-    pulse = callback
-    return 1
-  }) as typeof setInterval)
-  const clear = spyOn(globalThis, 'clearInterval').mockImplementation(() => {})
+  // No clock asks again: the owner coming back to the window does.
+  const pulse = () => window_fixture.dispatchEvent(new Event('focus'))
   const warn = spyOn(console, 'warn').mockImplementation(() => {})
   const pairing = { address: 'agent', multisig_public_key: 'descriptor', signer_mode: 'host-persistent' as const }
   let status = 503
@@ -50,7 +46,7 @@ const fixture = () => {
     })
   }) as unknown as typeof fetch)
   // The owner verification boundary has its own real cryptographic fixture tests. Here the HTTP client,
-  // observer, timer and session reducer exercise transport recovery without signing or network access.
+  // observer and session reducer exercise transport recovery without signing or network access.
   const refresh = spyOn(hosted, 'refresh_hosted_owner').mockImplementation((client) =>
     client.request('/fixture/status')
   )
@@ -68,7 +64,7 @@ const fixture = () => {
     dispatch,
     state: () => state,
     calls: () => calls,
-    pulse: () => pulse(),
+    pulse,
     status: (next: number) => {
       status = next
     },
@@ -79,8 +75,6 @@ const fixture = () => {
       controller.abort()
       refresh.mockRestore()
       fetcher.mockRestore()
-      interval.mockRestore()
-      clear.mockRestore()
       warn.mockRestore()
       for (const key of Object.keys(globals)) {
         const descriptor = descriptors[key]
@@ -91,7 +85,7 @@ const fixture = () => {
   }
 }
 
-test('temporary 503 clears active display and the existing timer recovers; true revocation stays disconnected', async () => {
+test('temporary 503 clears active display and the next window focus recovers; true revocation stays disconnected', async () => {
   const f = fixture()
   try {
     await tick()

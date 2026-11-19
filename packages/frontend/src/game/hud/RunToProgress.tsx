@@ -48,7 +48,7 @@ export const RunToProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <div className="world-run-progress pointer-events-none absolute top-[148px] left-1/2 z-[6] w-[min(360px,calc(100vw-32px))] -translate-x-1/2 rounded-[9px] border border-gold/25 bg-surface/85 px-3 py-2 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-sm">
       <div className="mb-1.5 flex items-center justify-between gap-3 text-[8px] tracking-[0.16em] uppercase">
         <span className="text-gold">{text('run_to_progress')}</span>
-        <span className="flex shrink-0 items-center gap-2 text-[#8d929d] tabular-nums">
+        <span className="flex shrink-0 items-center gap-2 text-faint tabular-nums">
           {remaining !== null && <Text path="ui.meters" values={{ count: Math.ceil(remaining) }} />}
           <span className="flex items-center gap-1">
             <Clock3 size={10} aria-hidden="true" />≈{eta}

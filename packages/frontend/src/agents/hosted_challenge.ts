@@ -7,6 +7,8 @@ import {
   type HostedConnectRequest,
 } from '@aresrpg/protocol'
 
+import type { AuthSession } from '../auth.ts'
+
 export type HostedSigningIntent = Readonly<{
   input: HostedChallengeInput
   consent: HostedConnectRequest | null
@@ -23,6 +25,39 @@ export const sign_hosted_message = async <T>(
   const signed = await sign(new TextEncoder().encode(challenge.message))
   if (challenge.expires_at <= Date.now()) throw new Error('Expired challenge')
   return signed
+}
+
+/** The Google account's identity for an owner proof. Only a zkLogin account can prove ownership to the bot. */
+export const hosted_owner_identity = (wallet: Pick<AuthSession, 'identity' | 'read_agent_pairing_request'>) => {
+  const request = wallet.read_agent_pairing_request?.(crypto.randomUUID())
+  if (wallet.identity !== 'zklogin' || !request) throw new Error('Google wallet required')
+  return request
+}
+
+type HostedPost = <T>(path: string, body?: Readonly<unknown>) => Promise<T>
+/** One owner-proof signature: ask the bot for a challenge, check it against this exact request, sign it.
+ * `check` runs between the awaited steps so a caller can stop when its account changed;
+ * `retain` receives the authorization id just before the account signs. */
+export const sign_hosted_challenge_with = async (
+  post: HostedPost,
+  wallet: Pick<AuthSession, 'sign_personal_message'>,
+  input: HostedChallengeInput,
+  /** Read after the bot answered, so a request that is refused never touches the page. */
+  context: () => Omit<HostedSigningIntent, 'input'>,
+  {
+    check = () => undefined,
+    retain = () => undefined,
+  }: Readonly<{ check?: () => void; retain?: (id: string) => void }> = {}
+) => {
+  check()
+  const challenge = await post<HostedChallengeResponse>('/connect/challenge', input)
+  check()
+  const { signature } = await sign_hosted_message(challenge, { input, ...context() }, (bytes) => {
+    retain(challenge.authorization_id)
+    return wallet.sign_personal_message(bytes)
+  })
+  check()
+  return { challenge_id: challenge.challenge_id, signature, authorization_id: challenge.authorization_id }
 }
 
 /** Display the registered destination, never a self-asserted OAuth client brand. */

@@ -26,7 +26,7 @@ for (const asset of ['app_boot', 'game_entry']) {
     await page.route(new RegExp(`/assets/${asset}-[^/]+\\.js$`), (route) => {
       return route.fulfill({ status: 404, body: 'missing' })
     })
-    await page.goto('/play-demo?source=test#test-claim-key')
+    await page.goto('/world?source=test#test-claim-key')
     const shell = page.locator('[data-boot-loading]')
     await expect(shell).toHaveAttribute('data-world-loading', 'failed')
     const reload = shell.getByRole('button', { name: 'Reload', exact: true })
@@ -35,12 +35,12 @@ for (const asset of ['app_boot', 'game_entry']) {
     expect(navigations).toBe(1)
     await reload.click()
     await expect.poll(() => navigations).toBe(2)
-    expect(page.url()).toContain('/play-demo?source=test#test-claim-key')
+    expect(page.url()).toContain('/world?source=test#test-claim-key')
   })
 }
 
 test('missing entry CSS exposes immediate recovery', async ({ page }) => {
-  await page.route(/\/assets\/layout-[^/]+\.css$/, (route) => route.fulfill({ status: 404, body: 'missing' }))
+  await page.route(/\/assets\/sale-[^/]+\.css$/, (route) => route.fulfill({ status: 404, body: 'missing' }))
   await page.goto('/allocation')
   await expect(page.locator('[data-boot-loading]')).toHaveAttribute('data-world-loading', 'failed')
   await expect(page.getByRole('button', { name: 'Reload', exact: true })).toBeVisible()
@@ -72,7 +72,7 @@ test('a slow import can still finish after recovery becomes available', async ({
       body: 'export const boot_game = () => document.getElementById("root").replaceChildren(document.createTextNode("Loaded"))',
     })
   })
-  await page.goto('/play-demo', { waitUntil: 'domcontentloaded' })
+  await page.goto('/world', { waitUntil: 'domcontentloaded' })
   const shell = page.locator('[data-boot-loading]')
   await expect(shell.getByRole('button', { name: 'Reload', exact: true })).toBeVisible({ timeout: 25000 })
   await expect(shell).toHaveAttribute('data-world-loading', 'assets')
@@ -84,8 +84,7 @@ test('an unavailable GPU adapter leaves loading with visible graphics recovery',
   await page.addInitScript(() => {
     if (navigator.gpu) Object.defineProperty(navigator.gpu, 'requestAdapter', { value: async () => null })
   })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Play', exact: true }).first().click()
+  await page.goto('/demo')
   const failed = page.locator('.loading-modal[open] [data-world-loading="failed"]')
   await expect(failed).toBeVisible({ timeout: 30000 })
   await expect(failed).toContainText('Graphics could not start.')
@@ -107,9 +106,9 @@ test('a stalled mounted world offers recovery and still processes a late GPU res
             }),
     })
   })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Play', exact: true }).first().click()
-  const modal = page.locator('.loading-modal[open]')
+  await page.goto('/demo')
+  // The composition lab mounts a world without an account.
+  const modal = page.locator('.loading-modal[open]', { has: page.locator('[data-loading-context="demo"]') })
   await expect(modal.locator('[data-world-loading="graphics"]')).toBeVisible({ timeout: 30000 })
   await expect(modal.getByRole('button', { name: 'Reload', exact: true })).toBeVisible({ timeout: 25000 })
   await expect(modal).toContainText('Loading is taking longer than expected.')
@@ -123,8 +122,7 @@ test('renderer download failure offers reload without blaming browser compatibil
     requests++
     return route.fulfill({ status: 503, body: 'unavailable' })
   })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Play', exact: true }).first().click()
+  await page.goto('/demo')
   const failed = page.locator('.loading-modal[open] [data-world-loading="failed"]')
   await expect(failed).toBeVisible({ timeout: 30000 })
   await expect(failed).toContainText('The world stopped loading or rendering.')

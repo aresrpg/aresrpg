@@ -134,7 +134,7 @@ export const MobsTab = ({
       ) : view === 'by_level' ? (
         grouped.map((group) => (
           <section key={group.label}>
-            <div className="border-b border-[#c8963c]/30 bg-[#c8963c]/4 px-3 py-2 text-[8px] tracking-[0.25em] text-[#c8963c]/60 uppercase">
+            <div className="border-b border-gold/30 bg-gold/4 px-3 py-2 text-[8px] tracking-[0.25em] text-gold/60 uppercase">
               <Shield className="mr-1 inline opacity-30" size={8} />
               {text('level_bracket', { range: group.label })}
             </div>

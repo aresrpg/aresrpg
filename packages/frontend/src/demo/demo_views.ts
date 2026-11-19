@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Boxes, FlaskConical, Grid2X2, Mountain, Package, Swords } from 'lucide-react'
+import { Boxes, FlaskConical, Grid2X2, Mountain, Package, Palette, Swords } from 'lucide-react'
 
 export type DemoView = 'assets' | 'world' | 'fight' | 'boards' | 'content' | 'biomes' | 'ui'
 export const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
@@ -10,7 +10,7 @@ export const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
 )
 export const VIEW_ICONS = Object.freeze({
   assets: Boxes,
-  ui: Grid2X2,
+  ui: Palette,
   world: FlaskConical,
   fight: Swords,
   boards: Grid2X2,

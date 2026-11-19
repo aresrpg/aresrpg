@@ -48,6 +48,23 @@
   cursor: pointer;
   background: color-mix(in srgb, var(--color-gold) 13%, var(--color-surface));
 }
+/* In a page header the trigger is an ordinary shared button that hugs its two balances. */
+.wallet-trigger.wallet-trigger--compact {
+  gap: 14px;
+  width: auto;
+  max-width: none;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--aui-border);
+  background: var(--aui-high);
+  color: var(--aui-ink);
+}
+.wallet-trigger--compact .wallet-trigger__balance {
+  padding-left: 0;
+  border-left: 0;
+  color: var(--aui-ink);
+  font: 600 13px/1 var(--aui-font-mono);
+}
 .wallet-trigger span {
   min-width: 0;
   overflow: hidden;
@@ -55,6 +72,9 @@
   white-space: nowrap;
 }
 .wallet-trigger__balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
   border-left: 1px solid var(--color-border);
   padding-left: 12px;
@@ -68,6 +88,9 @@
 .wallet-trigger:hover,
 .world-account:has(.wallet-popover:popover-open) .wallet-trigger {
   background: color-mix(in srgb, var(--color-gold) 22%, var(--color-surface));
+}
+.wallet-trigger.wallet-trigger--compact:hover {
+  background: var(--aui-lifted);
 }
 .wallet-panel {
   display: flex;
@@ -104,7 +127,7 @@
   gap: 8px;
 }
 .wallet-popover__identity > svg {
-  color: #c9af7b;
+  color: var(--aui-brass);
   flex: none;
 }
 .wallet-popover__identity > strong {
@@ -113,7 +136,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #e2cfaa;
+  color: var(--aui-brass-hi);
   font-size: 14px;
 }
 .wallet-panel .aui-wallet-balances {
@@ -124,7 +147,7 @@
   grid-template-columns: 24px minmax(0, 1fr);
   padding: 10px;
   gap: 3px 8px;
-  background: #171c22;
+  background: var(--aui-sunk);
 }
 .wallet-panel .aui-wallet-balances :is(svg, img) {
   grid-row: span 2;
@@ -136,14 +159,6 @@
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
-.wallet-popover__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.wallet-popover__actions .aui-button {
-  min-height: 40px;
-}
 .wallet-popover__gas {
   display: flex;
   align-items: center;
@@ -152,10 +167,10 @@
   padding-top: 9px;
   border-top: 1px solid #ffffff12;
   font-size: 11px;
-  color: #a0a9b4;
+  color: var(--aui-muted);
 }
 .wallet-popover__gas strong {
-  color: #d1d8e0;
+  color: var(--aui-soft);
   font-variant-numeric: tabular-nums;
 }
 

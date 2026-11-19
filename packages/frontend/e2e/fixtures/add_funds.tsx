@@ -28,7 +28,16 @@ initialize_app_store({ quality: 'medium', music_enabled: false, render_distance:
 dispatch_app({ type: 'auth/connecting' })
 dispatch_app({
   type: 'auth/connected',
-  session: { address: recipient, wallet_name: 'Google', identity: 'zklogin' } as AuthSession,
+  session: {
+    address: recipient,
+    wallet_name: 'Google',
+    identity: 'zklogin',
+    is_transaction_idle: () => true,
+    read_sui_balance: async () => read_app_state().session.sui_balance_mist ?? 0n,
+    estimate_sui_transfer: (...args: Parameters<AuthSession['estimate_sui_transfer']>) =>
+      (source as AuthSession).estimate_sui_transfer(...args),
+    send_sui: (...args: Parameters<AuthSession['send_sui']>) => (source as AuthSession).send_sui(...args),
+  } as AuthSession,
 })
 dispatch_app({
   type: 'wallet/refreshed',
@@ -117,7 +126,15 @@ const source: AuthSession | CryptoWalletSession = params.has('crypto')
         return 1_000_000n
       },
       read_sui_balance: async () => 10_000_000_000n,
-      send_sui: async (address: string, amount: bigint) => ({ digest: sent(address, amount) }),
+      send_sui: async (address: string, amount: bigint, _drain: boolean, before_sign?: () => void) => {
+        try {
+          // Match the SDK's final signing boundary, including modal/session cancellation.
+          before_sign?.()
+          return { digest: sent(address, amount) }
+        } finally {
+          document.documentElement.dataset.transfer = 'finished'
+        }
+      },
     } as unknown as AuthSession)
 if (params.has('live')) {
   const stop = observe_app(['external_wallet'])

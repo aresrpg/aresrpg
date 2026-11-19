@@ -7,9 +7,9 @@ import { item_stat_weight } from './item_power.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 const base_input =
-  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e3dfd7] outline-none transition-colors focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/[0.025] disabled:text-[#737781]'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-text outline-none transition-colors focus:border-cyan/70 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/[0.025] disabled:text-faint'
 const small_button =
-  'h-7 cursor-pointer border border-white/12 bg-white/[0.035] px-2 text-[8px] tracking-[0.12em] text-[#9da1ab] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45]'
+  'h-7 cursor-pointer border border-white/12 bg-white/[0.035] px-2 text-[8px] tracking-[0.12em] text-muted uppercase hover:border-gold/50 hover:text-gold'
 const never_readonly = (): boolean => false
 
 const humanize = (value: string): string =>
@@ -26,10 +26,10 @@ const options_for = (key: string): readonly string[] | null => {
 
 const element_swatch = (value: string): string => {
   if (value === 'fire') return 'bg-[#ef674d]'
-  if (value === 'water') return 'bg-[#4a9eff]'
-  if (value === 'earth') return 'bg-[#b58a55]'
+  if (value === 'water') return 'bg-cyan'
+  if (value === 'earth') return 'bg-gold'
   if (value === 'air') return 'bg-[#65c993]'
-  if (value === 'neutral') return 'bg-[#b9b4aa]'
+  if (value === 'neutral') return 'bg-muted'
   return 'bg-white/15'
 }
 
@@ -110,7 +110,7 @@ const PrimitiveEditor = ({
     return (
       <label
         className={`inline-flex h-8 items-center gap-2 border px-2.5 text-[9px] ${
-          value ? 'border-[#55c98b]/35 bg-[#55c98b]/8 text-[#82dba8]' : 'border-white/10 bg-black/20 text-[#777b86]'
+          value ? 'border-[#55c98b]/35 bg-[#55c98b]/8 text-[#82dba8]' : 'border-white/10 bg-black/20 text-faint'
         } ${read_only ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'}`}
       >
         <input
@@ -185,7 +185,7 @@ const PrimitiveEditor = ({
     )
   return value.length > 100 ? (
     <textarea
-      className="min-h-20 w-full max-w-3xl resize-y border border-white/12 bg-bg p-2 text-[10px] leading-5 text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:opacity-55"
+      className="min-h-20 w-full max-w-3xl resize-y border border-white/12 bg-bg p-2 text-[10px] leading-5 text-text outline-none focus:border-cyan/70 disabled:opacity-55"
       disabled={read_only}
       onChange={(event) => on_change(event.target.value)}
       value={value}
@@ -208,12 +208,12 @@ const json_record = (value: JsonValue): Readonly<Record<string, JsonValue>> | nu
 
 const stat_color = (stat: string): string => {
   if (stat === 'vitality') return 'bg-[#e86a73]'
-  if (stat === 'strength' || stat === 'earth_resistance') return 'bg-[#b58a55]'
+  if (stat === 'strength' || stat === 'earth_resistance') return 'bg-gold'
   if (stat === 'intelligence' || stat === 'fire_resistance') return 'bg-[#ef674d]'
-  if (stat === 'chance' || stat === 'water_resistance') return 'bg-[#4a9eff]'
+  if (stat === 'chance' || stat === 'water_resistance') return 'bg-cyan'
   if (stat === 'agility' || stat === 'air_resistance') return 'bg-[#65c993]'
   if (stat === 'wisdom') return 'bg-[#b584e8]'
-  return 'bg-[#c8963c]'
+  return 'bg-gold'
 }
 
 const StatsEditor = ({
@@ -237,8 +237,8 @@ const StatsEditor = ({
         <div className="bg-surface-low p-2.5" key={stat}>
           <div className="mb-2 flex items-center gap-2">
             <span className={`size-2 ${stat_color(stat)}`} />
-            <span className="text-[8px] tracking-[0.1em] text-[#a7aab2] uppercase">{humanize(stat)}</span>
-            <span className="ml-auto border border-white/7 bg-white/[0.025] px-1.5 py-0.5 text-[7px] tabular-nums text-[#777d88]">
+            <span className="text-[8px] tracking-[0.1em] text-muted uppercase">{humanize(stat)}</span>
+            <span className="ml-auto border border-white/7 bg-white/[0.025] px-1.5 py-0.5 text-[7px] tabular-nums text-faint">
               {item_stat_weight(stat, typeof maximum[stat] === 'number' ? maximum[stat] : 0)} weight
             </span>
           </div>
@@ -250,7 +250,7 @@ const StatsEditor = ({
               read_only={is_readonly([...path, 'min', stat])}
               value={minimum[stat] ?? 0}
             />
-            <span className="text-[8px] text-[#555b66] uppercase">to</span>
+            <span className="text-[8px] text-faint uppercase">to</span>
             <PrimitiveEditor
               compact
               field_key={stat}
@@ -282,9 +282,9 @@ const RangeEditor = ({
   const rest = Object.entries(value).filter(([key]) => !excluded.has(key))
   return (
     <div>
-      <div className="flex flex-wrap items-end gap-2 border-l-2 border-[#4a9eff]/55 bg-[#4a9eff]/[0.035] p-2.5">
+      <div className="flex flex-wrap items-end gap-2 border-l-2 border-cyan/55 bg-cyan/[0.035] p-2.5">
         <div>
-          <p className="mb-1 text-[7px] tracking-[0.12em] text-[#666d78] uppercase">From</p>
+          <p className="mb-1 text-[7px] tracking-[0.12em] text-faint uppercase">From</p>
           <PrimitiveEditor
             compact
             field_key={from_key}
@@ -293,9 +293,9 @@ const RangeEditor = ({
             value={value[from_key] ?? 0}
           />
         </div>
-        <span className="mb-2 text-[8px] text-[#59606b] uppercase">to</span>
+        <span className="mb-2 text-[8px] text-faint uppercase">to</span>
         <div>
-          <p className="mb-1 text-[7px] tracking-[0.12em] text-[#666d78] uppercase">To</p>
+          <p className="mb-1 text-[7px] tracking-[0.12em] text-faint uppercase">To</p>
           <PrimitiveEditor
             compact
             field_key={to_key}
@@ -306,7 +306,7 @@ const RangeEditor = ({
         </div>
         {'element' in value && (
           <div>
-            <p className="mb-1 text-[7px] tracking-[0.12em] text-[#666d78] uppercase">Element</p>
+            <p className="mb-1 text-[7px] tracking-[0.12em] text-faint uppercase">Element</p>
             <PrimitiveEditor
               field_key="element"
               on_change={(next) => on_change([...path, 'element'], next)}
@@ -352,7 +352,7 @@ const sections = Object.freeze([
     id: 'identity',
     label: 'Identity',
     note: 'Names, stable references, and classification',
-    tone: 'border-[#c8963c]/45 text-[#efbd45] bg-[#c8963c]/[0.035]',
+    tone: 'border-gold/45 text-gold bg-gold/[0.035]',
   }),
   Object.freeze({
     id: 'progression',
@@ -376,19 +376,19 @@ const sections = Object.freeze([
     id: 'world',
     label: 'World population',
     note: 'Terrain, biomes, cities, populations, and dungeons',
-    tone: 'border-[#4a9eff]/40 text-[#78b7ff] bg-[#4a9eff]/[0.03]',
+    tone: 'border-cyan/40 text-cyan bg-cyan/[0.03]',
   }),
   Object.freeze({
     id: 'presentation',
     label: 'Presentation',
     note: 'Models, art, colors, and authored status',
-    tone: 'border-[#e5a85b]/40 text-[#efbd7a] bg-[#e5a85b]/[0.03]',
+    tone: 'border-gold/40 text-gold-light bg-gold/[0.03]',
   }),
   Object.freeze({
     id: 'other',
     label: 'Additional data',
     note: 'Fields preserved directly from the JSON corpus',
-    tone: 'border-white/15 text-[#a7aab2] bg-white/[0.018]',
+    tone: 'border-white/15 text-muted bg-white/[0.018]',
   }),
 ] as const)
 
@@ -423,9 +423,9 @@ const Field = ({
     if (stats) return <div className="col-span-full">{stats}</div>
     return (
       <details className="col-span-full border border-white/10 bg-black/15" open={depth < 2}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-l-2 border-[#4a9eff]/45 px-3 py-2.5">
-          <span className="text-[9px] tracking-[0.13em] text-[#d6d1c8] uppercase">{humanize(field_key)}</span>
-          <span className="text-[8px] tabular-nums text-[#656a74]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-l-2 border-cyan/45 px-3 py-2.5">
+          <span className="text-[9px] tracking-[0.13em] text-soft uppercase">{humanize(field_key)}</span>
+          <span className="text-[8px] tabular-nums text-faint">
             {Array.isArray(value) ? value.length : Object.keys(value).length} {Array.isArray(value) ? 'rows' : 'fields'}
           </span>
         </summary>
@@ -446,14 +446,12 @@ const Field = ({
   const hint = field_hint(field_key)
   return (
     <div
-      className={`min-w-0 border-l-2 p-2.5 ${read_only ? 'border-[#c8963c]/55 bg-[#c8963c]/[0.035]' : 'border-white/8 bg-black/15'}`}
+      className={`min-w-0 border-l-2 p-2.5 ${read_only ? 'border-gold/55 bg-gold/[0.035]' : 'border-white/8 bg-black/15'}`}
     >
       <div className="mb-2 flex min-h-3 items-center gap-2">
-        <span className="text-[8px] tracking-[0.1em] text-[#a7aab2] uppercase">{humanize(field_key)}</span>
-        {hint && <span className="text-[7px] text-[#555b66]">{hint}</span>}
-        {read_only && (
-          <span className="ml-auto text-[7px] tracking-[0.1em] text-[#c8963c] uppercase">Locked identity</span>
-        )}
+        <span className="text-[8px] tracking-[0.1em] text-muted uppercase">{humanize(field_key)}</span>
+        {hint && <span className="text-[7px] text-faint">{hint}</span>}
+        {read_only && <span className="ml-auto text-[7px] tracking-[0.1em] text-gold uppercase">Locked identity</span>}
       </div>
       <PrimitiveEditor
         field_key={field_key}
@@ -495,7 +493,7 @@ export const JsonEditor = ({
         {value.map((row, index) => (
           <div className="border border-white/9 bg-bg" key={`${path.join('.')}-${index}`}>
             <div className="flex items-center justify-between gap-2 border-b border-white/7 px-2.5 py-2">
-              <span className="text-[8px] tracking-[0.12em] text-[#7f8490] uppercase">
+              <span className="text-[8px] tracking-[0.12em] text-faint uppercase">
                 {array_row_label(field_key, index)}
               </span>
               <button
@@ -549,7 +547,7 @@ export const JsonEditor = ({
             <section className={`border ${section.tone}`} key={section.id}>
               <header className="border-b border-current/15 px-3 py-2.5">
                 <h2 className="text-[9px] tracking-[0.16em] uppercase">{section.label}</h2>
-                <p className="mt-1 text-[7px] normal-case text-[#666b75]">{section.note}</p>
+                <p className="mt-1 text-[7px] normal-case text-faint">{section.note}</p>
               </header>
               <div className="grid gap-2 p-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {section_entries.map(([key, child]) => (

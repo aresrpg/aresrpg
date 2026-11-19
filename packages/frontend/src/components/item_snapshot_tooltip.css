@@ -7,7 +7,7 @@
   width: min(300px, calc(100vw - 24px));
   max-height: min(440px, calc(100vh - 24px));
   overflow: auto;
-  border: 1px solid rgb(200 150 60 / 35%);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 35%, transparent);
   padding: 12px;
   pointer-events: none;
   font-family: var(--aui-font);
@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #a99cb9;
+  color: var(--aui-muted);
   font:
     9px/1.4 'JetBrains Mono',
     monospace;

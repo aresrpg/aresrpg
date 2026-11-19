@@ -55,7 +55,7 @@ export type { FriendsActions } from './friends.ts'
 export type { PartyActions } from './party.ts'
 export type { MasteryActions } from './mastery.ts'
 export type { ItemSnapshot } from './item_snapshot.ts'
-export type { SuinsActions, SuinsSnapshot, SuinsSelection } from './suins_actions.ts'
+export type { SuinsActions, SuinsSnapshot, SuinsSelection, SuinsReview } from './suins_actions.ts'
 
 const select_personal_kiosk = (caps: readonly KioskOwnerCap[], kiosk_id?: string): KioskOwnerCap | null =>
   (kiosk_id ? caps.find(({ kioskId }) => kioskId === kiosk_id) : caps[0]) ?? null

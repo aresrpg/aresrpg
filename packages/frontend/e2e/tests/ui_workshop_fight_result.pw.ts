@@ -2,12 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
-test('victory retains its roster and opens independent loot details with readable demo names', async ({ page }) => {
+test('victory retains its roster and opens independent loot details with readable names', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/e2e/fixtures/fight_result.html')
   const report = page.locator('.result--fe')
   await expect(report).toBeVisible()
-  await expect(report.locator('.fe-row__nametext')).toHaveText(['Senshi', 'Goblin', 'Goblin', 'Goblin'])
+  await expect(report.locator('.fe-row__nametext')).toHaveText(['Senshi', 'Aloe Gaia'])
   await expect(report.locator('.aui-window-header')).toContainText('Victory')
   const loot = report.locator('button.fe-tile')
   await expect(loot).toHaveCount(6)

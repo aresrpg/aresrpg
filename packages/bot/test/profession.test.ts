@@ -1,71 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
-import { job_xp_for_level } from '@aresrpg/immutable'
 
-import { next_profession_action } from '../src/profession_plan.ts'
 import { validate_gameplay } from '../src/gameplay.ts'
 import { fold_actor_inventory } from '../src/actor_inventory.ts'
 import { profession_knowledge, acquisition_sources } from '../src/profession_catalog.ts'
 
-import {
-  profession_context,
-  plan,
-  character,
-  recipe,
-  resource,
-  other_input,
-  item,
-} from './helpers/profession_fixture.ts'
-
-test('live validation distinguishes tool, ingredient, travel and protector requirements without writes', () => {
-  const context = profession_context()
-  expect(next_profession_action(plan, context).action?.kind).toBe('gather')
-  expect(
-    next_profession_action(plan, {
-      ...context,
-      snapshot: { ...context.snapshot, characters: [{ ...character, equipment: [] }] },
-    }).issue?.code
-  ).toBe('gathering_tool_required')
-  expect(
-    next_profession_action(plan, {
-      ...context,
-      snapshot: { ...context.snapshot, characters: [{ ...character, at_ms: 999999 }] },
-    }).state
-  ).toBe('waiting')
-  expect(
-    next_profession_action(plan, {
-      ...context,
-      snapshot: {
-        ...context.snapshot,
-        characters: [
-          {
-            ...character,
-            ambush: { protector: resource.protector, x: 50000, z: 50000, scalar: 100, board_seed: '1', hp: '10' },
-          },
-        ],
-      },
-    }).issue?.code
-  ).toBe('combat_required')
-  const no_resources = {
-    ...context,
-    snapshot: {
-      ...context.snapshot,
-      inventory: { ...context.snapshot.inventory!, items: [item(resource.item_type, 100)] },
-    },
-  }
-  const blocked = next_profession_action(plan, no_resources)
-  expect(blocked).toMatchObject({ state: 'awaiting_ai', issue: { code: 'acquisition_required' } })
-  expect(blocked.progress.missing).toContainEqual({ item_type: other_input, quantity: recipe.inputs[other_input]! })
-  expect(acquisition_sources(other_input).drops.length).toBeGreaterThan(0)
-})
+import { profession_context, character, recipe, resource, other_input, item } from './helpers/profession_fixture.ts'
 
 test('craft uses one canonical stack plan, excludes listings and rejects stale revisions', () => {
   const context = profession_context()
   const inputs = Object.entries(recipe.inputs).map(([item_type, amount], index) => item(item_type, amount, 30 + index))
   const snapshot = { ...context.snapshot, inventory: { ...context.snapshot.inventory!, items: inputs } }
-  const action = next_profession_action(plan, { ...context, snapshot }).action!
-  expect(action.kind).toBe('craft')
+  const payload = { character_id: character.id, output_type: recipe.output_type, attempts: 1 }
+  const action = { kind: 'craft' as const, payload }
   const validated = validate_gameplay({ ...context, snapshot, command: { ...context.command, ...action } })
   expect(validated.kind).toBe('craft')
   if (validated.kind === 'craft') expect(validated.input.input_item_ids).toEqual(inputs.map(({ id }) => id))
@@ -93,13 +41,9 @@ test('inventory tombstones and versions prevent stale packets restoring spent re
   expect(restored.items.find(({ id }) => id === first.id)?.version).toBe('3')
 })
 
-test('completion requires actual projected profession XP and knowledge exposes real recipe/drop facts', () => {
+test('knowledge exposes real recipe and drop facts', () => {
   const context = profession_context()
-  const snapshot = {
-    ...context.snapshot,
-    characters: [{ ...character, jobs: { [plan.job]: String(job_xp_for_level(plan.target_level)) } }],
-  }
-  expect(next_profession_action(plan, { ...context, snapshot }).state).toBe('completed')
+  expect(acquisition_sources(other_input).drops.length).toBeGreaterThan(0)
   const knowledge = profession_knowledge(context.snapshot, [recipe.output_type])
   expect(knowledge.recipes.find(({ output_type }) => output_type === recipe.output_type)?.inputs).toEqual(recipe.inputs)
   expect(knowledge.zones[0]!.resources?.[0]?.item_type).toBe(resource.item_type)

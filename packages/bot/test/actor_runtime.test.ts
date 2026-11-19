@@ -72,10 +72,6 @@ test('unresolved original envelope cannot consume or fail another connector comm
     observation_revision: lane.observation_revision,
   }
   await put(f.store, 'command:original', original)
-  const encrypted = await f.options.cipher.encrypt(
-    JSON.stringify({ bytes: Buffer.from([1, 2, 3]).toString('base64') }),
-    'fixture-unresolved'
-  )
   await put(f.store, lane_key, {
     ...lane,
     active_command: original.id,
@@ -84,7 +80,8 @@ test('unresolved original envelope cannot consume or fail another connector comm
       grant_id: f.grant.id,
       digest: 'fixture-unresolved',
       phase: 'submitting',
-      encrypted,
+      bytes: Buffer.from([1, 2, 3]).toString('base64'),
+      signatures: ['fixture-signature'],
       gas_budget_mist: '100',
     },
   })
@@ -217,6 +214,26 @@ test('revoking one watcher releases its slot without stopping another live conne
   await f.runtime.stop()
 })
 
+test('a connector releasing the market view never takes it from the connector that holds it', async () => {
+  const f = await fixture()
+  await f.observe({})
+  await f.admit()
+  await f.observe({ market: { kind: 'overview', request: 1 } })
+  const other = { ...f.grant, id: 'other', client_id: 'other-client' }
+  await put(f.store, 'grant:other', other)
+  const sent = () => f.sockets[0]!.sent.map((raw) => JSON.parse(raw) as { type: string; observation?: unknown })
+  const before = sent().length
+  // A release by another connector is no error and sends nothing; taking the held view still is refused.
+  await f.runtime.observe(other, { market: null })
+  expect(sent()).toHaveLength(before)
+  await expect(f.runtime.observe(other, { market: { kind: 'overview', request: 2 } })).rejects.toThrow(
+    'OBSERVATION_SLOT_BUSY'
+  )
+  await f.observe({ market: null })
+  expect(sent().at(-1)).toEqual({ type: 'packet/market_observe', observation: null })
+  await f.runtime.stop()
+})
+
 test('explicit newly authorized connector replaces auth-expired actor but not server takeover', async () => {
   const f = await fixture()
   await f.observe()
@@ -304,18 +321,19 @@ test('unsigned validation failure allows corrected intent after an unchanged fre
   }
 })
 
-test('observation discovers the current connector profession run without exposing another grant run', async () => {
+test('observation lists the wallet runs for every grant of its owner and hides another bot run', async () => {
   const f = await fixture()
   try {
     await f.observe()
     await f.admit()
     const key = lane_key_for(f.bot)
     const lane = (await f.store.read<Lane>(key))!
-    await put(f.store, key, { ...lane, profession_run_id: 'retained-run' })
-    await put(f.store, 'profession:retained-run', { id: 'retained-run', grant_id: f.grant.id, bot_id: f.bot.id })
-    expect(await f.observe()).toMatchObject({ profession_run_id: 'retained-run' })
-    await put(f.store, 'profession:retained-run', { id: 'retained-run', grant_id: 'other-grant' })
-    expect(await f.observe()).toMatchObject({ profession_run_id: null })
+    const run = { id: 'hero-run', character_id: 'hero', status: 'awaiting_ai', issue: 'no_behavior_matched' }
+    await put(f.store, key, { ...lane, runs: { hero: 'hero-run' } })
+    await put(f.store, 'behavior:hero-run', { ...run, grant_id: 'other-grant', bot_id: f.bot.id })
+    expect(await f.observe()).toMatchObject({ runs: [run], state: 'awaiting_ai' })
+    await put(f.store, 'behavior:hero-run', { ...run, grant_id: f.grant.id, bot_id: 'other-bot' })
+    expect(await f.observe()).toMatchObject({ runs: [] })
   } finally {
     await f.runtime.stop()
   }
@@ -395,4 +413,45 @@ test('spell discovery works before a fight and exposes authored unlock levels an
   } finally {
     await f.runtime.stop()
   }
+})
+
+test('the wallet status goes out on its own socket when it changes, never again while it is the same', async () => {
+  const f = await fixture()
+  await f.observe()
+  await f.admit()
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 5))
+  const statuses = () =>
+    f.sockets
+      .at(-1)!
+      .sent.map((raw) => JSON.parse(raw) as { type: string; status?: unknown })
+      .filter(({ type }) => type === 'packet/agent_status')
+  await flush()
+  const lane = (await f.store.read<Lane>(lane_key_for(f.bot)))!
+  // The authenticated baseline became ready: that is a change, and the owner's clients are told once.
+  expect(statuses()).toEqual([
+    {
+      type: 'packet/agent_status',
+      status: {
+        ready: true,
+        event_fence: lane.fence,
+        sampled_at: f.clock.monotonic,
+        state: 'idle',
+        runs: [],
+        direct: null,
+      },
+    },
+  ])
+  await f.runtime.tick()
+  await f.runtime.settle()
+  await f.observe()
+  await flush()
+  expect(statuses()).toHaveLength(1)
+  // Another process pauses the wallet: no queue pass runs here, so the lease heartbeat tells the owner.
+  await put(f.store, lane_key_for(f.bot), { ...(await f.store.read<Lane>(lane_key_for(f.bot)))!, paused: true })
+  await f.runtime.renew()
+  await flush()
+  expect(statuses().at(-1)).toMatchObject({ status: { state: 'paused' } })
+  expect(statuses()).toHaveLength(2)
+  expect(f.errors).toHaveLength(0)
+  await f.runtime.stop()
 })

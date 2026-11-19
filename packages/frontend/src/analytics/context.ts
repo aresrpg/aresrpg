@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { adventure_quest } from '../adventure/quest.ts'
 import { is_admin_address } from '../admin_access.ts'
 import { next_quest } from '../journey/model.ts'
 import { character_creation_surface } from '../modules/character_creation.ts'
@@ -9,9 +8,7 @@ import type { AppState } from '../store.ts'
 
 export type AnalyticsProperties = Readonly<Record<string, string | number | boolean | null>>
 
-const onboarding_stage = ({ session, navigation, adventure, analytics }: AppState): string => {
-  if (adventure.character && !['onboarding', 'entered'].includes(adventure.phase))
-    return `demo_${adventure_quest(adventure)}`
+const onboarding_stage = ({ session, navigation, analytics }: AppState): string => {
   if (!session.wallet) return 'login'
   const creation = character_creation_surface(session, navigation)
   if (creation) return creation
@@ -24,7 +21,7 @@ export const analytics_context = (state: AppState): AnalyticsProperties => {
   const { session, navigation, journey } = state
   const stage = onboarding_stage(state)
   return {
-    surface: stage.startsWith('demo_') ? 'demo' : navigation.page,
+    surface: navigation.page,
     onboarding_step: stage,
     locale: state.locale,
     authenticated: session.wallet !== null,

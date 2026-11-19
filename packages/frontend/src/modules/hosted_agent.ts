@@ -11,8 +11,6 @@ import {
 } from '../agents/hosted_client.ts'
 import { agent_identity_storage_key } from '../agents/pairing_storage.ts'
 
-// Visible owner UI revalidates authorization on the same cadence as wallet balance reads.
-const REFRESH_MS = 5_000
 export const observe_hosted_agent = (
   { events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0],
   service_url = env.bot_service_url
@@ -31,6 +29,10 @@ export const observe_hosted_agent = (
     service_url &&
     !new URLSearchParams(location.search).has('authorization_id') &&
     get_state().session.wallet?.identity === 'zklogin'
+  /**
+   * Authorization is read when something says it may have changed: sign-in, focus, another tab. Never
+   * on a clock. What the bot is doing is not read here: the bot pushes it on the game socket.
+   */
   const refresh = () => {
     if (
       eligible() &&
@@ -98,11 +100,9 @@ export const observe_hosted_agent = (
   }
   window.addEventListener('storage', stored)
   window.addEventListener('focus', refresh)
-  const timer = setInterval(refresh, REFRESH_MS)
   signal.addEventListener(
     'abort',
     () => {
-      clearInterval(timer)
       window.removeEventListener('storage', stored)
       window.removeEventListener('focus', refresh)
       cancel()

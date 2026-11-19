@@ -1,17 +1,14 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
-/* Accepted landing ledger. All presentation belongs to this component, not its hosts. */
+/* The KARES ledger. It paints no frame of its own: its host supplies the surface it sits on. */
 .kares-ledger {
-  --ink: #efe8dc;
-  --ink-soft: #d6d0c4;
-  --ink-faint: #b2aea5;
-  --rune: #76c8ff;
-  --plate: #ecd19c;
-  --gold: #f2b552;
-  font-family: 'Ares UI', Nunito, sans-serif;
-  color: var(--ink);
-  line-height: 1.55;
-  width: 100%;
   box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  width: 100%;
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+  line-height: 1.5;
 }
 .kares-ledger * {
   box-sizing: border-box;
@@ -20,486 +17,304 @@
   margin: 0;
 }
 .kares-ledger ul {
-  list-style: none;
   padding: 0;
+  list-style: none;
 }
-.kares-ledger button {
-  cursor: pointer;
-  font-family: inherit;
+.kares-ledger section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
 }
-.kares-ledger button:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-.kares-ledger :focus-visible {
-  outline: 3px solid var(--rune);
-  outline-offset: 3px;
-}
-.kares-ledger .n {
-  --s: 6px;
-  clip-path: polygon(
-    var(--s) 0,
-    calc(100% - var(--s)) 0,
-    calc(100% - var(--s)) var(--s),
-    100% var(--s),
-    100% calc(100% - var(--s)),
-    calc(100% - var(--s)) calc(100% - var(--s)),
-    calc(100% - var(--s)) 100%,
-    var(--s) 100%,
-    var(--s) calc(100% - var(--s)),
-    0 calc(100% - var(--s)),
-    0 var(--s),
-    var(--s) var(--s)
-  );
-}
-.kares-ledger .slab {
-  display: inline-flex;
-  position: relative;
-  filter: drop-shadow(0 5px 0 #07090c) drop-shadow(0 12px 18px rgb(0 0 0 / 0.55));
-}
-.kares-ledger .btn {
-  --s: 6px;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  min-height: 64px;
-  padding: 2px 30px 6px;
-  border: 0;
-  font-weight: 800;
-  font-size: 19px;
-  line-height: 1.1;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: filter 0.15s ease;
-}
-.kares-ledger .btn-rune {
-  color: var(--ink);
-  background: linear-gradient(180deg, #38424f 0%, #242b36 100%);
-  box-shadow:
-    inset 0 2px 0 #56606e,
-    inset 0 -6px 0 #13171e;
-}
-.kares-ledger .btn-rune::before {
-  content: '';
-  position: absolute;
-  inset: 5px 5px 9px;
-  --s: 4px;
-  border: 1.5px solid rgb(118 200 255 / 0.62);
-  clip-path: polygon(
-    var(--s) 0,
-    calc(100% - var(--s)) 0,
-    calc(100% - var(--s)) var(--s),
-    100% var(--s),
-    100% calc(100% - var(--s)),
-    calc(100% - var(--s)) calc(100% - var(--s)),
-    calc(100% - var(--s)) 100%,
-    var(--s) 100%,
-    var(--s) calc(100% - var(--s)),
-    0 calc(100% - var(--s)),
-    0 var(--s),
-    var(--s) var(--s)
-  );
-  pointer-events: none;
-}
-.kares-ledger .btn-sm {
-  min-height: 52px;
-  padding-inline: 22px;
-  font-size: 17px;
-}
-.kares-ledger {
-  position: relative;
-  isolation: isolate;
-  padding: 12px;
-}
-.kares-ledger::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  --s: 12px;
-  clip-path: polygon(
-    var(--s) 0,
-    calc(100% - var(--s)) 0,
-    calc(100% - var(--s)) var(--s),
-    100% var(--s),
-    100% calc(100% - var(--s)),
-    calc(100% - var(--s)) calc(100% - var(--s)),
-    calc(100% - var(--s)) 100%,
-    var(--s) 100%,
-    var(--s) calc(100% - var(--s)),
-    0 calc(100% - var(--s)),
-    0 var(--s),
-    var(--s) var(--s)
-  );
-  background: linear-gradient(180deg, #5b6472 0%, #3a4250 22%, #252b35 100%);
-  box-shadow: inset 0 2px 0 #7a8390;
-}
-.kares-ledger .ledger-in {
-  --s: 6px;
-  padding: clamp(20px, 2.6vw, 32px);
-  background: linear-gradient(180deg, #141921, #0d1016);
-}
+/* Header: the coin and the name on one line, the introduction under the name, the purchase at the end. */
 .kares-ledger .tk-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 4px 16px;
   align-items: center;
+  gap: 8px 16px;
 }
 .kares-ledger .tk-coin {
   grid-column: 1;
-  grid-row: 1/3;
-  width: 52px;
-  height: 52px;
+  grid-row: 1;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
-  filter: drop-shadow(0 3px 0 #05070c) drop-shadow(0 0 12px rgb(118 200 255 / 0.22));
 }
 .kares-ledger .tk-head h2 {
   grid-column: 2;
   grid-row: 1;
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  color: var(--plate);
-  text-shadow: 0 2px 0 #05070c;
+  color: var(--aui-ink);
+  font: 700 clamp(28px, 3.4vw, 40px) / 1 var(--aui-font-title);
+  letter-spacing: -0.01em;
 }
 .kares-ledger .tk-head p {
-  grid-column: 2;
+  grid-column: 1 / 3;
   grid-row: 2;
+  max-width: 60ch;
+  color: var(--aui-soft);
   font-size: 15px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-  max-width: 52ch;
 }
-.kares-ledger .tk-head .buy {
+.kares-ledger .buy {
   grid-column: 3;
-  grid-row: 1/3;
-  align-self: start;
+  grid-row: 1 / 3;
+  display: grid;
+  justify-items: end;
+  align-self: center;
+  gap: 8px;
+  text-align: right;
 }
-.kares-ledger .tk-head .buy small {
-  max-width: 24ch;
-  font-size: 13px;
+.kares-ledger .buy .aui-button {
+  min-height: 42px;
+  padding-inline: 18px;
+  text-decoration: none;
+}
+.kares-ledger .buy small {
+  max-width: 30ch;
+  color: var(--aui-muted);
+  font-size: 12px;
   line-height: 1.4;
 }
-
-@media (max-width: 599px) {
-  .kares-ledger .tk-head {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .kares-ledger .tk-coin,
-  .kares-ledger .tk-head h2 {
-    grid-row: 1;
-  }
-  .kares-ledger .tk-head .buy {
-    grid-column: 1/-1;
-    grid-row: 2;
-    justify-items: end;
-    text-align: right;
-    margin-top: 12px;
-  }
-  .kares-ledger .tk-head .buy small {
-    max-width: 32ch;
-  }
-  .kares-ledger .tk-head p {
-    grid-column: 1/-1;
-    grid-row: 3;
-    max-width: none;
-    margin-top: 14px;
-  }
-}
+/* Status: one line with a state dot, between two hairlines. */
 .kares-ledger .tk-status {
-  --sc: #7c8594;
+  --sc: var(--aui-faint);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  margin-top: 20px;
-  padding: 10px 14px;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--ink-soft);
-  background: #0a0d13;
-  box-shadow:
-    inset 3px 0 0 var(--sc),
-    inset 0 0 0 1px #232a35;
+  gap: 8px 14px;
+  padding: 10px 0;
+  border-block: 1px solid var(--aui-line);
+  color: var(--aui-muted);
+  font-size: 13px;
 }
 .kares-ledger .tk-status b {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 800;
-  color: var(--ink);
+  gap: 9px;
+  color: var(--aui-ink);
+  font-weight: 700;
 }
 .kares-ledger .tk-status b::before {
   content: '';
-  width: 8px;
-  height: 8px;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--sc);
 }
 .kares-ledger .tk-status[data-state='loading'] {
-  --sc: var(--gold);
+  --sc: var(--aui-brass);
 }
 .kares-ledger .tk-status[data-state='ready'] {
-  --sc: var(--rune);
+  --sc: var(--aui-success);
 }
 .kares-ledger .tk-status[data-state='stale'],
 .kares-ledger .tk-status[data-state='error'] {
-  --sc: #e3907c;
+  --sc: var(--aui-danger);
 }
 .kares-ledger .tk-status[data-state='pre_funding'] {
-  --sc: #b395dd;
+  --sc: var(--aui-hue-lilac);
 }
-.kares-ledger .tk-retry {
-  --s: 3px;
+.kares-ledger .tk-status .aui-button {
   margin-left: auto;
-  min-height: 34px;
-  padding: 3px 12px 5px;
-  border: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--ink);
-  background: linear-gradient(180deg, #38424f, #242b36);
-  box-shadow:
-    inset 0 1px 0 #56606e,
-    inset 0 -3px 0 #13171e;
 }
 .kares-ledger .tk-h {
-  margin: 26px 0 12px;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--ink-faint);
+  color: var(--aui-muted);
+  font: 700 10px/1 var(--aui-font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-.kares-ledger .metric b,
-.kares-ledger .pool dd {
-  font-variant-numeric: tabular-nums;
-}
-.kares-ledger .supply-row {
+.kares-ledger :is(.supply-row, .pools, .uses) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+}
+.kares-ledger :is(.metric, .pool, .uses li) {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  background: color-mix(in srgb, var(--aui-sunk) 70%, transparent);
 }
 .kares-ledger .metric {
-  --s: 5px;
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  padding: 14px 16px 15px;
-  background: linear-gradient(180deg, #181d26, #11151c);
-  box-shadow:
-    inset 0 0 0 1px #262d38,
-    inset 0 2px 0 #2e3542;
-}
-.kares-ledger .metric > span {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink-faint);
-}
-.kares-ledger .metric b {
-  font-size: clamp(22px, 2.4vw, 28px);
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--ink);
-}
-.kares-ledger .metric b[data-empty] {
-  color: #8f949c;
-}
-.kares-ledger .metric b small,
-.kares-ledger .pool dd small {
-  font-size: max(12px, 0.5em);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--plate);
-  margin-left: 0.3em;
-}
-.kares-ledger .metric small {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--ink-faint);
-}
-.kares-ledger .pools {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-.kares-ledger .pool {
-  --s: 5px;
-  position: relative;
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 16px 16px 14px;
-  background: linear-gradient(180deg, #181d26, #11151c);
-  box-shadow:
-    inset 0 3px 0 var(--c),
-    inset 0 0 0 1px #262d38;
+}
+.kares-ledger .metric > span {
+  color: var(--aui-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.kares-ledger .metric b {
+  color: var(--aui-ink);
+  font: 600 clamp(22px, 2.4vw, 30px) / 1.1 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.kares-ledger :is(.metric b, .pool dd)[data-empty] {
+  color: var(--aui-faint);
+}
+.kares-ledger :is(.metric b, .pool dd) small {
+  margin-left: 0.4em;
+  color: var(--aui-hue-gold);
+  font: 700 11px/1 var(--aui-font-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.kares-ledger .metric > small {
+  color: var(--aui-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.kares-ledger .pool {
+  display: grid;
+  align-content: start;
+  gap: 10px;
 }
 .kares-ledger .pool h4 {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: var(--ink);
+  color: var(--aui-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 .kares-ledger .pool h4 svg {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 .kares-ledger .pool > p {
-  font-size: 14px;
+  color: var(--aui-soft);
+  font-size: 13px;
   line-height: 1.45;
-  color: var(--ink-soft);
-}
-.kares-ledger .pool dl {
-  display: grid;
-  gap: 0;
-  margin: 2px 0 0;
 }
 .kares-ledger .pool dl > div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 2px 10px;
-  padding: 8px 0;
-  border-top: 1px solid #222934;
+  gap: 2px 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--aui-line);
 }
 .kares-ledger .pool dt {
+  color: var(--aui-muted);
   font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--ink-faint);
-}
-.kares-ledger .pool dt small {
-  display: block;
-  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 .kares-ledger .pool dd {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--ink);
+  min-width: 0;
+  color: var(--aui-ink);
+  font: 600 15px/1.2 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
 }
-.kares-ledger .pool dd[data-empty] {
-  color: #8f949c;
-}
-.kares-ledger .uses {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+.kares-ledger .pool dd.pool-note {
+  grid-column: 1 / -1;
+  color: var(--aui-faint);
+  font: 400 12px/1.4 var(--aui-font);
+  text-align: left;
 }
 .kares-ledger .uses li {
-  --s: 5px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 4px 12px;
   align-items: start;
-  padding: 14px 16px;
-  background: #0f1319;
-  box-shadow: inset 0 0 0 1px #232a35;
+  gap: 4px 12px;
 }
 .kares-ledger .uses svg {
-  grid-row: 1/3;
-  width: 28px;
-  height: 28px;
+  grid-row: 1 / 3;
+  width: 24px;
+  height: 24px;
 }
 .kares-ledger .uses b {
-  font-size: 15px;
-  color: var(--ink);
+  color: var(--aui-ink);
+  font-size: 14px;
 }
 .kares-ledger .uses span {
-  font-size: 14px;
+  color: var(--aui-soft);
+  font-size: 13px;
   line-height: 1.45;
-  color: var(--ink-soft);
 }
-.kares-ledger .token {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px 28px;
-  margin-top: 24px;
-  padding-top: 22px;
-  border-top: 1px solid #262d38;
-}
+/* Token type: the address on one line with its copy button. */
 .kares-ledger .token-id {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
-}
-.kares-ledger .token-id > span {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink-faint);
 }
 .kares-ledger .token-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
+  gap: 8px 14px;
 }
 .kares-ledger .token-row output {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--plate);
+  min-width: 0;
+  color: var(--aui-ink);
+  font: 600 13px/1.4 var(--aui-font-mono);
   overflow-wrap: anywhere;
-}
-.kares-ledger .copy {
-  --s: 3px;
-  min-height: 36px;
-  padding: 4px 14px 6px;
-  border: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--ink);
-  background: linear-gradient(180deg, #38424f, #242b36);
-  box-shadow:
-    inset 0 1px 0 #56606e,
-    inset 0 -3px 0 #13171e;
-}
-.kares-ledger .copy:disabled {
-  cursor: not-allowed;
-  color: #9a978f;
-  background: #1d222b;
-  box-shadow: inset 0 0 0 1px #2c333f;
 }
 .kares-ledger .token-id small {
-  font-size: 14px;
-  color: var(--ink-faint);
-  max-width: 52ch;
+  max-width: 60ch;
+  color: var(--aui-muted);
+  font-size: 12px;
 }
-.kares-ledger .buy {
+/* Distribution: the fixed supply, its split as one bar, then one row per share. */
+.kares-ledger .tk-total {
+  color: var(--aui-ink);
+  font: 600 clamp(26px, 3vw, 36px) / 1 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.kares-ledger .tk-total small {
+  margin-left: 0.4em;
+  color: var(--aui-hue-gold);
+  font: 700 12px/1 var(--aui-font-mono);
+  letter-spacing: 0.1em;
+}
+.kares-ledger .tk-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+.kares-ledger .tk-shares > div {
   display: grid;
-  justify-items: end;
-  gap: 6px;
+  grid-template-columns: auto minmax(0, 1fr) auto 5ch;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--aui-line);
+  font-size: 13px;
+}
+.kares-ledger .tk-shares i {
+  width: 8px;
+  height: 8px;
+}
+.kares-ledger .tk-shares dt {
+  color: var(--aui-soft);
+}
+.kares-ledger .tk-shares dd {
+  color: var(--aui-ink);
+  font: 600 13px/1 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.kares-ledger .buy small {
-  color: var(--ink-faint);
+.kares-ledger .tk-shares dd:last-child {
+  color: var(--aui-hue-gold);
 }
-.kares-ledger .pool-staking {
-  --c: #4a9eff;
+.kares-ledger .tk-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 28px;
 }
-.kares-ledger .pool-community {
-  --c: #b395dd;
-}
-.kares-ledger .pool-boss {
-  --c: #bd795c;
-}
-.kares-ledger .pool dd {
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.kares-ledger .pool dl > div {
-  grid-template-columns: minmax(0, 1fr) auto;
+.kares-ledger .tk-notes p {
+  color: var(--aui-muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 @media (max-width: 899px) {
-  .kares-ledger .pools,
-  .kares-ledger .uses {
+  .kares-ledger :is(.pools, .uses, .tk-notes) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -507,20 +322,25 @@
   .kares-ledger .supply-row {
     grid-template-columns: minmax(0, 1fr);
   }
+  .kares-ledger .tk-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .kares-ledger .buy {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-items: start;
+    text-align: left;
+  }
 }
-
-.kares-ledger .pool dd small {
-  white-space: nowrap;
+/* The tab stacks the live ledger and the distribution with one rhythm. */
+.tokenomics-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  padding: 22px;
 }
-.kares-ledger .pool dt {
-  overflow-wrap: anywhere;
-}
-
-.kares-ledger .pool dd.pool-note {
-  grid-column: 1 / -1;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.35;
-  color: var(--ink-faint);
+@media (max-width: 760px) {
+  .tokenomics-tab {
+    padding: 16px;
+  }
 }

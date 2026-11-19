@@ -21,8 +21,8 @@
   align-items: flex-start;
   justify-content: center;
   gap: 4px;
-  border: 1px solid rgba(200, 150, 60, 0.24);
-  background: rgba(200, 150, 60, 0.05);
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 24%, transparent);
+  background: color-mix(in srgb, var(--aui-brass) 5%, transparent);
   padding: 5px 6px;
 }
 

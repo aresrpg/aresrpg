@@ -14,6 +14,7 @@ import {
 } from '../../packages/sdk/src/deployment_admin.ts'
 import { seed_sdk, board_value } from '../../packages/sdk/src/seed.ts'
 import { kares_payment } from '../../packages/sdk/src/kares_ptb.ts'
+import { CHARACTER_PRICE_MIST } from '../../packages/sdk/src/character_price.ts'
 import boards from '../../seed/content/fight_boards.json'
 
 import { local_packages, object_of, shared_of } from './local_packages.ts'
@@ -92,7 +93,7 @@ export const prepare_game = async (env: Environment, economy: { id: string; shar
     const tx = new Transaction()
     sdk.with_personal_kiosk(tx, null, (kiosk, cap) =>
       sdk.doors.create_character(tx, {
-        payment: sdk.coin_of(tx, 1_000_000_000n),
+        payment: sdk.coin_of(tx, CHARACTER_PRICE_MIST),
         kiosk,
         cap,
         raw_name: name,

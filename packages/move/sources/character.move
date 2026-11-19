@@ -26,7 +26,7 @@ const EInvalidColor: u64 = 104;
 const EWrongPayment: u64 = 105;
 
 const MAX_COLOR_VALUE: u32 = 16777215; // 0xFFFFFF
-const PRICE: u64 = 1_000_000_000; // 1 SUI, fixed — no free path, no sponsoring
+const PRICE: u64 = 10_000_000_000; // 10 SUI, fixed — no free path, no sponsoring
 
 /// A character must be locked in a PERSONAL kiosk, so its `KioskOwnerCap` is itself soulbound and
 /// can't be sold or lent outside the royalty rule. The personal-kiosk TRANSFER rule gates trades
@@ -85,7 +85,7 @@ fun init(_otw: CHARACTER, ctx: &mut TxContext) {
 
 // ╔════════════════ [ Creation ] ═════════════════════════════════════════════ ]
 
-/// Mint for exactly 1 SUI. The lowercase name claims the character's deterministic ID and is
+/// Mint for exactly 10 SUI. The lowercase name claims the character's deterministic ID and is
 /// permanently reserved. Package-private: the ONE public mint door is
 /// `api::create_character`, which also joins the first world — a character is never world-less.
 public(package) fun create_character(

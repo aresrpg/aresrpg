@@ -4,6 +4,7 @@ import {
   create_fight,
   encode_fight_action,
   fight_loot_types,
+  hydrate_fight_checkpoint,
   type HydratedFightCheckpoint,
   type FightCommandInput,
 } from '@aresrpg/fight'
@@ -14,12 +15,35 @@ import { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 import spells from '../../../seed/content/spells.json'
 
 import {
+  assert_target_context,
+  assert_area_position,
+  parse_world_area,
+  WORLD_AREA_SCHEMA,
+  type WorldArea,
+  parse_target_options,
+  target_schema,
+  type TargetOptions,
+} from './target_constraints.ts'
+import {
   EQUIPMENT_ACTIONS,
   validate_equip_item,
   validate_consumable,
   equipment_executors,
   type EquipmentActionPlan,
 } from './equipment_actions.ts'
+import {
+  TEAM_ACTIONS,
+  assert_supported_fight,
+  team_executors,
+  settle_executor,
+  validate_dungeon_enter,
+  validate_dungeon_fight,
+  validate_dungeon_leave,
+  validate_fight_join,
+  type SettlePlan,
+  type TeamActionPlan,
+  type TeamExecutor,
+} from './team_actions.ts'
 import { LOOT_BOX_ACTIONS, validate_open_boxes, validate_claim_loot, type LootBoxPlan } from './loot_boxes.ts'
 import { RAISE_SPELL_ACTION, validate_spell_allocation, type SpellAllocationPlan } from './spell_allocation.ts'
 import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
@@ -77,7 +101,15 @@ type Actions = AgentActions['fight'] &
     | 'use_consumable'
   >
 type TurnInput = Parameters<Actions['commit_turn']>[0]
-type FightPayload = Readonly<{ character_id: string; fight: string; fighter_idx: string; checkpoint_id: string }>
+type FightPayload = Readonly<{
+  character_id: string
+  fight: string
+  fighter_idx: string
+  checkpoint_id: string
+  /** Names the dungeon whose room this command may act in; absent for an ordinary fight. */
+  dungeon?: string
+  target_options?: TargetOptions
+}>
 export type FightTurnPayload = FightPayload &
   Readonly<{
     actions: readonly (
@@ -87,8 +119,9 @@ export type FightTurnPayload = FightPayload &
     )[]
   }>
 type PlacePayload = FightPayload & Readonly<{ cell: string }>
-type SearchPayload = Readonly<{ character_id: string; world: string; x: number; z: number }>
+type SearchPayload = Readonly<{ character_id: string; world: string; x: number; z: number; area?: WorldArea }>
 type EngagePayload = Readonly<{
+  target_options?: TargetOptions
   character_id: string
   world: string
   zone_x: number
@@ -96,16 +129,24 @@ type EngagePayload = Readonly<{
   group_index: string
   zone_checkpoint_id: string
 }>
-const search_schema = object_schema({
-  character_id: identifier,
-  world: nonempty,
-  x: world_coordinate,
-  z: world_coordinate,
-})
+const search_schema = {
+  ...object_schema({
+    character_id: identifier,
+    world: nonempty,
+    x: world_coordinate,
+    z: world_coordinate,
+    area: WORLD_AREA_SCHEMA,
+  }),
+  required: ['character_id', 'world', 'x', 'z'],
+}
 const fight_properties = { character_id: identifier, fight: identifier, fighter_idx: decimal, checkpoint_id: nonempty }
-const fight_schema = object_schema(fight_properties)
-const place_schema = object_schema({ ...fight_properties, cell: decimal })
-const engage_schema = object_schema({
+const fight_schema_of = (properties: Parameters<typeof target_schema>[0]) => ({
+  ...target_schema({ ...properties, dungeon: nonempty }),
+  required: Object.keys(properties),
+})
+const fight_schema = fight_schema_of(fight_properties)
+const place_schema = fight_schema_of({ ...fight_properties, cell: decimal })
+const engage_schema = target_schema({
   character_id: identifier,
   world: nonempty,
   zone_x: coordinate,
@@ -113,7 +154,7 @@ const engage_schema = object_schema({
   group_index: decimal,
   zone_checkpoint_id: nonempty,
 })
-export const FIGHT_TURN_SCHEMA = object_schema({
+export const FIGHT_TURN_SCHEMA = fight_schema_of({
   ...fight_properties,
   actions: {
     type: 'array',
@@ -170,6 +211,7 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
   raise_stats: RAISE_STATS_ACTION,
   raise_spell: RAISE_SPELL_ACTION,
   ...EQUIPMENT_ACTIONS,
+  ...TEAM_ACTIONS,
   market_buy: MARKET_BUY_ACTION,
   market_sell: MARKET_SELL_ACTION,
   world_search: Object.freeze({
@@ -219,20 +261,20 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
 export type GameplayActionName = keyof typeof GAMEPLAY_ACTIONS
 export const parse_gameplay_action = (kind: string, payload: unknown) => {
   if (!Object.hasOwn(GAMEPLAY_ACTIONS, kind)) throw new Error('invalid_action')
-  return GAMEPLAY_ACTIONS[kind as GameplayActionName].parse(payload)
+  const parsed = GAMEPLAY_ACTIONS[kind as GameplayActionName].parse(payload)
+  parse_target_options((parsed as { target_options?: unknown }).target_options)
+  parse_world_area((parsed as { area?: unknown }).area)
+  return parsed
 }
 export const gameplay_json = (value: unknown): string =>
   JSON.stringify(value, (_, field: unknown) => (typeof field === 'bigint' ? field.toString() : field))
 export const fight_checkpoint_id = (row: FightStateRow): string => hash_secret(gameplay_json(row))
 export const zone_checkpoint_id = (row: ActorWorld['zones'][string]): string => hash_secret(gameplay_json(row))
 export const hydrate_gameplay_fight = (row: FightStateRow): HydratedFightCheckpoint =>
-  create_fight({
-    mode: 'remote',
-    state: {
-      contract: row.contract,
-      sources: { players: row.players, spells: Object.fromEntries(spells.map((spell) => [spell.name, spell])) },
-    } as unknown as HydratedFightCheckpoint,
-  }).state()
+  hydrate_fight_checkpoint({
+    contract: row.contract,
+    sources: { players: row.players, spells: Object.fromEntries(spells.map((spell) => [spell.name, spell])) },
+  })
 type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
   kind: K
   travel?: import('./locomotion.ts').Travel
@@ -246,6 +288,7 @@ export type GameplayPlan =
   | StatAllocationPlan
   | SpellAllocationPlan
   | LootBoxPlan
+  | TeamActionPlan
   | Plan<'world_search', 'search_zone'>
   | Plan<'fight_engage', 'engage'>
   | Plan<'fight_place', 'place'>
@@ -253,12 +296,15 @@ export type GameplayPlan =
   | Plan<'fight_start', 'start'>
   | Plan<'fight_crank', 'crank'>
   | Plan<'fight_turn', 'commit_turn'>
-  | Plan<'fight_settle', 'settle'>
+  | SettlePlan
 
-export const owned_fight = (payload: FightPayload, context: GameplayContext) => {
+const observed_fight = (payload: Pick<FightPayload, 'fight' | 'checkpoint_id'>, context: GameplayContext) => {
   const row = context.snapshot.fights[payload.fight]
   if (!row || fight_checkpoint_id(row) !== payload.checkpoint_id) throw new Error('needs_resync')
-  const checkpoint = hydrate_gameplay_fight(row)
+  return { row, checkpoint: hydrate_gameplay_fight(row) }
+}
+export const owned_fight = (payload: FightPayload, context: GameplayContext) => {
+  const { row, checkpoint } = observed_fight(payload, context)
   const { contract } = checkpoint
   const seat = u64(payload.fighter_idx)
   const character = owned_character(context, payload.character_id)
@@ -277,17 +323,13 @@ export const owned_fight = (payload: FightPayload, context: GameplayContext) => 
     contract.id === payload.fight,
   ].every(Boolean)
   if (!authority) throw new Error('fight_authority_mismatch')
-  if (
-    [
-      contract.managed,
-      contract.wagered,
-      contract.dungeon,
-      row.kolizeum,
-      row.tournament,
-      !contract.fighters.some((candidate) => candidate.kind.type === 'mob'),
-    ].some(Boolean)
-  )
-    throw new Error('unsupported_fight_mode')
+  assert_supported_fight(row, contract, payload.dungeon)
+  assert_target_context(payload.target_options, character, {
+    world: contract.world,
+    x: Number(contract.x),
+    z: Number(contract.z),
+    types: contract.fighters.flatMap(({ kind }) => (kind.type === 'mob' ? [kind.snapshot.mob_type] : [])),
+  })
   return { checkpoint, character, seat }
 }
 const preview_command = (fighter: bigint, action: TurnInput['actions'][number]): FightCommandInput => {
@@ -353,7 +395,7 @@ const validate_boundary = <K extends 'fight_start' | 'fight_crank'>(
   })
   return { kind, input: { fight: payload.fight } }
 }
-const validate_settle = (context: GameplayContext): Plan<'fight_settle', 'settle'> => {
+const validate_settle = (context: GameplayContext): SettlePlan => {
   const payload = parse_fight(context.command.payload)
   const { checkpoint, character, seat } = owned_fight(payload, context)
   const { contract } = checkpoint
@@ -370,6 +412,7 @@ const validate_settle = (context: GameplayContext): Plan<'fight_settle', 'settle
       settlements: [{ fighter_idx: seat, loot }],
       last,
       boss_rewards: contract.boss_weight > 0n,
+      dungeon: contract.dungeon,
     },
   }
 }
@@ -378,10 +421,13 @@ const validate_search = (context: GameplayContext): Plan<'world_search', 'search
   const character = owned_character(context, payload.character_id)
   const { zx, zz } = zone_of(payload.x, payload.z)
   assert_tracked_zone(context, payload.character_id, payload.world, zx, zz)
+  parse_world_area(payload.area)
+  assert_area_position(payload.area, character.world!, character.x!, character.z!)
+  assert_area_position(payload.area, payload.world, payload.x, payload.z)
   assert_travel(character, payload, payload.x, payload.z, context.snapshot.clock!.chain_ms)
   return {
     kind: 'world_search',
-    travel: travel_destination(character, payload.x, payload.z),
+    travel: { ...travel_destination(character, payload.x, payload.z), area: payload.area },
     input: {
       ...payload,
       custody: custody_of(character),
@@ -401,10 +447,16 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
     (candidate) => BigInt(candidate.index) === group_index
   )
   if (!group || group.members.length === 0) throw new Error('mob_group_unavailable')
+  const area = assert_target_context(payload.target_options, character, {
+    world: payload.world,
+    x: group.x,
+    z: group.z,
+    types: group.members.map(({ mob_type }) => mob_type),
+  })
   assert_travel(character, payload, group.x, group.z, context.snapshot.clock!.chain_ms)
   return {
     kind: 'fight_engage',
-    travel: travel_destination(character, group.x, group.z),
+    travel: { ...travel_destination(character, group.x, group.z), area },
     input: {
       character_id: payload.character_id,
       world: payload.world,
@@ -419,6 +471,7 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
 /** Rechecked at final signing and submission admission against the current actor snapshot. */
 export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
   const observed_ms = assert_fresh(context)
+  parse_target_options(context.command.payload.target_options)
   const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
     equip_item: () => validate_equip_item(context),
     use_consumable: () => validate_consumable(context),
@@ -428,6 +481,10 @@ export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
     raise_spell: () => validate_spell_allocation(context),
     open_loot_boxes: () => validate_open_boxes(context),
     claim_loot: () => validate_claim_loot(context),
+    fight_join: () => validate_fight_join(context, (payload) => observed_fight(payload, context)),
+    dungeon_enter: () => validate_dungeon_enter(context),
+    dungeon_fight: () => validate_dungeon_fight(context),
+    dungeon_leave: () => validate_dungeon_leave(context),
     world_search: () => validate_search(context),
     fight_engage: () => validate_engage(context),
     fight_place: () => validate_place(context),
@@ -463,13 +520,14 @@ export type MarketplaceExecutor = Partial<Pick<Actions, 'buy' | 'list'>>
 export type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
 export const execute_gameplay_actions = async (
   context: GameplayContext,
-  actions: GameplayActions & MarketplaceExecutor,
+  actions: GameplayActions & MarketplaceExecutor & TeamExecutor,
   send?: GameplayPacketSender
 ) => {
   const plan = validate_gameplay(context)
   const executors = {
     ...profession_action_executors(actions),
     ...equipment_executors(actions),
+    ...team_executors(actions),
     market_buy: (input: MarketBuyPlan['input']) => {
       if (!actions.buy) throw new Error('market_executor_unavailable')
       return actions.buy(input)
@@ -489,8 +547,8 @@ export const execute_gameplay_actions = async (
     fight_start: actions.start,
     fight_crank: actions.crank,
     fight_turn: actions.commit_turn,
-    fight_settle: actions.settle,
-  } satisfies { [Plan in GameplayPlan as Plan['kind']]: (input: Plan['input']) => ReturnType<Actions['search_zone']> }
+    fight_settle: settle_executor(actions),
+  } satisfies { [Plan in GameplayPlan as Plan['kind']]: (input: Plan['input']) => Promise<unknown> }
   // The mapped type checks each key/input pair; the discriminated plan preserves that correlation at dispatch.
   const execute = () => executors[plan.kind](plan.input as never)
   if (plan.kind !== 'fight_turn' || !send) return execute()
@@ -530,7 +588,7 @@ export const execute_gameplay = ({
   const actions = create_agent_actions(sdk, context.address)
   return execute_gameplay_actions(
     context,
-    { ...actions.fight, ...actions.character, buy: actions.marketplace.buy, list: actions.marketplace.list },
+    { ...actions.fight, ...actions.character, ...actions.marketplace, dungeon: actions.dungeon },
     send
   )
 }

@@ -102,7 +102,7 @@ These source defaults can differ by deployment; they are not an availability gua
 
 - [Sui zkLogin identity and integration](https://docs.sui.io/sui-stack/zklogin-integration/zklogin)
 
-- [Read-request budget](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/request_limiter.ts)
+- [Read-request budget](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/protocol/src/request_limiter.ts)
 - [Packet flood handling](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/player.ts)
 - [Connection timeout](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/connection.ts)
 - [Slow-consumer limits](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/player_output.ts)

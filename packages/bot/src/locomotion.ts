@@ -7,9 +7,11 @@ import { create_world_collision } from '@aresrpg/engine/locomotion/world_collisi
 import { step_walking_follower } from '@aresrpg/engine/locomotion/walking_follower'
 import type { WalkWorld, WalkPoint } from '@aresrpg/engine/locomotion/walkable'
 
+import { area_allows_segment, assert_area_position, type WorldArea } from './target_constraints.ts'
 import { begin_idle, step_idle, type IdleState } from './idle.ts'
 
 export type Travel = Readonly<{
+  area?: WorldArea
   riding?: boolean
   character_id: string
   checkpoint: string
@@ -99,6 +101,20 @@ export const create_locomotion = ({
     }
     const travel = await check()
     if (!travel) return
+    assert_area_position(travel.area, travel.world, travel.x, travel.z)
+    assert_area_position(travel.area, travel.world, travel.target_x, travel.target_z)
+    const allowed = (from: WalkPoint, to: WalkPoint) => {
+      if (
+        !area_allows_segment(
+          travel.area,
+          travel.world,
+          [client_to_chain_coordinate(from[0]), client_to_chain_coordinate(from[2])],
+          [client_to_chain_coordinate(to[0]), client_to_chain_coordinate(to[2])]
+        )
+      )
+        throw new Error('target_outside_area')
+      return true
+    }
     const world = world_of(travel.world)
     // Wait for authored collision before choosing the initial ground elevation.
     const x = chain_to_client_coordinate(travel.x)
@@ -110,6 +126,7 @@ export const create_locomotion = ({
     const previous = poses.get(travel.character_id)
     let pose = previous?.checkpoint === travel.checkpoint ? previous : initial_pose(world, travel)
     await check()
+    allowed(pose.position, pose.position)
     await publish(travel, pose, send, epoch)
     let at = now()
     const target = { x: chain_to_client_coordinate(travel.target_x), z: chain_to_client_coordinate(travel.target_z) }
@@ -118,7 +135,7 @@ export const create_locomotion = ({
       const current = await check()
       if (JSON.stringify(current) !== JSON.stringify(travel)) throw new Error('needs_resync')
       const next_at = now()
-      const step = step_walking_follower(world, pose.motion, pose.position, target, next_at - at)
+      const step = step_walking_follower(world, pose.motion, pose.position, target, next_at - at, allowed)
       at = next_at
       pose = { checkpoint: travel.checkpoint, position: step.position, motion: step.motion }
       await publish(travel, pose, send, epoch)

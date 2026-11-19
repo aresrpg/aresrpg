@@ -54,17 +54,17 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
         <header className="flex items-center gap-3 pr-8">
           <EntityIcon label={mob.name} size="size-12" src={mob_icon(mob.mob_type)} />
           <div className="min-w-0 flex-1">
-            <p className="mt-1 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+            <p className="mt-1 text-[8px] tracking-[0.16em] text-faint uppercase">
               {format_text(text.level_range, { min: mob.level_min, max: mob.level_max })}
             </p>
           </div>
         </header>
         <div className="h-px bg-white/6" />
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+          <label className="text-[8px] tracking-[0.16em] text-faint uppercase">
             {format_text(text.level, { level: placement.level })}
             <select
-              className="mt-2 block h-9 w-24 border border-white/10 bg-bg px-2 text-[10px] text-[#e8e4dc]"
+              className="mt-2 block h-9 w-24 border border-white/10 bg-bg px-2 text-[10px] text-text"
               onChange={(event) =>
                 dispatch_app({
                   type: 'simulator/mob_placed',
@@ -85,7 +85,7 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
             </select>
           </label>
           <button
-            className="h-9 cursor-pointer border border-white/10 px-3 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase"
+            className="h-9 cursor-pointer border border-white/10 px-3 text-[8px] tracking-[0.14em] text-muted uppercase"
             onClick={close}
             type="button"
           >
@@ -107,7 +107,7 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
             <div className="border-r border-white/8">
               {mob.spells.map((spell, index) => (
                 <button
-                  className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[8px] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280]'}`}
+                  className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[8px] uppercase ${index === spell_index ? 'border-gold bg-gold/8 text-gold' : 'border-transparent text-faint'}`}
                   key={`${spell.name}-${index}`}
                   onClick={() => set_spell_index(index)}
                   type="button"

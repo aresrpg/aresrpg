@@ -22,7 +22,7 @@ const Counter = ({
   return (
     <button
       aria-expanded={active === kind}
-      className={`${red ? 'text-[#ff8caa]' : 'text-[#ffca57]'} cursor-pointer border-b border-current/35 pb-0.5 hover:brightness-125`}
+      className={`${red ? 'text-[#ff8caa]' : 'text-gold'} cursor-pointer border-b border-current/35 pb-0.5 hover:brightness-125`}
       data-validation-toggle={kind}
       onClick={() => select(active === kind ? null : kind)}
       title={`Show ${red ? 'errors' : 'warnings'}`}
@@ -66,7 +66,7 @@ export const ValidationPanel = ({
   const red = active === 'reds'
   return (
     <div
-      className={`${red ? 'border-[#ff5a8b]/30 bg-[#ff5a8b]/6 text-[#ff8caa]' : 'border-[#ffca57]/25 bg-[#ffca57]/5 text-[#e5be68]'} h-full overflow-y-auto border px-3 py-2 text-[8px] leading-4`}
+      className={`${red ? 'border-[#ff5a8b]/30 bg-[#ff5a8b]/6 text-[#ff8caa]' : 'border-gold/25 bg-gold/5 text-gold'} h-full overflow-y-auto border px-3 py-2 text-[8px] leading-4`}
       data-validation-panel={active}
     >
       {report[active].map((message) => (

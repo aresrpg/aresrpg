@@ -89,7 +89,9 @@ test('mobile login and touch controls expose explicit actions without executing 
       gift={false}
     />
   )
-  expect(login).toContain('/play-demo')
+  // A signed-out visit gets the plain sign-in card.
+  expect(login).toContain('data-player-login')
+  expect(login).toContain(copy.continue_google)
   expect(renderToStaticMarkup(<TouchControls copy={copy} />)).toContain('aria-label="Move"')
   expect(
     renderToStaticMarkup(

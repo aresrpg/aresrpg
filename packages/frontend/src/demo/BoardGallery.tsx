@@ -36,10 +36,10 @@ const CELL_KINDS = Object.freeze([
 ] as const satisfies readonly BoardCellKind[])
 const cell_styles: Readonly<Record<BoardCellKind, string>> = Object.freeze({
   void: 'border-dashed border-white/8 bg-bg',
-  floor: 'border-white/12 bg-[#171b22]',
-  obstacle: 'border-[#9f7a4e]/45 bg-[#5d4830]',
-  hole: 'border-[#56606e]/45 bg-black shadow-[inset_0_0_8px_#000]',
-  start_a: 'border-[#5fb9ff]/55 bg-[#2b8fdb]',
+  floor: 'border-white/12 bg-surface-low',
+  obstacle: 'border-gold/45 bg-gold-dark',
+  hole: 'border-steel/45 bg-black shadow-[inset_0_0_8px_#000]',
+  start_a: 'border-cyan/55 bg-cyan',
   start_b: 'border-[#ff7696]/55 bg-[#b13f5d]',
 })
 const preview_fill: Readonly<Record<Exclude<BoardCellKind, 'void'>, string>> = Object.freeze({
@@ -157,7 +157,7 @@ export const BoardEditor = ({
       <header className="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-surface-low p-3">
         <div className="flex items-center gap-2">
           <button
-            className="flex h-9 cursor-pointer items-center gap-2 border border-white/10 px-3 text-[8px] tracking-[0.14em] text-[#9096a0] uppercase hover:border-white/25 hover:text-[#e8e4dc] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-[#9096a0]"
+            className="flex h-9 cursor-pointer items-center gap-2 border border-white/10 px-3 text-[8px] tracking-[0.14em] text-faint uppercase hover:border-white/25 hover:text-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-faint"
             disabled={error !== null}
             onClick={on_back}
             type="button"
@@ -176,23 +176,23 @@ export const BoardEditor = ({
           </button>
         </div>
         <div className="text-center">
-          <p className="text-[10px] tracking-[0.15em] text-[#d7b660] uppercase">
+          <p className="text-[10px] tracking-[0.15em] text-gold uppercase">
             {text.fight_board} #{board_number}
           </p>
-          <p className="mt-1 text-[8px] text-[#68717e]">
-            {text.board_draw_hint} · <span className="text-[#8b929d]">{save_status}</span>
+          <p className="mt-1 text-[8px] text-faint">
+            {text.board_draw_hint} · <span className="text-faint">{save_status}</span>
           </p>
         </div>
         <div className="flex items-center gap-4 text-right text-[7px] tracking-[0.12em] uppercase">
-          <span className="text-[#747b86]">
+          <span className="text-faint">
             {text.board_canvas}
-            <strong className="ml-2 text-[9px] font-normal text-[#b8bec7]">
+            <strong className="ml-2 text-[9px] font-normal text-soft">
               {BOARD_GRID_WIDTH}×{BOARD_GRID_HEIGHT}
             </strong>
           </span>
-          <span className="text-[#747b86]">
+          <span className="text-faint">
             {text.board_output}
-            <strong className="ml-2 text-[9px] font-normal text-[#b8bec7]">
+            <strong className="ml-2 text-[9px] font-normal text-soft">
               {board.shape_mask.some((word) => BigInt(word) !== 0n) ? `${board.width}×${board.height}` : '—'}
             </strong>
           </span>
@@ -209,15 +209,15 @@ export const BoardEditor = ({
 
       <div className="grid flex-1 gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
         <aside className="h-fit border border-white/10 bg-surface-low p-3">
-          <p className="mb-2 text-[7px] tracking-[0.16em] text-[#626975] uppercase">{text.board_cell_type}</p>
+          <p className="mb-2 text-[7px] tracking-[0.16em] text-faint uppercase">{text.board_cell_type}</p>
           <div className="grid gap-1.5">
             {CELL_KINDS.map((kind) => (
               <button
                 aria-pressed={tool === kind}
                 className={`flex h-9 cursor-pointer items-center gap-3 border px-2 text-left text-[8px] tracking-[0.1em] uppercase ${
                   tool === kind
-                    ? 'border-[#d7b660]/55 bg-[#d7b660]/8 text-[#e8c878]'
-                    : 'border-white/8 text-[#858c97] hover:border-white/20 hover:text-[#d5d2cb]'
+                    ? 'border-gold/55 bg-gold/8 text-gold-light'
+                    : 'border-white/8 text-faint hover:border-white/20 hover:text-soft'
                 }`}
                 key={kind}
                 onClick={() => set_tool(kind)}
@@ -330,16 +330,14 @@ export const BoardGallery = ({ text }: Readonly<{ text: AppCopy['demo_page'] }>)
         <div className="mx-auto max-w-7xl">
           <header className="mb-4 flex items-center justify-between gap-3 border-b border-white/8 pb-3">
             <div>
-              <p className="text-[10px] tracking-[0.16em] text-[#d7b660] uppercase">{text.fight_board}</p>
+              <p className="text-[10px] tracking-[0.16em] text-gold uppercase">{text.fight_board}</p>
               {import.meta.env.DEV && (
-                <p className="mt-1 text-[8px] text-[#626975]">
-                  {status_label(text, editor.status, file?.dirty ?? false)}
-                </p>
+                <p className="mt-1 text-[8px] text-faint">{status_label(text, editor.status, file?.dirty ?? false)}</p>
               )}
             </div>
             {import.meta.env.DEV && (
               <button
-                className="flex h-9 cursor-pointer items-center gap-2 border border-[#4a9eff]/35 bg-[#4a9eff]/7 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35"
+                className="flex h-9 cursor-pointer items-center gap-2 border border-cyan/35 bg-cyan/7 px-3 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/65 disabled:cursor-not-allowed disabled:opacity-35"
                 disabled={!can_edit}
                 onClick={add_board}
                 type="button"
@@ -364,10 +362,10 @@ export const BoardGallery = ({ text }: Readonly<{ text: AppCopy['demo_page'] }>)
                 >
                   <BoardPreview board={board} />
                   <span className="mt-2 flex items-center justify-between text-[8px] tracking-[0.12em] uppercase">
-                    <span className="text-[#d7b660]">
+                    <span className="text-gold">
                       {text.fight_board} #{index + 1}
                     </span>
-                    <span className="text-[#68717e]">
+                    <span className="text-faint">
                       {board.width}×{board.height}
                     </span>
                   </span>

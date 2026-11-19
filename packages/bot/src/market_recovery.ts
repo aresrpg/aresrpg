@@ -8,7 +8,7 @@ import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
 import { lane_key_for } from './command_admission.ts'
 
-/** Durable proof pointers only; certified receipt history remains the source of truth. */
+/** Session-only proof pointers; reconnects retain certified catalogue watermarks in memory. */
 export const settled_market_receipts = (lane: Lane, command: Command, receipt: Receipt): Lane['catalogue_receipts'] => {
   const relation = market_receipt_relation(command, receipt)
   if (!relation) return lane.catalogue_receipts
@@ -29,31 +29,33 @@ const assert_proof = (
   kiosk: string,
   pointer: NonNullable<Lane['catalogue_receipts']>[string],
   command: Command,
-  record: Readonly<{ digest: string; receipt: Receipt }>
+  receipt: Receipt
 ) => {
-  const relation = market_receipt_relation(command, record.receipt)
+  const relation = market_receipt_relation(command, receipt)
   const valid = [
     command.id === pointer.command_id,
     command.lane_key === lane_key_for(lane),
     command.status === 'completed',
     (command.result as { digest?: string } | undefined)?.digest === pointer.digest,
-    record.digest === pointer.digest,
-    receipt_digest(record.receipt) === pointer.digest,
+    receipt_digest(receipt) === pointer.digest,
     relation?.kiosk === kiosk,
     relation?.version === pointer.version,
   ]
   if (!valid.every(Boolean)) throw new Error('market_receipt_proof_invalid')
 }
+// A newer settlement for the same kiosk releases the older proof; it is folded on the next read instead.
+const superseded = async (store: ControlStore, lane: Lane, kiosk: string, command_id: string) => {
+  const current = (await store.read<Lane>(lane_key_for(lane)))?.catalogue_receipts?.[kiosk]
+  return Boolean(current) && current?.command_id !== command_id
+}
 export const read_market_receipts = async (store: ControlStore, lane: Lane): Promise<readonly MarketProof[]> => {
   const proofs: MarketProof[] = []
   for (const [kiosk, pointer] of Object.entries(lane.catalogue_receipts ?? {})) {
-    const [command, record] = await Promise.all([
-      store.read<Command>(`command:${pointer.command_id}`),
-      store.read<{ digest: string; receipt: Receipt }>(`receipt:${pointer.digest}`),
-    ])
-    if (!command || !record) throw new Error('market_receipt_proof_invalid')
-    assert_proof(lane, kiosk, pointer, command, record)
-    proofs.push({ command, receipt: record.receipt })
+    const command = await store.read<Command>(`command:${pointer.command_id}`)
+    if (!command && (await superseded(store, lane, kiosk, pointer.command_id))) continue
+    if (!command?.receipt) throw new Error('market_receipt_proof_invalid')
+    assert_proof(lane, kiosk, pointer, command, command.receipt)
+    proofs.push({ command, receipt: command.receipt })
   }
   return proofs
 }

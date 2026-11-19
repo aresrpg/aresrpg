@@ -58,14 +58,18 @@ test('hosted service has no implicit endpoint and rejects insecure or credential
     expect(() => resolve_bot_service_url(url)).toThrow()
 })
 
-test('provider entry resumes setup once but never grants consent automatically', () => {
+// Regression: arriving with an assistant's request started the setup by itself, so one link click by a
+// signed-in player signed an owner proof and created a custody wallet for a request they never read.
+test('an assistant request waits for the player: nothing is signed or created before their click', () => {
   const wallet = {}
-  const pending = reduce_hosted(empty_hosted(), { type: 'reset', session: wallet, resume_authorization: true })
+  const arrived = reduce_hosted(empty_hosted(), { type: 'reset', session: wallet, requested: true })
+  expect(arrived.phase).toBe('idle')
+  const pending = reduce_hosted(arrived, { type: 'start', phase: 'authenticating' })
   expect(pending.phase).toBe('authenticating')
-  const replacement = reduce_hosted(pending, { type: 'reset', session: {}, resume_authorization: true })
+  const replacement = reduce_hosted(pending, { type: 'reset', session: {}, requested: true })
   expect(replacement).toMatchObject({ phase: 'failed', failure: 'restart' })
   const disconnected = reduce_hosted(pending, { type: 'reset', session: null })
-  expect(reduce_hosted(disconnected, { type: 'reset', session: {}, resume_authorization: true })).toMatchObject({
+  expect(reduce_hosted(disconnected, { type: 'reset', session: {}, requested: true })).toMatchObject({
     phase: 'failed',
     failure: 'restart',
   })
@@ -85,7 +89,7 @@ test('provider entry resumes setup once but never grants consent automatically',
     closed
   )
   expect(reduce_hosted(empty_hosted(), { type: 'reset', session: wallet }).phase).toBe('idle')
-  expect(reduce_hosted(empty_hosted(), { type: 'reset', session: null, resume_authorization: true }).phase).toBe('idle')
+  expect(reduce_hosted(empty_hosted(), { type: 'reset', session: null, requested: true }).phase).toBe('idle')
 })
 
 test('invalid bound authorization requires provider restart; unknown errors permit explicit retry', async () => {

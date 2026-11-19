@@ -27,26 +27,48 @@ const fixture = async () => {
   return { redis, namespace, store, key, dispose }
 }
 
-integration('Redis expires temporary records itself while retaining durable execution evidence', async () => {
+integration('Redis expires temporary records itself while retaining authority but not execution evidence', async () => {
   const f = await fixture()
   try {
     const expires_at = Date.now() + 150
     const temporary = ['request:idle', 'challenge:idle', 'client:idle', 'grant:code']
-    const durable = ['client:approved', 'grant:active', 'grant:revoked', 'command:receipt', 'journal:pending']
-    await f.store.transaction([...temporary, ...durable], async (tx) => {
+    const durable = ['client:approved', 'grant:active', 'grant:revoked']
+    const volatile = ['command:receipt']
+    await f.store.transaction([...temporary, ...durable, ...volatile], async (tx) => {
       for (const key of temporary.slice(0, 3)) await tx.put(key, { expires_at })
       await tx.put('grant:code', { code: { expires_at, used: false }, family: null, access: null })
       await tx.put('client:approved', { id: 'approved' })
       await tx.put('grant:active', { code: { expires_at, used: true }, family: { used_hashes: ['replay'] } })
       await tx.put('grant:revoked', { code: { expires_at, used: false }, revoked: true })
       await tx.put('command:receipt', { status: 'completed', digest: 'synthetic' })
-      await tx.put('journal:pending', { phase: 'submitting', digest: 'synthetic' })
     })
     for (const key of temporary) expect(await f.redis.send('PTTL', [f.key(key)])).toBeGreaterThan(0)
     await Bun.sleep(200)
     // Direct Redis commands prove this is native expiry, not application reads or cleanup.
     for (const key of temporary) expect(await f.redis.send('EXISTS', [f.key(key)])).toBe(0)
+    expect(await f.store.scan_keys('request:', 10)).toEqual([])
     for (const key of durable) expect(await f.redis.send('PTTL', [f.key(key)])).toBe(-1)
+    for (const key of volatile) expect(await f.redis.send('EXISTS', [f.key(key)])).toBe(0)
+  } finally {
+    await f.dispose()
+  }
+})
+
+integration('a pairing proof expires with the authorization request it belongs to', async () => {
+  const f = await fixture()
+  try {
+    const expires_at = Date.now() + 150
+    await f.store.transaction(['request:pairing'], (tx) => tx.put('request:pairing', { expires_at }))
+    await f.store.transaction(['proof:pairing:nonce'], (tx) =>
+      tx.put('proof:pairing:nonce', { status: 'pending', bot_id: 'bot' })
+    )
+    expect(await f.redis.send('PEXPIRETIME', [f.key('proof:pairing:nonce')])).toBe(expires_at)
+    await Bun.sleep(200)
+    expect(await f.redis.send('EXISTS', [f.key('proof:pairing:nonce')])).toBe(0)
+    // Without its live request a proof cannot be written at all.
+    await expect(
+      f.store.transaction(['proof:orphan:nonce'], (tx) => tx.put('proof:orphan:nonce', { status: 'pending' }))
+    ).rejects.toThrow('INVALID_CONTROL_EXPIRY')
   } finally {
     await f.dispose()
   }

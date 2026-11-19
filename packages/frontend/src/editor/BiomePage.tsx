@@ -28,10 +28,9 @@ import { move_spline_knot, sample_biome_cell, world_height_domain, world_height_
 import { entity_rows, type JsonPath, type JsonValue } from './seed_editor.ts'
 
 const action_class =
-  'h-8 cursor-pointer border border-[#4a9eff]/35 bg-cyan/8 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35'
-const input_class =
-  'h-7 border border-white/12 bg-bg px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
-const micro_label = 'block text-[7px] tracking-[0.1em] text-[#6f747e] uppercase'
+  'h-8 cursor-pointer border border-cyan/35 bg-cyan/8 px-3 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/65 disabled:cursor-not-allowed disabled:opacity-35'
+const input_class = 'h-7 border border-white/12 bg-bg px-2 text-[8px] text-soft outline-none focus:border-cyan/60'
+const micro_label = 'block text-[7px] tracking-[0.1em] text-faint uppercase'
 
 const record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
   value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
@@ -164,11 +163,11 @@ const LandscapeControls = ({
         y_domain={world_height_graph_domain()}
         y_value_domain={world_height_domain()}
       />
-      <section className="shrink-0 border-l-2 border-[#efbd45]/55 bg-black/22 px-2.5 py-2">
+      <section className="shrink-0 border-l-2 border-gold/55 bg-black/22 px-2.5 py-2">
         <div className="mb-2 flex items-end justify-between gap-2">
           <div>
             <span className={micro_label}>Selected knot</span>
-            <strong className="mt-1 block text-[9px] text-[#efbd45]">{point_index + 1}</strong>
+            <strong className="mt-1 block text-[9px] text-gold">{point_index + 1}</strong>
           </div>
           <div className="flex items-end gap-1.5">
             <label>
@@ -220,7 +219,7 @@ const LandscapeControls = ({
               />
             </label>
             <button
-              className="h-7 border border-white/10 px-2 text-[8px] text-[#777b86] hover:border-[#ff5a8b]/45 hover:text-[#ff8caa] disabled:opacity-25"
+              className="h-7 border border-white/10 px-2 text-[8px] text-faint hover:border-[#ff5a8b]/45 hover:text-[#ff8caa] disabled:opacity-25"
               disabled={preview_busy || biome.landscape.length <= 2}
               onClick={() => {
                 begin_preview_update()
@@ -272,12 +271,12 @@ const LandscapeControls = ({
           })}
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-[6px] text-[#626670]">
+          <span className="text-[6px] text-faint">
             {point.land ? 'Own material boundary' : 'Inherits previous boundary'}
           </span>
           {point_index > 0 && point.land && (
             <button
-              className="text-[7px] tracking-[0.08em] text-[#777b86] uppercase hover:text-[#efbd45]"
+              className="text-[7px] tracking-[0.08em] text-faint uppercase hover:text-gold"
               onClick={() =>
                 replace(point_path, {
                   x: point.x,
@@ -298,7 +297,7 @@ const LandscapeControls = ({
 
 const WorldAndMaterials = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; replace: ReplaceTerrain }>) => (
   <div className="space-y-3">
-    <section className="flex flex-wrap items-end gap-2 border-l-2 border-[#4a9eff]/45 bg-black/20 p-2.5">
+    <section className="flex flex-wrap items-end gap-2 border-l-2 border-cyan/45 bg-black/20 p-2.5">
       <label>
         <span className={micro_label}>Seed</span>
         <input
@@ -358,7 +357,7 @@ export const BiomePage = () => {
     recipe_error = error instanceof Error ? error.message : String(error)
   }
   if (!file || !selected || !world)
-    return <div className="grid flex-1 place-items-center text-[10px] text-[#777b86]">No terrain recipe available.</div>
+    return <div className="grid flex-1 place-items-center text-[10px] text-faint">No terrain recipe available.</div>
 
   const replace = (path: JsonPath, value: JsonValue): void =>
     dispatch_app({ type: 'editor/value_changed', domain: 'worlds', path: [...selected.path, ...path], value })
@@ -395,7 +394,7 @@ export const BiomePage = () => {
               ] as const
             ).map(([id, label, Icon]) => (
               <button
-                className={`flex h-7 items-center gap-2 px-3 text-[8px] tracking-[0.12em] uppercase ${mode === id ? 'bg-[#4a9eff]/14 text-[#8fc4ff]' : 'text-[#777b86] hover:text-[#d8d3ca]'}`}
+                className={`flex h-7 items-center gap-2 px-3 text-[8px] tracking-[0.12em] uppercase ${mode === id ? 'bg-cyan/14 text-cyan' : 'text-faint hover:text-soft'}`}
                 key={id}
                 onClick={() => {
                   set_preview_busy(false)
@@ -411,9 +410,9 @@ export const BiomePage = () => {
         </div>
         <p className="shrink-0 text-[8px] tracking-[0.14em] uppercase">
           {editor.status === 'saving' ? (
-            <span className="animate-pulse text-[#efbd45]">Saving…</span>
+            <span className="animate-pulse text-gold">Saving…</span>
           ) : file.dirty ? (
-            <span className="text-[#efbd45]">● unsaved</span>
+            <span className="text-gold">● unsaved</span>
           ) : (
             <span className="text-[#65c993]">Saved · autosave on</span>
           )}
@@ -435,7 +434,7 @@ export const BiomePage = () => {
       </div>
 
       {recipe_error && (
-        <pre className="absolute inset-x-4 top-18 z-40 whitespace-pre-wrap border border-[#ff5a8b]/30 bg-[#16090e]/96 p-3 text-[9px] text-[#ff8caa]">
+        <pre className="absolute inset-x-4 top-18 z-40 whitespace-pre-wrap border border-[#ff5a8b]/30 bg-void/96 p-3 text-[9px] text-[#ff8caa]">
           {recipe_error}
         </pre>
       )}
@@ -445,7 +444,7 @@ export const BiomePage = () => {
           className="absolute left-3 top-17 z-20 w-80 max-w-[calc(100%-24px)] border border-white/10 bg-bg/88 shadow-2xl backdrop-blur-md"
           open
         >
-          <summary className="cursor-pointer list-none px-3 py-2 text-[8px] tracking-[0.14em] text-[#9ea4ae] uppercase marker:hidden">
+          <summary className="cursor-pointer list-none px-3 py-2 text-[8px] tracking-[0.14em] text-muted uppercase marker:hidden">
             Map readout {sampled ? `· ${sampled.biome.name} · Y ${sampled.surface_y}` : '· click 2D map to focus'}
           </summary>
           <BiomeCoverage
@@ -459,7 +458,7 @@ export const BiomePage = () => {
 
       {recipe && !panel_open && (
         <button
-          className="absolute right-3 top-17 z-30 flex h-9 items-center gap-2 border border-[#c8963c]/35 bg-surface-low/92 px-3 text-[8px] tracking-[0.12em] text-[#e0b86b] uppercase shadow-xl backdrop-blur-md"
+          className="absolute right-3 top-17 z-30 flex h-9 items-center gap-2 border border-gold/35 bg-surface-low/92 px-3 text-[8px] tracking-[0.12em] text-gold uppercase shadow-xl backdrop-blur-md"
           onClick={() => set_panel_open(true)}
           type="button"
         >
@@ -472,19 +471,19 @@ export const BiomePage = () => {
         <aside className="absolute bottom-3 right-3 top-17 z-30 flex w-[min(440px,calc(100%-24px))] flex-col overflow-hidden border border-white/10 bg-surface-low/92 shadow-2xl backdrop-blur-md">
           <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-3 py-2">
             <div>
-              <strong className="text-[9px] tracking-[0.15em] text-[#e0b86b] uppercase">World editor</strong>
-              <p className="mt-0.5 text-[7px] text-[#6f747e]">
+              <strong className="text-[9px] tracking-[0.15em] text-gold uppercase">World editor</strong>
+              <p className="mt-0.5 text-[7px] text-faint">
                 {active_tab.help} Live Engine is the real game renderer; 3D Height is the fast sampler.
               </p>
             </div>
             {preview_busy && (
-              <span className="ml-auto mr-2 animate-pulse text-[7px] tracking-[0.12em] text-[#efbd45] uppercase">
+              <span className="ml-auto mr-2 animate-pulse text-[7px] tracking-[0.12em] text-gold uppercase">
                 Rebuilding terrain…
               </span>
             )}
             <button
               aria-label="Collapse terrain editor"
-              className="grid size-8 place-items-center border border-white/8 text-[#858994] hover:text-white"
+              className="grid size-8 place-items-center border border-white/8 text-faint hover:text-white"
               onClick={() => set_panel_open(false)}
               type="button"
             >

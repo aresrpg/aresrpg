@@ -11,7 +11,7 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #aab3bf;
+  color: var(--aui-muted);
   font-size: 11px;
   flex: none;
 }
@@ -20,7 +20,7 @@
 }
 .mastery-summary > span {
   flex: none;
-  color: #d8bc80;
+  color: var(--aui-brass);
 }
 .mastery-body {
   display: grid;
@@ -33,7 +33,7 @@
   overflow-y: auto;
   min-height: 0;
   padding: 12px;
-  background: #191e25;
+  background: var(--aui-surface);
   border: 1px solid #ffffff12;
   border-radius: 7px;
   scrollbar-width: thin;
@@ -80,7 +80,7 @@
   padding: 12px;
 }
 .mastery-offer[data-affordable='true'] {
-  border-color: #b7995b66;
+  border-color: color-mix(in srgb, var(--aui-brass) 40%, transparent);
 }
 .mastery-offer > button {
   flex: 1;
@@ -102,7 +102,7 @@
 }
 .mastery-offer h3 {
   font: 700 13px var(--aui-font);
-  color: #e3c287;
+  color: var(--aui-brass);
   text-transform: none;
   letter-spacing: normal;
   justify-content: center;
@@ -184,9 +184,9 @@
 }
 .mastery-world-reward {
   flex: none;
-  color: #f2ce7f;
+  color: var(--aui-brass);
   font: 700 11px var(--aui-font);
-  background: #25221acc;
+  background: color-mix(in srgb, var(--aui-brass-ink) 80%, transparent);
   padding: 4px 6px;
   border-radius: 4px;
 }

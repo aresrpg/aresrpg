@@ -5,14 +5,15 @@ import { readFile } from 'node:fs/promises'
 
 import { RedisClient } from 'bun'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { create_telegram_access } from '@aresrpg/protocol/telegram-access'
 
 import { create_reporting } from './reporting.ts'
 import { read_config, deployment_integer, deployment_value } from './config.ts'
 import { create_redis_store, type ControlStore } from './store.ts'
 import { create_owner_verifier } from './owner_proof.ts'
 import { create_ingress } from './http.ts'
-import { create_envelope_cipher } from './envelope_cipher.ts'
 import type { Observe } from './control.ts'
+import type { OwnerControl } from './owner_control.ts'
 import type { BotConfig } from './model.ts'
 import { shutdown_service, start_service_runtime } from './service_runtime.ts'
 
@@ -24,14 +25,21 @@ type RuntimeOptions = Readonly<{
   redis: RedisClient
   report_failure: (error: unknown) => void
 }>
-const start_http = ({ env, config, store, rpc_url }: RuntimeOptions, observe: Observe, ready: () => boolean) => {
+const start_http = (
+  { env, config, store, rpc_url, redis }: RuntimeOptions,
+  observe: Observe,
+  ready: () => boolean,
+  dispatch: OwnerControl
+) => {
   const client = new SuiGrpcClient({ network: config.network, baseUrl: rpc_url })
   const fetch = create_ingress({
     store,
     config,
     observe,
+    dispatch,
     ready,
     verify_owner: create_owner_verifier(client),
+    join_waitlist: create_telegram_access((command, args) => redis.send(command, args)).join,
     policy: { revision: 1, scopes: config.scopes },
     observation_freshness_ms: config.observation_freshness_ms,
     provision_enabled: env.BOT_PROVISION_ENABLED === 'true',
@@ -46,10 +54,6 @@ const start_actor = async ({ env, config, store, rpc_url, redis, report_failure 
     store,
     parse_signing_keyring(await readFile(deployment_value(env, 'BOT_SIGNING_KEYRING_FILE'), 'utf8'))
   )
-  const cipher = create_envelope_cipher(
-    await readFile(deployment_value(env, 'BOT_ENVELOPE_KEY_FILE')),
-    await readFile(deployment_value(env, 'BOT_ENVELOPE_KEY_ID_FILE'), 'utf8')
-  )
   const lease_ms = deployment_integer(env, 'BOT_LEASE_MS')
   const tick_ms = deployment_integer(env, 'BOT_TICK_MS')
   const heartbeat_ms = deployment_integer(env, 'BOT_HEARTBEAT_MS')
@@ -59,7 +63,6 @@ const start_actor = async ({ env, config, store, rpc_url, redis, report_failure 
     store,
     config,
     provider,
-    cipher,
     endpoint: deployment_value(env, 'BOT_GAME_ENDPOINT'),
     origin: config.web_origin,
     actor_id,
@@ -104,9 +107,9 @@ const main = async () => {
     const rpc_url = deployment_value(env, 'BOT_SUI_RPC_URL')
     if (new URL(rpc_url).protocol !== 'https:') throw new Error('Sui RPC requires HTTPS')
     const options = { env, config, store: create_redis_store(redis), rpc_url, redis, report_failure }
-    const { stop, observe, ready } = await start_actor(options)
+    const { stop, observe, ready, dispatch } = await start_actor(options)
     stop_actor = stop
-    const server = start_http(options, observe, ready)
+    const server = start_http(options, observe, ready, dispatch)
     const shutdown = () => {
       void shutdown_service({
         server,

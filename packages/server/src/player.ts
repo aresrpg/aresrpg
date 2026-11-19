@@ -11,6 +11,7 @@
 
 import { EventEmitter } from 'node:events'
 
+import { create_request_limiter, type RequestLimiter } from '@aresrpg/protocol/request-limiter'
 import {
   parse_client_packet,
   MAX_TRACKED_CHARACTERS,
@@ -24,6 +25,7 @@ import {
   type MarketPriceObservation,
   type LeaderboardObservation,
   type CharacterRow,
+  VIOLATION_DROP_REASONS,
 } from '@aresrpg/protocol'
 
 import { create_player_output, type PlayerSocket } from './player_output.ts'
@@ -58,7 +60,6 @@ import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
 import player_allocation from './modules/player_allocation.ts'
 import type { Allocation } from './allocation/runtime.ts'
-import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
 // Preserve the six-character traffic floor; larger authenticated tracking sets receive
@@ -286,6 +287,8 @@ type PlayerWires = Pick<
   indexing_health?: () => Promise<IndexingHealth>
   request_limiter?: RequestLimiter
   realtime_limiter?: RequestLimiter
+  /** Called when the server itself drops this verified player for a violation: the one source of a cool-off. */
+  penalize?: () => void
   ws: PlayerSocket
 }
 
@@ -311,6 +314,7 @@ export function create_player({
     Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }),
   request_limiter = create_request_limiter(),
   realtime_limiter,
+  penalize = () => undefined,
 }: PlayerWires): Player {
   let state = INITIAL_STATE()
   const realtime =
@@ -322,7 +326,11 @@ export function create_player({
   let closed = false
   const controller = new AbortController()
   const { send, position: send_position } = create_player_output(ws, controller.signal)
-  const drop = (reason: string) => void ws.close(1008, reason)
+  /** The server's own decision to end this socket. A violation earns the cool-off here, never from a close frame. */
+  const drop = (reason: string): void => {
+    if (VIOLATION_DROP_REASONS.has(reason)) penalize()
+    ws.close(1008, reason)
+  }
 
   const events = new EventEmitter()
   events.setMaxListeners(0)

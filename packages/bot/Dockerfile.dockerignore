@@ -38,6 +38,8 @@ seed/scenes/*
 !seed/content/pet_wings.json
 !seed/content/recipes.json
 !seed/content/mobs.json
+!seed/content/dungeons.json
+!seed/content/strategies.json
 !seed/portraits/
 seed/portraits/*
 !seed/portraits/manifest.json

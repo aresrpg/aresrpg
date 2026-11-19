@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { randomBytes } from 'node:crypto'
+
 import { parseSerializedSignature } from '@mysten/sui/cryptography'
 import type { Redis } from 'ioredis'
 import {
@@ -12,9 +14,9 @@ import {
 
 import { verify_wallet_message } from '../auth.ts'
 
-import { key, read_campaign } from './store.ts'
-import { random_id } from './x.ts'
+import { key, read_awards } from './store.ts'
 
+const random_id = (): string => randomBytes(32).toString('hex')
 const collection = (owner: string): string => key(`verified:${owner}`)
 export const verified_wallets = async (redis: Redis, owner: string): Promise<readonly AllocationWallet[]> => {
   // The ordinary socket admission already verified the game-wallet signature.
@@ -87,11 +89,7 @@ export const share_wallet = async (redis: Redis, owner: string, address: string,
   await redis.set(share_key, candidate, 'NX')
   const token = (await redis.get(share_key))!
   await redis.set(key(`share:${token}`), address)
-  const current = await read_campaign(redis)
-  const version = share_version(
-    current.phase,
-    current.awards.find((award) => award.address === address)
-  )
+  const version = share_version((await read_awards(redis)).find((award) => award.address === address))
   return `${origin}/api/allocation?action=preview&token=${token}&v=${version}`
 }
 export const shared_address = async (redis: Redis, token: string | null): Promise<string> => {

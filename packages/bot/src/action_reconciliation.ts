@@ -8,6 +8,7 @@ import { consumable_baseline, consumable_projected, type ConsumableBaseline } fr
 import { EQUIPMENT_ACTIONS, equipment_projected } from './equipment_actions.ts'
 import { market_sell_projected } from './market_actions.ts'
 import { loot_boxes_projected } from './loot_boxes.ts'
+import { team_projected } from './team_actions.ts'
 import { spell_projected } from './spell_allocation.ts'
 import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
 import { owned_character } from './gameplay_context.ts'
@@ -105,7 +106,10 @@ const character_projected = (
       inventory_projected(receipt, context.snapshot.inventory),
   }
   const check = checks[command.kind === 'resolve_ambush' ? 'fight_engage' : command.kind]
-  return check ? check() : projected_fight(command, context)
+  const created = receipt_event(receipt, '::fight::FightCreated')?.fight
+  return check
+    ? check()
+    : (team_projected(command.kind, command.payload, created, character) ?? projected_fight(command, context))
 }
 
 /** Receipt settlement and packet delivery may occur in either order. The same proof handles both. */
@@ -120,20 +124,16 @@ export const reconcile_action = async (
   const retained = await store.read<Lane>(lane_key)
   if (!retained?.reconciliation_command || !context.snapshot.ready) return
   const command_key = `command:${retained.reconciliation_command}`
-  const command = await store.read<Command>(command_key)
-  const digest = (command?.result as { digest?: string } | undefined)?.digest
-  if (!command || !digest) return
-  const receipt_key = `receipt:${digest}`
-  await store.transaction([lane_key, command_key, receipt_key], async (tx) => {
+  await store.transaction([lane_key, command_key], async (tx) => {
     const lane = assert_lease(await tx.get<Lane>(lane_key), actor_id, fence, now)
+    const command = await tx.get<Command>(command_key)
     if (
       lane.pending ||
-      lane.reconciliation_command !== command.id ||
+      lane.reconciliation_command !== command?.id ||
       lane.observation_revision !== context.snapshot.observation_revision
     )
       return
-    const record = await tx.get<{ receipt: Receipt }>(receipt_key)
-    if (!record || !action_projected(command, record.receipt, context)) return
+    if (!command?.receipt || !action_projected(command, command.receipt, context)) return
     await tx.put(lane_key, { ...lane, reconciliation_command: null, needs_resync: false })
   })
 }

@@ -29,7 +29,7 @@ import {
   type EquipmentMap,
 } from './equipment_stage.ts'
 import { select_inventory_item } from './inventory_selection.ts'
-import { is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
+import { type ItemMenuState } from './InventoryOverlays.tsx'
 import { bag_item_matches, type BagCategory, type ResourceFilter } from './InventoryResourceFilters.tsx'
 
 const consumable_action = (item: Readonly<ItemRow>) => {
@@ -245,12 +245,20 @@ export function useEquipment({
   const unequip = (slot: CharacterEquipmentSlot): void => commit(stage_unequip(real, slot))
 
   const activate = (item: Readonly<ItemRow>): void => {
-    if (committing) return
-    if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
-    if (is_loot_box(item)) return set_reveal_box(item)
     const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
-    if (effect) return effect.type === 'heal' ? set_healing_item(item) : drink(item)
-    equip(item, null)
+    const slot = natural_slot_for(item, real)
+    const consumable_actions = {
+      loot_box: set_reveal_box,
+      heal: set_healing_item,
+      reset_stats: drink,
+      reset_spells: drink,
+      recall: drink,
+      city: drink,
+    }
+    const action = effect ? consumable_actions[effect.type] : slot ? () => equip(item, slot) : null
+    if (committing || !action) return
+    if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
+    action(item)
   }
 
   const totals = useMemo(() => {

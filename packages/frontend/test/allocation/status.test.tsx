@@ -29,7 +29,7 @@ test('refreshing an existing campaign projection does not show a loading indicat
   const html = render({
     ...initial_allocation(),
     task: { kind: 'load' },
-    status: { phase: 'registration', submissions_open: true, wallets: [], awards: [], user: null, submission: null },
+    status: { wallets: [], awards: [] },
   })
   expect(html).not.toContain('class="spinner"')
   expect(html).not.toContain('class="banner"')

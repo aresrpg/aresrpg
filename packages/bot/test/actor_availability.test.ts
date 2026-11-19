@@ -10,7 +10,7 @@ import type { SuiTransport } from '@aresrpg/sdk'
 
 import { create_actor_runtime } from '../src/actor_runtime.ts'
 import { request_provisioning } from '../src/provisioning.ts'
-import { empty_lane, lane_key_for, type Command } from '../src/control.ts'
+import { lane_key_for, type Command, type Lane } from '../src/control.ts'
 
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { put } from './helpers/control_fixture.ts'
@@ -60,23 +60,6 @@ test('an unresolved wallet receipt does not block provisioning another wallet', 
   const signature = new MultiSigPublicKey(fromBase64(f.bot.multisig_public_key)).combinePartialSignatures([
     signed.signature,
   ])
-  const encrypted = await f.options.cipher.encrypt(
-    JSON.stringify({ bytes: Buffer.from(bytes).toString('base64'), signatures: [signature] }),
-    JSON.stringify([lane_key, command.id, digest])
-  )
-  await put(f.store, lane_key, {
-    ...empty_lane(f.bot),
-    pending: {
-      command_id: command.id,
-      grant_id: f.grant.id,
-      digest,
-      phase: 'submitting',
-      encrypted,
-      gas_budget_mist: '1000',
-    },
-    active_command: command.id,
-    decision_revision: 1,
-  })
   const other = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(8))
   const reference = {
     key_id: 'fixture:signing:second-known-test-key',
@@ -96,6 +79,22 @@ test('an unresolved wallet receipt does not block provisioning another wallet', 
           },
   }
   const runtime = create_actor_runtime({ ...f.options, provider, sdk_options: { client: transport } })
+  await runtime.observe(f.grant, {})
+  const lane = (await f.store.read<Lane>(lane_key))!
+  await put(f.store, lane_key, {
+    ...lane,
+    pending: {
+      command_id: command.id,
+      grant_id: f.grant.id,
+      digest,
+      phase: 'submitting',
+      bytes: Buffer.from(bytes).toString('base64'),
+      signatures: [signature],
+      gas_budget_mist: '1000',
+    },
+    active_command: command.id,
+    decision_revision: 1,
+  })
   try {
     await runtime.tick()
     expect(await Promise.race([started.then(() => true), Bun.sleep(100).then(() => false)])).toBe(true)

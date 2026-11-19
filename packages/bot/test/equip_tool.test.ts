@@ -10,12 +10,13 @@ import {
   parse_gameplay_action,
   execute_gameplay,
   execute_gameplay_actions,
+  type GameplayContext,
 } from '../src/gameplay.ts'
-import { next_profession_action } from '../src/profession_plan.ts'
+import { nearest_gather } from '../src/behavior_targets.ts'
 import { fold_actor_inventory } from '../src/actor_inventory.ts'
 import { id, pins, digest, fake_client } from '../../sdk/test/helpers/transport.ts'
 
-import { profession_context, plan, character, item } from './helpers/profession_fixture.ts'
+import { profession_context, character, item, resource } from './helpers/profession_fixture.ts'
 
 const tool = { ...item('fixture_tool', 1, 45), category: character.equipment[0]!.category }
 const equip_context = () => {
@@ -31,9 +32,16 @@ const equip_context = () => {
   }
 }
 
+/** The gather a tree would select next, validated against the same observation. */
+const gather = (context: GameplayContext) =>
+  validate_gameplay({
+    ...context,
+    command: { ...context.command, ...nearest_gather(character.id, resource.item_type, context)! },
+  })
+
 test('unequipped handover waits for deposited tool, equips through SDK and gathers only after observed equipment', async () => {
   const handed_over = equip_context()
-  expect(next_profession_action(plan, handed_over).issue?.code).toBe('gathering_tool_required')
+  expect(() => gather(handed_over)).toThrow('gathering_tool_required')
   expect(() => validate_gameplay(handed_over)).toThrow('tool_unavailable')
   const deposited = {
     ...handed_over,
@@ -64,12 +72,12 @@ test('unequipped handover waits for deposited tool, equips through SDK and gathe
     },
   } as Parameters<typeof execute_gameplay_actions>[1])
   expect(calls).toEqual([action.input])
-  expect(next_profession_action(plan, deposited).issue?.code).toBe('gathering_tool_required')
+  expect(() => gather(deposited)).toThrow('gathering_tool_required')
   const observed = {
     ...deposited,
     snapshot: { ...deposited.snapshot, characters: [{ ...character, equipment: [{ ...tool, slot: 'tool' }] }] },
   }
-  expect(next_profession_action(plan, observed).action?.kind).toBe('gather')
+  expect(gather(observed).kind).toBe('gather')
 })
 
 test('tool action rejects foreign custody, unavailable inventory, levels, stale state and injected fields', () => {

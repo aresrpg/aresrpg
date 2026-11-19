@@ -11,9 +11,6 @@ const {
   MESH_REDIS_URL = 'redis://localhost:6379',
   ALLOCATION_REDIS_URL,
   ALLOCATION_ORIGIN = 'https://aresrpg.world',
-  ALLOCATION_X_CLIENT_ID,
-  ALLOCATION_X_CLIENT_SECRET,
-  ALLOCATION_X_BEARER,
   GRAPH_NAME = 'aresrpg',
   PORT: RAW_PORT = '9800',
   SUI_NETWORK = 'testnet',
@@ -48,7 +45,4 @@ export const ADMIN_ADDRESSES = new Set(
 export const ALLOCATION_OPTIONS = Object.freeze({
   origin: ALLOCATION_ORIGIN,
   redis_url: ALLOCATION_REDIS_URL,
-  client_id: ALLOCATION_X_CLIENT_ID,
-  client_secret: ALLOCATION_X_CLIENT_SECRET,
-  bearer: ALLOCATION_X_BEARER,
 })

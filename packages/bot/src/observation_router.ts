@@ -5,6 +5,13 @@ import { randomUUID } from 'node:crypto'
 import { lane_key_for, lane_owned_elsewhere, type Lane, type Observe } from './control.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore } from './store.ts'
+import {
+  OWNER_CONTROL_SCOPES,
+  owner_control_method,
+  type OwnerControl,
+  type OwnerControlMethod,
+  type LocalOwnerControl,
+} from './owner_control.ts'
 
 type Request = Readonly<{
   type: 'request'
@@ -15,6 +22,7 @@ type Request = Readonly<{
   fence: number
   deadline: number
   payload: Readonly<Record<string, unknown>>
+  control?: Readonly<{ method: OwnerControlMethod; args: readonly unknown[] }>
 }>
 type Outcome = Readonly<{ ok: true; value: unknown }> | Readonly<{ ok: false; error: string }>
 type Reply = Readonly<{ type: 'reply'; id: string; sender: string; fence: number; outcome: Outcome }>
@@ -25,6 +33,10 @@ type Bus = Readonly<{
 }>
 const topic = (actor: string) => `bot:observations:${actor}`
 const pending_read = () => ({ status: 'pending' })
+const stale_owner = (control?: Request['control']) => {
+  if (control) throw new Error('actor_fenced')
+  return pending_read()
+}
 const message_error = (error: unknown) => (error instanceof Error ? error.message : String(error))
 const acquire_race = (error: unknown) =>
   ['actor_owned', 'control_transaction_conflict', 'actor_fenced'].includes(message_error(error))
@@ -49,10 +61,12 @@ const decode = (raw: string): Request | Reply => {
     ].every(Boolean)
   )
     throw new Error('invalid_observation_message')
+  if (message.control && (!owner_control_method(message.control.method) || !Array.isArray(message.control.args)))
+    throw new Error('invalid_control_message')
   return message
 }
 
-/** Ephemeral reads only. Redis CAS, leases and journals remain the admission authority.
+/** Ephemeral owner RPC. Redis CAS and leases remain the admission authority.
  * This fails if recovery reopens gameplay after takeover or a reply bypasses current ownership/grant. */
 export const create_observation_router = async (
   options: Readonly<{
@@ -60,6 +74,7 @@ export const create_observation_router = async (
     config: BotConfig
     actor_id: string
     local: Observe
+    local_control?: LocalOwnerControl
     publisher: Pick<Bus, 'publish'>
     subscriber: Pick<Bus, 'subscribe' | 'unsubscribe'>
     timeout_ms: number
@@ -68,6 +83,11 @@ export const create_observation_router = async (
   }>
 ) => {
   const now = options.now ?? Date.now
+  const local_control: LocalOwnerControl =
+    options.local_control ??
+    (async () => {
+      throw new Error('control_unavailable')
+    })
   const awaiting = new Map<string, { owner: string; fence: number; resolve: (value: Outcome) => void }>()
   const serving = new Set<Promise<void>>()
   const lifetime = new AbortController()
@@ -89,12 +109,13 @@ export const create_observation_router = async (
       lifetime.signal.removeEventListener('abort', cancel)
     }
   }
-  const live = async (id: string) => {
+  const live = async (id: string, method?: OwnerControlMethod) => {
     const grant = await options.store.read<Grant>(`grant:${id}`)
     const bot = grant ? await options.store.read<Bot>(`bot:${grant.bot_id}`) : null
     if (!grant || !bot) throw new Error('invalid_token')
     assert_live_grant(options.config, grant, bot, now())
-    if (!grant.scopes.includes('bot:observe')) throw new Error('insufficient_scope')
+    if (!grant.scopes.includes(method ? OWNER_CONTROL_SCOPES[method] : 'bot:observe'))
+      throw new Error('insufficient_scope')
     return { grant, bot }
   }
   const current_lane = async (bot: Bot) => {
@@ -123,12 +144,17 @@ export const create_observation_router = async (
     )
   }
   const serve_value = async (request: Request) => {
-    const { grant, bot } = await live(request.grant_id)
-    if (!(await owner_matches(bot, options.actor_id, request.fence))) return pending_read()
+    const method = request.control?.method
+    const { grant, bot } = await live(request.grant_id, method)
+    if (!(await owner_matches(bot, options.actor_id, request.fence))) return stale_owner(request.control)
     if (!ready()) throw new Error('observation_unavailable')
-    const value = await options.local(grant, request.payload, { actor_id: request.actor_id, fence: request.fence })
-    await live(request.grant_id)
-    return (await owner_matches(bot, options.actor_id, request.fence)) ? value : pending_read()
+    if (now() >= request.deadline) throw new Error('observation_timeout')
+    const expected = { actor_id: request.actor_id, fence: request.fence, deadline: request.deadline }
+    const value = request.control
+      ? await local_control(grant, request.control.method, request.control.args, expected)
+      : await options.local(grant, request.payload, expected)
+    await live(request.grant_id, method)
+    return (await owner_matches(bot, options.actor_id, request.fence)) ? value : stale_owner(request.control)
   }
   const serve = async (request: Request) => {
     if (request.actor_id !== options.actor_id || request.deadline <= now()) return
@@ -136,7 +162,7 @@ export const create_observation_router = async (
     const deadline = Math.min(request.deadline, now() + options.timeout_ms)
     let outcome: Outcome
     try {
-      outcome = { ok: true, value: await bounded(serve_value(request), deadline) }
+      outcome = { ok: true, value: await bounded(serve_value({ ...request, deadline }), deadline) }
     } catch (error) {
       options.report_failure(error)
       outcome = { ok: false, error: message_error(error) }
@@ -164,7 +190,12 @@ export const create_observation_router = async (
   }
   await options.subscriber.subscribe(topic(options.actor_id), receive)
   subscribed = true
-  const remote = async (grant: Grant, payload: Readonly<Record<string, unknown>>, lane: Lane) => {
+  const remote = async (
+    grant: Grant,
+    payload: Readonly<Record<string, unknown>>,
+    lane: Lane,
+    control?: Request['control']
+  ) => {
     const id = randomUUID()
     const deadline = Math.min(lane.lease_until, now() + options.timeout_ms)
     const response = new Promise<Outcome>((resolve) => {
@@ -182,12 +213,13 @@ export const create_observation_router = async (
           fence: lane.fence,
           deadline,
           payload,
+          control,
         } satisfies Request)
       )
       if (receivers === 0) throw new Error('observation_unavailable')
       const outcome = await response
-      const { bot } = await live(grant.id)
-      if (!(await owner_matches(bot, lane.actor_id, lane.fence))) return pending_read()
+      const { bot } = await live(grant.id, control?.method)
+      if (!(await owner_matches(bot, lane.actor_id, lane.fence))) return stale_owner(control)
       if (!outcome.ok) throw new Error(outcome.error)
       return outcome.value
     }
@@ -219,7 +251,32 @@ export const create_observation_router = async (
       throw error
     }
   }
+  const dispatch: OwnerControl = async (grant, method, args) => {
+    if (!ready()) throw new Error('observation_unavailable')
+    if (![owner_control_method(method), Array.isArray(args)].every(Boolean)) throw new Error('invalid_control_message')
+    const current = await live(grant.id, method)
+    if (![current.grant.bot_id === grant.bot_id, current.grant.address === grant.address].every(Boolean))
+      throw new Error('invalid_token')
+    const lane = await current_lane(current.bot)
+    // Observation owns acquisition. A control request never wakes or retries at another owner.
+    if (!lane || lane.lease_until <= now()) throw new Error('actor_fenced')
+    const is_foreign: boolean = foreign(lane)
+    if (is_foreign) return remote(current.grant, {}, lane, { method, args })
+    return serve_value({
+      type: 'request',
+      id: randomUUID(),
+      sender: options.actor_id,
+      actor_id: options.actor_id,
+      grant_id: current.grant.id,
+      fence: lane.fence,
+      deadline: Math.min(lane.lease_until, now() + options.timeout_ms),
+      payload: {},
+      control: { method, args },
+    })
+  }
   return {
+    dispatch: ((grant, method, args) =>
+      bounded(dispatch(grant, method, args), now() + options.timeout_ms)) as OwnerControl,
     observe: ((grant, payload) => bounded(read(grant, payload), now() + options.timeout_ms)) as Observe,
     ready,
     fail: () => lifetime.abort(),

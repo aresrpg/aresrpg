@@ -16,6 +16,7 @@ export {
   city_at_position,
   client_world_position,
   world_city_areas,
+  world_biome_at_zone,
   world_terrain,
   worlds_source,
   type WorldCityArea,
