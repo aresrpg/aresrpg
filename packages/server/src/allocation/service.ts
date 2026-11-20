@@ -2,19 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { Redis } from 'ioredis'
 import type { AllocationRequest, AllocationResult } from '@aresrpg/protocol'
-import {
-  blast_rows,
-  normalize_address,
-  public_award,
-  type AllocationStatus,
-  type Award,
-} from '@aresrpg/immutable/allocation'
+import { normalize_address, public_award, type AllocationStatus } from '@aresrpg/immutable/allocation'
 
 import { verify_wallet_message } from '../auth.ts'
 
-import { blast_allowlist } from './blast_allowlist.ts'
 import { verified_wallets, wallet_challenge, verify_wallet, remove_wallet, share_wallet } from './wallets.ts'
-import { read_awards } from './store.ts'
+import { read_awards, read_proofs } from './store.ts'
 
 export type AllocationOptions = Readonly<{
   origin: string
@@ -24,21 +17,14 @@ export type AllocationOptions = Readonly<{
 export const allocation_status = async (redis: Redis, owner: string): Promise<AllocationStatus> => {
   const wallets = await verified_wallets(redis, owner)
   const requested = new Set(wallets.map(({ address }) => address))
-  const all = await read_awards(redis)
-  const awards = all.filter(({ address }) => requested.has(address))
-  return {
-    wallets,
-    awards: awards.map(public_award),
-    ...(awards.length ? { proofs: spot_proofs(all, awards) } : {}),
-  }
-}
-/** Proofs come from the complete list, in the exact order handed to Blast. */
-const spot_proofs = (all: readonly Award[], own: readonly Award[]) => {
-  const allowlist = blast_allowlist(blast_rows(all))
-  return own.flatMap(({ address }) => {
-    const proof = allowlist.proof(normalize_address(address))
+  const awards = (await read_awards(redis)).filter(({ address }) => requested.has(address))
+  // Stored proofs are returned only for this account's verified, awarded wallets.
+  const stored = awards.length ? await read_proofs(redis) : {}
+  const proofs = awards.flatMap(({ address }) => {
+    const proof = stored[normalize_address(address)]
     return proof ? [{ address, proof }] : []
   })
+  return { wallets, awards: awards.map(public_award), ...(proofs.length ? { proofs } : {}) }
 }
 
 /** owner comes exclusively from the admitted game connection, never request JSON. */

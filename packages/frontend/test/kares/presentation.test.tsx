@@ -210,3 +210,32 @@ test('the pre-sale chat card advertises allocations and navigates without openin
   expect(html).toContain(copy.allocation_page.menu_action)
   expect(html).not.toContain('target="_blank"')
 })
+
+test('the open sale keeps buyers in the app and a settled sale links out to Blast', async () => {
+  const { BlastSaleCardView } = await import('../../src/kares/BlastSaleCard.tsx')
+  const { initial_blast_state } = await import('../../src/kares/blast.ts')
+  const copy = await load_app_copy('en')
+  const snapshot = {
+    version: '10',
+    clock_ms: 100n,
+    phase: 'live' as const,
+    committed: 75n,
+    target: 100n,
+    progress_bps: 7500,
+    start_ms: 0n,
+    end_ms: 200n,
+    token_allocation: 400n,
+  }
+  const state = { ...initial_blast_state(), ready: true, url: 'https://www.blast.fun/presale/example', snapshot }
+  const live = renderToStaticMarkup(<BlastSaleCardView copy={copy} state={state} />)
+  expect(live).toContain('href="/allocation"')
+  expect(live).toContain(copy.kares_page.blast_live)
+  expect(live).toContain(copy.allocation_page.sale_buy)
+  expect(live).toContain('role="progressbar"')
+  expect(live).not.toContain('target="_blank"')
+  const funded = renderToStaticMarkup(
+    <BlastSaleCardView copy={copy} state={{ ...state, snapshot: { ...snapshot, phase: 'funded' } }} />
+  )
+  expect(funded).toContain('href="https://www.blast.fun/presale/example"')
+  expect(funded).toContain('target="_blank"')
+})

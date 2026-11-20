@@ -18,22 +18,26 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
   const phase = blast_phase(state)
   const text = copy.kares_page
   const { sui, number } = useNumbers()
+  // A Google wallet can buy only on our allocation page, so the open sale stays in the app.
+  const blast = { href: state.url, note: text.blast_note, action: text.blast_action, target: '_blank' }
+  const destinations = {
+    soon: {
+      href: '/allocation',
+      title: copy.allocation_page.menu_title,
+      note: copy.allocation_page.menu_note,
+      action: copy.allocation_page.menu_action,
+      target: undefined,
+    },
+    live: {
+      href: '/allocation',
+      title: text.blast_live,
+      note: text.blast_note,
+      action: copy.allocation_page.sale_buy,
+      target: undefined,
+    },
+  }
   const destination =
-    phase === 'soon'
-      ? {
-          href: '/allocation',
-          title: copy.allocation_page.menu_title,
-          note: copy.allocation_page.menu_note,
-          action: copy.allocation_page.menu_action,
-          target: undefined,
-        }
-      : {
-          href: state.url,
-          title: text[`blast_${phase}`],
-          note: text.blast_note,
-          action: text.blast_action,
-          target: '_blank',
-        }
+    phase === 'soon' || phase === 'live' ? destinations[phase] : { ...blast, title: text[`blast_${phase}`] }
   const { snapshot } = state
   const show_progress = snapshot && ['live', 'closing', 'funded', 'complete'].includes(phase)
   return (

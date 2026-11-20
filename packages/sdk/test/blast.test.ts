@@ -13,10 +13,13 @@ import {
   decode_blast_presale,
   project_blast_presale,
 } from '../src/blast.ts'
+import { blast_purchase_config } from '../src/blast_purchase.ts'
+import { resolve_pins } from '../src/pins.ts'
 
 import { id } from './helpers/transport.ts'
 import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
 import live from './fixtures/blast_presale_live.mainnet.json' with { type: 'json' }
+import kares from './fixtures/kares_presale.mainnet.json' with { type: 'json' }
 
 // Mainnet object 0x091759…facba, version 1056407653, captured 2026-10-21 via gRPC.
 test('deployed Blast derives its commitment window from start and duration', () => {
@@ -187,4 +190,29 @@ test('a sale of the live Blast deployment decodes with the same fields', () => {
     token_allocation: 450000000000000n,
   })
   expect(project_blast_presale(sale, 1795164432939n, '1099635701').phase).toBe('complete')
+})
+
+// Mainnet object 0x2d8a59…f9b7b, version 1101083029, captured 2026-11-21 via gRPC: the KARES sale itself.
+test('the pinned KARES sale reads as live through the deployment pins', async () => {
+  const pins = resolve_pins('mainnet')
+  const [sale] = kares.objects
+  const clock = {
+    objectId: id(6),
+    owner: { $kind: 'Shared' },
+    type: '0x2::clock::Clock',
+    json: { timestamp_ms: '1795300000000' },
+  }
+  const transport = { network: 'mainnet', core: { getObjects: async () => ({ objects: [sale, clock] }) } }
+  const reader = create_blast_reader({ network: 'mainnet', pins }, transport as never)
+  expect(reader.url).toBe(`https://www.blast.fun/presale/${sale!.objectId}`)
+  expect(await reader.read()).toMatchObject({
+    phase: 'live',
+    committed: 1075033011533n,
+    target: 60_000_000_000_000n,
+    start_ms: 1795205043334n,
+    end_ms: 1795637043334n,
+    token_allocation: 400_000_000_000_000_000n,
+  })
+  expect(blast_purchase_config(pins)).toMatchObject({ id: sale!.objectId, package: live.objects[0]!.type.slice(0, 66) })
+  expect(blast_purchase_config(pins).package_version).toBe(live.objects[1]!.objectId)
 })

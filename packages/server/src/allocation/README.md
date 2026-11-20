@@ -34,9 +34,15 @@ the tier and allocation without the wallet address.
 
 ```bash
 bun scripts/allocation_campaign.ts export blast.csv
-bun scripts/allocation_campaign.ts allowlist blast.csv
+BLAST_PARTNER_API_KEY=... bun scripts/allocation_campaign.ts proofs
 ```
 
 `export` writes the published list in the Blast handoff format and refuses to overwrite
-a different file. `allowlist` prints the Merkle root and leaf count of that exact CSV;
-compare it with the sale's on-chain root before enabling purchases.
+a different file.
+
+Blast may add wallets of its own to the sale's allowlist, so only Blast holds the full list
+and only Blast can issue a proof. `proofs` reads the pinned sale's root from the chain,
+fetches each published wallet's proof from Blast's partner API, and stores them in the
+campaign store. It stores nothing unless every proof reaches that root with the published
+cap. Run it once after the sale is pinned; the page offers no purchase before it. The key
+is an operator secret: the game server never holds it and never calls Blast.

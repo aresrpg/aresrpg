@@ -1916,8 +1916,10 @@ asset uses that same image; there is no separate token website.
 Whitelisted wallets buy on `/allocation`, because a zkLogin address is bound to the app that issued it.
 Once a presale pin exists, the same Blast reader switches each awarded card to a spot panel: the
 wallet's commitment read from the presale's `CommitmentKey` field, its SUI balance and one next
-action. The connected signer commits through the SDK's allowlisted call with a proof that the server
-derives from the complete final award list in the Blast CSV order; after launch or cancellation it
+action. The connected signer commits through the SDK's allowlisted call with Blast's proof for that wallet.
+Blast holds the full allowlist, so an operator command imports its proofs once, checks each against the
+sale's on-chain root and the published cap, and stores them beside the awards; the server only serves
+them. While the sale is open the Blast card links to `/allocation`. After launch or cancellation it
 claims with Blast's permissionless `claim`. Max keeps the funding gas cushion, and a short wallet
 opens the shared funding window instead of signing.
 

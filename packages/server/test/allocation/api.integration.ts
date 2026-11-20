@@ -7,10 +7,9 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { Redis } from 'ioredis'
-import { MAX_ALLOCATION_WALLETS, blast_rows, normalize_address } from '@aresrpg/immutable/allocation'
+import { MAX_ALLOCATION_WALLETS, normalize_address } from '@aresrpg/immutable/allocation'
 
 import { serve_allocation } from '../../src/allocation/api.ts'
-import { blast_allowlist } from '../../src/allocation/blast_allowlist.ts'
 import { allocation_status } from '../../src/allocation/service.ts'
 import { wallet_challenge, verify_wallet, verified_wallets, share_wallet } from '../../src/allocation/wallets.ts'
 import { connect_redis, key } from '../../src/allocation/store.ts'
@@ -78,12 +77,14 @@ describe('campaign integration', () => {
       { address: other, tier: 'member', source: 'social', evidence: '7' },
       { address: owner, tier: 'veteran', source: 'community', evidence: 'PRIVATE' },
     ]
+    const stored = (index: string) => ({ index, cap_mist: '125000000000', siblings: ['ab'.repeat(32)] })
     expect((await allocation_status(redis, owner)).proofs).toBeUndefined()
     await redis.set(key('awards'), JSON.stringify(awards))
+    // Awarded, but the operator has not imported Blast's proofs yet: no proof, never a guessed one.
+    expect((await allocation_status(redis, owner)).proofs).toBeUndefined()
+    await redis.set(key('proofs'), JSON.stringify({ [owner]: stored('1'), [other]: stored('0') }))
     const { proofs } = await allocation_status(redis, owner)
-    const expected = blast_allowlist(blast_rows(awards as never)).proof(owner)
-    expect(proofs).toEqual([{ address: owner, proof: expected! }])
-    expect(expected).toMatchObject({ index: '0', cap_mist: '125000000000' })
+    expect(proofs).toEqual([{ address: owner, proof: stored('1') }])
     expect(JSON.stringify(proofs)).not.toContain(other.slice(2))
   })
   test('cards are returned only after a real signature verifies and replay is refused', async () => {
