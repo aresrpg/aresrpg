@@ -90,8 +90,9 @@ jobs:
     if: needs.backend-plan.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # The Production environment holds the only token that reaches production and waits for the
-    # owner's approval (DECISIONS: DEPLOY TOKENS LIVE IN ENVIRONMENTS).
+    # The Production environment holds the only token that reaches production and requires the
+    # owner's review, which the owner's release operator gives for the run it dispatched
+    # (DECISIONS: DEPLOY TOKENS LIVE IN ENVIRONMENTS).
     environment: Production
     outputs:
       url: ${{ steps.deploy.outputs.url }}

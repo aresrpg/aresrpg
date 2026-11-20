@@ -59,8 +59,9 @@ snapshots.
    If Move changed, prepare its compatible upgrades or fresh publication and push the resulting
    hardcoded pins to `edge` before versioning.
 8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level).
-   Dispatch preparation CI on that exact tag. Approve its `Production` environment request in
-   GitHub; the staged build waits for it. Wait for changed backend images and the staged
+   Dispatch preparation CI on that exact tag. Its staged build reads the production token from
+   the GitHub `Production` environment; the release operator approves that request for the run
+   it dispatched. Wait for changed backend images and the staged
    production Vercel build. CI gives the frontend build and prebuilt output one custom deployment ID;
    `scripts/pin_vercel_deployment.ts` must run after `vercel build` and before upload. This keeps
    retained deployments accessible to their already-open pages.
@@ -82,7 +83,7 @@ snapshots.
 16. Release tooling automatically dispatches the production-activation workflow with the retained
     tag, version, preparation run and request ID. The network is always mainnet. It promotes the
     staged Vercel deployment without rebuilding, verifies production, and publishes the draft release.
-    The activation waits for the owner's approval of its `Production` environment request.
+    The release operator approves the activation's `Production` request in the same way.
     Wait for that exact successful activation and published release before continuing. Persist
     dispatch intent first; a lost response must never cause an automatic duplicate dispatch.
 17. Exercise one affected action against chain truth.
