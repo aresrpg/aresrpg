@@ -143,4 +143,6 @@ test('the archer profile shoots Magic Arrow at every level and casts a buff only
   expect(casts(40n, 20n)).toEqual([arrow!, range!, critical!, power!])
   expect(casts(21n, 20n)).toEqual([arrow!, range!, critical!])
   expect(archer_turn(1n).skipped).toEqual(['range:cast', 'critical:cast', 'power:cast'])
-})
+  // Six full turn plans, each simulated on the real fight twin: about one second each on a CI runner
+  // under coverage, so the default five seconds is too short.
+}, 30_000)
