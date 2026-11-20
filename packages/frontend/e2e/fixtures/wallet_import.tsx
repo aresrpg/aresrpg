@@ -19,6 +19,12 @@ import '../../src/tailwind.css'
 // Only the real window, reducer and observer run. Both wallets record intent without any chain access.
 const params = new URLSearchParams(location.search)
 const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+// A `stepped` run holds every intermediate state until the test releases it: no state is on
+// screen for a fixed time only, so a slow runner cannot miss it.
+const step = (): Promise<void> =>
+  params.has('stepped')
+    ? new Promise((resolve) => window.addEventListener('import-step', () => resolve(), { once: true }))
+    : Promise.resolve()
 const record = (call: string): void => {
   const calls = JSON.parse(document.documentElement.dataset.calls ?? '[]') as string[]
   document.documentElement.dataset.calls = JSON.stringify([...calls, call])
@@ -45,12 +51,12 @@ const import_assets = async (_source: AuthSession, options: WalletImportOptions)
   options.before_sign()
   if (params.has('source_gas')) throw new WalletImportFundingRequired('source', 31_000_000n)
   options.on_progress?.({ signer: 'source', moved: 0, total: 42 })
-  await pause(400)
+  await step()
   if (params.has('owner_gas'))
     throw new AgentHandoverIncomplete(new WalletImportFundingRequired('owner', 60_000_000n), 'offer-digest')
   if (params.has('fail')) throw new AgentHandoverIncomplete(new Error('RPC unavailable'), 'offer-digest')
   options.on_progress?.({ signer: 'owner', moved: 20, total: 42 })
-  await pause(400)
+  await step()
   options.on_progress?.({ signer: 'owner', moved: 42, total: 42 })
   return plan
 }

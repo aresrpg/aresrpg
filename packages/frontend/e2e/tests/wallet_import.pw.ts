@@ -5,6 +5,9 @@ import { expect, test, type Page } from '@playwright/test'
 
 const calls = (page: Page) => page.evaluate(() => document.documentElement.dataset.calls ?? '[]')
 
+/** The stepped fixture holds each import state until this releases it. */
+const release_step = (page: Page) => page.evaluate(() => window.dispatchEvent(new Event('import-step')))
+
 const open_connected = async (page: Page, query = '') => {
   await page.goto(`/e2e/fixtures/wallet_import.html${query}`)
   await page.getByRole('button', { name: 'Import characters and items' }).click()
@@ -50,13 +53,16 @@ test('an empty wallet offers no import', async ({ page }) => {
 test('the summary states the fee, a double click imports once and the window cannot close mid-run', async ({
   page,
 }) => {
-  const dialog = await open_connected(page, '?roster')
+  const dialog = await open_connected(page, '?roster&stepped')
   await expect(dialog).toContainText('0.042 SUI')
   await expect(dialog).toContainText('Characters left in the wallet because your roster is full: 2')
   await dialog.getByRole('button', { name: 'Import', exact: true }).dblclick()
   await expect(dialog).toContainText('Approve the request in Slush.')
   await page.keyboard.press('Escape')
+  await expect(dialog).toContainText('Approve the request in Slush.')
+  await release_step(page)
   await expect(dialog).toContainText('Moved 20 of 42')
+  await release_step(page)
   await expect(dialog).toContainText('Characters and items moved: 42.')
   expect(await calls(page)).toBe('["read","import"]')
   await dialog.getByRole('button', { name: 'Done' }).click()
