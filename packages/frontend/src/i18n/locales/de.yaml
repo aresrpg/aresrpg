@@ -732,6 +732,7 @@ settings_page:
   suins_saved: 'Spieler- und Agentenname angewendet. Öffentliche Anzeigen können einige Minuten benötigen.'
   suins_read_failed: 'Namen konnten nicht geladen werden. Bitte aktualisiere die Liste.'
   suins_write_failed: 'Die Namensänderung konnte nicht bestätigt werden. Aktualisiere vor einem neuen Versuch.'
+  suins_unavailable: 'Namen können hier gerade nicht geändert werden: Der Bot-Dienst, der den Namen deines Agenten erhält, ist nicht verfügbar. Es wurde nichts geändert.'
   suins_wallet_required: 'Melde dich an, um einen Namen zu wählen.'
   day_night_cycle_label: Tag-Nacht-Zyklus
   day_night_cycle_hint: Deaktivieren, um die Welt dauerhaft auf Mittag zu stellen.

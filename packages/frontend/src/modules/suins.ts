@@ -24,6 +24,7 @@ type Request =
 type Failure =
   | 'read_failed'
   | 'write_failed'
+  | 'unavailable'
   | 'invalid_parent'
   | 'collision'
   | 'stale_review'
@@ -244,9 +245,10 @@ const reconcile = async (
     return { type: 'suins/used', request, pending: { pairing, reason: transaction_failure_kind(error) } }
   }
 }
-const failure_reason = (error: unknown): Failure => {
+/** A refusal the player can read; any other failure is an unconfirmed write. */
+export const failure_reason = (error: unknown): Failure => {
   const cause = error instanceof Error ? error.cause : null
-  const failures = ['invalid_parent', 'collision', 'stale_review', 'unsupported'] as const
+  const failures = ['invalid_parent', 'collision', 'stale_review', 'unsupported', 'unavailable'] as const
   return failures.find((reason) => reason === cause) ?? 'write_failed'
 }
 const observe: NonNullable<AppModule['observe']> = (context) => {

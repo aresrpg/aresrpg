@@ -732,6 +732,7 @@ settings_page:
   suins_saved: 'Noms du joueur et de l’agent appliqués. L’affichage public peut prendre quelques minutes.'
   suins_read_failed: 'Impossible de charger les noms. Réessayez en actualisant.'
   suins_write_failed: 'La modification du nom n’a pas pu être confirmée. Actualisez avant de réessayer.'
+  suins_unavailable: "Les noms ne peuvent pas être modifiés ici pour le moment : le service de bot qui reçoit le nom de votre agent est indisponible. Rien n'a été modifié."
   suins_wallet_required: 'Connectez-vous pour choisir un nom.'
   day_night_cycle_label: Cycle jour/nuit
   day_night_cycle_hint: Désactivez pour garder le monde à midi.

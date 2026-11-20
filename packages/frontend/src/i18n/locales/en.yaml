@@ -732,6 +732,7 @@ settings_page:
   suins_saved: 'Player and agent names applied. Public displays may take a few minutes to refresh.'
   suins_read_failed: 'Names could not be loaded. Try refreshing.'
   suins_write_failed: 'The name change could not be confirmed. Refresh before trying again.'
+  suins_unavailable: "Names cannot be changed here right now: the bot service that receives your agent's name is not available. Nothing was changed."
   suins_wallet_required: 'Sign in to choose a name.'
   day_night_cycle_label: Day/night cycle
   day_night_cycle_hint: Disable to keep the world at midday.

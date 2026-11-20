@@ -732,6 +732,7 @@ settings_page:
   suins_saved: 'プレイヤー名とエージェント名を適用しました。公開表示の更新には数分かかる場合があります。'
   suins_read_failed: '名前を読み込めませんでした。更新して再試行してください。'
   suins_write_failed: '名前の変更を確認できませんでした。更新してから再試行してください。'
+  suins_unavailable: '現在ここでは名前を変更できません。エージェントの名前を受け取るボットサービスが利用できません。何も変更されていません。'
   suins_wallet_required: '名前を選ぶにはログインしてください。'
   day_night_cycle_label: 昼夜サイクル
   day_night_cycle_hint: 無効にすると、世界は常に正午になります。

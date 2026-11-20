@@ -42,6 +42,8 @@ export const create_hosted_client = (
 ) => {
   const request = async <T>(path: string, body?: Readonly<unknown>): Promise<T> => {
     signal.throwIfAborted()
+    // The bot service is optional per deployment; without its address there is nothing to ask.
+    if (!origin) throw new Error('Hosted service unavailable', { cause: 'unavailable' })
     const response = await fetcher(new URL(path, origin), {
       method: body === undefined ? 'GET' : 'POST',
       credentials: 'include',

@@ -733,6 +733,7 @@ settings_page:
   suins_saved: 'Đã áp dụng tên người chơi và tác nhân. Hiển thị công khai có thể mất vài phút để cập nhật.'
   suins_read_failed: Không tải được tên. Hãy làm mới.
   suins_write_failed: Chưa xác nhận được việc đổi tên. Hãy làm mới trước khi thử lại.
+  suins_unavailable: 'Hiện không thể đổi tên tại đây: dịch vụ bot nhận tên của agent không khả dụng. Không có gì bị thay đổi.'
   suins_wallet_required: Đăng nhập để chọn tên.
   day_night_cycle_label: Chu kỳ ngày/đêm
   day_night_cycle_hint: Tắt để thế giới luôn ở giữa trưa.

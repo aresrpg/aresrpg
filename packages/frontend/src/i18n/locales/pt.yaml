@@ -730,6 +730,7 @@ settings_page:
   suins_saved: 'Nomes do jogador e agente aplicados. A exibição pública pode levar alguns minutos.'
   suins_read_failed: Não foi possível carregar os nomes. Tente atualizar.
   suins_write_failed: Não foi possível confirmar a alteração do nome. Atualize antes de tentar novamente.
+  suins_unavailable: 'Os nomes não podem ser alterados aqui neste momento: o serviço de bot que recebe o nome do seu agente não está disponível. Nada foi alterado.'
   suins_wallet_required: Entre para escolher um nome.
   day_night_cycle_label: Ciclo de dia e noite
   day_night_cycle_hint: Desative para manter o mundo ao meio-dia.

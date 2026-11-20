@@ -733,6 +733,7 @@ settings_page:
   suins_saved: '玩家和代理名称已应用。公开显示可能需要几分钟更新。'
   suins_read_failed: 无法加载名称。请刷新重试。
   suins_write_failed: 无法确认名称变更。请刷新后再试。
+  suins_unavailable: '目前无法在此更改名称：接收代理名称的机器人服务不可用。未做任何更改。'
   suins_wallet_required: 请登录以选择名称。
   day_night_cycle_label: 昼夜循环
   day_night_cycle_hint: 关闭后，世界将保持正午。

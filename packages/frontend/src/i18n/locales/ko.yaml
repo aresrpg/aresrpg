@@ -733,6 +733,7 @@ settings_page:
   suins_saved: '플레이어와 에이전트 이름을 적용했습니다. 공개 표시 갱신에는 몇 분이 걸릴 수 있습니다.'
   suins_read_failed: 이름을 불러올 수 없습니다. 새로고침해 보세요.
   suins_write_failed: 이름 변경을 확인할 수 없습니다. 다시 시도하기 전에 새로고침하세요.
+  suins_unavailable: '지금은 여기서 이름을 변경할 수 없습니다. 에이전트 이름을 받는 봇 서비스를 사용할 수 없습니다. 변경된 것은 없습니다.'
   suins_wallet_required: 이름을 선택하려면 로그인하세요.
   day_night_cycle_label: 낮/밤 주기
   day_night_cycle_hint: 끄면 월드가 항상 정오로 유지됩니다.
