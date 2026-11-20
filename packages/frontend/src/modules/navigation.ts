@@ -52,7 +52,6 @@ export type NavigationInput =
   | Readonly<{ type: 'route/changed'; pathname: string }>
   | Readonly<{ type: 'dialog/open'; dialog: AppDialog | null }>
   | Readonly<{ type: 'auth/rejected'; error: string }>
-  | Readonly<{ type: 'auth/disconnected' }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
 
 export const initial_navigation_state = (): NavigationState =>

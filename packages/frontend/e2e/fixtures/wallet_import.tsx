@@ -12,7 +12,7 @@ import {
 
 import type { AuthSession } from '../../src/auth.ts'
 import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
-import { WalletImport } from '../../src/settings/WalletImport.tsx'
+import { WalletImport, WalletImportWindow } from '../../src/settings/WalletImport.tsx'
 import { dispatch_app, observe_app, useAppStore } from '../../src/store.ts'
 import '../../src/tailwind.css'
 
@@ -120,6 +120,7 @@ const Fixture = () => {
     <main className="aui-settings min-h-screen bg-bg p-6 text-text">
       <div className="max-w-xl">
         <WalletImport copy={copy} />
+        <WalletImportWindow copy={copy} />
       </div>
       <output data-funding="">{funding === null ? '' : String(funding)}</output>
     </main>

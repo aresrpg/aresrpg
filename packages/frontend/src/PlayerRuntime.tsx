@@ -17,6 +17,7 @@ import { selected_world as selected_world_name } from './modules/engine_selectio
 import { character_creation_failure_message, character_creation_insufficient } from './character_creation_funding.ts'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { SuinsConfirmation } from './settings/SuinsConfirmation.tsx'
+import { WalletImportWindow } from './settings/WalletImport.tsx'
 import { Login } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
@@ -260,6 +261,7 @@ export function PlayerRuntime({
         )}
         <OwnedGameplay>{in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}</OwnedGameplay>
         <SuinsConfirmation copy={copy} />
+        <WalletImportWindow copy={copy} />
         <Toasts />
         <OwnedGameplay>
           <OnboardingFeedback />

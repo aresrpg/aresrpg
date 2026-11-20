@@ -737,6 +737,7 @@ settings_page:
   import_title: 'Import from another wallet'
   import_hint: 'Move the characters and items of another Sui wallet you own into your game account.'
   import_open: 'Import characters and items'
+  import_welcome: 'Import characters from another wallet'
   import_connect: 'Connect the wallet that holds your characters and items.'
   import_loading: 'Reading the wallet…'
   import_empty: 'This wallet has no characters or items to import.'

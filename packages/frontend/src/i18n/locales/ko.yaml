@@ -738,6 +738,7 @@ settings_page:
   import_title: '다른 지갑에서 가져오기'
   import_hint: '내가 소유한 다른 Sui 지갑의 캐릭터와 아이템을 게임 계정으로 옮깁니다.'
   import_open: '캐릭터와 아이템 가져오기'
+  import_welcome: '다른 지갑에서 캐릭터 가져오기'
   import_connect: '캐릭터와 아이템이 들어 있는 지갑을 연결하세요.'
   import_loading: '지갑을 읽는 중…'
   import_empty: '이 지갑에는 가져올 캐릭터나 아이템이 없습니다.'

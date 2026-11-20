@@ -40,6 +40,7 @@ export const initial_session_state = (serial = 0): SessionState =>
     online: null,
     online_characters: null,
     auth_ready: false,
+    after_sign_out: undefined,
     wallets: [],
     wallet: null,
     sui_balance_mist: null,

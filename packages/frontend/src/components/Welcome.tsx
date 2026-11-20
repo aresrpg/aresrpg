@@ -8,7 +8,7 @@ import { ArrowRight } from 'lucide-react'
 import { FUNDING_CUSHION_MIST } from '../funding/near.ts'
 import { env, type Network } from '../env.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
-import type { AppCopy } from '../i18n/copy.ts'
+import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { SessionState } from '../modules/session.ts'
@@ -68,12 +68,22 @@ export const Welcome = ({
           copy={copy}
           session={session}
           embedded
-          disconnect={() => dispatch_app({ type: 'auth/disconnected' })}
+          disconnect={() => dispatch_app({ type: 'auth/disconnected', then: 'home' })}
         />
         <Button tone="primary" onClick={create}>
           {copy.create_character}
           <ArrowRight size={16} aria-hidden="true" />
         </Button>
+        {session.wallet?.identity === 'zklogin' && (
+          <button
+            type="button"
+            className="min-h-11 self-center px-3 text-xs text-muted underline underline-offset-4 transition-colors hover:text-text focus-visible:text-text"
+            data-welcome-import=""
+            onClick={() => dispatch_app({ type: 'wallet_import/open' })}
+          >
+            {copy_text(copy.settings_page)('import_welcome')}
+          </button>
+        )}
       </div>
     </section>
   )

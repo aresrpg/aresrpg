@@ -737,6 +737,7 @@ settings_page:
   import_title: 'Importar desde otra cartera'
   import_hint: 'Mueve los personajes y objetos de otra cartera Sui que te pertenece a tu cuenta de juego.'
   import_open: 'Importar personajes y objetos'
+  import_welcome: 'Importar personajes desde otra cartera'
   import_connect: 'Conecta la cartera que contiene tus personajes y objetos.'
   import_loading: 'Leyendo la cartera…'
   import_empty: 'Esta cartera no tiene personajes ni objetos para importar.'

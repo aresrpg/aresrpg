@@ -735,6 +735,7 @@ settings_page:
   import_title: 'Importar de outra carteira'
   import_hint: 'Mova as personagens e os itens de outra carteira Sui que lhe pertence para a sua conta de jogo.'
   import_open: 'Importar personagens e itens'
+  import_welcome: 'Importar personagens de outra carteira'
   import_connect: 'Ligue a carteira que contém as suas personagens e os seus itens.'
   import_loading: 'A ler a carteira…'
   import_empty: 'Esta carteira não tem personagens nem itens para importar.'

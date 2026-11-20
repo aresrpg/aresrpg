@@ -162,10 +162,28 @@ const ImportBody = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return <Idle copy={copy} view={view} t={t} />
 }
 
-/** The Settings entry and its window. A running import keeps its state when Settings closes and shows it again on return. */
-export const WalletImport = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+/** The one import window. It mounts once at the app root, so every entry opens the same window
+ * and a running import keeps showing when its entry page closes. */
+export const WalletImportWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const open = useAppStore((state) => state.wallet_import.open)
   const running = useAppStore((state) => state.wallet_import.pending === 'import')
+  const t = copy_text(copy.settings_page)
+  if (!open) return null
+  return (
+    <ModalFrame
+      label={t('import_title')}
+      close={running ? null : () => dispatch_app({ type: 'wallet_import/close' })}
+      close_label={copy.wallet_close}
+    >
+      <div className="flex flex-col gap-4 p-6 text-text" data-wallet-import-window="">
+        <ImportBody copy={copy} />
+      </div>
+    </ModalFrame>
+  )
+}
+
+/** The Settings entry. */
+export const WalletImport = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const signed_in = useAppStore((state) => state.session.wallet?.identity === 'zklogin')
   const t = copy_text(copy.settings_page)
   return (
@@ -180,17 +198,6 @@ export const WalletImport = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           {t('import_open')}
         </Button>
       </div>
-      {open && (
-        <ModalFrame
-          label={t('import_title')}
-          close={running ? null : () => dispatch_app({ type: 'wallet_import/close' })}
-          close_label={copy.wallet_close}
-        >
-          <div className="flex flex-col gap-4 p-6 text-text" data-wallet-import-window="">
-            <ImportBody copy={copy} />
-          </div>
-        </ModalFrame>
-      )}
     </section>
   )
 }

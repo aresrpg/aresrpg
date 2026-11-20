@@ -737,6 +737,7 @@ settings_page:
   import_title: 'Aus einer anderen Wallet importieren'
   import_hint: 'Verschiebe die Charaktere und Gegenstände einer anderen Sui-Wallet, die dir gehört, in dein Spielkonto.'
   import_open: 'Charaktere und Gegenstände importieren'
+  import_welcome: 'Charaktere aus einer anderen Wallet importieren'
   import_connect: 'Verbinde die Wallet, die deine Charaktere und Gegenstände enthält.'
   import_loading: 'Wallet wird gelesen…'
   import_empty: 'Diese Wallet enthält keine Charaktere oder Gegenstände zum Importieren.'

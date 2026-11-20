@@ -737,6 +737,7 @@ settings_page:
   import_title: '別のウォレットからインポート'
   import_hint: 'あなたが所有する別のSuiウォレットのキャラクターとアイテムを、ゲームアカウントに移動します。'
   import_open: 'キャラクターとアイテムをインポート'
+  import_welcome: '別のウォレットからキャラクターをインポート'
   import_connect: 'キャラクターとアイテムが入っているウォレットを接続してください。'
   import_loading: 'ウォレットを読み込み中…'
   import_empty: 'このウォレットにはインポートできるキャラクターやアイテムがありません。'

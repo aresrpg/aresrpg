@@ -737,6 +737,7 @@ settings_page:
   import_title: 'Importer depuis un autre portefeuille'
   import_hint: 'Déplacez les personnages et les objets d’un autre portefeuille Sui qui vous appartient vers votre compte de jeu.'
   import_open: 'Importer des personnages et des objets'
+  import_welcome: 'Importer des personnages depuis un autre portefeuille'
   import_connect: 'Connectez le portefeuille qui contient vos personnages et vos objets.'
   import_loading: 'Lecture du portefeuille…'
   import_empty: 'Ce portefeuille ne contient aucun personnage ni objet à importer.'

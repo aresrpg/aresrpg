@@ -738,6 +738,7 @@ settings_page:
   import_title: 'Nhập từ ví khác'
   import_hint: 'Chuyển nhân vật và vật phẩm từ một ví Sui khác của bạn vào tài khoản trò chơi.'
   import_open: 'Nhập nhân vật và vật phẩm'
+  import_welcome: 'Nhập nhân vật từ ví khác'
   import_connect: 'Kết nối ví đang chứa nhân vật và vật phẩm của bạn.'
   import_loading: 'Đang đọc ví…'
   import_empty: 'Ví này không có nhân vật hay vật phẩm nào để nhập.'

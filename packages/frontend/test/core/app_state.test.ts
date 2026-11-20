@@ -185,6 +185,13 @@ describe('app state', () => {
     expect(disconnected.external_wallet.session).toBe(connected.external_wallet.session)
   })
 
+  test('a sign-out carries its destination for the observer; a plain sign-out carries none', () => {
+    const home = reduce_app_state(connect(), { type: 'auth/disconnected', then: 'home' })
+    expect(home.session).toMatchObject({ wallet: null, after_sign_out: 'home' })
+    expect(reduce_app_state(connect(), { type: 'auth/disconnected' }).session.after_sign_out).toBeUndefined()
+    expect(reduce_app_state(home, { type: 'auth/connecting' }).session.wallet).toBeNull()
+  })
+
   test('holder vouchers and recoverable giftcards remain separate from the game wallet', () => {
     const holder = auth_session('0xholder')
     const card = { id: '0xgift', template: '0xtemplate', amount: 1 }

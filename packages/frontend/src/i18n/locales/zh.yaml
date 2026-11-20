@@ -738,6 +738,7 @@ settings_page:
   import_title: '从其他钱包导入'
   import_hint: '将你拥有的另一个 Sui 钱包中的角色和物品转移到你的游戏账户。'
   import_open: '导入角色和物品'
+  import_welcome: '从其他钱包导入角色'
   import_connect: '连接存有你的角色和物品的钱包。'
   import_loading: '正在读取钱包…'
   import_empty: '此钱包中没有可导入的角色或物品。'

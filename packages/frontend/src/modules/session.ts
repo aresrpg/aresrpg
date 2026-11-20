@@ -33,6 +33,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 import { send_market_floor_request } from '../marketplace/floor_state.ts'
 import { market_price_subscription } from '../marketplace/price_history_state.ts'
+import { return_home } from '../components/app_layout.ts'
 
 import { leaderboard_subscription, inspection_subscription } from './leaderboards.ts'
 import { fold_character_creation, type CharacterCreation, type CharacterCreationInput } from './character_creation.ts'
@@ -83,6 +84,8 @@ export type SessionState = Readonly<{
   online: number | null
   online_characters: number | null
   auth_ready: boolean
+  /** Where a player's own sign-out leads. The observer acts on it after the wallet is released. */
+  after_sign_out: 'home' | undefined
   wallets: readonly string[]
   wallet: AuthSession | null
   sui_balance_mist: bigint | null
@@ -103,7 +106,8 @@ export type SessionInput =
   | Readonly<{ type: 'auth/connected'; session: AuthSession }>
   | Readonly<{ type: 'auth/failed'; error: string }>
   | Readonly<{ type: 'auth/rejected'; error: string }>
-  | Readonly<{ type: 'auth/disconnected' }>
+  /** `then: 'home'` opens the home page once the sign-out has finished. */
+  | Readonly<{ type: 'auth/disconnected'; then?: 'home' }>
   | Readonly<{ type: 'link/connecting' }>
   | Readonly<{ type: 'link/replaced' }>
   | Readonly<{ type: 'link/rejected'; reason: string }>
@@ -310,6 +314,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       Object.freeze({
         ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
         auth_ready: current.auth_ready,
+        after_sign_out: input.then,
         wallets: current.wallets,
       })
     )
@@ -445,9 +450,16 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     }
     character_requests.clear()
   }
-  const forget_session = (connected: AuthSession | null): void => {
+  // Google sign-out clears its stored session in several asynchronous steps. A page change before
+  // they finish would leave that session restorable, so the home page opens only afterwards.
+  const forget_session = (connected: AuthSession | null, destination: SessionState['after_sign_out']): void => {
     dispose_link()
-    void account.sign_out(connected).catch((error) => console.warn('Wallet disconnect failed.', error))
+    void account
+      .sign_out(connected)
+      .catch((error) => console.warn('Wallet disconnect failed.', error))
+      .finally(() => {
+        if (destination === 'home') return_home()
+      })
   }
   events.on('server/packet', ({ packet }) => {
     if (packet.type === 'packet/character_owner_response') {
@@ -541,7 +553,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       next_id,
     })
     if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
-      forget_session(previous.session.wallet)
+      forget_session(previous.session.wallet, state.session.after_sign_out)
   })
   const publish_selected_position = observe_session_positions(
     { events, get_state, signal },

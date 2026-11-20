@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client'
 import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
 import { initialize_app_store, dispatch_app, useAppStore } from '../../src/store.ts'
 import { Welcome } from '../../src/components/Welcome.tsx'
+import { WalletImportWindow } from '../../src/settings/WalletImport.tsx'
 import { WalletCard } from '../../src/components/WalletCard.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
@@ -24,7 +25,7 @@ const Fixture = () => {
   const [created, set_created] = useState(false)
   const session = {
     ...initial_session_state(),
-    wallet: { address: `0x${'11'.repeat(32)}` } as never,
+    wallet: { address: `0x${'11'.repeat(32)}`, identity: 'zklogin' } as never,
     sui_balance_mist: balance,
     kares_balance: 0n,
   }
@@ -63,6 +64,7 @@ const Fixture = () => {
         ) : (
           <Welcome copy={copy} session={session} network={network} create={() => set_created(true)} />
         )}
+        <WalletImportWindow copy={copy} />
         {funding_cost !== null && (
           <AddFundsModal
             address={`0x${'11'.repeat(32)}`}
