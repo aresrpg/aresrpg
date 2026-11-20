@@ -210,6 +210,12 @@ jobs:
     # commit it lands, instead of rotting the graph behind an advancing watermark.
     name: tests (indexer)
     runs-on: ubuntu-latest
+    env:
+      # The Rust that the pinned Sui revision itself builds with (its rust-toolchain.toml); bump it
+      # with `sui_cli` in move-packages.json. The runner image's own Rust floats: 1.100 changed
+      # Cargo's build layout, and the pinned coverage tool then counted an unexecuted copy of the
+      # crate (81% read as 58%, 2026-11-20).
+      RUSTUP_TOOLCHAIN: '1.98.1'
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -236,6 +242,7 @@ jobs:
         run: |
           echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
           echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
+          echo "revision=$(jq -er '.sui_cli.revision' move-packages.json)" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -246,7 +253,8 @@ jobs:
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           release='${{ steps.sui_version.outputs.version }}'
-          expected="sui ${release##*-v}-"
+          revision='${{ steps.sui_version.outputs.revision }}'
+          expected="sui ${release##*-v}-${revision:0:12}"
           actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
           if [[ "$actual" != "$expected"* ]]; then
             archive="$RUNNER_TEMP/sui.tgz"
@@ -272,10 +280,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/cargo-llvm-cov
             packages/indexer/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('packages/indexer/Cargo.lock') }}-llvm-cov-0.9.0
-          restore-keys: cargo-${{ runner.os }}-
+          key: cargo-${{ runner.os }}-rust-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('packages/indexer/Cargo.lock') }}-llvm-cov-0.9.0
+          restore-keys: cargo-${{ runner.os }}-rust-${{ env.RUSTUP_TOOLCHAIN }}-
       - name: setup Redis for projection recovery tests
         uses: ./.github/actions/setup-redis
+      - name: install the pinned Rust toolchain
+        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rustfmt,clippy,llvm-tools-preview
       - name: cargo fmt --check
         working-directory: packages/indexer
         run: cargo fmt --check
