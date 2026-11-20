@@ -5,6 +5,7 @@ module aresrpg::best_effort_stacks_tests;
 
 use aresrpg::item::{Self, Item};
 use aresrpg_seed::item_rows;
+use kiosk::personal_kiosk;
 use sui::{kiosk, package::Publisher, test_scenario, transfer_policy};
 
 #[test]
@@ -15,6 +16,8 @@ fun deposits_accept_missing_full_listed_and_incompatible_hints() {
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   let template = item_rows::template_for_testing(b"wool".to_string(), b"resource".to_string(), scenario.ctx());
   let other = item_rows::template_for_testing(b"wood".to_string(), b"resource".to_string(), scenario.ctx());
   let missing = item::mint_plain(&template, 1, scenario.ctx());
@@ -50,7 +53,8 @@ fun deposits_accept_missing_full_listed_and_incompatible_hints() {
   assert!(!kiosk.has_item(merged_id));
   assert!(kiosk.borrow<Item>(&cap, listed_id).amount() == 3);
   transfer::public_share_object(kiosk);
-  transfer::public_transfer(cap, @0xA);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   transfer::public_share_object(policy);
   transfer::public_transfer(policy_cap, @0xA);
   publisher.burn();
@@ -66,10 +70,27 @@ fun fallback_deposit_still_requires_the_owning_kiosk_cap() {
   scenario.next_tx(@0xA);
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, _policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
-  let (mut kiosk, _cap) = kiosk::new(scenario.ctx());
+  let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let _personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
   let (_other, wrong_cap) = kiosk::new(scenario.ctx());
   let template = item_rows::template_for_testing(b"wool".to_string(), b"resource".to_string(), scenario.ctx());
   let minted = item::mint_plain(&template, 1, scenario.ctx());
   item::deposit(&mut kiosk, &wrong_cap, &policy, option::none(), minted);
+  abort 999
+}
+
+/// Red-first regression (audit MOVE-1): an Item minted into a plain kiosk could be offered in a
+/// Trade whose counterparty claim then aborts forever in the personal-kiosk transfer rule.
+#[test, expected_failure(abort_code = 108, location = aresrpg::character)]
+fun deposit_refuses_a_kiosk_that_is_not_personal() {
+  let mut scenario = test_scenario::begin(@0xA);
+  item::test_init(scenario.ctx());
+  scenario.next_tx(@0xA);
+  let publisher = scenario.take_from_sender<Publisher>();
+  let (policy, _policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
+  let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let template = item_rows::template_for_testing(b"wool".to_string(), b"resource".to_string(), scenario.ctx());
+  let minted = item::mint_plain(&template, 1, scenario.ctx());
+  item::deposit(&mut kiosk, &cap, &policy, option::none(), minted);
   abort 999
 }

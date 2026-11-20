@@ -7,6 +7,7 @@ use aresrpg::{api, character::{Self, Character}, equipment, item::{Self, Item}, 
 use aresrpg_control::admin;
 use aresrpg_math::item_stats;
 use aresrpg_seed::{item_rows, registry};
+use kiosk::personal_kiosk;
 use sui::{clock, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA11CE;
@@ -40,6 +41,8 @@ fun run(case: Case) {
   let character = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
   let character_id = object::id(&character);
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   kiosk.place(&cap, character);
   let mut generator = random::new_generator_for_testing();
   let pet_item = item::mint(&template, 1, &mut generator, scenario.ctx());
@@ -57,14 +60,16 @@ fun run(case: Case) {
   };
   test_scenario::return_shared(version);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   let mut clock = clock::create_for_testing(scenario.ctx());
   let days = if (case == Case::Full || case == Case::Capped) 60 else 1;
   let mut day = 1;
   while (day <= days) {
     scenario.next_tx(OWNER);
     let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-    let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+    let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+    let (cap, borrow) = personal.borrow_val();
     let version = scenario.take_shared<version::Version>();
     clock::set_for_testing(&mut clock, day * DAY);
     if (case != Case::NotPet) api::unequip_item(&mut kiosk, &cap, character_id, b"pet".to_string(),
@@ -84,12 +89,14 @@ fun run(case: Case) {
     assert!(equipment::folded(kiosk.borrow(&cap, character_id)) == scaled);
     test_scenario::return_shared(version);
     transfer::public_transfer(kiosk, OWNER);
-    scenario.return_to_sender(cap);
+    personal.return_val(cap, borrow);
+    scenario.return_to_sender(personal);
     day = day + 1;
   };
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   api::unequip_item(&mut kiosk, &cap, character_id, b"pet".to_string(),
     test_scenario::receiving_ticket_by_id<Item>(pet_id), &policy, &version);
@@ -109,6 +116,8 @@ fun run(case: Case) {
   item::destroy_for_testing(remaining);
   character::destroy(kiosk.take(&cap, character_id));
   kiosk::close_and_withdraw(kiosk, cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   item_rows::destroy_for_testing(template);
   item_rows::destroy_for_testing(food_template);
   protected_policy::destroy_for_testing(protected, scenario.ctx());

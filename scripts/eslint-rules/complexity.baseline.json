@@ -409,7 +409,7 @@
     },
     "packages/server/src/modules/player_world.ts": {
       "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
-        24
+        21
       ],
       "observe > track": [
         12
@@ -1740,11 +1740,6 @@
         9
       ]
     },
-    "packages/frontend/src/airdrop/gift_state.ts": {
-      "checked": [
-        9
-      ]
-    },
     "packages/frontend/src/airdrop/gift_runtime.ts": {
       "create_gift_runtime > observe > check": [
         9
@@ -1993,10 +1988,7 @@
     },
     "packages/server/src/modules/player_world.ts": {
       "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
-        22
-      ],
-      "observe > follow_observed": [
-        12
+        20
       ],
       "observe > sync_observed": [
         12
@@ -2135,28 +2127,6 @@
     },
     "packages/sdk/src/agent_transfer_actions.ts": {
       "agent_transfer_actions > compose": [
-        11
-      ]
-    },
-    "packages/sdk/src/gift_gateway.ts": {
-      "authorize": [
-        9
-      ],
-      "bounded_json": [
-        9
-      ],
-      "create_gift_gateway > anonymous(request: Request)": [
-        10
-      ],
-      "prepare": [
-        10
-      ]
-    },
-    "packages/sdk/src/gift_contract.ts": {
-      "decode_gift_proof": [
-        11
-      ],
-      "decode_gift_status": [
         11
       ]
     },

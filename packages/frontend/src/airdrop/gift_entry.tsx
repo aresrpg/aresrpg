@@ -11,6 +11,7 @@ import { react_error_handlers } from '../reporting.ts'
 
 import { capture_gift_intent } from './gift_intent.ts'
 import { create_gift_runtime } from './gift_runtime.ts'
+import { gift_content } from './gift_content.ts'
 import { GiftPage } from './GiftPage.tsx'
 
 /** Gift entry deliberately imports neither the app store nor PlayerRuntime/world code. */
@@ -19,7 +20,7 @@ export const boot_gift = async (): Promise<void> => {
   const locale = load_locale()
   const copy = await load_app_copy(locale)
   finish_startup_recovery()
-  const runtime = create_gift_runtime({ link })
+  const runtime = create_gift_runtime({ link, policy: gift_content().policy })
   createRoot(document.getElementById('root')!, react_error_handlers).render(
     <StrictMode>
       <LocaleScope locale={locale}>

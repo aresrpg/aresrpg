@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { GiftStatus } from '@aresrpg/sdk/gift'
+import { GIFT_FUNDING_MIST, type GiftStatus } from '@aresrpg/sdk/gift'
 
 import type { AuthSession } from '../auth.ts'
 
@@ -11,6 +11,7 @@ export type GiftWallet = Pick<
   | 'identity'
   | 'gift'
   | 'inspect_giftcard_link'
+  | 'read_sui_balance'
   | 'on_invalidated'
   | 'dispose'
   | 'disconnect'
@@ -21,6 +22,8 @@ export type GiftState = Readonly<{
   ready: boolean
   wallet: GiftWallet | null
   status: GiftStatus | null
+  /** The game account's SUI, read with each status check; a confirmed step never rereads it. */
+  balance: bigint | null
   task: GiftTask | null
   sequence: number
   error: string | null
@@ -32,7 +35,7 @@ export type GiftState = Readonly<{
 export type GiftResult =
   | Readonly<{ kind: 'ready' }>
   | Readonly<{ kind: 'connected'; wallet: GiftWallet; advance: GiftTask['advance'] }>
-  | Readonly<{ kind: 'checked'; status: GiftStatus }>
+  | Readonly<{ kind: 'checked'; status: GiftStatus; balance: bigint | null }>
   | Readonly<{ kind: 'executed'; status: GiftStatus }>
   | Readonly<{ kind: 'disconnected' }>
 export type GiftInput =
@@ -50,6 +53,7 @@ export const initial_gift_state = (): GiftState => ({
   ready: false,
   wallet: null,
   status: null,
+  balance: null,
   task: null,
   sequence: 0,
   error: null,
@@ -65,23 +69,36 @@ const task = (state: GiftState, kind: GiftTaskKind, advance: GiftTask['advance']
   task: { id: state.sequence + 1, kind, advance },
 })
 
+const PAID_STAGES: ReadonlySet<GiftStatus['stage']> = new Set(['available', 'voucher', 'crate', 'reward'])
+
+/** Every remaining gift step is player-paid, so an account below the floor funds before any step starts. */
+export const gift_needs_funding = ({ task, status, balance }: GiftState): boolean =>
+  !task && !!status && PAID_STAGES.has(status.stage) && balance !== null && balance < GIFT_FUNDING_MIST
+
+/** The next automatic step, or none: a crate opens only on request, and an unfunded account waits. */
+const next_action = (state: GiftState, next: GiftState): GiftTaskKind | null => {
+  if (!state.task?.advance || gift_needs_funding(next)) return null
+  const actions = {
+    available: 'transfer',
+    voucher: 'redeem',
+    reward: 'collect',
+    crate: state.task.advance === 'open' ? 'open' : null,
+  } as const
+  return actions[next.status!.stage as keyof typeof actions] ?? null
+}
+
 const checked = (state: GiftState, result: Extract<GiftResult, { kind: 'checked' }>): GiftState => {
   const { status } = result
   const next = {
     ...state,
     task: null,
     status,
+    balance: result.balance,
     error: null,
     celebrate: state.celebrate || (state.status?.stage === 'crate' && status.stage === 'reward'),
   }
-  const actions = {
-    available: 'transfer',
-    voucher: 'redeem',
-    reward: 'collect',
-    crate: state.task?.advance === 'open' ? 'open' : null,
-  } as const
-  const action = actions[status.stage as keyof typeof actions]
-  return state.task?.advance && action ? task(next, action) : next
+  const action = next_action(state, next)
+  return action ? task(next, action) : next
 }
 
 const completions: {
@@ -95,12 +112,13 @@ const completions: {
         ready: true,
         wallet: result.wallet,
         status: state.wallet?.address === result.wallet.address ? state.status : null,
+        balance: state.wallet?.address === result.wallet.address ? state.balance : null,
       },
       'check',
       result.advance
     ),
   checked,
-  executed: (state, result) => checked(state, { kind: 'checked', status: result.status }),
+  executed: (state, result) => checked(state, { kind: 'checked', status: result.status, balance: state.balance }),
   disconnected: (state) => ({ ...initial_gift_state(), ready: true, sequence: state.sequence }),
 }
 
@@ -110,7 +128,7 @@ const request_allowed = (state: GiftState, kind: GiftTaskKind): boolean => {
   if (!state.wallet) return false
   const required = { redeem: 'voucher', open: 'crate', collect: 'reward', transfer: 'available' } as const
   const stage = required[kind as keyof typeof required]
-  return stage ? state.status?.stage === stage : ['check', 'logout'].includes(kind)
+  return stage ? state.status?.stage === stage && !gift_needs_funding(state) : ['check', 'logout'].includes(kind)
 }
 
 const inputs: {

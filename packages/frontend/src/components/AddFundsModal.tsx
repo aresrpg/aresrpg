@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Check, Copy, CreditCard, ExternalLink, Wallet } from 'lucide-react'
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { CreditCard, ExternalLink, Wallet } from 'lucide-react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { NativeModal, GameWindow, Button } from '@aresrpg/ui'
 
 import { env, type Network } from '../env.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { FundingErrorBoundary } from '../funding/FundingErrorBoundary.tsx'
-import { useFundingAnalytics, type FundingMethod } from '../funding/analytics.ts'
+import { useFundingAnalytics } from '../funding/analytics.ts'
 import { FUNDING_CUSHION_MIST } from '../funding/near.ts'
 import { format_sui, format_token_usd } from '../wallet_amount.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
@@ -23,7 +23,7 @@ import { capture_analytics } from '../analytics.ts'
 import { funding_recipient_current, type FundingAuthorization } from '../funding/recipient.ts'
 import { useFundingCheckout } from '../funding/useFundingCheckout.ts'
 
-import { useCopy } from './useCopy.ts'
+import { WalletAddressBlock } from './WalletAddressBlock.tsx'
 
 const FundingDialog = lazy(() => import('../funding/FundingDialog.tsx'))
 const FundingCheckout = lazy(() =>
@@ -38,51 +38,6 @@ const CARD_PROVIDERS = [
   { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
 ] as const
 const wallet_text = (copy: AppCopy, key: string): string => copy_text(copy.wallet_legacy)(key)
-
-const WalletAddressBlock = ({
-  address,
-  compact,
-  copy,
-  method,
-  recipient_label,
-}: Readonly<{
-  address: string
-  compact?: boolean
-  copy: AppCopy
-  method: FundingMethod
-  recipient_label?: string
-}>) => {
-  const [copied, copy_value] = useCopy()
-  useEffect(() => {
-    if (copied) capture_analytics('funding_address_copied', { method })
-  }, [copied, method])
-  const copy_address = (): void => {
-    if (address) copy_value(address)
-  }
-  return (
-    <section>
-      {!compact && (
-        <>
-          <h3 className="mb-2 text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-            {recipient_label ?? wallet_text(copy, 'your_address')}
-          </h3>
-          <p className="mb-3 text-[10px] tracking-wide text-muted">{wallet_text(copy, 'send_sui')}</p>
-        </>
-      )}
-      <Button className="aui-funding-address" disabled={!address} onClick={copy_address} type="button">
-        <Wallet className="shrink-0 text-gold opacity-60" size={14} />
-        <span className="flex-1 select-all break-all text-left font-mono text-[11px] tracking-wide text-gold">
-          {address || copy.sign_in_to_play}
-        </span>
-        {copied ? (
-          <Check className="shrink-0 text-emerald-400 opacity-80" size={14} />
-        ) : (
-          <Copy className="shrink-0 opacity-40 transition-opacity group-hover:opacity-80" size={14} />
-        )}
-      </Button>
-    </section>
-  )
-}
 
 type FundingProps = Readonly<{ address: string; copy: AppCopy; recipient_label?: string }>
 const CardFunding = ({ copy, locked }: Readonly<{ copy: AppCopy; locked: boolean }>) => (

@@ -7,6 +7,7 @@ use aresrpg::{api, character::{Self, Character}, dungeon, item::{Self, Item}, pr
 use aresrpg_control::admin;
 use aresrpg_math::{city_map, consumable_effect, dungeon_data, spell_effect};
 use aresrpg_seed::{dungeon_content, item_rows, registry, spell_rows, world_content};
+use kiosk::personal_kiosk;
 use sui::{clock, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA11CE;
@@ -62,6 +63,8 @@ fun run(case: Case, between_rooms: bool) {
   if (case == Case::Spells) progression::reset_spells(&mut character);
   let character_id = object::id(&character);
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   kiosk.place(&cap, character);
   let mut generator = random::new_generator_for_testing();
   let potion = item::mint(&template, 2, &mut generator, scenario.ctx());
@@ -69,11 +72,13 @@ fun run(case: Case, between_rooms: bool) {
   item::deposit(&mut kiosk, &cap, &policy, option::none(), potion);
   world_content::share(content);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
 
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   let spell = scenario.take_shared<spell_rows::SpellTemplate>();
   let content = scenario.take_shared<world_content::WorldContent>();
@@ -113,11 +118,13 @@ fun run(case: Case, between_rooms: bool) {
   test_scenario::return_shared(spell);
   test_scenario::return_shared(content);
   transfer::public_transfer(kiosk, OWNER);
-  scenario.return_to_sender(cap);
+  personal.return_val(cap, borrow);
+  scenario.return_to_sender(personal);
 
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, borrow) = personal.borrow_val();
   let character: &Character = kiosk.borrow(&cap, character_id);
   if (case == Case::Stats) assert!(character.strength() == 0 && character.available_points() == 45);
   if (case == Case::Spells) {
@@ -145,6 +152,8 @@ fun run(case: Case, between_rooms: bool) {
   };
   character::destroy(kiosk.take(&cap, character_id));
   kiosk::close_and_withdraw(kiosk, cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   item_rows::destroy_for_testing(template);
   item_rows::destroy_for_testing(wrong);
   item_rows::destroy_for_testing(key_template);

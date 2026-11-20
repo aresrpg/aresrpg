@@ -5,7 +5,19 @@ import { expect, test } from 'bun:test'
 import { card } from '../src/transport.ts'
 
 import { MIRA, identity, limits } from './helpers/connected_fixture.ts'
-import { buttons, calls, copies, en, input, link_url, linked, redeliver, setup } from './helpers/runtime_fixture.ts'
+import {
+  buttons,
+  calls,
+  copies,
+  en,
+  input,
+  labels,
+  link_url,
+  linked,
+  plain,
+  redeliver,
+  setup,
+} from './helpers/runtime_fixture.ts'
 
 test('a redelivered /link, /enable, /join or /unlink acts once and is answered again', async () => {
   const f = await setup()
@@ -27,7 +39,7 @@ test('a redelivered /link, /enable, /join or /unlink acts once and is answered a
   expect(calls(unlinking, (url) => url.endsWith('/oauth/revoke'))).toBe(revokes + 1)
 })
 
-test('a redelivered /confirm links once and the repeat shows the current state', async () => {
+test('a redelivered return from the browser links once and the repeat shows the current state', async () => {
   const f = await setup()
   await f.runtime.fetch(input(30, '/link'))
   const opened = await f.runtime.fetch(new Request(link_url(f.last())))
@@ -40,11 +52,14 @@ test('a redelivered /confirm links once and the repeat shows the current state',
   )
   // Regression: the service sent the code to the chat that began the link. Whoever began it could then
   // confirm a login made in another person's browser, and bind their chat to that person's bot. Only
-  // the browser that consented shows the code; the chat receives nothing.
-  const code = (await page.text()).trim().split('/confirm ').at(-1)!
+  // the browser that consented carries the code, back to its own account; the chat receives nothing.
+  expect(page.status).toBe(303)
+  const returning = new URL(page.headers.get('location')!)
+  expect(returning.origin + returning.pathname).toBe('https://t.me/fixture_bot')
+  const code = returning.searchParams.get('start')!
   expect(f.cards).toHaveLength(shown_before)
   expect(f.cards.some((shown) => shown.text.includes(code))).toBe(false)
-  await redeliver(f, () => input(31, `/confirm ${code}`))
+  await redeliver(f, () => input(31, `/start ${code}`))
   expect((await f.user())?.identity).toEqual(identity)
   expect(await f.attempts()).toEqual([])
   expect(f.cards.some((shown) => shown.text === card(en.failure_changed).text)).toBe(true)
@@ -89,7 +104,7 @@ test('relinking a linked chat names the unlink step instead of a dead end', asyn
   expect((await f.say('/link')).text).toBe(card(en.failure_unlink_first).text)
 })
 
-test('pairing uses the starting chat locale with a do-not-share line; browser failures are localized pages', async () => {
+test('a login returns the browser to the chat, never to a page that is kept; browser failures are localized pages', async () => {
   const f = await setup()
   const fr = copies('fr')
   await f.runtime.fetch(input(20, '/link', false, 'fr'))
@@ -101,10 +116,11 @@ test('pairing uses the starting chat locale with a do-not-share line; browser fa
       headers: { cookie },
     })
   )
-  expect(page.status).toBe(200)
-  // The pairing instructions and the do-not-share line are on the browser page, in the chat's language.
-  const pairing = await page.text()
-  for (const line of [fr.confirm, fr.confirm_warning]) expect(pairing).toContain(line)
+  expect(page.status).toBe(303)
+  expect(page.headers.get('location')).toStartWith('https://t.me/fixture_bot?start=')
+  // The address holds a one-use code: no cache keeps it and the next site never learns it.
+  expect(page.headers.get('cache-control')).toBe('no-store')
+  expect(page.headers.get('referrer-policy')).toBe('no-referrer')
   // A second open of the same link is refused in the starter's language with a readable page.
   const reopened = await f.runtime.fetch(new Request(link_url(f.last())))
   expect(reopened.status).toBe(410)
@@ -169,7 +185,7 @@ for (const [phase, reach] of Object.entries(attempt_phases))
     expect(await f.records.ids('attempts:')).toEqual([])
     expect(revokes()).toBe(Number(Boolean(attempt!.tokens)))
     // The ended attempt is refused, and the player is shown the login card again.
-    await f.say(`/confirm ${attempt!.confirmation ?? 'ended'}`)
+    await f.say(`/start ${attempt!.confirmation ?? 'ended'}`)
     expect(await f.user()).toBeNull()
     expect(buttons(f.last())).toContain('/link')
   })
@@ -250,4 +266,22 @@ test('an unreachable hosted bot on a read asks to try again and claims no unknow
   const answer = await f.say('/menu')
   expect(answer.text).toBe(card(en.failure_temporary).text)
   expect(buttons(answer)).toEqual([])
+})
+
+test('a new chat is welcomed under a picture and logs in with buttons alone, in every language', async () => {
+  const f = await setup()
+  const welcome = await f.say('/start')
+  expect(welcome.photo).toStartWith('https://')
+  expect(plain(welcome)).toBe(en.welcome)
+  expect(labels(welcome)).toEqual([en.connect_google])
+  const login = await f.press(en.connect_google)
+  expect(plain(login)).toBe(en.link)
+  expect(labels(login)).toEqual([en.open_login])
+  expect(link_url(login)).toStartWith('https://companion.example/link/')
+  // No message asks the player to type a command: every step has a button. A photo caption holds 1024 characters.
+  for (const locale of ['en', 'fr', 'de', 'es', 'pt', 'ru', 'uk', 'ja', 'ko', 'vi', 'zh']) {
+    const { strategies, ...texts } = copies(locale)
+    for (const text of [...Object.values(texts), ...Object.values(strategies)]) expect(text).not.toMatch(/\/[a-z]/)
+    expect(card(copies(locale).welcome).text.length).toBeLessThanOrEqual(1024)
+  }
 })

@@ -41,6 +41,10 @@ test('every locale renders the erasure warning, exact destinations, defaults and
       expect(markup).toContain('0xplayer')
       expect(markup).toContain('0xagent')
       expect(markup).not.toContain('private-review')
+      // Regression (production, 2026-11-20): Cancel read a copy key that does not exist and rendered
+      // as an empty button beside "Confirm change".
+      expect(markup).toContain(`>${copy.ui.agent_cancel}</button>`)
+      expect(markup).not.toMatch(/<button[^>]*><\/button>/)
       for (const key of [
         'suins_confirm_title',
         'suins_confirm_erase',

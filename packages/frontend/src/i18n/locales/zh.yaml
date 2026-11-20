@@ -735,6 +735,30 @@ settings_page:
   suins_write_failed: 无法确认名称变更。请刷新后再试。
   suins_unavailable: '目前无法在此更改名称：接收代理名称的机器人服务不可用。未做任何更改。'
   suins_wallet_required: 请登录以选择名称。
+  import_title: '从其他钱包导入'
+  import_hint: '将你拥有的另一个 Sui 钱包中的角色和物品转移到你的游戏账户。'
+  import_open: '导入角色和物品'
+  import_connect: '连接存有你的角色和物品的钱包。'
+  import_loading: '正在读取钱包…'
+  import_empty: '此钱包中没有可导入的角色或物品。'
+  import_characters: '角色'
+  import_items: '物品'
+  import_fee: '转移费用'
+  import_fee_note: '此费用由你的游戏钱包支付。网络费用另计。'
+  import_pending: '上一次导入尚未完成，将先完成它。'
+  import_left_roster: '因角色栏已满而留在钱包中的角色：{count}'
+  import_left_listed: '因正在出售而留在钱包中的资产：{count}。取消出售后即可导入。'
+  import_start: '导入'
+  import_running: '已转移 {moved} / {total}…'
+  import_sign_source: '请在 {wallet} 中批准请求。数量较多时需要多次批准。'
+  import_sign_owner: '正在接收到你的游戏钱包…'
+  import_done: '已转移的角色和物品：{count}。它们很快会出现在你的背包中。'
+  import_done_close: '完成'
+  import_source_funding: '{wallet} 需要约 {amount} SUI 支付网络费用。请添加 SUI，然后再次检查钱包。'
+  import_owner_funding: '你的游戏钱包需要更多 SUI 才能接收这些资产。请充值，然后再次检查钱包。'
+  import_busy: '另一笔交易正在进行。请等待其完成后重试。'
+  import_resumable: '没有任何损失。请再次检查钱包以完成导入。'
+  import_retry: '再次检查钱包'
   day_night_cycle_label: 昼夜循环
   day_night_cycle_hint: 关闭后，世界将保持正午。
   title: 设置
@@ -3017,6 +3041,9 @@ gift_page:
   welcome_title: '用一份礼物开启冒险'
   welcome_body: '这张卡可兑换 Basecamp 的 {{count}} 个 Sui Crate 之一。来领取属于你的那一个吧。'
   save_hint: '登录即可保存礼物，稍后再玩也没关系。'
+  funding_title: '请先充值少量 SUI'
+  funding_body: '领取、开启和收取礼物都需要少量网络手续费。请向下方的游戏账户转入至少 {{amount}} SUI，然后继续。'
+  funding_check: '我已充值 SUI'
   edition: 'Basecamp 限定 · {{count}} 份礼物'
   contents_title: '宝箱内容'
   contents_count: '1 份惊喜 · {{count}} 种可能'
@@ -3057,9 +3084,8 @@ gift_page:
   sound_on: '开启声音'
   sound_off: '关闭声音'
   error_invalid: '礼物链接不完整或无效，请重新扫描原始二维码。'
-  error_ineligible: '此礼物不符合免费领取条件，或状态已更改。请检查状态。'
+  error_ineligible: '此礼物不符合条件，或状态已更改。请检查状态。'
   error_unauthorized: '请使用领取此礼物的 Google 账户重新登录。'
-  error_sponsor_unavailable: '未能准备交易。你的礼物仍然安全，请稍后重试。'
   error_unavailable: '未能完成这一步。点击继续重试。'
   error_uncertain: '上一次操作尚未确认。请检查状态，这不会再次开启宝箱。'
   error_login: '登录未完成，请重试。如果弹窗被拦截，请在 Safari 或 Chrome 中打开链接。'
@@ -3473,6 +3499,7 @@ landing_page:
     signed_in: 已登录为 {{address}}
     failed: 登录未完成，请重试。
     logout: 退出登录
+    dev_only: '仅供开发使用，不建议用于游玩。'
   hero:
     eyebrow:
       - 战术MMORPG协议
@@ -3678,7 +3705,10 @@ landing_page:
     colophon: 一个世界，无限界面
 
 telegram_companion:
-  connect_google: '🔑 Google'
+  welcome: "⚔️ 欢迎来到 AresRPG\n\n你的英雄生活在链上。在这个聊天中，你可以关注他们、选择策略，他们会替你战斗和采集。\n\n首先请用 Google 登录。页面会在浏览器中打开，只需几秒钟。"
+  open_login: '🌐 打开登录页面'
+  disconnect: '🔓 断开 Google'
+  connect_google: '🔑 使用 Google 登录'
   waiting: '你的游戏账号尚未获得 Telegram 使用权限。加入等候名单即可申请。'
   on_waitlist: '✅ 你已加入等候名单。点击“检查访问权限”查看游戏账号是否已通过。'
   join_waitlist: '加入等候名单'
@@ -3701,12 +3731,10 @@ telegram_companion:
   back: '☰ 菜单'
   status: '📍 状态'
   approve: '✅ 批准'
-  link: '🔑 使用 /link 在浏览器中关联Google'
-  linked: '✅ Google已关联 · /menu'
+  link: '🔑 登录页面已准备好，将在浏览器中打开。'
+  linked: '✅ Google已关联'
   unlinked: '🔓 已解除关联'
-  confirm: '在你的 Telegram 聊天中发送下面的命令以完成绑定。'
-  confirm_warning: '请勿分享此代码。只确认你本人发起的登录。'
-  browser_expired: '此页面已过期。请返回Telegram，使用 /link 重新登录。'
+  browser_expired: '此页面已过期。请返回Telegram重新登录。'
   check_status: '📍 查看状态'
   log_in_again: '🔑 重新登录'
   balance: '💰 代理余额'
@@ -3718,9 +3746,9 @@ telegram_companion:
   choose_strategy: '选择策略'
   failure_changed: '内容已更新。以下是当前状态。'
   failure_reconnect: '你的登录已过期。请重新登录：'
-  failure_unlink_first: '此聊天或Google账号已连接，或仍有未完成的登录。请使用 /unlink 后再试。'
+  failure_unlink_first: '此聊天或Google账号已连接，或仍有未完成的登录。请断开 Google 后再试。'
   failure_temporary: '这次没有成功。请稍后再试。'
-  failure_busy: '该角色仍在完成一项操作，或代理已暂停。如果是你暂停的，请使用 /resume，然后查看状态。'
+  failure_busy: '该角色仍在完成一项操作，或代理已暂停。如果是你暂停的，请先恢复，然后查看状态。'
   failure_run_limit: '你的代理已在运行其所能支持的最多角色。请先停止一个，再启动这个角色。'
   review: '确认此策略'
   effects: '停止前会在这座城市战斗仅含1只怪物的怪物组。每次操作消耗SUI燃气费，没有总额上限。不保证胜利；重启可能重复步骤。停止不会取消已提交的操作。'
@@ -3732,7 +3760,7 @@ telegram_companion:
   attention: '策略需要处理。请在游戏中查看角色，然后查看状态或停止。'
   unknown: '结果尚未确认。请先查看状态。'
   city_review: '城市：{city}'
-  city_required: '请先在游戏中进入城市，再用 /menu 重新确认。'
+  city_required: '请先在游戏中进入城市，然后打开菜单重新确认。'
   enable_agent: '🔑 启用代理'
   play_consent: '你的游戏账号已获准使用。请授权代理以继续。'
   world_review: '世界：{world}'
@@ -3897,11 +3925,8 @@ dapp_page:
   unavailable_title: '自动服务没有响应'
   unavailable_body: '请暂时使用 3D 世界。'
   unavailable_action: '打开 3D 世界'
-  connect_title: '连接你的托管机器人'
-  connect_body: '机器人替你操作英雄。请允许此页面开始和停止它的活动。'
-  connect_custody: '机器人账户由你的 Google 账户与 AresRPG 共同持有：任一方都能签名，你随时可以取回你的英雄。'
-  connect_fees: '每个动作都是一笔从机器人余额支付的 Sui 交易。活动会一直进行，直到你停止或余额用完。'
-  connect_stop: '此页面可以让机器人游玩和暂停，并用它的余额在市场上交易。它无法提取你的 SUI。'
+  connect_title: '你的机器人未连接'
+  connect_body: '连接后即可派出英雄。'
   connect_action: '连接'
   connect_busy: '正在连接…'
   reading_heroes: '正在读取你的英雄…'

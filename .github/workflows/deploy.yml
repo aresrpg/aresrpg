@@ -23,6 +23,9 @@ jobs:
   vercel:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The Preview environment holds the edge-only Vercel token; production's token never reaches
+    # this job (DECISIONS: DEPLOY TOKENS LIVE IN ENVIRONMENTS).
+    environment: Preview
     env:
       VITE_NETWORK: mainnet
       VITE_GRAPHQL_URL: https://graphql.mainnet.sui.io/graphql
@@ -30,7 +33,6 @@ jobs:
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       ARES_DEPLOYMENT_ID: ares-${{ github.run_id }}-${{ github.run_attempt }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: wait for the gate to conclude GREEN on this sha (red cannot deploy)
@@ -45,6 +47,7 @@ jobs:
           echo "::error::gate never concluded within 20 minutes"; exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           # Same art-cache scheme as the gate — the 1.8GB tree restores from cache, not git.
           filter: blob:none
           sparse-checkout: |
@@ -81,15 +84,23 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: pull the Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: bun run vercel pull --yes --environment=preview --git-branch=edge --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: bun run vercel build --scope aresrpg --token="$VERCEL_TOKEN"
       - name: pin prebuilt deployment assets
         run: bun --env-file=.vercel/.env.preview.local scripts/pin_vercel_deployment.ts
       - name: deploy the prebuilt output
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         id: deploy
         run: echo "url=$(bun run vercel deploy --prebuilt --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
       - name: point edge.aresrpg.world at the fresh edge deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         # `alias set` is the one CLI command that ignores VERCEL_ORG_ID and falls back to the
         # token's personal scope — the explicit team scope is mandatory here.
         run: bun run vercel alias set "${{ steps.deploy.outputs.url }}" edge.aresrpg.world --scope aresrpg --token="$VERCEL_TOKEN"

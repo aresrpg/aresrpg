@@ -5,7 +5,7 @@ import { Transaction } from '@mysten/sui/transactions'
 import type { SuiClientTypes } from '@mysten/sui/client'
 
 import { gift_redemption, verified_gift_package, type GiftPolicy, type GiftReceipt } from '../src/gift_provenance.ts'
-import { validate_gift_voucher } from '../src/gift_sponsor.ts'
+import { validate_gift_voucher } from '../src/gift_chain.ts'
 
 import fixture from './fixtures/basecamp_gift.mainnet.json'
 
@@ -38,7 +38,7 @@ test('captured voucher and raw redemption transaction identify the exact minted 
   })
 })
 
-test('a Sui Crate template alone never grants sponsorship to a different campaign voucher', () => {
+test('a Sui Crate template alone never admits a voucher from a different campaign', () => {
   expect(() => validate_gift_voucher({ ...policy, giftcards: new Set() }, fixture.voucher as never)).toThrow()
   expect(() => gift_redemption(policy, sender, { ...proof, giftcard: fixture.voucher.objectId }, receipt())).toThrow()
   expect(() => gift_redemption(policy, fixture.voucher.objectId, proof, receipt())).toThrow()

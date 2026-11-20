@@ -16,6 +16,7 @@ export const create_auth = () =>
     network: env.network,
     rpc_url: env.sui_rpc_url,
     redirect_url: `${window.location.origin}/enoki`,
+    offer_wallets: env.dev_sign_in,
   })
 
 export type Auth = ReturnType<typeof create_auth>

@@ -18,7 +18,7 @@ use sui::{
 
 const ENoPoints: u64 = 106; // raise_stat: not enough available points
 const EUnknownStat: u64 = 107; // raise_stat: not one of the six characteristics
-const ENotPersonalKiosk: u64 = 108; // custody: a character must live in a PERSONAL kiosk
+const ENotPersonalKiosk: u64 = 108; // custody: a character or minted item must live in a PERSONAL kiosk
 const EInvalidSpend: u64 = 109; // raise_stat: points leave an unusable remainder
 const ENameInvalid: u64 = 102;
 const EInvalidClasse: u64 = 103;
@@ -31,7 +31,8 @@ const PRICE: u64 = 10_000_000_000; // 10 SUI, fixed — no free path, no sponsor
 /// A character must be locked in a PERSONAL kiosk, so its `KioskOwnerCap` is itself soulbound and
 /// can't be sold or lent outside the royalty rule. The personal-kiosk TRANSFER rule gates trades
 /// only — never the mint or a fight/dungeon/kolizeum re-lock (audit 2026-08-11) — so every
-/// `kiosk.lock` of a Character calls this. `personal_kiosk` is a READ here, not the purged cap.
+/// `kiosk.lock` of a Character calls this, and so does `item::deposit`, the one Item mint door.
+/// `personal_kiosk` is a READ here, not the purged cap.
 public(package) fun assert_personal_custody(kiosk: &Kiosk) {
   assert!(personal_kiosk::is_personal(kiosk), ENotPersonalKiosk);
 }

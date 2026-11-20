@@ -32,9 +32,13 @@ export const input = (id: number, value: string, callback = false, language_code
 export const copies = await load_copies()
 export const en = copies('en')
 export const plain = (shown: Card) => shown.text.replaceAll('\\', '')
-export const buttons = (shown: Card) => shown.reply_markup.inline_keyboard.flat().map((button) => button.callback_data)
+/** What a button does: the data it sends to the chat, or the page it opens. */
+export const target = (button: Card['reply_markup']['inline_keyboard'][number][number]) =>
+  'url' in button ? button.url : button.callback_data
+export const buttons = (shown: Card) => shown.reply_markup.inline_keyboard.flat().map(target)
 export const labels = (shown: Card) => shown.reply_markup.inline_keyboard.flat().map((button) => button.text)
-export const link_url = (shown: Card) => plain(shown).split('\n').at(-1)!
+/** The login page a card opens. It is a button, never text a preview crawler could fetch. */
+export const link_url = (shown: Card) => buttons(shown).at(-1)!
 
 export const setup = async (replaced: Readonly<{ telegram?: Partial<Telegram> }> = {}) => {
   const f = fixture()
@@ -58,6 +62,7 @@ export const setup = async (replaced: Readonly<{ telegram?: Partial<Telegram> }>
       ...replaced.telegram,
     },
     copy: copies,
+    bot_username: 'fixture_bot',
     secret: 'fixture',
     max_request_bytes: 4096,
     review_ttl_ms: limits.proposal_ttl_ms,
@@ -74,9 +79,9 @@ export const setup = async (replaced: Readonly<{ telegram?: Partial<Telegram> }>
   const press = async (match: string) => {
     const button = last()
       .reply_markup.inline_keyboard.flat()
-      .find(({ text, callback_data }) => text.startsWith(match) || callback_data.startsWith(match))
+      .find((shown) => shown.text.startsWith(match) || target(shown).startsWith(match))
     if (!button) throw new Error(`no button "${match}" on: ${plain(last())}`)
-    await runtime.fetch(input(++update.id, button.callback_data, true))
+    await runtime.fetch(input(++update.id, target(button), true))
     return last()
   }
   /** Menu, hero, Play, strategy: ends on the review card. `launch` also approves it. */

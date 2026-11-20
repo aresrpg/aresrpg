@@ -37,10 +37,28 @@ test('a portrait recipient reaches a saved gift without canvas, funding or a sec
   await expect(page.locator('canvas')).toHaveCount(0)
 })
 
-test('failed sponsorship is not automatically retried across reload', async ({ page }) => {
+test('an empty account sees its SUI address first, and only funding starts the claim', async ({ page }) => {
+  await page.goto('/e2e/fixtures/gift_onboarding.html?unfunded')
+  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Add a little SUI first' })).toBeVisible()
+  await expect(page.getByText('at least 0.1 SUI')).toBeVisible()
+  await expect(page.getByRole('button', { name: new RegExp(`0x${'2'.repeat(64)}`) })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+  await page.screenshot({ path: 'test-results/gift-funding-step-mobile.png', fullPage: true })
+  // Still empty: checking again keeps the fund step and submits nothing.
+  await page.getByRole('button', { name: 'I’ve added SUI', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Add a little SUI first' })).toBeVisible()
+  await expect(page.locator('body')).toHaveAttribute('data-gift-calls', '')
+  await page.evaluate(() => localStorage.setItem('fixture:gift-funded', '1'))
+  await page.getByRole('button', { name: 'I’ve added SUI', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'You just got 1 of 100 Sui Crates' })).toBeVisible()
+  await expect(page.locator('body')).toHaveAttribute('data-gift-calls', 'transfer,redeem')
+})
+
+test('a failed step is not automatically retried across reload', async ({ page }) => {
   await page.goto('/e2e/fixtures/gift_onboarding.html?fail=redeem')
   await page.getByRole('button', { name: 'Continue with Google', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Your gift is safe')
+  await expect(page.getByRole('alert')).toContainText('We couldn’t finish this step')
   await expect(page.locator('body')).toHaveAttribute('data-gift-calls', 'transfer,redeem')
   await page.reload()
   await expect(page.getByRole('heading', { name: 'This card is unavailable' })).toBeVisible()

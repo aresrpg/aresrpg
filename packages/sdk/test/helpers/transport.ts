@@ -68,6 +68,12 @@ const resolve_gas =
   }
 
 /** A fake CORE client: hydrate sources, a scriptable simulation verdict, an execution recorder. */
+/** Objects an executed transaction creates, as receipt rows and as the optional type map. */
+const created_objects = (created: Readonly<Record<string, string>> = {}) => ({
+  rows: Object.keys(created).map((object_id) => ({ ...changed(object_id, '7'), idOperation: 'Created' as const })),
+  types: Object.keys(created).length ? { objectTypes: created } : {},
+})
+
 export const fake_client = ({
   simulate_ok,
   execution_ok = true,
@@ -80,6 +86,7 @@ export const fake_client = ({
   resolution_failure,
   lag = new Map<string, number>(),
   owned_versions = new Map<string, string[]>(),
+  created,
 }: {
   simulate_ok: boolean
   execution_ok?: boolean
@@ -96,10 +103,13 @@ export const fake_client = ({
   lag?: Map<string, number>
   /** objectId → versions returned across reads, for receipt-fresh node-lag tests */
   owned_versions?: Map<string, string[]>
+  /** objectId → type of objects the executed transaction creates */
+  created?: Readonly<Record<string, string>>
   /** Which branch a refused simulation arrives in — a `success: false` status can ride the
    *  Transaction branch, and the preflight must refuse that identically. */
   failure_branch?: 'FailedTransaction' | 'Transaction'
 }) => {
+  const made = created_objects(created)
   const calls = {
     simulations: 0,
     executions: 0,
@@ -189,8 +199,9 @@ export const fake_client = ({
                 ? { success: true, error: null }
                 : { success: false, error: { message: failure_message } },
               gasObject: gas_object,
-              changedObjects: [gas_object],
+              changedObjects: [gas_object, ...made.rows],
             },
+            ...made.types,
           },
         })
         calls.digests.push(result.Transaction!.digest!)

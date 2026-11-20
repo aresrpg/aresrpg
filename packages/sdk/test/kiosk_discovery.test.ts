@@ -3,7 +3,7 @@
 import { expect, test } from 'bun:test'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 
-import { read_personal_kiosks } from '../src/kiosk_discovery.ts'
+import { read_personal_kiosks, with_created_kiosk } from '../src/kiosk_discovery.ts'
 
 const cap = (id: string, is_personal = true) =>
   ({ objectId: id, kioskId: id, isPersonal: is_personal, version: '1', digest: '' }) satisfies KioskOwnerCap
@@ -39,4 +39,15 @@ test('incomplete or cyclic ownership pagination never yields a partial roster', 
     }
     await expect(read_personal_kiosks(sdk, 'owner')).rejects.toThrow('pagination')
   }
+})
+
+test('a kiosk this session created is used while the ownership listing has not caught up', () => {
+  const created = cap('created')
+  expect(with_created_kiosk([], created)).toEqual([created])
+  expect(with_created_kiosk([cap('older')], created).map((row) => row.kioskId)).toEqual(['older', 'created'])
+})
+test('a listed kiosk is never doubled, and its listed version wins over the creation receipt', () => {
+  const listed = { ...cap('created'), version: '9' }
+  expect(with_created_kiosk([listed], cap('created'))).toEqual([listed])
+  expect(with_created_kiosk([listed], null)).toEqual([listed])
 })

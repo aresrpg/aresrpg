@@ -46,6 +46,7 @@ test('failed feed reads report unavailable and a later successful empty read is 
     await Bun.sleep(0)
     expect(h.packets).toEqual([{ type: 'packet/tournaments_error', reason: 'unavailable' }])
     h.chain.emit(channels.tournament)
+    await Bun.sleep(0)
     h.reads[1].resolve([])
     await Bun.sleep(0)
     expect(h.packets[1]).toEqual({ type: 'packet/tournaments', tournaments: [] })
@@ -59,9 +60,11 @@ test('a slow old failure cannot replace a newer successful feed', async () => {
   try {
     await Bun.sleep(0)
     h.chain.emit(channels.tournament)
-    h.reads[1].resolve([])
     await Bun.sleep(0)
+    expect(h.reads).toHaveLength(1)
     h.reads[0].reject(new Error('stale failure'))
+    await Bun.sleep(0)
+    h.reads[1].resolve([])
     await Bun.sleep(0)
     expect(h.packets).toEqual([{ type: 'packet/tournaments', tournaments: [] }])
   } finally {
@@ -83,5 +86,27 @@ test('disposal suppresses outstanding delivery and subscription failure reports 
     expect(failed.reads).toHaveLength(0)
   } finally {
     failed.controller.abort()
+  }
+})
+
+// Audit RT-1: one PTB of cheap donations emits hundreds of tournament events. Each connection
+// coalesces them into one active read plus one rerun, never one graph read per event.
+test('a burst of tournament events costs each connection at most one rerun', async () => {
+  const connections = Array.from({ length: 20 }, () => harness())
+  const pending = () => connections.flatMap(({ reads }) => reads)
+  try {
+    await Bun.sleep(0)
+    for (const read of pending()) read.resolve([])
+    await Bun.sleep(0)
+    const baseline = pending().length
+    for (let index = 0; index < 101; index += 1) for (const { chain } of connections) chain.emit(channels.tournament)
+    for (let round = 0; round < 3; round += 1) {
+      await Bun.sleep(0)
+      for (const read of pending().slice(baseline)) read.resolve([])
+    }
+    await Bun.sleep(0)
+    expect(pending().length - baseline).toBeLessThanOrEqual(2 * connections.length)
+  } finally {
+    for (const { controller } of connections) controller.abort()
   }
 })

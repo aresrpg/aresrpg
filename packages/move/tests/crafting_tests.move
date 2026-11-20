@@ -6,6 +6,7 @@ module aresrpg::crafting_tests;
 use aresrpg::{character, crafting, item, progression, protected_policy};
 use aresrpg_math::{craft_batch, job_xp};
 use aresrpg_seed::{item_rows, recipe_rows};
+use kiosk::personal_kiosk;
 use sui::{
   event,
   kiosk,
@@ -40,6 +41,8 @@ fun run_aggregate_craft(attempts: u16): u16 {
   let (item_policy, item_policy_cap) = transfer_policy::new<item::Item>(&publisher, scenario.ctx());
   let protected = protected_policy::for_testing<item::Item>(&publisher, scenario.ctx());
   let (mut kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, kiosk_cap, scenario.ctx());
+  let (kiosk_cap, borrow) = personal.borrow_val();
 
   let mut input_templates = vector[];
   let mut input_template_ids = vector[];
@@ -129,6 +132,8 @@ fun run_aggregate_craft(attempts: u16): u16 {
   let output: item::Item = kiosk.take(&kiosk_cap, output_id);
   item::destroy_for_testing(output);
   kiosk::close_and_withdraw(kiosk, kiosk_cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   protected_policy::destroy_for_testing(protected, scenario.ctx());
   transfer_policy::destroy_and_withdraw(item_policy, item_policy_cap, scenario.ctx()).into_balance().destroy_zero();
   recipe_rows::destroy_for_testing(recipe);

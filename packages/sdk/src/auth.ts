@@ -16,7 +16,7 @@ import { character_claim_id, character_create, character_id, type CharacterCreat
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
 import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
 import { create_agent_recall_reader, type AgentRecall } from './agent_recall.ts'
-import { read_personal_kiosks } from './kiosk_discovery.ts'
+import { read_personal_kiosks, with_created_kiosk } from './kiosk_discovery.ts'
 import { check_agent_return, read_agent_returns, type AgentReturnOffer } from './agent_returns.ts'
 import { agent_transfer_actions, type AgentTransferActions } from './agent_transfer_actions.ts'
 import { agent_deposit_actions } from './agent_deposit.ts'
@@ -45,6 +45,8 @@ import {
 } from './wallet_standard.ts'
 import { create_personal_kiosk_runner } from './kiosk_runner.ts'
 import { create_gift_actions, type GiftActions } from './gift_actions.ts'
+import type { GiftPolicy } from './gift_provenance.ts'
+import type { WalletImportOptions, WalletImportPlan } from './wallet_import.ts'
 
 export type { CharacterActions } from './character_actions.ts'
 export type { ScribeOutcome } from './forgemagie.ts'
@@ -120,7 +122,7 @@ export type AuthSession = Readonly<{
     before_sign?: () => void
   ) => Promise<Readonly<{ digest: string }>>
   read_giftcards: () => Promise<readonly GiftcardRow[]>
-  gift: GiftActions
+  gift: (policy: GiftPolicy) => GiftActions
   inspect_giftcard_link: (url: string) => Promise<GiftcardRow | null>
   transfer_giftcards: (
     transfers: readonly GiftcardTransfer[]
@@ -132,6 +134,9 @@ export type AuthSession = Readonly<{
   ) => Promise<Readonly<{ digest: string }>>
   read_marketplace_royalties: () => Promise<readonly MarketplaceRoyalty[]>
   claim_marketplace_royalties: () => ReturnType<typeof claim_royalties>
+  /** This session is the game wallet that receives; `source` is another connected wallet of the player. */
+  read_wallet_import: (source: AuthSession, character_slots: number) => Promise<WalletImportPlan>
+  import_wallet_assets: (source: AuthSession, options: WalletImportOptions) => Promise<WalletImportPlan>
   dispose?: () => void
   on_invalidated?: (listener: () => void) => () => void
   disconnect: () => Promise<void>
@@ -157,6 +162,8 @@ export type BrowserAuthOptions = Readonly<{
   redirect_url: string
   rpc_url?: string
   pins?: Pins
+  /** A development build also offers Slush beside Google. Players sign in with Google alone. */
+  offer_wallets?: boolean
 }>
 export type WalletAuthOptions = Pick<BrowserAuthOptions, 'graphql_url' | 'network' | 'rpc_url' | 'pins'>
 
@@ -203,7 +210,10 @@ const create_wallet_session = (
     try {
       const owned_caps = await request
       const cap = select_personal_kiosk(
-        owned_caps.filter(({ isPersonal }) => isPersonal),
+        with_created_kiosk(
+          owned_caps.filter(({ isPersonal }) => isPersonal),
+          sdk.created_personal_kiosk()
+        ),
         kiosk_id
       )
       if (!cap) {
@@ -230,6 +240,18 @@ const create_wallet_session = (
     sign_transaction,
     pins,
   })
+  const import_context = (source: AuthSession) => {
+    const from = admin_wallet_contexts.get(source)
+    if (!from || from.network !== network) throw new Error('The source wallet session is unavailable.')
+    return Object.freeze({
+      client: resolution_client,
+      source_sdk: from.sdk,
+      source: from.account.address,
+      owner_sdk: sdk,
+      owner: account.address,
+      owner_kiosk_cap: kiosk_cap,
+    })
+  }
   const session: AuthSession = Object.freeze({
     address: account.address,
     wallet_name: wallet.name,
@@ -309,7 +331,7 @@ const create_wallet_session = (
       const { read_giftcards } = await import('./distribution.ts')
       return read_giftcards(resolution_client, sdk, account.address)
     },
-    gift: create_gift_actions(sdk, account.address, binding.sign_personal_message),
+    gift: create_gift_actions(sdk, account.address, resolution_client, client),
     inspect_giftcard_link: async (url) => {
       const { inspect_giftcard_link } = await import('./distribution.ts')
       return inspect_giftcard_link(resolution_client, sdk, url)
@@ -340,6 +362,14 @@ const create_wallet_session = (
       const { claim_marketplace_royalties } = await import('./marketplace_admin.ts')
       return claim_marketplace_royalties(sdk, account.address)
     },
+    read_wallet_import: async (source, character_slots) => {
+      const { read_wallet_import } = await import('./wallet_import.ts')
+      return read_wallet_import(import_context(source), character_slots)
+    },
+    import_wallet_assets: async (source, options) => {
+      const { import_wallet_assets } = await import('./wallet_import.ts')
+      return import_wallet_assets(import_context(source), options)
+    },
     dispose: binding.dispose,
     on_invalidated: binding.on_invalidated,
     disconnect: binding.disconnect,
@@ -364,7 +394,14 @@ const connect_wallet = async (
   return create_wallet_session(wallet, account, network, client, resolution_client, pins)
 }
 
+/** Slush is offered even without its extension: its web wallet registers once per page. */
+const offer_slush_wallet = (): void => {
+  if (typeof window !== 'undefined' && !installed_wallets().some((wallet) => wallet.name === SLUSH_WALLET_NAME))
+    registerSlushWallet('AresRPG')
+}
+
 export const create_browser_auth = (options: BrowserAuthOptions) => {
+  if (options.offer_wallets) offer_slush_wallet()
   const client = new SuiGraphQLClient({ network: options.network, url: options.graphql_url })
   const resolution_client = new SuiGrpcClient({
     network: options.network,
@@ -398,8 +435,7 @@ export const create_browser_auth = (options: BrowserAuthOptions) => {
 }
 
 export const create_wallet_auth = (options: WalletAuthOptions) => {
-  if (typeof window !== 'undefined' && !installed_wallets().some((wallet) => wallet.name === SLUSH_WALLET_NAME))
-    registerSlushWallet('AresRPG')
+  offer_slush_wallet()
   const client = new SuiGraphQLClient({ network: options.network, url: options.graphql_url })
   const resolution_client = new SuiGrpcClient({
     network: options.network,

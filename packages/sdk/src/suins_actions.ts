@@ -15,7 +15,12 @@ import { assert_name_record, type NameRecord } from './suins_record.ts'
 
 export type OwnedSuinsName = Readonly<{ name: string; object_id: string; nft_id: string; subname: boolean }>
 export type SuinsSnapshot = Readonly<{ default_name: string | null; names: readonly OwnedSuinsName[] }>
-export type SuinsSelection = Readonly<{ name: string; digest?: string }>
+/**
+ * The result of applying a parent name. `targets` is the receipt: every application name of that
+ * parent with the address the applied state points it to. A later step trusts it instead of reading
+ * the name again, because a node may not have indexed the transaction that wrote it yet.
+ */
+export type SuinsSelection = Readonly<{ name: string; digest?: string; targets?: Readonly<Record<string, string>> }>
 export type SuinsReview = Readonly<{
   fingerprint: string
   player_address: string
@@ -24,7 +29,7 @@ export type SuinsReview = Readonly<{
 }>
 export type SuinsActions = Readonly<{
   managed: boolean
-  set_default: (name: string, before_sign: () => void) => Promise<void>
+  set_default: (name: string, before_sign: () => void, applied?: SuinsSelection) => Promise<void>
   snapshot: () => Promise<SuinsSnapshot>
   validate_parent: (name: string, before_sign: () => void, player_address?: string) => Promise<void>
   review_parent: (
@@ -271,9 +276,9 @@ export const suins_actions = ({
   })
   return Object.freeze({
     managed,
-    set_default: async (name, before_sign) => {
+    set_default: async (name, before_sign, applied) => {
       if (!managed) return refuse('unsupported')
-      await set_application_default(client, sdk, owner, name, 'aresrpg.', before_sign)
+      await set_application_default(client, sdk, owner, name, 'aresrpg.', before_sign, applied)
     },
     snapshot: async () => {
       const signal = AbortSignal.timeout(10_000)
@@ -302,7 +307,8 @@ export const suins_actions = ({
       const current_default = own_default ? await read_default(client, owner, AbortSignal.timeout(10_000)) : name
       before_sign()
       const changes = leaves.filter((leaf) => leaf.change !== 'none')
-      if ([!changes.length, current_default === name].every(Boolean)) return { name }
+      const targets = Object.fromEntries(leaves.map((leaf) => [leaf.name, leaf.target!]))
+      if ([!changes.length, current_default === name].every(Boolean)) return { name, targets }
       const transaction = new Transaction()
       const writer = client.$extend(suins({ packageInfo: { ...service.config, ...SUBNAME_WRITES } })).suins
       const builder = new SuinsTransaction(writer, transaction)
@@ -315,28 +321,41 @@ export const suins_actions = ({
       if ([own_default, [current_default !== name, leaves[0]!.change !== 'none'].some(Boolean)].every(Boolean))
         builder.setDefault(name)
       const receipt = await sdk.execute(transaction, { budget: 'estimate', before_sign })
-      return { name, digest: receipt_digest(receipt) }
+      return { name, digest: receipt_digest(receipt), targets }
     },
   })
 }
 
 /** Each target executor signs its reverse record after verifying the forward target. */
+/**
+ * Where a name points. The receipt of the transaction that just wrote the name says so; without one
+ * the node is asked. Either way the chain has the last word: it aborts a default for a foreign name.
+ */
+const name_target = async (
+  client: SuiGrpcClient,
+  name: string,
+  signal: AbortSignal,
+  applied?: SuinsSelection
+): Promise<string | null> =>
+  applied?.targets?.[name] ?? (await client.core.resolveNameServiceAddress({ name, signal })).address ?? null
+
 const set_application_default = async (
   client: SuiGrpcClient,
   sdk: Pick<Sdk, 'execute'>,
   address: string,
   input: string,
   prefix: 'aresrpg.' | 'aresrpgagent.',
-  before_sign: () => void
+  before_sign: () => void,
+  applied?: SuinsSelection
 ): Promise<void> => {
   before_sign()
   const name = canonical_suins_name(input)
   if (!isValidSuiNSName(name) || !name.startsWith(prefix)) return refuse('invalid_parent')
   const owner = normalizeSuiAddress(address)
   const signal = AbortSignal.timeout(10_000)
-  const target = await client.core.resolveNameServiceAddress({ name, signal })
+  const target = await name_target(client, name, signal, applied)
   before_sign()
-  if (!target.address || normalizeSuiAddress(target.address) !== owner) return refuse('invalid_parent')
+  if (!target || normalizeSuiAddress(target) !== owner) return refuse('invalid_parent')
   const current_default = await read_default(client, owner, signal)
   before_sign()
   if (current_default === name) return
@@ -350,5 +369,6 @@ export const set_agent_suins_default = (
   sdk: Pick<Sdk, 'execute'>,
   address: string,
   input: string,
-  before_sign: () => void
-): Promise<void> => set_application_default(client, sdk, address, input, 'aresrpgagent.', before_sign)
+  before_sign: () => void,
+  applied?: SuinsSelection
+): Promise<void> => set_application_default(client, sdk, address, input, 'aresrpgagent.', before_sign, applied)

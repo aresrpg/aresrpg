@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { create_watcher } from '../pubsub_bus.ts'
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import { channels } from '../protocol.ts'
 import { get_kolizeums } from '../reads/get_kolizeums.ts'
@@ -13,9 +13,10 @@ const log = logger(import.meta)
 export default {
   name: 'player_kolizeum',
   observe: ({ pubsub, send, signal, graph, address }) => {
-    const push = latest_reader(
+    const push = coalesced_reader(
       () => get_kolizeums(graph, { address }),
-      (lobbies) => send({ type: 'packet/kolizeums', lobbies })
+      (lobbies) => send({ type: 'packet/kolizeums', lobbies }),
+      signal
     )
     const refresh = (): void => {
       void push().catch((error: Error) => log.error({ address, error: error.message }, 'kolizeum board read failed'))

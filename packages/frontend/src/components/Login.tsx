@@ -3,6 +3,7 @@
 
 import { WalletCards } from 'lucide-react'
 
+import { env } from '../env.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
 import { useAppStore } from '../store.ts'
@@ -43,7 +44,7 @@ export const Login = ({
         <div className="flex flex-col gap-3">
           <GoogleLoginButton copy={copy} ready={auth_ready} loading={loading} login={login_google} />
           <div className="contents" hidden={gift}>
-            {import.meta.env.DEV && auth_ready && (
+            {env.dev_sign_in && auth_ready && (
               <>
                 <button className="aui-button" type="button" disabled={loading} onClick={() => set_show_wallets(true)}>
                   <WalletCards size={17} aria-hidden="true" />

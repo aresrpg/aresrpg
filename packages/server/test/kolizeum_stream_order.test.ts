@@ -83,6 +83,10 @@ test('the War Table subscribes before its baseline and stale reads cannot overwr
   expect(reads).toBe(1)
   bus.graph.emitter.emit(channels.kolizeum, { type: 'KolizeumChanged', data: {} })
   await flush()
+  // The invalidation waits behind the active read instead of starting a second one.
+  expect(reads).toBe(1)
+  resolve_stale([])
+  await flush()
   await flush()
   expect(sent).toEqual([
     {
@@ -105,8 +109,6 @@ test('the War Table subscribes before its baseline and stale reads cannot overwr
       ],
     },
   ])
-  resolve_stale([])
-  await flush()
-  expect(sent).toHaveLength(1)
+  expect(reads).toBe(2)
   controller.abort()
 })

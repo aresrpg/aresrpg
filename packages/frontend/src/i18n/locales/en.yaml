@@ -734,6 +734,30 @@ settings_page:
   suins_write_failed: 'The name change could not be confirmed. Refresh before trying again.'
   suins_unavailable: "Names cannot be changed here right now: the bot service that receives your agent's name is not available. Nothing was changed."
   suins_wallet_required: 'Sign in to choose a name.'
+  import_title: 'Import from another wallet'
+  import_hint: 'Move the characters and items of another Sui wallet you own into your game account.'
+  import_open: 'Import characters and items'
+  import_connect: 'Connect the wallet that holds your characters and items.'
+  import_loading: 'Reading the wallet…'
+  import_empty: 'This wallet has no characters or items to import.'
+  import_characters: 'Characters'
+  import_items: 'Items'
+  import_fee: 'Transfer fee'
+  import_fee_note: 'Your game wallet pays this fee. Network fees are extra.'
+  import_pending: 'An earlier import is unfinished. It is completed first.'
+  import_left_roster: 'Characters left in the wallet because your roster is full: {count}'
+  import_left_listed: 'Assets left in the wallet because they are on sale: {count}. Cancel the sale to import them.'
+  import_start: 'Import'
+  import_running: 'Moved {moved} of {total}…'
+  import_sign_source: 'Approve the request in {wallet}. A large collection needs several approvals.'
+  import_sign_owner: 'Receiving in your game wallet…'
+  import_done: 'Characters and items moved: {count}. They appear in your inventory shortly.'
+  import_done_close: 'Done'
+  import_source_funding: '{wallet} needs about {amount} SUI for network fees. Add SUI to it, then check the wallet again.'
+  import_owner_funding: 'Your game wallet needs more SUI to receive these assets. Add funds, then check the wallet again.'
+  import_busy: 'Another transaction is in progress. Wait for it, then try again.'
+  import_resumable: 'Nothing is lost. Check the wallet again to finish the import.'
+  import_retry: 'Check the wallet again'
   day_night_cycle_label: Day/night cycle
   day_night_cycle_hint: Disable to keep the world at midday.
   title: 'Settings'
@@ -3073,6 +3097,9 @@ gift_page:
   welcome_title: 'A gift to start your adventure'
   welcome_body: 'Your card unlocks one of {{count}} Sui Crates from Basecamp. Let’s make this one yours.'
   save_hint: 'Sign in to keep your gift, even if you play later.'
+  funding_title: 'Add a little SUI first'
+  funding_body: 'Claiming, opening and collecting your gift each cost a small network fee. Send at least {{amount}} SUI to your game account below, then continue.'
+  funding_check: 'I’ve added SUI'
   edition: 'Basecamp edition · {{count}} gifts'
   contents_title: 'Inside your crate'
   contents_count: '1 surprise · {{count}} possibilities'
@@ -3113,9 +3140,8 @@ gift_page:
   sound_on: 'Enable sounds'
   sound_off: 'Mute sounds'
   error_invalid: 'This gift link is incomplete or invalid. Scan the original QR code again.'
-  error_ineligible: 'This gift is not eligible for this free claim, or its state has changed. Check its status.'
+  error_ineligible: 'This gift is not eligible, or its state has changed. Check its status.'
   error_unauthorized: 'Please sign in again with the Google account you used to claim this gift.'
-  error_sponsor_unavailable: 'We couldn’t prepare this transaction. Your gift is safe. Try again later.'
   error_unavailable: 'We couldn’t finish this step. Continue to try again.'
   error_uncertain: 'Your last action is not confirmed yet. Check its status; this will not open another crate.'
   error_login: 'Sign-in wasn’t completed. Try again. If the window was blocked, open this link in Safari or Chrome.'
@@ -3529,6 +3555,7 @@ landing_page:
     signed_in: Signed in as {{address}}
     failed: Sign-in did not complete. Try again.
     logout: Log out
+    dev_only: 'For development only. Not recommended for playing the game.'
   hero:
     eyebrow:
       - Tactical MMORPG protocol
@@ -3752,7 +3779,10 @@ landing_page:
     colophon: one world, unlimited interfaces
 
 telegram_companion:
-  connect_google: '🔑 Google'
+  welcome: "⚔️ Welcome to AresRPG\n\nYour heroes live on-chain. From this chat you follow them, choose a strategy, and they fight and gather for you.\n\nTo begin, log in with Google. It opens in your browser and takes a few seconds."
+  open_login: '🌐 Open the login page'
+  disconnect: '🔓 Disconnect Google'
+  connect_google: '🔑 Log in with Google'
   waiting: 'Your game account does not have Telegram access yet. Join the waitlist to ask for it.'
   on_waitlist: '✅ You are on the waitlist. Use Check access to see if your game account was admitted.'
   join_waitlist: 'Join the waitlist'
@@ -3775,12 +3805,10 @@ telegram_companion:
   back: '☰ Menu'
   status: '📍 Status'
   approve: '✅ Approve'
-  link: '🔑 Use /link to connect Google in your browser'
-  linked: '✅ Google linked · /menu'
+  link: '🔑 Your login page is ready. It opens in your browser.'
+  linked: '✅ Google linked'
   unlinked: '🔓 Unlinked'
-  confirm: 'Send the command below in your Telegram chat to finish the link.'
-  confirm_warning: 'Do not share this code. Confirm only a login you started yourself.'
-  browser_expired: 'This page expired. Go back to Telegram and use /link to log in again.'
+  browser_expired: 'This page expired. Go back to Telegram and log in again.'
   check_status: '📍 Check status'
   log_in_again: '🔑 Log in again'
   balance: '💰 Agent balance'
@@ -3792,9 +3820,9 @@ telegram_companion:
   choose_strategy: 'Choose a strategy'
   failure_changed: 'This was updated. Here is what is current now.'
   failure_reconnect: 'Your login expired. Log in again:'
-  failure_unlink_first: 'This chat or Google account is already connected, or a login is still open. Use /unlink, then try again.'
+  failure_unlink_first: 'This chat or Google account is already connected, or a login is still open. Disconnect Google, then try again.'
   failure_temporary: 'That did not work this time. Try again in a moment.'
-  failure_busy: 'This character is still finishing an action, or the agent is paused. If you paused it, use /resume, then check the status.'
+  failure_busy: 'This character is still finishing an action, or the agent is paused. If you paused it, resume it, then check the status.'
   failure_run_limit: 'Your agent already runs as many characters as it can. Stop one, then start this one.'
   review: 'Review this strategy'
   effects: 'Fights one-mob groups in this city until stopped. Each action costs SUI gas, with no total cap. Victory is not guaranteed; a restart may repeat a step. Stop cannot cancel submitted actions.'
@@ -3806,7 +3834,7 @@ telegram_companion:
   attention: 'Strategy needs attention. Check your character in the game, then use Status or Stop.'
   unknown: 'The result is not confirmed yet. Check the status first.'
   city_review: 'City: {city}'
-  city_required: 'Move into a city in the game, then review again with /menu.'
+  city_required: 'Move into a city in the game, then open the menu and review again.'
   enable_agent: '🔑 Enable agent'
   play_consent: 'Your game account is admitted. Approve agent permissions to continue.'
   world_review: 'World: {world}'
@@ -3982,11 +4010,8 @@ dapp_page:
   unavailable_title: 'The automated service is not responding'
   unavailable_body: 'Please use the 3D world for now.'
   unavailable_action: 'Open the 3D world'
-  connect_title: 'Connect your hosted bot'
-  connect_body: 'Your bot plays your heroes for you. Allow this page to start and stop its activities.'
-  connect_custody: "Your bot's account is held jointly by your Google account and AresRPG: either can sign, and you can always take your heroes back."
-  connect_fees: "Each action is a Sui transaction paid from the bot's balance. Activities run until you stop them or the balance runs out."
-  connect_stop: 'This page can play and pause your bot, and trade on the market with its balance. It cannot withdraw your SUI.'
+  connect_title: 'Your bot is not connected'
+  connect_body: 'Connect to send your heroes out.'
   connect_action: 'Connect'
   connect_busy: 'Connecting…'
   reading_heroes: 'Reading your heroes…'

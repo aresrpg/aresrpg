@@ -357,8 +357,8 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       reject: (error: Readonly<Error>) => void
     }>
   >()
-  // The installed-wallet picker exists in development builds only (owner ruling); players sign in with Google.
-  const account = create_remembered_auth(undefined, undefined, { wallets: import.meta.env.DEV })
+  // The installed-wallet choice exists in local and edge builds only (owner ruling); players sign in with Google.
+  const account = create_remembered_auth(undefined, undefined, { wallets: env.dev_sign_in })
 
   void account
     .provider()

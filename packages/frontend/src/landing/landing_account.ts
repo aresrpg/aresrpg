@@ -4,6 +4,7 @@
 import { createStore } from 'zustand/vanilla'
 
 import type { AuthSession } from '../auth.ts'
+import { env } from '../env.ts'
 import { create_remembered_auth, type RememberedAuth } from '../remembered_auth.ts'
 
 export type LandingAccountState = Readonly<{
@@ -68,7 +69,7 @@ export const play_step = (status: LandingAccountState['status']): 'enter' | 'wai
 }
 
 export const create_landing_account = (
-  auth: RememberedAuth = create_remembered_auth(),
+  auth: RememberedAuth = create_remembered_auth(undefined, undefined, { wallets: env.dev_sign_in }),
   join: (session: AuthSession) => Promise<void> = join_telegram_waitlist
 ) => {
   const store = createStore<LandingAccountState>(() => initial_landing_account)
@@ -95,12 +96,15 @@ export const create_landing_account = (
     }
   }
 
-  /** Google through Enoki is the only sign-in here. Resolves true once the visitor is signed in. */
-  const login = async (): Promise<boolean> => {
+  /**
+   * Google through Enoki is the sign-in. A local or edge build may name an installed wallet instead.
+   * Resolves true once the visitor is signed in.
+   */
+  const login = async (wallet: string | null = null): Promise<boolean> => {
     if (store.getState().status === 'signed_in') return true
     if (store.getState().status !== 'signed_out') return false
     dispatch({ type: 'connect' })
-    return settle(() => auth.connect())
+    return settle(() => auth.connect(wallet))
   }
 
   return {
@@ -113,6 +117,8 @@ export const create_landing_account = (
       return settle(auth.restore)
     },
     login,
+    /** The installed wallets a local or edge build offers beside Google. Null in production. */
+    wallet_names: auth.wallet_names,
     /** Joins the Telegram waitlist as the signed-in account. A signed-out visitor signs in first. */
     join_waitlist: async (): Promise<void> => {
       if (!(await login())) return

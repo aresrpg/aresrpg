@@ -30,7 +30,14 @@ export type LandingCopy = Readonly<{
   sound_off: string
   nav: Readonly<{ docs: string; journal: string; discord: string }>
   kares: Readonly<{ trigger: string; trigger_detail: string }>
-  account: Readonly<{ login: string; logging_in: string; signed_in: string; logout: string; failed: string }>
+  account: Readonly<{
+    login: string
+    logging_in: string
+    signed_in: string
+    logout: string
+    failed: string
+    dev_only: string
+  }>
   hero: Readonly<{
     eyebrow: readonly [string, string]
     title: readonly [string, string, string]

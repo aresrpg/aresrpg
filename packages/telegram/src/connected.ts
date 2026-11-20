@@ -15,14 +15,19 @@ import type { Copy, CopyKey } from './copy.ts'
 import { perform, read_view, type Action, type Bot } from './hosted.ts'
 import { read_update } from './http.ts'
 import type { LinkService } from './link.ts'
-import { button, card, type Telegram } from './transport.ts'
+import { button, card, page_button, type Telegram } from './transport.ts'
 import type { Input } from './wire.ts'
+
+/** The picture above the welcome. Telegram fetches it from the game's public site, so it must stay served there. */
+const WELCOME_BANNER = 'https://aresrpg.world/social/x-banner-v3-1500x500.png'
 
 export const create_connected = (
   options: Readonly<{
     access: TelegramAccess
     links: LinkService
-    telegram: Telegram
+    telegram: Pick<Telegram, 'send' | 'acknowledge'>
+    /** The bot's public name. The browser returns to this chat after a login. */
+    bot_username: string
     copy: (locale: string) => Copy
     secret: string
     max_request_bytes: number
@@ -81,11 +86,12 @@ export const create_connected = (
     if (['/link', '/enable'].includes(input.text)) {
       if (input.text === '/link') await replace_expired_login(input.sender)
       const url = await (input.text === '/enable' ? links.upgrade : links.begin)(input.sender, input.locale)
-      await send(input, `${copy_for(input).link}\n${url}`)
+      await send(input, copy_for(input).link, [[page_button(copy_for(input).open_login, url)]])
       return true
     }
-    if (input.text.startsWith('/confirm ')) {
-      await links.confirm(input.sender, input.text.slice('/confirm '.length).trim())
+    // The browser that logged in returns here through the chat's Start button, which carries its one-use code.
+    if (input.text.startsWith('/start ')) {
+      await links.confirm(input.sender, input.text.slice('/start '.length).trim())
       await send(input, copy_for(input).linked, [[button(copy_for(input).check_access, '/start')]])
       return true
     }
@@ -125,11 +131,15 @@ export const create_connected = (
       console.error('Telegram attempt retirement failed', code_of(error))
     })
     if (await process_link(input)) return null
-    // An unlinked sender only ever sees the login card and leaves no navigation state, also when its
+    // An unlinked sender only ever sees the welcome card and leaves no navigation state, also when its
     // login ended outside this chat: the operator removed the owner, or the hosted bot ended the grant.
     if (!(await links.current(input.sender))) {
       sessions.delete(input.sender)
-      await send(input, copy_for(input).link, [[button(copy_for(input).connect_google, '/link')]])
+      const copy = copy_for(input)
+      await telegram.send(input.sender, {
+        ...card(copy.welcome, [[button(copy.connect_google, '/link')]]),
+        photo: WELCOME_BANNER,
+      })
       return null
     }
     const previous = sessions.get(input.sender) ?? initial_session()
@@ -168,13 +178,13 @@ export const create_connected = (
         .find((part) => part.startsWith('__Host-ares-telegram='))
         ?.slice('__Host-ares-telegram='.length) ?? ''
     const result = await links.callback(url.searchParams, cookie)
-    const copy = options.copy(result.locale ?? 'en')
-    // The code is shown only to the browser that consented. It is never sent to the chat that began
-    // the link: that chat may belong to someone else, and the code is what binds the two.
-    return browser_page(
-      200,
-      `${copy.confirm}\n${copy.confirm_warning}\n\n${result.owner}\n${result.address}\n\n/confirm ${result.code}`
-    )
+    // The code goes only to the browser that consented, which carries it back to its own Telegram
+    // account. It is never sent to the chat that began the link: that chat may belong to someone
+    // else, and the code is what binds the two. A code returned from another account matches nothing.
+    return new Response(null, {
+      status: 303,
+      headers: { ...PRIVATE_PAGE, Location: `https://t.me/${options.bot_username}?start=${result.code}` },
+    })
   }
   const browser = async (request: Request) => {
     const url = new URL(request.url)
@@ -316,6 +326,7 @@ export const FAILURE_CODES: Readonly<Record<FailureKind, readonly string[]>> = {
     'storage_key_required',
     'strategy_identity_required',
     'telegram_delivery_failed',
+    'telegram_identity_unknown',
     'telegram_token_required',
     'tool_failed',
     'unavailable',
@@ -333,24 +344,25 @@ type FailureResponse = Readonly<{ status: number; page: CopyKey; next?: Readonly
 const FAILURE_RESPONSES: Readonly<Record<FailureKind, FailureResponse>> = {
   failure_changed: { status: 410, page: 'browser_expired' },
   failure_reconnect: { status: 400, page: 'browser_expired', next: { label: 'log_in_again', command: '/link' } },
-  failure_unlink_first: { status: 409, page: 'failure_unlink_first' },
+  failure_unlink_first: {
+    status: 409,
+    page: 'failure_unlink_first',
+    next: { label: 'disconnect', command: '/unlink' },
+  },
   failure_busy: { status: 409, page: 'failure_busy', next: { label: 'check_status', command: '/status' } },
   failure_run_limit: { status: 409, page: 'failure_run_limit', next: { label: 'stop', command: '/stop' } },
   waiting: { status: 403, page: 'waiting', next: { label: 'check_access', command: '/start' } },
-  city_required: { status: 409, page: 'city_required' },
+  city_required: { status: 409, page: 'city_required', next: { label: 'back', command: '/menu' } },
   observation_unknown: { status: 409, page: 'observation_unknown' },
   unknown: { status: 504, page: 'unknown', next: { label: 'check_status', command: '/status' } },
   failure_temporary: { status: 503, page: 'failure_temporary' },
 }
+/** A login answer is never stored and never names itself to the next site. */
+const PRIVATE_PAGE = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }
 const browser_page = (status: number, text: string) =>
   new Response(text, {
     status,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
-    },
+    headers: { ...PRIVATE_PAGE, 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
   })
 const accepted_language = (request: Request) =>
   request.headers.get('accept-language')?.split(',')[0]?.split(/[-;]/)[0]?.trim().toLowerCase() || 'en'

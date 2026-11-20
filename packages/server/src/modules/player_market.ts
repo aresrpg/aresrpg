@@ -15,7 +15,7 @@ import { get_market_slice } from '../reads/get_market_slice.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 import { observe_market_counts } from '../market_counts_observer.ts'
 import { observe_market_prices } from '../market_prices_observer.ts'
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 
@@ -61,9 +61,10 @@ export default {
       )
     }
     signal.addEventListener('abort', () => stop_types?.(), { once: true })
-    const read_latest_history = latest_reader(
+    const read_latest_history = coalesced_reader(
       () => get_market_history(graph, pubsub.graph, { address }),
-      (history) => send({ type: 'packet/market_history', ...history })
+      (history) => send({ type: 'packet/market_history', ...history }),
+      signal
     )
     const push_history = (): void => {
       void read_latest_history().catch((error: Error) =>
@@ -72,7 +73,7 @@ export default {
     }
 
     let previous_kiosks: readonly string[] = []
-    const read_slice = latest_reader(
+    const read_slice = coalesced_reader(
       async () => {
         const observation = get_state().market_observation
         return observation && observation.kind !== 'types' && observation.kind !== 'overview'
@@ -84,7 +85,8 @@ export default {
           previous_kiosks = [...new Set(result.listings.map(({ kiosk }) => kiosk))]
           send({ type: 'packet/market_slice', ...result })
         }
-      }
+      },
+      signal
     )
     const push_slice = (): void => {
       void read_slice().catch((error: Error) => log.warn({ error: error.message }, 'market slice failed'))

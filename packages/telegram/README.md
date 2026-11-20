@@ -113,7 +113,7 @@ supervisor starts a fresh one. There is no HTTP health route.
 ## Authority and recovery
 
 `/link` reuses Google consent, PKCE, exact issuer/resource binding, browser cookie and sender-side
-`/confirm`. The authenticated identity binds owner, descriptor, generation, grant and multisig.
+confirmation: the browser returns to the chat, whose Start button carries the one-use code. The authenticated identity binds owner, descriptor, generation, grant and multisig.
 Existing encrypted OAuth credentials and scoped revoke/cleanup behavior remain in place.
 
 Telegram keeps one record per linked sender in process memory: its button revision, the login it belongs

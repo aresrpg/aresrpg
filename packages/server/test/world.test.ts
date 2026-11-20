@@ -3,6 +3,8 @@
 
 import { describe, expect, test } from 'bun:test'
 
+import { ZONE_RECENTER_MS } from '../src/modules/player_world.ts'
+
 import { create_player } from './helpers/player.ts'
 import { wire, make_character, flush } from './helpers/world_wire.ts'
 
@@ -503,7 +505,7 @@ describe('the world module', () => {
       at_ms: Date.now(),
       budget_blocks: 0,
     })
-    await flush()
+    await Bun.sleep(ZONE_RECENTER_MS + 50)
     expect(sent.some((packet) => packet.type === 'packet/player_left' && packet.character_id === '0xold')).toBe(true)
   })
 

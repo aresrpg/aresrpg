@@ -12,6 +12,7 @@ import {
 } from '../src/blast_purchase.ts'
 
 import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
+import live from './fixtures/blast_presale_live.mainnet.json' with { type: 'json' }
 import { id } from './helpers/transport.ts'
 
 const config: BlastPurchaseConfig = {
@@ -82,7 +83,7 @@ test('simulation never executes; purchase uses the common executor exactly once'
       getObject: async () => ({
         object: {
           owner: { $kind: 'Shared' },
-          type: `${config.package_original}::blast_presale_package::PackageVersion`,
+          type: `${id(9)}::package_version::PackageVersion<${config.package_original}::blast_presale_package::BLAST_PRESALE_PACKAGE>`,
         },
       }),
     },
@@ -146,7 +147,7 @@ test('a claim pays the signer as participant and refuses before the sale ends', 
       getObject: async () => ({
         object: {
           owner: { $kind: 'Shared' },
-          type: `${config.package_original}::blast_presale_package::PackageVersion`,
+          type: `${id(9)}::package_version::PackageVersion<${config.package_original}::blast_presale_package::BLAST_PRESALE_PACKAGE>`,
         },
       }),
     },
@@ -166,4 +167,58 @@ test('a claim pays the signer as participant and refuses before the sale ends', 
     expect((await actions.claim()).digest).toBe('claim-digest')
   }
   expect(executions).toBe(2)
+})
+
+// Mainnet objects 0x247165…2b57e (version 1099635701) and 0xd9523c…3ba7 (version 1063892806), captured
+// 2026-11-20 via gRPC. Regression: the purchase check was written against Blast's October test deployment,
+// whose version object was `<package>::blast_presale_package::PackageVersion`. The live deployment shares a
+// generic `PackageVersion<…BLAST_PRESALE_PACKAGE>` from Blast's common library, so every purchase was refused.
+test('the live Blast version object is accepted only for its own presale package', async () => {
+  const [live_sale, live_version] = live.objects
+  const blast_package = live_sale!.type.split('::')[0]!
+  const live_config = { ...config, package: blast_package, package_original: blast_package }
+  const sale = {
+    ...live_sale,
+    objectId: live_config.id,
+    type: normalizeStructTag(`${blast_package}::blast_presale::Presale<${config.coin_type},${SUI_TYPE_ARG}>`),
+    json: { ...live_sale!.json, lifecycle: { '@variant': 'Open' }, start_ms: '0', duration_ms: '10000' },
+  }
+  const actions_with = (version: unknown, package_original = blast_package) =>
+    blast_purchase_actions({
+      sdk: {
+        pins: { ...pins, blast_presale: { ...live_config, package_original } },
+        simulate: async () => ({
+          $kind: 'Transaction',
+          Transaction: {
+            effects: {
+              status: { success: true },
+              gasUsed: { computationCost: '1', storageCost: '1', storageRebate: '0', nonRefundableStorageFee: '0' },
+            },
+          },
+        }),
+      },
+      client: {
+        network: 'mainnet',
+        core: {
+          getObjects: async () => ({
+            objects: [
+              { ...sale, type: sale.type.replace(blast_package, package_original) },
+              { objectId: id(6), owner: { $kind: 'Shared' }, type: '0x2::clock::Clock', json: { timestamp_ms: '1' } },
+            ],
+          }),
+          getObject: async () => ({ object: version }),
+        },
+      },
+      address: id(5),
+    } as never)
+  const buy = { method: 'open', amount: 10n } as const
+  expect((await actions_with(live_version).simulate(buy)).amount_mist).toBe(10n)
+  // The same real object, pinned beside another package, belongs to another package.
+  await expect(actions_with(live_version, id(2)).simulate(buy)).rejects.toThrow('another package')
+  await expect(
+    actions_with({ ...live_version, owner: { $kind: 'AddressOwner', AddressOwner: id(5) } }).simulate(buy)
+  ).rejects.toThrow('another package')
+  await expect(
+    actions_with({ ...live_version, type: `${blast_package}::blast_presale::PresaleRegistry` }).simulate(buy)
+  ).rejects.toThrow('another package')
 })

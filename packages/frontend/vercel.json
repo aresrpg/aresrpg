@@ -30,9 +30,6 @@
     "api/solana.ts": {
       "maxDuration": 15
     },
-    "api/gift.ts": {
-      "maxDuration": 30
-    },
     "api/portrait.ts": {
       "includeFiles": "{../../seed/{icons/characters/*_hd.png,portraits/*.png},public/portrait-share/backgrounds/*.png}"
     }

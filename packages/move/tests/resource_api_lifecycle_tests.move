@@ -153,6 +153,8 @@ fun stack_api_splits_merges_and_burns_exactly_the_owned_quantity() {
   publisher.burn();
   let template = item_rows::template_for_testing(b"grain".to_string(), b"resource".to_string(), scenario.ctx());
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   let item = item::mint_plain(&template, 10, scenario.ctx());
   let id = object::id(&item);
   item::deposit(&mut kiosk, &cap, &policy, option::none(), item);
@@ -162,11 +164,13 @@ fun stack_api_splits_merges_and_burns_exactly_the_owned_quantity() {
   assert!(kiosk.is_locked(id) && kiosk.is_locked(split));
   test_scenario::return_shared(version);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
 
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   api::merge_stacks(&mut kiosk, &cap, &protected, id, split, &version, scenario.ctx());
   assert!(!kiosk.has_item(split) && item::amount(kiosk.borrow(&cap, id)) == 10);
@@ -176,6 +180,8 @@ fun stack_api_splits_merges_and_burns_exactly_the_owned_quantity() {
   assert!(!kiosk.has_item(id) && kiosk.item_count() == 0);
   test_scenario::return_shared(version);
   kiosk::close_and_withdraw(kiosk, cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   item_rows::destroy_for_testing(template);
   protected_policy::destroy_for_testing(protected, scenario.ctx());
   transfer_policy::destroy_and_withdraw(policy, policy_cap, scenario.ctx()).into_balance().destroy_zero();

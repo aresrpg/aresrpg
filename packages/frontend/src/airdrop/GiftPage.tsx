@@ -116,7 +116,7 @@ export const GiftPage = ({ runtime, copy }: Readonly<{ runtime: GiftRuntime; cop
           ))}
         </nav>
         <GiftScene view={view} state={state} content={content} roll={roll} phase={phase} copy={copy} text={text} />
-        <GiftActions view={view} state={state} runtime={runtime} text={text} enter={enter_game} />
+        <GiftActions view={view} state={state} runtime={runtime} text={text} copy={copy} enter={enter_game} />
         {view.contents && <GiftContents content={content} text={text} />}
       </GameWindow>
     </main>

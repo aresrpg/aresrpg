@@ -142,3 +142,27 @@ test('after a restored player logs out, Play asks for sign-in and never waits on
   await account.logout()
   expect(play_step(account.store.getState().status)).toBe('login')
 })
+
+test('an installed wallet signs in only where the surface rules wallets in', async () => {
+  const slush = { ...session, wallet_name: 'Slush', identity: 'wallet' } as unknown as AuthSession
+  const values = new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => void values.set(key, value),
+    removeItem: (key: string) => void values.delete(key),
+  }
+  const provider = async () => ({
+    connect_google: signed_in,
+    restore: signed_in,
+    wallets: () => [{ name: 'Slush', connect: async () => slush }],
+    dispose: () => undefined,
+  })
+  const dev = create_landing_account(create_remembered_auth(provider, storage, { wallets: true }))
+  expect(await dev.wallet_names?.()).toEqual(['Slush'])
+  expect(await dev.login('Slush')).toBe(true)
+  expect(values.get('last_wallet')).toBe('Slush')
+  const production = create_landing_account(create_remembered_auth(provider, storage))
+  expect(production.wallet_names).toBeNull()
+  expect(await production.login('Slush')).toBe(false)
+  expect(production.store.getState()).toEqual({ ...initial_landing_account, failed: true })
+})

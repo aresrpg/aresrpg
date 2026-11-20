@@ -29,6 +29,7 @@ const main = async () => {
     redis.access.admitted
   )
   await links.retire_ended_attempts()
+  const telegram = create_telegram(connected.token, connected.limits.request_ms)
   const runtime = create_connected({
     access: redis.access,
     links,
@@ -36,7 +37,8 @@ const main = async () => {
     secret: config.secret,
     max_request_bytes: config.maximum,
     review_ttl_ms: connected.limits.proposal_ttl_ms,
-    telegram: create_telegram(connected.token, connected.limits.request_ms),
+    telegram,
+    bot_username: await telegram.username(),
   })
   // Public TLS termination and webhook registration are explicit operations outside this entry.
   const server = Bun.serve({ hostname: config.hostname, port: config.port, fetch: runtime.fetch })

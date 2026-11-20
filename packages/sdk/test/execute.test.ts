@@ -46,6 +46,21 @@ describe('the execute gate (core interface)', () => {
     await expect(refused.execute(refused.tx())).rejects.toThrow('NOT submitted')
     expect(observed).toEqual([])
   })
+  test('a personal kiosk created by a certified success is remembered; a failed creation is not', async () => {
+    const created = { [id(70)]: '0x2::kiosk::Kiosk', [id(71)]: `${id(5)}::personal_kiosk::PersonalKioskCap` }
+    const failed = await game(fake_client({ simulate_ok: true, execution_ok: false, created }))
+    await expect(failed.execute(failed.tx())).rejects.toThrow('failed on-chain')
+    expect(failed.created_personal_kiosk()).toBeNull()
+    const sdk = await game(fake_client({ simulate_ok: true, created }))
+    expect(sdk.created_personal_kiosk()).toBeNull()
+    await sdk.execute(sdk.tx(), { include: { objectTypes: true } })
+    expect(sdk.created_personal_kiosk()).toMatchObject({
+      objectId: id(71),
+      kioskId: id(70),
+      isPersonal: true,
+      version: '7',
+    })
+  })
   test('pre-sign resolution lag is classified without retrying inside the SDK', () => {
     const lag = new Error(
       '[sdk] transaction resolution failed — NOT submitted: provided version does not match for object 0x1, provided: 10 actual: 0x9'

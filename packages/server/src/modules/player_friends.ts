@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { EventEnvelope } from '../protocol.ts'
 import { get_friends } from '../reads/get_friends.ts'
@@ -16,12 +16,13 @@ export default {
     action.type === 'action/friends' ? { ...state, friends: new Set(action.friends) } : state,
   observe: ({ pubsub, graph, address, signal, channels, send, dispatch }) => {
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
-    const refresh = latest_reader(
+    const refresh = coalesced_reader(
       () => get_friends(graph, { address }),
       (friends) => {
         dispatch({ type: 'action/friends', friends: friends.map(({ address: friend }) => String(friend)) })
         send({ type: 'packet/friends', friends })
-      }
+      },
+      signal
     )
     const forward = (payload: EventEnvelope): void => {
       if (payload.type === 'FriendListChanged')

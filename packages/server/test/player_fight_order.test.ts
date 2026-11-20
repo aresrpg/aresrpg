@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import { latest_fight_state_reader } from '../src/modules/player_fight.ts'
-import { latest_keyed_reader, latest_reader } from '../src/latest_read.ts'
+import { coalesced_reader, latest_keyed_reader } from '../src/latest_read.ts'
 
 test('a stale fight-state read cannot overwrite a newer checkpoint', async () => {
   const resolvers: ((value: string) => void)[] = []
@@ -45,15 +45,18 @@ test('a stale pre-settlement roster cannot overwrite the returned character HP',
 test('a stale singleton social baseline cannot overwrite a newer invalidation', async () => {
   const resolvers: ((value: string) => void)[] = []
   const delivered: string[] = []
-  const push = latest_reader(
+  const push = coalesced_reader(
     () => new Promise<string>((resolve) => resolvers.push(resolve)),
-    (value) => delivered.push(value)
+    (value) => delivered.push(value),
+    new AbortController().signal
   )
   const baseline = push()
   const invalidation = push()
-  resolvers[1]!('new')
-  await invalidation
+  await Promise.resolve()
   resolvers[0]!('old')
   await baseline
+  await Promise.resolve()
+  resolvers[1]!('new')
+  await invalidation
   expect(delivered).toEqual(['new'])
 })

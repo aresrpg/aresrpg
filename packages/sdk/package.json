@@ -44,7 +44,6 @@
     "./freeze-targets": "./src/freeze_targets.ts",
     "./gift": "./src/gift_contract.ts",
     "./gift-provenance": "./src/gift_provenance.ts",
-    "./gift-gateway": "./src/gift_gateway.ts",
     "./login-proof": "./src/login_proof.ts",
     "./agent-actions": "./src/agent_actions.ts",
     "./agent-connection": "./src/agent_connection.ts",
@@ -58,7 +57,8 @@
     "./agent-recall": "./src/agent_recall.ts",
     "./agent-inventory": "./src/agent_inventory.ts",
     "./agent-asset-transfer": "./src/agent_asset_transfer.ts",
-    "./agent-returns": "./src/agent_returns.ts"
+    "./agent-returns": "./src/agent_returns.ts",
+    "./wallet-import": "./src/wallet_import.ts"
   },
   "scripts": {
     "generate": "node scripts/generate_doors.mjs && node scripts/generate_seed_doors.mjs",

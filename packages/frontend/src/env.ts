@@ -8,6 +8,8 @@ export type EngineQuality = 'low' | 'medium' | 'high'
 
 export type PublicEnv = Readonly<{
   bot_service_url: string
+  /** Local and edge builds also offer an installed wallet at sign-in. Production offers Google alone. */
+  dev_sign_in: boolean
   privy_app_id: string
   posthog_project_token: string
   app_name: string
@@ -53,6 +55,7 @@ export const resolve_bot_service_url = (value = ''): string => {
 
 const resolve_optional_services = (source: Readonly<Record<string, string | undefined>>) => ({
   bot_service_url: resolve_bot_service_url(source.VITE_BOT_SERVICE_URL),
+  dev_sign_in: source.VITE_DEPLOY_ENV === 'local' || source.VITE_DEPLOY_ENV === 'preview',
   privy_app_id: source.VITE_PRIVY_APP_ID ?? 'cmvpm31db00nk0gimsyylhwzk',
   posthog_project_token: source.VITE_POSTHOG_PROJECT_TOKEN ?? 'phc_pi5yrMJfu5h6rN86ugdURJcTWUkXQsGmCfMR6hSZ3RP8',
 })

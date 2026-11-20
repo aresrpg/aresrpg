@@ -7,6 +7,7 @@ use aresrpg::{api, distribution, item, pet, version};
 use aresrpg_control::admin;
 use aresrpg_math::item_stats;
 use aresrpg_seed::{item_rows, registry};
+use kiosk::personal_kiosk;
 use sui::{kiosk, package::Publisher, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA11CE;
@@ -21,7 +22,8 @@ fun transferred_giftcard_redeems_into_existing_stack() {
 
   let publisher = scenario.take_from_sender<Publisher>();
   let (item_policy, item_policy_cap) = transfer_policy::new<item::Item>(&publisher, scenario.ctx());
-  let (kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
+  let (mut kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
+  personal_kiosk::create_for(&mut kiosk, kiosk_cap, RECIPIENT, scenario.ctx());
   let cap = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
   let template = item_rows::template_for_testing(
@@ -52,7 +54,6 @@ fun transferred_giftcard_redeems_into_existing_stack() {
   transfer::public_transfer(item_policy, RECIPIENT);
   transfer::public_transfer(item_policy_cap, RECIPIENT);
   transfer::public_transfer(kiosk, RECIPIENT);
-  transfer::public_transfer(kiosk_cap, RECIPIENT);
   registry::destroy_for_testing(root);
   admin::destroy_for_testing(cap);
   item_rows::share_item(template);
@@ -63,7 +64,8 @@ fun transferred_giftcard_redeems_into_existing_stack() {
   let item_policy = scenario.take_from_sender<transfer_policy::TransferPolicy<item::Item>>();
   let item_policy_cap = scenario.take_from_sender<transfer_policy::TransferPolicyCap<item::Item>>();
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let kiosk_cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (kiosk_cap, borrow) = personal.borrow_val();
   let template = scenario.take_shared<item_rows::ItemTemplate>();
   let card = scenario.take_from_sender_by_id<distribution::Giftcard>(seeded_card_id);
   let target = item::mint_plain(&template, 1, scenario.ctx());
@@ -80,6 +82,8 @@ fun transferred_giftcard_redeems_into_existing_stack() {
   let item = kiosk.take<item::Item>(&kiosk_cap, target_id);
   item::destroy_for_testing(item);
   kiosk::close_and_withdraw(kiosk, kiosk_cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   transfer_policy::destroy_and_withdraw(item_policy, item_policy_cap, scenario.ctx()).into_balance().destroy_zero();
   publisher.burn();
   test_scenario::return_shared(template);

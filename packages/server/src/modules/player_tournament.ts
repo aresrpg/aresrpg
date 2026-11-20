@@ -3,7 +3,7 @@
 import type { ServerPacket } from '@aresrpg/protocol'
 
 import { create_watcher } from '../pubsub_bus.ts'
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import { channels } from '../protocol.ts'
 import { get_tournaments } from '../reads/get_tournaments.ts'
@@ -14,7 +14,7 @@ export default {
   name: 'player_tournament',
   observe: ({ pubsub, send, signal, graph, address }) => {
     const unavailable = (): ServerPacket => ({ type: 'packet/tournaments_error', reason: 'unavailable' })
-    const push = latest_reader(
+    const push = coalesced_reader(
       async (): Promise<ServerPacket> => {
         try {
           return { type: 'packet/tournaments', tournaments: await get_tournaments(graph, address) }
@@ -25,7 +25,8 @@ export default {
       },
       (packet) => {
         if (!signal.aborted) send(packet)
-      }
+      },
+      signal
     )
     const refresh = (): void => {
       void push().catch((error: Error) => log.error({ error: error.message }, 'tournament read failed'))

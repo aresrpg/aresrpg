@@ -7,6 +7,7 @@ import { item_template_id } from '@aresrpg/sdk/seed-ids'
 import { living_content, resolve_pins } from '@aresrpg/sdk/pins'
 
 import { GiftPage } from '../../src/airdrop/GiftPage.tsx'
+import { gift_content } from '../../src/airdrop/gift_content.ts'
 import { create_gift_runtime } from '../../src/airdrop/gift_runtime.ts'
 import type { GiftWallet } from '../../src/airdrop/gift_state.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -26,6 +27,9 @@ const digests = {
   collect: 'AiJJxoVs2uXm7Ca9ivFKEQyHbuPE6wMF6VA8zoGaZtVr',
 }
 const ledger_key = 'fixture:gift-chain'
+const funded_key = 'fixture:gift-funded'
+// ?unfunded starts the account at 0 SUI; the test deposits by setting the funded flag.
+const balance = (): bigint => (params.has('unfunded') && !localStorage.getItem(funded_key) ? 0n : 1_000_000_000n)
 type Ledger = { stage: GiftStatus['stage']; proof: GiftProof; calls: string[]; pending: GiftAction | null }
 const read_ledger = (): Ledger =>
   (JSON.parse(localStorage.getItem(ledger_key) ?? 'null') as Ledger) ?? {
@@ -68,7 +72,11 @@ const create_wallet = (): GiftWallet => {
       params.has('used') || read_ledger().stage !== 'available'
         ? null
         : { id: giftcard, template: template('sui_crate'), amount: 1 },
-    gift: {
+    read_sui_balance: async () => {
+      await wait()
+      return balance()
+    },
+    gift: () => ({
       transfer: async () => {
         await wait()
         const ledger = read_ledger()
@@ -90,7 +98,7 @@ const create_wallet = (): GiftWallet => {
         await wait()
         const ledger = read_ledger()
         save({ ...ledger, calls: [...ledger.calls, action] })
-        if (params.get('fail') === action) throw new GiftError('sponsor_unavailable')
+        if (params.get('fail') === action) throw new GiftError('unavailable')
         if (params.has('uncertain') && action === 'open') {
           save({ ...read_ledger(), pending: 'open' })
           throw new Error('transaction outcome unknown')
@@ -98,7 +106,7 @@ const create_wallet = (): GiftWallet => {
         confirm(action)
         return status()
       },
-    },
+    }),
   }
 }
 capture_audio(({ source }) => {
@@ -108,6 +116,7 @@ capture_audio(({ source }) => {
 save(read_ledger())
 const runtime = create_gift_runtime({
   link: `${location.origin}/gift#$fixture-card`,
+  policy: gift_content().policy,
   load_auth: async () => () => ({
     connect_google: async () => {
       await wait()

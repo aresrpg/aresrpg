@@ -59,7 +59,8 @@ snapshots.
    If Move changed, prepare its compatible upgrades or fresh publication and push the resulting
    hardcoded pins to `edge` before versioning.
 8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level).
-   Dispatch preparation CI on that exact tag. Wait for changed backend images and the staged
+   Dispatch preparation CI on that exact tag. Approve its `Production` environment request in
+   GitHub; the staged build waits for it. Wait for changed backend images and the staged
    production Vercel build. CI gives the frontend build and prebuilt output one custom deployment ID;
    `scripts/pin_vercel_deployment.ts` must run after `vercel build` and before upload. This keeps
    retained deployments accessible to their already-open pages.
@@ -81,6 +82,7 @@ snapshots.
 16. Release tooling automatically dispatches the production-activation workflow with the retained
     tag, version, preparation run and request ID. The network is always mainnet. It promotes the
     staged Vercel deployment without rebuilding, verifies production, and publishes the draft release.
+    The activation waits for the owner's approval of its `Production` environment request.
     Wait for that exact successful activation and published release before continuing. Persist
     dispatch intent first; a lost response must never cause an automatic duplicate dispatch.
 17. Exercise one affected action against chain truth.
@@ -168,18 +170,6 @@ session storage, and is never sent to the application server.
 Keep bearer files outside the repository with owner-only access. Never upload them before
 the cards are intentionally distributed. If execution returns a digest and fails, inspect that digest
 and current object custody; never retry automatically.
-
-## Gift sponsorship configuration
-
-The gift API requires server-only `GIFT_SPONSOR_PRIVATE_KEY`, a Sui Ed25519 private key
-for a dedicated, lightly funded address on the selected network. Keep the public Enoki key and Google
-client configuration for login. Never expose the sponsor key through a `VITE_` variable. The server constructs and signs only the fixed campaign transactions; the SDK submits
-both the sponsor and sender signatures directly. No external sponsorship credits or gas pool are required.
-The QR key signs transport locally; Slush’s hosted sponsor is not used.
-No dashboard-wide Move allowlist or QR reprint is needed. The existing 100 vouchers remain the supply.
-Sponsorship failure leaves the gift recoverable and never asks the recipient to fund this claim.
-Release this frontend/API change through the normal preparation and activation workflow above.
-Before activation, verify a zero-SUI claim through reward collection and a reload after interrupted confirmation.
 
 ## Telegram companion
 

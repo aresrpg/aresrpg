@@ -116,9 +116,7 @@ const observe_inventory = (
   }
   /** The status stream has no stored snapshot: the bot itself is asked for its current one. */
   const want_status = () => {
-    void pubsub.mesh
-      .publish(mesh.agent_status_wanted(address), null)
-      .catch((error: unknown) => log.warn({ err: error }, 'agent status request failed'))
+    void pubsub.mesh.publish(mesh.agent_status_wanted(address), null)
   }
   void Promise.all([
     // What only the bot knows about this account arrives from the bot's own socket, through the mesh.
@@ -167,9 +165,7 @@ export default {
     })
     // A status speaks only for the address that signed this socket; the server relays it and keeps nothing.
     const relay = (status: AgentStatus | null) => {
-      void context.pubsub.mesh
-        .publish(mesh.agent_status(context.address), status)
-        .catch((error: unknown) => log.warn({ err: error }, 'agent status relay failed'))
+      void context.pubsub.mesh.publish(mesh.agent_status(context.address), status)
     }
     let sharing = false
     context.events.on('packet/agent_status', ({ status }) => {

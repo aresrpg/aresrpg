@@ -131,6 +131,20 @@ test('cluster online unions rolling pod snapshots instead of summing duplicate p
   expect(() => cluster_online_count(['broken'])).toThrow()
 })
 
+test('a failed publish resolves: an unawaited caller can never turn it into a process exit', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const offline: BusRedis = {
+    ...publisher.redis,
+    publish: async () => {
+      throw new Error('Reached the max retries per request limit')
+    },
+  }
+  const mesh = create_mesh_bus({ subscriber: subscriber.redis, publisher: offline })
+
+  expect(await mesh.publish('pos:w:0:0', { kind: 'leave' })).toBeUndefined()
+})
+
 test('a refused watch rolls back completely so the next attempt really subscribes', async () => {
   const subscriber = fake_redis()
   const publisher = fake_redis()
@@ -150,6 +164,31 @@ test('a refused watch rolls back completely so the next attempt really subscribe
   expect(watcher.has('pos:w:0:0')).toBe(false)
   await watcher.watch('pos:w:0:0', () => undefined)
   expect(attempts).toBe(2)
+})
+
+test('a refused watch that its caller only discards never becomes an unhandled rejection', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const offline: BusRedis = {
+    ...subscriber.redis,
+    subscribe: async () => {
+      throw new Error('offline')
+    },
+  }
+  const mesh = create_mesh_bus({ subscriber: offline, publisher: publisher.redis })
+  const graph = create_graph_bus({ subscriber: offline, publisher: publisher.redis, on_lost: () => undefined })
+  const watcher = create_watcher({ graph, mesh })
+  const unhandled: unknown[] = []
+  const record = (reason: unknown) => unhandled.push(reason)
+  process.on('unhandledRejection', record)
+  try {
+    void watcher.watch('pos:w:0:0', () => undefined)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  } finally {
+    process.off('unhandledRejection', record)
+  }
+  expect(unhandled).toEqual([])
+  expect(watcher.has('pos:w:0:0')).toBe(false)
 })
 
 test('the graph bus reads the indexer checkpoint marker from ITS OWN redis', async () => {

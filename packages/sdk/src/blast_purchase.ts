@@ -2,7 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { bcs } from '@mysten/sui/bcs'
 import { Transaction, coinWithBalance } from '@mysten/sui/transactions'
-import { isValidSuiObjectId, normalizeSuiObjectId, SUI_TYPE_ARG } from '@mysten/sui/utils'
+import {
+  isValidSuiObjectId,
+  normalizeStructTag,
+  normalizeSuiObjectId,
+  parseStructTag,
+  SUI_TYPE_ARG,
+} from '@mysten/sui/utils'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
 import { blast_config, create_blast_reader, type BlastConfig, type BlastPhase } from './blast.ts'
@@ -67,12 +73,24 @@ export const create_blast_claim_transaction = (config: BlastPurchaseConfig, send
   return tx
 }
 
+/** Blast's shared library owns the generic `PackageVersion`; its one type argument is the witness of
+ * the package it versions. That witness, not the library's address, binds it to the pinned presale. */
+const versions_package = (type: string, package_original: string): boolean => {
+  const { module, name, typeParams } = parseStructTag(type)
+  const [witness] = typeParams
+  return (
+    module === 'package_version' &&
+    name === 'PackageVersion' &&
+    typeParams.length === 1 &&
+    typeof witness === 'object' &&
+    normalizeStructTag(witness) ===
+      normalizeStructTag(`${package_original}::blast_presale_package::BLAST_PRESALE_PACKAGE`)
+  )
+}
+
 const verify_version = async (client: SuiGrpcClient, config: BlastPurchaseConfig): Promise<void> => {
   const { object } = await client.core.getObject({ objectId: config.package_version })
-  if (
-    object.owner.$kind !== 'Shared' ||
-    object.type !== `${config.package_original}::blast_presale_package::PackageVersion`
-  )
+  if (object.owner.$kind !== 'Shared' || !versions_package(object.type, config.package_original))
     throw new Error('Blast version object belongs to another package')
 }
 

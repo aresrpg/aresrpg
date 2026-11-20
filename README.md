@@ -38,8 +38,8 @@ The endpoint must support SPL Token and Token-2022 account reads. Never use a `V
 for this credential. For local development, set the same server-only variable in the frontend's
 ignored local environment; Vite serves the same relay handler. Requests retain the site's Origin,
 so the upstream provider must allow that domain (including localhost when used locally).
-The relay admits bounded read requests only; LI.FI broadcasts signed Solana transactions through
-its separate public write RPC. The receiving Sui wallet remains fixed and has no bridge signer.
+The relay admits bounded read requests only; the player's Solana wallet signs and broadcasts the
+NEAR Intents deposit itself. The receiving Sui wallet remains fixed and has no bridge signer.
 
 ## Contributing
 

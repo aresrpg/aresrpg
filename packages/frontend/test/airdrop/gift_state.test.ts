@@ -2,7 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { initial_gift_state, reduce_gift, type GiftState, type GiftWallet } from '../../src/airdrop/gift_state.ts'
+import {
+  gift_needs_funding,
+  initial_gift_state,
+  reduce_gift,
+  type GiftState,
+  type GiftWallet,
+} from '../../src/airdrop/gift_state.ts'
+import { gift_presentation } from '../../src/airdrop/gift_presentation.ts'
 import { is_gift_entry, gift_link_from_url } from '../../src/airdrop/gift_intent.ts'
 import { carousel_crossings, carousel_plan, carousel_progress, BOX_SPIN_MS } from '../../src/characters/box_carousel.ts'
 
@@ -18,7 +25,7 @@ const checked = (state: GiftState, stage: 'voucher' | 'crate' | 'reward') => {
   return reduce_gift(pending, {
     type: 'completed',
     task: pending.task!.id,
-    result: { kind: 'checked', status: { stage, proof } },
+    result: { kind: 'checked', status: { stage, proof }, balance: null },
   })
 }
 
@@ -36,7 +43,7 @@ test('printed gift routes and fragment-bearing claim routes bypass the game entr
 test('a failed automatic redemption stops until an explicit retry', () => {
   const started = checked(ready(), 'voucher')
   expect(started.task?.kind).toBe('redeem')
-  const failed = reduce_gift(started, { type: 'failed', task: started.task!.id, error: 'sponsor_unavailable' })
+  const failed = reduce_gift(started, { type: 'failed', task: started.task!.id, error: 'unavailable' })
   const refreshed = checked(failed, 'voucher')
   expect(failed.task).toBeNull()
   expect(refreshed.task?.kind).toBe('redeem')
@@ -53,7 +60,7 @@ test('restoring a session checks status without submitting transactions', () => 
     const state = reduce_gift(restored, {
       type: 'completed',
       task: restored.task!.id,
-      result: { kind: 'checked', status: { stage, proof } },
+      result: { kind: 'checked', status: { stage, proof }, balance: null },
     })
     expect(state.task).toBeNull()
   }
@@ -140,4 +147,35 @@ test('an uncertain opening is never repeated when recovery still sees the old cr
   const opening = reduce_gift(checked(ready(), 'crate'), { type: 'request', kind: 'open' })
   const uncertain = reduce_gift(opening, { type: 'failed', task: opening.task!.id, error: 'uncertain' })
   expect(checked(uncertain, 'crate').task).toBeNull()
+})
+
+test('below 0.1 SUI the gift waits on the fund step and no paid step can start', () => {
+  const pending = reduce_gift(ready(), { type: 'request', kind: 'check' })
+  const unfunded = reduce_gift(pending, {
+    type: 'completed',
+    task: pending.task!.id,
+    result: { kind: 'checked', status: { stage: 'voucher', proof }, balance: 99_999_999n },
+  })
+  expect(unfunded.task).toBeNull()
+  expect(gift_needs_funding(unfunded)).toBe(true)
+  expect(gift_presentation(unfunded).screen).toBe('funding')
+  expect(reduce_gift(unfunded, { type: 'request', kind: 'redeem' })).toBe(unfunded)
+  const recheck = reduce_gift(unfunded, { type: 'request', kind: 'check' })
+  const funded = reduce_gift(recheck, {
+    type: 'completed',
+    task: recheck.task!.id,
+    result: { kind: 'checked', status: { stage: 'voucher', proof }, balance: 100_000_000n },
+  })
+  expect(funded.task?.kind).toBe('redeem')
+})
+
+test('a collected or missing gift never asks for funding', () => {
+  const pending = reduce_gift(ready(), { type: 'request', kind: 'check' })
+  const done = reduce_gift(pending, {
+    type: 'completed',
+    task: pending.task!.id,
+    result: { kind: 'checked', status: { stage: 'collected', proof }, balance: 0n },
+  })
+  expect(gift_needs_funding(done)).toBe(false)
+  expect(gift_presentation(done).screen).toBe('reward')
 })

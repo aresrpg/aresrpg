@@ -734,6 +734,30 @@ settings_page:
   suins_write_failed: 'La modification du nom n’a pas pu être confirmée. Actualisez avant de réessayer.'
   suins_unavailable: "Les noms ne peuvent pas être modifiés ici pour le moment : le service de bot qui reçoit le nom de votre agent est indisponible. Rien n'a été modifié."
   suins_wallet_required: 'Connectez-vous pour choisir un nom.'
+  import_title: 'Importer depuis un autre portefeuille'
+  import_hint: 'Déplacez les personnages et les objets d’un autre portefeuille Sui qui vous appartient vers votre compte de jeu.'
+  import_open: 'Importer des personnages et des objets'
+  import_connect: 'Connectez le portefeuille qui contient vos personnages et vos objets.'
+  import_loading: 'Lecture du portefeuille…'
+  import_empty: 'Ce portefeuille ne contient aucun personnage ni objet à importer.'
+  import_characters: 'Personnages'
+  import_items: 'Objets'
+  import_fee: 'Frais de transfert'
+  import_fee_note: 'Votre portefeuille de jeu paie ces frais. Les frais de réseau s’ajoutent.'
+  import_pending: 'Un import précédent est inachevé. Il est terminé en premier.'
+  import_left_roster: 'Personnages laissés dans le portefeuille car votre équipe est complète : {count}'
+  import_left_listed: 'Éléments laissés dans le portefeuille car ils sont en vente : {count}. Annulez la vente pour les importer.'
+  import_start: 'Importer'
+  import_running: '{moved} sur {total} déplacés…'
+  import_sign_source: 'Approuvez la demande dans {wallet}. Une grande collection demande plusieurs approbations.'
+  import_sign_owner: 'Réception dans votre portefeuille de jeu…'
+  import_done: 'Personnages et objets déplacés : {count}. Ils apparaissent bientôt dans votre inventaire.'
+  import_done_close: 'Terminé'
+  import_source_funding: '{wallet} a besoin d’environ {amount} SUI pour les frais de réseau. Ajoutez des SUI, puis vérifiez à nouveau le portefeuille.'
+  import_owner_funding: 'Votre portefeuille de jeu a besoin de plus de SUI pour recevoir ces éléments. Ajoutez des fonds, puis vérifiez à nouveau le portefeuille.'
+  import_busy: 'Une autre transaction est en cours. Attendez sa fin, puis réessayez.'
+  import_resumable: 'Rien n’est perdu. Vérifiez à nouveau le portefeuille pour terminer l’import.'
+  import_retry: 'Vérifier à nouveau le portefeuille'
   day_night_cycle_label: Cycle jour/nuit
   day_night_cycle_hint: Désactivez pour garder le monde à midi.
   title: 'Paramètres'
@@ -3075,6 +3099,9 @@ gift_page:
   welcome_title: 'Un cadeau pour commencer l’aventure'
   welcome_body: 'Votre carte donne accès à l’une des {{count}} Sui Crates de Basecamp. Recevez la vôtre.'
   save_hint: 'Connectez-vous pour garder votre cadeau, même si vous jouez plus tard.'
+  funding_title: 'Ajoutez d’abord un peu de SUI'
+  funding_body: 'Réclamer, ouvrir et récupérer votre cadeau coûtent chacun de petits frais de réseau. Envoyez au moins {{amount}} SUI sur votre compte de jeu ci-dessous, puis continuez.'
+  funding_check: 'J’ai ajouté des SUI'
   edition: 'Édition Basecamp · {{count}} cadeaux'
   contents_title: 'Dans votre caisse'
   contents_count: '1 surprise · {{count}} possibilités'
@@ -3117,7 +3144,6 @@ gift_page:
   error_invalid: 'Ce lien est incomplet ou invalide. Scannez à nouveau le QR code d’origine.'
   error_ineligible: 'Ce cadeau n’est pas éligible ici, ou son état a changé. Vérifiez son statut.'
   error_unauthorized: 'Reconnectez-vous avec le compte Google utilisé pour recevoir ce cadeau.'
-  error_sponsor_unavailable: 'La transaction n’a pas pu être préparée. Votre cadeau est conservé. Réessayez plus tard.'
   error_unavailable: 'Cette étape n’a pas abouti. Continuez pour réessayer.'
   error_uncertain: 'Votre dernière action n’est pas encore confirmée. Vérifiez son statut : aucune autre caisse ne sera ouverte.'
   error_login: 'La connexion n’a pas abouti. Réessayez. Si la fenêtre a été bloquée, ouvrez ce lien dans Safari ou Chrome.'
@@ -3531,6 +3557,7 @@ landing_page:
     signed_in: Connecté avec {{address}}
     failed: La connexion n’a pas abouti. Réessayez.
     logout: Se déconnecter
+    dev_only: 'Réservé au développement. Déconseillé pour jouer.'
   hero:
     eyebrow:
       - Protocole de MMORPG tactique
@@ -3761,7 +3788,10 @@ landing_page:
     colophon: un monde, des interfaces sans limite
 
 telegram_companion:
-  connect_google: '🔑 Google'
+  welcome: "⚔️ Bienvenue dans AresRPG\n\nVos héros vivent on-chain. Depuis ce chat, vous les suivez, vous choisissez une stratégie, et ils combattent et récoltent pour vous.\n\nPour commencer, connectez-vous avec Google. La page s’ouvre dans votre navigateur et prend quelques secondes."
+  open_login: '🌐 Ouvrir la page de connexion'
+  disconnect: '🔓 Déconnecter Google'
+  connect_google: '🔑 Se connecter avec Google'
   waiting: 'Votre compte de jeu n’a pas encore accès à Telegram. Rejoignez la liste d’attente pour le demander.'
   on_waitlist: '✅ Vous êtes sur la liste d’attente. Utilisez « Vérifier l’accès » pour voir si votre compte de jeu a été admis.'
   join_waitlist: 'Rejoindre la liste d’attente'
@@ -3784,12 +3814,10 @@ telegram_companion:
   back: '☰ Menu'
   status: '📍 État'
   approve: '✅ Autoriser'
-  link: '🔑 Utilisez /link pour connecter Google dans votre navigateur'
-  linked: '✅ Google associé · /menu'
+  link: '🔑 Votre page de connexion est prête. Elle s’ouvre dans votre navigateur.'
+  linked: '✅ Google associé'
   unlinked: '🔓 Liaison supprimée'
-  confirm: 'Envoyez la commande ci-dessous dans votre chat Telegram pour terminer la liaison.'
-  confirm_warning: 'Ne partagez pas ce code. Confirmez uniquement une connexion que vous avez lancée vous-même.'
-  browser_expired: 'Cette page a expiré. Retournez sur Telegram et utilisez /link pour vous reconnecter.'
+  browser_expired: 'Cette page a expiré. Retournez sur Telegram et reconnectez-vous.'
   check_status: '📍 Voir le statut'
   log_in_again: '🔑 Se reconnecter'
   balance: '💰 Solde de l’agent'
@@ -3801,9 +3829,9 @@ telegram_companion:
   choose_strategy: 'Choisissez une stratégie'
   failure_changed: 'Cela a été mis à jour. Voici l’état actuel.'
   failure_reconnect: 'Votre connexion a expiré. Reconnectez-vous :'
-  failure_unlink_first: 'Ce chat ou ce compte Google est déjà connecté, ou une connexion est encore ouverte. Utilisez /unlink, puis réessayez.'
+  failure_unlink_first: 'Ce chat ou ce compte Google est déjà connecté, ou une connexion est encore ouverte. Déconnectez Google, puis réessayez.'
   failure_temporary: 'Cela n’a pas fonctionné cette fois. Réessayez dans un instant.'
-  failure_busy: 'Ce personnage termine encore une action, ou l’agent est en pause. Si vous l’avez mis en pause, utilisez /resume, puis consultez le statut.'
+  failure_busy: 'Ce personnage termine encore une action, ou l’agent est en pause. Si vous l’avez mis en pause, reprenez-le, puis consultez le statut.'
   failure_run_limit: 'Votre agent dirige déjà autant de personnages qu’il le peut. Arrêtez-en un, puis lancez celui-ci.'
   review: 'Vérifiez cette stratégie'
   effects: 'Combat les groupes d’un monstre dans cette ville jusqu’à l’arrêt. Chaque action coûte du gas SUI, sans plafond total. Victoire non garantie ; un redémarrage peut répéter une étape. L’arrêt n’annule pas les actions envoyées.'
@@ -3815,7 +3843,7 @@ telegram_companion:
   attention: 'La stratégie demande votre attention. Vérifiez votre personnage en jeu, puis consultez Statut ou Arrêter.'
   unknown: 'Le résultat n’est pas encore confirmé. Consultez d’abord le statut.'
   city_review: 'Ville : {city}'
-  city_required: 'Entrez dans une ville en jeu, puis revenez avec /menu.'
+  city_required: 'Entrez dans une ville en jeu, puis ouvrez le menu et vérifiez à nouveau.'
   enable_agent: '🔑 Activer l’agent'
   play_consent: 'Votre compte de jeu est admis. Autorisez l’agent pour continuer.'
   world_review: 'Monde : {world}'
@@ -3997,11 +4025,8 @@ dapp_page:
   unavailable_title: 'Le service automatisé ne répond pas'
   unavailable_body: 'Veuillez utiliser le monde 3D pour le moment.'
   unavailable_action: 'Ouvrir le monde 3D'
-  connect_title: 'Connectez votre bot hébergé'
-  connect_body: 'Votre bot joue vos héros à votre place. Autorisez cette page à lancer et arrêter ses activités.'
-  connect_custody: 'Le compte de votre bot est détenu conjointement par votre compte Google et AresRPG : chacun peut signer, et vous pouvez toujours reprendre vos héros.'
-  connect_fees: "Chaque action est une transaction Sui payée avec le solde du bot. Les activités continuent jusqu'à ce que vous les arrêtiez ou que le solde soit épuisé."
-  connect_stop: 'Cette page peut faire jouer et mettre en pause votre bot, et commercer sur le marché avec son solde. Elle ne peut pas retirer vos SUI.'
+  connect_title: "Votre bot n'est pas connecté"
+  connect_body: 'Connectez-le pour envoyer vos héros.'
   connect_action: 'Connecter'
   connect_busy: 'Connexion…'
   reading_heroes: 'Lecture de vos héros…'

@@ -16,7 +16,7 @@ export const SuinsConfirmation = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <GameWindow
         title={t('suins_confirm_title')}
         close={cancel}
-        close_label={copy.ui.close}
+        close_label={copy.wallet_close}
         className="aui-confirm [&>header]:shrink-0"
       >
         <div className="min-h-0 space-y-4 overflow-y-auto break-words px-5 py-4 text-xs leading-6 text-muted">
@@ -35,7 +35,7 @@ export const SuinsConfirmation = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </div>
         <div className="aui-confirm-actions shrink-0 flex-wrap gap-3">
           <Button type="button" onClick={cancel}>
-            {copy.ui.cancel}
+            {copy.ui.agent_cancel}
           </Button>
           <Button type="button" tone="primary" onClick={() => dispatch_app({ type: 'suins/confirm' })}>
             {t('suins_confirm_apply')}

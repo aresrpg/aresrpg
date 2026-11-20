@@ -282,7 +282,7 @@ Speaking actors face the listener, and caption context-menu picking uses the cap
 projected bounds. Speech wraps whole words, with grapheme fallback for long unbroken text.
 
 The `/kares` page uses the same app entry as other routes and the `LightPage` shell. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one optional selected wallet shared by funding, admin royalties,
-staking, tournament administration, and gift import. Sui Wallet Standard, including Slush's web wallet,
+staking, tournament administration, gift import, and the Settings import of another wallet's characters and items. Sui Wallet Standard, including Slush's web wallet,
 provides Sui sessions; Privy connects existing EVM and Solana wallets without authenticating the game or
 creating embedded wallets. Privy’s wallet picker owns the Ethereum and Solana selection. Disconnect waits for the Solana provider to finish and clears remembered selection.
 Sui-only features derive their signing capability from the selected session;
@@ -1751,27 +1751,15 @@ attempt never creates an automatic retry timer.
 Voucher pre/post ownership invalidates both custodians through the indexer, including plain transfers
 without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
-which survives Google login without reaching the server. The printed URLs remain unchanged. A dedicated sponsor pays for the fixed zkSend voucher transport;
-the QR key signs in the browser and never reaches the gateway. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
-`/api/gift` gateway for sponsored transfer, redemption, opening and collection. Confirmed SDK receipts advance the gift reducer directly; gateway status is used only for restoration and explicit recovery. Restoring a session only checks
-status; it does not automatically submit another transaction. Uncertain submissions use the existing SDK
-transaction tracking; there is no separate gift journal. One explicit continuation checks current state and resumes the unfinished step. The gift page hands players to the normal game entry, which owns character selection and creation. Character creation and ordinary gameplay keep their normal SUI costs.
-
-Read-only gift status is public and does not request a wallet signature. For sponsorship, the gateway
-verifies an expiring wallet signature over the complete intent, resolves campaign membership
-from seed-derived voucher identities, and proves each descendant crate/claim through certified receipts.
-It accepts fixed operations, never caller-built transaction bytes. Transfer proves one campaign voucher
-in the supplied public bag, fixes its recipient to the authenticated account, and rejects other assets. The SDK composes each PTB, and the
-server builds gas data using a lightly funded signer and returns its signature for those exact bytes.
-The SDK verifies the sponsor signature, obtains the sender signature, and submits both through its
-existing execution boundary. There is no execution relay or gas pool. Both server and SDK
-validate the sponsored envelope and simulate before signing; sponsor gas never becomes player-paid gas
-in the wallet ledger. The sponsor private key exists only in the server environment. Enoki remains the login provider. Node function entry points import SDK
-source by relative path so Vercel rewrites TypeScript extensions; workspace exports retain their source extensions.
-Gift status is a narrow SDK read exception: current voucher/claim custody and exact receipt provenance,
-with bounded archived event hints for recovery. Historical single-gift receipts may use GraphQL after
-gRPC pruning; their validated fixed PTBs emit fewer than its fifty-event cap. Historical package calls
-must prove the same original game lineage. Signed write receipts still require gRPC.
+which survives Google login without reaching the server. They boot the lightweight gift page: its own
+reducer walks claim, crate and reveal without the app store or a renderer. Every step is player-paid.
+The bearer link moves the voucher through the same zkSend claim as every other gift link; the player's
+wallet signs and pays redemption, opening and collection through the SDK's ordinary execution. Below
+0.1 SUI (`GIFT_FUNDING_MIST`) the page stops before any step and shows the account's SUI address;
+each status check rereads the balance. Status is a narrow SDK chain read: current voucher, crate and
+claim custody, proven through certified receipts of the seed-authored campaign, with bounded GraphQL
+event hints for recovery after gRPC pruning. A confirmed receipt advances the reducer directly;
+restoring a session only checks status and never submits. No gift sponsor or gateway exists.
 The shared box presentation preloads and decodes its box and reward images before starting charge, burst, carousel and reveal from the confirmed result. Failed artwork skips the carousel so a confirmed reward remains accessible. The reveal plays the existing level-up cue once; restoring a reward never replays it. Each reel
 contains the authored reward pool and lands on that result; one lead reel schedules overlapping recorded
 ticks for batches. Skip and teardown cancel its sounds, while reduced motion shows the result directly.

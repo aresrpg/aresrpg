@@ -7,6 +7,7 @@ use aresrpg::{api, item::{Self, Item}, mastery::{Self, MasteryOffer}, version};
 use aresrpg_control::admin::{Self, AdminCap};
 use aresrpg_rewards::{amounts as kares, economy::{Self, Economy}, test_coin::{Self, TEST_COIN as KARES}};
 use aresrpg_seed::{item_rows::{Self, ItemTemplate}, registry::{Self, Registry}};
+use kiosk::personal_kiosk::{Self, Borrow, PersonalKioskCap};
 use sui::{
   coin::Coin,
   coin_registry::Currency,
@@ -30,6 +31,8 @@ public struct Fixture {
   payment: Coin<KARES>,
   kiosk: Kiosk,
   kiosk_cap: KioskOwnerCap,
+  personal: PersonalKioskCap,
+  borrow: Borrow,
   policy: TransferPolicy<Item>,
   policy_cap: TransferPolicyCap<Item>,
   publisher: Publisher,
@@ -51,17 +54,21 @@ fun fixture(cost: u64): Fixture {
   let economy = economy::economy_for_testing<KARES>(object::id(&currency), @0x0.to_id(), scenario.ctx());
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
-  let (kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
-  Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher }
+  let (mut kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, kiosk_cap, scenario.ctx());
+  let (kiosk_cap, borrow) = personal.borrow_val();
+  Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, personal, borrow, policy, policy_cap, publisher }
 }
 
 fun finish(fixture: Fixture) {
-  let Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher } = fixture;
+  let Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, personal, borrow, policy, policy_cap, publisher } = fixture;
   test_scenario::return_shared(offer);
   test_scenario::return_to_address(@0xC, currency);
   transfer::public_transfer(payment, OWNER);
   transfer::public_share_object(kiosk);
-  transfer::public_transfer(kiosk_cap, OWNER);
+  std::unit_test::destroy(kiosk_cap);
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   transfer::public_share_object(policy);
   transfer::public_transfer(policy_cap, OWNER);
   publisher.burn();

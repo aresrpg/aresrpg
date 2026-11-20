@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useRef } from 'react'
+import { GIFT_FUNDING_MIST } from '@aresrpg/sdk/gift'
 
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { items_by_type } from '../content/items.ts'
+import { format_sui } from '../wallet_amount.ts'
 import { BoxRevealCell, type BoxPhase, type BoxResult } from '../characters/BoxRevealCell.tsx'
 
 import type { gift_content } from './gift_content.ts'
@@ -38,7 +40,9 @@ export const GiftScene = ({
       <h2 ref={heading} tabIndex={-1}>
         {text(view.title, { count: content.count, item: reward })}
       </h2>
-      <p className="gift-intro">{text(view.body, { count: content.count, item: reward })}</p>
+      <p className="gift-intro">
+        {text(view.body, { count: content.count, item: reward, amount: format_sui(GIFT_FUNDING_MIST, 1) })}
+      </p>
       {view.art && (
         <div className={`boxreveal gift-art ${phase === 'spinning' ? 'gift-art--carousel' : ''}`} data-phase={phase}>
           <BoxRevealCell

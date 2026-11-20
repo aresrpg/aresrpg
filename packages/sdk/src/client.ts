@@ -37,7 +37,6 @@ import {
   type TransactionStorage,
   type TransactionJournal,
 } from './transaction_execution.ts'
-import { create_sponsored_execution } from './sponsored_execution.ts'
 import { transaction_resolution_error } from './transaction_error.ts'
 
 export { doors, type Pins }
@@ -419,6 +418,11 @@ export function SDK({
     }
   }
 
+  // A kiosk created by this session's own certified receipt. Ownership listings can lag behind it.
+  let created_personal_kiosk: KioskOwnerCap | null = null
+  const remember_created_kiosk = (receipt: Receipt): void => {
+    if (failure_of(receipt) === null) created_personal_kiosk ??= receipt_personal_kiosk_cap(receipt)
+  }
   const execution = create_transaction_execution({
     core: sui_client.core,
     key: `aresrpg:transaction:${network}:${sender}`,
@@ -433,6 +437,7 @@ export function SDK({
       }
       if (sender) balance.invalidate(sender)
       absorb_receipt(cache, receipt)
+      remember_created_kiosk(receipt)
       const execution: TransactionExecution = {
         digest: receipt_digest(receipt),
         outcome: failure_of(receipt) === null ? 'success' : 'failure',
@@ -497,12 +502,6 @@ export function SDK({
 
   const execute = (tx: Transaction, options: Readonly<Parameters<typeof execute_now>[1]> = {}): Promise<Receipt> =>
     execution.enqueue(() => execute_now(tx, options))
-  const sponsored = create_sponsored_execution({
-    address: sender,
-    sign,
-    execution,
-    simulate: (transaction) => sui_client.core.simulateTransaction({ transaction, include: { effects: true } }),
-  })
 
   const execute_personal_kiosk = async (
     tx: Transaction,
@@ -556,11 +555,6 @@ export function SDK({
     door_context: ctx,
     doors: bound_doors,
     execute,
-    execute_sponsored: (...args: Parameters<typeof sponsored>) =>
-      execution.enqueue(() => {
-        require_write_transport(sui_client)
-        return sponsored(...args)
-      }),
     is_transaction_idle: execution.is_transaction_idle,
     recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
     synchronize_transactions: () => execution.enqueue(execution.before_next),
@@ -576,6 +570,7 @@ export function SDK({
       return BigInt(result.balance.balance)
     },
     gas_spent_24h: gas_ledger.spent_24h,
+    created_personal_kiosk: (): KioskOwnerCap | null => created_personal_kiosk,
     on_transaction: (listener: (execution: TransactionExecution) => void): (() => void) => {
       transaction_listeners.add(listener)
       return () => {

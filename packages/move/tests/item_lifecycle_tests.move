@@ -7,6 +7,7 @@ use aresrpg::{item, protected_policy};
 use aresrpg_control::admin;
 use aresrpg_math::item_stats;
 use aresrpg_seed::{item_rows, registry};
+use kiosk::personal_kiosk;
 use sui::{kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 #[test]
@@ -17,6 +18,8 @@ fun authenticated_drop_plans_deliver_stacks_and_separate_gear_objects() {
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, policy_cap) = transfer_policy::new<item::Item>(&publisher, scenario.ctx());
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   let wool = item_rows::template_for_testing(b"wool".to_string(), b"resource".to_string(), scenario.ctx());
   let hat = item_rows::template_for_testing(b"hat".to_string(), b"hat".to_string(), scenario.ctx());
   let mut plans = vector[item::prepare_plan(&hat, option::none()), item::prepare_plan(&wool, option::none())];
@@ -26,7 +29,8 @@ fun authenticated_drop_plans_deliver_stacks_and_separate_gear_objects() {
   item::deliver_drops(&mut plans, &b"hat".to_string(), 3, &mut kiosk, &cap, &policy, &mut rng, scenario.ctx());
   assert!(plans.is_empty() && kiosk.item_count() == 4, 1);
   transfer::public_share_object(kiosk);
-  transfer::public_transfer(cap, @0xA);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   transfer_policy::destroy_and_withdraw(policy, policy_cap, scenario.ctx()).into_balance().destroy_zero();
   publisher.burn();
   item_rows::destroy_for_testing(wool);

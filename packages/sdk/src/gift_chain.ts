@@ -158,7 +158,7 @@ const personal_cap = async (sdk: Sdk, address: string, kiosk?: string): Promise<
   return cap
 }
 
-/** The gateway accepts intent, never transaction bytes; the SDK composes its three fixed PTBs. */
+/** The SDK composes the three fixed gift PTBs; the player's wallet signs and pays for each. */
 export const build_gift_transaction = async (
   sdk: Sdk,
   policy: GiftPolicy,
@@ -206,8 +206,6 @@ export const build_gift_transaction = async (
         existing: null,
       })
   }
-  // Resolves only kind inputs. The player's empty gas balance is irrelevant.
-  const kind = await tx.build({ client: sdk.sui_client as never, onlyTransactionKind: true })
   validate_gift_transaction(policy, action, tx.getData(), status)
-  return { tx, kind }
+  return tx
 }

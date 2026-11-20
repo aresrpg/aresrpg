@@ -5,7 +5,7 @@
 
 import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
-import { HTTP_DOOR, admit_visitor, create_request_limiter } from '@aresrpg/protocol/request-limiter'
+import { HTTP_DOOR, admit_visitor, create_request_limiter, visitor_of } from '@aresrpg/protocol/request-limiter'
 
 import { create_allocation } from './allocation/runtime.ts'
 import { create_public_market } from './public_market.ts'
@@ -84,21 +84,20 @@ const http_routes = new Map<
   (request: Request, server: Readonly<import('bun').Server<ConnectionData>>) => Response | Promise<Response>
 >([
   ['/health', () => new Response('ok')],
-  [
-    '/api/allocation',
-    (request) => {
-      if (!admit_visitor(http_limiter, request)) return new Response('rate limited', { status: 429 })
-      return allocation.http(request)
-    },
-  ],
+  ['/api/allocation', (request) => allocation.http(request)],
 ])
+const rate_limited = () => new Response('rate limited', { status: 429 })
+/** The public door: every request, the socket upgrade included, takes the visitor's own allowance
+ * before any route (DECISIONS: RATE LIMITING IS ONE DOOR; audit SERVER-1). */
+const route_of = (request: Request, pathname: string) =>
+  admit_visitor(http_limiter, request) ? http_routes.get(pathname) : rate_limited
 
 const server = Bun.serve<ConnectionData>({
   port: PORT,
   maxRequestBodySize: 64 * 1024,
   async fetch(request, bun_server) {
     const url = new URL(request.url)
-    const route = http_routes.get(url.pathname)
+    const route = route_of(request, url.pathname)
     if (route) return route(request, bun_server)
     if (url.pathname !== '/') return new Response('not found', { status: 404 })
 
@@ -108,7 +107,7 @@ const server = Bun.serve<ConnectionData>({
     if (!claimed_address || !isValidSuiAddress(claimed_address)) return new Response('invalid address', { status: 401 })
     const address = normalizeSuiAddress(claimed_address)
     if (bans.is_banned(address)) return new Response('cooling off', { status: 403 })
-    const release_pending = pending.reserve()
+    const release_pending = pending.reserve(visitor_of(request))
     if (!release_pending) return new Response('authentication full', { status: 503 })
     try {
       const upgraded = bun_server.upgrade(request, { data: { address, release_pending } })

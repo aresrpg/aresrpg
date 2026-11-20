@@ -3,6 +3,7 @@
 /// Item identity, quantity, and rolled stats. Templates and their authoring live in seed.
 module aresrpg::item;
 
+use aresrpg::character;
 use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg_math::{content_rules, item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
 use std::string::String;
@@ -225,6 +226,8 @@ public(package) fun can_merge(kiosk: &Kiosk, cap: &KioskOwnerCap, target_id: ID,
 }
 
 /// Deposit always delivers the minted item. Merge when the hint still fits; otherwise lock a new stack.
+/// The one mint door enforces personal custody: the item policy's personal-kiosk rule gates trades
+/// only, so an Item minted into a plain kiosk could never be claimed out of a settled Trade.
 public(package) fun deposit(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -232,6 +235,7 @@ public(package) fun deposit(
   existing: Option<ID>,
   minted: Item,
 ) {
+  character::assert_personal_custody(kiosk);
   if (existing.is_some() && can_merge(kiosk, cap, *existing.borrow(), &minted)) {
     let target: &mut Item = kiosk.borrow_mut(cap, *existing.borrow());
     target.merge(minted);

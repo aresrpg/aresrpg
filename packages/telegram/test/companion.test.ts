@@ -45,7 +45,7 @@ const plain = (step: Step) => shown(step).text.replaceAll('\\', '')
 const data = (step: Step) =>
   shown(step)
     .reply_markup.inline_keyboard.flat()
-    .map((button) => button.callback_data)
+    .map((button) => ('url' in button ? button.url : button.callback_data))
 const labels = (step: Step) =>
   shown(step)
     .reply_markup.inline_keyboard.flat()

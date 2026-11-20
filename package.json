@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "git config core.hooksPath scripts/githooks",
+    "prepare": "git config --unset core.hooksPath || true; cp scripts/githooks/pre-commit \"$(git rev-parse --git-path hooks)/pre-commit\"",
     "preversion": "bun scripts/release_preflight.mjs",
     "postversion": "git push origin edge --follow-tags",
     "dev:app": "bun run --cwd packages/frontend dev --host 127.0.0.1 --port 5173 --strictPort",

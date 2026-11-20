@@ -16,6 +16,7 @@ import {
 
 import { id } from './helpers/transport.ts'
 import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
+import live from './fixtures/blast_presale_live.mainnet.json' with { type: 'json' }
 
 // Mainnet object 0x091759…facba, version 1056407653, captured 2026-10-21 via gRPC.
 test('deployed Blast derives its commitment window from start and duration', () => {
@@ -172,4 +173,18 @@ test('a commitment is two little-endian u64 values and a missing field means not
   expect(await reader.commitment(id(5))).toBeNull()
   failure = new Error('rpc down')
   await expect(reader.commitment(id(5))).rejects.toThrow('rpc down')
+})
+
+// Mainnet object 0x247165…2b57e, version 1099635701, captured 2026-11-20 via gRPC: Blast's live deployment.
+test('a sale of the live Blast deployment decodes with the same fields', () => {
+  const sale = decode_blast_presale(live.objects[0]!.json)
+  expect(sale).toEqual({
+    lifecycle: 'Migrated',
+    total_commitments: 3000000000000n,
+    raise_target: 3000000000000n,
+    start_ms: 1795164360000n,
+    end_ms: 1795164432939n,
+    token_allocation: 450000000000000n,
+  })
+  expect(project_blast_presale(sale, 1795164432939n, '1099635701').phase).toBe('complete')
 })

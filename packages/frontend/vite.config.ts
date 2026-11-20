@@ -30,7 +30,6 @@ import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
 import { portrait_dev_plugin } from './portrait_dev.ts'
-import { gift_dev_plugin } from './gift_dev.ts'
 import { deployment_build_config } from './deployment_assets.ts'
 import { public_pages_plugin } from './public_pages.ts'
 
@@ -155,7 +154,6 @@ export default defineConfig(({ mode, command }) => {
     plugins: [
       ...deployment.plugins,
       public_pages_plugin(),
-      gift_dev_plugin(loaded_env),
       portrait_dev_plugin(),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),

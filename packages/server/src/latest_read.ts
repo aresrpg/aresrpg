@@ -16,17 +16,6 @@ export const latest_keyed_reader = <T, Args extends readonly unknown[]>(
   }
 }
 
-export const latest_reader = <T>(read: () => Promise<T>, deliver: (value: T) => void) => {
-  let generation = 0
-  return (): Promise<void> => {
-    generation += 1
-    const current = generation
-    return read().then((value) => {
-      if (generation === current) deliver(value)
-    })
-  }
-}
-
 /** One active read and one shared pending refresh. A queued refresh suppresses the active
  * result; errors still reject the callers of that read. Pending refreshes run after either
  * outcome. Abort retires delivery and pending work, but cannot cancel an active graph read.

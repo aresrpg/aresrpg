@@ -228,7 +228,8 @@ const reconcile = async (
   )
   before_sign()
   try {
-    if (parent_wallet !== wallet) await wallet.suins.set_default(human.name, before_sign)
+    // `human` is the receipt of the write: the default steps trust it instead of reading the names again.
+    if (parent_wallet !== wallet) await wallet.suins.set_default(human.name, before_sign, human)
   } catch (error) {
     before_sign()
     console.warn('Names applied; player default remains pending.', error)
@@ -237,7 +238,7 @@ const reconcile = async (
   before_sign()
   context.dispatch({ type: 'suins/applied', request, name: human.name })
   try {
-    await wallet.set_agent_default(pairing, `aresrpgagent.${request.name}`, before_sign)
+    await wallet.set_agent_default(pairing, `aresrpgagent.${request.name}`, before_sign, human)
     return { type: 'suins/used', request, pending: null }
   } catch (error) {
     before_sign()

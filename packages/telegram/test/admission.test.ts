@@ -39,6 +39,7 @@ const setup = async (limiters: Limiters = {}) => {
       acknowledge: async () => undefined,
     },
     copy,
+    bot_username: 'fixture_bot',
     secret: 'fixture',
     max_request_bytes: 4096,
   })
@@ -115,7 +116,7 @@ test('one card per stage: log in, join the waitlist, on the waitlist, admitted; 
     return f.cards.at(-1)!
   }
   const said = (card: string, text: string) => expect(card.replaceAll('\\', '')).toContain(text)
-  said(await last(1, '/start'), en.link)
+  said(await last(1, '/start'), en.welcome)
   await f.identify()
   said(await last(2, '/start'), en.waiting)
   said(await last(3, '/join'), en.on_waitlist)
@@ -185,7 +186,7 @@ test('an owner removed while the listener runs meets the login card and leaves n
   expect(f.runtime.sessions.get(42)?.revision).toBe(1)
   await admission_command(['remove', identity.owner], cleanup_env, f.access, f.backend, async () => Response.json({}))
   await f.runtime.fetch(request(2, '/menu'))
-  expect(f.cards.at(-1)!.replaceAll('\\', '')).toContain(en.link)
+  expect(f.cards.at(-1)!.replaceAll('\\', '')).toContain(en.welcome)
   expect(f.runtime.sessions.has(42)).toBe(false)
   expect(await f.links.current(42)).toBeNull()
 })

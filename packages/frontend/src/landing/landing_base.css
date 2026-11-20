@@ -639,6 +639,71 @@
   background: var(--if-world);
   box-shadow: 0 0 8px var(--if-world);
 }
+/* Local and edge builds only: the sign-in choices open under the control as one quiet list. */
+.landing .landing-account[data-sign-in-menu] {
+  anchor-name: --landing-account;
+}
+.landing .landing-account[data-sign-in-menu] > svg {
+  color: var(--aui-muted);
+}
+.landing .landing-account-menu[popover] {
+  position: fixed;
+  position-anchor: --landing-account;
+  inset: calc(anchor(bottom) + 6px) anchor(right) auto auto;
+  margin: 0;
+  width: min(232px, calc(100vw - 32px));
+  padding: 4px;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background: var(--aui-raised);
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+}
+.landing .landing-account-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  font: 700 13px/1 var(--aui-font);
+  text-align: left;
+  cursor: pointer;
+}
+.landing .landing-account-menu button > svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+.landing .landing-account-menu button:hover,
+.landing .landing-account-menu button:focus-visible {
+  background: color-mix(in srgb, var(--aui-ink) 8%, transparent);
+  outline: none;
+}
+/* The development wallets sit under a hairline, with the reason they are not for play. */
+.landing .landing-account-menu > div {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--aui-ink) 10%, transparent);
+}
+.landing .landing-account-menu > div > button {
+  color: var(--aui-soft);
+}
+.landing .landing-account-menu p {
+  margin: 0;
+  padding: 4px 10px 8px;
+  color: var(--aui-muted);
+  font: 500 11px/1.45 var(--aui-font);
+}
+@supports not (anchor-name: --landing-account) {
+  .landing .landing-account-menu[popover] {
+    inset: 72px 16px auto auto;
+  }
+}
 .landing .landing-account-error {
   flex-basis: 100%;
   text-align: right;

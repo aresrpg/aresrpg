@@ -28,6 +28,9 @@ import { observed_character } from './player_agent_observation.ts'
 const log = logger(import.meta)
 
 const TRACKING_RADIUS = 1
+/** Windows follow movement on this clock, never on a move packet: a client oscillating across a
+ *  zone border costs at most one re-track per window per tick (audit SERVER-2). */
+export const ZONE_RECENTER_MS = 1_000
 /** The travel bucket banks at most this much time — the burst allowance between packets.
  *  (2026-08-20: pricing each packet against a re-anchored wall clock dropped legal walks —
  *  a network stall flushes buffered positions in ONE millisecond, and a zero-second window
@@ -40,6 +43,12 @@ const spiral = (zx: number, zz: number) =>
     zx: zx + ((index % (2 * TRACKING_RADIUS + 1)) - TRACKING_RADIUS),
     zz: zz + (Math.floor(index / (2 * TRACKING_RADIUS + 1)) - TRACKING_RADIUS),
   }))
+
+/** The `world:zx:zz` a tracking window is centred on; null for an absent or emptied window. */
+const window_center = (window?: Readonly<{ world: string; zones: readonly { zx: number; zz: number }[] }>) => {
+  const center = window?.zones[Math.floor(window.zones.length / 2)]
+  return center ? `${window!.world}:${center.zx}:${center.zz}` : null
+}
 
 /** The same mount, still standing? — a move/refit; anything else remounts whole. */
 const same_mount = (before: Embodied, current: Embodied) =>
@@ -149,11 +158,7 @@ export default {
         target.dungeon_run
       )
         return
-      const at = position_zone(position)
-      const current = windows.get(target.id)
-      const center = current?.zones[Math.floor(current.zones.length / 2)]
-      if (current?.world === position.world && center?.zx === at.zx && center.zz === at.zz) return
-      void track(target.id, position.world, spiral(at.zx, at.zz)).catch(tracking_failed)
+      drift.set(target.id, { world: position.world, ...position_zone(position) })
     }
     const tracking_failed = (error: unknown): void => {
       log.warn({ err: error }, 'observed world tracking failed')
@@ -166,6 +171,17 @@ export default {
     const seeds = new Map<string, string>()
     /** One tracking window per owned character; subscriptions are the union of these sets. */
     const windows = new Map<string, Readonly<{ world: string; zones: readonly { zx: number; zz: number }[] }>>()
+    /** Where each moving window should be centred; a move records it and does no IO. */
+    const drift = new Map<string, Readonly<{ world: string; zx: number; zz: number }>>()
+    const recenter = setInterval(() => {
+      for (const [id, { world, zx, zz }] of drift) {
+        const center = window_center(windows.get(id))
+        if (center !== null && center !== `${world}:${zx}:${zz}`)
+          void track(id, world, spiral(zx, zz)).catch(tracking_failed)
+      }
+      drift.clear()
+    }, ZONE_RECENTER_MS)
+    recenter.unref?.()
     events.on('action/friends', () => {
       const probes = new Set(
         [...windows.values()].flatMap(({ world, zones }) => zones.map(({ zx, zz }) => `${world}:${zx}:${zz}`))
@@ -373,7 +389,7 @@ export default {
       const previous_zone = zone_of(before.x, before.z)
       const current_zone = zone_of(current.x, current.z)
       if (current_zone.zx !== previous_zone.zx || current_zone.zz !== previous_zone.zz) {
-        void track(current.character_id, current.world, spiral(current_zone.zx, current_zone.zz))
+        drift.set(current.character_id, { world: current.world, ...current_zone })
         void pubsub.mesh.publish(mesh.pos(current.world, previous_zone.zx, previous_zone.zz), {
           kind: 'leave',
           character_id: current.character_id,
@@ -563,12 +579,7 @@ export default {
           if (!before_tracked.fight && current_tracked.fight) leave(before)
           else if (before_tracked.fight && !current_tracked.fight) appear(current)
           else if (!current_tracked.fight) move(before, current)
-          else {
-            const previous_zone = zone_of(before.x, before.z)
-            const current_zone = zone_of(current.x, current.z)
-            if (current_zone.zx !== previous_zone.zx || current_zone.zz !== previous_zone.zz)
-              void track(current.character_id, current.world, spiral(current_zone.zx, current_zone.zz))
-          }
+          else drift.set(current.character_id, { world: current.world, ...zone_of(current.x, current.z) })
           return
         }
         if (before) unmount(before)
@@ -581,6 +592,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
+      clearInterval(recenter)
       zone_watches.forEach((stop) => stop())
       for (const channel of watched()) unwatch(channel)
     })

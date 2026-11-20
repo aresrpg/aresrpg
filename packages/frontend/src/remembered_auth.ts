@@ -46,6 +46,10 @@ export const create_remembered_auth = <S extends Session = AuthSession>(
     /** A wallet was remembered when this surface started, whether or not it still restores. */
     returning: read_auth_wallet(storage) !== null,
     provider,
+    /** The installed wallets this surface may sign in with, or null where Google is the only sign-in. */
+    wallet_names: wallets
+      ? async (): Promise<readonly string[]> => (await provider()).wallets?.().map(({ name }) => name) ?? []
+      : null,
     /** Null when nothing is remembered. A wallet that no longer restores is forgotten before the failure surfaces. */
     restore: async (): Promise<S | null> => {
       const wallet_name = read_auth_wallet(storage)

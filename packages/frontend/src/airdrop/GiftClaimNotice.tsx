@@ -125,9 +125,10 @@ export const GiftClaimNoticeView = ({
 export const GiftClaimNotice = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const distribution = useAppStore((state) => state.distribution)
   const session = useAppStore((state) => state.session)
-  const dialog = useAppStore((state) => state.navigation.dialog)
+  // Add Funds is open while a funding cost is set; the notice steps aside for it.
+  const funding = useAppStore((state) => state.navigation.funding_cost_mist !== null)
   const { notice } = distribution
-  if (!session.wallet || !notice || dialog === 'top_up') return null
+  if (!session.wallet || !notice || funding) return null
   const close = (): void => dispatch_app({ type: 'distribution/notice_dismissed' })
   return (
     <ModalFrame close={close} close_label={copy.wallet_close} label={copy_text(copy.airdrop_page)('title')}>

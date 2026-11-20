@@ -74,6 +74,11 @@ import distribution, {
   type DistributionInput,
   type DistributionState,
 } from './modules/distribution.ts'
+import wallet_import, {
+  initial_wallet_import_state,
+  type WalletImportInput,
+  type WalletImportState,
+} from './modules/wallet_import.ts'
 import job_level_up, {
   initial_job_level_up_state,
   type JobLevelUpInput,
@@ -119,6 +124,7 @@ export type AppState = Readonly<{
   runeforge: RuneforgeState
   mastery: MasteryState
   distribution: DistributionState
+  wallet_import: WalletImportState
   job_level_up: JobLevelUpState
   suins: SuinsState
   dapp: DappState
@@ -156,6 +162,7 @@ export type AppInput =
   | RuneforgeInput
   | MasteryInput
   | DistributionInput
+  | WalletImportInput
   | ClaimsInput
   | JobLevelUpInput
   | SuinsInput
@@ -225,6 +232,7 @@ const MODULE_REGISTRY = [
   [runeforge, 'player'],
   [mastery, 'player'],
   [distribution, 'player'],
+  [wallet_import, 'player'],
   [job_level_up, 'player'],
   [dapp, 'dapp'],
 ] as const satisfies readonly (readonly [
@@ -295,6 +303,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     runeforge: initial_runeforge_state(),
     mastery: initial_mastery_state(),
     distribution: initial_distribution_state(),
+    wallet_import: initial_wallet_import_state(),
     job_level_up: initial_job_level_up_state(),
     dapp: initial_dapp_state(),
   })

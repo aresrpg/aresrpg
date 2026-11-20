@@ -49,7 +49,7 @@ const App = () => {
         Replay snapshot
       </button>
       <GiftClaimNotice copy={copy} />
-      {state.navigation.dialog === 'top_up' && (
+      {state.navigation.funding_cost_mist !== null && (
         <AddFundsModal
           address={wallet.address}
           copy={copy}
@@ -57,7 +57,7 @@ const App = () => {
           warning={gift_funding_text(copy, state.distribution, state.session)}
           on_close={() => {
             funded = true
-            dispatch_app({ type: 'dialog/open', dialog: null })
+            dispatch_app({ type: 'funding/close' })
           }}
         />
       )}

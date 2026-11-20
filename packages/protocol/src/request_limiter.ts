@@ -13,7 +13,7 @@ export const HTTP_DOOR = Object.freeze({ capacity: 600, window_ms: 60_000 })
  * request arrives through the tunnel from the same pod addresses, so the socket address names nobody.
  * The edge overwrites this header, and a service is reachable from outside only through the tunnel.
  */
-const visitor_of = (request: Request): string | null => request.headers.get('cf-connecting-ip')
+export const visitor_of = (request: Request): string | null => request.headers.get('cf-connecting-ip')
 
 type Bucket = Readonly<{ count: number; started_at_ms: number }>
 

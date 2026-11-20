@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { coalesced_reader, latest_reader } from '../src/latest_read.ts'
+import { coalesced_reader } from '../src/latest_read.ts'
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void
@@ -149,7 +149,7 @@ test('refresh requested synchronously by delivery is not lost', async () => {
 // Deterministic account-initialization model: one baseline read, then one refresh per
 // newly acquired character watch, matching player_events. This measures read amplification,
 // not FalkorDB latency, Redis subscription costs, memory, or production throughput.
-const account_work = async (accounts: number, characters: number, coalesce: boolean) => {
+const account_work = async (accounts: number, characters: number) => {
   const work = await Promise.all(
     Array.from({ length: accounts }, async () => {
       let gate = deferred<void>()
@@ -162,9 +162,7 @@ const account_work = async (accounts: number, characters: number, coalesce: bool
         return Array.from({ length: characters }, (_, index) => index)
       }
       const deliver = () => {}
-      const refresh = coalesce
-        ? coalesced_reader(read, deliver, new AbortController().signal)
-        : latest_reader(read, deliver)
+      const refresh = coalesced_reader(read, deliver, new AbortController().signal)
       const baseline = refresh()
       await flush()
       gate.resolve()
@@ -186,9 +184,7 @@ const account_work = async (accounts: number, characters: number, coalesce: bool
   )
 }
 
-test('equal 100-character initialization workloads expose account read amplification', async () => {
-  expect(await account_work(100, 1, false)).toEqual({ read_calls: 200, roster_rows: 200 })
-  expect(await account_work(10, 10, false)).toEqual({ read_calls: 110, roster_rows: 1100 })
-  expect(await account_work(100, 1, true)).toEqual({ read_calls: 200, roster_rows: 200 })
-  expect(await account_work(10, 10, true)).toEqual({ read_calls: 30, roster_rows: 300 })
+test('a burst of watch refreshes costs at most one rerun per account', async () => {
+  expect(await account_work(100, 1)).toEqual({ read_calls: 200, roster_rows: 200 })
+  expect(await account_work(10, 10)).toEqual({ read_calls: 30, roster_rows: 300 })
 })

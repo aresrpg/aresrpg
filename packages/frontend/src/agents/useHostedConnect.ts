@@ -18,7 +18,12 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     const context = { authorization_id: requested_id, completed: false, wallet }
     // eslint-disable-next-line functional/immutable-data -- This ref owns one mounted network lifetime, never app state.
     lifetime.current = context
-    dispatch({ type: 'reset', session: wallet, requested: requested_id !== null && eligible })
+    dispatch({
+      type: 'reset',
+      session: wallet,
+      account: wallet?.address ?? null,
+      requested: requested_id !== null && eligible,
+    })
     return () =>
       queueMicrotask(() => {
         if (lifetime.current !== context && lifetime.current.wallet === wallet) return

@@ -3,7 +3,8 @@
 import type { ComponentType } from 'react'
 import { Button } from '@aresrpg/ui'
 
-import type { CopyText } from '../i18n/copy.ts'
+import type { AppCopy, CopyText } from '../i18n/copy.ts'
+import { WalletAddressBlock } from '../components/WalletAddressBlock.tsx'
 
 import type { GiftRuntime } from './gift_runtime.ts'
 import type { GiftState } from './gift_state.ts'
@@ -13,6 +14,7 @@ type ActionsProps = Readonly<{
   state: GiftState
   runtime: GiftRuntime
   text: CopyText
+  copy: AppCopy
   enter: () => void
 }>
 const ProgressAction = ({ state, runtime, text }: ActionsProps) => {
@@ -52,6 +54,19 @@ const MissingActions = ({ state, runtime, text }: ActionsProps) => (
     )}
   </>
 )
+const FundingActions = ({ state, runtime, text, copy }: ActionsProps) => (
+  <>
+    {state.wallet && <WalletAddressBlock address={state.wallet.address} copy={copy} method="direct" />}
+    <Button
+      tone="primary"
+      busy={state.task !== null}
+      disabled={!state.ready}
+      onClick={() => runtime.dispatch({ type: 'request', kind: 'check' })}
+    >
+      {text('funding_check')}
+    </Button>
+  </>
+)
 const LaterActions = ({ text, enter }: ActionsProps) => (
   <Button tone="primary" onClick={enter}>
     {text('continue_game')}
@@ -59,6 +74,7 @@ const LaterActions = ({ text, enter }: ActionsProps) => (
 )
 const ACTIONS: Record<GiftScreen, ComponentType<ActionsProps>> = {
   welcome: ProgressAction,
+  funding: FundingActions,
   working: ProgressAction,
   received: ProgressAction,
   reserved: ProgressAction,

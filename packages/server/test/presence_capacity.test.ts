@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events'
 
 import { expect, test } from 'bun:test'
 
+import { ZONE_RECENTER_MS } from '../src/modules/player_world.ts'
 import { movement_listener_channel } from '../src/protocol.ts'
 import { create_public_world } from '../src/public_world.ts'
 import type { Pubsub } from '../src/pubsub_bus.ts'
@@ -264,7 +265,7 @@ test('targeted movement respects hydration, retired zones, world replacement and
       at_ms: Date.now(),
       budget_blocks: 0,
     })
-    await flush()
+    await Bun.sleep(ZONE_RECENTER_MS + 50)
     expect(fixture.pubsub.emitter.listenerCount(channel)).toBe(0)
   } finally {
     release()

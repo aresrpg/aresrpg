@@ -136,3 +136,16 @@ test('actual websocket pending flood stays bounded while a proved replacement ca
     await expect(fetch(endpoint)).rejects.toMatchObject({ code: 'ECONNREFUSED' })
   }
 })
+
+test('one visitor holds at most its share of pending logins; others and the cluster still enter', () => {
+  const admission = create_pending_admission(8, 2)
+  const releases = [admission.reserve('203.0.113.7'), admission.reserve('203.0.113.7')]
+  expect(releases.every(Boolean)).toBe(true)
+  expect(admission.reserve('203.0.113.7')).toBeNull()
+  expect(admission.reserve('198.51.100.2')).not.toBeNull()
+  expect(admission.reserve(null)).not.toBeNull()
+  releases[0]!()
+  releases[0]!()
+  expect(admission.reserve('203.0.113.7')).not.toBeNull()
+  expect(admission.reserve('203.0.113.7')).toBeNull()
+})

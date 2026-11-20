@@ -8,7 +8,7 @@ import { get_trades } from '../reads/get_trades.ts'
 import logger from '../logger.ts'
 import type { PlayerModule } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
-import { latest_reader } from '../latest_read.ts'
+import { coalesced_reader } from '../latest_read.ts'
 
 const log = logger(import.meta)
 
@@ -17,9 +17,10 @@ export default {
   observe: ({ pubsub, graph, send, address, signal }) => {
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
 
-    const refresh = latest_reader(
+    const refresh = coalesced_reader(
       () => get_trades(graph, { address }),
-      (trades) => send({ type: 'packet/trades', trades })
+      (trades) => send({ type: 'packet/trades', trades }),
+      signal
     )
     const reread = (): void => {
       void refresh().catch((error: Error) => log.warn({ address, error: error.message }, 'trade roster read failed'))

@@ -29,7 +29,7 @@ jobs:
       - name: authorize the release owner and network
         env:
           ACTOR_ID: ${{ github.event.sender.id }}
-          ACTOR: ${{ github.actor }}
+          ACTOR: ${{ github.triggering_actor }}
         run: |
           test "$ACTOR_ID" = "11330271" && test "$ACTOR" = "Sceat"
           test "$SUI_NETWORK" = mainnet
@@ -90,13 +90,15 @@ jobs:
     if: needs.backend-plan.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The Production environment holds the only token that reaches production and waits for the
+    # owner's approval (DECISIONS: DEPLOY TOKENS LIVE IN ENVIRONMENTS).
+    environment: Production
     outputs:
       url: ${{ steps.deploy.outputs.url }}
     env:
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       ARES_DEPLOYMENT_ID: ares-${{ github.run_id }}-${{ github.run_attempt }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ github.token }}
       VITE_NETWORK: mainnet
       VITE_GRAPHQL_URL: https://graphql.mainnet.sui.io/graphql
@@ -104,6 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           filter: blob:none
           sparse-checkout: |
             /*
@@ -139,12 +142,18 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: pull the Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: bun run vercel pull --yes --environment=production --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: bun run vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
       - name: pin prebuilt deployment assets
         run: bun --env-file=.vercel/.env.production.local scripts/pin_vercel_deployment.ts
       - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         id: deploy
         run: echo "url=$(bun run vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
 

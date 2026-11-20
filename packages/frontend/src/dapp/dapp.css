@@ -42,12 +42,6 @@
 .dapp-notice .aui-button {
   justify-self: start;
 }
-.dapp-points {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--aui-muted);
-  line-height: 1.5;
-}
 .dapp-loading {
   display: flex;
   align-items: center;

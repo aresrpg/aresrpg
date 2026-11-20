@@ -62,14 +62,14 @@ test('hosted service has no implicit endpoint and rejects insecure or credential
 // signed-in player signed an owner proof and created a custody wallet for a request they never read.
 test('an assistant request waits for the player: nothing is signed or created before their click', () => {
   const wallet = {}
-  const arrived = reduce_hosted(empty_hosted(), { type: 'reset', session: wallet, requested: true })
+  const arrived = reduce_hosted(empty_hosted(), { type: 'reset', session: wallet, account: '0xa', requested: true })
   expect(arrived.phase).toBe('idle')
   const pending = reduce_hosted(arrived, { type: 'start', phase: 'authenticating' })
   expect(pending.phase).toBe('authenticating')
-  const replacement = reduce_hosted(pending, { type: 'reset', session: {}, requested: true })
+  const replacement = reduce_hosted(pending, { type: 'reset', session: {}, account: '0xb', requested: true })
   expect(replacement).toMatchObject({ phase: 'failed', failure: 'restart' })
   const disconnected = reduce_hosted(pending, { type: 'reset', session: null })
-  expect(reduce_hosted(disconnected, { type: 'reset', session: {}, requested: true })).toMatchObject({
+  expect(reduce_hosted(disconnected, { type: 'reset', session: {}, account: '0xb', requested: true })).toMatchObject({
     phase: 'failed',
     failure: 'restart',
   })
@@ -90,6 +90,20 @@ test('an assistant request waits for the player: nothing is signed or created be
   )
   expect(reduce_hosted(empty_hosted(), { type: 'reset', session: wallet }).phase).toBe('idle')
   expect(reduce_hosted(empty_hosted(), { type: 'reset', session: null, requested: true }).phase).toBe('idle')
+})
+
+// Regression (production, 2026-11-20): the dapp mounts this dialog before the Google session is
+// restored, so the reducer saw "no session" and then the player's own session, took that for a
+// replaced wallet and told every player to "start the connection again in your assistant".
+test('a session that arrives after the page is the same player, not a replaced wallet', () => {
+  const waiting = reduce_hosted(empty_hosted(), { type: 'reset', session: null, account: null, requested: false })
+  const restored = reduce_hosted(waiting, { type: 'reset', session: {}, account: '0xa', requested: true })
+  expect(restored).toMatchObject({ phase: 'idle', failure: null })
+  // the store may hand the same account a new session object: still the same player
+  const refreshed = reduce_hosted(restored, { type: 'reset', session: {}, account: '0xa', requested: true })
+  expect(refreshed).toMatchObject({ phase: 'idle', failure: null })
+  const other = reduce_hosted(refreshed, { type: 'reset', session: {}, account: '0xb', requested: true })
+  expect(other).toMatchObject({ phase: 'failed', failure: 'restart' })
 })
 
 test('invalid bound authorization requires provider restart; unknown errors permit explicit retry', async () => {

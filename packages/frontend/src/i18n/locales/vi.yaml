@@ -735,6 +735,30 @@ settings_page:
   suins_write_failed: Chưa xác nhận được việc đổi tên. Hãy làm mới trước khi thử lại.
   suins_unavailable: 'Hiện không thể đổi tên tại đây: dịch vụ bot nhận tên của agent không khả dụng. Không có gì bị thay đổi.'
   suins_wallet_required: Đăng nhập để chọn tên.
+  import_title: 'Nhập từ ví khác'
+  import_hint: 'Chuyển nhân vật và vật phẩm từ một ví Sui khác của bạn vào tài khoản trò chơi.'
+  import_open: 'Nhập nhân vật và vật phẩm'
+  import_connect: 'Kết nối ví đang chứa nhân vật và vật phẩm của bạn.'
+  import_loading: 'Đang đọc ví…'
+  import_empty: 'Ví này không có nhân vật hay vật phẩm nào để nhập.'
+  import_characters: 'Nhân vật'
+  import_items: 'Vật phẩm'
+  import_fee: 'Phí chuyển'
+  import_fee_note: 'Ví trò chơi của bạn trả phí này. Phí mạng được tính riêng.'
+  import_pending: 'Một lần nhập trước chưa hoàn tất. Nó sẽ được hoàn tất trước.'
+  import_left_roster: 'Nhân vật ở lại trong ví vì đội hình của bạn đã đầy: {count}'
+  import_left_listed: 'Tài sản ở lại trong ví vì đang được rao bán: {count}. Hủy bán để nhập chúng.'
+  import_start: 'Nhập'
+  import_running: 'Đã chuyển {moved} trên {total}…'
+  import_sign_source: 'Hãy chấp thuận yêu cầu trong {wallet}. Bộ sưu tập lớn cần nhiều lần chấp thuận.'
+  import_sign_owner: 'Đang nhận vào ví trò chơi…'
+  import_done: 'Số nhân vật và vật phẩm đã chuyển: {count}. Chúng sẽ sớm xuất hiện trong kho đồ.'
+  import_done_close: 'Xong'
+  import_source_funding: '{wallet} cần khoảng {amount} SUI cho phí mạng. Hãy thêm SUI rồi kiểm tra lại ví.'
+  import_owner_funding: 'Ví trò chơi của bạn cần thêm SUI để nhận các tài sản này. Hãy nạp tiền rồi kiểm tra lại ví.'
+  import_busy: 'Một giao dịch khác đang diễn ra. Hãy chờ rồi thử lại.'
+  import_resumable: 'Không có gì bị mất. Hãy kiểm tra lại ví để hoàn tất việc nhập.'
+  import_retry: 'Kiểm tra lại ví'
   day_night_cycle_label: Chu kỳ ngày/đêm
   day_night_cycle_hint: Tắt để thế giới luôn ở giữa trưa.
   title: Cài đặt
@@ -3017,6 +3041,9 @@ gift_page:
   welcome_title: 'Món quà mở đầu cuộc phiêu lưu'
   welcome_body: 'Thẻ của bạn mở khóa một trong {{count}} Sui Crate từ Basecamp. Hãy nhận phần quà của mình.'
   save_hint: 'Đăng nhập để giữ quà, ngay cả khi bạn chơi sau.'
+  funding_title: 'Hãy nạp một ít SUI trước'
+  funding_body: 'Nhận, mở và thu thập quà đều tốn một khoản phí mạng nhỏ. Hãy gửi ít nhất {{amount}} SUI vào tài khoản game bên dưới rồi tiếp tục.'
+  funding_check: 'Tôi đã nạp SUI'
   edition: 'Phiên bản Basecamp · {{count}} phần quà'
   contents_title: 'Bên trong thùng quà'
   contents_count: '1 bất ngờ · {{count}} khả năng'
@@ -3057,9 +3084,8 @@ gift_page:
   sound_on: 'Bật âm thanh'
   sound_off: 'Tắt âm thanh'
   error_invalid: 'Liên kết quà không đầy đủ hoặc không hợp lệ. Hãy quét lại mã QR gốc.'
-  error_ineligible: 'Quà không đủ điều kiện nhận miễn phí hoặc trạng thái đã thay đổi. Hãy kiểm tra lại.'
+  error_ineligible: 'Quà không đủ điều kiện hoặc trạng thái đã thay đổi. Hãy kiểm tra lại.'
   error_unauthorized: 'Hãy đăng nhập lại bằng tài khoản Google đã dùng để nhận quà.'
-  error_sponsor_unavailable: 'Không thể chuẩn bị giao dịch. Quà của bạn vẫn được giữ. Hãy thử lại sau.'
   error_unavailable: 'Không thể hoàn tất bước này. Nhấn Tiếp tục để thử lại.'
   error_uncertain: 'Thao tác trước chưa được xác nhận. Kiểm tra trạng thái sẽ không mở thêm thùng quà.'
   error_login: 'Đăng nhập chưa hoàn tất. Hãy thử lại. Nếu cửa sổ bị chặn, mở liên kết bằng Safari hoặc Chrome.'
@@ -3473,6 +3499,7 @@ landing_page:
     signed_in: Đã đăng nhập bằng {{address}}
     failed: Đăng nhập chưa hoàn tất. Hãy thử lại.
     logout: Đăng xuất
+    dev_only: 'Chỉ dành cho phát triển. Không khuyến nghị dùng để chơi.'
   hero:
     eyebrow:
       - Giao thức MMORPG chiến thuật
@@ -3696,7 +3723,10 @@ landing_page:
     colophon: một thế giới, vô số giao diện
 
 telegram_companion:
-  connect_google: '🔑 Google'
+  welcome: "⚔️ Chào mừng đến với AresRPG\n\nCác anh hùng của bạn sống on-chain. Trong cuộc trò chuyện này, bạn theo dõi họ, chọn chiến lược, và họ chiến đấu, thu thập thay bạn.\n\nĐể bắt đầu, hãy đăng nhập bằng Google. Trang mở trong trình duyệt và chỉ mất vài giây."
+  open_login: '🌐 Mở trang đăng nhập'
+  disconnect: '🔓 Ngắt kết nối Google'
+  connect_google: '🔑 Đăng nhập bằng Google'
   waiting: 'Tài khoản trò chơi của bạn chưa có quyền dùng Telegram. Hãy vào danh sách chờ để xin quyền.'
   on_waitlist: '✅ Bạn đang trong danh sách chờ. Dùng “Kiểm tra truy cập” để xem tài khoản trò chơi đã được duyệt chưa.'
   join_waitlist: 'Vào danh sách chờ'
@@ -3719,12 +3749,10 @@ telegram_companion:
   back: '☰ Menu'
   status: '📍 Trạng thái'
   approve: '✅ Cho phép'
-  link: '🔑 Dùng /link để liên kết Google trong trình duyệt'
-  linked: '✅ Đã liên kết Google · /menu'
+  link: '🔑 Trang đăng nhập của bạn đã sẵn sàng. Trang mở trong trình duyệt.'
+  linked: '✅ Đã liên kết Google'
   unlinked: '🔓 Đã hủy liên kết'
-  confirm: 'Gửi lệnh bên dưới trong cuộc trò chuyện Telegram của bạn để hoàn tất liên kết.'
-  confirm_warning: 'Không chia sẻ mã này. Chỉ xác nhận lượt đăng nhập do chính bạn bắt đầu.'
-  browser_expired: 'Trang này đã hết hạn. Quay lại Telegram và dùng /link để đăng nhập lại.'
+  browser_expired: 'Trang này đã hết hạn. Quay lại Telegram và đăng nhập lại.'
   check_status: '📍 Kiểm tra trạng thái'
   log_in_again: '🔑 Đăng nhập lại'
   balance: '💰 Số dư tác nhân'
@@ -3736,9 +3764,9 @@ telegram_companion:
   choose_strategy: 'Chọn chiến lược'
   failure_changed: 'Nội dung đã được cập nhật. Đây là trạng thái hiện tại.'
   failure_reconnect: 'Đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại:'
-  failure_unlink_first: 'Cuộc trò chuyện hoặc tài khoản Google này đã được kết nối, hoặc còn một lượt đăng nhập chưa xong. Dùng /unlink rồi thử lại.'
+  failure_unlink_first: 'Cuộc trò chuyện hoặc tài khoản Google này đã được kết nối, hoặc còn một lượt đăng nhập chưa xong. Ngắt kết nối Google rồi thử lại.'
   failure_temporary: 'Lần này chưa thành công. Hãy thử lại sau giây lát.'
-  failure_busy: 'Nhân vật này vẫn đang hoàn tất một thao tác, hoặc tác nhân đang tạm dừng. Nếu bạn đã tạm dừng, hãy dùng /resume rồi kiểm tra trạng thái.'
+  failure_busy: 'Nhân vật này vẫn đang hoàn tất một thao tác, hoặc tác nhân đang tạm dừng. Nếu bạn đã tạm dừng, hãy tiếp tục rồi kiểm tra trạng thái.'
   failure_run_limit: 'Tác nhân của bạn đã điều khiển số nhân vật tối đa. Hãy dừng một nhân vật rồi bắt đầu nhân vật này.'
   review: 'Xem lại chiến lược'
   effects: 'Đánh các nhóm một quái trong thành phố này đến khi dừng. Mỗi hành động tốn gas SUI, không giới hạn tổng phí. Không bảo đảm thắng; khởi động lại có thể lặp một bước. Dừng không hủy hành động đã gửi.'
@@ -3750,7 +3778,7 @@ telegram_companion:
   attention: 'Chiến lược cần kiểm tra. Xem nhân vật trong trò chơi rồi chọn Trạng thái hoặc Dừng.'
   unknown: 'Kết quả chưa được xác nhận. Hãy kiểm tra trạng thái trước.'
   city_review: 'Thành phố: {city}'
-  city_required: 'Vào một thành phố trong trò chơi rồi xem lại bằng /menu.'
+  city_required: 'Vào một thành phố trong trò chơi, rồi mở menu và xem lại.'
   enable_agent: '🔑 Bật tác nhân'
   play_consent: 'Tài khoản trò chơi đã được duyệt. Cấp quyền cho tác nhân để tiếp tục.'
   world_review: 'Thế giới: {world}'
@@ -3915,11 +3943,8 @@ dapp_page:
   unavailable_title: 'Dịch vụ tự động không phản hồi'
   unavailable_body: 'Tạm thời hãy dùng thế giới 3D.'
   unavailable_action: 'Mở thế giới 3D'
-  connect_title: 'Kết nối bot lưu trữ'
-  connect_body: 'Bot chơi anh hùng thay bạn. Hãy cho phép trang này bắt đầu và dừng các hoạt động của nó.'
-  connect_custody: 'Tài khoản của bot do tài khoản Google của bạn và AresRPG cùng nắm giữ: bên nào cũng có thể ký, và bạn luôn có thể lấy lại anh hùng.'
-  connect_fees: 'Mỗi hành động là một giao dịch Sui trả bằng số dư của bot. Hoạt động chạy cho đến khi bạn dừng hoặc hết số dư.'
-  connect_stop: 'Trang này có thể cho bot chơi, tạm dừng bot và giao dịch ở chợ bằng số dư của bot. Trang không thể rút SUI của bạn.'
+  connect_title: 'Bot của bạn chưa được kết nối'
+  connect_body: 'Kết nối để cử các anh hùng lên đường.'
   connect_action: 'Kết nối'
   connect_busy: 'Đang kết nối…'
   reading_heroes: 'Đang đọc anh hùng của bạn…'

@@ -9,11 +9,11 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { LightPage } from '../components/LightPage.tsx'
 import { Toasts } from '../components/Toasts.tsx'
 import { SessionReplacedModal } from '../components/SessionReplacedModal.tsx'
-import { AgentSetup } from '../agents/AgentSetup.tsx'
 import { format_sui } from '../wallet_amount.ts'
 
 import { dapp_text } from './copy.ts'
 import { DAPP_ROUTE } from './oauth.ts'
+import { DappConsent } from './DappConsent.tsx'
 import { DappMarket } from './DappMarket.tsx'
 import { DappPlay, play_stage } from './DappPlay.tsx'
 import type { DappMode } from './state.ts'
@@ -80,7 +80,7 @@ export const DappPage = ({ copy, locale }: Readonly<{ copy: AppCopy; locale: Loc
       <div className="dapp" lang={locale}>
         {consent_route() ? (
           <>
-            <AgentSetup copy={copy} close={() => globalThis.location.assign(DAPP_ROUTE)} />
+            <DappConsent copy={copy} />
             <SuinsConfirmation copy={copy} />
           </>
         ) : market ? (

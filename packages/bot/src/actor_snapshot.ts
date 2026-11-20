@@ -39,6 +39,39 @@ export const empty_snapshot = (): ActorSnapshot => ({
   cursor: 0,
   events: [],
 })
+/** The packets this actor folds (keep in step with `fold_packet`, `fold_actor_world` and
+ * `fold_actor_inventory`); only these enter the event ring that `bot_observe` returns.
+ * Text other players write (chat, whispers, tournament team names, party, friend and presence
+ * rows) never reaches the owner's AI client, which also holds market tools (audit BOTAI-1). */
+const MODELED_PACKETS: ReadonlySet<ServerPacket['type']> = new Set([
+  'packet/characters',
+  'packet/fight_state',
+  'packet/fight_started',
+  'packet/fight_phase',
+  'packet/fight_ended',
+  'packet/game_state',
+  'packet/server_info',
+  'packet/tracked_zones',
+  'packet/zones',
+  'packet/zone_spawns',
+  'packet/inventory',
+  'packet/item_updated',
+  'packet/item_removed',
+  'packet/listings',
+  'packet/trades',
+  'packet/trade_destroyed',
+  'packet/claims',
+  'packet/market_slice',
+  'packet/market_prices',
+])
+/** One cursor per admitted event, so a skipped packet never reads as a lost one. */
+const admit_event = (snapshot: ActorSnapshot, packet: ServerPacket, limit: number) =>
+  MODELED_PACKETS.has(packet.type)
+    ? {
+        cursor: snapshot.cursor + 1,
+        events: [...snapshot.events, { cursor: snapshot.cursor + 1, packet }].slice(-limit),
+      }
+    : { cursor: snapshot.cursor, events: snapshot.events }
 const fold_packet = (snapshot: ActorSnapshot, packet: ServerPacket, now: number): ActorSnapshot => {
   switch (packet.type) {
     case 'packet/characters':
@@ -105,15 +138,13 @@ export const reduce_actor_snapshot = (
       (id) => !!fights[id] && !fight_state_regresses(fight_phases[id] ?? 0, fights[id].contract)
     ),
   ].every(Boolean)
-  const cursor = snapshot.cursor + 1
   return {
     ...next,
     fights,
     fight_phases: Object.fromEntries(Object.entries(fight_phases).filter(([id]) => active_fights.has(id))),
     ready,
-    cursor,
     observed_at: now,
-    events: [...snapshot.events, { cursor, packet: state.last_packet }].slice(-limit),
+    ...admit_event(snapshot, state.last_packet, limit),
   }
 }
 export const observation_events = (snapshot: ActorSnapshot, after: unknown, fence: number, supplied_fence: unknown) => {

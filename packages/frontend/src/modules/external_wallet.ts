@@ -71,9 +71,12 @@ const reduce = (state: AppState, event: AppInput): AppState => {
         error: 'funding_route_unavailable',
       },
     }
-  const busy = [state.distribution.pending, current.request, current.connector_request].some(
-    (operation) => operation !== null && operation !== 'load'
-  )
+  const busy = [
+    state.distribution.pending,
+    state.wallet_import.pending,
+    current.request,
+    current.connector_request,
+  ].some((operation) => operation !== null && operation !== 'load')
   if (selection_input(input.type) && busy) return state
   if (input.type === 'external_wallet/crypto_requested')
     return {

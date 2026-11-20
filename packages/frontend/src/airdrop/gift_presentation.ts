@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { GiftState, GiftTaskKind } from './gift_state.ts'
+import { gift_needs_funding, type GiftState, type GiftTaskKind } from './gift_state.ts'
 
-export type GiftScreen = 'welcome' | 'working' | 'received' | 'opening' | 'reward' | 'reserved' | 'missing' | 'later'
+export type GiftScreen =
+  'welcome' | 'funding' | 'working' | 'received' | 'opening' | 'reward' | 'reserved' | 'missing' | 'later'
 const STATUS_SCREENS = {
   missing: 'missing',
   available: 'working',
@@ -13,6 +14,7 @@ const STATUS_SCREENS = {
 } as const
 const SCENES = {
   welcome: { step: 0, art: true, contents: true },
+  funding: { step: 0, art: false, contents: false },
   working: { step: 0, art: true, contents: false },
   received: { step: 1, art: true, contents: true },
   opening: { step: 1, art: true, contents: true },
@@ -26,6 +28,7 @@ const screen_for = (state: GiftState): GiftScreen => {
   if (state.view !== 'gift') return state.view
   if (state.celebrate || state.task?.kind === 'open') return 'opening'
   if (!state.wallet) return 'welcome'
+  if (gift_needs_funding(state)) return 'funding'
   return state.status ? STATUS_SCREENS[state.status.stage] : 'working'
 }
 export const gift_presentation = (state: GiftState) => {
@@ -36,7 +39,7 @@ export type GiftPresentation = ReturnType<typeof gift_presentation>
 
 export const gift_action = (state: GiftState): GiftTaskKind => {
   if (!state.wallet) return 'login'
-  if (state.error) return 'check'
+  if (state.error || gift_needs_funding(state)) return 'check'
   const actions = { voucher: 'redeem', crate: 'open', reward: 'collect', available: 'transfer' } as const
   return state.status && state.status.stage in actions ? actions[state.status.stage as keyof typeof actions] : 'check'
 }

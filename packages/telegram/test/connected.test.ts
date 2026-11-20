@@ -115,7 +115,7 @@ test('a lost start reply is unknown for that hero only: it is observed, never se
   expect(plain(answer)).toBe(en.unknown)
   expect(buttons(answer)).toEqual(['/status'])
   // Telegram redelivers the same approval: it is stale, and the request is not sent a second time.
-  const approval = f.cards.at(-2)!.reply_markup.inline_keyboard[0]![0]!.callback_data
+  const approval = buttons(f.cards.at(-2)!)[0]!
   await f.runtime.fetch(input(900, approval, true))
   expect(f.bot.sent('bot_start_behavior')).toHaveLength(1)
   f.bot.lost.clear()

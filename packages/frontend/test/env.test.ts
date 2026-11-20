@@ -19,6 +19,12 @@ describe('frontend environment', () => {
     expect(env.social_image_url).toBe('https://aresrpg.world/social/home.jpg')
   })
 
+  test('only a local or edge build offers the development sign-in', () => {
+    const offered = (deployment?: string) => resolve_env({ VITE_DEPLOY_ENV: deployment }).dev_sign_in
+    expect([offered('local'), offered('preview')]).toEqual([true, true])
+    expect([offered('production'), offered('development'), offered()]).toEqual([false, false, false])
+  })
+
   test('one app URL drives canonical and social asset URLs', () => {
     const env = resolve_env({ VITE_APP_URL: 'https://preview.example/game/' })
 

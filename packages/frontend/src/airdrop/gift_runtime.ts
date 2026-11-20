@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { createStore } from 'zustand/vanilla'
 import { GiftError } from '@aresrpg/sdk/gift'
+import type { GiftPolicy } from '@aresrpg/sdk/gift-provenance'
 
 import { browser_auth_storage, type AuthStorage } from '../auth_storage.ts'
 import { create_remembered_auth } from '../remembered_auth.ts'
@@ -24,6 +25,7 @@ type GiftAuth = Readonly<{
 }>
 type GiftRuntimeOptions = Readonly<{
   link: string | null
+  policy: GiftPolicy
   storage?: AuthStorage | null
   load_auth?: () => Promise<() => GiftAuth>
 }>
@@ -36,6 +38,7 @@ const failure_code = (error: unknown): string => {
 
 export const create_gift_runtime = ({
   link,
+  policy,
   storage = browser_auth_storage(),
   load_auth = async () => (await import('../auth.ts')).create_auth,
 }: GiftRuntimeOptions) => {
@@ -60,7 +63,7 @@ export const create_gift_runtime = ({
     const check = async (state: GiftState): Promise<GiftResult> => {
       const wallet = require_wallet(state)
       // The shared SDK owns uncertain submissions. Reload its session after it accepts a receipt.
-      if (await wallet.gift.recover()) {
+      if (await wallet.gift(policy).recover()) {
         const restored = await account.restore()
         if (!restored) throw new GiftError('unauthorized')
         return connected(restored, state.task!.advance)
@@ -68,16 +71,17 @@ export const create_gift_runtime = ({
       let proof = state.status?.proof ?? null
       if (!state.status && link && !state.skip_link) {
         const card = await wallet.inspect_giftcard_link(link)
-        if (!card) return { kind: 'checked', status: { stage: 'missing', proof: null } }
+        if (!card) return { kind: 'checked', status: { stage: 'missing', proof: null }, balance: null }
         proof = { giftcard: card.id }
       }
-      return { kind: 'checked', status: await wallet.gift.status(proof) }
+      const [status, balance] = await Promise.all([wallet.gift(policy).status(proof), wallet.read_sui_balance()])
+      return { kind: 'checked', status, balance }
     }
     const write =
       (action: 'redeem' | 'open' | 'collect') =>
       async (state: GiftState): Promise<GiftResult> => {
         if (!state.status?.proof) throw new GiftError('invalid')
-        return { kind: 'executed', status: await require_wallet(state).gift.execute(action, state.status.proof) }
+        return { kind: 'executed', status: await require_wallet(state).gift(policy).execute(action, state.status) }
       }
     const tasks: Record<GiftTask['kind'], (state: GiftState) => Promise<GiftResult>> = {
       boot: async () => {
@@ -99,7 +103,7 @@ export const create_gift_runtime = ({
       },
       transfer: async (state) => {
         if (!link || !state.status?.proof) throw new GiftError('invalid')
-        return { kind: 'executed', status: await require_wallet(state).gift.transfer(link, state.status.proof) }
+        return { kind: 'executed', status: await require_wallet(state).gift(policy).transfer(link, state.status.proof) }
       },
       redeem: write('redeem'),
       open: write('open'),

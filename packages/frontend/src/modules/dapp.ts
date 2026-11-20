@@ -290,10 +290,13 @@ const bind_wallet = (bot: Bot, context: AppContext, effects: DappEffects, wallet
       if (!completed.ok) return link_refused(context, completed.error)
       if (completed.value || context.get_state().session.wallet !== wallet) return
       const connected = grant_store(effects.grants, wallet.address).read() !== null
-      context.dispatch({
-        type: 'dapp/link',
-        link: connected ? { phase: 'connected' } : { phase: 'disconnected', error: null },
-      })
+      // No connect screen: a signed-in player without a grant is connected at once. The page that
+      // receives the bot's consent redirect is already finishing that request, so it starts no other.
+      const consenting = new URLSearchParams(effects.location().search).has('authorization_id')
+      const unlinked = consenting
+        ? ({ phase: 'disconnected', error: null } as const)
+        : ({ phase: 'authorizing' } as const)
+      context.dispatch({ type: 'dapp/link', link: connected ? { phase: 'connected' } : unlinked })
     })
 }
 

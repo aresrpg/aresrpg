@@ -261,8 +261,14 @@ const create_bus = ({
         )
       } else refs.set(channel, count - 1)
     },
+    // A publication is one ephemeral fact and no caller acts on its failure: the bus logs a failed
+    // one here, because most callers discard it and an unobserved rejection exits the process.
     publish: async (channel, payload) => {
-      await publisher.publish(channel, JSON.stringify(payload))
+      try {
+        await publisher.publish(channel, JSON.stringify(payload))
+      } catch (error) {
+        log.warn({ channel, error: (error as Error).message }, 'publish failed')
+      }
     },
     close: () => {
       closed = true
@@ -445,8 +451,11 @@ export const create_watcher = ({ graph, mesh }: Pubsub, signal?: AbortSignal): W
     { once: true }
   )
   return {
-    watch: async (channel, forward) => {
-      if (signal?.aborted) return
+    // Returns the watch's own `ready` promise, which already logs a refusal: a caller that only
+    // discards it (`void watch(...)`) can never turn a refused subscription into a process exit,
+    // and a caller that awaits it still sees the rejection.
+    watch: (channel, forward) => {
+      if (signal?.aborted) return Promise.resolve()
       const existing = watches.get(channel)
       if (existing) return existing.ready
       const owned_forward = (payload: never) => {
@@ -461,6 +470,7 @@ export const create_watcher = ({ graph, mesh }: Pubsub, signal?: AbortSignal): W
           bus_of(channel).emitter.off(channel, owned_forward as (payload: unknown) => void)
           throw error
         })
+      void entry.ready.catch((error: Error) => log.warn({ channel, error: error.message }, 'subscription refused'))
       watches.set(channel, entry)
       return entry.ready
     },

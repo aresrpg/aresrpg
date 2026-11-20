@@ -52,11 +52,6 @@ const Connect = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const error = link.phase === 'disconnected' ? link.error : null
   return (
     <Notice title={dapp_text(copy, 'connect_title')} body={dapp_text(copy, 'connect_body')}>
-      <ul className="dapp-points">
-        <li>{dapp_text(copy, 'connect_custody')}</li>
-        <li>{dapp_text(copy, 'connect_fees')}</li>
-        <li>{dapp_text(copy, 'connect_stop')}</li>
-      </ul>
       <Button tone="primary" busy={busy} onClick={() => dispatch_app({ type: 'dapp/connect' })}>
         {dapp_text(copy, busy ? 'connect_busy' : 'connect_action')}
       </Button>
@@ -122,6 +117,7 @@ type Stage =
   | 'sign_in'
   | 'google'
   | 'loading'
+  | 'connecting'
   | 'connect'
   | 'observe_failed'
   | 'reading'
@@ -144,7 +140,14 @@ const heroes_stage = ({ phase, characters }: AppState['session']['agent_inventor
 /** The bot says what runs. It and the game server must both have answered before the board shows. */
 const bot_stage = ({ dapp, session }: AppState): Stage => {
   const { link, observation, observe_error } = dapp
-  if (link.phase !== 'connected') return link.phase === 'idle' ? 'loading' : 'connect'
+  // Connecting is automatic; the notice shows only after a disconnect or a failed connection.
+  const unlinked = {
+    idle: 'loading',
+    authorizing: 'connecting',
+    exchanging: 'connecting',
+    disconnected: 'connect',
+  } as const
+  if (link.phase !== 'connected') return unlinked[link.phase]
   if (!observation) return observe_error ? 'observe_failed' : 'reading'
   return observation.ready ? heroes_stage(session.agent_inventory) : 'syncing'
 }
@@ -166,6 +169,7 @@ export const DappPlay = ({ copy, locale }: Props) => {
     sign_in: () => <SignIn copy={copy} />,
     google: () => <Notice title={text('google_title')} body={text('google_body')} />,
     loading: () => <Loading label={text('loading')} />,
+    connecting: () => <Loading label={text('connect_busy')} />,
     connect: () => <Connect copy={copy} />,
     observe_failed: () => <Notice title={text('observe_failed_title')} body={text('observe_failed')} />,
     reading: () => <Loading label={text('reading_heroes')} />,

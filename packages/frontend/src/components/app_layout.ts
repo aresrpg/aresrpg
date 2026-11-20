@@ -22,3 +22,6 @@ export const graphics_notice_visible = (
   dismissed: boolean,
   degraded: boolean
 ): boolean => !outside_world && ((failed && !world_unavailable) || (!dismissed && (world_unavailable || degraded)))
+
+/** "Return to home" leaves the world for the home page. The session stays: leaving is not signing out. */
+export const return_home = (go: (url: string) => void = (url) => globalThis.location.assign(url)): void => go('/')

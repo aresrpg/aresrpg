@@ -133,6 +133,12 @@ const auth_session = (address = '0xowner'): AuthSession =>
       treasury_mist: 0n,
       policies: [],
     }),
+    read_wallet_import: async () => {
+      throw new Error('unused in reducer tests')
+    },
+    import_wallet_assets: async () => {
+      throw new Error('unused in reducer tests')
+    },
     disconnect: async () => undefined,
   })
 const connect = (address = '0xowner') =>

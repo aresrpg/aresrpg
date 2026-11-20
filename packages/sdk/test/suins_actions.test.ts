@@ -144,6 +144,7 @@ test('root application creates two final-target leaves and only the human defaul
   expect(await apply_reviewed(actions, 'sceat.sui', agent, current)).toEqual({
     name: 'aresrpg.sceat.sui',
     digest: 'confirmed',
+    targets: { 'aresrpg.sceat.sui': owner, 'aresrpgagent.sceat.sui': agent },
   })
   expect(commands(state.executions[0]!)).toEqual(['new_leaf', 'new_leaf', 'set_reverse_lookup'])
 })
@@ -152,7 +153,10 @@ test('identical clean application performs no write', async () => {
   state.records.set('aresrpg.sceat.sui', leaf(owner))
   state.records.set('aresrpgagent.sceat.sui', leaf(agent))
   state.defaults.set(owner, 'aresrpg.sceat.sui')
-  expect(await apply_reviewed(actions, 'sceat.sui', agent, current)).toEqual({ name: 'aresrpg.sceat.sui' })
+  expect(await apply_reviewed(actions, 'sceat.sui', agent, current)).toEqual({
+    name: 'aresrpg.sceat.sui',
+    targets: { 'aresrpg.sceat.sui': owner, 'aresrpgagent.sceat.sui': agent },
+  })
   expect(state.executions).toHaveLength(0)
 })
 test('retargeting recreates a same-lineage leaf; stale lineage and expired nodes use direct creation', () => {
@@ -311,6 +315,26 @@ test('player reverse record is signed separately and refuses a foreign target', 
   await actions.set_default('aresrpg.sceat.sui', current)
   expect(commands(state.executions[0]!)).toEqual(['set_reverse_lookup'])
   await expect(actions.set_default('aresrpgagent.sceat.sui', current)).rejects.toThrow('invalid_parent')
+})
+
+// Regression (mainnet, 2026-11-20): the default name is set right after the name is created. The node
+// had not indexed the new name yet, the lookup found nothing and the step was refused: the names
+// existed on chain but the player's default stayed on the old name. The transaction that wrote the
+// name already says where it points, so its receipt is trusted instead of a second read.
+test('the default step trusts the receipt of the transaction that just wrote the name', async () => {
+  const { actions, state, client } = setup()
+  const player = owner
+  const applied = await apply_reviewed(actions, 'sceat.sui', agent, current, player)
+  expect(applied.targets).toEqual({ 'aresrpg.sceat.sui': player, 'aresrpgagent.sceat.sui': agent })
+  // the node has not indexed the new names yet
+  client.core.resolveNameServiceAddress = async () => ({ address: null })
+  await expect(actions.set_default('aresrpg.sceat.sui', current)).rejects.toThrow('invalid_parent')
+  const before = state.executions.length
+  await actions.set_default('aresrpg.sceat.sui', current, applied)
+  expect(commands(state.executions.at(-1)!)).toEqual(['set_reverse_lookup'])
+  expect(state.executions).toHaveLength(before + 1)
+  // a receipt cannot make a name point to this wallet: the agent's name still refuses here
+  await expect(actions.set_default('aresrpgagent.sceat.sui', current, applied)).rejects.toThrow('invalid_parent')
 })
 
 test('external parent keeps ownership, collision and cancellation checks', async () => {

@@ -732,6 +732,30 @@ settings_page:
   suins_write_failed: Não foi possível confirmar a alteração do nome. Atualize antes de tentar novamente.
   suins_unavailable: 'Os nomes não podem ser alterados aqui neste momento: o serviço de bot que recebe o nome do seu agente não está disponível. Nada foi alterado.'
   suins_wallet_required: Entre para escolher um nome.
+  import_title: 'Importar de outra carteira'
+  import_hint: 'Mova as personagens e os itens de outra carteira Sui que lhe pertence para a sua conta de jogo.'
+  import_open: 'Importar personagens e itens'
+  import_connect: 'Ligue a carteira que contém as suas personagens e os seus itens.'
+  import_loading: 'A ler a carteira…'
+  import_empty: 'Esta carteira não tem personagens nem itens para importar.'
+  import_characters: 'Personagens'
+  import_items: 'Itens'
+  import_fee: 'Taxa de transferência'
+  import_fee_note: 'A sua carteira de jogo paga esta taxa. As taxas de rede são à parte.'
+  import_pending: 'Uma importação anterior está por terminar. É concluída primeiro.'
+  import_left_roster: 'Personagens que ficam na carteira porque o seu plantel está cheio: {count}'
+  import_left_listed: 'Elementos que ficam na carteira porque estão à venda: {count}. Cancele a venda para os importar.'
+  import_start: 'Importar'
+  import_running: '{moved} de {total} movidos…'
+  import_sign_source: 'Aprove o pedido em {wallet}. Uma coleção grande precisa de várias aprovações.'
+  import_sign_owner: 'A receber na sua carteira de jogo…'
+  import_done: 'Personagens e itens movidos: {count}. Aparecem em breve no seu inventário.'
+  import_done_close: 'Concluído'
+  import_source_funding: '{wallet} precisa de cerca de {amount} SUI para as taxas de rede. Adicione SUI e verifique a carteira novamente.'
+  import_owner_funding: 'A sua carteira de jogo precisa de mais SUI para receber estes elementos. Adicione fundos e verifique a carteira novamente.'
+  import_busy: 'Outra transação está em curso. Aguarde e tente novamente.'
+  import_resumable: 'Nada se perdeu. Verifique a carteira novamente para terminar a importação.'
+  import_retry: 'Verificar a carteira novamente'
   day_night_cycle_label: Ciclo de dia e noite
   day_night_cycle_hint: Desative para manter o mundo ao meio-dia.
   title: Configurações
@@ -3033,6 +3057,9 @@ gift_page:
   welcome_title: 'Um presente para começar sua aventura'
   welcome_body: 'Seu cartão libera uma das {{count}} Sui Crates do Basecamp. Resgate a sua.'
   save_hint: 'Entre para guardar seu presente, mesmo que vá jogar depois.'
+  funding_title: 'Adicione um pouco de SUI primeiro'
+  funding_body: 'Resgatar, abrir e coletar seu presente custam, cada um, uma pequena taxa de rede. Envie pelo menos {{amount}} SUI para sua conta do jogo abaixo e depois continue.'
+  funding_check: 'Já adicionei SUI'
   edition: 'Edição Basecamp · {{count}} presentes'
   contents_title: 'Dentro da sua caixa'
   contents_count: '1 surpresa · {{count}} possibilidades'
@@ -3075,7 +3102,6 @@ gift_page:
   error_invalid: 'Este link está incompleto ou inválido. Escaneie o QR original novamente.'
   error_ineligible: 'Este presente não é elegível ou seu estado mudou. Verifique o status.'
   error_unauthorized: 'Entre novamente com a conta Google usada para resgatar este presente.'
-  error_sponsor_unavailable: 'Não foi possível preparar a transação. Seu presente está guardado. Tente mais tarde.'
   error_unavailable: 'Não foi possível concluir esta etapa. Continue para tentar novamente.'
   error_uncertain: 'Sua última ação ainda não foi confirmada. Verificar o status não abrirá outra caixa.'
   error_login: 'O login não foi concluído. Tente novamente. Se a janela foi bloqueada, abra o link no Safari ou Chrome.'
@@ -3489,6 +3515,7 @@ landing_page:
     signed_in: Conectado como {{address}}
     failed: O login não foi concluído. Tente novamente.
     logout: Sair
+    dev_only: 'Apenas para desenvolvimento. Não recomendado para jogar.'
   hero:
     eyebrow:
       - Protocolo de MMORPG tático
@@ -3714,7 +3741,10 @@ landing_page:
     colophon: um mundo, interfaces ilimitadas
 
 telegram_companion:
-  connect_google: '🔑 Google'
+  welcome: "⚔️ Boas-vindas ao AresRPG\n\nSeus heróis vivem on-chain. Neste chat você os acompanha, escolhe uma estratégia, e eles lutam e coletam por você.\n\nPara começar, entre com o Google. A página abre no navegador e leva alguns segundos."
+  open_login: '🌐 Abrir a página de login'
+  disconnect: '🔓 Desconectar o Google'
+  connect_google: '🔑 Entrar com o Google'
   waiting: 'Sua conta de jogo ainda não tem acesso pelo Telegram. Entre na lista de espera para pedir.'
   on_waitlist: '✅ Você está na lista de espera. Use “Verificar acesso” para ver se sua conta de jogo foi admitida.'
   join_waitlist: 'Entrar na lista de espera'
@@ -3737,12 +3767,10 @@ telegram_companion:
   back: '☰ Menu'
   status: '📍 Estado'
   approve: '✅ Autorizar'
-  link: '🔑 Use /link para conectar Google no navegador'
-  linked: '✅ Google vinculado · /menu'
+  link: '🔑 Sua página de login está pronta. Ela abre no navegador.'
+  linked: '✅ Google vinculado'
   unlinked: '🔓 Desvinculado'
-  confirm: 'Envie o comando abaixo no seu chat do Telegram para concluir a vinculação.'
-  confirm_warning: 'Não compartilhe este código. Confirme apenas um login que você mesmo iniciou.'
-  browser_expired: 'Esta página expirou. Volte ao Telegram e use /link para entrar novamente.'
+  browser_expired: 'Esta página expirou. Volte ao Telegram e entre novamente.'
   check_status: '📍 Ver status'
   log_in_again: '🔑 Entrar novamente'
   balance: '💰 Saldo do agente'
@@ -3754,9 +3782,9 @@ telegram_companion:
   choose_strategy: 'Escolha uma estratégia'
   failure_changed: 'Isso foi atualizado. Este é o estado atual.'
   failure_reconnect: 'Seu login expirou. Entre novamente:'
-  failure_unlink_first: 'Este chat ou esta conta Google já está conectado, ou há um login em aberto. Use /unlink e tente de novo.'
+  failure_unlink_first: 'Este chat ou esta conta Google já está conectado, ou há um login em aberto. Desconecte o Google e tente de novo.'
   failure_temporary: 'Desta vez não funcionou. Tente novamente em instantes.'
-  failure_busy: 'Este personagem ainda está concluindo uma ação, ou o agente está pausado. Se você o pausou, use /resume e depois confira o status.'
+  failure_busy: 'Este personagem ainda está concluindo uma ação, ou o agente está pausado. Se você o pausou, retome-o e depois confira o status.'
   failure_run_limit: 'Seu agente já conduz todos os personagens que consegue. Pare um e depois inicie este.'
   review: 'Revise esta estratégia'
   effects: 'Combate grupos de um monstro nesta cidade até parar. Cada ação gasta gás SUI, sem limite total. Sem garantia de vitória; reiniciar pode repetir uma etapa. Parar não cancela ações enviadas.'
@@ -3768,7 +3796,7 @@ telegram_companion:
   attention: 'A estratégia precisa de atenção. Confira seu personagem no jogo e use Status ou Parar.'
   unknown: 'O resultado ainda não foi confirmado. Confira primeiro o status.'
   city_review: 'Cidade: {city}'
-  city_required: 'Entre em uma cidade no jogo e revise novamente com /menu.'
+  city_required: 'Entre em uma cidade no jogo, depois abra o menu e revise novamente.'
   enable_agent: '🔑 Ativar agente'
   play_consent: 'Sua conta de jogo foi admitida. Autorize o agente para continuar.'
   world_review: 'Mundo: {world}'
@@ -3946,11 +3974,8 @@ dapp_page:
   unavailable_title: 'O serviço automatizado não está respondendo'
   unavailable_body: 'Use o mundo 3D por enquanto.'
   unavailable_action: 'Abrir o mundo 3D'
-  connect_title: 'Conecte seu bot hospedado'
-  connect_body: 'Seu bot joga com seus heróis por você. Permita que esta página inicie e pare as atividades dele.'
-  connect_custody: 'A conta do seu bot é compartilhada entre a sua conta Google e a AresRPG: qualquer uma pode assinar, e você sempre pode recuperar seus heróis.'
-  connect_fees: 'Cada ação é uma transação Sui paga com o saldo do bot. As atividades continuam até você pará-las ou o saldo acabar.'
-  connect_stop: 'Esta página pode fazer seu bot jogar e pausar, e negociar no mercado com o saldo dele. Ela não pode sacar seus SUI.'
+  connect_title: 'O seu bot não está ligado'
+  connect_body: 'Ligue-o para enviar os seus heróis.'
   connect_action: 'Conectar'
   connect_busy: 'Conectando…'
   reading_heroes: 'Lendo seus heróis…'

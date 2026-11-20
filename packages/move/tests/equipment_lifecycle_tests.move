@@ -7,6 +7,7 @@ use aresrpg::{api, character::{Self, Character}, equipment, item::{Self, Item}, 
 use aresrpg_control::admin;
 use aresrpg_math::{item_damages, item_stats};
 use aresrpg_seed::{item_rows, registry};
+use kiosk::personal_kiosk;
 use sui::{event, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA11CE;
@@ -30,6 +31,8 @@ fun records_and_folded_stats_follow_real_equipped_custody() {
   assert!(equipment::tool_of(&character) == b"".to_string());
   let character_id = object::id(&character);
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   kiosk.place(&cap, character);
   let version = scenario.take_shared<version::Version>();
   let slots = vector[b"hat", b"weapon", b"tool", b"relic_1", b"relic_2"];
@@ -68,11 +71,13 @@ fun records_and_folded_stats_follow_real_equipped_custody() {
   assert!(event::events_by_type<equipment::ItemEquipped>().length() == 5);
   test_scenario::return_shared(version);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
 
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   index = 0;
   while (index < slots.length()) {
@@ -94,6 +99,8 @@ fun records_and_folded_stats_follow_real_equipped_custody() {
   };
   character::destroy(kiosk.take(&cap, character_id));
   kiosk::close_and_withdraw(kiosk, cap, scenario.ctx()).into_balance().destroy_zero();
+  std::unit_test::destroy(personal);
+  std::unit_test::destroy(borrow);
   while (!templates.is_empty()) item_rows::destroy_for_testing(templates.pop_back());
   templates.destroy_empty();
   protected_policy::destroy_for_testing(protected, scenario.ctx());
@@ -118,6 +125,8 @@ fun reject_equip(variant: u8) {
   let character = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
   let id = object::id(&character);
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   kiosk.place(&cap, character);
   let mut generator = random::new_generator_for_testing();
   let first = item::mint(&template, 1, &mut generator, scenario.ctx());
@@ -127,10 +136,12 @@ fun reject_equip(variant: u8) {
   item::deposit(&mut kiosk, &cap, &policy, option::none(), first);
   item::deposit(&mut kiosk, &cap, &policy, option::none(), second);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, _borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   let slot = if (variant == 0) b"invented" else if (variant == 1) b"weapon" else if (variant == 4) b"relic_1" else b"hat";
   api::equip_item(&mut kiosk, &cap, id, slot.to_string(), first_id, &protected, &version, scenario.ctx());
@@ -151,6 +162,8 @@ fun reject_unequip(variant: u8) {
   let character = character::test_character(b"senshi".to_string(), 1, 0, scenario.ctx());
   let id = object::id(&character);
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
+  let mut personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
+  let (cap, borrow) = personal.borrow_val();
   kiosk.place(&cap, character);
   let mut generator = random::new_generator_for_testing();
   let hat = item_rows::template_for_testing(b"hat".to_string(), b"hat".to_string(), scenario.ctx());
@@ -165,10 +178,12 @@ fun reject_unequip(variant: u8) {
   api::equip_item(&mut kiosk, &cap, id, b"cloak".to_string(), second_id, &protected, &version, scenario.ctx());
   test_scenario::return_shared(version);
   transfer::public_transfer(kiosk, OWNER);
-  transfer::public_transfer(cap, OWNER);
+  personal.return_val(cap, borrow);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   scenario.next_tx(OWNER);
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-  let cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
+  let mut personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let (cap, _borrow) = personal.borrow_val();
   let version = scenario.take_shared<version::Version>();
   let slot = if (variant == 0) b"invented" else if (variant == 1) b"weapon" else b"hat";
   api::unequip_item(&mut kiosk, &cap, id, slot.to_string(),

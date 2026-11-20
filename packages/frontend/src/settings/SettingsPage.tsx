@@ -11,6 +11,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { SuinsSettings } from './SuinsSettings.tsx'
+import { WalletImport } from './WalletImport.tsx'
 import { AudioSettings, GameplaySettings, GraphicsSettings } from './SettingsFields.tsx'
 
 export default function SettingsPage({
@@ -36,6 +37,7 @@ export default function SettingsPage({
       <div className="flex flex-col gap-4">
         <AgentSetupButton copy={copy} />
         <SuinsSettings copy={copy} />
+        <WalletImport copy={copy} />
       </div>
     ),
   }
