@@ -235,7 +235,7 @@ public(package) fun deposit(
   existing: Option<ID>,
   minted: Item,
 ) {
-  character::assert_personal_custody(kiosk);
+  character::custody(kiosk);
   if (existing.is_some() && can_merge(kiosk, cap, *existing.borrow(), &minted)) {
     let target: &mut Item = kiosk.borrow_mut(cap, *existing.borrow());
     target.merge(minted);

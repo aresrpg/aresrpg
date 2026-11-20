@@ -32,8 +32,9 @@ const PRICE: u64 = 10_000_000_000; // 10 SUI, fixed — no free path, no sponsor
 /// can't be sold or lent outside the royalty rule. The personal-kiosk TRANSFER rule gates trades
 /// only — never the mint or a fight/dungeon/kolizeum re-lock (audit 2026-08-11) — so every
 /// `kiosk.lock` of a Character calls this, and so does `item::deposit`, the one Item mint door.
-/// `personal_kiosk` is a READ here, not the purged cap.
-public(package) fun assert_personal_custody(kiosk: &Kiosk) {
+/// `personal_kiosk` is a READ here, not the purged cap. The name is short on purpose: every calling
+/// module stores it, and the package sits at its size limit.
+public(package) fun custody(kiosk: &Kiosk) {
   assert!(personal_kiosk::is_personal(kiosk), ENotPersonalKiosk);
 }
 

@@ -130,7 +130,7 @@ public fun create_character(
     ctx,
   );
   world::join_world(&mut character, first_world, clock);
-  character::assert_personal_custody(kiosk); // soulbound custody — a personal kiosk only
+  character::custody(kiosk); // soulbound custody — a personal kiosk only
   kiosk.lock(cap, policy, character);
 }
 

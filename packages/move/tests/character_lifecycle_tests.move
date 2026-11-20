@@ -54,7 +54,7 @@ fun earned_levels_allocate_all_six_stats_through_the_kiosk_api_and_reset_exactly
   let (mut kiosk, cap) = kiosk::new(scenario.ctx());
   let personal = personal_kiosk::new(&mut kiosk, cap, scenario.ctx());
   let cap = personal_kiosk::borrow(&personal);
-  character::assert_personal_custody(&kiosk);
+  character::custody(&kiosk);
   kiosk.place(cap, character);
   api::raise_stat(&mut kiosk, cap, id, b"vitality".to_string(), 1, &version);
   api::raise_stat(&mut kiosk, cap, id, b"wisdom".to_string(), 3, &version);
@@ -134,6 +134,6 @@ fun unknown_stat_is_refused() { invalid_stat(b"luck", 1); }
 fun ordinary_kiosk_cannot_carry_character_custody() {
   let mut ctx = tx_context::dummy();
   let (kiosk, cap) = kiosk::new(&mut ctx);
-  character::assert_personal_custody(&kiosk);
+  character::custody(&kiosk);
   coin::burn_for_testing(kiosk.close_and_withdraw(cap, &mut ctx));
 }

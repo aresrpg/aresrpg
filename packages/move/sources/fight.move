@@ -833,7 +833,7 @@ fun release_forfeit(
   emit_end_if_needed(fight, ended_before);
   let mut character: Character = dynamic_object::remove(&mut fight.id, FighterKey(fighter));
   if (pvm) progression::set_hp(&mut character, 1, clock);
-  character::assert_personal_custody(kiosk);
+  character::custody(kiosk);
   kiosk.lock(cap, policy, character);
 }
 
@@ -967,7 +967,7 @@ fun settle_seat(
   let mut character: Character = dynamic_object::remove(&mut fight.id, FighterKey(fighter));
   if (pvm) progression::set_hp(&mut character, hp, clock);
   if (won) progression::award_experience(&mut character, experience, clock);
-  character::assert_personal_custody(kiosk);
+  character::custody(kiosk);
   kiosk.lock(cap, character_policy, character);
   combat::mark_settled(&mut fight.combat, fighter);
 }
