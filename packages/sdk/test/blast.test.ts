@@ -14,7 +14,6 @@ import {
   project_blast_presale,
 } from '../src/blast.ts'
 import { blast_purchase_config } from '../src/blast_purchase.ts'
-import { resolve_pins } from '../src/pins.ts'
 
 import { id } from './helpers/transport.ts'
 import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
@@ -193,9 +192,23 @@ test('a sale of the live Blast deployment decodes with the same fields', () => {
 })
 
 // Mainnet object 0x2d8a59…f9b7b, version 1101083029, captured 2026-11-21 via gRPC: the KARES sale itself.
-test('the pinned KARES sale reads as live through the deployment pins', async () => {
-  const pins = resolve_pins('mainnet')
+test('the KARES sale reads as live and exposes its purchase configuration', async () => {
   const [sale] = kares.objects
+  const [sale_package, coin_type] = [
+    sale!.type.slice(0, 66),
+    sale!.type.slice(sale!.type.indexOf('<') + 1).split(',')[0],
+  ]
+  const pins = {
+    network: 'mainnet' as const,
+    kares_coin_type: coin_type,
+    blast_presale: {
+      id: sale!.objectId,
+      package_original: sale_package,
+      package: sale_package,
+      package_version: live.objects[1]!.objectId,
+      url: `https://www.blast.fun/presale/${sale!.objectId}`,
+    },
+  }
   const clock = {
     objectId: id(6),
     owner: { $kind: 'Shared' },
@@ -204,7 +217,6 @@ test('the pinned KARES sale reads as live through the deployment pins', async ()
   }
   const transport = { network: 'mainnet', core: { getObjects: async () => ({ objects: [sale, clock] }) } }
   const reader = create_blast_reader({ network: 'mainnet', pins }, transport as never)
-  expect(reader.url).toBe(`https://www.blast.fun/presale/${sale!.objectId}`)
   expect(await reader.read()).toMatchObject({
     phase: 'live',
     committed: 1075033011533n,
@@ -213,6 +225,5 @@ test('the pinned KARES sale reads as live through the deployment pins', async ()
     end_ms: 1795637043334n,
     token_allocation: 400_000_000_000_000_000n,
   })
-  expect(blast_purchase_config(pins)).toMatchObject({ id: sale!.objectId, package: live.objects[0]!.type.slice(0, 66) })
-  expect(blast_purchase_config(pins).package_version).toBe(live.objects[1]!.objectId)
+  expect(blast_purchase_config(pins)).toMatchObject({ id: sale!.objectId, package: sale_package })
 })
