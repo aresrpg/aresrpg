@@ -15,7 +15,7 @@
     "@aresrpg/protocol": "workspace:*",
     "@aresrpg/sdk": "workspace:*",
     "@mysten/sui": "2.39.1",
-    "@sentry/bun": "11.11.0"
+    "@sentry/bun": "11.14.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
