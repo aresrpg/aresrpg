@@ -188,11 +188,16 @@ export const create_contract_build_service = ({
         ].join('\n')
       )
     )
+  // The CLI prints its version and the first twelve characters of its commit. Both must be those of
+  // the pinned mainnet release: a nightly, a fork or a local build can report the same number.
   const ensure_compiler = async (): Promise<void> => {
-    const [, expected_version] = move_packages.sui_cli.release.split('-v')
+    const { release, revision } = move_packages.sui_cli
+    const pinned = `sui ${release.split('-v')[1]}-${revision.slice(0, 12)}`
     const { stdout: compiler_version } = await run('sui', ['--version'], repo_dir)
-    if (!compiler_version.trim().startsWith(`sui ${expected_version}-`))
-      throw new Error(`Sui compiler must match ${move_packages.sui_cli.release}; found ${compiler_version.trim()}`)
+    if (!compiler_version.trim().startsWith(pinned))
+      throw new Error(
+        `Sui compiler must match ${release} (${pinned}); found ${compiler_version.trim()}. Run: suiup install sui@${release.replace('-v', '-')} && suiup default set sui@${release.replace('-v', '-')}`
+      )
   }
   const verify_bytecode = async (network: Network, artifact: ContractArtifact): Promise<void> => {
     await ensure_compiler()

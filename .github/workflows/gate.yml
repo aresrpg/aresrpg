@@ -153,6 +153,7 @@ jobs:
         run: |
           echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
           echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
+          echo "revision=$(jq -er '.sui_cli.revision' move-packages.json)" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -163,7 +164,9 @@ jobs:
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           release='${{ steps.sui_version.outputs.version }}'
-          expected="sui ${release##*-v}-"
+          revision='${{ steps.sui_version.outputs.revision }}'
+          # version and commit of the pinned mainnet release, as `sui --version` prints them
+          expected="sui ${release##*-v}-${revision:0:12}"
           actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
           if [[ "$actual" != "$expected"* ]]; then
             archive="$RUNNER_TEMP/sui.tgz"

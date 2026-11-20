@@ -30,6 +30,19 @@ test('a different Sui compiler cannot produce a release artifact', async () => {
   expect(calls).toEqual([['sui', '--version']])
 })
 
+// The version line of the pinned release: its number and the first twelve characters of its commit.
+const PINNED_COMPILER = `sui ${move_packages.sui_cli.release.split('-v')[1]}-${move_packages.sui_cli.revision.slice(0, 12)}`
+
+// Regression: only the version number was compared, so any build that reported the same number
+// (a nightly, a fork, a local build) passed as the pinned mainnet release.
+test('a compiler with the pinned version number but another commit is refused', async () => {
+  const compiler = create_contract_build_service({
+    repo_dir: import.meta.dir,
+    run: async () => ({ stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-000000000000`, stderr: '' }),
+  })
+  await expect(compiler.compile_math('testnet')).rejects.toThrow('Sui compiler')
+})
+
 test('the pinned Sui compiler proceeds to the existing artifact build', async () => {
   const calls = []
   const compiler = create_contract_build_service({
@@ -39,7 +52,7 @@ test('the pinned Sui compiler proceeds to the existing artifact build', async ()
       return {
         stdout:
           args[0] === '--version'
-            ? `sui ${move_packages.sui_cli.release.split('-v')[1]}-abc123`
+            ? PINNED_COMPILER
             : JSON.stringify({ modules: ['AA=='], dependencies: ['0x2'], digest: [1] }),
         stderr: '',
       }
@@ -61,8 +74,7 @@ test('publication versions come from metadata reads instead of the flaky CLI obj
     },
     run: async (_command, args) => {
       if (args.includes('object')) throw new Error('EOF while parsing a value')
-      if (args[0] === '--version')
-        return { stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`, stderr: '' }
+      if (args[0] === '--version') return { stdout: PINNED_COMPILER, stderr: '' }
       if (args.includes('chain-identifier')) return { stdout: '4c78adac', stderr: '' }
       publication_file = await Bun.file(args[args.indexOf('--pubfile-path') + 1]).text()
       return { stdout: JSON.stringify({ modules: ['AA=='], dependencies: ['0x2'], digest: [1] }), stderr: '' }
@@ -88,7 +100,7 @@ test('failed or invalid package metadata stops compilation once with network and
       run: async (_command, args) => {
         if (args[0] === 'move') builds += 1
         return {
-          stdout: args[0] === '--version' ? `sui ${move_packages.sui_cli.release.split('-v')[1]}-test` : '4c78adac',
+          stdout: args[0] === '--version' ? PINNED_COMPILER : '4c78adac',
           stderr: '',
         }
       },
@@ -110,8 +122,7 @@ test('preflight meters the exact candidate modules against the selected network 
       return '139'
     },
     run: async (_command, args) => {
-      if (args[0] === '--version')
-        return { stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`, stderr: '' }
+      if (args[0] === '--version') return { stdout: PINNED_COMPILER, stderr: '' }
       expect(args.slice(0, 4)).toEqual(['client', 'verify-bytecode-meter', '--protocol-version', '139'])
       for (const [index, arg] of args.entries()) {
         if (arg === '--module') module_bytes.push([...new Uint8Array(await Bun.file(args[index + 1]).arrayBuffer())])
@@ -138,10 +149,7 @@ test('meter rejection or missing protocol data cannot approve an upgrade', async
       repo_dir: import.meta.dir,
       read_protocol: async () => '139',
       run: async (_command, args) => ({
-        stdout:
-          args[0] === '--version'
-            ? `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`
-            : JSON.stringify({ success }),
+        stdout: args[0] === '--version' ? PINNED_COMPILER : JSON.stringify({ success }),
         stderr: '',
       }),
     })
@@ -152,7 +160,7 @@ test('meter rejection or missing protocol data cannot approve an upgrade', async
     read_protocol: async () => {
       throw new Error('protocol unavailable')
     },
-    run: async () => ({ stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`, stderr: '' }),
+    run: async () => ({ stdout: PINNED_COMPILER, stderr: '' }),
   })
   await expect(compiler.verify_bytecode('mainnet', artifact)).rejects.toThrow('protocol unavailable')
 })
