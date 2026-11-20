@@ -67,7 +67,7 @@ test('observations recheck identity and live authority without durable read comm
   }
 })
 
-test('unchanged fresh observations retain pending envelopes and receipt/takeover barriers', async () => {
+test('unchanged fresh observations retain pending envelopes and the receipt barrier', async () => {
   const f = await runtime_fixture()
   const control = create_control_service(f.store, f.options.config, 60000, () => f.clock.now)
   const key = lane_key_for(f.bot)
@@ -97,11 +97,9 @@ test('unchanged fresh observations retain pending envelopes and receipt/takeover
     expect(queued.status).toBe('accepted')
     expect(await f.store.read<Lane>(key)).toMatchObject({ pending, active_command: null, direct: queued.id })
     await expect(direct(2)).rejects.toThrow('bot_busy_or_paused')
-    for (const barrier of [{ reconciliation_command: 'receipt' }, { transport_stopped: true }]) {
-      await put(f.store, key, { ...lease, ...barrier })
-      await control.observed(key, 'test', lease.fence, true, false)
-      expect((await f.store.read<Lane>(key))?.needs_resync).toBe(true)
-    }
+    await put(f.store, key, { ...lease, reconciliation_command: 'receipt' })
+    await control.observed(key, 'test', lease.fence, true, false)
+    expect((await f.store.read<Lane>(key))?.needs_resync).toBe(true)
   } finally {
     await f.runtime.stop()
   }
@@ -126,7 +124,6 @@ test('lease takeover forgets execution but preserves stop authority and fences t
         gas_budget_mist: '100',
       },
       paused: true,
-      transport_stopped: true,
       runs: { hero: 'tree' },
       observed_at: f.clock.now,
     }
@@ -139,7 +136,6 @@ test('lease takeover forgets execution but preserves stop authority and fences t
       actor_id: 'second',
       fence: first.fence + 1,
       paused: true,
-      transport_stopped: true,
       active_command: null,
       pending: null,
       reconciliation_command: null,

@@ -63,8 +63,8 @@ const bound_transaction_lifecycle = (
     const lane = await lane_for(tx)
     const grant = await tx.get<Grant>(`grant:${command.grant_id}`)
     const current = await tx.get<Command>(`command:${command.id}`)
-    if (!grant || !current || !['accepted', 'executing', 'uncertain'].includes(current.status))
-      throw new Error('command_not_active')
+    // Only receipt recovery settles an uncertain command; nothing prepares, signs or submits it again.
+    if (!grant || !current || !['accepted', 'executing'].includes(current.status)) throw new Error('command_not_active')
     assert_live_grant(config, grant, await tx.get<Bot>(`bot:${command.bot_id}`), now())
     if (
       [

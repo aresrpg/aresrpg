@@ -85,26 +85,48 @@ test('stopped combat cannot prepare, sign or submit an already accepted child co
   expect((await f.store.read<Lane>(f.key))!.pending).toBeNull()
 })
 
-test('failed, uncertain and cancelled combat children never admit replacement transactions', async () => {
-  for (const status of ['failed', 'uncertain', 'cancelled'] as const) {
+test('an uncertain combat child never admits a replacement transaction', async () => {
+  const f = await combat_fixture()
+  await f.tick()
+  const command = await f.get_command()
+  await put(f.store, `command:${command.id}`, { ...command, status: 'uncertain', error: 'fixture failure' })
+  await f.tick()
+  await f.tick()
+  expect(await f.get_run()).toMatchObject({ status: 'awaiting_ai', actions_started: 1, issue: 'command_uncertain' })
+  expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
+  expect((await f.store.read<Lane>(f.key))!.active_command).toBe(command.id)
+})
+
+test('a failed or cancelled combat child is selected again only once the fight state moves', async () => {
+  for (const status of ['failed', 'cancelled'] as const) {
     const f = await combat_fixture()
     await f.tick()
     const command = await f.get_command()
     await put(f.store, `command:${command.id}`, { ...command, status, error: 'fixture failure' })
+    await put(f.store, f.key, { ...(await f.store.read<Lane>(f.key))!, active_command: null })
     await f.tick()
     await f.tick()
-    expect(await f.get_run()).toMatchObject({ status: 'awaiting_ai', actions_started: 1, issue: `command_${status}` })
+    expect(await f.get_run()).toMatchObject({ status: 'waiting', actions_started: 1 })
     expect(await f.store.scan_keys('command:', 10)).toHaveLength(1)
-    expect((await f.store.read<Lane>(f.key))!.active_command).toBe(command.id)
+    const lane = (await f.store.read<Lane>(f.key))!
+    const revision = lane.observation_revision + 1
+    await put(f.store, f.key, { ...lane, observation_revision: revision })
+    await f.tick({
+      ...f.context,
+      command: { ...f.context.command, observation_revision: revision },
+      snapshot: { ...f.context.snapshot, observation_revision: revision },
+    })
+    const next = await f.get_command()
+    expect(await f.get_run()).toMatchObject({ status: 'active', actions_started: 2 })
+    expect(next).toMatchObject({ kind: command.kind, payload: { fight: command.payload.fight } })
+    expect(next.id).not.toBe(command.id)
   }
 })
 
-test('pause, human takeover and revocation stop combat without issuing a child', async () => {
-  for (const reason of ['pause', 'takeover', 'revocation'] as const) {
+test('pause and revocation stop combat without issuing a child', async () => {
+  for (const reason of ['pause', 'revocation'] as const) {
     const f = await combat_fixture()
     if (reason === 'pause') await f.control.pause(f.grant)
-    if (reason === 'takeover')
-      await put(f.store, f.key, { ...(await f.store.read<Lane>(f.key))!, transport_stopped: true })
     if (reason === 'revocation') await put(f.store, `grant:${f.grant.id}`, { ...f.grant, revoked: true })
     await f.tick()
     expect(await f.get_run()).toMatchObject({

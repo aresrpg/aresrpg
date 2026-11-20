@@ -50,7 +50,7 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
   const host = (retained: Lane | null, run: BehaviorRun, prior: BehaviorRun | null, revisions: Revisions): Lane => {
     assert_revision(revisions.decision_revision)
     assert_revision(revisions.observation_revision)
-    if (!retained || retained.transport_stopped) throw new Error('needs_resync')
+    if (!retained) throw new Error('needs_resync')
     const lane = { ...retained, ...released_run(retained, run.id) }
     if ([lane.paused, prior && unresolved(retained, prior)].some(Boolean)) throw new Error('bot_busy_or_paused')
     if (

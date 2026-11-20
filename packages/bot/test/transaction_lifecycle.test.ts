@@ -441,7 +441,7 @@ const conflict_fixture = async () => {
 test('certified conflict fails the exact command atomically, preserves stopped control and retains proof', async () => {
   const f = await conflict_fixture()
   const lane = (await f.store.read<Lane>(f.lane_key))!
-  await put(f.store, f.lane_key, { ...lane, paused: true, transport_stopped: true })
+  await put(f.store, f.lane_key, { ...lane, paused: true })
   await put(f.store, 'behavior:stopped', { status: 'stopped', issue: 'explicit_stop' })
   await put(f.store, 'command:command', {
     ...(await f.store.read<Command>('command:command'))!,
@@ -457,7 +457,6 @@ test('certified conflict fails the exact command atomically, preserves stopped c
   })
   expect(await f.store.read<Lane>(f.lane_key)).toMatchObject({
     paused: true,
-    transport_stopped: true,
     needs_resync: true,
     pending: null,
     active_command: null,

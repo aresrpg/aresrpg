@@ -7,6 +7,7 @@ import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model
 import type { ControlStore } from './store.ts'
 import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
 import { command_issue } from './planning_failure.ts'
+import { observed_balance } from './character_observability.ts'
 import { hash_secret } from './security.ts'
 import { run_hosted, run_key, released_run } from './run_ref.ts'
 import { next_behavior_action } from './behavior_plan.ts'
@@ -43,15 +44,46 @@ const slot_busy = (lane: Lane, context: GameplayContext) =>
     !gameplay_observation_ready(context),
     lane.observation_revision !== context.snapshot.observation_revision,
   ].some(Boolean)
-const gate = (lane: Lane, previous: Command | null, context: GameplayContext, authority: string | undefined) => {
+const unfunded = (previous: Command, context: GameplayContext) => {
+  const balance = observed_balance(context)
+  return !balance || BigInt(balance.balance_mist) <= BigInt(previous.funding_balance_mist ?? 0)
+}
+/** A command that did not complete is followed only once a fact it was judged on has moved: the balance
+ * for an unfunded payment, otherwise the observed game state, or the clock for a refusal that spent no
+ * gas. A failure that spent gas never follows the clock. */
+const unmoved = (
+  input: Pick<RunInput, 'config' | 'now'>,
+  lane: Lane,
+  previous: Command | null,
+  context: GameplayContext
+) => {
+  if (!previous || !['failed', 'cancelled'].includes(previous.status)) return undefined
+  const issue = command_issue(previous.status, previous.error)
+  if (issue === 'funding_required') return unfunded(previous, context) ? issue : undefined
+  const due = input.now >= (previous.refused_at ?? Infinity) + input.config.refusal_retry_ms
+  return [lane.observation_revision > previous.observation_revision, due].some(Boolean) ? undefined : issue
+}
+/** Receipt recovery owns an uncertain envelope; once none remains, acting again is a new decision. */
+const uncertain = (lane: Lane, command: Command) => ({
+  status: lane.pending?.command_id === command.id ? ('waiting' as const) : ('awaiting_ai' as const),
+  issue: 'command_uncertain',
+})
+/** Only decisions stop or pause a run. Every other gate is a fact that the next tick reads again. */
+const gate = (
+  input: Pick<RunInput, 'config' | 'now'>,
+  lane: Lane,
+  previous: Command | null,
+  context: GameplayContext,
+  authority: string | undefined
+) => {
+  const outcome = previous?.status ?? 'completed'
   if (authority) return { status: 'stopped' as const, issue: authority }
-  if ([lane.paused, lane.transport_stopped].some(Boolean)) return { status: 'paused' as const, issue: 'paused' }
-  const outcome = previous ?? { status: 'completed', error: 'step_failed' }
-  if (['failed', 'uncertain', 'cancelled'].includes(outcome.status))
-    return { status: 'awaiting_ai' as const, issue: command_issue(outcome.status, outcome.error) }
-  return [slot_busy(lane, context), outcome.status !== 'completed'].some(Boolean)
-    ? { status: 'waiting' as const, issue: 'needs_resync' }
-    : undefined
+  if (lane.paused) return { status: 'paused' as const, issue: 'paused' }
+  if (outcome === 'uncertain') return uncertain(lane, previous!)
+  if ([slot_busy(lane, context), ['accepted', 'executing'].includes(outcome)].some(Boolean))
+    return { status: 'waiting' as const, issue: 'needs_resync' }
+  const issue = unmoved(input, lane, previous, context)
+  return issue ? { status: 'waiting' as const, issue } : undefined
 }
 /** A direct command is a one-shot entry of the same queue. On its turn it takes the single signing
  * slot against fresh state, like a tree's next action; while the slot is not free it keeps waiting.
@@ -70,7 +102,7 @@ export const direct_tick = async (input: Omit<RunInput, 'run'> & Readonly<{ comm
       await tx.get<Bot>(`bot:${bot_id}`),
       now
     )
-    const fenced = [lane.paused, lane.transport_stopped, lane.decision_revision !== command.decision_revision]
+    const fenced = [lane.paused, lane.decision_revision !== command.decision_revision]
     const refusal = authority ?? (fenced.some(Boolean) ? 'bot_busy_or_paused' : input.refusal)
     if (refusal) {
       await tx.put(`command:${id}`, { ...command, status: 'failed', error: refusal })
@@ -105,7 +137,7 @@ const report_outcome = (outcome: TickOutcome, report?: RunInput['report_failure'
   report(outcome.diagnostic)
   return outcome.status
 }
-// A blocked tree keeps its hero's slot and discoverable objective; every other ending frees the slot.
+// A tree awaiting its author keeps its hero's slot and discoverable objective; every other ending frees the slot.
 // A run never advances the wallet decision: a hero must not fence its neighbours.
 const ended_lane = (run: BehaviorRun, lane: Lane, status: Status): Lane =>
   status === 'awaiting_ai' ? lane : { ...lane, ...released_run(lane, run.id) }
@@ -172,12 +204,13 @@ export const run_tick = async (input: RunInput) => {
     }
     const grant = await tx.get<Grant>(`grant:${run.grant_id}`)
     const authority = authority_issue(config, grant, await tx.get<Bot>(`bot:${run.bot_id}`), now)
-    const blocked = gate(lane, previous, context, authority)
+    const blocked = gate(input, lane, previous, context, authority)
     if (blocked) return finish(blocked.status, blocked.issue)
     const next = next_behavior_action(run, previous, context)
     if (next.state !== 'action') {
       const status = await finish(next.state, next.issue, next.record)
-      return finished_result(status, next.diagnostic)
+      // A planning fault re-evaluates every tick; it is reported when it starts, not on every pass.
+      return finished_result(status, run.issue === next.issue ? undefined : next.diagnostic)
     }
     const action = next.action!
     admit_command(

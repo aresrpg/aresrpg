@@ -121,7 +121,7 @@ test('wall clock jumps do not advance the retained chain observation', async () 
   await f.runtime.stop()
 })
 
-test('normal server takeover is terminal even when another connector queues observation', async () => {
+test('a server takeover is a fact: renewal reconnects the same lease and observation recovers', async () => {
   const f = await fixture()
   await f.observe()
   await f.runtime.tick()
@@ -129,14 +129,18 @@ test('normal server takeover is terminal even when another connector queues obse
   await f.admit()
   await f.runtime.tick()
   await f.runtime.settle()
+  const before = (await f.store.read<Lane>(lane_key_for(f.bot)))!
   f.sockets[0]!.handlers.on_close(4000, 'REPLACED')
   await f.runtime.renew()
-  f.clock.now += 1
-  await expect(f.observe()).rejects.toThrow('ACTOR_TERMINAL')
-  await f.runtime.tick()
+  expect(f.sockets).toHaveLength(2)
+  await f.admit()
   await f.runtime.settle()
-  expect(f.sockets).toHaveLength(1)
-  expect((await f.store.read<Lane>(lane_key_for(f.bot)))!.paused).toBe(true)
+  f.clock.now += 1
+  expect(await f.observe()).toMatchObject({ ready: true })
+  const after = (await f.store.read<Lane>(lane_key_for(f.bot)))!
+  expect(after).toMatchObject({ fence: before.fence, decision_revision: before.decision_revision })
+  expect(after.paused).toBeFalsy()
+  expect(f.errors.map(String)).toEqual(['Error: connection_closed: REPLACED'])
   await f.runtime.stop()
 })
 
@@ -234,7 +238,7 @@ test('a connector releasing the market view never takes it from the connector th
   await f.runtime.stop()
 })
 
-test('explicit newly authorized connector replaces auth-expired actor but not server takeover', async () => {
+test('explicit newly authorized connector replaces an auth-expired actor', async () => {
   const f = await fixture()
   await f.observe()
   await f.runtime.tick()

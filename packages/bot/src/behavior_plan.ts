@@ -59,11 +59,12 @@ const combat_resolution = (
       [!run.activation, previous?.kind !== 'fight_settle', previous?.payload.fight !== fight].some(Boolean),
     ].every(Boolean)
   )
-    return { status: 'replan', issue: 'custody_changed' }
+    return { status: 'failure', issue: 'custody_changed' }
   const statuses: Record<CombatNext['state'], Resolution['status']> = {
     action: 'action',
     completed: 'success',
     waiting: 'waiting',
+    failure: 'failure',
     awaiting_ai: 'replan',
   }
   return { status: statuses[next.state], action: next.action, issue: next.issue, fight }
@@ -131,12 +132,14 @@ const resolve_action = (
   } catch (error) {
     const known = planning_issue(error)
     if (!known) throw error
-    return { status: known.state === 'waiting' ? 'waiting' : 'replan', issue: known.issue }
+    return { status: known.state, issue: known.issue }
   }
 }
-/** Consume only the command associated with this leaf; retained receipts cannot complete a new traversal. */
+/** Consume only the command associated with this leaf; retained receipts cannot complete a new traversal.
+ * A command that did not complete completes nothing: the tree selects against fresh state again. */
 const consume_completion = (run: BehaviorRun, previous: Command | null): BehaviorRun => {
   if (!previous || !run.pending_node || previous.id === run.consumed_command_id) return run
+  if (previous.status !== 'completed') return { ...run, consumed_command_id: previous.id }
   const memory = run.activation ? run.memory : { ...run.memory, completed: [...run.memory.completed, run.pending_node] }
   return { ...run, memory, consumed_command_id: previous.id }
 }
@@ -154,9 +157,10 @@ const continuation = (
   pending_node: result.status === 'action' ? result.node! : null,
   activation: selected.fight ? { node: result.node!, fight: selected.fight } : result.blocked ? run.activation : null,
 })
+// Only an authored replan yields to the author. A failed tree waits for the facts to change.
 const states = {
   success: 'waiting',
-  failure: 'awaiting_ai',
+  failure: 'waiting',
   waiting: 'waiting',
   complete: 'completed',
   replan: 'awaiting_ai',

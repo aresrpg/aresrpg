@@ -7,7 +7,7 @@ import type { AuthSession } from '../auth.ts'
 import { read_app_state, dispatch_app } from '../store.ts'
 
 import { begin_setup_name } from './naming_barrier.ts'
-import { empty_hosted, hosted_pending, reduce_hosted, hosted_failure } from './hosted_state.ts'
+import { empty_hosted, hosted_pending, reduce_hosted, hosted_failure, request_inherited } from './hosted_state.ts'
 import { setup_hosted, authorize_hosted, create_hosted_client, cancel_hosted_session } from './hosted_client.ts'
 
 export const useHostedConnect = (wallet: AuthSession | null, origin: string, requested_id: string | null) => {
@@ -26,7 +26,7 @@ export const useHostedConnect = (wallet: AuthSession | null, origin: string, req
     })
     return () =>
       queueMicrotask(() => {
-        if (lifetime.current !== context && lifetime.current.wallet === wallet) return
+        if (lifetime.current !== context && request_inherited(wallet, lifetime.current.wallet)) return
         if (!origin || !context.authorization_id || context.completed) return
         void cancel_hosted_session(origin, context.authorization_id).catch((error) =>
           console.warn('Hosted authorization cancellation failed; expiry still applies.', error)

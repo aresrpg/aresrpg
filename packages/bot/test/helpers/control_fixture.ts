@@ -73,6 +73,7 @@ export const fixture_config: BotConfig = {
   authority_generation: 'fixture-generation',
   recovery_mode: false,
   observation_freshness_ms: 60000,
+  refusal_retry_ms: 30000,
   request_ttl_ms: 300000,
   challenge_ttl_ms: 60000,
   code_ttl_ms: 30000,

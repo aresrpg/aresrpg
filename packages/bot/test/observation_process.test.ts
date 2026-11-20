@@ -166,30 +166,22 @@ integration(
 )
 
 integration(
-  'two OS processes retain terminal human takeover across owner shutdown and lease expiry',
+  'two OS processes keep serving through a server takeover and hand over after owner shutdown',
   async () => {
     const f = await process_pair(url!)
     try {
       await f.first.call('observe')
       await f.first.call('admit')
-      await f.first.call('mode', { read: 'hold_result' })
-      const in_flight = f.second.call('observe').then(
-        () => 'unexpected_snapshot',
-        (error: Error) => error.message
-      )
-      await until(async () => (await f.first.call<Status>('status')).read_entered)
       await f.first.call('takeover')
-      await f.first.call('release')
-      expect(await in_flight).toBe('ACTOR_TERMINAL')
-      await f.first.call('mode')
-      await expect(f.second.call('observe')).rejects.toThrow('ACTOR_TERMINAL')
-      const terminal = (await f.lane())!
-      expect(terminal).toMatchObject({ paused: true, transport_stopped: true, needs_resync: true })
+      // A socket the server ended is a fact: no latch or pause reaches the shared lane.
+      const owned = (await f.lane())!
+      expect(owned.paused).toBeFalsy()
+      expect(owned).not.toHaveProperty('transport_stopped')
       await f.first.call('stop')
-      await Bun.sleep(Math.max(0, terminal.lease_until - Date.now()) + 30)
-      await expect(f.second.call('observe')).rejects.toThrow('ACTOR_TERMINAL')
-      expect((await f.second.call<Status>('status')).sockets).toBe(0)
-      expect((await f.lane())?.transport_stopped).toBe(true)
+      await Bun.sleep(Math.max(0, owned.lease_until - Date.now()) + 30)
+      await expect(f.second.call('observe')).resolves.toBeDefined()
+      expect((await f.second.call<Status>('status')).sockets).toBe(1)
+      expect((await f.lane())?.paused).toBeFalsy()
     } finally {
       await f.close()
     }

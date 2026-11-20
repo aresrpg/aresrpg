@@ -5,6 +5,7 @@ import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
 export const PLANNING_DIAGNOSTIC_PREFIX = 'run_planning_internal_error '
 
+/** Facts not observed yet: the leaf waits instead of failing. */
 const waiting = new Set([
   'needs_resync',
   'inventory_unavailable',
@@ -12,7 +13,8 @@ const waiting = new Set([
   'needs_custody_resync',
   'market_unavailable',
 ])
-const blocked = new Set([
+/** What the game refuses right now: the leaf fails, and later ticks evaluate the tree again. */
+const refused = new Set([
   'invalid_target_options',
   'target_outside_area',
   'target_group_mismatch',
@@ -56,9 +58,8 @@ const blocked = new Set([
 export const planning_issue = (error: unknown) => {
   if (!(error instanceof Error) || error.constructor !== Error) return undefined
   if (waiting.has(error.message)) return { state: 'waiting' as const, issue: error.message }
-  if (blocked.has(error.message)) return { state: 'awaiting_ai' as const, issue: error.message }
-  if (/^illegal_fight_(action|turn):[a-z_]+$/.test(error.message))
-    return { state: 'awaiting_ai' as const, issue: error.message }
+  if (refused.has(error.message) || /^illegal_fight_(action|turn):[a-z_]+$/.test(error.message))
+    return { state: 'failure' as const, issue: error.message }
   return undefined
 }
 export const planning_diagnostic = (error: unknown, kind: string, run: Readonly<{ id: string; revision?: number }>) => {
@@ -74,8 +75,9 @@ export const planning_blocker = <Run extends Readonly<{ id: string; revision?: n
   run: Run
 ) => {
   const known = planning_issue(error)
+  // A planning fault is never a decision: the run waits and evaluates its tree again next tick.
   return {
-    state: known?.state ?? ('awaiting_ai' as const),
+    state: 'waiting' as const,
     issue: known?.issue ?? 'internal_error',
     record: run,
     diagnostic: known ? undefined : planning_diagnostic(error, kind, run),

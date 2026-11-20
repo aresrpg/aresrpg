@@ -5,8 +5,6 @@ import {
   parse_client_packet,
   parse_server_packet,
   SERVER_PACKET_TYPES,
-  TAKEOVER_DROP_REASONS,
-  VIOLATION_DROP_REASONS,
   type CharacterRow,
   type ClientPacket,
   type ServerPacket,
@@ -118,7 +116,8 @@ const reduce_connection = (state: AgentConnectionState, action: ConnectionAction
 
 /** Explicit connection lifecycle, with no keys, transaction signing, replay, or automatic retries.
  * The injected transport must deliver JSON text. A new roster is required on every connection.
- * stop() is permanent; disconnect() permits a later explicit connect().
+ * stop() is permanent. Any server close reports `disconnected` with its reason in `error` (a takeover
+ * such as `REPLACED`, a violation such as `SPEED`); whether to connect() again is the caller's policy.
  */
 export const create_agent_connection = (options: AgentConnectionOptions) => {
   const url = connection_url(options)
@@ -210,11 +209,7 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
         on_close: (_code, reason) => {
           if (!current()) return
           socket = null
-          stopped =
-            TAKEOVER_DROP_REASONS.has(reason) ||
-            VIOLATION_DROP_REASONS.has(reason) ||
-            ['INVALID_SIGNATURE', 'INVALID_PACKET'].includes(reason)
-          retire(stopped ? 'stopped' : 'disconnected', reason)
+          retire('disconnected', reason)
         },
       })
       if (!current()) {

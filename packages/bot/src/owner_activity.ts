@@ -10,7 +10,7 @@ type WalletState = AgentStatus['state']
 const RUN_STATES: readonly WalletState[] = ['active', 'waiting', 'awaiting_ai', 'paused']
 
 /**
- * What the wallet is doing as a whole, for its owner. A stopped or uncertain wallet is said first;
+ * What the wallet is doing as a whole, for its owner. A paused or uncertain wallet is said first;
  * then its command in flight; then its most active hero run. Pure: the status sharer supplies the
  * lane, the lane's active command and the run statuses it already read.
  */
@@ -24,7 +24,7 @@ export const wallet_state = (
   const run = RUN_STATES.find((state) => run_statuses.includes(state)) ?? null
   const gates: readonly (readonly [boolean, WalletState])[] = [
     [[bot.status !== 'ready', lane.paused].some(Boolean), 'paused'],
-    [[lane.transport_stopped, command?.status === 'uncertain'].some(Boolean), 'unavailable'],
+    [command?.status === 'uncertain', 'unavailable'],
     [[Boolean(lane.active_command), !command].every(Boolean), 'unavailable'],
     [[run, command].some(Boolean) && lane.lease_until <= now, 'unavailable'],
     [Boolean(command?.waiting_for_resume), 'waiting'],

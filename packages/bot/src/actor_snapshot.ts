@@ -188,6 +188,5 @@ export const actor_snapshot_transition = (
         !fight_state_regresses(previous.fight_phases[id] ?? 0, previous.fights[id]?.contract)
     ),
     became_ready: snapshot.ready && !previous.ready,
-    terminal_server: state.status === 'stopped' && !!state.error,
   }
 }

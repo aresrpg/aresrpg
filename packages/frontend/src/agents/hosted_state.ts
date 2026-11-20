@@ -65,6 +65,12 @@ export const reduce_hosted = <T>(state: HostedState<T>, input: HostedInput<T>): 
   return { ...state, ...input.values }
 }
 
+/** Whether the next lifetime keeps the request of the one that ended. It does for the same account,
+ * and when no account had signed in yet: a page loads before its sign-in is restored, so the request
+ * in its address was never seen by another account. An account change always ends the request. */
+export const request_inherited = <T>(ended: T | null, successor: T | null): boolean =>
+  ended === null || ended === successor
+
 export const hosted_failure = (error: unknown, authorization_id: string | null): 'restart' | 'retry' =>
   authorization_id !== null &&
   error instanceof Error &&

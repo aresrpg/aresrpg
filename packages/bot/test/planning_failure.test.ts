@@ -9,6 +9,7 @@ import { refresh_run_command } from '../src/run_refresh.ts'
 import { planning_issue } from '../src/planning_failure.ts'
 import type { BehaviorRun } from '../src/behavior_script.ts'
 
+import { put } from './helpers/control_fixture.ts'
 import { runtime_fixture } from './helpers/runtime_fixture.ts'
 import { profession_context, character, resource } from './helpers/profession_fixture.ts'
 
@@ -53,14 +54,11 @@ const broken = (context: ReturnType<typeof profession_context>) => ({
 })
 test('expected planning issues stay explicit and implementation errors are not domain refusals', () => {
   expect(planning_issue(new Error('needs_resync'))).toEqual({ state: 'waiting', issue: 'needs_resync' })
-  expect(planning_issue(new Error('ingredients_required'))).toEqual({
-    state: 'awaiting_ai',
-    issue: 'ingredients_required',
-  })
+  expect(planning_issue(new Error('ingredients_required'))).toEqual({ state: 'failure', issue: 'ingredients_required' })
   expect(planning_issue(new TypeError('needs_resync'))).toBeUndefined()
   expect(planning_issue(new Error('secret implementation payload'))).toBeUndefined()
 })
-test('unexpected planning failure commits a visible blocker and reports once after commit', async () => {
+test('unexpected planning failure waits visibly, re-evaluates, and reports once after commit', async () => {
   const f = await fixture()
   const reports: unknown[] = []
   const committed: Promise<BehaviorRun>[] = []
@@ -73,12 +71,16 @@ test('unexpected planning failure commits a visible blocker and reports once aft
     },
   }
   await run_tick(input)
-  expect((await committed[0])?.status).toBe('awaiting_ai')
+  expect((await committed[0])?.status).toBe('waiting')
   const run = await f.get_run()
-  expect(run).toMatchObject({ status: 'awaiting_ai', issue: 'internal_error', actions_started: 0 })
+  expect(run).toMatchObject({ status: 'waiting', issue: 'internal_error', actions_started: 0 })
   expect(Object.values((await f.store.read<Lane>(f.key))?.runs ?? {})).toEqual([run.id])
-  expect(await f.store.scan_pending(20)).not.toContain(`behavior:${run.id}`)
+  // Still scheduled: a fault is a fact the next tick reads again, never a stop.
+  expect(await f.store.scan_pending(20)).toContain(`behavior:${run.id}`)
   await run_tick({ ...input, run })
+  await run_tick({ ...input, run: await f.get_run() })
+  await run_tick({ ...f.input, run: await f.get_run() })
+  expect((await f.get_run()).status).toBe('active')
   expect(reports).toHaveLength(1)
   expect(String(reports[0])).toContain(run.id)
   expect(String(reports[0])).toContain('"revision":1')
@@ -100,7 +102,7 @@ test('unexpected refresh failure retires only the unsent draft before surfacing 
       f.clock.now
     )
   ).rejects.toThrow('run_planning_internal_error')
-  expect(await f.get_run()).toMatchObject({ status: 'awaiting_ai', issue: 'internal_error', last_command_id: null })
+  expect(await f.get_run()).toMatchObject({ status: 'waiting', issue: 'internal_error', last_command_id: null })
   expect((await f.store.read<Command>(`command:${command.id}`))?.status).toBe('cancelled')
   expect(await f.store.read<Lane>(f.key)).toMatchObject({
     pending: null,
@@ -150,7 +152,45 @@ test('explicit wait and completion do not invent an unhandled reason', async () 
   }
   await f.runtime.stop()
 })
-test('canonical equipment refusals remain external instruction blockers', () => {
+test('canonical equipment refusals fail the leaf so the tree can choose again', () => {
   for (const issue of ['wrong_slot', 'level_too_low', 'relic_duplicate', 'item_listed'])
-    expect(planning_issue(new Error(issue))).toEqual({ state: 'awaiting_ai', issue })
+    expect(planning_issue(new Error(issue))).toEqual({ state: 'failure', issue })
+})
+test('a refused leaf fails so a selector takes its next branch', async () => {
+  const f = await fixture()
+  const run = await f.get_run()
+  const refused = {
+    type: 'action',
+    action: { type: 'call', kind: 'raise_spell', payload: { character_id: character.id, spell: 'Tricky Trap' } },
+  }
+  const decision = next_behavior_action(
+    {
+      ...run,
+      script: { ...run.script, tree: { type: 'selector', children: [refused, run.script.tree] } },
+    } as BehaviorRun,
+    null,
+    f.input.context
+  )
+  expect(decision).toMatchObject({ state: 'action', action: { kind: 'gather' }, node: 'root/1' })
+  await f.runtime.stop()
+})
+test('a refusal that spent no gas is tried again after the retry delay; a gas-spending failure is not', async () => {
+  for (const [spent, retried] of [
+    [false, 'active'],
+    [true, 'waiting'],
+  ] as const) {
+    const f = await fixture()
+    await run_tick(f.input)
+    const command = (await f.store.read<Command>(`command:${(await f.get_run()).last_command_id}`))!
+    // As the executor leaves each failure: refused before submission, or settled from an aborted receipt.
+    const failure = spent ? { result: { digest: 'd', gas_mist: '5' } } : { refused_at: f.clock.now }
+    await put(f.store, `command:${command.id}`, { ...command, status: 'failed', error: 'MoveAbort', ...failure })
+    // The slot is free again, and the lease renewed as the live actor does on every tick.
+    const lease_until = f.clock.now + 2 * f.options.config.refusal_retry_ms
+    await put(f.store, f.key, { ...(await f.store.read<Lane>(f.key))!, active_command: null, lease_until })
+    const tick = async (now: number) => run_tick({ ...f.input, now, run: await f.get_run() })
+    await expect(tick(f.clock.now + f.options.config.refusal_retry_ms - 1)).resolves.toBe('waiting')
+    await expect(tick(f.clock.now + f.options.config.refusal_retry_ms)).resolves.toBe(retried)
+    await f.runtime.stop()
+  }
 })

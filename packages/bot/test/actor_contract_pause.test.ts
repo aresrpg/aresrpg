@@ -101,7 +101,25 @@ test('contract resume cannot replay discarded local signed bytes', async () => {
   }
 })
 
-for (const reason of ['revoked', 'takeover', 'stale_checkpoint'] as const) {
+test('a server takeover reconnects while the frozen command keeps waiting unsigned', async () => {
+  const f = await accepted_fixture()
+  try {
+    await f.freeze(true)
+    await f.tick()
+    f.sockets[0]!.handlers.on_close(4000, 'REPLACED')
+    await f.tick()
+    await f.tick()
+    expect(f.sockets).toHaveLength(2)
+    expect(f.submissions).toHaveLength(0)
+    expect(await f.store.read<Command>(`command:${f.command.id}`)).toMatchObject({ status: 'accepted' })
+    expect((await f.store.read<Lane>(f.lane_key))!.paused).toBeFalsy()
+    expect(f.errors.map(String)).toContain('Error: connection_closed: REPLACED')
+  } finally {
+    await f.runtime.stop()
+  }
+})
+
+for (const reason of ['revoked', 'stale_checkpoint'] as const) {
   test(`contract resume does not revive ${reason} work`, async () => {
     const f = await accepted_fixture()
     try {
@@ -111,7 +129,6 @@ for (const reason of ['revoked', 'takeover', 'stale_checkpoint'] as const) {
         await f.store.transaction(['grant:grant'], async (tx) => {
           await tx.put('grant:grant', { ...f.grant, revoked: true })
         })
-      if (reason === 'takeover') f.sockets[0]!.handlers.on_close(4000, 'REPLACED')
       if (reason === 'stale_checkpoint') {
         const fight = f.original.fight_baseline!
         await f.send({
@@ -121,7 +138,7 @@ for (const reason of ['revoked', 'takeover', 'stale_checkpoint'] as const) {
           seats: {},
         })
       }
-      if (reason !== 'takeover') await f.freeze(false)
+      await f.freeze(false)
       await f.tick()
       await f.tick()
       expect(f.submissions).toHaveLength(0)

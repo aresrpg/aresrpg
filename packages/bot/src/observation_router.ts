@@ -67,7 +67,7 @@ const decode = (raw: string): Request | Reply => {
 }
 
 /** Ephemeral owner RPC. Redis CAS and leases remain the admission authority.
- * This fails if recovery reopens gameplay after takeover or a reply bypasses current ownership/grant. */
+ * This fails if a reply bypasses current ownership or grant. */
 export const create_observation_router = async (
   options: Readonly<{
     store: ControlStore
@@ -118,11 +118,7 @@ export const create_observation_router = async (
       throw new Error('insufficient_scope')
     return { grant, bot }
   }
-  const current_lane = async (bot: Bot) => {
-    const lane = await options.store.read<Lane>(lane_key_for(bot))
-    if (lane?.transport_stopped) throw new Error('ACTOR_TERMINAL')
-    return lane
-  }
+  const current_lane = (bot: Bot) => options.store.read<Lane>(lane_key_for(bot))
   const owner_matches = async (bot: Bot, actor: string, fence: number) => {
     const lane = await current_lane(bot)
     return [lane?.actor_id === actor, lane?.fence === fence, (lane?.lease_until ?? 0) > now()].every(Boolean)
@@ -240,7 +236,6 @@ export const create_observation_router = async (
     try {
       const value = await options.local(current.grant, payload)
       await live(grant.id)
-      await current_lane(current.bot)
       if (!ready()) throw new Error('observation_unavailable')
       return value
     } catch (error) {

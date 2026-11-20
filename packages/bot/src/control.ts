@@ -38,7 +38,6 @@ export type Lane = Readonly<{
    * readable until the next direct command is accepted. */
   direct?: string | null
   reconciliation_command?: string | null
-  transport_stopped?: boolean
   fight_replays?: Readonly<Record<string, FightReplay>>
   catalogue_receipts?: Readonly<Record<string, Readonly<{ digest: string; version: string; command_id: string }>>>
   network: 'mainnet'
@@ -77,6 +76,10 @@ export type Command = Readonly<{
   /** The certified receipt, settled with result; process-local and never returned to a client. */
   receipt?: Receipt
   error?: string
+  /** The SUI balance a funding refusal was judged against; its run waits until the wallet holds more. */
+  funding_balance_mist?: string
+  /** When a command was refused before submission, at no gas cost; its run may try again on a clock. */
+  refused_at?: number
 }>
 /** Existing envelope/command work precedes objectives which depend on its reconciliation. */
 export const lane_work_key = (key: string, lane: Lane | null): string => {
@@ -166,7 +169,7 @@ export const create_control_service = (
         ...lane,
         observation_revision: lane.observation_revision + Number(changed),
         observed_at: now(),
-        needs_resync: [!ready, lane.reconciliation_command, lane.transport_stopped].some(Boolean),
+        needs_resync: [!ready, lane.reconciliation_command].some(Boolean),
       })
     })
   const accept = async (

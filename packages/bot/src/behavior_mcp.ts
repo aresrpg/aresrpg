@@ -29,7 +29,7 @@ const definitions = {
   bot_behavior_status: {
     scope: 'bot:observe',
     description:
-      'Read one hero’s retained tree, revision, progress, pending command ID and current issue. script.strategy names the shared catalogue entry the tree was bound from, when any. Every authorized connector of this owner reads the same run. Progress and issue are process-local and reset when the service restarts. awaiting_ai requires external AI replanning; this service does not invoke an inference provider.',
+      'Read one hero’s retained tree, revision, progress, pending command ID and current issue. script.strategy names the shared catalogue entry the tree was bound from, when any. Every authorized connector of this owner reads the same run. Progress and issue are process-local and reset when the service restarts. A run waits on facts and resumes by itself; awaiting_ai means an authored replan, a combat fallback or an unresolvable uncertain transaction needs external AI replanning. This service does not invoke an inference provider.',
     properties: { character_id: identifier },
   },
   bot_stop_behavior: {

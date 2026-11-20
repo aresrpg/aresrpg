@@ -223,9 +223,9 @@ test('a purchase refuses itself when another connector holds the market view', a
   // Any other failure to reach the game leaves the order waiting, and is reported.
   const retry = await direct(f, character.id, 'retry', KEY)
   await f.pass(undefined, async () => {
-    throw new Error('ACTOR_TERMINAL')
+    throw new Error('actor_stopped')
   })
   expect(await status_of(f, retry.id)).toBe('accepted')
-  expect(f.errors.map(String)).toEqual(['Error: ACTOR_TERMINAL'])
+  expect(f.errors.map(String)).toEqual(['Error: actor_stopped'])
   await f.runtime.stop()
 })

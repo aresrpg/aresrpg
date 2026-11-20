@@ -85,8 +85,25 @@ test('lost lease rejects challenge signing and permanently retires actor', async
   await f.send({ type: 'packet/signature_request', payload: '11111111-1111-4111-8111-111111111111' })
   expect(f.signs()).toBe(0)
   expect(f.sessions[0]!.closed).toBe(true)
-  await expect(f.actor.connect()).rejects.toThrow('TERMINAL')
+  await expect(f.actor.connect()).rejects.toThrow('actor_stopped')
   await f.actor.stop()
+})
+test('a server close, takeover included, reconnects on the next connect, unlike this actor own stop', async () => {
+  for (const reason of ['REPLACED', 'ALREADY_CONNECTED', 'SPEED', 'RATE_LIMIT', 'INVALID_PACKET']) {
+    const f = fixture()
+    await f.actor.connect()
+    await f.admit()
+    f.sessions[0]!.handlers.on_close(4000, reason)
+    await f.actor.settle_observations()
+    expect(f.actor.state()).toMatchObject({ status: 'disconnected', error: reason })
+    await f.actor.connect()
+    expect(f.sessions).toHaveLength(2)
+    await f.admit()
+    expect(f.actor.state().status).toBe('ready')
+    await f.actor.stop()
+    await expect(f.actor.connect()).rejects.toThrow('actor_stopped')
+    expect(f.sessions).toHaveLength(2)
+  }
 })
 test('market and price observation have distinct exclusive slots', async () => {
   const f = fixture()

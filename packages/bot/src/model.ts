@@ -82,6 +82,7 @@ export type BotConfig = Readonly<{
   network: 'mainnet'
   authority_generation: string
   observation_freshness_ms: number
+  refusal_retry_ms: number
   request_ttl_ms: number
   challenge_ttl_ms: number
   code_ttl_ms: number

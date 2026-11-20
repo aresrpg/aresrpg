@@ -216,15 +216,16 @@ test('constrained restart proves original fight origin and every original mob, i
     },
   }
   expect(() => validate_gameplay(late_context)).toThrow('target_group_mismatch')
-  expect(next_behavior_action(run, null, late_context).state).toBe('awaiting_ai')
+  expect(next_behavior_action(run, null, late_context).state).toBe('waiting')
   checkpoint.contract.fighters.pop()
   checkpoint.contract.x = BigInt(rectangle.max_x + world_center + 1)
-  expect(
-    next_behavior_action(run, null, {
-      ...context,
-      snapshot: { ...context.snapshot, fights: { [fight_id]: row_of(checkpoint) } },
-    })
-  ).toMatchObject({ state: 'awaiting_ai', issue: 'target_outside_area' })
+  // The refused fight fails its leaf, so the tree may take another branch; it never plays outside the area.
+  const outside = next_behavior_action(run, null, {
+    ...context,
+    snapshot: { ...context.snapshot, fights: { [fight_id]: row_of(checkpoint) } },
+  })
+  expect(outside.state).toBe('waiting')
+  expect(outside.action).toBeUndefined()
 })
 
 test('a waiting constrained run disables ordinary idle roaming without a second movement policy', () => {

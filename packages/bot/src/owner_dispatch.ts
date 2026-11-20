@@ -14,7 +14,6 @@ export const create_owner_dispatch =
     const guard = (lane: Lane | null) => {
       if (now() >= expected.deadline) throw new Error('observation_timeout')
       assert_lease(lane, expected.actor_id, expected.fence, now())
-      if (lane?.transport_stopped) throw new Error('ACTOR_TERMINAL')
     }
     const fenced: ControlStore = {
       ...store,

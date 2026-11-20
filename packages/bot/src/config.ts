@@ -16,6 +16,8 @@ export const DEPLOYMENT_DEFAULTS: Readonly<Record<string, number>> = Object.free
   BOT_LEASE_MS: 30000,
   BOT_HEARTBEAT_MS: 10000,
   BOT_TICK_MS: 1000,
+  // A refusal that spent no gas is tried again after this long even if no fact moved (owner, 2026-11-21).
+  BOT_REFUSAL_RETRY_MS: 30000,
   BOT_EVENT_LIMIT: 256,
   BOT_SCAN_LIMIT: 100,
 })
@@ -52,6 +54,7 @@ export const read_config = (env: Readonly<Record<string, string | undefined>>): 
     authority_generation: deployment_value(env, 'BOT_AUTHORITY_GENERATION'),
     recovery_mode: recovery === 'true',
     observation_freshness_ms: deployment_integer(env, 'BOT_OBSERVATION_FRESHNESS_MS'),
+    refusal_retry_ms: deployment_integer(env, 'BOT_REFUSAL_RETRY_MS'),
     request_ttl_ms: deployment_integer(env, 'BOT_REQUEST_TTL_MS'),
     challenge_ttl_ms: deployment_integer(env, 'BOT_CHALLENGE_TTL_MS'),
     code_ttl_ms: deployment_integer(env, 'BOT_CODE_TTL_MS'),

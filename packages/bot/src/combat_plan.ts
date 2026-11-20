@@ -19,7 +19,8 @@ type CombatIntent = Readonly<{
   dungeon?: string
 }>
 export type CombatNext = Readonly<{
-  state: 'action' | 'waiting' | 'awaiting_ai' | 'completed'
+  /** awaiting_ai is only the profile's authored fallback; failure lets the tree choose again. */
+  state: 'action' | 'waiting' | 'failure' | 'awaiting_ai' | 'completed'
   issue?: string
   action?: Readonly<{ kind: GameplayActionName; payload: Readonly<Record<string, unknown>> }>
 }>
@@ -89,11 +90,12 @@ const owned_turn_action = (
   const { contract } = checkpoint
   const configured = run.profiles.find((profile) => profile.character_id === character_id)!
   const unavailable = validate_profile_checkpoint(configured.profile, checkpoint, seat)
-  if (unavailable.length) return { state: 'awaiting_ai', issue: `unavailable_spells:${unavailable.join(',')}` }
+  if (unavailable.length) return { state: 'failure', issue: `unavailable_spells:${unavailable.join(',')}` }
   const observed_ms = gameplay_observed_ms(context)
   if (observed_ms < contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms) return { state: 'waiting' }
   const planned = plan_combat_turn(configured.profile, checkpoint, seat, observed_ms)
-  if (planned.issue) return { state: 'awaiting_ai', issue: planned.issue }
+  if (planned.issue)
+    return { state: planned.issue === 'not_active_turn' ? 'waiting' : 'awaiting_ai', issue: planned.issue }
   return action('fight_turn', { ...payload, character_id, fighter_idx: String(seat), actions: planned.actions })
 }
 const fight_action = (selection: Selection): CombatNext => {
@@ -111,13 +113,13 @@ export const next_combat_action = (run: CombatIntent, context: GameplayContext):
   const characters = context.snapshot.characters.filter(({ id }) =>
     run.profiles.some(({ character_id }) => character_id === id)
   )
-  if (characters.length !== run.profiles.length) return { state: 'awaiting_ai', issue: 'character_not_owned' }
+  if (characters.length !== run.profiles.length) return { state: 'failure', issue: 'character_not_owned' }
   if (characters.every((character) => character.custody === 'kiosk' && !character.active_fight))
     return { state: 'completed' } // The run reducer additionally requires its reconciled settlement command.
   const row = context.snapshot.fights[run.fight]
   if (!row) return { state: 'waiting' }
   const remaining = characters.filter((character) => character.active_fight?.id === run.fight)
-  if (!remaining.length) return { state: 'awaiting_ai', issue: 'fight_changed' }
+  if (!remaining.length) return { state: 'failure', issue: 'fight_changed' }
   const payload = {
     ...target_fields(run.target_options),
     ...(run.dungeon ? { dungeon: run.dungeon } : {}),

@@ -4,6 +4,7 @@ import { SDK } from '@aresrpg/sdk'
 import { create_agent_multisig } from '@aresrpg/sdk/agent-multisig'
 import { create_agent_transaction_signer } from '@aresrpg/sdk/agent-transactions'
 import type { TransactionJournal } from '@aresrpg/sdk/transaction-execution'
+import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 import type { ClientPacket } from '@aresrpg/protocol'
 import { fromBase64 } from '@mysten/sui/utils'
 import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
@@ -97,8 +98,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       freshness_ms: options.observation_freshness_ms,
     })
     const authorize = async () => {
-      const lane = assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
-      if (lane.transport_stopped) throw new Error('ACTOR_TERMINAL')
+      assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
       const valid = await Promise.all([...connector_grants].map((grant_id) => grant_is_live(bot.id, grant_id)))
       if (!valid.some(Boolean)) throw new Error('invalid_token')
     }
@@ -167,7 +167,6 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     }
     let sdk = build_sdk()
     let recovered = false
-    let terminal_server = lease.transport_stopped === true
     const actor = create_bot_actor({
       connection: {
         endpoint: options.endpoint,
@@ -198,12 +197,9 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
             const next = retire_fight_replays(current, snapshot.characters)
             if (next !== current) await tx.put(lane_key, next)
           })
-        if (transition.terminal_server) terminal_server = true
-        if (terminal_server)
-          await store.transaction([lane_key], async (tx) => {
-            const current = assert_lease(await tx.get<Lane>(lane_key), options.actor_id, lease.fence, now())
-            await tx.put(lane_key, { ...current, paused: true, needs_resync: true, transport_stopped: true })
-          })
+        // A server close, takeover included, is a fact: the next pass reconnects it and its reason is logged.
+        if (state.status === 'disconnected' && state.error)
+          options.report_failure(new Error(`connection_closed: ${state.error}`))
         await status.observed(state.last_packet)
       },
       report_failure: options.report_failure,
@@ -238,7 +234,6 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       lease,
       actor,
       share_status: () => status.share().catch(options.report_failure),
-      terminal_server: () => terminal_server,
       get sdk() {
         return sdk
       },
@@ -283,8 +278,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       const lane = await store.read<Lane>(key)
       if (session_reusable(existing, lane, command)) return existing
       const recovery = lane?.pending?.command_id === command.id
-      const explicit_read = [!existing.terminal_server(), command.kind === 'observe'].every(Boolean)
-      if ([!recovery, !explicit_read].every(Boolean)) return existing
+      if ([!recovery, command.kind !== 'observe'].every(Boolean)) return existing
       if (!recovery) await live_bot(bot.id, command.grant_id)
       // Receipt reconciliation owns a lease even when gameplay/socket authority is revoked.
       // Only this process retains transaction evidence; new owners re-evaluate the saved tree.
@@ -305,6 +299,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     }
   }
   const fail_command = async (session: Session, command: Command, error: unknown) => {
+    const funding = transaction_failure_kind(error) === 'funding'
+    const balance = funding ? await read_actor_balance(session.sdk, monotonic_now, options.report_failure) : null
     await store.transaction([command.lane_key, `command:${command.id}`], async (tx) => {
       const lane = assert_lease(await tx.get<Lane>(command.lane_key), options.actor_id, session.lease.fence, now())
       const current = await tx.get<Command>(`command:${command.id}`)
@@ -316,6 +312,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         ...current,
         status: unknown ? 'uncertain' : 'failed',
         error: String(error),
+        ...(balance ? { funding_balance_mist: balance.balance_mist } : {}),
+        ...(unknown ? {} : { refused_at: now() }),
       })
       await tx.put(command.lane_key, {
         ...lane,
@@ -325,7 +323,6 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     })
   }
   const observe_session = async (session: Session, command: Command) => {
-    if (session.terminal_server()) throw new Error('ACTOR_TERMINAL')
     await session.actor.connect()
     await session.actor.settle_observations()
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' }
@@ -471,7 +468,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const renew_sessions = async () => {
     for (const [key, session] of sessions) {
       try {
-        const live = [session.actor.state().status !== 'stopped', !session.terminal_server()].every(Boolean)
+        const live = session.actor.state().status !== 'stopped'
         // Only this process can reconcile its envelope, so the lease outlives socket authority until it settles.
         if (!live && !(await store.read<Lane>(key))?.pending) continue
         await control.heartbeat(key, options.actor_id, session.lease.fence, options.lease_ms)

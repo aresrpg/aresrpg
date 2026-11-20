@@ -72,7 +72,7 @@ const fixture = async (
   }
 }
 
-test.each(['ACTOR_TERMINAL', 'OBSERVATION_SLOT_BUSY', 'invalid_gameplay_payload'])(
+test.each(['actor_stopped', 'OBSERVATION_SLOT_BUSY', 'invalid_gameplay_payload'])(
   'remote read preserves %s',
   async (message) => {
     const f = await fixture(async () => {

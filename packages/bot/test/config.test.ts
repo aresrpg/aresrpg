@@ -15,6 +15,7 @@ const env = {
 test('one service uses source-owned tuning defaults while keeping authority explicit', () => {
   expect(read_config(env)).toMatchObject({
     observation_freshness_ms: 15000,
+    refusal_retry_ms: 30000,
     request_ttl_ms: 600000,
     challenge_ttl_ms: 300000,
     code_ttl_ms: 60000,

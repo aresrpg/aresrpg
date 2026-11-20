@@ -184,7 +184,7 @@ test('a lost lease reports its submitted command as uncertain once, never as fai
   }
 })
 
-test('terminal human takeover permits only local receipt reconciliation without reconnecting', async () => {
+test('a server takeover during submission reconciles the exact receipt and never resubmits', async () => {
   const f = await signed_fixture()
   await f.admit()
   await f.runtime.settle()
@@ -198,10 +198,13 @@ test('terminal human takeover permits only local receipt reconciliation without 
     await f.runtime.tick()
     await f.runtime.settle()
     expect((await f.store.read<Command>('command:signed'))!.status).toBe('completed')
-    expect((await f.store.read<Lane>(f.lane_key))!.paused).toBeTrue()
+    expect((await f.store.read<Lane>(f.lane_key))!.paused).toBeFalsy()
     expect(f.submissions).toEqual([])
-    expect(f.sockets).toHaveLength(1)
-    await expect(f.runtime.observe(f.grant, {})).rejects.toThrow('ACTOR_TERMINAL')
+    // The socket is a fact: the same lease reconnects it, including after recovery drops it for fresh state.
+    await f.runtime.renew()
+    expect(f.sockets.length).toBeGreaterThan(1)
+    expect(f.sockets.at(-1)!.closed).toBe(false)
+    expect(f.submissions).toEqual([])
   } finally {
     await f.runtime.stop()
   }

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { empty_hosted, reduce_hosted } from '../../src/agents/hosted_state.ts'
+import { empty_hosted, reduce_hosted, request_inherited } from '../../src/agents/hosted_state.ts'
 import { resolve_bot_service_url } from '../../src/env.ts'
 
 test('close, back and account replacement retire all late hosted completions', () => {
@@ -113,4 +113,15 @@ test('invalid bound authorization requires provider restart; unknown errors perm
     expect(hosted_failure(new Error('Request failed', { cause }), null)).toBe('retry')
   }
   expect(hosted_failure(new Error('Request failed', { cause: 'storage_unavailable' }), 'request')).toBe('retry')
+})
+
+// 2026-11-20, production: the dapp consent page loaded before the sign-in was restored, cancelled the
+// request named in its address when the account arrived, and the bot then refused the owner proof.
+test('a request survives the arrival of the first account and dies on an account change', () => {
+  const [alice, bob] = [{ address: '0xa' }, { address: '0xb' }]
+  expect(request_inherited(null, alice)).toBe(true)
+  expect(request_inherited(alice, alice)).toBe(true)
+  expect(request_inherited(null, null)).toBe(true)
+  expect(request_inherited(alice, bob)).toBe(false)
+  expect(request_inherited(alice, null)).toBe(false)
 })

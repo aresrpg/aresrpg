@@ -142,8 +142,8 @@ test('real ordinary partial multisig authenticates over loopback; rejects wrong 
   }
   try {
     const wrong_signer = connect({ address: agent.address, sign_personal_message: other.sign_personal_message })
-    await wait_for(() => wrong_signer.state().status === 'stopped')
-    expect(wrong_signer.state().error).toBe('INVALID_SIGNATURE')
+    await wait_for(() => wrong_signer.state().error === 'INVALID_SIGNATURE')
+    expect(wrong_signer.state().status).toBe('disconnected')
     expect(fixture.promotions).toEqual([])
 
     const wrong_challenge = connect({
@@ -153,8 +153,8 @@ test('real ordinary partial multisig authenticates over loopback; rejects wrong 
         return { ...stale, bytes: Buffer.from(message).toString('base64') }
       },
     })
-    await wait_for(() => wrong_challenge.state().status === 'stopped')
-    expect(wrong_challenge.state().error).toBe('INVALID_SIGNATURE')
+    await wait_for(() => wrong_challenge.state().error === 'INVALID_SIGNATURE')
+    expect(wrong_challenge.state().status).toBe('disconnected')
     expect(fixture.promotions).toEqual([])
 
     const valid = connect(agent)

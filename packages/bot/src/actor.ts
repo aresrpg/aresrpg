@@ -39,7 +39,8 @@ export type ActorOptions = Readonly<{
 
 /** Exactly one ordinary wallet-auth root connection per leased bot, shared by every connector
  * and character. No reconnect timer and no executor: bounded writes use the SDK execution seam.
- * The supervisor must await check_lease on its renewal cadence and never recreate a stopped actor. */
+ * The supervisor must await check_lease on its renewal cadence. A server close, takeover included, is
+ * an ordinary disconnect; only this actor's own stop is final. */
 export const create_bot_actor = (options: ActorOptions) => {
   let slots: Slots = { market: null, prices: null }
   let pending: Promise<void> = Promise.resolve()
@@ -74,7 +75,7 @@ export const create_bot_actor = (options: ActorOptions) => {
       })
   })
   const connect = async () => {
-    if (connection.state().status === 'stopped') throw new Error('ACTOR_TERMINAL')
+    if (connection.state().status === 'stopped') throw new Error('actor_stopped')
     if (starting) return starting
     if (!['disconnected', 'failed'].includes(connection.state().status)) return
     starting = (async () => {

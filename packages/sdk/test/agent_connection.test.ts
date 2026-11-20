@@ -164,7 +164,7 @@ test('disconnect invalidates an in-flight proof and stop prevents reconnect', as
   expect(client.state().status).toBe('stopped')
 })
 
-test('takeover closes permanently, and returned snapshots cannot mutate authority', async () => {
+test('a takeover disconnects without retrying, keeps its reason, and only an explicit connect reopens it', async () => {
   const { client, sessions, admit } = fixture()
   client.connect()
   await admit()
@@ -172,10 +172,15 @@ test('takeover closes permanently, and returned snapshots cannot mutate authorit
   snapshot.characters[0].custody = 'kiosk'
   expect(client.request_fight_resync(fight)).toBe(true)
   sessions[0].handlers.on_close(1008, 'ALREADY_CONNECTED')
-  client.connect()
+  await Promise.resolve()
   expect(sessions).toHaveLength(1)
-  expect(client.state().characters).toEqual([])
-  expect(client.state().status).toBe('stopped')
+  expect(client.state()).toMatchObject({ status: 'disconnected', error: 'ALREADY_CONNECTED', characters: [] })
+  client.connect()
+  expect(sessions).toHaveLength(2)
+  client.stop()
+  client.connect()
+  expect(sessions).toHaveLength(2)
+  expect(client.state()).toMatchObject({ status: 'stopped', error: null })
 })
 
 test('malformed roster and malformed JSON retire the connection', async () => {

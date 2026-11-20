@@ -14,7 +14,6 @@ const fields: Readonly<Record<string, readonly string[]>> = {
     'decision_revision',
     'observation_revision',
     'paused',
-    'transport_stopped',
     'execution_busy',
     'runs',
   ],
