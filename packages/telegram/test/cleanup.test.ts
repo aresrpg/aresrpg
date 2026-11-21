@@ -61,8 +61,7 @@ test('failed cleanup preserves credentials; unknown pending exchange cannot repo
 
 test('offline cleanup retains a known pending grant on failure and deletes it only after revoke succeeds', async () => {
   const f = fixture()
-  const { browser, query } = await f.start()
-  await f.links.callback(query, browser.cookie)
+  await f.exchanged()
   await expect(
     cleanup_sender(['--sender', '42'], env, f.backend, async () => {
       throw new Error('offline')

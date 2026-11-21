@@ -28,7 +28,9 @@ export type {
   AgentObservation,
   AgentStatus,
   HostedObjective,
+  RunEnding,
 } from './agent_identity.ts'
+export { DIRECT_UNSETTLED, RUN_ENDINGS, run_ending } from './agent_identity.ts'
 export type { TournamentLink, TournamentRow, TournamentTeam, TournamentSeat, TournamentMatch } from './tournament.ts'
 export { coin_share, tournament_coin_claims, TOURNAMENT_RESULTS_MS, recent_tournament_result } from './tournament.ts'
 export type { AllocationRequest, AllocationResult } from './allocation.ts'
@@ -51,6 +53,8 @@ export * from './leaderboards.ts'
 export * from './inspection.ts'
 import type { PlayerPosition } from './position.ts'
 export * from './position.ts'
+import { ZONE_SIZE } from './zone.ts'
+export * from './zone.ts'
 export * from './fights.ts'
 
 export type { FightWireAction } from '@aresrpg/fight'
@@ -577,8 +581,6 @@ export type KolizeumLobbyRow = Readonly<{
 
 export type ClosableFightRow = Readonly<{ fight: string; kolizeum: string | null; tournament?: TournamentLink | null }>
 
-/** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
-export const ZONE_SIZE = 512
 /** zone.move RESEARCH_TTL_MS — after this age Search draws a fresh seed and resets consumption. */
 export const ZONE_RESEARCH_TTL_MS = 7_200_000
 export const zone_of = (x: number, z: number) => ({ zx: Math.floor(x / ZONE_SIZE), zz: Math.floor(z / ZONE_SIZE) })
@@ -880,6 +882,8 @@ export type ServerPackets = {
     online: number
     /** Unique live server-tracked characters across all worlds, including fights and dungeons. */
     online_characters: number | null
+    /** Of `online`, the sockets sharing a hosted bot status. Sent to admins only; null while unknown. */
+    online_agents?: number | null
     indexing_lag: number | null
     current_epoch: string | null
     chain_timestamp_ms: number | null

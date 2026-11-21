@@ -99,8 +99,17 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
 }
 
-export type OnlinePopulation = Readonly<{ online: number; online_characters: number | null }>
-type OnlineSnapshot = Readonly<{ addresses: readonly string[]; characters: readonly string[] }>
+export type OnlinePopulation = Readonly<{
+  online: number
+  online_characters: number | null
+  /** Of `online`, the addresses whose socket shares a hosted bot status. Self-declared: a count, never authority. */
+  online_agents?: number | null
+}>
+type OnlineSnapshot = Readonly<{
+  addresses: readonly string[]
+  characters: readonly string[]
+  agents: readonly string[]
+}>
 
 export type MeshBus = Bus & {
   /** This pod's authenticated addresses and tracked character IDs, with a 20-second TTL. */
@@ -129,11 +138,12 @@ const online_sample_values = (values: readonly string[]): readonly number[] => {
 const string_ids = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((id) => typeof id === 'string')
 
-const character_union_count = (values: readonly (string | null)[]): number | null => {
+/** Unique identities across the companion snapshots of the live pods; unknown while one pod has none. */
+const companion_union_count = (values: readonly (string | null)[]): number | null => {
   if (values.includes(null)) return null
   const identities = values.flatMap((raw) => {
     const ids: unknown = JSON.parse(raw!)
-    if (!string_ids(ids)) throw new Error('character heartbeat has an invalid shape')
+    if (!string_ids(ids)) throw new Error('companion heartbeat has an invalid shape')
     return ids
   })
   return new Set(identities).size
@@ -143,7 +153,8 @@ const character_union_count = (values: readonly (string | null)[]): number | nul
  * Legacy numeric counts remain only a maximum floor alongside identity snapshots. */
 export const cluster_online_count = (
   values: readonly (string | null)[],
-  character_values: readonly (string | null)[] = []
+  character_values: readonly (string | null)[] = [],
+  agent_values: readonly (string | null)[] = []
 ): OnlinePopulation => {
   const addresses = new Set<string>()
   const legacy: number[] = []
@@ -161,8 +172,13 @@ export const cluster_online_count = (
   })
   const online = has_snapshots ? Math.max(addresses.size, 0, ...legacy) : legacy.reduce((a, b) => a + b, 0)
   if (!Number.isSafeInteger(online)) throw new Error('online heartbeat count exceeds the safe integer range')
-  const live_characters = values.flatMap((raw, index) => (raw === null ? [] : [character_values[index] ?? null]))
-  return { online, online_characters: character_union_count(live_characters) }
+  const live = (companions: readonly (string | null)[]) =>
+    values.flatMap((raw, index) => (raw === null ? [] : [companions[index] ?? null]))
+  return {
+    online,
+    online_characters: companion_union_count(live(character_values)),
+    online_agents: companion_union_count(live(agent_values)),
+  }
 }
 
 const create_bus = ({
@@ -344,7 +360,7 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
   })
   /** one SCAN per pod per window, whatever the connection count */
   const online_cache = {
-    value: { online: 0, online_characters: null } as OnlinePopulation,
+    value: { online: 0, online_characters: null, online_agents: null } as OnlinePopulation,
     at_ms: 0,
     pending: null as Promise<OnlinePopulation> | null,
   }
@@ -356,14 +372,15 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
       if (next === '0') break
       cursor = next
     }
-    // One atomic read pairs each legacy membership key with its character-only companion.
+    // One atomic read pairs each legacy membership key with its companions.
+    const families = ['server:', 'server-characters:', 'server-agents:']
     const snapshots = keys.length
-      ? await publisher.mget(keys.flatMap((key) => [key, key.replace('server:', 'server-characters:')]))
+      ? await publisher.mget(keys.flatMap((key) => families.map((family) => key.replace('server:', family))))
       : []
-    online_cache.value = cluster_online_count(
-      snapshots.filter((_, index) => index % 2 === 0),
-      snapshots.filter((_, index) => index % 2 === 1)
+    const [addresses, characters, agents] = families.map((_, family) =>
+      snapshots.filter((_, index) => index % families.length === family)
     )
+    online_cache.value = cluster_online_count(addresses!, characters, agents)
     online_cache.at_ms = Date.now()
     return online_cache.value
   }
@@ -375,6 +392,7 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
         .multi([
           ['setex', `server:${server_id}`, 20, JSON.stringify(snapshot.addresses)],
           ['setex', `server-characters:${server_id}`, 20, JSON.stringify(snapshot.characters)],
+          ['setex', `server-agents:${server_id}`, 20, JSON.stringify(snapshot.agents)],
         ])
         .exec()
       if (!result) throw new Error('heartbeat transaction was aborted')

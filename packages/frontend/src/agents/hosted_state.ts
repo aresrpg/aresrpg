@@ -3,12 +3,19 @@
 import type { HostedConnectRequest } from '@aresrpg/protocol'
 
 export type HostedPhase = 'idle' | 'authenticating' | 'ready' | 'authorizing' | 'failed' | 'complete'
+/**
+ * The one thing a connection waits for right now: the owner proof, the creation of the bot wallet,
+ * its custody check, its name, the approval of the request, then the return to the client that asked.
+ */
+export type HostedStep = 'proving' | 'creating' | 'checking' | 'naming' | 'approving' | 'returning'
 export type HostedState<T> = Readonly<{
   generation: number
   session: object | null
   /** The first signed-in account that received this request; the request stays its own. */
   holder: string | null
   phase: HostedPhase
+  /** Null whenever the phase waits for nothing. */
+  step: HostedStep | null
   failure: 'retry' | 'restart' | null
   authorization_id: string | null
   bots: readonly T[]
@@ -27,6 +34,7 @@ export const empty_hosted = <T>(): HostedState<T> => ({
   session: null,
   holder: null,
   phase: 'idle',
+  step: null,
   failure: null,
   authorization_id: null,
   bots: [],
@@ -35,6 +43,12 @@ export const empty_hosted = <T>(): HostedState<T> => ({
   verified: '',
 })
 export const hosted_pending = (phase: HostedPhase) => ['authenticating', 'authorizing'].includes(phase)
+const FIRST_STEP = { authenticating: 'proving', authorizing: 'approving' } as const
+/** A pending phase keeps the step its operation reported; a finished request is returning; nothing else waits. */
+const phase_step = (phase: HostedPhase, step: HostedStep | null): HostedStep | null => {
+  if (phase === 'complete') return 'returning'
+  return hosted_pending(phase) ? step : null
+}
 /**
  * A request waits for a start: arriving signs nothing and creates nothing. It belongs to the first
  * account that receives it, so another account must start again. A page that mounts before the
@@ -59,10 +73,17 @@ export const reduce_hosted = <T>(state: HostedState<T>, input: HostedInput<T>): 
   if ([input.type === 'start', hosted_pending(state.phase)].every(Boolean)) return state
   if (input.type === 'start') {
     const previous = input.phase === 'authenticating' ? { ...empty_hosted<T>(), holder: state.holder } : state
-    return { ...previous, session: state.session, generation: state.generation + 1, phase: input.phase }
+    return {
+      ...previous,
+      session: state.session,
+      generation: state.generation + 1,
+      phase: input.phase,
+      step: FIRST_STEP[input.phase],
+    }
   }
   if (![input.generation === state.generation, hosted_pending(state.phase)].every(Boolean)) return state
-  return { ...state, ...input.values }
+  const next = { ...state, ...input.values }
+  return { ...next, step: phase_step(next.phase, next.step) }
 }
 
 /** Whether the next lifetime keeps the request of the one that ended. It does for the same account,

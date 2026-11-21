@@ -109,3 +109,29 @@ export const owner_connected = (session: SessionState): boolean => {
     pairing.multisig_public_key === response.bot.multisig_public_key,
   ].every(Boolean)
 }
+
+/** Whether the owner check can run for this account on this page: the rule the check itself applies.
+ * It never runs without the bot service, for an account that is not a Google account, or on a consent
+ * link, whose `authorization_id` belongs to another request. */
+export const owner_checkable = (wallet: Pick<AuthSession, 'identity'> | null, service_url: string, search: string) =>
+  [Boolean(service_url), wallet?.identity === 'zklogin', !new URLSearchParams(search).has('authorization_id')].every(
+    Boolean
+  )
+
+export type OwnerAnswer = 'unknown' | 'connected' | 'not_connected'
+/**
+ * What is known about the owner's agent, read from the one connection state. `unknown` is a check
+ * that has not answered yet: it is never shown as "not connected". A check that cannot run
+ * (`checkable` false) will never answer, so it reads `not_connected` at once and never waits. During
+ * a later re-check the previous answer stands until the new one arrives.
+ */
+/** A real answer exists: the bot said it, or no check can ever run. A failed check is not an answer. */
+export const owner_answered = (session: SessionState, checkable: boolean): boolean =>
+  !checkable || session.agent_connection.response !== null
+
+export const owner_answer = (session: SessionState, checkable: boolean): OwnerAnswer => {
+  if (owner_connected(session)) return 'connected'
+  const { phase, response } = session.agent_connection
+  const unanswered = checkable && response === null && ['idle', 'checking'].includes(phase)
+  return unanswered ? 'unknown' : 'not_connected'
+}

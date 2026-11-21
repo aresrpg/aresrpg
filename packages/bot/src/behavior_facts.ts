@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { job_level_from_xp } from '@aresrpg/immutable'
 
-import type { BehaviorCondition, BehaviorFact } from './behavior_script.ts'
+import type { BehaviorCondition, BehaviorFact, BehaviorRun, StateCondition, TallyCondition } from './behavior_script.ts'
+import { run_tally } from './behavior_tally.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import { market_price_condition } from './market_prices.ts'
 import { world_available } from './behavior_world.ts'
@@ -24,6 +25,7 @@ const fact_value = (fact: BehaviorFact, context: GameplayContext): string | numb
     custody: () => character.custody ?? null,
     ambush: () => Boolean(character.ambush),
     fight: () => Boolean(character.active_fight),
+    dungeon_run: () => Boolean(character.dungeon_run),
     quantity: () =>
       profession_inventory(context.snapshot.inventory, character.kiosk)
         .filter(({ item_type }) => item_type === fact.key)
@@ -31,32 +33,43 @@ const fact_value = (fact: BehaviorFact, context: GameplayContext): string | numb
   }
   return readers[fact.type]()
 }
+const compare = (op: StateCondition['op'], value: bigint, threshold: bigint): boolean =>
+  ({
+    eq: value === threshold,
+    ne: value !== threshold,
+    lt: value < threshold,
+    lte: value <= threshold,
+    gt: value > threshold,
+    gte: value >= threshold,
+  })[op]
+/** A run's own tally is always known: it never waits for an observation. */
+const tally_condition = (condition: TallyCondition, run: Pick<BehaviorRun, 'tally'>): boolean => {
+  const { fees_mist, dungeon_runs } = run_tally(run)
+  const value = condition.type === 'fees_spent' ? BigInt(fees_mist) : BigInt(dungeon_runs)
+  return compare(condition.op, value, BigInt(condition.value))
+}
 const special_condition = (
-  condition: Exclude<BehaviorCondition, import('./behavior_script.ts').StateCondition>,
-  context: GameplayContext
+  condition: Exclude<BehaviorCondition, StateCondition>,
+  context: GameplayContext,
+  run: Pick<BehaviorRun, 'tally'>
 ) => {
+  if (condition.type === 'fees_spent' || condition.type === 'dungeon_runs') return tally_condition(condition, run)
   if (condition.type === 'sui_balance') {
     const balance = observed_balance(context)
-    if (!balance) return null
-    const value = BigInt(balance.balance_mist)
-    const threshold = BigInt(condition.value)
-    const compare = {
-      eq: value === threshold,
-      ne: value !== threshold,
-      lt: value < threshold,
-      lte: value <= threshold,
-      gt: value > threshold,
-      gte: value >= threshold,
-    }
-    return compare[condition.op]
+    return balance ? compare(condition.op, BigInt(balance.balance_mist), BigInt(condition.value)) : null
   }
   if (condition.type === 'market_price') return market_price_condition(condition, context)
   const value = world_available(condition.fact, context)
   if (value === null) return null
   return condition.op === 'eq' ? value === condition.value : value !== condition.value
 }
-export const behavior_condition = (condition: BehaviorCondition, context: GameplayContext): boolean | null => {
-  if ('type' in condition) return special_condition(condition, context)
+/** `run` is the run whose tree asks: its tally answers the conditions on fees and dungeon runs. */
+export const behavior_condition = (
+  condition: BehaviorCondition,
+  context: GameplayContext,
+  run: Pick<BehaviorRun, 'tally'> = {}
+): boolean | null => {
+  if ('type' in condition) return special_condition(condition, context, run)
   let value: ReturnType<typeof fact_value>
   try {
     value = fact_value(condition.fact, context)

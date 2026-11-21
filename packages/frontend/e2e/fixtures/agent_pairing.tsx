@@ -302,7 +302,7 @@ const CustodyPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return (
     <>
       <AgentSetupButton copy={copy} label={copy.ui.agent_connect_your} />
-      <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />
+      <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} />
       <Button onClick={() => send_character_to_agent('fixture-character', copy)}>Offer fixture character</Button>
     </>
   )
@@ -310,7 +310,11 @@ const CustodyPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
 void load_app_copy('en')
   .then((copy) => {
-    if (new URLSearchParams(location.search).has('custody')) observe_app(['hosted_agent'])
+    // The owner check runs where this page shows its answer: the custody panel, and the setup dialog
+    // opened with no request. A consent link alone is tested for its request, which no check may join.
+    const params = new URLSearchParams(location.search)
+    const plain = !['send_failure', 'funding', 'authorization_id'].some((name) => params.has(name))
+    if (params.has('custody') || plain) observe_app(['hosted_agent'])
     connect(0)
     if (new URLSearchParams(location.search).has('send_failure')) {
       dispatch_app({

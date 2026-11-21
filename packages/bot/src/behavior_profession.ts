@@ -27,7 +27,7 @@ import { profession_inventory } from './actor_inventory.ts'
 import { recipe_job, profession_recipes } from './profession_catalog.ts'
 import { owned_character, type GameplayContext } from './gameplay_context.ts'
 import { nearest_gather, type SelectedAction } from './behavior_targets.ts'
-import { identifier, nonempty, object_schema } from './gameplay_schema.ts'
+import { identifier, nonempty, object_schema, type Schema } from './gameplay_schema.ts'
 import type { WorldSelection } from './behavior_world.ts'
 
 export type ProfessionSelection = Readonly<{
@@ -35,13 +35,22 @@ export type ProfessionSelection = Readonly<{
   character_id: string
   world: string
   order: 'best_progress'
+  /** The jobs to pick work from; every job when absent. */
+  jobs?: readonly string[]
 }>
-export const PROFESSION_SELECTION_SCHEMA = object_schema({
+const profession_properties = {
   type: { const: 'profession' },
   character_id: identifier,
   world: nonempty,
   order: { const: 'best_progress' },
-})
+} as const
+export const PROFESSION_SELECTION_SCHEMA: Schema = {
+  ...object_schema({
+    ...profession_properties,
+    jobs: { type: 'array', minItems: 1, uniqueItems: true, items: { oneOf: job_slugs.map((job) => ({ const: job })) } },
+  }),
+  required: Object.keys(profession_properties),
+}
 const acquisition = acquisition_estimator({
   items,
   recipes,
@@ -57,10 +66,11 @@ const input_seconds = (item_type: string) => {
 }
 type Inventory = ReturnType<typeof profession_inventory>
 type Character = ReturnType<typeof owned_character>
-const feasible_craft = (character: Character, inventory: Inventory) => {
+const feasible_craft = (character: Character, inventory: Inventory, jobs: readonly string[]) => {
   const feasible = (recipe: RecipeProgressionInput) =>
     craft_stack_plan(recipe.inputs, 1, inventory, new Set(), character.kiosk) !== null
   const [choice] = job_slugs
+    .filter((job) => jobs.includes(job))
     .flatMap((job) => {
       const best = best_recipe_for_job_progression(
         progression_recipes,
@@ -86,11 +96,13 @@ const available_tools = (character: Character, inventory: Inventory) =>
 const choose_resource = (
   character: Character,
   inventory: Inventory,
-  context: GameplayContext
+  context: GameplayContext,
+  jobs: readonly string[]
 ): SelectedAction | undefined => {
   const tools = available_tools(character, inventory)
   if (!tools.length) throw new Error('tool_unavailable')
   const candidates = gatherable_catalog
+    .filter((resource) => jobs.includes(resource.job))
     .flatMap((resource) => {
       const level = job_level_from_xp(Number(character.jobs[resource.job] ?? 0))
       const tool = tools.find(({ category }) => category === `tool_${resource.job.toLowerCase()}`)
@@ -123,6 +135,7 @@ export const select_profession = (action: ProfessionSelection, context: Gameplay
   if (character.world !== action.world) throw new Error('target_outside_area')
   const inventory = profession_inventory(context.snapshot.inventory, character.kiosk)
   if (inventory.some((item) => !item.version)) throw new Error('inventory_unavailable')
-  const selected = feasible_craft(character, inventory) ?? choose_resource(character, inventory, context)
+  const jobs = action.jobs ?? job_slugs
+  const selected = feasible_craft(character, inventory, jobs) ?? choose_resource(character, inventory, context, jobs)
   return selected ? { status: 'action', action: selected } : { status: 'failure', code: 'resource_unavailable' }
 }

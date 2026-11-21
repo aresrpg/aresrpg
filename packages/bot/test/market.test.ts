@@ -2,7 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import type { ListingRow, MarketObservation, ServerPacket } from '@aresrpg/protocol'
+import { SDK, type SuiTransport } from '@aresrpg/sdk'
 import type { Receipt } from '@aresrpg/sdk/cache'
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import { Inputs, Transaction, type TransactionPlugin } from '@mysten/sui/transactions'
+import { bcs } from '@mysten/sui/bcs'
 
 import { empty_inventory, fold_actor_inventory } from '../src/actor_inventory.ts'
 import {
@@ -16,9 +20,20 @@ import { select_purchase, select_sale } from '../src/behavior_market.ts'
 import {
   validate_market_buy,
   validate_market_sell,
+  validate_market_delist,
+  validate_market_collect,
   market_sell_projected,
+  market_delist_projected,
+  wallet_kiosks,
   MARKET_SELL_ACTION,
 } from '../src/market_actions.ts'
+import {
+  execute_gameplay,
+  execute_gameplay_actions,
+  parse_gameplay_action,
+  validate_gameplay,
+} from '../src/gameplay.ts'
+import { digest, fake_client, pins } from '../../sdk/test/helpers/transport.ts'
 import { market_price_condition, market_prices_observed } from '../src/market_prices.ts'
 import { parse_behavior_script } from '../src/behavior_script.ts'
 
@@ -299,4 +314,156 @@ test('buy refuses a changed listing and preserves the authored spend cap into th
   expect(() =>
     validate_market_buy({ ...context, command: { ...command, payload: { ...command.payload, price_mist: '1' } } })
   ).toThrow('listing_changed_or_ineligible')
+})
+
+const own = (n: number): ListingRow => ({ ...listing(n), kiosk: character.kiosk, seller: profession_context().address })
+const wallet_context = (kind: 'market_delist' | 'market_collect', payload: Record<string, unknown>) => {
+  const context = profession_context()
+  return {
+    ...context,
+    command: { ...context.command, kind, payload },
+    snapshot: { ...context.snapshot, inventory: { ...context.snapshot.inventory!, listings: [own(40)] } },
+  }
+}
+/** SDK-shaped marketplace actions that record every call. */
+const market_recorder = () => {
+  const calls: (readonly [string, unknown])[] = []
+  const record = (name: string) => async (input: unknown) => {
+    calls[calls.length] = [name, input]
+    return { digest: 'fixture', version: '9' }
+  }
+  const actions = { buy: record('buy'), list: record('list'), delist: record('delist'), collect: record('collect') }
+  return { calls, actions: actions as unknown as Parameters<typeof execute_gameplay_actions>[1] }
+}
+
+test('delist names one own item listing, refuses anything else and makes exactly one SDK call', async () => {
+  const payload = { item_id: id(40), kiosk: character.kiosk }
+  expect(parse_gameplay_action('market_delist', payload)).toEqual(payload)
+  for (const bad of [{ item_id: id(40) }, { ...payload, kiosk: '0x12' }, { ...payload, price_mist: '1' }])
+    expect(() => parse_gameplay_action('market_delist', bad)).toThrow('invalid_gameplay_payload')
+  const context = wallet_context('market_delist', payload)
+  expect(validate_gameplay(context)).toEqual({
+    kind: 'market_delist',
+    input: { kind: 'item', id: id(40), kiosk: character.kiosk },
+  })
+  const { calls, actions } = market_recorder()
+  await execute_gameplay_actions(context, actions)
+  expect(calls).toEqual([['delist', { kind: 'item', id: id(40), kiosk: character.kiosk }]])
+  const with_listings = (listings: readonly ListingRow[] | null) => ({
+    ...context,
+    snapshot: { ...context.snapshot, inventory: { ...context.snapshot.inventory, listings } as never },
+  })
+  // Sold or already withdrawn, or another kiosk's row: the listing is gone.
+  for (const listings of [[], [{ ...own(40), kiosk: id(80) }], [own(41)]])
+    expect(() => validate_market_delist(with_listings(listings))).toThrow('listing_gone')
+  // The bot lists items only: a character listing is never its own to withdraw.
+  expect(() => validate_market_delist(with_listings([{ ...own(40), kind: 'character' }]))).toThrow(
+    'listing_changed_or_ineligible'
+  )
+  expect(() => validate_market_delist(with_listings(null))).toThrow('inventory_unavailable')
+  expect(() => validate_gameplay({ ...context, snapshot: { ...context.snapshot, ready: false } })).toThrow(
+    'needs_resync'
+  )
+  await expect(execute_gameplay_actions(with_listings([]), actions)).rejects.toThrow('listing_gone')
+  await expect(execute_gameplay_actions(context, {} as Parameters<typeof execute_gameplay_actions>[1])).rejects.toThrow(
+    'market_executor_unavailable'
+  )
+  expect(calls).toHaveLength(1)
+})
+
+test('a delisting is projected once the own listings no longer hold the row', () => {
+  const context = wallet_context('market_delist', { item_id: id(40), kiosk: character.kiosk })
+  const { inventory } = context.snapshot
+  expect(market_delist_projected(context.command, inventory)).toBe(false)
+  expect(market_delist_projected(context.command, { ...inventory, listings: [own(41)] })).toBe(true)
+  expect(market_delist_projected(context.command, { ...inventory, listings: null })).toBe(false)
+})
+
+test('collect takes kiosks only, defaults to every observed kiosk of the wallet and never takes a destination', async () => {
+  expect(parse_gameplay_action('market_collect', {})).toEqual({})
+  expect(parse_gameplay_action('market_collect', { kiosks: [id(80)] })).toEqual({ kiosks: [id(80)] })
+  for (const bad of [
+    { kiosks: [] },
+    { kiosks: [id(80), id(80)] },
+    { kiosks: ['0x12'] },
+    { kiosks: id(80) },
+    { recipient: id(1) },
+    { kiosks: [id(80)], address: id(1) },
+  ])
+    expect(() => parse_gameplay_action('market_collect', bad)).toThrow('invalid_gameplay_payload')
+  const context = wallet_context('market_collect', {})
+  const elsewhere = { ...item(resource.item_type, 1, 61), kiosk: id(81) }
+  const direct = { ...item(resource.item_type, 1, 62), kiosk: '' }
+  const snapshot = {
+    ...context.snapshot,
+    inventory: { ...context.snapshot.inventory, items: [elsewhere, direct], listings: [{ ...own(40), kiosk: id(82) }] },
+  }
+  // Heroes', bag items' and own listings' kiosks, once each; an item held outside a kiosk names none.
+  expect(wallet_kiosks(snapshot)).toEqual([character.kiosk, id(81), id(82)].toSorted())
+  expect(validate_market_collect({ ...context, snapshot }).input).toEqual(wallet_kiosks(snapshot))
+  const chosen = { ...context, command: { ...context.command, payload: { kiosks: [id(83)] } } }
+  expect(validate_gameplay(chosen)).toEqual({ kind: 'market_collect', input: [id(83)] })
+  const { calls, actions } = market_recorder()
+  await execute_gameplay_actions(chosen, actions)
+  expect(calls).toEqual([['collect', [id(83)]]])
+  const bare = { ...context.snapshot.inventory, items: [], listings: [] }
+  const empty = { ...context.snapshot, characters: [], inventory: bare }
+  await expect(execute_gameplay_actions({ ...context, snapshot: empty as never }, actions)).rejects.toThrow(
+    'nothing_to_collect'
+  )
+  expect(() => validate_gameplay({ ...context, snapshot: { ...context.snapshot, frozen: true } })).toThrow(
+    'needs_resync'
+  )
+  expect(calls).toHaveLength(1)
+})
+
+test('the real SDK collection withdraws each kiosk and sends the coin to the bot wallet only', async () => {
+  const context = wallet_context('market_collect', { kiosks: [character.kiosk] })
+  const chain = fake_client({ simulate_ok: true })
+  const transfers: string[] = []
+  const targets: string[] = []
+  const client = {
+    ...chain,
+    core: {
+      ...chain.core,
+      resolveTransactionPlugin: (): TransactionPlugin => async (data, options, next) => {
+        // Fixture resolver supplies refs; production Core resolves these through its normal object reader.
+        data.inputs.forEach((input, index) => {
+          if (input.$kind === 'UnresolvedObject')
+            data.inputs[index] = Inputs.ObjectRef({ objectId: input.UnresolvedObject.objectId, version: '1', digest })
+        })
+        await chain.core.resolveTransactionPlugin()(data, options, next)
+      },
+      executeTransaction: async (input: { transaction: Uint8Array }) => {
+        const { commands, inputs } = Transaction.from(input.transaction).getData()
+        for (const command of commands) {
+          if (command.MoveCall) targets[targets.length] = command.MoveCall.function
+          const recipient = command.TransferObjects?.address
+          if (recipient?.$kind !== 'Input') continue
+          const pure = inputs[recipient.Input]!
+          transfers[transfers.length] = bcs.Address.fromBase64(pure.Pure!.bytes)
+        }
+        return chain.core.executeTransaction(input)
+      },
+    },
+  } as unknown as SuiTransport
+  const sdk = SDK({ client, pins, signer: new Ed25519Keypair(), transaction_storage: null })
+  await execute_gameplay({
+    ...context,
+    sdk: {
+      ...sdk,
+      get_owned_kiosks: async () => ({
+        kioskOwnerCaps: [
+          { objectId: character.kiosk_cap!, kioskId: character.kiosk, isPersonal: true, version: '1', digest },
+        ],
+        kioskIds: [character.kiosk],
+        hasNextPage: false,
+        nextCursor: null,
+      }),
+    },
+  })
+  expect(targets.filter((name) => name === 'withdraw')).toHaveLength(1)
+  // The only recipient of the transaction is the wallet the bot acts for; no input can name another.
+  expect(transfers).toEqual([context.address])
+  expect(chain.calls.executions).toBe(1)
 })

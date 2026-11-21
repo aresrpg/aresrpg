@@ -14,7 +14,9 @@ import { gas_mist_from_receipt } from '@aresrpg/sdk'
 import { assert_run_admission } from './behavior_control.ts'
 import { settled_market_receipts } from './market_recovery.ts'
 import { settled_fight_replays } from './fight_runtime.ts'
-import { run_keys } from './run_ref.ts'
+import { run_key, run_keys } from './run_ref.ts'
+import type { BehaviorRun } from './behavior_script.ts'
+import { charge_run } from './behavior_tally.ts'
 import { assert_lease, type Command, type Envelope, type Lane } from './control.ts'
 import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
@@ -208,9 +210,11 @@ const bound_transaction_lifecycle = (
       const lane = assert_lease(await store.read<Lane>(command.lane_key), actor_id, fence, now())
       const { pending } = lane
       const command_key = `command:${pending?.command_id ?? command.id}`
+      // The settled command may be another one than the bound one: its run is charged in the same commit.
+      const settling = await store.read<Command>(command_key)
       await settle_envelope(
         store,
-        [...keys, `grant:${pending?.grant_id ?? command.grant_id}`, command_key],
+        [...keys, `grant:${pending?.grant_id ?? command.grant_id}`, command_key, ...run_keys(settling ?? {})],
         command_key,
         command.lane_key,
         actor_id,
@@ -283,8 +287,19 @@ const settle_envelope = async (
       receipt: JSON.parse(as_json(receipt)),
       result: { digest, gas_mist: String(net_gas), success: outcome.status === 'completed' },
     })
-    await tx.put(lane_key, settled_lane(lane, command, receipt, outcome.status === 'completed'))
+    await charge_signer(tx, command, net_gas)
+    const settled = settled_lane(lane, command, receipt, outcome.status === 'completed')
+    await tx.put(lane_key, { ...settled, fees_mist: String(BigInt(lane.fees_mist ?? 0) + net_gas) })
   })
+
+/** The fee of a settled receipt is charged once, here, to the run that signed it: a failed execution
+ * paid gas too. A tree accepted since then is another run and starts its own tally. */
+const charge_signer = async (tx: ControlTransaction, command: Command, net_gas: bigint) => {
+  if (!command.run_id) return
+  const key = run_key(command.run_id)
+  const run = await tx.get<BehaviorRun>(key)
+  if (run && run.revision === command.behavior_binding?.revision) await tx.put(key, charge_run(run, net_gas))
+}
 
 const settled_with = (command: Command | null, digest: string) =>
   Boolean(command?.receipt && receipt_digest(command.receipt) === digest)

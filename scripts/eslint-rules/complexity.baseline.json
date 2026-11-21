@@ -907,7 +907,7 @@
     },
     "packages/frontend/src/agents/AgentKioskPanel.tsx": {
       "AgentKioskStatus": [
-        11
+        10
       ]
     },
     "packages/frontend/src/agents/hosted_client.ts": {
@@ -918,11 +918,6 @@
     "packages/frontend/src/agents/AgentSetup.tsx": {
       "AgentSetupButton": [
         9
-      ]
-    },
-    "packages/frontend/src/agents/activity.ts": {
-      "fold_agent_activity": [
-        12
       ]
     },
     "packages/frontend/src/agents/disconnect_agent.ts": {

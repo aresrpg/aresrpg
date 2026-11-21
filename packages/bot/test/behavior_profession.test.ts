@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
-import { gatherable_catalog, job_xp_for_level } from '@aresrpg/immutable'
+import { gatherable_catalog, job_slugs, job_xp_for_level } from '@aresrpg/immutable'
 import { worlds_source } from '@aresrpg/engine/data'
 import { bind_strategy } from '@aresrpg/protocol/strategies'
 
 import { select_profession } from '../src/behavior_profession.ts'
+import { recipe_job } from '../src/profession_catalog.ts'
 import { validate_gameplay } from '../src/gameplay.ts'
 import { next_behavior_action } from '../src/behavior_plan.ts'
 import { parse_behavior_script, type BehaviorRun } from '../src/behavior_script.ts'
@@ -185,4 +186,36 @@ test('profession candidates never spend listed, traded or unversioned ingredient
       },
     })
   ).toThrow('inventory_unavailable')
+})
+
+test('a profession leaf bound to some jobs picks its work only inside them', () => {
+  const context = profession_context()
+  const stocked = Object.entries(recipe.inputs).map(([type, amount], index) => item(type, amount, 30 + index))
+  const ready = {
+    ...context,
+    snapshot: { ...context.snapshot, inventory: { ...context.snapshot.inventory!, items: stocked } },
+  }
+  const crafting = recipe_job(recipe.output_type)!
+  const kind = (jobs: readonly string[]) => {
+    const selected = select_profession({ ...action, jobs }, ready)
+    return selected.status === 'action' ? selected.action.kind : 'code' in selected ? selected.code : selected.status
+  }
+  // Every job, named or not, is today's choice: the feasible craft first.
+  expect(kind(job_slugs)).toBe('craft')
+  expect(select_profession(action, ready)).toMatchObject({ action: { kind: 'craft' } })
+  expect(kind([crafting])).toBe('craft')
+  // Without the crafting job the recipe is passed over: the hero harvests what its other jobs can.
+  expect(kind([resource.job].filter((job) => job !== crafting))).toBe(
+    resource.job === crafting ? 'resource_unavailable' : 'gather'
+  )
+  const idle = job_slugs.filter((job) => ![crafting, resource.job].includes(job))
+  expect(kind(idle)).toBe('resource_unavailable')
+  const leaf = (jobs: unknown) => ({
+    version: '1',
+    objective: { title: 'Work' },
+    tree: { type: 'action', action: { ...action, jobs } },
+  })
+  expect(parse_behavior_script(leaf([crafting])).tree).toMatchObject({ action: { jobs: [crafting] } })
+  for (const invalid of [[], ['NOT_A_JOB'], [crafting, crafting], crafting])
+    expect(() => parse_behavior_script(leaf(invalid))).toThrow('invalid_behavior_action')
 })

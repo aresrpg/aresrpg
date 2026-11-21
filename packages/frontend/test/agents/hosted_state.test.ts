@@ -125,3 +125,37 @@ test('a request survives the arrival of the first account and dies on an account
   expect(request_inherited(alice, bob)).toBe(false)
   expect(request_inherited(alice, null)).toBe(false)
 })
+
+// Each wait of a connection has one name, so the page never shows a generic "Connecting…" for all of them.
+test('a pending phase names the step in progress, and a phase that waits for nothing names none', () => {
+  const proving = reduce_hosted(empty_hosted<string>(), { type: 'start', phase: 'authenticating' })
+  expect(empty_hosted<string>().step).toBeNull()
+  expect(proving.step).toBe('proving')
+  const report = (state: typeof proving, step: 'creating' | 'checking' | 'naming') =>
+    reduce_hosted(state, { type: 'result', generation: state.generation, values: { step } })
+  const creating = report(proving, 'creating')
+  // A step is a result of the operation in flight: the phase and its generation stay, so nothing restarts.
+  expect(creating).toMatchObject({ step: 'creating', phase: 'authenticating', generation: proving.generation })
+  expect(report(report(creating, 'checking'), 'naming').step).toBe('naming')
+  const ready = reduce_hosted(creating, { type: 'result', generation: creating.generation, values: { phase: 'ready' } })
+  expect(ready.step).toBeNull()
+  const approving = reduce_hosted(ready, { type: 'start', phase: 'authorizing' })
+  expect(approving.step).toBe('approving')
+  const complete = reduce_hosted(approving, {
+    type: 'result',
+    generation: approving.generation,
+    values: { phase: 'complete' },
+  })
+  expect(complete.step).toBe('returning')
+  const failed = reduce_hosted(approving, {
+    type: 'result',
+    generation: approving.generation,
+    values: { phase: 'failed', failure: 'retry' },
+  })
+  expect(failed.step).toBeNull()
+  // A step reported by an operation that was retired never names the next one.
+  const retired = reduce_hosted(proving, { type: 'reset', session: null })
+  expect(reduce_hosted(retired, { type: 'result', generation: proving.generation, values: { step: 'checking' } })).toBe(
+    retired
+  )
+})

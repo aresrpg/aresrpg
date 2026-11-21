@@ -1,0 +1,366 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* The dapp's shared parts: hero card, hero picker, run card, market link, sheets and notices.
+   Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
+
+/* A status dot: grey while nothing is said, green while the bot plays, ember when the player is needed. */
+.dapp-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--aui-faint);
+}
+.dapp-dot[data-tone='live'] {
+  background: var(--aui-success);
+}
+.dapp-dot[data-tone='alert'] {
+  background: var(--aui-orange);
+}
+
+/* Hero portrait: a 2D image, never a canvas. */
+.dapp-portrait {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--aui-radius);
+  background: var(--aui-sunk);
+  object-fit: contain;
+}
+.dapp-portrait[data-small] {
+  width: 40px;
+  height: 40px;
+}
+
+/* Hero card */
+.dapp-hero-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: start;
+}
+.dapp-hero-id {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.dapp-hero-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+.dapp-hero-line strong {
+  font-size: 16px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.dapp-hero-level {
+  color: var(--aui-brass-hi);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dapp-hero-class {
+  color: var(--aui-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dapp-hero-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-hero-card[data-compact] .dapp-hero-foot {
+  padding-top: 0;
+  border-top: 0;
+}
+.dapp-hero-state {
+  flex: 1 1 96px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.dapp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Hero picker: one pressed-or-not button per hero. */
+.dapp-hero-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 6px;
+}
+.dapp-hero-picker .aui-button {
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 56px;
+  padding: 6px 10px 6px 6px;
+  text-align: left;
+}
+.dapp-hero-pick-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dapp-hero-pick-text small {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Run card: one hosted hero. */
+.dapp-run {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.dapp-run[data-running] {
+  border-color: var(--aui-line-strong);
+}
+.dapp-run-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dapp-run-title {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.dapp-run-title h3 {
+  overflow-wrap: anywhere;
+}
+.dapp-run-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.dapp-run-time {
+  flex: none;
+  align-self: start;
+  color: var(--aui-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.aui-panel .dapp-run-line {
+  margin: 0;
+  color: var(--aui-soft);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.aui-panel .dapp-run-line[data-tone='alert'] {
+  padding: 8px 10px;
+  border: 1px solid currentcolor;
+  border-radius: var(--aui-radius);
+  color: var(--aui-orange);
+}
+.dapp-run-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+.dapp-run-facts div {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+  min-width: 0;
+}
+.dapp-run-facts dt {
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.dapp-run-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.dapp-run-facts small {
+  display: block;
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.dapp-run-drops {
+  display: grid;
+  gap: 6px;
+}
+.dapp-run-drops header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+}
+.dapp-run-drops h4 {
+  margin: 0;
+  color: var(--aui-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+.dapp-run-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* An item row that opens its sheet: icon, name, amount or rate. */
+.dapp-rows {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aui-button.dapp-row {
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 10px 4px 6px;
+  font-weight: 400;
+  text-align: left;
+}
+.dapp-row img {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dapp-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dapp-row-value {
+  flex: none;
+  color: var(--aui-brass-hi);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Market link: a button to the listing, or one sentence when nobody sells. */
+.dapp-market-unsold {
+  margin: 0;
+  color: var(--aui-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Sheets: one window, a scrolling body, a footer of actions. */
+.dapp-sheet-body {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dapp-sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-sheet-foot .dapp-market-unsold {
+  flex: 1 1 200px;
+}
+.dapp-drops-room {
+  display: grid;
+  gap: 8px;
+}
+.dapp-drops-room h2 {
+  margin: 0;
+  color: var(--aui-brass-hi);
+  font-family: var(--aui-font-display);
+  font-size: 15px;
+}
+.dapp-drops-mob {
+  display: grid;
+  gap: 4px;
+}
+.aui-button.dapp-drops-mob-head {
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 4px 10px 4px 6px;
+  text-align: left;
+}
+.dapp-drops-mob-head img {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.dapp-drops-mob-head small {
+  display: block;
+  color: var(--aui-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Notices: what the bot was asked and has not settled, one line each. */
+.dapp-notices {
+  display: grid;
+  gap: 8px;
+}
+.dapp-notice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dapp-notice-row > p {
+  flex: 1 1 220px;
+}
+.dapp-notice-text {
+  margin: 0;
+  color: var(--aui-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* The fee limit of a start: its field, then what the limit means. The field is sized here, once, so
+   it is the same on every tab that starts something. */
+.dapp-fee-cap {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.dapp-fee-cap .aui-input {
+  max-width: 220px;
+  min-height: 44px;
+}
+
+/* Every action of a part is a 44px target, sized to its label. */
+.dapp-hero-actions .aui-button,
+.dapp-run-foot .aui-button,
+.dapp-run-drops header .aui-button,
+.dapp-sheet-foot .aui-button,
+.aui-button.dapp-market-link,
+.dapp-notice-row .aui-button {
+  min-height: 44px;
+}

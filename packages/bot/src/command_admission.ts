@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { DIRECT_UNSETTLED } from '@aresrpg/protocol'
+
 import type { Command, Lane } from './control.ts'
 import type { Bot, Grant } from './model.ts'
 import { public_command_error } from './planning_failure.ts'
@@ -49,7 +51,7 @@ export const queue_command = (
   freshness_ms: number
 ) => {
   assert_playable(grant, input.kind)
-  const unsettled = held !== null && ['accepted', 'executing'].includes(held.status)
+  const unsettled = held !== null && DIRECT_UNSETTLED.includes(held.status)
   if ([lane.paused, unsettled].some(Boolean)) throw new Error('bot_busy_or_paused')
   if (
     [

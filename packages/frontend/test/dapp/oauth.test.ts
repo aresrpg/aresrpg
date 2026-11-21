@@ -8,6 +8,7 @@ import {
   dapp_consent_requested,
   grant_store,
   is_callback,
+  own_callback,
   read_pending,
   save_pending,
   without_callback,
@@ -78,6 +79,24 @@ test('a callback carries a code or an error, and its parameters leave the addres
   expect(is_callback('?code=a.b&state=s')).toBe(true)
   expect(is_callback('?error=access_denied&state=s')).toBe(true)
   expect(without_callback('https://g/dapp?code=a&state=b&iss=c&keep=1#f')).toBe('/dapp?keep=1#f')
+})
+
+test('only a redirect to this origin’s dapp page that carries an answer is taken without a page load', () => {
+  const here = 'https://game.example.test'
+  expect(own_callback(`${here}/dapp?code=a.b&state=s&iss=i`, here)).toBe('/dapp?code=a.b&state=s&iss=i')
+  expect(own_callback(`${here}/dapp?error=access_denied&state=s`, here)).toBe('/dapp?error=access_denied&state=s')
+  for (const redirect of [
+    'https://assistant.example/callback?code=a&state=s',
+    'https://game.example.test.evil.example/dapp?code=a&state=s',
+    'http://game.example.test/dapp?code=a&state=s',
+    `${here}/dapp/extra?code=a&state=s`,
+    `${here}/world?code=a&state=s`,
+    `${here}/dapp`,
+    `${here}/dapp?next=1`,
+    'not a url',
+    '',
+  ])
+    expect(own_callback(redirect, here)).toBeNull()
 })
 
 test('a grant persists per owner; another owner, a changed grant or a broken record is never one', () => {

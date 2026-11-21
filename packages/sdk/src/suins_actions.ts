@@ -26,6 +26,8 @@ export type SuinsReview = Readonly<{
   player_address: string
   agent_address: string
   erased_names: readonly string[]
+  /** The chain already holds both leaves and both reverse records: applying would sign nothing. */
+  unchanged: boolean
 }>
 export type SuinsActions = Readonly<{
   managed: boolean
@@ -268,12 +270,15 @@ export const suins_actions = ({
       })),
     }
   }
-  const review_of = (inspection: Awaited<ReturnType<typeof inspect>>): SuinsReview => ({
-    fingerprint: JSON.stringify({ owner, ...inspection }),
-    player_address: inspection.leaves[0]!.target!,
-    agent_address: inspection.leaves[1]!.target!,
-    erased_names: inspection.leaves.filter((leaf) => leaf.record && leaf.change !== 'none').map((leaf) => leaf.name),
-  })
+  type Inspection = Awaited<ReturnType<typeof inspect>>
+  const fingerprint_of = (inspection: Inspection): string => JSON.stringify({ owner, ...inspection })
+  /** Clean leaves are half the answer: each target wallet must also carry its leaf as its default name. */
+  const unchanged = async ({ leaves }: Inspection): Promise<boolean> => {
+    if (leaves.some((leaf) => leaf.change !== 'none')) return false
+    const signal = AbortSignal.timeout(10_000)
+    const defaults = await Promise.all(leaves.map((leaf) => read_default(client, leaf.target!, signal)))
+    return leaves.every((leaf, index) => defaults[index] === leaf.name)
+  }
   return Object.freeze({
     managed,
     set_default: async (name, before_sign, applied) => {
@@ -294,13 +299,22 @@ export const suins_actions = ({
     validate_parent: async (input, before_sign, player_address) => {
       await inspect(input, undefined, before_sign, player_address)
     },
-    review_parent: async (input, agent_address, before_sign, player_address) =>
-      review_of(await inspect(input, normalizeSuiAddress(agent_address), before_sign, player_address)),
+    review_parent: async (input, agent_address, before_sign, player_address) => {
+      const inspection = await inspect(input, normalizeSuiAddress(agent_address), before_sign, player_address)
+      const { leaves } = inspection
+      return {
+        fingerprint: fingerprint_of(inspection),
+        player_address: leaves[0]!.target!,
+        agent_address: leaves[1]!.target!,
+        erased_names: leaves.filter((leaf) => leaf.record && leaf.change !== 'none').map((leaf) => leaf.name),
+        unchanged: await unchanged(inspection),
+      }
+    },
     apply_parent: async (input, agent_address, before_sign, player_address, review) => {
       const agent = normalizeSuiAddress(agent_address)
       const inspection = await inspect(input, agent, before_sign, player_address)
-      const fresh = review_of(inspection)
-      if (review?.fingerprint !== fresh.fingerprint) return refuse(review ? 'stale_review' : 'confirmation_required')
+      if (review?.fingerprint !== fingerprint_of(inspection))
+        return refuse(review ? 'stale_review' : 'confirmation_required')
       const { parent, leaves } = inspection
       const { name } = leaves[0]!
       const own_default = leaves[0]!.target === owner

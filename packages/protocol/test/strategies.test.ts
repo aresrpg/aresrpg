@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+
 import { expect, test } from 'bun:test'
+import { GROUP_SIZE_AVG3_AT, GROUP_SIZE_FULL_AT, mob_group_size_bounds, world_center } from '@aresrpg/immutable'
 
 import type { ItemRow, ListingRow, TradeRow } from '../src/packets.ts'
-import { bind_strategy, hero_place, raid_entrants, raid_keys, type RaidBag } from '../src/strategies.ts'
+import catalogue from '../../../seed/content/strategies.json'
+import {
+  bind_strategy,
+  bind_team,
+  difficulties,
+  hero_place,
+  raid_entrants,
+  raid_keys,
+  type RaidBag,
+} from '../src/strategies.ts'
 
 const [DUNGEON, KEY] = ['gilded_lorito', 'key_of_gilded_lorito']
 const [SHARED, APART] = ['0xshared', '0xapart']
@@ -97,4 +109,60 @@ test('a bound script names its catalogue entry and keeps authored text verbatim'
   })
   expect(script).toMatchObject({ version: '1', strategy: 'fight_nearby', objective: { title: 'Train' } })
   expect(JSON.stringify(script.tree)).toContain(JSON.stringify(profile))
+})
+
+test('the three difficulty levels are the distances where the game draws only groups of their sizes', () => {
+  expect(difficulties).toEqual({
+    easy: { min_size: 1, max_size: 2, min_distance: 0, max_distance: 1333 },
+    medium: { min_size: 2, max_size: 4, min_distance: 2000, max_distance: 2666 },
+    hard: { min_size: 6, max_size: 6, min_distance: 10_000, max_distance: world_center },
+  })
+  // The sizes are authored in seed; the distances are never authored.
+  expect(catalogue.difficulty).toEqual({
+    easy: { min_size: 1, max_size: 2 },
+    medium: { min_size: 2, max_size: 4 },
+    hard: { min_size: 6, max_size: 6 },
+  })
+  for (const { min_size, max_size, min_distance, max_distance } of Object.values(difficulties)) {
+    const fits = (distance: number) => {
+      const [low, high] = mob_group_size_bounds(BigInt(distance))
+      return low >= BigInt(min_size) && high <= BigInt(max_size)
+    }
+    // Every distance of the band fits, and the band cannot be widened on either side.
+    expect([min_distance, Math.floor((min_distance + max_distance) / 2), max_distance].every(fits)).toBe(true)
+    expect(min_distance === 0 || !fits(min_distance - 1)).toBe(true)
+    expect(max_distance === world_center || !fits(max_distance + 1)).toBe(true)
+  }
+})
+
+test('a difficulty spreads into a binding: its sizes fence the groups, its band narrows the area', () => {
+  const scope = { title: 'Hunt', area: { world: 'nauvis', biome: 'forest' }, ...difficulties.hard } as const
+  const [script] = bind_team('team_hunt', [{ character: '0xhero' }], scope)
+  const tree = JSON.stringify(script!.tree)
+  const area = { world: 'nauvis', biome: 'forest', min_distance: 10_000, max_distance: world_center }
+  expect(tree).toContain(`"min_size":6,"max_size":6`)
+  expect(tree).toContain(`"area":${JSON.stringify(area)}`)
+  expect(tree).not.toContain('"$')
+  // No difficulty bound: the area is the chosen place and nothing else.
+  const plain = JSON.stringify(
+    bind_strategy('team_hunt', { character: '0xhero', title: 'Hunt', area: scope.area }).tree
+  )
+  expect(plain).toContain(`"area":${JSON.stringify(scope.area)}`)
+  expect(plain).not.toContain('min_distance')
+})
+
+test('a tree names every field it reads, and one it cannot default must be bound', () => {
+  const minimal = { character: '0xhero', title: 'Work', area: { world: 'nauvis' } } as const
+  expect(() => bind_strategy('gather_item', minimal)).toThrow('strategy_field_required')
+  expect(() => bind_strategy('dungeon_raid', minimal)).toThrow('strategy_field_required')
+  const capped = JSON.stringify(bind_strategy('fight_nearby', { ...minimal, fee_cap_mist: '10000000000' }).tree)
+  expect(capped).toContain('{"type":"fees_spent","op":"gte","value":"10000000000"}')
+  // A cap left out is the largest u64: no sum of fees reaches it.
+  expect(JSON.stringify(bind_strategy('fight_nearby', minimal).tree)).toContain('"value":"18446744073709551615"')
+  expect(JSON.stringify(bind_strategy('dungeon_raid', { ...minimal, dungeon: DUNGEON }).tree)).toContain(
+    `{"type":"dungeon_runs","op":"gte","value":${Number.MAX_SAFE_INTEGER}}`
+  )
+  // An undefined field is a field left out, never the text "undefined".
+  const loose = bind_strategy('fight_nearby', { ...minimal, runs: undefined, mob_types: undefined })
+  expect(JSON.stringify(loose.tree)).toBe(JSON.stringify(bind_strategy('fight_nearby', minimal).tree))
 })

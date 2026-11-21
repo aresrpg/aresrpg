@@ -22,7 +22,7 @@ import { pet_animation, pet_vertical_offset, type PetLocomotion } from './core/p
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
 import { create_caption_target } from './core/caption_target.ts'
 import { publish_other_tag } from './core/nametag_feed.ts'
-import { read_pose } from './core/pose_feed.ts'
+import { read_displayed_pose } from './core/pose_feed.ts'
 
 /** A stopped player stops emitting moves — after this quiet window the run pose relaxes. */
 const IDLE_AFTER_MS = 300
@@ -109,12 +109,19 @@ export const create_presence_renderer = ({
   let disposed = false
   let ticking = false
   let last_tick_ms = 0
+  let watched_id: string | null | undefined
+
+  /** A watched hero is the camera subject. Like a controlled hero it stays an individual body,
+   *  because the engine plays entity cues (the gather cast) on individuals, never on the crowd. */
+  const presentation_of = (character_id: string): 'individual' | 'crowd' =>
+    character_id === watched_id ? 'individual' : 'crowd'
 
   /** attach/detach a slot's nametag — range-gated (owner: 15 blocks), loaded bodies only. */
   const sync_tag = (character_id: string): void => {
     const slot = slots.get(character_id)
-    const own = read_pose()
-    const within_range = !!slot?.loaded && !!own && Math.hypot(slot.x - own.x, slot.z - own.z) <= NAMETAG_RANGE_BLOCKS
+    const viewer = read_displayed_pose()
+    const within_range =
+      !!slot?.loaded && !!viewer && Math.hypot(slot.x - viewer.x, slot.z - viewer.z) <= NAMETAG_RANGE_BLOCKS
     if (within_range === tags.has(character_id)) return
     if (within_range) {
       const target = create_caption_target((caption) => label(character_id, caption))
@@ -173,11 +180,11 @@ export const create_presence_renderer = ({
   const build = (): void => {
     if (disposed) return
     const now = Date.now()
-    const own = read_pose()
+    const viewer = read_displayed_pose()
     const entities = [...slots.entries()].flatMap(([character_id, slot]): EntityRender[] => {
       if (!slot.loaded) return []
       // beyond animation range the mixer freezes on the idle pose (never a T-pose: IDLE still applies)
-      const far = own ? Math.hypot(slot.x - own.x, slot.z - own.z) > ANIMATION_RANGE_BLOCKS : false
+      const far = viewer ? Math.hypot(slot.x - viewer.x, slot.z - viewer.z) > ANIMATION_RANGE_BLOCKS : false
       const moving = !far && now - slot.moved_at < IDLE_AFTER_MS
       const mounted = slot.riding && slot.loaded.pet !== null
       const pet_id = `${character_id}:pet`
@@ -191,7 +198,7 @@ export const create_presence_renderer = ({
           facing_yaw: slot.yaw,
           anim,
           gait_scale: time_scale,
-          presentation: 'crowd',
+          presentation: presentation_of(character_id),
         })
       )
       if (!slot.loaded.pet) return [character]
@@ -268,13 +275,17 @@ export const create_presence_renderer = ({
           .filter(([, slot]) => slot.loaded)
           .map(([character_id, slot]) => Object.freeze({ character_id, x: slot.x, y: slot.y, z: slot.z }))
       ),
+    /** The world scene draws the controlled hero, so its row is skipped here. A watched hero has
+     *  no controlled body: its row is drawn here, as the one individual. */
     update: (
       rows: Readonly<Record<string, PresenceRow & { y: number; live?: boolean }>>,
-      own_character_id: string | null
+      own_character_id: string | null,
+      watched_character_id?: string | null
     ): void => {
       if (disposed) return
       const now = Date.now()
-      let changed = false
+      let changed = watched_character_id !== watched_id
+      watched_id = watched_character_id
       const visible_rows = Object.entries(rows).filter(([id]) => id !== own_character_id)
       const visible_ids = new Set(visible_rows.map(([id]) => id))
       for (const stale of [...slots.keys()].filter((id) => !visible_ids.has(id))) {

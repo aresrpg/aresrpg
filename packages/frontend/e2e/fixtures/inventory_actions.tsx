@@ -7,7 +7,7 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import { TradeDialog } from '../../src/components/TradeDialog.tsx'
 import '../../src/components/trade_inbox.css'
-import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
+import EquipmentTab from '../../src/characters/GameEquipmentTab.tsx'
 import { CrushResultModal } from '../../src/characters/CrushResultModal.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'

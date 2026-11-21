@@ -20,6 +20,7 @@ import { hydrate_gameplay_fight } from './gameplay.ts'
 import { evaluate_behavior, empty_behavior_memory, type BehaviorResult } from './behavior_tree.ts'
 import { behavior_condition } from './behavior_facts.ts'
 import type { BehaviorAction, BehaviorRun } from './behavior_script.ts'
+import { observe_dungeon } from './behavior_tally.ts'
 
 type Resolution = Readonly<{
   status: 'action' | 'failure' | 'waiting' | 'success' | 'replan'
@@ -168,7 +169,8 @@ const states = {
 } as const
 /** Called only after the live command and its receipt projection have reconciled. */
 const evaluate_behavior_action = (run: BehaviorRun, previous: Command | null, context: GameplayContext) => {
-  const completed = consume_completion(run, previous)
+  const hero = context.snapshot.characters.find(({ id }) => id === run.character_id)
+  const completed = observe_dungeon(consume_completion(run, previous), hero)
   const consumed = completed.observation
     ? {
         ...completed,
@@ -179,7 +181,7 @@ const evaluate_behavior_action = (run: BehaviorRun, previous: Command | null, co
   const result = evaluate_behavior(
     run.script.tree,
     consumed.memory,
-    (condition) => behavior_condition(condition, context),
+    (condition) => behavior_condition(condition, context, consumed),
     (action, path) => {
       const active = path === run.activation?.node ? consumed : { ...consumed, activation: null }
       const resolution = resolve_action(action, active, context, previous)

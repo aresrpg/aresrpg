@@ -288,3 +288,29 @@ test('patrol exhaustion selects bounded canonical research and refreshed drafts 
   )
   expect(refreshed).toMatchObject({ payload: { target_options: { area, min_size: 1, max_size: 1 } } })
 })
+
+test('a distance band narrows an area by the centre of each zone, as the population rule sizes its groups', () => {
+  const band = { world: world.world, min_distance: 2000, max_distance: 2666 }
+  const at = (zx: number, zz = 97) => [(zx + 0.5) * ZONE_SIZE, (zz + 0.5) * ZONE_SIZE] as const
+  // Zone 102 has its centre 2,480 blocks east of the world centre; its neighbours lie outside the band.
+  expect(area_contains(band, world.world, ...at(102))).toBe(true)
+  expect(area_contains(band, world.world, 102 * ZONE_SIZE, at(97)[0])).toBe(true)
+  expect(area_contains(band, world.world, ...at(101))).toBe(false)
+  expect(area_contains(band, world.world, ...at(103))).toBe(false)
+  // The larger axis decides: a zone far to the north is out, whatever its east-west place.
+  expect(area_contains(band, world.world, ...at(98, 110))).toBe(false)
+  expect(area_contains(band, 'elsewhere', ...at(102))).toBe(false)
+  // A band combines with a city or a biome: both must hold.
+  expect(area_contains({ ...band, city: city.city }, world.world, city.x, city.z)).toBe(false)
+  expect(area_contains({ ...area, max_distance: 1333 }, world.world, city.x, city.z)).toBe(true)
+  const biome = world_biome_at_zone(world.world, 102, 97)!
+  expect(area_contains({ ...band, biome }, world.world, ...at(102))).toBe(true)
+  expect(parse_target_options({ area: band })).toEqual({ area: band })
+  for (const invalid of [
+    { ...band, min_distance: 3000 },
+    { ...band, min_distance: -1 },
+    { ...band, max_distance: 1.5 },
+    { ...band, city: city.city, biome },
+  ])
+    expect(() => parse_target_options({ area: invalid })).toThrow()
+})

@@ -1,163 +1,209 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { lazy, Suspense, useState } from 'react'
-import { NativeModal, ProgressBar, SegmentedControl } from '@aresrpg/ui'
-import { experience_progress } from '@aresrpg/immutable/experience'
-import type { CharacteristicValues } from '@aresrpg/immutable'
-import type { CharacterRow, EquippedItem } from '@aresrpg/protocol'
+import { lazy, Suspense, useMemo, type ReactNode } from 'react'
+import { Button, CarvedIcon, GameWindow, Panel, type CarvedSymbol } from '@aresrpg/ui'
+import type { CharacterRow } from '@aresrpg/protocol'
 
-import type { AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
-import { character_icon, item_icon } from '../content/assets.ts'
 import type { CharacterSession } from '../characters/character_session.ts'
-import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
+import { ItemCraftSessionContext } from '../components/ItemCrafting.tsx'
+import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
+import { toast } from '../toast.ts'
 
+import { account_bag, hero_items } from './account.ts'
 import { dapp_text } from './copy.ts'
-import { direct_free, hero_hosted, selected_hero, type DappState } from './state.ts'
+import { DappHeroCard, HeroPortrait } from './DappHeroCard.tsx'
+import { DappHeroPicker } from './DappHeroPicker.tsx'
+import { hero_editable, hero_session, type HeroDirect } from './hero_session.ts'
+import { selected_hero } from './state.ts'
 
+// The doll, bag and sheet styles the game's character tabs are drawn with, as their game window loads them.
+import '../components/character_surfaces.css'
+import '../characters/characters.css'
+import './dapp_heroes.css'
+
+const EquipmentTab = lazy(() => import('../characters/EquipmentTab.tsx'))
 const StatsTab = lazy(() => import('../characters/StatsTab.tsx'))
 const SpellsTab = lazy(() => import('../characters/SpellsTab.tsx'))
+const JobsTab = lazy(() => import('../characters/JobsTab.tsx'))
 
-type HeroStatus = 'fight' | 'dungeon' | 'activity' | 'free'
-const hero_status = (state: DappState, hero: Readonly<CharacterRow>): HeroStatus => {
-  if (hero.active_fight) return 'fight'
-  if (hero.dungeon_run) return 'dungeon'
-  return hero_hosted(state, hero.id) ? 'activity' : 'free'
+type Hero = Readonly<CharacterRow>
+
+const look_at = (hero_id: string): void => dispatch_app({ type: 'dapp/select_hero', hero_id })
+
+/**
+ * The adapter of the game's character and jobs tabs for one hero of the bot account. A change or a
+ * craft is one direct request; while the hero cannot change, a gesture says why and sends nothing.
+ */
+export const useHeroSession = (
+  copy: AppCopy,
+  hero: Hero
+): Readonly<{ session: CharacterSession; editable: boolean }> => {
+  const account = useAppStore(({ session }) => session.agent_inventory)
+  const editable = useAppStore(({ dapp }) => hero_editable(dapp, hero))
+  return useMemo(() => {
+    const bag = account_bag(account)
+    const send = ({ action, payload }: HeroDirect): void =>
+      dispatch_app({ type: 'dapp/hero_direct', id: crypto.randomUUID(), hero_id: hero.id, action, payload })
+    const locked = dapp_text(copy, 'detail_locked')
+    const refuse = (): void => toast.add(locked, 'info')
+    // Until the bag is fully read nothing in it is known to be free of a listing or a trade.
+    const items = bag ? hero_items(bag, hero.kiosk) : []
+    const roster = { characters: account.characters, select: look_at }
+    return { editable, session: hero_session({ hero, items, roster, editable, locked, send, refuse }) }
+  }, [account, copy, editable, hero])
 }
 
-/** Advanced mode picks the hero it acts on; Basic acts on the whole team, so its tiles only inform. */
-const HeroTile = ({
+/** One character tab of the game inside the game's own window frame, laid in the page. `layout` is
+ *  the game's own layout class of that tab, when it has one. */
+const HeroWindow = ({
   copy,
-  hero: row,
-  selected,
-}: Readonly<{ copy: AppCopy; hero: CharacterRow; selected: boolean | null }>) => {
-  const status = useAppStore(({ dapp }) => hero_status(dapp, row))
-  const progress = experience_progress(Number(row.experience))
-  const portrait = character_icon(row.classe, row.sex, {
-    color_1: row.color_1,
-    color_2: row.color_2,
-    color_3: row.color_3,
-  })
-  const body = (
+  tab,
+  icon,
+  title,
+  layout = '',
+  children,
+}: Readonly<{
+  copy: AppCopy
+  tab: 'equipment' | 'stats' | 'spells' | 'jobs'
+  icon: CarvedSymbol
+  title: string
+  layout?: string
+  children: ReactNode
+}>) => (
+  <GameWindow
+    className={`gw-tab game-character-window game-character-window--${tab} ${layout} dapp-heroes-window`}
+    data-character-panel={tab}
+    title={title}
+    icon={<CarvedIcon name={icon} />}
+    close={null}
+    close_label={dapp_text(copy, 'close')}
+  >
+    <div className="game-character-body aui-workspace-main">
+      <Suspense
+        fallback={
+          <p className="dapp-note" role="status">
+            {dapp_text(copy, 'loading')}
+          </p>
+        }
+      >
+        {children}
+      </Suspense>
+    </div>
+  </GameWindow>
+)
+
+/** The chosen hero: who it is, why it cannot change when it cannot, then its gear, characteristics and spells. */
+const HeroDetail = ({ copy, hero }: Readonly<{ copy: AppCopy; hero: Hero }>) => {
+  const { session, editable } = useHeroSession(copy, hero)
+  return (
     <>
-      {portrait ? <img src={portrait} alt="" /> : <span className="dapp-hero-fallback" aria-hidden="true" />}
-      <span className="dapp-hero-text">
-        <strong>{row.name}</strong>
-        <span>{dapp_text(copy, 'hero_level', { level: String(row.level) })}</span>
-        <ProgressBar label={dapp_text(copy, 'hero_xp')} value={progress.percent} max={100} />
-        <span className="dapp-hero-status">{dapp_text(copy, `status_${status}`)}</span>
-      </span>
+      <DappHeroCard copy={copy} hero={hero} />
+      {!editable && (
+        <p className="dapp-warning" role="status" data-heroes-locked="">
+          {dapp_text(copy, 'detail_locked')}
+        </p>
+      )}
+      <HeroWindow copy={copy} tab="equipment" icon="inventory" title={dapp_text(copy, 'detail_equipment')}>
+        <EquipmentTab character={hero} copy={copy} session={session} preview={() => <HeroPortrait hero={hero} />} />
+      </HeroWindow>
+      <HeroWindow copy={copy} tab="stats" icon="stats" title={dapp_text(copy, 'detail_stats')}>
+        {/* Without an adapter the game's tab finds no owned character and stays locked. */}
+        <StatsTab character={hero} copy={copy} raise_stats={editable ? session.raise_stats : undefined} />
+      </HeroWindow>
+      <HeroWindow copy={copy} tab="spells" icon="spells" title={dapp_text(copy, 'detail_spells')}>
+        <SpellsTab character={hero} copy={copy} session={session} />
+      </HeroWindow>
     </>
   )
-  if (selected === null)
-    return (
-      <div className="dapp-hero" data-status={status}>
-        {body}
-      </div>
-    )
+}
+
+/**
+ * The hero's professions, through the game's own jobs tab: its levels, its recipes with what its bag
+ * holds, the game's advice on what to craft and who crafts better, and a Craft the bot signs. It stays
+ * mounted when the hero changes, so the profession in view follows the player to the better crafter.
+ */
+const HeroJobs = ({ copy, hero }: Readonly<{ copy: AppCopy; hero: Hero }>) => {
+  const { session } = useHeroSession(copy, hero)
   return (
-    <button
-      type="button"
-      className="dapp-hero"
-      aria-pressed={selected}
-      data-status={status}
-      onClick={() => dispatch_app({ type: 'dapp/select_hero', hero_id: row.id })}
+    <HeroWindow
+      copy={copy}
+      tab="jobs"
+      icon="jobs"
+      title={copy_text(copy.characters_page)('tab_jobs')}
+      layout="aui-feature-port aui-jobs-port"
     >
-      {body}
-    </button>
+      <JobsTab character={hero} copy={copy} session={session} />
+    </HeroWindow>
   )
 }
 
+const CraftScope = ({ copy, hero, children }: Readonly<{ copy: AppCopy; hero: Hero; children: ReactNode }>) => {
+  const { session } = useHeroSession(copy, hero)
+  const craft = useMemo(
+    () => ({ character: hero, inventory: session.inventory, craft: session.craft }),
+    [hero, session]
+  )
+  return <ItemCraftSessionContext.Provider value={craft}>{children}</ItemCraftSessionContext.Provider>
+}
+/**
+ * Every item surface of the dapp (the item sheet, the market) crafts as the chosen hero of the bot
+ * account, through the same session as the Heroes tab: never against the signed-in player's own bag.
+ */
+export const DappCraftScope = ({ copy, children }: Readonly<{ copy: AppCopy; children: ReactNode }>) => {
+  const hero = useAppStore(({ dapp, session }) => selected_hero(dapp, session.agent_inventory))
+  return hero ? (
+    <CraftScope copy={copy} hero={hero}>
+      {children}
+    </CraftScope>
+  ) : (
+    children
+  )
+}
+
+/** An account without a hero: the way to the first one is on the Home tab. */
+const NoHero = ({ copy }: Readonly<{ copy: AppCopy }>) => (
+  <Panel className="dapp-heroes-empty" data-heroes-empty="">
+    <h3>{dapp_text(copy, 'heroes_empty_title')}</h3>
+    <p className="dapp-note">{dapp_text(copy, 'heroes_empty_body')}</p>
+    <Button tone="primary" onClick={() => dispatch_app({ type: 'dapp/tab', tab: 'home' })}>
+      {dapp_text(copy, 'heroes_empty_action')}
+    </Button>
+  </Panel>
+)
+
+/** The pick only chooses whom to look at: a hero in a fight, a dungeon or on an activity is a choice too. */
+const any_hero = (): boolean => true
+const select_hero = ([hero_id]: readonly string[]): void => {
+  if (hero_id) dispatch_app({ type: 'dapp/select_hero', hero_id })
+}
+
+/** The Heroes tab: one hero at a time, through the game's own equipment, characteristics, spells and jobs tabs. */
 export const DappHeroes = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const heroes = useAppStore(({ session }) => session.agent_inventory.characters)
-  const selected = useAppStore(({ dapp }) => (dapp.mode === 'advanced' ? dapp.hero_id : null))
-  return (
-    <section className="dapp-section" aria-label={dapp_text(copy, 'heroes_title')}>
-      <h2>{dapp_text(copy, 'heroes_title')}</h2>
-      <div className="dapp-heroes">
-        {heroes.map((hero) => (
-          <HeroTile key={hero.id} copy={copy} hero={hero} selected={selected === null ? null : hero.id === selected} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-/** The game's own character tabs, fed by the hosted hero and writing through the bot's direct commands. */
-const hero_session = (
-  hero: Readonly<CharacterRow>,
-  items: CharacterSession['inventory'],
-  editable: boolean
-): CharacterSession => {
-  const send = (action: 'raise_stats' | 'raise_spell', payload: Readonly<Record<string, unknown>>) =>
-    dispatch_app({ type: 'dapp/hero_action', id: crypto.randomUUID(), hero_id: hero.id, action, payload })
-  return {
-    inventory: items,
-    commit: () => undefined,
-    raise_stats: (spending: CharacteristicValues) => send('raise_stats', { character_id: hero.id, spending }),
-    ...(editable ? { raise_spell: (spell: string) => send('raise_spell', { character_id: hero.id, spell }) } : {}),
-  }
-}
-
-const Equipment = ({ copy, items }: Readonly<{ copy: AppCopy; items: readonly EquippedItem[] }>) => {
-  const [open, set_open] = useState<EquippedItem | null>(null)
-  if (!items.length) return <p className="dapp-note">{dapp_text(copy, 'equipment_empty')}</p>
-  return (
-    <>
-      <ul className="dapp-equipment">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button type="button" className="dapp-item" title={item.name} onClick={() => set_open(item)}>
-              {item_icon(item.item_type) ? <img src={item_icon(item.item_type)!} alt={item.name} /> : item.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {open && (
-        <NativeModal close={() => set_open(null)} label={open.name} className="aui-modal-scrim">
-          <section className="dapp-sheet">
-            <OwnedItemDetail item={open} copy={copy} />
-          </section>
-        </NativeModal>
-      )}
-    </>
-  )
-}
-
-/** A stat or spell change needs this hero standing free in its kiosk and no other direct request open. */
-const editable_hero = (state: DappState, hero: Readonly<CharacterRow> | null): boolean =>
-  [direct_free(state), hero !== null, !hero?.active_fight, !hero?.dungeon_run].every(Boolean)
-
-type DetailTab = 'stats' | 'spells' | 'equipment'
-export const DappHeroDetail = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const hero = useAppStore(({ dapp, session }) => selected_hero(dapp, session.agent_inventory))
-  const items = useAppStore(({ session }) => session.agent_inventory.inventory)
-  const editable = useAppStore(({ dapp }) => editable_hero(dapp, hero))
-  const [tab, set_tab] = useState<DetailTab>('stats')
-  if (!hero) return null
-  const session = hero_session(hero, items, editable)
+  const title = dapp_text(copy, 'heroes_title')
   return (
-    <section className="dapp-section dapp-detail" aria-label={dapp_text(copy, 'detail_title', { name: hero.name })}>
-      <h2>{dapp_text(copy, 'detail_title', { name: hero.name })}</h2>
-      {!editable && <p className="dapp-note">{dapp_text(copy, 'detail_locked')}</p>}
-      <SegmentedControl<DetailTab>
-        label={dapp_text(copy, 'detail_title', { name: hero.name })}
-        value={tab}
-        on_change={set_tab}
-        options={[
-          { value: 'stats', label: dapp_text(copy, 'detail_stats') },
-          { value: 'spells', label: dapp_text(copy, 'detail_spells') },
-          { value: 'equipment', label: dapp_text(copy, 'detail_equipment') },
-        ]}
-      />
-      <Suspense fallback={<p className="dapp-note">{dapp_text(copy, 'loading')}</p>}>
-        {/* Without an adapter the game's tab finds no owned character and stays locked. */}
-        {tab === 'stats' && (
-          <StatsTab character={hero} copy={copy} raise_stats={editable ? session.raise_stats : undefined} />
-        )}
-        {tab === 'spells' && <SpellsTab character={hero} copy={copy} session={session} />}
-        {tab === 'equipment' && <Equipment copy={copy} items={hero.equipment} />}
-      </Suspense>
+    <section className="dapp-section dapp-heroes-tab" aria-label={title}>
+      <h2>{title}</h2>
+      <p className="dapp-note">{dapp_text(copy, 'heroes_intro')}</p>
+      {hero ? (
+        <>
+          <DappHeroPicker
+            copy={copy}
+            label={title}
+            heroes={heroes}
+            selected={[hero.id]}
+            busy_selectable={any_hero}
+            on_change={select_hero}
+          />
+          {/* A change of hero drops what was staged for the previous one. */}
+          <HeroDetail key={hero.id} copy={copy} hero={hero} />
+          <HeroJobs copy={copy} hero={hero} />
+        </>
+      ) : (
+        <NoHero copy={copy} />
+      )}
     </section>
   )
 }

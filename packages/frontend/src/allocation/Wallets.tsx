@@ -18,6 +18,7 @@ export const Wallets = ({
   external,
   text,
   google_label,
+  rule,
 }: Readonly<{
   state: AllocationState
   cards: readonly CardView[]
@@ -25,6 +26,8 @@ export const Wallets = ({
   external: WalletView
   text: CopyText
   google_label: string
+  /** What linking a wallet is for: proving ownership, or buying while a sale is open. */
+  rule: string
 }>) => {
   const [open, set_open] = useState(false)
   const initial_selection = useRef<AuthSession | null>(null)
@@ -49,7 +52,7 @@ export const Wallets = ({
         <span className="step-num">{count ? '✓' : '1'}</span>
         <div>
           <h2>{text('link_wallets')}</h2>
-          <p>{text('wallet_rule')}</p>
+          <p>{rule}</p>
         </div>
       </div>
       <div className="wallets">

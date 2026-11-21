@@ -20,6 +20,7 @@ export type DiscoverAction = Readonly<{
     | Readonly<{ region: WorldRegion; order: 'nearest' }>
     | Readonly<{ region?: never; area: WorldArea; order: 'nearest' }>
     | Readonly<{ order: 'onward' }>
+    | Readonly<{ region?: never; area: WorldArea; order: 'toward' }>
   )
 export type WorldSelection =
   | Readonly<{ status: 'action'; action: SelectedAction }>
@@ -45,6 +46,7 @@ export const WORLD_ACTION_SCHEMAS = [
   },
   object_schema({ ...discovery_properties, order: { const: 'nearest' }, area: WORLD_AREA_SCHEMA }),
   object_schema({ ...discovery_properties, order: { const: 'onward' } }),
+  object_schema({ ...discovery_properties, order: { const: 'toward' }, area: WORLD_AREA_SCHEMA }),
 ] as const
 
 /** Adjacent Hamiltonian cycle of the world's even-sized zone grid; the first column closes the route.
@@ -55,6 +57,7 @@ export const onward_zone = (zx: number, zz: number) => {
   if (zz % 2 === 0) return zx < side - 1 ? { zx: zx + 1, zz } : { zx, zz: zz + 1 }
   return zx > 1 ? { zx: zx - 1, zz } : { zx: zz < side - 1 ? 1 : 0, zz: Math.min(side - 1, zz + 1) }
 }
+/** A search fenced by its leaf's area. A walk toward an area starts outside it, so it carries none. */
 const discover_target = (action: DiscoverAction, x: number, z: number): WorldSelection => ({
   status: 'action',
   action: {
@@ -64,7 +67,7 @@ const discover_target = (action: DiscoverAction, x: number, z: number): WorldSel
       world: action.world,
       x,
       z,
-      ...(action.area ? { area: action.area } : {}),
+      ...(action.area && action.order !== 'toward' ? { area: action.area } : {}),
     },
   },
 })
@@ -80,13 +83,76 @@ const select_onward = (action: DiscoverAction, context: GameplayContext): WorldS
     Math.min(world_size - 1, (zz + 0.5) * ZONE_SIZE)
   )
 }
+const GRID_SIDE = Math.ceil(world_size / ZONE_SIZE)
+const zone_center = (index: number) => Math.min(world_size - 1, (index + 0.5) * ZONE_SIZE)
+type Zone = Readonly<{ zx: number; zz: number }>
+const zone_gap = (from: Zone, to: Zone) => Math.hypot(to.zx - from.zx, to.zz - from.zz)
+const nearest_zone = (from: Zone, zones: readonly Zone[]): Zone | undefined =>
+  zones.toSorted((a, b) => zone_gap(from, a) - zone_gap(from, b) || a.zx - b.zx || a.zz - b.zz)[0]
+/** The zones of the world grid exactly `radius` zones away from one zone, on any axis. */
+const zone_ring = ({ zx, zz }: Zone, radius: number): readonly Zone[] =>
+  Array.from({ length: 2 * radius + 1 }, (_, index) => index - radius)
+    .flatMap((offset) => [
+      { zx: zx + offset, zz: zz - radius },
+      { zx: zx + offset, zz: zz + radius },
+      { zx: zx - radius, zz: zz + offset },
+      { zx: zx + radius, zz: zz + offset },
+    ])
+    .filter((zone) => [zone.zx, zone.zz].every((index) => index >= 0 && index < GRID_SIDE))
+/** The zone of an area nearest to a zone outside it, looked for ring by ring across the whole grid.
+ * Undefined when no zone of that world belongs to the area. */
+const area_zone = (area: WorldArea, from: Zone): Zone | undefined =>
+  Array.from({ length: GRID_SIDE - 1 }, (_, index) => index + 1).reduce<Zone | undefined>(
+    (found, radius) =>
+      found ??
+      nearest_zone(
+        from,
+        zone_ring(from, radius).filter(({ zx, zz }) =>
+          area_contains(area, area.world, zone_center(zx), zone_center(zz))
+        )
+      ),
+    undefined
+  )
+/** Whether the hero's tracked window, in that world, holds a zone. */
+const tracks = (context: GameplayContext, character_id: string, world: string, zone: Zone) => {
+  const tracked = context.snapshot.tracked_zones[character_id]
+  return tracked?.world === world && tracked.zones.some(({ zx, zz }) => zx === zone.zx && zz === zone.zz)
+}
+/** A position is trusted only once both world facts of the hero agree. */
+const standing = (character: Readonly<{ world?: string; checkpoint_world?: string }>, world: string) => {
+  if (!character.world) return 'unknown'
+  if (character.world !== world) return 'elsewhere'
+  return character.checkpoint_world === world ? 'here' : 'unknown'
+}
+/** Walk toward the leaf's area: one zone of the tracked window per search, the one nearest to the area.
+ * A hero inside its area has nothing to walk; a hero that cannot reach it holds its run. */
+const select_toward = (
+  action: Extract<DiscoverAction, { order: 'toward' }>,
+  context: GameplayContext
+): WorldSelection => {
+  const character = owned_character(context, action.character_id)
+  const place = standing(character, action.world)
+  if (place === 'elsewhere') throw new Error('area_unreachable')
+  if (place === 'unknown') return { status: 'waiting', code: 'needs_resync' }
+  if (area_contains(action.area, action.world, character.x!, character.z!))
+    return { status: 'failure', code: 'area_reached' }
+  const here = { zx: Math.floor(character.x! / ZONE_SIZE), zz: Math.floor(character.z! / ZONE_SIZE) }
+  const goal = area_zone(action.area, here)
+  if (!goal) throw new Error('area_unreachable')
+  const step = nearest_zone(goal, zone_ring(here, 1))!
+  if (!tracks(context, character.id, action.world, step)) return { status: 'waiting', code: 'needs_resync' }
+  return discover_target(action, zone_center(step.zx), zone_center(step.zz))
+}
 
 const within = ({ zx, zz }: Readonly<{ zx: number; zz: number }>, region: WorldRegion) =>
   zx >= region.min_zx && zx <= region.max_zx && zz >= region.min_zz && zz <= region.max_zz
 const region_valid = (region: WorldRegion) => region.min_zx <= region.max_zx && region.min_zz <= region.max_zz
 
 /** Missing tracked rows are undiscovered; present rows retain the canonical refresh deadline. */
-export const select_discovery = (action: DiscoverAction, context: GameplayContext): WorldSelection => {
+const select_research = (
+  action: Exclude<DiscoverAction, { order: 'toward' }>,
+  context: GameplayContext
+): WorldSelection => {
   const character = owned_character(context, action.character_id)
   const window = context.snapshot.tracked_zones[character.id]
   if (![window?.world === action.world, character.world === action.world].every(Boolean))
@@ -123,6 +189,10 @@ export const select_discovery = (action: DiscoverAction, context: GameplayContex
     }
   return discover_target(action, target.x, target.z)
 }
+
+/** A walk heads for its area from outside; every other order explores from where the hero stands. */
+export const select_discovery = (action: DiscoverAction, context: GameplayContext): WorldSelection =>
+  action.order === 'toward' ? select_toward(action, context) : select_research(action, context)
 
 export type WorldAvailability = Readonly<{
   character_id: string

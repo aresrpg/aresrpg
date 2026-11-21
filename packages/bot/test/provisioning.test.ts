@@ -7,11 +7,13 @@ import { verify_agent_pairing } from '@aresrpg/sdk/agent-pairing'
 import { create_managed_agent_signer } from '@aresrpg/sdk/agent-signer'
 
 import {
+  PROOF_HOLD_MS,
   request_provisioning,
   request_owner_provisioning,
   run_provisioning,
   request_pairing_proof,
   run_pairing_proof,
+  type Deadline,
 } from '../src/provisioning.ts'
 import type { ControlStore } from '../src/store.ts'
 
@@ -28,6 +30,30 @@ const input = {
   policy: { revision: 1, scopes: ['play'] },
 }
 const fixture = () => ({ store: memory_store(), provider: managed_provider_fixture() })
+/** A hold that ends at once: for a test that asks with no actor to sign and does not test the hold. */
+const no_hold: Deadline = (expired) => {
+  queueMicrotask(expired)
+  return () => undefined
+}
+/** The door's deadline as a recorder: nothing expires until the test says so, and no wall time passes. */
+const manual_deadline = () => {
+  const state = { armed: [] as number[], cancelled: 0, expire: () => undefined as void }
+  const deadline: Deadline = (expired, ms) => {
+    state.armed = [...state.armed, ms]
+    state.expire = expired
+    return () => {
+      state.cancelled += 1
+    }
+  }
+  return { state, deadline }
+}
+const fresh_request = (nonce = '11111111-1111-4111-8111-111111111111') => ({
+  version: 1 as const,
+  network: 'mainnet' as const,
+  owner: input.owner,
+  zklogin_public_identifier: input.zklogin_public_identifier,
+  nonce,
+})
 test('unknown commit reconciles the same creation ID and never prepares a replacement', async () => {
   const { store: original, provider } = fixture()
   await request_provisioning(original, input)
@@ -103,7 +129,7 @@ test('verified descriptor publishes once; proof matches fresh browser request', 
     zklogin_public_identifier: input.zklogin_public_identifier,
     nonce: '11111111-1111-4111-8111-111111111111',
   }
-  await request_pairing_proof(store, { authorization_id: 'auth', bot_id: bot.id, owner: input.owner, request })
+  await request_pairing_proof(store, { authorization_id: 'auth', bot_id: bot.id, owner: input.owner, request }, no_hold)
   const result = await run_pairing_proof(store, provider, `proof:auth:${request.nonce}`)
   expect((await verify_agent_pairing(request, result.proof)).address).toBe(bot.address)
   expect((await run_provisioning(store, provider, input.id)).address).toBe(bot.address)
@@ -147,12 +173,12 @@ test('pairing request equality survives persisted JSON key reordering', async ()
     zklogin_public_identifier: input.zklogin_public_identifier,
   }
   const args = { authorization_id: 'reordered', bot_id: bot.id, owner: input.owner, request }
-  const result = await request_pairing_proof(store, args)
+  const result = await request_pairing_proof(store, args, no_hold)
   const key = `proof:reordered:${request.nonce}`
   await store.transaction([key], async (tx) =>
     tx.put(key, { ...result, request: Object.fromEntries(Object.entries(request).reverse()) })
   )
-  expect((await request_pairing_proof(store, args)).status).toBe('pending')
+  expect((await request_pairing_proof(store, args, no_hold)).status).toBe('pending')
 })
 
 test('a changed descriptor invalidates an already requested pairing proof', async () => {
@@ -167,12 +193,85 @@ test('a changed descriptor invalidates an already requested pairing proof', asyn
     nonce: '11111111-1111-4111-8111-111111111111',
   }
   const args = { authorization_id: 'changed', bot_id: bot.id, owner: input.owner, request }
-  await request_pairing_proof(store, args)
+  await request_pairing_proof(store, args, no_hold)
   await put(store, `bot:${bot.id}`, { ...bot, generation: bot.generation + 1 })
-  await expect(request_pairing_proof(store, args)).rejects.toThrow('PAIRING_REQUEST_CONFLICT')
+  await expect(request_pairing_proof(store, args, no_hold)).rejects.toThrow('PAIRING_REQUEST_CONFLICT')
   await expect(run_pairing_proof(store, provider, `proof:changed:${request.nonce}`)).rejects.toThrow(
     'PAIRING_BOT_UNAVAILABLE'
   )
+})
+
+// Regression (2026-11-21): the door always answered `pending` first and the browser then slept a
+// fixed second, on every owner check and every connection.
+test('a custody proof is answered in the request that asked for it when this process signs', async () => {
+  const { store, provider } = fixture()
+  await request_provisioning(store, input)
+  const bot = await run_provisioning(store, provider, input.id)
+  // The service runtime's wiring: the store wakes this process's actor for each key that gains work.
+  store.subscribe_pending!((keys) => {
+    for (const key of keys) void run_pairing_proof(store, provider, key)
+  })
+  const request = fresh_request()
+  const { state, deadline } = manual_deadline()
+  const answer = await request_pairing_proof(
+    store,
+    { authorization_id: 'one', bot_id: bot.id, owner: input.owner, request },
+    deadline
+  )
+  expect(answer.status).toBe('ready')
+  expect((await verify_agent_pairing(request, answer.proof!)).address).toBe(bot.address)
+  // The answer ended the hold: its deadline was armed once, never expired, and was cancelled.
+  expect(state.armed).toEqual([PROOF_HOLD_MS])
+  expect(state.cancelled).toBe(1)
+})
+
+test('with no actor to sign, a proof request is held to its deadline and then says pending', async () => {
+  const { store, provider } = fixture()
+  await request_provisioning(store, input)
+  const bot = await run_provisioning(store, provider, input.id)
+  const args = { authorization_id: 'held', bot_id: bot.id, owner: input.owner, request: fresh_request() }
+  const { state, deadline } = manual_deadline()
+  const seen = { answered: false }
+  const asking = request_pairing_proof(store, args, deadline).then((answer) => {
+    seen.answered = true
+    return answer
+  })
+  for (let turn = 0; turn < 50; turn += 1) await Promise.resolve()
+  expect(seen.answered).toBe(false)
+  expect(state.armed).toEqual([PROOF_HOLD_MS])
+  state.expire()
+  expect((await asking).status).toBe('pending')
+  // Signed later (the actor's next pass): the next request reads the stored proof and holds nothing.
+  await run_pairing_proof(store, provider, `proof:held:${args.request.nonce}`)
+  const later = manual_deadline()
+  expect((await request_pairing_proof(store, args, later.deadline)).status).toBe('ready')
+  expect(later.state.cancelled).toBe(1)
+})
+
+test('a proof nonce is one request: replayed for another request it is refused at once, before any hold', async () => {
+  const { store, provider } = fixture()
+  await request_provisioning(store, input)
+  const bot = await run_provisioning(store, provider, input.id)
+  const request = fresh_request()
+  const args = { authorization_id: 'replay', bot_id: bot.id, owner: input.owner, request }
+  await request_pairing_proof(store, args, no_hold)
+  const signed = await run_pairing_proof(store, provider, `proof:replay:${request.nonce}`)
+  const legacy = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: true })
+  const { state, deadline } = manual_deadline()
+  // The same nonce under another descriptor of the same bot: the stored proof is never handed over.
+  await put(store, `bot:${bot.id}`, { ...bot, generation: bot.generation + 1 })
+  await expect(request_pairing_proof(store, args, deadline)).rejects.toThrow('PAIRING_REQUEST_CONFLICT')
+  await put(store, `bot:${bot.id}`, bot)
+  // The same nonce for another owner or another account identity never reaches the record.
+  await expect(request_pairing_proof(store, { ...args, owner: legacy.toSuiAddress() }, deadline)).rejects.toThrow(
+    'PAIRING_OWNER_MISMATCH'
+  )
+  // No refused request was left held, and the one stored proof still answers only its own nonce.
+  expect(state.armed.length).toBe(state.cancelled)
+  await expect(
+    verify_agent_pairing(fresh_request('22222222-2222-4222-8222-222222222222'), signed.proof)
+  ).rejects.toThrow()
+  expect((await request_pairing_proof(store, args, deadline)).proof).toEqual(signed.proof)
 })
 
 test('one Google owner reserves one request and refuses alternate identities without creating another key', async () => {

@@ -6,7 +6,7 @@ import { create_control_service, lane_key_for, type Lane, type Command } from '.
 import { next_behavior_action } from '../src/behavior_plan.ts'
 import { run_tick } from '../src/run_runtime.ts'
 import { refresh_run_command } from '../src/run_refresh.ts'
-import { planning_issue } from '../src/planning_failure.ts'
+import { command_issue, planning_issue, public_command_error } from '../src/planning_failure.ts'
 import type { BehaviorRun } from '../src/behavior_script.ts'
 
 import { put } from './helpers/control_fixture.ts'
@@ -55,8 +55,25 @@ const broken = (context: ReturnType<typeof profession_context>) => ({
 test('expected planning issues stay explicit and implementation errors are not domain refusals', () => {
   expect(planning_issue(new Error('needs_resync'))).toEqual({ state: 'waiting', issue: 'needs_resync' })
   expect(planning_issue(new Error('ingredients_required'))).toEqual({ state: 'failure', issue: 'ingredients_required' })
+  // A blocker holds its leaf like a wait, so its code reaches the run instead of falling through.
+  expect(planning_issue(new Error('area_unreachable'))).toEqual({ state: 'waiting', issue: 'area_unreachable' })
+  expect(command_issue('failed', 'Error: area_unreachable')).toBe('area_unreachable')
   expect(planning_issue(new TypeError('needs_resync'))).toBeUndefined()
   expect(planning_issue(new Error('secret implementation payload'))).toBeUndefined()
+})
+test('the refusals of the direct commands are domain codes: each fails its leaf and reaches a client as itself', () => {
+  // Emptying an empty slot, creating a hero, withdrawing a listing, collecting proceeds.
+  for (const code of [
+    'slot_empty',
+    'character_name_taken',
+    'invalid_character_name',
+    'listing_gone',
+    'nothing_to_collect',
+  ]) {
+    expect(planning_issue(new Error(code))).toEqual({ state: 'failure', issue: code })
+    expect(command_issue('failed', `Error: ${code}`)).toBe(code)
+    expect(public_command_error('failed', code)).toBe(code)
+  }
 })
 test('unexpected planning failure waits visibly, re-evaluates, and reports once after commit', async () => {
   const f = await fixture()

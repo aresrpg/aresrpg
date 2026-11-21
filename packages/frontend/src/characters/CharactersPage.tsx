@@ -20,7 +20,7 @@ import { EmptyEquipment } from './EmptyEquipment.tsx'
 import '../components/character_surfaces.css'
 import './characters.css'
 
-const EquipmentTab = lazy(() => import('./EquipmentTab.tsx'))
+const EquipmentTab = lazy(() => import('./GameEquipmentTab.tsx'))
 const StatsTab = lazy(() => import('./StatsTab.tsx'))
 const SpellsTab = lazy(() => import('./SpellsTab.tsx'))
 const JobsTab = lazy(() => import('./JobsTab.tsx'))

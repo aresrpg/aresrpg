@@ -39,6 +39,7 @@ export const initial_session_state = (serial = 0): SessionState =>
     selected_character_id: read_selected_character(),
     online: null,
     online_characters: null,
+    online_agents: null,
     auth_ready: false,
     after_sign_out: undefined,
     wallets: [],

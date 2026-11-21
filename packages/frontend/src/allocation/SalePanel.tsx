@@ -10,20 +10,12 @@ import { format_sui } from '../wallet_amount.ts'
 import { explorer_transaction_url } from '../explorer.ts'
 import { env } from '../env.ts'
 
+import { countdown_text } from './clock.tsx'
 import { spot_stage, type SaleState, type SpotStage } from './sale.ts'
 
 export const sui_text = (mist: bigint, locale: Locale): string => format_sui(mist, 2, locale).replace(/[.,]00$/, '')
 export const kares_text = (atomic: bigint, locale: Locale): string =>
   new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Number(atomic / 1_000_000_000n))
-export const countdown_text = (ms: number, text: CopyText): string => {
-  const minutes = Math.max(0, Math.floor(ms / 60_000))
-  return text('sale_countdown', {
-    days: Math.floor(minutes / 1440),
-    hours: Math.floor(minutes / 60) % 24,
-    minutes: minutes % 60,
-  })
-}
-
 const Row = ({ label, children }: Readonly<{ label: string; children: ReactNode }>) => (
   <p className="sale-row">
     <span>{label}</span>

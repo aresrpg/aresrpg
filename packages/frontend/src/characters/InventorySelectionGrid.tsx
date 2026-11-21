@@ -41,6 +41,8 @@ export const InventorySelectionGrid = ({
 }>) => {
   const [selection_mode, set_selection_mode] = useState(false)
   const selected_items = items.filter(({ id }) => selected.includes(id))
+  // A selection is for the item menu or for a transfer: a caller that offers neither gets no selection tools.
+  const selectable = Boolean(menu ?? transfer)
   const drop = (ids: readonly string[], point: Readonly<{ x: number; y: number }>): void => {
     if (transfer?.(ids, point)) return
     if (!equip || ids.length !== 1) return
@@ -52,41 +54,43 @@ export const InventorySelectionGrid = ({
   }
   return (
     <>
-      <div className="inventory-selection-tools">
-        <Button
-          className="inventory-select-toggle"
-          aria-pressed={selection_mode}
-          disabled={disabled}
-          onClick={() => set_selection_mode(!selection_mode)}
-        >
-          {copy.ui.inventory_select}
-        </Button>
-        <span aria-live="polite">
-          {copy_text(copy.ui)('inventory_selected_count', { count: selected_items.length })}
-        </span>
-        <Button
-          aria-label={copy.ui.inventory_deselect}
-          disabled={selected_items.length === 0 || disabled}
-          onClick={() => change([])}
-        >
-          <X size={13} />
-        </Button>
-        {menu && (
+      {selectable && (
+        <div className="inventory-selection-tools">
           <Button
-            aria-label={copy.ui.mobile_item_actions}
-            disabled={selected_items.length === 0 || disabled}
-            onClick={(event) => {
-              event.stopPropagation()
-              const [item] = selected_items
-              if (!item) return
-              const bounds = event.currentTarget.getBoundingClientRect()
-              menu({ item, items: selected_items, x: bounds.left, y: bounds.bottom })
-            }}
+            className="inventory-select-toggle"
+            aria-pressed={selection_mode}
+            disabled={disabled}
+            onClick={() => set_selection_mode(!selection_mode)}
           >
-            <MoreHorizontal size={14} />
+            {copy.ui.inventory_select}
           </Button>
-        )}
-      </div>
+          <span aria-live="polite">
+            {copy_text(copy.ui)('inventory_selected_count', { count: selected_items.length })}
+          </span>
+          <Button
+            aria-label={copy.ui.inventory_deselect}
+            disabled={selected_items.length === 0 || disabled}
+            onClick={() => change([])}
+          >
+            <X size={13} />
+          </Button>
+          {menu && (
+            <Button
+              aria-label={copy.ui.mobile_item_actions}
+              disabled={selected_items.length === 0 || disabled}
+              onClick={(event) => {
+                event.stopPropagation()
+                const [item] = selected_items
+                if (!item) return
+                const bounds = event.currentTarget.getBoundingClientRect()
+                menu({ item, items: selected_items, x: bounds.left, y: bounds.bottom })
+              }}
+            >
+              <MoreHorizontal size={14} />
+            </Button>
+          )}
+        </div>
+      )}
       <SelectionGrid
         className={class_name}
         selected={selected}

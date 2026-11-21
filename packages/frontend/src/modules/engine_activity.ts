@@ -4,6 +4,7 @@
 import type { AppState } from '../store.ts'
 import type { create_world } from '../game/core/world.ts'
 
+import { chain_now } from './chain_clock.ts'
 import { is_world_page } from './navigation.ts'
 import { selected_world_action_lock } from './world_gather.ts'
 
@@ -18,5 +19,5 @@ export const sync_world_activity = (world: Readonly<WorldActivity> | null, state
     world_page && state.navigation.dialog === null && !!state.session.wallet,
     !state.session.agent_view.request
   )
-  world.set_action_lock(selected_world_action_lock(state))
+  world.set_action_lock(selected_world_action_lock(state, chain_now(state.chain_clock, performance.now())))
 }

@@ -156,6 +156,13 @@ export {
   type WeaponCategory,
 } from './item.ts'
 export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
+export {
+  GROUP_SIZE_AVG3_AT,
+  GROUP_SIZE_FULL_AT,
+  center_distance,
+  distance_ramp,
+  mob_group_size_bounds,
+} from './zone_math.ts'
 export { basis_points, marketplace_lot_sizes, marketplace_royalty_bps } from './marketplace.ts'
 export {
   character_equipment_slots,

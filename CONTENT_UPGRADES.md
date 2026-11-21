@@ -189,6 +189,9 @@ none of these steps; each one needs explicit owner approval.
    Where Redis users are restricted, the companion's user needs the set and sorted-set commands
    `SADD SREM SISMEMBER SMEMBERS ZADD ZSCORE ZRANGE` on `telegram:*` beside its record commands, and the
    hosted bot's user needs `ZADD` on `telegram:waitlist`.
+   The frontend build sets `VITE_TELEGRAM_CALLBACK_URL` to the exact `callback_url` of
+   `TELEGRAM_CONNECTED_CONFIG`. A wrong or missing value shows the assistants' consent dialog on a Telegram
+   login and approves nothing by itself. Keep `link_ttl_ms` at or below the hosted bot's request lifetime.
 4. Route `/telegram`, `/link/*` and `/oauth/callback` on the public host to the listener: the webhook, the
    login link and the Google return. Once it answers behind public TLS, register the webhook with Telegram
    `setWebhook`: the public
@@ -255,6 +258,10 @@ Mainnet publication, funding, upgrades and permanent freeze require explicit own
    Blast's domain. `package` and `package_version` enable allowlisted purchases on `/allocation`;
    then run `bun scripts/allocation_campaign.ts proofs`, which stores Blast's proofs only if each reaches the sale's on-chain root.
    These are verified external facts, not locally published objects.
+   A sale may be pinned alone, before any token is adopted: add `coin_type` to the `blast_presale`
+   entry and leave `kares_coin_type` and `kares_currency` unset. The sale card, the home page line
+   and the `/allocation` purchase then work while every game token feature stays off and the
+   Economy stays unbound. If the sale fails, replace that one entry with the new sale.
 5. Ensure external migration delivered at least 410 million spendable tokens to the treasury.
    Escrowed or vested tokens cannot fund reserves. The treasury must sign funding and own both Setup and UpgradeCap.
    If custody changed after publication, explicitly transfer both capabilities before funding.

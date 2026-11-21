@@ -13,9 +13,13 @@ import { object_schema, identifier, decode } from './gameplay_schema.ts'
 
 type CharacterActions = ReturnType<typeof create_agent_actions>['character']
 export const EQUIPMENT_SLOT_SCHEMA = { oneOf: character_equipment_slots.map((slot) => ({ const: slot })) }
-type EquipPayload = Readonly<{ character_id: string; item_id: string; slot: CharacterEquipmentSlot }>
+/** No `item_id` empties the slot: its occupant goes back to the hero's kiosk. */
+type EquipPayload = Readonly<{ character_id: string; item_id?: string; slot: CharacterEquipmentSlot }>
 type ConsumePayload = Readonly<{ character_id: string; item_id: string; amount: number }>
-const equip_schema = object_schema({ character_id: identifier, item_id: identifier, slot: EQUIPMENT_SLOT_SCHEMA })
+const equip_schema = {
+  ...object_schema({ character_id: identifier, item_id: identifier, slot: EQUIPMENT_SLOT_SCHEMA }),
+  required: ['character_id', 'slot'],
+}
 const consume_schema = object_schema({
   character_id: identifier,
   item_id: identifier,
@@ -24,7 +28,7 @@ const consume_schema = object_schema({
 export const EQUIPMENT_ACTIONS = {
   equip_item: {
     description:
-      'Equip an exact available owned item into an authored slot, replacing its current occupant atomically.',
+      'Equip an exact available owned item into an authored slot, replacing its current occupant atomically. Omit item_id to empty the slot instead: its occupant returns to the hero kiosk.',
     input_schema: equip_schema,
     parse: (value: unknown) => decode<EquipPayload>(equip_schema, value),
   },
@@ -43,9 +47,7 @@ const available_character = (context: GameplayContext, character_id: string) => 
   if (!character_free(character)) throw new Error('character_not_available')
   return character
 }
-export const validate_equip_item = (context: GameplayContext) => {
-  const payload = EQUIPMENT_ACTIONS.equip_item.parse(context.command.payload)
-  const character = available_character(context, payload.character_id)
+const equippable_item = (context: GameplayContext, character: CharacterRow, payload: EquipPayload) => {
   const item = profession_inventory(context.snapshot.inventory, character.kiosk).find(
     ({ id }) => id === payload.item_id
   )
@@ -59,13 +61,20 @@ export const validate_equip_item = (context: GameplayContext) => {
   })
   if (refusal) throw new Error(refusal)
   if (character.equipment.some(({ id }) => id === item.id)) throw new Error('item_already_equipped')
+  return item
+}
+export const validate_equip_item = (context: GameplayContext) => {
+  const payload = EQUIPMENT_ACTIONS.equip_item.parse(context.command.payload)
+  const character = available_character(context, payload.character_id)
   const previous = character.equipment.find(({ slot }) => slot === payload.slot)
+  if (!payload.item_id && !previous) throw new Error('slot_empty')
+  const item = payload.item_id ? equippable_item(context, character, payload) : null
   return {
     kind: 'equip_item' as const,
     input: {
       character_id: character.id,
       custody: custody_of(character),
-      to_equip: [{ slot: payload.slot, item_id: item.id }],
+      to_equip: item ? [{ slot: payload.slot, item_id: item.id }] : [],
       to_unequip: previous ? [{ slot: payload.slot, item_id: previous.id }] : [],
     },
   }
@@ -111,4 +120,6 @@ export const equipment_executors = (actions: Pick<CharacterActions, 'equip' | 'u
   use_consumable: actions.use_consumable,
 })
 export const equipment_projected = (payload: EquipPayload, character: CharacterRow) =>
-  character.equipment.some(({ slot, id }) => slot === payload.slot && id === payload.item_id)
+  payload.item_id
+    ? character.equipment.some(({ slot, id }) => slot === payload.slot && id === payload.item_id)
+    : character.equipment.every(({ slot }) => slot !== payload.slot)

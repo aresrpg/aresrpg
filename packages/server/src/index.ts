@@ -66,6 +66,7 @@ setInterval(() => {
     .heartbeat(SERVER_ID, {
       addresses: [...connections.keys()],
       characters: [...connections.values()].flatMap(({ player }) => player.online_characters()),
+      agents: [...connections].flatMap(([address, { player }]) => (player.is_agent() ? [address] : [])),
     })
     .then(() => pubsub.mesh.cluster_online())
     .then(({ online }) => pubsub.mesh.record_online?.(online, Date.now()))

@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client'
 import { item_stat_center } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
-import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
+import EquipmentTab from '../../src/characters/GameEquipmentTab.tsx'
 import RuneforgeTab from '../../src/characters/RuneforgeTab.tsx'
 import { CrushResultDialog } from '../../src/characters/CrushResultModal.tsx'
 import { Toasts } from '../../src/components/Toasts.tsx'

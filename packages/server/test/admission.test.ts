@@ -67,7 +67,13 @@ test('actual websocket pending flood stays bounded while a proved replacement ca
               active?.close(1000, 'REPLACED')
               active = ws
               promotions += 1
-              return { online_characters: () => [], dispatch: () => {}, on_message: () => {}, on_close: () => {} }
+              return {
+                online_characters: () => [],
+                is_agent: () => false,
+                dispatch: () => {},
+                on_message: () => {},
+                on_close: () => {},
+              }
             },
           })
         )

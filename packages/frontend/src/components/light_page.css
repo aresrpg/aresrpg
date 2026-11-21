@@ -48,6 +48,11 @@
   margin: 0 auto;
   padding: 16px;
 }
+/* An application surface uses the whole window; a reading page keeps its column. */
+.light-page[data-wide] > .light-page-header,
+.light-page[data-wide] > .light-page-main {
+  max-width: none;
+}
 .light-page-card {
   display: grid;
   gap: 12px;
@@ -66,6 +71,15 @@
 }
 .light-page-card .aui-button {
   justify-self: start;
+}
+/* A wait the card names: the spinner and its sentence on one line. */
+.light-page-card .light-page-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.light-page-status .aui-spinner {
+  flex: none;
 }
 .light-page-actions {
   display: flex;

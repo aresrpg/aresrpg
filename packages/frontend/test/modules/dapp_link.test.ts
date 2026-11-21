@@ -3,8 +3,8 @@
 import { expect, test } from 'bun:test'
 import type { BotFetch } from '@aresrpg/protocol/hosted-bot-client'
 
-import { strict_clock } from '../../src/modules/dapp.ts'
-import { grant_store, save_pending } from '../../src/dapp/oauth.ts'
+import { receive_consent, strict_clock } from '../../src/modules/dapp.ts'
+import { grant_store, read_pending, save_pending } from '../../src/dapp/oauth.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { dapp_error } from '../../src/dapp/copy.ts'
 import { raw_observation } from '../dapp/fixtures.ts'
@@ -263,6 +263,151 @@ test('signing in without a grant starts the connection by itself; a Disconnect d
   expect(chosen.state().dapp.link).toEqual({ phase: 'disconnected', error: null })
   expect(navigated).toHaveLength(1)
   chosen.stop()
+})
+
+const CONSENT_PAGE = 'https://game.example.test/world?intent=connect-agent&authorization_id=a'
+const OWN_PENDING = {
+  client_id: 'c',
+  redirect_uri: 'https://game.example.test/dapp',
+  scope,
+  state: 's1',
+  verifier: 'v',
+  expires_at: 5_000,
+}
+const answer = (values: Readonly<Record<string, string>> = {}) =>
+  `https://game.example.test/dapp?${new URLSearchParams({ code: 'g.code', state: 's1', iss: issuer, ...values })}`
+/**
+ * The consent page of this tab's own request: a signed-in dapp whose address the page can replace.
+ * `navigated` holds every page load the dapp asked for, `exchanged` every code sent to the bot.
+ */
+const consent_page = async (pending: typeof OWN_PENDING | null = OWN_PENDING) => {
+  const page = { href: CONSENT_PAGE }
+  const navigated: string[] = []
+  const exchanged: Record<string, string>[] = []
+  const fetcher: BotFetch = async (url, init) => {
+    if (url.endsWith('/oauth/token')) {
+      exchanged.push(JSON.parse(String(init.body)) as Record<string, string>)
+      return tokens('g.x', 'g.y')
+    }
+    const { params } = JSON.parse(String(init.body)) as { params: { name: string } }
+    return tool_reply(params.name === 'bot_identity' ? identity : raw_observation())
+  }
+  const effects = {
+    ...effects_for(fetcher),
+    location: () => {
+      const url = new URL(page.href)
+      return { href: url.href, search: url.search, origin: url.origin }
+    },
+    replace_url: (path: string) => {
+      page.href = new URL(path, page.href).href
+    },
+    navigate: (url: string) => void navigated.push(url),
+  }
+  save_pending(effects.pending, pending)
+  const app = harness(effects)
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: wallet })
+  await settle()
+  // The consent page starts no other request; it waits for the consent step to finish this one.
+  expect(app.state().dapp.link).toEqual({ phase: 'disconnected', error: null })
+  return {
+    app,
+    effects,
+    page,
+    navigated,
+    exchanged,
+    receive: (url: string) => receive_consent(url, app.dispatch, effects),
+  }
+}
+
+// Owner complaint 2026-11-21: a first connection was three page loads. The consent step sent the
+// browser to `/dapp?code=…` only for a new boot to exchange a code the page already held.
+test('the consent answer of this tab’s own request links the dapp in place, with no page load', async () => {
+  const f = await consent_page()
+  expect(f.receive(answer())).toBe(true)
+  // The address is the dapp's own at once and never keeps the code; the link is being completed.
+  expect(f.page.href).toBe('https://game.example.test/dapp')
+  expect(f.app.state().dapp.link).toEqual({ phase: 'exchanging' })
+  await settle()
+  expect(f.navigated).toEqual([])
+  expect(f.app.state().dapp.link).toEqual({ phase: 'connected' })
+  // One exchange, under the verifier and the redirect of the request this tab kept.
+  expect(f.exchanged).toHaveLength(1)
+  expect(f.exchanged[0]).toMatchObject({
+    grant_type: 'authorization_code',
+    code: 'g.code',
+    code_verifier: 'v',
+    redirect_uri: 'https://game.example.test/dapp',
+    client_id: 'c',
+  })
+  // The grant is stored where it always was, under the signed-in owner, and the request is spent.
+  expect(grant_store(f.effects.grants, owner).read()?.refresh_token).toBe('g.y')
+  expect(read_pending(f.effects.pending, 0)).toBeNull()
+  expect(f.app.state().session.inventory_pairing).toEqual(PAIRING)
+  f.app.stop()
+})
+
+test('an answer taken in place passes the same checks as a page load: state, issuer and this tab’s request', async () => {
+  const refused = async (redirect: string, pending: typeof OWN_PENDING | null = OWN_PENDING) => {
+    const f = await consent_page(pending)
+    expect(f.receive(redirect)).toBe(true)
+    await settle()
+    // Nothing is exchanged, nothing is stored, and the code does not stay in the address.
+    expect(f.exchanged).toEqual([])
+    expect(grant_store(f.effects.grants, owner).read()).toBeNull()
+    expect(f.page.href).toBe('https://game.example.test/dapp')
+    expect(f.navigated).toEqual([])
+    f.app.stop()
+    return f.app.state().dapp.link
+  }
+  const failed = { phase: 'disconnected', error: 'consent_failed' } as const
+  // A state that is not the one this tab generated.
+  expect(await refused(answer({ state: 'forged' }))).toEqual(failed)
+  // An answer that does not come from this bot service (RFC 9207).
+  expect(await refused(answer({ iss: 'https://other.example.test' }))).toEqual(failed)
+  // A tab that began no request holds no verifier: it can finish nothing.
+  expect(await refused(answer(), null)).toEqual(failed)
+  // A request that expired in tab storage is not this tab's request any more.
+  expect(await refused(answer(), { ...OWN_PENDING, expires_at: 1 })).toEqual(failed)
+})
+
+test('a redirect that is not this origin’s dapp page is never taken in place: the browser leaves for it', async () => {
+  const f = await consent_page()
+  for (const redirect of [
+    'https://assistant.example/callback?code=g.code&state=s1',
+    'https://companion.example.test/oauth/callback?code=g.code',
+    'https://game.example.test/other?code=g.code&state=s1',
+    'https://game.example.test.evil.example/dapp?code=g.code&state=s1',
+    'https://game.example.test/dapp',
+    'not a url',
+  ]) {
+    const before = f.navigated.length
+    expect(f.receive(redirect)).toBe(false)
+    expect(f.navigated.slice(before)).toEqual([redirect])
+  }
+  await settle()
+  // The page and its link did not move, and this tab's request is still waiting to be finished.
+  expect(f.page.href).toBe(CONSENT_PAGE)
+  expect(f.app.state().dapp.link).toEqual({ phase: 'disconnected', error: null })
+  expect(f.exchanged).toEqual([])
+  expect(read_pending(f.effects.pending, 0)).not.toBeNull()
+  f.app.stop()
+})
+
+test('a code is exchanged once: the same answer delivered again finds its request spent', async () => {
+  const f = await consent_page()
+  f.receive(answer())
+  await settle()
+  expect(f.exchanged).toHaveLength(1)
+  expect(f.app.state().dapp.link).toEqual({ phase: 'connected' })
+  // The request left tab storage when its answer was first read, so a replayed answer is refused
+  // before the bot is asked, exactly as a reload of the old callback address is.
+  f.receive(answer())
+  await settle()
+  expect(f.exchanged).toHaveLength(1)
+  expect(f.page.href).toBe('https://game.example.test/dapp')
+  expect(f.app.state().dapp.link).toEqual({ phase: 'disconnected', error: 'consent_failed' })
+  f.app.stop()
 })
 
 test('two readings of the page clock in one millisecond still order the answer before the read that proves it', () => {

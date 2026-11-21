@@ -873,6 +873,8 @@ admin_page:
   online_players: Joueurs en ligne
   online_players_body: Pic de joueurs authentifiés uniques par intervalle
   online_now: Joueurs en ligne
+  online_split: Répartition en ligne
+  online_split_detail: 'joueurs · bots hébergés'
   peak: Pic
   revenue: Revenus
   revenue_over_time: Revenus au fil du temps
@@ -2820,6 +2822,10 @@ ui:
   agent_activity_travel: 'Position changée'
   agent_activity_fight_entered: 'Combat rejoint'
   agent_activity_fight_left: 'Combat quitté'
+  agent_activity_dungeon_left: 'A quitté le donjon'
+  agent_activity_loot: 'Butin'
+  agent_activity_command: 'Action demandée par votre assistant'
+  agent_log_read_only: 'Lecture seule. Votre assistant IA décide de ce qui se passe ici.'
   agent_activity_fight: 'En combat'
   agent_activity_dungeon: 'Dans un donjon'
   agent_activity_world: 'Dans le monde'
@@ -2879,7 +2885,6 @@ ui:
   agent_coin_direct: 'Les jetons sont transférés directement en une transaction. L’expéditeur paie les frais.'
   agent_pair_for_deposit: 'Vérifiez un signataire persistant de l’agent avant tout dépôt.'
   agent_inventory_connect: 'Vérifiez l’adresse complète de votre agent pour utiliser son inventaire.'
-  agent_inventory_demo: 'Les transferts de l’agent nécessitent un portefeuille Google connecté. Équipement et sélection fonctionnent hors ligne.'
   agent_transfer_interrupted: 'Une tentative de transfert précédente nécessite votre confirmation pour continuer.'
   agent_transfer_sender: 'Expéditeur'
   agent_source_balance: 'Solde de l’expéditeur'
@@ -2937,6 +2942,11 @@ ui:
   agent_hosted_authenticate: 'Authentifier le portefeuille Google'
   agent_hosted_ready: 'Configuration terminée'
   agent_hosted_consent: 'Connecter votre assistant'
+  agent_checking: "Vérification de l'état de l'agent…"
+  signing_in: 'Connexion en cours…'
+  telegram_link_title: 'Lier Telegram'
+  telegram_link_signin: 'Connectez-vous avec Google pour lier cette conversation Telegram à votre compte de jeu.'
+  telegram_link_failed: 'Impossible de lier Telegram. Retournez sur Telegram et connectez-vous à nouveau.'
   agent_hosted_review: "Un assistant demande l'accès à votre bot. Continuez pour voir ce qu'il demande ; rien n'est partagé avant que vous ne connectiez."
   agent_hosted_authority: 'Peut jouer et dépenser les actifs de ce bot.'
   agent_hosted_read_access: 'Peut consulter ce bot.'
@@ -3196,6 +3206,7 @@ allocation_page:
   source_pending: Sélection en attente
   link_wallets: Liez vos portefeuilles
   wallet_rule: Signez avec chaque portefeuille pour prouver qu’il vous appartient.
+  wallet_rule_sale: 'Liez le portefeuille qui détient votre place, puis achetez depuis sa carte.'
   verified: Vérifié
   remove_wallet: Retirer {{wallet}}
   add_wallet: Lier un portefeuille Sui
@@ -3211,8 +3222,10 @@ allocation_page:
   play: Jouer à AresRPG
   sale_title: La vente se déroule sur Blast
   sale_time: 'La date et l’heure de la vente seront annoncées ultérieurement.'
+  sale_public: 'Pas de place ? Suivez la vente publique sur Blast.'
   results_title: 'Résultats de la campagne'
   results_note: Vos cartes révèlent les résultats avant la vente.
+  results_note_sale: 'La whitelist est définitive. Les portefeuilles whitelistés achètent sur cette page, dans la limite de leur plafond.'
   spot_gives: Ce qu’offre un spot
   signing: Confirmez la signature dans votre portefeuille…
   no_spot_yet: Pas encore de spot
@@ -3237,6 +3250,8 @@ allocation_page:
   sale_cancelled: 'Vente annulée'
   sale_spots_open: 'Vos places sont ouvertes'
   sale_ends_in: 'Fin dans {{time}}'
+  sale_public_in: 'Ouverte à tous dans {{time}}'
+  sale_public_now: 'Ouverte à tous maintenant'
   sale_opens_in: 'Ouverture dans {{time}}'
   sale_opens_soon: 'Ouverture prochaine'
   sale_countdown: '{{days}} j {{hours}} h {{minutes}} min'
@@ -3789,12 +3804,11 @@ landing_page:
     colophon: un monde, des interfaces sans limite
 
 telegram_companion:
-  welcome: "⚔️ Bienvenue dans AresRPG\n\nVos héros vivent on-chain. Depuis ce chat, vous les suivez, vous choisissez une stratégie, et ils combattent et récoltent pour vous.\n\nPour commencer, connectez-vous avec Google. La page s’ouvre dans votre navigateur et prend quelques secondes."
-  open_login: '🌐 Ouvrir la page de connexion'
+  welcome: "⚔️ Bienvenue dans AresRPG\n\nVos héros vivent sur la blockchain. Depuis cette conversation, vous les suivez, choisissez une stratégie, et ils combattent et récoltent pour vous.\n\nPour commencer, connectez-vous avec Google. La page s'ouvre dans votre navigateur, puis vous ramène ici."
   disconnect: '🔓 Déconnecter Google'
   connect_google: '🔑 Se connecter avec Google'
   waiting: 'Votre compte de jeu n’a pas encore accès à Telegram. Rejoignez la liste d’attente pour le demander.'
-  on_waitlist: '✅ Vous êtes sur la liste d’attente. Utilisez « Vérifier l’accès » pour voir si votre compte de jeu a été admis.'
+  on_waitlist: "✅ Vous êtes sur la liste d'attente. Quand votre compte de jeu sera admis, Vérifier l'accès ouvrira vos héros."
   join_waitlist: 'Rejoindre la liste d’attente'
   check_access: 'Vérifier l’accès'
   inventory: '🎒 Inventaire'
@@ -3815,10 +3829,8 @@ telegram_companion:
   back: '☰ Menu'
   status: '📍 État'
   approve: '✅ Autoriser'
-  link: '🔑 Votre page de connexion est prête. Elle s’ouvre dans votre navigateur.'
-  linked: '✅ Google associé'
   unlinked: '🔓 Liaison supprimée'
-  browser_expired: 'Cette page a expiré. Retournez sur Telegram et reconnectez-vous.'
+  browser_expired: "Ce lien n'est plus valide. Retournez sur Telegram et envoyez un message pour en obtenir un nouveau."
   check_status: '📍 Voir le statut'
   log_in_again: '🔑 Se reconnecter'
   balance: '💰 Solde de l’agent'
@@ -3830,7 +3842,7 @@ telegram_companion:
   choose_strategy: 'Choisissez une stratégie'
   failure_changed: 'Cela a été mis à jour. Voici l’état actuel.'
   failure_reconnect: 'Votre connexion a expiré. Reconnectez-vous :'
-  failure_unlink_first: 'Ce chat ou ce compte Google est déjà connecté, ou une connexion est encore ouverte. Déconnectez Google, puis réessayez.'
+  failure_unlink_first: 'Cette conversation ou ce compte Google est déjà connecté. Déconnectez Google, puis réessayez.'
   failure_temporary: 'Cela n’a pas fonctionné cette fois. Réessayez dans un instant.'
   failure_busy: 'Ce personnage termine encore une action, ou l’agent est en pause. Si vous l’avez mis en pause, reprenez-le, puis consultez le statut.'
   failure_run_limit: 'Votre agent dirige déjà autant de personnages qu’il le peut. Arrêtez-en un, puis lancez celui-ci.'
@@ -3845,8 +3857,6 @@ telegram_companion:
   unknown: 'Le résultat n’est pas encore confirmé. Consultez d’abord le statut.'
   city_review: 'Ville : {city}'
   city_required: 'Entrez dans une ville en jeu, puis ouvrez le menu et vérifiez à nouveau.'
-  enable_agent: '🔑 Activer l’agent'
-  play_consent: 'Votre compte de jeu est admis. Autorisez l’agent pour continuer.'
   world_review: 'Monde : {world}'
   gather_effects: 'Fabrique des recettes utiles avec les ingrédients disponibles pour progresser ; sinon récolte avec les outils disponibles et explore ce monde. Combat les protecteurs avec des tactiques simples. Continue jusqu’à l’arrêt. Gas SUI et ingrédients sans plafond total ; échecs possibles. Un redémarrage peut répéter une étape. L’arrêt n’annule pas les actions envoyées.'
   strategies:
@@ -4008,14 +4018,18 @@ docs_page:
 
 dapp_page:
   brand: 'Expéditions'
-  mode_label: "Mode d'interface"
-  mode_basic: 'Simple'
-  mode_advanced: 'Avancé'
   nav_label: 'Sections'
-  nav_play: 'Jouer'
   nav_market: 'Marché'
   bot_balance: 'Bot : {amount} SUI'
   bot_balance_hint: 'Les SUI que détient votre bot hébergé. Ils paient les frais réseau de vos héros et vos achats sur le marché.'
+  bot_balance_low: "Votre bot manque de SUI. Ajoutez des SUI à son portefeuille, sinon vos héros s'arrêteront."
+  asking_bot: "Réveil de votre bot pour savoir ce qu'il fait…"
+  connect_proving: 'Preuve que ce compte est le vôtre…'
+  connect_creating: 'Création du portefeuille de votre bot…'
+  connect_checking: 'Vérification du portefeuille de votre bot…'
+  connect_naming: 'Attribution du nom de votre bot…'
+  connect_approving: 'Approbation de la connexion…'
+  connect_returning: 'Finalisation de la connexion…'
   loading: 'Chargement…'
   signing_in: 'Connexion en cours…'
   signin_title: 'Envoyez vos héros en expédition'
@@ -4032,11 +4046,9 @@ dapp_page:
   connect_busy: 'Connexion…'
   reading_heroes: 'Lecture de vos héros…'
   syncing: 'Votre bot rattrape le monde. Cette page se met à jour toute seule.'
-  observe_failed_title: 'Votre bot ne répond pas'
   observe_failed: 'Impossible de joindre votre bot. Rechargez cette page pour réessayer.'
-  empty_title: "Votre bot n'a pas encore de héros"
-  empty_body: 'Créez un héros dans le monde 3D, puis faites un clic droit sur son portrait et choisissez Envoyer à un agent. Il apparaîtra ici à son arrivée.'
-  empty_action: 'Ouvrir le monde 3D'
+  heroes_failed_title: 'Impossible de lire vos héros'
+  heroes_failed: "Le serveur de jeu n'a pas envoyé vos héros. Rechargez cette page pour réessayer."
   heroes_title: 'Vos héros'
   hero_level: 'Niveau {level}'
   hero_xp: 'Expérience'
@@ -4044,32 +4056,16 @@ dapp_page:
   status_activity: 'En activité'
   status_fight: 'En combat'
   status_dungeon: 'En donjon'
-  activities_title: 'Activités'
-  activities_team: "Chaque bouton envoie tous les héros libres. Les héros d'une même ville partent en équipe."
-  activities_hero: 'Ces boutons agissent uniquement sur {name}.'
-  activities_build: "En mode Simple, les héros {classe} progressent aussi tout seuls : leurs points de caractéristiques vont en {stat}, leurs points de sort d'abord à {spell}, et ils portent le meilleur équipement qu'ils possèdent."
-  activity_ready: 'Prêts : {names}'
-  activity_out: 'En cours : {names}'
   activity_other: 'Activité'
   activity_train: 'Entraînement'
-  activity_train_body: "Combattre des monstres dans la ville actuelle de chaque héros pour l'expérience et le butin. Seul, un héros vise des monstres isolés ; les héros d'une même ville chassent en équipe."
-  activity_train_action: "Lancer l'entraînement"
   activity_gather: 'Récolte'
-  activity_gather_body: 'Récolter et fabriquer dans le monde du héros avec ses outils, pour monter ses métiers.'
-  activity_gather_action: 'Lancer la récolte'
   activity_raid: 'Raid'
-  activity_raid_body: 'Entrer dans le donjon de la ville de ce héros pour son butin le plus rare. Le héros utilise une clé.'
-  activity_raid_body_basic: 'Envoyer vos héros libres les plus forts, {size} au maximum, dans {dungeon} pour son butin le plus rare. Chaque héros utilise une clé.'
-  activity_raid_action: 'Lancer le raid'
   blocker_command_pending: 'En attente de la réponse de votre bot…'
   blocker_no_free_hero: "Aucun héros n'est libre pour cela en ce moment."
   blocker_hero_busy: '{names} : en combat ou en donjon en ce moment.'
   blocker_hero_unknown: '{names} : votre bot lit encore ce héros. Réessayez dans un instant.'
-  blocker_city_required: "{names} : pas en ville. Amenez d'abord le héros dans une ville du monde 3D."
-  blocker_world_required: '{names} : dans un autre monde que ce donjon.'
+  blocker_world_required: '{names} : dans un autre monde.'
   blocker_key_missing: '{names} : pas de clé pour ce donjon.'
-  blocker_team_full: "{names} : l'équipe de raid est déjà complète."
-  key_missing: 'Manquant : {count} × {item}'
   key_find: 'Trouver {item} au marché'
   key_unsold: 'Personne ne vend {item} en ce moment.'
   raid_short_title: "Pas assez de clés pour toute l'équipe"
@@ -4079,39 +4075,32 @@ dapp_page:
   close: 'Fermer'
   command_uncertain: 'Impossible de confirmer la réponse de votre bot. Cette page revérifie toute seule ; rien ne sera envoyé deux fois.'
   command_refused: '{names} : {reason}'
-  positions_title: 'Positions'
-  positions_empty: 'Lancez une activité pour suivre sa progression ici.'
   position_running: 'En cours'
-  position_waiting: "Votre bot attend : il ne peut pas poursuivre cette activité pour l'instant."
+  run_notice_funding: "Votre bot n'a plus de SUI. Ajoutez des SUI à son portefeuille et il reprendra tout seul."
+  run_notice_requirement: "Il manque à ce héros un outil, un niveau ou des matériaux pour cette activité. Donnez-lui ce qu'il faut, ou choisissez une autre activité."
+  run_notice_plan: "Votre bot a besoin d'un nouveau plan pour cette activité. Arrêtez-la puis relancez-la, ou demandez à votre client IA de l'ajuster."
   position_stopping: 'Arrêt…'
   position_finished: 'Terminée'
   position_ended_issue: 'Votre bot a arrêté cette activité. Vérifiez son solde et votre héros, puis relancez-la.'
   position_hp: 'Vie'
   position_xp: 'Expérience gagnée'
-  position_levels: '+{count} niveaux'
+  position_levels: 'Niveau +{count}'
   position_job_xp: 'Expérience de métier'
   position_fights: 'Combats'
   position_dungeon: '{dungeon} · salle {room}'
   position_team: 'En combat avec {names}'
-  position_loot: 'Objets trouvés'
-  position_no_loot: "Aucun objet trouvé pour l'instant."
   position_stop: 'Arrêter'
   position_dismiss: 'Retirer'
-  haul_title: 'Rapporté'
-  haul_spent: 'SUI utilisés : {amount}'
-  haul_spent_hint: 'SUI sortis du portefeuille de votre bot pendant que vos héros étaient en activité : frais réseau, achats et transferts sortants.'
-  found_toast: 'Votre héros a trouvé'
-  hero_action_sent: 'Envoyé à votre bot.'
-  detail_title: '{name} en détail'
-  detail_locked: "Les caractéristiques et les sorts peuvent changer tant que ce héros n'est pas en combat et que votre bot n'a pas d'autre demande en cours."
+  bag_title: 'Sac'
+  bag_empty: 'Le sac est vide.'
+  bag_loading: 'Lecture du sac de votre bot…'
+  bag_feed_title: "Vient d'arriver"
+  bag_feed_empty: "Les nouveaux objets s'affichent ici dès leur arrivée."
+  found_toast: 'Nouveau dans votre sac'
+  detail_locked: "L'équipement, les caractéristiques, les sorts et la fabrication sont accessibles tant que ce héros est hors combat et que votre bot n'a pas d'autre demande en cours."
   detail_stats: 'Caractéristiques'
   detail_spells: 'Sorts'
   detail_equipment: 'Équipement'
-  equipment_empty: 'Aucun équipement porté.'
-  market_account: "Ce marché commerce au nom de votre bot : il paie avec le solde du bot, et vos achats arrivent dans le sac que partagent vos héros. Une annonce ne peut pas encore être retirée depuis cette page, et le produit d'une vente reste dans le kiosque du bot."
-  market_queued: "Votre bot a votre ordre pour {item}. Il le signe après l'action en cours."
-  market_bought: 'Acheté : {amount} × {item}. Il est dans le sac de vos héros.'
-  market_listed: 'Mis en vente : {amount} × {item}.'
   error_unknown: 'Une erreur est survenue. Réessayez.'
   error_expired: 'La connexion à votre bot a expiré. Reconnectez-vous.'
   error_google_required: 'Continuez avec Google pour connecter un bot hébergé.'
@@ -4131,10 +4120,243 @@ dapp_page:
   error_tool_failed: "Votre bot n'a pas pu le faire. Réessayez plus tard."
   error_insufficient_funds: "Votre bot n'a pas assez de SUI pour cela. Ajoutez des SUI à votre bot, puis réessayez."
   error_listing_changed_or_ineligible: "Cette offre a changé ou n'existe plus. Vérifiez le prix actuel, puis réessayez."
-  error_character_not_available: "Aucun de vos héros n'est libre pour porter cela en ce moment : ils sont en combat. Réessayez dans un instant."
+  error_character_not_available: "Aucun héros n'est libre pour cela en ce moment : un combat est en cours. Réessayez dans un instant."
   error_sale_source_changed_or_unavailable: "Cet objet a changé, ou aucune pile n'est assez grande. Choisissez-le de nouveau."
-  error_order_failed: "L'ordre n'a pas abouti. Vérifiez le solde et le sac de votre bot avant de réessayer."
-  error_order_unconfirmed: "Cet ordre n'a pas pu être confirmé et le sac n'a pas changé. Vérifiez le solde de votre bot avant de réessayer."
   disconnect_action: 'Déconnecter cette page'
   disconnect_body: "Retire l'accès de cette page à votre bot. Les activités qu'elle a lancées cessent de prendre de nouvelles actions. La déconnexion du compte fait de même."
   disconnect_failed: "Votre bot n'a pas confirmé. Cette page a toujours accès. Réessayez."
+  direct_queued: "Votre bot a reçu votre demande. Il la signe après l'action en cours."
+  direct_done_raise_stats: 'Caractéristiques mises à jour.'
+  direct_done_raise_spell: 'Niveau du sort augmenté.'
+  direct_done_equip_item: 'Équipement modifié.'
+  direct_done_use_consumable: '{name} a utilisé {item}.'
+  direct_done_dungeon_leave: '{name} a quitté le donjon.'
+  direct_done_market_buy: 'Acheté : {amount} × {item}. Il est dans le sac de vos héros.'
+  direct_done_market_sell: 'Mis en vente : {amount} × {item}.'
+  direct_done_market_delist: 'Annonce retirée : {amount} × {item} est de retour dans votre sac.'
+  direct_done_create_character: '{name} est prêt.'
+  level_up_toast: '{name} a atteint le niveau {level}.'
+  run_wait_travel: 'En route à pied. Le jeu fixe le temps de marche.'
+  run_wait_other: 'En attente du bon moment pour agir.'
+  run_notice_place: 'Il ne peut pas rejoindre ce lieu à pied depuis sa position. Arrêtez-le et choisissez un autre lieu.'
+  blocker_work_unknown: '{names} : ne peut pas faire ce travail dans le monde où il se trouve.'
+  blocker_job_level_required: '{names} : niveau de métier trop bas pour cela.'
+  blocker_tool_required: "{names} : n'a pas d'outil pour ce métier."
+  error_direct_failed: "Votre bot n'a pas pu le faire. Vérifiez son solde et votre héros avant de réessayer."
+  error_direct_unconfirmed: "Cette demande n'a pas pu être confirmée et cette page ne voit aucun changement. Vérifiez avant de réessayer."
+  error_invalid_character_name: 'Un nom compte 4 à 19 lettres, chiffres ou symboles, sans espace.'
+  error_character_name_taken: 'Ce nom est déjà pris. Choisissez-en un autre.'
+  error_funding_required: "Votre bot n'a pas assez de SUI pour cela. Ajoutez des SUI à votre bot, puis réessayez."
+  error_command_failed: "Le jeu a refusé cette action. Rien n'a été dépensé. Vérifiez puis réessayez."
+  error_invalid_gameplay_payload: "Cette demande n'était pas valide. Rien n'a été envoyé."
+  error_slot_empty: 'Cet emplacement est déjà vide.'
+  error_listing_gone: "Cette annonce n'existe plus : elle a été vendue ou déjà retirée."
+  error_inventory_unavailable: 'Votre bot lit encore son sac. Réessayez dans un instant.'
+  error_item_unavailable: "Cet objet n'est plus dans le sac. Choisissez-le à nouveau."
+  error_consumable_no_effect: 'Cela ne changerait rien pour ce héros.'
+  error_dungeon_unavailable: "Ce héros n'est plus dans ce donjon."
+  error_wrong_slot: 'Cet objet ne va pas dans cet emplacement.'
+  error_level_too_low: 'Le niveau de ce héros est trop bas pour cet objet.'
+  error_relic_duplicate: 'Ce héros porte déjà cette relique.'
+  error_item_already_equipped: 'Ce héros porte déjà cet objet.'
+  error_needs_custody_resync: 'Votre bot était encore en train de se mettre à jour. Réessayez dans quelques secondes.'
+  error_character_authority_mismatch: 'Votre bot ne détient plus ce héros.'
+  error_insufficient_consumables: 'Il ne reste pas assez de cet objet.'
+  error_unsupported_consumable: 'Votre bot ne peut pas utiliser cet objet.'
+  error_idempotency_conflict: 'Cette demande a déjà été envoyée. Attendez sa réponse.'
+  run_needs_help: 'A besoin de vous'
+  run_waiting: 'En attente'
+  run_objective: 'Objectif : {objective}'
+  run_results: 'Gagnés {won} · perdus {lost}'
+  run_dungeon_runs: 'Donjons terminés'
+  run_drops_title: 'Derniers butins'
+  run_drops_empty: 'Le butin apparaît ici après chaque combat.'
+  run_send_again: 'Renvoyer'
+  fees_run: 'Frais payés : {amount} SUI'
+  item_sell: 'Vendre'
+  sell_loot: 'Vendre le butin'
+  drops_place_title: 'Tout ce qui tombe à {place}'
+  drops_dungeon_title: 'Tous les butins de {dungeon}'
+  drops_rate: '~{rate}% par ennemi vaincu'
+  drops_room: 'Salle {room}'
+  drops_boss_room: 'Salle du boss'
+  next_title: 'Prochaine étape conseillée'
+  next_funds_title: "Votre bot n'a plus de SUI"
+  next_funds_body: 'Vos héros se sont arrêtés car votre bot ne peut pas payer les frais réseau. Ajoutez des SUI au portefeuille du bot dans le menu du portefeuille et ils reprendront tout seuls.'
+  next_raid_title: '{dungeon} vous attend'
+  next_raid_body: 'Clés que vous détenez pour ce donjon : {count}. Un héros est libre de partir.'
+  next_raid_action: 'Préparer un raid'
+  next_quest_title: '{name} est libre'
+  next_quest_body: 'Envoyez-le combattre pour du butin et des clés, ou travailler.'
+  next_quest_action: 'Envoyer en quête'
+  next_out_title: 'Tous les héros sont partis'
+  next_out_body: "Suivez-les dans l'onglet Quêtes."
+  next_out_action: 'Voir les quêtes'
+  hero_send_quest: 'Envoyer en quête'
+  hero_raid: 'Raid en donjon'
+  hero_watch_raid: 'Suivre le raid'
+  add_hero_title: 'Nouveau héros'
+  add_hero_body: '{count} classes · {price} SUI, payés par votre bot'
+  add_hero_action: 'Créer un héros'
+  add_hero_funds: 'Votre bot a besoin de {price} SUI pour le héros et de {fee} SUI pour les frais réseau. Ajoutez des SUI à votre bot dans le menu du portefeuille.'
+  create_sent: "Votre bot crée {name}. Le héros apparaîtra ici dès que le jeu l'aura confirmé."
+  welcome_title: 'Bienvenue dans Expéditions'
+  welcome_body: "Vos héros jouent au vrai jeu pour vous. Trois étapes jusqu'à votre premier raid."
+  step_create_title: 'Créez votre premier héros'
+  step_create_body: 'Choisissez une classe. Un héros vous appartient pour de bon.'
+  step_quest_title: "Envoyez-le en quête d'une clé"
+  step_quest_body: 'Les monstres de {city} lâchent {key}.'
+  step_raid_title: 'Raid dans {dungeon}'
+  step_raid_body: 'Chaque héros apporte une clé. La salle du boss renferme le butin le plus rare.'
+  fees_wallet: 'Frais payés par votre bot au total : {amount} SUI'
+  quest_title: 'Quêtes'
+  quest_intro: "Chaque combat peut donner de l'équipement et des clés. Les travailleurs transforment le butin en équipement."
+  quest_fight: 'Combattre pour du butin'
+  quest_fight_body: 'Équipement, clés et expérience à chaque combat'
+  quest_work: 'Aller travailler'
+  quest_work_body: "Récolter des ressources, ou fabriquer de l'équipement et des potions"
+  quest_who: 'Qui'
+  quest_where: 'Où'
+  quest_here: 'Là où se trouve chaque héros'
+  quest_pick_hero: 'Choisissez un héros'
+  quest_send: 'Envoyer {names}'
+  quest_until_stop: "Continue jusqu'à ce que vous l'arrêtiez."
+  quest_empty: "Pas encore de héros. Créez-en un dans l'onglet Accueil, puis envoyez-le en quête."
+  quest_empty_action: "Aller à l'accueil"
+  quest_walks: "{names} : s'y rend d'abord à pied. Chaque zone traversée coûte des frais réseau."
+  quest_walk_time: 'Au moins {time} à pied.'
+  quest_run_fight: 'Combattre dans {place}'
+  quest_run_work_job: 'Travailler comme {job}'
+  quest_run_gather: 'Récolter {item}'
+  quest_run_craft: 'Fabriquer {item}'
+  world_locked: "{world} s'ouvre au niveau de héros {level}."
+  place_levels: 'Monstres de niveau {min}–{max}'
+  place_key_drop: '{key} : ~{rate} % par {mob} vaincu'
+  place_rarest: 'Butin le plus rare : {item}, ~{rate} % sur {mob}'
+  place_level_warning: 'Les monstres ici sont de niveau {min}–{max}. {name} est de niveau {level}.'
+  place_all_drops: 'Tout ce qui tombe ici'
+  difficulty_label: 'Difficulté'
+  difficulty_none: 'Toutes'
+  difficulty_easy: 'Facile'
+  difficulty_medium: 'Moyenne'
+  difficulty_hard: 'Difficile'
+  difficulty_none_hint: "N'importe quel groupe, n'importe où dans le lieu."
+  difficulty_hint: "Groupes de {min} à {max} monstres. La taille d'un groupe dépend de sa distance au centre du monde."
+  difficulty_hint_one: "Groupes de {size} monstres. La taille d'un groupe dépend de sa distance au centre du monde."
+  difficulty_unfit: "{city} n'est pas à cette distance. Choisissez un autre lieu ou une autre difficulté."
+  travel_needed: "{name} n'est pas à {city}."
+  travel_potion_held: 'Vous avez {count} × {item}. Cela emmène le héros sur place aussitôt.'
+  travel_potion_use: 'Voyager avec une potion'
+  travel_potion_none: '{item} emmène un héros sur place aussitôt. Les alchimistes en préparent.'
+  fee_cap: 'Plafond de frais'
+  fee_cap_none: 'Aucun plafond'
+  fee_cap_hint: "Chaque héros s'arrête dès que sa propre activité a payé {amount} SUI de frais réseau. Il termine d'abord son combat."
+  fee_cap_invalid: 'Saisissez un montant de SUI supérieur à zéro, ou laissez vide pour aucun plafond.'
+  work_auto: 'Laisser votre bot choisir'
+  work_auto_body: "Votre bot récolte et fabrique ce qui fait le plus progresser les métiers de ce héros, avec les outils qu'il possède."
+  work_gather: 'Récolter une ressource'
+  work_craft: 'Fabriquer une recette'
+  work_worker: 'Travailleur'
+  work_change: 'Changer'
+  work_job: 'Métier'
+  work_job_any: "N'importe quel métier"
+  work_job_level: '{job} niveau {level}'
+  work_job_new: 'Débutant en {job}'
+  work_gather_hint: "{name} récolte {min}–{max} toutes les {seconds} s et gagne {xp} d'expérience de métier par récolte."
+  work_craft_hint: "{name} réussit {percent} % des essais et gagne {xp} d'expérience de métier par essai."
+  work_rare_find: "Une récolte peut aussi donner {item}. {mob} peut défendre l'endroit."
+  work_objective: 'Objectif'
+  work_goal_level: 'Atteindre un niveau'
+  work_goal_gather: 'Récolter une quantité'
+  work_goal_craft: 'Fabriquer une quantité'
+  work_goal_until: "Jusqu'à ce que je l'arrête"
+  work_how_many: 'Combien'
+  work_target_level: 'Niveau de métier à atteindre'
+  work_amount_invalid: 'Saisissez un nombre entier supérieur à zéro.'
+  work_level_invalid: 'Saisissez un niveau de {min} à {max}.'
+  work_tries: 'Essais : environ {tries}, pour {amount} × {item}'
+  work_harvests: 'Récoltes : environ {tries}, pour {amount} × {item}'
+  work_needs: "Ce qu'il vous faut"
+  work_tool_worn: '{item} équipé'
+  work_tool_bag: "{item} est dans votre sac. {name} l'équipe au début du travail."
+  work_tool_missing: 'Il faut {tool}. Les bricoleurs en fabriquent.'
+  work_material_missing: '{item} : il en faut {need}, dans votre sac {have}, manque {missing}'
+  work_material_ready: '{item} : il en faut {need}, dans votre sac {have}'
+  work_never_buys: "Achetez ce qui manque au marché, ou obtenez-le vous-même. Un héros n'achète jamais."
+  work_locked: 'Débloqué au niveau {level} de {job}'
+  work_pick_resource: 'Choisissez une ressource.'
+  work_pick_recipe: 'Choisissez une recette.'
+  work_start: 'Lancer'
+  out_now_title: 'En cours'
+  raid_title: 'Traquer {boss}'
+  raid_intro: 'Chaque salle est un combat avec son propre butin. Le butin des salles vidées est acquis.'
+  raid_dungeon: 'Donjon'
+  raid_dungeon_facts: '{rooms} salles · {monsters} monstres · boss {boss}'
+  raid_keys_held: 'Clés détenues : {count}. Chaque héros en apporte une.'
+  raid_team: 'Équipe'
+  raid_team_count: '{count} sur {size}'
+  raid_best_team: 'Meilleure équipe'
+  raid_seat_add: 'Ajouter'
+  raid_seat_title: 'Place {seat}'
+  raid_seat_remove: 'Retirer'
+  raid_seat_swap: 'Faire entrer'
+  raid_seat_key: 'A une clé'
+  raid_seat_no_key: 'Pas de clé'
+  raid_seat_none: "Tous les héros sont déjà dans l'équipe."
+  raid_seat_stop_note: "Arrêter un héros met fin à son activité. Ce qu'il a trouvé est déjà dans votre sac."
+  raid_no_seat: 'Ajoutez au moins un héros libre. Touchez une place ou utilisez Meilleure équipe.'
+  raid_levels_title: 'Votre équipe et les salles'
+  raid_alone: '{name} part seul.'
+  raid_drops_title: "Ce qu'un passage peut rapporter"
+  raid_rooms: 'Salles {first}–{last}'
+  raid_stake: 'Clés utilisées : {count}, une par héros'
+  raid_walk: "{name} : au moins {time} à pied jusqu'aux portes"
+  raid_repeats: "L'équipe relance le raid tant que chaque héros a une clé. Appuyez sur Arrêter pour finir."
+  raid_enter: 'Entrer · Clés : {count}'
+  raid_keys_short: 'Encore {count} {item} pour cette équipe'
+  raid_quest_for_keys: 'Quête de clés'
+  raid_room: 'Salle {room} sur {rooms}'
+  raid_boss_room: 'Salle du boss · {boss}'
+  raid_walking: 'En route vers les portes'
+  raid_loot: 'Butin des salles vidées'
+  raid_loot_empty: "Le butin de chaque salle vidée s'affiche ici."
+  raid_next_drops: 'La prochaine salle peut donner'
+  raid_stop_note: "Arrêter met fin au raid. Chaque héros reste dans le donjon, dans sa salle. Pour abandonner un passage, arrêtez d'abord le héros, puis quittez le donjon."
+  raid_stop_team: "Arrêter l'équipe"
+  raid_plan: 'Préparer un autre raid'
+  raid_back: 'Retour au raid'
+  raid_inside_title: 'Toujours dans un donjon'
+  raid_inside_body: 'Ces héros se sont arrêtés en plein passage de donjon. Relancez le raid pour continuer, ou quittez le donjon.'
+  raid_leave: 'Quitter le donjon'
+  raid_leave_body: "Le passage se termine pour ce héros. Sa clé n'est pas rendue."
+  raid_result_won: 'Victoire'
+  raid_result_lost: 'Défaite'
+  raid_result_bag: 'Tout ce qui suit est dans votre sac.'
+  raid_keys_left: 'Clés restantes : {count}'
+  raid_change_team: "Changer d'équipe"
+  raid_again: 'Relancer le raid'
+  raid_empty_title: "Pas encore d'équipe"
+  raid_empty_body: "Créez un héros, envoyez-le en quête d'une clé, puis revenez."
+  raid_runs: 'Passages'
+  raid_runs_all: "Tant qu'il reste des clés"
+  raid_runs_count: 'Passages par héros : {count}'
+  nav_home: 'Accueil'
+  heroes_intro: 'Équipement, caractéristiques, sorts et métiers.'
+  heroes_empty_title: 'Pas encore de héros'
+  heroes_empty_body: "Créez un héros dans l'onglet Accueil. Son équipement, ses caractéristiques, ses sorts et ses métiers s'affichent ici."
+  heroes_empty_action: "Aller à l'accueil"
+  nav_quest: 'Quête'
+  nav_raid: 'Raid'
+  nav_heroes: 'Héros'
+  keys_chip: 'Clés de donjon : {count}'
+  empty_title: "Rien ici pour l'instant"
+  empty_body: 'Ce que fait votre assistant IA apparaît ici.'
+  run_ended_objective_reached: "L'objectif que vous avez fixé est atteint."
+  run_ended_fee_cap_reached: 'La limite de frais que vous avez fixée est atteinte.'
+  run_ended_run_cap_reached: 'Les passages demandés sont terminés.'
+  run_ended_completed: 'Son plan est terminé.'
+  direct_done_craft: '{name} a fini de fabriquer {item} (essais : {amount}). Ce qui a réussi est dans le sac.'
+  error_ingredients_required: "Ce héros n'a plus tous les ingrédients. Vérifiez la recette, puis réessayez."
+  error_crafting_level_required: 'Le niveau de métier de ce héros est trop bas pour cette recette.'
+  error_craft_batch_limit: "C'est trop d'essais pour une seule demande. Demandez-en moins."
+  error_recipe_unavailable: 'Cette recette ne peut pas être fabriquée pour le moment.'

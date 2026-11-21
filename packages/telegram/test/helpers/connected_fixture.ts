@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { create_bot_client, type BotFetch, type BotGrant, type BotIdentity } from '@aresrpg/protocol/hosted-bot-client'
+import {
+  PLAY_SCOPE,
+  create_bot_client,
+  type BotFetch,
+  type BotGrant,
+  type BotIdentity,
+} from '@aresrpg/protocol/hosted-bot-client'
 import type { TelegramAccess } from '@aresrpg/protocol/telegram-access'
 
 import worlds from '../../../../seed/content/worlds.json'
@@ -175,7 +181,7 @@ export const create_world = () => {
 
 export const fixture = (options: Readonly<{ backend?: RecordBackend; access?: TelegramAccess; now?: number }> = {}) => {
   const clock = { now: options.now ?? 1000 }
-  let token_scope = 'bot:observe'
+  let token_scope = PLAY_SCOPE
   // What the token endpoint issues next; the real bot never issues the same secret twice.
   const issued = { access_token: 'access', refresh_token: 'refresh' }
   const backend = options.backend ?? memory_backend(() => clock.now)
@@ -207,11 +213,11 @@ export const fixture = (options: Readonly<{ backend?: RecordBackend; access?: Te
     hosted,
     'https://companion.example/oauth/callback',
     limits.link_ttl_ms,
-    access.admitted,
     () => clock.now
   )
-  const start = async (sender = 42, upgrade = false) => {
-    const url = await (upgrade ? links.upgrade(sender) : links.begin(sender))
+  /** The chat asks for its login page and a browser opens it: everything up to the return from the bot. */
+  const start = async (sender = 42) => {
+    const url = await links.begin(sender)
     const browser = await links.browser(new URL(url).pathname.slice(6))
     token_scope = new URL(browser.location).searchParams.get('scope')!
     const query = new URLSearchParams({
@@ -221,18 +227,30 @@ export const fixture = (options: Readonly<{ backend?: RecordBackend; access?: Te
     })
     return { browser, query }
   }
-  const identify = async (sender = 42) => {
+  /** A login whose browser returned: its grant is held, and the chat has not confirmed. Answers the one-use token. */
+  const signed_in = async (sender = 42) => {
     const { browser, query } = await start(sender)
-    const result = await links.callback(query, browser.cookie)
-    await links.confirm(sender, result.code)
-    return result
+    return links.callback(query, browser.cookie)
   }
-  const link = async (sender = 42) => {
-    await identify(sender)
-    const { browser, query } = await start(sender, true)
-    const result = await links.callback(query, browser.cookie)
-    await links.confirm(sender, result.code)
-    return result
+  /** The whole login: the browser returns with the token, and the chat that asked sends it back. */
+  const link = async (sender = 42) => links.confirm(sender, await signed_in(sender))
+  /** A login whose token exchange succeeded and whose identity read did not: its attempt holds tokens. */
+  const exchanged = async (sender = 42) => {
+    const { browser, query } = await start(sender)
+    overrides.handler = async (url, init) => {
+      if (url.endsWith('/mcp')) throw new Error('identity unavailable')
+      return respond(url, init)
+    }
+    await links.callback(query, browser.cookie).then(
+      () => {
+        throw new Error('the identity read was expected to fail')
+      },
+      (error: unknown) => {
+        if (!(error instanceof Error) || error.message !== 'unavailable') throw error
+      }
+    )
+    overrides.handler = undefined
+    return { browser, query }
   }
   const expire = () =>
     records.change([user_id(42)], (get) => ({
@@ -257,7 +275,8 @@ export const fixture = (options: Readonly<{ backend?: RecordBackend; access?: Te
     access,
     clock,
     start,
-    identify,
+    exchanged,
+    signed_in,
     link,
     expire,
     attempts,

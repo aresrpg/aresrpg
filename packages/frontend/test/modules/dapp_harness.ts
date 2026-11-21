@@ -79,8 +79,13 @@ export const tool_reply = (content: unknown) =>
   Response.json({ jsonrpc: '2.0', id: 1, result: { structuredContent: content } })
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
 
-export const effects_for = (fetcher: BotFetch, search = ''): DappEffects & { replaced: string[] } => {
+/** `replaced` holds every address the page set; `scrolled` holds one entry per return to the top of the page. */
+export const effects_for = (
+  fetcher: BotFetch,
+  search = ''
+): DappEffects & { replaced: string[]; scrolled: number[] } => {
   const replaced: string[] = []
+  const scrolled: number[] = []
   const clock = { now: 1_000 }
   return {
     issuer,
@@ -94,7 +99,10 @@ export const effects_for = (fetcher: BotFetch, search = ''): DappEffects & { rep
     // eslint-disable-next-line fp-law/no-mutating-methods -- a test harness records calls in its own lists
     replace_url: (path) => void replaced.push(path),
     navigate: () => undefined,
+    // eslint-disable-next-line fp-law/no-mutating-methods -- a test harness records calls in its own lists
+    scroll_top: () => void scrolled.push(clock.now),
     replaced,
+    scrolled,
   }
 }
 

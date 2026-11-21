@@ -193,4 +193,6 @@ export type LandingProps = Readonly<{
   agent_connect_url: string
   /** The shared sign-in control for the header. Absent in the build-time render. */
   account?: ReactNode
+  /** A full-width line above the page, owned by the entry. Absent in the build-time render. */
+  notice?: ReactNode
 }>

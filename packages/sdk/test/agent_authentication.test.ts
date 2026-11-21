@@ -78,7 +78,13 @@ const fixture_server = async () => {
             },
             promote: () => {
               promotions.push(ws.data.address)
-              return { online_characters: () => [], dispatch: () => {}, on_message: () => {}, on_close: () => {} }
+              return {
+                online_characters: () => [],
+                is_agent: () => false,
+                dispatch: () => {},
+                on_message: () => {},
+                on_close: () => {},
+              }
             },
           })
         )

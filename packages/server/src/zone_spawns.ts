@@ -12,7 +12,15 @@ import { draw, mix, rng_seed } from '@aresrpg/fight/prng'
 import { sample_biome_grid, type BiomeGrid } from '@aresrpg/engine/biomes'
 import { parse_world_recipe } from '@aresrpg/engine/recipe'
 import { ZONE_SIZE as ZONE_BLOCKS, type MobGroupRow, type ResourcePackRow } from '@aresrpg/protocol'
-import { archimob_appearance_bp, archimob_rows, type ArchimobRow } from '@aresrpg/immutable'
+import {
+  archimob_appearance_bp,
+  archimob_rows,
+  center_distance,
+  distance_ramp as ramp,
+  mob_group_size_bounds,
+  world_center,
+  type ArchimobRow,
+} from '@aresrpg/immutable'
 
 import mobs_source from '../../../seed/content/mobs.json'
 import worlds_source from '../../../seed/content/worlds.json'
@@ -20,15 +28,12 @@ import worlds_source from '../../../seed/content/worlds.json'
 /** the wire's zone unit, not a second opinion — protocol is this side's one home */
 const ZONE_SIZE = BigInt(ZONE_BLOCKS)
 const WORLD_SIZE = 100_000
-const WORLD_CENTER = 50_000n
 const GROUPS_MIN = 48n
 const GROUPS_MAX = 64n
 const RES_PACKS_MIN = 24n
 const RES_PACKS_MAX = 42n
 const CITY_RESOURCE_NODE_NUMERATOR = 3n
 const CITY_RESOURCE_NODE_DENOMINATOR = 2n
-const GROUP_SIZE_FULL_AT = 10_000n
-const GROUP_SIZE_AVG3_AT = 2_000n
 const LEVEL_RAMP_AT = 20_000n
 const LEVEL_LOW_CAP = 75n
 const LEVEL_HIGH_CAP = 100n
@@ -104,7 +109,7 @@ export const world_population = (world: string): WorldPopulation | null => {
   )
   const map = sample_biome_grid(parse_world_recipe(source.terrain), {
     world_size: WORLD_SIZE,
-    world_center: Number(WORLD_CENTER),
+    world_center,
     cell_size: Number(ZONE_SIZE),
   })
   const population = Object.freeze({
@@ -127,25 +132,12 @@ const biome_of_zone = (map: BiomeGrid, zx: number, zz: number): number => {
   return map.cells[cz * map.side + cx]!
 }
 
-const distance_blocks = (zx: bigint, zz: bigint): bigint => {
-  const px = zx * ZONE_SIZE + ZONE_SIZE / 2n
-  const pz = zz * ZONE_SIZE + ZONE_SIZE / 2n
-  const dx = px >= WORLD_CENTER ? px - WORLD_CENTER : WORLD_CENTER - px
-  const dz = pz >= WORLD_CENTER ? pz - WORLD_CENTER : WORLD_CENTER - pz
-  return dx >= dz ? dx : dz
-}
+/** The shared distance rule (`zone_math::distance_blocks`) at the centre of a zone. */
+const distance_blocks = (zx: number, zz: number): bigint =>
+  BigInt(center_distance((zx + 0.5) * ZONE_BLOCKS, (zz + 0.5) * ZONE_BLOCKS))
 
-const ramp = (distance: bigint, full_at: bigint, from: bigint, to: bigint): bigint => {
-  const capped = distance > full_at ? full_at : distance
-  return from + ((to - from) * capped) / full_at
-}
-
-export const mob_group_size_bounds = (distance: bigint): readonly [bigint, bigint] => {
-  const low = ramp(distance, GROUP_SIZE_FULL_AT, 1n, 6n)
-  // At 2,000 blocks low=2 and high=4: uniform 2..4 has the authored average of three.
-  const high = ramp(distance, (GROUP_SIZE_AVG3_AT * 5n) / 3n, 1n, 6n)
-  return Object.freeze([low, high < low ? low : high])
-}
+// The group-size rule has one home, shared with the strategy binder that names difficulty levels by it.
+export { mob_group_size_bounds }
 
 export const mob_level_scalar_bounds = (distance: bigint): readonly [bigint, bigint] =>
   Object.freeze([ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_LOW_CAP), ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_HIGH_CAP)])
@@ -199,7 +191,7 @@ export const mob_groups = (
   const rows = population_rows(population, population.mobs, zx, zz)
   if (rows.length === 0) return []
   const total = rows.reduce((sum, row) => sum + row.weight_bp, 0n)
-  const distance = distance_blocks(BigInt(zx), BigInt(zz))
+  const distance = distance_blocks(zx, zz)
   const cursor = { state: rng_seed(mix(seed, 2n)) }
   const archi_cursor = { state: rng_seed(mix(seed, 4n)) }
   const count = GROUPS_MIN + (draw(cursor) % (GROUPS_MAX - GROUPS_MIN + 1n))
@@ -238,7 +230,7 @@ export const resource_packs = (
   const rows = population_rows(population, population.resources, zx, zz)
   if (rows.length === 0) return []
   const city = city_index_at(population, zx, zz) >= 0
-  const distance = distance_blocks(BigInt(zx), BigInt(zz))
+  const distance = distance_blocks(zx, zz)
   const cursor = { state: rng_seed(mix(seed, 3n)) }
   const nodes_lo = ramp(distance, NODES_RAMP_AT, 2n, 16n)
   const nodes_hi = ramp(distance, NODES_RAMP_AT, 4n, 22n)

@@ -9,10 +9,14 @@ import type { Bot } from './model.ts'
 import { wallet_state } from './owner_activity.ts'
 import type { ControlStore } from './store.ts'
 
+/** A wallet that settled nothing yet has paid zero, never nothing. */
+const wallet_fees = (lane: Lane | null) => lane?.fees_mist ?? '0'
 /**
  * The owner's clients follow a hosted wallet from its own game socket, and from nowhere else. Its
- * status (wallet state, runs, direct command, readiness) is sent when it differs from the last one
- * sent, and always to a new socket baseline or an owner who started watching; never on a cadence. The
+ * status (wallet state and fees, runs with theirs, direct command, readiness) is sent when it differs
+ * from the last one sent, and always to a new socket baseline or an owner who started watching; never on
+ * a cadence. A run that ended by itself is in it with its reason until its hero starts again, so an owner
+ * who watches later is told too. The
  * game server relays it and keeps nothing. A pass of the signing queue is what moves a run or a command,
  * so the runtime shares after each pass. A stop or a pause may be written by another process: the
  * runtime also shares at its lease heartbeat, which is when this process reads the wallet again.
@@ -37,7 +41,7 @@ export const create_status_sharer = (
     const command = lane?.active_command ? await store.read<Command>(`command:${lane.active_command}`) : null
     const statuses = runs.map(({ status }) => status)
     const state = wallet_state(current ?? bot, lane ?? empty_lane(bot), command, statuses, now())
-    const status = { ready: ready(), event_fence, state, runs, direct }
+    const status = { ready: ready(), event_fence, state, runs, direct, fees_mist: wallet_fees(lane) }
     const fingerprint = JSON.stringify(status)
     if (!always && fingerprint === shared) return
     // A status that did not leave is not shared: the next one is sent whatever it holds.

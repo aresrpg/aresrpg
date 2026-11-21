@@ -123,6 +123,7 @@ const heartbeat = setInterval(
     void pubsub.mesh.heartbeat(`${name}_${raw_port}`, {
       addresses: [...players.keys()].map((socket) => (socket as { data: { address: string } }).data.address),
       characters: [...players.values()].flatMap((player) => player.online_characters()),
+      agents: [],
     }),
   5000
 )

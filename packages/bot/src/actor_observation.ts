@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { ClientPacket } from '@aresrpg/protocol'
+import type { ClientPacket, RunEnding } from '@aresrpg/protocol'
 
 import type { create_bot_actor } from './actor.ts'
 import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
 import type { BehaviorRun } from './behavior_script.ts'
-import { run_keys } from './run_ref.ts'
+import { run_key, run_keys } from './run_ref.ts'
+import { run_tally } from './behavior_tally.ts'
 import { public_command_error } from './planning_failure.ts'
 import { observation_events } from './actor_snapshot.ts'
 import { fight_planning } from './fight_planning.ts'
@@ -83,26 +84,51 @@ const observed_run = (run: BehaviorRun) => {
   const { id, character_id, status, issue } = run
   return { id, character_id, status, issue, strategy: script_of(run)?.strategy }
 }
-/** A run as its owner is told it: the observed row plus the objective its tree was authored with. */
-export const told_run = (run: BehaviorRun) => ({ ...observed_run(run), objective: script_of(run)?.objective })
+/** A run as its owner is told it: the observed row, the objective its tree was authored with, and
+ * what it paid in fees and how many dungeon runs it saw end since that tree was accepted. */
+export const told_run = (run: BehaviorRun) => {
+  const { fees_mist, dungeon_runs } = run_tally(run)
+  return { ...observed_run(run), objective: script_of(run)?.objective, fees_mist, dungeon_runs }
+}
 
-/** Every run the wallet hosts, one per hero. Any live grant of this bot reads the same list:
- * one verified owner holds one wallet. `strategy` is the catalogue entry its tree was bound from,
- * absent for an authored tree. `state` says whether any run still plays without the AI. `direct` is
- * the wallet's one direct command with its outcome, so a client follows its request from observations. */
+type Owner = Pick<Command, 'bot_id'>
+type Rower<Row> = (run: BehaviorRun) => Row
+const owned = (run: BehaviorRun | null, { bot_id }: Owner): run is BehaviorRun => run?.bot_id === bot_id
+const hosted_runs = async <Row>(store: ControlStore, lane: Lane | null, owner: Owner, row: Rower<Row>) => {
+  const records = await Promise.all((lane ? run_keys(lane) : []).map((key) => store.read<BehaviorRun>(key)))
+  return records.flatMap((run) => (owned(run, owner) ? [row(run)] : []))
+}
+/** The runs that ended by themselves and whose hero did not start again, each with its reason. A stop
+ * written since on such a run is the last word on it: only a run still completed is explained. */
+const ended_runs = async <Row>(store: ControlStore, lane: Lane | null, owner: Owner, row: Rower<Row>) => {
+  const endings = Object.entries(lane?.ended ?? {})
+  const records = await Promise.all(endings.map(([id]) => store.read<BehaviorRun>(run_key(id))))
+  return endings.flatMap(([, ended], index) => {
+    const run = records[index] ?? null
+    return owned(run, owner) && run.status === 'completed' ? [{ ...row(run), ended }] : []
+  })
+}
+/** Every run the wallet hosts, one per hero, then every run that ended by itself, with `ended`. Any
+ * live grant of this bot reads the same list: one verified owner holds one wallet. `strategy` is the
+ * catalogue entry its tree was bound from, absent for an authored tree. `state` says whether any
+ * hosted run still plays without the AI. `direct` is the wallet's one direct command with its outcome,
+ * so a client follows its request from observations. */
 export const run_observation = async <Row extends Readonly<{ status: string }>>(
   store: ControlStore,
   lane: Lane | null,
-  command: Pick<Command, 'bot_id'>,
-  row: (run: BehaviorRun) => Row
+  command: Owner,
+  row: Rower<Row>
 ) => {
-  const records = await Promise.all((lane ? run_keys(lane) : []).map((key) => store.read<BehaviorRun>(key)))
-  const runs = records.flatMap((run) => (run?.bot_id === command.bot_id ? [row(run)] : []))
+  const hosted = await hosted_runs(store, lane, command, row)
+  const runs: readonly (Row & Readonly<{ ended?: RunEnding }>)[] = [
+    ...hosted,
+    ...(await ended_runs(store, lane, command, row)),
+  ]
   const held = lane?.direct ? await store.read<Command>(`command:${lane.direct}`) : null
   const direct = held?.bot_id === command.bot_id ? held : null
   return {
     runs,
-    state: runs.some(({ status }) => status !== 'awaiting_ai') ? 'running' : 'awaiting_ai',
+    state: hosted.some(({ status }) => status !== 'awaiting_ai') ? 'running' : 'awaiting_ai',
     direct: direct && {
       id: direct.id,
       kind: direct.kind,

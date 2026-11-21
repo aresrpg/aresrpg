@@ -6,12 +6,18 @@ import { job_groups, job_level_from_xp, type JobSlug } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import { crafting_character } from '../modules/craft_character_lock.ts'
+import type { CharacterSession } from '../characters/character_session.ts'
 import { CraftControls } from '../characters/CraftControls.tsx'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
-export type ItemCraftSession = Readonly<{ character: CharacterRow; inventory?: readonly ItemRow[] }>
+/** `inventory` is a bag of its own instead of the player's live one; only `craft` can craft from it. */
+export type ItemCraftSession = Readonly<{
+  character: CharacterRow
+  inventory?: readonly ItemRow[]
+  craft?: CharacterSession['craft']
+}>
 
 export const ItemCraftSessionContext = createContext<ItemCraftSession | undefined>(undefined)
 
@@ -31,6 +37,7 @@ export const ItemCrafting = ({
   open_ingredient: (item_type: string) => void
 }>) => {
   const effective_session = useCraftSession(session)
+  const { inventory, craft }: Partial<ItemCraftSession> = effective_session ?? {}
   const copy = useAppStore((state) => state.copy)
   const character = useAppStore((state) =>
     effective_session?.inventory === undefined
@@ -53,7 +60,8 @@ export const ItemCrafting = ({
       key={item_type}
       recipe={recipe}
       character={character}
-      inventory_override={effective_session?.inventory}
+      inventory_override={inventory}
+      craft={craft}
       job={job as JobSlug}
       level={job_level_from_xp(Number(character?.jobs[job as JobSlug] ?? 0))}
       t={copy_text(copy.characters_page)}

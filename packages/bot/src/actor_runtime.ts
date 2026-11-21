@@ -11,7 +11,7 @@ import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
 import { create_actor_locomotion } from './actor_locomotion.ts'
 import { read_actor_balance } from './actor_balance.ts'
-import { gameplay_observation_ready } from './gameplay_context.ts'
+import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
 import { wait_for_contract, ready_gameplay_command } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
@@ -40,6 +40,7 @@ import { run_keys } from './run_ref.ts'
 import { actor_observation, apply_actor_watches, owned_run_observation } from './actor_observation.ts'
 import { create_status_sharer } from './status_sharer.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
+import { create_market_collector } from './market_collection.ts'
 export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
 export type { ActorRuntimeOptions } from './actor_runtime_options.ts'
 import type { ActorRuntimeOptions } from './actor_runtime_options.ts'
@@ -201,6 +202,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         if (state.status === 'disconnected' && state.error)
           options.report_failure(new Error(`connection_closed: ${state.error}`))
         await status.observed(state.last_packet)
+        await collect(state.last_packet)
       },
       report_failure: options.report_failure,
     })
@@ -229,6 +231,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         ),
     })
     const status = create_status_sharer(store, bot, lease.fence, () => snapshot.ready, now, monotonic_now, actor.send)
+    const collect = create_market_collector(store, control, bot, connector_grants, status.share, options.report_failure)
     return {
       bot,
       lease,
@@ -370,8 +373,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     session.recovered()
   }
 
-  const bind_execution = (session: Session, command: Command, lane: Lane) => {
-    const context = session_context(session, command)
+  const bind_execution = (session: Session, command: Command, lane: Lane, balance: GameplayContext['balance']) => {
+    const context = { ...session_context(session, command), balance }
     validate_gameplay(context)
     if (command.kind === 'fight_turn')
       assert_fight_reconciled(
@@ -404,7 +407,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       if (!ready) return
       if (session.actor.state().status !== 'ready') throw new Error('needs_resync')
       session.refresh_execution()
-      bind_execution(session, ready, lane)
+      bind_execution(session, ready, lane, balance)
       if (!(await session.walk())) return
       await execute_gameplay({ ...session_context(session, ready), sdk: session.sdk, send: session.send_gameplay })
     } catch (error) {

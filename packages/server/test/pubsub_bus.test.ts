@@ -115,19 +115,28 @@ test('a message fans out parsed, and the heartbeat writes the TTL presence key',
   bus.emitter.on('chat:world:w1', (payload) => void seen.push(payload))
 
   subscriber.emitter.emit('message', 'chat:world:w1', JSON.stringify({ text: 'yo' }))
-  await bus.heartbeat('pod-1', { addresses: ['0xa', '0xb', '0xc'], characters: ['c1', 'c2'] })
+  await bus.heartbeat('pod-1', { addresses: ['0xa', '0xb', '0xc'], characters: ['c1', 'c2'], agents: ['0xc'] })
   await bus.record_online?.(3, 1_800_000)
 
   expect(seen).toEqual([{ text: 'yo' }])
   expect(publisher.calls).toContainEqual(['setex', 'server:pod-1', '20', '["0xa","0xb","0xc"]'])
   expect(publisher.calls).toContainEqual(['setex', 'server-characters:pod-1', '20', '["c1","c2"]'])
+  expect(publisher.calls).toContainEqual(['setex', 'server-agents:pod-1', '20', '["0xc"]'])
   expect(publisher.calls.filter(([name]) => name === 'zadd')).toHaveLength(5)
 })
 
 test('cluster online unions rolling pod snapshots instead of summing duplicate players', () => {
-  expect(cluster_online_count(['["0xa","0xb"]', '["0xb","0xc"]'])).toEqual({ online: 3, online_characters: null })
-  expect(cluster_online_count(['2', '3'])).toEqual({ online: 5, online_characters: null })
-  expect(cluster_online_count(['4', '["0xa","0xb"]'])).toEqual({ online: 4, online_characters: null })
+  expect(cluster_online_count(['["0xa","0xb"]', '["0xb","0xc"]'])).toEqual({
+    online: 3,
+    online_characters: null,
+    online_agents: null,
+  })
+  expect(cluster_online_count(['2', '3'])).toEqual({ online: 5, online_characters: null, online_agents: null })
+  expect(cluster_online_count(['4', '["0xa","0xb"]'])).toEqual({
+    online: 4,
+    online_characters: null,
+    online_agents: null,
+  })
   expect(() => cluster_online_count(['broken'])).toThrow()
 })
 
@@ -429,25 +438,41 @@ test('cluster population deduplicates reconnect overlap and ignores expired comp
   const replacement = '["a","b"]'
   const first_characters = '["one","two","two"]'
   const next_characters = '["one","two","three"]'
-  expect(cluster_online_count([first], [first_characters])).toEqual({ online: 1, online_characters: 2 })
-  expect(cluster_online_count([first, replacement], [first_characters, next_characters])).toEqual({
+  expect(cluster_online_count([first], [first_characters])).toMatchObject({ online: 1, online_characters: 2 })
+  expect(cluster_online_count([first, replacement], [first_characters, next_characters])).toMatchObject({
     online: 2,
     online_characters: 3,
   })
-  expect(cluster_online_count([null, replacement], [first_characters, next_characters])).toEqual({
+  expect(cluster_online_count([null, replacement], [first_characters, next_characters])).toMatchObject({
     online: 2,
     online_characters: 3,
   })
-  expect(cluster_online_count([null, null], [first_characters, next_characters])).toEqual({
+  expect(cluster_online_count([null, null], [first_characters, next_characters])).toMatchObject({
     online: 0,
     online_characters: 0,
   })
-  expect(cluster_online_count([first, '["b"]'], [first_characters, null])).toEqual({
+  expect(cluster_online_count([first, '["b"]'], [first_characters, null])).toMatchObject({
     online: 2,
     online_characters: null,
   })
-  expect(cluster_online_count([first, '4'], [first_characters, null])).toEqual({ online: 4, online_characters: null })
+  expect(cluster_online_count([first, '4'], [first_characters, null])).toMatchObject({
+    online: 4,
+    online_characters: null,
+  })
   expect(() => cluster_online_count([first], ['[1]'])).toThrow()
+})
+
+test('hosted bots are counted once across pods and stay unknown while one pod is of the previous release', () => {
+  const pods = ['["a","bot"]', '["b","bot","other"]']
+  const characters = ['[]', '[]']
+  expect(cluster_online_count(pods, characters, ['["bot"]', '["bot","other"]'])).toMatchObject({
+    online: 4,
+    online_agents: 2,
+  })
+  expect(cluster_online_count(pods, characters, ['[]', '[]']).online_agents).toBe(0)
+  expect(cluster_online_count(pods, characters, ['["bot"]', null]).online_agents).toBeNull()
+  expect(cluster_online_count([null, pods[1]!], characters, ['["bot"]', '["other"]']).online_agents).toBe(1)
+  expect(() => cluster_online_count(pods, characters, ['{}', '[]'])).toThrow()
 })
 
 test.each([

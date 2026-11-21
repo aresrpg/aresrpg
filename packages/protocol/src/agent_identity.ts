@@ -31,6 +31,14 @@ export const valid_agent_observation = (value: unknown): value is AgentObservati
   )
 }
 
+/** Why a hosted run ended by itself, as its bot tells its owner. `completed` is an authored end that
+ * names none of the other reasons. A run its player stopped has no ending. The bot sends these codes
+ * only, and every reader gives each its own sentence. */
+export const RUN_ENDINGS = ['objective_reached', 'fee_cap_reached', 'run_cap_reached', 'completed'] as const
+export type RunEnding = (typeof RUN_ENDINGS)[number]
+/** The listed ending a code names. Any other value names none: a reader then tells a plain end. */
+export const run_ending = (code: unknown): RunEnding | undefined => RUN_ENDINGS.find((ending) => ending === code)
+
 /** What only a hosted bot knows about its own wallet: what the wallet is doing as a whole, its hero
  * runs and its one direct command. The bot sends it on its own socket when it changes, and when a
  * watching owner asks; the server relays it to the verified owner and stores nothing. It is the one
@@ -49,6 +57,13 @@ export type AgentStatus = Readonly<{
     strategy?: string
     /** The AI-authored presentation of the run's goal; absent for a run of a retired shape. */
     objective?: HostedObjective
+    /** Net network fees this run paid since its tree was started or replaced, in MIST. */
+    fees_mist?: string
+    /** Dungeon runs this run saw end since its tree was started or replaced. */
+    dungeon_runs?: number
+    /** Set on a run that ended by itself, to its `RunEnding`. Such a run holds no hero; the bot keeps
+     * telling it until that hero starts again. */
+    ended?: string
   }>[]
   direct: Readonly<{
     id: string
@@ -57,12 +72,21 @@ export type AgentStatus = Readonly<{
     error?: string
     payload: Readonly<Record<string, unknown>>
   }> | null
+  /** Net network fees of every transaction this wallet's bot settled, in MIST. */
+  fees_mist?: string
 }>
+/** The statuses of a direct command the wallet still holds: the bot admits no other direct command
+ * meanwhile, and an owner's page locks its one-off actions by the same list. */
+export const DIRECT_UNSETTLED: readonly string[] = ['accepted', 'executing']
 const plain = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 const STATES: readonly unknown[] = ['idle', 'active', 'waiting', 'awaiting_ai', 'paused', 'unavailable']
 const text = (value: unknown): boolean => typeof value === 'string'
 const optional_text = (value: unknown): boolean => value === undefined || text(value)
+/** A sum of net fees in MIST: a storage rebate can make it negative. */
+const optional_mist = (value: unknown): boolean => value === undefined || (text(value) && /^-?\d+$/.test(String(value)))
+const optional_count = (value: unknown): boolean =>
+  value === undefined || (Number.isSafeInteger(value) && Number(value) >= 0)
 const valid_objective = (value: unknown): boolean =>
   value === undefined ||
   (plain(value) &&
@@ -80,6 +104,9 @@ const valid_run = (value: unknown): boolean =>
     optional_text(value.issue),
     optional_text(value.strategy),
     valid_objective(value.objective),
+    optional_mist(value.fees_mist),
+    optional_count(value.dungeon_runs),
+    optional_text(value.ended),
   ].every(Boolean)
 const valid_direct = (value: unknown): boolean =>
   value === null ||
@@ -97,4 +124,5 @@ export const valid_agent_status = (value: unknown): value is AgentStatus =>
     STATES.includes(value.state),
     Array.isArray(value.runs) && value.runs.every(valid_run),
     valid_direct(value.direct),
+    optional_mist(value.fees_mist),
   ].every(Boolean)

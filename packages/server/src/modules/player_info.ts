@@ -13,7 +13,7 @@ const INFO_INTERVAL_MS = 5_000
 
 export default {
   name: 'player_info',
-  observe: ({ events, game_state, indexing_health, pubsub, send, signal, get_state }) => {
+  observe: ({ admin, events, game_state, indexing_health, pubsub, send, signal, get_state }) => {
     events.on('packet/ping', ({ id }: Extract<PlayerAction, { type: 'packet/ping' }>) =>
       send({ type: 'packet/pong', id })
     )
@@ -36,6 +36,8 @@ export default {
           send({
             type: 'packet/server_info',
             ...population,
+            // How much of the population is automated is the operator's figure, not a public one.
+            online_agents: admin ? population.online_agents : undefined,
             indexing_lag: health.lag,
             current_epoch: health.epoch,
             chain_timestamp_ms: health.chain_timestamp_ms,

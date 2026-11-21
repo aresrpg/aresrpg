@@ -7,6 +7,7 @@ import { DEFAULT_ADMIN_ADDRESS, type PresenceRow } from '@aresrpg/protocol'
 import { world_presence_rows } from '../../src/modules/engine_selection.ts'
 import { automation_fixture } from '../modules/automation_fixture.ts'
 import { create_follow_addon } from '../../src/game/core/cameras.ts'
+import { publish_observed_pose, publish_pose } from '../../src/game/core/pose_feed.ts'
 import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 
 const appearance: CharacterAppearanceRender = {
@@ -293,5 +294,71 @@ test('mounted presence drives the same follow-camera wind and FOV, with no speed
   } finally {
     renderer.dispose()
     clock.mockRestore()
+  }
+})
+
+const watched_scene = () => {
+  const frames = new Set<(now: number) => void>()
+  let entities: readonly EntityRender[] = []
+  const renderer = create_presence_renderer({
+    submit: (next) => {
+      entities = next
+    },
+    pet_ground_height: () => 0,
+    label: () => {},
+    next_frame: (frame) => {
+      frames.add(frame)
+    },
+    appearance_loader: async () => appearance,
+  })
+  const frame = async () => {
+    await Bun.sleep(0)
+    const callbacks = [...frames]
+    frames.clear()
+    callbacks.forEach((run) => run(performance.now() + 16))
+  }
+  const base = rows_at(50_000).player_0!
+  const rows = { hero: { ...base, character_id: 'hero' }, other: { ...base, character_id: 'other' } }
+  return { renderer, frame, rows, body: (id: string) => entities.find((entity) => entity.id === id) }
+}
+
+test('the watched hero is an individual body that entity cues can reach, while a controlled hero stays out', async () => {
+  const { renderer, frame, rows, body } = watched_scene()
+  try {
+    renderer.update(rows, null, 'hero')
+    await frame()
+    expect(body('hero')).toMatchObject({ kind: 'character', presentation: 'individual' })
+    expect(body('other')).toMatchObject({ kind: 'character', presentation: 'crowd' })
+    renderer.update(rows, 'hero')
+    await frame()
+    expect(body('hero')).toBeUndefined()
+    expect(body('other')).toMatchObject({ presentation: 'crowd' })
+    renderer.update(rows, null, 'hero')
+    await frame()
+    expect(body('hero')).toMatchObject({ presentation: 'individual' })
+  } finally {
+    renderer.dispose()
+  }
+})
+
+test('animation range is measured from the watched hero when nobody is controlled', async () => {
+  const displayed = (x: number) =>
+    Object.freeze({ character_id: 'hero', x, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0.5 })
+  const { renderer, frame, rows, body } = watched_scene()
+  publish_pose(null)
+  publish_observed_pose(null)
+  publish_observed_pose(displayed(150))
+  try {
+    renderer.update(rows, null, 'hero')
+    await frame()
+    expect(body('other')?.animation).toMatchObject({ name: 'IDLE', time_scale: 0 })
+    publish_observed_pose(null)
+    publish_observed_pose(displayed(0))
+    renderer.update({ ...rows, other: { ...rows.other, x: 50_001 } }, null, 'hero')
+    await frame()
+    expect(body('other')?.animation).toMatchObject({ time_scale: 1 })
+  } finally {
+    renderer.dispose()
+    publish_observed_pose(null)
   }
 })

@@ -29,6 +29,8 @@ export type BlastSnapshot = Readonly<{
   start_ms: bigint
   end_ms: bigint
   token_allocation: bigint
+  /** When any wallet may commit without a cap. Null or absent: the sale has no such phase. */
+  public_ms?: bigint | null
 }>
 /** One wallet's live commitment. Blast deletes it when the wallet claims. */
 export type BlastCommitment = Readonly<{ quote: bigint; wallet_cap: bigint }>
@@ -49,6 +51,11 @@ export const blast_url = (value: unknown): string => {
   return url.href
 }
 
+/** The coin a sale sells is the sale's own fact. A sale opens before the game adopts a token, and a
+ * failed sale's coin is never adopted: the pin names its coin, else it sells the adopted token. */
+export const blast_coin_type = (pins: Pins): unknown =>
+  (pins.blast_presale as Partial<BlastConfig> | null | undefined)?.coin_type ?? pins.kares_coin_type
+
 export const blast_config = (pins: Pins): BlastConfig | null => {
   if (pins.blast_presale === undefined || pins.blast_presale === null) return null
   const value = pins.blast_presale as Partial<BlastConfig>
@@ -64,7 +71,7 @@ export const blast_config = (pins: Pins): BlastConfig | null => {
     id: normalizeSuiObjectId(value.id),
     package_original: normalizeSuiObjectId(value.package_original),
     url: blast_url(value.url),
-    coin_type: kares_coin_type(pins.kares_coin_type),
+    coin_type: kares_coin_type(blast_coin_type(pins)),
   }
 }
 
@@ -75,6 +82,7 @@ export type BlastPresale = Readonly<{
   start_ms: bigint
   end_ms: bigint
   token_allocation: bigint
+  public_ms: bigint | null
 }>
 export const project_blast_presale = (sale: BlastPresale, clock_ms: bigint, version: string): BlastSnapshot => {
   if (sale.raise_target <= 0n) throw new Error('Blast presale has no funding target')
@@ -96,6 +104,7 @@ export const project_blast_presale = (sale: BlastPresale, clock_ms: bigint, vers
     start_ms: sale.start_ms,
     end_ms: sale.end_ms,
     token_allocation: sale.token_allocation,
+    public_ms: sale.public_ms,
   }
 }
 
@@ -116,18 +125,31 @@ export const blast_claim_preview = (
   }
 }
 
+/** The uncapped phase opens the sale to any wallet only when its access is `Anyone`, and only if it
+ * starts before the sale closes. A sale of an older layout has no such field. */
+const public_opening = (json: Readonly<Record<string, unknown>>, start_ms: bigint, end_ms: bigint): bigint | null => {
+  const uncapped = json.uncapped as Readonly<{ access?: unknown; starts_after_ms?: unknown }> | null | undefined
+  const access = uncapped?.access
+  if (!access || typeof access !== 'object' || Reflect.get(access, '@variant') !== 'Anyone') return null
+  const opens = start_ms + u64(uncapped.starts_after_ms)
+  return opens < end_ms ? opens : null
+}
+
 /** Sui decodes the Move layout. Only presentation fields cross this read boundary. */
 export const decode_blast_presale = (json: Readonly<Record<string, unknown>>): BlastPresale => {
   const { lifecycle } = json
   const variant = lifecycle && typeof lifecycle === 'object' ? Reflect.get(lifecycle, '@variant') : null
   if (!LIFECYCLES.some((value) => value === variant)) throw new Error('Unknown Blast presale lifecycle')
+  const start_ms = u64(json.start_ms)
+  const end_ms = u64((start_ms + u64(json.duration_ms)).toString())
   return {
     lifecycle: variant as BlastLifecycle,
     total_commitments: u64(json.total_commitments),
     raise_target: u64(json.raise_target),
-    start_ms: u64(json.start_ms),
-    end_ms: u64((u64(json.start_ms) + u64(json.duration_ms)).toString()),
+    start_ms,
+    end_ms,
     token_allocation: u64(json.token_allocation),
+    public_ms: public_opening(json, start_ms, end_ms),
   }
 }
 

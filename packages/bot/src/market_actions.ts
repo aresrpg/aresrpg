@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { buyer_total, type MarketplaceAsset } from '@aresrpg/sdk/marketplace'
+import { buyer_total, type MarketplaceActions, type MarketplaceAsset } from '@aresrpg/sdk/marketplace'
 import { item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { Receipt } from '@aresrpg/sdk/cache'
 
-import { decode, object_schema, identifier, nonempty, decimal, u64 } from './gameplay_schema.ts'
+import { decode, matches, object_schema, identifier, nonempty, decimal, u64 } from './gameplay_schema.ts'
 import { owned_character, custody_of, type GameplayContext } from './gameplay_context.ts'
-import { profession_inventory, inventory_projected, type ActorInventory } from './actor_inventory.ts'
+import { profession_inventory, inventory_projected, inventory_read, type ActorInventory } from './actor_inventory.ts'
 import { market_receipt_relation } from './actor_market.ts'
+import type { ActorSnapshot } from './actor_snapshot.ts'
 import type { Command } from './control.ts'
 
 const schema = object_schema({
@@ -164,3 +165,77 @@ export const market_sell_projected = (command: Command, receipt: Receipt, invent
     ) ?? false
   )
 }
+
+const delist_schema = object_schema({ item_id: identifier, kiosk: identifier })
+type Delisting = Readonly<{ item_id: string; kiosk: string }>
+export const MARKET_DELIST_ACTION = Object.freeze({
+  description:
+    'Withdraw one exact item listing of this bot account from the market, named by the id and kiosk of its own listing row. The item stays in its kiosk and is usable again once the listing leaves the observed own listings.',
+  input_schema: delist_schema,
+  parse: (value: unknown) => decode<Delisting>(delist_schema, value),
+})
+export type MarketDelistPlan = Readonly<{ kind: 'market_delist'; input: Omit<MarketplaceAsset, 'price_mist'> }>
+const own_listing = (inventory: ActorInventory | undefined, { item_id, kiosk }: Delisting) => {
+  if (!inventory_read(inventory)) throw new Error('inventory_unavailable')
+  return inventory.listings.find((row) => row.id === item_id && row.kiosk === kiosk)
+}
+export const validate_market_delist = (context: GameplayContext): MarketDelistPlan => {
+  const listing = own_listing(context.snapshot.inventory, MARKET_DELIST_ACTION.parse(context.command.payload))
+  // Sold or already withdrawn. The bot lists items only: a character listing is never its own to withdraw.
+  if (!listing) throw new Error('listing_gone')
+  if (listing.kind !== 'item') throw new Error('listing_changed_or_ineligible')
+  return { kind: 'market_delist', input: { kind: 'item', id: listing.id, kiosk: listing.kiosk } }
+}
+/** The delisting is projected once the account's own listings no longer hold that row. */
+export const market_delist_projected = (command: Command, inventory: ActorInventory | undefined) =>
+  inventory_read(inventory) && !own_listing(inventory, MARKET_DELIST_ACTION.parse(command.payload))
+
+const collect_schema = {
+  ...object_schema({ kiosks: { type: 'array', items: identifier, minItems: 1, uniqueItems: true } }),
+  required: [],
+}
+type Collection = Readonly<{ kiosks?: readonly string[] }>
+export const MARKET_COLLECT_ACTION = Object.freeze({
+  description:
+    'Collect the sale proceeds held in the kiosks of this bot account into the bot wallet itself; the destination is never an input. Omit kiosks to collect from every kiosk the account is observed to hold. A kiosk that holds nothing yields nothing and is not an error. The bot also sends this command by itself when it observes proceeds, so it is only needed to force a collection.',
+  input_schema: collect_schema,
+  parse: (value: unknown) => decode<Collection>(collect_schema, value),
+})
+export type MarketCollectPlan = Readonly<{ kind: 'market_collect'; input: readonly string[] }>
+/** Every kiosk the account is observed to hold: its heroes', its bag items' and its own listings'. */
+export const wallet_kiosks = ({ characters, inventory }: Pick<ActorSnapshot, 'characters' | 'inventory'>) => {
+  const rows = [...characters, ...(inventory?.items ?? []), ...(inventory?.listings ?? [])]
+  return [...new Set(rows.map(({ kiosk }) => kiosk))].filter((kiosk) => matches(identifier, kiosk)).toSorted()
+}
+export const validate_market_collect = (context: GameplayContext): MarketCollectPlan => {
+  const { kiosks = wallet_kiosks(context.snapshot) } = MARKET_COLLECT_ACTION.parse(context.command.payload)
+  if (!kiosks.length) throw new Error('nothing_to_collect')
+  return { kind: 'market_collect', input: kiosks }
+}
+
+/** The market fragment of the one catalogue: descriptions, schemas, validators and executors. */
+export const MARKET_ACTIONS = {
+  market_buy: MARKET_BUY_ACTION,
+  market_sell: MARKET_SELL_ACTION,
+  market_delist: MARKET_DELIST_ACTION,
+  market_collect: MARKET_COLLECT_ACTION,
+}
+export type MarketPlan = MarketBuyPlan | MarketSellPlan | MarketDelistPlan | MarketCollectPlan
+export const market_validators = (context: GameplayContext) => ({
+  market_buy: () => validate_market_buy(context),
+  market_sell: () => validate_market_sell(context),
+  market_delist: () => validate_market_delist(context),
+  market_collect: () => validate_market_collect(context),
+})
+export type MarketExecutor = Partial<Pick<MarketplaceActions, 'buy' | 'list' | 'delist' | 'collect'>>
+const required = <T>(action: T | undefined): T => {
+  if (!action) throw new Error('market_executor_unavailable')
+  return action
+}
+/** The proceeds destination is fixed inside the SDK call to the wallet these actions were built for. */
+export const market_executors = (actions: MarketExecutor) => ({
+  market_buy: (input: MarketBuyPlan['input']) => required(actions.buy)(input),
+  market_sell: (input: MarketSellPlan['input']) => required(actions.list)(input),
+  market_delist: (input: MarketDelistPlan['input']) => required(actions.delist)(input),
+  market_collect: (input: MarketCollectPlan['input']) => required(actions.collect)(input),
+})

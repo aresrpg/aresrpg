@@ -80,6 +80,7 @@ export const AdminExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             copy={copy.admin_page as Record<string, string>}
             overview={overview}
             online_count={128}
+            online_agents={17}
             revenue_wallet={{
               royalties: [],
               treasury_mist: 168420000000n,

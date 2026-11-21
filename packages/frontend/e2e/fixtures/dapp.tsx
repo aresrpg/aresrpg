@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { createRoot } from 'react-dom/client'
-import type { AgentStatus, CharacterRow, ItemRow, ListingRow } from '@aresrpg/protocol'
+import type {
+  AgentStatus,
+  CharacterRow,
+  FightResolutionRow,
+  InventoryPacket,
+  ItemRow,
+  ListingRow,
+} from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
 import { DappPage } from '../../src/dapp/DappPage.tsx'
@@ -13,7 +20,14 @@ import '../../src/tailwind.css'
 // while this page never signs, opens the game socket or submits a transaction.
 // A stand-in for the game server's push of the bot account to its owner: the test names the account
 // and it arrives as `packet/inventory_observed` on the session's own read-only account subscription.
-type PushedAccount = Readonly<{ characters: CharacterRow[]; items: ItemRow[]; balance_mist: string }>
+type PushedAccount = Readonly<{
+  characters: CharacterRow[]
+  items: ItemRow[]
+  listings: ListingRow[]
+  resolutions: FightResolutionRow[]
+  kiosk_versions: Record<string, string>
+  balance_mist: string
+}>
 Object.assign(window, {
   // The bot's own status, as the game server relays it from the bot's socket on that same subscription.
   push_status: (status: AgentStatus) =>
@@ -25,17 +39,18 @@ Object.assign(window, {
         packet: { type: 'packet/agent_status', status },
       },
     }),
-  push_account: ({ characters, items, balance_mist }: PushedAccount) => {
+  push_account: ({ characters, items, listings, resolutions, kiosk_versions, balance_mist }: PushedAccount) => {
     const { wallet, inventory_pairing: pairing, agent_inventory } = read_app_state().session
     if (!wallet || !pairing) return
-    const pushed = (
-      packet: { type: 'packet/characters'; characters: CharacterRow[] } | { type: 'packet/inventory'; items: ItemRow[] }
-    ) =>
+    const pushed = (packet: InventoryPacket) =>
       dispatch_app({
         type: 'server/packet',
         packet: { type: 'packet/inventory_observed', id: agent_inventory.serial, packet },
       })
     pushed({ type: 'packet/characters', characters })
+    pushed({ type: 'packet/listings', listings, kiosk_versions })
+    pushed({ type: 'packet/fight_resolutions', resolutions })
+    // The last packet of a snapshot is its inventory: the account is fully read from then on.
     pushed({ type: 'packet/inventory', items })
     dispatch_app({
       type: 'agent/inventory_balances',

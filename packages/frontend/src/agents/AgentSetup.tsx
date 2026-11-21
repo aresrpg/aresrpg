@@ -16,8 +16,9 @@ import { HostedBotPanel } from './HostedBotPanel.tsx'
 import { disconnect_agent } from './disconnect_agent.ts'
 import { AgentConnectionButton, AgentConnectedModal } from './AgentConnected.tsx'
 import { agent_tab_source } from './character_tabs.ts'
-import { owner_connected } from './owner_state.ts'
+import { owner_checkable } from './owner_state.ts'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
+import { useOwnerAnswer } from './useOwnerAnswer.ts'
 import './agent_setup.css'
 
 const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
@@ -33,6 +34,10 @@ const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: ()
     const url = new URL(location.href)
     url.searchParams.delete('authorization_id')
     history.replaceState(history.state, '', url)
+    // No owner check runs on a consent link. Once the request is dismissed the page behind is an
+    // ordinary one: ask now, so it does not keep showing a status nobody checked.
+    if (authorization_request && owner_checkable(wallet, env.bot_service_url, url.search))
+      dispatch_app({ type: 'agent/connection_refresh' })
     close()
   }
   const connect_action = (
@@ -109,6 +114,22 @@ const AgentProviderSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: ()
   )
 }
 
+/** The owner check has not answered: the dialog says so and offers neither setup nor disconnect yet. */
+const AgentChecking = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
+  const title_id = useId()
+  return (
+    <NativeModal close={close} label={copy.ui.agent_checking} aria-labelledby={title_id} className="aui-modal-scrim">
+      <section className="agent-setup" data-agent-setup="" data-agent-checking="">
+        <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={close} />
+        <h2 id={title_id}>{copy.ui.agent_checking}</h2>
+        <div className="flex justify-center py-8" role="status" aria-label={copy.ui.agent_checking} aria-busy="true">
+          <Loader2 className="animate-spin text-gold opacity-80" size={28} aria-hidden="true" />
+        </div>
+      </section>
+    </NativeModal>
+  )
+}
+
 const AgentDisconnect = ({
   wallet,
   bot,
@@ -148,9 +169,13 @@ const AgentDisconnect = ({
 
 export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
   const session = useAppStore((app) => app.session)
+  const answer = useOwnerAnswer()
   const bot = session.agent_connection.response?.bot
   const authorization = new URLSearchParams(location.search).has('authorization_id')
-  if (!authorization && owner_connected(session) && session.wallet && bot)
+  // A consent link shows its request whatever this account's agent is; it is never held by the owner check.
+  if (authorization) return <AgentProviderSetup copy={copy} close={close} />
+  if (answer === 'unknown') return <AgentChecking copy={copy} close={close} />
+  if (answer === 'connected' && session.wallet && bot)
     return <AgentDisconnect wallet={session.wallet} bot={bot} copy={copy} close={close} />
   return <AgentProviderSetup copy={copy} close={close} />
 }
@@ -165,7 +190,8 @@ export const AgentSetupButton = ({
   class_name?: string
 }>) => {
   const [open, set_open] = useState(false)
-  const connected = useAppStore((app) => owner_connected(app.session))
+  const answer = useOwnerAnswer()
+  const connected = answer === 'connected'
   const wallet = useAppStore((app) => app.session.wallet)
   const connection = useAppStore((app) => app.session.agent_connection)
   const bot = connection.response?.bot
@@ -174,7 +200,8 @@ export const AgentSetupButton = ({
   const checking = phase === 'checking' && !connection.response
   const busy = phase === 'returning'
   const status_label = {
-    checking: checking ? copy.ui.agent_cancel : label,
+    // A check that has no answer yet is named below; a re-check keeps the label of the answer it has.
+    checking: label,
     returning: copy.ui.agent_return_resume,
     failed: copy.ui.agent_hosted_retry,
     unavailable: copy.ui.agent_hosted_retry,
@@ -195,7 +222,13 @@ export const AgentSetupButton = ({
         class_name={class_name}
         open={activate}
         disabled={busy}
-        label={connected ? copy.ui.agent_connected : (status_label ?? copy.ui.agent_setup)}
+        label={
+          connected
+            ? copy.ui.agent_connected
+            : answer === 'unknown'
+              ? copy.ui.agent_checking
+              : (status_label ?? copy.ui.agent_setup)
+        }
       />
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>

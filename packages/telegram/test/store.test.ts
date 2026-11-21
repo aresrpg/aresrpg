@@ -72,13 +72,16 @@ integration('a link on Redis: per-entity ciphertext, deadline while unopened, de
   const r = await connect()
   try {
     const f = fixture({ backend: r.backend, now: Date.now() })
-    const { browser, query } = await f.start()
+    await f.links.begin(42)
     const [pending] = (await r.keys()).filter((key) => key.includes(':pending:'))
     expect(await r.redis.send('PTTL', [pending!])).toBeGreaterThan(0)
-    const result = await f.links.callback(query, browser.cookie)
     // Once it holds tokens it must outlive its deadline until revoked or consumed.
+    const { browser, query } = await f.exchanged()
     expect(await r.redis.send('PTTL', [pending!])).toBe(-1)
-    await f.links.confirm(42, result.code)
+    // A held grant has no native expiry either: it is revoked, never dropped, when it is not confirmed.
+    const token = await f.links.callback(query, browser.cookie)
+    expect(await r.redis.send('PTTL', [pending!])).toBe(-1)
+    expect(await f.links.confirm(42, token)).toBe(true)
     const keys = await r.keys()
     expect(keys.map((key) => key.slice(r.namespace.length + 1).split(':')[0]).toSorted()).toEqual(['owner', 'user'])
     for (const key of keys) {
@@ -91,22 +94,20 @@ integration('a link on Redis: per-entity ciphertext, deadline while unopened, de
   }
 })
 
-integration('the allowlist on Redis is read live: admitted at the next request, refused after removal', async () => {
+integration('the allowlist on Redis is read live: admitted at the next read, refused after removal', async () => {
   const r = await connect()
   try {
     const f = fixture({ backend: r.backend, access: r.access, now: Date.now() })
-    await f.identify()
+    // The login needs no admission and never changes with it: the allowlist alone answers.
+    await f.link()
     expect(await r.access.admitted(identity.owner)).toBe(false)
-    await expect(f.links.upgrade(42)).rejects.toThrow('owner_not_admitted')
     await r.operator.admit(identity.owner)
     await r.operator.admit(identity.owner)
     expect(await r.redis.send('TYPE', [`${r.namespace}:admitted`])).toBe('set')
     expect(await r.operator.admitted_owners()).toEqual([identity.owner])
-    const { browser, query } = await f.start(42, true)
-    await f.links.confirm(42, (await f.links.callback(query, browser.cookie)).code)
-    expect((await f.links.authenticate(42)).play).toBe(true)
+    expect(await r.access.admitted((await f.links.authenticate(42)).identity.owner)).toBe(true)
     await r.operator.remove(identity.owner)
-    await expect(f.links.authenticate(42)).rejects.toThrow('owner_not_admitted')
+    expect(await r.access.admitted((await f.links.authenticate(42)).identity.owner)).toBe(false)
     expect(await r.operator.admitted_owners()).toEqual([])
   } finally {
     await r.dispose()

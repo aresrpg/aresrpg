@@ -1,0 +1,298 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* The Raid tab: setup, followed raids and their results.
+   Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
+
+.dapp-raid,
+.dapp-raid-setup,
+.dapp-raid-follow {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.dapp-raid-follow {
+  gap: 10px;
+}
+
+/* A title with its one action on the same wrapping row. */
+.dapp-raid-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.dapp-raid-bar > :first-child {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.dapp-raid-bar h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.dapp-raid-bar h3 small {
+  color: var(--aui-muted);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Setup: who and where on the left, the plan on the right. One column on a phone. */
+.dapp-raid-split,
+.dapp-raid-column {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+@media (min-width: 960px) {
+  .dapp-raid-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .dapp-raid-plan {
+    position: sticky;
+    top: 16px;
+  }
+}
+.dapp-raid-panel,
+.dapp-raid-party {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.dapp-raid-panel > .aui-button {
+  justify-self: start;
+}
+.dapp-raid-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.dapp-raid-block h4 {
+  margin: 0;
+  color: var(--aui-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Dungeon picker: one pressed-or-not button per dungeon, its boss above its name. */
+.dapp-raid-dungeons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 6px;
+}
+.dapp-raid-dungeons .aui-button {
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.dapp-raid-dungeons img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+/* The board: the seats of one fight side, three to a row. */
+.dapp-raid-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.dapp-raid-board .aui-button.dapp-raid-seat {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 8px 4px;
+  font-weight: 400;
+  text-align: center;
+}
+.dapp-raid-seat strong {
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.dapp-raid-seat small {
+  color: var(--aui-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dapp-raid-seat [data-seat-key='held'] {
+  color: var(--aui-success);
+}
+.dapp-raid-seat [data-seat-key='none'] {
+  color: var(--aui-orange);
+}
+.dapp-raid-board .aui-button.dapp-raid-seat[data-empty] {
+  border: 1px dashed var(--aui-line-strong);
+  background: transparent;
+  box-shadow: none;
+  color: var(--aui-muted);
+  font-weight: 700;
+}
+
+/* Rooms and the level of their monsters. */
+.dapp-raid-levels {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-raid-levels div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--aui-line);
+}
+.dapp-raid-levels dt {
+  color: var(--aui-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.dapp-raid-levels dd {
+  margin: 0 0 0 auto;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A team short of keys: what it lacks and the two ways to get it. */
+.dapp-raid-short {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  background: var(--aui-sunk);
+  overflow-wrap: anywhere;
+}
+.dapp-raid-actions,
+.dapp-raid-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.dapp-raid-foot {
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-raid-foot > p {
+  flex: 1 1 200px;
+  margin: 0;
+}
+.dapp-raid-foot img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* A followed raid: its dungeon, where the team stands, and one run card per hero. */
+.dapp-raid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+}
+.dapp-raid-party[data-live] {
+  border-color: var(--aui-line-strong);
+}
+.dapp-raid-party-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.dapp-raid-party-head span,
+.dapp-raid-team span,
+.dapp-raid-room {
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.dapp-raid-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.dapp-raid-track i {
+  height: 10px;
+  border-radius: var(--aui-radius);
+  background: var(--aui-high);
+}
+.dapp-raid-track [data-room-state='done'] {
+  background: var(--aui-success);
+}
+.dapp-raid-track [data-room-state='now'] {
+  background: var(--aui-orange);
+}
+.dapp-raid-team {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dapp-raid-team li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  overflow-wrap: anywhere;
+}
+
+/* A finished raid: how it went, then what it brought back. */
+.dapp-raid-result {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.dapp-raid-result img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.dapp-raid-party[data-verdict='lost'] .dapp-raid-result img {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.dapp-raid-result h3 {
+  font-family: var(--aui-font-display);
+  font-size: 19px;
+}
+.dapp-raid-party[data-verdict='won'] .dapp-raid-result h3 {
+  color: var(--aui-success);
+}
+.dapp-raid-party[data-verdict='lost'] .dapp-raid-result h3 {
+  color: var(--aui-danger);
+}
+.dapp-raid-result span {
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.aui-panel .dapp-raid-keys {
+  margin: 0;
+  color: var(--aui-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every action of the tab is a 44px target, sized to its label. Sheets and questions open outside the
+   tab, in the page's top layer: their buttons take the shared touch size. */
+.dapp-raid-bar .aui-button,
+.dapp-raid-panel > .aui-button,
+.dapp-raid-dungeons .aui-button,
+.dapp-raid-actions .aui-button,
+.dapp-raid-foot .aui-button,
+.dapp-raid .aui-segments .aui-button {
+  min-height: 44px;
+}

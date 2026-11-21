@@ -7,28 +7,7 @@ import { buyer_total, market_needs_funding } from '../marketplace/price.ts'
 import type { MarketplaceState } from '../modules/marketplace.ts'
 
 import { held_items, strongest_first, type DappAccount } from './account.ts'
-import type { DappDirect, DappObservation } from './observation.ts'
-
-/**
- * One request to trade as the bot account. It is sent once, then followed in the bot's observations:
- * `accepted` waits in the bot's signing queue, `uncertain` waits for an observation and is never sent again.
- */
-export type MarketOrder = Readonly<{
-  id: string
-  action: 'market_buy' | 'market_sell'
-  /** The bot's typed action. A purchase carries the total the player saw as its ceiling. */
-  payload: Readonly<Record<string, unknown>>
-  item_type: string
-  amount: number
-  /** Units of this item in the bag when the order was placed: a purchase adds to it. */
-  held: number
-  /** The direct command the bot held before this order, which is never this order's own. */
-  after: string | null
-  status: 'pending' | 'accepted' | 'uncertain' | 'done' | 'refused'
-  error: string | null
-}>
-export const order_open = (order: MarketOrder | null): order is MarketOrder =>
-  order !== null && ['pending', 'accepted', 'uncertain'].includes(order.status)
+import { direct_open, direct_request, type DirectPayload, type DirectRequest, type DirectSeen } from './direct.ts'
 
 /** The hero whose kiosk receives or hands over the lot. The bot moves items only for a hero standing free. */
 const carrier = (heroes: readonly CharacterRow[], kiosk?: string): CharacterRow | null =>
@@ -36,19 +15,8 @@ const carrier = (heroes: readonly CharacterRow[], kiosk?: string): CharacterRow 
     [hero.custody === 'kiosk', !hero.active_fight, !hero.ambush, !kiosk || hero.kiosk === kiosk].every(Boolean)
   ) ?? null
 
-type Draft = Pick<MarketOrder, 'action' | 'item_type' | 'amount' | 'payload'>
-/** An order the bot would refuse anyway is refused here, with the bot's own code, and nothing is sent. */
-type Seen = Readonly<{ observation: DappObservation; account: DappAccount }>
-const order_of = (id: string, { observation, account }: Seen, draft: Draft, refusal: string | null): MarketOrder => ({
-  id,
-  ...draft,
-  held: held_items(account.inventory)[draft.item_type] ?? 0,
-  after: observation.direct?.id ?? null,
-  status: refusal ? 'refused' : 'pending',
-  error: refusal,
-})
 const buy_refusal = (
-  { account }: Seen,
+  { account }: DirectSeen,
   listing: Readonly<ListingRow>,
   hero: Readonly<CharacterRow> | null
 ): string | null => {
@@ -58,14 +26,10 @@ const buy_refusal = (
 }
 
 /** A purchase names the exact offer on screen and never pays more than the total shown for it. The
- * bot reads that item's current offers itself before it signs, and refuses an offer that changed. */
-export const buy_order = (
-  observation: DappObservation,
-  account: DappAccount,
-  id: string,
-  listing: Readonly<ListingRow>
-): MarketOrder => {
-  const seen = { observation, account }
+ * bot reads that item's current offers itself before it signs, and refuses an offer that changed.
+ * Only the bot's own command proves it: units that reach the bag may be a hero's own find. */
+export const buy_request = (id: string, seen: DirectSeen, listing: Readonly<ListingRow>): DirectRequest => {
+  const { observation, account } = seen
   const hero = carrier(account.characters)
   const item_type = listing.item_type ?? ''
   const payload = {
@@ -78,8 +42,9 @@ export const buy_order = (
     price_mist: listing.price_mist,
     max_total_mist: String(buyer_total(BigInt(listing.price_mist))),
   }
-  const draft: Draft = { action: 'market_buy', item_type, amount: listing.amount, payload }
-  return order_of(id, seen, draft, buy_refusal(seen, listing, hero))
+  const { amount } = listing
+  const draft = { action: 'market_buy' as const, item_type, amount, payload }
+  return direct_request(id, observation, draft, buy_refusal(seen, listing, hero))
 }
 
 /**
@@ -89,24 +54,18 @@ export const buy_order = (
 const sale_source = (rows: readonly ItemRow[], listing: Readonly<Pick<ListingRow, 'id' | 'amount'>>) =>
   rows.find((row) => row.id === listing.id && row.amount >= listing.amount)
 
-export const sell_order = (
-  observation: DappObservation,
-  account: DappAccount,
+export const sell_request = (
   id: string,
+  { observation, account }: DirectSeen,
   listing: Readonly<Pick<ListingRow, 'id' | 'item_type' | 'amount' | 'price_mist'>>
-): MarketOrder => {
+): DirectRequest => {
   const item_type = listing.item_type ?? ''
-  const draft = (payload: MarketOrder['payload']): Draft => ({
-    action: 'market_sell',
-    item_type,
-    amount: listing.amount,
-    payload,
-  })
-  const seen = { observation, account }
+  const request = (payload: DirectPayload, refusal: string | null) =>
+    direct_request(id, observation, { action: 'market_sell', item_type, amount: listing.amount, payload }, refusal)
   const source = sale_source(account.inventory, listing)
-  if (!source?.version) return order_of(id, seen, draft({}), 'sale_source_changed_or_unavailable')
+  if (!source?.version) return request({}, 'sale_source_changed_or_unavailable')
   const hero = carrier(account.characters, source.kiosk)
-  if (!hero) return order_of(id, seen, draft({}), 'character_not_available')
+  if (!hero) return request({}, 'character_not_available')
   const payload = {
     character_id: hero.id,
     source_kiosk: source.kiosk,
@@ -117,46 +76,29 @@ export const sell_order = (
     amount: listing.amount,
     price_mist: listing.price_mist,
   }
-  return order_of(id, seen, draft(payload), null)
+  return request(payload, null)
 }
 
-/** A bot failure reads `Error: code`; anything that is not a plain code is an order that did not go through. */
-const refusal_code = (error: string | null): string => {
-  const code = (error ?? '').replace(/^Error: /, '')
-  return /^[a-z_]+$/.test(code) ? code : 'order_failed'
+/** The bot withdraws an item listing only; one the account no longer shows sold or was withdrawn already. */
+const delist_refusal = (own: Readonly<ListingRow> | undefined): string | null => {
+  if (!own) return 'listing_gone'
+  return own.kind === 'item' ? null : 'listing_changed_or_ineligible'
 }
-const same_payload = (left: MarketOrder['payload'], right: MarketOrder['payload']): boolean =>
-  Object.keys(left).length === Object.keys(right).length &&
-  Object.entries(left).every(([key, value]) => JSON.stringify(value) === JSON.stringify(right[key]))
-const own_command = (order: MarketOrder, direct: DappDirect | null): DappDirect | null =>
-  direct !== null &&
-  [direct.id !== order.after, direct.kind === order.action, same_payload(direct.payload, order.payload)].every(Boolean)
-    ? direct
-    : null
-/** Without a command at the bot only the bag can prove a purchase; anything else stays unconfirmed. */
-const bag_outcome = (order: MarketOrder, items: Readonly<Record<string, number>>): MarketOrder => {
-  const bought = order.action === 'market_buy' && (items[order.item_type] ?? 0) >= order.held + order.amount
-  return bought
-    ? { ...order, status: 'done', error: null }
-    : { ...order, status: 'refused', error: 'order_unconfirmed' }
-}
-const OUTCOMES: Readonly<Record<string, MarketOrder['status']>> = {
-  accepted: 'accepted',
-  executing: 'accepted',
-  completed: 'done',
-  uncertain: 'uncertain',
-}
-/** A fresh observation is the truth of a sent order: the bot's own command for it, else the bag once it is read. */
-export const followed_order = (
-  order: MarketOrder | null,
-  observation: DappObservation,
-  account: DappAccount
-): MarketOrder | null => {
-  if (!order || !['accepted', 'uncertain'].includes(order.status)) return order
-  const command = own_command(order, observation.direct)
-  if (!command) return account.phase === 'ready' ? bag_outcome(order, held_items(account.inventory)) : order
-  const status = OUTCOMES[command.status] ?? 'refused'
-  return { ...order, status, error: status === 'refused' ? refusal_code(command.error) : null }
+/** A listing is withdrawn by its own item and kiosk. One the bot would refuse is refused here, with
+ * the bot's own code, and nothing is sent. */
+export const delist_request = (
+  id: string,
+  { observation, account }: DirectSeen,
+  listing: Readonly<Pick<ListingRow, 'id' | 'kiosk'>>
+): DirectRequest => {
+  const own = account.catalogue.own_listings.find((row) => row.id === listing.id && row.kiosk === listing.kiosk)
+  const draft = {
+    action: 'market_delist' as const,
+    item_type: own?.item_type ?? null,
+    amount: own?.amount ?? 0,
+    payload: { item_id: listing.id, kiosk: listing.kiosk },
+  }
+  return direct_request(id, observation, draft, delist_refusal(own))
 }
 
 const NOTHING = Object.freeze({ history: [], profits: [], revenue_30d_mist: '0', history_total: 0 })
@@ -177,7 +119,7 @@ const bot_account = (account: DappAccount, address: string | null): Pick<Source,
  */
 export const bot_market = (
   { account, address }: Readonly<{ account: DappAccount; address: string | null }>,
-  order: MarketOrder | null,
+  direct: DirectRequest | null,
   live: MarketplaceState
 ): Source => ({
   ...bot_account(account, address),
@@ -185,7 +127,9 @@ export const bot_market = (
     ...live,
     ...NOTHING,
     own_listings: account.catalogue.own_listings,
-    pending: order_open(order) ? order.id : null,
+    // The wallet holds one direct command: while any request is open, the market sends no other.
+    pending: direct_open(direct) ? direct.id : null,
   },
-  capabilities: { characters: false, withdraw: false, history: false },
+  // The bot withdraws an item listing; character trades and the sales ledger have no source for its account.
+  capabilities: { characters: false, withdraw: true, history: false },
 })

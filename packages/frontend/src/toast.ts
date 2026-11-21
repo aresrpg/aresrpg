@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { gas_refusal } from '@aresrpg/sdk/transaction-error'
+
 import { error_message } from './i18n/error_text.ts'
 import { report_error, type ReportContext } from './reporting.ts'
 
@@ -36,9 +38,7 @@ const message_of = error_message
 
 /** The Sui SDK's gas-refusal vocabulary — a failed ATTEMPT is the only trigger for the
  *  top-up prompt (never a balance poll: first logins stay unbothered). */
-const GAS_EMPTY_PATTERN =
-  /gas coin|no valid gas|insufficientgas|gasbalancetoolow|unable to select a gas|gas selection.*insufficient sui balance/i
-export const gas_empty_error = (error: unknown): boolean => GAS_EMPTY_PATTERN.test(message_of(error))
+export const gas_empty_error = (error: unknown): boolean => gas_refusal(message_of(error))
 const gas_empty_cell: { listener: (() => void) | null } = { listener: null }
 /** Registered by the session observer (injection breaks the store↔toast cycle). */
 export const on_gas_empty = (listener: (() => void) | null): void => {

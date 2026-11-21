@@ -5,6 +5,7 @@ import { chain_now } from '@aresrpg/protocol/chain-clock'
 import type { CharacterRow, FightStateRow } from '@aresrpg/protocol'
 
 import { create_fight, fight_path_to, reachable_fight_cells } from '../../fight/src/index.ts'
+import { create_mcp_handler } from '../src/mcp.ts'
 import { create_fixture } from '../../fight/test/helpers.ts'
 import { gameplay_observed_ms } from '../src/gameplay_context.ts'
 import {
@@ -19,6 +20,8 @@ import {
   type GameplayContext,
   type FightTurnPayload,
 } from '../src/gameplay.ts'
+
+import { fixture as hero_fixture } from './helpers/hero_runs_fixture.ts'
 
 const address = `0x${'1'.repeat(64)}`
 const character_id = `0x${'2'.repeat(64)}`
@@ -113,6 +116,9 @@ test('canonical catalog exposes the complete bounded PvE lifecycle and strict ne
     'dungeon_leave',
     'market_buy',
     'market_sell',
+    'market_delist',
+    'market_collect',
+    'create_character',
     'world_search',
     'fight_engage',
     'fight_place',
@@ -324,4 +330,41 @@ test('failed submission rolls back courtesy presentation without retrying the tr
   ).rejects.toBe(failure)
   expect(submissions).toBe(1)
   expect(packets.at(-1)).toEqual({ type: 'packet/fight_resync', fight: fight_id })
+})
+
+test('the public tool list carries the wallet-level kinds, and a tool call is one accepted direct command', async () => {
+  const f = await hero_fixture()
+  const mcp = create_mcp_handler(f.control, true, 'metadata')
+  type Tool = Readonly<{ name: string; inputSchema: { properties: { action: { required: readonly string[] } } } }>
+  const list = (await mcp(f.grant, { jsonrpc: '2.0', id: 1, method: 'tools/list' })) as { result: { tools: Tool[] } }
+  const tool = (name: string) => list.result.tools.find((entry) => entry.name === name)!
+  for (const name of ['bot_create_character', 'bot_market_delist', 'bot_market_collect', 'bot_equip_item'])
+    expect(tool(name)).toBeDefined()
+  expect(tool('bot_equip_item').inputSchema.properties.action.required).toEqual(['character_id', 'slot'])
+  expect(tool('bot_market_collect').inputSchema.properties.action.required).toEqual([])
+  const { decision_revision, observation_revision } = await f.lane()
+  const call = async (name: string, action: unknown, idempotency_key = name) =>
+    (
+      (await mcp(f.grant, {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name, arguments: { idempotency_key, decision_revision, observation_revision, action } },
+      })) as { result: { isError: boolean; structuredContent: Record<string, unknown> } }
+    ).result
+  const hero = { name: 'Newhero', classe: 'senshi', male: true, color_1: 1, color_2: 2, color_3: 3 }
+  // A refused payload reaches no command: the code is returned by the call itself.
+  expect((await call('bot_create_character', { ...hero, name: 'no' })).structuredContent).toEqual({
+    error: 'invalid_character_name',
+  })
+  expect((await call('bot_market_collect', { recipient: address })).structuredContent).toEqual({
+    error: 'invalid_gameplay_payload',
+  })
+  expect((await f.lane()).direct ?? null).toBeNull()
+  const accepted = await call('bot_create_character', hero)
+  expect(accepted).toMatchObject({ isError: false, structuredContent: { status: 'accepted' } })
+  expect((await f.lane()).direct).toBe(String(accepted.structuredContent.command_id))
+  // The wallet holds one direct command: the next kind waits for it.
+  expect((await call('bot_market_collect', {})).structuredContent).toEqual({ error: 'bot_busy_or_paused' })
+  await f.runtime.stop()
 })

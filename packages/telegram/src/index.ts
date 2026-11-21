@@ -25,8 +25,7 @@ const main = async () => {
     secure_records(redis.backend, connected.storage_key),
     hosted,
     connected.callback_url,
-    connected.limits.link_ttl_ms,
-    redis.access.admitted
+    connected.limits.link_ttl_ms
   )
   await links.retire_ended_attempts()
   const telegram = create_telegram(connected.token, connected.limits.request_ms)

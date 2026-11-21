@@ -8,7 +8,7 @@ import { EmptyEquipment } from '../../characters/EmptyEquipment.tsx'
 import '../../characters/characters.css'
 import '../../components/character_surfaces.css'
 
-const Equipment = lazy(() => import('../../characters/EquipmentTab.tsx'))
+const Equipment = lazy(() => import('../../characters/GameEquipmentTab.tsx'))
 const Stats = lazy(() => import('../../characters/StatsTab.tsx'))
 const Jobs = lazy(() => import('../../characters/JobsTab.tsx'))
 const Forge = lazy(() => import('../../characters/RuneforgeTab.tsx'))
@@ -32,7 +32,7 @@ const PanelBody = ({
     case 'stats':
       return <Stats character={character} copy={copy} raise_stats={session?.raise_stats} />
     case 'jobs':
-      return <Jobs character={character} copy={copy} preview={!!session} />
+      return <Jobs character={character} copy={copy} session={session} />
     case 'runeforge':
       return <Forge character={character} copy={copy} inventory={session?.inventory} />
     case 'spells':

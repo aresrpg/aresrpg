@@ -182,6 +182,7 @@ created character. `/docs` and `/dapp`
 are engine-less routes that never show the game loader.
 The Telegram card's action joins the Telegram waitlist as that signed-in account, signing in first when
 needed: the browser signs the hosted bot's session challenge and the bot stores the proven address.
+While the Blast sale is live, a pink line above the page shows the in-game Blast card's facts from the same sale reader and links to `/allocation`; it loads apart from the first paint and is absent in every other phase.
 The landing owns one looping HTML audio element and a persistent landing-only sound preference.
 Its navbar control stays available on mobile. Browser gesture retries respect that preference;
 leaving the landing releases the player before game boot. The website soundtrack lives in frontend public assets.
@@ -564,7 +565,7 @@ socket buffers and position queues have hard ceilings; stalled movement closes f
 presence changes submit models at most once per animation frame.
 
 Online history is the deliberate exception to chain replay: authenticated websocket presence is
-off-chain. Each server heartbeat atomically publishes its short-lived authenticated-address snapshot and a character-only companion key. The original `server:*` address schema stays readable by older binaries; companion keys use `server-characters:*`. The
+off-chain. Each server heartbeat atomically publishes its short-lived authenticated-address snapshot and a character-only companion key. The original `server:*` address schema stays readable by older binaries; companion keys use `server-characters:*` and `server-agents:*`. The agent key lists the addresses whose socket shares a hosted bot status; that count is self-declared, reaches admins only in the same heartbeat packet, and splits the admin's online figure into players and hosted bots. The
 address union collapses into one-minute samples, 15-minute aggregates through seven days, and daily
 aggregates afterward. Rolling replicas cannot multiply one account. The HUD also displays the union of live tracked character IDs
 across all worlds, including connected fighters and dungeon characters. It excludes untracked holdings
@@ -830,16 +831,28 @@ and uses the same checkout and asynchronous signing guard. Self-funding retains 
 
 ### Telegram strategy selection
 
-Telegram links Google through existing PKCE/owner consent before anything else. Initial consent
-is observe-only. A linked owner that is not admitted sees the waitlist card; Join the waitlist stores
+Telegram logs in with one link and one confirming tap. The welcome card of an unlinked chat carries one button,
+that chat's login page. The Telegram service sends the browser to the hosted bot's authorization, which sends it
+to the game's web page. The page signs in with Google only when the browser has no session and approves the
+request with no consent screen; the bot then returns the browser to Telegram's callback. That return proves an
+account, not a chat, so it links nothing: the service holds the verified grant with the attempt (phase `confirm`)
+and redirects the browser to `https://t.me/<bot>?start=<token>` with a fresh one-use token, kept only as its
+hash. When the chat that began the attempt sends `/start <token>` (Telegram's START button), the service matches
+the token against that chat's own attempts, writes the link in the same commit that deletes the attempt, and shows
+the chat its current card. Any other chat, and any unknown, used or expired token, changes nothing and gets its
+ordinary card; a grant never confirmed is revoked when its attempt ends. The page stays silent only for a request
+whose registered redirect, as the hosted bot reports it, is the configured Telegram callback
+(`VITE_TELEGRAM_CALLBACK_URL`); any other request waits for the player on the consent dialog. Every login asks for
+observe, play and pause scope. A link opens one browser, is exchanged once, ends at `link_ttl_ms`, and is bound to
+its chat by its attempt record and the START tap, and to its browser by a cookie. Admission is separate from the login and
+is the only gate to play. A linked owner that is not admitted sees the waitlist card; Join the waitlist stores
 only its verified zkLogin owner address and never admits. The operator's allowlist alone admits an owner.
 Both lists live in the permanent Redis behind `@aresrpg/protocol/telegram-access`: `telegram:admitted` is
 a set and `telegram:waitlist` a sorted set scored by joining time, kept once per owner. Telegram reads
 them on every update and the hosted bot writes the waitlist for the home page, so admitting or removing an
-owner takes effect at the next request with no restart and no boot-time check. The operator command lists
+owner takes effect at the next update with no restart, no boot-time check and no second login. The operator command lists
 who waits and who is admitted, admits, and removes; removing refuses the owner at once, then revokes its
-Telegram login so nothing it started keeps running. Enabling gameplay requires a second explicit consent
-for that same owner. Sender IDs bind private chats to verified accounts but never grant admission. The
+Telegram login so nothing it started keeps running. Sender IDs bind private chats to verified accounts but never grant admission. The
 agent multisig signs gameplay; the personal Google wallet remains authentication/recovery. Connect Your
 Agent stays separate.
 
@@ -898,7 +911,9 @@ no copy of it. A hero's health is the chain's regeneration rule over its own row
 shows its fighter's health: the account subscription also watches each fight a hero is seated in and pushes
 that fight state on every fight event, and `seated_player_health` in `@aresrpg/fight` is the one rule the
 dapp and the bot read it with. What the bot alone knows is what its wallet is doing as a whole (`state`), its
-`runs` with the objective each was authored with, and its one direct command. That status
+`runs` with the objective each was authored with, and its one direct command. A run that ended by itself
+stays in `runs` with `ended`, its reason from the one shared list `RUN_ENDINGS`, until its hero starts again;
+it holds no slot, and a run the player stopped names no ending. That status
 (`packet/agent_status`) is the one owner-facing status of a bot: the 3D game's activity line and the dapp
 both read it, and the bot service's HTTP owner status carries authorization only. The bot sends it on its
 own game socket when it differs from the last one sent: after each pass of the wallet's signing queue and
@@ -913,24 +928,33 @@ connects, once before each command for the wallet revisions, and once after each
 pushed status can show a run or a command, but only a read requested after the last answered command proves
 one is absent; until that read, a pushed status finishes no position and fails no order. Statuses are
 ordered by the bot's own lease fence, then its process clock. The dapp is per hero throughout: one command and at
-most one running position per hero, so heroes start, stop and recover independently; Basic mode sends every
-free hero and Advanced mode acts on one. Train, Gather and Raid bind the seed-authored trees through the shared
-binder, one tree per hero: heroes that share a city train as one team (`team_hunt`) and a hero alone trains
-with `fight_nearby`. A raid team is the strongest free heroes (level, then experience, then id), at most one
-fight side (`CONTRACT_CONSTANTS.start_cells`), trimmed by the shared key rule to the heroes that can enter;
-the bound trees name exactly those heroes as allies, so the bot's entry rule holds by construction. A team
-short of keys is confirmed in a modal that names who enters and links to the key's market listing without a
-price; with no usable key nothing is sent. Advanced raids the dungeon of the city its hero stands in. Basic
-raids the dungeon authored in seed from anywhere in its world, and binds the seed's build to every hero of
-its class, so that hero spends its points and wears its best gear by itself; a hero of another class and
-every Advanced start bind no build, and their growth leaves list nothing. Positions are the browser-local
+most one running position per hero, so heroes start, stop and recover independently. The page has one version
+and five tabs (Home, Quest, Raid, Heroes, Market) held in one reducer field. A start carries its own spec: the
+heroes the player picked, in order, and for a fight the place and difficulty, for work the resource or recipe
+and its goal, for a raid the dungeon and the number of runs, plus an optional fee cap. The spec stays on the
+command and on the position it opens, so "send again" replays it. Train, Gather and Raid bind the seed-authored
+trees through the shared binder, one tree per hero: heroes that share a scope train as one team (`team_hunt`)
+and a hero alone trains with `fight_nearby`; `gather_item` and `craft_item` work one chosen item toward a goal.
+A hero outside its place walks there first: the planner states it as a fact (`walks`, from the shared
+`area_contains`), never as a blocker. A raid seats at most one fight side (`CONTRACT_CONSTANTS.start_cells`)
+in the order picked, trimmed by the shared key rule to the heroes that can enter; the strongest free heroes
+are only a proposal. The bound trees name exactly those heroes as allies, so the bot's entry rule holds by
+construction. A team short of keys is told who enters, with a link to the key's market listing without a
+price; with no usable key nothing is sent. A difficulty, a run cap and a fee cap bind only when chosen, count
+per hero, and a malformed cap starts nothing. Positions are the browser-local
 view of hero runs: a fresh observation (one requested after the last command reply) opens a position for
-every run, finishes the ones whose run is gone, and resolves unknown replies, which are observed and never
+every run, finishes the ones whose run is gone, with the reason the bot gives when the run ended by itself
+(one sentence per code, a plain end for a code the page does not list), and resolves unknown replies, which are observed and never
 resent. A position's activity is the `strategy` the bot reports for its run, so no tree is read back or
-recognised by shape. A position folds what its hero won; the shared bag and the wallet's fees fold once into
-one haul. Both fold the pushed account by value on every input, so a repeated row or bag counts nothing twice. None of it is chain or bot truth. Stat and spell changes and market orders are direct bot
-commands. The bot holds one at a time and signs it in turn with its heroes, so the dapp sends one at a time
-and never waits for a hosted run.
+recognised by shape. A position folds what its hero won, its fight results and the fees its run paid. The page shows the bot's bag itself, and beside it a
+feed of what entered that bag, newest first, whatever brought it: the feed folds the pushed account by value on
+every input, so a repeated bag counts nothing twice. It is kept on the device per bot account and bounded;
+after a reload or a reconnect the first bag is compared with the last one stored, so what arrived meanwhile is
+told. The bag is the truth; the feed is a convenience. None of it is chain or bot truth. Stat and spell changes, equipment, a city potion, leaving a
+dungeon, market orders, withdrawing a listing and creating a hero are kinds of the one
+direct request of the reducer. The bot holds one direct command at a time and signs it in turn with its
+heroes, so the dapp sends one at a time and never waits for a hosted run. A creation is proven by the new
+hero in the pushed account; a purchase only by the bot's own command.
 
 The dapp's market trades as the bot account, because that account holds the heroes and their bag. It is the
 game's own marketplace presentation behind `MarketSourceContext`, the seam that says whose bag, balance and
@@ -949,9 +973,10 @@ A purchase or a listing is one order of the dapp reducer, sent once as `bot_mark
 `max_total_mist`; a hero standing free in its kiosk carries the lot, and an order the bot would refuse
 anyway (offer not watched, balance too low, no free hero, no single stack large enough) is refused before
 it is sent. After that the observation's `direct` command is the order's only truth: accepted, bought,
-refused with the bot's code, or uncertain; with no command left at the bot only the bag proves a purchase,
-and nothing is ever sent again. The source's capabilities hide what the bot account cannot do: character
-trades, withdrawing a listing and the sales ledger, because the bot has no delist or collect action.
+refused with the bot's code, or uncertain; with no command left at the bot the order stays
+unconfirmed, because a hero's own find adds the same units to the bag, and nothing is ever sent again. The source's capabilities hide what the bot account cannot do: character
+trades and the sales ledger. Withdrawing an item listing is a direct request. The page offers no collection, because it does not
+know what the kiosks hold; the bot collects by itself once they hold 0.1 SUI or more.
 Nothing of the Google account's bag, balance or listings is shown, and the dapp signs nothing.
 
 ### Funding

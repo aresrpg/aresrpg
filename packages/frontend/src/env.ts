@@ -8,6 +8,8 @@ export type EngineQuality = 'low' | 'medium' | 'high'
 
 export type PublicEnv = Readonly<{
   bot_service_url: string
+  /** The Telegram service's login callback; a request that returns there links a chat with no consent screen. */
+  telegram_callback_url: string
   /** Local and edge builds also offer an installed wallet at sign-in. Production offers Google alone. */
   dev_sign_in: boolean
   privy_app_id: string
@@ -53,8 +55,27 @@ export const resolve_bot_service_url = (value = ''): string => {
   return url.origin
 }
 
+/** The `callback_url` of the Telegram service, a peer address like the bot service's. Empty when unset. */
+const resolve_telegram_callback_url = (value = ''): string => {
+  if (!value) return ''
+  const url = new URL(value)
+  if (
+    ![
+      url.protocol === 'https:',
+      !url.username,
+      !url.password,
+      !url.search,
+      !url.hash,
+      url.pathname === '/oauth/callback',
+    ].every(Boolean)
+  )
+    throw new Error('VITE_TELEGRAM_CALLBACK_URL must be the HTTPS /oauth/callback address of the Telegram service')
+  return url.href
+}
+
 const resolve_optional_services = (source: Readonly<Record<string, string | undefined>>) => ({
   bot_service_url: resolve_bot_service_url(source.VITE_BOT_SERVICE_URL),
+  telegram_callback_url: resolve_telegram_callback_url(source.VITE_TELEGRAM_CALLBACK_URL),
   dev_sign_in: source.VITE_DEPLOY_ENV === 'local' || source.VITE_DEPLOY_ENV === 'preview',
   privy_app_id: source.VITE_PRIVY_APP_ID ?? 'cmvpm31db00nk0gimsyylhwzk',
   posthog_project_token: source.VITE_POSTHOG_PROJECT_TOKEN ?? 'phc_pi5yrMJfu5h6rN86ugdURJcTWUkXQsGmCfMR6hSZ3RP8',

@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* The Home tab: the next step, the heroes, the first steps of an empty account, and the way to a new hero.
+   Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
+.dapp-home {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* Next best step: one panel, one action. The action drops under the sentence on a narrow screen. */
+.dapp-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  border-color: var(--aui-line-strong);
+}
+.dapp-next[data-next='funds'] {
+  border-color: var(--aui-orange);
+}
+.dapp-next-text {
+  flex: 1 1 220px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dapp-next-label {
+  color: var(--aui-faint);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dapp-next p {
+  margin: 0;
+}
+.dapp-next > .aui-button {
+  margin-left: auto;
+}
+
+/* Heroes: a title with the count, then the cards and the tile of a new hero. */
+.dapp-home-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dapp-home-heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+}
+.dapp-create-tile {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  border-style: dashed;
+  border-color: var(--aui-line-strong);
+}
+
+/* The way to a new hero: what it costs, one button, and why it is closed when it is. */
+.dapp-create {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  min-width: 0;
+}
+.dapp-create p {
+  margin: 0;
+}
+/* The portrait of the hero being made fills the preview box of the game's creation form. */
+.dapp-portrait.dapp-create-portrait {
+  width: min(100%, 240px);
+  height: auto;
+  aspect-ratio: 1;
+  background: none;
+}
+
+/* An account with no hero: three numbered steps, the current one marked. */
+.dapp-welcome {
+  display: grid;
+  gap: 12px;
+}
+.dapp-welcome > header {
+  display: grid;
+  gap: 4px;
+}
+.dapp-welcome h1 {
+  margin: 0;
+  font-family: var(--aui-font-display);
+  font-size: 1.5rem;
+}
+.dapp-welcome > header p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--aui-soft);
+  line-height: 1.5;
+}
+.dapp-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: dapp-step;
+}
+.dapp-step {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.dapp-step::before {
+  counter-increment: dapp-step;
+  content: counter(dapp-step);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--aui-high);
+  color: var(--aui-muted);
+  font-weight: 800;
+}
+.dapp-step[data-now] {
+  border-color: var(--aui-line-strong);
+}
+.dapp-step[data-now]::before {
+  background: var(--aui-orange);
+  color: var(--aui-orange-ink);
+}
+.dapp-step-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dapp-step-body > p {
+  margin: 0;
+}
+
+/* Every action of Home is a 44px target, sized to its label. */
+.dapp-next .aui-button,
+.dapp-create .aui-button,
+.dapp-home .dapp-disconnect .aui-button {
+  min-height: 44px;
+}

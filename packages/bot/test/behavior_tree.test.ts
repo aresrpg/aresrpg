@@ -88,3 +88,28 @@ test('unknown priority preserves completed effects in the selected branch', () =
   expect(blocked.blocked).toBe(true)
   expect(evaluate_behavior(branch, blocked.memory, () => false).action).toBe('craft')
 })
+
+test('an authored completion carries its reason out of the tree', () => {
+  const tree: Node = {
+    type: 'loop',
+    child: {
+      type: 'selector',
+      children: [
+        {
+          type: 'sequence',
+          children: [
+            { type: 'condition', condition: 'capped' },
+            { type: 'complete', reason: 'cap' },
+          ],
+        },
+        { type: 'action', action: 'work' },
+      ],
+    },
+  }
+  expect(evaluate_behavior(tree, empty_behavior_memory(), () => true)).toMatchObject({
+    status: 'complete',
+    reason: 'cap',
+  })
+  expect(evaluate_behavior(tree, empty_behavior_memory(), () => false)).toMatchObject({ status: 'action' })
+  expect(evaluate_behavior({ type: 'complete' }, empty_behavior_memory(), () => true).reason).toBeUndefined()
+})

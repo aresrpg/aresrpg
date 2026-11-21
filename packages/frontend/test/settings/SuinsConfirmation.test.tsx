@@ -25,6 +25,7 @@ test('every locale renders the erasure warning, exact destinations, defaults and
           player_address: '0xplayer',
           agent_address: '0xagent',
           erased_names: ['aresrpg.parent.sui'],
+          unchanged: false,
         },
       },
     },

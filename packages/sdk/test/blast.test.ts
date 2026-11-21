@@ -135,6 +135,7 @@ test('estimates and claim previews follow Blast economics', () => {
       start_ms: 0n,
       end_ms: 1n,
       token_allocation: 10001n,
+      public_ms: null,
     },
     2n,
     '7'
@@ -187,8 +188,27 @@ test('a sale of the live Blast deployment decodes with the same fields', () => {
     start_ms: 1795164360000n,
     end_ms: 1795164432939n,
     token_allocation: 450000000000000n,
+    public_ms: null,
   })
   expect(project_blast_presale(sale, 1795164432939n, '1099635701').phase).toBe('complete')
+})
+
+// Same captured KARES sale: allowlisted for four days, then open to any wallet for the last one.
+test('the captured KARES sale opens to everyone four days after its start', () => {
+  const fields = kares.objects[0]!.json
+  const sale = decode_blast_presale(fields)
+  expect(sale.public_ms).toBe(1795205043334n + 345600000n)
+  expect(project_blast_presale(sale, 1795205043335n, '1101083029').public_ms).toBe(1795550643334n)
+  // A phase reserved to eligible wallets, one that would start after the close, or an older layout: none.
+  const { uncapped } = fields
+  for (const none of [
+    { ...fields, uncapped: { ...uncapped, access: { '@variant': 'Eligible' } } },
+    { ...fields, uncapped: { ...uncapped, starts_after_ms: fields.duration_ms } },
+    { ...fields, uncapped: undefined },
+  ])
+    expect(decode_blast_presale(none).public_ms).toBeNull()
+  // Mainnet object 0x091759…facba (captured 2026-10-21) has no uncapped phase at all.
+  expect(decode_blast_presale(captured.objects[0].json).public_ms).toBeNull()
 })
 
 // Mainnet object 0x2d8a59…f9b7b, version 1101083029, captured 2026-11-21 via gRPC: the KARES sale itself.

@@ -5,15 +5,14 @@ import { class_names } from '@aresrpg/immutable'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_NAME_MAX_LENGTH, is_valid_character_name } from '@aresrpg/sdk/character-name'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { character_creation_funding_text } from '../character_creation_funding.ts'
+import type { CharacterRenderSource } from '../game/character_entities.ts'
 import { dispatch_app } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
-
-import { CharacterPreviewCanvas } from './CharacterPreviewCanvas.tsx'
 
 type CharacterIdentity = Readonly<{
   name: string
@@ -37,12 +36,18 @@ export const CharacterCreateModal = ({
   cancel,
   create,
   insufficient,
+  preview,
   view_spells,
 }: Readonly<{
   copy: AppCopy
   cancel: () => void
   create: (input: CharacterCreateInput) => Promise<void>
   insufficient: boolean
+  /**
+   * The picture of the character being made. Its caller owns it: the 3D game draws the model, a page
+   * without a canvas draws a portrait.
+   */
+  preview: (source: CharacterRenderSource) => ReactNode
   view_spells: (classe: string) => void
 }>) => {
   const localized_numbers = useNumbers()
@@ -88,7 +93,7 @@ export const CharacterCreateModal = ({
         <p className="mt-1 text-[10px] tracking-[0.04em] text-faint">{copy.create_lead}</p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="relative grid min-h-80 place-items-center overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_50%_42%,rgba(200,150,60,0.12),transparent_58%)]">
-            <CharacterPreviewCanvas source={preview_source} />
+            {preview(preview_source)}
             <div className="pointer-events-none absolute bottom-5 left-0 w-full text-center uppercase">
               <div className="text-[12px] tracking-[0.25em]">{identity.classe}</div>
               <div className="mt-1 text-[8px] tracking-[0.18em] text-faint">

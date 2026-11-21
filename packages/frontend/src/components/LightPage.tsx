@@ -13,10 +13,23 @@ import './light_page.css'
 /** A page's mood: blue for the token, orange for agents, green for expeditions. */
 export type LightPageAura = 'sky' | 'ember' | 'moss'
 
-/** The one sign-in card of a light page: it asks for the game account before the page's own content. */
+/**
+ * The one sign-in card of a light page: it asks for the game account before the page's own content.
+ * While a sign-in runs, a restored session included, it says so and asks for nothing: the player
+ * never reads a request to sign in that the page is already answering.
+ */
 export const LightPageGate = ({ copy, title, body }: Readonly<{ copy: AppCopy; title: string; body: string }>) => {
   const ready = useAppStore(({ session }) => session.auth_ready)
   const status = useAppStore(({ session }) => session.auth_status)
+  if (status === 'connecting')
+    return (
+      <section className="aui-panel light-page-card">
+        <p className="light-page-status" role="status" aria-busy="true">
+          <span className="aui-spinner" aria-hidden="true" />
+          {copy.ui.signing_in}
+        </p>
+      </section>
+    )
   return (
     <section className="aui-panel light-page-card">
       <h1>{title}</h1>
@@ -24,7 +37,7 @@ export const LightPageGate = ({ copy, title, body }: Readonly<{ copy: AppCopy; t
       <GoogleLoginButton
         copy={copy}
         ready={ready}
-        loading={status === 'connecting'}
+        loading={false}
         login={() => dispatch_app({ type: 'auth/login_google' })}
       />
     </section>
@@ -42,18 +55,21 @@ export const LightPage = ({
   brand,
   controls,
   aura,
+  wide,
   children,
 }: Readonly<{
   copy: AppCopy
   brand: ReactNode
   controls?: ReactNode
   aura?: LightPageAura
+  /** An application surface: the bar and the content use the whole window, not a reading column. */
+  wide?: boolean
   children: ReactNode
 }>) => {
   const session = useAppStore((state) => state.session)
   const locale = useAppStore((state) => state.locale)
   return (
-    <div className={aura ? 'light-page aui-aura' : 'light-page'} data-aura={aura}>
+    <div className={aura ? 'light-page aui-aura' : 'light-page'} data-aura={aura} data-wide={wide ? '' : undefined}>
       {aura && <div aria-hidden="true" className="light-page-scene" />}
       <header className="light-page-header">
         <a className="light-page-brand" href="/">

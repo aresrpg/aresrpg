@@ -32,9 +32,7 @@ export const cleanup_sender = async (
     secure_records(backend, setting(env, 'TELEGRAM_STORAGE_KEY')),
     hosted,
     text(config.callback_url),
-    link_ttl_ms,
-    // Revoking a login never depends on admission.
-    async () => false
+    link_ttl_ms
   )
   const sender = 'sender' in target ? target.sender : await links.sender_of(target.owner)
   if (sender === null) throw new Error('cleanup_owner_not_linked')

@@ -6,7 +6,8 @@ import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
 import { consumable_baseline, consumable_projected, type ConsumableBaseline } from './consumable_projection.ts'
 import { EQUIPMENT_ACTIONS, equipment_projected } from './equipment_actions.ts'
-import { market_sell_projected } from './market_actions.ts'
+import { market_delist_projected, market_sell_projected } from './market_actions.ts'
+import { character_created_projected } from './character_actions.ts'
 import { loot_boxes_projected } from './loot_boxes.ts'
 import { team_projected } from './team_actions.ts'
 import { spell_projected } from './spell_allocation.ts'
@@ -63,18 +64,32 @@ const projected_fight = (command: Command, context: GameplayContext): boolean =>
   }
   return checks[command.kind === 'fight_crank' ? 'fight_turn' : command.kind]?.() ?? false
 }
+/** A wallet-level command names no hero: the account's own rows are its proof. Without this, a settled
+ *  hero creation, withdrawal or collection left the wallet waiting for a resync that could never come. */
+const wallet_projected = (command: Command, receipt: Receipt, context: GameplayContext): boolean | undefined => {
+  const checks: Partial<Record<Command['kind'], () => boolean>> = {
+    create_character: () => character_created_projected(receipt, context.snapshot.characters),
+    market_delist: () => market_delist_projected(command, context.snapshot.inventory),
+    // A collection changes no row the game projects: its certified receipt is the whole proof.
+    market_collect: () => true,
+  }
+  return checks[command.kind]?.()
+}
+const settled_command = (command: Command, receipt: Receipt): boolean =>
+  [
+    Boolean(command.action_baseline),
+    command.status === 'completed',
+    receipt_digest(receipt) === (command.result as { digest?: string })?.digest,
+  ].every(Boolean)
 export const action_projected = (command: Command, receipt: Receipt, context: GameplayContext): boolean => {
-  if (
-    !command.action_baseline ||
-    command.status !== 'completed' ||
-    receipt_digest(receipt) !== (command.result as { digest?: string })?.digest
-  )
-    return false
+  if (!settled_command(command, receipt)) return false
+  const wallet = wallet_projected(command, receipt, context)
+  if (wallet !== undefined) return wallet
   const character = context.snapshot.characters.find(({ id }) => id === command.payload.character_id)
   if (!character) return false
   if (['craft', 'gather'].includes(command.kind))
     return Boolean(
-      command.action_baseline.profession &&
+      command.action_baseline?.profession &&
       receipt_projected(command.action_baseline.profession, command, receipt, context)
     )
   return character_projected(command, receipt, context, character)

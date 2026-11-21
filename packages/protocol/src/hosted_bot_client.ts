@@ -20,8 +20,7 @@ export const READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'bot_validate_combat_profile',
 ])
 
-/** What a consent may cover: reading only, or reading, playing and pausing. */
-export const OBSERVE_SCOPE = 'bot:observe'
+/** What our own clients ask a consent to cover: reading, playing and pausing. */
 export const PLAY_SCOPE = 'bot:observe bot:play bot:pause'
 
 /**

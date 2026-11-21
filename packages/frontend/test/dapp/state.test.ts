@@ -1,20 +1,34 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
-import { basic_build, bind_team } from '@aresrpg/protocol/strategies'
+import { bind_team } from '@aresrpg/protocol/strategies'
 
 import { parse_observation } from '../../src/dapp/observation.ts'
 import {
   activity_offer,
+  fight_spec,
+  free_heroes,
   hero_hosted,
+  hero_status,
+  idle_heroes,
   initial_dapp_state,
+  picked_heroes,
+  quest_heroes,
+  quest_spec,
+  raid_seats,
   reduce_dapp,
   running_position,
+  selected_hero,
+  send_again,
+  tab_badges,
+  work_spec,
+  work_worker,
   type CommandOutcome,
   type DappInput,
   type DappState,
 } from '../../src/dapp/state.ts'
 import type { DappAccount } from '../../src/dapp/account.ts'
+import { RAID_TEAM, type StartSpec } from '../../src/dapp/strategies.ts'
 
 import {
   HERO,
@@ -28,6 +42,7 @@ import {
 
 const SECOND = hero_id('2')
 const KEY = 'key_of_gilded_lorito'
+const DUNGEON = 'gilded_lorito'
 const team = [character_fixture(), character_fixture({ id: SECOND, name: 'Bran', level: 7 })]
 /** The reducer reads the account the game socket pushes; each test names the account it folds under. */
 const fold_under =
@@ -43,17 +58,21 @@ const observed = (overrides: Readonly<Record<string, unknown>>, requested_ms: nu
   now: requested_ms,
 })
 const connected = fold(initial_dapp_state(), { type: 'dapp/link', link: { phase: 'connected' } }, observed({}, 100))
-const start = (
-  activity: 'train' | 'gather' | 'raid',
-  hero_ids: readonly string[],
-  id: string = activity
-): DappInput => ({
+type Activity = StartSpec['activity']
+/** What each activity asks with nothing chosen: where each hero stands, the bot's own pick, the first dungeon. */
+const SPECS: { readonly [K in Activity]: (hero_ids: readonly string[]) => StartSpec } = {
+  train: (hero_ids) => ({ activity: 'train', hero_ids, place: null, difficulty: null, fee_cap_mist: null }),
+  gather: (hero_ids) => ({ activity: 'gather', hero_ids, work: { mode: 'auto', job: null }, fee_cap_mist: null }),
+  raid: (hero_ids) => ({ activity: 'raid', hero_ids, dungeon: DUNGEON, runs: null, fee_cap_mist: null }),
+}
+const start = (activity: Activity, hero_ids: readonly string[], id: string = activity): DappInput => ({
   type: 'dapp/start',
   id,
-  activity,
-  hero_ids,
+  spec: SPECS[activity](hero_ids),
   title: 'Title',
 })
+const offer = (state: DappState, account: DappAccount, activity: Activity, hero_ids: readonly string[]) =>
+  activity_offer(state, account, SPECS[activity](hero_ids), 'Title')
 const settle = (hero: string, id: string, outcome: CommandOutcome, now: number): DappInput => ({
   type: 'dapp/command_settled',
   hero_id: hero,
@@ -69,11 +88,111 @@ const running = (state: DappState) =>
     finished_ms === null ? [[hero, activity]] : []
   )
 
-test('Advanced starts on the strongest hero, keeps an explicit selection and survives a pending answer', () => {
-  expect(connected.hero_id).toBe(SECOND)
+test('one version: the page opens on Home, a tab is one field, and nothing of a mode or a second view exists', () => {
+  expect(Object.keys(initial_dapp_state()).toSorted()).toEqual(
+    [
+      'bag_feed',
+      'commands',
+      'direct',
+      'hero_id',
+      'link',
+      'market_panel',
+      'observation',
+      'observe_error',
+      'positions',
+      'proven_ms',
+      'quest',
+      'raid',
+      'settled_ms',
+      'tab',
+    ].toSorted()
+  )
+  expect(connected.tab).toBe('home')
+  const raiding = fold(connected, { type: 'dapp/tab', tab: 'raid' })
+  expect(raiding.tab).toBe('raid')
+  expect(fold(raiding, { type: 'dapp/tab', tab: 'raid' })).toBe(raiding)
+  // The Market tab opens on Buy, or on the panel asked for; the next plain visit is Buy again.
+  expect(connected.market_panel).toBe('BUY')
+  const selling = fold(raiding, { type: 'dapp/tab', tab: 'market', panel: 'SELL' })
+  expect([selling.tab, selling.market_panel]).toEqual(['market', 'SELL'])
+  expect(fold(selling, { type: 'dapp/tab', tab: 'market', panel: 'SELL' })).toBe(selling)
+  expect(fold(selling, { type: 'dapp/tab', tab: 'market' }).market_panel).toBe('BUY')
+})
+
+test('a quest proposes who goes when nobody is picked, and never a hero that fights, raids or is out', () => {
+  // Nothing picked: the strongest hero that can go is proposed. The pick itself stays empty.
+  expect(idle_heroes(connected, ACCOUNT).map(({ id }) => id)).toEqual([SECOND, HERO])
+  expect(picked_heroes(connected, ACCOUNT)).toEqual([])
+  expect(fight_spec(connected, ACCOUNT).hero_ids).toEqual([SECOND])
+  expect(connected.quest.hero_ids).toEqual([])
+  // Picked heroes go in the order picked.
+  const picked = fold(connected, { type: 'dapp/quest_pick', pick: { hero_ids: [HERO, SECOND] } })
+  expect(fight_spec(picked, ACCOUNT)).toEqual({ ...SPECS.train([HERO, SECOND]) })
+  // A hero in a fight or a dungeon is not free to go, whatever the bot says of it; a hosted one neither.
+  const fighting = account_fixture({ characters: [team[0]!, { ...team[1]!, active_fight: { id: 'f', seat: 0 } }] })
+  expect(idle_heroes(connected, fighting).map(({ id }) => id)).toEqual([HERO])
+  expect(fight_spec(picked, fighting).hero_ids).toEqual([HERO])
+  const out = fold(picked, start('train', [SECOND]), settle(SECOND, 'train', done, 300))
+  expect(picked_heroes(out, ACCOUNT).map(({ id }) => id)).toEqual([HERO])
+  // Before the bot answered a hero claims no status: it can still be proposed, and nothing starts.
+  expect(idle_heroes(initial_dapp_state(), ACCOUNT)).toHaveLength(2)
+
+  // Work sends one worker: the pick, else the best free hero of the profession, else the strongest.
+  const working = fold(connected, { type: 'dapp/quest_pick', pick: { kind: 'work' } })
+  expect(work_worker(working, ACCOUNT)?.id).toBe(SECOND)
+  const mining = fold(working, { type: 'dapp/quest_pick', pick: { work: { mode: 'auto', job: 'MINER' } } })
+  const miners = account_fixture({
+    characters: [
+      { ...team[0]!, jobs: { MINER: '900000' } },
+      { ...team[1]!, jobs: {} },
+    ],
+  })
+  expect(work_worker(mining, miners)?.id).toBe(HERO)
+  expect(work_spec(mining, miners)).toEqual({
+    activity: 'gather',
+    hero_ids: [HERO],
+    work: { mode: 'auto', job: 'MINER' },
+    fee_cap_mist: null,
+  })
+  expect(work_worker(fold(mining, { type: 'dapp/quest_pick', pick: { hero_ids: [SECOND] } }), miners)?.id).toBe(SECOND)
+  expect(work_spec(working, account_fixture({ characters: [] })).hero_ids).toEqual([])
+})
+
+test('a second Start from a proposal sends nobody else: one press, one hero', () => {
+  // Reported 2026-11-21: with nothing picked, the first press sent the proposed hero, the proposal moved
+  // to the next free hero at once, and the second press of a double click sent that one too.
+  const sent = (state: DappState) => Object.values(state.commands).map(({ hero_id: hero }) => hero)
+  for (const kind of ['fight', 'work'] as const) {
+    const picking = fold(connected, { type: 'dapp/quest_pick', pick: { kind } })
+    const proposal = kind === 'fight' ? fight_spec(picking, ACCOUNT) : work_spec(picking, ACCOUNT)
+    expect([kind, proposal.hero_ids, picking.quest.hero_ids]).toEqual([kind, [SECOND], []])
+    const once = fold(picking, { type: 'dapp/start', id: 'a', spec: proposal, title: 'Title' })
+    expect([kind, sent(once)]).toEqual([kind, [SECOND]])
+    // The proposal became the pick, so the tab proposes nobody while that hero is out.
+    expect([kind, once.quest.hero_ids]).toEqual([kind, [SECOND]])
+    const next = kind === 'fight' ? fight_spec(once, ACCOUNT) : work_spec(once, ACCOUNT)
+    expect([kind, next.hero_ids]).toEqual([kind, []])
+    // The second press, with the spec the page drew before or after the first: nothing is issued.
+    for (const spec of [proposal, next])
+      expect(fold(once, { type: 'dapp/start', id: 'b', spec, title: 'Title' })).toBe(once)
+    // The answer changes nothing of that: one run, and still nobody else proposed.
+    const out = fold(once, settle(SECOND, 'a', done, 300))
+    expect([kind, running(out).map(([hero]) => hero), sent(out)]).toEqual([kind, [SECOND], []])
+    expect(fold(out, { type: 'dapp/start', id: 'c', spec: proposal, title: 'Title' })).toBe(out)
+    expect((kind === 'fight' ? fight_spec(out, ACCOUNT) : work_spec(out, ACCOUNT)).hero_ids).toEqual([])
+  }
+})
+
+test('the Heroes tab shows the strongest hero until the player chooses one; the default is never stored', () => {
+  expect(connected.hero_id).toBeNull()
+  expect(selected_hero(connected, ACCOUNT)?.id).toBe(SECOND)
   const chosen = fold(connected, { type: 'dapp/select_hero', hero_id: HERO }, observed({}, 300))
   expect(chosen.hero_id).toBe(HERO)
-  expect(fold(chosen, { type: 'dapp/select_hero', hero_id: 'ghost' }).hero_id).toBe(HERO)
+  expect(selected_hero(chosen, ACCOUNT)?.id).toBe(HERO)
+  expect(fold(chosen, { type: 'dapp/select_hero', hero_id: 'ghost' })).toBe(chosen)
+  // A chosen hero that left the account falls back to the strongest one that is there.
+  expect(selected_hero(chosen, account_fixture({ characters: [team[1]!] }))?.id).toBe(SECOND)
+  expect(selected_hero(chosen, account_fixture({ characters: [] }))).toBeNull()
   const pending: DappInput = {
     type: 'dapp/observed',
     observation: parse_observation({ status: 'pending' })!,
@@ -81,6 +200,67 @@ test('Advanced starts on the strongest hero, keeps an explicit selection and sur
     now: 400,
   }
   expect(fold(chosen, pending)).toMatchObject({ hero_id: HERO, positions: [] })
+})
+
+test('the picks keep what the player chose; who can still go is derived when it is read', () => {
+  const picked = fold(
+    connected,
+    { type: 'dapp/quest_pick', pick: { hero_ids: [SECOND, HERO, SECOND, 'ghost'] } },
+    { type: 'dapp/quest_pick', pick: { kind: 'work', work: { mode: 'auto', job: 'FARMER' } } },
+    { type: 'dapp/quest_pick', pick: { fee_cap_mist: '900' } }
+  )
+  // A pick merges: the heroes stay while the kind and the work change. A hero is picked once.
+  expect(picked.quest).toEqual({
+    kind: 'work',
+    hero_ids: [SECOND, HERO, 'ghost'],
+    place: null,
+    difficulty: null,
+    work: { mode: 'auto', job: 'FARMER' },
+    fee_cap_mist: '900',
+  })
+  expect(quest_heroes(picked, ACCOUNT).map(({ id }) => id)).toEqual([SECOND, HERO])
+  expect(quest_spec(picked, ACCOUNT)).toEqual({
+    activity: 'gather',
+    hero_ids: [SECOND, HERO],
+    work: { mode: 'auto', job: 'FARMER' },
+    fee_cap_mist: '900',
+  })
+  const fighting = fold(picked, {
+    type: 'dapp/quest_pick',
+    pick: { kind: 'fight', place: { world: 'nauvis', city: 'thebes' }, difficulty: 'easy', fee_cap_mist: null },
+  })
+  expect(quest_spec(fighting, ACCOUNT)).toEqual({
+    activity: 'train',
+    hero_ids: [SECOND, HERO],
+    place: { world: 'nauvis', city: 'thebes' },
+    difficulty: 'easy',
+    fee_cap_mist: null,
+  })
+  // A malformed cap is never read as "no cap": the whole pick is ignored.
+  for (const fee_cap_mist of ['0', '-1', '1.5', 'much'])
+    expect(fold(picked, { type: 'dapp/quest_pick', pick: { fee_cap_mist, kind: 'fight' } })).toBe(picked)
+  expect(fold(connected, { type: 'dapp/raid_pick', pick: { runs: 0, dungeon: DUNGEON } })).toBe(connected)
+  // A hero that is sent out leaves the derived pick and returns when it is free again.
+  const out = fold(picked, start('gather', [SECOND]), settle(SECOND, 'gather', done, 300))
+  expect(out.quest.hero_ids).toEqual([SECOND, HERO, 'ghost'])
+  expect(quest_heroes(out, ACCOUNT).map(({ id }) => id)).toEqual([HERO])
+  expect(free_heroes(out, ACCOUNT).map(({ id }) => id)).toEqual([HERO])
+})
+
+test('a raid seats a full fight side at most, in the order picked, and keeps its dungeon and its caps', () => {
+  const crowd = Array.from({ length: 8 }, (_, index) => character_fixture({ id: hero_id(String(index + 1)) }))
+  const account = account_fixture({ characters: crowd })
+  const ids = crowd.map(({ id }) => id).toReversed()
+  const seated = fold_under(account)(
+    connected,
+    { type: 'dapp/raid_pick', pick: { hero_ids: [...ids, ids[0]!] } },
+    { type: 'dapp/raid_pick', pick: { dungeon: DUNGEON, runs: 3, fee_cap_mist: '5000' } }
+  )
+  expect(seated.raid).toEqual({ dungeon: DUNGEON, hero_ids: ids.slice(0, RAID_TEAM), runs: 3, fee_cap_mist: '5000' })
+  expect(raid_seats(seated, account).map(({ id }) => id)).toEqual(ids.slice(0, RAID_TEAM))
+  // Seats can be emptied again, and the caps removed.
+  const emptied = fold_under(account)(seated, { type: 'dapp/raid_pick', pick: { hero_ids: [], runs: null } })
+  expect(emptied.raid).toMatchObject({ hero_ids: [], runs: null, fee_cap_mist: '5000' })
 })
 
 test('two heroes run different activities at once; a hosted hero never gets a second start', () => {
@@ -99,19 +279,70 @@ test('two heroes run different activities at once; a hosted hero never gets a se
     [HERO, 'train'],
   ])
   expect(fold(both, start('gather', [HERO]))).toBe(both)
-  // The haul begins from the bag as it was when the heroes went out, and is told once for both.
-  expect(both.haul).toMatchObject({ found: {} })
+  // The first bag seen is the feed's baseline: nothing has arrived yet.
+  expect(both.bag_feed).toMatchObject({ seen: {}, gains: [] })
   const wheat = account_fixture({ characters: team, items: [item_fixture('wheat', 3)] })
   const runs = [hosted(HERO, 'fight_nearby'), hosted(SECOND, 'gather_craft')]
   const fed = fold_under(wheat)(both, observed({ observation_revision: 11, runs }, 700))
-  expect(fed.haul?.found).toEqual({ wheat: 3 })
+  expect(fed.bag_feed.gains).toEqual([{ item_type: 'wheat', amount: 3 }])
   // The socket pushes the bag by itself: any later input folds it, and the same bag is never counted twice.
-  expect(fold_under(wheat)(both, { type: 'dapp/view', view: 'play' }).haul?.found).toEqual({ wheat: 3 })
-  expect(fold_under(wheat)(fed, { type: 'dapp/view', view: 'play' })).toBe(fed)
-  expect(activity_offer(both, ACCOUNT, 'gather', [HERO, SECOND], 'Title')).toMatchObject({
-    out: [{ id: SECOND }],
-    free: [],
-  })
+  expect(fold_under(wheat)(both, { type: 'dapp/tab', tab: 'home' }).bag_feed.gains).toEqual([
+    { item_type: 'wheat', amount: 3 },
+  ])
+  expect(fold_under(wheat)(fed, { type: 'dapp/tab', tab: 'home' })).toBe(fed)
+  expect(offer(both, ACCOUNT, 'gather', [HERO, SECOND])).toMatchObject({ out: [{ id: SECOND }], free: [] })
+  // The tabs count the heroes they follow, and each hero says what holds it.
+  expect(tab_badges(both)).toEqual({ quest: 2, raid: 0 })
+  expect(hero_status(both, team[0]!)).toBe('activity')
+  expect(hero_status(connected, team[0]!)).toBe('free')
+  expect(hero_status(initial_dapp_state(), team[0]!)).toBeNull()
+  const seated = character_fixture({ custody: 'fight', active_fight: { id: 'f1', seat: 0 } })
+  expect(hero_status(connected, seated)).toBe('fight')
+  expect(hero_status(connected, character_fixture({ dungeon_run: { dungeon: DUNGEON, room: 1 } }))).toBe('dungeon')
+})
+
+test('a position this page opened keeps exactly what its Start asked, so the same request can be sent again', () => {
+  const spec: StartSpec = {
+    activity: 'train',
+    hero_ids: [HERO, SECOND],
+    place: { world: 'nauvis', city: 'thebes' },
+    difficulty: 'easy',
+    fee_cap_mist: '4000',
+  }
+  const asked: DappInput = { type: 'dapp/start', id: 'c1', spec, title: 'Title' }
+  const out = fold(connected, asked, settle(HERO, 'c1', done, 300), settle(SECOND, 'c1', done, 310))
+  expect(out.positions.map(({ sent, activity }) => [sent, activity])).toEqual([
+    [spec, 'train'],
+    [spec, 'train'],
+  ])
+  // Stopped, the finished position still holds the request: sending it again starts the free heroes.
+  const stopped = fold(out, { type: 'dapp/stop', id: 's', hero_ids: [HERO] }, settle(HERO, 's', done, 400))
+  const finished = stopped.positions.find(({ finished_ms }) => finished_ms !== null)!
+  expect(finished.sent).toEqual(spec)
+  const again = fold(stopped, { type: 'dapp/start', id: 'c2', spec: finished.sent!, title: 'Title' })
+  expect(Object.keys(again.commands)).toEqual([HERO])
+  // A start whose answer was lost keeps its request on the position its visible run opens.
+  const lost = fold(
+    connected,
+    asked,
+    settle(HERO, 'c1', { kind: 'uncertain' }, 300),
+    observed({ observation_revision: 11, runs: [hosted(HERO, 'fight_nearby')] }, 400)
+  )
+  expect(running_position(lost, HERO)?.sent).toEqual(spec)
+  // A run another client started carries no request of this page.
+  const foreign = fold(connected, observed({ observation_revision: 11, runs: [hosted(HERO, 'fight_nearby')] }, 400))
+  expect(running_position(foreign, HERO)?.sent).toBeNull()
+  expect(send_again(foreign, ACCOUNT, running_position(foreign, HERO)!, 'Title')).toBeNull()
+  // The same request is offered under the run's own title, and is ready only while its hero is free.
+  expect(send_again(stopped, ACCOUNT, finished, 'Fallback')).toEqual({ title: 'Fallback', ready: true })
+  expect(send_again(stopped, ACCOUNT, { ...finished, objective: 'Hunt' }, 'Fallback')?.title).toBe('Hunt')
+  expect(send_again(again, ACCOUNT, finished, 'Fallback')?.ready).toBe(false)
+  expect(send_again({ ...stopped, observation: null }, ACCOUNT, finished, 'Fallback')?.ready).toBe(false)
+  // A raid whose team is now short of keys is not offered here: the Raid tab confirms that case first.
+  const raid = { ...finished, sent: SPECS.raid([HERO, SECOND]) }
+  const keyed = (keys: number) => account_fixture({ characters: team, items: [item_fixture(KEY, keys)] })
+  expect(send_again(connected, keyed(1), raid, 'Raid')).toBeNull()
+  expect(send_again(connected, keyed(2), raid, 'Raid')).toEqual({ title: 'Raid', ready: true })
 })
 
 test('stopping one hero leaves the other running, and a stale observation never reopens it', () => {
@@ -174,61 +405,58 @@ test('a lost start reply stays uncertain and resolves only from a later observat
   })
 })
 
-test('Basic sends every free hero at once: a team hunt is one tree per hero with its allies and its build', () => {
+test('heroes sent together hunt as a team: one tree per hero with its allies, and no build is ever bound', () => {
   const sent = fold(connected, start('train', [HERO, SECOND]))
   const scope = { title: 'Title', area: { world: 'nauvis', city: 'thebes' } }
-  // Both fixture heroes are archers, so Basic binds the seed's archer build to each.
-  const archers = [HERO, SECOND].map((character) => ({ character, ...basic_build('yogan') }))
   const scripts = (state: DappState) =>
     Object.values(state.commands).map((command) => command.kind === 'start' && command.script)
-  expect(scripts(sent)).toEqual([...bind_team('team_hunt', archers, scope)])
-  // Advanced acts on one hero and binds no build: the growth leaves it carries list nothing.
-  const advanced = fold(connected, { type: 'dapp/mode', mode: 'advanced' }, start('train', [HERO]))
-  expect(scripts(advanced)).toEqual([...bind_team('fight_nearby', [{ character: HERO }], scope)])
+  expect(scripts(sent)).toEqual([...bind_team('team_hunt', [{ character: HERO }, { character: SECOND }], scope)])
+  expect(scripts(fold(connected, start('train', [HERO])))).toEqual([
+    ...bind_team('fight_nearby', [{ character: HERO }], scope),
+  ])
   // A hero that is already out is left alone; only the free one is sent, on its own.
   const one_out = fold(connected, start('gather', [SECOND]), settle(SECOND, 'gather', done, 500))
   const rest = fold(one_out, start('train', [HERO, SECOND]))
   expect(Object.keys(rest.commands)).toEqual([HERO])
   expect(JSON.stringify(rest.commands[HERO])).toContain('"max_size":1')
+  // The command keeps the whole request, so the position it opens can send it again.
+  expect(rest.commands[HERO]).toMatchObject({ kind: 'start', spec: SPECS.train([HERO, SECOND]) })
 })
 
 test('a raid short of keys sends only the heroes that hold one; without any key, or anyone free, nothing is sent', () => {
   const keys = (amount: number, characters = team) =>
     account_fixture({ characters, items: amount ? [item_fixture(KEY, amount)] : [] })
   const [one, none, two] = [keys(1), keys(0), keys(2)]
-  // One key for two heroes: the stronger one enters alone, and the plan says who stays and what is missing.
-  expect(activity_offer(connected, one, 'raid', [HERO, SECOND], 'Title').plan).toMatchObject({
+  // One key for two heroes: the first seat enters alone, and the plan says who stays and what is missing.
+  expect(offer(connected, one, 'raid', [SECOND, HERO]).plan).toMatchObject({
     starts: [{ hero_id: SECOND }],
     blocked: [{ hero_id: HERO, blocker: 'key_missing' }],
     missing_keys: { [KEY]: 1 },
   })
-  const alone = fold_under(one)(connected, start('raid', [HERO, SECOND]))
+  const alone = fold_under(one)(connected, start('raid', [SECOND, HERO]))
   expect(Object.keys(alone.commands)).toEqual([SECOND])
   expect(JSON.stringify(alone.commands[SECOND])).toContain('"dungeon":"gilded_lorito"')
   expect(JSON.stringify(alone.commands[SECOND])).toContain('"allies":[]')
   expect(fold_under(none)(connected, start('raid', [HERO, SECOND]))).toBe(connected)
-  expect(activity_offer(connected, none, 'raid', [HERO, SECOND], 'Title').plan).toMatchObject({
-    starts: [],
-    missing_keys: { [KEY]: 2 },
-  })
+  expect(offer(connected, none, 'raid', [HERO, SECOND]).plan).toMatchObject({ starts: [], missing_keys: { [KEY]: 2 } })
   // A bag the socket is still reading counts no key at all: the raid is not planned from it.
-  expect(activity_offer(connected, { ...two, phase: 'loading' }, 'raid', [HERO, SECOND], 'Title').plan.blocked).toEqual(
+  expect(offer(connected, { ...two, phase: 'loading' }, 'raid', [HERO, SECOND]).plan.blocked).toEqual(
     [HERO, SECOND].map((hero) => ({ hero_id: hero, blocker: 'hero_unknown' }))
   )
-  const raiding = fold_under(two)(connected, start('raid', [HERO, SECOND]))
+  const raiding = fold_under(two)(connected, start('raid', [SECOND, HERO]))
   expect(Object.keys(raiding.commands)).toEqual([SECOND, HERO])
   expect(JSON.stringify(raiding.commands[SECOND])).toContain(`"type":"dungeon","character_id":"${SECOND}"`)
   const fighting = character_fixture({ id: SECOND, custody: 'fight', active_fight: { id: 'f1', seat: 0 } })
   const busy = keys(2, [team[0]!, fighting])
-  expect(activity_offer(connected, busy, 'raid', [HERO, SECOND], 'Title').plan.blocked).toEqual([
+  expect(offer(connected, busy, 'raid', [HERO, SECOND]).plan.blocked).toEqual([
     { hero_id: SECOND, blocker: 'hero_busy' },
   ])
   const all_out = fold_under(two)(raiding, settle(HERO, 'raid', done, 300), settle(SECOND, 'raid', done, 310))
-  expect(activity_offer(all_out, two, 'train', [HERO, SECOND], 'Title')).toMatchObject({
-    free: [],
-    plan: { starts: [], blocked: [] },
-  })
+  expect(tab_badges(all_out)).toEqual({ quest: 0, raid: 2 })
+  expect(offer(all_out, two, 'train', [HERO, SECOND])).toMatchObject({ free: [], plan: { starts: [], blocked: [] } })
   expect(fold_under(two)(all_out, start('train', [HERO, SECOND]))).toBe(all_out)
+  // Nothing is planned before the bot answered.
+  expect(offer(initial_dapp_state(), two, 'raid', [HERO, SECOND]).plan.starts).toEqual([])
 })
 
 test('the bot owns the run limit: its refusal is kept per hero and the dapp adds no cap of its own', () => {
@@ -260,63 +488,40 @@ test('a reload names every running hero from the first observation: the bot says
     [HERO, 'raid'],
     [SECOND, null],
   ])
+  expect(tab_badges(reloaded)).toEqual({ quest: 1, raid: 1 })
   expect(running_position(reloaded, SECOND)?.issue).toBe('no_matching_branch')
-  expect(activity_offer(reloaded, ACCOUNT, 'train', [HERO, SECOND], 'Title').free).toEqual([])
-  expect(activity_offer(reloaded, ACCOUNT, 'raid', [HERO, SECOND], 'Title').out.map(({ id }) => id)).toEqual([HERO])
-  // A run that ends by itself finishes its position; dismissing the last one ends the haul too.
+  expect(offer(reloaded, ACCOUNT, 'train', [HERO, SECOND]).free).toEqual([])
+  expect(offer(reloaded, ACCOUNT, 'raid', [HERO, SECOND]).out.map(({ id }) => id)).toEqual([HERO])
+  // A run that ends by itself finishes its position.
   const ended = fold(reloaded, observed({ observation_revision: 11, runs: [] }, 200))
   expect(running(ended)).toEqual([])
-  expect(ended.haul).not.toBeNull()
   const cleared = ended.positions.reduce(
     (state, { id }) => reduce_dapp(state, { type: 'dapp/dismiss', position_id: id }, ACCOUNT),
     ended
   )
-  expect(cleared).toMatchObject({ positions: [], haul: null })
+  expect(cleared).toMatchObject({ positions: [] })
 })
 
-test('connect only leaves a signed-in disconnected link; sign-out keeps only the device mode', () => {
+test('connect only leaves a signed-in disconnected link; sign-out keeps nothing, not even the picks', () => {
   const disconnected = fold(initial_dapp_state(), { type: 'dapp/link', link: { phase: 'disconnected', error: null } })
   expect(fold(disconnected, { type: 'dapp/connect' }).link.phase).toBe('authorizing')
   expect(fold(initial_dapp_state(), { type: 'dapp/connect' }).link.phase).toBe('idle')
-  const advanced = fold(
+  const chosen = fold(
     connected,
-    { type: 'dapp/mode', mode: 'advanced' },
-    { type: 'dapp/link', link: { phase: 'idle' } }
+    { type: 'dapp/tab', tab: 'quest' },
+    { type: 'dapp/quest_pick', pick: { hero_ids: [HERO], difficulty: 'hard' } },
+    { type: 'dapp/raid_pick', pick: { hero_ids: [SECOND], dungeon: DUNGEON } },
+    { type: 'dapp/select_hero', hero_id: HERO }
   )
-  expect(advanced).toEqual({ ...initial_dapp_state(), mode: 'advanced' })
+  expect(fold(chosen, { type: 'dapp/link', link: { phase: 'idle' } })).toEqual(initial_dapp_state())
   // Observations without a grant are ignored, and Disconnect waits for unanswered commands.
   expect(fold(disconnected, observed({}, 1))).toBe(disconnected)
   const asking = fold(connected, start('train', [HERO]))
   expect(fold(asking, { type: 'dapp/disconnect' })).toBe(asking)
-  expect(fold(connected, { type: 'dapp/disconnect' }).link).toEqual({ phase: 'disconnected', error: null })
-})
-
-test('a stat or spell change is one direct request at a time and waits for no hosted hero', () => {
-  const action: DappInput = {
-    type: 'dapp/hero_action',
-    id: 'h1',
-    hero_id: HERO,
-    action: 'raise_spell',
-    payload: { character_id: HERO, spell: 's' },
-  }
-  const changing = fold(connected, action)
-  expect(changing.commands[HERO]).toMatchObject({ kind: 'hero_action', action: 'raise_spell', status: 'pending' })
-  // The bot signs it in turn with its heroes, so another hero starts without waiting for the answer.
-  expect(Object.keys(fold(changing, start('train', [SECOND])).commands)).toEqual([HERO, SECOND])
-  // The bot holds one direct request at a time: a second change waits for the first.
-  expect(fold(changing, { ...action, id: 'h2', hero_id: SECOND })).toBe(changing)
-  expect(fold(changing, settle(HERO, 'h1', done, 300)).commands).toEqual({ [HERO]: changing.commands[HERO] })
-  const answered = fold(changing, { type: 'dapp/command_settled', hero_id: HERO, id: 'h1', outcome: done, now: 300 })
-  expect(answered.commands).toEqual({})
-  // A hero out on an activity no longer locks the others.
-  const elsewhere = fold(connected, observed({ observation_revision: 11, runs: [run_fixture(SECOND)] }, 200))
-  expect(fold(elsewhere, action).commands[HERO]).toMatchObject({ kind: 'hero_action', status: 'pending' })
-  // The answer only says the bot took the request: while the bot still holds it, the next one waits.
-  const direct = { id: 'c1', kind: 'raise_spell', status: 'executing', payload: {} }
-  const held = fold(answered, observed({ observation_revision: 12, direct }, 400))
-  expect(fold(held, { ...action, id: 'h2', hero_id: SECOND })).toBe(held)
-  const over = fold(held, observed({ observation_revision: 13, direct: { ...direct, status: 'completed' } }, 500))
-  expect(fold(over, { ...action, id: 'h2', hero_id: SECOND }).commands[SECOND]).toMatchObject({ status: 'pending' })
+  expect(fold(chosen, { type: 'dapp/disconnect' })).toEqual({
+    ...initial_dapp_state(),
+    link: { phase: 'disconnected', error: null },
+  })
 })
 
 test('a stopped run the bot still lists is not running: the hero is free and nothing reopens', () => {
@@ -333,9 +538,9 @@ test('a stopped run the bot still lists is not running: the hero is free and not
   expect(running(after)).toEqual([])
   expect(after.positions).toHaveLength(1)
   expect(hero_hosted(after, SECOND)).toBe(false)
-  const offer = activity_offer(after, ACCOUNT, 'train', [SECOND], 'Title')
-  expect(offer.free.map(({ id }) => id)).toEqual([SECOND])
-  expect(offer.plan.starts).toHaveLength(1)
+  const offered = offer(after, ACCOUNT, 'train', [SECOND])
+  expect(offered.free.map(({ id }) => id)).toEqual([SECOND])
+  expect(offered.plan.starts).toHaveLength(1)
   // A reload sees the same: a stopped, failed or completed run opens no position.
   for (const status of ['stopped', 'failed', 'completed', 'paused']) {
     const reloaded = fold(connected, observed({ observation_revision: 11, runs: [run_fixture(SECOND, status)] }, 200))
@@ -368,4 +573,9 @@ test('a pushed status follows runs once a read proved the view, and proves nothi
   const proven = fold(stale, observed({ sampled_at: 8 }, 700))
   expect(running_position(proven, SECOND)).toBeNull()
   expect(running_position(fold(proven, pushed({ sampled_at: 9, runs: gathering })), HERO)?.activity).toBe('gather')
+  // The fees the bot paid ride the same pushed status: for the wallet, and on each run's position.
+  const paying = [{ ...gathering[0]!, fees_mist: '1500' }]
+  const paid = fold(proven, pushed({ sampled_at: 10, runs: paying, fees_mist: '90000' }))
+  expect(paid.observation?.fees_mist).toBe(90_000n)
+  expect(running_position(paid, HERO)?.fees_mist).toBe(1_500n)
 })

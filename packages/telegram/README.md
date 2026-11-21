@@ -7,19 +7,43 @@ key and no game truth. No live Telegram, Google or chain execution has been vali
 
 ## Player flow
 
-Sign in with Google → join the waitlist → operator admits the verified game-owner address →
-explicitly enable the agent → select an existing agent-multisig character → Play → review → Approve.
+Tap Log in with Google on the welcome card → tap START when the browser returns to Telegram → join the
+waitlist → operator admits the verified game-owner address → select an existing agent-multisig character →
+Play → review → Approve.
 Each character has its own strategy, status and Stop; several characters run different strategies at once.
 
-Initial linking requests only `bot:observe`. Private chat, browser/PKCE and sender-side confirmation bind
-the verified Google zkLogin owner; a typed wallet address never establishes identity. The confirmation
-code is shown only on the browser page of the person who consented, never sent to the chat that began the
-link: the code is what proves both are the same person. `/join` records
-that owner address only, once, with the time it joined. Joining the waitlist does not grant admission:
-only the operator's allowlist does. After admission, Enable agent requests fresh gameplay/pause consent
-for the same owner; direct gameplay/control calls require both admission and the upgraded grant.
-Telegram sender IDs identify chats and links, never admission. The home page's Telegram card joins the
-same waitlist through the hosted bot.
+Logging in is one link and one confirming tap, with nothing to type (owner ruling 2026-11-21). The
+welcome card's only button opens the login page. The browser asks for a Google sign-in only when it has
+no game session, shows no consent screen, and returns to Telegram on the bot's deep link, where Telegram
+shows its START button. Tapping it links the chat and shows its current card. There is no second link, no
+code to read or type and no command to enable anything. The web page approves the request by itself only
+when the hosted bot reports that its registered redirect is this service's callback
+(`VITE_TELEGRAM_CALLBACK_URL` on the frontend build, equal to `callback_url` below); when that setting
+is absent or different, the page shows the assistants' consent dialog instead and approves nothing alone.
+
+The browser's return proves an account, never a chat: any web page can send a signed-in player through a
+login page that another chat asked for. So the return links nothing. The service holds the verified
+grant with the attempt and sends the browser to `https://t.me/<bot>?start=<token>` with a fresh one-use
+token: 32 random bytes, 43 characters of the alphabet Telegram allows in a start parameter, stored only
+as a SHA-256 hash and never written to a chat or a log. Telegram sends `/start <token>` from the account
+that tapped START, and the service compares it only with the attempts of that same chat. The tap is
+therefore the proof that the person who signed in controls the chat that asked. A player driven through
+someone else's login page lands in their own chat, where the token matches nothing: no chat is linked,
+that chat gets its ordinary card, and the held grant is revoked when its attempt ends. Until the tap, the
+asking chat gets nothing of the account: no card, no hero, no identity. A token is used once, belongs to
+one attempt and ends with it at `link_ttl_ms`. A player who returns to the chat without tapping START
+gets the welcome card with a new login page; the unconfirmed login is ended and its grant revoked.
+
+The link is bound to the chat that asked for it: the attempt carries the sender of the chat's own private
+update, and nothing the browser sends names a chat. The Google account that signs in owns the link: the
+owner is read back from the hosted bot with the fresh tokens, and a typed wallet address never
+establishes identity. Every login requests observe, play and pause scope.
+Whether a chat may play is the allowlist's answer alone, read on every update: an owner who is not
+admitted sees the waitlist card and reaches nothing of the hosted bot but its own identity; once
+admitted, its next update plays with the login it already has. `/join` records that owner address only,
+once, with the time it joined. Joining the waitlist does not grant admission: only the operator's
+allowlist does. Telegram sender IDs identify chats and links, never admission. The home page's Telegram
+card joins the same waitlist through the hosted bot.
 
 ## Admission
 
@@ -93,8 +117,10 @@ Every variable is required unless stated. A refused start names the variable to 
 - `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_STORAGE_KEY` (64 lowercase hexadecimal characters, never stored in Redis).
 - `TELEGRAM_CONNECTED_CONFIG`: JSON with the existing HTTPS `issuer`, the HTTPS `callback_url` ending in
   `/oauth/callback`, and `limits` with exactly three positive safe integers: `request_ms` (the deadline of
-  one request to the hosted bot or to Telegram), `link_ttl_ms` (how long a login attempt lives) and
+  one request to the hosted bot or to Telegram), `link_ttl_ms` (how long a login attempt lives, which is
+  how long the welcome card's button works; keep it at or below the hosted bot's request lifetime) and
   `proposal_ttl_ms` (how long a strategy review stays approvable). No production defaults are supplied.
+  The frontend build's `VITE_TELEGRAM_CALLBACK_URL` must equal `callback_url`.
 
 POST private sender-owned Telegram updates to `/telegram` with the configured webhook secret.
 Public TLS and webhook registration are separate operator actions. An authentic update the bot does
@@ -112,9 +138,17 @@ supervisor starts a fresh one. There is no HTTP health route.
 
 ## Authority and recovery
 
-`/link` reuses Google consent, PKCE, exact issuer/resource binding, browser cookie and sender-side
-confirmation: the browser returns to the chat, whose Start button carries the one-use code. The authenticated identity binds owner, descriptor, generation, grant and multisig.
-Existing encrypted OAuth credentials and scoped revoke/cleanup behavior remain in place.
+The login reuses the hosted bot's authorization, PKCE, exact issuer/resource binding and the browser
+cookie: only the browser that opened a link can finish it, a link opens one browser, and its return is
+exchanged once. That return only holds the grant; the chat that asked establishes the link by sending
+back the one-use token (see Player flow). The authenticated identity binds owner, descriptor, generation,
+grant and multisig. An unlinked chat always has one login button: an unopened link is offered again, and
+one that was opened and never finished, a held grant its chat never confirmed included, is ended and
+replaced by the chat's next update. A login whose owner is already linked to another chat is refused in
+the browser, or at the START tap when two chats held the same account, and its grant revoked at once. A login that ended (expired, revoked, or stored
+with view-only scope by the earlier two-step flow) is answered with Log in again, which replaces it and
+shows the welcome card. Existing encrypted OAuth credentials and scoped revoke/cleanup behavior remain
+in place.
 
 Telegram keeps one record per linked sender in process memory: its button revision, the login it belongs
 to, the selected character and the one open strategy review. One reducer writes it from an update and one
@@ -142,10 +176,9 @@ text. Each entity is its own AES-256-GCM record, authenticated with its record i
 established link, an owner's sender index, each link attempt and each sender's attempt list. Every
 change compares the stored ciphertext and commits all touched records atomically; a concurrent change
 fails closed and is never replayed. Every link attempt ends `link_ttl_ms` after it was created, whatever
-its phase. Redis expires an unopened one; one that may hold tokens is retired, revoking its grant, on the
-sender's next interaction or at startup. A consumed or retired attempt is deleted; an established link
-never expires. A login for another Google owner than expected is revoked once, by the shared client, and
-its attempt ends. The encryption key stays outside Redis. The sender record lives only in process memory
+its phase. Redis expires an unopened one; one that may hold tokens (a grant waiting for its chat's START
+included) is retired, revoking its grant, on the sender's next interaction or at startup. A consumed or retired attempt is deleted; an established link
+never expires. The encryption key stays outside Redis. The sender record lives only in process memory
 and exists only for linked senders.
 
 There is no update deduplication. Telegram redelivers an update only when the webhook did not answer
@@ -153,8 +186,7 @@ There is no update deduplication. Telegram redelivers an update only when the we
 redelivery acts at most once and is answered with the current state. `bun run waitlist remove <address>`
 ends an owner's access and its login together. To revoke one login without changing admission, use
 `bun run cleanup --owner <address>`, or `--sender <id>` for a known chat; the listener keeps running. An
-unfinished Enable agent login of a removed owner has no owner index; it is refused and retired at its
-next use, or ends by itself at its `link_ttl_ms` deadline. Cleanup needs `TELEGRAM_REDIS_URL`, the storage
+unfinished login has no owner index; it ends by itself at its `link_ttl_ms` deadline. Cleanup needs `TELEGRAM_REDIS_URL`, the storage
 key and issuer/callback plus request/link deadlines; it does not require Telegram credentials or change
 admission. Failed cleanup names its reason and preserves credentials. Revocation does not undo an
 admitted submission.
@@ -193,7 +225,8 @@ disposable loopback Redis to also run the Redis suite.
 The hosted bot is a stand-in that enforces its per-character contract: argument names, one run per
 character, its refusal codes, and the bot's real script parser. Fixtures cover two characters on different
 strategies, stopping one, replacement, a lost reply, the run limit, a busy or paused agent, recovery mode,
-live admission and removal, the waitlist cards, the operator command, door limits, stale buttons, duplicate
-delivery, OAuth races and cleanup. A stand-in is not proof of live deployment, successful harvesting or
+the login through the service's own door with its START confirmation, a drive-by login played from both
+chats, live admission and removal, the waitlist cards, the
+operator command, door limits, stale buttons, duplicate delivery, OAuth races and cleanup. A stand-in is not proof of live deployment, successful harvesting or
 profitable play.
 All copy comes from the supported YAML locales. No replacement game artwork is introduced.

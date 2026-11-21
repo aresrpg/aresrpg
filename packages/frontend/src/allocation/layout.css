@@ -27,6 +27,12 @@
   border-radius: 10px;
   background: var(--blast-soft);
 }
+a.blast {
+  text-decoration: none;
+}
+a.blast:hover {
+  border-color: var(--blast-deep);
+}
 .blast h3 {
   margin: 0;
   color: var(--blast-deep);

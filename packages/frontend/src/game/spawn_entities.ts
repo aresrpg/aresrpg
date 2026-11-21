@@ -27,7 +27,7 @@ import {
 } from './core/spawn_wander.ts'
 import { rendered_groups, type WorldMobGroup } from './core/spawn_residency.ts'
 import { publish_spawn_tag } from './core/nametag_feed.ts'
-import { read_pose } from './core/pose_feed.ts'
+import { read_displayed_pose } from './core/pose_feed.ts'
 
 /** Packs advertise themselves before their bodies fill the screen; E still selects the nearest card. */
 export const MOB_TAG_RANGE_BLOCKS = 50
@@ -100,7 +100,7 @@ export const create_spawn_renderer = ({
   /** attach/detach a pack's card — range-gated, and only while the pack is actually placed. */
   const sync_tag = (group_id: string): void => {
     const slot = groups.get(group_id)
-    const own = read_pose()
+    const viewer = read_displayed_pose()
     const anchor = slot
       ? group_label_anchor(
           slot.members.map((member) => ({
@@ -111,7 +111,8 @@ export const create_spawn_renderer = ({
           }))
         )
       : null
-    const within = !!slot && !!own && !!anchor && Math.hypot(anchor.x - own.x, anchor.z - own.z) <= MOB_TAG_RANGE_BLOCKS
+    const within =
+      !!slot && !!viewer && !!anchor && Math.hypot(anchor.x - viewer.x, anchor.z - viewer.z) <= MOB_TAG_RANGE_BLOCKS
     const attached = tagged.get(group_id) ?? null
     if (within && anchor) {
       const div = attached ?? (typeof document === 'undefined' ? null : document.createElement('div'))
@@ -138,10 +139,12 @@ export const create_spawn_renderer = ({
 
   const build = (): void => {
     if (disposed) return
-    const own = read_pose()
+    const viewer = read_displayed_pose()
     const entities = [...groups.values()].flatMap(({ members }) =>
       members.flatMap((member): EntityRender[] => {
-        const far = own ? Math.hypot(member.wander.x - own.x, member.wander.z - own.z) > ANIMATION_RANGE_BLOCKS : false
+        const far = viewer
+          ? Math.hypot(member.wander.x - viewer.x, member.wander.z - viewer.z) > ANIMATION_RANGE_BLOCKS
+          : false
         const moving = member.wander.moving && !far
         const entity = mob_entity(
           {
@@ -212,8 +215,9 @@ export const create_spawn_renderer = ({
 
   const refresh = (): void => {
     if (disposed) return
-    const own = read_pose()
-    const wanted = own ? rendered_groups(tracked_groups, own) : []
+    // Bodies stand around the displayed hero: the controlled one, or the one being watched.
+    const viewer = read_displayed_pose()
+    const wanted = viewer ? rendered_groups(tracked_groups, viewer) : []
     const keep = new Set(wanted.map(({ id }) => id))
     let changed = false
     for (const group_id of [...groups.keys()])

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
+import { PLAY_SCOPE } from '@aresrpg/protocol/hosted-bot-client'
 import { create_request_limiter } from '@aresrpg/protocol/request-limiter'
+import type { TelegramAccess } from '@aresrpg/protocol/telegram-access'
 
+import { memory_access } from '../../protocol/test/helpers/memory_access.ts'
 import { admission_command } from '../src/admission.ts'
 import { create_connected } from '../src/connected.ts'
 import { load_copies } from '../src/copy.ts'
@@ -23,8 +26,8 @@ const copy = await load_copies()
 const en = copy('en')
 type Limiters = Pick<Parameters<typeof create_connected>[0], 'visitor_limiter' | 'sender_limiter'>
 /** A linked-or-not sender whose owner is not admitted, unless the test admits it. */
-const setup = async (limiters: Limiters = {}) => {
-  const f = fixture()
+const setup = async (limiters: Limiters = {}, access?: TelegramAccess) => {
+  const f = fixture({ access })
   await f.access.remove(identity.owner)
   const cards: string[] = []
   const runtime = create_connected({
@@ -56,12 +59,15 @@ const cleanup_env = {
 }
 test('Google login precedes the waitlist; no text address or Telegram sender ID can grant admission', async () => {
   const f = await setup()
+  const registrations = () => f.sent.filter(({ url }) => url.endsWith('/oauth/register')).length
   await f.runtime.fetch(request(1, '/join'))
   expect(await f.access.joined(identity.owner)).toBe(false)
   expect(f.cards.at(-1)).toContain('Google')
-  expect(f.sent).toHaveLength(0)
-  await f.identify()
-  expect((await f.links.current(42))?.scope).toBe('bot:observe')
+  // The welcome carries the login page: the bot registered that one request and was asked nothing else.
+  expect(f.sent.map(({ url }) => url)).toEqual(['https://bot.example/oauth/register'])
+  await f.link()
+  // One login, and it holds play scope from the start: admission alone decides whether the chat may play.
+  expect((await f.links.current(42))?.scope).toBe(PLAY_SCOPE)
   expect(await f.access.joined(identity.owner)).toBe(false)
   await f.runtime.fetch(request(2, `/join ${OTHER}`))
   expect(await f.access.waiting()).toEqual([])
@@ -83,33 +89,68 @@ test('Google login precedes the waitlist; no text address or Telegram sender ID 
     '/stop',
     '/status',
     '/inventory',
+    '/enable',
     'approve:1',
     'pause:1',
     'stop:1:all',
     'strategy:1:fight_nearby',
-  ].entries())
+  ].entries()) {
     expect((await f.runtime.fetch(request(10 + i, text))).status).toBe(200)
-  // A waiting owner reaches nothing of the hosted bot but its own identity.
+    expect(f.cards.at(-1)!.replaceAll('\\', '')).toContain(en.on_waitlist)
+  }
+  // A waiting owner reaches nothing of the hosted bot but its own identity, whatever scope its login holds.
   const reached = () => f.bot.calls.filter(({ name }) => name !== 'bot_identity')
   expect(reached()).toEqual([])
   await f.access.admit(identity.owner)
-  // Admitted, but the login is read-only until the owner approves agent permissions.
-  for (const [i, text] of ['/play', '/menu', '/pause', 'approve:1'].entries()) {
-    await f.runtime.fetch(request(30 + i, text))
-    expect(f.cards.at(-1)).toContain('permissions')
-  }
-  expect(reached()).toEqual([])
-  const { browser, query } = await f.start(42, true)
-  expect(new URL(browser.location).searchParams.get('scope')).toBe('bot:observe bot:play bot:pause')
-  const result = await f.links.callback(query, browser.cookie)
-  await f.links.confirm(42, result.code)
+  // Admitted: the very next update plays, with the login the chat already has. No second browser trip.
   await f.runtime.fetch(request(40, '/menu'))
-  expect((await f.links.current(42))?.scope).toBe('bot:observe bot:play bot:pause')
   expect(reached().map(({ name }) => name)).toEqual(['bot_observe'])
+  expect(registrations()).toBe(1)
+  expect((await f.links.current(42))?.refresh_token).toBe('refresh')
+})
+
+// Admission is one live read of the owner's address on every update: the only gate, in both directions.
+test('admission takes effect at the next update: admitted plays at once, removed stops at once', async () => {
+  const f = await setup()
+  await f.link()
+  const observed = () => f.bot.sent('bot_observe').length
+  const hosted = () => f.sent.filter(({ url }) => !url.endsWith('/mcp')).length
+  const logins = hosted()
+  const last = async (id: number, text: string) => {
+    await f.runtime.fetch(request(id, text))
+    return f.cards.at(-1)!.replaceAll('\\', '')
+  }
+  expect(await last(1, '/menu')).toContain(en.waiting)
+  expect(observed()).toBe(0)
+  await f.access.admit(identity.owner)
+  expect(await last(2, '/menu')).toContain(en.menu)
+  expect(observed()).toBe(1)
+  await f.access.remove(identity.owner)
+  // The login is untouched by the allowlist itself; the operator command revokes it separately.
+  expect(await last(3, '/menu')).toContain(en.waiting)
+  expect(await last(4, 'approve:1')).toContain(en.waiting)
+  expect(observed()).toBe(1)
+  await f.access.admit(identity.owner)
+  expect(await last(5, '/menu')).toContain(en.menu)
+  expect(observed()).toBe(2)
+  // No login, refresh or revoke happened in between: the same grant served every state.
+  expect(hosted()).toBe(logins)
+  expect((await f.links.current(42))?.refresh_token).toBe('refresh')
+})
+
+test('a sender id is never an admission: an allowlist that names the chat admits nobody', async () => {
+  // The operator command refuses anything but an owner address; this allowlist holds the chat id all the same.
+  const f = await setup({}, memory_access(undefined, ['42']))
+  await f.link()
+  expect(await f.access.admitted('42')).toBe(true)
+  await f.runtime.fetch(request(1, '/menu'))
+  expect(f.cards.at(-1)!.replaceAll('\\', '')).toContain(en.waiting)
+  expect(f.bot.calls.filter(({ name }) => name !== 'bot_identity')).toEqual([])
+  await expect(f.access.admit('42')).rejects.toThrow('invalid_owner')
 })
 
 // The cards a sender sees on the way in, in order. The running service reads the allowlist on each update.
-test('one card per stage: log in, join the waitlist, on the waitlist, admitted; removal refuses the next update', async () => {
+test('one card per stage: log in, join the waitlist, on the waitlist, the menu; removal refuses the next update', async () => {
   const f = await setup()
   const last = async (id: number, text: string) => {
     await f.runtime.fetch(request(id, text))
@@ -117,12 +158,12 @@ test('one card per stage: log in, join the waitlist, on the waitlist, admitted; 
   }
   const said = (card: string, text: string) => expect(card.replaceAll('\\', '')).toContain(text)
   said(await last(1, '/start'), en.welcome)
-  await f.identify()
+  await f.link()
   said(await last(2, '/start'), en.waiting)
   said(await last(3, '/join'), en.on_waitlist)
   said(await last(4, '/start'), en.on_waitlist)
   await f.access.admit(identity.owner)
-  said(await last(5, '/start'), en.play_consent)
+  said(await last(5, '/start'), en.menu)
   await f.access.remove(identity.owner)
   said(await last(6, '/start'), en.on_waitlist)
   expect([en.waiting, en.on_waitlist, en.join_waitlist].every((text) => /waitlist/i.test(text))).toBe(true)
@@ -246,9 +287,9 @@ test('configuration reads no allowlist: admission lives in Redis and a refused s
   )
 })
 
-test('a revoked read-only login cannot join and a changed Google identity cannot reuse a waiting link', async () => {
+test('a revoked login cannot join and a changed Google identity cannot reuse a waiting link', async () => {
   const f = await setup()
-  await f.identify()
+  await f.link()
   f.overrides.handler = async () =>
     Response.json({ result: { structuredContent: { ...identity, owner: `0x${'3'.repeat(64)}` } } })
   // A refusal the player was told about is answered, not redelivered.

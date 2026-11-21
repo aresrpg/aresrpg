@@ -175,6 +175,47 @@ type PairingProof = Readonly<{
   status: 'pending' | 'ready'
   proof?: Awaited<ReturnType<typeof prepare_agent_pairing>>['response']
 }>
+/**
+ * How long the door holds a custody proof request while this process's actor signs it. The store wakes
+ * that actor when the request commits and signing is local, so a hold normally ends within the same
+ * request. The value stays under the listener's 10 s idle timeout (Bun's default) and the browser's
+ * 15 s request timeout, so a held request always answers before either side gives up on it.
+ */
+export const PROOF_HOLD_MS = 5_000
+/** A deadline as a value: `expired` runs once after `ms`, never synchronously, unless the cancel ran first. */
+export type Deadline = (expired: () => void, ms: number) => () => void
+const process_deadline: Deadline = (expired, ms) => {
+  const timer = setTimeout(expired, ms)
+  return () => clearTimeout(timer)
+}
+/**
+ * Requests this process holds, by proof key. This is scheduling only, like the store's pending
+ * listeners: a release says "read again", and the answer always comes from the store.
+ */
+const held_requests = new Map<string, Set<() => void>>()
+const hold_request = (key: string, deadline: Deadline) => {
+  const { promise: over, resolve } = Promise.withResolvers<void>()
+  const holders = held_requests.get(key) ?? new Set<() => void>()
+  held_requests.set(key, holders)
+  const end = () => {
+    if (!holders.delete(end)) return
+    cancel()
+    if (!holders.size && held_requests.get(key) === holders) held_requests.delete(key)
+    resolve()
+  }
+  holders.add(end)
+  const cancel = deadline(end, PROOF_HOLD_MS)
+  return { over, end }
+}
+const release_requests = (key: string): void => {
+  for (const end of [...(held_requests.get(key) ?? [])]) end()
+}
+
+/**
+ * Queues the proof of one fresh browser nonce and answers it in the same request when this process
+ * signs it: the request is held until `run_pairing_proof` stored the proof, or until the hold's
+ * deadline, and then says what the store holds. A request that is refused is never held.
+ */
 export const request_pairing_proof = async (
   store: ControlStore,
   input: Readonly<{
@@ -182,47 +223,57 @@ export const request_pairing_proof = async (
     bot_id: string
     request: AgentPairingRequest
     owner: string
-  }>
+  }>,
+  deadline: Deadline = process_deadline
 ) => {
   const request = parse_agent_pairing_request(input.request)
   if (request.owner !== input.owner) throw new Error('PAIRING_OWNER_MISMATCH')
   verify_owner(input.owner, request.zklogin_public_identifier)
   const key = `proof:${input.authorization_id}:${request.nonce}`
-  return store.transaction([key, `bot:${input.bot_id}`], async (tx) => {
-    const bot = await tx.get<Bot>(`bot:${input.bot_id}`)
-    if (!bot) throw new Error('PAIRING_BOT_MISSING')
-    if (
-      ![
-        bot.status === 'ready',
-        bot.owner === input.owner,
-        bot.zklogin_public_identifier === request.zklogin_public_identifier,
-      ].every(Boolean)
-    )
-      throw new Error('PAIRING_BOT_MISMATCH')
-    const previous = await tx.get<PairingProof>(key)
-    if (
-      previous &&
-      (previous.bot_id !== input.bot_id ||
-        previous.descriptor_revision !== descriptor_revision(bot) ||
-        !Object.entries(request).every(([name, value]) => Reflect.get(previous.request, name) === value))
-    )
-      throw new Error('PAIRING_REQUEST_CONFLICT')
-    const record: PairingProof = previous ?? {
-      descriptor_revision: descriptor_revision(bot),
-      owner: input.owner,
-      bot_id: input.bot_id,
-      request,
-      status: 'pending',
-    }
-    await tx.put(key, record)
-    return record
-  })
+  // Held before the commit that wakes the actor, so its answer cannot arrive unseen.
+  const held = hold_request(key, deadline)
+  try {
+    const queued = await store.transaction([key, `bot:${input.bot_id}`], async (tx) => {
+      const bot = await tx.get<Bot>(`bot:${input.bot_id}`)
+      if (!bot) throw new Error('PAIRING_BOT_MISSING')
+      if (
+        ![
+          bot.status === 'ready',
+          bot.owner === input.owner,
+          bot.zklogin_public_identifier === request.zklogin_public_identifier,
+        ].every(Boolean)
+      )
+        throw new Error('PAIRING_BOT_MISMATCH')
+      const previous = await tx.get<PairingProof>(key)
+      if (
+        previous &&
+        (previous.bot_id !== input.bot_id ||
+          previous.descriptor_revision !== descriptor_revision(bot) ||
+          !Object.entries(request).every(([name, value]) => Reflect.get(previous.request, name) === value))
+      )
+        throw new Error('PAIRING_REQUEST_CONFLICT')
+      const record: PairingProof = previous ?? {
+        descriptor_revision: descriptor_revision(bot),
+        owner: input.owner,
+        bot_id: input.bot_id,
+        request,
+        status: 'pending',
+      }
+      await tx.put(key, record)
+      return record
+    })
+    if (queued.status === 'ready') return queued
+    await held.over
+    return (await store.read<PairingProof>(key)) ?? queued
+  } finally {
+    held.end()
+  }
 }
 export const run_pairing_proof = async (store: ControlStore, provider: ManagedProvider, key: string) => {
   const record = await store.read<PairingProof>(key)
   if (!record) throw new Error('PAIRING_REQUEST_MISSING')
   // The lock prevents concurrent revocation/key replacement across this bounded signing effect.
-  return store.transaction([key, `bot:${record.bot_id}`, `provision:${record.bot_id}`], async (tx) => {
+  const signed = await store.transaction([key, `bot:${record.bot_id}`, `provision:${record.bot_id}`], async (tx) => {
     const current = await tx.get<PairingProof>(key)
     const bot = await tx.get<Bot>(`bot:${record.bot_id}`)
     const provision = await tx.get<ProvisionRequest>(`provision:${record.bot_id}`)
@@ -244,4 +295,6 @@ export const run_pairing_proof = async (store: ControlStore, provider: ManagedPr
     await tx.put(key, result)
     return result
   })
+  release_requests(key)
+  return signed
 }

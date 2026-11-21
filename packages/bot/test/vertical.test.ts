@@ -142,10 +142,15 @@ const run_vertical = async (store: ControlStore, actor_store: ControlStore = sto
       zklogin_public_identifier: identity.zklogin_public_identifier,
     }
     const proof_input = { authorization_id, bot_id: created.bot.id, request }
-    expect((await http.request('/connect/proof', proof_input)).status).toBe(202)
-    await runtime.tick()
-    await runtime.settle()
+    // The service runtime's wiring: a key that gains work wakes this process's actor. The door holds
+    // the request it queued, so the proof arrives in the one request that asked for it.
+    const stop_waking = store.subscribe_pending!((keys) => {
+      for (const key of keys) void runtime.wake(key)
+    })
     const proof = await http.json<{ status: string; proof: AgentPairingResponse }>('/connect/proof', proof_input)
+    stop_waking()
+    await runtime.settle()
+    expect(proof.status).toBe('ready')
     expect((await verify_agent_pairing(request, proof.proof)).address).toBe(created.bot.address)
     const consent = await http.json<HostedChallengeResponse>('/connect/challenge', {
       ...identity,

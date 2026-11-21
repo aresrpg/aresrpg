@@ -754,3 +754,11 @@
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   align-content: start;
 }
+
+/* A session adapter that cannot craft now says why, above the bar it closes. */
+.jobs__craft-locked {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--warn);
+}

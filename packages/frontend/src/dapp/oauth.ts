@@ -104,6 +104,16 @@ export const is_callback = (search: string): boolean => {
   const params = new URLSearchParams(search)
   return params.has('code') || params.has('error')
 }
+/**
+ * An approved redirect that names this origin's dapp page is taken without a page load: the result is
+ * its path and query, for the address. Any other redirect is null, and the browser leaves for it.
+ */
+export const own_callback = (redirect: string, origin: string): string | null => {
+  if (!URL.canParse(redirect)) return null
+  const url = new URL(redirect)
+  const own = [url.origin === origin, url.pathname === DAPP_ROUTE, is_callback(url.search)].every(Boolean)
+  return own ? `${url.pathname}${url.search}` : null
+}
 export const without_callback = (href: string): string => {
   const url = new URL(href)
   for (const key of ['code', 'state', 'iss', 'error', 'error_description']) url.searchParams.delete(key)

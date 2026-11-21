@@ -27,9 +27,9 @@ import type { AuthSession } from '../auth.ts'
 import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
 import { remember_selected_character_change } from '../auth_storage.ts'
 import { env } from '../env.ts'
-import { create_remembered_auth } from '../remembered_auth.ts'
+import { create_remembered_auth, type RememberedAuth } from '../remembered_auth.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 import { send_market_floor_request } from '../marketplace/floor_state.ts'
 import { market_price_subscription } from '../marketplace/price_history_state.ts'
@@ -83,6 +83,8 @@ export type SessionState = Readonly<{
   selected_character_id: string | null
   online: number | null
   online_characters: number | null
+  /** Hosted bots among `online`. Only an admin's server sends it; absent or null is unknown. */
+  online_agents: number | null | undefined
   auth_ready: boolean
   /** Where a player's own sign-out leads. The observer acts on it after the wallet is released. */
   after_sign_out: 'home' | undefined
@@ -211,6 +213,7 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
       ...session,
       online: packet.online,
       online_characters: packet.online_characters,
+      online_agents: packet.online_agents,
       indexing_lag: packet.indexing_lag,
       current_epoch: packet.current_epoch,
     })
@@ -345,7 +348,17 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   }
   return state
 }
-const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
+/** What the session observer does outside the store. A test passes its own: no sign-in code, no socket. */
+export type SessionEffects = Readonly<{ account: RememberedAuth; connect: typeof connect_server }>
+const browser_effects = (): SessionEffects => ({
+  // The installed-wallet choice exists in local and edge builds only (owner ruling); players sign in with Google.
+  account: create_remembered_auth(undefined, undefined, { wallets: env.dev_sign_in }),
+  connect: connect_server,
+})
+const observe = (
+  { events, dispatch, signal, get_state }: AppContext,
+  { account, connect }: SessionEffects = browser_effects()
+): void => {
   let link: ServerLink | null = null
   let balance_request_id = 0
   let next_request_id = 1
@@ -362,15 +375,12 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       reject: (error: Readonly<Error>) => void
     }>
   >()
-  // The installed-wallet choice exists in local and edge builds only (owner ruling); players sign in with Google.
-  const account = create_remembered_auth(undefined, undefined, { wallets: env.dev_sign_in })
-
+  // The sign-in code loads in the background. It says which sign-ins this surface offers; a restore awaits it itself.
   void account
     .provider()
     .then((auth) => {
       if (signal.aborted) return
       dispatch({ type: 'auth/ready', wallets: auth.wallets?.().map(({ name }) => name) ?? [] })
-      if (account.returning) dispatch({ type: 'auth/connecting' })
     })
     .catch((error) => {
       if (signal.aborted) return
@@ -541,7 +551,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     }
     if (state.session.wallet !== previous.session.wallet && state.session.wallet) {
       link?.dispose()
-      link = connect_server({ session: state.session.wallet, dispatch })
+      link = connect({ session: state.session.wallet, dispatch })
       dispatch({ type: 'wallet/refresh' })
     }
     send_market_floor_request({ state, link, dispatch, next_id })
@@ -579,5 +589,11 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     globalThis.removeEventListener('focus', refresh_on_focus)
     globalThis.document?.removeEventListener('visibilitychange', refresh_on_focus)
   })
+  // A remembered wallet is known before the first render, so its restore starts now and not once the
+  // sign-in code has loaded: a returning player never sees the sign-in card. This stays the last step:
+  // the restore is started by the state listener above, from the change this input makes.
+  if (account.returning) dispatch({ type: 'auth/connecting' })
 }
+// Named for the tests that pass their own effects; `observe` stays the name the complexity baseline keys on.
+export { observe as observe_session }
 export default Object.freeze({ name: 'session', reduce, observe }) satisfies AppModule

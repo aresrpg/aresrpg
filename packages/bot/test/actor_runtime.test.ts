@@ -442,6 +442,7 @@ test('the wallet status goes out on its own socket when it changes, never again 
         state: 'idle',
         runs: [],
         direct: null,
+        fees_mist: '0',
       },
     },
   ])

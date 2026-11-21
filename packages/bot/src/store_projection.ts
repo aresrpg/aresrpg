@@ -16,6 +16,8 @@ const fields: Readonly<Record<string, readonly string[]>> = {
     'paused',
     'execution_busy',
     'runs',
+    'ended',
+    'fees_mist',
   ],
   behavior: [
     'id',
@@ -28,6 +30,7 @@ const fields: Readonly<Record<string, readonly string[]>> = {
     'revision',
     'status',
     'created_at',
+    'tally',
   ],
 }
 export const execution_record = (key: string) => volatile_record(key) || Object.hasOwn(fields, kind_of(key))

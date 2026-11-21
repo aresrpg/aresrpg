@@ -9,6 +9,7 @@ import {
   refresh_hosted_owner,
   retryable_hosted_request,
 } from '../agents/hosted_client.ts'
+import { owner_checkable } from '../agents/owner_state.ts'
 import { agent_identity_storage_key } from '../agents/pairing_storage.ts'
 
 export const observe_hosted_agent = (
@@ -25,10 +26,8 @@ export const observe_hosted_agent = (
       void cancel_hosted_session(service_url, previous.authorization_id).catch(console.warn)
     context = null
   }
-  const eligible = () =>
-    service_url &&
-    !new URLSearchParams(location.search).has('authorization_id') &&
-    get_state().session.wallet?.identity === 'zklogin'
+  // One rule decides whether this owner can be checked; the page that shows the answer reads the same one.
+  const eligible = () => owner_checkable(get_state().session.wallet, service_url, location.search)
   /**
    * Authorization is read when something says it may have changed: sign-in, focus, another tab. Never
    * on a clock. What the bot is doing is not read here: the bot pushes it on the game socket.

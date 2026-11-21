@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { HostedBotDescriptor, HostedConnectRequest } from '@aresrpg/protocol'
+import type { HostedConnectRequest } from '@aresrpg/protocol'
 import type { PendingAuthorization } from '@aresrpg/protocol/hosted-bot-client'
 
-import type { HostedState } from '../agents/hosted_state.ts'
+import type { HostedStep } from '../agents/hosted_state.ts'
 
 /**
  * The request on screen is the one this tab itself began for this page: same client, same redirect,
@@ -22,20 +22,17 @@ export const own_request = (
     URL.canParse(consent.redirect_uri) && new URL(consent.redirect_uri).origin === origin,
   ].every(Boolean)
 
-/**
- * What the dapp does next without asking: it proves the owner, then approves its own request. An
- * assistant's request never takes this path; it waits for the player on the consent dialog.
- * `refused` is a request that is not this tab's own.
- */
-export const silent_step = (
-  state: Readonly<HostedState<HostedBotDescriptor>>,
-  pending: Readonly<PendingAuthorization> | null,
-  origin: string
-): 'authenticating' | 'authorizing' | 'refused' | null => {
-  if (!state.session || !pending) return null
-  if (state.phase === 'idle') return 'authenticating'
-  if (state.phase !== 'ready' || !state.consent) return null
-  if (!own_request(state.consent, pending, origin)) return 'refused'
-  const verified = state.bots.some(({ id }) => id === state.selected && id === state.verified)
-  return verified ? 'authorizing' : null
+/** The sentence of each wait of a connection, as a key of the dapp's copy. */
+const STEP_LABEL: Readonly<Record<HostedStep, string>> = {
+  proving: 'connect_proving',
+  creating: 'connect_creating',
+  checking: 'connect_checking',
+  naming: 'connect_naming',
+  approving: 'connect_approving',
+  returning: 'connect_returning',
+}
+/** What the consent step waits for: a step of the connection, or before any step the sign-in being restored. */
+export const consent_label = (step: HostedStep | null, signing_in: boolean): string => {
+  if (step) return STEP_LABEL[step]
+  return signing_in ? 'signing_in' : 'connect_busy'
 }

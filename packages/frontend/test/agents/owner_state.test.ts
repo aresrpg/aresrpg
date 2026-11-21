@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test'
 import type { HostedOwnerStatus } from '@aresrpg/protocol'
 
 import { reduce_app_state } from '../../src/store.ts'
-import { owner_connected } from '../../src/agents/owner_state.ts'
+import { owner_answer, owner_checkable, owner_connected } from '../../src/agents/owner_state.ts'
 import { automation_fixture } from '../modules/automation_fixture.ts'
 
 const pairing = { address: 'agent', multisig_public_key: 'descriptor', signer_mode: 'host-persistent' as const }
@@ -125,4 +125,80 @@ test('connection proof expires and cannot be replaced by a matching inventory pr
     pairing,
   })
   expect(owner_connected(connected.session)).toBe(false)
+})
+
+// Regression: `owner_connected` is false both for "not connected" and for "not checked yet", so the
+// agent page opened the setup and read "Connect your agent" during the check, then flipped to
+// "Agent connected". The reading has three answers, and an unanswered check is never "not connected".
+test('an owner check that has not answered reads unknown, never not connected', () => {
+  const original = automation_fixture()
+  const wallet = original.session.wallet!
+  // Signed in, nothing asked yet: the check is about to run.
+  expect(owner_answer(original.session, true)).toBe('unknown')
+  const checking = reduce_app_state(original, { type: 'agent/connection_refresh' })
+  expect(checking.session.agent_connection.phase).toBe('checking')
+  expect(owner_answer(checking.session, true)).toBe('unknown')
+  const result = {
+    type: 'agent/connection_result' as const,
+    failure: null,
+    wallet,
+    generation: checking.session.agent_connection.generation,
+  }
+  const connected = reduce_app_state(checking, { ...result, response: response(wallet.address), pairing })
+  expect(owner_answer(connected.session, true)).toBe('connected')
+  const disconnected = reduce_app_state(checking, {
+    ...result,
+    response: { ...response(wallet.address), status: 'disconnected', expires_at: null },
+    pairing: null,
+  })
+  expect(owner_answer(disconnected.session, true)).toBe('not_connected')
+  // A check that failed or could not reach the bot has answered: the page offers Try again, not a wait.
+  for (const failure of ['failed', 'unavailable'] as const) {
+    const ended = reduce_app_state(checking, { ...result, failure, response: null, pairing: null })
+    expect(owner_answer(ended.session, true)).toBe('not_connected')
+  }
+  expect(owner_answer(reduce_app_state(checking, { type: 'agent/connection_cancel' }).session, true)).toBe(
+    'not_connected'
+  )
+})
+
+test('a re-check keeps the answer it already has until the new one arrives', () => {
+  const original = automation_fixture()
+  const wallet = original.session.wallet!
+  const settle = (state: typeof original, connected: boolean) => {
+    const checking = reduce_app_state(state, { type: 'agent/connection_refresh' })
+    return reduce_app_state(checking, {
+      type: 'agent/connection_result',
+      failure: null,
+      wallet,
+      generation: checking.session.agent_connection.generation,
+      response: connected
+        ? response(wallet.address)
+        : { ...response(wallet.address), status: 'disconnected', expires_at: null },
+      pairing: connected ? pairing : null,
+    })
+  }
+  for (const [connected, answer] of [
+    [true, 'connected'],
+    [false, 'not_connected'],
+  ] as const) {
+    const again = reduce_app_state(settle(original, connected), { type: 'agent/connection_refresh' })
+    expect(again.session.agent_connection.phase).toBe('checking')
+    expect(owner_answer(again.session, true)).toBe(answer)
+  }
+})
+
+test('a check that can never run reads not connected at once instead of waiting for ever', () => {
+  const original = automation_fixture()
+  const checking = reduce_app_state(original, { type: 'agent/connection_refresh' })
+  for (const session of [original.session, checking.session]) expect(owner_answer(session, false)).toBe('not_connected')
+  const service = 'https://bot.example.test'
+  const google = { identity: 'zklogin' } as const
+  expect(owner_checkable(google, service, '')).toBe(true)
+  expect(owner_checkable(google, service, '?intent=connect-agent')).toBe(true)
+  // No bot service, an account that is not a Google account, no account, or a consent link: no check.
+  expect(owner_checkable(google, '', '')).toBe(false)
+  expect(owner_checkable({ identity: 'wallet' }, service, '')).toBe(false)
+  expect(owner_checkable(null, service, '')).toBe(false)
+  expect(owner_checkable(google, service, '?intent=connect-agent&authorization_id=request')).toBe(false)
 })

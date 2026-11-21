@@ -27,15 +27,38 @@ import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { retry_after_version_race, run_direct_transaction } from '../transaction_guard.ts'
 
+import type { CharacterSession } from './character_session.ts'
 import { JobItemIcon } from './JobItemIcon.tsx'
 
 export const craft_result_tone = (successes: number): 'error' | 'success' => (successes === 0 ? 'error' : 'success')
+
+type SessionCraft = CharacterSession['craft']
+/**
+ * Who can ask for a craft. A session adapter that crafts says itself whether it can now. The wallet
+ * signs over the live bag only. A bag of its own without that ability is only read: no control is drawn.
+ */
+const craft_access = (craft: SessionCraft, signer: boolean, local: boolean) =>
+  craft
+    ? { drawn: true, open: craft.locked === null, locked: craft.locked }
+    : { drawn: !local, open: signer && !local, locked: null }
+
+/** What the Craft button says on hover: why it is closed, else what it does. */
+const craft_hint = (
+  t: CopyText,
+  { locked, level_ok, affordable }: Readonly<{ locked: string | null; level_ok: boolean; affordable: boolean }>,
+  facts: Readonly<{ job: string; required: number; level: number; count: number; name: string }>
+): string => {
+  if (locked) return locked
+  if (!level_ok) return t('jobs.craft.requires_level', facts)
+  return affordable ? t('jobs.craft.craft_tooltip', facts) : t('jobs.craft.not_enough')
+}
 
 /** Inline craft controls — the bill of materials + the real Craft button, as detail children. */
 export const CraftControls = ({
   recipe,
   character,
   inventory_override,
+  craft,
   job,
   level,
   t,
@@ -44,6 +67,8 @@ export const CraftControls = ({
   recipe: Readonly<SeedRecipe>
   character?: Readonly<CharacterRow>
   inventory_override?: readonly ItemRow[]
+  /** The session adapter's own way to craft from `inventory_override`. */
+  craft?: SessionCraft
   job: JobSlug
   level: number
   t: CopyText
@@ -82,7 +107,8 @@ export const CraftControls = ({
   )
   const level_ok = level >= required
   const affordable = stack_plan !== null
-  const can_craft = !!wallet && inventory_override === undefined && level_ok && affordable && !pending
+  const access = craft_access(craft, !!wallet, inventory_override !== undefined)
+  const can_craft = access.open && level_ok && affordable && !pending
   const success_chance = craft_success_percent(level)
 
   const on_craft = (): void => {
@@ -174,48 +200,50 @@ export const CraftControls = ({
         <span className="jobs__craft-chance-value hud-num">{success_chance}%</span>
       </div>
 
-      <div className="jobs__craft-bar" data-stackable-output={String(stackable_output)}>
-        <fieldset className="jobs__craft-amount" disabled={pending} hidden={!stackable_output}>
-          <span className="jobs__craft-amount-label">{t('jobs.craft.amount')}</span>
-          <input
-            aria-label={t('jobs.craft.amount')}
-            className="jobs__craft-input hud-num"
-            max={batch_limit}
-            min={1}
-            onChange={({ currentTarget }) =>
-              set_attempts(Math.max(1, Math.min(batch_limit, Math.floor(Number(currentTarget.value)))))
-            }
-            type="number"
-            value={attempts}
-          />
-          <Button disabled={maximum_attempts < 1} onClick={() => set_attempts(maximum_attempts)} type="button">
-            {t('jobs.craft.max')}
+      {access.locked && (
+        <p className="jobs__craft-locked" role="status">
+          {access.locked}
+        </p>
+      )}
+      {access.drawn && (
+        <div className="jobs__craft-bar" data-stackable-output={String(stackable_output)}>
+          <fieldset className="jobs__craft-amount" disabled={pending} hidden={!stackable_output}>
+            <span className="jobs__craft-amount-label">{t('jobs.craft.amount')}</span>
+            <input
+              aria-label={t('jobs.craft.amount')}
+              className="jobs__craft-input hud-num"
+              max={batch_limit}
+              min={1}
+              onChange={({ currentTarget }) =>
+                set_attempts(Math.max(1, Math.min(batch_limit, Math.floor(Number(currentTarget.value)))))
+              }
+              type="number"
+              value={attempts}
+            />
+            <Button disabled={maximum_attempts < 1} onClick={() => set_attempts(maximum_attempts)} type="button">
+              {t('jobs.craft.max')}
+            </Button>
+          </fieldset>
+          <Button
+            tone="primary"
+            className="jobs__craft-btn"
+            disabled={!can_craft}
+            onClick={craft ? () => craft.run(recipe.output_type, attempts) : on_craft}
+            title={craft_hint(
+              t,
+              { locked: access.locked, level_ok, affordable },
+              { job: vocabulary.job(job), required, level, count: attempts, name: output.name }
+            )}
+            type="button"
+          >
+            {pending
+              ? t('jobs.craft.crafting')
+              : level_ok
+                ? t('jobs.craft.craft_button', { count: attempts })
+                : t('jobs.craft.locked_level', { level: required })}
           </Button>
-        </fieldset>
-        <Button
-          tone="primary"
-          className="jobs__craft-btn"
-          disabled={!can_craft}
-          onClick={on_craft}
-          title={
-            !level_ok
-              ? t('jobs.craft.requires_level', { job: vocabulary.job(job), required, level })
-              : !affordable
-                ? t('jobs.craft.not_enough')
-                : t('jobs.craft.craft_tooltip', {
-                    count: attempts,
-                    name: output.name,
-                  })
-          }
-          type="button"
-        >
-          {pending
-            ? t('jobs.craft.crafting')
-            : level_ok
-              ? t('jobs.craft.craft_button', { count: attempts })
-              : t('jobs.craft.locked_level', { level: required })}
-        </Button>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

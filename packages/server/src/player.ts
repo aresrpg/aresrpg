@@ -129,6 +129,8 @@ export type PlayerAction =
 export type PlayerState = {
   /** Read-only; never grants presence, relay or transaction authority. */
   agent_watch?: AgentWatch | null
+  /** This socket shared a hosted bot status. Self-declared: counted, never authority. */
+  agent?: true
   /** Every owned character tracked by this connection, keyed by explicit wire identity. */
   characters: Readonly<Record<string, TrackedCharacter>>
   /** The authenticated indexed roster; it is also the complete server-managed tracking set. */
@@ -187,6 +189,7 @@ export type PlayerModule = {
 export type Player = {
   /** Live tracked identities, including fights/dungeons; never the full ownership catalogue. */
   online_characters: () => readonly string[]
+  is_agent: () => boolean
   dispatch: (action: PlayerAction) => void
   on_message: (raw: string | Buffer) => void
   on_close: () => void
@@ -371,6 +374,7 @@ export function create_player({
 
   return {
     online_characters: () => Object.keys(state.characters),
+    is_agent: () => state.agent === true,
     dispatch: (action) => context.dispatch(action),
     on_message: (raw) => {
       if (closed) return

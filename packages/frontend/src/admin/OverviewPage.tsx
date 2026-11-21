@@ -35,6 +35,11 @@ const text = (copy: Readonly<Record<string, string>>, key: string, fallback: str
 const sui_number = (mist: string): number => Number(BigInt(mist)) / 1_000_000_000
 const display_count = (value: number | null | undefined): string =>
   typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : '—'
+/** Every online address is either a hosted bot or a player; the split is unknown until both counts are. */
+const online_split = (online: number | null, agents: number | null | undefined): string =>
+  typeof online === 'number' && typeof agents === 'number'
+    ? `${display_count(online - agents)} · ${display_count(agents)}`
+    : '—'
 const display_sui = (value: unknown): string =>
   typeof value === 'string' && /^\d+$/.test(value) ? `${format_sui(BigInt(value), 2)} SUI` : '—'
 const bucket_label = (copy: Readonly<Record<string, string>>, bucket: AdminBucket): string =>
@@ -364,12 +369,14 @@ const LoadingOverview = ({
 export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
   const overview = useAppStore((state) => state.admin.overview)
   const online_count = useAppStore((state) => state.session.online)
+  const online_agents = useAppStore((state) => state.session.online_agents)
   const revenue_wallet = useAdminRevenue(copy)
   return (
     <OverviewPageView
       copy={copy}
       overview={overview}
       online_count={online_count}
+      online_agents={online_agents}
       revenue_wallet={revenue_wallet}
       dispatch={dispatch_app}
     />
@@ -380,12 +387,14 @@ export const OverviewPageView = ({
   copy,
   overview,
   online_count,
+  online_agents,
   revenue_wallet,
   dispatch,
 }: Readonly<{
   copy: Readonly<Record<string, string>>
   overview: AdminOverviewState
   online_count: number | null
+  online_agents: number | null | undefined
   revenue_wallet: AdminRevenue
   dispatch: (input: import('./admin_state.ts').AdminInput) => void
 }>) => {
@@ -446,6 +455,12 @@ export const OverviewPageView = ({
             label={text(copy, 'online_now', 'Players online')}
             tone="green"
             value={display_count(online_count)}
+          />
+          <KpiCard
+            detail={text(copy, 'online_split_detail', 'players · hosted bots')}
+            label={text(copy, 'online_split', 'Online split')}
+            tone="green"
+            value={online_split(online_count, online_agents)}
           />
         </KpiGroup>
         <KpiGroup label={text(copy, 'population', 'Population')} tone="population">

@@ -12,12 +12,11 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { BrowsePanel } from './BrowsePanel.tsx'
 import { HistoryPanel } from './HistoryPanel.tsx'
 import { MarketplaceDisclaimer } from './MarketplaceDisclaimer.tsx'
-import { useMarketCapabilities } from './MarketSource.tsx'
+import { useMarketCapabilities, useMarketPanel, type MarketPanel } from './MarketSource.tsx'
 import { SellPanel } from './SellPanel.tsx'
 import { MarketVolumeBadge } from './marketplace_model.tsx'
 
-type Tab = 'BUY' | 'SELL' | 'HISTORY'
-const tabs: readonly Tab[] = ['BUY', 'SELL', 'HISTORY']
+const tabs: readonly MarketPanel[] = ['BUY', 'SELL', 'HISTORY']
 
 export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCopy; locale: Locale }>) {
   const text = copy_text(copy.marketplace_page)
@@ -55,9 +54,11 @@ export const MarketplacePageView = ({
   volume: Readonly<{ day_mist: string | null; month_mist: string | null; history_days: number }>
 }>) => {
   const text = copy_text(copy.marketplace_page)
-  const [tab, set_tab] = useState<Tab>('BUY')
   const { history } = useMarketCapabilities()
   const offered = tabs.filter((value) => history || value !== 'HISTORY')
+  // The source names the panel the page opens on, among those it offers; the player's own choice then stays here.
+  const opening = useMarketPanel()
+  const [tab, set_tab] = useState<MarketPanel>(offered.includes(opening) ? opening : 'BUY')
   return (
     <MarketPage
       tabs={{

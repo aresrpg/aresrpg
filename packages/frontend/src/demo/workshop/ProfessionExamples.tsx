@@ -5,6 +5,7 @@ import { Workspace } from '@aresrpg/ui'
 import { job_xp_for_level } from '@aresrpg/immutable'
 import { Hammer, Pickaxe } from 'lucide-react'
 
+import type { CharacterSession } from '../../characters/character_session.ts'
 import JobsTab from '../../characters/JobsTab.tsx'
 import RuneforgeTab from '../../characters/RuneforgeTab.tsx'
 import { sample_character, sample_character_row, sample_inventory } from '../sample.ts'
@@ -13,6 +14,13 @@ import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 
 import { WorkshopSurface } from './shared.tsx'
 import '../../characters/characters.css'
+
+/** The sample owns no bag and changes nothing: its recipes are read, never crafted. */
+const SAMPLE_SESSION: CharacterSession = Object.freeze({
+  inventory: [],
+  commit: () => undefined,
+  raise_stats: () => undefined,
+})
 
 export const JobsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const character = useMemo(() => {
@@ -26,7 +34,7 @@ export const JobsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <WorkshopSurface copy={copy} title={copy_text(copy.characters_page)('tab_jobs')} icon={<Pickaxe />}>
       {(header) => (
         <Workspace {...header} className="aui-feature-port aui-jobs-port">
-          <JobsTab character={character} copy={copy} preview />
+          <JobsTab character={character} copy={copy} session={SAMPLE_SESSION} />
         </Workspace>
       )}
     </WorkshopSurface>

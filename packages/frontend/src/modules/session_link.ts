@@ -23,6 +23,7 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       latency_ms: null,
       online: null,
       online_characters: null,
+      online_agents: null,
       indexing_lag: null,
       current_epoch: null,
     }
@@ -34,6 +35,7 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       latency_ms: null,
       online: null,
       online_characters: null,
+      online_agents: null,
       indexing_lag: null,
       current_epoch: null,
     }
@@ -46,6 +48,7 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       latency_ms: null,
       online: null,
       online_characters: null,
+      online_agents: null,
       current_epoch: null,
     }
   if (input.type === 'link/failed')
@@ -56,6 +59,7 @@ export const fold_link_input = <T extends LinkState>(session: T, input: LinkInpu
       latency_ms: null,
       online: null,
       online_characters: null,
+      online_agents: null,
       indexing_lag: null,
       current_epoch: null,
     }

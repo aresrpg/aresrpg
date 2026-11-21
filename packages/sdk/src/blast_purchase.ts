@@ -11,7 +11,7 @@ import {
 } from '@mysten/sui/utils'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
-import { blast_config, create_blast_reader, type BlastConfig, type BlastPhase } from './blast.ts'
+import { blast_coin_type, blast_config, create_blast_reader, type BlastConfig, type BlastPhase } from './blast.ts'
 import { receipt_digest } from './cache.ts'
 import type { Pins, Sdk } from './client.ts'
 import { gas_mist_from_receipt } from './gas.ts'
@@ -113,7 +113,7 @@ export const blast_purchase_actions = ({
   return Object.freeze({
     configured: (): boolean => {
       const pin = sdk.pins.blast_presale as Partial<BlastPurchaseConfig> | null | undefined
-      return !!(pin?.package && pin.package_version && sdk.pins.kares_coin_type)
+      return !!(pin?.package && pin.package_version && blast_coin_type(sdk.pins))
     },
     simulate: async (purchase: BlastPurchase) => {
       const receipt = await sdk.simulate(await prepare(purchase))

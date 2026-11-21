@@ -5,22 +5,104 @@
   color: var(--aui-ink);
   font-family: var(--aui-font);
 }
-.dapp-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+/* Header readouts: the keys the heroes hold (a button to the Raid tab) and what the bot wallet holds. */
 .dapp-chip {
-  padding: 4px 8px;
-  border: 1px solid var(--aui-line);
+  padding: 6px 10px;
+  border: 1px solid var(--aui-line-strong);
   border-radius: var(--aui-radius);
-  color: var(--aui-soft);
-  font-size: 0.85rem;
+  color: var(--aui-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* The market uses the full page width. */
-.light-page-main:has(.dapp-market) {
-  max-width: none;
+.dapp-chip[data-low] {
+  border-color: var(--aui-danger);
+  color: var(--aui-danger);
+}
+.aui-button.dapp-chip {
+  min-height: 44px;
+}
+/* The five tabs: a row above the board. Below 960px they are a bar at the bottom of the screen. */
+.dapp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.dapp-tabs .aui-button {
+  min-height: 44px;
+  gap: 8px;
+}
+.dapp-tabs .aui-button[aria-current='page'] {
+  background-color: var(--aui-brass-deep);
+  border-color: var(--aui-brass-lo);
+  box-shadow: inset 0 -2px var(--aui-brass);
+  color: var(--aui-brass-hi);
+}
+.dapp-tab-badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--aui-radius);
+  background: var(--aui-orange);
+  color: var(--aui-orange-ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+  text-shadow: none;
+}
+@media (max-width: 959px) {
+  /* The height of the bar is one fact. The page ends above it, and the toasts stand on it: they are
+     placed by the page's bottom inset, which the bar extends. */
+  :root:has(.dapp-tabs) {
+    --dapp-bar: calc(62px + env(safe-area-inset-bottom, 0px));
+    --safe-bottom: calc(var(--dapp-bar) + 8px);
+  }
+  .dapp-tabs {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 6;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    height: var(--dapp-bar);
+    margin: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--aui-border);
+    background: var(--aui-surface);
+  }
+  .dapp-tabs .aui-button {
+    position: relative;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 4px 2px;
+    border-color: transparent;
+    background-color: transparent;
+    box-shadow: none;
+    font-size: 11px;
+  }
+  .dapp-tabs .aui-button[aria-current='page'] {
+    background-color: transparent;
+    border-color: transparent;
+  }
+  .dapp-tabs .aui-button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dapp-tab-badge {
+    position: absolute;
+    top: 2px;
+    left: calc(50% + 6px);
+  }
+  /* The page ends above the bar. */
+  .dapp:has(.dapp-tabs) {
+    padding-bottom: var(--dapp-bar);
+  }
 }
 .dapp-notice {
   max-width: 560px;
@@ -70,9 +152,38 @@
 .dapp-warning {
   color: var(--aui-blue);
 }
+/* The board (the tab on screen), and beside it what entered the bag. Below 960px the feed is a strip above the board. */
+.dapp-layout {
+  display: grid;
+  gap: 20px;
+}
 .dapp-board {
   display: grid;
   gap: 20px;
+  min-width: 0;
+}
+.dapp-bot-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dapp-bot-wait .aui-spinner {
+  flex: none;
+}
+.dapp-bag-feed-panel {
+  order: -1;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 12px 14px;
+  background: var(--aui-surface);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+}
+.dapp-bag-feed-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--aui-brass-hi);
 }
 .dapp-section {
   display: grid;
@@ -84,279 +195,89 @@
   font-size: 1.1rem;
   color: var(--aui-brass-hi);
 }
-.dapp-heroes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: 8px;
-}
-.dapp-hero {
+.dapp-bag-feed {
   display: flex;
-  gap: 10px;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px;
-  background: var(--aui-raised);
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-  color: var(--aui-ink);
-  text-align: left;
-  font: inherit;
-}
-button.dapp-hero {
-  cursor: pointer;
-}
-.dapp-hero[aria-pressed='true'] {
-  border-color: var(--aui-brass);
-  background: var(--aui-lifted);
-}
-.dapp-hero img,
-.dapp-hero-fallback {
-  width: 56px;
-  height: 56px;
-  flex: none;
-  object-fit: contain;
-}
-.dapp-hero-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-.dapp-hero-text strong {
-  overflow-wrap: anywhere;
-}
-.dapp-hero-text > span {
-  color: var(--aui-muted);
-  font-size: 0.85rem;
-}
-.dapp-hero-status {
-  color: var(--aui-soft);
-}
-.dapp-hero[data-status='activity'] .dapp-hero-status {
-  color: var(--aui-success);
-}
-.dapp-activities {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 10px;
-}
-.dapp-activity {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  background: var(--aui-raised);
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-}
-.dapp-activity header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--aui-brass-hi);
-}
-.dapp-activity h3 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-.dapp-activity p {
-  margin: 0;
-  color: var(--aui-soft);
-  line-height: 1.45;
-}
-.dapp-activity-state {
-  display: grid;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--aui-muted);
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
 }
-.dapp-activity-state [data-line='out'] {
-  color: var(--aui-success);
-}
-.dapp-fix {
-  display: grid;
+.dapp-bag-feed li {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  justify-items: start;
-  padding: 8px 10px;
+  padding: 4px 8px;
   border: 1px solid var(--aui-line);
   border-radius: var(--aui-radius);
   font-size: 0.85rem;
 }
-.dapp-confirm-body {
-  display: grid;
-  gap: 12px;
-  padding: 14px 16px 0;
-  color: var(--aui-soft);
-  font-size: 0.9rem;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+.dapp-bag-feed img {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
 }
-.dapp-confirm-body p {
-  margin: 0;
-}
-.dapp-confirm .aui-confirm-actions {
-  flex-wrap: wrap;
-}
-.dapp-confirm .aui-button {
-  min-height: 44px;
-}
-.dapp-activity footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: auto;
-}
-.dapp-activity .aui-button {
-  min-height: 44px;
-}
-.dapp-positions {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: 10px;
-}
-.dapp-position {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
-  background: var(--aui-surface);
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-}
-.dapp-position[data-running] {
-  border-color: var(--aui-line-strong);
-}
-.dapp-position header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: baseline;
-}
-.dapp-position h3,
-.dapp-haul h3 {
-  margin: 0;
-  font-size: 1rem;
-  overflow-wrap: anywhere;
-}
-.dapp-position-time,
-.dapp-position-status,
-.dapp-position-where,
-.dapp-haul header span {
-  margin: 0;
-  color: var(--aui-muted);
-  font-size: 0.85rem;
-}
-.dapp-position-where {
-  color: var(--aui-soft);
-  overflow-wrap: anywhere;
-}
-.dapp-haul {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-}
-.dapp-haul header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 4px 12px;
-}
-.dapp-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
-  margin: 0;
-}
-.dapp-facts div {
-  display: grid;
-  gap: 1px;
-}
-.dapp-facts dt {
-  color: var(--aui-muted);
-  font-size: 0.8rem;
-}
-.dapp-facts dd {
-  margin: 0;
+.dapp-bag-feed strong {
+  color: var(--aui-success);
   font-variant-numeric: tabular-nums;
 }
-.dapp-loot,
-.dapp-equipment {
+.dapp-bag-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
-.dapp-item {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  background: var(--aui-sunk);
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-  color: var(--aui-soft);
-  font: inherit;
-  font-size: 0.7rem;
-  cursor: pointer;
+@media (min-width: 960px) {
+  /* The shell is wide for this page: the board takes the window, and the feed keeps a fixed column. */
+  .dapp-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+  /* The market has no side column. */
+  .dapp-layout[data-tab='market'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dapp-bag-feed-panel {
+    order: 0;
+    position: sticky;
+    top: 16px;
+  }
+  .dapp-bag-feed {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+  .dapp-bag-feed li {
+    display: flex;
+  }
+  .dapp-bag-feed li span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 }
-.dapp-item:disabled {
-  cursor: default;
-}
-.dapp-item img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-}
-.dapp-item-count {
-  position: absolute;
-  right: 2px;
-  bottom: 1px;
-  font-size: 0.7rem;
-  color: var(--aui-ink);
-  text-shadow: 0 1px 2px var(--aui-void);
-}
-.dapp-loot-more {
-  align-self: center;
-  color: var(--aui-muted);
-}
-.dapp-position footer {
-  display: flex;
-  justify-content: flex-end;
-}
-.dapp-detail {
-  padding-top: 4px;
-  border-top: 1px solid var(--aui-line);
-}
-.dapp-sheet {
-  max-width: min(92vw, 420px);
-  max-height: 80dvh;
-  overflow: auto;
-  background: var(--aui-surface);
-}
+/* A column, not a grid: a grid shares the spare height between its rows, which pushed the market
+   down under any notice above it. Only the market itself takes the remaining height.
+   The game's market lays itself out by the width of the containers its host names: `app-content`
+   for its panels, `aui-window` for its toolbar. This page is that host, so it names them: without
+   them the market keeps its widest layout at any width, and a phone clips it. */
 .dapp-market {
-  display: grid;
+  container: app-content aui-window / inline-size;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   min-height: calc(100dvh - 120px);
+}
+.dapp-market > :last-child {
+  flex: 1;
+}
+/* The header keeps its two readouts on a phone: the page's sub-label gives them its place. */
+@media (max-width: 560px) {
+  .light-page-header:has(.dapp-chip) .light-page-brand span {
+    display: none;
+  }
 }
 .dapp-link-button {
   text-decoration: none;
   justify-self: start;
-}
-@media (max-width: 560px) {
-  .dapp-brand span {
-    display: none;
-  }
 }
 .dapp-disconnect {
   display: flex;

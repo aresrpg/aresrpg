@@ -3,6 +3,7 @@
 import { expect, test } from 'bun:test'
 import { normalizeStructTag, SUI_TYPE_ARG } from '@mysten/sui/utils'
 
+import { create_blast_reader } from '../src/blast.ts'
 import {
   blast_purchase_config,
   blast_purchase_actions,
@@ -24,6 +25,33 @@ const config: BlastPurchaseConfig = {
   url: 'https://www.blast.fun/',
 }
 const pins = { network: 'mainnet' as const, kares_coin_type: config.coin_type, blast_presale: config }
+
+// The sale can fail and its coin be replaced, so opening a sale must not make the game adopt that coin.
+test('a sale that carries its own coin opens without the game token pin, and its coin wins over it', () => {
+  const sale_only = { network: 'mainnet' as const, blast_presale: config }
+  expect(blast_purchase_config(sale_only).coin_type).toBe(normalizeStructTag(config.coin_type))
+  expect(blast_purchase_actions({ sdk: { pins: sale_only }, client: {}, address: id(5) } as never).configured()).toBe(
+    true
+  )
+  expect(create_blast_reader({ network: 'mainnet', pins: sale_only }).configured).toBe(true)
+  const adopted = `${id(7)}::kares::KARES`
+  expect(blast_purchase_config({ ...sale_only, kares_coin_type: adopted }).coin_type).toBe(
+    normalizeStructTag(config.coin_type)
+  )
+  // The operator's own entry names no coin: the adopted token then is the sale's coin.
+  const { coin_type: _coin, ...unnamed } = config
+  expect(
+    blast_purchase_config({ network: 'mainnet', kares_coin_type: adopted, blast_presale: unnamed }).coin_type
+  ).toBe(normalizeStructTag(adopted))
+  expect(() => blast_purchase_config({ network: 'mainnet', blast_presale: unnamed })).toThrow('coin type')
+  expect(
+    blast_purchase_actions({
+      sdk: { pins: { blast_presale: unnamed } },
+      client: {},
+      address: id(5),
+    } as never).configured()
+  ).toBe(false)
+})
 
 test('purchase refuses absent pins, non-positive amounts and malformed proof data', () => {
   expect(() => blast_purchase_config({})).toThrow('not configured')

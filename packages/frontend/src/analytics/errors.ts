@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { ErrorEvent, EventHint } from '@sentry/react'
+import { gas_refusal } from '@aresrpg/sdk/transaction-error'
 
 import type { AnalyticsEvent } from '../analytics.ts'
 
@@ -13,10 +14,8 @@ const ERROR_KINDS = [
   [/webgpu_unavailable|Unable to create WebGPU adapter/i, 'graphics_unsupported'],
   [/webgpu|device.lost|GPUDevice/i, 'graphics_failed'],
   [/terrain_failed/i, 'terrain_failed'],
-  [
-    /gas coin|no valid gas|insufficientgas|gasbalancetoolow|gas selection.*insufficient sui balance/i,
-    'insufficient_funds',
-  ],
+  // The SDK owns the one list of fee-refusal wordings; a second list here had drifted from it.
+  [{ test: gas_refusal }, 'insufficient_funds'],
   [/outcome unknown|previous transaction.*not yet visible/i, 'transaction_uncertain'],
   [/failed on-chain/i, 'transaction_failed'],
   [/NOT submitted|MoveAbort|abort code:/i, 'transaction_rejected'],

@@ -23,6 +23,7 @@ import type { BehaviorMemory, BehaviorNode } from './behavior_tree.ts'
 import type { DiscoverAction, WorldAvailability } from './behavior_world.ts'
 import type { MarketPriceCondition } from './market_prices.ts'
 import type { BuySelection, SellSelection } from './behavior_market.ts'
+import type { RunTally } from './behavior_tally.ts'
 
 export type BehaviorAction =
   | BuySelection
@@ -53,7 +54,8 @@ export type BehaviorAction =
       profiles: readonly Readonly<{ character_id: string; profile: CombatProfile }>[]
     }>
 export type BehaviorFact = Readonly<{
-  type: 'level' | 'job_level' | 'quantity' | 'hp' | 'max_hp' | 'hp_percent' | 'custody' | 'ambush' | 'fight'
+  type:
+    'level' | 'job_level' | 'quantity' | 'hp' | 'max_hp' | 'hp_percent' | 'custody' | 'ambush' | 'fight' | 'dungeon_run'
   character_id: string
   key?: string
 }>
@@ -62,8 +64,13 @@ export type StateCondition = Readonly<{
   op: 'eq' | 'ne' | 'lt' | 'lte' | 'gt' | 'gte'
   value: string | number | boolean
 }>
+/** A fact of the run itself, never of the game: what it tallied since its tree was accepted. */
+export type TallyCondition =
+  | Readonly<{ type: 'fees_spent'; op: StateCondition['op']; value: string }>
+  | Readonly<{ type: 'dungeon_runs'; op: StateCondition['op']; value: number }>
 export type BehaviorCondition =
   | StateCondition
+  | TallyCondition
   | Readonly<{ type: 'sui_balance'; op: StateCondition['op']; value: string }>
   | (MarketPriceCondition & Readonly<{ type: 'market_price' }>)
   | Readonly<{ type: 'world'; fact: WorldAvailability; op: 'eq' | 'ne'; value: boolean }>
@@ -96,6 +103,8 @@ export type BehaviorRun = Readonly<{
   last_command_id: string | null
   issue?: string
   created_at: number
+  /** What this run paid and finished since its tree was accepted; absent until the first entry. */
+  tally?: RunTally
 }>
 const strict_object = (
   value: unknown,
@@ -162,7 +171,11 @@ const visitors: Readonly<Record<string, (node: Record<string, unknown>) => reado
     if (!matches(nonempty, value)) throw new Error('invalid_behavior_script')
   }),
   wait: leaf(null, () => undefined),
-  complete: leaf(null, () => undefined),
+  complete: (node) => {
+    strict_object(node, ['type'], ['reason'])
+    if (node.reason !== undefined && !matches(nonempty, node.reason)) throw new Error('invalid_behavior_script')
+    return []
+  },
 }
 /** Iterative validation avoids a call-stack depth limit; the existing HTTP body limit bounds input. */
 export const parse_behavior_script = (value: unknown): BehaviorScript => {

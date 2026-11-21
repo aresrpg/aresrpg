@@ -6,7 +6,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { archimob_appearance_bp } from '@aresrpg/immutable'
+import { archimob_appearance_bp, GROUP_SIZE_AVG3_AT, GROUP_SIZE_FULL_AT } from '@aresrpg/immutable'
 import { expect, test } from 'bun:test'
 
 import {
@@ -83,8 +83,6 @@ test('every hand-mirrored zone constant matches Move', () => {
     'RES_PACKS_MAX',
     'CITY_RESOURCE_NODE_NUMERATOR',
     'CITY_RESOURCE_NODE_DENOMINATOR',
-    'GROUP_SIZE_FULL_AT',
-    'GROUP_SIZE_AVG3_AT',
     'LEVEL_RAMP_AT',
     'LEVEL_LOW_CAP',
     'LEVEL_HIGH_CAP',
@@ -95,6 +93,10 @@ test('every hand-mirrored zone constant matches Move', () => {
     new RegExp(`const ${name}${move ? ': u64' : ''} = ([\\d_]+)${move ? ';' : 'n'}`).exec(source)?.[1] ?? null
 
   names.forEach((name) => expect(value(twin_source, name, false), name).toBe(value(move_source, name, true)))
+  // The group-size constants live in the shared rule the server imports; they still equal the chain's.
+  const chain = (name: string) => BigInt(value(move_source, name, true)!.replaceAll('_', ''))
+  expect(GROUP_SIZE_FULL_AT).toBe(chain('GROUP_SIZE_FULL_AT'))
+  expect(GROUP_SIZE_AVG3_AT).toBe(chain('GROUP_SIZE_AVG3_AT'))
   expect(new RegExp('const ARCHIMOB_BP: u64 = ([\\d_]+);').exec(move_source)?.[1]).toBe(String(archimob_appearance_bp))
 })
 

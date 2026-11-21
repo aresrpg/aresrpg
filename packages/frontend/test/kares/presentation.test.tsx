@@ -233,6 +233,25 @@ test('the open sale keeps buyers in the app and a settled sale links out to Blas
   expect(live).toContain(copy.allocation_page.sale_buy)
   expect(live).toContain('role="progressbar"')
   expect(live).not.toContain('target="_blank"')
+  // The home page header carries the same facts, and exists only while the sale is live.
+  const { BlastSaleBarView } = await import('../../src/kares/BlastSaleBar.tsx')
+  const bar = renderToStaticMarkup(<BlastSaleBarView copy={copy} state={state} now={0} />)
+  expect(bar).not.toContain('everyone')
+  // A sale with a public phase also says when any wallet may buy.
+  const opening = { ...state, snapshot: { ...snapshot, public_ms: 90_000_000n } }
+  expect(renderToStaticMarkup(<BlastSaleBarView copy={copy} state={opening} now={0} />)).toContain(
+    'Open to everyone in 1d 1h 0m'
+  )
+  expect(bar).toContain('href="/allocation"')
+  expect(bar).toContain(copy.kares_page.blast_live)
+  expect(bar).toContain(copy.allocation_page.sale_buy)
+  expect(bar).toContain('aria-valuenow="75"')
+  for (const quiet of [
+    { ...initial_blast_state(), ready: true },
+    { ...state, snapshot: { ...snapshot, phase: 'funded' as const } },
+    { ...state, error: true },
+  ])
+    expect(renderToStaticMarkup(<BlastSaleBarView copy={copy} state={quiet} now={0} />)).toBe('')
   const funded = renderToStaticMarkup(
     <BlastSaleCardView copy={copy} state={{ ...state, snapshot: { ...snapshot, phase: 'funded' } }} />
   )

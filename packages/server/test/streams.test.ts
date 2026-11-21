@@ -478,6 +478,28 @@ describe('market + self stream + heartbeat', () => {
     expect(sent.filter((packet) => packet.type === 'packet/trades')).toHaveLength(before + 2)
   })
 
+  test('the hosted bot split reaches an admin only, and a shared status marks the socket', async () => {
+    const info = async (admin: boolean) => {
+      const { sent, ws, graph, pubsub } = wire()
+      const mesh = {
+        ...pubsub.mesh,
+        cluster_online: async () => ({ online: 7, online_characters: 12, online_agents: 3 }),
+      }
+      const player = create_player({ ws, address: '0xme', admin, graph, pubsub: { ...pubsub, mesh } })
+      await flush()
+      return { player, packet: sent.find((packet) => packet.type === 'packet/server_info') }
+    }
+    const operator = await info(true)
+    expect(operator.packet).toMatchObject({ online: 7, online_agents: 3 })
+    const visitor = await info(false)
+    expect(visitor.packet).toMatchObject({ online: 7 })
+    expect(visitor.packet).not.toHaveProperty('online_agents')
+    expect(visitor.player.is_agent()).toBe(false)
+    const status = { ready: true, event_fence: 1, sampled_at: 1, state: 'idle' as const, runs: [], direct: null }
+    visitor.player.dispatch({ type: 'packet/agent_status', status })
+    expect(visitor.player.is_agent()).toBe(true)
+  })
+
   test('the heartbeat pushes the cluster-wide count', async () => {
     const { sent, ws, graph, pubsub } = wire()
     create_player({

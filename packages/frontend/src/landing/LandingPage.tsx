@@ -16,6 +16,7 @@ export const LandingPage = ({
   root_ref,
   kares_trigger,
   account,
+  notice,
   children,
 }: LandingProps &
   Readonly<{
@@ -26,6 +27,7 @@ export const LandingPage = ({
   const [selected, on_select] = useState<InterfaceId>('world')
   return (
     <div className="landing" ref={root_ref}>
+      {notice}
       <div className="landing-flow">
         <LandingBackdrop assets={assets} />
         <LandingHero

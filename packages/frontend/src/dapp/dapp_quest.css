@@ -1,0 +1,207 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* The Quest tab: mode cards, who, where, the plan panel, work, and the heroes that are out.
+   Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
+.dapp-quest {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+}
+.dapp-quest-head {
+  display: grid;
+  gap: 4px;
+}
+.dapp-quest-head h2 {
+  margin: 0;
+  color: var(--aui-brass-hi);
+  font-family: var(--aui-font-display);
+  font-size: 1.4rem;
+  line-height: 1.2;
+}
+.dapp-quest-caps {
+  margin: 0;
+  color: var(--aui-muted);
+  font-family: var(--aui-font);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dapp-quest-step {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* A choice: one pressed-or-not button with a name and what it means. */
+.aui-button.dapp-quest-choice {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: normal;
+}
+.dapp-quest-choice img {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dapp-quest-choice svg {
+  flex: none;
+}
+.dapp-quest-choice-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dapp-quest-choice-text b {
+  font-size: 14px;
+  font-weight: 800;
+}
+.dapp-quest-choice-text small {
+  font-size: 12px;
+  font-weight: 400;
+}
+.dapp-quest-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 8px;
+}
+.dapp-quest-modes .dapp-quest-choice {
+  min-height: 72px;
+}
+.dapp-quest-modes b {
+  font-size: 15px;
+}
+.dapp-quest-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 6px;
+}
+
+/* Fight: the plan of the chosen place, then the places. On one column the plan and its Start come
+   first; side by side the places stand on the left and the plan stays in view on the right. */
+.dapp-quest-split {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+.dapp-quest-places {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 8px;
+}
+.dapp-quest-place {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  padding: 8px;
+  background: var(--aui-surface);
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+}
+.dapp-quest-place[data-selected] {
+  border-color: var(--aui-brass-lo);
+}
+.dapp-quest-mobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.dapp-quest-mobs .aui-button {
+  width: 44px;
+  min-height: 44px;
+  padding: 2px;
+}
+.dapp-quest-mobs img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+/* The plan panel: what one Start would do, read top to bottom. */
+.dapp-quest-plan {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  scroll-margin-top: 12px;
+}
+.dapp-quest-field,
+.dapp-quest-facts,
+.dapp-quest-arrival,
+.dapp-quest-send {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.dapp-quest-facts .aui-button {
+  justify-self: start;
+}
+.dapp-quest-send {
+  padding-top: 12px;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-quest-send > .aui-button {
+  justify-self: end;
+  max-width: 100%;
+  white-space: normal;
+}
+.dapp-quest-lines {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--aui-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.dapp-quest-lines:empty {
+  display: none;
+}
+.dapp-quest .aui-segments {
+  flex-wrap: wrap;
+}
+.dapp-quest .aui-input {
+  max-width: 220px;
+}
+
+/* Out now: one run card per hero. */
+.dapp-quest-runs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+/* Every action is a 44px target, sized to its label. */
+.dapp-quest .aui-segments .aui-button,
+.dapp-quest .aui-input,
+.dapp-quest-facts .aui-button,
+.dapp-quest-send > .aui-button {
+  min-height: 44px;
+}
+
+@media (min-width: 960px) {
+  .dapp-quest-split {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+  .dapp-quest-split > .dapp-quest-step {
+    grid-area: 1 / 1;
+  }
+  .dapp-quest-split > .dapp-quest-plan {
+    grid-area: 1 / 2;
+    position: sticky;
+    top: 16px;
+  }
+}

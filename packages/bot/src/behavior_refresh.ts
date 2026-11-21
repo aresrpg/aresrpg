@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { run_live } from '@aresrpg/protocol/strategies'
-
 import type { ControlTransaction } from './store.ts'
 import type { Command, Lane } from './control.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import type { BehaviorRun } from './behavior_script.ts'
 import { next_behavior_action } from './behavior_plan.ts'
-import { released_run } from './run_ref.ts'
+import { ended_run } from './run_ref.ts'
 
 /** Accepted, unprepared drafts may refresh targets within the same tree leaf. A changed branch
  * retires that draft; it can never inherit its command ID or be counted as successful execution. */
@@ -50,7 +48,7 @@ export const retain_behavior_draft = async (
   await tx.put(current.lane_key, {
     ...lane,
     active_command: null,
-    ...(run_live({ status }) ? {} : released_run(lane, run.id)),
+    ...ended_run(lane, run.id, { status, issue: next.issue }),
   })
   return next.diagnostic ?? null
 }

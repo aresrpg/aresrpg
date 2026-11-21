@@ -1,63 +1,125 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
+import type { CharacterRow, FightResolutionRow, RunEnding } from '@aresrpg/protocol'
 
-import { held_items, hero_experience, job_experience, type DappAccount } from './account.ts'
+import { run_notice, type RunNotice } from '../agents/activity.ts'
+
+import { hero_experience, job_experience, type DappAccount } from './account.ts'
 import type { DappObservation, DappRun } from './observation.ts'
-import { strategy_activity, type DappActivity } from './strategies.ts'
+import { strategy_activity, type DappActivity, type StartSpec } from './strategies.ts'
 
 /** Finished positions kept for review until dismissed (mockup round 9 ruling). */
 export const FINISHED_POSITIONS_KEPT = 6
+/** Fight results a position keeps with their loot, newest last. A hero that fights for hours would
+ * otherwise grow the open page without end; the won and lost counts keep every fight. */
+export const FIGHT_RESULTS_KEPT = 24
 
-/** What one hero won while this page followed its run. The bag and the fees belong to the haul. */
-export type PositionTotals = Readonly<{ xp: bigint; levels: number; job_xp: bigint; fights: readonly string[] }>
+/** What one hero won while this page followed its run. What entered the bag is the bag feed's.
+ * `fights` are the fights the hero was seen seated in; `won` and `lost` are those whose result was told. */
+export type PositionTotals = Readonly<{
+  xp: bigint
+  levels: number
+  job_xp: bigint
+  fights: readonly string[]
+  won: readonly string[]
+  lost: readonly string[]
+}>
+/** One ended fight of the hero: its side won or lost, the dungeon room it was, and its loot once rolled. */
+export type FightResult = Readonly<{
+  fight: string
+  won: boolean
+  room: number | null
+  drops: readonly Readonly<{ item_type: string; qty: number }>[]
+}>
+/** Why a run that plays is not acting right now: one sentence each, `dapp_page.run_wait_<wait>`. */
+export type RunWait = 'travel' | 'other'
 type HeroSample = Readonly<{ experience: bigint; job_experience: bigint; level: number }>
 export type DappPosition = Readonly<{
   id: string
   hero_id: string
   /** Null for a run whose tree was not bound from the shared catalogue. */
   activity: DappActivity | null
+  /** What this page's Start asked for; null for a run found in an observation. */
+  sent: StartSpec | null
   started_ms: number
   finished_ms: number | null
-  /** The bot's last reported blocker for this run; null while it plays and after a plain end. */
+  /** Why its run ended by itself, one sentence each, `dapp_page.run_ended_<ended>`. Null while it runs,
+   * after the player's stop, and when the bot named no reason this page lists. */
+  ended: RunEnding | null
+  /** The help this run last needed from the player; null while it plays and after a plain end. */
+  notice: RunNotice | null
+  /** Set while the run waits by itself and needs nothing from the player. */
+  wait: RunWait | null
+  /** The bot's own code or words for that blocker or wait: diagnostics, never text the player reads. */
   issue: string | null
+  /** The title the run's author gave its goal. */
+  objective: string | null
+  /** Net network fees the run paid, in MIST, and the dungeon runs it saw end: the bot's last word. */
+  fees_mist: bigint | null
+  dungeon_runs: number | null
   totals: PositionTotals
+  results: readonly FightResult[]
   sample: HeroSample | null
 }>
-/** What the heroes brought to the bot's shared bag and what its wallet paid, while any of them was out. */
-export type DappHaul = Readonly<{
-  found: Readonly<Record<string, number>>
-  /** Everything that left the wallet: network fees, and what the owner bought or moved out. */
-  spent_mist: bigint
-  /** Units of the page's own purchase already left out of the finds, so each is left out once. */
-  bought: Readonly<{ id: string; units: number }> | null
-  sample: Readonly<{ rows: readonly ItemRow[]; balance_mist: bigint | null }>
-}>
-
-const EMPTY_TOTALS: PositionTotals = Object.freeze({ xp: 0n, levels: 0, job_xp: 0n, fights: [] })
+const EMPTY_TOTALS: PositionTotals = Object.freeze({ xp: 0n, levels: 0, job_xp: 0n, fights: [], won: [], lost: [] })
+const NO_RESULTS: readonly FightResult[] = Object.freeze([])
 const gain = (next: bigint, previous: bigint): bigint => (next > previous ? next - previous : 0n)
 const sample_of = (hero: Readonly<CharacterRow>): HeroSample => ({
   experience: hero_experience(hero),
   job_experience: job_experience(hero),
   level: hero.level,
 })
-const blocker_of = (run: DappRun): string | null => (run.status === 'awaiting_ai' ? (run.issue ?? run.status) : null)
+/** What the bot says of one run, copied by value. */
+type RunFacts = Readonly<
+  Pick<DappPosition, 'activity' | 'notice' | 'wait' | 'issue' | 'objective' | 'fees_mist' | 'dungeon_runs'>
+>
+type Blocker = Pick<RunFacts, 'notice' | 'wait' | 'issue'>
+const UNBLOCKED: Blocker = Object.freeze({ notice: null, wait: null, issue: null })
+/** The bot's waiting codes the page has a sentence for. Any other wait is told without a reason. */
+const WAITS: Readonly<Record<string, RunWait>> = Object.freeze({
+  travel_not_ready: 'travel',
+})
+/** The game overlay's classifier decides what blocks a run: an ordinary wait is never a blocker. */
+const blocker_of = ({ status, issue }: DappRun): Blocker => {
+  const notice = run_notice(status, issue)
+  if (notice) return { notice, wait: null, issue: issue ?? status }
+  if (status !== 'waiting') return UNBLOCKED
+  const [code = ''] = (issue ?? '').split(':', 1)
+  return { notice: null, wait: Object.hasOwn(WAITS, code) ? WAITS[code]! : 'other', issue }
+}
+const run_facts = (run: DappRun): RunFacts => ({
+  activity: strategy_activity(run.strategy),
+  ...blocker_of(run),
+  objective: run.objective,
+  fees_mist: run.fees_mist,
+  dungeon_runs: run.dungeon_runs,
+})
+const NO_FACTS: RunFacts = Object.freeze({
+  ...UNBLOCKED,
+  activity: null,
+  objective: null,
+  fees_mist: null,
+  dungeon_runs: null,
+})
 
 export const open_position = (
   hero_id: string,
-  activity: DappActivity | null,
   now: number,
-  heroes: readonly CharacterRow[]
+  heroes: readonly CharacterRow[],
+  opened: Readonly<Partial<Pick<DappPosition, 'activity' | 'sent'>>> = {}
 ): DappPosition => {
   const hero = heroes.find(({ id }) => id === hero_id)
   return {
     id: `${hero_id}:${now}`,
     hero_id,
-    activity,
+    ...NO_FACTS,
+    sent: null,
+    ...opened,
     started_ms: now,
     finished_ms: null,
-    issue: null,
+    ended: null,
     totals: EMPTY_TOTALS,
+    results: NO_RESULTS,
     sample: hero ? sample_of(hero) : null,
   }
 }
@@ -67,34 +129,75 @@ const same_sample = (left: HeroSample, right: HeroSample): boolean =>
 /** A fight is counted once, when its hero is first seen seated in it. */
 const fights_with = (fights: readonly string[], fight_id: string | undefined): readonly string[] =>
   fight_id === undefined || fights.includes(fight_id) ? fights : [...fights, fight_id]
-/** A running position folds its hero's gains by value, so the same hero row seen twice changes nothing. */
-export const advance_position = (position: DappPosition, heroes: readonly CharacterRow[]): DappPosition => {
-  const hero = heroes.find(({ id }) => id === position.hero_id)
+const with_gains = (
+  totals: PositionTotals,
+  previous: HeroSample,
+  sample: HeroSample,
+  fight_id: string | undefined
+): PositionTotals => {
+  const fights = fights_with(totals.fights, fight_id)
+  if (same_sample(sample, previous) && fights === totals.fights) return totals
+  return {
+    ...totals,
+    xp: totals.xp + gain(sample.experience, previous.experience),
+    levels: totals.levels + Math.max(0, sample.level - previous.level),
+    job_xp: totals.job_xp + gain(sample.job_experience, previous.job_experience),
+    fights,
+  }
+}
+
+type Told = Readonly<Pick<DappPosition, 'totals' | 'results'>>
+/**
+ * The game server lists an ended fight until it is settled, so the same row arrives many times. Its
+ * result is told once, when the winner is first known, and its loot joins it when it is rolled.
+ */
+const with_result = (told: Told, row: Readonly<FightResolutionRow>): Told => {
+  const { totals, results } = told
+  const result = { fight: row.fight, won: row.winner === row.team, room: row.dungeon_room, drops: row.drops }
+  const known = results.find(({ fight }) => fight === row.fight)
+  if (known) {
+    const rolled = known.drops.length === 0 && row.drops.length > 0
+    return rolled ? { totals, results: results.map((entry) => (entry === known ? result : entry)) } : told
+  }
+  // A result that left the kept list was counted already.
+  if ([...totals.won, ...totals.lost].includes(row.fight)) return told
+  const side = result.won ? 'won' : 'lost'
+  return {
+    totals: { ...totals, [side]: [...totals[side], row.fight] },
+    results: [...results, result].slice(-FIGHT_RESULTS_KEPT),
+  }
+}
+
+/** A running position folds its hero's gains and fight results by value, so the same account seen
+ * twice changes nothing. */
+export const advance_position = (
+  position: DappPosition,
+  { characters, resolutions }: Readonly<Pick<DappAccount, 'characters' | 'resolutions'>>
+): DappPosition => {
+  const hero = characters.find(({ id }) => id === position.hero_id)
   if (position.finished_ms !== null || !hero) return position
   const sample = sample_of(hero)
   const previous = position.sample
   if (!previous) return { ...position, sample }
-  const { totals } = position
-  const fights = fights_with(totals.fights, hero.active_fight?.id)
-  if (same_sample(sample, previous) && fights === totals.fights) return position
-  return {
-    ...position,
-    sample,
-    totals: {
-      xp: totals.xp + gain(sample.experience, previous.experience),
-      levels: totals.levels + Math.max(0, sample.level - previous.level),
-      job_xp: totals.job_xp + gain(sample.job_experience, previous.job_experience),
-      fights,
-    },
-  }
+  const gained = with_gains(position.totals, previous, sample, hero.active_fight?.id)
+  const { totals, results } = resolutions
+    .filter(({ character, winner }) => character === hero.id && winner !== null)
+    .reduce(with_result, { totals: gained, results: position.results })
+  const same = totals === position.totals && results === position.results
+  return same ? position : { ...position, sample, totals, results }
 }
 
-export const finish_position = (position: DappPosition, now: number): DappPosition =>
-  position.finished_ms === null ? { ...position, finished_ms: now } : position
+/** A finished position keeps what its run last said, but it waits for nothing any more. `ended` is the
+ * reason of a run that ended by itself; a position that is already finished never takes a later one. */
+export const finish_position = (position: DappPosition, now: number, ended: RunEnding | null = null): DappPosition =>
+  position.finished_ms === null ? { ...position, finished_ms: now, wait: null, ended } : position
 
+const same_facts = (position: DappPosition, facts: RunFacts): boolean =>
+  (Object.keys(facts) as readonly (keyof RunFacts)[]).every((key) => position[key] === facts[key])
 /**
  * A fresh observation is the truth of what runs: a followed run that is gone finishes its position,
- * a run this page does not follow yet opens one, and every run says its own activity and blocker.
+ * with the reason the bot gives when the run ended by itself; a run this page does not follow yet
+ * opens one, and every run says its own activity, blocker and fees.
  */
 export const sync_positions = (
   positions: readonly DappPosition[],
@@ -104,17 +207,15 @@ export const sync_positions = (
 ): readonly DappPosition[] => {
   const followed = positions.map((position) => {
     const run = observation.runs[position.hero_id]
-    if (position.finished_ms !== null || !run) return finish_position(position, now)
-    const [issue, activity] = [blocker_of(run), strategy_activity(run.strategy)]
-    return issue === position.issue && activity === position.activity ? position : { ...position, issue, activity }
+    if (position.finished_ms !== null || !run)
+      return finish_position(position, now, observation.ended[position.hero_id] ?? null)
+    const facts = run_facts(run)
+    return same_facts(position, facts) ? position : { ...position, ...facts }
   })
   const running = new Set(followed.flatMap(({ hero_id, finished_ms }) => (finished_ms === null ? [hero_id] : [])))
   const opened = Object.entries(observation.runs)
     .filter(([hero_id]) => !running.has(hero_id))
-    .map(([hero_id, run]) => ({
-      ...open_position(hero_id, strategy_activity(run.strategy), now, heroes),
-      issue: blocker_of(run),
-    }))
+    .map(([hero_id, run]) => ({ ...open_position(hero_id, now, heroes), ...run_facts(run) }))
   return [...opened, ...followed]
 }
 
@@ -126,70 +227,4 @@ export const retained_positions = (positions: readonly DappPosition[]): readonly
     .toSorted((left, right) => (right.finished_ms ?? 0) - (left.finished_ms ?? 0))
     .slice(0, FINISHED_POSITIONS_KEPT)
   return [...running, ...finished]
-}
-
-/** A purchase this page asked for. Its units enter the bag like a find, and are not one. */
-export type HaulPurchase = Readonly<{ id: string; item_type: string; amount: number }>
-const found_items = (
-  found: DappHaul['found'],
-  previous: Readonly<Record<string, number>>,
-  next: Readonly<Record<string, number>>,
-  bought: Readonly<Record<string, number>>
-): DappHaul['found'] => {
-  const gains = Object.entries(next)
-    .map(([type, amount]) => [type, amount - (previous[type] ?? 0) - (bought[type] ?? 0)] as const)
-    .filter(([, gained]) => gained > 0)
-  if (!gains.length) return found
-  return Object.fromEntries([
-    ...Object.entries(found),
-    ...gains.map(([type, gained]) => [type, (found[type] ?? 0) + gained] as const),
-  ])
-}
-/**
- * The bag's gains as finds, minus the page's own purchase. Each bought unit is left out once: the
- * haul remembers how many it already left out, so a bought item that is spent and won again counts
- * as the find it is.
- */
-const haul_finds = (
-  haul: DappHaul,
-  previous: Readonly<Record<string, number>>,
-  next: Readonly<Record<string, number>>,
-  purchase: HaulPurchase | null
-): Pick<DappHaul, 'found' | 'bought'> => {
-  if (!purchase) return { found: found_items(haul.found, previous, next, {}), bought: haul.bought }
-  const { id, item_type, amount } = purchase
-  const left_out = haul.bought?.id === id ? haul.bought.units : 0
-  const gained = (next[item_type] ?? 0) - (previous[item_type] ?? 0)
-  const units = Math.max(0, Math.min(gained, amount - left_out))
-  return {
-    found: found_items(haul.found, previous, next, { [item_type]: units }),
-    bought: units ? { id, units: left_out + units } : haul.bought,
-  }
-}
-
-/** What left the wallet between two known balances; an unknown balance proves no payment. */
-const paid = (before: bigint | null, after: bigint | null): bigint =>
-  before !== null && after !== null ? gain(before, after) : 0n
-/**
- * The haul folds increases of the bag only, and only while a hero is out: deposits, sales and
- * transfers never erase it, and an idle bag only moves its baseline. A bag not read yet moves nothing.
- * What this page bought is not a find: the units of its own purchase are left out.
- */
-export const advance_haul = (
-  haul: DappHaul | null,
-  account: DappAccount,
-  out: boolean,
-  purchase: HaulPurchase | null = null
-): DappHaul | null => {
-  if (account.phase !== 'ready') return haul
-  const sample = { rows: account.inventory, balance_mist: account.sui_balance_mist }
-  if (!haul) return out ? { found: {}, spent_mist: 0n, bought: null, sample } : null
-  const { rows, balance_mist } = haul.sample
-  if (rows === sample.rows && balance_mist === sample.balance_mist) return haul
-  if (!out) return { ...haul, sample }
-  return {
-    ...haul_finds(haul, held_items(rows), held_items(sample.rows), purchase),
-    spent_mist: haul.spent_mist + paid(balance_mist, sample.balance_mist),
-    sample,
-  }
 }

@@ -23,6 +23,10 @@
   padding: 5px 15px;
   background: var(--keyline);
   box-shadow: none;
+  /* The face is always dark. A caller's tone (the primary tone's dark ink on the agent page) must not
+     reach the label: it reads in the light ink, over a dark shadow, whatever class it arrived with. */
+  color: var(--aui-ink);
+  text-shadow: 0 1px color-mix(in srgb, var(--aui-void) 53%, transparent);
   --c: 7px;
   clip-path: polygon(
     var(--c) 0,

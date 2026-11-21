@@ -16,7 +16,7 @@ import {
   chain_anchor_changed,
   create_owned_position_cache,
 } from '../game/core/position_store.ts'
-import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import { read_pose, subscribe_displayed_pose } from '../game/core/pose_feed.ts'
 import {
   read_owned_character_positions,
   subscribe_owned_character_positions,
@@ -184,7 +184,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       world?.ground_height(chain_to_client_coordinate(x), chain_to_client_coordinate(z)) ?? 0
     presence?.update(
       in_dungeon && !agent_watching(state.session) ? Object.freeze({}) : world_presence_rows(state, ground_height),
-      agent_watching(state.session) ? null : state.session.selected_character_id
+      agent_watching(state.session) ? null : state.session.selected_character_id,
+      agent_watching(state.session) ? state.session.selected_character_id : null
     )
   }
   const sync_spawns = (state: AppState): void => {
@@ -514,11 +515,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (nearby?.fight !== state.fight.nearby?.fight || nearby?.character_id !== state.fight.nearby?.character_id)
       dispatch({ type: 'fight/nearby', nearby })
   }
-  const unsubscribe_pose = subscribe_pose(() => {
+  const unsubscribe_pose = subscribe_displayed_pose(() => {
     sync_nearby()
-    const state = get_state()
     spawns?.refresh()
-    sync_resources(state)
+    sync_resources(get_state())
   })
   observe_world_controls({ events, get_state, read_world: () => world })
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))

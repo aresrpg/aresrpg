@@ -13,6 +13,8 @@ type MarketAccount = Pick<SessionState, 'inventory' | 'characters' | 'sui_balanc
 /** What an account can do on the market. The player's own wallet does all of it. */
 export type MarketCapabilities = Readonly<{ characters: boolean; withdraw: boolean; history: boolean }>
 const EVERYTHING: MarketCapabilities = Object.freeze({ characters: true, withdraw: true, history: true })
+/** The panels of the market page. */
+export type MarketPanel = 'BUY' | 'SELL' | 'HISTORY'
 export type MarketSource = Readonly<{
   market: MarketplaceState
   account: MarketAccount
@@ -21,6 +23,8 @@ export type MarketSource = Readonly<{
   /** Trades that lock some of the account's items; a source without any locks nothing. */
   trades?: readonly TradeRow[]
   capabilities?: MarketCapabilities
+  /** The panel the page opens on; a source that names none opens on Buy. */
+  panel?: MarketPanel
 }>
 /** The real controllers run unchanged against their live domain, an isolated preview, or another
  * account: the source says whose bag, balance and listings these are and how that account trades. */
@@ -44,3 +48,4 @@ export const useMarketTradeRows = () => {
   return source ? (source.trades ?? NO_TRADES) : rows
 }
 export const useMarketCapabilities = () => useContext(MarketSourceContext)?.capabilities ?? EVERYTHING
+export const useMarketPanel = (): MarketPanel => useContext(MarketSourceContext)?.panel ?? 'BUY'

@@ -7,7 +7,7 @@ import { mulberry } from '@aresrpg/engine/data'
 import type { ResourceNodeMarker } from '@aresrpg/engine'
 
 import { publish_spawn_tag } from './core/nametag_feed.ts'
-import { read_pose } from './core/pose_feed.ts'
+import { read_displayed_pose } from './core/pose_feed.ts'
 
 const LOAD_RANGE_BLOCKS = 90
 const DESPAWN_RANGE_BLOCKS = 120
@@ -130,8 +130,8 @@ export const create_resource_renderer = ({
   }
 
   const sync_tags = (): void => {
-    const own = read_pose()
-    const wanted = new Set(own ? resource_tag_ids(markers, own) : [])
+    const viewer = read_displayed_pose()
+    const wanted = new Set(viewer ? resource_tag_ids(markers, viewer) : [])
     for (const id of [...tagged]) if (!wanted.has(id)) clear_tag(id)
     for (const id of wanted) {
       if (tagged.has(id) || typeof document === 'undefined') continue
@@ -144,8 +144,9 @@ export const create_resource_renderer = ({
 
   return Object.freeze({
     update: (live: readonly WorldResourcePack[]): void => {
-      const own = read_pose()
-      const wanted = own ? resident_resource_packs(live, own, new Set(placed.keys())) : []
+      // Packs are drawn around the displayed hero: the controlled one, or the one being watched.
+      const viewer = read_displayed_pose()
+      const wanted = viewer ? resident_resource_packs(live, viewer, new Set(placed.keys())) : []
       const keep = new Set(wanted.map(({ id }) => id))
       let changed = false
       for (const [id] of placed)

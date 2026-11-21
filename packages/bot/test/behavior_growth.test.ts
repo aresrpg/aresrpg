@@ -4,7 +4,6 @@ import { expect, test } from 'bun:test'
 import { create_character_source, create_fight } from '@aresrpg/fight'
 import { characteristic_spending_quote, type CharacteristicName } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
-import { basic_build } from '@aresrpg/protocol/strategies'
 
 import spells from '../../../seed/content/spells.json'
 import { create_fixture } from '../../fight/test/helpers.ts'
@@ -13,9 +12,9 @@ import { parse_combat_profile, validate_profile_character } from '../src/combat_
 import { plan_combat_turn } from '../src/combat_tactics.ts'
 import { validate_gameplay, type GameplayContext } from '../src/gameplay.ts'
 
+import { archer_build as build } from './helpers/archer_fixture.ts'
 import { character, profession_context } from './helpers/profession_fixture.ts'
 
-const build = basic_build('yogan')
 const [arrow, range, critical, power] = build.spells!
 const spend = (hero: CharacterRow): SpendAction => ({
   type: 'spend_points',
@@ -107,9 +106,7 @@ test('points wait for the first listed spell instead of leaking to a cheaper one
   })
 })
 
-test('a hero of another class is bound no build, so its growth leaf spends nothing', () => {
-  const other = basic_build(character.classe)
-  expect(other).toEqual({})
+test('a growth leaf that lists no priority spends nothing', () => {
   const hero = { ...character, available_points: 30, available_spell_points: 9 }
   const idle: SpendAction = { type: 'spend_points', character_id: hero.id, stats: [], spells: [] }
   expect(select_spending(idle, context_of(hero))).toEqual({ status: 'failure', code: 'nothing_to_spend' })

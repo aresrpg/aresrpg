@@ -76,6 +76,7 @@ const fixture = async (existing: boolean, standalone = false) => {
   })
   const controller = new AbortController()
   const calls: string[] = []
+  const steps: string[] = []
   const state = {
     existing,
     fail_create: false,
@@ -84,6 +85,10 @@ const fixture = async (existing: boolean, standalone = false) => {
     paused: false,
     oauth: false,
     invalid_proof: false,
+    /** How many times the bot says `pending` before it answers the proof. */
+    pending_proofs: 0,
+    /** The bot answers with a proof signed for another nonce, as a replayed old answer would be. */
+    replayed_proof: false,
   }
   const routes: Record<string, (init: RequestInit) => Response | Promise<Response>> = {
     'POST /connect/challenge': (init) => {
@@ -157,7 +162,12 @@ const fixture = async (existing: boolean, standalone = false) => {
     },
     'POST /connect/proof': async (init) => {
       const body = JSON.parse(String(init.body))
-      const proof = await prepare_agent_pairing(body.request, member)
+      if (state.pending_proofs > 0) {
+        state.pending_proofs -= 1
+        return Response.json({ status: 'pending' }, { status: 202 })
+      }
+      const signed = state.replayed_proof ? { ...body.request, nonce: crypto.randomUUID() } : body.request
+      const proof = await prepare_agent_pairing(signed, member)
       if (state.retire === 'abort') controller.abort(new Error('Cancelled'))
       if (state.retire === 'wallet')
         read.mockReturnValue({ session: { wallet: null } } as ReturnType<typeof app.read_app_state>)
@@ -184,10 +194,12 @@ const fixture = async (existing: boolean, standalone = false) => {
       wallet,
       state.oauth ? 'authorization' : null,
       () => {},
-      'verified-session'
+      'verified-session',
+      (step) => void steps.push(step)
     )
   return {
     run,
+    steps,
     run_standalone: () =>
       prepare_standalone_hosted(
         create_hosted_client(
@@ -262,6 +274,52 @@ test.each([false, true])(
     }
   }
 )
+
+// Regression (2026-11-21): after every `pending` proof answer the browser slept a fixed second, and
+// the bot always answered `pending` first, so each owner check and each connection lost that second.
+test('a custody proof costs one request when the bot answers, and a pending answer is asked again with no clock', async () => {
+  const f = await fixture(true)
+  const timers = spyOn(globalThis, 'setTimeout')
+  const proofs = () => f.calls.filter((call) => call === 'POST /connect/proof')
+  try {
+    await f.run()
+    expect(proofs()).toHaveLength(1)
+    // The bot held the request as long as it holds one and still had no proof: the wait was the
+    // bot's, so the next request leaves at once.
+    f.state.pending_proofs = 2
+    await f.run()
+    expect(proofs()).toHaveLength(4)
+    expect(timers).not.toHaveBeenCalled()
+  } finally {
+    timers.mockRestore()
+    f.cleanup()
+  }
+})
+
+test.each([false, true])(
+  'a connection names each wait as it begins, and only the waits that happen: existing=%s',
+  async (existing) => {
+    const f = await fixture(existing)
+    try {
+      await f.run()
+      // The owner proof is named by the phase that starts; a wallet is created only for a new owner.
+      expect(f.steps).toEqual(existing ? ['checking'] : ['creating', 'checking'])
+    } finally {
+      f.cleanup()
+    }
+  }
+)
+
+test('a proof signed for another nonce is refused: an old answer never stands in for this check', async () => {
+  const f = await fixture(true)
+  try {
+    f.state.replayed_proof = true
+    await expect(f.run()).rejects.toThrow()
+    expect(f.published).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
 
 test('failed creation can retry without publishing unverified success', async () => {
   const f = await fixture(false)

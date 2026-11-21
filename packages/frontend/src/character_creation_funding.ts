@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
-import { GAS_BUDGET_MIST } from '@aresrpg/sdk/gas-budget'
+import { CHARACTER_FUNDING_MIST, GAS_BUDGET_MIST } from '@aresrpg/sdk/gas-budget'
 
 import { localized_error } from './i18n/error_text.ts'
 import { format_sui } from './wallet_amount.ts'
 
-const CHARACTER_CREATION_BALANCE_MIST = CHARACTER_PRICE_MIST + GAS_BUDGET_MIST
 const FALLBACK_FUNDING_TEXT = 'You need at least {{fee}} SUI left in your balance for fees.'
 
 export const character_creation_insufficient = (balance_mist: bigint | null): boolean =>
-  balance_mist !== null && balance_mist < CHARACTER_CREATION_BALANCE_MIST
+  balance_mist !== null && balance_mist < CHARACTER_FUNDING_MIST
 
 export const character_creation_funding_text = (template: string, amount_text = format_sui): string =>
   template.replaceAll('{{fee}}', amount_text(GAS_BUDGET_MIST, 2))

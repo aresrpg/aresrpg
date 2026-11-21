@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useMemo } from 'react'
 import { useStore } from 'zustand'
+import type { BlastSnapshot } from '@aresrpg/sdk/blast'
 
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
@@ -24,6 +25,10 @@ import { useSaleSpots } from './SaleSpots.tsx'
 import './allocation.css'
 import './layout.css'
 import './sale.css'
+
+/** While a sale can still be bought, linking a wallet is how its owner buys. */
+const wallet_rule = (sale: BlastSnapshot | null): string =>
+  ['soon', 'live'].includes(sale?.phase ?? '') ? 'wallet_rule_sale' : 'wallet_rule'
 
 const CampaignStatus = ({
   state,
@@ -64,7 +69,7 @@ export const AllocationPage = ({
   const external_state = useStore(external.store)
   const view = allocation_view(state.status)
   // A pinned sale snapshot switches the page to buying; without one the page shows the published spots.
-  const sale = useBlastSale().snapshot
+  const { snapshot: sale, url: blast_url } = useBlastSale()
   const now = useMinuteClock()
   const wallet = { state: external_state, dispatch: external.dispatch }
   const { spot, overlays } = useSaleSpots({
@@ -119,8 +124,9 @@ export const AllocationPage = ({
             external={wallet}
             google_label={copy.continue_google}
             text={text}
+            rule={text(wallet_rule(sale))}
           />
-          <Results text={text} locale={locale} kares_copy={copy.kares_page} />
+          <Results text={text} locale={locale} kares_copy={copy.kares_page} sale={sale} url={blast_url} />
         </div>
         <p className="fine">{text('footer')}</p>
       </main>

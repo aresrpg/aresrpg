@@ -6,11 +6,10 @@
 
 import { IconButton } from '@aresrpg/ui'
 import { character_equipment_slots } from '@aresrpg/immutable'
-import { cloneElement, useId, useMemo, useState } from 'react'
-import type { CharacterRow } from '@aresrpg/protocol'
+import { cloneElement, useId, useMemo, useState, type ReactNode } from 'react'
+import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
-import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
-import { character_render_source } from '../game/character_entities.ts'
+import { character_render_source, type CharacterRenderSource } from '../game/character_entities.ts'
 import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { inventory_groups } from '../inventory_stacks.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
@@ -28,18 +27,50 @@ import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
 import { equip_refusal } from './equipment_stage.ts'
 import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
-import { inventory_action_selection, useInventoryActions } from './InventoryOverlays.tsx'
-import { InventoryItemActions } from './InventoryItemActions.tsx'
+import { inventory_action_selection, useInventoryActions, type ItemMenuState } from './InventoryOverlays.tsx'
+import { InventoryItemActions, primary_item_action } from './InventoryItemActions.tsx'
 import { select_inventory_item } from './inventory_selection.ts'
 import { InventoryFilters } from './InventoryFilters.tsx'
 import { PendingClaims } from './PendingClaims.tsx'
+
+/**
+ * What the tab offers beyond wearing gear: the agent panel with its toggle, the pending claims, and the
+ * item actions the wallet signs. The player's own wallet gets all of it. A session adapter holds no
+ * function for any of it, and its bag is not the player's own, so it gets none.
+ */
+type BagExtras = Readonly<{
+  class_name: string
+  toggle: ReactNode
+  claims: ReactNode
+  panel: ReactNode
+  menu?: (menu: ItemMenuState) => void
+  transfer?: (ids: readonly string[], point: Readonly<{ x: number; y: number }>) => boolean
+  /** Adds the inspected item to the selection, or takes it out. */
+  select?: () => void
+  selection: typeof inventory_action_selection
+}>
+const ADAPTER_EXTRAS: BagExtras = Object.freeze({
+  class_name: 'chr-equip',
+  toggle: null,
+  claims: null,
+  panel: null,
+  selection: () => null,
+})
 
 export default function EquipmentTab({
   character,
   copy,
   session,
-}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) {
-  const kiosk = useAgentKiosk(copy, !!session)
+  preview,
+}: Readonly<{
+  character: Readonly<CharacterRow>
+  copy: AppCopy
+  session?: CharacterSession
+  /** The picture at the heart of the doll, drawn by the caller for the gear as it would be worn. This
+   *  tab reaches no renderer, so a surface without a canvas loads none. */
+  preview: (source: CharacterRenderSource) => ReactNode
+}>) {
+  const kiosk = useAgentKiosk(copy, Boolean(session))
   const {
     t,
     encumbered_ids,
@@ -92,18 +123,53 @@ export default function EquipmentTab({
   const inspected_slot = character_equipment_slots.find((slot) => equipment[slot]?.id === inspected?.id)
   const inspected_bag_item = bag.find((item) => item.id === inspected?.id)
 
+  const extras: BagExtras = session
+    ? ADAPTER_EXTRAS
+    : {
+        class_name: 'chr-equip chr-equip--agent',
+        toggle: (
+          <button
+            type="button"
+            className="agent-equipment-toggle"
+            aria-controls={equipment_id}
+            aria-expanded={equipment_open}
+            onClick={() => set_equipment_open(!equipment_open)}
+          >
+            {t('equipment_head')}
+          </button>
+        ),
+        claims: <PendingClaims copy={copy} />,
+        panel: <AgentKioskPanel key={kiosk.pairing?.address} kiosk={kiosk} copy={copy} disabled={committing} />,
+        menu: set_menu,
+        transfer: (ids, point) => {
+          if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="agent"]')) return false
+          if (!committing) kiosk.offer(ids, 'deposit', bag)
+          return true
+        },
+        select: () => {
+          if (!inspected) return
+          set_selected_ids(select_inventory_item(selected_ids, inspected.id, true))
+          set_inspected_id(null)
+        },
+        selection: inventory_action_selection,
+      }
+  const { inventory: inventory_override, craft }: Partial<CharacterSession> = session ?? {}
   const item_actions = useInventoryActions({
     copy,
     menu,
     close_menu: () => set_menu(null),
     reveal_box,
     set_reveal_box,
-    inventory_override: session?.inventory,
-    detail: inventory_action_selection(inspected_bag_item, selected_items),
+    inventory_override,
+    detail: extras.selection(inspected_bag_item, selected_items),
   })
+  // An adapter wears gear and nothing more: a bag item it cannot wear answers no gesture.
+  const activate_item = (item: Readonly<ItemRow>): void => {
+    if (!session || primary_item_action(item, false) === 'equip') activate(item)
+  }
   return (
     <div
-      className="chr-equip chr-equip--agent"
+      className={extras.class_name}
       data-equipment-open={equipment_open || undefined}
       onClick={(event) => {
         if (committing) return
@@ -116,15 +182,7 @@ export default function EquipmentTab({
           set_selected_ids([])
       }}
     >
-      <button
-        type="button"
-        className="agent-equipment-toggle"
-        aria-controls={equipment_id}
-        aria-expanded={equipment_open}
-        onClick={() => set_equipment_open(!equipment_open)}
-      >
-        {t('equipment_head')}
-      </button>
+      {extras.toggle}
       <div id={equipment_id} className="chr-equip__side" data-tutorial-target="character_equipment">
         <div className="chr-equip__chip">
           <div className="min-w-0 flex-1">
@@ -146,7 +204,7 @@ export default function EquipmentTab({
         </p>
         <div className="chr-eyebrow">{t('equipment_head')}</div>
         <EquipmentDoll
-          preview={<CharacterPreviewCanvas source={preview_source} pedestal />}
+          preview={preview(preview_source)}
           item_for={(slot) => equipment[slot] ?? null}
           open={(slot) => {
             if (committing) return
@@ -216,7 +274,7 @@ export default function EquipmentTab({
             <OwnedItemDetail
               item={inspected}
               copy={copy}
-              craft_session={{ character, inventory: session?.inventory }}
+              craft_session={{ character, inventory: inventory_override, craft }}
               comparison={equipment_comparison(inspected, equipment)}
             />
             <InventoryItemActions
@@ -227,14 +285,11 @@ export default function EquipmentTab({
               can_use={!session}
               entries={item_actions.detail_entries}
               copy={copy}
-              toggle={() => {
-                set_selected_ids(select_inventory_item(selected_ids, inspected.id, true))
-                set_inspected_id(null)
-              }}
+              toggle={extras.select}
               close={() => set_inspected_id(null)}
               activate={() => {
                 if (inspected_slot) unequip(inspected_slot)
-                else if (inspected_bag_item) activate(inspected_bag_item)
+                else if (inspected_bag_item) activate_item(inspected_bag_item)
                 set_inspected_id(null)
               }}
             />
@@ -243,7 +298,7 @@ export default function EquipmentTab({
       </div>
 
       <div className="chr-equip__bag" data-tutorial-target="shared_inventory" data-inventory-owner="player">
-        <PendingClaims copy={copy} />
+        {extras.claims}
         <InventoryFilters
           category={category}
           set_category={(value) => {
@@ -263,15 +318,11 @@ export default function EquipmentTab({
           items={grid_items.map(({ item }) => item)}
           selected={selected_ids}
           change={set_selected_ids}
-          menu={set_menu}
+          menu={extras.menu}
           disabled={[committing, kiosk.busy, kiosk.blocked].some(Boolean)}
           drag_item={set_dragging_id}
           equip={equip}
-          transfer={(ids, point) => {
-            if (!document.elementFromPoint(point.x, point.y)?.closest('[data-inventory-owner="agent"]')) return false
-            if (!committing) kiosk.offer(ids, 'deposit', bag)
-            return true
-          }}
+          transfer={extras.transfer}
         >
           {inventory_groups(kiosk.player_pending).map(({ item, amount }) => (
             <InventoryItemCell
@@ -306,12 +357,15 @@ export default function EquipmentTab({
               pending={items.some(({ id }) => kiosk.pending_ids.has(id))}
               onClick={(event) => select_item(item, event.shiftKey)}
               onDoubleClick={(event) => {
-                if (!event.shiftKey) activate(item)
+                if (!event.shiftKey) activate_item(item)
               }}
-              onContextMenu={(event) => {
-                event.preventDefault()
-                set_menu({ x: event.clientX, y: event.clientY, ...inventory_action_selection(item, selected_items)! })
-              }}
+              onContextMenu={
+                extras.menu &&
+                ((event) => {
+                  event.preventDefault()
+                  set_menu({ x: event.clientX, y: event.clientY, ...inventory_action_selection(item, selected_items)! })
+                })
+              }
               show_level
             />
           ))}
@@ -320,13 +374,7 @@ export default function EquipmentTab({
           ))}
         </InventorySelectionGrid>
       </div>
-      <AgentKioskPanel
-        key={kiosk.pairing?.address}
-        kiosk={kiosk}
-        copy={copy}
-        disabled={committing}
-        offline={!!session}
-      />
+      {extras.panel}
       <ConsumeHealingModal
         character={character}
         close={() => set_healing_item(null)}

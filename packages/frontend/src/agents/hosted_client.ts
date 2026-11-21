@@ -18,6 +18,7 @@ import { browser_auth_storage } from '../auth_storage.ts'
 import type { AppContext } from '../store.ts'
 
 import { hosted_consent_destination, hosted_owner_identity, sign_hosted_challenge_with } from './hosted_challenge.ts'
+import type { HostedStep } from './hosted_state.ts'
 import { complete_agent_pairing } from './pairing_storage.ts'
 
 /** HTTP/network availability is retryable; owner proof and consent failures are not. */
@@ -111,6 +112,29 @@ const read_hosted_session = async (
   if (result.owner !== wallet.address || !Array.isArray(result.bots)) throw new Error('Owner mismatch')
   return { id, session: result }
 }
+/**
+ * The request an authorization id names, as the bot itself describes it: the one decoder of that
+ * answer. The read signs nothing and needs no account, only the request's own cookie.
+ */
+export const read_hosted_request = async (
+  client: Pick<HostedClient, 'request' | 'origin'>,
+  authorization_id: string
+): Promise<HostedConnectRequest> => {
+  const consent = await client.request<HostedConnectRequest | null>(
+    `/connect/request?authorization_id=${encodeURIComponent(authorization_id)}`
+  )
+  const valid =
+    consent !== null &&
+    [
+      consent.authorization_id === authorization_id,
+      Boolean(hosted_consent_destination(consent.redirect_uri)),
+      consent.network === 'mainnet',
+      Array.isArray(consent.scopes),
+      consent.resource === new URL('/mcp', client.origin).href,
+    ].every(Boolean)
+  if (!valid) throw new Error('Invalid consent request')
+  return consent
+}
 export const authenticate_hosted = async (
   client: Readonly<HostedClient>,
   wallet: AuthSession,
@@ -120,24 +144,7 @@ export const authenticate_hosted = async (
 ) => {
   current_wallet(wallet, client)
   const pairing = hosted_owner_identity(wallet)
-  const consent =
-    authorization_id !== null
-      ? await client.request<HostedConnectRequest>(
-          `/connect/request?authorization_id=${encodeURIComponent(authorization_id)}`
-        )
-      : null
-  if (
-    authorization_id !== null &&
-    (!consent ||
-      ![
-        consent.authorization_id === authorization_id,
-        Boolean(hosted_consent_destination(consent.redirect_uri)),
-        consent.network === 'mainnet',
-        Array.isArray(consent.scopes),
-        consent.resource === new URL('/mcp', client.origin).href,
-      ].every(Boolean))
-  )
-    throw new Error('Invalid consent request')
+  const consent = authorization_id !== null ? await read_hosted_request(client, authorization_id) : null
   const prove = async (proof_id: string | null) => {
     const signed = await sign_hosted_challenge(
       client,
@@ -199,17 +206,21 @@ export const verify_hosted_bot = async (
   current_wallet(wallet, client)
   const request = hosted_owner_identity(wallet)
   if (bot.status !== 'ready') throw new Error('Hosted signer unavailable')
-  const poll = async (): Promise<AgentPairingResponse> => {
+  /**
+   * The bot holds this request until its actor has signed the proof, so the first answer is normally
+   * the proof. `pending` means the bot held the request as long as it holds one: the wait was the
+   * bot's, so the next request leaves at once and no clock runs here. Abort ends it.
+   */
+  const ask = async (): Promise<AgentPairingResponse> => {
     const result = await client.request<{ status: 'pending' | 'ready'; proof?: AgentPairingResponse }>(
       '/connect/proof',
       { authorization_id, bot_id: bot.id, request }
     )
     if (result.status === 'ready' && result.proof) return result.proof
     if (result.status !== 'pending') throw new Error('Invalid signer proof')
-    await pause_hosted_request(client.signal)
-    return poll()
+    return ask()
   }
-  const identity = await verify_agent_pairing(request, await poll())
+  const identity = await verify_agent_pairing(request, await ask())
   current_wallet(wallet, client)
   if (identity.address !== bot.address || identity.multisig_public_key !== bot.multisig_public_key)
     throw new Error('Hosted descriptor mismatch')
@@ -226,18 +237,26 @@ const setup_bot = (bots: readonly HostedBotDescriptor[]) => {
   return bots[0]
 }
 
-/** One Connect intent prepares one unambiguous wallet and verifies custody before reporting readiness. */
+/**
+ * One Connect intent prepares one unambiguous wallet and verifies custody before reporting readiness.
+ * `report` names each wait as it begins, after the owner proof the caller already names: the creation
+ * of a wallet (only for an owner who has none), then its custody check.
+ */
 export const prepare_hosted = async (
   client: Readonly<HostedClient>,
   wallet: AuthSession,
   authorization_id: string | null,
   retain: (id: string) => void,
-  session_id: string | null = authorization_id
+  session_id: string | null = authorization_id,
+  report: (step: HostedStep) => void = () => undefined
 ) => {
   const result = await authenticate_hosted(client, wallet, authorization_id, retain, session_id)
   current_wallet(wallet, client)
-  const bot = setup_bot(result.bots) ?? (await provision_hosted(client, result.authorization_id))
+  const existing = setup_bot(result.bots)
+  if (!existing) report('creating')
+  const bot = existing ?? (await provision_hosted(client, result.authorization_id))
   current_wallet(wallet, client)
+  report('checking')
   const proof = await verify_hosted_bot(client, wallet, result.authorization_id, bot)
   return { ...result, bots: [bot], selected: bot.id, verified: bot.id, pairing: retain_hosted_pairing(proof) }
 }

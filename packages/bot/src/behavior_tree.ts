@@ -6,7 +6,9 @@ export type BehaviorNode<Action, Condition> =
   | Readonly<{ type: 'loop'; child: BehaviorNode<Action, Condition> }>
   | Readonly<{ type: 'condition'; condition: Condition }>
   | Readonly<{ type: 'action'; action: Action }>
-  | Readonly<{ type: 'wait' | 'complete' }>
+  | Readonly<{ type: 'wait' }>
+  /** An authored end. Its optional reason is reported as the run's issue. */
+  | Readonly<{ type: 'complete'; reason?: string }>
   | Readonly<{ type: 'replan'; reason: string }>
 export type BehaviorMemory = Readonly<{
   completed: readonly string[]
@@ -57,7 +59,7 @@ export const evaluate_behavior = <Action, Condition>(
       }
     },
     wait: (_node, _path, retained) => ({ status: 'waiting', memory: retained }),
-    complete: (_node, _path, retained) => ({ status: 'complete', memory: retained }),
+    complete: (node, _path, retained) => ({ status: 'complete', reason: node.reason, memory: retained }),
     replan: (node, _path, retained) => ({ status: 'replan', reason: node.reason, memory: retained }),
     loop: (node, path, retained) => {
       const result = visit(node.child, `${path}/0`, retained)

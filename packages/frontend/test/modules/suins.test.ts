@@ -22,6 +22,7 @@ const fixture = () => {
     pause: null as Promise<void> | null,
     guard: null as (() => void) | null,
     agent_error: null as Error | null,
+    unchanged: false,
   }
   const wallet = {
     address: '0x1',
@@ -49,6 +50,7 @@ const fixture = () => {
           player_address: player,
           agent_address: agent,
           erased_names: ['aresrpg.child.sceat.sui'],
+          unchanged: state.unchanged,
         }
       },
       apply_parent: async (name: string, agent: string, guard: () => void) => {
@@ -472,4 +474,103 @@ test.each([
   } finally {
     f.stop()
   }
+})
+
+// Regression (production, 2026-11-21): "Confirm name change" was offered again for a name whose
+// records already matched, in Settings and on every hosted connection. Applying it signed nothing.
+test('a name whose records already match finishes setup without a review or a signature', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    f.state.unchanged = true
+    const stages: string[] = []
+    const unsubscribe = f.app.store.subscribe(({ suins }) => {
+      if (suins.request?.kind === 'set') stages.push(suins.request.stage)
+    })
+    f.app.dispatch({ type: 'suins/setup_started', token: 'connect' })
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'connect' })
+    await tick()
+    unsubscribe()
+    const result = f.app.store.getState().suins
+    expect(stages).not.toContain('review')
+    expect(stages).not.toContain('apply')
+    expect(f.calls).toEqual(['validate'])
+    expect(result.request).toBeNull()
+    expect(result.completed).toEqual(['connect'])
+    expect(result.pending).toBeNull()
+    expect(result.error).toBeNull()
+    expect(result.applied).toBe('child.sceat.sui')
+    // The next connection reads again and is not asked either.
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'again' })
+    await tick()
+    expect(f.calls).toEqual(['validate', 'validate'])
+    expect(f.app.store.getState().suins.completed).toEqual(['again'])
+  } finally {
+    f.stop()
+  }
+})
+
+test('a missing agent default keeps the name offered: the review opens and Apply retries', async () => {
+  const f = fixture()
+  try {
+    await tick()
+    f.state.no_gas = true
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'partial' })
+    await advance(f)
+    expect(f.app.store.getState().suins.pending).toEqual({ pairing, reason: 'funding' })
+    expect(f.app.store.getState().suins.applied).toBeNull()
+    f.state.no_gas = false
+    f.app.dispatch({ type: 'suins/setup', pairing, token: 'retry' })
+    await tick()
+    expect(f.app.store.getState().suins.request).toMatchObject({ stage: 'review' })
+    f.app.dispatch({ type: 'suins/confirm' })
+    await tick()
+    expect(f.calls).toEqual(['validate', 'human', 'agent', 'validate', 'human', 'agent'])
+    expect(f.app.store.getState().suins.applied).toBe('child.sceat.sui')
+  } finally {
+    f.stop()
+  }
+})
+
+const names = [{ name: 'sceat.sui', object_id: '0x3', nft_id: '0x3', subname: false }]
+const applied_state = (name = 'sceat.sui') => {
+  const loaded = { ...initial_suins_state(), snapshot: { default_name: `aresrpg.${name}`, names }, draft: name }
+  const requested = reduce_suins(loaded, { type: 'suins/use' })
+  return reduce_suins(requested, { type: 'suins/used', request: requested.request as never, pending: null })
+}
+
+test('the applied name is a claim of the last read: writes, contradicting reads and resets retire it', () => {
+  const state = applied_state()
+  expect(state.applied).toBe('sceat.sui')
+  // Choosing another name and coming back changes nothing on chain.
+  const other = reduce_suins(state, { type: 'suins/name_changed', name: 'other.sui' })
+  expect(other.applied).toBe('sceat.sui')
+  // A cancelled review signed nothing either.
+  const reviewing = reduce_suins(other, { type: 'suins/use' })
+  const request = reviewing.request as never
+  const review = {
+    fingerprint: 'review',
+    player_address: '0x1',
+    agent_address: '0x2',
+    erased_names: [],
+    unchanged: false,
+  }
+  const reviewed = reduce_suins(reviewing, { type: 'suins/reviewed', request, pairing, review })
+  expect(reduce_suins(reviewed, { type: 'suins/cancel' }).applied).toBe('sceat.sui')
+  // Consent starts the writes: the outcome is unknown until they complete.
+  const applying = reduce_suins(reviewed, { type: 'suins/confirm' })
+  expect(applying.applied).toBeNull()
+  const partial = reduce_suins(applying, {
+    type: 'suins/used',
+    request: applying.request as never,
+    pending: { pairing, reason: 'funding' },
+  })
+  expect(partial.applied).toBeNull()
+  // A later read that shows another default name contradicts the claim.
+  const refreshing = reduce_suins(state, { type: 'suins/refresh' })
+  const same = { type: 'suins/loaded', request: refreshing.request!, snapshot: state.snapshot! } as const
+  expect(reduce_suins(refreshing, same).applied).toBe('sceat.sui')
+  const moved = { ...same, snapshot: { default_name: 'aresrpg.other.sui', names } }
+  expect(reduce_suins(refreshing, moved).applied).toBeNull()
+  expect(reduce_suins(state, { type: 'suins/reset' }).applied).toBeNull()
 })

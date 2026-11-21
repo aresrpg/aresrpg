@@ -40,14 +40,17 @@ export const InventoryItemActions = ({
   entries: readonly InventoryMenuEntry[]
   copy: AppCopy
   activate: () => void
-  toggle: () => void
+  /** Absent when a selection can go nowhere: no Select button is drawn. */
+  toggle?: () => void
   close: () => void
 }>) => {
-  const action = primary_item_action(item, equipped)
+  const primary = primary_item_action(item, equipped)
+  // An action the driver cannot perform is not offered, rather than shown disabled.
+  const action = primary === 'use' && !can_use ? null : primary
   const labels = { equip: copy.ui.design_equip, unequip: copy.ui.mobile_unequip, use: copy.ui.inventory_use }
   return (
     <div className="inventory-item-actions">
-      {!equipped && (
+      {!equipped && toggle && (
         <Button aria-pressed={selected} disabled={disabled} onClick={toggle}>
           <Check size={13} />
           {selected ? copy.ui.inventory_deselect : copy.ui.inventory_select}
@@ -68,12 +71,7 @@ export const InventoryItemActions = ({
         </Button>
       ))}
       {action && (
-        <Button
-          tone="primary"
-          className="inventory-item-primary"
-          disabled={disabled || (action === 'use' && !can_use)}
-          onClick={activate}
-        >
+        <Button tone="primary" className="inventory-item-primary" disabled={disabled} onClick={activate}>
           {labels[action]}
         </Button>
       )}

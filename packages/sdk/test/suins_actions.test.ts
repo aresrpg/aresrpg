@@ -459,3 +459,69 @@ test.each(['avatar', 'target', 'presence', 'agent'])(
     expect(state.executions).toHaveLength(0)
   }
 )
+
+// Regression (production, 2026-11-21): a name whose records already matched was offered for
+// confirmation again, in Settings and on every hosted connection. A review now says when the two
+// leaves and the two reverse records already match, so the caller can skip the confirmation.
+const applied = (managed = true, player = owner) => {
+  const fixture = setup(managed)
+  fixture.state.records.set('aresrpg.sceat.sui', leaf(player))
+  fixture.state.records.set('aresrpgagent.sceat.sui', leaf(agent))
+  fixture.state.defaults.set(player, 'aresrpg.sceat.sui')
+  fixture.state.defaults.set(agent, 'aresrpgagent.sceat.sui')
+  return fixture
+}
+test('a review is unchanged only when both leaves are clean and both reverse records match', async () => {
+  const { actions, state } = applied()
+  const review = await actions.review_parent('sceat.sui', agent, current)
+  expect(review.unchanged).toBe(true)
+  expect(review.erased_names).toEqual([])
+  // The reviewed consent still applies as before: nothing to sign.
+  expect(await actions.apply_parent('sceat.sui', agent, current, undefined, review)).toEqual({
+    name: 'aresrpg.sceat.sui',
+    targets: { 'aresrpg.sceat.sui': owner, 'aresrpgagent.sceat.sui': agent },
+  })
+  expect(state.executions).toHaveLength(0)
+})
+test.each([
+  ['the agent wallet has no default name', (defaults: Map<string, string>) => defaults.delete(agent)],
+  [
+    'the agent wallet carries another default',
+    (defaults: Map<string, string>) => defaults.set(agent, 'aresrpg.sceat.sui'),
+  ],
+  ['the player wallet has no default name', (defaults: Map<string, string>) => defaults.delete(owner)],
+])('a review stays offered when %s', async (_case, change) => {
+  const { actions, state } = applied()
+  change(state.defaults)
+  expect((await actions.review_parent('sceat.sui', agent, current)).unchanged).toBe(false)
+})
+test.each([
+  ['points elsewhere', leaf(owner)],
+  ['carries data', leaf(agent, { avatar: 'old-avatar' })],
+])('a review stays offered when a leaf %s, without reading the reverse records', async (_case, record) => {
+  const { actions, client, state } = applied()
+  state.records.set('aresrpgagent.sceat.sui', record)
+  let reverse_reads = 0
+  const read = client.core.defaultNameServiceName
+  client.core.defaultNameServiceName = async (options) => {
+    reverse_reads++
+    return read(options)
+  }
+  expect((await actions.review_parent('sceat.sui', agent, current)).unchanged).toBe(false)
+  expect(reverse_reads).toBe(0)
+})
+test('a failed reverse read leaves the review unknown, never unchanged', async () => {
+  const { actions, client } = applied()
+  client.core.defaultNameServiceName = async () => {
+    throw new Error('Network unavailable')
+  }
+  await expect(actions.review_parent('sceat.sui', agent, current)).rejects.toThrow('Network unavailable')
+})
+test('an external parent compares the reverse record of the player wallet, not its own', async () => {
+  const player = normalizeSuiAddress('0xb')
+  const { actions, state } = applied(false, player)
+  expect((await actions.review_parent('sceat.sui', agent, current, player)).unchanged).toBe(true)
+  state.defaults.delete(player)
+  state.defaults.set(owner, 'aresrpg.sceat.sui')
+  expect((await actions.review_parent('sceat.sui', agent, current, player)).unchanged).toBe(false)
+})

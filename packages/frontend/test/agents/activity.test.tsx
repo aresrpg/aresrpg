@@ -3,7 +3,13 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { current_agent_activity, fold_agent_activity, hero_activity } from '../../src/agents/activity.ts'
+import {
+  current_agent_activity,
+  fold_agent_activity,
+  hero_activity,
+  run_notice,
+  type HeroActivity,
+} from '../../src/agents/activity.ts'
 import { AgentActivityLog } from '../../src/agents/AgentActivity.tsx'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import { reduce_app_state } from '../../src/store.ts'
@@ -92,6 +98,23 @@ test('the live observation reducer retains activity only for the admitted observ
   expect(late.session.agent_view.activity).toEqual([])
 })
 
+const copy = {
+  ui: {
+    agent_activity_label: 'Agent activity',
+    agent_activity_active: 'Working',
+    agent_activity_waiting: 'Waiting',
+    agent_activity_idle: 'Waiting for an objective',
+    agent_activity_travel: 'Changed location',
+  },
+  dapp_page: { run_notice_funding: 'Your bot is out of SUI.' },
+} as unknown as AppCopy
+const render = (activity: HeroActivity) =>
+  renderToStaticMarkup(
+    <AgentActivityLog copy={copy} character={character()} history={[{ kind: 'travel' }]} activity={activity} />
+  )
+/** What the player reads: the markup with every tag and attribute removed. */
+const read = (html: string) => html.replace(/<[^>]*>/g, ' ')
+
 test('the pushed status describes one hero and never crosses observation identity', () => {
   const base = automation_fixture().session
   const pairing = { address: 'paired', multisig_public_key: 'public', signer_mode: 'host-persistent' as const }
@@ -126,7 +149,7 @@ test('the pushed status describes one hero and never crosses observation identit
     steps: ['Gather herbs', 'Craft potions'],
   }
   const run = { id: 'run', character_id: 'alice', status: 'active', objective, issue: '<blocked> Supplies unavailable' }
-  const activity = { status: 'active' as const, objective, issue: run.issue }
+  const activity = { status: 'active' as const, objective, notice: null, issue: run.issue }
   const playing = { ...pushed, state: 'active' as const, runs: [run] }
   const active = { ...session, agent_inventory: { ...session.agent_inventory, status: playing } }
   expect(current_agent_activity(active)).toEqual(activity)
@@ -150,27 +173,58 @@ test('the pushed status describes one hero and never crosses observation identit
   expect(current_agent_activity({ ...active, link_status: 'idle' })).toBeNull()
   expect(current_agent_activity({ ...active, agent_view: { ...active.agent_view, request: null } })).toBeNull()
   expect(current_agent_activity({ ...active, inventory_pairing: { ...pairing, address: 'other-bot' } })).toBeNull()
-  const copy = {
-    ui: {
-      agent_activity_label: 'Agent activity',
-      agent_activity_active: 'Working',
-      agent_activity_idle: 'Waiting for an objective',
-      agent_activity_travel: 'Changed location',
-    },
-  } as unknown as AppCopy
-  const render = (value: typeof idle | typeof activity) =>
-    renderToStaticMarkup(
-      <AgentActivityLog copy={copy} character={character()} history={[{ kind: 'travel' }]} activity={value} />
-    )
   const html = render(activity)
   expect(html.indexOf(objective.title)).toBeLessThan(html.indexOf('Changed location'))
   expect(html).toContain('&lt;script&gt;literal text&lt;/script&gt;')
   expect(html).toContain('Gather herbs')
-  expect(html).toContain('&lt;blocked&gt; Supplies unavailable')
   expect(html).toContain('Working')
   expect(html).not.toContain('Waiting for an objective')
+  // The bot's own words stay diagnostic: an attribute, never a line the player reads.
+  expect(html).toContain('data-issue="&lt;blocked&gt; Supplies unavailable"')
+  expect(read(html)).not.toContain('Supplies unavailable')
   const waiting = render(idle)
   expect(waiting).toContain('Waiting for an objective')
   expect(waiting).not.toContain(objective.title)
   expect(waiting.match(/Waiting for an objective/g)).toHaveLength(1)
+})
+
+test('a run says a blocker in one plain sentence and never the code of the bot', () => {
+  const pushed = { ready: true, event_fence: 1, sampled_at: 1, state: 'waiting' as const, direct: null }
+  const objective = { title: 'Herbalist level 30' }
+  const told = (issue: string) =>
+    hero_activity(
+      { ...pushed, runs: [{ id: 'run', character_id: 'alice', status: 'waiting', objective, issue }] },
+      'alice'
+    )!
+  // A hero that walks waits: the status line says it, and nothing is added under the title.
+  const walking = render(told('travel_not_ready'))
+  expect(read(walking)).not.toContain('travel_not_ready')
+  expect(read(walking).match(/\S+/g)).toEqual(['Herbalist', 'level', '30', 'Changed', 'location', 'Waiting'])
+  expect(walking).toContain('data-issue="travel_not_ready"')
+  const unfunded = render(told('funding_required'))
+  expect(read(unfunded)).toContain('Your bot is out of SUI.')
+  expect(read(unfunded)).not.toContain('funding_required')
+})
+
+test('only a blocker the player can lift is a notice; a wait, a refusal and an unknown code are none', () => {
+  // Ordinary play: the run continues by itself, and the status line already says it waits.
+  expect(run_notice('waiting', 'travel_not_ready')).toBeNull()
+  expect(run_notice('waiting', 'command_failed')).toBeNull()
+  expect(run_notice('waiting', 'needs_resync')).toBeNull()
+  expect(run_notice('paused', 'paused')).toBeNull()
+  expect(run_notice('active', undefined)).toBeNull()
+  expect(run_notice('waiting', 'illegal_fight_action:out_of_range')).toBeNull()
+  expect(run_notice('waiting', 'funding_required')).toBe('funding')
+  expect(run_notice('awaiting_ai', 'funding_required')).toBe('funding')
+  expect(run_notice('waiting', 'gathering_tool_required')).toBe('requirement')
+  expect(run_notice('waiting', 'crafting_level_required')).toBe('requirement')
+  // A run that asks for its author needs a new plan, whatever words the author left as the reason.
+  expect(run_notice('awaiting_ai', 'any free text')).toBe('plan')
+  expect(run_notice('awaiting_ai', null)).toBe('plan')
+  expect(run_notice('waiting', 'invalid_region')).toBe('plan')
+  expect(run_notice('waiting', 'unavailable_spells:Fire Ball,Root')).toBe('plan')
+  // A code the bot adds tomorrow, free text and an inherited object key never reach the player.
+  expect(run_notice('waiting', 'a_code_added_tomorrow')).toBeNull()
+  expect(run_notice('waiting', 'Supplies unavailable')).toBeNull()
+  expect(run_notice('waiting', 'constructor')).toBeNull()
 })

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import { create_fight } from '@aresrpg/fight'
+import { job_xp_for_level } from '@aresrpg/immutable'
 import type { FightStateRow } from '@aresrpg/protocol'
 import { character_max_hp } from '@aresrpg/protocol/character-stats'
 
@@ -11,7 +12,9 @@ import {
   held_items,
   hero_experience,
   hero_health,
+  hero_items,
   job_experience,
+  job_level,
   strongest_first,
 } from '../../src/dapp/account.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
@@ -120,4 +123,20 @@ test('a hero in its kiosk shows the chain\u2019s own health; a seated hero shows
   expect(hero_health(fighting, { fights: {} }, fight.owner, 1_000)).toBeNull()
   expect(hero_health(fighting, { fights }, '0xother', 1_000)).toBeNull()
   expect(hero_health(fighting, { fights }, null, 1_000)).toBeNull()
+})
+
+test('a hero’s own bag and profession level are read as the bot reads them', () => {
+  expect(job_level(character_fixture({ jobs: {} }), 'FARMER')).toBe(1)
+  const farmer = character_fixture({ jobs: { FARMER: String(job_xp_for_level(30)) } })
+  expect(job_level(farmer, 'FARMER')).toBe(30)
+  expect(job_level(farmer, 'MINER')).toBe(1)
+  const hoe = { ...item_fixture('old_hoe', 1, 'hoe'), category: 'tool_farmer' }
+  const bag = (items: readonly object[], more: Parameters<typeof account_fixture>[0] = {}) =>
+    account_bag(account_fixture({ items, ...more }))!
+  const rows = [hoe, { ...item_fixture('wheat', 4, 'far'), kiosk: '0xother' }, item_fixture('wheat', 2, 'near')]
+  // Only its own kiosk, and nothing a listing or a trade locks.
+  expect(hero_items(bag(rows), '0xkiosk').map(({ id }) => id)).toEqual(['hoe', 'near'])
+  expect(hero_items(bag(rows, { listings: [{ id: 'near' }] }), '0xkiosk').map(({ id }) => id)).toEqual(['hoe'])
+  const traded = [{ caps_a: [{ object: 'hoe' }], caps_b: [] }]
+  expect(hero_items(bag(rows, { trades: traded }), '0xkiosk').map(({ id }) => id)).toEqual(['near'])
 })

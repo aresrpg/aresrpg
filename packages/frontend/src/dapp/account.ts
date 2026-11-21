@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { hydrate_fight_checkpoint, seated_player_health } from '@aresrpg/fight'
+import { job_level_from_xp } from '@aresrpg/immutable'
 import type { CharacterRow, FightStateRow, ItemRow } from '@aresrpg/protocol'
 import { character_max_hp, projected_hp } from '@aresrpg/protocol/character-stats'
+import { available_inventory_items, encumbered_asset_ids } from '@aresrpg/protocol/inventory'
 import type { RaidBag } from '@aresrpg/protocol/strategies'
 
 import type { AgentInventoryView } from '../agents/inventory_state.ts'
@@ -14,6 +16,9 @@ import { catalog_spell_sources } from '../content/fight_sources.ts'
  */
 export type DappAccount = AgentInventoryView
 
+/** Below this the header shows the bot's SUI in red: heroes stop when it cannot pay fees (owner, 2026-11-21). */
+export const BOT_LOW_BALANCE_MIST = 200_000_000n
+
 /** Units held by item type, summed across stack fragments. */
 export const held_items = (rows: readonly ItemRow[]): Readonly<Record<string, number>> =>
   rows.reduce<Record<string, number>>(
@@ -24,6 +29,14 @@ export const held_items = (rows: readonly ItemRow[]): Readonly<Record<string, nu
 /** The bag with what locks its items, for the shared raid-key rule. Null until all of it is read. */
 export const account_bag = ({ phase, inventory, catalogue, trades }: DappAccount): RaidBag | null =>
   phase === 'ready' ? { items: inventory, listings: catalogue.own_listings, trades } : null
+
+/** What one hero can use: the items of its own kiosk that no listing and no trade locks. It is the
+ * bot's own reading of a hero's bag, from the same shared helpers. */
+export const hero_items = ({ items, listings, trades }: RaidBag, kiosk: string): readonly ItemRow[] =>
+  available_inventory_items(items, encumbered_asset_ids(listings, trades), kiosk)
+
+export const job_level = ({ jobs }: Readonly<Pick<CharacterRow, 'jobs'>>, job: string): number =>
+  job_level_from_xp(Number(jobs[job] ?? 0))
 
 export const hero_experience = ({ experience }: Readonly<Pick<CharacterRow, 'experience'>>): bigint =>
   BigInt(experience)

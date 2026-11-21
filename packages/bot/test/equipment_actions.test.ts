@@ -6,6 +6,7 @@ import { equip_refusal } from '@aresrpg/protocol/equipment'
 import items from '../../../seed/content/items.json'
 import { validate_equip_item, validate_consumable, equipment_projected } from '../src/equipment_actions.ts'
 import type { GameplayContext } from '../src/gameplay_context.ts'
+import { execute_gameplay_actions, parse_gameplay_action } from '../src/gameplay.ts'
 import { select_owned_item } from '../src/behavior_items.ts'
 
 import { profession_context, character, item } from './helpers/profession_fixture.ts'
@@ -112,4 +113,55 @@ test('consumable refusal covers rooted characters, unsupported effects and inval
       },
     })
   ).toThrow('unsupported_consumable')
+})
+test('an equip without an item empties the slot with one unequip, and an empty slot is refused', async () => {
+  const worn = { ...character, equipment: [...character.equipment, { ...hat, slot: 'hat' }] }
+  const payload = { character_id: character.id, slot: 'hat' as const }
+  expect(parse_gameplay_action('equip_item', payload)).toEqual(payload)
+  expect(() => parse_gameplay_action('equip_item', { character_id: character.id })).toThrow('invalid_gameplay_payload')
+  expect(() => parse_gameplay_action('equip_item', { ...payload, item_id: null })).toThrow('invalid_gameplay_payload')
+  const base = context_for('equip_item', payload)
+  const context = { ...base, snapshot: { ...base.snapshot, characters: [worn] } }
+  expect(validate_equip_item(context).input).toEqual({
+    character_id: character.id,
+    custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap! },
+    to_equip: [],
+    to_unequip: [{ slot: 'hat', item_id: hat.id }],
+  })
+  const calls: unknown[] = []
+  await execute_gameplay_actions(context, {
+    equip: async (input: unknown) => {
+      calls[calls.length] = input
+      return { digest: 'fixture' }
+    },
+  } as unknown as Parameters<typeof execute_gameplay_actions>[1])
+  expect(calls).toEqual([validate_equip_item(context).input])
+  // The certified effect: the slot is empty. A worn slot is not yet the projection.
+  expect(equipment_projected(payload, worn)).toBe(false)
+  expect(equipment_projected(payload, character)).toBe(true)
+  expect(() => validate_equip_item(base)).toThrow('slot_empty')
+  for (const busy of [{ custody: 'fight' as const }, { ambush: { fired: true } as never }])
+    expect(() =>
+      validate_equip_item({ ...context, snapshot: { ...context.snapshot, characters: [{ ...worn, ...busy }] } })
+    ).toThrow('character_not_available')
+  expect(() => validate_equip_item({ ...context, snapshot: { ...context.snapshot, characters: [] } })).toThrow(
+    'character_authority_mismatch'
+  )
+})
+test('an equip with an item still swaps the occupant out in the same change', () => {
+  const second = { ...hat, id: item('fixture_hat', 1, 72).id }
+  const worn = { ...character, equipment: [...character.equipment, { ...hat, slot: 'hat' }] }
+  const base = context_for('equip_item', { character_id: character.id, item_id: second.id, slot: 'hat' })
+  const context = {
+    ...base,
+    snapshot: {
+      ...base.snapshot,
+      characters: [worn],
+      inventory: { ...base.snapshot.inventory, items: [second] },
+    },
+  }
+  expect(validate_equip_item(context).input).toMatchObject({
+    to_equip: [{ slot: 'hat', item_id: second.id }],
+    to_unequip: [{ slot: 'hat', item_id: hat.id }],
+  })
 })

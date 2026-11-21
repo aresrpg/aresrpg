@@ -37,7 +37,7 @@ export const EmptyEquipment = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           }}
         />
       </div>
-      <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} offline={false} />
+      <AgentKioskPanel kiosk={kiosk} copy={copy} disabled={false} />
     </div>
   )
 }

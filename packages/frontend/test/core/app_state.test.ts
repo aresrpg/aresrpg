@@ -289,6 +289,22 @@ describe('app state', () => {
     expect(online.session.online).toBe(42)
     expect(online.session.online_characters).toBe(12)
     expect(online.session.indexing_lag).toBe(7)
+    // Only an admin's packet carries the hosted bot count; without it the split is unknown.
+    expect(online.session.online_agents).toBeUndefined()
+    const split = reduce_app_state(online, {
+      type: 'server/packet',
+      packet: {
+        type: 'packet/server_info',
+        online_characters: 12,
+        online: 42,
+        online_agents: 5,
+        indexing_lag: 7,
+        current_epoch: '9',
+        chain_timestamp_ms: 1_000_000,
+        chain_sample_age_ms: 0,
+      },
+    })
+    expect(split.session.online_agents).toBe(5)
     const frozen = reduce_app_state(online, {
       type: 'server/packet',
       packet: { type: 'packet/game_state', frozen: true },

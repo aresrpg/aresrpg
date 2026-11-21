@@ -21,6 +21,7 @@ describe('websocket admission', () => {
         promoted += 1
         return {
           online_characters: () => [],
+          is_agent: () => false,
           dispatch: () => undefined,
           on_message: () => undefined,
           on_close: () => undefined,
@@ -49,6 +50,7 @@ describe('websocket admission', () => {
         promoted = true
         return {
           online_characters: () => [],
+          is_agent: () => false,
           dispatch: () => undefined,
           on_message: () => undefined,
           on_close: () => undefined,
@@ -75,6 +77,7 @@ describe('websocket admission', () => {
       verify: async () => true,
       promote: () => ({
         online_characters: () => [],
+        is_agent: () => false,
         dispatch: () => undefined,
         on_message: () => undefined,
         on_close: () => undefined,

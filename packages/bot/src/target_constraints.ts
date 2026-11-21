@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { city_at_position, client_world_position, world_biome_at_zone, worlds_source } from '@aresrpg/engine/data'
+import { city_at_position, world_biome_at_zone, worlds_source } from '@aresrpg/engine/data'
 import { world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
+import { area_contains as shared_area_contains } from '@aresrpg/protocol/strategies'
 
 import mobs from '../../../seed/content/mobs.json'
 
-import { decode, nonempty, object_schema, type Schema } from './gameplay_schema.ts'
+import { decode, nonempty, object_schema, world_coordinate, type Schema } from './gameplay_schema.ts'
 
-export type WorldArea = Readonly<{ world: string }> &
+/** A world, one of its cities or one of its biomes, optionally narrowed to a band of distance from the
+ * world centre: the distance the population rule draws group sizes by, taken at the zone's centre. */
+export type WorldArea = Readonly<{ world: string; min_distance?: number; max_distance?: number }> &
   (
     | Readonly<{ city?: never; biome?: never }>
     | Readonly<{ city: string; biome?: never }>
@@ -20,12 +23,14 @@ export type TargetOptions = Readonly<{
   mob_types?: readonly string[]
   area?: WorldArea
 }>
+const distance_band = { min_distance: world_coordinate, max_distance: world_coordinate } as const
+/** One place of a world; the distance band is optional on each. */
+const area_schema = (place: Readonly<Record<string, Schema>>): Schema => ({
+  ...object_schema({ world: nonempty, ...place, ...distance_band }),
+  required: ['world', ...Object.keys(place)],
+})
 export const WORLD_AREA_SCHEMA: Schema = {
-  oneOf: [
-    object_schema({ world: nonempty }),
-    object_schema({ world: nonempty, city: nonempty }),
-    object_schema({ world: nonempty, biome: nonempty }),
-  ],
+  oneOf: [area_schema({}), area_schema({ city: nonempty }), area_schema({ biome: nonempty })],
 }
 export const parse_world_area = (value: unknown): WorldArea | undefined => {
   if (value === undefined) return undefined
@@ -64,18 +69,12 @@ export const validate_world_area = (area: WorldArea) => {
     (area.city
       ? source.cities.some(({ city }) => city === area.city)
       : !area.biome || source.terrain?.biomes.some(({ name }) => name === area.biome))
-  if (!exists) throw new Error('invalid_target_options')
+  if (!exists || !band_ordered(area)) throw new Error('invalid_target_options')
 }
-export const area_contains = (area: WorldArea, world: string, x: number, z: number): boolean => {
-  if (world !== area.world || ![x, z].every((value) => Number.isFinite(value) && value >= 0 && value < world_size))
-    return false
-  if (area.city) return city_at_position(world, ...client_world_position(x, z))?.id === area.city
-  if (!area.biome) return true
-  const zx = Math.floor(x / ZONE_SIZE)
-  const zz = Math.floor(z / ZONE_SIZE)
-  if (city_at_position(world, ...client_world_position((zx + 0.5) * ZONE_SIZE, (zz + 0.5) * ZONE_SIZE))) return false
-  return world_biome_at_zone(world, zx, zz) === area.biome
-}
+const band_ordered = ({ min_distance = 0, max_distance = world_size }: WorldArea) => min_distance <= max_distance
+const AREA_LOOKUPS = { city_at: city_at_position, biome_at: world_biome_at_zone } as const
+export const area_contains = (area: WorldArea, world: string, x: number, z: number): boolean =>
+  shared_area_contains(area, world, x, z, AREA_LOOKUPS)
 export const assert_area_position = (area: WorldArea | undefined, world: string, x: number, z: number) => {
   if (area && !area_contains(area, world, x, z)) throw new Error('target_outside_area')
 }
@@ -119,7 +118,8 @@ export const area_allows_segment = (
 ): boolean => {
   if (!area) return true
   if (![from, to].every(([x, z]) => area_contains(area, world, x, z))) return false
-  if (!area.biome) return true // The canonical city footprint is a convex rectangle.
+  // A city footprint is a convex rectangle; a distance band fences both ends of a walk, not its line.
+  if (!area.biome) return true
   const times = [0, ...axis_crossings(from[0], to[0]), ...axis_crossings(from[1], to[1]), 1].toSorted((a, b) => a - b)
   const at = (time: number) =>
     area_contains(area, world, from[0] + (to[0] - from[0]) * time, from[1] + (to[1] - from[1]) * time)

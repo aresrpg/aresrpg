@@ -26,6 +26,7 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import type { CharacterSession } from './character_session.ts'
 import { GatheringTime } from './GatheringTime.tsx'
 import { job_from_path, job_path } from './job_navigation.ts'
 import { JobEmblem } from './JobEmblem.tsx'
@@ -140,30 +141,43 @@ export const better_job_character = (
   }, null)
 }
 
-const useJobSession = (preview: boolean | undefined, character: Readonly<CharacterRow>) => {
+type Roster = NonNullable<CharacterSession['roster']>
+const NO_ROSTER: Roster = Object.freeze({ characters: [], select: () => undefined })
+const select_character = (character_id: string): void => dispatch_app({ type: 'character/select', character_id })
+/**
+ * Whose characters and bag the tab reads. A session adapter brings its own: its roster, its bag and
+ * its way to craft, and a better crafter is advised only among the characters it names. Without one
+ * the tab reads the player's own, and a crafter locked in the settings is never advised away from.
+ */
+const useJobSession = (session: CharacterSession | undefined, character: Readonly<CharacterRow>) => {
   const live = useAppStore((state) => state.session.characters)
+  const crafting_locked = useAppStore(({ settings }) => !!settings.always_craft_from_character_id)
+  if (session)
+    return {
+      roster: session.roster ?? NO_ROSTER,
+      craft_session: { character, inventory: session.inventory, craft: session.craft },
+    }
   return {
-    characters: preview ? [character] : live,
-    craft_session: { character, inventory: preview ? [] : undefined },
+    roster: { characters: crafting_locked ? [] : live, select: select_character },
+    craft_session: { character },
   }
 }
 
 export default function JobsTab({
   character,
   copy,
-  preview,
+  session,
   navigate_job,
 }: Readonly<{
   character: Readonly<CharacterRow>
   copy: AppCopy
-  preview?: boolean
+  session?: CharacterSession
   navigate_job?: (pathname: string) => void
 }>) {
   const vocabulary = useVocabulary()
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
-  const { characters, craft_session } = useJobSession(preview, character)
-  const crafting_locked = useAppStore(({ settings }) => !!settings.always_craft_from_character_id)
+  const { roster, craft_session } = useJobSession(session, character)
   const pathname = useAppStore(({ navigation }) => navigation.pathname)
   const [selected_job, set_selected_job] = useState<JobSlug>(() => job_from_path(pathname))
   const root = useRef<HTMLDivElement>(null)
@@ -244,7 +258,7 @@ export default function JobsTab({
             </div>
             <div className="jobs__list-entries">
               {job_groups[kind].map((job) => {
-                const better = crafting_locked ? null : better_job_character(characters, character.id, job)
+                const better = better_job_character(roster.characters, character.id, job)
                 return (
                   <div className="jobs__list-entry" key={job}>
                     <div className="jobs__alternate-slot">
@@ -259,7 +273,7 @@ export default function JobsTab({
                           </span>
                           <button
                             aria-label={t('jobs.switch_to_character', { name: better.name })}
-                            onClick={() => dispatch_app({ type: 'character/select', character_id: better.id })}
+                            onClick={() => roster.select(better.id)}
                             title={t('jobs.switch_to_character', { name: better.name })}
                             type="button"
                           >

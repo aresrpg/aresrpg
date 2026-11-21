@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import type { HostedChallengeResponse, HostedAuthorizeResponse } from '@aresrpg/protocol'
-import { create_bot_client } from '@aresrpg/protocol/hosted-bot-client'
+import { PLAY_SCOPE, create_bot_client, same_scope } from '@aresrpg/protocol/hosted-bot-client'
 
 import { create_http_fixture } from '../../bot/test/helpers/http_fixture.ts'
 import { fixture_bot, put } from '../../bot/test/helpers/control_fixture.ts'
@@ -23,8 +23,7 @@ test('Telegram PKCE client composes real hosted HTTP Google-consent and token ha
     secure_records(memory_backend(), 'ab'.repeat(32)),
     client,
     'https://companion.example/oauth/callback',
-    60000,
-    async (owner) => owner === fixture_bot.owner
+    60000
   )
   const link = await links.begin(42)
   const browser = await links.browser(new URL(link).pathname.slice(6))
@@ -55,9 +54,12 @@ test('Telegram PKCE client composes real hosted HTTP Google-consent and token ha
     challenge_id: consent.challenge_id,
     signature: service.signature(consent.message),
   })
-  const callback = await links.callback(new URL(approved.redirect_url).searchParams, browser.cookie)
+  // The real bot's redirect proves the account; the chat that asked is linked when it sends the token back.
+  const token = await links.callback(new URL(approved.redirect_url).searchParams, browser.cookie)
   expect(await links.current(42)).toBeNull()
-  await links.confirm(42, callback.code)
+  expect(await links.confirm(42, token)).toBe(true)
+  // The real bot issued the scope the one login asks for: observe, play and pause.
+  expect(same_scope((await links.current(42))!.scope, PLAY_SCOPE)).toBe(true)
   expect((await links.current(42))?.identity).toMatchObject({
     owner: fixture_bot.owner,
     address: fixture_bot.address,

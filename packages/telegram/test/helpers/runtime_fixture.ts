@@ -8,7 +8,7 @@ import type { Card, Telegram } from '../../src/transport.ts'
 
 import { fixture, limits } from './connected_fixture.ts'
 
-export const input = (id: number, value: string, callback = false, language_code = 'en') =>
+export const input = (id: number, value: string, callback = false, language_code = 'en', sender = 42) =>
   new Request('https://companion.example/telegram', {
     method: 'POST',
     headers: { 'X-Telegram-Bot-Api-Secret-Token': 'fixture' },
@@ -18,14 +18,18 @@ export const input = (id: number, value: string, callback = false, language_code
             update_id: id,
             callback_query: {
               id: `query-${id}`,
-              from: { id: 42, is_bot: false, language_code },
-              message: { chat: { id: 42, type: 'private' } },
+              from: { id: sender, is_bot: false, language_code },
+              message: { chat: { id: sender, type: 'private' } },
               data: value,
             },
           }
         : {
             update_id: id,
-            message: { from: { id: 42, is_bot: false, language_code }, chat: { id: 42, type: 'private' }, text: value },
+            message: {
+              from: { id: sender, is_bot: false, language_code },
+              chat: { id: sender, type: 'private' },
+              text: value,
+            },
           }
     ),
   })
@@ -97,6 +101,24 @@ export const setup = async (replaced: Readonly<{ telegram?: Partial<Telegram> }>
   }
   return { ...f, cards, acknowledgments, outage, runtime, say, press, review, launch, last }
 }
+/**
+ * The browser's whole trip through the service's own door: it opens the login button of a card, and
+ * returns from the hosted bot with the cookie it was given. `cookie` replaces that cookie. The trip
+ * links nothing: the chat still has to send back the token of `start_token`.
+ */
+export const log_in = async (f: Awaited<ReturnType<typeof setup>>, shown: Card = f.last(), cookie?: string) => {
+  const opened = await f.runtime.fetch(new Request(link_url(shown)))
+  const state = new URL(opened.headers.get('location')!).searchParams.get('state')!
+  const returning = () =>
+    f.runtime.fetch(
+      new Request(`https://companion.example/oauth/callback?iss=https://bot.example&code=code&state=${state}`, {
+        headers: { cookie: cookie ?? opened.headers.get('set-cookie')!.split(';')[0]! },
+      })
+    )
+  return { opened, returning, returned: await returning() }
+}
+/** The one-use token a finished browser trip carries to Telegram: START sends it as `/start <token>`. */
+export const start_token = (returned: Response) => new URL(returned.headers.get('location')!).searchParams.get('start')!
 export const linked = async () => {
   const f = await setup()
   await f.link()

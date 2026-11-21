@@ -18,6 +18,7 @@ import {
   grant_store,
   is_callback,
   local_storage,
+  own_callback,
   read_pending,
   REQUEST_TIMEOUT_MS,
   save_pending,
@@ -26,7 +27,7 @@ import {
   type DappStorage,
 } from '../dapp/oauth.ts'
 import { parse_observation, parse_revisions, type DappObservation, type DappRevisions } from '../dapp/observation.ts'
-import type { MarketOrder } from '../dapp/market.ts'
+import type { DirectRequest } from '../dapp/direct.ts'
 import {
   account_followed,
   observation_proven,
@@ -35,13 +36,15 @@ import {
   type CommandOutcome,
   type DappCommand,
   type DappInput,
-  type DappMode,
+  type DappLink,
 } from '../dapp/state.ts'
-import { dapp_text, item_name } from '../dapp/copy.ts'
+import { dapp_text, direct_text, item_name } from '../dapp/copy.ts'
+import { decode_bag_feed, encode_bag_feed, new_gains, type BagFeed } from '../dapp/bag_feed.ts'
 
 export { initial_dapp_state, type DappInput, type DappState } from '../dapp/state.ts'
 
-const MODE_KEY = 'aresrpg:dapp:mode'
+/** One feed per bot account on this device. */
+const bag_feed_key = (address: string): string => `aresrpg:dapp:bag_feed:${address}`
 
 export type DappEffects = Readonly<{
   issuer: string
@@ -55,12 +58,22 @@ export type DappEffects = Readonly<{
   location: () => Readonly<Pick<Location, 'href' | 'search' | 'origin'>>
   replace_url: (path: string) => void
   navigate: (url: string) => void
+  /** Shows the top of the page: where a tab begins, and where a tab lists the heroes that are out. */
+  scroll_top: () => void
 }>
 /** Wall time that never repeats: a read asked in the same millisecond as an answer still comes after it. */
 export const strict_clock = (wall: () => number = Date.now) => {
   let last = 0
   return () => (last = Math.max(last + 1, wall()))
 }
+/** The page's own window: where it is, a replacement that never reloads, a navigation that leaves, its scroll. */
+type PageEffects = Pick<DappEffects, 'location' | 'replace_url' | 'navigate' | 'scroll_top'>
+const browser_page = (): PageEffects => ({
+  location: () => globalThis.location,
+  replace_url: (path) => globalThis.history.replaceState(globalThis.history.state, '', path),
+  navigate: (url) => globalThis.location.assign(url),
+  scroll_top: () => globalThis.scrollTo?.(0, 0),
+})
 const browser_effects = (): DappEffects => ({
   issuer: env.bot_service_url,
   // eslint-disable-next-line functional/prefer-tacit -- Browser fetch must not run with the effects object as its receiver.
@@ -71,26 +84,23 @@ const browser_effects = (): DappEffects => ({
   lock: globalThis.navigator?.locks
     ? (owner, task) => globalThis.navigator.locks.request(`aresrpg:dapp:refresh:${owner}`, task)
     : undefined,
-  location: () => globalThis.location,
-  replace_url: (path) => globalThis.history.replaceState(globalThis.history.state, '', path),
-  navigate: (url) => globalThis.location.assign(url),
+  ...browser_page(),
 })
 
-const read_mode = (storage: Readonly<DappStorage> | null): DappMode | null => {
+/** The feed is a device convenience: unreadable or unwritable storage only loses it. */
+const read_bag_feed = (storage: Readonly<DappStorage> | null, address: string): BagFeed => {
   try {
-    const mode = storage?.getItem(MODE_KEY)
-    return mode === 'basic' || mode === 'advanced' ? mode : null
+    return decode_bag_feed(storage?.getItem(bag_feed_key(address)) ?? null)
   } catch (error) {
-    console.warn('The saved dapp mode could not be read.', error)
-    return null
+    console.warn('The saved bag feed could not be read.', error)
+    return decode_bag_feed(null)
   }
 }
-const write_mode = (storage: Readonly<DappStorage> | null, mode: DappMode): void => {
+const write_bag_feed = (storage: Readonly<DappStorage> | null, address: string, feed: BagFeed): void => {
   try {
-    storage?.setItem(MODE_KEY, mode)
+    storage?.setItem(bag_feed_key(address), encode_bag_feed(feed))
   } catch (error) {
-    // The toggle remains usable for this page when device storage is unavailable.
-    console.warn('The dapp mode could not be saved.', error)
+    console.warn('The bag feed could not be saved.', error)
   }
 }
 
@@ -158,7 +168,7 @@ const revised_command = async (
   return revisions ? bot.call(name, { ...args, ...revisions }) : ({ ok: false, error: 'needs_resync' } as const)
 }
 
-/** Stats, spell ranks and market orders go through the bot's typed gameplay catalogue as direct commands. */
+/** Every direct request goes through the bot's typed gameplay catalogue: one `bot_<action>` call. */
 const direct_command = (
   bot: Bot,
   context: AppContext,
@@ -170,32 +180,18 @@ const direct_command = (
     action: command.payload,
   })
 
-const submit = async (
-  bot: Bot,
-  context: AppContext,
-  effects: DappEffects,
-  command: DappCommand
-): Promise<Read<unknown>> => {
-  switch (command.kind) {
-    case 'start':
-      return revised_command(bot, context, effects, 'bot_start_behavior', {
+const submit = (bot: Bot, context: AppContext, effects: DappEffects, command: DappCommand): Promise<Read<unknown>> =>
+  command.kind === 'start'
+    ? revised_command(bot, context, effects, 'bot_start_behavior', {
         script: command.script,
         idempotency_key: command.id,
       })
-    case 'stop':
-      return bot.call('bot_stop_behavior', { character_id: command.hero_id })
-    case 'hero_action':
-      return direct_command(bot, context, effects, command)
-  }
-}
+    : bot.call('bot_stop_behavior', { character_id: command.hero_id })
 
 /** Each hero's command travels by itself, so heroes never wait for one another. */
 const run_command = (bot: Bot, context: AppContext, effects: DappEffects, command: DappCommand): void => {
   const settle = (outcome: CommandOutcome) => {
     if (context.signal.aborted) return
-    // An accepted hero change is applied by the bot later; the next observation shows its result.
-    if (outcome.kind === 'done' && command.kind === 'hero_action')
-      toast.rich(dapp_text(context.get_state().copy, 'hero_action_sent'), [], 'success')
     const { hero_id, id } = command
     context.dispatch({ type: 'dapp/command_settled', hero_id, id, outcome, now: effects.now() })
   }
@@ -208,16 +204,16 @@ const run_command = (bot: Bot, context: AppContext, effects: DappEffects, comman
   )
 }
 
-/** A market order is sent once; from then on the bot's observations say what became of it. */
-const run_order = (bot: Bot, context: AppContext, effects: DappEffects, order: MarketOrder): void => {
+/** A direct request is sent once; from then on the bot's observations say what became of it. */
+const run_direct = (bot: Bot, context: AppContext, effects: DappEffects, request: DirectRequest): void => {
   const settle = (outcome: CommandOutcome) => {
     if (!context.signal.aborted)
-      context.dispatch({ type: 'dapp/order_sent', id: order.id, outcome, now: effects.now() })
+      context.dispatch({ type: 'dapp/direct_sent', id: request.id, outcome, now: effects.now() })
   }
-  void direct_command(bot, context, effects, order).then(
+  void direct_command(bot, context, effects, request).then(
     (result) => settle(outcome_of(result)),
     (error: unknown) => {
-      console.warn('A hosted bot market order failed unexpectedly.', error)
+      console.warn('A hosted bot direct request failed unexpectedly.', error)
       settle({ kind: 'uncertain' })
     }
   )
@@ -251,30 +247,48 @@ const verified_grant = async (client: BotClient, pending: PendingAuthorization, 
   return tokens.ok ? client.verify(tokens.value, owner) : tokens
 }
 
-/** The consent redirect returns once to this tab; its code becomes a grant only for the signed-in
- * owner. The value says whether this page load was that return. */
-const complete_authorization = async (
-  { client }: Bot,
-  context: AppContext,
-  effects: DappEffects,
-  wallet: AuthSession
-): Promise<Read<boolean>> => {
+/**
+ * The consent answer in this page's address becomes a grant, once, and only for the signed-in owner.
+ * It is read from the address and taken out of it before anything is asked, with the request this tab
+ * kept: the answer must carry that request's state and this issuer, and the code is exchanged with
+ * that request's verifier. This is the one door of a consent answer, whether a page load brought it
+ * or the consent step delivered it in place (`receive_consent`).
+ */
+const exchange = async ({ client }: Bot, effects: DappEffects, wallet: AuthSession): Promise<Read<null>> => {
   const { search, href } = effects.location()
-  if (!is_callback(search)) return { ok: true, value: false }
+  if (!is_callback(search)) return refused('consent_failed')
   const pending = read_pending(effects.pending, effects.now())
   effects.replace_url(without_callback(href))
   save_pending(effects.pending, null)
   const code = pending && client.authorization_code(pending, new URLSearchParams(search))
   if (!pending || !code?.ok) return refused('consent_failed')
-  context.dispatch({ type: 'dapp/link', link: { phase: 'exchanging' } })
   const grant = await verified_grant(client, pending, code.value, wallet.address)
   if (!grant.ok) return grant
-  if (!grant_store(effects.grants, wallet.address).save(grant.value)) {
-    drop_grant(client, grant.value)
-    return refused('storage_unavailable')
+  if (grant_store(effects.grants, wallet.address).save(grant.value)) return { ok: true, value: null }
+  drop_grant(client, grant.value)
+  return refused('storage_unavailable')
+}
+
+/**
+ * The consent step approved this tab's own request on a page that already runs the dapp. The answer
+ * is the redirect that request registered, and that redirect is this page: its address takes the
+ * answer without a load, and the link exchanges it exactly as a load of that address would. A
+ * redirect that does not name this origin's dapp page is never taken: the browser leaves for it.
+ * The value says whether the answer was taken in place.
+ */
+export const receive_consent = (
+  redirect: string,
+  dispatch: (input: DappInput) => void,
+  page: PageEffects = browser_page()
+): boolean => {
+  const callback = own_callback(redirect, page.location().origin)
+  if (callback === null) {
+    page.navigate(redirect)
+    return false
   }
-  context.dispatch({ type: 'dapp/link', link: { phase: 'connected' } })
-  return { ok: true, value: true }
+  page.replace_url(callback)
+  dispatch({ type: 'dapp/link', link: { phase: 'exchanging' } })
+  return true
 }
 
 /** A link step that did not finish returns to Connect with its reason. */
@@ -282,23 +296,19 @@ const link_refused = (context: AppContext, error: string): void => {
   if (!context.signal.aborted) context.dispatch({ type: 'dapp/link', link: { phase: 'disconnected', error } })
 }
 
-const bind_wallet = (bot: Bot, context: AppContext, effects: DappEffects, wallet: AuthSession | null) => {
-  if (!wallet) return context.dispatch({ type: 'dapp/link', link: { phase: 'idle' } })
-  void complete_authorization(bot, context, effects, wallet)
-    .catch(unexpected)
-    .then((completed) => {
-      if (!completed.ok) return link_refused(context, completed.error)
-      if (completed.value || context.get_state().session.wallet !== wallet) return
-      const connected = grant_store(effects.grants, wallet.address).read() !== null
-      // No connect screen: a signed-in player without a grant is connected at once. The page that
-      // receives the bot's consent redirect is already finishing that request, so it starts no other.
-      const consenting = new URLSearchParams(effects.location().search).has('authorization_id')
-      const unlinked = consenting
-        ? ({ phase: 'disconnected', error: null } as const)
-        : ({ phase: 'authorizing' } as const)
-      context.dispatch({ type: 'dapp/link', link: connected ? { phase: 'connected' } : unlinked })
-    })
+/** What a signed-in account's link is before anything is asked of the bot. */
+const bound_link = (effects: DappEffects, wallet: AuthSession): DappLink => {
+  const { search } = effects.location()
+  // A consent answer waits in the address: exchanging it is the whole link.
+  if (is_callback(search)) return { phase: 'exchanging' }
+  if (grant_store(effects.grants, wallet.address).read()) return { phase: 'connected' }
+  // No connect screen: a signed-in player without a grant is connected at once. The page that
+  // receives the bot's consent redirect is already finishing that request, so it starts no other.
+  const consenting = new URLSearchParams(search).has('authorization_id')
+  return consenting ? { phase: 'disconnected', error: null } : { phase: 'authorizing' }
 }
+const bind_wallet = (context: AppContext, effects: DappEffects, wallet: AuthSession | null) =>
+  context.dispatch({ type: 'dapp/link', link: wallet ? bound_link(effects, wallet) : { phase: 'idle' } })
 
 /**
  * The bot's account is read on the game socket, never from the bot: a connected grant names the
@@ -316,23 +326,61 @@ const follow_account = (context: AppContext, effects: DappEffects): void => {
   context.dispatch({ type: 'agent/inventory_target', wallet, pairing })
 }
 
-/** Finds are announced from the haul's own delta, so a repeated observation never repeats a toast. */
+/** Finds are announced from the feed's own delta, so a repeated observation never repeats a toast. */
 const announce_finds = (state: AppState, previous: AppState) => {
-  const before = previous.dapp.haul?.found
-  if (!before) return
-  const gains = Object.entries(state.dapp.haul?.found ?? {}).map(
-    ([item_type, amount]) => [item_type, amount - (before[item_type] ?? 0)] as const
-  )
-  for (const [item_type, added] of gains.filter(([, added]) => added > 0))
+  for (const { item_type, amount } of new_gains(state.dapp.bag_feed, previous.dapp.bag_feed))
     toast.rich(
       dapp_text(state.copy, 'found_toast'),
       [
         { text: `${dapp_text(state.copy, 'found_toast')} `, tone: 'default' },
-        { text: `+${added} ${item_name(item_type)}`, tone: 'gold' },
+        { text: `+${amount} ${item_name(item_type)}`, tone: 'gold' },
       ],
       'success'
     )
 }
+
+const resolved = (request: DirectRequest | null): request is DirectRequest =>
+  request !== null && ['done', 'refused'].includes(request.status)
+/** A request is told once, when it resolves: the delta is its own status, never the bot's message. */
+const announce_direct = (state: AppState, previous: AppState) => {
+  const [request, before] = [state.dapp.direct, previous.dapp.direct]
+  if (!resolved(request) || (before?.id === request.id && before.status === request.status)) return
+  const text = direct_text(state.copy, request, state.session.agent_inventory.characters)
+  toast.rich(text, [], request.status === 'done' ? 'success' : 'info')
+}
+
+type News = Readonly<{ text: string; tone: 'success' | 'info' }>
+type Position = AppState['dapp']['positions'][number]
+type Teller = Readonly<{ copy: AppState['copy']; name: string }>
+/** A level the hero gained since its position was last seen. */
+const level_news = ({ copy, name }: Teller, { sample }: Position, before: Position): readonly News[] => {
+  const level = sample?.level ?? 0
+  return level > (before.sample?.level ?? level)
+    ? [{ text: dapp_text(copy, 'level_up_toast', { name, level: String(level) }), tone: 'success' }]
+    : []
+}
+/** The help its run starts to need: told when that need appears or changes. */
+const notice_news = ({ copy, name }: Teller, { notice }: Position, before: Position): readonly News[] => {
+  if (notice === null || notice === before.notice) return []
+  const reason = dapp_text(copy, `run_notice_${notice}`)
+  return [{ text: dapp_text(copy, 'command_refused', { names: name, reason }), tone: 'info' }]
+}
+/** Why its run ended by itself: told when the position finishes with that reason. */
+const ending_news = ({ copy, name }: Teller, { ended }: Position): readonly News[] => {
+  if (ended === null) return []
+  const reason = dapp_text(copy, `run_ended_${ended}`)
+  return [{ text: dapp_text(copy, 'command_refused', { names: name, reason }), tone: 'info' }]
+}
+/** A position seen for the first time is a baseline: only a followed one that was running has news. */
+const run_news = (state: AppState, previous: AppState): readonly News[] =>
+  state.dapp.positions.flatMap((position) => {
+    const before = previous.dapp.positions.find(({ id }) => id === position.id)
+    if (!before || before === position || before.finished_ms !== null) return []
+    const hero = state.session.agent_inventory.characters.find(({ id }) => id === position.hero_id)
+    const teller = { copy: state.copy, name: hero?.name ?? '' }
+    if (position.finished_ms !== null) return ending_news(teller, position)
+    return [...level_news(teller, position, before), ...notice_news(teller, position, before)]
+  })
 
 /**
  * The player signed out of a linked page. Only sign-out folds the link to idle in the reduction that
@@ -346,6 +394,13 @@ const signed_out = (state: AppState, previous: AppState): boolean =>
     state.dapp.link.phase === 'idle',
   ].every(Boolean)
 
+/** A run this page's own Start opened since the last state: the player's request, answered. */
+const start_answered = (state: AppState, previous: AppState): boolean =>
+  state.dapp.positions.some(
+    ({ id, sent, finished_ms }) =>
+      sent !== null && finished_ms === null && !previous.dapp.positions.some((before) => before.id === id)
+  )
+
 /** Commands the reducer just admitted: each is sent once, when it first appears. */
 const issued_commands = (state: AppState, previous: AppState): readonly DappCommand[] =>
   Object.values(state.dapp.commands).filter(
@@ -355,8 +410,6 @@ const issued_commands = (state: AppState, previous: AppState): readonly DappComm
 export const observe_dapp = (context: AppContext, effects: DappEffects = browser_effects()) => {
   const { events, dispatch, get_state, signal } = context
   const device = local_storage()
-  const saved_mode = read_mode(device)
-  if (saved_mode) dispatch({ type: 'dapp/mode', mode: saved_mode })
   if (!effects.issuer) return
   const bot = create_bot(context, effects)
   let reading = false
@@ -411,16 +464,30 @@ export const observe_dapp = (context: AppContext, effects: DappEffects = browser
       .then((started) => {
         if (!started.ok) link_refused(context, started.error)
       })
+  /** The outcome re-enters only while this account's link still waits for it: a link that moved on keeps its state. */
+  const complete = (wallet: AuthSession) =>
+    void exchange(bot, effects, wallet)
+      .catch(unexpected)
+      .then((linked) => {
+        const { session, dapp } = get_state()
+        if (session.wallet !== wallet || dapp.link.phase !== 'exchanging') return
+        if (!linked.ok) return link_refused(context, linked.error)
+        if (!signal.aborted) dispatch({ type: 'dapp/link', link: { phase: 'connected' } })
+      })
+  /** What a link phase starts for the signed-in account when the link enters it. */
+  const entered: Readonly<Partial<Record<DappLink['phase'], (wallet: AuthSession) => void>>> = {
+    authorizing: authorize,
+    exchanging: complete,
+  }
   // Each effect observes its own slice of the state delta.
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.session.wallet !== previous.session.wallet) bind_wallet(bot, context, effects, state.session.wallet)
+    if (state.session.wallet !== previous.session.wallet) bind_wallet(context, effects, state.session.wallet)
     if (signed_out(state, previous)) revoke(grant_store(effects.grants, previous.session.wallet!.address))
-    if (state.dapp.mode !== previous.dapp.mode) write_mode(device, state.dapp.mode)
   })
   events.on('STATE_UPDATED', (state, previous) => {
     const [link, before] = [state.dapp.link, previous.dapp.link]
     if (link.phase === before.phase) return
-    if (link.phase === 'authorizing' && state.session.wallet) authorize(state.session.wallet)
+    if (state.session.wallet) entered[link.phase]?.(state.session.wallet)
     if (link.phase === 'disconnected' && before.phase === 'connected' && !link.error)
       revoke(owner_grants(context, effects))
     follow_account(context, effects)
@@ -429,11 +496,29 @@ export const observe_dapp = (context: AppContext, effects: DappEffects = browser
   events.on('STATE_UPDATED', (state, previous) => {
     if (state.dapp.commands !== previous.dapp.commands)
       for (const command of issued_commands(state, previous)) run_command(bot, context, effects, command)
-    if (state.dapp.haul !== previous.dapp.haul) announce_finds(state, previous)
+  })
+  // The feed follows the bot account on screen: restored when that account changes, saved when it grows.
+  events.on('STATE_UPDATED', (state, previous) => {
+    const [address, before] = [state.session.inventory_pairing?.address, previous.session.inventory_pairing?.address]
+    if (address && address !== before)
+      return dispatch({ type: 'dapp/bag_feed_restored', feed: read_bag_feed(device, address) })
+    if (state.dapp.bag_feed === previous.dapp.bag_feed) return
+    announce_finds(state, previous)
+    if (address && state.dapp.bag_feed.seen) write_bag_feed(device, address, state.dapp.bag_feed)
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    const { order } = state.dapp
-    if (order?.status === 'pending' && order.id !== previous.dapp.order?.id) run_order(bot, context, effects, order)
+    const { direct } = state.dapp
+    if (direct?.status === 'pending' && direct.id !== previous.dapp.direct?.id)
+      run_direct(bot, context, effects, direct)
+  })
+  // Presentation follows the state delta, so a status pushed twice never tells anything twice.
+  events.on('STATE_UPDATED', (state, previous) => {
+    if (state.dapp.direct !== previous.dapp.direct) announce_direct(state, previous)
+    for (const { text, tone } of run_news(state, previous)) toast.rich(text, [], tone)
+  })
+  // A tab starts at its top, and so does the answer to a Start: the heroes that are out head their tab.
+  events.on('STATE_UPDATED', (state, previous) => {
+    if (state.dapp.tab !== previous.dapp.tab || start_answered(state, previous)) effects.scroll_top()
   })
   // The bot's pushed status re-enters through the reducer. A push never asks the bot for a read.
   events.on('STATE_UPDATED', (state, previous) => {
@@ -449,7 +534,7 @@ export const observe_dapp = (context: AppContext, effects: DappEffects = browser
   signal.addEventListener('abort', () => globalThis.document?.removeEventListener('visibilitychange', recover), {
     once: true,
   })
-  bind_wallet(bot, context, effects, get_state().session.wallet)
+  bind_wallet(context, effects, get_state().session.wallet)
 }
 
 const reduce = (state: AppState, input: Parameters<NonNullable<AppModule['reduce']>>[1]): AppState => {

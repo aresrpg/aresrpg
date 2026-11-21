@@ -76,17 +76,17 @@ import {
   type ProfessionActionPlan,
 } from './profession_actions.ts'
 import {
-  MARKET_BUY_ACTION,
-  MARKET_SELL_ACTION,
-  validate_market_buy,
-  validate_market_sell,
-  type MarketBuyPlan,
-  type MarketSellPlan,
+  MARKET_ACTIONS,
+  market_validators,
+  market_executors,
+  type MarketExecutor,
+  type MarketPlan,
 } from './market_actions.ts'
+import { CHARACTER_ACTIONS, character_validators, character_executors } from './character_actions.ts'
+import type { CreateCharacterPlan } from './character_actions.ts'
 
 type AgentActions = ReturnType<typeof create_agent_actions>
 type Actions = AgentActions['fight'] &
-  Pick<AgentActions['marketplace'], 'buy' | 'list'> &
   Pick<
     AgentActions['character'],
     | 'search_zone'
@@ -212,8 +212,8 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
   raise_spell: RAISE_SPELL_ACTION,
   ...EQUIPMENT_ACTIONS,
   ...TEAM_ACTIONS,
-  market_buy: MARKET_BUY_ACTION,
-  market_sell: MARKET_SELL_ACTION,
+  ...MARKET_ACTIONS,
+  ...CHARACTER_ACTIONS,
   world_search: Object.freeze({
     description:
       "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
@@ -282,8 +282,8 @@ type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
 }>
 export type GameplayPlan =
   | EquipmentActionPlan
-  | MarketBuyPlan
-  | MarketSellPlan
+  | MarketPlan
+  | CreateCharacterPlan
   | ProfessionActionPlan
   | StatAllocationPlan
   | SpellAllocationPlan
@@ -475,8 +475,8 @@ export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
   const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
     equip_item: () => validate_equip_item(context),
     use_consumable: () => validate_consumable(context),
-    market_buy: () => validate_market_buy(context),
-    market_sell: () => validate_market_sell(context),
+    ...market_validators(context),
+    ...character_validators(context),
     raise_stats: () => validate_stat_allocation(context),
     raise_spell: () => validate_spell_allocation(context),
     open_loot_boxes: () => validate_open_boxes(context),
@@ -516,11 +516,11 @@ export type GameplayActions = Pick<
   | 'claim_loot_batch'
   | 'use_consumable'
 >
-export type MarketplaceExecutor = Partial<Pick<Actions, 'buy' | 'list'>>
+type WalletExecutor = MarketExecutor & Parameters<typeof character_executors>[0]
 export type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
 export const execute_gameplay_actions = async (
   context: GameplayContext,
-  actions: GameplayActions & MarketplaceExecutor & TeamExecutor,
+  actions: GameplayActions & WalletExecutor & TeamExecutor,
   send?: GameplayPacketSender
 ) => {
   const plan = validate_gameplay(context)
@@ -528,14 +528,8 @@ export const execute_gameplay_actions = async (
     ...profession_action_executors(actions),
     ...equipment_executors(actions),
     ...team_executors(actions),
-    market_buy: (input: MarketBuyPlan['input']) => {
-      if (!actions.buy) throw new Error('market_executor_unavailable')
-      return actions.buy(input)
-    },
-    market_sell: (input: MarketSellPlan['input']) => {
-      if (!actions.list) throw new Error('market_executor_unavailable')
-      return actions.list(input)
-    },
+    ...market_executors(actions),
+    ...character_executors(actions),
     raise_stats: actions.raise_stats,
     raise_spell: actions.raise_spell,
     open_loot_boxes: actions.open_loot_boxes,
@@ -588,7 +582,13 @@ export const execute_gameplay = ({
   const actions = create_agent_actions(sdk, context.address)
   return execute_gameplay_actions(
     context,
-    { ...actions.fight, ...actions.character, ...actions.marketplace, dungeon: actions.dungeon },
+    {
+      ...actions.fight,
+      ...actions.character,
+      ...actions.marketplace,
+      dungeon: actions.dungeon,
+      create_character: actions.create_character,
+    },
     send
   )
 }

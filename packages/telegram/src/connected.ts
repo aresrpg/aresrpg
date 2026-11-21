@@ -20,13 +20,15 @@ import type { Input } from './wire.ts'
 
 /** The picture above the welcome. Telegram fetches it from the game's public site, so it must stay served there. */
 const WELCOME_BANNER = 'https://aresrpg.world/social/x-banner-v3-1500x500.png'
+/** What Telegram sends, followed by the link's parameter, when a player taps START on a deep link to the bot. */
+const START = '/start '
 
 export const create_connected = (
   options: Readonly<{
     access: TelegramAccess
     links: LinkService
     telegram: Pick<Telegram, 'send' | 'acknowledge'>
-    /** The bot's public name. The browser returns to this chat after a login. */
+    /** The bot's public name. The browser returns to this chat after a login, to its START button. */
     bot_username: string
     copy: (locale: string) => Copy
     secret: string
@@ -65,7 +67,8 @@ export const create_connected = (
     await links.revoke(sender)
     sessions.delete(sender)
   }
-  // An expired login is replaced by /link in one step; a working one still needs an explicit /unlink.
+  // Log in again: an expired login is dropped, and the same update then shows the welcome with a fresh
+  // login button. A working login stays; it still needs an explicit /unlink.
   const replace_expired_login = async (sender: number) => {
     if (!(await links.current(sender))) return
     const expired = await links.authenticate(sender).then(
@@ -76,26 +79,6 @@ export const create_connected = (
       }
     )
     if (expired) await forget(sender)
-  }
-  const process_link = async (input: Input): Promise<boolean> => {
-    if (input.text === '/unlink') {
-      await forget(input.sender)
-      await send(input, copy_for(input).unlinked)
-      return true
-    }
-    if (['/link', '/enable'].includes(input.text)) {
-      if (input.text === '/link') await replace_expired_login(input.sender)
-      const url = await (input.text === '/enable' ? links.upgrade : links.begin)(input.sender, input.locale)
-      await send(input, copy_for(input).link, [[page_button(copy_for(input).open_login, url)]])
-      return true
-    }
-    // The browser that logged in returns here through the chat's Start button, which carries its one-use code.
-    if (input.text.startsWith('/start ')) {
-      await links.confirm(input.sender, input.text.slice('/start '.length).trim())
-      await send(input, copy_for(input).linked, [[button(copy_for(input).check_access, '/start')]])
-      return true
-    }
-    return false
   }
   /** Each request is sent once, in order. The first one the bot does not confirm ends the batch by its code. */
   const act = async (input: Input, bot: Bot, actions: readonly Action[]): Promise<string | null> => {
@@ -130,14 +113,24 @@ export const create_connected = (
     await links.expire_attempts(input.sender).catch((error: unknown) => {
       console.error('Telegram attempt retirement failed', code_of(error))
     })
-    if (await process_link(input)) return null
+    if (input.text === '/unlink') {
+      await forget(input.sender)
+      await send(input, copy_for(input).unlinked)
+      return null
+    }
+    if (input.text === '/link') await replace_expired_login(input.sender)
+    // START on the deep link the browser returned to. A token that is not this chat's own held login
+    // changes nothing and is never echoed or logged: the update goes on as any other.
+    if (input.text.startsWith(START)) await links.confirm(input.sender, input.text.slice(START.length))
     // An unlinked sender only ever sees the welcome card and leaves no navigation state, also when its
     // login ended outside this chat: the operator removed the owner, or the hosted bot ended the grant.
+    // The card's one button is the login page itself: one tap, then START when the browser returns here.
     if (!(await links.current(input.sender))) {
       sessions.delete(input.sender)
       const copy = copy_for(input)
+      const url = await links.begin(input.sender, input.locale)
       await telegram.send(input.sender, {
-        ...card(copy.welcome, [[button(copy.connect_google, '/link')]]),
+        ...card(copy.welcome, [[page_button(copy.connect_google, url)]]),
         photo: WELCOME_BANNER,
       })
       return null
@@ -146,57 +139,13 @@ export const create_connected = (
     // Taken before any hosted read, so every older button is stale even when that read fails.
     sessions.set(input.sender, { ...previous, revision: previous.revision + 1, review: null })
     const linked = await links.authenticate(input.sender)
+    // The one admission gate, read live on every update: an owner admitted meanwhile plays at this
+    // update with the login it already has, and a removed one is refused at this update.
     if (!(await access.admitted(linked.identity.owner))) {
       await telegram.send(input.sender, await waitlist_card(access, input, copy_for(input), linked.identity.owner))
       return null
     }
-    if (!linked.play) {
-      await send(input, copy_for(input).play_consent, [[button(copy_for(input).enable_agent, '/enable')]])
-      return null
-    }
     return play(input, previous, linked.bot, linked.identity)
-  }
-  const browser_response = async (request: Request, url: URL) => {
-    if (url.pathname.startsWith('/link/')) {
-      const result = await links.browser(url.pathname.slice(6))
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: result.location,
-          'Set-Cookie': `__Host-ares-telegram=${result.cookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=${new Date(result.expires).toUTCString()}`,
-          'Cache-Control': 'no-store',
-          'Referrer-Policy': 'no-referrer',
-        },
-      })
-    }
-    if (url.pathname !== '/oauth/callback') return new Response(null, { status: 404 })
-    const cookie =
-      request.headers
-        .get('cookie')
-        ?.split(';')
-        .map((part) => part.trim())
-        .find((part) => part.startsWith('__Host-ares-telegram='))
-        ?.slice('__Host-ares-telegram='.length) ?? ''
-    const result = await links.callback(url.searchParams, cookie)
-    // The code goes only to the browser that consented, which carries it back to its own Telegram
-    // account. It is never sent to the chat that began the link: that chat may belong to someone
-    // else, and the code is what binds the two. A code returned from another account matches nothing.
-    return new Response(null, {
-      status: 303,
-      headers: { ...PRIVATE_PAGE, Location: `https://t.me/${options.bot_username}?start=${result.code}` },
-    })
-  }
-  const browser = async (request: Request) => {
-    const url = new URL(request.url)
-    try {
-      return await browser_response(request, url)
-    } catch (error) {
-      console.error('Telegram browser request refused', code_of(error))
-      const path_id = url.pathname.startsWith('/link/') ? url.pathname.slice(6) : null
-      const locale = (await links.browser_locale(path_id, url.searchParams.get('state'))) ?? accepted_language(request)
-      const { status, page } = FAILURE_RESPONSES[failure_kind(code_of(error))]
-      return browser_page(status, options.copy(locale)[page])
-    }
   }
   const notify = (input: Input, kind: FailureKind) => {
     const copy = copy_for(input)
@@ -228,6 +177,49 @@ export const create_connected = (
       console.error('Telegram current state unavailable', again)
       await notify(input, failure_kind(again) === 'failure_changed' ? 'failure_temporary' : failure_kind(again))
     })
+  }
+  const browser_response = async (request: Request, url: URL) => {
+    if (url.pathname.startsWith('/link/')) {
+      const result = await links.browser(url.pathname.slice(6))
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: result.location,
+          'Set-Cookie': `__Host-ares-telegram=${result.cookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=${new Date(result.expires).toUTCString()}`,
+          'Cache-Control': 'no-store',
+          'Referrer-Policy': 'no-referrer',
+        },
+      })
+    }
+    if (url.pathname !== '/oauth/callback') return new Response(null, { status: 404 })
+    const cookie =
+      request.headers
+        .get('cookie')
+        ?.split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('__Host-ares-telegram='))
+        ?.slice('__Host-ares-telegram='.length) ?? ''
+    // The return proves an account, not a chat: anyone can be sent through a chat's login page. So it
+    // links nothing and tells the chat nothing. The browser goes back to Telegram with a one-use token,
+    // and the START tap there sends it from the chat of the person who signed in: only the chat that
+    // asked is then linked (owner ruling 2026-11-21). The token is shown and typed nowhere.
+    const token = await links.callback(url.searchParams, cookie)
+    return new Response(null, {
+      status: 303,
+      headers: { ...PRIVATE_PAGE, Location: `https://t.me/${options.bot_username}?start=${token}` },
+    })
+  }
+  const browser = async (request: Request) => {
+    const url = new URL(request.url)
+    try {
+      return await browser_response(request, url)
+    } catch (error) {
+      console.error('Telegram browser request refused', code_of(error))
+      const path_id = url.pathname.startsWith('/link/') ? url.pathname.slice(6) : null
+      const locale = (await links.browser_locale(path_id, url.searchParams.get('state'))) ?? accepted_language(request)
+      const { status, page } = FAILURE_RESPONSES[failure_kind(code_of(error))]
+      return browser_page(status, options.copy(locale)[page])
+    }
   }
   const fetch = async (request: Request): Promise<Response> => {
     try {
@@ -261,7 +253,6 @@ type FailureKind =
   | 'failure_unlink_first'
   | 'failure_busy'
   | 'failure_run_limit'
-  | 'waiting'
   | 'city_required'
   | 'observation_unknown'
   | 'unknown'
@@ -274,9 +265,6 @@ export const FAILURE_CODES: Readonly<Record<FailureKind, readonly string[]>> = {
     'behavior_revision_conflict',
     'behavior_run_not_found',
     'character_changed',
-    'confirmation_consumed',
-    'confirmation_expired',
-    'confirmation_mismatch',
     'exchange_unavailable',
     'identity_changed',
     'inventory_page_expired',
@@ -286,7 +274,6 @@ export const FAILURE_CODES: Readonly<Record<FailureKind, readonly string[]>> = {
     'link_expired_or_removed',
     'needs_resync',
     'owner_mismatch',
-    'play_already_enabled',
     'review_changed',
     'review_expired',
     'unknown_strategy',
@@ -301,10 +288,9 @@ export const FAILURE_CODES: Readonly<Record<FailureKind, readonly string[]>> = {
     'unexpected_oauth_scope',
     'unknown_link',
   ],
-  failure_unlink_first: ['finish_existing_link', 'owner_already_linked', 'revocation_pending', 'unlink_before_relink'],
+  failure_unlink_first: ['owner_already_linked', 'revocation_pending', 'unlink_before_relink'],
   failure_busy: ['bot_busy_or_paused'],
   failure_run_limit: ['run_limit_reached'],
-  waiting: ['owner_not_admitted'],
   city_required: ['city_required'],
   observation_unknown: ['observation_unknown'],
   unknown: ['control_unconfirmed', 'pending_exchange_outcome_unknown', 'uncertain'],
@@ -351,7 +337,6 @@ const FAILURE_RESPONSES: Readonly<Record<FailureKind, FailureResponse>> = {
   },
   failure_busy: { status: 409, page: 'failure_busy', next: { label: 'check_status', command: '/status' } },
   failure_run_limit: { status: 409, page: 'failure_run_limit', next: { label: 'stop', command: '/stop' } },
-  waiting: { status: 403, page: 'waiting', next: { label: 'check_access', command: '/start' } },
   city_required: { status: 409, page: 'city_required', next: { label: 'back', command: '/menu' } },
   observation_unknown: { status: 409, page: 'observation_unknown' },
   unknown: { status: 504, page: 'unknown', next: { label: 'check_status', command: '/status' } },

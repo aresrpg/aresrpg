@@ -22,12 +22,10 @@ export const AgentKioskPanel = ({
   kiosk,
   copy,
   disabled,
-  offline,
 }: Readonly<{
   kiosk: AgentKioskController
   copy: AppCopy
   disabled: boolean
-  offline: boolean
 }>) => {
   const [coin, set_coin] = useState<TransferToken | null>(null)
   const { snapshot, pairing, state } = kiosk
@@ -46,7 +44,7 @@ export const AgentKioskPanel = ({
         <span className="agent-kiosk__badge">{copy.ui.agent_kiosk_badge}</span>
         <span>{snapshot ? agent_inventory_groups(snapshot.inventory.items).length : '—'}</span>
       </header>
-      <AgentKioskStatus kiosk={kiosk} copy={copy} offline={offline} />
+      <AgentKioskStatus kiosk={kiosk} copy={copy} />
       {snapshot && (
         <>
           <AgentBalances inventory={snapshot.inventory} disabled={controls_disabled} choose={set_coin} />
@@ -98,13 +96,8 @@ const AgentBalances = ({
   </div>
 )
 
-const AgentKioskStatus = ({
-  kiosk,
-  copy,
-  offline,
-}: Readonly<{ kiosk: AgentKioskController; copy: AppCopy; offline: boolean }>) => {
+const AgentKioskStatus = ({ kiosk, copy }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy }>) => {
   const connected = useAppStore((app) => owner_connected(app.session))
-  if (offline) return <p>{copy.ui.agent_inventory_demo}</p>
   if (!kiosk.pairing) return null
   const failure =
     kiosk.state.error ||

@@ -3,16 +3,16 @@
 import { expect, test } from 'bun:test'
 import { item_stat_center, stat_names, type StatName } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
-import { basic_build } from '@aresrpg/protocol/strategies'
 
 import seed_items from '../../../seed/content/items.json'
 import { id } from '../../sdk/test/helpers/transport.ts'
 import { select_owned_item, type EquipOwnedAction } from '../src/behavior_items.ts'
 import { validate_gameplay, type GameplayContext } from '../src/gameplay.ts'
 
+import { archer_build } from './helpers/archer_fixture.ts'
 import { character, profession_context } from './helpers/profession_fixture.ts'
 
-const priority = basic_build('yogan').equipment as readonly StatName[]
+const priority: readonly StatName[] = archer_build.equipment
 const best = (slot: EquipOwnedAction['slot'] = 'hat', stats = priority): EquipOwnedAction => ({
   type: 'equip_owned',
   character_id: character.id,

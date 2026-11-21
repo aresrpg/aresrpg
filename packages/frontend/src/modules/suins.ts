@@ -38,6 +38,8 @@ export type SuinsState = Readonly<{
   error: Failure | null
   confirmed: boolean
   pending: Pending | null
+  /** The parent whose two names and two defaults a chain read last showed complete; null is unknown. */
+  applied: string | null
   waiters: readonly string[]
   completed: readonly string[]
   setup: AgentPairingIdentity | null
@@ -61,7 +63,7 @@ export type SuinsInput =
   | Readonly<{ type: 'suins/cancel_setup'; token: string }>
   | Readonly<{ type: 'suins/loaded'; request: Request; snapshot: SuinsSnapshot }>
   | Readonly<{ type: 'suins/applied'; request: Request; name: string }>
-  | Readonly<{ type: 'suins/used'; request: Request; pending: Pending | null }>
+  | Readonly<{ type: 'suins/used'; request: Extract<Request, { kind: 'set' }>; pending: Pending | null }>
   | Readonly<{ type: 'suins/failed'; request: Request; error: Failure }>
 
 export const initial_suins_state = (): SuinsState => ({
@@ -71,6 +73,7 @@ export const initial_suins_state = (): SuinsState => ({
   error: null,
   confirmed: false,
   pending: null,
+  applied: null,
   waiters: [],
   completed: [],
   setup: null,
@@ -99,7 +102,9 @@ const completions: {
   'suins/loaded': (state, input) => {
     const parent = applied_parent(input.snapshot)
     const draft = input.snapshot.names.some(({ name }) => name === parent) ? parent : ''
-    const loaded = { ...state, snapshot: input.snapshot, draft, request: null }
+    // A fresh default name that is not the remembered one contradicts it.
+    const applied = state.applied === parent ? state.applied : null
+    const loaded = { ...state, snapshot: input.snapshot, draft, applied, request: null }
     return state.setup ? setup_request(loaded, state.setup) : loaded
   },
   'suins/reviewed': (state, input) => ({
@@ -111,7 +116,12 @@ const completions: {
     snapshot: { default_name: input.name, names: state.snapshot!.names },
   }),
   'suins/failed': (state, input) => ({ ...finish(state), error: input.error }),
-  'suins/used': (state, input) => ({ ...finish(state), pending: input.pending, confirmed: true }),
+  'suins/used': (state, input) => ({
+    ...finish(state),
+    pending: input.pending,
+    confirmed: true,
+    applied: input.pending ? null : input.request.name,
+  }),
 }
 const complete = (state: SuinsState, input: Completion): SuinsState =>
   input.request === state.request ? completions[input.type](state, input as never) : state
@@ -119,7 +129,8 @@ type Intent = Exclude<SuinsInput, { request: Request }>
 const intents: { [K in Intent['type']]: (state: SuinsState, input: Extract<Intent, { type: K }>) => SuinsState } = {
   'suins/confirm': (state) =>
     state.request?.kind === 'set' && state.request.stage === 'review'
-      ? { ...state, request: { ...state.request, stage: 'apply' } }
+      ? // Writes start here: what the chain holds is unknown until they complete.
+        { ...state, applied: null, request: { ...state.request, stage: 'apply' } }
       : state,
   'suins/cancel': (state) =>
     state.request?.kind === 'set' && state.request.stage === 'review' ? finish(state) : state,
@@ -206,7 +217,10 @@ const prepare = async (
   before_sign()
   const review = await parent_wallet.suins.review_parent(request.name, pairing.address, before_sign, wallet.address)
   before_sign()
-  return { type: 'suins/reviewed', request, pairing, review }
+  // Nothing to change means nothing to confirm: the request completes like an applied one.
+  return review.unchanged
+    ? { type: 'suins/used', request, pending: null }
+    : { type: 'suins/reviewed', request, pairing, review }
 }
 const reconcile = async (
   context: AppContext,

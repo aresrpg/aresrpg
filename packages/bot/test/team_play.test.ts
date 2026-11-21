@@ -441,6 +441,102 @@ test('the raid strategy drives one hero through a dungeon and an ordinary combat
   expect(ordinary.action?.payload).not.toHaveProperty('dungeon')
 })
 
+test('a raid bound with a run cap ends after that many dungeon runs ended, and not before', () => {
+  const scope = { character: character_id, title: 'Raid', area: { world: portal.world }, dungeon: dungeon!.dungeon }
+  const script = (runs?: number) => parse_behavior_script(bind_strategy('dungeon_raid', { ...scope, runs }))
+  const raid = (runs?: number): BehaviorRun => ({
+    id: 'run',
+    bot_id: fixture_bot.id,
+    grant_id: 'grant',
+    lane_key: 'lane',
+    character_id,
+    fingerprint: 'fixture',
+    script: script(runs),
+    revision: 1,
+    memory: empty_behavior_memory(),
+    pending_node: null,
+    activation: null,
+    consumed_command_id: null,
+    status: 'active',
+    actions_started: 0,
+    last_command_id: null,
+    created_at: 0,
+  })
+  const at_portal = { ...portal, checkpoint_world: portal.world, custody: 'kiosk' as const, active_fight: undefined }
+  const outside = { ...character(), ...at_portal }
+  const inside = { ...outside, dungeon_run: { dungeon: dungeon!.dungeon, room: 1 } }
+  const keys = { id: id(40), item_type: dungeon!.key, name: 'Key', category: 'key', level: 1, amount: 9 }
+  const seen = (hero: CharacterRow, checkpoint = placement()): GameplayContext => {
+    const context = context_of(checkpoint, [hero])
+    const items = [{ ...keys, kiosk: outside.kiosk, version: '1' }]
+    const inventory = { ...empty_inventory(), loaded: true, listings: [], trades: [], items }
+    return { ...context, snapshot: { ...context.snapshot, inventory } } as GameplayContext
+  }
+  /** Each look carries the tally the run stored at the look before it. */
+  const played = (run: BehaviorRun, looks: readonly GameplayContext[]) =>
+    looks.reduce<readonly ReturnType<typeof next_behavior_action>[]>((results, context) => {
+      const tally = results.at(-1)?.record.tally
+      return [...results, next_behavior_action({ ...run, tally }, null, context)]
+    }, [])
+  // The last room is won while the hero still sits in its fight: the run has ended, the fight has not.
+  const settling = seen(character())
+  const looks = [seen(outside), seen(inside), seen(outside), seen(inside), settling, seen(outside)]
+  const capped = played(raid(2), looks)
+  expect(capped.map(({ state, action }) => action?.kind ?? state)).toEqual([
+    'dungeon_enter',
+    'dungeon_fight',
+    'dungeon_enter',
+    'dungeon_fight',
+    capped[4]!.action!.kind,
+    'completed',
+  ])
+  expect(capped.map(({ record }) => record.tally?.dungeon_runs ?? 0)).toEqual([0, 0, 1, 1, 2, 2])
+  // Two runs ended, but the hero is still in a fight: the tree plays it out before it ends.
+  expect(capped[4]).toMatchObject({ state: 'action' })
+  expect(capped[5]).toMatchObject({ state: 'completed', issue: 'run_cap_reached' })
+  expect(capped[5]!.action).toBeUndefined()
+  // With no cap bound the hero raids while keys last, as before.
+  const open = played(raid(), looks)
+  expect(open.at(-1)!.action?.kind).toBe('dungeon_enter')
+  expect(open.at(-1)!.record.tally?.dungeon_runs).toBe(2)
+  // One run is not two.
+  expect(played(raid(2), looks.slice(0, 3)).at(-1)!.action?.kind).toBe('dungeon_enter')
+})
+
+test('a run whose fees reached its cap plays out the fight its hero is in, then ends before anything new', () => {
+  const scope = { character: character_id, title: 'Raid', area: { world: portal.world }, dungeon: dungeon!.dungeon }
+  const capped = (strategy: string): BehaviorRun => ({
+    id: 'run',
+    bot_id: fixture_bot.id,
+    grant_id: 'grant',
+    lane_key: 'lane',
+    character_id,
+    fingerprint: 'fixture',
+    script: parse_behavior_script(bind_strategy(strategy, { ...scope, fee_cap_mist: '100' })),
+    revision: 1,
+    memory: empty_behavior_memory(),
+    pending_node: null,
+    activation: null,
+    consumed_command_id: null,
+    status: 'active',
+    actions_started: 0,
+    last_command_id: null,
+    created_at: 0,
+    tally: { fees_mist: '100', dungeon_runs: 0, in_dungeon: false },
+  })
+  const fighting = context_of(started(), [character()])
+  const free = context_of(placement(), [{ ...character(), custody: 'kiosk', active_fight: undefined }])
+  // Leaving a fight would forfeit it: its turns are still signed.
+  expect(next_behavior_action(capped('dungeon_raid'), null, fighting).action).toMatchObject({ kind: 'fight_turn' })
+  for (const strategy of ['dungeon_raid', 'team_hunt']) {
+    // A run never ends while its hero sits in a fight, even one its tree cannot play.
+    expect(next_behavior_action(capped(strategy), null, fighting).state).not.toBe('completed')
+    const ended = next_behavior_action(capped(strategy), null, free)
+    expect(ended).toMatchObject({ state: 'completed', issue: 'fee_cap_reached' })
+    expect(ended.action).toBeUndefined()
+  }
+})
+
 test('a raid hero keeps its key until every listed teammate can follow it into the dungeon', () => {
   const { world } = portal
   const raid = { type: 'dungeon', character_id, world, dungeon: dungeon!.dungeon, profile, allies: [ally_id] } as const

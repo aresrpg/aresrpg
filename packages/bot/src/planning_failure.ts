@@ -13,6 +13,9 @@ const waiting = new Set([
   'needs_custody_resync',
   'market_unavailable',
 ])
+/** What only the player can change: the leaf holds its run, pays nothing and reads the fact again each
+ * tick. A blocker is reported as the run's issue, so it waits where a refusal would fall through. */
+const blocked = new Set(['area_unreachable'])
 /** What the game refuses right now: the leaf fails, and later ticks evaluate the tree again. */
 const refused = new Set([
   'invalid_target_options',
@@ -53,11 +56,17 @@ const refused = new Set([
   'spell_not_learned',
   'spell_rank_capped',
   'insufficient_spell_points',
+  'slot_empty',
+  'character_name_taken',
+  'invalid_character_name',
+  'listing_gone',
+  'nothing_to_collect',
 ])
 /** Only explicit domain errors are user-facing; implementation messages may contain secrets. */
 export const planning_issue = (error: unknown) => {
   if (!(error instanceof Error) || error.constructor !== Error) return undefined
-  if (waiting.has(error.message)) return { state: 'waiting' as const, issue: error.message }
+  if (waiting.has(error.message) || blocked.has(error.message))
+    return { state: 'waiting' as const, issue: error.message }
   if (refused.has(error.message) || /^illegal_fight_(action|turn):[a-z_]+$/.test(error.message))
     return { state: 'failure' as const, issue: error.message }
   return undefined

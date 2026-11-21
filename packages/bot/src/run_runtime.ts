@@ -9,7 +9,7 @@ import { gameplay_observation_ready, type GameplayContext } from './gameplay_con
 import { command_issue } from './planning_failure.ts'
 import { observed_balance } from './character_observability.ts'
 import { hash_secret } from './security.ts'
-import { run_hosted, run_key, released_run } from './run_ref.ts'
+import { run_hosted, run_key, ended_run } from './run_ref.ts'
 import { next_behavior_action } from './behavior_plan.ts'
 import type { BehaviorRun } from './behavior_script.ts'
 
@@ -137,10 +137,6 @@ const report_outcome = (outcome: TickOutcome, report?: RunInput['report_failure'
   report(outcome.diagnostic)
   return outcome.status
 }
-// A tree awaiting its author keeps its hero's slot and discoverable objective; every other ending frees the slot.
-// A run never advances the wallet decision: a hero must not fence its neighbours.
-const ended_lane = (run: BehaviorRun, lane: Lane, status: Status): Lane =>
-  status === 'awaiting_ai' ? lane : { ...lane, ...released_run(lane, run.id) }
 /** A new actor lifetime evaluates the authored tree from its root, never old execution progress.
  * No receipt history means this can repeat a non-idempotent leaf after an ambiguous crash. */
 const restart_run = async (input: RunInput): Promise<BehaviorRun> => {
@@ -199,7 +195,8 @@ export const run_tick = async (input: RunInput) => {
     const previous = run.last_command_id ? await tx.get<Command>(`command:${run.last_command_id}`) : null
     const finish = async (status: Status, issue?: string, record: BehaviorRun = run) => {
       await tx.put(key, { ...record, status, issue })
-      if (!['active', 'waiting'].includes(status)) await tx.put(run.lane_key, ended_lane(run, lane, status))
+      if (!['active', 'waiting'].includes(status))
+        await tx.put(run.lane_key, { ...lane, ...ended_run(lane, run.id, { status, issue }) })
       return status
     }
     const grant = await tx.get<Grant>(`grant:${run.grant_id}`)

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Integration controller: the presentation and choreography remain Opus-authored.
+import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@aresrpg/ui/styles.css'
 
@@ -21,6 +22,9 @@ import { LandingAccount } from './LandingAccount.tsx'
 import { LandingAccountContext } from './LandingChooser.tsx'
 import { landing_assets } from './assets.ts'
 import { landing_links } from './presentation.ts'
+
+/** The sale reads the chain through the SDK; the home page paints first and loads it apart. */
+const BlastSaleBar = lazy(() => import('../kares/BlastSaleBar.tsx'))
 
 /** The mood of each light page the home page opens in place; the agent page is the rest. */
 const LIGHT_AURAS: Readonly<Record<string, 'sky' | 'moss'>> = { '/kares': 'sky', '/dapp': 'moss' }
@@ -100,6 +104,11 @@ export const boot_landing = async (): Promise<void> => {
             links={links}
             on_play={play}
             agent_connect_url={agent_connect_url(location.origin)}
+            notice={
+              <Suspense fallback={null}>
+                <BlastSaleBar copy={copy} />
+              </Suspense>
+            }
             account={
               <>
                 <LanguageCard compact copy={copy} locale={locale} change_locale={change_locale} />

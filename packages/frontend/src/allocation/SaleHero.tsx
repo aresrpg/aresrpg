@@ -7,7 +7,8 @@ import type { Locale } from '../i18n/locale.ts'
 import type { KaresCopy } from '../kares/copy.ts'
 
 import { blast_helmet, blast_wordmark } from './assets.ts'
-import { countdown_text, sui_text } from './SalePanel.tsx'
+import { countdown_text, public_line } from './clock.tsx'
+import { sui_text } from './SalePanel.tsx'
 
 const subline = (sale: BlastSnapshot, now: number, text: CopyText): string | null => {
   if (sale.phase === 'live') return text('sale_ends_in', { time: countdown_text(Number(sale.end_ms) - now, text) })
@@ -25,6 +26,7 @@ export const SaleHero = ({
   locale,
 }: Readonly<{ sale: BlastSnapshot; spots: number; now: number; text: CopyText; kares: KaresCopy; locale: Locale }>) => {
   const detail = subline(sale, now, text)
+  const everyone = public_line(sale, now, text)
   return (
     <div className="sale-hero">
       <span className="blast-badge">
@@ -35,6 +37,7 @@ export const SaleHero = ({
         {spots && sale.phase === 'live' ? text('sale_spots_open') : kares[`blast_${sale.phase}`]}
       </p>
       {detail && <p className="deadline">{detail}</p>}
+      {everyone && <p className="deadline">{everyone}</p>}
       {sale.phase !== 'soon' && sale.phase !== 'cancelled' && (
         <div className="sale-progress">
           <p>

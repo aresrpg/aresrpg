@@ -141,6 +141,9 @@ const observe_inventory = (
 
 export default {
   name: 'player_inventory_observation',
+  // The first shared status marks this socket as a hosted bot for the cluster's population count.
+  reduce: (state, action) =>
+    action.type === 'packet/agent_status' && !state.agent ? { ...state, agent: true } : state,
   observe: (context) => {
     let lifetime: AbortController | null = null
     context.events.on('packet/inventory_observe', ({ id, observation }) => {

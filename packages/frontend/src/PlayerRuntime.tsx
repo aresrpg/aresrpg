@@ -28,6 +28,7 @@ import {
   WORLD_FRAME_LAYER,
 } from './components/app_layout.ts'
 import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
+import { CharacterPreviewCanvas } from './components/CharacterPreviewCanvas.tsx'
 import { CityArrivalBanner } from './components/CityArrivalBanner.tsx'
 import { DungeonLobby } from './components/DungeonLobby.tsx'
 import { engine_notice_kind, EngineNotice } from './components/EngineNotice.tsx'
@@ -254,6 +255,7 @@ export function PlayerRuntime({
             copy={copy}
             create={create_character}
             insufficient={sui_insufficient}
+            preview={(source) => <CharacterPreviewCanvas source={source} />}
             view_spells={(classe) => {
               open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
             }}

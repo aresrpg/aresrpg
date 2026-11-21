@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { FightStateRow } from '@aresrpg/protocol'
+import type { FightStateRow, RunEnding } from '@aresrpg/protocol'
 import type { Receipt } from '@aresrpg/sdk/cache'
 
 import { create_behavior_control } from './behavior_control.ts'
@@ -34,6 +34,9 @@ export type Lane = Readonly<{
   runs?: Readonly<Record<string, string>>
   /** Run key to the last command that run admitted. */
   run_commands?: Readonly<Record<string, string>>
+  /** The runs that ended by themselves, each with its reason: run ID to ending. One stays told to the
+   * owner until its hero starts again. Stored with the lane. */
+  ended?: Readonly<Record<string, RunEnding>>
   /** The wallet's one direct command: a one-shot queue entry until it takes the signing slot, then
    * readable until the next direct command is accepted. */
   direct?: string | null
@@ -54,6 +57,8 @@ export type Lane = Readonly<{
   /** The last admitted command; it stays readable until the lane admits the next one. */
   latest_command?: string | null
   pending: Envelope | null
+  /** Net network fees of every receipt this wallet's bot settled, in MIST. Stored with the lane and never reset. */
+  fees_mist?: string
 }>
 export type Command = Readonly<{
   /** The hero run that issued this command; absent on a direct command. */

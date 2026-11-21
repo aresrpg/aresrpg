@@ -75,7 +75,11 @@ const ParentSelector = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         <Button
           type="submit"
           tone="primary"
-          disabled={!state.draft.trim() || state.error === 'player_default_uncertain'}
+          disabled={[
+            !state.draft.trim(),
+            state.error === 'player_default_uncertain',
+            state.applied === state.draft,
+          ].some(Boolean)}
         >
           {t('suins_use')}
         </Button>

@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 
 import { expect, test } from 'bun:test'
 
-test.each(['game_entry.tsx', 'dapp/DappPage.tsx'])(
+test.each(['game_entry.tsx', 'dapp/DappPage.tsx', 'characters/EquipmentTab.tsx'])(
   '%s reaches no Three.js runtime before loading a game surface',
   async (entry) => {
     const packages = resolve(import.meta.dir, '../../..')

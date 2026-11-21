@@ -106,9 +106,9 @@ const current_snapshot = (
   wallet: AuthSession | null,
   pairing: AgentPairingIdentity | null,
   view: AgentInventoryView,
-  offline: boolean
+  idle: boolean
 ) => {
-  if (!source || offline) return undefined
+  if (!source || idle) return undefined
   return source.wallet === wallet && same_inventory_pairing(source.pairing, pairing)
     ? project_kiosk(source, view)
     : undefined
@@ -150,8 +150,12 @@ const transfer_routes = (snapshot: KioskSnapshot, player_items: readonly ItemRow
   },
 })
 
-/** Transaction discovery owns capabilities only; game inventory and balances come from the session reducer. */
-export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
+/**
+ * Transaction discovery owns capabilities only; game inventory and balances come from the session reducer.
+ * `idle`: the bag on screen is not the player's own (a character session adapter drives the tab), so
+ * nothing is discovered, offered or recovered.
+ */
+export const useAgentKiosk = (copy: AppCopy, idle: boolean) => {
   const wallet = useAppStore((app) => app.session.wallet)
   const pairing = useAppStore((app) => app.session.inventory_pairing)
   const view = useAppStore((app) => app.session.agent_inventory)
@@ -166,7 +170,7 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
   }
   const transfer = useAgentTransaction(wallet, pairing, refresh, copy)
   useEffect(() => {
-    if (!wallet || !pairing || offline) return
+    if (!wallet || !pairing || idle) return
     let current = true
     dispatch({ type: 'load' })
     let completed: readonly string[] = []
@@ -198,8 +202,8 @@ export const useAgentKiosk = (copy: AppCopy, offline: boolean) => {
     return () => {
       current = false
     }
-  }, [wallet, pairing, view.serial, offline, listing_revision, link_ready])
-  const snapshot = current_snapshot(discovery.snapshot, wallet, pairing, view, offline)
+  }, [wallet, pairing, view.serial, idle, listing_revision, link_ready])
+  const snapshot = current_snapshot(discovery.snapshot, wallet, pairing, view, idle)
   const state = kiosk_status(discovery, view, copy, link_ready)
   const routes = snapshot ? transfer_routes(snapshot, []) : null
   const pending_deposit_ids = new Set([...(snapshot?.reserved_player_items ?? []), ...transfer.pending_ids])

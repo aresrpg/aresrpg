@@ -7,6 +7,7 @@
 import { gather_time_ms, job_level_from_xp } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { agent_watching, displayed_character } from '../agents/observation.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { play_audio } from '../game/audio/audio_registry.ts'
@@ -67,15 +68,31 @@ const world_ambush = (state: Readonly<AppState>, character_id: string | null): s
 export const selected_world_ambush = (state: Readonly<AppState>): string | null =>
   world_ambush(state, state.session.selected_character_id)
 
+/** A watched hero has no local attempt. Its gather is the root the chain wrote: a free hero whose
+ *  checkpoint is dated after chain time (`gathering.move`, `world::delay_checkpoint`). Unknown
+ *  chain time proves no root. */
+const watched_gather_root = (
+  state: Readonly<AppState>,
+  character: Readonly<CharacterRow>,
+  chain_ms: number | null | undefined
+): boolean =>
+  agent_watching(state.session) &&
+  !character.active_fight &&
+  (character.at_ms ?? 0) > (chain_ms ?? Number.POSITIVE_INFINITY)
+
+/** The displayed hero's lock. `chain_ms` is the caller's current chain time: only the watched
+ *  branch reads it, because the player's own gather is timed by its local attempt. */
 export const selected_world_action_lock = (
-  state: Readonly<AppState>
+  state: Readonly<AppState>,
+  chain_ms?: number | null
 ): Readonly<{ character_id: string; animation: 'gather' | null }> | null => {
-  const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+  const character = displayed_character(state.session)
   if (!character) return null
+  const lock = (animation: 'gather' | null) => Object.freeze({ character_id: character.id, animation })
   const gathering = selected_gathering(state)
-  if (gathering) return Object.freeze({ character_id: character.id, animation: gathering.ambushed ? null : 'gather' })
-  if (character.dungeon_run) return Object.freeze({ character_id: character.id, animation: null })
-  return character.ambush ? Object.freeze({ character_id: character.id, animation: null }) : null
+  if (gathering) return lock(gathering.ambushed ? null : 'gather')
+  if (character.dungeon_run || character.ambush) return lock(null)
+  return watched_gather_root(state, character, chain_ms) ? lock('gather') : null
 }
 
 export const gather_state_input = (

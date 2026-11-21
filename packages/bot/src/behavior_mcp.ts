@@ -11,7 +11,7 @@ const definitions = {
   bot_validate_behavior: {
     scope: 'bot:observe',
     description:
-      'Validate an AI-authored behavior tree without executing it. A tree acts for exactly one hero: every action names the same character_id, while conditions may read teammates. Conditions are reactive; unknown facts wait. Sequences retain reconciled actions until failure or traversal reset; selectors choose the first non-failing child. A successful root repeats on the next existing scheduler tick; complete terminates. No default action/time cutoff.',
+      'Validate an AI-authored behavior tree without executing it. A tree acts for exactly one hero: every action names the same character_id, while conditions may read teammates. Conditions are reactive; unknown facts wait. Sequences retain reconciled actions until failure or traversal reset; selectors choose the first non-failing child. A successful root repeats on the next existing scheduler tick; complete terminates and reports its optional reason as the run issue. A tree may test what its own run tallied since it was started or replaced: fees_spent (MIST of network fees from its settled receipts) and dungeon_runs (dungeon runs it saw end). No default action/time cutoff.',
     properties: { script: BEHAVIOR_SCRIPT_SCHEMA },
   },
   bot_start_behavior: {

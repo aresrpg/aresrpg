@@ -21,7 +21,8 @@ const verify = async (page: Page) => {
   await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'ready')
 }
 
-test('standalone provider installation never starts owner proof, provisioning, or consent', async ({ page }) => {
+// The owner check proves the account and reads its agent before the guide opens; the guide asks nothing more.
+test('standalone provider installation starts no provisioning and no consent', async ({ page }) => {
   const { requests } = await mock_hosted(page)
   await open(page)
   for (const provider of ['ChatGPT', 'Claude', 'Grok']) {
@@ -32,7 +33,7 @@ test('standalone provider installation never starts owner proof, provisioning, o
   await expect(page.locator('html')).toHaveAttribute('data-agent-candidate', '')
   await expect(page.locator('[data-hosted-phase]')).toHaveAttribute('data-hosted-phase', 'idle')
   await page.keyboard.press('Escape')
-  expect(requests).toEqual([])
+  expect(requests.map(({ path }) => path)).toEqual(['/connect/challenge', '/connect/verify', '/connect/status'])
   expect(
     await page.evaluate((address) => localStorage.getItem(`aresrpg.agent-identities:${address}`), owner)
   ).toBeNull()
@@ -217,8 +218,9 @@ const connected_inventory = async (page: Page) => {
   await expect(page.getByRole('combobox')).toHaveCount(0)
   await expect(page.getByText('I compared this full address', { exact: false })).toHaveCount(0)
   await expect(page.getByText('Saved agent recovery', { exact: true })).toHaveCount(0)
+  // A verified target opens the coin transfer between the game wallet and the bot.
   await page.getByRole('button', { name: 'SUI', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Deposit to agent', exact: true })).toBeEnabled()
+  await expect(page.getByRole('dialog', { name: 'Transfer', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Offer fixture character', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-fixture-offer', 'true')
@@ -294,8 +296,12 @@ for (const reason of ['expired', 'ambiguous', 'stale_proof', 'revoke_during_proo
     f.connection.authorized = true
     f.connection[reason] = true
     await open_custody(page)
-    if (reason === 'ambiguous') await expect(page.getByRole('alert')).toContainText('More than one hosted wallet')
-    else await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
+    if (reason === 'ambiguous') {
+      // Two wallets: nothing is selected, and the setup button says why instead of opening.
+      await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
+      await expect(page.getByText('More than one hosted wallet needs review. No wallet was selected.')).toBeVisible()
+      await expect(page.locator('[data-agent-setup]')).toHaveCount(0)
+    } else await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
     await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toHaveCount(0)
     expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
@@ -326,7 +332,8 @@ for (const action of ['cancel', 'wallet'] as const) {
     f.connection.authorized = true
     await open_custody(page, '&slow_signature')
     await expect(page.locator('html')).toHaveAttribute('data-fixture-signing', 'true')
-    if (action === 'cancel') await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    // A first check that has not answered is named on the button; pressing it cancels the check.
+    if (action === 'cancel') await page.getByRole('button', { name: 'Checking agent status…', exact: true }).click()
     else await page.evaluate(() => dispatchEvent(new CustomEvent('fixture/wallet', { detail: 1 })))
     await expect.poll(() => f.requests.some(({ path }) => path === '/connect/cancel')).toBe(true)
     await page.evaluate(() => dispatchEvent(new Event('fixture/signature')))
@@ -345,10 +352,9 @@ test('dismissing a malformed provider request restores owner status without anot
   const f = await mock_hosted(page)
   f.connection.authorized = true
   await open_custody(page, '&authorization_id=invalid')
-  await page
-    .getByRole('region', { name: 'Agent kiosk' })
-    .getByRole('button', { name: 'Connect your agent', exact: true })
-    .click()
+  await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
+  // A request waits for Continue; one the service does not know is refused then, before any signature.
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page).not.toHaveURL(/authorization_id/)

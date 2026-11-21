@@ -89,6 +89,15 @@ export const transaction_signature_refused = (error: unknown): boolean => {
   return value.code === 4001 || (value.cause !== error && transaction_signature_refused(value.cause))
 }
 
+/**
+ * Every wording by which a node, wallet or SDK says the signer cannot pay the fees. One list for the
+ * whole product: three copies drifted, and a run out of SUI was reported as a plain failure because
+ * only this one missed the node's "insufficient SUI balance".
+ */
+const GAS_REFUSAL =
+  /insufficient.?gas|insufficient(?: SUI)?.?balance|not enough (?:SUI|coins|balance|gas)|no valid gas|gas coin|gasbalancetoolow|unable to select a gas/i
+export const gas_refusal = (message: string): boolean => GAS_REFUSAL.test(message)
+
 /** Display classification never authorizes a retry; the executor still owns recovery. */
 export const transaction_failure_kind = (error: unknown): 'uncertain' | 'refused' | 'funding' | 'failed' => {
   const message = readable_transaction_error(error)
@@ -99,10 +108,6 @@ export const transaction_failure_kind = (error: unknown): 'uncertain' | 'refused
   )
     return 'uncertain'
   if (transaction_signature_refused(error)) return 'refused'
-  if (
-    pre_submission_failure(error) &&
-    /insufficient.?gas|insufficient.?balance|not enough (?:SUI|coins|balance|gas)|no valid gas coins/i.test(message)
-  )
-    return 'funding'
+  if (pre_submission_failure(error) && gas_refusal(message)) return 'funding'
   return 'failed'
 }

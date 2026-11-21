@@ -6,6 +6,7 @@ import { class_names } from '@aresrpg/immutable'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { CharacterCreateModal, character_name_error_text } from '../../src/components/CharacterCreateModal.tsx'
+import { CharacterPreviewCanvas } from '../../src/components/CharacterPreviewCanvas.tsx'
 import SettingsPage from '../../src/settings/SettingsPage.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 
@@ -26,6 +27,7 @@ test('each modal exposes its own initial surface', async () => {
       copy={copy}
       create={async () => undefined}
       insufficient={false}
+      preview={(source) => <CharacterPreviewCanvas source={source} />}
       view_spells={() => undefined}
     />
   )
@@ -49,6 +51,7 @@ test('each modal exposes its own initial surface', async () => {
       copy={copy}
       create={async () => undefined}
       insufficient
+      preview={(source) => <CharacterPreviewCanvas source={source} />}
       view_spells={() => undefined}
     />
   )

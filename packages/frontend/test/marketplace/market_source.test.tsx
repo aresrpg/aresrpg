@@ -48,7 +48,7 @@ const as = (source: MarketSource | null, node: ReactNode) =>
 const text = (name: string) => name
 const label = (key: string) => String(copy.marketplace_page[key])
 
-test('an account without characters, withdrawal or history is offered none of them', () => {
+test('an account without characters or history is offered neither', () => {
   initialize_app_store({ quality: 'medium', music_enabled: false, render_distance: null })
   const source = bot_source('5000000000')
   const volume = { day_mist: null, month_mist: null, history_days: 0 }
@@ -60,13 +60,32 @@ test('an account without characters, withdrawal or history is offered none of th
   expect(page(source)).not.toContain(label('tab_history'))
   expect(page(source)).toContain(label('tab_sell'))
   expect(as(source, <BrowsePanel text={text} />)).not.toContain('group_characters')
-  // The account's own listing is shown, with no control to withdraw it.
+  // The account's own listing is shown, with the control to withdraw it: the bot withdraws item listings.
   const selling = as(source, <SellPanel text={text} />)
   expect(selling).toContain('market-own-listing')
-  expect(selling).not.toContain('market-delist')
+  expect(selling).toContain('market-delist')
+  // A source that cannot withdraw shows the listing without that control.
+  const fixed = { ...source, capabilities: { characters: false, withdraw: false, history: false } }
+  expect(as(fixed, <SellPanel text={text} />)).not.toContain('market-delist')
   // The sellable inventory is the source's bag: one key, whatever the signed-in player holds.
   expect(selling).toContain('inventory<span class="market-count">1</span>')
   expect(as({ ...source, capabilities: undefined }, <SellPanel text={text} />)).toContain('market-delist')
+})
+
+test('the page opens on the panel its source names, and on Buy otherwise', () => {
+  initialize_app_store({ quality: 'medium', music_enabled: false, render_distance: null })
+  const source = bot_source('5000000000')
+  const volume = { day_mist: null, month_mist: null, history_days: 0 }
+  const page = (value: MarketSource | null) =>
+    as(value, <MarketplacePageView copy={copy} locale="en" volume={volume} />)
+  // The Sell panel is the one that lists the account's own offers.
+  expect(page(source)).not.toContain('market-own-listing')
+  expect(page(null)).not.toContain('market-own-listing')
+  expect(page({ ...source, panel: 'SELL' })).toContain('market-own-listing')
+  expect(page({ ...source, panel: 'BUY' })).not.toContain('market-own-listing')
+  // A panel the account is not offered is never opened: the bot account has no history.
+  expect(page({ ...source, panel: 'HISTORY' })).toContain('aria-pressed="true"')
+  expect(page({ ...source, panel: 'HISTORY' })).toBe(page(source))
 })
 
 test('the offers, their price and what the account can afford come from the source', () => {

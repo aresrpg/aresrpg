@@ -13,7 +13,7 @@ import type { LandingProps } from './landing_types.ts'
 
 import './landing.css'
 
-export const Landing = ({ copy, assets, links, on_play, agent_connect_url, account }: LandingProps) => {
+export const Landing = ({ copy, assets, links, on_play, agent_connect_url, account, notice }: LandingProps) => {
   const root = useRef<HTMLDivElement>(null)
   useEffect(() => (root.current ? start_landing_motion(root.current) : undefined), [])
   // The token has its own page: its figures and the staking desk. The dock opens it in place.
@@ -34,6 +34,7 @@ export const Landing = ({ copy, assets, links, on_play, agent_connect_url, accou
       root_ref={root}
       kares_trigger={kares_trigger}
       account={account}
+      notice={notice}
     />
   )
 }
