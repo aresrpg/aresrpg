@@ -3016,6 +3016,9 @@ ui:
   formula_chastisement: G = min(Δ生命 × S, 上限 × S − 本回合G) · 怪物S = 1，玩家S = ½
   formula_drop: 掉率 = min(100%, 基础值 × 怪物等级段系数 × (600 + 队伍平均幸运) / 600)
   formula_xp: 经验 = 基础经验池 × 队伍系数 × 等级平衡 × 玩家等级 / 队伍总等级 × (100 + 智慧) / 100
+  agent_unreachable_title: '无法连接你的代理'
+  agent_unreachable_body: '代理服务没有响应，因此本页面无法判断是否已连接代理。没有任何更改。'
+  agent_unreachable: '代理无法连接'
 
 menu_build: '版本'
 

@@ -88,7 +88,7 @@ test('failed landing startup restores explicit reload recovery', async ({ page }
 test('engine-less pages show their skeleton shell, never the game postcard, and OAuth stays passive', async ({
   page,
 }) => {
-  for (const path of ['/connect-agent', '/world?intent=connect-agent', '/kares', '/enoki']) {
+  for (const path of ['/connect-agent', '/world?intent=connect-agent', '/kares', '/enoki', '/allocation']) {
     const gate = Promise.withResolvers<void>()
     await page.route(app_chunk, async (route) => {
       await gate.promise
@@ -98,7 +98,8 @@ test('engine-less pages show their skeleton shell, never the game postcard, and 
     try {
       await expect.poll(() => new URL(page.url()).pathname).toBe(path.split('?')[0])
       // A light page shows its own skeleton shell at once; the OAuth callback stays empty.
-      if (path === '/enoki') await expect(page.locator('#root')).toBeEmpty()
+      // The allocation page has a design of its own: it paints itself, after no other page's shell.
+      if (['/enoki', '/allocation'].includes(path)) await expect(page.locator('#root')).toBeEmpty()
       else await expect(page.locator('#root [data-boot-light] .aui-skeleton').first()).toBeVisible()
       await expect(page.locator('#root [data-boot-loading]')).toHaveCount(0)
       await expect(page.locator('#root .landing')).toHaveCount(0)

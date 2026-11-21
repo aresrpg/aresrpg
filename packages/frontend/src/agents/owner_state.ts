@@ -118,20 +118,28 @@ export const owner_checkable = (wallet: Pick<AuthSession, 'identity'> | null, se
     Boolean
   )
 
-export type OwnerAnswer = 'unknown' | 'connected' | 'not_connected'
+/** Whether anything can be asked about this account's agent. A Google account may have a hosted agent,
+ * so a build with no bot service address cannot know: that is unreachable, never "not connected". */
+export const owner_reachable = (wallet: Pick<AuthSession, 'identity'> | null, service_url: string): boolean =>
+  wallet?.identity !== 'zklogin' || Boolean(service_url)
+
+export type OwnerAnswer = 'unknown' | 'connected' | 'not_connected' | 'unreachable'
 /**
  * What is known about the owner's agent, read from the one connection state. `unknown` is a check
- * that has not answered yet: it is never shown as "not connected". A check that cannot run
- * (`checkable` false) will never answer, so it reads `not_connected` at once and never waits. During
- * a later re-check the previous answer stands until the new one arrives.
+ * that has not answered yet, and `unreachable` one that ended without an answer (the bot service
+ * failed, could not be reached, or the check was cancelled): neither is ever shown as "not connected",
+ * because the account may well have an agent. A check that cannot run (`checkable` false) will never
+ * answer, so it reads `not_connected` at once and never waits. During a later re-check the previous
+ * answer stands until the new one arrives.
  */
 /** A real answer exists: the bot said it, or no check can ever run. A failed check is not an answer. */
-export const owner_answered = (session: SessionState, checkable: boolean): boolean =>
-  !checkable || session.agent_connection.response !== null
+export const owner_answered = (session: SessionState, checkable: boolean, reachable = true): boolean =>
+  reachable && (!checkable || session.agent_connection.response !== null)
 
-export const owner_answer = (session: SessionState, checkable: boolean): OwnerAnswer => {
+export const owner_answer = (session: SessionState, checkable: boolean, reachable = true): OwnerAnswer => {
   if (owner_connected(session)) return 'connected'
+  if (!reachable) return 'unreachable'
   const { phase, response } = session.agent_connection
-  const unanswered = checkable && response === null && ['idle', 'checking'].includes(phase)
-  return unanswered ? 'unknown' : 'not_connected'
+  if (!checkable || response !== null) return 'not_connected'
+  return ['idle', 'checking'].includes(phase) ? 'unknown' : 'unreachable'
 }

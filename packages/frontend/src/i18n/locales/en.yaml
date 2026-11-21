@@ -3072,6 +3072,9 @@ ui:
   formula_chastisement: 'G = min(ΔHP × S, CAP × S − Gturn) · S = 1 for mobs, ½ for players'
   formula_drop: 'drop = min(100%, authored × mob band × (600 + average team Chance) / 600)'
   formula_xp: 'XP = base-XP pool × party coefficient × level balance × player level / party level × (100 + WIS) / 100'
+  agent_unreachable_title: 'Your agent cannot be reached'
+  agent_unreachable_body: 'The agent service did not answer, so this page cannot tell whether an agent is connected. Nothing was changed.'
+  agent_unreachable: 'Agent unreachable'
 
 menu_build: 'BUILD'
 

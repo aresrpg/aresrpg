@@ -16,7 +16,7 @@ import { HostedBotPanel } from './HostedBotPanel.tsx'
 import { disconnect_agent } from './disconnect_agent.ts'
 import { AgentConnectionButton, AgentConnectedModal } from './AgentConnected.tsx'
 import { agent_tab_source } from './character_tabs.ts'
-import { owner_checkable } from './owner_state.ts'
+import { owner_checkable, type OwnerAnswer } from './owner_state.ts'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
 import { useOwnerAnswer } from './useOwnerAnswer.ts'
 import './agent_setup.css'
@@ -130,6 +130,28 @@ const AgentChecking = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => v
   )
 }
 
+/** The owner check has no answer: the dialog says so, and offers only to ask again. */
+const AgentUnreachable = ({ copy, close }: Readonly<{ copy: AppCopy; close: () => void }>) => {
+  const title_id = useId()
+  return (
+    <NativeModal
+      close={close}
+      label={copy.ui.agent_unreachable_title}
+      aria-labelledby={title_id}
+      className="aui-modal-scrim"
+    >
+      <section className="agent-setup" data-agent-setup="" data-agent-unreachable="">
+        <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={close} />
+        <h2 id={title_id}>{copy.ui.agent_unreachable_title}</h2>
+        <p role="alert">{copy.ui.agent_unreachable_body}</p>
+        <Button tone="primary" onClick={() => dispatch_app({ type: 'agent/connection_refresh' })}>
+          {copy.ui.agent_hosted_retry}
+        </Button>
+      </section>
+    </NativeModal>
+  )
+}
+
 const AgentDisconnect = ({
   wallet,
   bot,
@@ -175,9 +197,20 @@ export const AgentSetup = ({ copy, close }: Readonly<{ copy: AppCopy; close: () 
   // A consent link shows its request whatever this account's agent is; it is never held by the owner check.
   if (authorization) return <AgentProviderSetup copy={copy} close={close} />
   if (answer === 'unknown') return <AgentChecking copy={copy} close={close} />
+  // Nothing is known about this account's agent: no setup is offered over an agent that may exist.
+  if (answer === 'unreachable') return <AgentUnreachable copy={copy} close={close} />
   if (answer === 'connected' && session.wallet && bot)
     return <AgentDisconnect wallet={session.wallet} bot={bot} copy={copy} close={close} />
   return <AgentProviderSetup copy={copy} close={close} />
+}
+
+/** What the button reads for each answer of the owner check. Only a real "not connected" reads as a
+ * setup to start (`setup`); a check without an answer never does. */
+const ANSWER_LABEL: Readonly<Record<OwnerAnswer, (copy: AppCopy, setup: string) => string>> = {
+  connected: (copy) => copy.ui.agent_connected,
+  unknown: (copy) => copy.ui.agent_checking,
+  unreachable: (copy) => copy.ui.agent_unreachable,
+  not_connected: (_copy, setup) => setup,
 }
 
 export const AgentSetupButton = ({
@@ -222,13 +255,7 @@ export const AgentSetupButton = ({
         class_name={class_name}
         open={activate}
         disabled={busy}
-        label={
-          connected
-            ? copy.ui.agent_connected
-            : answer === 'unknown'
-              ? copy.ui.agent_checking
-              : (status_label ?? copy.ui.agent_setup)
-        }
+        label={ANSWER_LABEL[answer](copy, status_label ?? copy.ui.agent_setup)}
       />
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>

@@ -62,7 +62,7 @@ export const LightPage = ({
   brand: ReactNode
   controls?: ReactNode
   aura?: LightPageAura
-  /** An application surface: the bar and the content use the whole window, not a reading column. */
+  /** An application surface: the content uses the whole window; the bar keeps its centred width. */
   wide?: boolean
   children: ReactNode
 }>) => {

@@ -3032,6 +3032,9 @@ ui:
   formula_chastisement: G = min(ΔPV × S, LIMITE × S − Gturno) · S = 1 para monstros, ½ para jogadores
   formula_drop: saque = min(100%, base × faixa do monstro × (600 + Sorte média da equipe) / 600)
   formula_xp: XP = reserva de XP base × coeficiente de grupo × equilíbrio de nível × nível do jogador / nível do grupo × (100 + SAB) / 100
+  agent_unreachable_title: 'Não foi possível contatar seu agente'
+  agent_unreachable_body: 'O serviço de agentes não respondeu, então esta página não sabe se há um agente conectado. Nada foi alterado.'
+  agent_unreachable: 'Agente indisponível'
 
 menu_build: 'VERSÃO'
 

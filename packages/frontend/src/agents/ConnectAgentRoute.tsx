@@ -8,7 +8,7 @@ import { LightPage, LightPageGate } from '../components/LightPage.tsx'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { SuinsConfirmation } from '../settings/SuinsConfirmation.tsx'
-import { useAppStore } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
 import { AgentLog } from './AgentLog.tsx'
 import { AgentSetup, AgentSetupButton } from './AgentSetup.tsx'
@@ -73,6 +73,23 @@ const AgentConnectedPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 /**
+ * The owner check ended without an answer. The account may have an agent, so the page says only that
+ * the service did not answer and offers the check again: never a setup, never "connect".
+ */
+const AgentUnreachable = ({ copy }: Readonly<{ copy: AppCopy }>) => (
+  <section className="aui-panel light-page-card" data-connect-agent-page="" data-agent-answer="unreachable">
+    <h1>{copy.ui.agent_unreachable_title}</h1>
+    <p role="alert">{copy.ui.agent_unreachable_body}</p>
+    <div className="light-page-actions">
+      <Button tone="primary" onClick={() => dispatch_app({ type: 'agent/connection_refresh' })}>
+        {copy.ui.agent_hosted_retry}
+      </Button>
+    </div>
+    <SuinsConfirmation copy={copy} />
+  </section>
+)
+
+/**
  * The page of an account with no agent, and the page behind an assistant's request. Until the player
  * dismisses it, the setup dialog opens by itself for an account known to have no agent, and for the
  * request, which waits for the player.
@@ -123,6 +140,7 @@ const AgentPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       </section>
     )
   if (shown === 'connected') return <AgentConnectedPage copy={copy} />
+  if (shown === 'unreachable') return <AgentUnreachable copy={copy} />
   return (
     <AgentSetupCard
       copy={copy}

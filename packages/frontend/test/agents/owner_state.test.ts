@@ -4,7 +4,13 @@ import { expect, test } from 'bun:test'
 import type { HostedOwnerStatus } from '@aresrpg/protocol'
 
 import { reduce_app_state } from '../../src/store.ts'
-import { owner_answer, owner_checkable, owner_connected } from '../../src/agents/owner_state.ts'
+import {
+  owner_answer,
+  owner_answered,
+  owner_checkable,
+  owner_connected,
+  owner_reachable,
+} from '../../src/agents/owner_state.ts'
 import { automation_fixture } from '../modules/automation_fixture.ts'
 
 const pairing = { address: 'agent', multisig_public_key: 'descriptor', signer_mode: 'host-persistent' as const }
@@ -152,13 +158,14 @@ test('an owner check that has not answered reads unknown, never not connected', 
     pairing: null,
   })
   expect(owner_answer(disconnected.session, true)).toBe('not_connected')
-  // A check that failed or could not reach the bot has answered: the page offers Try again, not a wait.
+  // A check that failed, could not reach the bot or was cancelled says nothing about the agent: the
+  // account may well be connected, so it never reads "not connected".
   for (const failure of ['failed', 'unavailable'] as const) {
     const ended = reduce_app_state(checking, { ...result, failure, response: null, pairing: null })
-    expect(owner_answer(ended.session, true)).toBe('not_connected')
+    expect(owner_answer(ended.session, true)).toBe('unreachable')
   }
   expect(owner_answer(reduce_app_state(checking, { type: 'agent/connection_cancel' }).session, true)).toBe(
-    'not_connected'
+    'unreachable'
   )
 })
 
@@ -201,4 +208,20 @@ test('a check that can never run reads not connected at once instead of waiting 
   expect(owner_checkable({ identity: 'wallet' }, service, '')).toBe(false)
   expect(owner_checkable(null, service, '')).toBe(false)
   expect(owner_checkable(google, service, '?intent=connect-agent&authorization_id=request')).toBe(false)
+})
+
+// Regression (owner report 2026-11-22): a build with no bot service address read "Connect your agent"
+// for an account that has an agent. With no service to ask, a Google account's agent is not known.
+test('a Google account with no bot service to ask reads unreachable, never not connected', () => {
+  const original = automation_fixture()
+  const google = { identity: 'zklogin' } as const
+  expect(owner_reachable(google, '')).toBe(false)
+  expect(owner_reachable(google, 'https://bot.example.test')).toBe(true)
+  // An account that can never have a hosted agent has nothing to reach: it stays "not connected".
+  expect(owner_reachable({ identity: 'wallet' }, '')).toBe(true)
+  expect(owner_reachable(null, '')).toBe(true)
+  expect(owner_answer(original.session, false, false)).toBe('unreachable')
+  // No answer exists, so nothing opens the setup by itself.
+  expect(owner_answered(original.session, false, false)).toBe(false)
+  expect(owner_answered(original.session, false, true)).toBe(true)
 })

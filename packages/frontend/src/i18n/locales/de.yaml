@@ -3050,6 +3050,9 @@ ui:
   formula_chastisement: 'G = min(ΔLP × S, GRENZE × S − Gzug) · S = 1 für Monster, ½ für Spieler'
   formula_drop: 'Beute = min(100 %, Basiswert × Monsterband × (600 + durchschnittliches Teamglück) / 600)'
   formula_xp: 'EP = Basis-EP-Pool × Gruppenkoeffizient × Stufenausgleich × Spielerstufe / Gruppenstufe × (100 + WEI) / 100'
+  agent_unreachable_title: 'Dein Agent ist nicht erreichbar'
+  agent_unreachable_body: 'Der Agentendienst hat nicht geantwortet, daher kann diese Seite nicht sagen, ob ein Agent verbunden ist. Es wurde nichts geändert.'
+  agent_unreachable: 'Agent nicht erreichbar'
 
 menu_build: 'BUILD'
 

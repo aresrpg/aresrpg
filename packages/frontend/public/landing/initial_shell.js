@@ -7,15 +7,16 @@
   const path = location.pathname.replace(/\/+$/, '')
   const root = document.getElementById('root')
   const shell = document.getElementById(path === '' ? 'boot-landing' : 'boot-game')
-  // Docs, the web dapp, the KARES page and Connect Your Agent have no world to load: they never show the
-  // game postcard while their entry starts.
+  // Docs, the allocation page, the web dapp, the KARES page and Connect Your Agent have no world to
+  // load: they never show the game postcard while their entry starts.
   const agent_entry =
     path === '/connect-agent' || new URLSearchParams(location.search).get('intent') === 'connect-agent'
-  const engine_less =
-    path === '/docs' || path.startsWith('/docs/') || path === '/dapp' || path === '/kares' || agent_entry
-  // An engine-less page shows its own shell at once, in its mood, with skeletons where its content will load.
+  // Pages with a design of their own: they paint themselves, with no shell of another page before them.
+  const own_shell = path === '/docs' || path.startsWith('/docs/') || path === '/allocation'
+  const engine_less = own_shell || path === '/dapp' || path === '/kares' || agent_entry
+  // A light page shows its own shell at once, in its mood, with skeletons where its content will load.
   const light = document.getElementById('boot-light')
-  if (root && light && engine_less && !path.startsWith('/docs')) {
+  if (root && light && engine_less && !own_shell) {
     const content = light.content.cloneNode(true)
     content.firstElementChild.setAttribute('data-aura', agent_entry ? 'ember' : path === '/kares' ? 'sky' : 'moss')
     root.replaceChildren(content)

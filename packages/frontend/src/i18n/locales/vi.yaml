@@ -3016,6 +3016,9 @@ ui:
   formula_chastisement: G = min(ΔMáu × S, GIỚI HẠN × S − Glượt) · S = 1 với quái, ½ với người chơi
   formula_drop: đồ rơi = min(100%, tỷ lệ cơ bản × khoảng cấp quái × (600 + May mắn trung bình nhóm) / 600)
   formula_xp: KN = quỹ KN cơ bản × hệ số nhóm × cân bằng cấp × cấp người chơi / cấp nhóm × (100 + Trí tuệ) / 100
+  agent_unreachable_title: 'Không liên lạc được với agent của bạn'
+  agent_unreachable_body: 'Dịch vụ agent không phản hồi nên trang này không biết agent có đang kết nối hay không. Không có gì bị thay đổi.'
+  agent_unreachable: 'Không liên lạc được agent'
 
 menu_build: 'BẢN DỰNG'
 

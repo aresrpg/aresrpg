@@ -6,6 +6,7 @@ import { expect, spyOn, test } from 'bun:test'
 
 import type { AuthSession } from '../../src/auth.ts'
 import { play_stage } from '../../src/dapp/DappPlay.tsx'
+import { sign_in_asked } from '../../src/components/Login.tsx'
 import { observe_session, type SessionEffects } from '../../src/modules/session.ts'
 import { create_remembered_auth, type AuthProvider } from '../../src/remembered_auth.ts'
 import { initial_app_state, reduce_app_state, type AppContext, type AppInput, type AppState } from '../../src/store.ts'
@@ -190,4 +191,28 @@ test.each(FAILED_RESTORES)('a failed restore falls back to the sign-in card: %s'
     await settle()
     logged.mockRestore()
   }
+})
+
+// Regression (owner report 2026-11-22): the 3D game showed its black sign-in card to a returning player
+// for as long as the remembered session took to restore. A restore is silent: no card, no page, no text.
+test('the game asks for sign-in only once the player is known to be signed out', () => {
+  const settings = {} as AppState['settings']
+  const signed_out = initial_app_state(settings)
+  expect(sign_in_asked(signed_out.session)).toBe(true)
+  // A remembered session is being restored: nothing is asked.
+  const restoring = reduce_app_state(signed_out, { type: 'auth/connecting' })
+  expect(restoring.session.auth_request).toBe('restore')
+  expect(sign_in_asked(restoring.session)).toBe(false)
+  // The restore found no session, or failed: now the player is known to be signed out.
+  const ready = reduce_app_state(restoring, { type: 'auth/ready', wallets: [] })
+  expect(sign_in_asked(reduce_app_state(ready, { type: 'auth/failed', error: 'expired' }).session)).toBe(true)
+  // A sign-in the player started keeps its card: its button is the one that shows the progress.
+  const asked = reduce_app_state(reduce_app_state(signed_out, { type: 'auth/ready', wallets: [] }), {
+    type: 'auth/login_google',
+  })
+  expect(asked.session.auth_request).toBe('google')
+  expect(sign_in_asked(asked.session)).toBe(true)
+  // Signed in: nothing to ask.
+  const connected = reduce_app_state(restoring, { type: 'auth/connected', session: wallet })
+  expect(sign_in_asked(connected.session)).toBe(false)
 })

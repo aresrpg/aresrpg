@@ -120,8 +120,22 @@ test('a connected account gets one status line, a quiet Disconnect and the log, 
   expect(html).toContain('Read only. Your AI assistant decides what happens here.')
 })
 
+// Regression (owner report 2026-11-22): with the bot service unreachable, a connected account read
+// "Connect your agent" with the setup to choose an assistant. A check without an answer knows nothing.
+test('an owner check that got no answer says the agent cannot be reached and offers no setup', () => {
+  arrive({ answer: 'unreachable' })
+  const html = page()
+  expect(html).toContain('data-agent-answer="unreachable"')
+  expect(html).toContain(text.agent_unreachable_title)
+  expect(html).toContain(text.agent_unreachable_body)
+  expect(button_labels(html).join('|')).toContain(text.agent_hosted_retry)
+  for (const absent of [text.agent_connect_your, text.agent_setup, text.agent_connected, text.agent_page_world])
+    expect(html).not.toContain(absent)
+  expect(html).not.toContain('<dialog')
+})
+
 test('the agent page keeps the orange aura of the shared light page in every state', () => {
-  for (const answer of ['unknown', 'not_connected', 'connected'] as const) {
+  for (const answer of ['unknown', 'not_connected', 'connected', 'unreachable'] as const) {
     arrive({ answer })
     expect(render_english(<ConnectAgentRoute copy={copy} />)).toContain('class="light-page aui-aura" data-aura="ember"')
   }
@@ -140,6 +154,9 @@ test('the setup button names the check and is never labelled Cancel during it', 
   expect(label('connected')).toContain(text.agent_connected)
   expect(label('not_connected')).toContain(text.agent_setup)
   expect(label('not_connected')).not.toContain(text.agent_cancel)
+  // A check without an answer never reads as a setup to start.
+  expect(label('unreachable')).toContain(text.agent_unreachable)
+  expect(label('unreachable')).not.toContain(text.agent_setup)
 })
 
 test('the setup dialog opened during the check says it is checking and offers no setup yet', () => {

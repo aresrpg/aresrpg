@@ -109,11 +109,12 @@
 .wallet-popover:not(:popover-open) {
   display: none;
 }
-/* The card opens under the chip that opened it, on every page. The corner rule above only fits the
-   game HUD, where the chip sits in that corner; on a centred page bar it left the card against the
-   window edge. The chip is the popover's invoker, so it is its anchor without a name. */
+/* On a light page the card opens under the chip that opened it: the chip sits in a centred bar, and
+   the corner rule above left the card against the window edge. The chip is the popover's invoker, so
+   it is its anchor without a name. The game HUD keeps the corner rule: its chip is in that corner,
+   and anchoring there threw the card to the left edge of the window (regression, 2026-11-22). */
 @supports (inset: anchor(bottom)) {
-  .wallet-popover {
+  .light-page .wallet-popover {
     inset: calc(anchor(bottom) + 6px) anchor(right) auto auto;
     max-height: calc(100dvh - 96px);
     position-try-fallbacks: flip-inline;

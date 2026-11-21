@@ -48,8 +48,7 @@
   margin: 0 auto;
   padding: 16px;
 }
-/* An application surface uses the whole window; a reading page keeps its column. */
-.light-page[data-wide] > .light-page-header,
+/* An application surface gives its content the whole window; the bar keeps its own centred width. */
 .light-page[data-wide] > .light-page-main {
   max-width: none;
 }

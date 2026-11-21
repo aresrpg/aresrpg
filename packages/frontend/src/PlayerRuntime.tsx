@@ -18,7 +18,7 @@ import { character_creation_failure_message, character_creation_insufficient } f
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { SuinsConfirmation } from './settings/SuinsConfirmation.tsx'
 import { WalletImportWindow } from './settings/WalletImport.tsx'
-import { Login } from './components/Login.tsx'
+import { Login, sign_in_asked } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
 import {
@@ -282,7 +282,7 @@ export function PlayerRuntime({
           />
         )}
 
-        {!session.wallet && (
+        {sign_in_asked(session) && (
           <Login
             auth_ready={session.auth_ready}
             wallets={session.wallets}

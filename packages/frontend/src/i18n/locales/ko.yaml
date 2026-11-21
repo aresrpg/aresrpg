@@ -3016,6 +3016,9 @@ ui:
   formula_chastisement: G = min(ΔHP × S, 상한 × S − 현재 턴 G) · S = 몬스터 1, 플레이어 ½
   formula_drop: 드롭률 = min(100%, 기본값 × 몬스터 구간 × (600 + 팀 평균 행운) / 600)
   formula_xp: 경험치 = 기본 경험치 총량 × 파티 계수 × 레벨 균형 × 플레이어 레벨 / 파티 레벨 × (100 + 지혜) / 100
+  agent_unreachable_title: '에이전트에 연결할 수 없습니다'
+  agent_unreachable_body: '에이전트 서비스가 응답하지 않아 에이전트가 연결되어 있는지 알 수 없습니다. 아무것도 변경되지 않았습니다.'
+  agent_unreachable: '에이전트 연결 불가'
 
 menu_build: '빌드'
 

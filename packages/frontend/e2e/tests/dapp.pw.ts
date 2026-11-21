@@ -496,16 +496,17 @@ for (const width of [1920, 1280, 390]) {
     bot.balance = 12n * SUI
     await ready(page, bot)
     await shot(page, 'home')
-    // The tab row and the board stand in the column of the header, centred under it.
     const [header, row, layout] = [
       await box(page.locator('.light-page-header')),
       await box(page.locator('.dapp-tabs')),
       await box(page.locator('.dapp-layout')),
     ]
     if (!phone) {
-      expect(row.x - header.x).toBeGreaterThanOrEqual(0)
-      expect(right(header) - right(layout)).toBeGreaterThanOrEqual(0)
-      expect(Math.abs(row.x - header.x - (right(header) - right(layout)))).toBeLessThanOrEqual(1)
+      // The bar keeps its own centred width; the tabs and the board take the window around it.
+      expect(Math.abs(header.x - (width - right(header)))).toBeLessThanOrEqual(1)
+      expect(header.width).toBeLessThanOrEqual(1120)
+      expect(row.x).toBeLessThanOrEqual(header.x)
+      expect(right(layout)).toBeGreaterThanOrEqual(right(header))
     }
     // The page ends above the tab bar: its last row is never under it.
     await scroll_to_end(page)

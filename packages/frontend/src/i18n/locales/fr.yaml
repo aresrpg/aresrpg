@@ -3074,6 +3074,9 @@ ui:
   formula_chastisement: 'G = min(ΔPV × S, PLAFOND × S − Gtour) · S = 1 pour les monstres, ½ pour les joueurs'
   formula_drop: 'butin = min(100 %, valeur de base × tranche du monstre × (600 + Chance moyenne de l’équipe) / 600)'
   formula_xp: 'XP = réserve de base × coefficient de groupe × équilibre des niveaux × niveau du joueur / niveau du groupe × (100 + SAG) / 100'
+  agent_unreachable_title: 'Votre agent est injoignable'
+  agent_unreachable_body: "Le service d'agents n'a pas répondu : cette page ne peut pas savoir si un agent est connecté. Rien n'a été modifié."
+  agent_unreachable: 'Agent injoignable'
 
 menu_build: 'VERSION'
 

@@ -6,10 +6,22 @@ import { WalletCards } from 'lucide-react'
 import { env } from '../env.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
+import type { SessionState } from '../modules/session.ts'
 import { useAppStore } from '../store.ts'
 
 import { GoogleLoginButton } from './GoogleLoginButton.tsx'
 import { WalletChoices, WalletPickerModal } from './WalletPickerModal.tsx'
+
+/**
+ * Whether the player is known to be signed out, so the game may ask for sign-in. While a remembered
+ * session is being restored the answer is not known yet, and the restore is silent: nothing is asked.
+ */
+export const sign_in_asked = ({
+  wallet,
+  auth_status,
+  auth_request,
+}: Readonly<Pick<SessionState, 'wallet' | 'auth_status' | 'auth_request'>>): boolean =>
+  !wallet && !(auth_status === 'connecting' && auth_request === 'restore')
 
 const login_lead = (copy: AppCopy, gift: boolean): string =>
   gift ? copy_text(copy.airdrop_page)('gift_login') : copy.sign_in_to_play

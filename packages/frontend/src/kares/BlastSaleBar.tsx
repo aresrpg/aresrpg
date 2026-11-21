@@ -30,7 +30,7 @@ export const BlastSaleBarView = ({ copy, state, now }: Readonly<{ copy: AppCopy;
       </span>
       <strong>{text.blast_live}</strong>
       <span className="blast-sale-bar-funding">
-        {sui(snapshot.committed)} / {sui(snapshot.target)} SUI · {number(percent, { maximumFractionDigits: 1 })}%
+        {sui(snapshot.committed, 0)} / {sui(snapshot.target, 0)} SUI · {number(percent, { maximumFractionDigits: 1 })}%
       </span>
       <span
         className="blast-sale-bar-track"

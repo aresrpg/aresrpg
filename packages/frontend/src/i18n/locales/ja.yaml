@@ -3027,6 +3027,9 @@ ui:
   formula_chastisement: 'G = min(ΔHP × S, 上限 × S − 当ターンのG) · S = モンスターは1、プレイヤーは½'
   formula_drop: 'ドロップ率 = min(100%, 基礎値 × モンスター帯補正 × (600 + チーム平均運) / 600)'
   formula_xp: '経験値 = 基礎経験値プール × パーティ係数 × レベル補正 × プレイヤーレベル / パーティ合計レベル × (100 + 知恵) / 100'
+  agent_unreachable_title: 'エージェントに接続できません'
+  agent_unreachable_body: 'エージェントサービスから応答がないため、エージェントが接続されているか確認できません。何も変更されていません。'
+  agent_unreachable: 'エージェントに接続できません'
 
 menu_build: 'ビルド'
 

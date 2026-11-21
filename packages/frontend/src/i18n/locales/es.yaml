@@ -3068,6 +3068,9 @@ ui:
   formula_chastisement: 'G = min(ΔPV × S, LÍMITE × S − Gturno) · S = 1 para monstruos, ½ para jugadores'
   formula_drop: 'botín = min(100%, valor base × franja del monstruo × (600 + Suerte media del equipo) / 600)'
   formula_xp: 'XP = reserva base × coeficiente de grupo × equilibrio de niveles × nivel del jugador / nivel del grupo × (100 + SAB) / 100'
+  agent_unreachable_title: 'No se puede contactar con tu agente'
+  agent_unreachable_body: 'El servicio de agentes no respondió, así que esta página no puede saber si hay un agente conectado. No se ha cambiado nada.'
+  agent_unreachable: 'Agente no disponible'
 
 menu_build: 'VERSIÓN'
 

@@ -915,11 +915,6 @@
         10
       ]
     },
-    "packages/frontend/src/agents/AgentSetup.tsx": {
-      "AgentSetupButton": [
-        9
-      ]
-    },
     "packages/frontend/src/agents/disconnect_agent.ts": {
       "disconnect_agent": [
         11

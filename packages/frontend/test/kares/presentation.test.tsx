@@ -244,6 +244,8 @@ test('the open sale keeps buyers in the app and a settled sale links out to Blas
   )
   expect(bar).toContain('href="/allocation"')
   expect(bar).toContain(copy.kares_page.blast_live)
+  // The header counts whole SUI: no decimals on either amount.
+  expect(bar).not.toMatch(/\d[.,]\d{2} \/ |\d[.,]\d{2} SUI/)
   expect(bar).toContain(copy.allocation_page.sale_buy)
   expect(bar).toContain('aria-valuenow="75"')
   for (const quiet of [

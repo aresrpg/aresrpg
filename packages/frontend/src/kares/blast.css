@@ -114,8 +114,11 @@
 }
 /* The home page header keeps the same pink on one line; narrow windows wrap it. */
 .blast-sale-bar {
-  position: relative;
-  z-index: 1;
+  /* It stays at the top of the page's own scroll container while the sale is live. */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -123,10 +126,48 @@
   gap: 6px 16px;
   padding: 9px max(16px, env(safe-area-inset-right, 0px)) 9px max(16px, env(safe-area-inset-left, 0px));
   color: #fff4ea;
-  background: linear-gradient(90deg, #b81a63, #e53283 50%, #b81a63);
+  /* A lit centre over a deep edge, then a soft top light: the bar reads as a band of light, not a flat fill. */
+  background:
+    linear-gradient(180deg, #ffffff2e, #ffffff00 42%, #3d062133),
+    radial-gradient(120% 220% at 50% -60%, #ff6fb0 0%, #e53283 38%, #b81a63 68%, #7d0f43 100%);
+  box-shadow:
+    inset 0 1px #ffd1e68c,
+    inset 0 -1px #4a082a99,
+    0 6px 18px #2a041873;
   font-size: 13px;
   line-height: 1.3;
   text-decoration: none;
+  text-shadow: 0 1px #6b0c3a8c;
+}
+/* The shared panel grain, and a slow sheen that crosses the band. */
+.blast-sale-bar::before,
+.blast-sale-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.blast-sale-bar::before {
+  background: url('../../../ui/src/assets/panel_grain.webp') 0 0 / 220px;
+  mix-blend-mode: overlay;
+  opacity: 0.55;
+}
+.blast-sale-bar::after {
+  background: linear-gradient(105deg, #ffffff00 40%, #ffffff33 50%, #ffffff00 60%) 0 0 / 300% 100%;
+  animation: blast-sale-bar-sheen 7s linear infinite;
+}
+@keyframes blast-sale-bar-sheen {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+/* Anchors of the page land under the band, not behind it. */
+.landing:has(> .blast-sale-bar) {
+  scroll-padding-top: 64px;
 }
 .blast-sale-bar:hover .blast-sale-bar-action {
   background: #fff4ea;
@@ -159,15 +200,19 @@
 .blast-sale-bar-track {
   display: block;
   width: 96px;
-  height: 4px;
+  height: 5px;
   overflow: hidden;
-  border-radius: 2px;
-  background: #fff4ea40;
+  border-radius: 3px;
+  background: #4a082a80;
+  box-shadow: inset 0 1px #2a041866;
 }
 .blast-sale-bar-track > span {
   display: block;
+  min-width: 3px;
   height: 100%;
-  background: #fff4ea;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffe3c2, #fff4ea);
+  box-shadow: 0 0 8px #fff4eacc;
 }
 .blast-sale-bar-action {
   display: flex;
@@ -176,6 +221,7 @@
   padding: 3px 10px;
   border: 1px solid #fff4ea;
   border-radius: 999px;
+  background: #ffffff1f;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -183,7 +229,17 @@
     background-color 160ms ease,
     color 160ms ease;
 }
+/* A phone keeps the band to two rows while it follows the scroll: the public opening is on the sale page. */
+@media (max-width: 560px) {
+  .blast-sale-bar-track ~ .blast-sale-bar-funding {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .blast-sale-bar::after {
+    animation: none;
+    background: none;
+  }
   .blast-sale-bar-action {
     transition: none;
   }
