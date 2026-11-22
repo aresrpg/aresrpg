@@ -12,9 +12,14 @@ test('claimed results stay above Blast for a day and reopen the correct podium',
   const results = page.locator('.tourney-results-card')
   await expect(results).toBeVisible()
   await expect(page.locator('.blast-sale-card')).toBeVisible()
-  const result_box = await results.boundingBox(),
-    blast_box = await page.locator('.blast-sale-card').boundingBox()
-  expect(result_box!.y + result_box!.height).toBeLessThanOrEqual(blast_box!.y)
+  // The two cards settle after the sale card has its figures: the settled layout is what is asserted.
+  // Measured once, right after both were visible, the result card still overlapped it by 24px on a
+  // slow CI runner (2026-11-22).
+  await expect(async () => {
+    const result_box = await results.boundingBox(),
+      blast_box = await page.locator('.blast-sale-card').boundingBox()
+    expect(result_box!.y + result_box!.height).toBeLessThanOrEqual(blast_box!.y)
+  }).toPass()
   await results.click()
   await expect(page.locator('.tourney-podium')).toBeVisible()
   expect(await fixture(page, 'state')).toMatchObject({ pathname: '/kolizeum/tournament/cup/podium' })
