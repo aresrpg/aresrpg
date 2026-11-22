@@ -256,32 +256,30 @@ test('a refusal whose reply cannot be delivered asks Telegram to redeliver', asy
   expect((await f.runtime.fetch(input(11, 'approve:1', true))).status).toBe(503)
 })
 
-test('an expired login offers one Log in again step that ends on the welcome with a new login button', async () => {
+// Regression (owner report 2026-11-22): an expired login answered a bare "Your login expired. Log in
+// again:" line. It is the welcome again: its picture, what the bot is, and the one login button.
+test('an expired login shows the welcome at once, with a new login button', async () => {
   const f = await linked()
   f.clock.now = identity.expires_at + 1
-  const expired = await f.say('/menu')
-  expect(expired.text).toBe(card(en.failure_reconnect).text)
-  expect(buttons(expired)).toEqual(['/link'])
-  const welcome = await f.press('/link')
+  const welcome = await f.say('/menu')
+  expect(welcome.text).not.toBe(card(en.failure_reconnect).text)
+  expect(welcome.photo).toBeDefined()
   expect(await f.links.current(42)).toBeNull()
   expect(plain(welcome)).toBe(en.welcome)
   expect(link_url(welcome)).toStartWith('https://companion.example/link/')
 })
 
 // A login made by the two-step flow asked for view-only scope first. It is not migrated: it gets the
-// same single Log in again step as any login that ended, and the new login holds play scope.
-test('a view-only login stored by the two-step flow gets one Log in again step, then plays', async () => {
+// welcome as any login that ended, and the new login holds play scope.
+test('a view-only login stored by the two-step flow gets the welcome, then plays', async () => {
   const f = await linked()
   await f.records.change([user_id(42)], (get) => ({
     [user_id(42)]: { value: { ...get<BotGrant>(user_id(42))!, scope: 'bot:observe' } },
   }))
   const reached = f.bot.calls.length
-  const asked = await f.say('/menu')
-  expect(asked.text).toBe(card(en.failure_reconnect).text)
-  expect(buttons(asked)).toEqual(['/link'])
-  expect(f.bot.calls).toHaveLength(reached)
   f.issued.refresh_token = 'play-refresh'
-  const welcome = await f.press('/link')
+  const welcome = await f.say('/menu')
+  expect(f.bot.calls).toHaveLength(reached)
   // The old grant is ended at the bot, never left behind.
   expect(f.sent.filter(({ url }) => url.endsWith('/oauth/revoke')).map(({ body }) => body.token)).toEqual(['refresh'])
   expect(plain(welcome)).toBe(en.welcome)
@@ -430,7 +428,7 @@ test('a refused callback acknowledgment never blocks the update', async () => {
   expect(f.runtime.sessions.get(42)?.character).toBe(MIRA)
 })
 
-test('a revoked grant offers one Log in again step that ends on the welcome with a new login button', async () => {
+test('a revoked grant shows the welcome at once, with a new login button', async () => {
   const f = await linked()
   // The hosted bot answers a revoked grant with HTTP 401, to its token before any tool runs and to its refresh.
   f.overrides.handler = async (url) => {
@@ -438,25 +436,19 @@ test('a revoked grant offers one Log in again step that ends on the welcome with
       return Response.json({ error: 'invalid_token' }, { status: 401 })
     return Response.json(url.endsWith('/oauth/register') ? { client_id: 'client' } : {})
   }
-  const ended = await f.say('/menu')
-  expect(ended.text).toBe(card(en.failure_reconnect).text)
-  expect(buttons(ended)).toEqual(['/link'])
-  const welcome = await f.press('/link')
+  const welcome = await f.say('/menu')
   expect(await f.links.current(42)).toBeNull()
   expect(plain(welcome)).toBe(en.welcome)
   expect(link_url(welcome)).toStartWith('https://companion.example/link/')
 })
 
-test('a refused token refresh asks for a new login at once', async () => {
+test('a refused token refresh shows the welcome at once', async () => {
   const f = await linked()
   await f.expire()
   f.overrides.handler = async (url, init) =>
     url.endsWith('/oauth/token') ? Response.json({ error: 'invalid_grant' }, { status: 400 }) : f.respond(url, init)
   const refused = await f.say('/menu')
-  expect(refused.text).toBe(card(en.failure_reconnect).text)
-  expect(buttons(refused)).toEqual(['/link'])
-  // One exchange at the login, then the one refused refresh.
-  expect(calls(f, (url) => url.endsWith('/oauth/token'))).toBe(2)
+  expect(plain(refused)).toBe(en.welcome)
 })
 
 test('an unreachable hosted bot on a read asks to try again and claims no unknown outcome', async () => {

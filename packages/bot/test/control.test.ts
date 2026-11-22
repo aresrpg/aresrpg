@@ -43,8 +43,8 @@ test('observations recheck identity and live authority without durable read comm
   )
   try {
     const keys = await f.store.scan_keys('', 1000)
-    expect(await control.observe(f.grant, { after_cursor: 2 })).toEqual({ status: 'pending' })
-    expect(reads).toEqual([{ grant: f.grant, payload: { after_cursor: 2 } }])
+    expect(await control.observe(f.grant, { view: 'zones' })).toEqual({ status: 'pending' })
+    expect(reads).toEqual([{ grant: f.grant, payload: { view: 'zones' } }])
     expect(await f.store.scan_keys('', 1000)).toEqual(keys)
     await expect(control.observe({ ...f.grant, bot_id: 'other' }, {})).rejects.toThrow('invalid_token')
     await expect(

@@ -134,12 +134,12 @@ test('account claims participate in semantic revisions and disappear on disconne
     last_packet: { type: 'packet/claims' as const, claims: [claim] },
     error: null,
   }
-  const first = actor_snapshot_transition(before, state, 100, 20)
+  const first = actor_snapshot_transition(before, state, 100)
   expect(first.snapshot.inventory?.claims).toEqual([claim])
   expect(first.changed).toBe(true)
-  expect(actor_snapshot_transition(first.snapshot, state, 101, 20).changed).toBe(false)
+  expect(actor_snapshot_transition(first.snapshot, state, 101).changed).toBe(false)
   expect(
-    actor_snapshot_transition(first.snapshot, { ...state, status: 'disconnected' }, 102, 20).snapshot.inventory?.claims
+    actor_snapshot_transition(first.snapshot, { ...state, status: 'disconnected' }, 102).snapshot.inventory?.claims
   ).toBeNull()
 })
 test('opening and collection wait for both receipt-proven inventory and indexed claims', () => {

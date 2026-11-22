@@ -146,8 +146,6 @@ const context_for = (
       ready: true,
       frozen: false,
       indexing_lag: 0,
-      cursor: 7,
-      events: [],
     },
   }
 }

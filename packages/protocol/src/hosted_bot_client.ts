@@ -14,6 +14,9 @@ const REFRESH_MARGIN_MS = 60_000
 export const READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'bot_identity',
   'bot_observe',
+  'bot_inventory',
+  'bot_item_stacks',
+  'bot_zones',
   'bot_status',
   'bot_behavior_status',
   'bot_validate_behavior',

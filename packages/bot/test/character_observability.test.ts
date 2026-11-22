@@ -103,10 +103,11 @@ test('health uses current gear maximum and clamps recovery; signed pet bonuses u
   ).toMatchObject({ vitality: 5, strength: -5 })
   expect(item_bonuses({ category: 'hat' })).toBeNull()
 })
-test('full observations expose health and signed rolls alongside existing raw inventory', () => {
+test('the status exposes health, and an unknown balance is absent, never null', () => {
   const context = profession_context()
-  const result = actor_observation(context, 1)
-  expect(result).toMatchObject({ health: { [character.id]: { current: 100, maximum: 100 } }, balance: null })
+  const result = actor_observation(context)
+  expect(result).toMatchObject({ health: { [character.id]: { current: 100, maximum: 100 } } })
+  expect(result).not.toHaveProperty('balance')
 })
 test('actor observation reads only its multisig and returns explicit exact-MIST freshness', async () => {
   const f = await runtime_fixture()

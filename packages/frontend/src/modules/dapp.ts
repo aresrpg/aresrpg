@@ -141,7 +141,7 @@ type Observed = Readonly<{ observation: DappObservation; revisions: DappRevision
 /** One read of the bot. It wakes a sleeping bot, and it alone proves what a pushed status cannot. */
 const observe_once = async (bot: Bot, context: AppContext, effects: DappEffects): Promise<Read<Observed>> => {
   const requested_ms = effects.now()
-  const read = await bot.call('bot_observe', { view: 'full' })
+  const read = await bot.call('bot_observe', {})
   if (!read.ok) return read
   const observation = parse_observation(read.value)
   if (!observation) return { ok: false, error: 'invalid_observation' }

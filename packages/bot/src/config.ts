@@ -18,7 +18,6 @@ export const DEPLOYMENT_DEFAULTS: Readonly<Record<string, number>> = Object.free
   BOT_TICK_MS: 1000,
   // A refusal that spent no gas is tried again after this long even if no fact moved (owner, 2026-11-21).
   BOT_REFUSAL_RETRY_MS: 30000,
-  BOT_EVENT_LIMIT: 256,
   BOT_SCAN_LIMIT: 100,
 })
 

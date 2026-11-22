@@ -69,8 +69,5 @@ export const character_observability = (context: GameplayContext) => ({
       Object.fromEntries(character.equipment.map((item) => [item.id, item_bonuses(item)])),
     ])
   ),
-  inventory_bonuses: context.snapshot.inventory?.loaded
-    ? Object.fromEntries(context.snapshot.inventory.items.map((item) => [item.id, item_bonuses(item)]))
-    : null,
   balance: observed_balance(context),
 })

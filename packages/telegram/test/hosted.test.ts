@@ -47,6 +47,15 @@ test('one observation is the whole view: heroes the agent holds, every hosted ru
   ])
   // The observation is the whole read: listing a run costs no read of its own.
   expect(f.bot.calls.map(({ name }) => name).filter((name) => name !== 'bot_identity')).toEqual(['bot_observe'])
+  // Only the update that shows the bag reads it: the bot's own bag read, one line per item.
+  const bagged = await read_view(f.session, identity, true)
+  expect(bagged.ok && bagged.value.items).toEqual([{ item_type: 'wheat', name: 'Wheat', amount: 12 }])
+  expect(
+    f.bot.calls
+      .map(({ name }) => name)
+      .slice(-2)
+      .toSorted()
+  ).toEqual(['bot_inventory', 'bot_observe'])
 })
 
 test('a listed run carries the catalogue entry it was bound from; an authored tree carries none', async () => {

@@ -282,22 +282,46 @@ test('MCP reports unavailable observation runtime and rejects retired command pa
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })
 
-test('MCP forwards changes view and its cursor pair while rejecting invalid view types', async () => {
+test('MCP reads the bag, the stacks of one item and the zones through the one observe path', async () => {
   const f = await authenticated_http(undefined, async (_grant, payload) => payload)
-  const call = async (args: unknown) =>
-    f.json<{ result: { isError: boolean; structuredContent: unknown } }>(
-      '/mcp',
-      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'bot_observe', arguments: args } },
-      f.access_token
-    )
-  const payload = { view: 'changes', after_cursor: 8, after_fence: 2 }
-  expect((await call(payload)).result.structuredContent).toEqual(payload)
-  for (const view of ['unknown', ['changes'], null, 1]) {
-    expect((await call({ view })).result).toMatchObject({
+  const call = async (name: string, args: unknown) =>
+    (
+      await f.json<{ result: { isError: boolean; structuredContent: unknown } }>(
+        '/mcp',
+        { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } },
+        f.access_token
+      )
+    ).result
+  // The status takes no view: a page deployed before sends `full`, and nothing else is a view of it.
+  expect((await call('bot_observe', { view: 'full' })).structuredContent).toEqual({})
+  for (const view of ['changes', 'inventory', ['full'], null, 1])
+    expect(await call('bot_observe', { view })).toMatchObject({
       isError: true,
       structuredContent: { error: 'invalid_argument' },
     })
-  }
+  expect((await call('bot_inventory', { category: 'resource' })).structuredContent).toEqual({
+    view: 'inventory',
+    category: 'resource',
+  })
+  expect((await call('bot_item_stacks', { item_type: 'wheat', limit: 5 })).structuredContent).toEqual({
+    view: 'stacks',
+    item_type: 'wheat',
+    limit: 5,
+  })
+  expect((await call('bot_zones', { nearby: true, mobs: true })).structuredContent).toEqual({
+    view: 'zones',
+    nearby: true,
+    mobs: true,
+  })
+  // An item is named, a limit is within its bounds, and a flag is a boolean.
+  for (const [name, args] of [
+    ['bot_item_stacks', {}],
+    ['bot_item_stacks', { item_type: 'wheat', limit: 0 }],
+    ['bot_item_stacks', { item_type: 'wheat', limit: 201 }],
+    ['bot_zones', { mobs: 'yes' }],
+  ] as const)
+    expect(await call(name, args)).toMatchObject({ isError: true, structuredContent: { error: 'invalid_argument' } })
+  expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })
 
 test('MCP forwards spell discovery and rejects invalid or unknown spell IDs', async () => {
@@ -322,7 +346,7 @@ test('MCP forwards spell discovery and rejects invalid or unknown spell IDs', as
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })
 
-test('MCP forwards read-only fight prefixes and rejects malformed or changes-only planning', async () => {
+test('MCP forwards read-only fight prefixes and rejects malformed planning', async () => {
   const f = await authenticated_http(undefined, async (_grant, payload) => payload)
   const fight_plan = {
     character_id: `0x${'2'.repeat(64)}`,
@@ -338,11 +362,7 @@ test('MCP forwards read-only fight prefixes and rejects malformed or changes-onl
       f.access_token
     )
   expect((await call({ fight_plan })).result.structuredContent).toEqual({ fight_plan })
-  for (const args of [
-    { fight_plan: null },
-    { fight_plan: { ...fight_plan, actions: [{ type: 'end_turn' }] } },
-    { view: 'changes', fight_plan },
-  ])
+  for (const args of [{ fight_plan: null }, { fight_plan: { ...fight_plan, actions: [{ type: 'end_turn' }] } }])
     expect((await call(args)).result.isError).toBe(true)
   expect(await f.store.scan_keys('command:', 100)).toEqual([])
 })

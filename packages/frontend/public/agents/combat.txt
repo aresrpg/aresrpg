@@ -4,7 +4,7 @@ Combat is a deterministic state machine with committed randomness. Move enforces
 
 ## Discover spells and spend spell points through MCP
 
-Use `bot_observe` with `{"spells":[]}` (the default full view) before authoring tactics. Read
+Use `bot_observe` with `{"spells":[]}` before authoring tactics. Read
 `planning_context.spells.catalog`: every row has `name`, `classe`, and `unlock_level` from the
 same authored spell corpus used by the executor. `name` is the exact, case-sensitive spell ID
 for cast steps and upgrades; there is no separate numeric ID to look up. No source checkout is needed.
@@ -42,7 +42,7 @@ To perform an explicitly authorized upgrade, call `bot_raise_spell` with:
 }
 ```
 
-Replace both revision placeholders with the latest full observation's revisions. This requires
+Replace both revision placeholders with the latest observation's revisions. This requires
 `bot:play` and submits one ordinary SDK transaction, raising exactly one rank. It also works as
 a behavior `call` action with `kind: "raise_spell"` and that same action object as `payload`.
 Read `bot_status` with the returned command ID and observe the new rank and spent points before
@@ -50,8 +50,11 @@ planning another upgrade. Preserve the same idempotency key for the same intent.
 failure or uncertain transaction is never automatically retried; use the existing status/recovery flow.
 Spell-point spending is separate from saving combat preferences or allocating characteristic points.
 
-Omit `spells` for ordinary live observations without the static catalog. A changes-only observation
-omits planning context; request full for discovery. If observation returns pending, repeat the read;
+Omit `spells` for an ordinary observation without the static catalog. An observation is a short
+status: it lists no bag and no zone. Read the bag with `bot_inventory`, the object ids of one item
+with `bot_item_stacks`, and the zones around a hero with `bot_zones` (monsters and resources only
+when asked). A key that is absent means the fact is absent or unknown; nothing is sent as `null`.
+If observation returns pending, repeat the read;
 if planning context is unavailable/needs_resync, obtain a fresh observation before planning.
 
 ## Tell your assistant how to fight
@@ -141,7 +144,7 @@ Use `spell_target_cells`, `weapon_target_cells`, `preview_spell_cast`, and `prev
 
 ## Hosted MCP cast and collision analysis
 
-Call `bot_observe` with `fight_plan: { character_id, fight, fighter_idx, checkpoint_id, actions: [] }`, using IDs from a fresh full observation. The optional full-view result lists the board cells and legal next targets for each learned spell and the weapon. An empty target list means no legal cast now, not an unlearned spell.
+Call `bot_observe` with `fight_plan: { character_id, fight, fighter_idx, checkpoint_id, actions: [] }`, using IDs from a fresh observation. The result lists the board cells and legal next targets for each learned spell and the weapon. An empty target list means no legal cast now, not an unlearned spell.
 
 To inspect a candidate, pass the same object with ordered `move`, `cast`, or `strike` actions in the `bot_fight_turn` vocabulary. The remote fight twin replays that prefix and returns predicted events and resulting fighters, then recalculates next casts. Compare separate requests to explore movement-before-cast and alternative aims. `fighter_moved` records each actual step; `push_collided` reports the target, remaining blocked cells and collision damage. A failed action reports its index and engine reason; remaining actions are not run and no continuation targets are offered. Returned events and fighters then describe only the successful prefix.
 

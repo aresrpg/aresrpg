@@ -94,7 +94,9 @@ test('once its boosts are in effect the hero attacks with its spells, as often a
   expect(after.contract.fighters[1]!.hp).toBeLessThan(1_000n)
   // The points are spent: not enough is left for another attack of the kind it used.
   expect(after.contract.fighters[0]!.ap).toBeLessThan(4n)
-})
+  // Several whole turns are planned on the real fight twin, about a hundred simulated actions each:
+  // the default five seconds were exceeded on a loaded CI runner (5.7 s, 2026-11-22).
+}, 30_000)
 
 test('with no monster in reach the hero boosts, then walks closer', () => {
   const { actions } = plan_combat_turn(shared, ikari(cell(14)), 0n, 63_000n)

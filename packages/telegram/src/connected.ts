@@ -10,7 +10,7 @@ import type { BotIdentity } from '@aresrpg/protocol/hosted-bot-client'
 import type { TelegramAccess } from '@aresrpg/protocol/telegram-access'
 
 import { waitlist_card } from './admission.ts'
-import { initial_session, outcome, outcome_card, reduce_companion, type Session } from './companion.ts'
+import { initial_session, outcome, outcome_card, reduce_companion, shows_bag, type Session } from './companion.ts'
 import type { Copy, CopyKey } from './copy.ts'
 import { perform, read_view, type Action, type Bot } from './hosted.ts'
 import { read_update } from './http.ts'
@@ -98,7 +98,7 @@ export const create_connected = (
   }
   /** One update of an admitted sender: one fresh observation, one reduction, then its card or its requests. */
   const play = async (input: Input, previous: Session, bot: Bot, identity: BotIdentity) => {
-    const view = await read_view(bot, identity)
+    const view = await read_view(bot, identity, shows_bag(input.text))
     if (!view.ok) return view.error
     const step = reduce_companion(previous, input, view.value, { copy: copy_for(input), now: now(), review_ttl_ms })
     sessions.set(input.sender, step.session)
@@ -169,6 +169,10 @@ export const create_connected = (
       if (refused === null) return
       console.error('Telegram request refused', refused)
       const kind = failure_kind(refused)
+      // An ended login is not an error message: the dead login is dropped and the player gets the
+      // welcome again, with its picture, what the bot is and the one login button (owner, 2026-11-22).
+      if (kind === 'failure_reconnect' && (await attempt({ ...input, text: '/link', callback_id: undefined })) === null)
+        return
       await notify(input, kind)
       // A stale action is not an error: say it was updated, then show what is true now.
       if (kind !== 'failure_changed') return

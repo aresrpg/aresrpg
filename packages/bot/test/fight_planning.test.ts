@@ -57,7 +57,6 @@ const fixture = (walls: bigint[] = [], caster = cell(5), target = cell(6)): Game
       indexing_lag: 0,
       observed_at: 4_000,
       clock: { chain_ms: 4_000, observed_at: 4_000 },
-      cursor: 0,
       observation_revision: 0,
       characters: [
         {
@@ -72,7 +71,6 @@ const fixture = (walls: bigint[] = [], caster = cell(5), target = cell(6)): Game
       zones: {},
       tracked_zones: {},
       fight_phases: {},
-      events: [],
     },
   }
 }
@@ -178,10 +176,7 @@ test('freshness, identity and current turn gate analysis; observations are JSON-
     actions: [cast()],
   }
   expect(() => fight_planning(context, { ...payload, checkpoint_id: 'stale' })).toThrow('needs_resync')
-  const observed = actor_observation(
-    { ...context, command: { ...context.command, payload: { fight_plan: payload } } },
-    1
-  )
+  const observed = actor_observation({ ...context, command: { ...context.command, payload: { fight_plan: payload } } })
   const wire = JSON.parse(JSON.stringify(observed))
   expect(wire.fight_plan.prediction).toBe(true)
   expect(wire.fight_plan.fighters[1].cell).toBe(String(cell(6)))

@@ -9,39 +9,39 @@ import type { BehaviorRun } from './behavior_script.ts'
 import { run_key, run_keys } from './run_ref.ts'
 import { run_tally } from './behavior_tally.ts'
 import { public_command_error } from './planning_failure.ts'
-import { observation_events } from './actor_snapshot.ts'
+import {
+  current_zones,
+  inventory_counts,
+  inventory_view,
+  stacks_view,
+  without_nulls,
+  zones_view,
+} from './actor_observation_views.ts'
 import { fight_planning } from './fight_planning.ts'
-import { character_observability, observed_balance } from './character_observability.ts'
+import { character_observability } from './character_observability.ts'
 import { gameplay_knowledge } from './gameplay_knowledge.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay.ts'
 
-/** Full snapshots remain the planning baseline; changes reuse the same fenced event ring. */
-export const actor_observation = (context: GameplayContext, fence: number) => {
+/** What the status reads from the actor: what the wallet holds and does, in a few kilobytes. A bag,
+ * the stacks of one item and the zones around a hero are detail views, asked for by name. */
+const status_view = (context: GameplayContext) => {
   const {
     snapshot,
     command: { payload },
   } = context
-  if (payload.view === 'changes' && payload.after_cursor === undefined) throw new Error('needs_resync')
-  const events = observation_events(snapshot, payload.after_cursor, fence, payload.after_fence)
-  if (payload.view === 'changes') {
-    const { ready, cursor, observation_revision, observed_at, clock, frozen, indexing_lag } = snapshot
-    return {
-      view: 'changes' as const,
-      balance: observed_balance(context),
-      ready,
-      cursor,
-      observation_revision,
-      observed_at,
-      clock,
-      frozen,
-      indexing_lag,
-      events,
-    }
-  }
+  const { inventory, zones, ...live } = snapshot
+  const { health, equipment_bonuses, balance } = character_observability(context)
   return {
-    ...snapshot,
-    ...character_observability(context),
-    events,
+    ...live,
+    health,
+    equipment_bonuses,
+    balance,
+    inventory: {
+      ...inventory_counts(inventory),
+      ...(inventory?.market ? { market: inventory.market } : {}),
+      ...(inventory?.market_prices ? { market_prices: inventory.market_prices } : {}),
+    },
+    current_zones: current_zones(snapshot.characters),
     ...(payload.fight_plan === undefined
       ? {}
       : { fight_plan: JSON.parse(gameplay_json(fight_planning(context, payload.fight_plan))) }),
@@ -49,7 +49,7 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
       Object.entries(snapshot.fights).map(([id, row]) => [id, fight_checkpoint_id(row)])
     ),
     zone_checkpoints: Object.fromEntries(
-      Object.entries(snapshot.zones)
+      Object.entries(zones)
         .filter(([, row]) => row.spawns !== null)
         .map(([id, row]) => [id, zone_checkpoint_id(row)])
     ),
@@ -59,6 +59,37 @@ export const actor_observation = (context: GameplayContext, fence: number) => {
       payload.spells as readonly string[] | undefined
     ),
   }
+}
+/** The detail views. Each one reads the same snapshot the status reads. */
+const DETAIL_VIEWS = {
+  inventory: ({ snapshot, command }: GameplayContext) => inventory_view(snapshot, command.payload),
+  stacks: ({ snapshot, command }: GameplayContext) => stacks_view(snapshot, command.payload),
+  zones: ({ snapshot, command }: GameplayContext) => zones_view(snapshot, command.payload),
+}
+export type DetailView = keyof typeof DETAIL_VIEWS
+export const detail_view = (payload: Command['payload']): DetailView | null =>
+  typeof payload.view === 'string' && Object.hasOwn(DETAIL_VIEWS, payload.view) ? (payload.view as DetailView) : null
+/** One read of the actor: the status, or the one detail view the command names. Nothing absent is
+ * written as `null`. */
+export const actor_observation = (context: GameplayContext) => {
+  const view = detail_view(context.command.payload)
+  return without_nulls(view ? { view, ...DETAIL_VIEWS[view](context) } : status_view(context)) as Readonly<
+    Record<string, unknown>
+  >
+}
+
+/**
+ * What one read answers. A detail view answers its one question, with the revision it was read at.
+ * The status adds what the wallet lane knows: its runs, its direct command and its revisions.
+ */
+export const observation_reply = async (
+  context: GameplayContext,
+  lane_facts: () => Promise<Readonly<Record<string, unknown>>>
+) => {
+  const observed = actor_observation(context)
+  if (detail_view(context.command.payload))
+    return { ...observed, observation_revision: context.snapshot.observation_revision }
+  return without_nulls({ ...(await lane_facts()), ...observed }) as Readonly<Record<string, unknown>>
 }
 
 export const apply_actor_watches = async (

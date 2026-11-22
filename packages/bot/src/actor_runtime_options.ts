@@ -14,7 +14,6 @@ export type ActorRuntimeOptions = Readonly<{
   origin: string
   actor_id: string
   lease_ms: number
-  event_limit: number
   scan_limit: number
   observation_freshness_ms: number
   sdk_options: Pick<SdkOptions, 'client' | 'rpc_url' | 'pins'>

@@ -21,7 +21,6 @@ import recipes from '../../../seed/content/recipes.json'
 import mobs from '../../../seed/content/mobs.json'
 
 import type { ActorSnapshot } from './actor_snapshot.ts'
-import { profession_inventory } from './actor_inventory.ts'
 
 export const profession_recipes = recipes as unknown as readonly SeedRecipe[]
 export const profession_item = (item_type: string) => items.find((item) => item.item_type === item_type)
@@ -51,13 +50,6 @@ export const profession_knowledge = (snapshot: ActorSnapshot, requested?: readon
       const level = job_level_from_xp(xp)
       return { job, xp, level, next_level_xp: job_xp_for_level(level + 1) ?? null }
     }),
-    available_inventory: (() => {
-      try {
-        return profession_inventory(snapshot.inventory, character.kiosk)
-      } catch (error) {
-        return { error: String(error) }
-      }
-    })(),
     equipped_tool: character.equipment.find(({ slot }) => slot === 'tool') ?? null,
   })),
   recipes: profession_recipes
@@ -78,23 +70,24 @@ export const profession_knowledge = (snapshot: ActorSnapshot, requested?: readon
         : [],
       ingredients: Object.keys(recipe.inputs).map((item_type) => ({ item_type, ...acquisition_sources(item_type) })),
     })),
-  zones: Object.values(snapshot.zones).map(({ zone, spawns }) => ({
-    world: zone.world,
-    zone_x: zone.zx,
-    zone_z: zone.zz,
-    resources: spawns
-      ? live_resource_packs(spawns.resources, zone).map((pack) => {
-          const resource = gatherable_of(pack.item_type)
-          const required_level = resource ? tier_unlock_level(resource.tier) : null
-          return {
-            ...pack,
-            ...resource,
-            required_level,
-            xp_per_harvest: required_level ? gather_xp(required_level) : null,
-            yield_bounds_at_unlock: required_level ? gather_quantity_bounds(required_level, required_level) : null,
-          }
-        })
-      : null,
-    mobs: spawns ? live_mob_groups(spawns.mobs, zone) : null,
-  })),
+})
+/** One zone as a planner reads it: where it is, and its live resource packs and monster groups. */
+export const zone_knowledge = ({ zone, spawns }: ActorSnapshot['zones'][string]) => ({
+  world: zone.world,
+  zone_x: zone.zx,
+  zone_z: zone.zz,
+  resources: spawns
+    ? live_resource_packs(spawns.resources, zone).map((pack) => {
+        const resource = gatherable_of(pack.item_type)
+        const required_level = resource ? tier_unlock_level(resource.tier) : null
+        return {
+          ...pack,
+          ...resource,
+          required_level,
+          xp_per_harvest: required_level ? gather_xp(required_level) : null,
+          yield_bounds_at_unlock: required_level ? gather_quantity_bounds(required_level, required_level) : null,
+        }
+      })
+    : null,
+  mobs: spawns ? live_mob_groups(spawns.mobs, zone) : null,
 })

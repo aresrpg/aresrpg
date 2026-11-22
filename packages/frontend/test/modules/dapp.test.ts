@@ -281,7 +281,7 @@ test('a purchase is one command of the bot account with the shown total as its c
     return tool_reply({ command_id: 'c1', status: 'accepted' })
   })
   const app = await signed_in(bot)
-  expect(bot.named('bot_observe').at(-1)!.arguments).toEqual({ view: 'full' })
+  expect(bot.named('bot_observe').at(-1)!.arguments).toEqual({})
   await browse_key(app)
   tap_buy(app, 'o1')
   tap_buy(app, 'o2')
@@ -307,7 +307,7 @@ test('a purchase is one command of the bot account with the shown total as its c
   expect(app.state().dapp.direct!.status).toBe('accepted')
   expect(names()).toEqual(new Set(['bot_observe', 'bot_market_buy']))
   // The bot is never asked to watch offers for the page: it reads them itself when it buys.
-  for (const { arguments: args } of bot.named('bot_observe')) expect(args).toEqual({ view: 'full' })
+  for (const { arguments: args } of bot.named('bot_observe')) expect(args).toEqual({})
   app.stop()
 })
 

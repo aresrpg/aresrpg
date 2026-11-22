@@ -42,7 +42,7 @@ for (const joined_world of [false, true])
       await flush()
       await flush()
       expect(fixture.sent.filter((packet) => packet.type === 'packet/characters').length).toBeGreaterThan(before)
-      snapshot = reduce_actor_snapshot(snapshot, { status: 'ready', last_packet: latest() } as never, 1000, 100)
+      snapshot = reduce_actor_snapshot(snapshot, { status: 'ready', last_packet: latest() } as never, 1000)
       return snapshot.characters[0]!
     }
     try {

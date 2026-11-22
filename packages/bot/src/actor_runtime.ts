@@ -37,7 +37,7 @@ import { retired_run } from './store_projection.ts'
 import { read_market_receipts, fold_market_receipts } from './market_recovery.ts'
 import { empty_inventory } from './actor_inventory.ts'
 import { run_keys } from './run_ref.ts'
-import { actor_observation, apply_actor_watches, owned_run_observation } from './actor_observation.ts'
+import { apply_actor_watches, observation_reply, owned_run_observation } from './actor_observation.ts'
 import { create_status_sharer } from './status_sharer.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
 import { create_market_collector } from './market_collection.ts'
@@ -183,7 +183,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       observe: async (state) => {
         locomotion.observe(state.status)
         await restore_market()
-        const transition = actor_snapshot_transition(snapshot, state, monotonic_now(), options.event_limit)
+        const transition = actor_snapshot_transition(snapshot, state, monotonic_now())
         ;({ snapshot } = transition)
         await control.observed(lane_key, options.actor_id, lease.fence, snapshot.ready, transition.changed)
         const lane = assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
@@ -334,13 +334,12 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
     await apply_actor_watches(session.actor, command)
     const [sampled_at, lane] = [monotonic_now(), await store.read<Lane>(command.lane_key)] // Stamped before its reads.
-    return {
+    return observation_reply({ ...session_context(session, command), snapshot, balance }, async () => ({
       ...(await owned_run_observation(store, lane, command)),
-      ...actor_observation({ ...session_context(session, command), snapshot, balance }, session.lease.fence),
       decision_revision: lane?.decision_revision,
       event_fence: session.lease.fence,
       sampled_at,
-    }
+    }))
   }
   const session_context = (session: Session, command: Command) => ({
     address: session.bot.address,

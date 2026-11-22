@@ -278,6 +278,9 @@ const intent_of = (text: string): Intent => {
   return { action: page ? 'inventory' : (COMMANDS.get(text) ?? 'menu'), revision: null, argument: page?.[1] ?? '' }
 }
 
+/** Whether an update shows the bag: the only update that reads it. */
+export const shows_bag = (text: string): boolean => intent_of(text).action === 'inventory'
+
 /** The one reducer of a sender's state: the previous session, one update and what the bot reports now. */
 export const reduce_companion = (previous: Session, input: Input, view: View, options: Options): Step => {
   const same_login = view.binding === previous.binding

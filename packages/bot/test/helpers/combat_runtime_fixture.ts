@@ -158,8 +158,6 @@ export const combat_fixture = async (checkpoint = placement()) => {
       ready: true,
       frozen: false,
       indexing_lag: 0,
-      cursor: 1,
-      events: [],
     },
   }
   const get_run = async () => (await store.read<BehaviorRun>('behavior:fixture-run'))!

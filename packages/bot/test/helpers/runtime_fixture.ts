@@ -52,7 +52,6 @@ export const runtime_fixture = async (store: ControlStore = memory_store()) => {
     origin: fixture_config.web_origin,
     actor_id: 'actor',
     lease_ms: 10000,
-    event_limit: 20,
     scan_limit: 100,
     observation_freshness_ms: 60000,
     sdk_options: { client: fake_client({ simulate_ok: true }) },

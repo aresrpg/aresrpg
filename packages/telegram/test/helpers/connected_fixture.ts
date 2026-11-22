@@ -127,6 +127,8 @@ export const create_world = () => {
         },
       }),
     ],
+    // Like the bot: the bag as one line per item.
+    bot_inventory: [[], () => ({ view: 'inventory', items: [{ item_type: 'wheat', name: 'Wheat', amount: 12 }] })],
     bot_behavior_status: [['character_id'], ({ character_id }) => run_of(character_id)],
     bot_start_behavior: [
       ['script', 'idempotency_key', 'decision_revision', 'observation_revision'],

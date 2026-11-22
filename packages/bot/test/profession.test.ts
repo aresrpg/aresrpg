@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test'
 
 import { validate_gameplay } from '../src/gameplay.ts'
 import { fold_actor_inventory } from '../src/actor_inventory.ts'
-import { profession_knowledge, acquisition_sources } from '../src/profession_catalog.ts'
+import { profession_knowledge, acquisition_sources, zone_knowledge } from '../src/profession_catalog.ts'
 
 import { profession_context, character, recipe, resource, other_input, item } from './helpers/profession_fixture.ts'
 
@@ -46,7 +46,8 @@ test('knowledge exposes real recipe and drop facts', () => {
   expect(acquisition_sources(other_input).drops.length).toBeGreaterThan(0)
   const knowledge = profession_knowledge(context.snapshot, [recipe.output_type])
   expect(knowledge.recipes.find(({ output_type }) => output_type === recipe.output_type)?.inputs).toEqual(recipe.inputs)
-  expect(knowledge.zones[0]!.resources?.[0]?.item_type).toBe(resource.item_type)
+  const [zone] = Object.values(context.snapshot.zones)
+  expect(zone_knowledge(zone!).resources?.[0]?.item_type).toBe(resource.item_type)
 })
 
 test('ordinary observations omit static recipes; explicit index and selected details reuse the same catalogue', () => {
@@ -61,5 +62,4 @@ test('ordinary observations omit static recipes; explicit index and selected det
   expect(selected.recipes).toHaveLength(1)
   expect(selected.recipes[0]!.inputs).toEqual(recipe.inputs)
   expect(selected.characters).toEqual(ordinary.characters)
-  expect(selected.zones).toEqual(ordinary.zones)
 })

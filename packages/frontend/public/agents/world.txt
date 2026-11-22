@@ -106,10 +106,11 @@ Set a reachable target and estimate the gap from measured score gain per activit
 
 OBSERVING GEAR, RECOVERY AND SUI
 
-Full observe returns the existing inventory.items and characters[].equipment rows: exact
-item IDs, categories, levels, rolled stats, damage lines and pet power. Stats are centered
-raw values; inventory_bonuses and equipment_bonuses expose signed, pet-scaled contributions
-using the same projection as player tooltips. Unknown rolls remain null. Choose an exact
+bot_observe returns each hero's characters[].equipment rows, and equipment_bonuses with their
+signed, pet-scaled contributions. The bag is not in it: bot_inventory lists one line per item,
+and bot_item_stacks gives the exact item IDs of one item, with rolled stats and the same signed
+bonuses for equipment, using the same projection as player tooltips. Stats are centered raw
+values. An unknown roll is absent. Choose an exact
 item with equip_item; equip_owned is a deterministic selector, not a gear-quality policy.
 
 health[character_id] reports current/maximum HP and its source. In fight custody this is

@@ -343,38 +343,23 @@ test('observation lists the wallet runs for every grant of its owner and hides a
   }
 })
 
-test('changes observations require a valid baseline and retain exact ordered events without repeated planning state', async () => {
+// Owner ruling 2026-11-22: an observation is a status. It returned 700 KB for one hero: every packet,
+// the whole bag three times and every zone three times.
+test('the status carries no packet, bag or zone, and a detail view answers only its question', async () => {
   const f = await fixture()
   try {
     await f.observe()
     await f.admit()
-    const full = (await f.observe()) as { cursor: number; event_fence: number; characters: unknown }
-    expect(full.characters).toEqual([])
-    expect({ ...((await f.observe({ view: 'full' })) as object), balance: null }).toEqual({ ...full, balance: null })
-    for (const payload of [
-      { view: 'changes' },
-      { view: 'changes', after_cursor: full.cursor },
-      { view: 'changes', after_cursor: full.cursor, after_fence: full.event_fence + 1 },
-      { view: 'changes', after_cursor: full.cursor + 1, after_fence: full.event_fence },
-    ])
-      await expect(f.observe(payload)).rejects.toThrow('needs_resync')
-    const payload = { view: 'changes', after_cursor: full.cursor, after_fence: full.event_fence }
-    const empty = await f.observe(payload)
-    expect(empty).toMatchObject({ view: 'changes', cursor: full.cursor, event_fence: full.event_fence, events: [] })
-    expect(empty).not.toHaveProperty('characters')
-    expect(empty).not.toHaveProperty('zones')
-    expect(empty).not.toHaveProperty('planning_context')
-    const packet = { type: 'packet/characters', characters: [] }
-    await f.send(packet)
-    const changed = await f.observe(payload)
-    expect(changed).toMatchObject({ events: [{ cursor: full.cursor + 1, packet }] })
-    expect({ ...((await f.observe(payload)) as object), balance: null }).toEqual({
-      ...(changed as object),
-      balance: null,
-    })
-    for (let index = 0; index < f.options.event_limit; index++) await f.send(packet)
-    await expect(f.observe(payload)).rejects.toThrow('needs_resync')
-    expect(await f.observe()).toHaveProperty('planning_context')
+    const status = (await f.observe()) as Record<string, unknown>
+    expect(status).toMatchObject({ characters: [], runs: [], inventory: { stacks: 0, item_types: 0 } })
+    for (const key of ['events', 'cursor', 'zones', 'inventory_bonuses']) expect(status).not.toHaveProperty(key)
+    expect(status.inventory).not.toHaveProperty('items')
+    expect(JSON.stringify(status)).not.toContain('null')
+    expect({ ...((await f.observe({ view: 'full' })) as object), balance: null }).toEqual({ ...status, balance: null })
+    const zones = (await f.observe({ view: 'zones', nearby: true })) as Record<string, unknown>
+    expect(zones).toMatchObject({ view: 'zones', zones: [] })
+    for (const key of ['runs', 'characters', 'planning_context', 'decision_revision'])
+      expect(zones).not.toHaveProperty(key)
   } finally {
     await f.runtime.stop()
   }

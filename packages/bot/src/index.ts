@@ -68,7 +68,6 @@ const start_actor = async ({ env, config, store, rpc_url, redis, report_failure 
     actor_id,
     sdk_options: { rpc_url },
     lease_ms,
-    event_limit: deployment_integer(env, 'BOT_EVENT_LIMIT'),
     scan_limit: deployment_integer(env, 'BOT_SCAN_LIMIT'),
     observation_freshness_ms: config.observation_freshness_ms,
     report_failure,

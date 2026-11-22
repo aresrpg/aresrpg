@@ -103,17 +103,24 @@ const verified_balance = (raw: Row, address: string): string | null => {
   return format_native_sui(balance.balance_mist, scale)
 }
 
-/** One fresh observation per update: every card and every request of that update derives from it. */
-export const read_view = async (bot: Bot, identity: BotIdentity): Promise<BotResult<View>> => {
-  const observed = await bot.call('bot_observe', { view: 'full' })
+/**
+ * One fresh status per update: every card and every request of that update derives from it. The bag
+ * is read only by the update that shows it: the bot's own bag read (`bot_inventory`, one line per
+ * item). A bag that was not read, or cannot be, stays unknown.
+ */
+export const read_view = async (bot: Bot, identity: BotIdentity, with_bag = false): Promise<BotResult<View>> => {
+  const [observed, bag] = await Promise.all([
+    bot.call('bot_observe', {}),
+    with_bag ? bot.call('bot_inventory', {}) : null,
+  ])
   if (!observed.ok) return observed
   const raw: Row = observed.value
   const roster = roster_of(raw)
-  const { inventory } = raw
+  const lines: unknown = bag?.ok ? (bag.value as Row).items : null
   const view: View = {
     binding: binding_of(identity),
     balance: verified_balance(raw, identity.address),
-    items: roster && inventory?.loaded === true && Array.isArray(inventory.items) ? inventory.items : null,
+    items: roster && Array.isArray(lines) ? lines : null,
     runs: listed_runs(raw.runs),
     roster,
   }
