@@ -232,6 +232,13 @@
     padding: 10px;
   }
 }
+/* The market is the game's own window, which is its own backdrop: no second frame around it. */
+.dapp-layout[data-tab='market'] {
+  padding: 0;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+}
 .dapp-board {
   display: grid;
   gap: 20px;
@@ -284,6 +291,11 @@
   /* The market has no side column. */
   .dapp-layout[data-tab='market'] {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* The market takes the width of its window in the game (`.aui-feature-port`), wider than the bar:
+     from 800px of detail the market lays the price history beside the offers. */
+  .light-page:has(.dapp-layout[data-tab='market']) .light-page-main {
+    max-width: 1540px;
   }
   .dapp-bag-feed-panel {
     order: 0;

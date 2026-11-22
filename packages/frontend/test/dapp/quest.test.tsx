@@ -267,9 +267,14 @@ test('with no pick the strongest free hero is proposed, nothing of a place shows
   expect(words(roaming)).toContain('Mira · Nauvis')
   expect(roaming).not.toContain('data-facts=')
   expect(button(roaming, 'Send Mira')).not.toContain('disabled')
-  // A hero in a fight is never proposed.
-  const busy = tab({}, { characters: [mira, { ...okami, active_fight: { id: 'f', seat: 0 } } as CharacterRow] })
+  // A hero inside a dungeon run is never proposed. One in a fight the bot does not play still is:
+  // the quest it is sent on ends that fight first.
+  const raiding = { ...okami, dungeon_run: { dungeon: 'gilded_lorito', room: 1 } } as CharacterRow
+  const busy = tab({}, { characters: [mira, raiding] })
   expect(fight_spec(busy.dapp, account_of(busy)).hero_ids).toEqual([HERO])
+  const fighting = { ...okami, active_fight: { id: 'f', seat: 0 } } as CharacterRow
+  const stranded = tab({}, { characters: [fighting] })
+  expect(fight_spec(stranded.dapp, account_of(stranded)).hero_ids).toEqual([fighting.id])
   // Before the bot answered nothing can start, and the page says what it waits for.
   const early = standing(tab({}, {}, { observation: null }))
   expect(tagged(early, 'data-start')[0]).toContain('disabled=""')

@@ -219,9 +219,16 @@ export const hero_status = (state: DappState, hero: Readonly<CharacterRow>): Her
   if (hero_hosted(state, hero.id)) return 'activity'
   return bot_ready(state) ? 'free' : null
 }
-/** The heroes that can be sent now, strongest first: none of them fights, raids or is already out. */
+/**
+ * Whether a hero can be sent on a quest now: the bot plays nothing for it and it stands in no dungeon
+ * run. A fight the bot does not play does not hold it: the run it is sent on takes that fight over,
+ * plays it out or gives it up, then goes on. One rule for Home, Quest and the pickers.
+ */
+export const hero_sendable = (state: DappState, hero: Readonly<CharacterRow>): boolean =>
+  !hero_hosted(state, hero.id) && !hero.dungeon_run
+/** The heroes that can be sent now, strongest first. */
 export const idle_heroes = (state: DappState, { characters }: DappAccount): readonly CharacterRow[] =>
-  strongest_first(characters).filter((hero) => [null, 'free'].includes(hero_status(state, hero)))
+  strongest_first(characters).filter((hero) => hero_sendable(state, hero))
 /** The picked quest heroes that can still be sent, in the order picked. */
 export const picked_heroes = (state: DappState, account: DappAccount): readonly CharacterRow[] => {
   const idle = idle_heroes(state, account)

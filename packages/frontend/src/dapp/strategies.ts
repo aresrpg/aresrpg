@@ -239,10 +239,17 @@ const needs_bag = (spec: StartSpec): boolean =>
 /** A hero that stands inside a run of this dungeon: a raid of it goes on with that run and burns no key. */
 export const raid_resumes = (dungeon: string, { dungeon_run }: Readonly<Pick<CharacterRow, 'dungeon_run'>>): boolean =>
   dungeon_run?.dungeon === dungeon
-/** A hero inside the chosen dungeon goes on with that run; any other fight, ambush or dungeon holds it. */
+/**
+ * A hero inside the chosen dungeon goes on with that run; any other dungeon run or a pending ambush
+ * holds it. A plain fight holds a raid, whose team enters together, and never a quest: the tree a
+ * quest binds plays the fight its hero is seated in, or gives it up once it has lasted too long,
+ * before anything else.
+ */
 const held = (spec: StartSpec, hero: Hero): boolean => {
-  const resuming = spec.activity === 'raid' && raid_resumes(spec.dungeon, hero)
-  return !resuming && [Boolean(hero.active_fight), Boolean(hero.ambush), Boolean(hero.dungeon_run)].some(Boolean)
+  const raid = spec.activity === 'raid'
+  const resuming = raid && raid_resumes(spec.dungeon, hero)
+  const fighting = raid && Boolean(hero.active_fight)
+  return !resuming && [fighting, Boolean(hero.ambush), Boolean(hero.dungeon_run)].some(Boolean)
 }
 type Assessed = Readonly<{ hero: Hero } & ({ scope: Scope } | { blocker: Blocker })>
 /** Only an authoritative checkpoint places a hero. */

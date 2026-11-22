@@ -10,15 +10,27 @@ import type { Locale } from '../i18n/locale.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { mob_icon } from '../content/assets.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
+import { character_send_eligible } from '../agents/character_send.ts'
+import { useCharacterRecall } from '../agents/useCharacterRecall.tsx'
 
 import { account_bag, type DappAccount } from './account.ts'
 import { dapp_text, fees_paid, item_name } from './copy.ts'
 import { DappBag } from './DappBag.tsx'
 import { DappCreateHero } from './DappCreateHero.tsx'
+import { DappGameHeroes } from './DappGameHeroes.tsx'
 import { DappHeroCard, HeroPortrait } from './DappHeroCard.tsx'
 import { next_step, proposed_dungeon, proposed_team, type NextStep } from './next_step.ts'
 import { dungeon_rooms, key_sources } from './places.ts'
-import { hero_command, hero_hosted, hero_status, running_position, type DappInput, type DappState } from './state.ts'
+import {
+  direct_free,
+  hero_command,
+  hero_hosted,
+  hero_sendable,
+  hero_status,
+  running_position,
+  type DappInput,
+  type DappState,
+} from './state.ts'
 import { raid_able, RAID_TEAM } from './strategies.ts'
 
 import './dapp_home.css'
@@ -26,7 +38,9 @@ import './dapp_home.css'
 type Hero = Readonly<CharacterRow>
 type Text = (key: string, values?: Readonly<Record<string, string>>) => string
 /** What every view of Home reads: the page's words, what the bot said and what the game server pushed. */
-type Seen = Readonly<{ text: Text; dapp: DappState; account: DappAccount }>
+type Seen = Readonly<{ text: Text; dapp: DappState; account: DappAccount; back: TakeBack }>
+/** The way back to the player's own game account: the game's recall gesture, and whether one is under way. */
+type TakeBack = Readonly<{ recall: (hero_id: string) => void; busy: boolean }>
 
 /** A button of Home fills a pick, then opens the tab that shows it. Nothing is sent to the bot from here. */
 export const quest_inputs = (hero_id: string): readonly DappInput[] => [
@@ -72,24 +86,44 @@ const hosted_actions = ({ text, dapp }: Seen, hero: Hero): ReactNode => {
     </>
   )
 }
+/** A hero gives up the fight it is seated in: the bot's own `fight_forfeit` payload. */
+export const forfeit_input = (hero_id: string): DappInput => ({
+  type: 'dapp/hero_direct',
+  id: crypto.randomUUID(),
+  hero_id,
+  action: 'fight_forfeit',
+  payload: { character_id: hero_id },
+})
 /**
- * What the player can do with one hero from Home. A hosted hero is stopped, never sent. A free hero is
- * sent, and the raid leads when the hero could enter one now. A hero the bot has not spoken of, or one
- * in a fight the bot does not play, offers nothing.
+ * What the player can do with one hero from Home. A hosted hero is stopped, never sent. A hero that
+ * can be sent is sent, and the raid leads when it could enter one now. A hero in a fight the bot does
+ * not play can still be sent (its run ends that fight first) or can give the fight up. A hero at
+ * rest can go back to the player's game account. A hero the bot has not spoken of, or one inside a
+ * dungeon run, offers nothing here.
  */
 const hero_actions = (seen: Seen, hero: Hero): ReactNode => {
-  const { text, dapp, account } = seen
+  const { text, dapp, account, back } = seen
   if (hero_hosted(dapp, hero.id)) return hosted_actions(seen, hero)
-  if (hero_status(dapp, hero) !== 'free') return null
+  if (hero_status(dapp, hero) === null || !hero_sendable(dapp, hero)) return null
   const raid = raid_ready(hero, account)
   return (
     <>
+      {hero.active_fight && (
+        <Button disabled={!direct_free(dapp)} data-forfeit="" onClick={() => send([forfeit_input(hero.id)])}>
+          {text('hero_forfeit')}
+        </Button>
+      )}
       <Button tone={raid ? 'neutral' : 'primary'} onClick={() => send(quest_inputs(hero.id))}>
         {text('hero_send_quest')}
       </Button>
       <Button tone={raid ? 'primary' : 'neutral'} onClick={() => send(seat_inputs(dapp, hero.id))}>
         {text('hero_raid')}
       </Button>
+      {character_send_eligible(hero) && (
+        <Button disabled={back.busy} data-take-back="" onClick={() => back.recall(hero.id)}>
+          {text('hero_take_back')}
+        </Button>
+      )}
     </>
   )
 }
@@ -251,14 +285,16 @@ const WalletFees = ({ label, amount }: Readonly<{ label: string; amount: string 
 
 /**
  * Home: the one next step and every hero with what it can be asked, or the first steps of an account
- * with no hero. Below them, the bot's own things: its bag and the fees it paid.
+ * with no hero. Below them, the heroes still in the player's game account, each with the way to the
+ * bot, then the bot's own things: its bag and the fees it paid.
  * Every figure is a fact of the game or a value the bot measured.
  */
 export const DappHome = ({ copy, locale }: Props) => {
   const dapp = useAppStore((state) => state.dapp)
   const account = useAppStore(({ session }) => session.agent_inventory)
   const text: Text = (key, values) => dapp_text(copy, key, values)
-  const seen: Seen = { text, dapp, account }
+  const { recall, busy, funding } = useCharacterRecall(copy)
+  const seen: Seen = { text, dapp, account, back: { recall, busy } }
   const step = next_step(dapp, account)
   const fees = dapp.observation?.fees_mist ?? null
   return (
@@ -273,6 +309,8 @@ export const DappHome = ({ copy, locale }: Props) => {
       {account.characters.length === 0 && account.phase === 'ready' && (
         <Onboarding copy={copy} locale={locale} seen={seen} />
       )}
+      <DappGameHeroes copy={copy} />
+      {funding}
       <DappBag copy={copy} />
       {fees !== null && (
         <WalletFees

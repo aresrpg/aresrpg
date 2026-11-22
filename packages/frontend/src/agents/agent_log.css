@@ -32,12 +32,19 @@
   border-radius: 50%;
   background: var(--aui-success);
 }
-/* The shared segments, one per hero. Many heroes or long names wrap to more rows instead of overflowing. */
+/* The shared segments, one per hero, each as wide as its name: they stand on the page itself, without
+   the sunk track of a control that fills its row. Many heroes or long names wrap to more rows. */
 .agent-log-heroes .aui-segments {
   flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
 }
 .agent-log-heroes .aui-button {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   overflow-wrap: anywhere;
 }
 /* The log scrolls inside the page and stays on its newest line: a reversed column keeps the scroll

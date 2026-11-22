@@ -296,16 +296,41 @@ test('a hosted hero shows Stop and no send action', () => {
   expect(button(raiding, text.position_stop!)).toBeDefined()
   expect(buttons(raiding)).toHaveLength(2)
 
-  // A hero in a fight the bot does not play can be neither stopped nor sent from here.
+  // Regression (owner report 2026-11-22): Home said a hero was free while Quest said it was in a fight
+  // and could not be sent. A hero in a fight the bot does not play says so, can give the fight up,
+  // and can still be sent: the run it is sent on ends that fight first.
   const fighting = character_fixture({ active_fight: { id: '0xfight', seat: 0 } as never })
   const busy = hero_card(home(answered({}, account_fixture({ characters: [fighting] }))), HERO)
   expect(busy).toContain('data-status="fight"')
-  expect(buttons(busy)).toHaveLength(0)
+  expect(button(busy, text.hero_forfeit!)).toBeDefined()
+  expect(button(busy, text.hero_send_quest!)).toBeDefined()
+  // A hero inside a dungeon run offers nothing here: the Raid tab goes on with it or leaves it.
+  const inside = character_fixture({ dungeon_run: { dungeon: 'gilded_lorito', room: 1 } as never })
+  expect(buttons(hero_card(home(answered({}, account_fixture({ characters: [inside] }))), HERO))).toHaveLength(0)
+})
+
+test('the heroes of the game account stand on Home, each with the way to the bot', () => {
+  // No hero in the game account: no section.
+  expect(home(answered())).not.toContain('data-game-heroes')
+  const owned = character_fixture({ id: `0x${'9'.repeat(64)}`, name: 'Okami' })
+  const fighting = character_fixture({ id: `0x${'8'.repeat(64)}`, name: 'Bran', custody: 'fight' as never })
+  const base = answered()
+  const html = home({ ...base, session: { ...base.session, characters: [owned, fighting] } })
+  expect(words(block(html, 'data-game-heroes', 'header'))).toContain(text.game_heroes_title)
+  expect(button(hero_card(html, owned.id), text.hero_give_bot!)).not.toContain('disabled')
+  // A hero in a fight cannot move: the game's own transfer rule.
+  expect(button(hero_card(html, fighting.id), text.hero_give_bot!)).toContain('disabled')
+  // A bot hero in a fight has no way back yet.
+  const seated = character_fixture({ custody: 'fight' as never, active_fight: { id: '0xfight', seat: 0 } as never })
+  const card = hero_card(home(answered({}, account_fixture({ characters: [seated] }))), HERO)
+  expect(button(card, text.hero_take_back!)).toBeUndefined()
 })
 
 test('a free hero leads with the raid only when it could enter a dungeon now', () => {
   const keyless = hero_card(home(answered()), HERO)
-  expect(buttons(keyless)).toHaveLength(2)
+  // Send, raid, and the way back to the player's game account.
+  expect(buttons(keyless)).toHaveLength(3)
+  expect(button(keyless, text.hero_take_back!)).toContain('data-take-back')
   expect(button(keyless, text.hero_send_quest)).toContain('aui-button--primary')
   expect(button(keyless, text.hero_raid)).toContain('aui-button--neutral')
 

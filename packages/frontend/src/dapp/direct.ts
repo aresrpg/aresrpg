@@ -8,7 +8,7 @@ import type { DappDirect, DappObservation } from './observation.ts'
 
 /** The direct commands of the bot's gameplay catalogue that act for one hero. */
 export type HeroDirectAction =
-  'raise_stats' | 'raise_spell' | 'equip_item' | 'use_consumable' | 'dungeon_leave' | 'craft'
+  'raise_stats' | 'raise_spell' | 'equip_item' | 'use_consumable' | 'dungeon_leave' | 'craft' | 'fight_forfeit'
 /** Every direct command this page sends. The others act for the wallet as a whole. Sale proceeds are
  * collected by the bot itself: its `market_collect` is the bot's own command, never a request of this page. */
 export type DirectAction = HeroDirectAction | 'market_buy' | 'market_sell' | 'market_delist' | 'create_character'

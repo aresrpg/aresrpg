@@ -128,10 +128,15 @@ test('a quest proposes who goes when nobody is picked, and never a hero that fig
   // Picked heroes go in the order picked.
   const picked = fold(connected, { type: 'dapp/quest_pick', pick: { hero_ids: [HERO, SECOND] } })
   expect(fight_spec(picked, ACCOUNT)).toEqual({ ...SPECS.train([HERO, SECOND]) })
-  // A hero in a fight or a dungeon is not free to go, whatever the bot says of it; a hosted one neither.
+  // A hero inside a dungeon run is not free to go; a hosted one neither. One in a fight the bot does
+  // not play still is: the quest it is sent on ends that fight first.
+  const raiding = account_fixture({
+    characters: [team[0]!, { ...team[1]!, dungeon_run: { dungeon: 'gilded_lorito', room: 1 } }],
+  })
+  expect(idle_heroes(connected, raiding).map(({ id }) => id)).toEqual([HERO])
+  expect(fight_spec(picked, raiding).hero_ids).toEqual([HERO])
   const fighting = account_fixture({ characters: [team[0]!, { ...team[1]!, active_fight: { id: 'f', seat: 0 } }] })
-  expect(idle_heroes(connected, fighting).map(({ id }) => id)).toEqual([HERO])
-  expect(fight_spec(picked, fighting).hero_ids).toEqual([HERO])
+  expect(idle_heroes(connected, fighting).map(({ id }) => id)).toEqual([SECOND, HERO])
   const out = fold(picked, start('train', [SECOND]), settle(SECOND, 'train', done, 300))
   expect(picked_heroes(out, ACCOUNT).map(({ id }) => id)).toEqual([HERO])
   // Before the bot answered a hero claims no status: it can still be proposed, and nothing starts.

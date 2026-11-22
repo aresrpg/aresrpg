@@ -4390,3 +4390,9 @@ dapp_page:
   work_tool_held: '{item} dans votre sac'
   work_tool_none: 'Sans {tool}'
   work_have: '{have} sur {need}'
+  hero_forfeit: 'Abandonner le combat'
+  direct_done_fight_forfeit: '{name} a abandonné le combat et est de nouveau libre.'
+  error_fight_unavailable: "Ce héros n'est plus en combat."
+  game_heroes_title: 'Dans votre compte de jeu'
+  hero_give_bot: 'Confier au bot'
+  hero_take_back: 'Reprendre'

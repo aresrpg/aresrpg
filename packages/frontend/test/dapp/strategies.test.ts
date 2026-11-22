@@ -396,8 +396,9 @@ test('sad paths block before any tree exists: an unknown checkpoint and busy her
     blocked: [{ hero_id: HERO, blocker: 'hero_unknown' }],
     missing_keys: {},
   })
+  // A plain fight holds no quest: the bound tree plays or gives up the fight its hero sits in first.
   const fighting = placed(HERO, thebes!, { custody: 'fight', active_fight: { id: 'fight', seat: 0 } })
-  expect(plan(train([fighting]), [fighting]).blocked).toEqual([{ hero_id: HERO, blocker: 'hero_busy' }])
+  expect(plan(train([fighting]), [fighting])).toMatchObject({ starts: [{ hero_id: HERO }], blocked: [] })
   const ambushed = placed(HERO, thebes!, {
     ambush: { protector: 'p', x: 0, z: 0, scalar: 1, board_seed: '1', hp: '1' },
   })

@@ -106,6 +106,16 @@ for (const { width, height, phone } of WINDOWS) {
     await expect(buy).toBeEnabled()
     await buy.scrollIntoViewIfNeeded()
     await expect(buy).toBeInViewport({ ratio: 1 })
+    // Regression (owner report 2026-11-22): a dark frame stood around the market's window, and the
+    // window was narrower than in the game, so the price history fell under the offers.
+    expect(await style(page.locator('.dapp-layout'), 'border-top-width')).toBe('0px')
+    expect(await style(page.locator('.dapp-layout'), 'padding-left')).toBe('0px')
+    if (width >= 1440) {
+      const offers = await box(market.locator('[data-marketplace-listings]'))
+      const history = await box(market.locator('[data-marketplace-price-history]'))
+      expect(history.x).toBeGreaterThanOrEqual(right(offers))
+      expect(history.y).toBeLessThan(offers.y + offers.height)
+    }
     await shot(page, 'market-buy')
     await segment(page, 'Marketplace', 'Sell').click()
     await expect(market.locator(`[data-marketplace-owned-item="${HOOD}-1"]`)).toBeVisible()

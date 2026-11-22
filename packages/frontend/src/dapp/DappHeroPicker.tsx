@@ -8,7 +8,7 @@ import { useAppStore } from '../store.ts'
 
 import { dapp_text } from './copy.ts'
 import { hero_class, HeroPortrait } from './DappHeroCard.tsx'
-import { hero_status } from './state.ts'
+import { hero_status, hero_sendable } from './state.ts'
 
 import './dapp_parts.css'
 
@@ -32,10 +32,12 @@ const HeroChoice = ({
   choose,
 }: Readonly<{ copy: AppCopy; hero: Hero; pressed: boolean; busy_selectable: BusySelectable; choose: () => void }>) => {
   const status = useAppStore(({ dapp }) => hero_status(dapp, hero))
-  // A hero in a fight, in a dungeon or already out cannot be sent: it says why instead of its level.
+  const sendable = useAppStore(({ dapp }) => hero_sendable(dapp, hero))
+  // A hero in a fight, in a dungeon or already out says so in place of its class, beside its level.
   const busy = status !== null && status !== 'free'
-  // A busy hero the caller can still take stays a choice, and still says what it does.
-  const locked = busy && !busy_selectable(hero)
+  // It stays a choice when it can still be sent (a fight the bot does not play is taken over by the
+  // run), or when the caller can take it anyway.
+  const locked = busy && !sendable && !busy_selectable(hero)
   const level = dapp_text(copy, 'hero_level', { level: String(hero.level) })
   return (
     <Button
@@ -48,7 +50,7 @@ const HeroChoice = ({
       <HeroPortrait hero={hero} small />
       <span className="dapp-hero-pick-text">
         {hero.name}
-        <small>{busy ? dapp_text(copy, `status_${status}`) : `${level} · ${hero_class(copy, hero)}`}</small>
+        <small>{`${level} · ${busy ? dapp_text(copy, `status_${status}`) : hero_class(copy, hero)}`}</small>
       </span>
     </Button>
   )

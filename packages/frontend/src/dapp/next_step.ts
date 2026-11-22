@@ -8,7 +8,7 @@ import { raid_keys } from '@aresrpg/protocol/strategies'
 import { content_catalog } from '../content/catalog.ts'
 
 import { account_bag, strongest_first, type DappAccount } from './account.ts'
-import { bot_ready, free_heroes, raid_seats, type DappState } from './state.ts'
+import { bot_ready, free_heroes, idle_heroes, raid_seats, type DappState } from './state.ts'
 import { raid_able, RAID_TEAM, type StartSpec } from './strategies.ts'
 
 /**
@@ -64,6 +64,6 @@ const open_raid = (state: DappState, account: DappAccount): NextStep | null => {
 export const next_step = (state: DappState, account: DappAccount): NextStep | null => {
   if (!bot_ready(state) || !account.characters.length) return null
   if (out_of_funds(state)) return { kind: 'funds' }
-  const [free] = strongest_first(free_heroes(state, account))
+  const [free] = idle_heroes(state, account)
   return open_raid(state, account) ?? (free ? { kind: 'quest', hero_id: free.id } : { kind: 'out' })
 }
