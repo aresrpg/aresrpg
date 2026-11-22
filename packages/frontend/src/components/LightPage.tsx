@@ -55,21 +55,18 @@ export const LightPage = ({
   brand,
   controls,
   aura,
-  wide,
   children,
 }: Readonly<{
   copy: AppCopy
   brand: ReactNode
   controls?: ReactNode
   aura?: LightPageAura
-  /** An application surface: the content uses the whole window; the bar keeps its centred width. */
-  wide?: boolean
   children: ReactNode
 }>) => {
   const session = useAppStore((state) => state.session)
   const locale = useAppStore((state) => state.locale)
   return (
-    <div className={aura ? 'light-page aui-aura' : 'light-page'} data-aura={aura} data-wide={wide ? '' : undefined}>
+    <div className={aura ? 'light-page aui-aura' : 'light-page'} data-aura={aura}>
       {aura && <div aria-hidden="true" className="light-page-scene" />}
       <header className="light-page-header">
         <a className="light-page-brand" href="/">

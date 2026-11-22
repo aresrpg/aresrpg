@@ -106,10 +106,10 @@ export const DappHeroCard = ({
         </div>
         <span className="dapp-hero-class">{hero_class(copy, hero)}</span>
         {!compact && (
-          <>
+          <div className="dapp-hero-meters">
             <ProgressBar label={dapp_text(copy, 'hero_xp')} value={progress.percent} max={100} />
             <HeroHealth copy={copy} hero={hero} />
-          </>
+          </div>
         )}
       </div>
       {(status !== null || actions) && (

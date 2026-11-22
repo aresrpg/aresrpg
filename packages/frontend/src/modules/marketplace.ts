@@ -80,12 +80,16 @@ export type MarketplaceState = CatalogueProjection &
     history_total: number
     profits: readonly Readonly<{ kiosk: string; amount_mist: string }>[]
     pending: string | null
+    /** A market view is mounted, in the game or in the web dapp: the one fact the socket's market
+     * subscriptions follow. It is a fact of the page, not of the account, so a sign-in keeps it. */
+    open: boolean
   }>
 
 export type MarketplaceInput =
   | MarketFloorInput
   | PriceHistoryInput
   | Readonly<{ type: 'market/opened' }>
+  | Readonly<{ type: 'market/closed' }>
   | Readonly<{ type: 'market/group_selected'; group: MarketGroup; category?: ItemCategory; item_type?: string }>
   | Readonly<{ type: 'market/page_requested'; direction: 'next' | 'previous' }>
   | Readonly<{ type: 'market/characters_filtered'; classe?: string; min_level?: number; max_level?: number }>
@@ -129,6 +133,7 @@ export const initial_marketplace_state = (): MarketplaceState =>
     history_total: 0,
     profits: [],
     pending: null,
+    open: false,
   })
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1_000
@@ -273,7 +278,13 @@ const group_query = (input: Extract<MarketplaceInput, { type: 'market/group_sele
 const reduce_selection = (market: MarketplaceState, input: AppInput): MarketplaceState => {
   switch (input.type) {
     case 'market/opened':
-      return { ...observe_query(market, market.observation ?? { kind: 'overview' }), page_cursors: market.page_cursors }
+      return {
+        ...observe_query(market, market.observation ?? { kind: 'overview' }),
+        page_cursors: market.page_cursors,
+        open: true,
+      }
+    case 'market/closed':
+      return { ...market, open: false }
     case 'market/group_selected':
       return select_query(market, group_query(input), input.group)
     case 'market/characters_filtered':
@@ -310,7 +321,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     input.type === 'auth/rejected' ||
     (input.type === 'auth/connected' && state.session.wallet === input.session)
   )
-    return Object.freeze({ ...state, marketplace: initial_marketplace_state() })
+    return Object.freeze({ ...state, marketplace: { ...initial_marketplace_state(), open: market.open } })
   if (input.type === 'server/packet') {
     const next = fold_packet(market, input.packet, state.session.wallet?.address ?? null)
     return next === market ? state : Object.freeze({ ...state, marketplace: next })

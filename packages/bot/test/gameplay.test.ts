@@ -114,6 +114,7 @@ test('canonical catalog exposes the complete bounded PvE lifecycle and strict ne
     'dungeon_enter',
     'dungeon_fight',
     'dungeon_leave',
+    'fight_forfeit',
     'market_buy',
     'market_sell',
     'market_delist',

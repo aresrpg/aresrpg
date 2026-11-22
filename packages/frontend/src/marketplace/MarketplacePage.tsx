@@ -26,8 +26,10 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
     month_mist: null,
     history_days: 0,
   }
+  // The view says when it is on screen: the socket observes the market only meanwhile, on any surface.
   useEffect(() => {
     dispatch_app({ type: 'market/opened' })
+    return () => dispatch_app({ type: 'market/closed' })
   }, [])
   if (settings.marketplace_disclaimer_acknowledged !== true)
     return (

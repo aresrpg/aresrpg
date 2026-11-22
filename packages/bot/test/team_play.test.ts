@@ -12,6 +12,7 @@ import { encode_cell, mask_from_cells } from '../../fight/src/combat_grid.ts'
 import { id } from '../../sdk/test/helpers/transport.ts'
 import { empty_snapshot } from '../src/actor_snapshot.ts'
 import { empty_inventory } from '../src/actor_inventory.ts'
+import { behavior_condition } from '../src/behavior_facts.ts'
 import { select_dungeon_step, select_join } from '../src/behavior_team.ts'
 import { select_spending } from '../src/behavior_growth.ts'
 import { select_owned_item } from '../src/behavior_items.ts'
@@ -297,6 +298,32 @@ test('a room is playable only by a command that names its dungeon, and settles t
   const between = { ...hero, custody: 'kiosk' as const, active_fight: undefined }
   expect(plan(context_of(room, [between]), leave)).toMatchObject({ input: { room: null } })
   expect(() => plan(context_of(room, [character()]), leave)).toThrow('character_not_available')
+})
+
+// Owner 2026-11-22. Minutes are whole chain minutes since the start: zero while placing, unknown in no fight.
+test('a seated hero forfeits its fight, and the tree can read how long the fight lasted', () => {
+  const forfeit = { kind: 'fight_forfeit', payload: { character_id } }
+  const free = { ...character(), custody: 'kiosk' as const, active_fight: undefined }
+  const room = started()
+  Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n })
+  const raider = { ...character(), dungeon_run: { dungeon: dungeon!.dungeon, room: 1 } }
+  expect(plan(context_of(started(), [character()]), forfeit)).toMatchObject({
+    kind: 'fight_forfeit',
+    input: { fight: fight_id, fighter_idx: 0n, dungeon: false },
+  })
+  expect(plan(context_of(room, [raider]), forfeit)).toMatchObject({ input: { fight: fight_id, dungeon: true } })
+  expect(() => plan(context_of(started(), [free]), forfeit)).toThrow('fight_unavailable')
+  const minutes = (fight: ReturnType<typeof started>, heroes: readonly CharacterRow[], value: number, at = now) =>
+    behavior_condition(
+      { fact: { type: 'fight_minutes', character_id }, op: 'gte', value },
+      context_of(fight, heroes, at)
+    )
+  const long = started()
+  long.contract.started_ms = 1_000_000n
+  expect(minutes(long, [character()], 15, 1_000_000 + 15 * 60_000)).toBe(true)
+  expect(minutes(long, [character()], 15, 1_000_000 + 15 * 60_000 - 1)).toBe(false)
+  expect(minutes(placement(), [character()], 1)).toBe(false)
+  expect(minutes(started(), [free], 0)).toBeNull()
 })
 
 test('a tree accepts the team, dungeon and growth leaves and still acts for one hero', () => {

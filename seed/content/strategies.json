@@ -1,15 +1,16 @@
 {
   "profile": {
     "version": "1",
-    "intent": "Strike the nearest legal enemy, moving for damage when possible, then approach. End the turn when no action is legal.",
+    "intent": "Boost first: cast every boost of the hero that is not in effect yet, glyphs at its feet included. Then hit with the most damaging weapon strike or spell as often as the turn allows, moving for damage. With nothing hit, walk closer and hit from there. End the turn when no action is legal.",
     "combos": [
       {
         "name": "attack",
         "steps": [
           {
-            "type": "strike",
+            "type": "attack",
             "target": "highest_damage_enemy",
-            "position": "best_damage"
+            "position": "best_damage",
+            "repeat": true
           }
         ]
       },
@@ -21,9 +22,23 @@
             "direction": "approach"
           }
         ]
+      },
+      {
+        "name": "boost",
+        "steps": [
+          {
+            "type": "boost"
+          }
+        ]
       }
     ],
     "rules": [
+      {
+        "when": {
+          "type": "always"
+        },
+        "combo": "boost"
+      },
       {
         "when": {
           "type": "always"
@@ -32,9 +47,15 @@
       },
       {
         "when": {
-          "type": "always"
+          "type": "no_hit_yet"
         },
         "combo": "approach"
+      },
+      {
+        "when": {
+          "type": "always"
+        },
+        "combo": "attack"
       }
     ],
     "fallback": "end_turn"
@@ -65,6 +86,43 @@
         "child": {
           "type": "selector",
           "children": [
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
             {
               "type": "action",
               "action": {
@@ -108,6 +166,36 @@
                 {
                   "type": "complete",
                   "reason": "fee_cap_reached"
+                }
+              ]
+            },
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": false
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "hp_percent",
+                      "character_id": "$character"
+                    },
+                    "op": "lt",
+                    "value": 100
+                  }
+                },
+                {
+                  "type": "wait"
                 }
               ]
             },
@@ -157,6 +245,43 @@
         "child": {
           "type": "selector",
           "children": [
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
             {
               "type": "action",
               "action": {
@@ -267,6 +392,43 @@
           "type": "selector",
           "children": [
             {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
+            {
               "type": "action",
               "action": {
                 "type": "combat",
@@ -310,6 +472,36 @@
                 {
                   "type": "complete",
                   "reason": "fee_cap_reached"
+                }
+              ]
+            },
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": false
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "hp_percent",
+                      "character_id": "$character"
+                    },
+                    "op": "lt",
+                    "value": 100
+                  }
+                },
+                {
+                  "type": "wait"
                 }
               ]
             },
@@ -374,6 +566,43 @@
                 {
                   "type": "condition",
                   "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
                     "type": "fees_spent",
                     "op": "gte",
                     "value": "$fee_cap_mist"
@@ -425,6 +654,47 @@
               ]
             },
             {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": false
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "dungeon_run",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": false
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "hp_percent",
+                      "character_id": "$character"
+                    },
+                    "op": "lt",
+                    "value": 100
+                  }
+                },
+                {
+                  "type": "wait"
+                }
+              ]
+            },
+            {
               "type": "action",
               "action": {
                 "type": "dungeon",
@@ -462,6 +732,43 @@
         "child": {
           "type": "selector",
           "children": [
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
             {
               "type": "action",
               "action": {
@@ -633,6 +940,43 @@
         "child": {
           "type": "selector",
           "children": [
+            {
+              "type": "sequence",
+              "children": [
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight",
+                      "character_id": "$character"
+                    },
+                    "op": "eq",
+                    "value": true
+                  }
+                },
+                {
+                  "type": "condition",
+                  "condition": {
+                    "fact": {
+                      "type": "fight_minutes",
+                      "character_id": "$character"
+                    },
+                    "op": "gte",
+                    "value": 15
+                  }
+                },
+                {
+                  "type": "action",
+                  "action": {
+                    "type": "call",
+                    "kind": "fight_forfeit",
+                    "payload": {
+                      "character_id": "$character"
+                    }
+                  }
+                }
+              ]
+            },
             {
               "type": "action",
               "action": {

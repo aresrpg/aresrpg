@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { lazy, Suspense, useMemo, type ReactNode } from 'react'
-import { Button, CarvedIcon, GameWindow, Panel, type CarvedSymbol } from '@aresrpg/ui'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
+import { Button, CarvedIcon, GameWindow, Panel, SegmentedControl } from '@aresrpg/ui'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import type { DetailTab } from '../characters/character_navigation.ts'
 import type { CharacterSession } from '../characters/character_session.ts'
 import { ItemCraftSessionContext } from '../components/ItemCrafting.tsx'
+import { CHARACTER_TABS } from '../game/hud/CharacterWindow.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -28,6 +30,9 @@ const SpellsTab = lazy(() => import('../characters/SpellsTab.tsx'))
 const JobsTab = lazy(() => import('../characters/JobsTab.tsx'))
 
 type Hero = Readonly<CharacterRow>
+/** The tabs of the game's character window a hero of the bot account has: the bot forges no rune. */
+export type HeroTab = Exclude<DetailTab, 'runeforge'>
+const HERO_TABS = CHARACTER_TABS.flatMap((entry) => (entry.tab === 'runeforge' ? [] : [entry]))
 
 const look_at = (hero_id: string): void => dispatch_app({ type: 'dapp/select_hero', hero_id })
 
@@ -54,87 +59,98 @@ export const useHeroSession = (
   }, [account, copy, editable, hero])
 }
 
-/** One character tab of the game inside the game's own window frame, laid in the page. `layout` is
- *  the game's own layout class of that tab, when it has one. */
-const HeroWindow = ({
-  copy,
-  tab,
-  icon,
-  title,
-  layout = '',
-  children,
-}: Readonly<{
-  copy: AppCopy
-  tab: 'equipment' | 'stats' | 'spells' | 'jobs'
-  icon: CarvedSymbol
-  title: string
-  layout?: string
-  children: ReactNode
-}>) => (
-  <GameWindow
-    className={`gw-tab game-character-window game-character-window--${tab} ${layout} dapp-heroes-window`}
-    data-character-panel={tab}
-    title={title}
-    icon={<CarvedIcon name={icon} />}
-    close={null}
-    close_label={dapp_text(copy, 'close')}
-  >
-    <div className="game-character-body aui-workspace-main">
-      <Suspense
-        fallback={
-          <p className="dapp-note" role="status">
-            {dapp_text(copy, 'loading')}
-          </p>
-        }
-      >
-        {children}
-      </Suspense>
-    </div>
-  </GameWindow>
-)
+type Sheet = Readonly<{ copy: AppCopy; hero: Hero; session: CharacterSession; editable: boolean }>
+/**
+ * One tab of the game's character window, for this hero. The gear, the characteristics and the spells
+ * are keyed by the hero: a change of hero drops what was staged for the previous one. The professions
+ * stay mounted, so the profession in view follows the player to the better crafter.
+ */
+const HeroTabBody = ({ tab, copy, hero, session, editable }: Sheet & Readonly<{ tab: HeroTab }>) => {
+  switch (tab) {
+    case 'equipment':
+      return (
+        <EquipmentTab
+          key={hero.id}
+          character={hero}
+          copy={copy}
+          session={session}
+          preview={() => <HeroPortrait hero={hero} />}
+        />
+      )
+    case 'stats':
+      // Without an adapter the game's tab finds no owned character and stays locked.
+      return (
+        <StatsTab key={hero.id} character={hero} copy={copy} raise_stats={editable ? session.raise_stats : undefined} />
+      )
+    case 'spells':
+      return <SpellsTab key={hero.id} character={hero} copy={copy} session={session} />
+    case 'jobs':
+      return <JobsTab character={hero} copy={copy} session={session} />
+  }
+}
 
-/** The chosen hero: who it is, why it cannot change when it cannot, then its gear, characteristics and spells. */
-const HeroDetail = ({ copy, hero }: Readonly<{ copy: AppCopy; hero: Hero }>) => {
+/** The points a hero has not spent yet: each count opens the tab that spends it. A hero without any shows nothing. */
+const unspent_points = (copy: AppCopy, hero: Hero, on_tab: (tab: HeroTab) => void): ReactNode => {
+  const points = [
+    { tab: 'stats', label: copy.fight_hud.level_up_stat_points, left: hero.available_points },
+    { tab: 'spells', label: copy.fight_hud.level_up_spell_points, left: hero.available_spell_points },
+  ] as const
+  const open = points.filter(({ left }) => left > 0)
+  return open.length
+    ? open.map(({ tab, label, left }) => (
+        <Button key={tab} data-heroes-points={tab} onClick={() => on_tab(tab)}>
+          {label}
+          <strong>{left}</strong>
+        </Button>
+      ))
+    : null
+}
+
+/**
+ * The chosen hero: who it is, why it cannot change when it cannot, then ONE window of the game with
+ * its gear, characteristics, spells and professions, one tab at a time. The tab bar, the window frame
+ * and every tab are the game's own; the window only takes the class and the title of the tab it shows.
+ */
+export const DappHeroSheet = ({
+  copy,
+  hero,
+  tab,
+  on_tab,
+}: Readonly<{ copy: AppCopy; hero: Hero; tab: HeroTab; on_tab: (tab: HeroTab) => void }>) => {
   const { session, editable } = useHeroSession(copy, hero)
+  const text = copy_text(copy.characters_page)
+  const options = HERO_TABS.map((entry) => ({ value: entry.tab, label: text(`tab_${entry.tab}`) }))
+  const { icon, layout } = HERO_TABS.find((entry) => entry.tab === tab)!
   return (
     <>
-      <DappHeroCard copy={copy} hero={hero} />
+      <DappHeroCard copy={copy} hero={hero} actions={unspent_points(copy, hero, on_tab)} />
       {!editable && (
         <p className="dapp-warning" role="status" data-heroes-locked="">
           {dapp_text(copy, 'detail_locked')}
         </p>
       )}
-      <HeroWindow copy={copy} tab="equipment" icon="inventory" title={dapp_text(copy, 'detail_equipment')}>
-        <EquipmentTab character={hero} copy={copy} session={session} preview={() => <HeroPortrait hero={hero} />} />
-      </HeroWindow>
-      <HeroWindow copy={copy} tab="stats" icon="stats" title={dapp_text(copy, 'detail_stats')}>
-        {/* Without an adapter the game's tab finds no owned character and stays locked. */}
-        <StatsTab character={hero} copy={copy} raise_stats={editable ? session.raise_stats : undefined} />
-      </HeroWindow>
-      <HeroWindow copy={copy} tab="spells" icon="spells" title={dapp_text(copy, 'detail_spells')}>
-        <SpellsTab character={hero} copy={copy} session={session} />
-      </HeroWindow>
+      <GameWindow
+        className={`gw-tab game-character-window game-character-window--${tab} ${layout} dapp-heroes-window`}
+        data-character-panel={tab}
+        title={text(`tab_${tab}`)}
+        icon={<CarvedIcon name={icon} />}
+        close={null}
+        close_label={dapp_text(copy, 'close')}
+      >
+        <SegmentedControl<HeroTab> label={hero.name} options={options} value={tab} on_change={on_tab} />
+        <div className="game-character-body aui-workspace-main">
+          <Suspense
+            fallback={
+              <p className="dapp-note" role="status">
+                {dapp_text(copy, 'loading')}
+              </p>
+            }
+          >
+            <HeroTabBody tab={tab} copy={copy} hero={hero} session={session} editable={editable} />
+          </Suspense>
+        </div>
+      </GameWindow>
     </>
-  )
-}
-
-/**
- * The hero's professions, through the game's own jobs tab: its levels, its recipes with what its bag
- * holds, the game's advice on what to craft and who crafts better, and a Craft the bot signs. It stays
- * mounted when the hero changes, so the profession in view follows the player to the better crafter.
- */
-const HeroJobs = ({ copy, hero }: Readonly<{ copy: AppCopy; hero: Hero }>) => {
-  const { session } = useHeroSession(copy, hero)
-  return (
-    <HeroWindow
-      copy={copy}
-      tab="jobs"
-      icon="jobs"
-      title={copy_text(copy.characters_page)('tab_jobs')}
-      layout="aui-feature-port aui-jobs-port"
-    >
-      <JobsTab character={hero} copy={copy} session={session} />
-    </HeroWindow>
   )
 }
 
@@ -178,10 +194,12 @@ const select_hero = ([hero_id]: readonly string[]): void => {
   if (hero_id) dispatch_app({ type: 'dapp/select_hero', hero_id })
 }
 
-/** The Heroes tab: one hero at a time, through the game's own equipment, characteristics, spells and jobs tabs. */
+/** The Heroes tab: one hero at a time, in one window of the game's own equipment, characteristics, spells and jobs tabs. */
 export const DappHeroes = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const heroes = useAppStore(({ session }) => session.agent_inventory.characters)
   const hero = useAppStore(({ dapp, session }) => selected_hero(dapp, session.agent_inventory))
+  // Which tab shows is this view's own: it stays when the hero changes.
+  const [tab, set_tab] = useState<HeroTab>('equipment')
   const title = dapp_text(copy, 'heroes_title')
   return (
     <section className="dapp-section dapp-heroes-tab" aria-label={title}>
@@ -197,9 +215,7 @@ export const DappHeroes = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             busy_selectable={any_hero}
             on_change={select_hero}
           />
-          {/* A change of hero drops what was staged for the previous one. */}
-          <HeroDetail key={hero.id} copy={copy} hero={hero} />
-          <HeroJobs copy={copy} hero={hero} />
+          <DappHeroSheet copy={copy} hero={hero} tab={tab} on_tab={set_tab} />
         </>
       ) : (
         <NoHero copy={copy} />

@@ -1,15 +1,26 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { job_level_from_xp } from '@aresrpg/immutable'
+import type { CharacterRow } from '@aresrpg/protocol'
 
 import type { BehaviorCondition, BehaviorFact, BehaviorRun, StateCondition, TallyCondition } from './behavior_script.ts'
 import { run_tally } from './behavior_tally.ts'
-import type { GameplayContext } from './gameplay_context.ts'
+import { hydrate_gameplay_fight } from './gameplay.ts'
+import { gameplay_observation_ready, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
 import { market_price_condition } from './market_prices.ts'
 import { world_available } from './behavior_world.ts'
 import { character_health, observed_balance } from './character_observability.ts'
 import { profession_inventory } from './actor_inventory.ts'
 
+/** Whole minutes of the chain clock since the hero's current fight started: zero while it is still
+ * being placed, and unknown (null) for a hero in no fight or while the clock is not observed. */
+const fight_minutes = (character: Readonly<CharacterRow>, context: GameplayContext): number | null => {
+  const row = character.active_fight ? context.snapshot.fights[character.active_fight.id] : undefined
+  if (!row || !gameplay_observation_ready(context)) return null
+  const started = hydrate_gameplay_fight(row).contract.started_ms
+  if (started === null) return 0
+  return Math.max(0, Math.floor((Number(gameplay_observed_ms(context)) - Number(started)) / 60_000))
+}
 const fact_value = (fact: BehaviorFact, context: GameplayContext): string | number | boolean | null => {
   const character = context.snapshot.characters.find(({ id }) => id === fact.character_id)
   if (!character) return null
@@ -21,6 +32,7 @@ const fact_value = (fact: BehaviorFact, context: GameplayContext): string | numb
       const health = character_health(character, context)
       return health ? Math.floor((health.current * 100) / health.maximum) : null
     },
+    fight_minutes: () => fight_minutes(character, context),
     job_level: () => job_level_from_xp(Number(character.jobs[fact.key!] ?? '0')),
     custody: () => character.custody ?? null,
     ambush: () => Boolean(character.ambush),

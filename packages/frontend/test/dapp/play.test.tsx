@@ -9,11 +9,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import * as zustand from 'zustand'
 
 import type { AuthSession } from '../../src/auth.ts'
-import { DappChips, DappTabs } from '../../src/dapp/DappPage.tsx'
+import { DappChips, DappDisconnect, DappTabs } from '../../src/dapp/DappPage.tsx'
 import { board_stage, DappStage, play_stage, shown_tab, type Stage } from '../../src/dapp/DappPlay.tsx'
 import type { DappAccount } from '../../src/dapp/account.ts'
 import { parse_observation } from '../../src/dapp/observation.ts'
-import type { DappState, DappTab } from '../../src/dapp/state.ts'
+import type { DappCommand, DappState, DappTab } from '../../src/dapp/state.ts'
 import type { AppCopy } from '../../src/i18n/copy.ts'
 import en from '../../src/i18n/locales/en.yaml'
 import {
@@ -29,12 +29,7 @@ import { automation_fixture } from '../modules/automation_fixture.ts'
 import { account_fixture, character_fixture, item_fixture, observation_fixture } from './fixtures.ts'
 
 const BOT = 'https://bot.example.test'
-/**
- * The copy the shell reads that the locale files do not hold yet. Once `en.yaml` has these keys,
- * delete this table: the test then pins the shipped English copy.
- */
-const english = en as AppCopy
-const copy: AppCopy = english
+const copy = en as AppCopy
 const text = copy.dapp_page as Readonly<Record<string, string>>
 const wallet = {
   address: `0x${'d'.repeat(64)}`,
@@ -143,6 +138,12 @@ const load_board = () => {
   dispatch_app({ type: 'dapp/observed', observation: observation_fixture(), requested_ms: 1, now: 1 })
 }
 const open_tab = (tab: DappTab) => dispatch_app({ type: 'dapp/tab', tab })
+/** The Quest tab with a place picked: nothing of a place, its Start included, shows before that. */
+const open_plan = (): string => {
+  open_tab('quest')
+  dispatch_app({ type: 'dapp/quest_pick', pick: { place: { world: 'nauvis', city: 'thebes' } } })
+  return view().html
+}
 const view = () => {
   const now = stage(read_app_state())
   return { stage: now, html: render_english(<DappStage stage={now} copy={copy} locale="en" />) }
@@ -199,9 +200,10 @@ test('the board shows the heroes before the bot answers, claims no status and no
   expect(before.html).not.toContain(`>${text.status_free}<`)
   expect(before.html).not.toContain('data-next=')
   expect(before.html).not.toContain(text.hero_send_quest)
-  // The Quest tab shows its Start, closed, with the reason.
+  // The Quest tab offers no Start before a place is picked; the plan of a place shows it closed, with the reason.
   open_tab('quest')
-  const quest = view().html
+  expect(tagged(view().html, 'data-start')).toEqual([])
+  const quest = open_plan()
   expect(quest).toContain('data-quest="fight"')
   const [start] = tagged(quest, 'data-start')
   expect(start).toContain('disabled=""')
@@ -218,12 +220,11 @@ test('the board shows the heroes before the bot answers, claims no status and no
 
   // A bot that is still catching up changes the label only.
   dispatch_app({ type: 'dapp/observed', observation: PENDING, requested_ms: 1, now: 1 })
-  open_tab('quest')
-  const syncing = view()
-  expect(syncing.stage).toBe('syncing')
-  expect(syncing.html).toContain(text.syncing)
-  expect(syncing.html).not.toContain('data-status=')
-  expect(tagged(syncing.html, 'data-start')[0]).toContain('disabled=""')
+  const syncing = open_plan()
+  expect(stage(read_app_state())).toBe('syncing')
+  expect(syncing).toContain(text.syncing)
+  expect(syncing).not.toContain('data-status=')
+  expect(tagged(syncing, 'data-start')[0]).toContain('disabled=""')
 })
 
 test('after the bot answers, the statuses and the actions appear', () => {
@@ -236,8 +237,7 @@ test('after the bot answers, the statuses and the actions appear', () => {
   // One free hero and no key: Home suggests a quest, and the hero can be sent.
   expect(after.html).toContain('data-next="quest"')
   expect(after.html).toContain(text.hero_send_quest)
-  open_tab('quest')
-  const quest = view().html
+  const quest = open_plan()
   expect(tagged(quest, 'data-start')[0]).not.toContain('disabled')
   expect(quest).not.toContain(text.blocker_command_pending)
 })
@@ -254,15 +254,15 @@ test('a failed bot read keeps the board and says so in place', () => {
   expect(failed.html).not.toContain('data-bot-wait')
   expect(failed.html).not.toContain('unavailable')
   expect(failed.html).not.toContain('data-status=')
-  open_tab('quest')
-  expect(tagged(view().html, 'data-start')[0]).toContain('disabled=""')
+  expect(tagged(open_plan(), 'data-start')[0]).toContain('disabled=""')
 })
 
 test('the five tabs render in order, the one on screen is the current page, and a badge counts heroes out', () => {
   load_board()
   const labels = [text.nav_home, text.nav_quest, text.nav_raid, text.nav_heroes, text.nav_market]
   const bar = tabs()
-  expect(bar).toContain(`<nav class="dapp-tabs" aria-label="${text.nav_label}">`)
+  // This is the bar of the page (the phone's bottom bar); the header mounts the same tabs with `place="bar"`.
+  expect(bar).toContain(`<nav class="dapp-tabs" data-place="page" aria-label="${text.nav_label}">`)
   expect(buttons(bar).map((markup) => markup.replace(/<[^>]*>/g, ''))).toEqual(labels)
   const current = (html: string) =>
     tagged(html, 'aria-current="page"').map((markup) => /data-tab="(\w+)"/.exec(markup)![1])
@@ -335,7 +335,8 @@ test('the header counts the keys the heroes hold and shows what the bot wallet h
   expect(chips({ ...holding({}), session: { ...holding({}).session, wallet: null } })).toBe('')
   // A bag still being read claims no key count; an unknown balance shows no figure.
   const unread = chips(holding({ phase: 'loading', sui_balance_mist: null }))
-  expect(unread).toBe('')
+  expect(unread).not.toContain('data-keys')
+  expect(unread).not.toContain('data-bot-balance')
   const read = chips(holding({ sui_balance_mist: 2_000_000_000n }))
   expect(read).toContain(`aria-label="${text.keys_chip!.replace('{count}', '3')}"`)
   expect(read).toContain('data-keys="3"')
@@ -345,6 +346,20 @@ test('the header counts the keys the heroes hold and shows what the bot wallet h
   const low = chips(holding({ sui_balance_mist: 100_000_000n }))
   expect(low).toContain('data-low="true"')
   expect(low).toContain(`title="${text.bot_balance_low}"`)
+})
+
+test('Disconnect is in the bar: it waits for every request the bot has not answered', () => {
+  const view = (dapp: Partial<DappState>): string => render_at(linked(dapp), <DappDisconnect copy={copy} />)
+  const HERO = 'hero-1'
+  const stop: DappCommand = { kind: 'stop', id: 'c1', hero_id: HERO, status: 'uncertain', error: null }
+  expect(view({ commands: { [HERO]: stop } })).toContain('disabled=""')
+  const free = view({ commands: { [HERO]: { ...stop, status: 'refused', error: 'unavailable' } } })
+  expect(free).toContain(`aria-label="${text.disconnect_action}"`)
+  expect(free).not.toContain('disabled')
+  // A page that is not connected has nothing to disconnect.
+  expect(view({ link: { phase: 'idle' } })).toBe('')
+  // It stands beside the readouts of the bar.
+  expect(render_at(linked({}), <DappChips copy={copy} locale="en" />)).toContain('data-disconnect')
 })
 
 test('an account with no hero gets the board with its first steps, and the wait of the bot is still named', () => {

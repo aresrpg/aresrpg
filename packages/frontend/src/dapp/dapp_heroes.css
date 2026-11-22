@@ -13,12 +13,29 @@
   min-height: 44px;
 }
 
-/* In the game the window floats at its own width over the world. In the page it takes the column. */
+/* In the game each tab floats over the world in a window of its own size. In the page ONE window shows
+   one tab at a time: it takes the column, and keeps one height whatever the tab, so the page does not
+   jump when the tab changes. It never stands taller than the screen leaves it. */
 .dapp-heroes-window.game-character-window {
   width: 100%;
+  height: min(780px, calc(100dvh - var(--dapp-bar, 0px) - 24px));
 }
 .dapp-heroes-window .game-character-body > .dapp-note {
   margin: auto;
+}
+/* The tab bar of the window: the shared segmented control, under the header. */
+.dapp-heroes-window > .aui-segments {
+  flex: none;
+  margin: 6px 6px 0;
+}
+.dapp-heroes-window > .aui-segments .aui-button {
+  min-width: 0;
+  min-height: 40px;
+}
+/* An unspent count is a figure beside its label. */
+.dapp-hero-actions [data-heroes-points] strong {
+  color: var(--aui-brass-hi);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The hero's 2D portrait stands where the game draws its 3D model. */
@@ -57,26 +74,13 @@
     flex: none;
     width: 640px;
   }
-}
-
-/* A wide window: from 1880px the board is 1500px wide. The equipment and the characteristics are
-   drawn for about 900px and read badly stretched, so they stand side by side, and the picker and the
-   card of the chosen hero share the first row the same way. The spells and the jobs keep the row:
-   half of it cuts the names in their lists. */
-@media (min-width: 1880px) {
-  .dapp-heroes-tab {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+  .dapp-heroes-window > .aui-segments .aui-button {
+    padding-inline: 4px;
   }
-  .dapp-heroes-tab
-    > :is(
-      h2,
-      .dapp-note,
-      .dapp-warning,
-      .dapp-heroes-empty,
-      .game-character-window--spells,
-      .game-character-window--jobs
-    ) {
-    grid-column: 1 / -1;
+  /* The bag's category row has one fixed height: its three tabs narrow, they never wrap over the search. */
+  .dapp-heroes-window .inventory-filters .chr-equip__bagtabs {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-inline: 6px;
   }
 }

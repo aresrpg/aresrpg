@@ -2,33 +2,37 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
+import { Panel } from '@aresrpg/ui'
 import { inventory_groups } from '@aresrpg/protocol/inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
-import { item_icon } from '../content/assets.ts'
 import { InventoryItemCell } from '../characters/InventoryItemCell.tsx'
 
-import { dapp_text, item_name } from './copy.ts'
+import { dapp_text } from './copy.ts'
 import type { BagGain } from './bag_feed.ts'
-import { DappItemSheet } from './DappItemSheet.tsx'
+import { DappItemRow, DappItemSheet } from './DappItemSheet.tsx'
 
-/** What entered the bag lately, newest first. The bag below stays the truth of what is held. */
+import './dapp_parts.css'
+
+/**
+ * What entered the bag lately, newest first: one row per kind, with the units gained. A row opens the
+ * item's sheet. The bag below stays the truth of what is held.
+ */
 const Feed = ({ copy, gains }: Readonly<{ copy: AppCopy; gains: readonly BagGain[] }>) => {
+  const [open, set_open] = useState<string | null>(null)
   if (!gains.length) return <p className="dapp-note">{dapp_text(copy, 'bag_feed_empty')}</p>
   return (
-    <ul className="dapp-bag-feed" aria-live="polite">
-      {gains.map(({ item_type, amount }) => {
-        const [name, icon] = [item_name(item_type), item_icon(item_type)]
-        return (
-          <li key={item_type}>
-            {icon && <img src={icon} alt="" />}
-            <span>{name}</span>
-            <strong>+{amount}</strong>
+    <>
+      <ul className="dapp-bag-feed" aria-live="polite">
+        {gains.map(({ item_type, amount }) => (
+          <li key={item_type} data-gain={item_type}>
+            <DappItemRow item_type={item_type} value={`+${amount}`} open={() => set_open(item_type)} />
           </li>
-        )
-      })}
-    </ul>
+        ))}
+      </ul>
+      {open && <DappItemSheet copy={copy} subject={{ kind: 'type', item_type: open }} close={() => set_open(null)} />}
+    </>
   )
 }
 
@@ -63,9 +67,9 @@ export const DappBag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const ready = useAppStore(({ session }) => session.agent_inventory.phase === 'ready')
   const rows = useAppStore(({ session }) => session.agent_inventory.inventory)
   return (
-    <section className="dapp-section" aria-label={dapp_text(copy, 'bag_title')}>
+    <Panel className="dapp-section dapp-bag" aria-label={dapp_text(copy, 'bag_title')}>
       <h2>{dapp_text(copy, 'bag_title')}</h2>
       {ready ? <Items copy={copy} rows={rows} /> : <p className="dapp-note">{dapp_text(copy, 'bag_loading')}</p>}
-    </section>
+    </Panel>
   )
 }

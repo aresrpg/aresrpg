@@ -5,17 +5,16 @@ import { expect, test } from '@playwright/test'
 import * as fake from '../fixtures/dapp_bot.ts'
 import * as view from '../fixtures/dapp_view.ts'
 
-const { MIRA, BRAN, NOVA, HOOD, OFFER, bot_fixture, calls_of, directs_of, hold, item, open_dapp, tree_of } = fake
-const { bottom, box, right, scroll_to_end, scroll_y, shot, local_only } = view
-const { tab, open_tab, hero, run, direct, start, fee, bot_chip, segment } = view
+const { MIRA, BRAN, NOVA, HOOD, OFFER, bot_fixture, calls_of, directs_of, sent_of, hold, item, open_dapp } = fake
+const { tree_of, pending_consent } = fake
+const { bottom, box, right, scroll_to_end, scroll_y, shot, local_only, expect_frame, open_plan } = view
+const { tab, open_tab, hero, run, direct, start, fee, bot_chip, segment, pick_place, buy_key, pick_key } = view
 const { seat, enter, short_notice, in_room, blocked_work, board, ready, team_hunt, KEY_NAME, open_key_market } = view
-type Bot = fake.Bot
 const PRICE_LINE = /\d+ classes · 10 SUI, paid by your bot/
 const UNREACHABLE = 'We could not reach your bot. Reload this page to try again.'
 const SUI = 1_000_000_000n
-/** The windows a state is captured in: its height, by its width. */
-const HEIGHTS: Readonly<Record<number, number>> = { 1920: 1080, 1280: 800, 390: 844 }
-const starts = (bot: Bot) => calls_of(bot, 'bot_start_behavior')
+const { WIDE, DESKTOP, PHONE } = view
+const starts = (bot: fake.Bot) => calls_of(bot, 'bot_start_behavior')
 
 test('the /dapp route boots the engine-less surface: Google sign-in, no renderer download', async ({ page }) => {
   await local_only(page)
@@ -30,22 +29,7 @@ test('the /dapp route boots the engine-less surface: Google sign-in, no renderer
 
 test('the bot consent redirect opens in the dapp only for the tab that started it', async ({ page }) => {
   await local_only(page)
-  await page.addInitScript(() => {
-    if (!location.search.includes('claimed')) return
-    sessionStorage.setItem(
-      'aresrpg:dapp:authorization',
-      JSON.stringify({
-        issuer: 'https://bot.fixture.invalid',
-        owner: '0xowner',
-        client_id: 'c',
-        redirect_uri: `${location.origin}/dapp`,
-        scope: 'bot:observe bot:play bot:pause',
-        state: 's',
-        verifier: 'v',
-        expires_at: Date.now() + 60_000,
-      })
-    )
-  })
+  await pending_consent(page)
   await page.goto('/world?intent=connect-agent&authorization_id=fixture-auth&claimed=1')
   await expect(page.locator('.light-page-header')).toBeVisible({ timeout: 60_000 })
   await expect(page.locator('canvas')).toHaveCount(0)
@@ -79,7 +63,10 @@ test('the board shows before the bot answers, and each wait of the bot is named'
   await expect(hero(page, MIRA)).toBeVisible()
   await expect(hero(page, MIRA)).not.toHaveAttribute('data-status')
   await expect(tab(page, 'market')).toBeDisabled()
+  // The Quest tab offers no Start before a place is picked; the plan of a place shows it closed, with the reason.
   await open_tab(page, 'quest')
+  await expect(start(page)).toHaveCount(0)
+  await pick_place(page)
   await expect(page.locator('[data-line="waiting"]')).toHaveText('Waiting for your bot to answer…')
   await expect(start(page)).toBeDisabled()
   release()
@@ -104,14 +91,12 @@ test('the board shows before the bot answers, and each wait of the bot is named'
     await open_tab(page, name)
     await expect(page.locator('.dapp-board')).not.toContainText('Waiting for your bot')
   }
-  await open_tab(page, 'quest')
+  await open_plan(page)
   await expect(page.locator('[data-line="unreachable"]')).toHaveText(UNREACHABLE)
   await expect(start(page)).toBeDisabled()
 })
 
-test('an account with no hero shows its first steps, and a hero the bot cannot pay is not offered', async ({
-  page,
-}) => {
+test('an account with no hero shows its first steps, and offers no hero its bot cannot pay', async ({ page }) => {
   const bot = bot_fixture()
   bot.heroes = []
   await board(page, bot)
@@ -133,7 +118,7 @@ test('an account with no hero shows its first steps, and a hero the bot cannot p
 test('a double click on Start sends the proposed hero only, never the next proposal too', async ({ page }) => {
   const bot = bot_fixture()
   await ready(page, bot)
-  await open_tab(page, 'quest')
+  await open_plan(page)
   await expect(start(page)).toHaveText('Send Mira')
   await start(page).dblclick()
   await expect(run(page, MIRA)).toContainText('Working', { timeout: 15_000 })
@@ -146,7 +131,7 @@ test('a raid short of keys asks first, then sends only the hero that holds one',
   const bot = bot_fixture(1)
   await ready(page, bot)
   await open_tab(page, 'raid')
-  await expect(page.locator('p[data-raid-keys]')).toHaveAttribute('data-raid-keys', '1')
+  await expect(page.locator('.dapp-raid-key')).toHaveAttribute('data-raid-keys', '1')
   await seat(page, 1, MIRA)
   await seat(page, 2, BRAN)
   await expect(page.locator(`[data-seat="1"] [data-seat-key]`)).toHaveAttribute('data-seat-key', 'held')
@@ -189,7 +174,7 @@ test('a refused purchase says why in one sentence, never a code, and buys nothin
   await expect(refused).toHaveAttribute('role', 'alert')
   await expect(page.locator('body')).not.toContainText('listing_changed')
   expect(directs_of(bot, 'market_buy')).toHaveLength(1)
-  await expect(bot_chip(page)).toContainText(/Bot: 2(\.00)? SUI/)
+  await expect(bot_chip(page)).toHaveAttribute('aria-label', /Bot: 2(\.00)? SUI/)
   await refused.getByRole('button', { name: 'Dismiss' }).click()
   await expect(direct(page)).toHaveCount(0)
   expect(starts(bot)).toEqual([])
@@ -209,7 +194,7 @@ test('a missing key is bought as the bot account, then the whole team enters', a
   expect(directs_of(bot, 'market_buy')).toHaveLength(1)
   const paid = { item_id: OFFER.id, price_mist: '500000000', max_total_mist: '550000000' }
   expect(bot.directs[0]!.action).toMatchObject(paid)
-  await expect(bot_chip(page)).toContainText('Bot: 1.45 SUI')
+  await expect(bot_chip(page)).toHaveAttribute('aria-label', 'Bot: 1.45 SUI')
   await expect(page.locator('.dapp-chip[data-keys]')).toHaveAttribute('data-keys', '2')
   await open_tab(page, 'raid')
   await expect(page.locator('[data-raid-short]')).toHaveCount(0)
@@ -258,23 +243,22 @@ test('a fight quest sends one start per picked hero, with its place, difficulty 
   const who = page.getByRole('group', { name: 'Who' })
   await expect(who.locator(`[data-hero="${MIRA}"]`)).toHaveAttribute('aria-pressed', 'true')
   await who.locator(`[data-hero="${BRAN}"]`).click()
-  await page
-    .locator('.dapp-quest-place', { hasText: /^Thebes/ })
-    .getByRole('button')
-    .first()
-    .click()
+  await pick_place(page, 'city:thebes')
   // A difficulty is a distance band: one the chosen city does not lie in offers no Start.
   await segment(page, 'Difficulty', 'Medium').click()
   await expect(page.locator('[data-unfit]')).toContainText('Thebes is not at that distance.')
   await expect(start(page)).toHaveCount(0)
   await segment(page, 'Difficulty', 'Easy').click()
-  await expect(page.locator('[data-plan="fight"]')).toContainText('Groups of 1 to 2 monsters.')
+  // The size of a group is one row of the plan; its sentence is the tooltip of that row.
+  const group = page.locator('[data-plan="fight"] [data-group="easy"]')
+  await expect(group.locator('dd')).toHaveText('1–2')
+  await expect(group).toHaveAttribute('title', /^Groups of 1 to 2 monsters\./)
   // A fee limit that cannot be read offers no Start at all.
   await fee(page).fill('abc')
   await expect(page.locator('[data-fee-cap]')).toContainText('Enter an amount of SUI above zero')
   await expect(start(page)).toHaveCount(0)
   await fee(page).fill('0.5')
-  await expect(page.locator('[data-fee-cap]')).toContainText('has paid 0.5 SUI in network fees')
+  await expect(page.locator('[data-fee-cap]')).toHaveAttribute('title', /has paid 0\.5 SUI in network fees/)
   await expect(start(page)).toHaveText('Send Mira, Bran')
   await start(page).dblclick()
   await expect(run(page, MIRA)).toContainText('Fighting with Bran', { timeout: 15_000 })
@@ -303,7 +287,9 @@ test('work it has no tool for is blocked with its reason, and auto work sends on
   const bot = bot_fixture()
   await ready(page, bot)
   await blocked_work(page)
-  await expect(page.locator('[data-tool-missing]')).toContainText('Handymen craft them.')
+  const tool = page.locator('[data-tool-missing]')
+  await expect(tool.locator('dd')).toContainText(/^No \S/)
+  await expect(tool).toHaveAttribute('title', /Handymen craft them\.$/)
   await start(page).click({ force: true })
   expect(starts(bot)).toEqual([])
   await segment(page, 'Go to work', 'Let your bot pick').click()
@@ -338,7 +324,7 @@ test('a raid seats the proposed team, enters once per hero, and stops as a team'
   expect(tree_of(bot, BRAN)).toContain(`"allies":["${MIRA}"]`)
   expect(tree_of(bot, BRAN)).toContain('"type":"dungeon_runs","op":"gte","value":3')
   await expect(tab(page, 'raid').locator('[data-badge]')).toHaveText('2')
-  await expect(page.locator('[data-raid-party][data-live]')).toContainText('Loot from cleared rooms')
+  await expect(page.locator('[data-raid-loot]')).toContainText('Loot from cleared rooms')
   await page.getByRole('button', { name: 'Stop the team' }).dblclick()
   await expect(page.locator('[data-raid-follow="result"]')).toBeVisible({ timeout: 15_000 })
   expect(bot.stops.toSorted()).toEqual([MIRA, BRAN])
@@ -349,9 +335,9 @@ test('Heroes changes gear, stats and spells by one request each, with no wallet 
   await ready(page, bot)
   await open_tab(page, 'heroes')
   const heroes = page.locator('.dapp-heroes-tab')
-  await expect(heroes.locator('[data-character-panel]')).toHaveCount(4)
-  const strength = heroes.getByRole('button', { name: 'Add a point to Strength', exact: true })
-  await expect(strength).toBeEnabled()
+  // One window, one tab at a time: it opens on Equipment.
+  await expect(heroes.locator('[data-character-panel]')).toHaveCount(1)
+  await expect(heroes.locator('[data-character-panel]')).toHaveAttribute('data-character-panel', 'equipment')
   // The bot holds the hero: nothing here moves an item between accounts, uses one or feeds a pet.
   await expect(page.getByRole('region', { name: 'Agent kiosk' })).toHaveCount(0)
   const hood = heroes.locator('.chr-equip__grid').getByRole('button', { name: /Molted Lorito Hood/ })
@@ -361,13 +347,17 @@ test('Heroes changes gear, stats and spells by one request each, with no wallet 
   await expect(direct(page)).toHaveText(/Equipment changed\./)
   const worn = { character_id: MIRA, slot: 'hat', item_id: `${HOOD}-1` }
   expect(bot.directs).toEqual([{ kind: 'equip_item', action: worn }])
-  await strength.click()
+  await segment(page, 'Mira', 'Stats').click()
+  await heroes.getByRole('button', { name: 'Add a point to Strength', exact: true }).click()
   await heroes.getByRole('button', { name: 'Confirm', exact: true }).dblclick()
   await expect(direct(page)).toHaveText(/Characteristics updated\./)
   expect(directs_of(bot, 'raise_stats')).toHaveLength(1)
   expect(bot.directs[1]!.action).toMatchObject({ character_id: MIRA, spending: { strength: 1 } })
-  const level_up = heroes.getByRole('button', { name: /^Level up spell/ })
-  await level_up.first().dblclick()
+  await segment(page, 'Mira', 'Spells').click()
+  await heroes
+    .getByRole('button', { name: /^Level up spell/ })
+    .first()
+    .dblclick()
   await expect(direct(page)).toHaveText(/Spell level raised\./)
   expect(directs_of(bot, 'raise_spell')).toHaveLength(1)
   // The pick only chooses whom to look at.
@@ -382,6 +372,7 @@ test('Heroes crafts a recipe the bag pays by one request, through the game’s o
   bot.bag = [...bot.bag, item('water', 1)]
   await ready(page, bot)
   await open_tab(page, 'heroes')
+  await segment(page, 'Mira', 'Jobs').click()
   const jobs = page.locator('[data-character-panel="jobs"]')
   // The game's own advice: the recipe this farmer levels on is marked.
   const flour = jobs.locator('.jobs__recipe[title="Wheat Flour"]')
@@ -392,8 +383,8 @@ test('Heroes crafts a recipe the bag pays by one request, through the game’s o
   await expect(water).toContainText('1 / 1')
   const craft = recipe.getByRole('button', { name: 'Craft ×1', exact: true })
   await expect(craft).toBeEnabled()
-  for (const width of [390, 1280]) {
-    await page.setViewportSize({ width, height: HEIGHTS[width]! })
+  for (const { width, height } of [PHONE, DESKTOP]) {
+    await page.setViewportSize({ width, height })
     await jobs.scrollIntoViewIfNeeded()
     await expect(craft).toBeInViewport({ ratio: 1 })
     await shot(page, 'heroes-craft', false)
@@ -435,6 +426,26 @@ test('the market lists and withdraws as the bot account, once each, and offers n
   expect(bot.watches).toBe(0)
 })
 
+// Reported 2026-11-22: the dapp's market listed nothing, because the page never asked the game server for it.
+test('the open market watches the game socket for its listings, and a closed one watches nothing', async ({ page }) => {
+  const bot = bot_fixture()
+  await ready(page, bot)
+  const watched = () => sent_of(bot, 'packet/market_observe').map(({ observation }) => observation)
+  // Off the Market tab the page watches no market: all it ever said of one is "none".
+  expect(watched().filter(Boolean)).toEqual([])
+  await open_tab(page, 'market')
+  await page.getByRole('button', { name: 'I understand' }).click()
+  await expect.poll(() => watched().at(-1)).toMatchObject({ kind: expect.any(String), request: expect.any(Number) })
+  // The item on screen is the one watched, and what the game server answers is what the market lists.
+  const market = page.locator('.dapp-market')
+  await pick_key(market)
+  await expect.poll(() => watched().at(-1)).toMatchObject({ kind: 'offers', item_type: OFFER.item_type })
+  await expect(market.locator('[data-marketplace-cheapest-lot="1"]')).toContainText('0.55')
+  // Leaving the tab ends the watch.
+  await open_tab(page, 'home')
+  await expect.poll(() => watched().at(-1)).toBeNull()
+})
+
 test('a run the bot ends by itself finishes on the page from the pushed status, with no read', async ({ page }) => {
   const bot = bot_fixture()
   await ready(page, bot)
@@ -443,10 +454,7 @@ test('a run the bot ends by itself finishes on the page from the pushed status, 
   await page.waitForLoadState('networkidle')
   const calls = bot.calls.length
   const status = { ready: true, event_fence: 1, sampled_at: performance.now(), state: 'idle', direct: null, runs: [] }
-  await page.evaluate(
-    (pushed) => (window as unknown as { push_status: (s: unknown) => void }).push_status(pushed),
-    status
-  )
+  await view.push_status(page, status)
   await expect(run(page, BRAN)).toContainText('Finished')
   expect(bot.calls).toHaveLength(calls)
 })
@@ -470,7 +478,7 @@ test('an expired grant that cannot refresh returns to Connect with an honest mes
   await ready(page, bot)
   bot.token_ok = false
   bot.refresh_ok = false
-  await open_tab(page, 'quest')
+  await open_plan(page)
   await start(page).click()
   await expect(page.getByRole('alert')).toHaveText(/connection expired/, { timeout: 15_000 })
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible()
@@ -480,34 +488,20 @@ test('an expired grant that cannot refresh returns to Connect with an honest mes
 test('disconnect revokes this page grant once and leaves the board', async ({ page }) => {
   const bot = bot_fixture()
   await ready(page, bot)
-  await page.getByRole('button', { name: 'Disconnect this page' }).dblclick()
+  await page.locator('.light-page-header [data-disconnect]').dblclick()
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible()
   await expect(page.locator('.dapp-tabs')).toHaveCount(0)
   await expect.poll(() => calls_of(bot, 'revoke').length).toBe(1)
 })
 
-for (const width of [1920, 1280, 390]) {
-  const height = HEIGHTS[width]!
-  const phone = width < 960
-
+for (const { width, height, phone } of [WIDE, DESKTOP, PHONE]) {
   test(`every tab, the create sheet and a blocked start fit ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height })
     const bot = bot_fixture(1)
     bot.balance = 12n * SUI
     await ready(page, bot)
     await shot(page, 'home')
-    const [header, row, layout] = [
-      await box(page.locator('.light-page-header')),
-      await box(page.locator('.dapp-tabs')),
-      await box(page.locator('.dapp-layout')),
-    ]
-    if (!phone) {
-      // The bar keeps its own centred width; the tabs and the board take the window around it.
-      expect(Math.abs(header.x - (width - right(header)))).toBeLessThanOrEqual(1)
-      expect(header.width).toBeLessThanOrEqual(1120)
-      expect(row.x).toBeLessThanOrEqual(header.x)
-      expect(right(layout)).toBeGreaterThanOrEqual(right(header))
-    }
+    const row = await expect_frame(page)
     // The page ends above the tab bar: its last row is never under it.
     await scroll_to_end(page)
     if (phone) expect(bottom(await box(page.locator('.dapp-layout')))).toBeLessThanOrEqual(row.y)
@@ -522,9 +516,12 @@ for (const width of [1920, 1280, 390]) {
     await open_tab(page, 'quest')
     await expect.poll(() => scroll_y(page)).toBe(0)
     await shot(page, 'quest')
-    // On one column the Start comes before the places; beside them it stays in view.
-    const send = await box(start(page))
-    if (phone) expect(bottom(send)).toBeLessThan((await box(page.locator('[data-place="here"]'))).y)
+    // The plan of a place opens at its entry: under it on one column, beside it otherwise.
+    await pick_place(page)
+    const [entry, plan] = [await box(view.place(page, 'here')), await box(page.locator('[data-plan="fight"]'))]
+    expect(phone ? plan.y >= bottom(entry) : plan.x >= right(entry)).toBe(true)
+    await expect(start(page)).toBeInViewport()
+    await shot(page, 'quest-plan')
     const quest_fee = await box(fee(page))
     await blocked_work(page)
     await shot(page, 'quest-blocked-start')
@@ -541,11 +538,14 @@ for (const width of [1920, 1280, 390]) {
     await shot(page, 'raid-short-notice')
     await short_notice(page).getByRole('button', { name: 'Cancel' }).click()
     await open_tab(page, 'heroes')
-    await expect(page.getByRole('button', { name: /^Level up spell/ }).first()).toBeVisible()
     await shot(page, 'heroes')
-    for (const panel of ['equipment', 'stats', 'spells', 'jobs']) {
-      await page.locator(`[data-character-panel="${panel}"]`).scrollIntoViewIfNeeded()
-      await shot(page, `heroes-${panel}`, false)
+    // One window: each of its four tabs is drawn in it, one at a time.
+    for (const name of ['Equipment', 'Stats', 'Spells', 'Jobs']) {
+      await segment(page, 'Mira', name).click()
+      const panel = page.locator(`[data-character-panel="${name.toLowerCase()}"]`)
+      await panel.scrollIntoViewIfNeeded()
+      await expect(panel.locator('.game-character-body > .dapp-note')).toHaveCount(0)
+      await shot(page, `heroes-${name.toLowerCase()}`, false)
     }
     await open_tab(page, 'market')
     await expect(page.getByRole('button', { name: 'I understand' })).toBeVisible()
@@ -560,7 +560,7 @@ for (const width of [1920, 1280, 390]) {
     if (phone) expect(bottom(await box(page.locator('.dapp-layout')))).toBeLessThanOrEqual(row.y)
     // An offer and its Buy are inside the window: nothing of the market is out of reach.
     await open_tab(page, 'raid')
-    await page.getByRole('button', { name: `Find ${KEY_NAME} on the market` }).click()
+    await buy_key(page).click()
     const buy = page.locator('[data-marketplace-cheapest-lot="1"]').getByRole('button', { name: 'Buy' })
     await buy.scrollIntoViewIfNeeded()
     await expect(buy).toBeInViewport({ ratio: 1 })
@@ -576,8 +576,7 @@ for (const width of [1920, 1280, 390]) {
     await page.setViewportSize({ width, height })
     const bot = bot_fixture(1)
     await ready(page, bot)
-    await open_tab(page, 'quest')
-    await start(page).scrollIntoViewIfNeeded()
+    await open_plan(page)
     await start(page).click()
     // The answer to a Start is on screen: the hero that is out heads the tab, above the setup.
     await expect(run(page, MIRA)).toBeInViewport({ timeout: 15_000 })
@@ -586,7 +585,7 @@ for (const width of [1920, 1280, 390]) {
     // A toast stands above the tab bar, never on it.
     const toasts = page.locator('[data-toasts]')
     await expect(toasts).toBeVisible({ timeout: 15_000 })
-    if (phone) expect(bottom(await box(toasts))).toBeLessThanOrEqual((await box(page.locator('.dapp-tabs'))).y)
+    if (phone) expect(bottom(await box(toasts))).toBeLessThanOrEqual((await box(page.locator('.dapp-tabs:visible'))).y)
     await shot(page, 'quest-run')
     await open_tab(page, 'raid')
     await seat(page, 1, BRAN)

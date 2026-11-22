@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { lazy, Suspense, useMemo } from 'react'
+import { CarvedIcon, GameWindow } from '@aresrpg/ui'
 
+import { HUD_PAGE_META } from '../game/hud/hud_pages.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
 import { MarketSourceContext } from '../marketplace/MarketSource.tsx'
@@ -11,6 +13,8 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { dapp_text } from './copy.ts'
 import { bot_market } from './market.ts'
 import type { DappInput } from './state.ts'
+
+import './dapp_market.css'
 
 const MarketplacePage = lazy(() => import('../marketplace/MarketplacePage.tsx'))
 
@@ -34,9 +38,13 @@ export const market_input = (input: MarketplaceInput, id: string): DappInput | M
 }
 const trade = (input: MarketplaceInput): void => dispatch_app(market_input(input, crypto.randomUUID()))
 
+/** The game's own market window: its title, its icon and the class its whole look is written under. */
+const WINDOW = HUD_PAGE_META.marketplace
+
 /**
- * The game's marketplace, trading as the bot account: its bag, balance and listings. It opens on the
- * panel the page was asked for. What became of a request shows in the page's one notice block.
+ * The game's marketplace in the game's own market window, trading as the bot account: its bag, balance
+ * and listings. It opens on the panel the page was asked for. What became of a request shows in the
+ * page's one notice block.
  */
 export const DappMarket = ({ copy, locale }: Readonly<{ copy: AppCopy; locale: Locale }>) => {
   const account = useAppStore(({ session }) => session.agent_inventory)
@@ -51,9 +59,20 @@ export const DappMarket = ({ copy, locale }: Readonly<{ copy: AppCopy; locale: L
   return (
     <section className="dapp-market" aria-label={dapp_text(copy, 'nav_market')}>
       <MarketSourceContext.Provider value={source}>
-        <Suspense fallback={<p className="dapp-note">{dapp_text(copy, 'loading')}</p>}>
-          <MarketplacePage copy={copy} locale={locale} />
-        </Suspense>
+        {/* The frame of `GamePageWindow`, laid in the page: the market's styles are scoped to its classes. */}
+        <GameWindow
+          className={`aui-feature-port aui-live-page ${WINDOW.class_name}`}
+          title={copy[WINDOW.label]}
+          icon={<CarvedIcon name={WINDOW.icon} />}
+          close={null}
+          close_label={dapp_text(copy, 'close')}
+        >
+          <div className="aui-live-page-content aui-workspace-main">
+            <Suspense fallback={<p className="dapp-note">{dapp_text(copy, 'loading')}</p>}>
+              <MarketplacePage copy={copy} locale={locale} />
+            </Suspense>
+          </div>
+        </GameWindow>
       </MarketSourceContext.Provider>
     </section>
   )

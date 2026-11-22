@@ -39,12 +39,29 @@ export const DappMarketLink = ({
   copy,
   item_type,
   on_open,
-}: Readonly<{ copy: AppCopy; item_type: string; on_open?: () => void }>) => {
-  const unsold = useAppStore(({ marketplace }) => nobody_sells(marketplace.floor, item_type))
+  label,
+  tone,
+  checks = true,
+}: Readonly<{
+  copy: AppCopy
+  item_type: string
+  on_open?: () => void
+  /** A short call to action where the item is already named beside it; the full sentence otherwise. */
+  label?: string
+  tone?: 'primary'
+  /**
+   * False where several links stand on one screen. The market reads one item's floor at a time, so only
+   * a link that stands alone may ask it whether anybody sells: two links asking gave one of them a
+   * "nobody sells" the other never got. A link that does not ask always opens the market.
+   */
+  checks?: boolean
+}>) => {
+  const unsold = useAppStore(({ marketplace }) => checks && nobody_sells(marketplace.floor, item_type))
   useEffect(() => {
+    if (!checks) return
     dispatch_app({ type: 'market/floor_selected', item_type })
     return () => dispatch_app({ type: 'market/floor_selected', item_type: null })
-  }, [item_type])
+  }, [item_type, checks])
   const listing = market_listing(item_type)
   const item = item_name(item_type)
   if (!listing || unsold)
@@ -56,6 +73,7 @@ export const DappMarketLink = ({
   return (
     <Button
       className="dapp-market-link"
+      tone={tone}
       data-market-link="listed"
       onClick={() => {
         dispatch_app({ type: 'market/group_selected', ...listing })
@@ -63,7 +81,7 @@ export const DappMarketLink = ({
         on_open?.()
       }}
     >
-      {dapp_text(copy, 'key_find', { item })}
+      {label ?? dapp_text(copy, 'key_find', { item })}
     </Button>
   )
 }

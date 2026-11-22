@@ -55,7 +55,17 @@ export type BehaviorAction =
     }>
 export type BehaviorFact = Readonly<{
   type:
-    'level' | 'job_level' | 'quantity' | 'hp' | 'max_hp' | 'hp_percent' | 'custody' | 'ambush' | 'fight' | 'dungeon_run'
+    | 'level'
+    | 'job_level'
+    | 'quantity'
+    | 'hp'
+    | 'max_hp'
+    | 'hp_percent'
+    | 'fight_minutes'
+    | 'custody'
+    | 'ambush'
+    | 'fight'
+    | 'dungeon_run'
   character_id: string
   key?: string
 }>

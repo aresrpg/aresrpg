@@ -33,7 +33,8 @@ export const fee_valid = (typed: string | null, cap: string | null): boolean => 
 
 /**
  * The optional fee limit of one hero's run, in SUI. The text as typed is the caller's view state; only
- * a limit that can be read reaches `pick`, so the stored limit is always a valid one.
+ * a limit that can be read reaches `pick`, so the stored limit is always a valid one. What a limit
+ * means is the field's tooltip and its text for assistive technology: the field itself is one row.
  */
 export const DappFeeCap = ({
   copy,
@@ -57,8 +58,10 @@ export const DappFeeCap = ({
     const next = fee_entry(value)
     if (next.valid) pick(next.cap)
   }
+  const meaning =
+    entry.valid && entry.cap !== null ? dapp_text(copy, 'fee_cap_hint', { amount: fee_text(entry.cap) }) : undefined
   return (
-    <div className="dapp-fee-cap" data-fee-cap={entry.valid ? 'valid' : 'invalid'}>
+    <div className="dapp-fee-cap" data-fee-cap={entry.valid ? 'valid' : 'invalid'} title={meaning}>
       <Field
         label={`${dapp_text(copy, 'fee_cap')} (SUI)`}
         error={entry.valid ? undefined : dapp_text(copy, 'fee_cap_invalid')}
@@ -73,9 +76,7 @@ export const DappFeeCap = ({
           onChange={(event) => enter(event.target.value)}
         />
       </Field>
-      {entry.valid && entry.cap !== null && (
-        <p className="dapp-note">{dapp_text(copy, 'fee_cap_hint', { amount: fee_text(entry.cap) })}</p>
-      )}
+      {meaning && <p className="aui-sr">{meaning}</p>}
     </div>
   )
 }

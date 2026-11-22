@@ -11,7 +11,7 @@ import * as zustand from 'zustand'
 
 import { content_catalog } from '../../src/content/catalog.ts'
 import { DappCreateHero, DappCreateSheet, create_blocker } from '../../src/dapp/DappCreateHero.tsx'
-import { DappDisconnect, DappHome, quest_inputs, seat_inputs, team_inputs } from '../../src/dapp/DappHome.tsx'
+import { DappHome, quest_inputs, seat_inputs, team_inputs } from '../../src/dapp/DappHome.tsx'
 import type { DappAccount } from '../../src/dapp/account.ts'
 import { item_name } from '../../src/dapp/copy.ts'
 import type { DirectRequest } from '../../src/dapp/direct.ts'
@@ -77,7 +77,7 @@ const block = (html: string, attribute: string, tag: string): string => {
 const next_panel = (html: string): string => block(html, 'data-next=', 'section')
 const hero_card = (html: string, id: string): string => block(html, `data-hero="${id}"`, 'section')
 /** A key of this page's copy printed as itself means the key has no sentence. */
-const RAW_KEY = /\b(next|hero|step|add_hero|create|welcome|fees|status|position|blocker)_[a-z_]+/
+const RAW_KEY = /\b(home|next|hero|step|add_hero|create|welcome|fees|sui|status|position|blocker)_[a-z_]+/
 
 const SPEC: StartSpec = { activity: 'train', hero_ids: [HERO], place: null, difficulty: null, fee_cap_mist: null }
 const running = (overrides: Partial<DappPosition> = {}): DappPosition => ({
@@ -216,7 +216,12 @@ test('each other next step renders its one action', () => {
   expect(quest).toContain('data-next="quest"')
   // The strongest free hero is the one named.
   expect(words(quest)).toContain('Okami is free')
-  expect(quest).toContain('<img class="dapp-portrait"')
+  // The picture, then the sentence, then the action in a row of its own under them.
+  const order = ['<img class="dapp-portrait"', 'dapp-next-text', 'dapp-next-actions', '<button'].map((part) =>
+    quest.indexOf(part)
+  )
+  expect(order[0]).toBeGreaterThan(0)
+  expect(order).toEqual(order.toSorted((left, right) => left - right))
   expect(buttons(quest)).toHaveLength(1)
   expect(button(quest, text.next_quest_action!)).toBeDefined()
 
@@ -238,6 +243,9 @@ test('an empty account shows three steps and only the current one has a button',
   expect(html).not.toContain('data-next=')
   expect(html).not.toContain('data-hero=')
   expect(words(html)).toContain(text.welcome_title)
+  // One heading: the welcome stands in for "What to do now".
+  expect(html.match(/<h1/g)).toHaveLength(1)
+  expect(words(html)).not.toContain(text.home_title)
   const steps = html.match(/<li class="aui-panel dapp-step".*?<\/li>/gs) ?? []
   expect(steps).toHaveLength(3)
   const [create, quest, raid] = steps
@@ -351,27 +359,23 @@ test('a button of Home fills a pick and opens its tab; it starts nothing', () =>
 test('Home holds the heroes with their count, the tile of a new hero, the bag and the fees the bot paid', () => {
   const account = account_fixture({ characters: [mira, okami], items: KEYS })
   const html = home(answered({ observation: observation_fixture({ fees_mist: '12345678' }) }, account))
+  expect(html).toContain(`<div class="dapp-home"><h1>${text.home_title}</h1>`)
   expect(html).toContain(`<h2>${text.heroes_title}</h2><span class="dapp-note">2</span>`)
   expect(html.match(/data-hero=/g)).toHaveLength(2)
   // The roster cap of a bot account is not a verified fact: the count stands alone.
   expect(words(html)).not.toMatch(/2 of \d/)
   expect(words(block(html, 'dapp-create-tile', 'section'))).toContain(text.add_hero_title)
   expect(html).toContain(`aria-label="${text.bag_title}"`)
-  expect(html).toContain('data-wallet-fees="">Fees your bot paid in all: 0.012 SUI</p>')
+  // The tile of a new hero is one cell of the heroes' grid, after the cards.
+  expect(html.indexOf('dapp-create-tile')).toBeGreaterThan(html.lastIndexOf('data-hero='))
+  expect(block(html, 'dapp-home-heroes', 'footer')).not.toContain('dapp-create-tile')
+  // The fees are a label and its figure, not a sentence.
+  expect(html).toContain(
+    `<dl class="dapp-ledger" data-wallet-fees=""><div><dt>${text.fees_wallet_label}</dt><dd>0.012 SUI</dd></div></dl>`
+  )
   expect(html).not.toContain('<canvas')
+  expect(words(html)).not.toMatch(RAW_KEY)
 
   // A bot that reports no fee says nothing about fees.
   expect(home(answered({}, account))).not.toContain('data-wallet-fees')
-})
-
-test('Disconnect waits for every request the bot has not answered', () => {
-  const view = (dapp: Partial<DappState>): string => render(<DappDisconnect copy={copy} />, answered(dapp))
-  const stop: DappCommand = { kind: 'stop', id: 'c1', hero_id: HERO, status: 'uncertain', error: null }
-  expect(button(view({ commands: { [HERO]: stop } }), text.disconnect_action!)).toContain('disabled=""')
-  expect(button(view({ direct: request({ status: 'accepted' }) }), text.disconnect_action!)).toContain('disabled=""')
-  const free = view({ commands: { [HERO]: { ...stop, status: 'refused', error: 'unavailable' } } })
-  expect(button(free, text.disconnect_action!)).not.toContain('disabled')
-  expect(free).toContain(escaped(text.disconnect_body!))
-  // Home ends with it.
-  expect(button(home(answered()), text.disconnect_action!)).toBeDefined()
 })

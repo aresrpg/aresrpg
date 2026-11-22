@@ -21,6 +21,17 @@ export type CombatStep =
       position?: 'best_damage'
       target: 'nearest_enemy' | 'lowest_hp_enemy' | 'highest_damage_enemy'
     }>
+  /** The most damaging legal action among the weapon and every spell the hero has learned, whatever
+   * its class: a profile that names no spell still fights with all of them. `repeat` spends the turn's
+   * remaining action points on further attacks. */
+  | Readonly<{
+      type: 'attack'
+      position?: 'best_damage'
+      target: 'nearest_enemy' | 'lowest_hp_enemy' | 'highest_damage_enemy'
+      repeat?: true
+    }>
+  /** Every learned spell that strengthens the hero itself and is not in effect yet, each once. */
+  | Readonly<{ type: 'boost' }>
   | Readonly<{ type: 'move'; direction: 'retreat' | 'approach' }>
 export type CombatCondition =
   | Readonly<{ type: 'always' }>
@@ -28,6 +39,8 @@ export type CombatCondition =
   | Readonly<{ type: 'enemy_within'; cells: number }>
   | Readonly<{ type: 'ally_present' }>
   | Readonly<{ type: 'ally_hp_below'; percent: number }>
+  /** The hero has hit no enemy yet this turn: for what is worth doing only when no attack landed. */
+  | Readonly<{ type: 'no_hit_yet' }>
 export type CombatProfile = Readonly<{
   version: '1'
   intent: string
@@ -53,6 +66,16 @@ const step_schema: Schema = {
       ...object_schema({ type: { const: 'strike' }, target: enemy_target, position: { const: 'best_damage' } }),
       required: ['type', 'target'],
     },
+    {
+      ...object_schema({
+        type: { const: 'attack' },
+        target: enemy_target,
+        position: { const: 'best_damage' },
+        repeat: { const: true },
+      }),
+      required: ['type', 'target'],
+    },
+    object_schema({ type: { const: 'boost' } }),
     object_schema({ type: { const: 'move' }, direction: choices('retreat', 'approach') }),
   ],
 }
@@ -60,6 +83,7 @@ const percent: Schema = { type: 'integer', minimum: 1, maximum: 100 }
 const condition_schema: Schema = {
   oneOf: [
     object_schema({ type: { const: 'always' } }),
+    object_schema({ type: { const: 'no_hit_yet' } }),
     object_schema({ type: { const: 'hp_below' }, percent }),
     object_schema({ type: { const: 'ally_present' } }),
     object_schema({ type: { const: 'ally_hp_below' }, percent }),
@@ -80,8 +104,8 @@ export const COMBAT_PROFILE_SCHEMA = object_schema({
   rules: { type: 'array', minItems: 1, items: object_schema({ when: condition_schema, combo: nonempty }) },
   fallback: choices('end_turn', 'awaiting_ai'),
 })
-const casts = (profile: CombatProfile) =>
-  profile.combos.flatMap(({ steps }) => steps.filter((step) => step.type === 'cast'))
+const casts = (profile: CombatProfile): readonly Cast[] =>
+  profile.combos.flatMap(({ steps }) => steps.flatMap((step) => (step.type === 'cast' ? [step] : [])))
 const spell_names = (steps: readonly Cast[]): readonly string[] => [...new Set(steps.map(({ spell }) => spell))]
 /** The spells whose absence stops the hero: every cast not marked `if_learned`. */
 const required_spells = (profile: CombatProfile) => spell_names(casts(profile).filter((step) => !step.if_learned))

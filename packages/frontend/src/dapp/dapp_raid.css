@@ -2,15 +2,18 @@
 /* The Raid tab: setup, followed raids and their results.
    Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
 
-.dapp-raid,
-.dapp-raid-setup,
-.dapp-raid-follow {
+/* The tab lays itself out by its own width, whatever stands beside it on the page. */
+.dapp-raid {
+  container: dapp-raid / inline-size;
   display: grid;
   gap: 16px;
   min-width: 0;
 }
+.dapp-raid-setup,
 .dapp-raid-follow {
-  gap: 10px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
 }
 
 /* A title with its one action on the same wrapping row. */
@@ -25,7 +28,8 @@
   flex: 1 1 220px;
   min-width: 0;
 }
-.dapp-raid-bar h3 {
+.dapp-raid-bar h3,
+.dapp-raid-block h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 800;
@@ -37,23 +41,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Setup: who and where on the left, the plan on the right. One column on a phone. */
+/* Two columns: who and where on the left, what it brings and costs on the right. One on a phone. */
 .dapp-raid-split,
 .dapp-raid-column {
   display: grid;
   gap: 12px;
   align-items: start;
+  align-content: start;
   min-width: 0;
 }
-@media (min-width: 960px) {
+@container dapp-raid (min-width: 720px) {
   .dapp-raid-split {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
     gap: 16px;
   }
-  .dapp-raid-plan {
-    position: sticky;
-    top: 16px;
+  /* A raid with nothing to show beside it keeps one column. */
+  .dapp-raid-split:has(> .dapp-raid-column:empty) {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+.dapp-raid-column:empty {
+  display: none;
 }
 .dapp-raid-panel,
 .dapp-raid-party {
@@ -69,14 +77,37 @@
   gap: 6px;
   min-width: 0;
 }
-.dapp-raid-block h4 {
+.dapp-raid-block h4,
+.dapp-raid-runs h4 {
   margin: 0;
   color: var(--aui-soft);
   font-size: 13px;
   font-weight: 800;
 }
+/* In a panel of the tab, a hint is a quiet line under what it explains. */
+.dapp-raid-panel .dapp-note,
+.dapp-raid-party .dapp-note {
+  font-size: 13px;
+}
+/* The runs: their label and their choices on one row, sized to what they say; the hint under them. */
+.dapp-raid-runs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-width: 0;
+}
+.dapp-raid-runs .aui-segments .aui-button {
+  flex: none;
+  min-width: 44px;
+  white-space: nowrap;
+}
+.dapp-raid-runs .dapp-note {
+  flex: 1 1 100%;
+}
 
-/* Dungeon picker: one pressed-or-not button per dungeon, its boss above its name. */
+/* Dungeon picker: one pressed-or-not card per dungeon, its boss above its name. */
 .dapp-raid-dungeons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
@@ -86,6 +117,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 4px;
+  font-size: 13px;
+  line-height: 1.15;
   text-align: center;
   overflow-wrap: anywhere;
 }
@@ -93,6 +126,25 @@
   width: 48px;
   height: 48px;
   object-fit: contain;
+}
+
+/* The key line: the key and how many are held, sized to what it says; with none, the ways to one. */
+.dapp-raid-key,
+.dapp-raid-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.dapp-raid-key .aui-button.dapp-row {
+  width: auto;
+  max-width: 100%;
+}
+.dapp-raid-key .dapp-row-name {
+  flex: 0 1 auto;
+}
+.dapp-raid-key .dapp-row-value {
+  font-weight: 800;
 }
 
 /* The board: the seats of one fight side, three to a row. */
@@ -136,33 +188,65 @@
   font-weight: 700;
 }
 
-/* Rooms and the level of their monsters. */
-.dapp-raid-levels {
-  display: grid;
-  margin: 0;
-  border-top: 1px solid var(--aui-line);
-}
-.dapp-raid-levels div {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2px 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--aui-line);
-}
-.dapp-raid-levels dt {
-  color: var(--aui-muted);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.dapp-raid-levels dd {
-  margin: 0 0 0 auto;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
+/* The way to a dungeon's whole drop table: a link under the short list, not one more row. */
+.aui-button.dapp-raid-more {
+  justify-self: start;
+  padding-inline: 2px;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  color: var(--aui-brass-hi);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-/* A team short of keys: what it lacks and the two ways to get it. */
+/* The plan's ledger is the shared one. Its travel row may hold one line per walker, each with its potion. */
+.dapp-raid-caps {
+  display: grid;
+  min-width: 0;
+}
+[data-raid-travel] dd {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+[data-raid-travel] small {
+  color: var(--aui-muted);
+  font: 400 12px/1.3 var(--aui-font);
+}
+.dapp-raid-walker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 8px;
+}
+/* The fee limit closes the ledger as one more row: its name, then its field. */
+.dapp-raid-caps > .dapp-fee-cap {
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--aui-line);
+}
+.dapp-raid-caps > .dapp-fee-cap .aui-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.dapp-raid-caps > .dapp-fee-cap .aui-field > span:first-child {
+  font-size: 13px;
+}
+.dapp-raid-caps > .dapp-fee-cap .aui-input {
+  flex: 0 1 220px;
+}
+.dapp-raid-caps > .dapp-fee-cap .aui-error {
+  flex-basis: 100%;
+}
+
+/* A team short of keys: what it lacks and, unless the key line shows them, the two ways to get it. */
 .dapp-raid-short {
   display: grid;
   gap: 8px;
@@ -172,21 +256,14 @@
   background: var(--aui-sunk);
   overflow-wrap: anywhere;
 }
-.dapp-raid-actions,
 .dapp-raid-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-}
-.dapp-raid-foot {
   justify-content: flex-end;
+  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--aui-line);
-}
-.dapp-raid-foot > p {
-  flex: 1 1 200px;
-  margin: 0;
 }
 .dapp-raid-foot img {
   width: 24px;
@@ -195,11 +272,12 @@
   image-rendering: pixelated;
 }
 
-/* A followed raid: its dungeon, where the team stands, and one run card per hero. */
+/* A followed raid: its dungeon and where the team stands; the run cards of a team, two to a row. */
 .dapp-raid-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: 10px;
+  gap: 12px 16px;
+  align-items: start;
 }
 .dapp-raid-party[data-live] {
   border-color: var(--aui-line-strong);
@@ -249,22 +327,35 @@
   gap: 2px 12px;
   overflow-wrap: anywhere;
 }
-
-/* A finished raid: how it went, then what it brought back. */
-.dapp-raid-result {
+/* Stop, then what it does and does not do. */
+.dapp-raid-stop {
   display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
+  justify-items: start;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--aui-line);
+}
+
+/* A finished raid: its boss, how it went, and where. */
+.dapp-raid-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .dapp-raid-result img {
-  width: 72px;
-  height: 72px;
+  flex: none;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 .dapp-raid-party[data-verdict='lost'] .dapp-raid-result img {
   filter: grayscale(1);
   opacity: 0.6;
+}
+.dapp-raid-result div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 .dapp-raid-result h3 {
   font-family: var(--aui-font-display);
@@ -280,11 +371,6 @@
   color: var(--aui-muted);
   font-size: 13px;
 }
-.aui-panel .dapp-raid-keys {
-  margin: 0;
-  color: var(--aui-soft);
-  font-variant-numeric: tabular-nums;
-}
 
 /* Every action of the tab is a 44px target, sized to its label. Sheets and questions open outside the
    tab, in the page's top layer: their buttons take the shared touch size. */
@@ -293,6 +379,9 @@
 .dapp-raid-dungeons .aui-button,
 .dapp-raid-actions .aui-button,
 .dapp-raid-foot .aui-button,
+.dapp-raid-stop .aui-button,
+.aui-button.dapp-raid-more,
+.dapp-raid-walker .aui-button,
 .dapp-raid .aui-segments .aui-button {
   min-height: 44px;
 }

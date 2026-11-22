@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { Button, Panel } from '@aresrpg/ui'
 import type { CharacterRow } from '@aresrpg/protocol'
+import { UserPlus } from 'lucide-react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
@@ -17,15 +18,7 @@ import { DappCreateHero } from './DappCreateHero.tsx'
 import { DappHeroCard, HeroPortrait } from './DappHeroCard.tsx'
 import { next_step, proposed_dungeon, proposed_team, type NextStep } from './next_step.ts'
 import { dungeon_rooms, key_sources } from './places.ts'
-import {
-  commands_unresolved,
-  hero_command,
-  hero_hosted,
-  hero_status,
-  running_position,
-  type DappInput,
-  type DappState,
-} from './state.ts'
+import { hero_command, hero_hosted, hero_status, running_position, type DappInput, type DappState } from './state.ts'
 import { raid_able, RAID_TEAM } from './strategies.ts'
 
 import './dapp_home.css'
@@ -145,7 +138,7 @@ const STEP_VIEWS: StepViews = {
   }),
 }
 
-/** The one thing to do next, with its one action. */
+/** The one thing to do next: its picture, its sentence, and its one action under them. */
 const NextPanel = ({ seen, step }: Readonly<{ seen: Seen; step: NextStep }>) => {
   const view = STEP_VIEWS[step.kind] as (step: NextStep, seen: Seen) => StepView
   const { title, body, art, action } = view(step, seen)
@@ -159,9 +152,11 @@ const NextPanel = ({ seen, step }: Readonly<{ seen: Seen; step: NextStep }>) => 
         <p>{body}</p>
       </div>
       {action && (
-        <Button tone="primary" onClick={() => send(action.inputs)}>
-          {action.label}
-        </Button>
+        <div className="dapp-next-actions">
+          <Button tone="primary" onClick={() => send(action.inputs)}>
+            {action.label}
+          </Button>
+        </div>
       )}
     </Panel>
   )
@@ -183,8 +178,13 @@ const Heroes = ({ copy, locale, seen }: Props & Readonly<{ seen: Seen }>) => {
           <DappHeroCard key={hero.id} copy={copy} hero={hero} actions={hero_actions(seen, hero)} />
         ))}
         <Panel className="dapp-create-tile" aria-label={text('add_hero_title')}>
-          <h3>{text('add_hero_title')}</h3>
-          <DappCreateHero copy={copy} locale={locale} />
+          <span className="dapp-portrait dapp-create-mark" aria-hidden="true">
+            <UserPlus size={24} />
+          </span>
+          <div className="dapp-create-tile-text">
+            <h3>{text('add_hero_title')}</h3>
+            <DappCreateHero copy={copy} locale={locale} />
+          </div>
         </Panel>
       </div>
     </section>
@@ -239,22 +239,19 @@ const Onboarding = ({ copy, locale, seen: { text, dapp, account } }: Props & Rea
   )
 }
 
-/** Ends the page's bot access on request. Signing out ends it too, so no token stays on the device. */
-export const DappDisconnect = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const blocked = useAppStore(({ dapp }) => commands_unresolved(dapp))
-  return (
-    <section className="dapp-disconnect">
-      <p className="dapp-note">{dapp_text(copy, 'disconnect_body')}</p>
-      <Button disabled={blocked} onClick={() => dispatch_app({ type: 'dapp/disconnect' })}>
-        {dapp_text(copy, 'disconnect_action')}
-      </Button>
-    </section>
-  )
-}
+/** What the bot wallet paid in network fees, in all: one label and its figure. */
+const WalletFees = ({ label, amount }: Readonly<{ label: string; amount: string }>) => (
+  <dl className="dapp-ledger" data-wallet-fees="">
+    <div>
+      <dt>{label}</dt>
+      <dd>{amount}</dd>
+    </div>
+  </dl>
+)
 
 /**
  * Home: the one next step and every hero with what it can be asked, or the first steps of an account
- * with no hero. Below them, the bot's own things: its bag, the fees it paid and this page's access.
+ * with no hero. Below them, the bot's own things: its bag and the fees it paid.
  * Every figure is a fact of the game or a value the bot measured.
  */
 export const DappHome = ({ copy, locale }: Props) => {
@@ -268,6 +265,7 @@ export const DappHome = ({ copy, locale }: Props) => {
     <div className="dapp-home">
       {account.characters.length > 0 && (
         <>
+          <h1>{text('home_title')}</h1>
           {step && <NextPanel seen={seen} step={step} />}
           <Heroes copy={copy} locale={locale} seen={seen} />
         </>
@@ -277,11 +275,11 @@ export const DappHome = ({ copy, locale }: Props) => {
       )}
       <DappBag copy={copy} />
       {fees !== null && (
-        <p className="dapp-note" data-wallet-fees="">
-          {text('fees_wallet', { amount: fees_paid(locale, fees) })}
-        </p>
+        <WalletFees
+          label={text('fees_wallet_label')}
+          amount={text('sui_amount', { amount: fees_paid(locale, fees) })}
+        />
       )}
-      <DappDisconnect copy={copy} />
     </div>
   )
 }

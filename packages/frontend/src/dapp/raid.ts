@@ -24,8 +24,6 @@ export const raid_text =
 
 /** Drop rows a raid block lists before the dungeon's full table: one screen of a phone. */
 export const RAID_DROPS_SHOWN = 6
-/** Drop rows of the room a team meets next: the mockup's four. */
-export const NEXT_DROPS_SHOWN = 4
 
 /** The monster a dungeon is hunted for: the one of its last room the seed marks as a boss. */
 export const dungeon_boss = ({ rooms }: SeedDungeon): SeedMob | null =>

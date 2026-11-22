@@ -59,8 +59,8 @@ export const reduce_market_prices = (state: AppState, input: AppInput): AppState
 }
 
 export const market_price_subscription = (state: AppState, previous: AppState): ClientPacket | null => {
-  const open = state.navigation.page === 'marketplace'
-  const was_open = previous.navigation.page === 'marketplace'
+  const { open } = state.marketplace
+  const was_open = previous.marketplace.open
   if (state.session.link_status !== 'ready' || (!open && !was_open)) return null
   const changed = open !== was_open || state.marketplace.prices.observation !== previous.marketplace.prices.observation
   if (previous.session.link_status === 'ready' && !changed) return null

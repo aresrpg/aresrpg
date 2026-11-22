@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// A deterministic stand-in for the hosted bot's OAuth and MCP surface, and for the game server's push
-// of the bot account. It is never a real service: every request to it is answered inside the browser test.
-import { test, type Page, type Route } from '@playwright/test'
+// A deterministic stand-in for the hosted bot's OAuth and MCP surface, for the game server's push of the
+// bot account, and for the game server's socket of the page. It is never a real service: every request
+// and every packet is answered inside the browser test.
+import { test, type Page, type Route, type WebSocketRoute } from '@playwright/test'
 
 export const BOT = 'https://bot.fixture.invalid'
 const OWNER = '0xd41c7cbc0cbccb9e7ab701373f3b5f082cc0024098f2ab561ff342107b91491f'
@@ -27,6 +28,10 @@ type Item = Readonly<{
   kiosk: string
 }>
 type Listing = Item & Readonly<{ kind: 'item'; price_mist: string; seller: string; at_ms: number }>
+/** A public offer: a listing of another account, in the lot the market groups it by. */
+type Offer = Listing & Readonly<{ group_key: string }>
+/** One packet of the game socket, either way. */
+export type Packet = Readonly<Record<string, unknown> & { type: string }>
 type Worn = Omit<Item, 'kiosk' | 'version'> & Readonly<{ slot: string }>
 /** Seed facts of the items the stand-in bag can hold (seed/content/items.json). */
 const ITEMS: Readonly<Record<string, Pick<Item, 'name' | 'category' | 'level'>>> = {
@@ -75,6 +80,22 @@ export type Bot = {
   refusal: string | null
   /** The bot account's one direct command, as the real bot observes it. */
   direct: unknown
+  /** The public offers of the dungeon key: what the game socket answers a market that watches it. */
+  offers: Offer[]
+  /** Every packet the page sent on its game socket, in order. */
+  packets: Packet[]
+}
+/** The one public key offer: 0.5 SUI asked, 0.55 SUI paid with the royalty. */
+export const OFFER: Offer = {
+  ...item(KEY, 1),
+  kind: 'item',
+  id: `0x${'7'.repeat(64)}`,
+  version: '5',
+  price_mist: '500000000',
+  kiosk: `0x${'8'.repeat(64)}`,
+  seller: `0x${'9'.repeat(64)}`,
+  at_ms: 1,
+  group_key: 'lot-1',
 }
 export const bot_fixture = (keys = 0): Bot => ({
   offline: false,
@@ -100,20 +121,9 @@ export const bot_fixture = (keys = 0): Bot => ({
   directs: [],
   refusal: null,
   direct: null,
+  offers: [OFFER],
+  packets: [],
 })
-/** The one public key offer: 0.5 SUI asked, 0.55 SUI paid with the royalty. */
-export const OFFER = {
-  ...item(KEY, 1),
-  kind: 'item',
-  id: `0x${'7'.repeat(64)}`,
-  version: '5',
-  price_mist: '500000000',
-  kiosk: `0x${'8'.repeat(64)}`,
-  seller: `0x${'9'.repeat(64)}`,
-  at_ms: 1,
-  group_key: 'lot-1',
-}
-
 /** Holds every read of the bot from now on; the returned function lets them answer. */
 export const hold = (bot: Bot): (() => void) => {
   const gate = Promise.withResolvers<void>()
@@ -125,6 +135,8 @@ export const hold = (bot: Bot): (() => void) => {
 }
 export const calls_of = (bot: Bot, name: string) => bot.calls.filter((call) => call === name)
 export const directs_of = (bot: Bot, kind: string) => bot.directs.filter((direct) => direct.kind === kind)
+/** The packets of one type the page sent on its game socket, in order. */
+export const sent_of = (bot: Bot, type: string) => bot.packets.filter((packet) => packet.type === type)
 /** The tree the bot retains for one hero, as text. */
 export const tree_of = (bot: Bot, hero: string) => JSON.stringify(bot.runs.get(hero) ?? null)
 
@@ -400,10 +412,105 @@ const serve = (bot: Bot) => async (route: Route) => {
   return handler(bot, route, request.postData() ? (JSON.parse(request.postData()!) as Record<string, unknown>) : {})
 }
 
+/** What the game server says first on this socket: the owner is in, and its own account holds no hero. */
+const GREETING: readonly Packet[] = [
+  { type: 'packet/connection_accepted', address: OWNER },
+  { type: 'packet/characters', characters: [] },
+  {
+    type: 'packet/server_info',
+    online: 1,
+    online_characters: 0,
+    indexing_lag: 0,
+    current_epoch: null,
+    chain_timestamp_ms: null,
+    chain_sample_age_ms: null,
+    market_volume: { day_mist: '93540000000', month_mist: '2853420000000', history_days: 30 },
+  },
+]
+type Watch = Readonly<{ kind: string; category?: string; item_type?: string; request: number }>
+const KEY_TYPE = { item_type: KEY, ...ITEMS[KEY]! }
+/**
+ * The public market holds the dungeon key and nothing else: the counts say so, its category lists it,
+ * and its offers are the ones the test names. A market nobody watches is told nothing.
+ */
+const market_packets = (bot: Bot, watch: Watch | null): Packet[] => {
+  if (!watch) return []
+  const counts = { type: 'packet/market_counts', observation: watch, counts: { [KEY_TYPE.category]: 1 } }
+  if (!['types', 'offers'].includes(watch.kind)) return [counts]
+  const items = watch.category === KEY_TYPE.category ? [KEY_TYPE] : []
+  const types = { type: 'packet/market_types', observation: watch, items }
+  if (watch.kind !== 'offers') return [counts, types]
+  const listings = watch.item_type === KEY ? bot.offers : []
+  return [
+    counts,
+    types,
+    { type: 'packet/market_slice', observation: watch, listings, kiosk_versions: {}, next_cursor: null },
+  ]
+}
+/** The lowest price asked for each lot size, in MIST: what one floor read answers. */
+const floor_prices = (offers: readonly Offer[]): Record<string, string> =>
+  Object.fromEntries(
+    offers
+      .toSorted((one, other) => Number(BigInt(other.price_mist) - BigInt(one.price_mist)))
+      .map(({ amount, price_mist }) => [String(amount), price_mist])
+  )
+/** What the game server answers to a packet of the page; any other packet is kept and not answered. */
+const ANSWERS: Readonly<Record<string, (bot: Bot, packet: Packet) => Packet[]>> = {
+  'packet/ping': (_bot, { id }) => [{ type: 'packet/pong', id }],
+  'packet/market_observe': (bot, { observation }) => market_packets(bot, observation as Watch | null),
+  'packet/market_floor_request': (bot, { id, item_type }) => [
+    { type: 'packet/market_floor', id, prices: item_type === KEY ? floor_prices(bot.offers) : {} },
+  ],
+  // No sale was ever made here: the history of any item is read and empty. The units of an item that
+  // exist are the ones on offer and the ones in the bot's bag.
+  'packet/market_prices_observe': (bot, { observation }) => {
+    if (!observation) return []
+    const { item_type } = observation as { item_type: string }
+    const stacks = [...bot.offers, ...bot.bag].filter((stack) => stack.item_type === item_type)
+    const total_units = String(stacks.reduce((units, { amount }) => units + amount, 0))
+    const history = { first_timestamp_ms: 0, sampled_at_ms: 1, buckets: [] }
+    return [{ type: 'packet/market_prices', observation, history, total_units }]
+  },
+}
+/**
+ * The page's own socket to the game server: the owner is accepted with no proof, every packet the page
+ * sends is kept in order, and the public market is answered. The bot account itself still arrives by
+ * `push_account`, before each answer of the bot.
+ */
+const game_socket = (bot: Bot) => (socket: WebSocketRoute) => {
+  const send = (packet: Packet) => socket.send(JSON.stringify(packet))
+  GREETING.forEach(send)
+  socket.onMessage((frame) => {
+    const packet = JSON.parse(String(frame)) as Packet
+    bot.packets.push(packet)
+    ANSWERS[packet.type]?.(bot, packet).forEach(send)
+  })
+}
+
+/**
+ * The tab that started a bot consent keeps its request until the bot sends the player back: this is that
+ * request, as the page stored it, for the visit that returns with `claimed`.
+ */
+export const pending_consent = (page: Page) =>
+  page.addInitScript((issuer) => {
+    if (!location.search.includes('claimed')) return
+    const request = { issuer, owner: '0xowner', client_id: 'c', state: 's', verifier: 'v' }
+    const grant = { redirect_uri: `${location.origin}/dapp`, scope: 'bot:observe bot:play bot:pause' }
+    const pending = { ...request, ...grant, expires_at: Date.now() + 60_000 }
+    sessionStorage.setItem('aresrpg:dapp:authorization', JSON.stringify(pending))
+  }, BOT)
+/** Real entry checks stay on this machine: every request to another host is refused before it leaves. */
+export const local_only = (page: Page) =>
+  page.route(
+    (url) => !['127.0.0.1', 'localhost'].includes(url.hostname),
+    (route) => route.abort('blockedbyclient')
+  )
 /** Opens the dapp fixture page against the stand-in bot; `signed_in` signs the synthetic Google owner in. */
 export const open_dapp = async (page: Page, bot: Bot, query = 'signed_in') => {
+  // The sign-in code the session loads asks its providers for metadata: nothing leaves this machine.
+  await local_only(page)
   await page.route(`${BOT}/**`, serve(bot))
-  // The public offers the stand-in game socket pushes for the item on screen.
-  await page.addInitScript((offers) => Object.assign(window, { market_offers: offers }), [OFFER])
+  // The game server's socket is the one that names the address it serves.
+  await page.routeWebSocket(/[?&]address=0x/, game_socket(bot))
   await page.goto(`/e2e/fixtures/dapp.html?${query}`)
 }

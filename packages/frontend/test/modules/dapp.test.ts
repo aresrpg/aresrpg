@@ -11,7 +11,17 @@ import type { DappInput } from '../../src/dapp/state.ts'
 import type { StartSpec } from '../../src/dapp/strategies.ts'
 import { buyer_total } from '../../src/marketplace/price.ts'
 import { toast, type Toast } from '../../src/toast.ts'
-import { HERO, character_fixture, hero_id, listing_fixture, raw_observation, run_fixture } from '../dapp/fixtures.ts'
+import { FINDS_NAMED, finds_text } from '../../src/modules/dapp.ts'
+import type { AppCopy } from '../../src/i18n/copy.ts'
+import {
+  HERO,
+  character_fixture,
+  hero_id,
+  item_fixture,
+  listing_fixture,
+  raw_observation,
+  run_fixture,
+} from '../dapp/fixtures.ts'
 
 import { owner, wallet, grant, harness, memory, tool_reply, settle, effects_for } from './dapp_harness.ts'
 
@@ -511,6 +521,34 @@ test('a hero whose run ends by itself is told once, with the reason; a plain end
   push_status(app, { sampled_at: 72, runs: [reached] })
   expect(app.state().dapp.positions.every(({ finished_ms }) => finished_ms !== null)).toBe(true)
   expect(toasts).toHaveLength(1)
+  unsubscribe()
+  app.stop()
+})
+
+test('a change of the bag is told once as "+n item", never as a sentence, and the same bag tells nothing', async () => {
+  const app = await signed_in(hosted_bot())
+  const { toasts, unsubscribe } = shown()
+  const bag = (...rows: readonly (readonly [string, number])[]) =>
+    rows.map(([item_type, amount]) => item_fixture(item_type, amount))
+  /** One toast per id: the game's reward toast resolves the one it opened. */
+  const told = () => [...new Map(toasts.map(({ id, message, type }) => [id, [message, type]])).values()]
+  // The bag the page first saw was empty: what arrives after it is a find.
+  push_account(app, bag(['wheat', 3]))
+  expect(told()).toEqual([['+3 Wheat', 'success']])
+  // The same bag pushed again, and a status of the bot, are no change of the bag.
+  push_account(app, bag(['wheat', 3]))
+  push_status(app, { sampled_at: 80 })
+  expect(told()).toHaveLength(1)
+  // A sale moves the baseline and tells nothing; only the units that come back are a find.
+  push_account(app, bag(['wheat', 1]))
+  expect(told()).toHaveLength(1)
+  // Several kinds in one change are one toast: the first ones named, the others counted.
+  push_account(app, bag(['wheat', 2], ['water', 2], ['wheat_flour', 1], [KEY, 1]))
+  expect(told().slice(1)).toEqual([['+1 Key of the Gilded Lorito · +1 Wheat Flour · +2 Water · found_more', 'success']])
+  const copy = { dapp_page: { found_more: '+{count} more' } } as unknown as AppCopy
+  const gains = ['a', 'b', 'c', 'd', 'e'].map((item_type) => ({ item_type, amount: 2 }))
+  expect(finds_text(copy, gains.slice(0, FINDS_NAMED))).toBe('+2 a · +2 b · +2 c')
+  expect(finds_text(copy, gains)).toBe('+2 a · +2 b · +2 c · +2 more')
   unsubscribe()
   app.stop()
 })

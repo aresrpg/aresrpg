@@ -20,7 +20,9 @@ import { decode, identifier, nonempty, object_schema } from './gameplay_schema.t
 type AgentActions = ReturnType<typeof create_agent_actions>
 type Digest = Promise<Readonly<{ digest: string }>>
 /** Optional so a caller that never joins or raids supplies nothing; an unsupplied door refuses. */
-export type TeamExecutor = Partial<Pick<AgentActions['fight'], 'join'> & Readonly<{ dungeon: AgentActions['dungeon'] }>>
+export type TeamExecutor = Partial<
+  Pick<AgentActions['fight'], 'join' | 'forfeit'> & Readonly<{ dungeon: AgentActions['dungeon'] }>
+>
 type Settle = Parameters<AgentActions['fight']['settle']>[0]
 export type SettlePlan = Readonly<{ kind: 'fight_settle'; input: Settle & Readonly<{ dungeon: string | null }> }>
 type Contract = HydratedFightCheckpoint['contract']
@@ -28,6 +30,7 @@ type JoinPayload = Readonly<{ character_id: string; fight: string; checkpoint_id
 type RunPayload = Readonly<{ character_id: string; world: string; dungeon: string }>
 type EnterPayload = RunPayload & Readonly<{ key_id: string }>
 type LeavePayload = Readonly<{ character_id: string; dungeon: string }>
+type ForfeitPayload = Readonly<{ character_id: string }>
 const run_properties = { character_id: identifier, world: nonempty, dungeon: nonempty }
 const join_schema = {
   ...object_schema({ character_id: identifier, fight: identifier, checkpoint_id: nonempty, dungeon: nonempty }),
@@ -57,6 +60,10 @@ export const TEAM_ACTIONS = {
   dungeon_leave: action<LeavePayload>(
     'End a dungeon run as a loss: abandon it while staged between rooms, or give up its current room fight.',
     leave_schema
+  ),
+  fight_forfeit: action<ForfeitPayload>(
+    'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. Use it for a fight that cannot be finished.',
+    object_schema({ character_id: identifier })
   ),
 }
 export const dungeon_content = (slug: string) => {
@@ -174,11 +181,28 @@ export const validate_dungeon_leave = (context: GameplayContext) => {
     },
   }
 }
+/** The door follows the fight: a room is given up through its dungeon, which also ends the run. */
+export const validate_fight_forfeit = (context: GameplayContext) => {
+  const payload = TEAM_ACTIONS.fight_forfeit.parse(context.command.payload)
+  const character = owned_character(context, payload.character_id)
+  const seat = character.active_fight
+  if (!seat) throw new Error('fight_unavailable')
+  return {
+    kind: 'fight_forfeit' as const,
+    input: {
+      fight: seat.id,
+      fighter_idx: BigInt(seat.seat),
+      custody: custody_of(character),
+      dungeon: Boolean(character.dungeon_run),
+    },
+  }
+}
 export type TeamActionPlan =
   | ReturnType<typeof validate_fight_join>
   | ReturnType<typeof validate_dungeon_enter>
   | ReturnType<typeof validate_dungeon_fight>
   | ReturnType<typeof validate_dungeon_leave>
+  | ReturnType<typeof validate_fight_forfeit>
 const required = <T>(executor: T | undefined): T => {
   if (!executor) throw new Error('team_executor_unavailable')
   return executor
@@ -193,6 +217,8 @@ export const team_executors = (actions: TeamExecutor) => ({
     room
       ? required(actions.dungeon).give_up_fight({ ...room, custody })
       : required(actions.dungeon).abandon({ character_id, custody }),
+  fight_forfeit: ({ dungeon, ...seat }: Input<'fight_forfeit'>): Digest =>
+    dungeon ? required(actions.dungeon).give_up_fight(seat) : required(actions.forfeit)(seat),
 })
 /** A room settles through its dungeon door, which also advances or ends the run. */
 export const settle_executor =
@@ -212,6 +238,7 @@ export const team_projected = (
     dungeon_fight: () => seated(created_fight),
     dungeon_enter: () => character.dungeon_run?.dungeon === payload.dungeon,
     dungeon_leave: () => !character.dungeon_run && character.custody === 'kiosk' && !character.active_fight,
+    fight_forfeit: () => character.custody === 'kiosk' && !character.active_fight,
   }
   return Object.hasOwn(checks, kind) ? checks[kind]!() : undefined
 }

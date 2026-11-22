@@ -5,12 +5,14 @@
   background: var(--aui-bg);
   color: var(--aui-ink);
   font-family: var(--aui-font);
-  overflow-x: hidden;
+  /* Clipped, not hidden: a hidden axis makes the page a scroll container and the bar stops sticking. */
+  overflow-x: clip;
 }
 /* A floating bar: inset from the page edges, over the content that scrolls under it. */
 .light-page-header {
   position: sticky;
-  top: 12px;
+  /* Flush with the window once the page scrolls: no strip above the bar shows the content behind it. */
+  top: 0;
   z-index: 5;
   box-sizing: border-box;
   display: flex;
@@ -18,7 +20,7 @@
   align-items: center;
   gap: 8px 12px;
   width: calc(100% - 24px);
-  max-width: 1120px;
+  max-width: var(--light-page-column, 1120px);
   margin: 12px auto 0;
   padding: 10px 16px;
   border: 1px solid var(--aui-border);
@@ -44,13 +46,9 @@
 .light-page-main {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1120px;
+  max-width: var(--light-page-column, 1120px);
   margin: 0 auto;
   padding: 16px;
-}
-/* An application surface gives its content the whole window; the bar keeps its own centred width. */
-.light-page[data-wide] > .light-page-main {
-  max-width: none;
 }
 .light-page-card {
   display: grid;

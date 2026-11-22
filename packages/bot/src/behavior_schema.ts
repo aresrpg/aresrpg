@@ -83,6 +83,7 @@ const fact_types = {
   hp: numeric,
   max_hp: numeric,
   hp_percent: numeric,
+  fight_minutes: numeric,
   job_level: numeric,
   quantity: numeric,
   custody: { oneOf: [literal('kiosk'), literal('fight')] },

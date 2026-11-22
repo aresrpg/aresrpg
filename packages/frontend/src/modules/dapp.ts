@@ -12,6 +12,7 @@ import {
 import type { AppContext, AppModule, AppState } from '../store.ts'
 import type { AuthSession } from '../auth.ts'
 import { env } from '../env.ts'
+import { item_icon } from '../content/assets.ts'
 import { toast } from '../toast.ts'
 import {
   authorization_request,
@@ -39,7 +40,7 @@ import {
   type DappLink,
 } from '../dapp/state.ts'
 import { dapp_text, direct_text, item_name } from '../dapp/copy.ts'
-import { decode_bag_feed, encode_bag_feed, new_gains, type BagFeed } from '../dapp/bag_feed.ts'
+import { decode_bag_feed, encode_bag_feed, new_gains, type BagFeed, type BagGain } from '../dapp/bag_feed.ts'
 
 export { initial_dapp_state, type DappInput, type DappState } from '../dapp/state.ts'
 
@@ -326,17 +327,26 @@ const follow_account = (context: AppContext, effects: DappEffects): void => {
   context.dispatch({ type: 'agent/inventory_target', wallet, pairing })
 }
 
-/** Finds are announced from the feed's own delta, so a repeated observation never repeats a toast. */
+/** Kinds one toast of finds names; the others are counted. */
+export const FINDS_NAMED = 3
+/** What one change of the bag brought, in one line: "+3 Wheat · +1 Key", then how many kinds more. */
+export const finds_text = (copy: AppState['copy'], gains: readonly BagGain[]): string => {
+  const named = gains.slice(0, FINDS_NAMED).map(({ item_type, amount }) => `+${amount} ${item_name(item_type)}`)
+  const more = gains.length - named.length
+  return [...named, ...(more > 0 ? [dapp_text(copy, 'found_more', { count: String(more) })] : [])].join(' · ')
+}
+/**
+ * Finds are announced from the feed's own delta, so a repeated observation never repeats a toast.
+ * One change of the bag is one toast, the game's own reward toast: the picture of the first item.
+ */
 const announce_finds = (state: AppState, previous: AppState) => {
-  for (const { item_type, amount } of new_gains(state.dapp.bag_feed, previous.dapp.bag_feed))
-    toast.rich(
-      dapp_text(state.copy, 'found_toast'),
-      [
-        { text: `${dapp_text(state.copy, 'found_toast')} `, tone: 'default' },
-        { text: `+${amount} ${item_name(item_type)}`, tone: 'gold' },
-      ],
-      'success'
-    )
+  const gains = new_gains(state.dapp.bag_feed, previous.dapp.bag_feed)
+  const [first] = gains
+  if (!first) return
+  const text = finds_text(state.copy, gains)
+  const icon = item_icon(first.item_type)
+  if (icon) toast.loading(text).success(text, icon)
+  else toast.rich(text, [], 'success')
 }
 
 const resolved = (request: DirectRequest | null): request is DirectRequest =>

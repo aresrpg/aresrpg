@@ -31,16 +31,17 @@
   height: 40px;
 }
 
-/* Hero card */
+/* Hero card: the portrait, who it is and how far, then one footer with what it does and what it can be asked. */
 .dapp-hero-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px 12px;
+  align-content: start;
   align-items: start;
 }
 .dapp-hero-id {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 .dapp-hero-line {
@@ -57,6 +58,8 @@
 }
 .dapp-hero-level {
   color: var(--aui-brass-hi);
+  font-size: 13px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -64,6 +67,32 @@
   color: var(--aui-muted);
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+/* The meters are one line each: the label, the bar, the figure. Both bars share their columns. */
+.dapp-hero-meters {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 5px 8px;
+  align-items: center;
+  margin-top: 3px;
+}
+.dapp-hero-meters .aui-progress {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  color: var(--aui-muted);
+  font-size: 11px;
+}
+.dapp-hero-meters .aui-progress > span {
+  display: contents;
+}
+.dapp-hero-meters .aui-progress strong {
+  order: 1;
+  font-family: var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.dapp-hero-meters .aui-progress strong:empty {
+  display: none;
 }
 .dapp-hero-foot {
   grid-column: 1 / -1;
@@ -355,6 +384,110 @@
   min-height: 44px;
 }
 
+/* A label and its figure on one line, between hairlines: a fee, a count, a stake. */
+.dapp-ledger {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--aui-line);
+}
+.dapp-ledger > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--aui-line);
+}
+.dapp-ledger dt {
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.dapp-ledger dd {
+  margin: 0 0 0 auto;
+  color: var(--aui-ink);
+  font: 600 13px/1.3 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The feed of what entered the bag: one row per kind, its picture, "+n" and its name. Under 960px
+   it is one line, its title then a strip that scrolls sideways; beside the board it is a column. */
+aside.dapp-bag-feed-panel {
+  display: flex;
+  align-items: center;
+  gap: 4px 12px;
+  /* The strip scrolls inside the panel: it never widens the board. */
+  min-width: 0;
+  padding: 8px 12px;
+}
+.dapp-bag-feed-panel > h2 {
+  flex: none;
+}
+.dapp-bag-feed-panel > :not(h2) {
+  flex: 1;
+  min-width: 0;
+}
+.dapp-bag-feed-panel .dapp-bag-feed {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 2px;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.dapp-bag-feed-panel .dapp-bag-feed li {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: 0;
+}
+.dapp-bag-feed-panel .dapp-row {
+  width: auto;
+  white-space: nowrap;
+}
+.dapp-bag-feed-panel .dapp-row img {
+  order: -2;
+  width: 28px;
+  height: 28px;
+}
+.dapp-bag-feed-panel .dapp-row-name {
+  flex: 1;
+  min-width: 0;
+}
+.dapp-bag-feed-panel .dapp-row-value {
+  order: -1;
+  flex: none;
+  min-width: 3ch;
+  color: var(--aui-success);
+  font-weight: 700;
+  text-align: left;
+}
+@media (min-width: 960px) {
+  aside.dapp-bag-feed-panel {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+  }
+  .dapp-bag-feed-panel > h2 {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--aui-line);
+  }
+  .dapp-bag-feed-panel .dapp-bag-feed {
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 0;
+    overflow-x: visible;
+  }
+  .dapp-bag-feed-panel .dapp-row {
+    width: 100%;
+    white-space: normal;
+  }
+}
+
 /* Every action of a part is a 44px target, sized to its label. */
 .dapp-hero-actions .aui-button,
 .dapp-run-foot .aui-button,
@@ -363,4 +496,10 @@
 .aui-button.dapp-market-link,
 .dapp-notice-row .aui-button {
   min-height: 44px;
+}
+/* Under a mouse the actions of a hero card take the denser height of the approved mockup. */
+@media (min-width: 960px) and (pointer: fine) {
+  .dapp-hero-actions .aui-button {
+    min-height: 36px;
+  }
 }

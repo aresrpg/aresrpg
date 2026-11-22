@@ -144,7 +144,14 @@ const AgentUnreachable = ({ copy, close }: Readonly<{ copy: AppCopy; close: () =
         <IconButton className="agent-setup-close" label={copy.wallet_close} icon={<X size={16} />} onClick={close} />
         <h2 id={title_id}>{copy.ui.agent_unreachable_title}</h2>
         <p role="alert">{copy.ui.agent_unreachable_body}</p>
-        <Button tone="primary" onClick={() => dispatch_app({ type: 'agent/connection_refresh' })}>
+        <Button
+          tone="primary"
+          onClick={() => {
+            // The dialog closes with the retry: its answer shows on the button, not in a second dialog.
+            dispatch_app({ type: 'agent/connection_refresh' })
+            close()
+          }}
+        >
           {copy.ui.agent_hosted_retry}
         </Button>
       </section>

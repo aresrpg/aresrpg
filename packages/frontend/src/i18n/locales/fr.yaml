@@ -4097,13 +4097,10 @@ dapp_page:
   bag_title: 'Sac'
   bag_empty: 'Le sac est vide.'
   bag_loading: 'Lecture du sac de votre bot…'
-  bag_feed_title: "Vient d'arriver"
-  bag_feed_empty: "Les nouveaux objets s'affichent ici dès leur arrivée."
-  found_toast: 'Nouveau dans votre sac'
+  bag_feed_title: 'Objets récents'
+  bag_feed_empty: 'Ce que rapportent vos héros apparaît ici.'
   detail_locked: "L'équipement, les caractéristiques, les sorts et la fabrication sont accessibles tant que ce héros est hors combat et que votre bot n'a pas d'autre demande en cours."
   detail_stats: 'Caractéristiques'
-  detail_spells: 'Sorts'
-  detail_equipment: 'Équipement'
   error_unknown: 'Une erreur est survenue. Réessayez.'
   error_expired: 'La connexion à votre bot a expiré. Reconnectez-vous.'
   error_google_required: 'Continuez avec Google pour connecter un bot hébergé.'
@@ -4126,7 +4123,6 @@ dapp_page:
   error_character_not_available: "Aucun héros n'est libre pour cela en ce moment : un combat est en cours. Réessayez dans un instant."
   error_sale_source_changed_or_unavailable: "Cet objet a changé, ou aucune pile n'est assez grande. Choisissez-le de nouveau."
   disconnect_action: 'Déconnecter cette page'
-  disconnect_body: "Retire l'accès de cette page à votre bot. Les activités qu'elle a lancées cessent de prendre de nouvelles actions. La déconnexion du compte fait de même."
   disconnect_failed: "Votre bot n'a pas confirmé. Cette page a toujours accès. Réessayez."
   direct_queued: "Votre bot a reçu votre demande. Il la signe après l'action en cours."
   direct_done_raise_stats: 'Caractéristiques mises à jour.'
@@ -4211,7 +4207,6 @@ dapp_page:
   step_quest_body: 'Les monstres de {city} lâchent {key}.'
   step_raid_title: 'Raid dans {dungeon}'
   step_raid_body: 'Chaque héros apporte une clé. La salle du boss renferme le butin le plus rare.'
-  fees_wallet: 'Frais payés par votre bot au total : {amount} SUI'
   quest_title: 'Quêtes'
   quest_intro: "Chaque combat peut donner de l'équipement et des clés. Les travailleurs transforment le butin en équipement."
   quest_fight: 'Combattre pour du butin'
@@ -4227,7 +4222,6 @@ dapp_page:
   quest_empty: "Pas encore de héros. Créez-en un dans l'onglet Accueil, puis envoyez-le en quête."
   quest_empty_action: "Aller à l'accueil"
   quest_walks: "{names} : s'y rend d'abord à pied. Chaque zone traversée coûte des frais réseau."
-  quest_walk_time: 'Au moins {time} à pied.'
   quest_run_fight: 'Combattre dans {place}'
   quest_run_work_job: 'Travailler comme {job}'
   quest_run_gather: 'Récolter {item}'
@@ -4260,7 +4254,6 @@ dapp_page:
   work_gather: 'Récolter une ressource'
   work_craft: 'Fabriquer une recette'
   work_worker: 'Travailleur'
-  work_change: 'Changer'
   work_job: 'Métier'
   work_job_any: "N'importe quel métier"
   work_job_level: '{job} niveau {level}'
@@ -4363,3 +4356,37 @@ dapp_page:
   error_crafting_level_required: 'Le niveau de métier de ce héros est trop bas pour cette recette.'
   error_craft_batch_limit: "C'est trop d'essais pour une seule demande. Demandez-en moins."
   error_recipe_unavailable: 'Cette recette ne peut pas être fabriquée pour le moment.'
+  home_title: 'Que faire maintenant'
+  fees_wallet_label: 'Frais réseau payés par votre bot'
+  sui_amount: '{amount} SUI'
+  found_more: '+{count} de plus'
+  raid_ledger_keys_used: 'Clés utilisées'
+  raid_ledger_keys_used_value: '{count}, une par héros'
+  raid_ledger_keys_left: 'Clés restantes'
+  raid_ledger_travel: 'Trajet'
+  raid_travel_none: 'Aux portes'
+  raid_travel_fee: 'Chaque zone traversée coûte des frais réseau.'
+  raid_buy_key: 'Acheter au marché'
+  quest_pick_place: 'Choisissez un lieu'
+  plan_levels: 'Niveau des monstres'
+  plan_range: '{min}–{max}'
+  plan_group: 'Taille des groupes'
+  plan_key: 'Butin de clé'
+  plan_rarest: 'Butin le plus rare'
+  plan_arrive: 'Arrivée'
+  plan_walk: 'À pied, au moins {time}'
+  plan_walk_far: 'À pied'
+  plan_potion: 'Arrivée immédiate'
+  about: '~{value}'
+  work_what: 'Quoi'
+  work_per_harvest: 'Par récolte'
+  work_harvest_time: 'Une récolte'
+  work_xp: 'Expérience de métier'
+  work_rare: 'Trouvaille rare'
+  work_success: 'Réussite par essai'
+  work_tries_label: 'Essais'
+  work_harvests_label: 'Récoltes'
+  work_tool: 'Outil'
+  work_tool_held: '{item} dans votre sac'
+  work_tool_none: 'Sans {tool}'
+  work_have: '{have} sur {need}'

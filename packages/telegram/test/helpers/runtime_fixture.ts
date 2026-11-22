@@ -126,8 +126,9 @@ export const linked = async () => {
 }
 export const calls = (f: Awaited<ReturnType<typeof setup>>, match: (url: string, name?: string) => boolean) =>
   f.sent.filter(({ url, body }) => match(url, body.params?.name)).length
+/** The area the tree's fight leaf is fenced to, wherever that leaf stands among the tree's branches. */
 export const tree_area = (run: { script: any } | undefined) =>
-  run?.script.tree.child.children[0].action.target_options.area
+  run?.script.tree.child.children.find((node: any) => node.action?.type === 'combat').action.target_options.area
 
 // Without update deduplication, Telegram may deliver the same update again (it retries non-2xx).
 // Each mutating input is guarded by its own phase or revision: the redelivery acts once and is answered.

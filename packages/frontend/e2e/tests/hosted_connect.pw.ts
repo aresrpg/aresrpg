@@ -290,6 +290,9 @@ test('original tab resolves the backend bot after another tab authorizes, ignori
   await provider.close()
 })
 
+/** A check that failed names itself on the button, and pressing the button asks again. */
+const retry_unreachable = (page: Page) => page.getByRole('button', { name: 'Agent unreachable', exact: true }).click()
+
 for (const reason of ['expired', 'ambiguous', 'stale_proof', 'revoke_during_proof'] as const) {
   test(`owner refresh rejects ${reason} without enabling custody or granting consent`, async ({ page }) => {
     const f = await mock_hosted(page)
@@ -301,14 +304,14 @@ for (const reason of ['expired', 'ambiguous', 'stale_proof', 'revoke_during_proo
       await page.getByRole('button', { name: 'Connect your agent', exact: true }).click()
       await expect(page.getByText('More than one hosted wallet needs review. No wallet was selected.')).toBeVisible()
       await expect(page.locator('[data-agent-setup]')).toHaveCount(0)
-    } else await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
+    } else await expect(page.getByRole('button', { name: 'Agent unreachable', exact: true })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
     await expect(page.getByRole('button', { name: 'Agent connected', exact: true })).toHaveCount(0)
     expect(f.requests.some(({ path }) => path === '/connect/authorize')).toBe(false)
     expect(f.requests.some(({ path, body }) => path === '/connect/challenge' && body.purpose === 'consent')).toBe(false)
     if (reason === 'expired') {
       f.connection.expired = false
-      await page.getByRole('button', { name: 'Try again', exact: true }).click()
+      await retry_unreachable(page)
       await connected_inventory(page)
     }
   })
@@ -340,7 +343,7 @@ for (const action of ['cancel', 'wallet'] as const) {
     await expect(page.locator('html')).toHaveAttribute('data-agent-confirmed', 'false')
     expect(f.requests.some(({ path }) => path === '/connect/proof')).toBe(false)
     if (action === 'cancel') {
-      await page.getByRole('button', { name: 'Try again', exact: true }).click()
+      await retry_unreachable(page)
       await expect(page.locator('html')).toHaveAttribute('data-fixture-signatures', '2')
       await page.evaluate(() => dispatchEvent(new Event('fixture/signature')))
       await connected_inventory(page)

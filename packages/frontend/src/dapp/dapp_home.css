@@ -3,27 +3,43 @@
    Colours, fonts, radius and shadow resolve only through the shared --aui-* tokens. */
 .dapp-home {
   display: grid;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
 }
+.dapp-home > h1,
+.dapp-welcome h1 {
+  margin: 0;
+  font-family: var(--aui-font-display);
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
 
-/* Next best step: one panel, one action. The action drops under the sentence on a narrow screen. */
+/* Next best step: its picture beside its sentence, and its one action under them, at the left. */
 .dapp-next {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px 14px;
-  border-color: var(--aui-line-strong);
+  align-items: center;
+  padding: 14px;
+  border-color: color-mix(in srgb, var(--aui-orange) 34%, transparent);
+  background-color: color-mix(in srgb, var(--aui-orange) 6%, var(--aui-surface));
 }
 .dapp-next[data-next='funds'] {
   border-color: var(--aui-orange);
 }
+.dapp-next > .dapp-portrait {
+  width: 64px;
+  height: 64px;
+}
 .dapp-next-text {
-  flex: 1 1 220px;
   display: grid;
   gap: 2px;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+/* A step with no picture gives its sentence the whole row. */
+.dapp-next-text:first-child {
+  grid-column: 1 / -1;
 }
 .dapp-next-label {
   color: var(--aui-faint);
@@ -34,12 +50,16 @@
 }
 .dapp-next p {
   margin: 0;
+  font-size: 13px;
 }
-.dapp-next > .aui-button {
-  margin-left: auto;
+.dapp-next-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-/* Heroes: a title with the count, then the cards and the tile of a new hero. */
+/* Heroes: a title with the count, then two columns of cards; the tile of a new hero is one of them. */
 .dapp-home-title {
   display: flex;
   align-items: baseline;
@@ -48,15 +68,29 @@
 }
 .dapp-home-heroes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: 10px;
 }
 .dapp-create-tile {
   display: grid;
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 12px;
   align-content: start;
+  align-items: start;
   border-style: dashed;
   border-color: var(--aui-line-strong);
+}
+.dapp-create-mark {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--aui-line-strong);
+  background: none;
+  color: var(--aui-brass);
+}
+.dapp-create-tile-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 /* The way to a new hero: what it costs, one button, and why it is closed when it is. */
@@ -85,11 +119,6 @@
 .dapp-welcome > header {
   display: grid;
   gap: 4px;
-}
-.dapp-welcome h1 {
-  margin: 0;
-  font-family: var(--aui-font-display);
-  font-size: 1.5rem;
 }
 .dapp-welcome > header p {
   margin: 0;
@@ -140,9 +169,13 @@
   margin: 0;
 }
 
-/* Every action of Home is a 44px target, sized to its label. */
+/* Every action of Home is sized to its label: a 44px target under a finger, the mockup's 36px under a mouse. */
 .dapp-next .aui-button,
-.dapp-create .aui-button,
-.dapp-home .dapp-disconnect .aui-button {
+.dapp-create .aui-button {
   min-height: 44px;
+}
+@media (min-width: 960px) and (pointer: fine) {
+  .dapp-create-tile .aui-button {
+    min-height: 36px;
+  }
 }

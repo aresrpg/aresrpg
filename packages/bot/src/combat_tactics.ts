@@ -8,10 +8,15 @@ import {
   weapon_target_cells,
   player_max_hp,
   manhattan,
+  spell_level_of,
+  board_zone_cells,
+  primary_stat,
+  sheet_of,
   type FightCommandInput,
   type Fighter,
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
+import { CHANNELS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 
 import { support_beneficiaries } from './combat_support.ts'
 import type { FightTurnPayload } from './gameplay.ts'
@@ -19,7 +24,11 @@ import type { CombatCondition, CombatProfile, CombatStep } from './combat_profil
 
 type Action = FightTurnPayload['actions'][number]
 type Candidate = Readonly<{ actions: readonly Action[]; state: HydratedFightCheckpoint }>
-type Context = Readonly<{ checkpoint: HydratedFightCheckpoint; seat: bigint; observed_ms: bigint }>
+/** `hit`: the hero already cost an enemy some health this turn. */
+type Context = Readonly<{ checkpoint: HydratedFightCheckpoint; seat: bigint; observed_ms: bigint; hit?: boolean }>
+/** A step that names what it casts or strikes with, and whom it aims at. */
+type Aimed = Extract<CombatStep, { type: 'cast' | 'strike' }>
+type Attack = Extract<CombatStep, { type: 'attack' }>
 const compare = (left: bigint, right: bigint) => (left < right ? -1 : Number(left > right))
 const enemies = ({ checkpoint, seat }: Context) => {
   const { team } = checkpoint.contract.fighters[Number(seat)]!
@@ -66,7 +75,7 @@ const simulate = (context: Context, action: Action): Candidate | null => {
   const result = runtime.apply({ ...command_input(action, context.seat), observed_ms: context.observed_ms })
   return result.error ? null : { actions: [action], state: result.state }
 }
-const target_cells = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): readonly bigint[] => {
+const target_cells = (context: Context, step: Aimed): readonly bigint[] => {
   const { checkpoint, seat } = context
   const legal =
     step.type === 'cast'
@@ -94,7 +103,7 @@ const enemy_hp_loss = (context: Context, candidate: Candidate): bigint =>
     (total, { fighter, seat }) => total + fighter.hp - candidate.state.contract.fighters[seat]!.hp,
     0n
   )
-const attack_score = (context: Context, step: Exclude<CombatStep, { type: 'move' }>, candidate: Candidate) => {
+const attack_score = (context: Context, step: Aimed, candidate: Candidate) => {
   switch (step.target) {
     case 'highest_damage_enemy':
       return enemy_hp_loss(context, candidate)
@@ -106,7 +115,7 @@ const attack_score = (context: Context, step: Exclude<CombatStep, { type: 'move'
       return undefined
   }
 }
-const cast_candidate = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): Candidate | null => {
+const cast_candidate = (context: Context, step: Aimed): Candidate | null => {
   let best: Readonly<{ candidate: Candidate | null; score: bigint | null }> = { candidate: null, score: null }
   for (const cell of target_cells(context, step)) {
     const action: Action =
@@ -139,10 +148,14 @@ const damage_order = (context: Context, left: Candidate, right: Candidate): numb
   )
 }
 /** One canonical route per reachable cell, never a promised endpoint after tackle or traps. */
-const attack_candidate = (context: Context, step: Exclude<CombatStep, { type: 'move' }>): Candidate | null => {
+const attack_candidate = (
+  context: Context,
+  step: Aimed,
+  movements: () => readonly Candidate[] = () => movement_candidates(context)
+): Candidate | null => {
   const stationary = cast_candidate(context, step)
   if (!step.position) return stationary
-  const moved = movement_candidates(context).flatMap((movement) => {
+  const moved = movements().flatMap((movement) => {
     const { state } = movement
     if (state.contract.ended || state.contract.fighters[Number(context.seat)]!.dead) return []
     const attack = cast_candidate({ ...context, checkpoint: state }, step)
@@ -151,6 +164,136 @@ const attack_candidate = (context: Context, step: Exclude<CombatStep, { type: 'm
   return (
     [...(stationary ? [stationary] : []), ...moved].sort((left, right) => damage_order(context, left, right))[0] ?? null
   )
+}
+/** The spells the fight twin lets this seat cast at all: its class's, unlocked at its level. */
+const learned_spells = ({ checkpoint, seat }: Context): readonly string[] =>
+  Object.keys(checkpoint.sources.spells)
+    .filter((name) => spell_level_of(checkpoint, seat, name) !== null)
+    .toSorted()
+/**
+ * The most damaging legal action among the weapon and every learned spell, each tried on the real twin.
+ * An action that costs no enemy any health is not an attack. The reachable cells are walked once and
+ * shared by every option.
+ */
+const best_attack = (context: Context, { target, position }: Attack): Candidate | null => {
+  const aim = { target, ...(position ? { position } : {}) }
+  const options: readonly Aimed[] = [
+    { type: 'strike', ...aim },
+    ...learned_spells(context).map((spell): Aimed => ({ type: 'cast', spell, ...aim })),
+  ]
+  let walked: readonly Candidate[] | null = null
+  const movements = () => (walked ??= movement_candidates(context))
+  return (
+    options
+      .flatMap((option) => {
+        const candidate = attack_candidate(context, option, movements)
+        return candidate && enemy_hp_loss(context, candidate) > 0n ? [candidate] : []
+      })
+      .sort((left, right) => damage_order(context, left, right))[0] ?? null
+  )
+}
+/** What an effect is, whatever is left of it: a boost still running is the same effect. */
+const effect_key = ({ kind, element, stat, source }: Fighter['effects'][number]) =>
+  [kind, element, stat, source].join(':')
+/** The characteristic each element's damage scales with (`fight_math::primary_stat`), by stat channel. */
+const ELEMENT_OF_STAT: ReadonlyMap<bigint, string> = new Map([
+  [CHANNELS.strength, 'earth'],
+  [CHANNELS.intelligence, 'fire'],
+  [CHANNELS.chance, 'water'],
+  [CHANNELS.agility, 'air'],
+])
+/** The elements this hero deals damage in: its learned spells and its weapon. */
+const damage_elements = (context: Context): readonly string[] => {
+  const { checkpoint, seat } = context
+  const fighter = checkpoint.contract.fighters[Number(seat)]!
+  const source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : undefined
+  const cast = learned_spells(context).flatMap((name) => spell_level_of(checkpoint, seat, name)?.effects ?? [])
+  return [
+    ...new Set([
+      ...cast.map(({ element }) => element),
+      ...(source?.weapon?.damages ?? []).map(({ element }) => element),
+    ]),
+  ].filter(Boolean)
+}
+/**
+ * The elements worth boosting: of those the hero deals damage in, the ones its build scales highest.
+ * A hero built on intelligence gains nothing from an agility boost, so that boost is not cast; a hero
+ * with no build yet scales them all alike, and every element it uses counts.
+ */
+const boosted_elements = (context: Context): readonly string[] => {
+  const sheet = sheet_of(context.checkpoint, context.seat)
+  const elements = damage_elements(context)
+  const best = elements.reduce((most, element) => {
+    const scaling = primary_stat(element, sheet)
+    return scaling > most ? scaling : most
+  }, 0n)
+  return elements.filter((element) => primary_stat(element, sheet) === best)
+}
+/** A boost of an elemental characteristic is worth its points only in an element the hero plays;
+ * any other boost (raw damage, action or movement points, range, critical, resistance) always is. */
+const worth = (stat: bigint, elements: readonly string[]): boolean => {
+  const element = ELEMENT_OF_STAT.get(stat)
+  return element === undefined || elements.includes(element)
+}
+/** A glyph helps its side when one of its effects is for allies or for its caster. */
+const HELPS: readonly bigint[] = [TARGET_FILTERS.not_enemy, TARGET_FILTERS.only_caster]
+/** The helpful glyphs of a fighter whose area covers a cell, with the stats they raise. */
+const own_glyphs = ({ contract }: HydratedFightCheckpoint, seat: bigint, cell: bigint) =>
+  contract.zones
+    .filter((zone) => zone.owner_fighter === seat && !zone.trap && board_zone_cells(zone).includes(cell))
+    .map(({ shape, size, effects }) => ({
+      key: `${shape}:${size}`,
+      stats: effects.filter(({ target_filter }) => HELPS.includes(target_filter)).map(({ stat }) => stat),
+    }))
+    .filter(({ stats }) => stats.length > 0)
+/**
+ * A cast strengthens the hero when it leaves something the hero did not already have and can use, an
+ * effect on itself or a helpful glyph under its feet, costs it no health and hurts no enemy. What is
+ * already in place is therefore never cast again, and a boost of an element the hero does not play is
+ * never cast at all.
+ */
+const strengthens = (context: Context, { state }: Candidate, elements: readonly string[]): boolean => {
+  const before = context.checkpoint.contract.fighters[Number(context.seat)]!
+  const after = state.contract.fighters[Number(context.seat)]!
+  const held = new Set(before.effects.map(effect_key))
+  const laid = new Set(own_glyphs(context.checkpoint, context.seat, before.cell).map(({ key }) => key))
+  const gained =
+    after.effects.some((effect) => !held.has(effect_key(effect)) && worth(effect.stat, elements)) ||
+    own_glyphs(state, context.seat, before.cell).some(
+      ({ key, stats }) => !laid.has(key) && stats.some((stat) => worth(stat, elements))
+    )
+  return [gained, after.hp >= before.hp, !after.dead, enemy_hp_loss(context, { actions: [], state }) === 0n].every(
+    Boolean
+  )
+}
+/**
+ * The learned spells that can boost at all, the costliest first: a spell with no effect for allies or
+ * for its caster is never tried, and when the turn cannot pay for every boost the larger ones go first.
+ */
+const boost_spells = (context: Context): readonly string[] => {
+  const level = (name: string) => spell_level_of(context.checkpoint, context.seat, name)
+  return learned_spells(context)
+    .filter((name) => level(name)?.effects.some(({ target_filter }) => HELPS.includes(target_filter)))
+    .toSorted((left, right) => compare(level(right)?.ap_cost ?? 0n, level(left)?.ap_cost ?? 0n))
+}
+/** How many cells around the hero a boost is tried on. The game lays a glyph on a free cell only, so
+ * the hero's own cell is tried first and then the nearest ones, whose glyph still covers the hero. */
+const BOOST_CELLS = 7
+const boost_cells = ({ checkpoint, seat }: Context, spell: string): readonly bigint[] => {
+  const own = checkpoint.contract.fighters[Number(seat)]!.cell
+  return spell_target_cells(checkpoint, seat, spell)
+    .targetable.toSorted((left, right) => compare(manhattan(own, left), manhattan(own, right)) || compare(left, right))
+    .slice(0, BOOST_CELLS)
+}
+/** The next learned spell that strengthens the hero itself. */
+const boost_candidate = (context: Context): Candidate | null => {
+  const elements = boosted_elements(context)
+  for (const spell of boost_spells(context))
+    for (const cell of boost_cells(context, spell)) {
+      const candidate = simulate(context, { type: 'cast', spell, target_cell: String(cell) })
+      if (candidate && strengthens(context, candidate, elements)) return candidate
+    }
+  return null
 }
 const enemy_distance = (context: Context, state: HydratedFightCheckpoint): bigint => {
   const { cell } = state.contract.fighters[Number(context.seat)]!
@@ -186,6 +329,7 @@ const conditions: {
   [Type in CombatCondition['type']]: (context: Context, when: Extract<CombatCondition, { type: Type }>) => boolean
 } = {
   always: () => true,
+  no_hit_yet: (context) => !context.hit,
   enemy_within: (context, when) =>
     enemies(context).length > 0 && enemy_distance(context, context.checkpoint) <= BigInt(when.cells),
   ally_present: (context) => allies(context).length > 0,
@@ -204,18 +348,51 @@ type Draft = Readonly<{ context: Context; actions: readonly Action[]; skipped: r
 const turn_finished = ({ checkpoint, seat }: Context) =>
   checkpoint.contract.ended || checkpoint.contract.fighters[Number(seat)]?.dead !== false
 
+/** How many times one step may act in a turn. A repeated attack and a boost go on while they find
+ * something to do; the bound only stops an action that would cost no action point from looping. */
+const STEP_REPEATS = 8
+const step_runs = (step: CombatStep): number =>
+  step.type === 'boost' || (step.type === 'attack' && step.repeat) ? STEP_REPEATS : 1
+const step_candidate = (context: Context, step: CombatStep): Candidate | null => {
+  switch (step.type) {
+    case 'move':
+      return movement_candidate(context, step.direction)
+    case 'attack':
+      return best_attack(context, step)
+    case 'boost':
+      return boost_candidate(context)
+    default:
+      return attack_candidate(context, step)
+  }
+}
+const advance = (draft: Draft, candidate: Candidate): Draft => ({
+  context: {
+    ...draft.context,
+    checkpoint: candidate.state,
+    hit: draft.context.hit || enemy_hp_loss(draft.context, candidate) > 0n,
+  },
+  actions: [...draft.actions, ...candidate.actions],
+  skipped: draft.skipped,
+})
+/** Runs one step as often as it may; the number of times it acted. */
+const run_step = (draft: Draft, step: CombatStep): Readonly<{ draft: Draft; runs: number }> => {
+  let result = draft
+  let runs = 0
+  while (runs < step_runs(step) && !turn_finished(result.context)) {
+    const candidate = step_candidate(result.context, step)
+    if (!candidate) break
+    result = advance(result, candidate)
+    runs += 1
+  }
+  return { draft: result, runs }
+}
 const apply_combo = (draft: Draft, combo: CombatProfile['combos'][number]): Draft => {
   let result = draft
   for (const step of combo.steps) {
     if (turn_finished(result.context)) break
-    const candidate =
-      step.type === 'move' ? movement_candidate(result.context, step.direction) : attack_candidate(result.context, step)
-    if (!candidate) return { ...result, skipped: [...result.skipped, `${combo.name}:${step.type}`] }
-    result = {
-      context: { ...result.context, checkpoint: candidate.state },
-      actions: [...result.actions, ...candidate.actions],
-      skipped: result.skipped,
-    }
+    const { draft: next, runs } = run_step(result, step)
+    if (runs === 0) return { ...result, skipped: [...result.skipped, `${combo.name}:${step.type}`] }
+    result = next
   }
   return result
 }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The Quest tab: what it shows for a given reducer state, what it proposes without sending, and the
-// exact inputs its buttons dispatch. Refusals and invalid entries come first.
+// exact inputs its buttons dispatch. Refusals and invalid entries come first. Nothing about a place or
+// a work shows before the player picks it; a fact that needs a sentence carries it as its tooltip.
 import { expect, spyOn, test } from 'bun:test'
 import { job_xp_for_level } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
@@ -11,7 +12,10 @@ import * as zustand from 'zustand'
 
 import { content_catalog } from '../../src/content/catalog.ts'
 import { DappQuest, QuestSendView, quest_runs, start_input } from '../../src/dapp/DappQuest.tsx'
-import { goal_ready } from '../../src/dapp/DappQuestWork.tsx'
+import { QuestFightView } from '../../src/dapp/DappQuestFight.tsx'
+import type { QuestSend } from '../../src/dapp/DappQuestParts.tsx'
+import { QuestWorkView } from '../../src/dapp/DappQuestWork.tsx'
+import { goal_ready } from '../../src/dapp/DappQuestWorkPlan.tsx'
 import { potion_input } from '../../src/dapp/DappStartParts.tsx'
 import type { DappAccount } from '../../src/dapp/account.ts'
 import { dapp_text, item_name } from '../../src/dapp/copy.ts'
@@ -69,7 +73,23 @@ const render = (node: ReactNode, state: AppState): string => {
   }
 }
 const quest = (state: AppState): string => render(<DappQuest copy={copy} locale="en" />, state)
+const nothing = (): void => undefined
+const send: QuestSend = (spec, title, parts) => (
+  <QuestSendView copy={copy} spec={spec} title={title} {...parts} entry={null} enter={nothing} />
+)
+/** The fight setup once the player chose "where each hero stands": that choice is view state. */
+const standing = (state: AppState): string =>
+  render(<QuestFightView copy={copy} locale="en" send={send} here set_here={nothing} />, state)
+/** The work setup once the player opened one way of working: that too is view state. */
+const opened = (state: AppState, viewed: WorkPick['mode']): string =>
+  render(
+    <QuestWorkView copy={copy} locale="en" send={send} viewed={viewed} view={nothing} entry={null} enter={nothing} />,
+    state
+  )
 const words = (html: string): string => html.replace(/<[^>]*>/g, ' ').replaceAll('&#x27;', "'")
+/** Every tooltip of the markup: the sentences a row keeps for whoever asks. */
+const hints = (html: string): string =>
+  [...html.matchAll(/ title="([^"]*)"/g)].map(([, hint]) => hint!.replaceAll('&#x27;', "'")).join(' | ')
 const buttons = (html: string): readonly string[] => html.match(/<button[^>]*>.*?<\/button>/gs) ?? []
 const button = (html: string, label: string): string | undefined =>
   buttons(html).find((markup) => words(markup).includes(label))
@@ -79,6 +99,16 @@ const pressed = (html: string): readonly string[] =>
   buttons(html)
     .filter((markup) => markup.includes('aria-pressed="true"'))
     .map((markup) => words(markup).replace(/\s+/g, ' ').trim())
+/** The words of the one ledger row that carries a mark. */
+const row = (html: string, mark: string): string =>
+  words(
+    html
+      .slice(html.indexOf(mark))
+      .split('</div>')[0]!
+      .replace(/^[^>]*>/, '')
+  )
+    .replace(/\s+/g, ' ')
+    .trim()
 const work = (pick: WorkPick, account: Account = {}): AppState =>
   tab({ kind: 'work', hero_ids: [HERO], work: pick }, account)
 const worker = (jobs: Readonly<Record<string, number>>, row: Partial<CharacterRow> = {}): CharacterRow =>
@@ -106,6 +136,7 @@ test('a fee limit that is not an amount never becomes "no limit", and no Start i
   expect(valid).toContain('data-fee-cap="valid"')
   expect(valid).toContain('value="0.05"')
   expect(words(valid)).toContain('has paid 0.05 SUI in network fees')
+  expect(hints(valid)).toContain('has paid 0.05 SUI in network fees')
   expect(tagged(valid, 'data-start')).toHaveLength(1)
   // An entry that is no amount says so, and there is nothing to press.
   const invalid = send('abc')
@@ -127,11 +158,17 @@ test('a difficulty the chosen city cannot offer says so and offers no Start', ()
 
   const fit = quest(tab({ place: THEBES, difficulty: 'easy' }))
   expect(fit).not.toContain('data-unfit')
-  expect(words(fit)).toContain('Groups of 1 to 2 monsters.')
+  // The size of the groups is one row; its rule is the row's tooltip.
+  expect(row(fit, 'data-group="easy"')).toBe('Group size 1–2')
+  expect(hints(fit)).toContain('Groups of 1 to 2 monsters.')
   expect(tagged(fit, 'data-start')).toHaveLength(1)
   // The hard level has one group size, and it reads as one.
-  expect(words(quest(tab({ place: RUINS, difficulty: 'hard' })))).toContain('Groups of 6 monsters.')
+  const hard = quest(tab({ place: RUINS, difficulty: 'hard' }))
+  expect(row(hard, 'data-group="hard"')).toBe('Group size 6')
+  expect(hints(hard)).toContain('Groups of 6 monsters.')
   expect(pressed(fit)).toContain('Easy')
+  // No difficulty meets any group.
+  expect(row(quest(tab({ place: THEBES })), 'data-group="none"')).toBe('Group size Any')
 })
 
 test('a locked resource or recipe cannot be picked, and the planner refuses one picked anyway', () => {
@@ -163,7 +200,8 @@ test('the planner blockers of work have their sentences, and a missing tool show
   const toolless = quest(work({ mode: 'gather', item_type: 'wheat', goal: UNTIL }))
   expect(toolless).toContain('data-line="tool_required">Mira: has no tool for this profession.')
   expect(toolless).toContain('data-tool-missing="FARMER"')
-  expect(words(toolless)).toContain('Needs a Farming tool. Handymen craft them.')
+  expect(row(toolless, 'data-tool-missing="FARMER"')).toContain('Tool No Farming tool')
+  expect(hints(toolless)).toContain('Needs a Farming tool. Handymen craft them.')
   expect(button(toolless, `Find ${item_name('old_hoe')} on the market`)).toBeDefined()
   expect(tagged(toolless, 'data-start')[0]).toContain('disabled=""')
 
@@ -181,7 +219,7 @@ test('the planner blockers of work have their sentences, and a missing tool show
   expect(goal_ready(level, null, 12)).toBe(false)
 })
 
-test('with no pick the strongest free hero and its own city are proposed, and nothing is sent', () => {
+test('with no pick the strongest free hero is proposed, nothing of a place shows, and nothing is sent', () => {
   const state = tab()
   const sent: unknown[] = []
   const stop = subscribe_app((next) => sent.push(next))
@@ -197,16 +235,35 @@ test('with no pick the strongest free hero and its own city are proposed, and no
     difficulty: null,
     fee_cap_mist: null,
   })
-  const picker = html.slice(html.indexOf('role="group" aria-label="Who"'), html.indexOf('dapp-quest-split'))
+  const picker = html.slice(html.indexOf('role="group" aria-label="Who"'), html.indexOf('dapp-quest-where'))
   expect(pressed(picker).map((label) => label.split(' ')[0])).toEqual(['Okami'])
-  // Where each hero stands: Okami stands in Thebes, so the plan reads Thebes.
-  expect(html).toContain('data-place="here" data-selected="true"')
+  // Before a place is picked there is no plan: no difficulty, no fee limit, no drops, no Start.
+  for (const mark of [
+    'data-plan=',
+    'data-start',
+    'data-fee-cap',
+    'aria-label="Difficulty"',
+    'data-facts=',
+    'data-drops=',
+  ])
+    expect([mark, html.includes(mark)]).toEqual([mark, false])
+  expect(html).toContain(`data-plan-hint="">${text.quest_pick_place}`)
+  // "Where each hero stands" is one entry of the list like the others, and it is not chosen yet.
+  expect(html).toContain('data-place="here"')
+  expect(html).not.toContain('data-selected')
   expect(words(html)).toContain('Okami · Thebes')
-  expect(html).toContain('data-facts="city:thebes"')
-  expect(button(html, 'Send Okami')).not.toContain('disabled')
   expect(pressed(html)).toContain('Fight for loot Gear, keys and experience from every fight')
+
+  // Chosen, it opens its plan: Okami stands in Thebes, so the plan reads Thebes.
+  const here = standing(state)
+  expect(here).toContain('data-place="here" data-selected="true"')
+  expect(here).toContain('data-facts="city:thebes"')
+  expect(here).not.toContain('data-plan-hint')
+  expect(button(here, 'Send Okami')).not.toContain('disabled')
+  // A fight has no goal of its own: the Start says so as its tooltip.
+  expect(button(here, 'Send Okami')).toContain(`title="${text.quest_until_stop}"`)
   // Outside every city a hero fights across its world: the page names the world and describes no place.
-  const roaming = quest(tab({}, { characters: [character_fixture({ x: 50_000, z: 60_000 })] }))
+  const roaming = standing(tab({}, { characters: [character_fixture({ x: 50_000, z: 60_000 })] }))
   expect(words(roaming)).toContain('Mira · Nauvis')
   expect(roaming).not.toContain('data-facts=')
   expect(button(roaming, 'Send Mira')).not.toContain('disabled')
@@ -214,37 +271,44 @@ test('with no pick the strongest free hero and its own city are proposed, and no
   const busy = tab({}, { characters: [mira, { ...okami, active_fight: { id: 'f', seat: 0 } } as CharacterRow] })
   expect(fight_spec(busy.dapp, account_of(busy)).hero_ids).toEqual([HERO])
   // Before the bot answered nothing can start, and the page says what it waits for.
-  const early = quest(tab({}, {}, { observation: null }))
+  const early = standing(tab({}, {}, { observation: null }))
   expect(tagged(early, 'data-start')[0]).toContain('disabled=""')
   expect(early).toContain(`data-line="waiting">${text.blocker_command_pending}`)
   // A bot that cannot be reached is not awaited: the line says so, and nothing can start.
-  const lost = quest(tab({}, {}, { observation: null, observe_error: 'unavailable' }))
+  const lost = standing(tab({}, {}, { observation: null, observe_error: 'unavailable' }))
   expect(tagged(lost, 'data-start')[0]).toContain('disabled=""')
   expect(lost).toContain(`data-line="unreachable">${text.observe_failed}`)
   expect(lost).not.toContain(text.blocker_command_pending)
 })
 
-test('the plan and its Start come before the places, and the heroes that are out come before the setup', () => {
-  const html = quest(tab())
+test('the plan of a place follows its entry of the list, and the heroes that are out come before the setup', () => {
+  const html = quest(tab({ place: RUINS }))
   const at = (markup: string, mark: string): number => markup.indexOf(mark)
-  // One column reads top to bottom: who, the plan with its Start, then every place.
-  expect(at(html, 'aria-label="Who"')).toBeLessThan(at(html, 'data-plan="fight"'))
+  // Who, then the list; the plan of the chosen place comes right after its own entry.
+  expect(at(html, 'aria-label="Who"')).toBeLessThan(at(html, 'data-place="here"'))
+  const chosen = at(html, 'data-place="city:the_ruins"')
+  expect(at(html, 'data-place="here"')).toBeLessThan(chosen)
+  expect(chosen).toBeLessThan(at(html, 'data-plan="fight"'))
   expect(at(html, 'data-plan="fight"')).toBeLessThan(at(html, 'data-start'))
-  expect(at(html, 'data-start')).toBeLessThan(at(html, 'data-place="here"'))
+  expect(html.slice(chosen + 1, at(html, 'data-plan="fight"'))).not.toContain('data-place=')
+  expect(html).not.toContain('data-plan-hint')
   expect(html).not.toContain('data-quest-runs')
   // A hero that is out heads the tab: its card is above the mode cards and the setup of the next Start.
   const out = open_position(HERO, 1_000, [mira, okami], { activity: 'train', sent: null })
   const ended = finish_position({ ...out, id: 'ended', hero_id: SECOND }, 2_000)
-  const busy = quest(tab({}, {}, { positions: [out, ended] }))
+  const busy = quest(tab({ place: RUINS }, {}, { positions: [out, ended] }))
   expect(at(busy, 'data-quest-runs="out"')).toBeLessThan(at(busy, 'data-mode="fight"'))
   expect(at(busy, 'data-mode="fight"')).toBeLessThan(at(busy, 'data-plan="fight"'))
   // What ended is history: it stays under the setup.
-  expect(at(busy, 'data-place="here"')).toBeLessThan(at(busy, 'data-quest-runs="finished"'))
+  expect(at(busy, 'data-plan="fight"')).toBeLessThan(at(busy, 'data-quest-runs="finished"'))
+  // A place of a world the list does not show keeps its plan: the pick is never hidden.
+  const elsewhere = quest(tab({ place: { world: 'yakutia', city: 'nowhere' } }))
+  expect(elsewhere).toContain('data-plan="fight"')
 })
 
 test('several heroes can be picked, in the order picked', () => {
   const state = tab({ hero_ids: [HERO, SECOND] })
-  const html = quest(state)
+  const html = standing(state)
   expect(fight_spec(state.dapp, account_of(state)).hero_ids).toEqual([HERO, SECOND])
   expect(button(html, 'Send Mira, Okami')).not.toContain('disabled')
   expect(words(html)).toContain('Mira · Thebes, Okami · Thebes')
@@ -259,11 +323,12 @@ test('a city the hero is not in shows the walk, and one potion button when its k
   const state = tab({ hero_ids: [HERO, SECOND], place: RUINS }, { items: [potion] })
   const html = quest(state)
   expect(html).toContain('data-arrival=""')
-  expect(words(html)).toContain('Mira, Okami: walks there first. Each zone on the way costs a network fee.')
-  expect(words(html)).toContain('Mira is not in The Ruins.')
-  expect(words(html)).toMatch(/At least [\d,]+ minutes on foot\./)
+  // One row per hero that walks: the least time on foot. Why it walks is the row's tooltip.
+  expect(row(html, `data-walker="${HERO}"`)).toMatch(/^Arrive · Mira On foot, at least [\d,]+ minutes/)
+  expect(row(html, `data-walker="${SECOND}"`)).toMatch(/^Arrive · Okami On foot, at least [\d,]+ minutes$/)
+  expect(hints(html)).toContain('Mira is not in The Ruins. Mira: walks there first. Each zone on the way costs')
   // The potion is in Mira's kiosk only: she alone may drink it. Walking never blocks the Start.
-  expect(words(html)).toContain(`You hold 2 × ${item_name('potion_of_the_ruins')}. It takes the hero there at once.`)
+  expect(hints(html)).toContain(`You hold 2 × ${item_name('potion_of_the_ruins')}. It takes the hero there at once.`)
   expect(tagged(html, 'data-potion')).toHaveLength(1)
   expect(tagged(html, 'data-potion')[0]).toContain(`data-potion="${HERO}"`)
   expect(button(html, 'Send Mira, Okami')).not.toContain('disabled')
@@ -283,29 +348,43 @@ test('a city the hero is not in shows the walk, and one potion button when its k
   // No potion held: the way to the market, and nothing to drink.
   const none = quest(tab({ hero_ids: [HERO], place: RUINS }))
   expect(tagged(none, 'data-potion')).toHaveLength(0)
-  expect(words(none)).toContain(`A ${item_name('potion_of_the_ruins')} takes a hero there at once.`)
+  expect(row(none, `data-walker="${HERO}"`)).toMatch(/^Arrive On foot, at least [\d,]+ minutes$/)
+  expect(words(none)).toContain('Arrive at once')
+  expect(hints(none)).toContain(`A ${item_name('potion_of_the_ruins')} takes a hero there at once.`)
   expect(button(none, `Find ${item_name('potion_of_the_ruins')} on the market`)).toBeDefined()
   // A hero already in the chosen city walks nowhere.
   expect(quest(tab({ hero_ids: [HERO], place: THEBES }))).not.toContain('data-arrival')
 })
 
-test('a place card shows the level band and the key drop at its seed rate, and no price', () => {
+test('a place card is its name, its kind, the level band and one key line at the seed rate, and no price', () => {
   const html = quest(tab({ place: RUINS }))
   const ruins = quest_places('nauvis').find(({ key }) => key === 'city:the_ruins')!
   const band = place_levels(ruins.mob_types)!
   const [key] = key_drops(ruins.mob_types)
   const card = html.slice(html.indexOf('data-place="city:the_ruins"')).split('</article>')[0]!
   expect(card).toContain('data-selected="true"')
-  expect(words(card)).toContain(`City · Monsters level ${band.min}–${band.max}`)
-  expect(words(card)).toContain(
-    `${item_name(key!.item_type)}: ~${key!.chance_bp / 100}% per kill from ${content_catalog.mob(key!.mob_type)!.mob.name}`
-  )
-  // One button per distinct monster opens its drops.
+  // A city and a biome carry their kind as a mark and as a word, not as a colour only.
+  expect(card).toContain('data-kind="city"')
+  expect(html).toContain('data-place="biome:plains" data-kind="biome"')
+  expect(words(card).replace(/\s+/g, ' ')).toContain(`The Ruins City Monsters level ${band.min}–${band.max}`)
+  // One fact line: the key and its rate. Which monster drops it is the card's tooltip.
+  const rate = `~${key!.chance_bp / 100}%`
+  expect(card.match(/data-key-drop=/g)).toHaveLength(1)
+  expect(words(card).replace(/\s+/g, ' ')).toContain(`${item_name(key!.item_type)} ${rate}`)
+  const source = `${item_name(key!.item_type)}: ${rate} per kill from ${content_catalog.mob(key!.mob_type)!.mob.name}`
+  expect(hints(card)).toContain(source)
+  expect(card).not.toContain('<p class="dapp-note"')
+  // One button chooses the place, and one per distinct monster opens its drops.
   expect(buttons(card)).toHaveLength(1 + new Set(ruins.mob_types).size)
   // Every city and biome with monsters has its card, after "where each hero stands".
   expect(html.match(/data-place="/g)).toHaveLength(1 + quest_places('nauvis').length)
-  expect(html).toContain('data-place="biome:')
-  expect(words(html)).toContain('Rarest drop: ')
+  // The plan lists the same facts as rows, and one link to everything that drops there.
+  const plan = html.slice(html.indexOf('data-plan="fight"')).split('</section>')[0]!
+  expect(words(plan).replace(/\s+/g, ' ')).toContain(`Monsters level ${band.min}–${band.max} Group size Any Key drop`)
+  expect(words(plan)).toContain('Rarest drop')
+  expect(hints(plan)).toContain(source)
+  expect(hints(plan)).toContain('Rarest drop: ')
+  expect(tagged(html, 'data-drops=')).toHaveLength(1)
   expect(button(html, text.place_all_drops!)).toBeDefined()
   expect(words(html)).not.toMatch(/≈|SUI \/ hour/)
   // The only SUI on the tab is the unit of the fee limit.
@@ -315,8 +394,8 @@ test('a place card shows the level band and the key drop at its seed rate, and n
   const novice = character_fixture({ level: 1 })
   const low = quest(tab({ hero_ids: [HERO, SECOND], place: RUINS }, { characters: [novice, okami] }))
   expect(low.match(/data-level-warning=/g)).toHaveLength(1)
-  expect(low).toContain(`data-level-warning="${HERO}"`)
-  expect(words(low)).toContain(`Monsters here are level ${band.min}–${band.max}. Mira is level 1.`)
+  expect(row(low, `data-level-warning="${HERO}"`)).toBe('Mira Level 1')
+  expect(hints(low)).toContain(`Monsters here are level ${band.min}–${band.max}. Mira is level 1.`)
   expect(html).not.toContain('data-level-warning')
 })
 
@@ -326,15 +405,20 @@ test('"What you need" lists what a recipe takes from the bag, with a market link
   const state = work(flour, { characters: [farmer], items: [item_fixture('wheat', 3)] })
   const html = quest(state)
   // Level 1 succeeds on half of its tries: two flours take four tries on average.
-  expect(words(html)).toContain(
+  expect(row(html, 'data-work-tries=""')).toBe('Tries ~4')
+  expect(hints(html)).toContain(
     dapp_text(copy, 'work_tries', { tries: '4', amount: '2', item: item_name('wheat_flour') })
   )
-  expect(words(html)).toContain('Mira succeeds on 50% of tries')
+  expect(row(html, 'data-work-facts="craft"')).toBe('Success per try 50%')
+  expect(hints(html)).toContain('Mira succeeds on 50% of tries')
   expect(html).toContain('data-material="wheat" data-missing="5"')
-  expect(words(html)).toContain(`${item_name('wheat')}: need 8, in your bag 3, missing 5`)
-  expect(words(html)).toContain(`${item_name('water')}: need 4, in your bag 0, missing 4`)
+  // A material is one row: what the bag holds of what the tries take. Its sentence is the tooltip.
+  expect(row(html, 'data-material="wheat"')).toContain(`${item_name('wheat')} 3 of 8`)
+  expect(row(html, 'data-material="water"')).toContain(`${item_name('water')} 0 of 4`)
+  expect(hints(html)).toContain(`${item_name('wheat')}: need 8, in your bag 3, missing 5`)
+  expect(hints(html)).toContain(`${item_name('water')}: need 4, in your bag 0, missing 4`)
   expect(button(html, `Find ${item_name('wheat')} on the market`)).toBeDefined()
-  expect(words(html)).toContain(text.work_never_buys!)
+  expect(hints(html)).toContain(text.work_never_buys!)
   // Nothing here buys, and missing materials never block the start: the run waits for them.
   expect(words(html)).not.toMatch(/\bBuy now\b|≈/)
   expect(html).not.toContain('data-line="')
@@ -353,14 +437,17 @@ test('"What you need" lists what a recipe takes from the bag, with a market link
       { characters: [farmer], items: [item_fixture('wheat', 2), item_fixture('water', 1)] }
     )
   )
-  expect(words(stocked)).toContain(`${item_name('wheat')}: need 2, in your bag 2`)
+  expect(row(stocked, 'data-material="wheat"')).toBe(`${item_name('wheat')} 2 of 2`)
+  expect(hints(stocked)).toContain(`${item_name('wheat')}: need 2, in your bag 2`)
   expect(stocked).not.toContain('data-market-link')
-  expect(words(stocked)).not.toContain(text.work_never_buys!)
+  expect(hints(stocked)).not.toContain(text.work_never_buys!)
   // A worn tool, and a held one the hero will equip.
   const hoe = { ...item_fixture('old_hoe', 1, 'hoe'), category: 'tool_farmer' }
   const held = quest(work({ mode: 'gather', item_type: 'wheat', goal: UNTIL }, { characters: [farmer], items: [hoe] }))
-  expect(words(held)).toContain(`${item_name('old_hoe')} is in your bag. Mira equips it when work starts.`)
-  expect(words(held)).toMatch(/Mira harvests \d+–\d+ every [\d.]+ s and earns \d+ profession experience each\./)
+  expect(words(held).replace(/\s+/g, ' ')).toContain(`Tool ${item_name('old_hoe')} in your bag`)
+  expect(hints(held)).toContain(`${item_name('old_hoe')} is in your bag. Mira equips it when work starts.`)
+  expect(row(held, 'data-work-facts="gather"')).toMatch(/^Per harvest \d+(–\d+)?$/)
+  expect(hints(held)).toMatch(/Mira harvests \d+–\d+ every [\d.]+ s and earns \d+ profession experience each\./)
   expect(button(held, 'Start')).not.toContain('disabled')
 })
 
@@ -368,11 +455,23 @@ test('work offers the pick of the bot, proposes the best worker, and reads the g
   // Nothing picked: the bot picks, with the strongest free hero.
   const auto = tab({ kind: 'work' })
   expect(work_worker(auto.dapp, account_of(auto))?.id).toBe(SECOND)
-  const html = quest(auto)
+  // Before the player says what to do there is no list, no plan and no Start: only the three ways.
+  const closed = quest(auto)
+  expect(tagged(closed, 'data-way=')).toHaveLength(3)
+  expect(pressed(closed)).not.toContain('Let your bot pick')
+  for (const mark of ['data-plan=', 'data-start', 'data-fee-cap', 'data-job=', 'data-work-item='])
+    expect([mark, closed.includes(mark)]).toEqual([mark, false])
+  const html = opened(auto, 'auto')
   expect(pressed(html)).toContain('Let your bot pick')
-  expect(words(html)).toContain(text.work_auto_body!)
-  expect(words(html)).toContain(text.quest_until_stop!)
+  expect(pressed(html)).toContain(text.work_job_any)
+  expect(hints(html)).toContain(text.work_auto_body!)
+  expect(button(html, 'Start')).toContain(`title="${text.quest_until_stop}"`)
   expect(button(html, 'Start')).not.toContain('disabled')
+  // A list open with nothing chosen from it yet offers no Start: the pick still says something else.
+  const listing = opened(auto, 'gather')
+  expect(listing).toContain(`data-plan-hint="">${text.work_pick_resource}`)
+  expect(listing).toContain('data-work-item="wheat"')
+  expect(tagged(listing, 'data-start')).toHaveLength(0)
   // One profession narrows the pick, and the best free hero of it is proposed.
   const miner = worker({ MINER: 30 })
   const narrowed = tab({ kind: 'work', work: { mode: 'auto', job: 'MINER' } }, { characters: [miner, okami] })
@@ -395,7 +494,8 @@ test('work offers the pick of the bot, proposes the best worker, and reads the g
   expect(ten).toContain('data-objective="amount"')
   // The sentence is the shipped copy's; the number of harvests is the planner's average.
   const harvests = dapp_text(copy, 'work_harvests', { tries: '\\d+', amount: '10', item: item_name('wheat') })
-  expect(words(ten)).toMatch(new RegExp(harvests))
+  expect(hints(ten)).toMatch(new RegExp(harvests))
+  expect(row(ten, 'data-work-tries=""')).toMatch(/^Harvests ~\d+$/)
   expect(ten).toContain('value="10"')
   const level = quest(
     work({ mode: 'gather', item_type: 'wheat', goal: { kind: 'job_level', level: 5 } }, { items: [hoe] })

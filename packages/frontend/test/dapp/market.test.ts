@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { expect, test } from 'bun:test'
+import { expect, spyOn, test } from 'bun:test'
 import type { ListingRow } from '@aresrpg/protocol'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import * as zustand from 'zustand'
 
-import { market_input } from '../../src/dapp/DappMarket.tsx'
+import { DappMarket, market_input } from '../../src/dapp/DappMarket.tsx'
 import { bot_market } from '../../src/dapp/market.ts'
 import type { StartSpec } from '../../src/dapp/strategies.ts'
 import {
@@ -14,7 +17,11 @@ import {
   type DappInput,
   type DappState,
 } from '../../src/dapp/state.ts'
+import { HUD_PAGE_META } from '../../src/game/hud/hud_pages.ts'
+import type { AppCopy } from '../../src/i18n/copy.ts'
+import en from '../../src/i18n/locales/en.yaml'
 import { initial_marketplace_state } from '../../src/modules/marketplace.ts'
+import { initial_app_state, type AppState } from '../../src/store.ts'
 import { buyer_total } from '../../src/marketplace/price.ts'
 import type { DappAccount } from '../../src/dapp/account.ts'
 
@@ -334,4 +341,26 @@ test('a listing is withdrawn by its own item and kiosk; sale proceeds are never 
     status: 'refused',
     error: 'direct_unconfirmed',
   })
+})
+
+test('the market stands in the game’s own market window, the frame its whole look is written under', () => {
+  const copy = en as AppCopy
+  const state = { ...initial_app_state({} as AppState['settings']), copy }
+  const read = ((_store: unknown, selector?: (app: AppState) => unknown) =>
+    selector ? selector(state) : state) as typeof zustand.useStore
+  const mocked = spyOn(zustand, 'useStore').mockImplementation(read)
+  try {
+    const html = renderToStaticMarkup(createElement(DappMarket, { copy, locale: 'en' }))
+    // The classes of `GamePageWindow`: without them the market's port styles do not apply, and it
+    // shows as bare default buttons in stretched columns.
+    const frame = `aui-window aui-feature-port aui-live-page ${HUD_PAGE_META.marketplace.class_name}`
+    expect(HUD_PAGE_META.marketplace.class_name).toBe('aui-market-port')
+    expect(html).toMatch(new RegExp(`<section class="dapp-market"[^>]*><section class="${frame}">`))
+    expect(html).toContain(`<h1>${copy.marketplace}</h1>`)
+    expect(html).toContain('<div class="aui-live-page-content aui-workspace-main">')
+    // The window is laid in the page: it has nothing to close.
+    expect(html).not.toContain('aui-icon-button')
+  } finally {
+    mocked.mockRestore()
+  }
 })

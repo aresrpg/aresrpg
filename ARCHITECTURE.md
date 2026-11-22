@@ -960,7 +960,8 @@ The dapp's market trades as the bot account, because that account holds the hero
 game's own marketplace presentation behind `MarketSourceContext`, the seam that says whose bag, balance and
 listings are shown and how that account trades; the 3D game mounts the same components with no source and
 keeps trading with the player's wallet. The `marketplace` module still owns public browsing (types, counts,
-floor, price history, volume) over the player's own socket. The bag, balance and own listings are the
+floor, price history, volume) over the player's own socket, and the socket observes the market while a market
+view is mounted, on any surface (`marketplace.open`), never by the game's navigation. The bag, balance and own listings are the
 session's pushed account fold. The offers on screen are the `marketplace` module's own, from the same socket;
 the dapp never asks the bot to watch them. A waiting purchase takes the wallet's one market view ahead of the
 hosted heroes, reads every current offer of its item under the order's own identity, and only then is

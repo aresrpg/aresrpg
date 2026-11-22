@@ -5,24 +5,87 @@
   color: var(--aui-ink);
   font-family: var(--aui-font);
 }
-/* Header readouts: the keys the heroes hold (a button to the Raid tab) and what the bot wallet holds. */
-.dapp-chip {
-  padding: 6px 10px;
-  border: 1px solid var(--aui-line-strong);
+/* Header readouts: the keys the heroes hold (a button to the Raid tab) and what the bot wallet holds.
+   They speak the wallet chip's language beside them: an icon, then a figure in the mono face. */
+.dapp-chip,
+.aui-button.dapp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--aui-border);
   border-radius: var(--aui-radius);
+  background: var(--aui-high);
   color: var(--aui-ink);
-  font-weight: 700;
+  font: 600 13px/1 var(--aui-font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.dapp-chip > svg:first-child {
+  color: var(--aui-muted);
+}
+/* A finger gets the full target; a mouse keeps the bar compact. */
+@media (pointer: coarse) {
+  .dapp-chip,
+  .aui-button.dapp-chip {
+    min-height: 44px;
+  }
+}
+/* A low bot balance is said by the figure and by a mark, not by colour alone. */
 .dapp-chip[data-low] {
   border-color: var(--aui-danger);
   color: var(--aui-danger);
 }
-.aui-button.dapp-chip {
-  min-height: 44px;
+.dapp-chip[data-low]::after {
+  content: '!';
+  font-weight: 800;
 }
-/* The five tabs: a row above the board. Below 960px they are a bar at the bottom of the screen. */
+/* The page frame: one centred column for the bar and the board alike, as the approved mockup. */
+.light-page:has(.dapp) {
+  --light-page-column: 1240px;
+}
+/* The board is exactly as wide as the bar above it: the backdrop is the board's own edge. */
+.light-page:has(.dapp) .light-page-main {
+  width: calc(100% - 24px);
+  padding-inline: 0;
+}
+/* The five tabs stand in the bar on a desktop, between the brand and the readouts. Below 960px they
+   are a bar at the bottom of the screen: the page renders them once in each place and shows one. */
+@media (min-width: 960px) {
+  .dapp-tabs[data-place='page'] {
+    display: none;
+  }
+  .dapp-tabs[data-place='bar'] {
+    flex-wrap: nowrap;
+    gap: 2px;
+    margin: 0 auto 0 12px;
+  }
+  .dapp-tabs[data-place='bar'] .aui-button {
+    min-height: 38px;
+    padding-inline: 12px;
+    border-color: transparent;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    color: var(--aui-soft);
+  }
+  .dapp-tabs[data-place='bar'] .aui-button:hover:not(:disabled) {
+    background-color: var(--aui-high);
+    color: var(--aui-ink);
+  }
+  .dapp-tabs[data-place='bar'] .aui-button[aria-current='page'] {
+    background-color: var(--aui-high);
+    border-color: transparent;
+    box-shadow: inset 0 -2px var(--aui-brass);
+    color: var(--aui-brass-hi);
+  }
+}
+@media (max-width: 959px) {
+  .dapp-tabs[data-place='bar'] {
+    display: none;
+  }
+}
 .dapp-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -81,6 +144,7 @@
     padding: 4px 2px;
     border-color: transparent;
     background-color: transparent;
+    background-image: none;
     box-shadow: none;
     font-size: 11px;
   }
@@ -153,9 +217,20 @@
   color: var(--aui-blue);
 }
 /* The board (the tab on screen), and beside it what entered the bag. Below 960px the feed is a strip above the board. */
+/* A backdrop stands between the scene of the page and its panels: nothing is read straight on the art. */
 .dapp-layout {
   display: grid;
   gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--aui-border);
+  border-radius: var(--aui-radius);
+  background: color-mix(in srgb, var(--aui-bg) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+@media (max-width: 959px) {
+  .dapp-layout {
+    padding: 10px;
+  }
 }
 .dapp-board {
   display: grid;
@@ -195,41 +270,15 @@
   font-size: 1.1rem;
   color: var(--aui-brass-hi);
 }
-.dapp-bag-feed {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.dapp-bag-feed li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border: 1px solid var(--aui-line);
-  border-radius: var(--aui-radius);
-  font-size: 0.85rem;
-}
-.dapp-bag-feed img {
-  width: 24px;
-  height: 24px;
-  image-rendering: pixelated;
-}
-.dapp-bag-feed strong {
-  color: var(--aui-success);
-  font-variant-numeric: tabular-nums;
-}
 .dapp-bag-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 @media (min-width: 960px) {
-  /* The shell is wide for this page: the board takes the window, and the feed keeps a fixed column. */
+  /* The main column, and beside it the secondary one: what the bag received lately. */
   .dapp-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 300px;
     align-items: start;
   }
   /* The market has no side column. */
@@ -239,35 +288,8 @@
   .dapp-bag-feed-panel {
     order: 0;
     position: sticky;
-    top: 16px;
+    top: 76px;
   }
-  .dapp-bag-feed {
-    flex-direction: column;
-    flex-wrap: nowrap;
-  }
-  .dapp-bag-feed li {
-    display: flex;
-  }
-  .dapp-bag-feed li span {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-}
-/* A column, not a grid: a grid shares the spare height between its rows, which pushed the market
-   down under any notice above it. Only the market itself takes the remaining height.
-   The game's market lays itself out by the width of the containers its host names: `app-content`
-   for its panels, `aui-window` for its toolbar. This page is that host, so it names them: without
-   them the market keeps its widest layout at any width, and a phone clips it. */
-.dapp-market {
-  container: app-content aui-window / inline-size;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: calc(100dvh - 120px);
-}
-.dapp-market > :last-child {
-  flex: 1;
 }
 /* The header keeps its two readouts on a phone: the page's sub-label gives them its place. */
 @media (max-width: 560px) {
@@ -278,13 +300,4 @@
 .dapp-link-button {
   text-decoration: none;
   justify-self: start;
-}
-.dapp-disconnect {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--aui-line);
 }

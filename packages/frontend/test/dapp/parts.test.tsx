@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import * as zustand from 'zustand'
 
 import { content_catalog } from '../../src/content/catalog.ts'
+import { DappBagFeed } from '../../src/dapp/DappBag.tsx'
 import { DappDropsSheet } from '../../src/dapp/DappDropsSheet.tsx'
 import { DappHeroCard } from '../../src/dapp/DappHeroCard.tsx'
 import { DappHeroPicker, toggled_heroes } from '../../src/dapp/DappHeroPicker.tsx'
@@ -88,8 +89,11 @@ test('a hero card claims no status until the bot answered', () => {
   expect(before).toContain('Mira')
   expect(before).toContain('Level 3')
   expect(before).toContain(`Yogan · ${copy.simulator_page.class_yogan_title}`)
-  expect(before).toContain(text.hero_xp)
-  expect(before).toContain(text.position_hp)
+  // Both meters stand in one group, so their bars share one column.
+  const meters = before.slice(before.indexOf('<div class="dapp-hero-meters">'), before.indexOf('</footer>'))
+  expect(meters.match(/<progress/g)).toHaveLength(2)
+  expect(meters).toContain(text.hero_xp)
+  expect(meters).toContain(text.position_hp)
   // The slot is the caller's: the card draws it and decides nothing about it.
   expect(before).toContain('<button type="button">Send</button>')
   expect(before).not.toContain('dapp-hero-state')
@@ -109,6 +113,7 @@ test('the compact hero card is one row: no meters', () => {
   const row = render(<DappHeroCard copy={copy} hero={mira} compact />, answered())
   expect(row).toContain('data-compact="true"')
   expect(row).not.toContain('<progress')
+  expect(row).not.toContain('dapp-hero-meters')
   expect(words(row)).toContain(text.status_free)
 })
 
@@ -519,4 +524,24 @@ test('refused starts name their heroes once per reason, and one notice covers ev
   })
   expect(unknown.split(escaped(text.command_uncertain!)).length - 1).toBe(1)
   expect(buttons(unknown)).toHaveLength(0)
+})
+
+test('the feed is one row per kind gained, newest first, each the shared item row; empty, it says so', () => {
+  const feed = (gains: DappState['bag_feed']['gains']): string =>
+    render(<DappBagFeed copy={copy} />, answered({ bag_feed: { seen: {}, gains, rows: null } }))
+  const empty = feed([])
+  expect(empty).toContain(`<aside class="dapp-bag-feed-panel" aria-label="${text.bag_feed_title}">`)
+  expect(words(empty)).toContain(text.bag_feed_empty)
+  expect(empty).not.toContain('<ul')
+
+  const rows = feed([
+    { item_type: lorito!.key, amount: 1 },
+    { item_type: 'wheat', amount: 12 },
+  ]).match(/<li data-gain=.*?<\/li>/gs)
+  expect(rows?.map((row) => words(row).replace(/\s+/g, ' ').trim())).toEqual([
+    `${item_name(lorito!.key)} +1`,
+    `${item_name('wheat')} +12`,
+  ])
+  expect(rows?.[0]).toContain(`<button data-item-row="${lorito!.key}"`)
+  expect(words(rows!.join(''))).not.toContain(text.bag_feed_empty)
 })

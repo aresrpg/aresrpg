@@ -21,17 +21,15 @@ import { DappDropsSheet } from './DappDropsSheet.tsx'
 import { DappHeroCard, hero_class, HeroPortrait } from './DappHeroCard.tsx'
 import { DappHeroPicker } from './DappHeroPicker.tsx'
 import { DappItemRow, DappItemSheet } from './DappItemSheet.tsx'
-import { RaidDropRows, RaidKeysShort } from './DappRaidRun.tsx'
+import { RaidDrops, RaidKeysShort, RaidKeyWays } from './DappRaidRun.tsx'
 import { DappFeeCap, DappPotionButton, fee_text, fee_valid, walk_time } from './DappStartParts.tsx'
 import { dungeon_keys, proposed_dungeon, proposed_team, raid_spec } from './next_step.ts'
-import { dungeon_rooms, travel_potion, walk_seconds } from './places.ts'
+import { place_levels, travel_potion, walk_seconds } from './places.ts'
 import {
   boss_name,
   dungeon_boss,
   dungeon_gates,
   enter_step,
-  RAID_DROPS_SHOWN,
-  raid_ladder,
   raid_text,
   raid_title,
   seat_taken,
@@ -72,7 +70,6 @@ const raid_setup = (text: RaidText, dapp: DappState, account: DappAccount) => {
   const bag = account_bag(account)
   return {
     dungeon,
-    rooms: dungeon_rooms(dungeon),
     spec,
     title,
     seats,
@@ -114,34 +111,33 @@ const Dungeons = ({ text, setup }: Pick<Shared, 'text' | 'setup'>) => (
   </div>
 )
 
-/** The dungeon as the seed authors it, and the keys the heroes hold for it. */
-const DungeonFacts = ({ text, setup, open }: Pick<Shared, 'text' | 'setup'> & Readonly<{ open: Open }>) => {
+/**
+ * The dungeon as the seed authors it, and the keys the heroes hold for it. With no key at all, the
+ * key line itself carries the two ways to get one.
+ */
+const DungeonFacts = ({ copy, text, setup, open }: Shared & Readonly<{ open: Open }>) => {
   const { dungeon, keys } = setup
+  const levels = place_levels(dungeon.rooms.flat().map(({ mob_type }) => mob_type))
+  const facts = text('raid_dungeon_facts', {
+    rooms: String(dungeon.rooms.length),
+    monsters: String(dungeon.rooms.reduce((total, room) => total + room.length, 0)),
+    boss: boss_name(dungeon),
+  })
   return (
     <Panel className="dapp-raid-panel" data-raid-dungeon={dungeon.dungeon}>
       <h3>{titleize(dungeon.dungeon)}</h3>
       <p className="dapp-note">
-        {text('raid_dungeon_facts', {
-          rooms: String(dungeon.rooms.length),
-          monsters: String(dungeon.rooms.reduce((total, room) => total + room.length, 0)),
-          boss: boss_name(dungeon),
-        })}
+        {[facts, levels && encyclopedia_text(copy)('level_range', levels)].filter(Boolean).join(' · ')}
       </p>
-      <ul className="dapp-rows">
-        <li>
-          <DappItemRow
-            item_type={dungeon.key}
-            value={keys === null ? '' : `×${keys}`}
-            open={() => open({ kind: 'item', item_type: dungeon.key })}
-          />
-        </li>
-      </ul>
-      <p className="dapp-note" data-raid-keys={keys ?? undefined}>
-        {keys === null ? text('bag_loading') : text('raid_keys_held', { count: String(keys) })}
-      </p>
-      <Button onClick={() => open({ kind: 'drops' })}>
-        {text('drops_dungeon_title', { dungeon: titleize(dungeon.dungeon) })}
-      </Button>
+      <div className="dapp-raid-key" data-raid-keys={keys ?? undefined}>
+        <DappItemRow
+          item_type={dungeon.key}
+          value={keys === null ? '' : `×${keys}`}
+          open={() => open({ kind: 'item', item_type: dungeon.key })}
+        />
+        {keys === null && <p className="dapp-note">{text('bag_loading')}</p>}
+        {keys === 0 && <RaidKeyWays copy={copy} dungeon={dungeon} />}
+      </div>
     </Panel>
   )
 }
@@ -203,6 +199,11 @@ const Board = ({ copy, text, setup, open }: Shared & Readonly<{ open: Open }>) =
           )
         })}
       </div>
+      {!setup.seats.length && (
+        <p className="dapp-note" data-raid-hint="no_seat">
+          {text('raid_no_seat')}
+        </p>
+      )}
     </section>
   )
 }
@@ -278,70 +279,71 @@ const SeatSheet = ({ copy, text, setup, seat, close }: Shared & Readonly<{ seat:
   )
 }
 
-/** The seated heroes' levels beside each room's monsters: the facts a player judges a team by. */
-const Levels = ({ copy, text, setup }: Shared) => {
-  const [alone] = setup.seats
-  return (
-    <section className="dapp-raid-block">
-      <h4>{text('raid_levels_title')}</h4>
-      <p className="dapp-note">
-        {setup.seats.map(({ name, level }) => `${name} · ${text('hero_level', { level: String(level) })}`).join(', ')}
-      </p>
-      {setup.seats.length === 1 && alone && <p className="dapp-note">{text('raid_alone', { name: alone.name })}</p>}
-      <dl className="dapp-raid-levels">
-        {setup.rooms.map(({ room, boss, levels }) => (
-          <div key={room} data-room={room}>
-            <dt>
-              {boss
-                ? text('raid_boss_room', { boss: boss_name(setup.dungeon) })
-                : text('drops_room', { room: String(room) })}
-            </dt>
-            <dd>{levels && encyclopedia_text(copy)('level_range', levels)}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
-}
+/** Heroes of the plan that burn a key: one already inside the dungeon goes on with its run. */
+const keys_staked = ({ dungeon, seats, offer }: Setup): number =>
+  seats.filter(
+    (hero) => !raid_resumes(dungeon.dungeon, hero) && offer.plan.starts.some(({ hero_id }) => hero_id === hero.id)
+  ).length
 
 /**
- * How the heroes reach the gates. Walking is a fact of the plan, never a blocker: the bot walks them
- * first. A hero that holds the city's potion may drink it, one hero at a time.
+ * How the heroes reach the gates, as one row of the ledger. Walking is a fact of the plan, never a
+ * blocker: the bot walks them first. A hero that holds the city's potion may drink it, one at a time.
  */
 const Travel = ({ copy, text, setup, locale }: Shared & Readonly<{ locale: Locale }>) => {
   const { seats, offer, gates, bag } = setup
-  const walkers = seats.filter(({ id }) => offer.plan.starts.some(({ hero_id, walks }) => walks && hero_id === id))
-  if (!walkers.length) return null
+  const { starts } = offer.plan
+  const walkers = seats.filter(({ id }) => starts.some(({ hero_id, walks }) => walks && hero_id === id))
   return (
-    <section className="dapp-raid-block" data-raid-travel="">
-      <p className="dapp-note">{text('quest_walks', { names: walkers.map(({ name }) => name).join(', ') })}</p>
-      {gates &&
-        walkers.map((hero) => {
-          const seconds = walk_seconds(hero, gates)
-          const potion = bag && travel_potion(bag, hero, gates)
-          if (seconds === null && !potion) return null
+    <div data-raid-travel={walkers.length}>
+      <dt>{text('raid_ledger_travel')}</dt>
+      <dd>
+        {!walkers.length && (starts.length ? text('raid_travel_none') : '—')}
+        {walkers.map((hero) => {
+          const seconds = gates && walk_seconds(hero, gates)
+          const potion = gates && bag && travel_potion(bag, hero, gates)
           return (
-            <div key={hero.id} className="dapp-notice-row" data-walker={hero.id}>
-              <p className="dapp-notice-text">
-                {seconds === null
-                  ? hero.name
-                  : text('raid_walk', { name: hero.name, time: walk_time(locale, seconds) })}
-              </p>
+            <span key={hero.id} className="dapp-raid-walker" data-walker={hero.id}>
+              {seconds === null ? hero.name : text('raid_walk', { name: hero.name, time: walk_time(locale, seconds) })}
               {potion && <DappPotionButton copy={copy} hero={hero} potion={potion} />}
-            </div>
+            </span>
           )
         })}
+        {walkers.length > 0 && <small>{text('raid_travel_fee')}</small>}
+      </dd>
+    </div>
+  )
+}
+
+/** What the plan stakes and how the team gets there, as label and value rows; the fee limit closes them. */
+const Ledger = ({ copy, text, setup, locale, draft }: Shared & Readonly<{ locale: Locale; draft: SetupDraft }>) => {
+  const cap = useAppStore(({ dapp }) => dapp.raid.fee_cap_mist)
+  return (
+    <section className="dapp-raid-caps" data-raid-caps="">
+      <dl className="dapp-ledger">
+        <div>
+          <dt>{text('raid_ledger_keys_used')}</dt>
+          <dd>{text('raid_ledger_keys_used_value', { count: String(keys_staked(setup)) })}</dd>
+        </div>
+        <Travel copy={copy} text={text} setup={setup} locale={locale} />
+      </dl>
+      {/* An entry that cannot be read changes nothing: the last limit stays, and Enter waits. */}
+      <DappFeeCap
+        copy={copy}
+        cap={cap}
+        typed={draft.fee}
+        type={draft.set_fee}
+        pick={(fee_cap_mist) => dispatch_app({ type: 'dapp/raid_pick', pick: { fee_cap_mist } })}
+      />
     </section>
   )
 }
 
 type RunChoice = `${number}` | 'all'
-/** How many dungeon runs each hero sees end, and the SUI its own run may pay. Both are optional and count per hero. */
-const Caps = ({ copy, text, fee, set_fee }: Omit<Shared, 'setup'> & Pick<SetupDraft, 'fee' | 'set_fee'>) => {
+/** How many dungeon runs each hero sees end: one, three, or while its keys last. */
+const Runs = ({ text }: Pick<Shared, 'text'>) => {
   const runs = useAppStore(({ dapp }) => dapp.raid.runs)
-  const cap = useAppStore(({ dapp }) => dapp.raid.fee_cap_mist)
   return (
-    <section className="dapp-raid-block" data-raid-caps="">
+    <section className="dapp-raid-runs">
       <h4>{text('raid_runs')}</h4>
       <SegmentedControl<RunChoice>
         label={text('raid_runs')}
@@ -357,14 +359,6 @@ const Caps = ({ copy, text, fee, set_fee }: Omit<Shared, 'setup'> & Pick<SetupDr
       <p className="dapp-note" data-raid-runs={runs ?? 'all'}>
         {runs === null ? text('raid_repeats') : text('raid_runs_count', { count: String(runs) })}
       </p>
-      {/* An entry that cannot be read changes nothing: the last limit stays, and Enter waits. */}
-      <DappFeeCap
-        copy={copy}
-        cap={cap}
-        typed={fee}
-        type={set_fee}
-        pick={(fee_cap_mist) => dispatch_app({ type: 'dapp/raid_pick', pick: { fee_cap_mist } })}
-      />
     </section>
   )
 }
@@ -374,7 +368,7 @@ const names_of = (heroes: readonly Hero[], ids: readonly string[]): string =>
     .filter(({ id }) => ids.includes(id))
     .map(({ name }) => name)
     .join(', ')
-/** Seated heroes that stay behind, one line per reason. A missing key has its own panel. */
+/** Seated heroes that stay behind, one line per reason. A missing key has its own notice. */
 const Blocked = ({ text, setup }: Pick<Shared, 'text' | 'setup'>) =>
   BLOCKERS.map((blocker) => {
     const ids = setup.offer.plan.blocked.flatMap((entry) => (entry.blocker === blocker ? [entry.hero_id] : []))
@@ -385,39 +379,33 @@ const Blocked = ({ text, setup }: Pick<Shared, 'text' | 'setup'>) =>
     ) : null
   })
 
-/** Heroes of the plan that burn a key: one already inside the dungeon goes on with its run. */
-const keys_staked = ({ dungeon, seats, offer }: Setup): number =>
-  seats.filter(
-    (hero) => !raid_resumes(dungeon.dungeon, hero) && offer.plan.starts.some(({ hero_id }) => hero_id === hero.id)
-  ).length
-
 type PlanProps = Shared & Readonly<{ locale: Locale; draft: SetupDraft; enter: () => void }>
-/** The plan of the seated team: what it can win, what it meets, what it costs and the one Enter. */
+/**
+ * The plan, in one panel beside the team: what a run can drop, what it stakes, how often it runs and
+ * the one Enter. It stands there before a hero is seated: only Enter waits for a team.
+ */
 const Plan = ({ copy, text, setup, locale, draft, enter }: PlanProps) => {
   const ready = useAppStore(({ dapp }) => bot_ready(dapp))
   const unreachable = useAppStore(({ dapp }) => bot_unreachable(dapp))
-  const { dungeon, rooms } = setup
+  const { dungeon, keys, seats } = setup
   const { plan } = setup.offer
   const missing = plan_keys_missing(plan)
   const staked = String(keys_staked(setup))
   const key_art = item_icon(dungeon.key)
   return (
-    <Panel className="dapp-raid-panel dapp-raid-plan" data-raid-plan="">
-      <section className="dapp-raid-block">
-        <h4>{text('raid_drops_title')}</h4>
-        <RaidDropRows
-          copy={copy}
-          locale={locale}
-          dungeon={dungeon}
-          drops={raid_ladder(rooms).slice(0, RAID_DROPS_SHOWN)}
-          inspect={(item_type) => draft.open({ kind: 'item', item_type })}
-        />
-      </section>
-      <Levels copy={copy} text={text} setup={setup} />
-      <Travel copy={copy} text={text} setup={setup} locale={locale} />
-      <Caps copy={copy} text={text} fee={draft.fee} set_fee={draft.set_fee} />
+    <Panel className="dapp-raid-panel" data-raid-plan={seats.length ? '' : 'empty'}>
+      <RaidDrops
+        copy={copy}
+        locale={locale}
+        dungeon={dungeon}
+        inspect={(item_type) => draft.open({ kind: 'item', item_type })}
+        more={() => draft.open({ kind: 'drops' })}
+      />
+      <Ledger copy={copy} text={text} setup={setup} locale={locale} draft={draft} />
+      <Runs text={text} />
       <Blocked text={text} setup={setup} />
-      {missing > 0 && <RaidKeysShort copy={copy} dungeon={dungeon} missing={missing} />}
+      {/* With no key at all, the key line of the dungeon carries the ways to one. */}
+      {missing > 0 && <RaidKeysShort copy={copy} dungeon={dungeon} missing={missing} ways={keys !== 0} />}
       {!ready && (
         <p className="dapp-note" role="status" aria-busy={!unreachable}>
           {text(bot_wait_key(unreachable))}
@@ -425,7 +413,6 @@ const Plan = ({ copy, text, setup, locale, draft, enter }: PlanProps) => {
       )}
       {(plan.starts.length > 0 || missing === 0) && (
         <footer className="dapp-raid-foot">
-          <p className="dapp-note">{text('raid_stake', { count: staked })}</p>
           <Button
             tone="primary"
             disabled={enter_step(plan) === 'blocked' || !fee_valid(draft.fee, null)}
@@ -509,16 +496,10 @@ export const RaidSetupView = ({ copy, locale, entered, back, draft }: SetupProps
       <div className="dapp-raid-split">
         <div className="dapp-raid-column">
           <Dungeons text={text} setup={setup} />
-          <DungeonFacts text={text} setup={setup} open={draft.open} />
+          <DungeonFacts {...shared} open={draft.open} />
           <Board {...shared} open={draft.open} />
         </div>
-        {setup.seats.length ? (
-          <Plan {...shared} locale={locale} draft={draft} enter={enter} />
-        ) : (
-          <p className="dapp-warning" data-raid-plan="empty">
-            {text('raid_no_seat')}
-          </p>
-        )}
+        <Plan {...shared} locale={locale} draft={draft} enter={enter} />
       </div>
       <Sheets {...shared} locale={locale} draft={draft} send={send} />
     </section>

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ReactNode } from 'react'
 import { Button } from '@aresrpg/ui'
-import { Castle, House, KeyRound, Store, Swords, Users } from 'lucide-react'
+import { Bot, Castle, House, KeyRound, Store, Swords, Unplug, Users } from 'lucide-react'
 
 import { SuinsConfirmation } from '../settings/SuinsConfirmation.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -12,6 +12,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { LightPage } from '../components/LightPage.tsx'
 import { Toasts } from '../components/Toasts.tsx'
 import { SessionReplacedModal } from '../components/SessionReplacedModal.tsx'
+import { SuiLogo } from '../components/SuiLogo.tsx'
 import { format_sui } from '../wallet_amount.ts'
 
 import { BOT_LOW_BALANCE_MIST } from './account.ts'
@@ -19,7 +20,7 @@ import { dapp_text } from './copy.ts'
 import { DappConsent } from './DappConsent.tsx'
 import { board_stage, DappStage, play_stage, shown_tab, type Stage } from './DappPlay.tsx'
 import { keys_held } from './next_step.ts'
-import { tab_badges, type DappTab } from './state.ts'
+import { commands_unresolved, tab_badges, type DappTab } from './state.ts'
 import './dapp.css'
 
 const consent_route = (): boolean => new URLSearchParams(globalThis.location.search).has('authorization_id')
@@ -38,7 +39,7 @@ const KeyChip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       onClick={() => dispatch_app({ type: 'dapp/tab', tab: 'raid' })}
     >
       <KeyRound size={16} aria-hidden="true" />
-      {keys}
+      <span>{keys}</span>
     </Button>
   )
 }
@@ -48,18 +49,45 @@ const BalanceChip = ({ copy, locale }: Props) => {
   const balance = useAppStore(({ session }) => session.agent_inventory.sui_balance_mist)
   if (balance === null) return null
   const low = balance < BOT_LOW_BALANCE_MIST
+  const amount = format_sui(balance, 2, locale)
   return (
     <span
       className="dapp-chip"
+      role="img"
+      aria-label={dapp_text(copy, 'bot_balance', { amount })}
+      data-bot-balance={amount}
       data-low={low || undefined}
       title={dapp_text(copy, low ? 'bot_balance_low' : 'bot_balance_hint')}
     >
-      {dapp_text(copy, 'bot_balance', { amount: format_sui(balance, 2, locale) })}
+      <Bot size={16} aria-hidden="true" />
+      <SuiLogo size={16} />
+      <span>{amount}</span>
     </span>
   )
 }
 
-/** The dapp's own header readouts: the keys the heroes hold and what the bot wallet holds. */
+/** Ends this page's bot access on request; signing out ends it too. It waits for every request the
+ * bot has not answered, so nothing is left without its outcome. */
+export const DappDisconnect = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const linked = useAppStore(({ dapp }) => dapp.link.phase === 'connected')
+  const blocked = useAppStore(({ dapp }) => commands_unresolved(dapp))
+  if (!linked) return null
+  const label = dapp_text(copy, 'disconnect_action')
+  return (
+    <Button
+      className="dapp-chip"
+      aria-label={label}
+      title={label}
+      disabled={blocked}
+      data-disconnect=""
+      onClick={() => dispatch_app({ type: 'dapp/disconnect' })}
+    >
+      <Unplug size={16} aria-hidden="true" />
+    </Button>
+  )
+}
+
+/** The dapp's own header controls: the keys the heroes hold, what the bot wallet holds, and the way out. */
 export const DappChips = ({ copy, locale }: Props) => {
   const signed_in = useAppStore(({ session }) => session.wallet !== null)
   if (!signed_in) return null
@@ -67,6 +95,7 @@ export const DappChips = ({ copy, locale }: Props) => {
     <>
       <KeyChip copy={copy} />
       <BalanceChip copy={copy} locale={locale} />
+      <DappDisconnect copy={copy} />
     </>
   )
 }
@@ -83,13 +112,17 @@ const TABS: readonly Readonly<{ tab: DappTab; icon: ReactNode }>[] = [
  * The five tabs. Quest and Raid count the heroes that are out on them. The market trades as the bot,
  * so its tab opens only once the bot has answered for the heroes; until then it cannot be pressed.
  */
-export const DappTabs = ({ copy, stage }: Readonly<{ copy: AppCopy; stage: Stage }>) => {
+export const DappTabs = ({
+  copy,
+  stage,
+  place = 'page',
+}: Readonly<{ copy: AppCopy; stage: Stage; place?: 'bar' | 'page' }>) => {
   const shown = useAppStore(({ dapp }) => shown_tab(dapp.tab, stage))
   const quest = useAppStore(({ dapp }) => tab_badges(dapp).quest)
   const raid = useAppStore(({ dapp }) => tab_badges(dapp).raid)
   const badges: Readonly<Partial<Record<DappTab, number>>> = { quest, raid }
   return (
-    <nav className="dapp-tabs" aria-label={dapp_text(copy, 'nav_label')}>
+    <nav className="dapp-tabs" data-place={place} aria-label={dapp_text(copy, 'nav_label')}>
       {TABS.map(({ tab, icon }) => (
         <Button
           key={tab}
@@ -109,6 +142,12 @@ export const DappTabs = ({ copy, stage }: Readonly<{ copy: AppCopy; stage: Stage
       ))}
     </nav>
   )
+}
+
+/** The tabs of the bar: on a desktop they stand in the bar itself, between the brand and the readouts. */
+const BarTabs = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const stage = useAppStore(play_stage)
+  return board_stage(stage) ? <DappTabs copy={copy} stage={stage} place="bar" /> : null
 }
 
 /** The gates, then the board with its tabs. The tabs show only once the game server read the bot account. */
@@ -133,7 +172,6 @@ export const DappPage = ({ copy, locale }: Props) => {
   return (
     <LocaleScope locale={locale}>
       <LightPage
-        wide
         aura="moss"
         brand={
           <>
@@ -141,7 +179,12 @@ export const DappPage = ({ copy, locale }: Props) => {
             <span>{dapp_text(copy, 'brand')}</span>
           </>
         }
-        controls={<DappChips copy={copy} locale={locale} />}
+        controls={
+          <>
+            <BarTabs copy={copy} />
+            <DappChips copy={copy} locale={locale} />
+          </>
+        }
         copy={copy}
       >
         <div className="dapp" lang={locale}>

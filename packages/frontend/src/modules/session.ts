@@ -508,8 +508,8 @@ const observe = (
   events.on('fight/resync', ({ fight }) => link?.send({ type: 'packet/fight_resync', fight }))
   observe_failure_toasts({ events, dispatch, get_state, signal })
   const sync_market_subscription = (state: AppState, previous: AppState): void => {
-    const market_open = state.navigation.page === 'marketplace'
-    const market_was_open = previous.navigation.page === 'marketplace'
+    const market_open = state.marketplace.open
+    const market_was_open = previous.marketplace.open
     const link_became_ready = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
     if (
       !link ||

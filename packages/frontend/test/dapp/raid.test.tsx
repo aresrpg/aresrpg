@@ -19,6 +19,7 @@ import {
   dungeon_boss,
   enter_step,
   RAID_DROPS_SHOWN,
+  raid_ladder,
   raid_parties,
   raid_verdict,
   seat_taken,
@@ -215,13 +216,16 @@ test('the proposed dungeon is the first whose key is held, and an unread bag cla
   expect(button(html, 'Gilded Lorito')).toContain('aria-pressed="false"')
   expect(words(html)).toContain('Hunt Araknomath')
   expect(words(html)).toContain(`${tangled!.rooms.length} rooms · ${tangled!.rooms.flat().length} monsters · boss`)
-  expect(words(html)).toContain(counted('raid_keys_held', 2))
+  // The key line says the key and how many are held; with a key in hand it offers no way to another.
+  expect(html).toContain('data-raid-keys="2"')
+  expect(words(html)).toContain(`${item_name(tangled!.key)} ×2`)
+  expect(html).not.toContain('data-raid-key-ways')
   // The player's own choice wins over the proposal.
   expect(press(setup(), keyed, 'Gilded Lorito')).toEqual([pick({ dungeon: lorito!.dungeon })])
-  // No seat is filled by the page: the plan asks for a hero, and nothing can be entered.
+  // No seat is filled by the page: the team block asks for a hero, and nothing can be entered.
   expect(html).toContain('data-raid-plan="empty"')
-  expect(words(html)).toContain(text.raid_no_seat)
-  expect(button(html, 'Enter')).toBeUndefined()
+  expect(html).toContain(`data-raid-hint="no_seat">${text.raid_no_seat}`)
+  expect(button(html, 'Enter')).toContain('disabled=""')
   no_raw_key(html)
   const unread = render(setup(), page(account_fixture({ characters: [mira], items: [keys(2)], phase: 'loading' })))
   expect(words(unread)).toContain(text.bag_loading)
@@ -306,10 +310,17 @@ test('a team short of keys opens the notice that names who enters and sends noth
   expect(sent).toHaveLength(1)
   expect(entered).toHaveBeenCalledTimes(1)
   expect(Object.keys(after(short, ...sent).dapp.commands)).toEqual([okami.id, mira.id])
-  // A team with no key at all has no Enter: only the ways to a key.
+  // A team with no key at all has no Enter: the key line itself carries the ways to a key, once.
   const keyless = render(setup(), seated(team_page([mira], 0), mira))
   expect(button(keyless, 'Enter')).toBeUndefined()
-  expect(button(keyless, text.raid_quest_for_keys!)).toBeDefined()
+  const key_line = keyless.slice(keyless.indexOf('data-raid-keys="0"'), keyless.indexOf('data-raid-plan'))
+  expect(key_line).toContain('data-market-link=')
+  expect(button(key_line, text.raid_quest_for_keys!)).toBeDefined()
+  expect(keyless.match(/data-raid-key-ways/g)).toHaveLength(1)
+  expect(keyless).toContain('data-raid-short="1"')
+  // A team that holds keys, but too few, finds those ways beside its Enter.
+  expect(html.slice(html.indexOf('data-raid-short="1"'))).toContain('data-raid-key-ways')
+  expect(html.match(/data-raid-key-ways/g)).toHaveLength(1)
 })
 
 test('Enter dispatches one dapp/start with the seats in order', () => {
@@ -373,9 +384,14 @@ test('a hero outside the city of the dungeon walks there, and its potion is opti
   const potion = { ...item_fixture('potion_of_thebes', 1, 'p1'), category: 'consumable' }
   const state = seated(page(account_fixture({ characters: [mira, away], items: [keys(2), potion] })), mira, away)
   const html = render(setup(), state)
-  expect(words(html)).toContain('Okami: walks there first. Each zone on the way costs a network fee.')
-  expect(words(html)).toMatch(/Okami: at least \d+ minutes on foot to the gates/)
+  const travel = words(html.slice(html.indexOf('data-raid-travel="1"')).split('</dd>')[0]!)
+  expect(travel).toMatch(/^.*Travel Okami: at least \d+ minutes on foot to the gates/)
+  expect(travel).toContain(text.raid_travel_fee)
   expect(html.match(/data-walker=/g)).toHaveLength(1)
+  expect(words(html)).toContain('Keys used 2, one per hero')
+  // A team that stands at the gates says so in the same row.
+  const near = render(setup(), seated(team_page([mira], 1), mira))
+  expect(words(near.slice(near.indexOf('data-raid-travel="0"')).split('</dd>')[0]!)).toContain(text.raid_travel_none)
   // Walking blocks nothing: both heroes enter.
   expect(button(html, enter_label(2))).not.toContain('disabled')
   const drunk = direct(away, 'use_consumable', { item_id: 'p1', amount: 1 })
@@ -445,14 +461,15 @@ test('the run view shows the room of each hero from its chain row and no round, 
   expect(html.match(/data-room-state="now"/g)).toHaveLength(1)
   // Both heroes won the same fight: its loot is each hero's own, summed by item.
   expect(words(html)).toContain(`${item_name(drop!.item_type)} ×4`)
-  expect(words(html)).toContain(text.raid_next_drops)
+  // The drops of the dungeon are listed once, beside the team, whatever room it stands in.
+  expect(html.match(/data-raid-drops=/g)).toHaveLength(1)
   expect(html.match(/data-run="/g)).toHaveLength(2)
   // No fight feed and no estimate: the only percentages are the seed's drop rates.
   expect(words(html).replace(/~[\d.,]+% per kill/g, '')).not.toMatch(/%|≈|\b(round|turn)\b/i)
   no_raw_key(html)
   const last = render(follow, pushed(started, { characters: inside(ROOMS, mira, okami) }))
   expect(words(last)).toContain(`Boss room · ${dungeon_boss(gilded)!.name}`)
-  expect(last).not.toContain(text.raid_next_drops)
+  expect(last.match(/data-raid-drops=/g)).toHaveLength(1)
 })
 
 test('Stop keeps a hero inside its run; Leave asks once, then sends dungeon_leave for a hero the bot left', () => {
@@ -502,7 +519,7 @@ test('the result shows won or lost from the folded results and the keys left', (
   expect(words(html)).toContain(text.raid_result_bag)
   expect(words(html)).toContain(`${item_name(drop!.item_type)} ×2`)
   expect(html).toContain('data-raid-keys="2"')
-  expect(words(html)).toContain('Keys left: 2')
+  expect(words(html)).toContain('Keys left 2')
   expect(words(html)).not.toMatch(/≈|SUI/)
   no_raw_key(html)
   // The same team again is one start with what the position kept.
@@ -531,12 +548,21 @@ test('the result shows won or lost from the folded results and the keys left', (
   expect(button(broke, text.raid_change_team!)).toBeDefined()
 })
 
-test('the setup lists what a run can drop, one screen of it, and each room beside the team', () => {
-  const rooms = dungeon_rooms(gilded)
-  const html = render(setup(), seated(team_page([mira], 1), mira))
+test('the setup lists what a run can drop, one screen of it, with the way to the whole table', () => {
+  const state = seated(team_page([mira], 1), mira)
+  const html = render(setup(), state)
+  // One row per drop and the key line: the boss room's rarest drop leads.
   expect(html.match(/data-item-row=/g)).toHaveLength(RAID_DROPS_SHOWN + 1)
+  const [prize] = raid_ladder(dungeon_rooms(gilded))
+  const drops = html.slice(html.indexOf('data-raid-drops='))
+  expect(drops.indexOf('data-item-row=')).toBe(drops.indexOf(`data-item-row="${prize!.item_type}"`))
+  expect(words(drops)).toContain(`${item_name(prize!.item_type)} · ${text.drops_boss_room}`)
   expect(words(html)).toMatch(/~[\d.]+% per kill/)
-  expect(words(html)).toContain('Mira goes alone.')
-  expect(html.match(/<div data-room="\d+">/g)).toHaveLength(rooms.length)
+  // The level band of the monsters stands in the facts of the dungeon; each room is in the full table.
+  expect(words(html)).toMatch(/boss Golden Lorito · Lv\. \d+-\d+/)
+  open.mockClear()
+  expect(press(setup(), state, `Every drop in Gilded Lorito`)).toEqual([])
+  expect(open).toHaveBeenCalledWith({ kind: 'drops' })
+  expect(render(setup({ sheet: { kind: 'drops' } }), state).match(/data-room="\d+"/g)).toHaveLength(ROOMS)
   no_raw_key(html)
 })

@@ -20,7 +20,7 @@ export {
   player_max_hp,
   seated_player_health,
 } from './create.ts'
-export { point_removal_chance, tackle_contest } from './fight_math.ts'
+export { point_removal_chance, primary_stat, tackle_contest } from './fight_math.ts'
 export { generate_board } from './board_gen.ts'
 export { project_board_cells } from './board.ts'
 export { spell_target_cells, weapon_target_cells, split_placements } from './effects.ts'
@@ -42,6 +42,7 @@ export {
   living_count,
   movement_points_of,
   players_ready_after,
+  sheet_of,
   xp_award_of,
   POOL_EFFECT_REASONS,
 } from './fighters.ts'

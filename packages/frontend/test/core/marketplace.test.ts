@@ -496,6 +496,22 @@ test('changing offer pages rejects the previous response and preserves owned cat
   expect(previous.marketplace.page_cursors).toEqual([])
 })
 
+// Regression (owner report 2026-11-22): the web dapp's market showed no counts, no volume and no
+// listings. The socket observed the market only while the game's navigation said "marketplace", and
+// the dapp has no such page. The mounted view is now the one fact: any surface that shows it is observed.
+test('a mounted market view is what the socket follows, on any surface, and a sign-in keeps it', () => {
+  const initial = initial_app_state(settings)
+  expect(initial.marketplace.open).toBe(false)
+  const opened = reduce_app_state(initial, { type: 'market/opened' })
+  expect(opened.marketplace.open).toBe(true)
+  // The game's navigation plays no part: this state never left the default page.
+  expect(opened.navigation.page).toBe(initial.navigation.page)
+  // An account change resets what the market holds, never the fact that its view is on screen.
+  expect(reduce_app_state(opened, { type: 'auth/disconnected' }).marketplace.open).toBe(true)
+  const closed = reduce_app_state(opened, { type: 'market/closed' })
+  expect(closed.marketplace.open).toBe(false)
+})
+
 test('type-count snapshots reject stale observations and distinguish unavailable from zero', () => {
   const opened = reduce_app_state(initial_app_state(settings), { type: 'market/opened' })
   const current = reduce_app_state(opened, {

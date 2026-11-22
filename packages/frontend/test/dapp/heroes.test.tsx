@@ -14,10 +14,10 @@ import { useEquipment } from '../../src/characters/useEquipment.ts'
 import { useSpells } from '../../src/characters/useSpells.ts'
 import { ItemCrafting } from '../../src/components/ItemCrafting.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
-import { DappHeroes, useHeroSession } from '../../src/dapp/DappHeroes.tsx'
+import { DappHeroes, DappHeroSheet, useHeroSession, type HeroTab } from '../../src/dapp/DappHeroes.tsx'
 import type { DappAccount } from '../../src/dapp/account.ts'
 import type { DirectRequest } from '../../src/dapp/direct.ts'
-import { reduce_dapp, type DappInput, type DappState } from '../../src/dapp/state.ts'
+import { reduce_dapp, selected_hero, type DappInput, type DappState } from '../../src/dapp/state.ts'
 import { copy_text, type AppCopy } from '../../src/i18n/copy.ts'
 import en from '../../src/i18n/locales/en.yaml'
 import * as store from '../../src/store.ts'
@@ -90,8 +90,8 @@ const render = (node: ReactNode, state: store.AppState): string => {
   }
 }
 /** The game's tabs are lazy: the first render asks for them, the next one draws them. */
-const tab = async (state: store.AppState): Promise<string> => {
-  render(<DappHeroes copy={copy} />, state)
+const drawn = async (node: ReactNode, state: store.AppState): Promise<string> => {
+  render(node, state)
   await Promise.all([
     import('../../src/characters/EquipmentTab.tsx'),
     import('../../src/characters/StatsTab.tsx'),
@@ -99,13 +99,27 @@ const tab = async (state: store.AppState): Promise<string> => {
     import('../../src/characters/JobsTab.tsx'),
   ])
   await new Promise((resolve) => setTimeout(resolve, 0))
-  return render(<DappHeroes copy={copy} />, state)
+  return render(node, state)
+}
+/** The Heroes tab as it opens: the window shows the hero's equipment. */
+const tab = (state: store.AppState): Promise<string> => drawn(<DappHeroes copy={copy} />, state)
+const TABS: readonly HeroTab[] = ['equipment', 'stats', 'spells', 'jobs']
+/** The chosen hero's card and window after the player pressed one tab of the window. */
+const sheet = (state: store.AppState, shown: HeroTab, on_tab: (next: HeroTab) => void = () => undefined) => {
+  const hero = selected_hero(state.dapp, state.session.agent_inventory)!
+  return drawn(<DappHeroSheet copy={copy} hero={hero} tab={shown} on_tab={on_tab} />, state)
 }
 const words = (html: string): string => html.replace(/<[^>]*>/g, ' ')
 const escaped = (value: string): string => value.replaceAll("'", '&#x27;')
 const windows = (html: string): readonly string[] =>
   [...html.matchAll(/data-character-panel="(\w+)"/g)].map(([, name]) => name!)
 const between = (html: string, from: string, to: string): string => html.slice(html.indexOf(from), html.indexOf(to))
+const count = (html: string, part: string): number => html.split(part).length - 1
+/** The buttons of the window's tab bar, in order: its label and whether it is the tab on screen. */
+const tab_bar = (html: string): readonly (readonly [string, string])[] =>
+  [...between(html, 'class="aui-segments"', 'game-character-body').matchAll(/aria-pressed="(\w+)"[^>]*>([^<]*)</g)].map(
+    ([, pressed, label]) => [label!, pressed!] as const
+  )
 const open_request = (status: DirectRequest['status']): DirectRequest => ({
   id: 'r1',
   action: 'raise_stats',
@@ -202,10 +216,13 @@ test('nothing can change before the bot answered, in a fight, in a dungeon, or w
   for (const state of locked) {
     const html = await tab(state)
     expect(html).toContain('data-heroes-locked')
-    expect(words(html)).toContain(text.detail_locked)
-    // The tabs stay on screen to read; the characteristics offer no step and no Confirm.
-    expect(windows(html)).toEqual(['equipment', 'stats', 'spells', 'jobs'])
-    const stats = between(html, 'data-character-panel="stats"', 'data-character-panel="spells"')
+    // The sentence shows once, above the window's tabs.
+    expect(count(words(html), text.detail_locked!)).toBe(1)
+    expect(html.indexOf('data-heroes-locked')).toBeLessThan(html.indexOf('class="aui-segments"'))
+    // Every tab stays on screen to read; the characteristics offer no step and no Confirm.
+    expect(tab_bar(html).map(([label]) => label)).toHaveLength(4)
+    const stats = await sheet(state, 'stats')
+    expect(windows(stats)).toEqual(['stats'])
     expect(stats.match(/<button[^>]*>\+<\/button>/g)?.every((button) => button.includes('disabled'))).toBe(true)
 
     const hero = state.session.agent_inventory.characters[0]!
@@ -265,7 +282,7 @@ test('the game refuses a gesture on a held hero in its own words before this pag
 test('a listed item and an item of another kiosk are not in the hero’s bag: they cannot be worn', async () => {
   const state = answered({}, heroes(mira))
   const html = await tab(state)
-  const gear = between(html, 'data-character-panel="equipment"', 'data-character-panel="stats"')
+  const gear = html.slice(html.indexOf('data-character-panel="equipment"'))
   expect(gear).toContain('Free Hat')
   expect(gear).not.toContain('Listed Hat')
   expect(gear).not.toContain('Far Hat')
@@ -283,8 +300,9 @@ test('a listed item and an item of another kiosk are not in the hero’s bag: th
   expect(probe(reading, mira, () => undefined).bag).toEqual([])
 })
 
-test('the tab shows the chosen hero, its game windows and a 2D portrait, never a canvas', async () => {
-  const html = await tab(answered({ hero_id: SECOND }, heroes(mira, okami)))
+test('the tab shows the chosen hero, one game window with four tabs and a 2D portrait, never a canvas', async () => {
+  const state = answered({ hero_id: SECOND }, heroes(mira, okami))
+  const html = await tab(state)
   expect(words(html)).toContain(text.heroes_title)
   expect(words(html)).toContain(text.heroes_intro)
   expect(html).not.toContain('data-heroes-locked')
@@ -293,8 +311,25 @@ test('the tab shows the chosen hero, its game windows and a 2D portrait, never a
   expect(picker).toMatch(new RegExp(`aria-pressed="true"[^>]*data-hero="${SECOND}"`))
   expect(picker).toMatch(new RegExp(`aria-pressed="false"[^>]*data-hero="${HERO}"`))
   expect(html).toMatch(/<section aria-label="Okami"[^>]*class="aui-panel dapp-hero-card"/)
-  expect(windows(html)).toEqual(['equipment', 'stats', 'spells', 'jobs'])
-  for (const key of ['detail_equipment', 'detail_stats', 'detail_spells']) expect(words(html)).toContain(text[key]!)
+  // One window: it opens on the equipment, and its tab bar names the game's four tabs in the game's words.
+  expect(windows(html)).toEqual(['equipment'])
+  expect(count(html, 'dapp-heroes-window')).toBe(1)
+  expect(tab_bar(html)).toEqual([
+    [jobs_text('tab_equipment'), 'true'],
+    [jobs_text('tab_stats'), 'false'],
+    [jobs_text('tab_spells'), 'false'],
+    [jobs_text('tab_jobs'), 'false'],
+  ])
+  // A pressed tab is the only one drawn, in the game's own window frame of that tab, under its own title.
+  for (const shown of TABS) {
+    const pressed = await sheet(state, shown)
+    expect(windows(pressed)).toEqual([shown])
+    expect(pressed).toMatch(
+      new RegExp(`class="aui-window gw-tab game-character-window game-character-window--${shown} `)
+    )
+    expect(tab_bar(pressed).filter(([, on]) => on === 'true')).toEqual([[jobs_text(`tab_${shown}`), 'true']])
+    expect(pressed).toContain(`<h1>${jobs_text(`tab_${shown}`)}</h1>`)
+  }
   // The doll holds the hero's picture where the game draws its 3D model.
   expect(html).toMatch(/class="inv__portrait"><img class="dapp-portrait"/)
   expect(html).not.toContain('<canvas')
@@ -302,11 +337,42 @@ test('the tab shows the chosen hero, its game windows and a 2D portrait, never a
 })
 
 test('with no choice the strongest hero is shown, and its characteristics can be raised', async () => {
-  const html = await tab(answered({}, heroes(okami, mira)))
+  const state = answered({}, heroes(okami, mira))
+  const html = await tab(state)
   expect(html).toMatch(/<section aria-label="Mira"[^>]*class="aui-panel dapp-hero-card"/)
-  const stats = between(html, 'data-character-panel="stats"', 'data-character-panel="spells"')
+  const stats = await sheet(state, 'stats')
   expect(stats.match(/<button[^>]*>\+<\/button>/g)?.some((button) => !button.includes('disabled'))).toBe(true)
   expect(escaped(words(html))).not.toContain(escaped(text.detail_locked!))
+})
+
+test('the hero’s card counts its unspent points, and each count opens the tab that spends it', async () => {
+  // Mira holds 12 characteristic points and 9 spell points; Okami holds none.
+  const state = answered({}, heroes(mira, okami))
+  const html = await tab(state)
+  const card = between(html, 'dapp-hero-card', 'class="aui-window')
+  expect(words(card)).toContain(`${copy.fight_hud.level_up_stat_points} 12`)
+  expect(words(card)).toContain(`${copy.fight_hud.level_up_spell_points} 9`)
+  expect([...card.matchAll(/data-heroes-points="(\w+)"/g)].map(([, name]) => name)).toEqual(['stats', 'spells'])
+  const spent = await tab({ ...state, dapp: { ...state.dapp, hero_id: SECOND } })
+  expect(spent).not.toContain('data-heroes-points')
+  // Pressing a count asks for its tab, exactly as pressing the tab does.
+  const asked: HeroTab[] = []
+  /** Every press of a count found in an element tree, the card's `actions` slot included. */
+  const presses = (node: unknown): readonly (() => void)[] => {
+    if (Array.isArray(node)) return node.flatMap(presses)
+    const props = (node as { props?: Record<string, unknown> } | null)?.props
+    if (!props) return []
+    const own = props['data-heroes-points'] ? [props.onClick as () => void] : []
+    return [...own, ...presses(props.children), ...presses(props.actions)]
+  }
+  const Probe = () => {
+    presses(DappHeroSheet({ copy, hero: mira, tab: 'equipment', on_tab: (next) => void asked.push(next) })).forEach(
+      (press) => press()
+    )
+    return null
+  }
+  render(<Probe />, state)
+  expect(asked).toEqual(['stats', 'spells'])
 })
 
 test('wearing, swapping and emptying a slot are one equip_item each, with the bot’s exact payload', () => {
@@ -359,7 +425,7 @@ test('the Jobs window is the game’s own: professions, recipes, its advice amon
   // The player's own characters are another account: a master crafter there is never advised here.
   const stranger = { ...master, id: hero_id('9'), name: 'Stranger' }
   const state = answered({}, pantry(farmer, master))
-  const html = await tab({ ...state, session: { ...state.session, characters: [farmer, stranger] } })
+  const html = await sheet({ ...state, session: { ...state.session, characters: [farmer, stranger] } }, 'jobs')
   const jobs = html.slice(html.indexOf('data-character-panel="jobs"'))
   // The game's window frame and layout, with the game's own title.
   expect(html).toMatch(/class="[^"]*game-character-window--jobs aui-feature-port aui-jobs-port dapp-heroes-window/)
@@ -376,7 +442,7 @@ test('the Jobs window is the game’s own: professions, recipes, its advice amon
   expect(words(jobs)).toContain(jobs_text('jobs.better_character', { name: 'Okami', job: 'Farmer', level: 12 }))
   expect(jobs).not.toContain('Stranger')
   // Looking at the master, its own level shows and nobody is advised above it.
-  const other = await tab({ ...state, dapp: { ...state.dapp, hero_id: SECOND } })
+  const other = await sheet({ ...state, dapp: { ...state.dapp, hero_id: SECOND } }, 'jobs')
   expect(other.includes('<section aria-label="Okami"')).toBe(true)
   expect(other).toContain(jobs_text('jobs.lv_badge', { level: 12 }))
   expect(other).not.toContain('data-better-job-character')

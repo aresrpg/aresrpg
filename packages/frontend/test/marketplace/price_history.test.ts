@@ -87,12 +87,13 @@ test('only an authenticated open marketplace observes history; reconnect restore
     item_type: 'quartz',
   })
   const state = {
-    navigation: { page: 'marketplace' },
-    marketplace: { prices },
+    // No navigation is read: the web dapp shows the market with no page of that name.
+    navigation: { page: 'world' },
+    marketplace: { prices, open: true },
     session: { link_status: 'ready' },
   } as AppState
   expect(market_price_subscription(state, state)).toBeNull()
-  const closed = { ...state, navigation: { ...state.navigation, page: 'characters' as const } }
+  const closed = { ...state, marketplace: { ...state.marketplace, open: false } }
   expect(market_price_subscription(closed, state)).toEqual({ type: 'packet/market_prices_observe', observation: null })
   expect(market_price_subscription(state, closed)).toEqual({
     type: 'packet/market_prices_observe',
