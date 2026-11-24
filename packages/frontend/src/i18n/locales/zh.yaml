@@ -469,6 +469,7 @@ marketplace_page:
   group_pets: 宠物
   group_runes: 符文
   group_consumable: 消耗品
+  group_keys: 钥匙
   group_resources: 资源
   group_characters: 角色
   search: 搜索物品…
@@ -3333,7 +3334,6 @@ docs_page:
     license_link: '阅读许可证'
 
 agent_page:
-  log_title: '智能体日志'
   manage_note: '要向机器人发送英雄或物品、取回它们或断开机器人，请打开你的资产页。'
   stage_wallet_title: '专属钱包'
   stage_wallet: '你的代理使用自己的机器人钱包游戏和签名。'
@@ -3344,8 +3344,30 @@ agent_page:
   heroes_title: '你的英雄'
   hero_level: '等级 {level}'
   heroes_failed: '游戏服务器没有发送你的英雄。请刷新此页面重试。'
-  empty_title: '这里还没有内容'
-  empty_body: '你的AI助手所做的操作会显示在这里。'
+  empty_title: '你的机器人还没有英雄'
+  empty_body: '从你的资产页发送一个，或让你的 AI 助手创建一个。'
+  state_failed: '英雄未加载'
+  log_waiting_title: '等待你的助手迈出第一步'
+  log_waiting_body: '此页面打开期间，这里会显示你的机器人所做的事。'
+  run_state_blocked: '需要你处理'
+  run_state_stopped: '已停止'
+  run_fees: '手续费 {amount} SUI'
+  run_dungeons: '地下城次数：{count}'
+  jump_latest: '跳到最新'
+  command_market_sell: '上架物品出售'
+  command_market_buy: '在市场购买'
+  command_market_delist: '撤下挂单'
+  command_market_collect: '领取销售收入'
+  command_gather: '采集'
+  command_craft: '制作'
+  command_equip: '更换装备'
+  command_loot: '打开战利品'
+  command_consumable: '使用消耗品'
+  command_points: '分配点数'
+  command_create: '创建英雄'
+  command_search: '搜索世界'
+  command_dungeon: '地下城行动'
+  command_fight: '战斗行动'
   activity_other: '活动'
   position_running: '进行中'
   position_finished: '已完成'
@@ -3436,6 +3458,7 @@ site:
   login: 登录
   new_tab: ' (在新标签页中打开)'
   log_in_first: '请先登录'
+  buy_kares: '购买 KARES'
   docs: 文档
   encyclopedia: 物品百科
   journal: 日志

@@ -19,6 +19,7 @@ import { dispatch_app, useSiteStore } from '../store.ts'
 
 import { displayed_listings } from './browse_cache.ts'
 import {
+  card_tone,
   FEATURED,
   group_chips,
   group_types,
@@ -77,7 +78,7 @@ const TypeCard = ({ row }: Readonly<{ row: MarketType }>) => {
   const ui = useText()
   return (
     <ItemLink
-      className={`${CARD} transition-[translate,border-color] duration-180 ease-ui hover:-translate-y-[3px] hover:border-line-strong focus-visible:-translate-y-[3px] focus-visible:border-line-strong motion-reduce:transition-none`}
+      className={`${CARD} market-card market-card--${card_tone(row.category) ?? 'plain'} transition-[translate,border-color] duration-180 ease-ui hover:-translate-y-[3px] hover:border-line-strong focus-visible:-translate-y-[3px] focus-visible:border-line-strong motion-reduce:transition-none`}
       item_type={row.item_type}
     >
       <ItemArt className={CARD_ART} item_type={row.item_type} />
@@ -241,7 +242,7 @@ const ShelfBody = ({
     )
   return (
     <div
-      className="flex snap-x snap-proximity gap-4 overflow-x-auto pt-1 scrollbar-none *:flex-[0_0_188px] *:snap-start max-[760px]:gap-3 max-[760px]:*:basis-[calc(50%-6px)]"
+      className="flex snap-x snap-proximity gap-4 overflow-x-auto pt-1 pr-(--site-bleed-right) scrollbar-none *:flex-[0_0_188px] *:snap-start max-[760px]:gap-3 max-[760px]:*:basis-[calc(50%-6px)]"
       ref={row_ref}
       aria-busy={rows === null}
     >

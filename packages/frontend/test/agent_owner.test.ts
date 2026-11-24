@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The player's view of its own agent through the site's real store: only a validated owner answer connects it,
-// only the current wallet's explicit choice makes it the inventory target, the agent's bag folds by version and
-// target, and a hero is sent only while the wallet, the target and the hero itself are still what was reviewed.
+// only the current wallet's explicit choice makes it the inventory target, the agent's bag and its heroes' log fold
+// by version and target, and a hero is sent only while the wallet, the target and the hero itself are still what
+// was reviewed.
 import { afterEach, expect, test } from 'bun:test'
 import type { AgentPairingIdentity, CharacterRow, HostedOwnerStatus, ItemRow } from '@aresrpg/protocol'
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
@@ -10,6 +11,13 @@ import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import { create_agent_identity } from '@aresrpg/sdk/agent-multisig'
 import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
 
+import {
+  fold_hero_logs,
+  log_groups,
+  observed_heroes,
+  type HeroLogs,
+  type ObservedHeroes,
+} from '../src/agents/activity.ts'
 import { execute_agent_transfer } from '../src/agents/agent_transaction.ts'
 import { character_send_current, character_send_eligible } from '../src/agents/character_send.ts'
 import { owner_answer, owner_checkable, owner_connected, owner_reachable } from '../src/agents/owner_state.ts'
@@ -91,7 +99,7 @@ test('only a validated owner answer connects the agent; late, cancelled or forei
   expect(owner_answer(session(), false, false)).toBe('unreachable')
 })
 
-test("the inventory target is the current wallet's explicit choice, and the agent's bag folds by version and by target", async () => {
+test("the inventory target is the current wallet's explicit choice, and the agent's bag and hero log fold by version and by target", async () => {
   const wallet = fake_wallet({ read_agent_balances: async () => ({ sui_balance_mist: 0n, kares_balance: null }) })
   const site = await start_site(wallet)
   const session = () => site.state().session
@@ -128,6 +136,56 @@ test("the inventory target is the current wallet's explicit choice, and the agen
   observed({ type: 'packet/item_updated', item: { ...ore, version: '3' } })
   expect(session().agent_inventory.inventory).toEqual([])
   expect(session().inventory).toBe(own_bag)
+  // The hero log: every observed change is one line, oldest first; the first read of the heroes, a status the bot
+  // repeats and the start of a run already playing are none. A run heads the lines it played, even those seen before
+  // its first line, and a line after its end stands alone.
+  const hero = character_row('hero', { world: 'w', checkpoint_world: 'w', x: 1, z: 1, at_ms: 1 })
+  const run = { id: 'run', character_id: 'hero', status: 'active', objective: { title: 'Farm' } }
+  const told = (runs: readonly object[], direct: object | null = null) => ({
+    type: 'packet/agent_status',
+    status: { ready: true, event_fence: 1, sampled_at: 1, state: 'active', runs, direct },
+  })
+  const fight = { fight: 'fight', world: 'w', dungeon: null, dungeon_room: null, kolizeum: null, fighter: 0 }
+  const won = { ...fight, character: 'hero', team: 0, winner: 0, dead: false, settled: false, boss_weight: 0 }
+  const seen: ObservedHeroes[] = []
+  const step = (packet: Readonly<Record<string, unknown>>) => {
+    observed(packet)
+    seen.push(observed_heroes(session().agent_inventory))
+  }
+  step({ type: 'packet/characters', characters: [hero] })
+  step({ type: 'packet/inventory', items: [ore] })
+  step(told([run]))
+  step({ type: 'packet/characters', characters: [{ ...hero, active_fight: { id: 'fight', seat: 0 } }] })
+  step({
+    type: 'packet/fight_resolutions',
+    resolutions: [{ ...won, kares: '0', loot_types: [], drops: [{ item_type: 'ore', qty: 2 }] }],
+  })
+  step(told([run]))
+  step(told([{ ...run, status: 'waiting', issue: 'funding_required' }]))
+  step(told([], { id: 'sell', kind: 'market_sell', status: 'completed', payload: { character_id: 'hero' } }))
+  step({ type: 'packet/characters', characters: [{ ...hero, experience: '50' }] })
+  const logs = seen
+    .slice(1)
+    .reduce((kept, after, index) => fold_hero_logs(kept, seen[index]!, after, index), {} as HeroLogs)
+  const lines = logs.hero ?? []
+  expect(lines.map(({ event }) => event)).toEqual([
+    { kind: 'fight_entered' },
+    { kind: 'fight_won' },
+    { kind: 'loot', drops: [{ item_type: 'ore', qty: 2 }] },
+    { kind: 'run', id: 'run', title: 'Farm', phase: 'funding', continued: true },
+    { kind: 'run', id: 'run', title: 'Farm', phase: 'ended', continued: true },
+    { kind: 'command', action: 'market_sell', error: null },
+    { kind: 'fight_left' },
+    { kind: 'experience', gained: '50' },
+  ])
+  expect(log_groups(lines, null).map(({ run, lines }) => [run?.phase ?? null, lines.length])).toEqual([
+    ['ended', 5],
+    [null, 3],
+  ])
+  // The run the bot plays now heads the loose lines it played since the page opened, or stands alone.
+  const live = { id: 'run', title: 'Farm', phase: 'working' } as const
+  expect(log_groups(lines.slice(0, 3), live)).toEqual([{ run: live, lines: lines.slice(0, 3) }])
+  expect(log_groups([], live)).toEqual([{ run: live, lines: [] }])
   // A replaced target refuses the earlier target's late bag and balances.
   const earlier = session().agent_inventory.serial
   site.dispatch({ type: 'agent/inventory_target', wallet, pairing: { ...pairing, address: 'second' } })

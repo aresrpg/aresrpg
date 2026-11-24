@@ -10,6 +10,7 @@ import { submit_agent_batches } from './agent_batch_limits.ts'
 import type { AgentBatchCharacter } from './agent_batch.ts'
 import type { RecallItem } from './agent_asset_transfer.ts'
 import { same_agent_equipment } from './agent_equipment.ts'
+import type { Receipt } from './cache.ts'
 import { transaction_resolution_error } from './transaction_error.ts'
 
 export type AgentHandoverIntent = Extract<AgentTransferIntent, { kind: 'offer' | 'asset_offer' }>
@@ -17,6 +18,8 @@ type Claim = Extract<AgentTransferIntent, { kind: 'claim' | 'asset_claim' }>
 type Readers = Readonly<{
   characters: () => Promise<readonly AgentReturnOffer[]>
   items: () => Promise<readonly AgentItemReturnOffer[]>
+  /** The item offers a certified offer created, read from its own receipt; null when they cannot be yet. */
+  offered?: (receipt: Receipt) => Promise<readonly AgentItemReturnOffer[] | null>
 }>
 
 /** A confirmed offer survives failed claim preparation, dismissal and reload as ordinary on-chain caps. */
@@ -88,6 +91,24 @@ const item_claim = (
   return { kind: 'asset_claim', agent_address: sender, items: matching }
 }
 
+/** The claim of an item offer, from the receipt of the offer that was just certified. Null whenever the receipt
+ *  does not give exactly the selected items: the listing path then decides, and reports any mismatch itself. */
+const claim_from_receipt = async (
+  intent: AgentHandoverIntent,
+  receipt: Receipt | null,
+  offered: Readers['offered'],
+  sender: string
+): Promise<Claim | null> => {
+  if (!receipt || !offered || intent.kind !== 'asset_offer') return null
+  try {
+    const rows = await offered(receipt)
+    return rows && item_claim(intent, rows, sender)
+  } catch (error) {
+    console.warn('[sdk] the offer receipt did not give its claim; reading the listing instead.', error)
+    return null
+  }
+}
+
 /** One gesture offers then claims. Reentry resumes matching caps; no submitted transaction is retried. */
 export const complete_agent_handover = async ({
   offer,
@@ -137,14 +158,22 @@ export const complete_agent_handover = async ({
     throw transaction_resolution_error(error)
   }
   let offer_digest: string | null = confirmed_offer
+  let offer_receipt: Receipt | null = null
   if (!incoming && !offer_digest) {
-    offer_digest = (await execute(offer, snapshot)).digest
+    const offered = await execute(offer, snapshot)
+    offer_digest = offered.digest
+    offer_receipt = offered.receipt
     notify_offer(on_offer, offer_digest)
   }
   try {
     before_sign()
-    await offer.synchronize()
-    incoming ??= await pending()
+    // The offer just certified names what it created: the claim is built from that, with no wait for the
+    // ownership listing. When the receipt cannot give the exact selection, the listing does, as before.
+    incoming ??= await claim_from_receipt(snapshot, offer_receipt, read.offered, offer.sender)
+    if (!incoming) {
+      await offer.synchronize()
+      incoming = await pending()
+    }
     if (!incoming) throw new Error('The confirmed transfer capabilities are not visible yet.')
     return await execute(claim, incoming)
   } catch (error) {

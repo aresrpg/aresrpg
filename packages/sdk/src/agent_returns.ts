@@ -7,6 +7,7 @@ import { normalizeSuiAddress, normalizeStructTag } from '@mysten/sui/utils'
 
 import { read_personal_kiosks } from './kiosk_discovery.ts'
 import type { EquipChange } from './character_actions.ts'
+import type { Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
 
 export type ReturnEquipment = EquipChange & Readonly<{ purchase_cap: string }>
@@ -252,6 +253,57 @@ export const read_agent_item_returns = async (
       })
   )
   return Object.freeze(verified.filter((offer) => offer !== null))
+}
+
+/**
+ * The item offers one certified offer created, read by the ids its own receipt names: no ownership listing
+ * is waited for or scanned. Null when the receipt created none, or when one is not readable or not a plain
+ * return offer yet: the caller then reads the listing, which stays the authority for recovery.
+ */
+export const read_offered_items = async (
+  client: SuiGrpcClient,
+  sdk: Pick<Sdk, 'get_owned_kiosks' | 'game_type_package'>,
+  receipt: Receipt,
+  owner: string,
+  agent_address: string
+): Promise<readonly AgentItemReturnOffer[] | null> => {
+  const recipient = normalizeSuiAddress(owner)
+  const agent = normalizeSuiAddress(agent_address)
+  const type = normalizeStructTag(`0x2::kiosk::PurchaseCap<${sdk.game_type_package}::item::Item>`)
+  const transaction = receipt.Transaction
+  const types = transaction?.objectTypes ?? {}
+  const created = (transaction?.effects?.changedObjects ?? []).flatMap(({ idOperation, objectId }) =>
+    idOperation === 'Created' &&
+    typeof objectId === 'string' &&
+    types[objectId] &&
+    normalizeStructTag(types[objectId]) === type
+      ? [objectId]
+      : []
+  )
+  if (!transaction?.digest || !created.length) return null
+  const [caps, { objects }] = await Promise.all([
+    read_personal_kiosks(sdk, agent),
+    client.core.getObjects({ objectIds: created, include: { content: true, previousTransaction: true } }),
+  ])
+  const kiosks = new Set(caps.map((cap) => normalizeSuiAddress(cap.kioskId)))
+  const offers = objects.map((object) =>
+    object instanceof Error || object.previousTransaction !== transaction.digest
+      ? null
+      : verified_offer(object, { type, recipient, agent, kiosks })
+  )
+  if (offers.length !== created.length || offers.some((offer) => offer === null)) return null
+  return Object.freeze(
+    offers.map((offer) =>
+      Object.freeze({
+        offer_digest: transaction.digest!,
+        item_id: offer!.character_id,
+        seller_kiosk: offer!.seller_kiosk,
+        purchase_cap: offer!.purchase_cap,
+        recipient,
+        agent_address: agent,
+      })
+    )
+  )
 }
 
 const equipment_events = (receipt: OfferReceipt, type_package: string, character: string) => {

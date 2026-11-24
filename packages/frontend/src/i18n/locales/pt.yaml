@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Mascotes
   group_runes: Runas
   group_consumable: Consumíveis
+  group_keys: Chaves
   group_resources: Recursos
   group_characters: Personagens
   search: Buscar itens…
@@ -3347,7 +3348,6 @@ docs_page:
     license_link: Leia a licença
 
 agent_page:
-  log_title: 'Registro do agente'
   manage_note: 'Para enviar heróis ou itens ao seu bot, recuperá-los ou desconectá-lo, abra seu portfólio.'
   stage_wallet_title: 'Uma carteira própria'
   stage_wallet: 'Seu agente joga e assina com uma carteira de bot própria.'
@@ -3358,8 +3358,30 @@ agent_page:
   heroes_title: 'Seus heróis'
   hero_level: 'Nível {level}'
   heroes_failed: 'O servidor do jogo não enviou seus heróis. Recarregue esta página para tentar de novo.'
-  empty_title: 'Ainda não há nada aqui'
-  empty_body: 'O que seu assistente de IA fizer aparece aqui.'
+  empty_title: 'Seu bot ainda não tem nenhum herói'
+  empty_body: 'Envie um do seu portfólio ou peça ao seu assistente de IA para criar um.'
+  state_failed: 'Heróis não carregados'
+  log_waiting_title: 'Aguardando o primeiro movimento do seu assistente'
+  log_waiting_body: 'Este registro mostra o que seu bot faz enquanto esta página está aberta.'
+  run_state_blocked: 'Precisa de você'
+  run_state_stopped: 'Parado'
+  run_fees: 'Taxas {amount} SUI'
+  run_dungeons: 'Masmorras jogadas: {count}'
+  jump_latest: 'Ir para o mais recente'
+  command_market_sell: 'Colocar um item à venda'
+  command_market_buy: 'Comprar no mercado'
+  command_market_delist: 'Retirar um anúncio'
+  command_market_collect: 'Receber as vendas'
+  command_gather: 'Coletar'
+  command_craft: 'Fabricar'
+  command_equip: 'Trocar equipamento'
+  command_loot: 'Abrir espólio'
+  command_consumable: 'Usar um consumível'
+  command_points: 'Gastar pontos'
+  command_create: 'Criar um herói'
+  command_search: 'Buscar no mundo'
+  command_dungeon: 'Movimento na masmorra'
+  command_fight: 'Movimento de combate'
   activity_other: 'Atividade'
   position_running: 'Em andamento'
   position_finished: 'Concluída'
@@ -3450,6 +3472,7 @@ site:
   login: Entrar
   new_tab: ' (abre em uma nova aba)'
   log_in_first: 'Entre primeiro'
+  buy_kares: 'Comprar KARES'
   docs: Docs
   encyclopedia: Enciclopédia de itens
   journal: Diário

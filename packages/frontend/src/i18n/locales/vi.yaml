@@ -469,6 +469,7 @@ marketplace_page:
   group_pets: Thú cưng
   group_runes: Ngọc khắc
   group_consumable: Vật phẩm tiêu hao
+  group_keys: Chìa khóa
   group_resources: Tài nguyên
   group_characters: Nhân vật
   search: Tìm vật phẩm…
@@ -3337,7 +3338,6 @@ docs_page:
     license_link: 'Đọc giấy phép'
 
 agent_page:
-  log_title: 'Nhật ký tác nhân'
   manage_note: 'Để gửi anh hùng hoặc vật phẩm cho bot, lấy lại chúng hoặc ngắt kết nối bot, hãy mở danh mục của bạn.'
   stage_wallet_title: 'Ví riêng'
   stage_wallet: 'Tác nhân chơi và ký bằng ví bot riêng của nó.'
@@ -3348,8 +3348,30 @@ agent_page:
   heroes_title: 'Anh hùng của bạn'
   hero_level: 'Cấp {level}'
   heroes_failed: 'Máy chủ trò chơi không gửi các anh hùng của bạn. Hãy tải lại trang này để thử lại.'
-  empty_title: 'Chưa có gì ở đây'
-  empty_body: 'Những gì trợ lý AI làm sẽ hiện ở đây.'
+  empty_title: 'Bot của bạn chưa có anh hùng nào'
+  empty_body: 'Gửi một anh hùng từ danh mục của bạn, hoặc nhờ trợ lý AI tạo một anh hùng.'
+  state_failed: 'Chưa tải được anh hùng'
+  log_waiting_title: 'Đang chờ nước đi đầu tiên của trợ lý'
+  log_waiting_body: 'Nhật ký này hiển thị những gì bot làm khi trang này đang mở.'
+  run_state_blocked: 'Cần bạn'
+  run_state_stopped: 'Đã dừng'
+  run_fees: 'Phí {amount} SUI'
+  run_dungeons: 'Lượt hầm ngục: {count}'
+  jump_latest: 'Đến mới nhất'
+  command_market_sell: 'Rao bán vật phẩm'
+  command_market_buy: 'Mua trên chợ'
+  command_market_delist: 'Gỡ tin rao'
+  command_market_collect: 'Nhận tiền bán'
+  command_gather: 'Thu thập'
+  command_craft: 'Chế tạo'
+  command_equip: 'Đổi trang bị'
+  command_loot: 'Mở chiến lợi phẩm'
+  command_consumable: 'Dùng vật phẩm tiêu hao'
+  command_points: 'Cộng điểm'
+  command_create: 'Tạo anh hùng'
+  command_search: 'Tìm trong thế giới'
+  command_dungeon: 'Bước trong hầm ngục'
+  command_fight: 'Nước đi chiến đấu'
   activity_other: 'Hoạt động'
   position_running: 'Đang chạy'
   position_finished: 'Đã xong'
@@ -3440,6 +3462,7 @@ site:
   login: Đăng nhập
   new_tab: ' (mở trong tab mới)'
   log_in_first: 'Hãy đăng nhập trước'
+  buy_kares: 'Mua KARES'
   docs: Tài liệu
   encyclopedia: Bách khoa vật phẩm
   journal: Nhật ký

@@ -13,6 +13,8 @@ type Watch = Readonly<{ owner: string; packet: ObservationPacket }>
 type Slots = Readonly<{ market: Watch | null; prices: Watch | null }>
 type SlotAction = Readonly<{ slot: keyof Slots; owner: string; packet: ObservationPacket }> | Readonly<{ reset: true }>
 const held_by_another = (existing: Watch | null, owner: string) => existing !== null && existing.owner !== owner
+/** Whether an observation was refused because another connector holds that view. */
+export const observation_slot_busy = (error: unknown) => String(error).includes('OBSERVATION_SLOT_BUSY')
 const reduce_slots = (state: Slots, action: SlotAction): Slots => {
   if ('reset' in action) return { market: null, prices: null }
   const existing = state[action.slot]

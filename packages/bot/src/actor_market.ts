@@ -86,6 +86,8 @@ export const fold_actor_market = (
  * This is a live multi-read sweep, not an atomic market snapshot. */
 export const market_observation_progress = (observation: MarketObservation, state: ActorInventory | undefined) => {
   const base = first_page(observation)
+  // The listed types alone have no page: they are read once their one packet has arrived.
+  if (base.kind === 'types') return { complete: state?.market_types !== undefined, observation: base }
   const market = state?.market
   if (!market) return { complete: false, observation: base }
   if (![same_sweep(market.observation, base), market.pages[0]?.cursor === ''].every(Boolean))

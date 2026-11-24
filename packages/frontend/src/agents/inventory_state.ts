@@ -66,6 +66,15 @@ const inventory_identity = (pairing: AgentPairingIdentity | null) =>
 export const same_inventory_pairing = (left: AgentPairingIdentity | null, right: AgentPairingIdentity | null) =>
   JSON.stringify(inventory_identity(left)) === JSON.stringify(inventory_identity(right))
 
+/** Whether a transfer the owner started still speaks for the owner: the same signed-in wallet and the same bot. Leaving
+ * the view that started it does not end it, so the visitor may move on while it runs; another account or bot does. */
+export const transfer_current = (
+  wallet: AuthSession | null,
+  pairing: AgentPairingIdentity | null,
+  started_wallet: AuthSession,
+  started_pairing: AgentPairingIdentity
+): boolean => wallet === started_wallet && same_inventory_pairing(pairing, started_pairing)
+
 type Observed<K extends InventoryPacket['type']> = (
   view: AgentInventoryView,
   packet: Readonly<Extract<InventoryPacket, { type: K }>>,

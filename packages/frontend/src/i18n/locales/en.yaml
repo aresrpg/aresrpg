@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Pets
   group_runes: Runes
   group_consumable: Consumables
+  group_keys: Keys
   group_resources: Resources
   group_characters: Characters
   search: Search items…
@@ -3364,7 +3365,6 @@ docs_page:
     license_link: Read the license
 
 agent_page:
-  log_title: 'Agent log'
   manage_note: 'To send heroes or items to your bot, take them back or disconnect it, open your portfolio.'
   stage_wallet_title: 'Its own wallet'
   stage_wallet: 'Your agent plays and signs with a bot wallet of its own.'
@@ -3375,8 +3375,30 @@ agent_page:
   heroes_title: 'Your heroes'
   hero_level: 'Level {level}'
   heroes_failed: 'The game server did not send your heroes. Reload this page to try again.'
-  empty_title: 'Nothing here yet'
-  empty_body: 'What your AI assistant does shows here.'
+  empty_title: 'Your bot holds no hero yet'
+  empty_body: 'Send one from your portfolio, or ask your AI assistant to create one.'
+  state_failed: 'Heroes not loaded'
+  log_waiting_title: "Waiting for your assistant's first move"
+  log_waiting_body: 'This log shows what your bot does while this page is open.'
+  run_state_blocked: 'Needs you'
+  run_state_stopped: 'Stopped'
+  run_fees: 'Fees {amount} SUI'
+  run_dungeons: 'Dungeon runs: {count}'
+  jump_latest: 'Jump to latest'
+  command_market_sell: 'List an item for sale'
+  command_market_buy: 'Buy on the market'
+  command_market_delist: 'Withdraw a listing'
+  command_market_collect: 'Collect sale proceeds'
+  command_gather: 'Gather'
+  command_craft: 'Craft'
+  command_equip: 'Change equipment'
+  command_loot: 'Open loot'
+  command_consumable: 'Use a consumable'
+  command_points: 'Spend points'
+  command_create: 'Create a hero'
+  command_search: 'Search the world'
+  command_dungeon: 'Dungeon move'
+  command_fight: 'Fight move'
   activity_other: 'Activity'
   position_running: 'Working'
   position_finished: 'Finished'
@@ -3467,6 +3489,7 @@ site:
   login: Log in
   new_tab: ' (opens a new tab)'
   log_in_first: 'Log in first'
+  buy_kares: 'Buy KARES'
   docs: Docs
   encyclopedia: Item encyclopedia
   journal: Journal

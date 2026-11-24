@@ -208,7 +208,9 @@ test('leaderboard money orders exactly beyond Number; a read during pending writ
   const scores = ['9007199254740993', '9007199254740992', '17']
   const members = scores.map((score, index) => rank_member(score, address(index)))
   const state = { pending: null as string | null, checkpoint: 50, mgets: 0 }
-  const call = async (command: string, ...args: readonly (string | number)[]): Promise<unknown> => {
+  // A Redis client's commands are methods: one taken off its client loses the client and throws.
+  async function call(this: unknown, command: string, ...args: readonly (string | number)[]): Promise<unknown> {
+    if (this === undefined) throw new TypeError('the command was called without its client')
     if (command === 'MGET') {
       state.mgets++
       return [JSON.stringify({ reset_at_ms: 2, timestamp_ms: 1, checkpoint: state.checkpoint }), state.pending]

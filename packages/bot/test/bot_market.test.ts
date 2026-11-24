@@ -22,6 +22,8 @@ import { MARKET_ACTIONS, market_sell_projected, wallet_kiosks } from '../src/mar
 import { execute_gameplay, execute_gameplay_actions, parse_gameplay_action } from '../src/gameplay.ts'
 import { digest, fake_client, pins } from '../../sdk/test/helpers/transport.ts'
 import { market_price_condition, market_prices_observed } from '../src/market_prices.ts'
+import { actor_observation } from '../src/actor_observation.ts'
+import { market_watches } from '../src/actor_observation_views.ts'
 import { type Command } from '../src/control.ts'
 
 import { character, item, profession_context, resource, plan_of } from './fixture_game.ts'
@@ -90,6 +92,139 @@ describe('market', () => {
       objectTypes: {},
       events: [],
     },
+  })
+
+  test('the listed types are a read of their own: pending until their packet arrives, then held', () => {
+    const types = { kind: 'types', request: 4 } as const
+    expect(market_observation_progress(types, empty_inventory())).toEqual({ complete: false, observation: types })
+    const items = [
+      {
+        item_type: 'scrap_hoe',
+        category: 'tool_farmer',
+        name: 'Scrap Hoe',
+        level: 1,
+        quote: { lots: { '1': '220000000' }, units: 3, change_bps: null },
+      },
+    ] as const
+    const listed = fold_actor_inventory(empty_inventory(), { type: 'packet/market_types', items })
+    expect(listed.market_types).toEqual(items)
+    expect(market_observation_progress(types, listed)).toEqual({ complete: true, observation: types })
+    // A page read does not wait for the types, and the types do not stand in for a page.
+    expect(market_observation_progress(observation, listed).complete).toBe(false)
+  })
+
+  /** One bot_market read of `inventory`: what it answers and what it points the market view at. */
+  const market_read = (inventory: ReturnType<typeof empty_inventory>, ask: Record<string, unknown> = {}) => {
+    const context = context_with(inventory)
+    const payload: Readonly<Record<string, unknown>> = { view: 'market', ...ask }
+    const command = { ...context.command, payload }
+    return {
+      view: actor_observation({ ...context, command }),
+      watches: market_watches(context.snapshot, command.payload),
+    }
+  }
+  const quote = (units: number, change_bps: number | null = null) => ({ lots: { '1': '20' }, units, change_bps })
+  const listed = fold_actor_inventory(empty_inventory(), {
+    type: 'packet/market_types',
+    items: [
+      { item_type: 'flax', category: 'resource', name: 'Flax', level: 1, quote: quote(30, -250) },
+      { item_type: 'scrap_hoe', category: 'tool_farmer', name: 'Scrap Hoe', level: 1, quote: quote(3) },
+      { item_type: resource.item_type, category: 'resource', name: 'Resource', level: 1, quote: quote(9) },
+    ],
+  })
+  const offers_of = (item_type: string) => ({ kind: 'offers', category: 'resource', item_type, request: 0 }) as const
+
+  test('bot_market reads the listed types, narrowed and cut, and a type not on sale without a page query', () => {
+    const types = { kind: 'types', request: 0 } as const
+    expect(market_read(empty_inventory())).toEqual({
+      view: { view: 'market', status: 'pending', asked: { market: types } },
+      watches: { market: types },
+    })
+    const flax = { item_type: 'flax', name: 'Flax', category: 'resource', level: 1, units: 30, lots: { '1': '20' } }
+    expect(market_read(listed, { category: 'resource', limit: 1 }).view).toEqual({
+      view: 'market',
+      total_types: 2,
+      types: [{ ...flax, change_bps: -250 }],
+    })
+    expect((market_read(listed).view.types as unknown[])[1]).not.toHaveProperty('change_bps')
+    // An item of unknown category waits for the listed types; once they are read, one missing from them is not on sale.
+    expect(market_read(empty_inventory(), { item_type: 'missing' }).watches).toEqual({ market: types })
+    expect(market_read(listed, { item_type: 'missing' })).toEqual({
+      view: { view: 'market', item_type: 'missing', listed: false },
+      watches: {},
+    })
+    expect(() => market_read(listed, { category: 'hats' })).toThrow('unknown_category')
+    for (const ask of [{ heroes: true, item_type: 'flax' }, { history: true }])
+      expect(() => market_read(listed, ask)).toThrow('invalid_argument')
+  })
+
+  test('bot_market offers the cheapest lot of each size or the cheapest per exact unit, rows bot_market_buy takes', () => {
+    const rows = [
+      listing(1, 1, '30'),
+      listing(2, 1, '20'),
+      listing(3, 1, '20'),
+      // Above 2^53 a float sees these two as one price; the lower id is the dearer one.
+      listing(4, 1, '9007199254740993'),
+      listing(5, 1, '9007199254740992'),
+      listing(6, 10, '100'),
+      listing(7, 3, '100'),
+    ]
+    const swept = fold_actor_market(listed, { ...page(rows), observation: offers_of(resource.item_type) })
+    const ask = { item_type: resource.item_type }
+    const { view, watches } = market_read(swept, ask)
+    // A complete sweep keeps watching the page it ended on.
+    expect(watches).toEqual({ market: offers_of(resource.item_type) })
+    const offer = (n: number, amount: number, price_mist: string, unit?: string) => ({
+      item_id: id(n),
+      seller_kiosk: id(80),
+      listing_version: '1',
+      amount,
+      price_mist,
+      ...(unit ? { unit_price_mist: unit } : {}),
+      seller: id(81),
+    })
+    expect(view).toEqual({
+      view: 'market',
+      item_type: resource.item_type,
+      total_offers: 7,
+      lot_sizes: [1, 3, 10],
+      offers: [offer(2, 1, '20', '20'), offer(7, 3, '100'), offer(6, 10, '100', '10')],
+    })
+    const by_unit = market_read(swept, { ...ask, limit: 50 }).view.offers as { item_id: string }[]
+    expect(by_unit.map(({ item_id }) => item_id)).toEqual([6, 2, 3, 1, 7, 5, 4].map(id))
+    // The offer row is what bot_market_buy takes, unchanged.
+    const { item_id, seller_kiosk, listing_version, amount, price_mist } = offer(2, 1, '20')
+    const payload = { character_id: character.id, item_type: resource.item_type, max_total_mist: '1000000000' }
+    const bought = { ...payload, item_id, seller_kiosk, listing_version, amount, price_mist }
+    expect(parse_gameplay_action('market_buy', bought)).toEqual(bought)
+    const context = context_with(swept)
+    expect(validate_market_buy({ ...context, command: { ...context.command, payload: bought } }).input.id).toBe(id(2))
+    // The sweep held is another item's: it is never this one's answer.
+    expect(market_read(swept, { item_type: 'flax' })).toEqual({
+      view: { view: 'market', status: 'pending', asked: { market: offers_of('flax') } },
+      watches: { market: offers_of('flax') },
+    })
+    // The price history waits for its own answer, then gives its newest buckets only.
+    const history = { ...ask, history: true }
+    const prices = { item_type: resource.item_type, id: 0 }
+    expect(market_read(swept, history)).toMatchObject({ view: { status: 'pending' }, watches: { prices } })
+    const buckets = Array.from({ length: 40 }, (_, day) => ({
+      at_ms: day,
+      total_mist: '10',
+      units: '1',
+      sales: '1',
+      checkpoint: 1,
+    }))
+    const priced = fold_actor_inventory(swept, {
+      type: 'packet/market_prices',
+      observation: prices,
+      total_units: '500',
+      history: { first_timestamp_ms: 0, sampled_at_ms: 40, buckets },
+    })
+    expect(market_read(priced, history).view.prices).toEqual({
+      total_units: '500',
+      history: { first_timestamp_ms: 0, sampled_at_ms: 40, buckets: buckets.toReversed().slice(0, 30) },
+    })
   })
 
   test('all pages contribute candidates, including offers from one kiosk across pages', () => {

@@ -7,6 +7,7 @@
 
 import type { GiftcardRow } from '@aresrpg/protocol'
 import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/giftcard-batch'
+import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
 import { sui_session } from '../wallet/external_session.ts'
 import type { AuthSession } from '../auth.ts'
@@ -15,7 +16,7 @@ import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { env } from '../env.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
-import { toast } from '../toast.ts'
+import { gas_empty_error, toast } from '../toast.ts'
 import { rolled_item_types } from '../content/item_templates.ts'
 
 import { create_giftcard_attempts } from './giftcard_attempts.ts'
@@ -24,8 +25,9 @@ export type DistributionState = Readonly<{
   holder_giftcards: readonly GiftcardRow[] | null
   pending: string | null
   error: string | null
-  /** Vouchers that reached the game wallet while it was signed in; the reward notice shows them. */
-  notice: Readonly<{ giftcards: readonly GiftcardRow[] }> | null
+  /** The accounts that closed the gift window in this browser session: it does not open again for them. A fact of
+   * the browser, not of the account, so a sign-out keeps it; the tab's session storage carries it across reloads. */
+  dismissed: readonly string[]
   /** The airdrop view is on screen: the one fact the holder read and the automatic redemption follow. The
    * view sets it; it is a fact of the page, not of the account, so a sign-out keeps it. */
   open: boolean
@@ -38,8 +40,7 @@ export type DistributionInput =
   | Readonly<{ type: 'distribution/claim_all' }>
   | Readonly<{ type: 'distribution/import' }>
   | Readonly<{ type: 'distribution/imported'; giftcards: readonly string[] }>
-  | Readonly<{ type: 'distribution/gifts_received'; giftcards: readonly GiftcardRow[] }>
-  | Readonly<{ type: 'distribution/notice_dismissed' }>
+  | Readonly<{ type: 'distribution/notice_dismissed'; address: string }>
   | Readonly<{
       type: 'distribution/redeem'
       giftcards: readonly GiftcardRow[]
@@ -55,21 +56,61 @@ export const initial_distribution_state = (): DistributionState =>
     holder_giftcards: null,
     pending: null,
     error: null,
-    notice: null,
+    dismissed: Object.freeze([]),
     open: false,
   })
+
+const DISMISSED_KEY = 'aresrpg:gift-window'
+
+/** The accounts that closed the gift window in this tab. Without session storage the window simply opens again. */
+const read_dismissed = (): readonly string[] => {
+  try {
+    const saved: unknown = JSON.parse(globalThis.sessionStorage?.getItem(DISMISSED_KEY) ?? '[]')
+    return Object.freeze(Array.isArray(saved) ? saved.filter((value) => typeof value === 'string') : [])
+  } catch (error) {
+    console.warn('The gift window cannot read what this tab closed.', error)
+    return Object.freeze([])
+  }
+}
+
+const remember_dismissed = (dismissed: readonly string[]): void => {
+  try {
+    globalThis.sessionStorage?.setItem(DISMISSED_KEY, JSON.stringify(dismissed))
+  } catch (error) {
+    console.warn('The gift window cannot remember that this tab closed it.', error)
+  }
+}
+
+/**
+ * Whether the gift window is on screen: an account is signed in (so no sign-in runs) and has giftcards waiting, it has
+ * not closed the window in this browser session, and no other window is in front (`other_window`, read from the page's
+ * open windows). Derived on every render; nothing sets it.
+ */
+export const gift_window_open = (
+  { session, distribution }: Pick<SiteState, 'session' | 'distribution'>,
+  other_window: boolean
+): boolean =>
+  !!session.wallet &&
+  session.giftcards.length > 0 &&
+  !distribution.dismissed.includes(session.wallet.address) &&
+  !other_window
+
+/** What the gift window says about the waiting cards. An outcome the chain has not settled offers no new attempt. */
+export const gift_window_status = ({
+  pending,
+  error,
+}: DistributionState): 'redeeming' | 'uncertain' | 'needs_sui' | 'held' => {
+  if (pending === 'redeem') return 'redeeming'
+  if (error && transaction_failure_kind(error) === 'uncertain') return 'uncertain'
+  return gas_empty_error(error) ? 'needs_sui' : 'held'
+}
 
 const with_distribution = <S extends SiteState>(state: S, distribution: DistributionState): S =>
   Object.freeze({ ...state, distribution })
 
 const reduce_notice_input = (current: DistributionState, input: AppInput): DistributionState | null => {
-  if (input.type === 'distribution/notice_dismissed') return Object.freeze({ ...current, notice: null })
-  if (input.type === 'distribution/gifts_received') {
-    const previous = current.notice?.giftcards ?? []
-    const giftcards = [...new Map([...previous, ...input.giftcards].map((card) => [card.id, card])).values()]
-    return Object.freeze({ ...current, notice: Object.freeze({ giftcards }) })
-  }
-  return null
+  if (input.type !== 'distribution/notice_dismissed' || current.dismissed.includes(input.address)) return null
+  return Object.freeze({ ...current, dismissed: Object.freeze([...current.dismissed, input.address]) })
 }
 
 const reduce_distribution_input = (current: DistributionState, input: AppInput): DistributionState | null => {
@@ -113,7 +154,14 @@ const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   const next = reduce_notice_input(state.distribution, input) ?? reduce_distribution_input(state.distribution, input)
   if (next) return with_distribution(state, next)
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
-    return with_distribution(state, Object.freeze({ ...initial_distribution_state(), open: state.distribution.open }))
+    return with_distribution(
+      state,
+      Object.freeze({
+        ...initial_distribution_state(),
+        open: state.distribution.open,
+        dismissed: state.distribution.dismissed,
+      })
+    )
   return state
 }
 
@@ -218,6 +266,7 @@ const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_sta
         for (const card of giftcards) dispatch({ type: 'giftcard/redeemed', giftcard: card.id })
         dispatch({ type: 'distribution/redeemed' })
         dispatch({ type: 'wallet/refresh' })
+        toast.add(copy_text(get_state().copy?.airdrop_page ?? {})('reward_complete'), 'success')
       })
       .catch((error) => {
         if (current()) fail_game_wallet(error)
@@ -228,13 +277,7 @@ const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_sta
     if (state.session.wallet !== previous.session.wallet) game_lifetime++
     if (state.external_wallet.session !== previous.external_wallet.session) holder_lifetime++
   })
-  events.on('STATE_UPDATED', (state, previous) => {
-    if (!state.session.wallet || state.session.wallet !== previous.session.wallet) return
-    if (state.session.giftcards === previous.session.giftcards) return
-    const prior = new Set(previous.session.giftcards.map(({ id }) => id))
-    const giftcards = state.session.giftcards.filter(({ id }) => !prior.has(id))
-    if (giftcards.length) dispatch({ type: 'distribution/gifts_received', giftcards })
-  })
+  events.on('distribution/notice_dismissed', () => remember_dismissed(get_state().distribution.dismissed))
   events.on('STATE_UPDATED', (state, previous) => {
     if (!state.distribution.open || state.distribution.error) return
     if (state.distribution.holder_giftcards !== null && previous.distribution.open) return
@@ -264,7 +307,7 @@ const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_sta
 
 export default Object.freeze({
   name: 'distribution',
-  initial: () => ({ distribution: initial_distribution_state() }),
+  initial: () => ({ distribution: Object.freeze({ ...initial_distribution_state(), dismissed: read_dismissed() }) }),
   reduce,
   observe,
 }) satisfies SiteModule

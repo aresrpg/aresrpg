@@ -52,8 +52,9 @@ Spell-point spending is separate from saving combat preferences or allocating ch
 
 Omit `spells` for an ordinary observation without the static catalog. An observation is a short
 status: it lists no bag and no zone. Read the bag with `bot_inventory`, the object ids of one item
-with `bot_item_stacks`, and the zones around a hero with `bot_zones` (monsters and resources only
-when asked). A key that is absent means the fact is absent or unknown; nothing is sent as `null`.
+with `bot_item_stacks`, the zones around a hero with `bot_zones` (monsters and resources only
+when asked), and the public market with `bot_market`. A key that is absent means the fact is
+absent or unknown; nothing is sent as `null`.
 If observation returns pending, repeat the read;
 if planning context is unavailable/needs_resync, obtain a fresh observation before planning.
 

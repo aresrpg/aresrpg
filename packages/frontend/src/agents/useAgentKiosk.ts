@@ -133,7 +133,11 @@ const transfer_routes = (snapshot: KioskSnapshot, player_items: readonly ItemRow
     recipient: snapshot.pairing.address,
     pending: snapshot.deposits,
     items: player_items.map((item) => ({ item, status: 'available' as const })),
-    read: { characters: snapshot.recall.read_pending_characters, items: snapshot.recall.read_deposit_items },
+    read: {
+      characters: snapshot.recall.read_pending_characters,
+      items: snapshot.recall.read_deposit_items,
+      offered: snapshot.recall.read_offered_deposit,
+    },
   },
   withdraw: {
     offer: snapshot.recall.transfer,
@@ -146,6 +150,7 @@ const transfer_routes = (snapshot: KioskSnapshot, player_items: readonly ItemRow
     read: {
       characters: () => snapshot.wallet.read_agent_returns(snapshot.pairing.address),
       items: snapshot.recall.read_incoming_items,
+      offered: snapshot.recall.read_offered_incoming,
     },
   },
 })

@@ -131,21 +131,12 @@ export const agent_transfer_actions = (
         network: sdk.network,
         gas_mist: gas_mist.toString(),
         gas_budget_mist: transaction.getData().gasData.budget,
-        // Recheck the exact reviewed transaction against current chain state before signing.
+        // Submits the exact transaction that was just checked, built and simulated, once. Nothing is checked or
+        // simulated again: the chain refuses a stale object, and every caller submits in the gesture that prepared.
         confirm: async ({ before_sign }: Readonly<{ before_sign?: () => void }> = {}) => {
           if (consumed) throw new Error('This review was already submitted. Reconcile its outcome first.')
           consumed = true
           const reviewed = Transaction.from(serialized)
-          await sdk.synchronize_transactions()
-          try {
-            if (is_asset_intent(intent) || is_agent_batch(intent)) await compose(intent)
-            else if (intent.kind === 'offer') await check_offer(intent)
-            else await check_return(intent)
-            assert_simulation(await simulate(reviewed))
-            if (is_asset_intent(intent)) await check_asset_reserve(sdk, context.address, intent, reviewed)
-          } catch (error) {
-            throw transaction_resolution_error(error)
-          }
           const receipt = await sdk.execute(reviewed, { include: { objectTypes: true }, before_sign })
           return Object.freeze({ digest: receipt_digest(receipt), receipt })
         },

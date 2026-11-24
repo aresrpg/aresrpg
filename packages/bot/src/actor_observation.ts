@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ClientPacket, RunEnding } from '@aresrpg/protocol'
 
-import type { create_bot_actor } from './actor.ts'
+import { observation_slot_busy, type create_bot_actor } from './actor.ts'
 import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
 import type { BehaviorRun } from './behavior_script.ts'
@@ -13,6 +13,8 @@ import {
   current_zones,
   inventory_counts,
   inventory_view,
+  market_view,
+  market_watches,
   stacks_view,
   without_nulls,
   zones_view,
@@ -23,7 +25,7 @@ import { gameplay_knowledge } from './catalog.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay_context.ts'
 
 /** What the status reads from the actor: what the wallet holds and does, in a few kilobytes. A bag,
- * the stacks of one item and the zones around a hero are detail views, asked for by name. */
+ * the stacks of one item, the zones around a hero and the market are detail views, asked for by name. */
 const status_view = (context: GameplayContext) => {
   const {
     snapshot,
@@ -36,11 +38,7 @@ const status_view = (context: GameplayContext) => {
     health,
     equipment_bonuses,
     balance,
-    inventory: {
-      ...inventory_counts(inventory),
-      ...(inventory?.market ? { market: inventory.market } : {}),
-      ...(inventory?.market_prices ? { market_prices: inventory.market_prices } : {}),
-    },
+    inventory: inventory_counts(inventory),
     current_zones: current_zones(snapshot.characters),
     ...(payload.fight_plan === undefined
       ? {}
@@ -65,6 +63,7 @@ const DETAIL_VIEWS = {
   inventory: ({ snapshot, command }: GameplayContext) => inventory_view(snapshot, command.payload),
   stacks: ({ snapshot, command }: GameplayContext) => stacks_view(snapshot, command.payload),
   zones: ({ snapshot, command }: GameplayContext) => zones_view(snapshot, command.payload),
+  market: ({ snapshot, command }: GameplayContext) => market_view(snapshot, command.payload),
 }
 type DetailView = keyof typeof DETAIL_VIEWS
 const detail_view = (payload: Command['payload']): DetailView | null =>
@@ -78,24 +77,10 @@ export const actor_observation = (context: GameplayContext) => {
   >
 }
 
-/**
- * What one read answers. A detail view answers its one question, with the revision it was read at.
- * The status adds what the wallet lane knows: its runs, its direct command and its revisions.
- */
-export const observation_reply = async (
-  context: GameplayContext,
-  lane_facts: () => Promise<Readonly<Record<string, unknown>>>
-) => {
-  const observed = actor_observation(context)
-  if (detail_view(context.command.payload))
-    return { ...observed, observation_revision: context.snapshot.observation_revision }
-  return without_nulls({ ...(await lane_facts()), ...observed }) as Readonly<Record<string, unknown>>
-}
-
-export const apply_actor_watches = async (
-  actor: Pick<ReturnType<typeof create_bot_actor>, 'observe'>,
-  command: Pick<Command, 'grant_id' | 'payload'>
-) => {
+type Watcher = Pick<ReturnType<typeof create_bot_actor>, 'observe'>
+/** Points the wallet's market views at what `payload` names: `market` and `prices` each hold an
+ * observation, or `null` to give that view back. A view it does not name is left as it is. */
+export const apply_actor_watches = async (actor: Watcher, command: Pick<Command, 'grant_id' | 'payload'>) => {
   for (const [name, type] of [
     ['market', 'packet/market_observe'],
     ['prices', 'packet/market_prices_observe'],
@@ -106,6 +91,35 @@ export const apply_actor_watches = async (
         { type: typeof type }
       >)
   }
+}
+/** A market read points the wallet's one market view at its question. A view another connector holds
+ * answers busy, as it refuses a purchase: a read never waits for a view it cannot get. */
+const watch_market = async (actor: Watcher, { command, snapshot }: GameplayContext) => {
+  try {
+    await apply_actor_watches(actor, { grant_id: command.grant_id, payload: market_watches(snapshot, command.payload) })
+    return null
+  } catch (error) {
+    if (!observation_slot_busy(error)) throw error
+    return { view: 'market', status: 'busy' }
+  }
+}
+
+/**
+ * What one read answers. A detail view answers its one question, with the revision it was read at.
+ * The status adds what the wallet lane knows: its runs, its direct command and its revisions.
+ */
+export const observation_reply = async (
+  context: GameplayContext,
+  actor: Watcher,
+  lane_facts: () => Promise<Readonly<Record<string, unknown>>>
+) => {
+  const view = detail_view(context.command.payload)
+  if (!view)
+    return without_nulls({ ...(await lane_facts()), ...actor_observation(context) }) as Readonly<
+      Record<string, unknown>
+    >
+  const busy = view === 'market' ? await watch_market(actor, context) : null
+  return { ...(busy ?? actor_observation(context)), observation_revision: context.snapshot.observation_revision }
 }
 
 /** A stored run of a retired shape holds no script: it is still listed, without an objective. */

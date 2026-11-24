@@ -8,6 +8,7 @@ import {
   Briefcase,
   ChartNoAxesColumn,
   Check,
+  Coins,
   Layers,
   Sparkles,
   Store,
@@ -289,6 +290,11 @@ export const SiteShell = () => {
               change_locale={(next) => dispatch_app({ type: 'locale/changed', locale: next })}
             />
           )}
+          {/* KARES trades on Aftermath: one small gold key outside the bar, at its right, on wide windows. */}
+          <NewTabLink className="site-buy-kares" href={SITE_ADDRESSES.aftermath} new_tab={copy?.site.new_tab ?? ''}>
+            <Coins size={15} strokeWidth={1.8} aria-hidden="true" />
+            {copy?.site.buy_kares ?? <span className="aui-skeleton site-stub" />}
+          </NewTabLink>
           <Account copy={copy} page={key} />
           <Burger copy={copy} menu={menu} />
         </header>

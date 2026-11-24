@@ -16,7 +16,8 @@ import type { KioskCapLoader } from './kiosk_runner.ts'
 import type { TransactionStorage } from './transaction_execution.ts'
 import { set_agent_suins_default, type SuinsSelection } from './suins_actions.ts'
 import { read_agent_recovery_assets } from './agent_inventory.ts'
-import { check_agent_return, read_agent_returns, read_agent_item_returns } from './agent_returns.ts'
+import { check_agent_return, read_agent_returns, read_agent_item_returns, read_offered_items } from './agent_returns.ts'
+import type { Receipt } from './cache.ts'
 import { sui_transfer_actions } from './sui_transfer.ts'
 
 export { owner_agent_identity } from './agent_pairing.ts'
@@ -100,6 +101,10 @@ const read_recall = (
     read_recovery_assets: () => read_agent_recovery_assets(options.client, sdk, identity.address),
     read_incoming_items: () => read_agent_item_returns(options.client, sdk, request.owner, identity.address),
     read_deposit_items: () => read_agent_item_returns(options.client, sdk, identity.address, request.owner),
+    read_offered_incoming: (receipt: Receipt) =>
+      read_offered_items(options.client, sdk, receipt, request.owner, identity.address),
+    read_offered_deposit: (receipt: Receipt) =>
+      read_offered_items(options.client, sdk, receipt, identity.address, request.owner),
   })
 }
 export type AgentRecall = Awaited<ReturnType<typeof read_recall>>

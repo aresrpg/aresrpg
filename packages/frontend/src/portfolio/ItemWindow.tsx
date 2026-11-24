@@ -74,7 +74,11 @@ export const ItemWindow = ({
               <Button
                 busy={kiosk.busy || kiosk.state.phase === 'loading'}
                 disabled={!can_transfer.every(Boolean)}
-                onClick={() => kiosk.offer([item.id], on_bot ? 'withdraw' : 'deposit', items)}
+                onClick={() => {
+                  // The move runs on with a toast; the cell shows it moving and the visitor goes on.
+                  kiosk.offer([item.id], on_bot ? 'withdraw' : 'deposit', items)
+                  close()
+                }}
               >
                 <ArrowLeftRight size={16} aria-hidden="true" />
                 {text(on_bot ? 'transfer_to_player' : 'transfer_to_bot')}

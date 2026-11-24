@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Mascotas
   group_runes: Runas
   group_consumable: Consumibles
+  group_keys: Llaves
   group_resources: Recursos
   group_characters: Personajes
   search: Buscar objetos…
@@ -3363,7 +3364,6 @@ docs_page:
     license_link: Lee la licencia
 
 agent_page:
-  log_title: 'Registro del agente'
   manage_note: 'Para enviar héroes u objetos a tu bot, recuperarlos o desconectarlo, abre tu portafolio.'
   stage_wallet_title: 'Su propia cartera'
   stage_wallet: 'Tu agente juega y firma con una cartera de bot propia.'
@@ -3374,8 +3374,30 @@ agent_page:
   heroes_title: 'Tus héroes'
   hero_level: 'Nivel {level}'
   heroes_failed: 'El servidor del juego no envió tus héroes. Recarga esta página para intentarlo de nuevo.'
-  empty_title: 'Aún no hay nada aquí'
-  empty_body: 'Lo que haga tu asistente de IA aparecerá aquí.'
+  empty_title: 'Tu bot aún no tiene ningún héroe'
+  empty_body: 'Envía uno desde tu portafolio o pide a tu asistente de IA que cree uno.'
+  state_failed: 'Héroes no cargados'
+  log_waiting_title: 'Esperando el primer movimiento de tu asistente'
+  log_waiting_body: 'Este registro muestra lo que hace tu bot mientras esta página está abierta.'
+  run_state_blocked: 'Te necesita'
+  run_state_stopped: 'Detenido'
+  run_fees: 'Comisiones {amount} SUI'
+  run_dungeons: 'Mazmorras jugadas: {count}'
+  jump_latest: 'Ir a lo último'
+  command_market_sell: 'Poner un objeto en venta'
+  command_market_buy: 'Comprar en el mercado'
+  command_market_delist: 'Retirar un anuncio'
+  command_market_collect: 'Cobrar las ventas'
+  command_gather: 'Recolectar'
+  command_craft: 'Fabricar'
+  command_equip: 'Cambiar equipo'
+  command_loot: 'Abrir botín'
+  command_consumable: 'Usar un consumible'
+  command_points: 'Gastar puntos'
+  command_create: 'Crear un héroe'
+  command_search: 'Buscar en el mundo'
+  command_dungeon: 'Movimiento en mazmorra'
+  command_fight: 'Movimiento de combate'
   activity_other: 'Actividad'
   position_running: 'En curso'
   position_finished: 'Terminada'
@@ -3466,6 +3488,7 @@ site:
   login: Iniciar sesión
   new_tab: ' (se abre en una pestaña nueva)'
   log_in_first: 'Inicia sesión primero'
+  buy_kares: 'Comprar KARES'
   docs: Docs
   encyclopedia: Enciclopedia de objetos
   journal: Diario

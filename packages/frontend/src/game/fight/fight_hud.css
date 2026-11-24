@@ -605,7 +605,7 @@
 
 .fight-hud__overworld-row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 12px;
 }
 

@@ -19,6 +19,8 @@ import { fold_actor_market, type ActorMarket } from './actor_market.ts'
 export type ActorInventory = Readonly<{
   market?: ActorMarket
   market_prices?: Extract<ServerPacket, { type: 'packet/market_prices' }>
+  /** Every publicly listed item type with its quote, as the last market observation received it. */
+  market_types?: Extract<ServerPacket, { type: 'packet/market_types' }>['items']
   claims: readonly ClaimRow[] | null
   items: readonly ItemRow[]
   removed: Readonly<Record<string, string>>
@@ -44,6 +46,8 @@ const snapshot_packet = (state: ActorInventory, packet: ServerPacket): ActorInve
   switch (packet.type) {
     case 'packet/market_prices':
       return { ...state, market_prices: packet }
+    case 'packet/market_types':
+      return { ...state, market_types: packet.items }
     case 'packet/market_slice':
       return fold_actor_market(state, packet)
     case 'packet/claims':

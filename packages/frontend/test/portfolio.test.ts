@@ -93,6 +93,7 @@ test('the bag shows one cell per stackable type and every action on a cell reach
     ['PETS', 0],
     ['RUNES', 0],
     ['CONSUMABLE', 1],
+    ['KEYS', 0],
     ['RESOURCES', 2],
   ])
   expect(cells.filter(in_group(null))).toHaveLength(cells.length)

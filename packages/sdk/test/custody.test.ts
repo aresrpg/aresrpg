@@ -413,6 +413,38 @@ test('an executed offer is never repeated: a failed claim keeps its digest and a
   const drop = handover(items)
   await complete_agent_handover(drop.options)
   expect(drop.kinds()).toEqual(['asset_offer', 'asset_claim'])
+  // The certified offer names what it created: the claim follows with no wait for the ownership listing and no
+  // second scan of it. A receipt that cannot give the exact selection, or cannot be read, falls back to the listing.
+  const wheat = {
+    item_id: 'wheat',
+    seller_kiosk: 'source',
+    purchase_cap: 'wheat-cap',
+    recipient: 'agent',
+    agent_address: 'owner',
+  }
+  const follow = async (offered: (() => Promise<readonly (typeof wheat)[] | null>) | undefined) => {
+    const run = handover(items)
+    const reads = { waits: 0, scans: 0 }
+    await complete_agent_handover({
+      ...run.options,
+      offer: { ...run.options.offer, synchronize: async () => void reads.waits++ },
+      read: {
+        ...run.options.read,
+        items: async () => {
+          reads.scans++
+          return run.state.offered ? [wheat] : []
+        },
+        offered,
+      },
+    })
+    return [run.kinds() as string[], reads.waits, reads.scans]
+  }
+  const both = ['asset_offer', 'asset_claim']
+  expect(await follow(async () => [wheat])).toEqual([both, 1, 1])
+  expect(await follow(undefined)).toEqual([both, 2, 2])
+  expect(await follow(async () => null)).toEqual([both, 2, 2])
+  expect(await follow(async () => [{ ...wheat, item_id: 'ore' }])).toEqual([both, 2, 2])
+  expect(await follow(() => Promise.reject(new Error('not readable yet')))).toEqual([both, 2, 2])
   const partial = handover({ ...items, items: [...items.items, { item_id: 'ore', kiosk: 'source', version: '1' }] })
   partial.state.offered = true
   await expect(complete_agent_handover(partial.options)).rejects.toThrow('does not match')
@@ -531,8 +563,11 @@ test('a reviewed transfer is simulated before signing and its confirmation is co
     0,
     true,
   ])
+  const [resolved, simulated] = [client.calls.resolutions, client.calls.simulations]
   const { digest: confirmed } = await review.confirm()
-  expect([confirmed, client.calls.executions, checks]).toEqual([client.calls.digests[0], 1, ['offer', 'offer']])
+  // The review was checked, built and simulated once when it was prepared: submitting it repeats none of that.
+  expect([confirmed, client.calls.executions, checks]).toEqual([client.calls.digests[0], 1, ['offer']])
+  expect([client.calls.resolutions - resolved, client.calls.simulations - simulated]).toEqual([0, 0])
   const offered = Transaction.from(client.calls.submitted[0]!).getData()
   expect(offered.commands.filter(({ MoveCall }) => MoveCall?.function === 'list_with_purchase_cap')).toHaveLength(1)
   await expect(review.confirm()).rejects.toThrow('already submitted')

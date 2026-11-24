@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Familiers
   group_runes: Runes
   group_consumable: Consommables
+  group_keys: Clés
   group_resources: Ressources
   group_characters: Personnages
   search: Rechercher…
@@ -3367,7 +3368,6 @@ docs_page:
     license_link: Lire la licence
 
 agent_page:
-  log_title: "Journal de l'agent"
   manage_note: 'Pour envoyer des héros ou des objets à votre bot, les reprendre ou le déconnecter, ouvrez votre portfolio.'
   stage_wallet_title: 'Son propre portefeuille'
   stage_wallet: 'Votre agent joue et signe avec un portefeuille de bot à lui.'
@@ -3378,8 +3378,30 @@ agent_page:
   heroes_title: 'Vos héros'
   hero_level: 'Niveau {level}'
   heroes_failed: "Le serveur de jeu n'a pas envoyé vos héros. Rechargez cette page pour réessayer."
-  empty_title: "Rien ici pour l'instant"
-  empty_body: 'Ce que fait votre assistant IA apparaît ici.'
+  empty_title: "Votre bot n'a encore aucun héros"
+  empty_body: "Envoyez-en un depuis votre portfolio, ou demandez à votre assistant IA d'en créer un."
+  state_failed: 'Héros non chargés'
+  log_waiting_title: 'En attente du premier coup de votre assistant'
+  log_waiting_body: 'Ce journal montre ce que fait votre bot tant que cette page est ouverte.'
+  run_state_blocked: 'Requiert votre aide'
+  run_state_stopped: 'Arrêté'
+  run_fees: 'Frais {amount} SUI'
+  run_dungeons: 'Donjons joués : {count}'
+  jump_latest: 'Aller au plus récent'
+  command_market_sell: 'Mettre un objet en vente'
+  command_market_buy: 'Acheter sur le marché'
+  command_market_delist: 'Retirer une annonce'
+  command_market_collect: 'Encaisser les ventes'
+  command_gather: 'Récolter'
+  command_craft: 'Fabriquer'
+  command_equip: "Changer d'équipement"
+  command_loot: 'Ouvrir du butin'
+  command_consumable: 'Utiliser un consommable'
+  command_points: 'Dépenser des points'
+  command_create: 'Créer un héros'
+  command_search: 'Chercher dans le monde'
+  command_dungeon: 'Action de donjon'
+  command_fight: 'Action de combat'
   activity_other: 'Activité'
   position_running: 'En cours'
   position_finished: 'Terminée'
@@ -3470,6 +3492,7 @@ site:
   login: Connexion
   new_tab: ' (s’ouvre dans un nouvel onglet)'
   log_in_first: "Connectez-vous d'abord"
+  buy_kares: 'Acheter KARES'
   docs: Docs
   encyclopedia: Encyclopédie des objets
   journal: Journal

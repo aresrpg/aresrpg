@@ -49,7 +49,7 @@ import { link_accepted } from '../server_link.ts'
 
 import { observe_subscriptions } from './session.ts'
 
-export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'RESOURCES', 'CHARACTERS'] as const
+export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'KEYS', 'RESOURCES', 'CHARACTERS'] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
 
 const equipment = Object.freeze(equipment_categories.filter((category) => category !== 'pet'))
@@ -58,7 +58,8 @@ const MARKET_CATEGORIES: Readonly<Record<MarketGroup, readonly ItemCategory[]>> 
   EQUIPMENT: equipment,
   PETS: ['pet'],
   RUNES: ['rune'],
-  CONSUMABLE: ['consumable', 'key'],
+  CONSUMABLE: ['consumable'],
+  KEYS: ['key'],
   RESOURCES: ['resource'],
   CHARACTERS: [],
 })

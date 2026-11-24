@@ -469,6 +469,7 @@ marketplace_page:
   group_pets: Питомцы
   group_runes: Руны
   group_consumable: Расходники
+  group_keys: Ключи
   group_resources: Ресурсы
   group_characters: Персонажи
   search: Поиск предметов…
@@ -3351,7 +3352,6 @@ docs_page:
     license_link: Читать лицензию
 
 agent_page:
-  log_title: 'Журнал агента'
   manage_note: 'Чтобы отправить боту героев или предметы, забрать их или отключить бота, откройте портфель.'
   stage_wallet_title: 'Собственный кошелёк'
   stage_wallet: 'Ваш агент играет и подписывает своим кошельком бота.'
@@ -3362,8 +3362,30 @@ agent_page:
   heroes_title: 'Ваши герои'
   hero_level: 'Уровень {level}'
   heroes_failed: 'Игровой сервер не прислал ваших героев. Перезагрузите страницу, чтобы повторить.'
-  empty_title: 'Здесь пока ничего нет'
-  empty_body: 'Здесь появится всё, что делает ваш ИИ-ассистент.'
+  empty_title: 'У вашего бота пока нет героя'
+  empty_body: 'Отправьте героя из портфеля или попросите ИИ-ассистента создать его.'
+  state_failed: 'Герои не загружены'
+  log_waiting_title: 'Ждём первого хода вашего ассистента'
+  log_waiting_body: 'Этот журнал показывает, что делает ваш бот, пока эта страница открыта.'
+  run_state_blocked: 'Нужна ваша помощь'
+  run_state_stopped: 'Остановлено'
+  run_fees: 'Комиссии {amount} SUI'
+  run_dungeons: 'Пройдено подземелий: {count}'
+  jump_latest: 'К последним'
+  command_market_sell: 'Выставить предмет на продажу'
+  command_market_buy: 'Купить на рынке'
+  command_market_delist: 'Снять лот'
+  command_market_collect: 'Забрать выручку'
+  command_gather: 'Собрать'
+  command_craft: 'Создать предмет'
+  command_equip: 'Сменить снаряжение'
+  command_loot: 'Открыть добычу'
+  command_consumable: 'Использовать расходник'
+  command_points: 'Распределить очки'
+  command_create: 'Создать героя'
+  command_search: 'Искать в мире'
+  command_dungeon: 'Ход в подземелье'
+  command_fight: 'Ход в бою'
   activity_other: 'Занятие'
   position_running: 'Идёт'
   position_finished: 'Завершено'
@@ -3454,6 +3476,7 @@ site:
   login: Войти
   new_tab: ' (откроется в новой вкладке)'
   log_in_first: 'Сначала войдите'
+  buy_kares: 'Купить KARES'
   docs: Документация
   encyclopedia: Энциклопедия предметов
   journal: Журнал

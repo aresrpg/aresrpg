@@ -12,7 +12,6 @@ import { AgentTransferFunding } from '../agents/AgentTransferFunding.tsx'
 import { send_character_to_agent } from '../agents/send_character.ts'
 import { useAgentKiosk } from '../agents/useAgentKiosk.ts'
 import { useCharacterRecall } from '../agents/useCharacterRecall.tsx'
-import { useOwnerAnswer } from '../agents/useOwnerAnswer.ts'
 import { ItemDetailContext } from '../components/ItemDetailContext.ts'
 import { bot_pairing, shown_wallet, WalletCard, type WalletShown } from '../components/WalletCard.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -96,16 +95,13 @@ const useHeroMove = (copy: AppCopy, on_bot: boolean) => {
   return { move, bot_heroes: recall.agent.characters, funding: recall.funding }
 }
 
-/** The wallet column: the one wallet card, then the account's own door. The game account brings assets
- * in from another wallet; the bot account opens the agent's connection, where the owner disconnects it. Under
- * them, one line that says so when the agent service cannot be reached: the bot tab cannot show then. */
+/** The wallet column: the one wallet card, then, for the game account, its door for assets of another wallet. */
 const WalletColumn = ({
   copy,
   shown,
   choose,
 }: Readonly<{ copy: AppCopy; shown: WalletShown; choose: (shown: WalletShown) => void }>) => {
   const session = useSiteStore((state) => state.session)
-  const unreachable = useOwnerAnswer() === 'unreachable'
   return (
     <aside className="flex min-w-0 flex-col items-start gap-4">
       <div className="aui-panel self-stretch p-4">
@@ -117,9 +113,7 @@ const WalletColumn = ({
           shown={{ value: shown, change: choose }}
         />
       </div>
-      {shown === 'bot' ? (
-        <AgentSetupButton copy={copy} label={copy.ui.agent_setup} />
-      ) : (
+      {shown === 'game' && (
         <Button
           disabled={session.wallet?.identity !== 'zklogin'}
           onClick={() => dispatch_app({ type: 'wallet_import/open' })}
@@ -128,10 +122,6 @@ const WalletColumn = ({
           {copy_text(copy.settings_page)('import_title')}
         </Button>
       )}
-      {/* The line holds its place, so the page does not move when the answer arrives. */}
-      <p className="min-h-5 text-sm/5 text-soft" role="status">
-        {unreachable ? copy.ui.agent_unreachable_title : ''}
-      </p>
     </aside>
   )
 }
@@ -194,17 +184,24 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       data-portfolio-account={shown}
     >
       <WalletColumn copy={copy} shown={shown} choose={choose} />
-      <section className="flex min-w-0 flex-col gap-4 [&>.aui-segments]:w-fit [&>.aui-segments]:max-w-full [&>.aui-segments]:flex-wrap [&_.aui-segments_.aui-button]:flex-[0_1_auto] [&_.aui-segments_.aui-button]:whitespace-nowrap">
-        <SegmentedControl<Tab>
-          label={text('tabs_label')}
-          value={tab}
-          on_change={set_tab}
-          options={[
-            { value: 'heroes', label: text('tab_heroes'), count: count(shown_heroes) },
-            { value: 'bag', label: text('tab_bag'), count: count(cells) },
-            { value: 'for_sale', label: text('tab_for_sale') },
-          ]}
-        />
+      <section className="flex min-w-0 flex-col gap-4 [&_.aui-segments_.aui-button]:flex-[0_1_auto] [&_.aui-segments_.aui-button]:whitespace-nowrap">
+        {/* The tabs, and at the row's end the agent's control: its state, and the way to its setup or its dialog. When
+            the row cannot hold both, the control takes the next line, still at the right. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 [&>.aui-segments]:w-fit [&>.aui-segments]:max-w-full [&>.aui-segments]:flex-wrap">
+          <SegmentedControl<Tab>
+            label={text('tabs_label')}
+            value={tab}
+            on_change={set_tab}
+            options={[
+              { value: 'heroes', label: text('tab_heroes'), count: count(shown_heroes) },
+              { value: 'bag', label: text('tab_bag'), count: count(cells) },
+              { value: 'for_sale', label: text('tab_for_sale') },
+            ]}
+          />
+          <div className="ml-auto" data-portfolio-agent="">
+            <AgentSetupButton copy={copy} label={copy.ui.agent_setup} face="status" />
+          </div>
+        </div>
         {panels[tab]()}
       </section>
       {sale.selected && (

@@ -206,10 +206,23 @@ test('15 MCP arguments are checked once against each tool schema; reads and refu
     checkpoint_id: 'observed',
     actions: [],
   }
-  expect((await f.call(token, 'bot_observe', { fight_plan, prices: null })).structuredContent).toEqual({
-    fight_plan,
-    prices: null,
-  })
+  expect((await f.call(token, 'bot_observe', { fight_plan })).structuredContent).toEqual({ fight_plan })
+  // The market is read by bot_market alone; bot_observe no longer takes a market or a price question.
+  for (const args of [{ market: null }, { market: { kind: 'types', request: 0 } }, { prices: null }])
+    expect(await f.call(token, 'bot_observe', args)).toMatchObject(refused())
+  expect(
+    (await f.call(token, 'bot_market', { item_type: 'wheat', limit: 50, history: true })).structuredContent
+  ).toEqual({ view: 'market', item_type: 'wheat', limit: 50, history: true })
+  for (const args of [
+    { item_type: 'Wheat' },
+    { item_type: '' },
+    { limit: 0 },
+    { limit: 201 },
+    { heroes: 'yes' },
+    { request: 1 },
+    { kind: 'offers' },
+  ])
+    expect(await f.call(token, 'bot_market', args)).toMatchObject(refused())
   for (const plan of [null, { ...fight_plan, actions: [{ type: 'end_turn' }] }])
     expect((await f.call(token, 'bot_observe', { fight_plan: plan })).isError).toBe(true)
   // A gameplay tool refuses an unknown field, a malformed id and an action of another kind.
@@ -303,6 +316,7 @@ test('S11 each tool declares its scope once; a tool reads only when that scope i
       'bot_inventory',
       'bot_item_stacks',
       'bot_zones',
+      'bot_market',
       'bot_status',
       'bot_behavior_status',
       'bot_validate_behavior',

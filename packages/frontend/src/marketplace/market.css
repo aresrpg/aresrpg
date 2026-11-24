@@ -23,6 +23,14 @@
   content-visibility: auto;
   contain-intrinsic-size: auto calc(44px + 12px + 4px + var(--market-card-h));
 }
+/* A shelf of cards runs to the window's right edge: its box reaches there (it paints nothing outside itself), its head
+   stays in the page, and the row's own right padding lets the last card stop at the page's edge. */
+.market-shelf[data-holds='cards'] {
+  margin-right: calc(-1 * var(--site-bleed-right));
+}
+.market-shelf[data-holds='cards'] > :first-child {
+  padding-right: var(--site-bleed-right);
+}
 .market-shelf[data-holds='tokens'] {
   contain-intrinsic-size: auto calc(44px + 12px + var(--market-tokens-h));
 }
@@ -45,4 +53,54 @@
   background:
     radial-gradient(60% 160% at 0% 50%, color-mix(in srgb, var(--aui-brass) 16%, transparent), transparent 70%),
     linear-gradient(180deg, var(--aui-high), var(--aui-lifted));
+}
+
+/* A card's ground says what kind of thing it holds, from the rarest down: a relic burns in ember with a sheen of
+   rays, a pet and a title carry a clear hue, a weapon and worn gear a faint one. One light from above the art, and
+   the hairline takes a little of the hue. No glow outside the card. */
+.market-card {
+  --tone: transparent;
+  --tone-light: 0%;
+  --tone-line: 0%;
+  border-color: color-mix(in srgb, var(--tone) var(--tone-line), var(--aui-line));
+  background-image:
+    radial-gradient(
+      120% 78% at 50% 0%,
+      color-mix(in srgb, var(--tone) var(--tone-light), transparent),
+      transparent 72%
+    ),
+    linear-gradient(in srgb 180deg, var(--color-high), var(--color-surface-raised));
+}
+.market-card--gear {
+  --tone: var(--aui-hue-sky);
+  --tone-light: 9%;
+  --tone-line: 10%;
+}
+.market-card--weapon {
+  --tone: var(--aui-hue-clay);
+  --tone-light: 11%;
+  --tone-line: 12%;
+}
+.market-card--title {
+  --tone: var(--aui-hue-gold);
+  --tone-light: 18%;
+  --tone-line: 24%;
+}
+.market-card--pet {
+  --tone: var(--aui-hue-green);
+  --tone-light: 18%;
+  --tone-line: 24%;
+}
+.market-card--relic {
+  --tone: var(--aui-orange);
+  --tone-light: 30%;
+  --tone-line: 48%;
+  background-image:
+    repeating-conic-gradient(
+      from 0deg at 50% 26%,
+      color-mix(in srgb, var(--aui-orange) 9%, transparent) 0deg 5deg,
+      transparent 5deg 15deg
+    ),
+    radial-gradient(120% 78% at 50% 0%, color-mix(in srgb, var(--aui-orange) 30%, transparent), transparent 72%),
+    linear-gradient(in srgb 180deg, var(--color-high), var(--color-surface-raised));
 }

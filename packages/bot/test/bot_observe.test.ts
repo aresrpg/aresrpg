@@ -203,13 +203,13 @@ describe('actor runtime', () => {
 
   test('revoking one watcher releases its slot without stopping another live connector', async () => {
     const f = await fixture()
-    await f.observe({ market: { kind: 'characters', request: 1 } })
+    await f.observe({ view: 'market', heroes: true })
     await f.runtime.tick()
     await f.runtime.settle()
     await f.admit()
     await f.runtime.tick()
     await f.runtime.settle()
-    await f.observe({ market: { kind: 'characters', request: 1 } })
+    await f.observe({ view: 'market', heroes: true })
     const other = { ...f.grant, id: 'other', client_id: 'other-client' }
     await put(f.store, 'grant:other', other)
     await f.runtime.observe(other, {})
@@ -223,6 +223,54 @@ describe('actor runtime', () => {
       observation: null,
     })
     await f.runtime.stop()
+  })
+
+  test('a market read is pending page by page, holds the one view against another connector, then gives it back', async () => {
+    const f = await fixture()
+    try {
+      await f.observe()
+      await f.admit()
+      const ask = { view: 'market', item_type: other_input, category: 'resource' }
+      const watched = () =>
+        f.sockets[0]!.sent.map((raw) => JSON.parse(raw)).filter(({ type }) => type === 'packet/market_observe')
+      const slice = (cursor: string | undefined, next_cursor: string | null, listings: readonly unknown[]) =>
+        f.send({
+          type: 'packet/market_slice',
+          observation: { kind: 'offers', category: 'resource', item_type: other_input, cursor, request: 0 },
+          listings,
+          next_cursor,
+          kiosk_versions: { [character.kiosk]: '1' },
+        })
+      const lot = (n: number, price_mist: string) => ({
+        ...item(other_input, 1, n),
+        kind: 'item',
+        version: '1',
+        price_mist,
+        seller: '0xseller',
+        at_ms: 1,
+      })
+      expect(await f.observe(ask)).toMatchObject({ view: 'market', status: 'pending' })
+      await slice(undefined, 'next', [lot(1, '30')])
+      expect(await f.observe(ask)).toMatchObject({ status: 'pending' })
+      expect(watched().map(({ observation }) => observation.cursor)).toEqual([undefined, 'next'])
+      await slice('next', null, [lot(2, '20')])
+      expect(await f.observe(ask)).toMatchObject({ view: 'market', total_offers: 2, offers: [{ price_mist: '20' }] })
+      // Asking again sends nothing: the view already shows this question.
+      expect(watched()).toHaveLength(2)
+      const other = { ...f.grant, id: 'other', client_id: 'other-client' }
+      await put(f.store, 'grant:other', other)
+      expect(await f.runtime.observe(other, { view: 'market', heroes: true })).toMatchObject({
+        view: 'market',
+        status: 'busy',
+      })
+      expect(await f.observe({ view: 'market', release: true })).toMatchObject({ view: 'market', released: true })
+      expect(watched().at(-1)).toEqual({ type: 'packet/market_observe', observation: null })
+      expect(await f.runtime.observe(other, { view: 'market', heroes: true })).toMatchObject({ status: 'pending' })
+      expect(await f.observe(ask)).toMatchObject({ view: 'market', status: 'busy' })
+      expect(f.errors).toEqual([])
+    } finally {
+      await f.runtime.stop()
+    }
   })
 
   test('observation lists the wallet runs for every grant of its owner and hides another bot run', async () => {

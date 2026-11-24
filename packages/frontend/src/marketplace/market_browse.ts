@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // What the market page reads from the listed types and offers: which group shows what, the rarest item, the price
 // of one unit, the cheapest offers, and what the page observes.
-import { item_is_stackable, is_item_category, type ItemCategory } from '@aresrpg/immutable'
+import { item_is_stackable, is_item_category, is_weapon_category, type ItemCategory } from '@aresrpg/immutable'
 import type { ListingRow, MarketQuote, MarketType, MarketUnitPrice } from '@aresrpg/protocol'
 
 import { market_categories, MARKET_GROUPS, type MarketGroup, type MarketSubject } from '../modules/marketplace.ts'
@@ -19,6 +19,16 @@ const by_listed_units = (left: Readonly<MarketType>, right: Readonly<MarketType>
 
 /** The groups of item types, in the market's order. Heroes are listings, not item types. */
 export const ITEM_GROUPS = Object.freeze(MARKET_GROUPS.filter((group) => market_categories(group).length > 0))
+
+/** The ground a card stands on, from the rarest kind down: a relic, then a pet or a title, then a weapon, then
+ *  everything else a hero wears. A tool, a key and a rune keep the plain ground. */
+export type CardTone = 'relic' | 'pet' | 'title' | 'weapon' | 'gear'
+const PLAIN: ReadonlySet<string> = new Set(['key', 'rune', 'tool_farmer', 'tool_herbalist', 'tool_miner'])
+export const card_tone = (category: string): CardTone | null => {
+  if (category === 'relic' || category === 'pet' || category === 'title') return category
+  if (is_weapon_category(category)) return 'weapon'
+  return PLAIN.has(category) || item_is_stackable(category) ? null : 'gear'
+}
 
 /** A group of unique items shows cards; a group of stackable items a token table. The categories decide it. */
 export const holds_cards = (group: MarketGroup): boolean =>

@@ -8,7 +8,7 @@ import { expect, test } from 'bun:test'
 
 import { RUN_ENDINGS, run_ending, valid_agent_observation } from '../src/agent_identity.ts'
 import { fold_inventory, fold_item_packet, reconcile_trade_row } from '../src/inventory_projection.ts'
-import { has_market_page, MARKET_OBSERVATION_SCHEMA } from '../src/marketplace.ts'
+import { has_market_page } from '../src/marketplace.ts'
 import {
   expand_chat_message,
   live_mob_groups,
@@ -162,9 +162,6 @@ test('market and leaderboard observations fold a bounded value or null and refus
     for (const observation of [undefined, [], {}, ...observations]) refused({ type, observation })
   expect(has_market_page({ kind: 'types', request: 1 })).toBe(false)
   expect(has_market_page({ kind: 'characters', request: 1 })).toBe(true)
-  expect(
-    MARKET_OBSERVATION_SCHEMA.oneOf.flatMap((schema) => ('properties' in schema ? [schema.properties.kind.const] : []))
-  ).toEqual(['offers', 'characters'])
 })
 
 test('inspection and paired-bot observations accept their bounded shapes and null, and refuse the rest', () => {

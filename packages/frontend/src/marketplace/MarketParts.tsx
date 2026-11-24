@@ -4,7 +4,7 @@
 import { SuiLogo } from '@aresrpg/ui'
 import type { ReactNode } from 'react'
 
-import { item_icon } from '../content/assets.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { useText } from '../i18n/useText.ts'
 import { market_item_href } from '../site/routes.ts'
@@ -24,9 +24,10 @@ export const ItemLink = ({
   </SiteLink>
 )
 
-/** An item's picture at the size its box gives it; the box is there before the picture. */
+/** An item's picture at the size its box gives it; the box is there before the picture. Every box of the market is
+ *  larger than the 64px thumbnail, so it shows the item's full picture. */
 export const ItemArt = ({ item_type, className }: Readonly<{ item_type: string | null; className: string }>) => {
-  const icon = item_type ? item_icon(item_type) : null
+  const icon = item_type ? item_detail_icon(item_type) : null
   return <span className={className}>{icon && <img alt="" src={icon} loading="lazy" decoding="async" />}</span>
 }
 

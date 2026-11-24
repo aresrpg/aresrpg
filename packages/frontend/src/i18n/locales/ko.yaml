@@ -469,6 +469,7 @@ marketplace_page:
   group_pets: 펫
   group_runes: 룬
   group_consumable: 소모품
+  group_keys: 열쇠
   group_resources: 자원
   group_characters: 캐릭터
   search: 아이템 검색…
@@ -3335,7 +3336,6 @@ docs_page:
     license_link: '라이선스 읽기'
 
 agent_page:
-  log_title: '에이전트 로그'
   manage_note: '봇에게 영웅이나 아이템을 보내거나, 되찾거나, 연결을 해제하려면 포트폴리오를 여세요.'
   stage_wallet_title: '전용 지갑'
   stage_wallet: '에이전트는 자신만의 봇 지갑으로 플레이하고 서명합니다.'
@@ -3346,8 +3346,30 @@ agent_page:
   heroes_title: '내 영웅'
   hero_level: '레벨 {level}'
   heroes_failed: '게임 서버가 영웅 정보를 보내지 않았습니다. 이 페이지를 새로고침해 다시 시도하세요.'
-  empty_title: '아직 아무것도 없습니다'
-  empty_body: 'AI 어시스턴트가 하는 일이 여기에 표시됩니다.'
+  empty_title: '봇에 아직 영웅이 없습니다'
+  empty_body: '포트폴리오에서 영웅을 보내거나 AI 어시스턴트에게 만들어 달라고 하세요.'
+  state_failed: '영웅을 불러오지 못함'
+  log_waiting_title: '어시스턴트의 첫 수를 기다리는 중'
+  log_waiting_body: '이 페이지가 열려 있는 동안 봇의 행동이 이 로그에 표시됩니다.'
+  run_state_blocked: '확인 필요'
+  run_state_stopped: '중지됨'
+  run_fees: '수수료 {amount} SUI'
+  run_dungeons: '던전 진행: {count}'
+  jump_latest: '최신으로'
+  command_market_sell: '아이템 판매 등록'
+  command_market_buy: '마켓에서 구매'
+  command_market_delist: '판매 등록 취소'
+  command_market_collect: '판매 대금 수령'
+  command_gather: '채집'
+  command_craft: '제작'
+  command_equip: '장비 변경'
+  command_loot: '전리품 열기'
+  command_consumable: '소모품 사용'
+  command_points: '포인트 분배'
+  command_create: '영웅 생성'
+  command_search: '월드 탐색'
+  command_dungeon: '던전 행동'
+  command_fight: '전투 행동'
   activity_other: '활동'
   position_running: '진행 중'
   position_finished: '완료'
@@ -3438,6 +3460,7 @@ site:
   login: 로그인
   new_tab: ' (새 탭에서 열림)'
   log_in_first: '먼저 로그인하세요'
+  buy_kares: 'KARES 구매'
   docs: 문서
   encyclopedia: 아이템 백과사전
   journal: 저널

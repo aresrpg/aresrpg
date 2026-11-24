@@ -53,8 +53,9 @@ type Call = NonNullable<RedisRead['call']>
  *  during checkpoint writes. A read that crossed a checkpoint, or found its rows inconsistent (null),
  *  retries. */
 const stable_read = async <T>(redis: RedisRead, read: (call: Call) => Promise<T | null>) => {
-  const { call } = redis
-  if (!call) throw new Error('leaderboard reads unavailable')
+  if (!redis.call) throw new Error('leaderboard reads unavailable')
+  // A command is a method of its client: it is called through the client, never taken off it.
+  const call: Call = (command, ...args) => redis.call!(command, ...args)
   for (let attempt = 0; attempt < 3; attempt++) {
     const before = (await call('MGET', META_KEY, PENDING_KEY)) as [string | null, string | null]
     if (before[1]) continue

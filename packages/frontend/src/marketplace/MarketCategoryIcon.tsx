@@ -11,6 +11,7 @@ const symbols = {
   PETS: PawPrint,
   RUNES: Gem,
   CONSUMABLE: FlaskConical,
+  KEYS: KeyRound,
   RESOURCES: Package,
   CHARACTERS: Users,
   rune: Gem,

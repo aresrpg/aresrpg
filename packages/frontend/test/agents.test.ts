@@ -10,6 +10,7 @@ import { pre_submission_failure } from '@aresrpg/sdk/transaction-error'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 import type { AgentTransferActions } from '@aresrpg/sdk/agent-transfer-actions'
 import type { WalletImportPlan } from '@aresrpg/sdk/wallet-import'
+import type { AgentPairingIdentity } from '@aresrpg/protocol'
 
 import { execute_agent_transfer } from '../src/agents/agent_transaction.ts'
 import {
@@ -25,9 +26,11 @@ import {
 } from '../src/agents/inventory_transfer.ts'
 import { item_claim_attempts } from '../src/agents/item_recovery.ts'
 import { read_agent_identities, remember_agent_identity } from '../src/agents/pairing_storage.ts'
+import { transfer_current } from '../src/agents/inventory_state.ts'
 import type { AuthSession } from '../src/auth.ts'
 import { rolled_item_types } from '../src/content/item_templates.ts'
 import { create_claim_attempts, create_giftcard_attempts } from '../src/modules/giftcard_attempts.ts'
+import { gift_window_open, gift_window_status } from '../src/modules/distribution.ts'
 import {
   agent_funding_authorization,
   funding_recipient_current,
@@ -36,7 +39,16 @@ import {
 import { initial_session_state, type SessionState } from '../src/modules/session.ts'
 import { SITE_MODULES } from '../src/site_modules.ts'
 
-import { character_row, fake_wallet, memory_storage, settle, sign_in, start_surface, type Started } from './harness.ts'
+import {
+  character_row,
+  fake_wallet,
+  memory_storage,
+  replace_globals,
+  settle,
+  sign_in,
+  start_surface,
+  type Started,
+} from './harness.ts'
 
 const running: Started[] = []
 afterEach(() => running.splice(0).forEach(({ stop }) => stop()))
@@ -239,6 +251,15 @@ test('a transfer to or from the agent is prepared and signed once, and a changed
   expect(pending_inventory_transfer({ recipient: 'old-agent', items: moving }, true, accounts).agent_pending).toEqual(
     []
   )
+  // A transfer outlives the view that started it, so the visitor may leave the page while it runs: only another signed-in
+  // wallet or another bot stops it before its next signature.
+  const owner = fake_wallet()
+  const bot: AgentPairingIdentity = { address: 'agent', multisig_public_key: 'key', signer_mode: 'host-persistent' }
+  expect(transfer_current(owner, bot, owner, bot)).toBe(true)
+  expect(transfer_current(fake_wallet(), bot, owner, bot)).toBe(false)
+  expect(transfer_current(null, bot, owner, bot)).toBe(false)
+  expect(transfer_current(owner, { ...bot, address: 'another-agent' }, owner, bot)).toBe(false)
+  expect(transfer_current(owner, null, owner, bot)).toBe(false)
 })
 
 test('recovery remembers who it tried, never retries a cap automatically, and never restores a signer', () => {
@@ -501,10 +522,35 @@ test('a giftcard redemption is tried once automatically, even across reloads, an
     await settle(5)
     return site
   }
-  await load()
+  // The tab's session storage remembers who closed the gift window, across reloads.
+  const tab = memory_storage()
+  replace_globals({ sessionStorage: tab })
+  const first = await load()
   expect(attempts).toEqual(['marked'])
+  // The waiting card opens the gift window by itself, unless another window is in front.
+  expect(gift_window_open(first.state(), false)).toBe(true)
+  expect(gift_window_open(first.state(), true)).toBe(false)
+  // What it says: a redemption on its way, a claim short of SUI, or an outcome the chain has not settled, which offers
+  // no new attempt.
+  const { distribution } = first.state()
+  expect(gift_window_status({ ...distribution, pending: 'redeem', error: null })).toBe('redeeming')
+  expect(gift_window_status({ ...distribution, error: 'Insufficient gas for this transaction' })).toBe('needs_sui')
+  const unknown = '[sdk] transaction outcome unknown: 0xd1; check this transaction before trying again'
+  expect(gift_window_status({ ...distribution, error: unknown })).toBe('uncertain')
+  expect(gift_window_status({ ...distribution, error: null })).toBe('held')
+  // Closed once, it stays closed for this account in this tab, through a sign-out and a reload; the cards stay listed.
+  first.dispatch({ type: 'distribution/notice_dismissed', address: wallet.address })
+  expect(gift_window_open(first.state(), false)).toBe(false)
+  first.dispatch({ type: 'auth/disconnected' })
+  expect(first.state().distribution.dismissed).toEqual([wallet.address])
   const reloaded = await load()
   expect(attempts).toHaveLength(1)
+  expect(reloaded.state().session.giftcards).toEqual([card])
+  expect(gift_window_open(reloaded.state(), false)).toBe(false)
+  // Another tab has its own session: the window opens there.
+  tab.removeItem('aresrpg:gift-window')
+  const other_tab = await load()
+  expect(gift_window_open(other_tab.state(), false)).toBe(true)
   reloaded.dispatch({ type: 'distribution/redeem', giftcards: [card] })
   await settle(5)
   expect(attempts).toHaveLength(2)

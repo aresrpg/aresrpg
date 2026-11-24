@@ -659,7 +659,6 @@ fn kiosk_view(views: &[ObjView<'_>], kiosk: Id) -> anyhow::Result<Option<decode:
 }
 
 struct SaleShape {
-    stackable: bool,
     kind: &'static str,
     category: Option<String>,
     item_type: Option<String>,
@@ -671,10 +670,6 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
     if sold.type_key.name == "Item" {
         let item = sold.decode::<decode::Item>()?;
         return Ok(SaleShape {
-            stackable: matches!(
-                item.category.as_str(),
-                "resource" | "consumable" | "rune" | "key"
-            ),
             kind: "item",
             category: Some(item.category),
             item_type: Some(item.item_type),
@@ -684,7 +679,6 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
     }
     let character = sold.decode::<decode::Character>()?;
     Ok(SaleShape {
-        stackable: false,
         kind: "character",
         category: None,
         item_type: None,
@@ -746,7 +740,8 @@ fn push_sale(
         return;
     }
     wire.market_volume_mist += u128::from(price);
-    if let Some(item_type) = shape.item_type.as_ref().filter(|_| shape.stackable) {
+    // Every item type has a price history: a stack trades as its units, a unique item as one. A hero has no type.
+    if let Some(item_type) = shape.item_type.as_ref() {
         wire.market_prices.push(crate::market_prices::Sale {
             item_type: item_type.clone(),
             mist: price,

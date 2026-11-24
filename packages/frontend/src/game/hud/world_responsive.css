@@ -62,13 +62,8 @@
   width: var(--world-slot-size);
   height: var(--world-slot-size);
 }
-[data-world-frame] .fight-hud--overworld .aui-health {
-  width: clamp(44px, 8cqw, 80px);
-  height: clamp(44px, 8cqw, 80px);
-}
-[data-world-frame] .fight-hud--overworld .aui-vital-token {
-  width: clamp(24px, 4cqw, 36px);
-  height: clamp(24px, 4cqw, 36px);
+[data-world-frame] .fight-hud--overworld .aui-vitals {
+  --aui-vitals-size: clamp(44px, 8cqw, 80px);
 }
 @container world-viewport (max-width: 850px) {
   .gw-compass-wrap {
@@ -142,6 +137,9 @@
       var(--world-chat-requested-height, min(280px, 70cqh)),
       var(--world-chat-max-height, 80cqh)
     );
+  }
+  [data-world-frame] .fight-hud--overworld .aui-vitals {
+    --aui-vitals-size: 68px;
   }
 }
 

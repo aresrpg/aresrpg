@@ -1,18 +1,22 @@
+/* One size knob: a caller sets --aui-vitals-size (the heart's width); every other size derives from it.
+   Action and movement points stack beside the heart and overlap its transparent right edge, so the cluster
+   is no taller than the heart. */
 .aui-vitals {
+  --vitals-heart: var(--aui-vitals-size, 100px);
+  --vitals-token: calc(var(--vitals-heart) * 0.44);
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  width: 100px;
   flex: none;
   font-family: var(--aui-font);
   color: #fff;
 }
 .aui-health {
   position: relative;
-  width: 100px;
-  height: 92px;
-  margin-top: -12px;
+  width: var(--vitals-heart);
+  height: calc(var(--vitals-heart) * 0.92);
+  /* The art's transparent rows above and below the heart take no layout height. */
+  margin-block: calc(var(--vitals-heart) * -0.14);
   background: none;
   border: 0;
   padding: 0;
@@ -41,7 +45,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: calc(var(--vitals-heart) * 0.22);
   font-weight: 800;
   line-height: 1.12;
   text-shadow:
@@ -58,15 +62,17 @@
 }
 .aui-vital-tokens {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: -4px;
+  flex-direction: column;
+  margin-left: calc(var(--vitals-heart) * -0.1);
 }
 .aui-vital-token {
   position: relative;
-  width: 39px;
-  height: 39px;
+  width: var(--vitals-token);
+  height: var(--vitals-token);
   filter: drop-shadow(0 1px 1px #0008);
+}
+.aui-vital-token + .aui-vital-token {
+  margin-top: calc(var(--vitals-token) * -0.15);
 }
 .aui-vital-token > img {
   width: 100%;
@@ -78,7 +84,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 17px;
+  font-size: calc(var(--vitals-token) * 0.42);
   font-weight: 800;
   text-shadow:
     0 2px #132a39,
@@ -91,25 +97,7 @@
 }
 @container aui-viewport (max-height: 500px) and (min-width: 501px) {
   .aui-vitals {
-    width: 80px;
-  }
-  .aui-health {
-    width: 82px;
-    height: 76px;
-    margin-top: -8px;
-  }
-  .aui-health > span {
-    font-size: 14px;
-  }
-  .aui-vital-tokens {
-    gap: 4px;
-  }
-  .aui-vital-token {
-    width: 32px;
-    height: 32px;
-  }
-  .aui-vital-token > strong {
-    font-size: 14px;
+    --aui-vitals-size: 80px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

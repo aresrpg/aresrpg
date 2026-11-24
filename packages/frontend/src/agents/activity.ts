@@ -142,16 +142,18 @@ export type AgentActivity =
 export type RunPhase = 'working' | 'ended' | RunNotice
 /**
  * Every line of a hero's log. A fight's result and its loot come from its resolution row; a run and a
- * command come from the bot's pushed status. A run's `title` is its author's own words; its `ending`
- * is why it ended by itself, when the bot names a listed reason; a command's `error` is the bot's
- * code. A view looks both codes up and never prints them.
+ * command come from the bot's pushed status. A run's `id` is the bot's; its `title` is its author's own
+ * words; `continued` is false only when the page sees it start; its `ending` is why it ended by itself,
+ * when the bot names a listed reason. A command's
+ * `action` is the bot's name for it and its `error` the bot's code. A view looks the codes up and never
+ * prints them.
  */
 export type HeroEvent =
   | AgentActivity
   | Readonly<{ kind: 'fight_won' | 'fight_lost' }>
   | Readonly<{ kind: 'loot'; drops: readonly Readonly<{ item_type: string; qty: number }>[] }>
-  | Readonly<{ kind: 'run'; title: string | null; phase: RunPhase; ending?: RunEnding }>
-  | Readonly<{ kind: 'command'; error: string | null }>
+  | Readonly<{ kind: 'run'; id: string; title: string | null; phase: RunPhase; continued: boolean; ending?: RunEnding }>
+  | Readonly<{ kind: 'command'; action: string; error: string | null }>
 
 const changed_location = (before: Readonly<CharacterRow>, after: Readonly<CharacterRow>): boolean =>
   !!character_checkpoint(before) &&
@@ -202,9 +204,9 @@ export const fold_agent_activity = (
 }
 
 /** A hero's run as its log tells it: `phase` is the help it needs from the player, or that it plays. */
-type RunFacts = Readonly<{ id: string; title: string | null; phase: RunPhase }>
+export type RunFacts = Readonly<{ id: string; title: string | null; phase: RunPhase }>
 type BotFacts = NonNullable<HeroFacts['bot']>
-type CommandFacts = Readonly<{ id: string; settled: boolean; error: string | null }>
+type CommandFacts = Readonly<{ id: string; action: string; settled: boolean; error: string | null }>
 /**
  * What the account's own page knows about one hero, each fact copied by value from the store: its
  * chain row, its fight results, and what the bot says of it. `bot` is null while the bot has not
@@ -217,7 +219,8 @@ export type HeroFacts = Readonly<{
 }>
 export type ObservedHeroes = Readonly<Record<string, HeroFacts>>
 
-const run_facts = ({ runs }: AgentStatus, hero: string): RunFacts | null => {
+/** The run the bot plays for a hero now, null when none. */
+export const run_facts = ({ runs }: AgentStatus, hero: string): RunFacts | null => {
   const run = runs.find(({ character_id, status }) => character_id === hero && PLAYED.includes(status))
   if (!run) return null
   const { id, objective, issue } = run
@@ -230,8 +233,8 @@ const ending_facts = ({ runs }: AgentStatus, hero: string): RunEnding | null =>
 const SETTLED: readonly string[] = ['completed', 'failed', 'cancelled']
 const command_facts = ({ direct }: AgentStatus, hero: string): CommandFacts | null => {
   if (direct?.payload.character_id !== hero) return null
-  const { id, status, error = '' } = direct
-  return { id, settled: SETTLED.includes(status), error: status === 'completed' ? null : error }
+  const { id, kind, status, error = '' } = direct
+  return { id, action: kind, settled: SETTLED.includes(status), error: status === 'completed' ? null : error }
 }
 
 const bot_facts = (status: AgentStatus, hero: string): BotFacts => ({
@@ -264,20 +267,28 @@ export const observed_heroes = ({
       )
     : NO_HEROES
 
-const run_line = ({ title }: RunFacts, phase: RunPhase): HeroEvent => ({ kind: 'run', title, phase })
+const run_line = ({ id, title }: RunFacts, phase: RunPhase, continued: boolean): HeroEvent => ({
+  kind: 'run',
+  id,
+  title,
+  phase,
+  continued,
+})
 /** A run that is gone, or that another run replaced, ended. One that is gone says why when the bot does. */
 const ended_run = (before: RunFacts | null, { run, ending }: BotFacts): readonly HeroEvent[] => {
   if (!before || before.id === run?.id) return []
-  return [{ ...run_line(before, 'ended'), ...(ending && !run ? { ending } : {}) }]
+  return [{ ...run_line(before, 'ended', true), ...(ending && !run ? { ending } : {}) }]
 }
 /** A run is told when it appears, and again each time it starts or stops needing the player. */
 const told_run = (before: RunFacts | null, after: RunFacts | null): readonly HeroEvent[] =>
-  after && (before?.id !== after.id || before.phase !== after.phase) ? [run_line(after, after.phase)] : []
+  after && (before?.id !== after.id || before.phase !== after.phase)
+    ? [run_line(after, after.phase, before?.id === after.id)]
+    : []
 /** A direct command is one line, when it settles. The same settled command seen again is none. */
 const command_changes = (before: CommandFacts | null, after: CommandFacts | null): readonly HeroEvent[] => {
   if (!after?.settled) return []
   const told = before?.id === after.id && before.settled
-  return told ? [] : [{ kind: 'command', error: after.error }]
+  return told ? [] : [{ kind: 'command', action: after.action, error: after.error }]
 }
 /** What a fight not seen yet had told: no winner and no loot. */
 const UNSEEN: Readonly<Pick<FightResolutionRow, 'winner' | 'drops'>> = Object.freeze({ winner: null, drops: [] })
@@ -333,4 +344,42 @@ export const fold_hero_logs = (logs: HeroLogs, before: ObservedHeroes, after: Ob
     return events.length ? [[hero, kept_lines(lines, numbered(lines, events, at), HERO_LOG_LINES)] as const] : []
   })
   return grown.length ? { ...logs, ...Object.fromEntries(grown) } : logs
+}
+
+/** A run as the transcript heads it: the bot's run, its last told phase and, once it ended by itself, why. */
+export type RunHead = Readonly<{ id: string; title: string | null; phase: RunPhase; ending?: RunEnding }>
+/** A stretch of one hero's log: the lines seen while one run played, under its head, or lines outside any run. */
+export type LogGroup = Readonly<{ run: RunHead | null; lines: readonly LoggedEvent[] }>
+
+const playing = ({ run }: LogGroup): boolean => run === null || run.phase !== 'ended'
+/**
+ * A line joins the group it was seen in. A run's first line opens its group and is its head; a later line of the
+ * same run (a blocker, a restart, its end) updates the head and stays as a line. A run the page did not see start
+ * was already playing the loose lines just before its first line, so it takes them; that line stays as a line.
+ */
+const grouped_line = (groups: readonly LogGroup[], line: LoggedEvent): readonly LogGroup[] => {
+  const last = groups.at(-1)
+  const before = groups.slice(0, -1)
+  const { event } = line
+  if (event.kind !== 'run')
+    return last && playing(last)
+      ? [...before, { ...last, lines: [...last.lines, line] }]
+      : [...groups, { run: null, lines: [line] }]
+  const same_run = last?.run?.id === event.id
+  const unseen_start = event.continued && last?.run === null
+  if (last && (same_run || unseen_start)) return [...before, { run: event, lines: [...last.lines, line] }]
+  return [...groups, { run: event, lines: event.continued ? [line] : [] }]
+}
+
+/**
+ * One hero's log as the runs it saw, oldest first. `live` is the run the bot plays for the hero now: it heads the
+ * loose lines at the end, which it played since the page opened, or stands alone while nothing was seen yet.
+ */
+export const log_groups = (lines: readonly LoggedEvent[], live: RunFacts | null): readonly LogGroup[] => {
+  const groups = lines.reduce(grouped_line, [] as readonly LogGroup[])
+  if (!live || groups.some(({ run }) => run?.id === live.id)) return groups
+  const last = groups.at(-1)
+  return last?.run === null
+    ? [...groups.slice(0, -1), { run: live, lines: last.lines }]
+    : [...groups, { run: live, lines: [] }]
 }

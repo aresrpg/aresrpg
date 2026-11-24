@@ -41,6 +41,8 @@ export const SITE_ADDRESSES = Object.freeze({
   discord: 'https://discord.gg/aresrpg',
   telegram: 'https://t.me/aresrpg',
   x: 'https://x.com/AresRPG',
+  /** Where KARES trades. */
+  aftermath: 'https://aftermath.finance/trade',
   source: 'https://github.com/aresrpg/aresrpg',
 })
 

@@ -23,7 +23,8 @@ status-effect or ability rule. Runtime gameplay behavior remains in game content
 
 Production contract
 Native 26-bone rig, mixamorig:Head and cape anchors, Rider parented to Hips, and the
-nondeforming Helmet child of Head. Head and crest are uniformly enlarged about the chin
+nondeforming Helmet child of Head, fitted to this head at scale 1.75: the ear discs and brow
+sit inside a worn shell's wall. Head and crest are uniformly enlarged about the chin
 by proportions.py to the shared head ratio. IDLE, WALK, RUN, JUMP, JUMP_RUN, FALL, SIT,
 DANCE and DEATH are native clips. Flat palettes are packed; three transparent
 customization masks retain the four-material contract with fixed partner colours.

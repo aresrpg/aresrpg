@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The AI page. Connected, it shows the agent's log; otherwise it lays the setup in place: an assistant's
+// The AI page. Connected, it is the agent's terminal; otherwise it lays the setup in place: an assistant's
 // request, or what the owner check answered. The page only shows: the owner sends, takes back and
 // disconnects the bot from the portfolio.
 import { ArrowLeftRight, List, Wallet } from 'lucide-react'
@@ -19,19 +19,14 @@ import { AgentSetupBody } from './AgentSetup.tsx'
 import { agent_request_id } from './owner_state.ts'
 import { useOwnerAnswer } from './useOwnerAnswer.ts'
 
-/** A connected agent: one status line, then the log of what the agent does with each hero. */
+/** A connected agent: its terminal across the page, then where the player manages it. */
 const AgentConnected = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <>
-    <header className="agent-page-status">
-      <span className="agent-page-dot" aria-hidden="true" />
-      <h1>{copy.ui.agent_connected}</h1>
-    </header>
-    <section className="agent-term" aria-labelledby="agent-term-title">
-      <h2 id="agent-term-title">{agent_text(copy, 'log_title')}</h2>
-      <AgentLog copy={copy} />
-    </section>
-    <p className="agent-log-note">
-      <SiteLink href={SITE_ADDRESSES.portfolio}>{agent_text(copy, 'manage_note')}</SiteLink>
+    <AgentLog copy={copy} />
+    <p className="m-0 text-[13px] leading-normal text-muted">
+      <SiteLink href={SITE_ADDRESSES.portfolio} className="text-soft underline-offset-2 hover:text-text">
+        {agent_text(copy, 'manage_note')}
+      </SiteLink>
     </p>
   </>
 )

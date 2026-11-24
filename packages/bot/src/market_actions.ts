@@ -190,7 +190,7 @@ const validate_market_collect = (context: GameplayContext) => {
 export const MARKET_ACTIONS = {
   market_buy: gameplay_action({
     description:
-      'Buy one exact item lot into the selected owned character kiosk. The bot reads the current offers of that item itself before it signs, then gives the market view back. Exact price and royalty-inclusive maximum are checked before preparation. Native Sui kiosk purchase checks asset and price on chain; listing version is a local freshness check, not an on-chain compare-and-swap. Receipt-proven inventory must reconcile before another action.',
+      'Buy one exact item lot into the selected owned character kiosk: take item_id, seller_kiosk, listing_version, amount and price_mist from an offer of bot_market. The bot reads the current offers of that item itself before it signs, then gives the market view back. Exact price and royalty-inclusive maximum are checked before preparation. Native Sui kiosk purchase checks asset and price on chain; listing version is a local freshness check, not an on-chain compare-and-swap. Receipt-proven inventory must reconcile before another action.',
     input_schema: schema,
     parse,
     validate: validate_market_buy,
@@ -198,7 +198,7 @@ export const MARKET_ACTIONS = {
   }),
   market_sell: gameplay_action({
     description:
-      'List one exact owned, unencumbered item or legal stack lot at the authored SUI ask. Revalidates source kiosk, item version and quantity; the existing SDK splits a partial lot. Waits for certified inventory and listing projection.',
+      'List one exact owned, unencumbered item or legal stack lot at the authored SUI ask; bot_market shows the asks of other sellers and the sale history. Revalidates source kiosk, item version and quantity; the existing SDK splits a partial lot. Waits for certified inventory and listing projection.',
     input_schema: sell_schema,
     parse: parse_sale,
     validate: validate_market_sell,

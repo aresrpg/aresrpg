@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: ペット
   group_runes: ルーン
   group_consumable: 消耗品
+  group_keys: 鍵
   group_resources: 素材
   group_characters: キャラクター
   search: アイテム検索…
@@ -3345,7 +3346,6 @@ docs_page:
     license_link: 'ライセンスを読む'
 
 agent_page:
-  log_title: 'エージェントログ'
   manage_note: 'ボットにヒーローやアイテムを送る、取り戻す、接続を解除するには、ポートフォリオを開いてください。'
   stage_wallet_title: '専用のウォレット'
   stage_wallet: 'エージェントは専用のボットウォレットでプレイし、署名します。'
@@ -3356,8 +3356,30 @@ agent_page:
   heroes_title: 'あなたのヒーロー'
   hero_level: 'レベル {level}'
   heroes_failed: 'ゲームサーバーからヒーローが届きませんでした。このページを再読み込みしてもう一度お試しください。'
-  empty_title: 'まだ何もありません'
-  empty_body: 'AIアシスタントの行動がここに表示されます。'
+  empty_title: 'ボットにはまだヒーローがいません'
+  empty_body: 'ポートフォリオから送るか、AIアシスタントに作成を頼んでください。'
+  state_failed: 'ヒーローを読み込めません'
+  log_waiting_title: 'アシスタントの最初の一手を待っています'
+  log_waiting_body: 'このページを開いている間、ボットの行動がこのログに表示されます。'
+  run_state_blocked: '対応が必要'
+  run_state_stopped: '停止'
+  run_fees: '手数料 {amount} SUI'
+  run_dungeons: 'ダンジョン周回: {count}'
+  jump_latest: '最新へ'
+  command_market_sell: 'アイテムを出品'
+  command_market_buy: 'マーケットで購入'
+  command_market_delist: '出品を取り下げ'
+  command_market_collect: '売上を受け取る'
+  command_gather: '採集'
+  command_craft: '製作'
+  command_equip: '装備を変更'
+  command_loot: '戦利品を開ける'
+  command_consumable: '消耗品を使う'
+  command_points: 'ポイントを割り振る'
+  command_create: 'ヒーローを作成'
+  command_search: 'ワールドを探索'
+  command_dungeon: 'ダンジョンでの行動'
+  command_fight: '戦闘での行動'
   activity_other: '活動'
   position_running: '進行中'
   position_finished: '完了'
@@ -3448,6 +3470,7 @@ site:
   login: ログイン
   new_tab: ' (新しいタブで開きます)'
   log_in_first: '先にログインしてください'
+  buy_kares: 'KARESを購入'
   docs: ドキュメント
   encyclopedia: アイテム図鑑
   journal: ジャーナル

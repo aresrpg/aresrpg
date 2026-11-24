@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Улюбленці
   group_runes: Руни
   group_consumable: Витратні предмети
+  group_keys: Ключі
   group_resources: Ресурси
   group_characters: Персонажі
   search: Пошук предметів…
@@ -3348,7 +3349,6 @@ docs_page:
     license_link: 'Читати ліцензію'
 
 agent_page:
-  log_title: 'Журнал агента'
   manage_note: 'Щоб надіслати боту героїв чи предмети, забрати їх або відключити бота, відкрийте портфель.'
   stage_wallet_title: 'Власний гаманець'
   stage_wallet: 'Ваш агент грає та підписує власним гаманцем бота.'
@@ -3359,8 +3359,30 @@ agent_page:
   heroes_title: 'Ваші герої'
   hero_level: 'Рівень {level}'
   heroes_failed: 'Ігровий сервер не надіслав ваших героїв. Перезавантажте сторінку, щоб спробувати знову.'
-  empty_title: 'Тут поки нічого немає'
-  empty_body: 'Тут зʼявиться все, що робить ваш ШІ-асистент.'
+  empty_title: 'У вашого бота ще немає героя'
+  empty_body: 'Надішліть героя з портфеля або попросіть ШІ-асистента створити його.'
+  state_failed: 'Героїв не завантажено'
+  log_waiting_title: 'Чекаємо на перший хід вашого асистента'
+  log_waiting_body: 'Цей журнал показує, що робить ваш бот, поки ця сторінка відкрита.'
+  run_state_blocked: 'Потрібна ваша допомога'
+  run_state_stopped: 'Зупинено'
+  run_fees: 'Комісії {amount} SUI'
+  run_dungeons: 'Пройдено підземель: {count}'
+  jump_latest: 'До останніх'
+  command_market_sell: 'Виставити предмет на продаж'
+  command_market_buy: 'Купити на ринку'
+  command_market_delist: 'Зняти лот'
+  command_market_collect: 'Забрати виручку'
+  command_gather: 'Зібрати'
+  command_craft: 'Створити предмет'
+  command_equip: 'Змінити спорядження'
+  command_loot: 'Відкрити здобич'
+  command_consumable: 'Використати витратний предмет'
+  command_points: 'Розподілити очки'
+  command_create: 'Створити героя'
+  command_search: 'Шукати у світі'
+  command_dungeon: 'Хід у підземеллі'
+  command_fight: 'Хід у бою'
   activity_other: 'Заняття'
   position_running: 'Триває'
   position_finished: 'Завершено'
@@ -3451,6 +3473,7 @@ site:
   login: Увійти
   new_tab: ' (відкривається в новій вкладці)'
   log_in_first: 'Спочатку увійдіть'
+  buy_kares: 'Купити KARES'
   docs: Документація
   encyclopedia: Енциклопедія предметів
   journal: Журнал

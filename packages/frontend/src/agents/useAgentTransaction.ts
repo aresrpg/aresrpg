@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { AgentItemReturnOffer } from '@aresrpg/sdk/agent-returns'
 import type { AgentPairingIdentity } from '@aresrpg/protocol'
 import type { AgentTransferActions, AgentTransferIntent } from '@aresrpg/sdk/agent-transfer-actions'
 import { complete_agent_handover, AgentHandoverIncomplete } from '@aresrpg/sdk/agent-handover'
-import { pre_submission_failure } from '@aresrpg/sdk/transaction-error'
+import { pre_submission_failure, transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
 import type { SessionState } from '../modules/session.ts'
 import type { AuthSession } from '../auth.ts'
@@ -19,7 +19,7 @@ import { agent_transfer_error, agent_transfer_needs_gas } from './transfer_error
 import { execute_agent_transfer } from './agent_transaction.ts'
 import { pending_inventory_transfer, type TransferPreview } from './inventory_transfer.ts'
 import { item_claim_attempts } from './item_recovery.ts'
-import { same_inventory_pairing } from './inventory_state.ts'
+import { same_inventory_pairing, transfer_current } from './inventory_state.ts'
 
 type Handover = Pick<Parameters<typeof complete_agent_handover>[0], 'claim' | 'read'>
 type State = Readonly<{
@@ -31,11 +31,14 @@ type State = Readonly<{
   error?: string
   digest?: string
   retryable?: boolean
+  /** The chain has not said whether it executed: nothing offers it again. */
+  uncertain?: boolean
   claimed?: readonly AgentItemReturnOffer[]
 }>
 const idle: State = { wallet: null, pairing: null, intent: null, phase: 'idle' }
 
-/** Pending cells are presentation only. Only the indexed account stream confirms ownership. */
+/** Pending cells are presentation only. Only the indexed account stream confirms ownership. A transfer runs to its end
+ * when the view that started it closes: its toast reports the outcome wherever the visitor went. */
 export const useAgentTransaction = (
   wallet: AuthSession | null,
   pairing: AgentPairingIdentity | null,
@@ -43,16 +46,7 @@ export const useAgentTransaction = (
   copy: AppCopy,
   read_pairing?: (session: SessionState) => AgentPairingIdentity | null
 ) => {
-  const mounted = useRef(true)
   const last_attempt = useRef<(() => unknown) | null>(null)
-  useEffect(() => {
-    // eslint-disable-next-line functional/immutable-data -- This ref retires unsigned work on inventory dismissal.
-    mounted.current = true
-    return () => {
-      // eslint-disable-next-line functional/immutable-data -- Cleanup prevents late preparations from requesting signatures.
-      mounted.current = false
-    }
-  }, [])
   const [state, set_state] = useState<State>(idle)
   const [funding_sender, set_funding_sender] = useState<string | null>(null)
   const transaction = state.wallet === wallet && same_inventory_pairing(state.pairing, pairing) ? state : idle
@@ -85,8 +79,12 @@ export const useAgentTransaction = (
     if (!wallet || !pairing || busy || (reconciling && !retry)) return null
     const is_current = () => {
       const { session } = read_app_state()
-      const selected = read_pairing ? read_pairing(session) : session.inventory_pairing
-      return mounted.current && session.wallet === wallet && same_inventory_pairing(selected, pairing)
+      return transfer_current(
+        session.wallet,
+        read_pairing ? read_pairing(session) : session.inventory_pairing,
+        wallet,
+        pairing
+      )
     }
     const before_sign = () => {
       if (!is_current()) throw new Error('The confirmed wallet or agent changed.')
@@ -148,6 +146,8 @@ export const useAgentTransaction = (
           phase: 'failed',
           error: failure.message,
           retryable: pre_submission_failure(error),
+          uncertain:
+            transaction_failure_kind(error instanceof AgentHandoverIncomplete ? error.cause : error) === 'uncertain',
         })
         complete()
       }

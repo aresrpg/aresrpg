@@ -582,30 +582,6 @@
     display: none;
   }
   .fight-hud--overworld .fight-hud__overworld-row {
-    align-items: center;
     gap: 8px;
-  }
-  .fight-hud--overworld .aui-vitals {
-    width: 68px;
-    gap: 0;
-  }
-  .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-health {
-    width: 68px;
-    height: 62px;
-    margin-top: 0;
-  }
-  .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-vital-token {
-    width: 32px;
-    height: 32px;
-  }
-  .fight-hud--overworld .aui-vital-tokens {
-    margin-top: -12px;
-    gap: 0;
-  }
-  .fight-hud--overworld .aui-health > span {
-    font-size: 18px;
-  }
-  .fight-hud--overworld .aui-vital-token > strong {
-    font-size: 16px;
   }
 }

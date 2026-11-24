@@ -7,6 +7,7 @@ import kares_logo from '../../../../seed/icons/currency/kares.png'
 import { env } from '../env.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
+import { SITE_ADDRESSES } from '../site/routes.ts'
 
 import type { KaresCopy } from './copy.ts'
 import type { FinanceState } from './model.ts'
@@ -192,7 +193,7 @@ const TokenomicsPanel = ({
         <div className="col-3 row-[1/3] grid justify-items-end gap-2 self-center text-right max-[599px]:col-span-full max-[599px]:row-3 max-[599px]:justify-items-start max-[599px]:text-left">
           <a
             className="aui-button aui-button--primary min-h-10.5 px-4.5 no-underline"
-            href="https://aftermath.finance/trade"
+            href={SITE_ADDRESSES.aftermath}
             target="_blank"
             rel="noopener noreferrer"
           >

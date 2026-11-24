@@ -36,6 +36,45 @@ export const AgentConnectionButton = ({
   return connected ? <span className="e-wrap">{button}</span> : button
 }
 
+/**
+ * The quiet face of the same control, for a row it shares with other controls: a 6px dot in the answer's tone (the site
+ * status card's colours) and the control's word, in a hairline frame. Every word the control can read is laid in the
+ * same cell and only the current one shows, so the box is as wide as its longest word and an answer never moves what
+ * stands beside it.
+ */
+export const AgentStatusButton = ({
+  tone,
+  label,
+  labels,
+  open,
+  disabled = false,
+}: Readonly<{
+  tone: string
+  label: string
+  labels: readonly string[]
+  open: () => void
+  disabled?: boolean
+}>) => (
+  <button
+    type="button"
+    className="inline-grid h-11 items-center rounded-[5px] border border-line bg-surface-high px-3.5 text-[13px] font-semibold text-text transition-colors duration-150 hover:border-line-strong hover:bg-surface-raised focus-visible:border-line-strong focus-visible:outline-none disabled:opacity-60 motion-reduce:transition-none"
+    onClick={open}
+    disabled={disabled}
+    data-agent-setup-button=""
+  >
+    {[...new Set([label, ...labels])].map((word) => (
+      <span
+        key={word}
+        className={`col-1 row-1 flex items-center justify-center gap-2.5 whitespace-nowrap ${word === label ? '' : 'invisible'}`}
+        aria-hidden={word === label ? undefined : true}
+      >
+        <span className={`size-1.5 flex-none rounded-full ${tone}`} aria-hidden="true" />
+        {word}
+      </span>
+    ))}
+  </button>
+)
+
 export const AgentConnectedModal = ({
   copy,
   close,

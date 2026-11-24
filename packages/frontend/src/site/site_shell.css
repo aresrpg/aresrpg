@@ -6,6 +6,8 @@
   --site-bar-width: 1080px;
   --site-page-width: 1400px;
   --site-gutter: 16px;
+  /* From the page's right content edge to the window's: a shelf that runs off the page ends at the window. */
+  --site-bleed-right: max(var(--site-gutter), (100vw - var(--site-page-width)) / 2 + var(--site-gutter));
   /* The bar's distance from the sale row, and from the window's top while it sticks: room for the helmet's crest. */
   --site-bar-top: 16px;
   /* The status card's box: its dock above the footer and the footer's first column are both this size. */
@@ -288,6 +290,46 @@
 }
 .site-bar .wallet-trigger--compact .wallet-trigger__balance {
   font: 500 13px/1 var(--aui-font-mono);
+}
+/* Buy KARES: a small gold key beside the bar. Gold is the token's colour; the hairline and the label carry it, the face stays dark. */
+.site-buy-kares {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  display: none;
+  translate: 0 -50%;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--aui-hue-gold) 42%, transparent);
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--aui-hue-gold) 14%, var(--aui-raised)),
+    color-mix(in srgb, var(--aui-hue-gold) 5%, var(--aui-surface))
+  );
+  color: var(--aui-hue-gold);
+  font: 800 13px/1 var(--aui-font);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.site-buy-kares:hover {
+  border-color: color-mix(in srgb, var(--aui-hue-gold) 75%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--aui-hue-gold) 22%, var(--aui-raised)),
+    color-mix(in srgb, var(--aui-hue-gold) 9%, var(--aui-surface))
+  );
+}
+/* It stands outside the bar, at its right, and follows it. Shown only where the window leaves it that room. */
+@media (min-width: 1400px) {
+  .site-buy-kares {
+    display: flex;
+  }
 }
 /* A label that has not loaded holds a word's width. */
 .site-stub {

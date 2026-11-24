@@ -23,34 +23,6 @@ export type MarketType = Readonly<{
   level: number
   quote: MarketQuote
 }>
-/** Wire schema of the page queries for connectors; semantic parsing remains parse_market_observation. */
-export const MARKET_OBSERVATION_SCHEMA = {
-  oneOf: [
-    { type: 'null' },
-    ...[
-      {
-        kind: 'offers',
-        fields: { category: { type: 'string' }, item_type: { type: 'string' }, cursor: { type: 'string' } },
-        required: ['category', 'item_type'],
-      },
-      {
-        kind: 'characters',
-        fields: {
-          cursor: { type: 'string' },
-          classe: { type: 'string' },
-          min_level: { type: 'integer' },
-          max_level: { type: 'integer' },
-        },
-        required: [],
-      },
-    ].map(({ kind, fields, required }) => ({
-      type: 'object',
-      properties: { kind: { const: kind }, request: { type: 'integer', minimum: 0 }, ...fields },
-      required: ['kind', 'request', ...required],
-      additionalProperties: false,
-    })),
-  ],
-} as const
 export const has_market_page = (
   observation: MarketObservation | MarketQuery | null
 ): observation is Extract<MarketObservation, { kind: MarketQuery['kind'] }> =>

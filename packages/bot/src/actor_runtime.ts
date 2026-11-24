@@ -315,9 +315,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
     const snapshot = session.snapshot()
     if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
-    await apply_actor_watches(session.actor, command)
     const [sampled_at, lane] = [monotonic_now(), await store.read<Lane>(command.lane_key)] // Stamped before its reads.
-    return observation_reply({ ...session_context(session, command), snapshot, balance }, async () => ({
+    return observation_reply({ ...session_context(session, command), snapshot, balance }, session.actor, async () => ({
       ...(await owned_run_observation(store, lane, command)),
       decision_revision: lane?.decision_revision,
       event_fence: session.lease.fence,

@@ -3,6 +3,7 @@
 import { parse_market_observation, type MarketObservation } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 
+import { observation_slot_busy } from './actor.ts'
 import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
 import type { Bot, BotConfig } from './model.ts'
@@ -140,7 +141,7 @@ const purchase_ready = async (
     await point_view(bot, command, progress.observation, options)
     return { wait: true, held: true }
   } catch (error) {
-    if (!String(error).includes('OBSERVATION_SLOT_BUSY')) throw error
+    if (!observation_slot_busy(error)) throw error
     return { refusal: 'market_unavailable', held: false }
   }
 }

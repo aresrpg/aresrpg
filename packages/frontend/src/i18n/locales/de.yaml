@@ -466,6 +466,7 @@ marketplace_page:
   group_pets: Begleiter
   group_runes: Runen
   group_consumable: Verbrauchsgüter
+  group_keys: Schlüssel
   group_resources: Ressourcen
   group_characters: Charaktere
   search: Gegenstände suchen…
@@ -3367,7 +3368,6 @@ docs_page:
     license_link: Lizenz lesen
 
 agent_page:
-  log_title: 'Agenten-Protokoll'
   manage_note: 'Um deinem Bot Helden oder Gegenstände zu senden, sie zurückzuholen oder ihn zu trennen, öffne dein Portfolio.'
   stage_wallet_title: 'Eine eigene Wallet'
   stage_wallet: 'Dein Agent spielt und signiert mit einer eigenen Bot-Wallet.'
@@ -3378,8 +3378,30 @@ agent_page:
   heroes_title: 'Deine Helden'
   hero_level: 'Stufe {level}'
   heroes_failed: 'Der Spielserver hat deine Helden nicht gesendet. Lade diese Seite neu, um es erneut zu versuchen.'
-  empty_title: 'Hier ist noch nichts'
-  empty_body: 'Was dein KI-Assistent tut, erscheint hier.'
+  empty_title: 'Dein Bot hat noch keinen Helden'
+  empty_body: 'Schicke einen aus deinem Portfolio oder bitte deinen KI-Assistenten, einen zu erstellen.'
+  state_failed: 'Helden nicht geladen'
+  log_waiting_title: 'Warte auf den ersten Zug deines Assistenten'
+  log_waiting_body: 'Dieses Protokoll zeigt, was dein Bot tut, solange diese Seite offen ist.'
+  run_state_blocked: 'Braucht dich'
+  run_state_stopped: 'Gestoppt'
+  run_fees: 'Gebühren {amount} SUI'
+  run_dungeons: 'Dungeon-Läufe: {count}'
+  jump_latest: 'Zum Neuesten'
+  command_market_sell: 'Gegenstand zum Verkauf anbieten'
+  command_market_buy: 'Auf dem Markt kaufen'
+  command_market_delist: 'Angebot zurückziehen'
+  command_market_collect: 'Verkaufserlöse einziehen'
+  command_gather: 'Sammeln'
+  command_craft: 'Herstellen'
+  command_equip: 'Ausrüstung wechseln'
+  command_loot: 'Beute öffnen'
+  command_consumable: 'Verbrauchsgut benutzen'
+  command_points: 'Punkte verteilen'
+  command_create: 'Helden erstellen'
+  command_search: 'Welt durchsuchen'
+  command_dungeon: 'Dungeon-Zug'
+  command_fight: 'Kampfzug'
   activity_other: 'Aktivität'
   position_running: 'Läuft'
   position_finished: 'Beendet'
@@ -3470,6 +3492,7 @@ site:
   login: Anmelden
   new_tab: ' (öffnet einen neuen Tab)'
   log_in_first: 'Zuerst anmelden'
+  buy_kares: 'KARES kaufen'
   docs: Docs
   encyclopedia: Gegenstands-Enzyklopädie
   journal: Journal

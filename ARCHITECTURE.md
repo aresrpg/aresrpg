@@ -377,7 +377,8 @@ Team play emerges from per-hero trees; there is no team controller. The dungeon 
 The bot collects its own kiosk proceeds once they reach 0.1 SUI (`packages/bot/src/market_collection.ts`).
 
 The MCP surface is one tool table (`TOOLS`, `packages/bot/src/mcp.ts`). `bot_observe` is a short status; detail comes
-from named views of the same read path (`bot_inventory`, `bot_item_stacks`: 20 by default, 200 at most, `bot_zones`).
+from named views of the same read path (`bot_inventory`, `bot_item_stacks`: 20 by default, 200 at most, `bot_zones`,
+`bot_market`: the public market, which borrows the wallet's one market view).
 The bot pushes its status on its own game socket (`packet/agent_status`); the server relays it inside the owner's
 account stream without storing it. No first-party client reads the bot over HTTP on a clock.
 

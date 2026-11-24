@@ -1,17 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import {
-  Castle,
-  DoorOpen,
-  Footprints,
-  LogOut,
-  MapPin,
-  Pickaxe,
-  Sparkles,
-  Swords,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import type { CharacterRow, HostedObjective } from '@aresrpg/protocol'
 
 import type { AppCopy } from '../i18n/copy.ts'
@@ -23,21 +12,9 @@ import {
   type AgentActivity as ActivityEntry,
   type HeroActivity,
 } from './activity.ts'
-import { activity_text } from './activity_text.ts'
+import { activity_text, now_mark } from './activity_text.ts'
 import { displayed_character } from './observation.ts'
 import './activity.css'
-
-const ACTIVITY_ICONS: Readonly<Record<ActivityEntry['kind'], LucideIcon>> = {
-  level: Sparkles,
-  profession: Pickaxe,
-  travel: Footprints,
-  fight_entered: Swords,
-  fight_left: DoorOpen,
-  experience: TrendingUp,
-  dungeon: Castle,
-  dungeon_left: LogOut,
-}
-const PLACE_ICONS = { fight: Swords, dungeon: DoorOpen, world: MapPin }
 
 export const AgentActivity = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const session = useAppStore((state) => state.session)
@@ -69,15 +46,14 @@ export const AgentActivityLog = ({
   locale?: string
 }>) => {
   const place = hero_whereabouts(character)
-  const CurrentIcon = place ? PLACE_ICONS[place] : MapPin
+  const CurrentIcon = place ? now_mark(place).icon : MapPin
   const current = activity?.status ?? place
   return (
     <div className="agent-activity">
       {activity?.objective && <AgentObjective copy={copy} objective={activity.objective} run={activity} />}
       <div role="log" aria-label={copy.ui.agent_activity_label} aria-live="polite">
         {history.map((event, index) => {
-          const Icon = ACTIVITY_ICONS[event.kind]
-          const { action, result } = activity_text(copy, event, locale)
+          const { action, result, icon: Icon } = activity_text(copy, event, locale)
           return (
             <p className="agent-activity-done" key={`${index}:${event.kind}`}>
               <span>{result ? `${action} ${result}` : action}</span>

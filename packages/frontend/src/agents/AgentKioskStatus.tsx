@@ -19,7 +19,8 @@ export const AgentKioskStatus = ({ kiosk, copy }: Readonly<{ kiosk: AgentKioskCo
       <p className="agent-transfer-error" role="alert" hidden={!failure}>
         {failure}
       </p>
-      {failure && (
+      {/* An outcome the chain has not settled is never offered again: its toast said so. */}
+      {failure && !kiosk.transaction.uncertain && (
         <Button disabled={kiosk.busy || kiosk.state.phase === 'loading'} onClick={retry}>
           {copy.ui.agent_hosted_retry}
         </Button>

@@ -15,7 +15,7 @@ import { toast } from '../toast.ts'
 import { useHostedConnect } from './useHostedConnect.ts'
 import { HostedBotPanel } from './HostedBotPanel.tsx'
 import { disconnect_agent } from './disconnect_agent.ts'
-import { AgentConnectionButton, AgentConnectedModal } from './AgentConnected.tsx'
+import { AgentConnectionButton, AgentConnectedModal, AgentStatusButton } from './AgentConnected.tsx'
 import { agent_request_id, owner_checkable, without_agent_request, type OwnerAnswer } from './owner_state.ts'
 import { ProviderHandoff } from './ProviderHandoff.tsx'
 import { useOwnerAnswer } from './useOwnerAnswer.ts'
@@ -232,15 +232,26 @@ const ANSWER_LABEL: Readonly<Record<OwnerAnswer, (copy: AppCopy, setup: string) 
   unreachable: (copy) => copy.ui.agent_unreachable,
   not_connected: (_copy, setup) => setup,
 }
+/** Each answer's dot, in the site status card's tones: a check without an answer stays neutral. */
+const ANSWER_TONE: Readonly<Record<OwnerAnswer, string>> = {
+  connected: 'bg-success',
+  unknown: 'bg-steel',
+  unreachable: 'bg-danger',
+  not_connected: 'bg-steel',
+}
 
+/** The agent's one control: what the owner check answered, and the way on (the setup, the connected agent's dialog, a
+ * new check). `face` picks its look: the approved seal, or the quiet status a row of other controls carries. */
 export const AgentSetupButton = ({
   copy,
   label,
   class_name,
+  face = 'seal',
 }: Readonly<{
   copy: AppCopy
   label?: string
   class_name?: string
+  face?: 'seal' | 'status'
 }>) => {
   const [open, set_open] = useState(false)
   const answer = useOwnerAnswer()
@@ -268,15 +279,26 @@ export const AgentSetupButton = ({
     else if (['failed', 'unavailable'].includes(phase)) dispatch_app({ type: 'agent/connection_refresh' })
     else set_open(true)
   }
+  const label_of = (shown: OwnerAnswer): string => ANSWER_LABEL[shown](copy, status_label ?? copy.ui.agent_setup)
   return (
     <>
-      <AgentConnectionButton
-        connected={connected}
-        class_name={class_name}
-        open={activate}
-        disabled={busy}
-        label={ANSWER_LABEL[answer](copy, status_label ?? copy.ui.agent_setup)}
-      />
+      {face === 'status' ? (
+        <AgentStatusButton
+          tone={ANSWER_TONE[answer]}
+          label={label_of(answer)}
+          labels={Object.keys(ANSWER_TONE).map((shown) => label_of(shown as OwnerAnswer))}
+          open={activate}
+          disabled={busy}
+        />
+      ) : (
+        <AgentConnectionButton
+          connected={connected}
+          class_name={class_name}
+          open={activate}
+          disabled={busy}
+          label={label_of(answer)}
+        />
+      )}
       {open && <AgentSetup copy={copy} close={() => set_open(false)} />}
     </>
   )
