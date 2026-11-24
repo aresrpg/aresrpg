@@ -20,7 +20,7 @@
     "@aresrpg/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.4",
+    "@types/bun": "^1.4.5",
     "@types/three": "0.187.0"
   }
 }
