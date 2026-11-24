@@ -4,12 +4,12 @@ import { Trophy } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { TournamentRow } from '@aresrpg/protocol'
+import { tournament_owned_match, tournament_registration, tournament_rounds } from '@aresrpg/protocol/tournament-rules'
 
 import { BlastSaleCard } from '../kares/BlastSaleCard.tsx'
 import { dispatch_app } from '../store.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
-import { tournament_owned_match, tournament_registration, tournament_rounds } from '../modules/tournament_selectors.ts'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
 import { action_label, countdown, match_label, own_team, tournament_name } from './presentation.ts'

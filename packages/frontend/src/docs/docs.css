@@ -54,13 +54,23 @@
 .docs-bar .docs-menu {
   display: none;
 }
+/* The brand is two links: the name leads to the site's home, the docs mark to the docs' first page. */
 .docs-brand {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  white-space: nowrap;
+}
+.docs-brand a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   color: inherit;
   text-decoration: none;
-  white-space: nowrap;
+}
+.docs-brand a:hover b,
+.docs-brand a:hover span {
+  color: var(--aui-ink);
 }
 .docs-brand b {
   font: 800 18px/1 var(--aui-font);
@@ -139,6 +149,9 @@
 }
 .docs-bar-space {
   flex: 1;
+}
+.docs-scrim {
+  display: none;
 }
 .docs-bar-link {
   padding: 10px 6px;
@@ -495,21 +508,40 @@
   .docs-bar .docs-menu {
     display: inline-flex;
   }
+  /* The rail becomes a drawer between the bar and the window's foot. It stretches between its insets (the wide
+     rail's `start` alignment would size it to its content and push its last entries off screen) and scrolls alone. */
   .docs-rail {
     position: absolute;
     z-index: 22;
     top: 8px;
-    bottom: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
     left: max(8px, env(safe-area-inset-left, 0px));
+    align-self: stretch;
     display: none;
     width: min(300px, calc(100vw - 16px));
     max-height: none;
+    overscroll-behavior: contain;
   }
   .docs[data-menu] .docs-rail {
     display: block;
   }
+  /* While the drawer is open, the page behind it is covered: a tap there closes the drawer and nothing scrolls. */
+  .docs[data-menu] .docs-scrim {
+    position: absolute;
+    z-index: 21;
+    inset: 0;
+    display: block;
+    background: color-mix(in srgb, var(--aui-void) 45%, transparent);
+    touch-action: none;
+  }
   .docs-bar-link {
     display: none;
+  }
+}
+/* A field under 16px makes a phone's browser zoom the page when it takes focus. */
+@media (pointer: coarse) {
+  .docs-find input {
+    font-size: 16px;
   }
 }
 @media (max-width: 560px) {
@@ -649,4 +681,60 @@
 }
 .docs-main--reference:is([data-section='classes'], [data-section='jobs']) .aui-collection-copy small {
   font-size: 13px;
+}
+/* The reference tools on a touch screen: the shared touch sizes (44px targets, 14px labels) and 16px fields, since a
+   smaller field makes a phone's browser zoom the page on focus. The game's encyclopedia keeps its compact strip. */
+@media (pointer: coarse) {
+  .docs .docs-reference :is(.aui-catalogue-tools, .aui-mob-tools) :is(input, select) {
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .docs .docs-reference :is(.aui-item-filters, .aui-mob-tools) > .aui-button {
+    min-height: 44px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  .docs .docs-reference .aui-item-filters small {
+    font-size: 12px;
+  }
+}
+/* A narrow page: the search and the order on one row, the filters on a second row that scrolls sideways. */
+@media (max-width: 640px) {
+  .docs .docs-reference :is(.aui-catalogue-tools, .aui-mob-tools) {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+  .docs .docs-reference .aui-catalogue-tools > input,
+  .docs .docs-reference .aui-mob-tools > .aui-search-field {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+  .docs .docs-reference .aui-catalogue-tools > select {
+    flex: none;
+    width: auto;
+    max-width: 45%;
+  }
+  .docs .docs-reference .aui-catalogue-tools > .aui-item-filters {
+    flex: 1 0 100%;
+    order: 1;
+    gap: 6px;
+    margin-inline: -8px;
+    padding: 0 8px;
+    scroll-padding-inline: 8px;
+    overscroll-behavior-x: contain;
+  }
+  .docs .docs-reference .aui-mob-tools > .aui-search-field {
+    flex-basis: 100%;
+  }
+  .docs .docs-reference .aui-mob-tools > :is(.aui-button, select) {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+  .docs .docs-reference .aui-mob-tools > small {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
 }

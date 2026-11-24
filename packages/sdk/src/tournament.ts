@@ -183,5 +183,3 @@ export const tournament_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk
   })
 }
 export type TournamentActions = ReturnType<typeof tournament_actions>
-
-export { TOURNAMENT_MATCH_MS, TOURNAMENT_MAX_TEAMS } from './tournament_rules.gen.ts'

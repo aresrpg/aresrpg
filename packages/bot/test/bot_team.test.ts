@@ -29,6 +29,7 @@ import {
   fixture_script,
   fighter as character,
   fight_character_id as character_id,
+  fight_context,
   fight_id,
   placement,
   strike_profile as profile,
@@ -42,6 +43,11 @@ describe('team play', () => {
   const now = 63_000
   const [dungeon] = dungeons
   const portal = { world: 'nauvis', x: 50512, z: 50000 }
+  /** A room as the chain projects it: the dungeon door policy closes the ordinary join, settle and
+   * forfeit doors, which the indexer reads as `managed`. Captured from mainnet fight
+   * 0x4e825873d06e91eaae80dcdc9e201e64678878638e8450f02854231a1609cc63 (gilded_lorito room 1), 2026-11-24. */
+  const as_room = (room: ReturnType<typeof placement>) =>
+    Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n, managed: true })
   /** A raid of the portal's dungeon, or a hunt when `dungeon` is left out, with its own caps. */
   const hero_tree = (caps: Readonly<{ dungeon?: string; runs?: number; fee_cap_mist?: string }>) =>
     parse_behavior_script(fixture_script({ character: character_id, world: portal.world, ...caps }))
@@ -54,38 +60,8 @@ describe('team play', () => {
     z: 250_000,
     ...patch,
   })
-  const context_of = (
-    checkpoint: ReturnType<typeof placement>,
-    characters: readonly CharacterRow[],
-    chain_ms = now
-  ): GameplayContext => ({
-    address: fixture_bot.address,
-    now,
-    freshness_ms: 60_000,
-    command: {
-      id: 'fixture',
-      grant_id: 'grant',
-      bot_id: fixture_bot.id,
-      lane_key: 'lane',
-      fingerprint: 'fixture',
-      kind: 'observe',
-      payload: {},
-      decision_revision: 0,
-      observation_revision: 1,
-      status: 'accepted',
-    },
-    snapshot: {
-      ...empty_snapshot(),
-      characters,
-      fights: { [fight_id]: row_of(checkpoint) },
-      clock: { chain_ms, observed_at: now },
-      observed_at: now,
-      observation_revision: 1,
-      ready: true,
-      frozen: false,
-      indexing_lag: 0,
-    },
-  })
+  const context_of = (checkpoint: ReturnType<typeof placement>, characters: readonly CharacterRow[], chain_ms = now) =>
+    fight_context(checkpoint, characters, now, chain_ms)
   const plan = (context: GameplayContext, action: Readonly<{ kind: string; payload: object }>) =>
     plan_of({ ...context, command: { ...context.command, ...action } as GameplayContext['command'] })
   const selected = (selection: ReturnType<typeof select_join>) => {
@@ -255,7 +231,7 @@ describe('team play', () => {
     })
     // A teammate already opened this room: join it, with no leader and no second fight.
     const room = placement()
-    Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n })
+    as_room(room)
     const opener = { ...character(), dungeon_run: staged.dungeon_run }
     const raid = { ...leaf, allies: [character_id] }
     const together = stocked([], [opener, staged], room)
@@ -269,7 +245,7 @@ describe('team play', () => {
 
   test('a room is playable only by a command that names its dungeon, and settles through the dungeon door', () => {
     const room = started()
-    Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n })
+    as_room(room)
     const hero = { ...character(), dungeon_run: { dungeon: dungeon!.dungeon, room: 1 } }
     const context = context_of(room, [hero])
     const payload = {
@@ -290,12 +266,19 @@ describe('team play', () => {
       kind: 'fight_turn',
       payload: { dungeon: dungeon!.dungeon },
     })
+    // The reported stall: a room still in placement readies its hero, by the tree and by hand.
+    const lobby = placement()
+    as_room(lobby)
+    const waiting = context_of(lobby, [hero])
+    const ready = next_combat_action({ ...intent, dungeon: dungeon!.dungeon }, waiting).action!
+    expect(ready).toMatchObject({ kind: 'fight_ready', payload: { dungeon: dungeon!.dungeon } })
+    expect(plan(waiting, ready)).toMatchObject({ kind: 'fight_ready', input: { fight: fight_id } })
     room.contract.ended = true
     const ended = context_of(room, [hero])
     const settle = { ...scoped, checkpoint_id: fight_checkpoint_id(ended.snapshot.fights[fight_id]!) }
     expect(plan(ended, { kind: 'fight_settle', payload: settle })).toMatchObject({
       kind: 'fight_settle',
-      input: { dungeon: dungeon!.dungeon },
+      input: { mode: { type: 'dungeon', dungeon: dungeon!.dungeon } },
     })
     const leave = { kind: 'dungeon_leave', payload: { character_id, dungeon: dungeon!.dungeon } }
     expect(plan(context, leave)).toMatchObject({ input: { room: { fight: fight_id, fighter_idx: 0n } } })
@@ -309,13 +292,15 @@ describe('team play', () => {
     const forfeit = { kind: 'fight_forfeit', payload: { character_id } }
     const free = { ...character(), custody: 'kiosk' as const, active_fight: undefined }
     const room = started()
-    Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n })
+    as_room(room)
     const raider = { ...character(), dungeon_run: { dungeon: dungeon!.dungeon, room: 1 } }
     expect(plan(context_of(started(), [character()]), forfeit)).toMatchObject({
       kind: 'fight_forfeit',
-      input: { fight: fight_id, fighter_idx: 0n, dungeon: false },
+      input: { fight: fight_id, fighter_idx: 0n, placement: false, mode: { type: 'ordinary' } },
     })
-    expect(plan(context_of(room, [raider]), forfeit)).toMatchObject({ input: { fight: fight_id, dungeon: true } })
+    expect(plan(context_of(room, [raider]), forfeit)).toMatchObject({
+      input: { fight: fight_id, mode: { type: 'dungeon', dungeon: dungeon!.dungeon } },
+    })
     expect(() => plan(context_of(started(), [free]), forfeit)).toThrow('fight_unavailable')
     const minutes = (fight: ReturnType<typeof started>, heroes: readonly CharacterRow[], value: number, at = now) =>
       behavior_condition(
@@ -439,7 +424,7 @@ describe('team play', () => {
     expect(next(stock(context_of(placement(), [outside]), [])).node).not.toBe('root/0/2')
     expect(next(stock(context_of(placement(), [staged]), [])).action?.kind).toBe('dungeon_fight')
     const room = started()
-    Object.assign(room.contract, { dungeon: dungeon!.dungeon, dungeon_room: 1n })
+    as_room(room)
     const fighting = context_of(room, [{ ...character(), dungeon_run: staged.dungeon_run }])
     const turn = next(fighting)
     expect(turn).toMatchObject({

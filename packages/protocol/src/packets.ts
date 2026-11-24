@@ -825,6 +825,8 @@ export type ServerPackets = {
     online: number
     /** Unique live server-tracked characters across all worlds, including fights and dungeons. */
     online_characters: number | null
+    /** Every live socket across the cluster, visitors included; null or absent while unknown. */
+    online_sockets?: number | null
     /** Of `online`, the sockets sharing a hosted bot status. Sent to admins only; null while unknown. */
     online_agents?: number | null
     indexing_lag: number | null

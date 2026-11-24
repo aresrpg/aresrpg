@@ -10,6 +10,7 @@ import { market_delist_projected, market_sell_projected } from './market_actions
 import { character_created_projected } from './character_actions.ts'
 import { loot_boxes_projected } from './loot_boxes.ts'
 import { team_projected } from './team_actions.ts'
+import { arena_projected, tournament_version } from './arena_actions.ts'
 import { spell_projected } from './spell_allocation.ts'
 import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
 import { owned_character, hydrate_gameplay_fight } from './gameplay_context.ts'
@@ -25,6 +26,8 @@ export type ActionBaseline = Readonly<{
   stats?: StatBaseline
   profession?: ProfessionBaseline
   consumable?: ConsumableBaseline
+  /** The version of the tournament row a tournament step read. */
+  tournament?: string
 }>
 export const bind_action_baseline = (command: Command, context: GameplayContext): Command => ({
   ...command,
@@ -45,6 +48,7 @@ const action_baseline = (command: Command, context: GameplayContext): Partial<Ac
     use_consumable: () => ({ consumable: consumable_baseline({ ...context, command }) }),
     gather: profession,
     craft: profession,
+    tournament_step: () => ({ tournament: tournament_version(context.snapshot, command.payload.tournament) }),
   }
   return baselines[command.kind]?.() ?? {}
 }
@@ -71,6 +75,9 @@ const wallet_projected = (command: Command, receipt: Receipt, context: GameplayC
     market_delist: () => market_delist_projected(command, context.snapshot.inventory),
     // A collection changes no row the game projects: its certified receipt is the whole proof.
     market_collect: () => true,
+    // Every tournament action rewrites its row: the projection moved past the version the step read.
+    tournament_step: () =>
+      tournament_version(context.snapshot, command.payload.tournament) !== command.action_baseline?.tournament,
   }
   return checks[command.kind]?.()
 }
@@ -123,7 +130,9 @@ const character_projected = (
   const created = receipt_event(receipt, '::fight::FightCreated')?.fight
   return check
     ? check()
-    : (team_projected(command.kind, command.payload, created, character) ?? projected_fight(command, context))
+    : (team_projected(command.kind, command.payload, created, character) ??
+        arena_projected(command.kind, character) ??
+        projected_fight(command, context))
 }
 
 /** Receipt settlement and packet delivery may occur in either order. The same proof handles both. */

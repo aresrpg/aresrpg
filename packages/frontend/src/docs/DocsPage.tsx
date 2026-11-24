@@ -8,6 +8,7 @@ import { content_catalog } from '../content/catalog.ts'
 import { EncyclopediaContent } from '../encyclopedia/EncyclopediaContent.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { useSiteMenu, type SiteMenu } from '../site/SiteMenu.tsx'
 
 import { GuideBody, type GuideLinks } from './DocsGuides.tsx'
 import { DocsLink, guide_title, sentence_case, type DocsCopy } from './docs_parts.tsx'
@@ -99,8 +100,13 @@ const DocsSearch = ({ copy, titles }: Readonly<{ copy: DocsCopy; titles: Titles 
   )
 }
 
-const DocsRail = ({ copy, titles, current }: Readonly<{ copy: DocsCopy; titles: Titles; current: DocsSection }>) => (
-  <nav aria-label={copy.nav_label} className="docs-rail" id="docs-rail">
+const DocsRail = ({
+  copy,
+  titles,
+  current,
+  menu,
+}: Readonly<{ copy: DocsCopy; titles: Titles; current: DocsSection; menu: SiteMenu }>) => (
+  <nav aria-label={copy.nav_label} className="docs-rail" id={menu.sheet_id} ref={menu.sheet} onClick={menu.on_pick}>
     {DOCS_NAV.map(({ group, sections }) => (
       <div key={group}>
         <h2>{copy.groups[group]}</h2>
@@ -156,9 +162,8 @@ export const DocsPage = ({
   const docs = copy.docs_page
   const view = docs_view(pathname)
   const titles = useMemo(() => section_titles(copy), [copy])
-  const [menu_path, set_menu_path] = useState<string | null>(null)
-  // The drawer belongs to the page it was opened on: any navigation closes it without an effect.
-  const menu_open = menu_path === pathname
+  // On a narrow screen the rail is the site's menu sheet: open on the page it was opened on, Escape and a pick close it.
+  const menu = useSiteMenu(pathname)
   const main = useRef<HTMLElement>(null)
   useEffect(() => {
     // Element.scrollTo may return a promise; an effect must return nothing.
@@ -166,22 +171,28 @@ export const DocsPage = ({
   }, [view.section])
   const group = DOCS_NAV.find(({ sections }) => sections.includes(view.section))?.group ?? 'start'
   return (
-    <div className="docs" data-menu={menu_open ? '' : undefined}>
+    <div className="docs" data-menu={menu.open ? '' : undefined} onKeyDown={menu.on_key_down} onBlur={menu.on_blur}>
       <Ground />
       <header className="docs-bar">
         <button
-          aria-controls="docs-rail"
-          aria-expanded={menu_open}
+          ref={menu.burger}
+          aria-controls={menu.sheet_id}
+          aria-expanded={menu.open}
           className="aui-button docs-menu"
-          onClick={() => set_menu_path(menu_open ? null : pathname)}
+          onClick={menu.toggle}
           type="button"
         >
           {docs.menu}
         </button>
-        <DocsLink className="docs-brand" to={docs_path('overview')}>
-          <b>AresRPG</b>
-          <span>{docs.title}</span>
-        </DocsLink>
+        {/* The name leads to the site's home, the docs mark to the docs' first page. */}
+        <span className="docs-brand">
+          <a href={links.home}>
+            <b>AresRPG</b>
+          </a>
+          <DocsLink to={docs_path('overview')}>
+            <span>{docs.title}</span>
+          </DocsLink>
+        </span>
         <DocsSearch copy={docs} titles={titles} />
         <span className="docs-bar-space" />
         {language}
@@ -193,7 +204,8 @@ export const DocsPage = ({
         </a>
       </header>
       <div className="docs-shell">
-        <DocsRail copy={docs} current={view.section} titles={titles} />
+        <DocsRail copy={docs} current={view.section} titles={titles} menu={menu} />
+        <div className="docs-scrim" aria-hidden="true" onClick={() => menu.close(true)} />
         {view.kind === 'guide' ? (
           <main className="docs-main" ref={main}>
             <article className="docs-article">

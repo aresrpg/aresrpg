@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { TournamentLink } from '@aresrpg/protocol'
+import { fight_doors, fight_mode } from '@aresrpg/sdk/fight-doors'
 
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { content_catalog } from '../content/catalog.ts'
@@ -100,12 +101,8 @@ const observe_with_wait = (
     closing.add(fight)
     close_notices.get(fight)?.()
     close_notices.delete(fight)
-    const transaction = () =>
-      row.tournament
-        ? wallet.tournament.close({ tournament: row.tournament.id, index: row.tournament.index, fight })
-        : row.kolizeum
-          ? wallet.kolizeum.close({ kolizeum: row.kolizeum, fight })
-          : wallet.fight.close({ fight })
+    // A fight that is over needs only its manager to pick the close door, never its dungeon.
+    const transaction = () => fight_doors(wallet, fight, fight_mode({ dungeon: null, managed: false }, row))!.close()
     void retry_close_after_projection_lag(() => retry_after_version_race(transaction, wait), wait)
       .then(() => dispatch({ type: 'fight_result/close_succeeded', fight }))
       .catch((error: unknown) => {
@@ -203,41 +200,15 @@ const observe_with_wait = (
     )
     const mastery = mastery_completion(state, first.dungeon, pending)
     const final_settlement = settlement_batch_is_final(state, first.character, settlements)
+    const mode = fight_mode({ dungeon: first.dungeon?.dungeon ?? null, managed: false }, first)
     const transaction = () =>
-      first.tournament
-        ? wallet.tournament.settle({
-            tournament: first.tournament.id,
-            index: first.tournament.index,
-            fight: first.fight,
-            fighter_idx: BigInt(first.fighter),
-            custody,
-            last: final_settlement,
-          })
-        : first.kolizeum
-          ? wallet.kolizeum.settle({
-              kolizeum: first.kolizeum,
-              fight: first.fight,
-              fighter_idx: BigInt(first.fighter),
-              custody,
-              last: final_settlement,
-            })
-          : first.dungeon
-            ? wallet.dungeon.settle({
-                fight: first.fight,
-                dungeon: first.dungeon.dungeon,
-                settlements,
-                custody,
-                mastery,
-                boss_rewards: first.boss_rewards,
-                last: final_settlement,
-              })
-            : wallet.fight.settle({
-                fight: first.fight,
-                settlements,
-                custody,
-                last: final_settlement,
-                boss_rewards: first.boss_rewards,
-              })
+      fight_doors(wallet, first.fight, mode)!.settle({
+        settlements,
+        custody,
+        mastery,
+        boss_rewards: first.boss_rewards,
+        last: final_settlement,
+      })
     void retry_after_version_race(transaction, wait)
       .then((receipt) => {
         const mastery_row = typeof receipt === 'object' && receipt !== null ? Reflect.get(receipt, 'mastery') : null

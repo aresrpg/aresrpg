@@ -2,16 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { TournamentRow } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
-import { TOURNAMENT_MATCH_MS } from '@aresrpg/sdk/tournament'
-
-import type { CopyText } from '../i18n/copy.ts'
-import type { TournamentAction } from '../modules/tournament.ts'
 import {
+  TOURNAMENT_MATCH_MS,
+  type TournamentAction,
   tournament_match_action,
   tournament_owned_match,
   tournament_rounds,
   type AdvancingSide,
-} from '../modules/tournament_selectors.ts'
+} from '@aresrpg/protocol/tournament-rules'
+
+import type { CopyText } from '../i18n/copy.ts'
 
 import { BracketCard, BracketTeam, BracketTree } from './BracketView.tsx'
 import { TeamPips, TournamentActionButton } from './TournamentControls.tsx'

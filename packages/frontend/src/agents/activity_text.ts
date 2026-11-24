@@ -125,6 +125,8 @@ const COMMANDS: Readonly<Record<string, Command>> = Object.freeze({
       'resolve_ambush',
       'fight_engage',
       'fight_join',
+      'kolizeum_join',
+      'tournament_step',
       'fight_start',
       'fight_place',
       'fight_ready',

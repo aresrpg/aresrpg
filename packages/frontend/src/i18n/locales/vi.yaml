@@ -1422,7 +1422,6 @@ encyclopedia_page:
   consumable_loot_box: Mở thưởng ngẫu nhiên
   consumable_reward_heading: PHẦN THƯỞNG
   consumable_rewards: THƯỞNG CÓ THỂ NHẬN
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Thêm {{amount}} {{stat}} vào vật phẩm
   rune_obtained_by_crushing: Nhận từ nghiền vật phẩm
   spell_n: PHÉP {{n}}
@@ -2983,7 +2982,6 @@ tournament_page:
   cancel: Hủy
   waiting: Đang chờ
   live: Đang đấu
-  no_winner: Không có người thắng
   crank: Tiếp tục trận
   spectate: Xem
   claim: Nhận

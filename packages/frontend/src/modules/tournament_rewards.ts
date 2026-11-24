@@ -2,11 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { tournament_coin_claims, type TournamentRow } from '@aresrpg/protocol'
 import { receipt_digest, type Receipt } from '@aresrpg/sdk/cache'
+import type { TournamentAction } from '@aresrpg/protocol/tournament-rules'
 
 import type { AppInput, AppState } from '../store.ts'
 
 import { selected_fight_result, fight_level_up_visible, fight_result_available } from './fight_result_view.ts'
-import type { TournamentAction } from './tournament.ts'
 
 export type CollectedReward = Readonly<
   { asset: 'sui' | 'kares'; amount: bigint } | { asset: 'item'; amount: bigint; template: string }

@@ -317,6 +317,7 @@ test('S11 each tool declares its scope once; a tool reads only when that scope i
       'bot_item_stacks',
       'bot_zones',
       'bot_market',
+      'bot_arenas',
       'bot_status',
       'bot_behavior_status',
       'bot_validate_behavior',

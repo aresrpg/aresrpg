@@ -5,6 +5,8 @@ import type { TournamentSettings } from '@aresrpg/sdk/tournament-admin'
 import { tournament_coin_claims, type TournamentLink, type TournamentRow, type ServerPacket } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession } from '@aresrpg/sdk/auth'
+import { run_tournament_action } from '@aresrpg/sdk/tournament-play'
+import { tournament_claims, type TournamentAction } from '@aresrpg/protocol/tournament-rules'
 import { pre_submission_failure, readable_transaction_error } from '@aresrpg/sdk/transaction-error'
 
 import { sui_session } from '../wallet/external_session.ts'
@@ -42,19 +44,6 @@ export type TournamentEntryFailure = Readonly<{
   version: string
   reason: string
 }>
-export type TournamentAction =
-  | Readonly<{ kind: 'create'; name: string; allowed: readonly string[]; character: string }>
-  | Readonly<{ kind: 'join'; team: number; revision: string; character: string }>
-  | Readonly<{ kind: 'find'; character: string }>
-  | Readonly<{ kind: 'leave'; team: number; character: string }>
-  | Readonly<{ kind: 'enter'; index: number; character: string }>
-  | Readonly<{ kind: 'crank'; index: number }>
-  | Readonly<{ kind: 'donate'; asset: 'sui' | 'kares'; amount: bigint }>
-  | Readonly<{ kind: 'coins'; team: number; seat: number }>
-  | Readonly<{ kind: 'item'; team: number; seat: number; reward: number }>
-  | Readonly<{ kind: 'start' }>
-  | Readonly<{ kind: 'expire' }>
-  | Readonly<{ kind: 'refund' }>
 export type TournamentAdminAction =
   | Readonly<{ kind: 'create'; settings: TournamentSettings }>
   | Readonly<{ kind: 'start'; id: string }>
@@ -246,122 +235,11 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
   }
 }
 
-export const open_team = (t: TournamentRow, character: string, address: string): number => {
-  const own = t.teams.findIndex((team) => team.seats.some((seat) => seat.owner === address))
-  if (own >= 0) return t.teams[own].seats.length < t.format ? own : -1
-  return (
-    t.teams
-      .map((team, index) => ({ team, index }))
-      .filter(
-        ({ team }) => team.seats.length < t.format && (team.allowed.length === 0 || team.allowed.includes(character))
-      )
-      .toSorted((a, b) => b.team.seats.length - a.team.seats.length || a.index - b.index)[0]?.index ?? -1
-  )
-}
-
-const execute = (
-  state: AppState,
-  wallet: AuthSession,
-  t: TournamentRow,
-  action: TournamentAction
-): Promise<unknown> => {
+const execute = (state: AppState, wallet: AuthSession, t: TournamentRow, action: TournamentAction) => {
   const character =
     'character' in action ? state.session.characters.find(({ id }) => id === action.character) : undefined
-  const custody = character ? character_custody(character) : undefined
-  const entry_fee_mist = BigInt(t.entry_fee_mist)
-  const sdk = wallet.tournament
-  const handlers: {
-    [Kind in TournamentAction['kind']]: (input: Extract<TournamentAction, { kind: Kind }>) => Promise<unknown>
-  } = {
-    create: (input) =>
-      sdk.create_team({
-        tournament: t.id,
-        name: input.name,
-        allowed: input.allowed,
-        character_id: input.character,
-        custody,
-        entry_fee_mist,
-      }),
-    join: (input) =>
-      sdk.join_team({
-        tournament: t.id,
-        team: input.team,
-        revision: input.revision,
-        character_id: input.character,
-        custody,
-        entry_fee_mist,
-      }),
-    find: (input) => {
-      const team = open_team(t, input.character, wallet.address)
-      return team >= 0
-        ? sdk.join_team({
-            tournament: t.id,
-            team,
-            revision: t.teams[team].revision,
-            character_id: input.character,
-            custody,
-            entry_fee_mist,
-          })
-        : sdk.create_team({
-            tournament: t.id,
-            name: character?.name ?? input.character,
-            allowed: [],
-            character_id: input.character,
-            custody,
-            entry_fee_mist,
-          })
-    },
-    leave: (input) => sdk.leave_team(t.id, input.team, input.character),
-    enter: (input) => {
-      const { fight } = t.matches[input.index]
-      const args = { tournament: t.id, index: input.index, character_id: input.character, custody }
-      return fight ? sdk.join({ ...args, fight }) : sdk.open(args)
-    },
-    crank: (input) => {
-      const { fight } = t.matches[input.index]
-      return fight ? sdk.crank({ tournament: t.id, index: input.index, fight }) : sdk.crank_unopened(t.id, input.index)
-    },
-    donate: (input) => sdk.donate(t.id, input.asset, input.amount, t.kares_pool),
-    coins: (input) => {
-      const { sui, kares } = tournament_coin_claims(t, input.team, input.seat)
-      if (sui === 0n && kares === 0n) return Promise.resolve()
-      return sdk.claim_coins(t.id, input.team, input.seat, {
-        sui: sui > 0n,
-        pool: kares > 0n ? t.kares_pool : null,
-      })
-    },
-    item: (input) =>
-      sdk.claim_item({
-        tournament: t.id,
-        team: input.team,
-        seat: input.seat,
-        reward: input.reward,
-        template: t.rewards[input.reward].template,
-      }),
-    start: () => sdk.start(t.id),
-    expire: () => sdk.expire(t.id, t.kares_pool),
-    refund: () => (t.kares_pool ? sdk.refund_kares(t.id, t.kares_pool) : Promise.resolve()),
-  }
-  // The key and payload come from the same discriminated input; each table entry is checked above.
-  return (handlers[action.kind] as (input: TournamentAction) => Promise<unknown>)(action)
-}
-
-export const tournament_claims = (t: TournamentRow, address: string | null): readonly TournamentAction[] => {
-  if (t.status !== 'finished') return []
-  return t.teams.flatMap((team, team_index) =>
-    team.seats.flatMap((seat, seat_index) => {
-      if (team.place === 0 || seat.owner !== address) return []
-      const { sui, kares } = tournament_coin_claims(t, team_index, seat_index)
-      const coins: TournamentAction[] =
-        sui > 0n || kares > 0n ? [{ kind: 'coins', team: team_index, seat: seat_index }] : []
-      const items = t.rewards.flatMap((reward, index): TournamentAction[] =>
-        reward.place === team.place && (BigInt(seat.items_claimed) & (1n << BigInt(index))) === 0n
-          ? [{ kind: 'item', team: team_index, seat: seat_index, reward: index }]
-          : []
-      )
-      return [...coins, ...items]
-    })
-  )
+  const hero = character && { name: character.name, custody: character_custody(character) }
+  return run_tournament_action(wallet.tournament, t, action, { address: wallet.address, hero })
 }
 
 export const automatic_actions = (

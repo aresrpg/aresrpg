@@ -74,6 +74,8 @@ export type SessionState = Readonly<{
   selected_character_id: string | null
   online: number | null
   online_characters: number | null
+  /** Every live socket on the server, visitors included; null while unknown. */
+  online_sockets: number | null
   /** Hosted bots among `online`. Only an admin's server sends it; absent or null is unknown. */
   online_agents: number | null | undefined
   /** Where a player's own sign-out leads. The observer acts on it after the wallet is released. */

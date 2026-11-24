@@ -1426,7 +1426,6 @@ encyclopedia_page:
   consumable_loot_box: Ouvre une récompense aléatoire
   consumable_reward_heading: RÉCOMPENSE
   consumable_rewards: RÉCOMPENSES POSSIBLES
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Ajoute {{amount}} {{stat}} à un objet
   rune_obtained_by_crushing: Obtenue en concassant des objets
   spell_n: SORT {{n}}
@@ -2996,7 +2995,6 @@ tournament_page:
   cancel: Annuler
   waiting: En attente
   live: En direct
-  no_winner: Aucun vainqueur
   crank: Faire avancer le match
   spectate: Regarder
   claim: Retirer

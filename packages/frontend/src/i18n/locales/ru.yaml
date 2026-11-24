@@ -1422,7 +1422,6 @@ encyclopedia_page:
   consumable_loot_box: Открывает случайную награду
   consumable_reward_heading: НАГРАДА
   consumable_rewards: ВОЗМОЖНЫЕ НАГРАДЫ
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Добавляет предмету {{amount}} {{stat}}
   rune_obtained_by_crushing: Получается дроблением предметов
   spell_n: ЗАКЛИНАНИЕ {{n}}
@@ -2983,7 +2982,6 @@ tournament_page:
   cancel: Отмена
   waiting: Ожидание
   live: Идёт бой
-  no_winner: Нет победителя
   crank: Продолжить матч
   spectate: Смотреть
   claim: Получить

@@ -13,6 +13,7 @@ import { SuinsClient } from '@mysten/suins'
 import { character_actions } from '../src/character_actions.ts'
 import { SDK } from '../src/client.ts'
 import { fight_actions } from '../src/fight.ts'
+import { fight_doors, fight_mode, type FightWallet } from '../src/fight_doors.ts'
 import { friend_list_id, friends_actions } from '../src/friends.ts'
 import { party_actions } from '../src/party.ts'
 import { subdomain_config, suins_actions } from '../src/suins_actions.ts'
@@ -134,6 +135,65 @@ test('a fight is placed, started, cranked, forfeited, settled and closed with it
   await actions.close({ fight })
   expect(last_game_call(client)).toBe('close_fight')
   expect(actions.gas_spent(fight)).toBe(2_500_000n * BigInt(client.calls.executions))
+})
+
+test('one router picks the lifecycle doors of a hunt, a room, an arena and a match', async () => {
+  const calls: string[] = []
+  const owner = (name: string, doors: readonly string[]) =>
+    Object.fromEntries(doors.map((door) => [door, async () => calls.push(`${name}.${door}`)]))
+  const wallet = {
+    fight: owner('fight', ['ready', 'start', 'forfeit', 'settle', 'close']),
+    dungeon: owner('dungeon', ['give_up_fight', 'settle']),
+    kolizeum: owner('kolizeum', ['ready', 'start', 'exit', 'forfeit', 'settle', 'close']),
+    tournament: owner('tournament', ['ready', 'crank', 'forfeit', 'settle', 'close']),
+  } as unknown as FightWallet
+  const settlement = { settlements: [{ fighter_idx: 0n, loot: [] }], last: true }
+  const life = async (mode: ReturnType<typeof fight_mode>, placement = false) => {
+    calls.length = 0
+    const doors = fight_doors(wallet, id(9), mode)!
+    await doors.ready({ fighter_idx: 0n })
+    await doors.start()
+    await doors.forfeit({ fighter_idx: 0n, placement })
+    await doors.settle(settlement)
+    await doors.close()
+    return [...calls]
+  }
+  const hunt = { dungeon: null, managed: false }
+  // Every dungeon room, arena and match is `managed` on chain: door policy 13, 31 and 63.
+  const managed = { dungeon: null, managed: true }
+  expect(await life(fight_mode(hunt, {}))).toEqual([
+    'fight.ready',
+    'fight.start',
+    'fight.forfeit',
+    'fight.settle',
+    'fight.close',
+  ])
+  expect(await life(fight_mode({ dungeon: 'gilded_lorito', managed: true }, {}))).toEqual([
+    'fight.ready',
+    'fight.start',
+    'dungeon.give_up_fight',
+    'dungeon.settle',
+    'fight.close',
+  ])
+  const arena = fight_mode(managed, { kolizeum: id(8) })
+  expect(await life(arena)).toEqual([
+    'kolizeum.ready',
+    'kolizeum.start',
+    'kolizeum.forfeit',
+    'kolizeum.settle',
+    'kolizeum.close',
+  ])
+  // Before the start an arena seat leaves with its pledge instead of losing it.
+  expect((await life(arena, true))[2]).toBe('kolizeum.exit')
+  expect(await life(fight_mode(managed, { tournament: { id: id(7), index: 3 } }))).toEqual([
+    'tournament.ready',
+    'tournament.crank',
+    'tournament.forfeit',
+    'tournament.settle',
+    'tournament.close',
+  ])
+  // A managed fight whose manager row has not arrived yet has no safe door.
+  expect(fight_doors(wallet, id(9), fight_mode(managed, {}))).toBeNull()
 })
 
 test('a party lives through invitations, membership and disbanding; friends keep one list', async () => {

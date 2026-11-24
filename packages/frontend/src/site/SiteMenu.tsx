@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The bar's menu on a narrow screen: the burger shows the bar's own navigation as a sheet that drops under the bar.
+// The docs' rail is the same menu on their narrow screens.
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'

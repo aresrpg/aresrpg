@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { KolizeumFighterRow, KolizeumLobbyRow, CharacterRow } from '@aresrpg/protocol'
+import { kolizeum_side_open } from '@aresrpg/protocol/kolizeum'
 import { Loader2, Plus, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
@@ -11,7 +12,7 @@ import { Text } from '../i18n/Text.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { kolizeum_side_open, parse_kolizeum_pledge, selected_kolizeum_pending } from '../modules/kolizeum.ts'
+import { parse_kolizeum_pledge, selected_kolizeum_pending } from '../modules/kolizeum.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 

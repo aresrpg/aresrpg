@@ -3,9 +3,9 @@
 import { Award, Medal, Trophy } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
 import { tournament_coin_claims, type TournamentRow } from '@aresrpg/protocol'
+import { tournament_podium, tournament_refund_available } from '@aresrpg/protocol/tournament-rules'
 
 import type { CopyText } from '../i18n/copy.ts'
-import { tournament_podium, tournament_refund_available } from '../modules/tournament_selectors.ts'
 
 import { TournamentCoin, TournamentPool } from './TournamentControls.tsx'
 import { TournamentStanding } from './TournamentStanding.tsx'

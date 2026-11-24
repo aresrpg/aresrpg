@@ -1422,7 +1422,6 @@ encyclopedia_page:
   consumable_loot_box: 무작위 보상 열기
   consumable_reward_heading: 보상
   consumable_rewards: 획득 가능한 보상
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: 아이템에 {{stat}} {{amount}} 추가
   rune_obtained_by_crushing: 아이템 분쇄로 획득
   spell_n: 주문 {{n}}
@@ -2983,7 +2982,6 @@ tournament_page:
   cancel: 취소
   waiting: 대기 중
   live: 경기 중
-  no_winner: 승자 없음
   crank: 경기 진행
   spectate: 관전
   claim: 수령

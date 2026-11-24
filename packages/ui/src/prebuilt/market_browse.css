@@ -24,7 +24,7 @@
 }
 :where(.aui-market-lot-heading) {
   display: grid;
-  grid-template-columns: 72px minmax(100px, 180px) minmax(80px, 110px);
+  grid-template-columns: 72px minmax(100px, 180px) minmax(80px, 110px) 44px;
   align-items: center;
   justify-content: center;
   gap: 1rem;
@@ -53,7 +53,7 @@
   display: grid;
   min-height: 4.5rem;
   min-width: 0px;
-  grid-template-columns: 72px minmax(100px, 180px) minmax(80px, 110px);
+  grid-template-columns: 72px minmax(100px, 180px) minmax(80px, 110px) 44px;
   align-items: center;
   justify-content: center;
   gap: 1rem;

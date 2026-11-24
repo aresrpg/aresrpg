@@ -1424,7 +1424,6 @@ encyclopedia_page:
   consumable_loot_box: Opens a random reward
   consumable_reward_heading: REWARD
   consumable_rewards: POSSIBLE REWARDS
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Adds {{amount}} {{stat}} on an item
   rune_obtained_by_crushing: Obtained by crushing items
   spell_n: SPELL {{n}}
@@ -2999,7 +2998,6 @@ tournament_page:
   cancel: Cancel
   waiting: Waiting
   live: Live
-  no_winner: No winner
   crank: Advance match
   spectate: Watch
   claim: Claim

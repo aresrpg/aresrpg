@@ -42,7 +42,8 @@ export const TOURNAMENT_MOVE_PATH = join(root, '../move/sources/tournament.move'
 export const TOURNAMENT_BRACKET_PATH = join(root, '../move-math/sources/tournament_bracket.move')
 export const TRADE_MOVE_PATH = join(root, '../move/sources/trade.move')
 export const DOORS_OUT_PATH = join(root, 'src/doors.gen.ts')
-export const TOURNAMENT_RULES_OUT_PATH = join(root, 'src/tournament_rules.gen.ts')
+// Beside the tournament rules that read it: the SDK depends on the protocol, never the reverse.
+export const TOURNAMENT_RULES_OUT_PATH = join(root, '../protocol/src/tournament_rules.gen.ts')
 export const CHARACTER_MOVE_PATH = join(root, '../move/sources/character.move')
 export const CHARACTER_PRICE_OUT_PATH = join(root, 'src/character_price.ts')
 

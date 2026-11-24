@@ -4,16 +4,17 @@ import { useEffect, useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { LockKeyhole, Plus, UserPlus } from 'lucide-react'
 import type { TournamentRow } from '@aresrpg/protocol'
-
-import { copy_text, type CopyText } from '../i18n/copy.ts'
-import { useAppStore } from '../store.ts'
 import {
   team_access,
   tournament_registration,
   tournament_seats,
   type SeatView,
-} from '../modules/tournament_selectors.ts'
-import { action_key, type TournamentAction } from '../modules/tournament.ts'
+  type TournamentAction,
+} from '@aresrpg/protocol/tournament-rules'
+
+import { copy_text, type CopyText } from '../i18n/copy.ts'
+import { useAppStore } from '../store.ts'
+import { action_key } from '../modules/tournament.ts'
 import { toast } from '../toast.ts'
 
 import {

@@ -55,52 +55,124 @@
     linear-gradient(180deg, var(--aui-high), var(--aui-lifted));
 }
 
-/* A card's ground says what kind of thing it holds, from the rarest down: a relic burns in ember with a sheen of
-   rays, a pet and a title carry a clear hue, a weapon and worn gear a faint one. One light from above the art, and
-   the hairline takes a little of the hue. No glow outside the card. */
+/* A card's ground says what kind of thing it holds, from the rarest down (owner pick 2026-11-24, "Deep hues"):
+   a relic (ember and gold, with rays: the only warm gold card), then a pet (green) or a title (sky), then a weapon
+   (clay), then worn gear (bone); a tool, a key and a rune stay plain. Each kind has
+   a field of dither cells in its colour mixed deep into carbon, so the picture stays on dark and the bright hue lives
+   on the frame. */
+.market {
+  --market-card-pad: 14px;
+  /* The dither masks: one cell per 3px where a density beats the 4x4 Bayer threshold, baked once for the desktop
+     card (64x88 cells) and the phone card (58x76, the `-m` ones). gear: a short band from the top. weapon: a taller
+     band. crest (pet, title): a halo around the picture and its top bands. relic: a wider halo cut by ten rays. */
+  --dither-gear: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABYCAQAAADv5TmjAAAAO0lEQVR42u3SsQkAQAwDMe+/tL/6GZxCgpAycCRtspxsz7c5UOBXGO0jBYYUGL4fAAAAAAAAAAAAcMMDdpV+kOGgia4AAAAASUVORK5CYII=');
+  --dither-gear-m: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAABMCAQAAACWyWx/AAAAOElEQVR42u3PsQkAMAwDQe2/tFJlhNhF7sCoNJ82mb7Mv2yzVHprB3exdNhfpRsLAAAAAAAAAI8d0u9atIdK0IsAAAAASUVORK5CYII=');
+  --dither-weapon: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABYCAQAAADv5TmjAAAAWElEQVR42u3WwQnAMAwDQGv/od1HP91Aht5B8DNYiJDsTttu82Q3eVNozX4Cze2TegLt60cCEvi8hqV5pAPFqQM6cKQDv/2QzRHlGtoeHQAAAAAAAACg6wFuImAcH9ft4QAAAABJRU5ErkJggg==');
+  --dither-weapon-m: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAABMCAQAAACWyWx/AAAAW0lEQVR42u3WQQrAIAxFQXP/Q6eLtjeQH9AZkCzlERdW95rQnT7VXfXW5uZUabbye0P50okrlZ5Z+tcG5+BOw9NO7XTjTo//rKxB6ad0R+Vs7R3sFAAAAADgCA8yrPhvYAQIZAAAAABJRU5ErkJggg==');
+  --dither-crest: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABYCAQAAADv5TmjAAAA20lEQVR42u2YQQ6FIAxEvf+lcalxIbRMWyDvJcTV/2WGEaHX9aG156ke7/838P3paAlHqXfJqDExpZ4Lk+oj196ZBcvai2KX4ULilMJKtfb/DMlAYuzGhl+9cT9QuCBT31t7XxaSNuR0F6QZ2E79uBsFG/JCb0LBZ8mt3rv2Z2UgTX30brhHBoq/BVo3JAe1bdVPu6A+E0ruhmnvv/pMmKo+xIXCloTqXiBoWVjdmMR+OlpgSjLDCy5mip5RYKmizpjXhaRSwa3KBenF7mz1AAAAAAAAAAAAAEdzA5UYavgUXcy8AAAAAElFTkSuQmCC');
+  --dither-crest-m: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAABMCAQAAACWyWx/AAAAoElEQVR42u2WUQrAIAxDvf+lu5/BZDBWa2pF3oPhn0mWIm3txuw5s75e54MZG47re5nClDNppSnNfGfIjnKkJDLxlL2NhMmVpPR2Odbtrp2mpsx4JvbuNOMRpFM6PaLTf5mTOtWnXb4JDspkdzplQ9Llqk6dLEipSZtsQ7Llx7d9qXyk2+D1Y2mLbUz9zKJRKuLt9syUAAAAAAAAAADg5AKaf2/loWBh+gAAAABJRU5ErkJggg==');
+  --dither-relic: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABYCAQAAADv5TmjAAABKElEQVR42u2W2w6DMAxD8/8/3T2xIWgTN3EZYz4SQrBLa9dJa62Z+Vdrtbt/2ftmyNdZ127cuZ+O1OXUb1Ox06yornj/bxX1P52Bw/A3y8BoDVdUgjFUour775+aAUz9biHmi/LCDGSzgLnzRfVQN8y6gGajm4HVbsCxy2YBV9+ZzmoXBsRDcpPfiaE3NXLi80Pw1AOLwsrC4BTEdyHu+YVYZt0IzoL1mOVPQc5ecNWeUO6GvLPhnfeC2frPuTBZ/9GUkc8pLaeW/Im9wFswz6UEeOuJut/ZFbAlMdST3BhnAz33f56TaiP1+3fHIYiZwCqhvPNV1feei3HzXIjiSC7OaGqeA8TYZYpvsQveml9AlIFnM1L7Xy4IIYQQQgghhBBCCCHEo3gB9ODJpwZ1n2gAAAAASUVORK5CYII=');
+  --dither-relic-m: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAABMCAQAAACWyWx/AAAA70lEQVR42u2W2wqEMAxEx///6OyLsEtJc7MpZZ0DRSmaME6TCBHAXiK163zBS9myYo+tU3kr3a0WuESuYQFAx/W7TvJ05k3WS33/dZ7uUnvniXmX9dT2eqBbpZum2nP97jSk71L7Gx/ZnlvdNz3t8LYUvmWeap6uUqvFTYd+NkdfX6c7eq86ZXonzD1ljvIUwb+K3Mk12kW1bq33jTRddWqkj/Ri7yskw9qqPTV2XSbVaq/PwhbUzk90dp4uSz/ujfcPvV1dp0kvtcctpYUjY6n1jlSkwM4i0wQ9teeqjH6F6D4hhBBCCCGEEELI3/MBNJPp3I7gxi0AAAAASUVORK5CYII=');
+}
+@media (max-width: 760px) {
+  .market {
+    --market-card-pad: 10px;
+  }
+}
 .market-card {
-  --tone: transparent;
-  --tone-light: 0%;
-  --tone-line: 0%;
-  border-color: color-mix(in srgb, var(--tone) var(--tone-line), var(--aui-line));
-  background-image:
-    radial-gradient(
-      120% 78% at 50% 0%,
-      color-mix(in srgb, var(--tone) var(--tone-light), transparent),
-      transparent 72%
-    ),
-    linear-gradient(in srgb 180deg, var(--color-high), var(--color-surface-raised));
+  position: relative;
+  isolation: isolate;
+  --dither-size: 192px 264px;
+}
+.market-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--dither-ink, transparent);
+  -webkit-mask: var(--dither, none) center top/var(--dither-size) no-repeat;
+  mask: var(--dither, none) center top/var(--dither-size) no-repeat;
+  image-rendering: pixelated;
 }
 .market-card--gear {
-  --tone: var(--aui-hue-sky);
-  --tone-light: 9%;
-  --tone-line: 10%;
+  --dither: var(--dither-gear);
 }
 .market-card--weapon {
-  --tone: var(--aui-hue-clay);
-  --tone-light: 11%;
-  --tone-line: 12%;
+  --dither: var(--dither-weapon);
 }
+.market-card--pet,
 .market-card--title {
-  --tone: var(--aui-hue-gold);
-  --tone-light: 18%;
-  --tone-line: 24%;
-}
-.market-card--pet {
-  --tone: var(--aui-hue-green);
-  --tone-light: 18%;
-  --tone-line: 24%;
+  --dither: var(--dither-crest);
 }
 .market-card--relic {
-  --tone: var(--aui-orange);
-  --tone-light: 30%;
-  --tone-line: 48%;
-  background-image:
-    repeating-conic-gradient(
-      from 0deg at 50% 26%,
-      color-mix(in srgb, var(--aui-orange) 9%, transparent) 0deg 5deg,
-      transparent 5deg 15deg
-    ),
-    radial-gradient(120% 78% at 50% 0%, color-mix(in srgb, var(--aui-orange) 30%, transparent), transparent 72%),
-    linear-gradient(in srgb 180deg, var(--color-high), var(--color-surface-raised));
+  --dither: var(--dither-relic);
+}
+.market-card--weapon {
+  border-color: color-mix(in srgb, var(--aui-hue-clay) 30%, var(--aui-line));
+}
+.market-card--pet {
+  border-color: color-mix(in srgb, var(--aui-hue-green) 62%, transparent);
+}
+.market-card--title {
+  border-color: color-mix(in srgb, var(--aui-hue-sky) 62%, transparent);
+}
+.market-card--relic {
+  border-color: color-mix(in srgb, var(--aui-hue-gold) 85%, var(--aui-orange));
+}
+.market-card--plain:is(:hover, :focus-visible),
+.market-card--gear:is(:hover, :focus-visible) {
+  border-color: var(--aui-line-strong);
+}
+.market-card--weapon:is(:hover, :focus-visible) {
+  border-color: color-mix(in srgb, var(--aui-hue-clay) 62%, transparent);
+}
+.market-card--pet:is(:hover, :focus-visible) {
+  border-color: var(--aui-hue-green);
+}
+.market-card--title:is(:hover, :focus-visible) {
+  border-color: var(--aui-hue-sky);
+}
+.market-card--relic:is(:hover, :focus-visible) {
+  border-color: var(--aui-brass-hi);
+}
+@media (max-width: 760px) {
+  .market-card {
+    --dither-size: 174px 228px;
+  }
+  .market-card--gear {
+    --dither: var(--dither-gear-m);
+  }
+  .market-card--weapon {
+    --dither: var(--dither-weapon-m);
+  }
+  .market-card--pet,
+  .market-card--title {
+    --dither: var(--dither-crest-m);
+  }
+  .market-card--relic {
+    --dither: var(--dither-relic-m);
+  }
+}
+.market-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--aui-high) 64%, var(--aui-lifted)), var(--aui-raised));
+}
+.market-card--gear {
+  --dither-ink: color-mix(in srgb, var(--aui-brass) 24%, var(--aui-raised));
+}
+.market-card--weapon {
+  --dither-ink: color-mix(in srgb, var(--aui-hue-clay) 28%, var(--aui-raised));
+}
+.market-card--pet {
+  --dither-ink: color-mix(in srgb, var(--aui-hue-green) 30%, var(--aui-raised));
+}
+.market-card--title {
+  --dither-ink: color-mix(in srgb, var(--aui-hue-sky) 32%, var(--aui-raised));
+}
+.market-card--relic {
+  --dither-ink: radial-gradient(
+    62% 52% at 50% calc(var(--market-card-pad) + var(--market-card-art) / 2),
+    color-mix(in srgb, var(--aui-hue-gold) 50%, var(--aui-raised)),
+    color-mix(in srgb, var(--aui-orange) 38%, var(--aui-raised))
+  );
 }

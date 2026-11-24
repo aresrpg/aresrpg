@@ -130,6 +130,8 @@ describe('gameplay lifecycle', () => {
       snapshot: {
         characters: [character(!['world_search', 'fight_engage'].includes(kind))],
         fight_phases: {},
+        kolizeums: [],
+        tournaments: [],
         fights: { [fight_id]: row },
         zones: { 'incarnam:97:97': zone },
         tracked_zones: {
@@ -282,7 +284,7 @@ describe('gameplay lifecycle', () => {
         settlements: [{ fighter_idx: 0n, loot: [{ item_type: 'silk', existing: null }] }],
         last: true,
         boss_rewards: true,
-        dungeon: null,
+        mode: { type: 'ordinary' },
       },
     })
     expect(() => plan_of(context_for('fight_settle', started()))).toThrow('fight_not_ended')
@@ -347,7 +349,8 @@ describe('gameplay lifecycle', () => {
       commit_turn: async () => ({ ...(await reject()), turn_witnesses: [] }),
       settle: reject,
     }
-    for (const extra of [{ managed: true }, { wagered: true }, { dungeon: 'test' }]) {
+    // A managed fight with no manager row yet, and a room no command named.
+    for (const extra of [{ managed: true }, { managed: true, dungeon: 'test' }]) {
       const state = placement()
       Object.assign(state.contract, extra)
       await expect(

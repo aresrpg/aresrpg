@@ -13,6 +13,7 @@ export const ObjectExplorerLink = ({
   hidden,
   copy,
   menu,
+  labelled,
   className = '',
   onClick,
 }: Readonly<{
@@ -20,6 +21,8 @@ export const ObjectExplorerLink = ({
   hidden?: boolean
   copy: AppCopy
   menu?: boolean
+  /** Shows the words beside the mark, where a row has the room. */
+  labelled?: boolean
   className?: string
   onClick?: () => void
 }>) => {
@@ -30,7 +33,7 @@ export const ObjectExplorerLink = ({
       aria-label={label}
       title={label}
       role={menu ? 'menuitem' : undefined}
-      className={`${menu ? 'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left' : 'inline-flex size-11 shrink-0 items-center justify-center'} text-muted hover:text-gold focus-visible:outline-2 focus-visible:outline-gold ${className}`}
+      className={`${menu ? 'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left' : labelled ? 'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 text-xs whitespace-nowrap no-underline' : 'inline-flex size-11 shrink-0 items-center justify-center'} text-muted hover:text-gold focus-visible:outline-2 focus-visible:outline-gold ${className}`}
       href={explorer_object_url(env.network, object_id)}
       target="_blank"
       rel="noopener noreferrer"
@@ -38,6 +41,8 @@ export const ObjectExplorerLink = ({
     >
       <ExternalLink size={12} aria-hidden="true" />
       {menu && label}
+      {/* A narrow row keeps the mark alone: the link's name stays its accessible label. */}
+      {labelled && <span className="max-[760px]:hidden">{label}</span>}
     </a>
   )
 }

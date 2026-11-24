@@ -1424,7 +1424,6 @@ encyclopedia_page:
   consumable_loot_box: Відкриває випадкову нагороду
   consumable_reward_heading: НАГОРОДА
   consumable_rewards: МОЖЛИВІ НАГОРОДИ
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Додає {{amount}} до характеристики «{{stat}}» предмета
   rune_obtained_by_crushing: Отримується за роздроблення предметів
   spell_n: ЗАКЛИНАННЯ {{n}}
@@ -2994,7 +2993,6 @@ tournament_page:
   cancel: Скасувати
   waiting: Очікування
   live: Триває бій
-  no_winner: Немає переможця
   crank: Продовжити матч
   spectate: Дивитися
   claim: Вивести

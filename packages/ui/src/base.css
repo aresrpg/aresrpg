@@ -592,8 +592,28 @@
   padding: 0;
   color: inherit;
 }
+/* A modal host is the visible viewport less the device's safe area and a 12px margin. Its one cell holds the window:
+   centred when it fits, never larger than the cell, so the title and the close control stay on screen and the
+   window's body scrolls inside. A window's own `100cqh` cap resolves against this same cell. */
+.aui-modal-scrim,
+.aui-floating-window {
+  box-sizing: border-box;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
+    calc(12px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
+  overscroll-behavior: contain;
+}
+.aui-modal-scrim[open],
+.aui-floating-window:popover-open {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+}
+.aui-modal-scrim[open] > *,
+.aui-floating-window > .aui-window {
+  max-width: 100%;
+  max-height: 100%;
+}
 .aui-modal-scrim {
-  padding: 12px;
   background: #0000004d;
 }
 .aui-native-modal::backdrop {
@@ -602,13 +622,8 @@
 .aui-native-modal[open][data-modal-nested] {
   background: transparent;
 }
-.aui-modal-scrim[open] {
-  display: grid;
-  place-items: center;
-}
 .aui-confirm {
   width: min(420px, 100%);
-  max-height: 100%;
 }
 .aui-confirm .aui-window-meta {
   display: none;
@@ -706,16 +721,11 @@
   max-width: none;
   max-height: none;
   margin: 0;
-  padding: 12px;
   border: 0;
   background: transparent;
   color: inherit;
   pointer-events: none;
   container: aui-viewport / size;
-}
-.aui-floating-window:popover-open {
-  display: grid;
-  place-items: center;
 }
 .aui-floating-window::backdrop {
   background: transparent;

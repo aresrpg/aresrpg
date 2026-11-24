@@ -22,7 +22,8 @@ import {
   type TargetOptions,
 } from './target_constraints.ts'
 import { EQUIPMENT_ACTIONS } from './equipment_actions.ts'
-import { TEAM_ACTIONS, assert_supported_fight } from './team_actions.ts'
+import { TEAM_ACTIONS, doors_of, supported_fight_mode } from './team_actions.ts'
+import { ARENA_ACTIONS } from './arena_actions.ts'
 import { LOOT_BOX_ACTIONS } from './loot_boxes.ts'
 import { RAISE_SPELL_ACTION } from './spell_allocation.ts'
 import { RAISE_STATS_ACTION } from './stat_allocation.ts'
@@ -179,14 +180,14 @@ export const owned_fight = (payload: FightPayload, context: GameplayContext) => 
     contract.id === payload.fight,
   ].every(Boolean)
   if (!authority) throw new Error('fight_authority_mismatch')
-  assert_supported_fight(row, contract, payload.dungeon)
+  const mode = supported_fight_mode(row, contract, payload.dungeon)
   assert_target_context(payload.target_options, character, {
     world: contract.world,
     x: Number(contract.x),
     z: Number(contract.z),
     types: contract.fighters.flatMap(({ kind }) => (kind.type === 'mob' ? [kind.snapshot.mob_type] : [])),
   })
-  return { checkpoint, character, seat }
+  return { checkpoint, character, seat, mode }
 }
 const preview_command = (fighter: bigint, action: TurnInput['actions'][number]): FightCommandInput => {
   switch (action.type) {
@@ -235,23 +236,23 @@ const validate_place = (context: GameplayContext) => {
 }
 const validate_ready = (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
-  const { checkpoint, seat } = owned_fight(payload, context)
+  const { checkpoint, seat, mode } = owned_fight(payload, context)
   preview(checkpoint, { type: 'ready', fighter: seat })
-  return { input: { fight: payload.fight, fighter_idx: seat } }
+  return { input: { fight: payload.fight, fighter_idx: seat, mode } }
 }
 const validate_boundary = (type: 'start' | 'crank') => (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
-  const { checkpoint } = owned_fight(payload, context)
+  const { checkpoint, mode } = owned_fight(payload, context)
   // Unlocking a timeout requires an observed chain timestamp, never interpolation alone.
   preview(checkpoint, {
     type,
     observed_ms: BigInt(context.snapshot.clock!.chain_ms),
   })
-  return { input: { fight: payload.fight } }
+  return { input: { fight: payload.fight, mode } }
 }
 const validate_settle = (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
-  const { checkpoint, character, seat } = owned_fight(payload, context)
+  const { checkpoint, character, seat, mode } = owned_fight(payload, context)
   const { contract } = checkpoint
   if (!contract.ended) throw new Error('fight_not_ended')
   const loot = fight_loot_types(checkpoint, Number(seat)).map((item_type) => ({ item_type, existing: null }))
@@ -265,7 +266,7 @@ const validate_settle = (context: GameplayContext) => {
       settlements: [{ fighter_idx: seat, loot }],
       last,
       boss_rewards: contract.boss_weight > 0n,
-      dungeon: contract.dungeon,
+      mode,
     },
   }
 }
@@ -338,35 +339,38 @@ const FIGHT_ACTIONS = {
     execute: (sdk, input) => sdk.engage(input),
   }),
   fight_place: gameplay_action({
-    description: 'Place an owned fighter in its ordinary PvE placement phase.',
+    description: 'Place an owned fighter in the placement phase of its fight, whatever manages the fight.',
     input_schema: place_schema,
     parse: parse_place,
     validate: validate_place,
     execute: (sdk, input) => sdk.place(input),
   }),
   fight_ready: gameplay_action({
-    description: 'Ready an owned PvE fighter. The final ready may start combat atomically.',
+    description:
+      'Ready an owned fighter in a hunt, a dungeon room, an arena or a tournament match. The final ready may start combat atomically.',
     input_schema: fight_schema,
     parse: parse_fight,
     validate: validate_ready,
-    execute: (sdk, input) => sdk.ready(input),
+    execute: (sdk, { fight, mode, fighter_idx }) => doors_of(sdk, fight, mode)!.ready({ fighter_idx }),
   }),
   fight_start: gameplay_action({
-    description: 'Start an owned PvE fight when all players are ready or observed chain time permits force start.',
+    description:
+      'Start an owned fight when all players are ready or observed chain time permits force start. An arena starts only once its lobby is full.',
     input_schema: fight_schema,
     parse: parse_fight,
     validate: validate_boundary('start'),
-    execute: (sdk, input) => sdk.start(input),
+    execute: (sdk, { fight, mode }) => doors_of(sdk, fight, mode)!.start(),
   }),
   fight_crank: gameplay_action({
-    description: 'Advance an owned active PvE fight when the canonical dead-seat or turn-timeout rule permits.',
+    description: 'Advance an owned active fight when the canonical dead-seat or turn-timeout rule permits.',
     input_schema: fight_schema,
     parse: parse_fight,
     validate: validate_boundary('crank'),
-    execute: (sdk, input) => sdk.crank(input),
+    execute: (sdk, { fight }) => sdk.crank({ fight }),
   }),
   fight_turn: gameplay_action({
-    description: 'Validate and commit one complete owned PvE turn through the shared fight twin and SDK.',
+    description:
+      'Validate and commit one complete owned turn through the shared fight twin and SDK, against mobs or players.',
     input_schema: FIGHT_TURN_SCHEMA,
     parse: parse_fight_turn,
     validate: validate_turn,
@@ -374,12 +378,12 @@ const FIGHT_ACTIONS = {
   }),
   fight_settle: gameplay_action({
     description:
-      'Settle one owned terminal PvE seat and collect its canonical loot into its original personal kiosk. No caller-supplied loot or merge targets.',
+      'Settle one owned seat of an ended fight and collect its canonical loot into its original personal kiosk; an arena or a tournament match pays its seat instead and carries no loot. No caller-supplied loot or merge targets.',
     input_schema: fight_schema,
     parse: parse_fight,
     validate: validate_settle,
-    // A room settles through its dungeon door, which also advances or ends the run.
-    execute: (sdk, { dungeon, ...input }) => (dungeon ? sdk.dungeon.settle({ ...input, dungeon }) : sdk.settle(input)),
+    // A room settles through its dungeon door, which also advances or ends the run; an arena or a match pays its seat.
+    execute: (sdk, { fight, mode, ...settlement }) => doors_of(sdk, fight, mode)!.settle(settlement),
   }),
 }
 /** One catalog supplies the MCP descriptions and schemas, admission parsing, validation and execution. */
@@ -390,6 +394,7 @@ export const GAMEPLAY_ACTIONS = Object.freeze({
   raise_spell: RAISE_SPELL_ACTION,
   ...EQUIPMENT_ACTIONS,
   ...TEAM_ACTIONS,
+  ...ARENA_ACTIONS,
   ...MARKET_ACTIONS,
   ...CHARACTER_ACTIONS,
   ...FIGHT_ACTIONS,
@@ -458,6 +463,8 @@ export const execute_gameplay = ({
       ...actions.character,
       ...actions.marketplace,
       dungeon: actions.dungeon,
+      kolizeum: actions.kolizeum,
+      tournament: actions.tournament,
       create_character: actions.create_character,
     },
     send

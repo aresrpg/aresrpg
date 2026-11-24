@@ -1423,7 +1423,6 @@ encyclopedia_page:
   consumable_loot_box: ランダム報酬を開く
   consumable_reward_heading: 報酬
   consumable_rewards: 入手可能な報酬
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: アイテムに{{stat}}を{{amount}}追加
   rune_obtained_by_crushing: アイテムの粉砕で入手
   spell_n: スペル {{n}}
@@ -2993,7 +2992,6 @@ tournament_page:
   cancel: キャンセル
   waiting: 待機中
   live: 対戦中
-  no_winner: 勝者なし
   crank: 試合を進める
   spectate: 観戦
   claim: 引き出す

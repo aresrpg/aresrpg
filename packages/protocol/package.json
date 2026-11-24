@@ -8,6 +8,8 @@
     ".": "./src/packets.ts",
     "./chain-clock": "./src/chain_clock.ts",
     "./fight-phase": "./src/fight_phase.ts",
+    "./kolizeum": "./src/kolizeum.ts",
+    "./tournament-rules": "./src/tournament_rules.ts",
     "./world-projection": "./src/world_projection.ts",
     "./equipment": "./src/equipment.ts",
     "./character-stats": "./src/character_stats.ts",

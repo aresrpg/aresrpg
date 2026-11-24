@@ -3,13 +3,16 @@
 
 import { job_groups, job_level_from_xp, type JobSlug } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
+import { useContext } from 'react'
 
 import { crafting_character } from '../modules/craft_character_lock.ts'
 import type { CharacterSession } from '../characters/character_session.ts'
-import { CraftControls } from '../characters/CraftControls.tsx'
+import { CraftControls, RecipeFacts } from '../characters/CraftControls.tsx'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
+
+import { ItemDetailContext } from './ItemDetailContext.ts'
 
 /** `inventory` is a bag of its own instead of the player's live one; only `craft` can craft from it. */
 export type ItemCraftSession = Readonly<{
@@ -29,6 +32,8 @@ export const ItemCrafting = ({
   open_ingredient: (item_type: string) => void
 }>) => {
   const { inventory, craft }: Partial<ItemCraftSession> = session ?? {}
+  // The docs read a recipe; only the game crafts it.
+  const reference = useContext(ItemDetailContext) === 'reference'
   const copy = useAppStore((state) => state.copy)
   const character = useAppStore((state) =>
     session?.inventory === undefined ? crafting_character(state, session?.character) : session.character
@@ -44,6 +49,15 @@ export const ItemCrafting = ({
     !copy
   )
     return null
+  if (reference)
+    return (
+      <RecipeFacts
+        recipe={recipe}
+        job={job as JobSlug}
+        t={copy_text(copy.characters_page)}
+        open_ingredient={open_ingredient}
+      />
+    )
   return (
     <CraftControls
       key={item_type}

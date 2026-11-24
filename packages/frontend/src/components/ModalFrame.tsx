@@ -18,12 +18,7 @@ export const ModalFrame = ({
   max_width?: string
 }>) => (
   <NativeModal close={close} label={label} className="aui-modal-scrim">
-    <GameWindow
-      title={label}
-      close={close}
-      close_label={close_label}
-      className={`w-full ${max_width} max-h-[calc(100dvh-24px)]`}
-    >
+    <GameWindow title={label} close={close} close_label={close_label} className={`w-full ${max_width}`}>
       <div className="min-h-0 overflow-y-auto">{children}</div>
     </GameWindow>
   </NativeModal>

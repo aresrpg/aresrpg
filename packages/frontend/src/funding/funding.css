@@ -30,7 +30,6 @@
 
 .aui-funding-window {
   width: min(512px, calc(100vw - 24px));
-  max-height: calc(100dvh - 24px);
   height: auto;
   --aui-ink: var(--aui-ink);
 }
@@ -55,7 +54,6 @@
 @media (orientation: landscape) and (max-height: 500px) {
   .aui-funding-window {
     width: min(512px, calc(100vw - 20px));
-    max-height: calc(100dvh - 16px);
   }
   .aui-funding-address {
     min-height: 60px;

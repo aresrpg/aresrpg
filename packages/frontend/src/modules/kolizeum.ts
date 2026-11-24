@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { KolizeumLobbyRow } from '@aresrpg/protocol'
-import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
+import { kolizeum_joinable } from '@aresrpg/protocol/kolizeum'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -32,11 +32,6 @@ export const selected_kolizeum_pending = (state: Readonly<AppState>): string | n
   const character_id = state.session.selected_character_id
   return character_id ? (state.kolizeum.pending_by_character[character_id] ?? null) : null
 }
-
-export const kolizeum_side_open = (lobby: Readonly<KolizeumLobbyRow>, side: 0 | 1): boolean =>
-  lobby.status === 'open' &&
-  lobby.fighters.filter((fighter) => fighter.team === side).length < Number(CONTRACT_CONSTANTS.start_cells) &&
-  lobby.fighters.filter((fighter) => fighter.team === side && !fighter.settled).length < lobby.format
 
 /** Pledges deliberately allow zero; the wallet transfer parser rejects it because transfers do not. */
 export const parse_kolizeum_pledge = (value: string): bigint | null => {
@@ -115,11 +110,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       !character ||
       !wallet ||
       !lobby ||
-      character.custody !== 'kiosk' ||
-      character.level < lobby.level_min ||
-      character.level > lobby.level_max ||
-      !lobby.can_join ||
-      !kolizeum_side_open(lobby, side) ||
+      !kolizeum_joinable(lobby, character, side) ||
       state.kolizeum.pending_by_character[character.id]
     )
       return

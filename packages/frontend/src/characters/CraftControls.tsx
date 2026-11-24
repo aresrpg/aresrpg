@@ -10,7 +10,7 @@ import {
 } from '@aresrpg/immutable'
 import { Button } from '@aresrpg/ui'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
-import { useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 
 import { encyclopedia_catalog, type SeedRecipe } from '../content/catalog.ts'
 import { titleize } from '../content/titles.ts'
@@ -56,6 +56,61 @@ const craft_hint = (
 }
 
 /** Inline craft controls — the bill of materials + the real Craft button, as detail children. */
+/** One ingredient of a recipe: its picture, name and level, then what the caller says about its amount. */
+const CraftIngredient = ({
+  item_type,
+  open,
+  level_label,
+  children,
+}: Readonly<{ item_type: string; open: (item_type: string) => void; level_label: CopyText; children: ReactNode }>) => {
+  const seed = encyclopedia_catalog.item(item_type)?.item
+  return (
+    <button className="jobs__ingredient" onClick={() => open(item_type)} type="button">
+      <JobItemIcon icon={item_type} size={32} />
+      <span className="jobs__ingredient-id">
+        <span className="jobs__ingredient-name">{seed?.name ?? titleize(item_type)}</span>
+        <span className="jobs__ingredient-lvl hud-num">
+          {level_label('jobs.lv_badge', { level: seed?.level ?? 1 })}
+        </span>
+      </span>
+      {children}
+    </button>
+  )
+}
+
+/** A recipe as facts to read, for the docs: the job and the level it asks, and what it takes. Nothing to press. */
+export const RecipeFacts = ({
+  recipe,
+  job,
+  t,
+  open_ingredient,
+}: Readonly<{
+  recipe: Readonly<SeedRecipe>
+  job: JobSlug
+  t: CopyText
+  open_ingredient: (item_type: string) => void
+}>) => {
+  const vocabulary = useVocabulary()
+  const inputs = Object.entries(recipe.inputs)
+  return (
+    <div className="jobs__craft">
+      <div className="jobs__craft-head">{t('jobs.craft.ingredients_head')}</div>
+      <div className="jobs__craft-profession">
+        <span>
+          {vocabulary.job(job)} · {t('jobs.lv_badge', { level: craft_required_level(inputs.length) })}
+        </span>
+      </div>
+      <div className="jobs__ingredients" style={{ '--ingredient-rows': Math.min(3, inputs.length) } as CSSProperties}>
+        {inputs.map(([item_type, need]) => (
+          <CraftIngredient item_type={item_type} key={item_type} open={open_ingredient} level_label={t}>
+            <span className="jobs__ingredient-amt hud-num">×{need}</span>
+          </CraftIngredient>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export const CraftControls = ({
   recipe,
   character,
@@ -176,26 +231,13 @@ export const CraftControls = ({
         </span>
       </div>
       <div className="jobs__ingredients" style={{ '--ingredient-rows': Math.min(3, rows.length) } as CSSProperties}>
-        {rows.map(({ item_type, need, have, enough }) => {
-          const seed = encyclopedia_catalog.item(item_type)?.item
-          return (
-            <button
-              className="jobs__ingredient"
-              key={item_type}
-              onClick={() => open_ingredient(item_type)}
-              type="button"
-            >
-              <JobItemIcon icon={item_type} size={32} />
-              <span className="jobs__ingredient-id">
-                <span className="jobs__ingredient-name">{seed?.name ?? titleize(item_type)}</span>
-                <span className="jobs__ingredient-lvl hud-num">{t('jobs.lv_badge', { level: seed?.level ?? 1 })}</span>
-              </span>
-              <span className={`jobs__ingredient-amt hud-num ${enough ? 'is-enough' : 'is-short'}`}>
-                {have} / {need}
-              </span>
-            </button>
-          )
-        })}
+        {rows.map(({ item_type, need, have, enough }) => (
+          <CraftIngredient item_type={item_type} key={item_type} open={open_ingredient} level_label={t}>
+            <span className={`jobs__ingredient-amt hud-num ${enough ? 'is-enough' : 'is-short'}`}>
+              {have} / {need}
+            </span>
+          </CraftIngredient>
+        ))}
       </div>
 
       <div className="jobs__craft-chance">

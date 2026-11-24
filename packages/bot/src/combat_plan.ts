@@ -60,7 +60,9 @@ const placement_action = (selection: Selection): CombatNext => {
   const { contract } = selection.checkpoint
   const { context, characters, payload } = selection
   const unready = characters.find((character) => !contract.fighters[character.active_fight!.seat]!.ready)
+  // An arena's placement clock is unarmed (zero) until its lobby is full: nothing expires before that.
   const expired =
+    contract.placement_ms !== 0n &&
     BigInt(context.snapshot.clock!.chain_ms) >= contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
   if (!expired && gathering(selection)) return { state: 'waiting' }
   if (unready)

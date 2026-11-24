@@ -12,7 +12,7 @@
   --site-bar-top: 16px;
   /* The status card's box: its dock above the footer and the footer's first column are both this size. */
   --site-status-w: 232px;
-  --site-status-h: 84px;
+  --site-status-h: 102px;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
   min-height: 100dvh;
@@ -264,6 +264,12 @@
   background: transparent;
   color: var(--aui-muted);
 }
+/* The docs mark shows where the bar has its full row; a narrow window reaches the docs from the footer. */
+@media (max-width: 1079px) {
+  .site-bar .site-docs {
+    display: none;
+  }
+}
 .site-bar .aui-icon-button:hover:not(:disabled) {
   border-color: var(--aui-line);
   background: var(--aui-hair);
@@ -423,7 +429,7 @@
 .site-status dd {
   font-family: var(--aui-font);
 }
-.site-status dd:last-child {
+.site-status dd:is(:first-of-type, :last-child) {
   font-family: var(--aui-font-mono);
 }
 

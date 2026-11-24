@@ -96,12 +96,12 @@
 }
 @container app-content (max-width: 1100px) {
   .market-lot-row {
-    grid-template-columns: 48px minmax(0, 1fr) minmax(90px, 112px);
+    grid-template-columns: 48px minmax(0, 1fr) minmax(90px, 112px) 44px;
     gap: 8px;
     padding-inline: 8px;
   }
   .market-lot-row button,
-  .market-ask > button:last-child {
+  .market-ask > button {
     white-space: normal;
     overflow: visible;
     padding-inline: 6px;

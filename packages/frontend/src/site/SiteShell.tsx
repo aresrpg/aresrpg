@@ -5,6 +5,7 @@
 import { Ground } from '@aresrpg/ui'
 import {
   ArrowUpRight,
+  BookOpen,
   Briefcase,
   ChartNoAxesColumn,
   Check,
@@ -85,6 +86,7 @@ const SiteStatus = ({ copy, dock = false }: Readonly<{ copy: AppCopy; dock?: boo
   const link_violation = useSiteStore(({ session }) => session.link_violation)
   const latency = useSiteStore(({ session }) => session.latency_ms)
   const lag = useSiteStore(({ session }) => session.indexing_lag)
+  const sockets = useSiteStore(({ session }) => session.online_sockets)
   const health = {
     unknown: '—',
     healthy: copy.site.indexing_healthy,
@@ -106,6 +108,9 @@ const SiteStatus = ({ copy, dock = false }: Readonly<{ copy: AppCopy; dock?: boo
         <output>{latency === null ? '' : `${latency} ${copy.latency_unit}`}</output>
       </p>
       <dl>
+        {/* Everyone connected right now, signed in or not. */}
+        <dt>{copy.online}</dt>
+        <dd>{sockets ?? '—'}</dd>
         <dt>{copy.indexing_health}</dt>
         <dd>{health}</dd>
         <dt>{copy.indexing_block_remaining}</dt>
@@ -208,6 +213,26 @@ const Account = ({ copy, page }: Readonly<{ copy: AppCopy | null; page: SitePage
   )
 }
 
+/** The docs, one tap from every page: a quiet mark beside the language. */
+const DocsMark = ({ copy }: Readonly<{ copy: AppCopy | null }>) => (
+  <a
+    className="aui-button aui-icon-button site-docs"
+    href={SITE_ADDRESSES.docs}
+    aria-label={copy?.site.docs}
+    title={copy?.site.docs}
+  >
+    <BookOpen size={17} strokeWidth={1.8} aria-hidden="true" />
+  </a>
+)
+
+/** KARES trades on Aftermath: one small gold key outside the bar, at its right, on wide windows. */
+const BuyKares = ({ copy }: Readonly<{ copy: AppCopy | null }>) => (
+  <NewTabLink className="site-buy-kares" href={SITE_ADDRESSES.aftermath} new_tab={copy?.site.new_tab ?? ''}>
+    <Coins size={15} strokeWidth={1.8} aria-hidden="true" />
+    {copy?.site.buy_kares ?? <span className="aui-skeleton site-stub" />}
+  </NewTabLink>
+)
+
 const SALE_LINE_KEY = 'aresrpg:sale-line'
 
 /**
@@ -282,6 +307,7 @@ export const SiteShell = () => {
             <span className="site-brand">AresRPG</span>
           </SiteLink>
           <SiteNav copy={copy} page={key} menu={menu} />
+          <DocsMark copy={copy} />
           {copy && (
             <LanguageCard
               compact
@@ -290,11 +316,7 @@ export const SiteShell = () => {
               change_locale={(next) => dispatch_app({ type: 'locale/changed', locale: next })}
             />
           )}
-          {/* KARES trades on Aftermath: one small gold key outside the bar, at its right, on wide windows. */}
-          <NewTabLink className="site-buy-kares" href={SITE_ADDRESSES.aftermath} new_tab={copy?.site.new_tab ?? ''}>
-            <Coins size={15} strokeWidth={1.8} aria-hidden="true" />
-            {copy?.site.buy_kares ?? <span className="aui-skeleton site-stub" />}
-          </NewTabLink>
+          <BuyKares copy={copy} />
           <Account copy={copy} page={key} />
           <Burger copy={copy} menu={menu} />
         </header>

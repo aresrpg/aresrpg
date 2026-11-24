@@ -6,6 +6,9 @@ import { expect, test } from '@playwright/test'
 test('practice plays a local bot turn and returns to its bracket without connecting a wallet or server', async ({
   page,
 }) => {
+  // CI renders the stage in software: a green run took 48.8s against the suite's 60s, and a slower runner missed the
+  // 30s stage load. This one test loads the whole game, so it has its own budget.
+  test.setTimeout(180_000)
   const sockets: string[] = []
   const errors: string[] = []
   page.on('websocket', (socket) => sockets.push(socket.url()))
@@ -20,7 +23,7 @@ test('practice plays a local bot turn and returns to its bracket without connect
   await expect(page).toHaveURL(/\/world\/practice$/)
   await expect(page.getByText('LOCAL PRACTICE · 1v1', { exact: true })).toBeVisible({ timeout: 30_000 })
   // The world's loading window covers the bracket until the stage has loaded, as it does for a player.
-  await expect(page.locator('dialog.loading-modal[open]')).toHaveCount(0, { timeout: 30_000 })
+  await expect(page.locator('dialog.loading-modal[open]')).toHaveCount(0, { timeout: 90_000 })
   await page.getByRole('button', { name: 'Play next match', exact: true }).click()
   const end_turn = page.getByRole('button', { name: 'End turn', exact: true })
   await expect(end_turn).toBeEnabled({ timeout: 30_000 })

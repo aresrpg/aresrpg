@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { TournamentRow } from '@aresrpg/protocol'
+import {
+  type TournamentNextAction,
+  advancing_side,
+  tournament_rounds,
+  type AdvancingSide,
+  type TournamentAction,
+} from '@aresrpg/protocol/tournament-rules'
 
 import type { CopyText } from '../i18n/copy.ts'
-import type { TournamentNextAction } from '../modules/tournament_selectors.ts'
-import { advancing_side, tournament_rounds, type AdvancingSide } from '../modules/tournament_selectors.ts'
 import { dispatch_app } from '../store.ts'
-import type { TournamentAction, TournamentState } from '../modules/tournament.ts'
+import type { TournamentState } from '../modules/tournament.ts'
 
 export const tournament_act = (id: string, action: TournamentAction): void =>
   dispatch_app({ type: 'tournament/action', id, action })

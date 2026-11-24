@@ -4,8 +4,8 @@
 import { Button } from '@aresrpg/ui'
 import { pet_max_feeds, type RuneEffect, type StatName } from '@aresrpg/immutable'
 
-import { useNumbers } from '../i18n/useNumbers.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
+import { LootOdds } from '../components/LootOdds.tsx'
 import { encyclopedia_catalog, type ItemDetail } from '../content/catalog.ts'
 import { item_is_pet_food } from '../content/item_resource_filters.ts'
 
@@ -62,29 +62,32 @@ const ConsumableDetails = ({
   select_item: (id: string) => void
   text: EncyclopediaText
 }>) => {
-  const numbers = useNumbers()
   const { consumable } = detail.item
   if (!consumable) return null
   if (consumable.type !== 'loot_box') return <ConsumableEffectSection consumable={consumable} text={text} />
   const random = loot_box_is_random(consumable.rewards)
   const total = consumable.rewards.reduce((sum, row) => sum + row.weight, 0)
   return (
-    <section className="flex flex-col gap-2" data-loot-rewards="">
+    <section className="flex flex-col gap-2">
       <DetailTitle>{text(random ? 'consumable_rewards' : 'consumable_reward_heading')}</DetailTitle>
-      {consumable.rewards.map((reward, index) => {
-        const name = encyclopedia_catalog.item(reward.item_type)?.item.name ?? reward.item_type
-        const chance = total === 0 ? 0 : (reward.weight * 100) / total
-        return (
-          <RecipeLink
-            key={reward.item_type}
-            index={index}
-            item_type={reward.item_type}
-            name={random ? text('consumable_reward', { chance: numbers.decimal(chance), item: name }) : name}
-            quantity={reward.amount}
-            select={() => select_item(reward.item_type)}
-          />
-        )
-      })}
+      <LootOdds
+        random={random}
+        rewards={consumable.rewards.map((reward) => ({
+          item_type: reward.item_type,
+          name: encyclopedia_catalog.item(reward.item_type)?.item.name ?? reward.item_type,
+          amount: reward.amount,
+          percent: total === 0 ? 0 : (reward.weight * 100) / total,
+        }))}
+        wrap={(reward, tile_class, tile) => (
+          <button
+            className={`${tile_class} cursor-pointer`}
+            type="button"
+            onClick={() => select_item(reward.item_type)}
+          >
+            {tile}
+          </button>
+        )}
+      />
     </section>
   )
 }

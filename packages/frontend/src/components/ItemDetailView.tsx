@@ -39,10 +39,10 @@ export const ItemDetailView = (props: ItemDetailProps) => {
     <div className="item-sheet-container">
       <ItemSummary
         {...props}
-        select_item={context === 'full' ? open('item') : undefined}
+        select_item={context !== 'summary' ? open('item') : undefined}
         sources={
           !props.edit &&
-          context === 'full' && (
+          context !== 'summary' && (
             <>
               <ItemCrafting item_type={props.item_type} session={props.craft_session} open_ingredient={open('item')} />
               <ItemAcquisition

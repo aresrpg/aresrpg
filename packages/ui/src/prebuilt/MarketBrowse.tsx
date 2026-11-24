@@ -22,6 +22,8 @@ export type MarketLot = Readonly<{
   action: string
   disabled: boolean
   buy: () => void
+  /** A quiet link about the offer of this size, where the caller shows the object on an explorer. */
+  link?: ReactNode
 }>
 
 export const MarketLotTable = ({
@@ -33,6 +35,7 @@ export const MarketLotTable = ({
       <span>{labels.lot_size}</span>
       <span>{labels.price}</span>
       <span className="aui-market-centered">{labels.buy}</span>
+      <span />
     </div>
     <div className="aui-market-lot-rows">
       {lots.map((lot, index) => (
@@ -59,6 +62,7 @@ export const MarketLotTable = ({
           <button className="aui-market-lot-buy" disabled={lot.disabled} onClick={lot.buy} type="button">
             {lot.action}
           </button>
+          {lot.link ?? <span />}
         </div>
       ))}
     </div>
@@ -73,12 +77,15 @@ export const MarketAskRow = ({
   seller,
   price,
   action,
+  link,
 }: Readonly<{
   index: number
   icon: ReactNode
   seller: MarketSeller | null
   price: Readonly<{ label: string; value: string }>
   action: Readonly<{ label: string; disabled: boolean; buy: () => void }>
+  /** A quiet link about this offer, after its action: where the caller shows the object on an explorer. */
+  link?: ReactNode
 }>) => (
   <div className={`market-ask aui-market-ask${index % 2 ? ' aui-market-stripe' : ''}`} data-marketplace-listing-row>
     {icon}
@@ -108,6 +115,7 @@ export const MarketAskRow = ({
     >
       {action.label}
     </button>
+    {link}
   </div>
 )
 

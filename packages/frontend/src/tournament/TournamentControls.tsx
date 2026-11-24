@@ -4,19 +4,19 @@ import { Button, GameWindow, NativeModal, SuiLogo } from '@aresrpg/ui'
 import { useId, type ReactNode, type CSSProperties } from 'react'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
+import {
+  tournament_review_available,
+  advancing_side,
+  type TournamentNextAction,
+  type TournamentViewer,
+  type TournamentAction,
+} from '@aresrpg/protocol/tournament-rules'
 
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import type { CopyText } from '../i18n/copy.ts'
-import {
-  tournament_review_available,
-  advancing_side,
-  type TournamentNextAction,
-  type TournamentViewer,
-} from '../modules/tournament_selectors.ts'
-import type { TournamentAction } from '../modules/tournament.ts'
 import { player_error_text } from '../i18n/player_error.ts'
 
 import {

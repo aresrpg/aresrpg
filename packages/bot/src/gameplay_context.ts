@@ -34,7 +34,7 @@ type AgentActions = ReturnType<typeof create_agent_actions>
 export type GameplayExecutor = AgentActions['fight'] &
   AgentActions['character'] &
   AgentActions['marketplace'] &
-  Readonly<{ dungeon: AgentActions['dungeon']; create_character: AgentActions['create_character'] }>
+  Readonly<Pick<AgentActions, 'dungeon' | 'kolizeum' | 'tournament' | 'create_character'>>
 /** One gameplay command kind. `validate` reads the observed context and is rechecked at signing and
  * submission; `execute` sends what it validated through the SDK. */
 export type GameplayAction<Input> = Readonly<{

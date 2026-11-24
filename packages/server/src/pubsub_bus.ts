@@ -101,6 +101,8 @@ export type GraphBus = Omit<Bus, 'publish'> & {
 export type OnlinePopulation = Readonly<{
   online: number
   online_characters: number | null
+  /** Every live socket across the cluster, signed in or not; null while a pod of an older build is counted. */
+  online_sockets?: number | null
   /** Of `online`, the addresses whose socket shares a hosted bot status. Self-declared: a count, never authority. */
   online_agents?: number | null
 }>
@@ -108,6 +110,8 @@ type OnlineSnapshot = Readonly<{
   addresses: readonly string[]
   characters: readonly string[]
   agents: readonly string[]
+  /** How many sockets this pod holds, visitors included. */
+  sockets?: number
 }>
 
 const DAY_MS = 86_400_000
@@ -155,10 +159,10 @@ const string_ids = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((id) => typeof id === 'string')
 
 const online_snapshot = (raw: string): OnlineSnapshot => {
-  const { addresses, characters, agents } = (JSON.parse(raw) ?? {}) as Record<string, unknown>
+  const { addresses, characters, agents, sockets } = (JSON.parse(raw) ?? {}) as Record<string, unknown>
   if (!string_ids(addresses) || !string_ids(characters) || !string_ids(agents))
     throw new Error('online heartbeat has an invalid shape')
-  return { addresses, characters, agents }
+  return { addresses, characters, agents, ...(Number.isSafeInteger(sockets) ? { sockets: sockets as number } : {}) }
 }
 
 /** The cluster's population: unique identities across the snapshots of the live pods (an expired one is null). */
@@ -169,6 +173,9 @@ export const cluster_online_count = (values: readonly (string | null)[]): Online
     online: union(({ addresses }) => addresses),
     online_characters: union(({ characters }) => characters),
     online_agents: union(({ agents }) => agents),
+    online_sockets: snapshots.every(({ sockets }) => sockets !== undefined)
+      ? snapshots.reduce((total, { sockets }) => total + sockets!, 0)
+      : null,
   }
 }
 

@@ -18,6 +18,7 @@ import type { BehaviorRun } from '../src/behavior_script.ts'
 import { empty_behavior_memory } from '../src/behavior_tree.ts'
 import type { CombatProfile } from '../src/combat_profile.ts'
 import { create_control_service, lane_key_for, type Command, type Lane } from '../src/control.ts'
+import { empty_snapshot } from '../src/actor_snapshot.ts'
 import { fight_checkpoint_id, gameplay_json, type GameplayContext } from '../src/gameplay_context.ts'
 import type { Grant } from '../src/model.ts'
 import { run_observation, run_tick } from '../src/run_runtime.ts'
@@ -56,6 +57,40 @@ export const started_fight = (owner?: string) => {
 }
 export const row_of = (checkpoint: HydratedFightCheckpoint): FightStateRow =>
   JSON.parse(gameplay_json({ contract: checkpoint.contract, players: checkpoint.sources.players, kolizeum: null }))
+/** What a command of this wallet observes: one seated fight, its heroes and a ready chain clock. */
+export const fight_context = (
+  checkpoint: HydratedFightCheckpoint,
+  characters: readonly CharacterRow[],
+  now: number,
+  chain_ms = now
+): GameplayContext => ({
+  address: fixture_bot.address,
+  now,
+  freshness_ms: 60_000,
+  command: {
+    id: 'fixture',
+    grant_id: 'grant',
+    bot_id: fixture_bot.id,
+    lane_key: 'lane',
+    fingerprint: 'fixture',
+    kind: 'observe',
+    payload: {},
+    decision_revision: 0,
+    observation_revision: 1,
+    status: 'accepted',
+  },
+  snapshot: {
+    ...empty_snapshot(),
+    characters,
+    fights: { [fight_id]: row_of(checkpoint) },
+    clock: { chain_ms, observed_at: now },
+    observed_at: now,
+    observation_revision: 1,
+    ready: true,
+    frozen: false,
+    indexing_lag: 0,
+  },
+})
 export const fighter = (patch: Partial<CharacterRow> = {}): CharacterRow => ({
   ...character,
   id: fight_character_id,
@@ -375,6 +410,8 @@ export const combat_fixture = async (checkpoint = placement()) => {
       characters: [fighter()],
       fights: { [fight_id]: row_of(checkpoint) },
       fight_phases: {},
+      kolizeums: [],
+      tournaments: [],
       zones: {},
       tracked_zones: {},
       clock: { chain_ms: now, observed_at: now },

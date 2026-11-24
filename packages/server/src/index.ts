@@ -73,6 +73,7 @@ setInterval(() => {
       addresses: [...connections.keys()],
       characters: [...connections.values()].flatMap(({ player }) => player.online_characters()),
       agents: [...connections].flatMap(([address, { player }]) => (player.is_agent() ? [address] : [])),
+      sockets: views.size() + connections.size,
     })
     .then(() => pubsub.mesh.cluster_online())
     .then((population) => pubsub.mesh.record_online(population, Date.now()))

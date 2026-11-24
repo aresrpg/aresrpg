@@ -1422,7 +1422,6 @@ encyclopedia_page:
   consumable_loot_box: 打开随机奖励
   consumable_reward_heading: 奖励
   consumable_rewards: 可能获得的奖励
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: 为物品增加{{amount}}{{stat}}
   rune_obtained_by_crushing: 通过分解物品获得
   spell_n: 技能{{n}}
@@ -2983,7 +2982,6 @@ tournament_page:
   cancel: 取消
   waiting: 等待中
   live: 对战中
-  no_winner: 无获胜者
   crank: 推进比赛
   spectate: 观战
   claim: 领取

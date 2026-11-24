@@ -5,17 +5,17 @@ import { useState } from 'react'
 import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
+import {
+  minimum_tournament_teams,
+  tournament_registration,
+  tournament_next_action,
+} from '@aresrpg/protocol/tournament-rules'
 
 import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'
 import type { TournamentAdminAction } from '../modules/tournament.ts'
-import {
-  minimum_tournament_teams,
-  tournament_registration,
-  tournament_next_action,
-} from '../modules/tournament_selectors.ts'
 
 import {
   TournamentDialog,

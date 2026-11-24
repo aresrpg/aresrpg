@@ -13,7 +13,13 @@ import { blast_leaf, blast_proof_root } from '../src/allocation/blast_allowlist.
 import { verify_wallet_message } from '../src/auth.ts'
 import type { Graph } from '../src/graph.ts'
 import { channels } from '../src/protocol.ts'
-import { create_graph_bus, create_mesh_bus, create_watcher, type BusRedis } from '../src/pubsub_bus.ts'
+import {
+  cluster_online_count,
+  create_graph_bus,
+  create_mesh_bus,
+  create_watcher,
+  type BusRedis,
+} from '../src/pubsub_bus.ts'
 import { get_admin_overview_section } from '../src/reads/get_admin_overview.ts'
 import { parse_analytics_totals, ZERO_TOTALS } from '../src/reads/get_analytics_totals.ts'
 import { rank_member } from '../src/reads/get_leaderboard.ts'
@@ -55,8 +61,12 @@ const fake_redis = (store: Partial<Record<keyof BusRedis, unknown>> = {}) => {
   } as unknown as BusRedis
   return { redis, emitter, calls }
 }
-const pod = (addresses: readonly string[], characters: readonly string[] = [], agents: readonly string[] = []) =>
-  JSON.stringify({ addresses, characters, agents })
+const pod = (
+  addresses: readonly string[],
+  characters: readonly string[] = [],
+  agents: readonly string[] = [],
+  sockets?: number
+) => JSON.stringify({ addresses, characters, agents, sockets })
 
 test('losing the graph connection kills the pod; a deliberate close does not', () => {
   const deaths: string[] = []
@@ -119,12 +129,15 @@ test('the online count unions pod snapshots: one address on two pods counts once
       scans++
       return ['0', keys]
     },
-    mget: async () => [pod(['0xa', '0xb'], ['c1'], ['0xb']), pod(['0xb', '0xc'], ['c1', 'c2'], ['0xb']), null],
+    // Each pod holds its signed-in players and its visitors: sockets add up, addresses are a union.
+    mget: async () => [pod(['0xa', '0xb'], ['c1'], ['0xb'], 9), pod(['0xb', '0xc'], ['c1', 'c2'], ['0xb'], 5), null],
     zrange: async () => ['1787990400000', '1', '1787986800000', '2'],
   })
   const mesh = create_mesh_bus({ subscriber: fake_redis().redis, publisher: publisher.redis })
   const counts = await Promise.all(Array.from({ length: 20 }, () => mesh.cluster_online()))
-  expect([counts[0], scans]).toEqual([{ online: 3, online_characters: 2, online_agents: 1 }, 1])
+  expect([counts[0], scans]).toEqual([{ online: 3, online_characters: 2, online_agents: 1, online_sockets: 14 }, 1])
+  // A pod of an older build does not say how many sockets it holds: the total is then unknown, never a part.
+  expect(cluster_online_count([pod(['0xa'], [], [], 4), pod(['0xb'])]).online_sockets).toBeNull()
   await mesh.heartbeat('pod-1', { addresses: ['0xa'], characters: ['c1'], agents: [] })
   await mesh.record_online({ online: 3, online_agents: 1 }, 1_800_000)
   await mesh.record_online({ online: 3, online_agents: null }, 1_800_000)

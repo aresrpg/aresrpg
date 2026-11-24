@@ -3,6 +3,7 @@
 import { worlds_source } from '@aresrpg/engine/data'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { CharacterRow, FightStateRow } from '@aresrpg/protocol'
+import { fight_doors, fight_mode } from '@aresrpg/sdk/fight-doors'
 
 import dungeons from '../../../seed/content/dungeons.json'
 
@@ -11,10 +12,12 @@ import {
   assert_travel,
   custody_of,
   gameplay_action,
+  hydrate_gameplay_fight,
   observed_fight,
   owned_character,
   travel_destination,
   type GameplayContext,
+  type GameplayExecutor,
 } from './gameplay_context.ts'
 import { decode, identifier, nonempty, object_schema } from './gameplay_schema.ts'
 
@@ -55,19 +58,18 @@ const staged_run = (character: CharacterRow, dungeon: string) => {
   if (!staged) throw new Error('character_not_available')
   return run!
 }
-/** The bot plays ordinary PvE. A dungeon room is playable only by a command that names that dungeon,
- * so only a tree whose owner chose the dungeon can spend a key or act in its rooms. */
-export const assert_supported_fight = (row: FightStateRow, contract: Contract, dungeon?: string) => {
-  const unsupported = [
-    contract.managed,
-    contract.wagered,
-    (contract.dungeon ?? undefined) !== dungeon,
-    row.kolizeum,
-    row.tournament,
-    !contract.fighters.some((fighter) => fighter.kind.type === 'mob'),
-  ]
-  if (unsupported.some(Boolean)) throw new Error('unsupported_fight_mode')
+/** What manages an observed fight, which decides its lifecycle doors. A dungeon room is playable only
+ * by a command that names that dungeon, so only a tree whose owner chose the dungeon can spend a key
+ * or act in its rooms. An arena or a match needs no name: its stake was the consent. */
+export const supported_fight_mode = (row: FightStateRow, contract: Contract, dungeon?: string) => {
+  const mode = fight_mode(contract, { kolizeum: row.kolizeum?.id, tournament: row.tournament })
+  const room = mode.type === 'dungeon' ? mode.dungeon : undefined
+  if (mode.type === 'unresolved' || room !== dungeon) throw new Error('unsupported_fight_mode')
+  return mode
 }
+/** The lifecycle doors of a fight this wallet's SDK signs for. */
+export const doors_of = (sdk: GameplayExecutor, fight: string, mode: ReturnType<typeof supported_fight_mode>) =>
+  fight_doors({ fight: sdk, dungeon: sdk.dungeon, kolizeum: sdk.kolizeum, tournament: sdk.tournament }, fight, mode)
 /** The side this wallet already fights on, while its placement still admits a public joiner. */
 export const joinable_team = (contract: Contract, address: string, character_id: string): bigint | null => {
   const players = contract.fighters.filter((fighter) => fighter.kind.type === 'player' && !fighter.forfeited)
@@ -91,9 +93,10 @@ const validate_fight_join = (context: GameplayContext) => {
   const character = owned_character(context, payload.character_id)
   const { row, checkpoint } = observed_fight(payload, context)
   const { contract } = checkpoint
-  assert_supported_fight(row, contract, payload.dungeon)
+  const mode = supported_fight_mode(row, contract, payload.dungeon)
   const team = joinable_team(contract, context.address, character.id)
-  if (team === null) throw new Error('fight_not_joinable')
+  // An arena seat is a wager and a match seat is a registration: each has its own command.
+  if (team === null || mode.type === 'kolizeum' || mode.type === 'tournament') throw new Error('fight_not_joinable')
   const input = { fight: payload.fight, character_id: character.id, custody: custody_of(character) }
   if (payload.dungeon) {
     if (staged_run(character, payload.dungeon).room !== Number(contract.dungeon_room))
@@ -143,18 +146,22 @@ const validate_dungeon_leave = (context: GameplayContext) => {
     },
   }
 }
-/** The door follows the fight: a room is given up through its dungeon, which also ends the run. */
+/** The door follows the fight: a room is given up through its dungeon, which also ends the run, and
+ * an arena seat that leaves before the start takes its pledge back. */
 const validate_fight_forfeit = (context: GameplayContext) => {
   const payload = parse_forfeit(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const seat = character.active_fight
-  if (!seat) throw new Error('fight_unavailable')
+  const row = seat && context.snapshot.fights[seat.id]
+  if (!seat || !row) throw new Error('fight_unavailable')
+  const { contract } = hydrate_gameplay_fight(row)
   return {
     input: {
       fight: seat.id,
       fighter_idx: BigInt(seat.seat),
       custody: custody_of(character),
-      dungeon: Boolean(character.dungeon_run),
+      placement: contract.round === 0n,
+      mode: supported_fight_mode(row, contract, contract.dungeon ?? undefined),
     },
   }
 }
@@ -196,11 +203,11 @@ export const TEAM_ACTIONS = {
   }),
   fight_forfeit: gameplay_action({
     description:
-      'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. Use it for a fight that cannot be finished.',
+      'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. In an arena the pledge is lost once the fight has started, and returned before. Use it for a fight that cannot be finished.',
     input_schema: forfeit_schema,
     parse: parse_forfeit,
     validate: validate_fight_forfeit,
-    execute: (sdk, { dungeon, ...seat }) => (dungeon ? sdk.dungeon.give_up_fight(seat) : sdk.forfeit(seat)),
+    execute: (sdk, { fight, mode, ...seat }) => doors_of(sdk, fight, mode)!.forfeit(seat),
   }),
 }
 /** The observed state that proves a certified team action took effect. */

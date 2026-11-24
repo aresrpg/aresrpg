@@ -8,6 +8,7 @@ import type { SeedItem } from '@aresrpg/sdk/seed'
 import { Store } from 'lucide-react'
 
 import { ItemSummary } from '../components/ItemSummary.tsx'
+import { ObjectExplorerLink } from '../components/ObjectExplorerLink.tsx'
 import { ItemSnapshotTooltip, useItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
 import type { CopyText } from '../i18n/copy.ts'
@@ -83,6 +84,7 @@ export const CheapestLotMarket = ({
   text,
 }: Offers & Readonly<{ asks: readonly ListingRow[]; sizes: readonly number[] }>) => {
   const localized_numbers = useNumbers()
+  const copy = useSiteStore((state) => state.copy)
   return (
     <MarketLotTable
       labels={{ lot_size: text('lot_size'), price: text('price'), buy: text('buy') }}
@@ -99,6 +101,7 @@ export const CheapestLotMarket = ({
             buy: () => {
               if (ready && ask) dispatch_app({ type: 'market/buy_requested', listing: ask })
             },
+            link: ask && copy ? <ObjectExplorerLink object_id={ask.id} copy={copy} /> : undefined,
           }
         })}
     />
@@ -116,6 +119,7 @@ export const AskRow = ({
 }: Offers & Readonly<{ index: number; listing: ListingRow }>) => {
   const localized_numbers = useNumbers()
   const ui = useText()
+  const copy = useSiteStore((state) => state.copy)
   const purchase = offer_purchase(listing, address, balance, pending)
   return (
     <MarketAskRow
@@ -140,6 +144,7 @@ export const AskRow = ({
           if (ready && purchase.enabled) dispatch_app({ type: 'market/buy_requested', listing })
         },
       }}
+      link={copy && <ObjectExplorerLink object_id={listing.id} copy={copy} labelled />}
     />
   )
 }

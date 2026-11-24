@@ -22,6 +22,7 @@ import {
 import { fight_planning } from './fight_planning.ts'
 import { character_observability } from './character_observability.ts'
 import { gameplay_knowledge } from './catalog.ts'
+import { arenas_view } from './arena_actions.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay_context.ts'
 
 /** What the status reads from the actor: what the wallet holds and does, in a few kilobytes. A bag,
@@ -31,7 +32,7 @@ const status_view = (context: GameplayContext) => {
     snapshot,
     command: { payload },
   } = context
-  const { inventory, zones, ...live } = snapshot
+  const { inventory, zones, kolizeums, tournaments, ...live } = snapshot
   const { health, equipment_bonuses, balance } = character_observability(context)
   return {
     ...live,
@@ -39,6 +40,7 @@ const status_view = (context: GameplayContext) => {
     equipment_bonuses,
     balance,
     inventory: inventory_counts(inventory),
+    arenas: { kolizeums: kolizeums.length, tournaments: tournaments.length },
     current_zones: current_zones(snapshot.characters),
     ...(payload.fight_plan === undefined
       ? {}
@@ -64,6 +66,7 @@ const DETAIL_VIEWS = {
   stacks: ({ snapshot, command }: GameplayContext) => stacks_view(snapshot, command.payload),
   zones: ({ snapshot, command }: GameplayContext) => zones_view(snapshot, command.payload),
   market: ({ snapshot, command }: GameplayContext) => market_view(snapshot, command.payload),
+  arenas: arenas_view,
 }
 type DetailView = keyof typeof DETAIL_VIEWS
 const detail_view = (payload: Command['payload']): DetailView | null =>

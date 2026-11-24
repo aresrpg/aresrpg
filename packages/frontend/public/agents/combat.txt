@@ -64,6 +64,19 @@ Describe the character's role and the order that matters: "Play this character s
 
 Hosted assistants can remember a profile with `bot_save_combat_profile`, after reading its revision with `bot_combat_profile` and checking it with `bot_validate_combat_profile`. To execute it, author a behavior tree with a `combat` action containing explicit profile snapshots for every owned participant, validate it with `bot_validate_behavior`, then call `bot_start_behavior` with fresh observation/decision revisions. The leaf binds one existing ordinary PvE fight, keeps the current legal placements, readies participants, plays their turns and settles through normal game actions. Its process-local activation survives ordinary waits, not actor restart. Restart reloads the saved script from its root and derives any current fight from fresh authoritative state. The assistant can compose an explicit `engage` action and reactive conditions to choose subsequent fights. Dungeon, tournament, wagered and other unsupported modes remain unavailable through this hosted leaf. The bot executes accepted trees while the assistant is offline; it never contacts an AI provider. Planning and replanning happen only when an external assistant calls MCP.
 
+A hosted hero plays every fight it is seated in with the same commands and the same `combat` leaf: a hunt, a dungeon
+room (the command names its dungeon), a Kolizeum arena and a tournament match. Read the open Kolizeum lobbies with
+`bot_arenas`. A seat there is a wager: `bot_kolizeum_join` names the lobby, the side and the exact `pledge_mist` read
+from the lobby, and is refused if the pledge changed. Explain the stake to the player before sending it. Before the
+fight starts `bot_fight_forfeit` returns the pledge; after the start it loses it. A `combat` leaf that lists `mob_types`
+does not play a fight against players: leave `target_options` out for arena play.
+
+Tournaments: `bot_arenas` lists each event and, for each hero, `next`: the one action the tournament rules offer it now.
+`bot_tournament_step` performs that action: register (it pays the event entry fee, refused above the
+`max_entry_fee_mist` you name), add a team mate, open or join the hero's match during its admission window, record a
+finished match, or claim a prize. A hero that misses the admission window loses its match, so a tree for a registered
+hero runs a `call` leaf of kind `tournament_step` first, then its `combat` leaf, then `wait`.
+
 Both `engage` and `combat` accept optional `target_options`: `min_size`, `max_size`, `mob_types`,
 and `area` as `{ "world": "nauvis", "city": "thebes" }` or a named `biome` instead of `city`.
 Use `min_size: 1` and `max_size: 1` for exactly one mob. The existing engagement `mob_types` filter

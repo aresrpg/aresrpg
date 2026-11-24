@@ -1424,7 +1424,6 @@ encyclopedia_page:
   consumable_loot_box: Abre una recompensa aleatoria
   consumable_reward_heading: RECOMPENSA
   consumable_rewards: RECOMPENSAS POSIBLES
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Añade {{amount}} de {{stat}} a un objeto
   rune_obtained_by_crushing: Se obtiene triturando objetos
   spell_n: HECHIZO {{n}}
@@ -2994,7 +2993,6 @@ tournament_page:
   cancel: Cancelar
   waiting: En espera
   live: En directo
-  no_winner: Sin ganador
   crank: Avanzar partida
   spectate: Ver
   claim: Retirar

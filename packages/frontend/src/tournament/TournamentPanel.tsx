@@ -4,18 +4,19 @@ import { useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import type { TournamentRow } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
-import { TOURNAMENT_MATCH_MS } from '@aresrpg/sdk/tournament'
-
-import { dispatch_app, useAppStore } from '../store.ts'
-import { copy_text, type CopyText } from '../i18n/copy.ts'
-import { player_error_text } from '../i18n/player_error.ts'
 import {
+  TOURNAMENT_MATCH_MS,
   match_kind,
   tournament_registration,
   tournament_rounds,
   tournament_start_soon,
-} from '../modules/tournament_selectors.ts'
-import { tournament_claims, type TournamentAction } from '../modules/tournament.ts'
+  tournament_claims,
+  type TournamentAction,
+} from '@aresrpg/protocol/tournament-rules'
+
+import { dispatch_app, useAppStore } from '../store.ts'
+import { copy_text, type CopyText } from '../i18n/copy.ts'
+import { player_error_text } from '../i18n/player_error.ts'
 import { PracticeButton } from '../practice/PracticeButton.tsx'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'

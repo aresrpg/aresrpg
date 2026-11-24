@@ -11,10 +11,12 @@ import { character_actions } from './character_actions.ts'
 import { character_create, type CharacterCreateInput } from './character.ts'
 import { dungeon_actions } from './dungeon.ts'
 import { fight_actions } from './fight.ts'
+import { kolizeum_actions } from './kolizeum.ts'
 import { create_personal_kiosk_runner } from './kiosk_runner.ts'
 import { marketplace_actions } from './marketplace.ts'
 import { mastery_actions } from './mastery.ts'
 import { party_actions } from './party.ts'
+import { tournament_actions } from './tournament.ts'
 import { trade_actions } from './trade.ts'
 
 /** Use an SDK constructed for this same signing address. Every method below can spend gas. */
@@ -33,6 +35,8 @@ export const create_agent_actions = (sdk: Sdk, address: string) => {
     character: character_actions(sdk, { kiosk_cap }),
     fight: fight_actions(sdk, { kiosk_cap }),
     dungeon: dungeon_actions(sdk, { kiosk_cap }),
+    kolizeum: kolizeum_actions(sdk, { kiosk_cap, address }),
+    tournament: tournament_actions(sdk, { kiosk_cap }),
     marketplace: marketplace_actions(sdk, { kiosk_cap, address }),
     mastery: mastery_actions(sdk, { kiosk_cap, address }),
     party: party_actions(sdk, { kiosk_cap }),

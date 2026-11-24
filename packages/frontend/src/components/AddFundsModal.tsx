@@ -223,7 +223,7 @@ export const FundingModal = ({
   return (
     <FundingErrorBoundary
       fallback={
-        <NativeModal close={on_close} label={title}>
+        <NativeModal close={on_close} label={title} className="aui-modal-scrim">
           <div className="border border-border bg-surface p-6" role="alert">
             <p className="text-xs">{wallet_text(copy, 'funding_failed')}</p>
             <WalletAddressBlock address={recipient} copy={copy} method="direct" recipient_label={recipient_label} />
@@ -232,7 +232,7 @@ export const FundingModal = ({
       }
     >
       {testnet ? (
-        <NativeModal close={close} label={title}>
+        <NativeModal close={close} label={title} className="aui-modal-scrim">
           {content}
         </NativeModal>
       ) : (

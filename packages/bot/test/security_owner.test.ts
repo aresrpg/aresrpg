@@ -268,7 +268,19 @@ test('S12 S13 only public codes leave the service: command errors, reports and t
   const hostile = [
     chat('whisper'),
     chat('world'),
-    { type: 'packet/tournaments', tournaments: [{ id: 't', team_a_name: injected }] },
+    // Arena rows are folded for the AI client: an unknown field and every name a player chose are dropped.
+    {
+      type: 'packet/tournaments',
+      tournaments: [
+        {
+          id: 't',
+          name: injected,
+          team_a_name: injected,
+          teams: [{ name: injected, allowed: [], seats: [{ character: '0xc', name: injected }] }],
+        },
+      ],
+    },
+    { type: 'packet/kolizeums', lobbies: [{ id: 'k', fighters: [{ seat: 0, name: injected }], note: injected }] },
     { type: 'packet/party', party: null },
   ] as unknown as ServerPacket[]
   const after = hostile.reduce(

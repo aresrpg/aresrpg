@@ -378,7 +378,8 @@ The bot collects its own kiosk proceeds once they reach 0.1 SUI (`packages/bot/s
 
 The MCP surface is one tool table (`TOOLS`, `packages/bot/src/mcp.ts`). `bot_observe` is a short status; detail comes
 from named views of the same read path (`bot_inventory`, `bot_item_stacks`: 20 by default, 200 at most, `bot_zones`,
-`bot_market`: the public market, which borrows the wallet's one market view).
+`bot_market`: the public market, which borrows the wallet's one market view, `bot_arenas`: the Kolizeum lobbies and tournaments the
+account stream pushes, without any name a player chose).
 The bot pushes its status on its own game socket (`packet/agent_status`); the server relays it inside the owner's
 account stream without storing it. No first-party client reads the bot over HTTP on a clock.
 
@@ -434,6 +435,10 @@ Duels, PvM, dungeon rooms, Kolizeum and tournaments use the same fight machine. 
 (`packages/move/sources/kolizeum.move`). A seat's access rule, never its population, decides who may join. The server
 relays fight drafts only from the connection's own seat.
 
+Placement, turns and cranks are shared by every mode. Ready, start, forfeit, settle and close belong to what manages
+the fight; `fight_mode` and `fight_doors` (`packages/sdk/src/fight_doors.ts`) map a fight row to those doors for the
+game client and the hosted bot alike.
+
 ### Tournaments
 
 Core owns rosters, deadlines, linked fights and prizes; `move-math` owns the single-elimination bracket of at most 64
@@ -441,6 +446,10 @@ teams (`packages/move-math/sources/tournament_bracket.move`). Nobody can start b
 anyone may crank the start. A match admits players during the fight placement window after it becomes available, and
 anyone may end an unfinished match after 30 minutes (`packages/move/sources/tournament.move`). An optional SUI fee per
 character goes half to the treasury and half to the prize pool.
+
+The rules a wallet plays by (who may register or enter, and its one next action) are pure functions of the projected
+row in `packages/protocol/src/tournament_rules.ts`; `run_tournament_action` (`packages/sdk/src/tournament_play.ts`) sends the
+chosen action. The game client and the hosted bot (`tournament_step`) both use them.
 
 ### Dungeons and Mastery
 

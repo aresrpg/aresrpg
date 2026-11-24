@@ -2,5 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { createContext } from 'react'
 
-/** Summaries show item identity and stats; acquisition and crafting belong to full item sheets. */
-export const ItemDetailContext = createContext<'full' | 'summary'>('full')
+/**
+ * How much of an item a sheet shows. `summary`: identity and stats. `reference`: also where it comes from and its
+ * recipe, as facts to read (the docs). `full`: the same with the actions of the game, crafting included.
+ */
+export const ItemDetailContext = createContext<'full' | 'reference' | 'summary'>('full')

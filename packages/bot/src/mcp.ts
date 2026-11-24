@@ -155,6 +155,12 @@ const TOOLS: Readonly<Record<string, Tool>> = {
     optional: ['item_type', 'category', 'limit', 'history', 'heroes', 'release'],
     call: (control, grant, args) => control.observe(grant, { view: 'market', ...args }),
   },
+  bot_arenas: {
+    scope: CONTROL_SCOPES.observe,
+    description:
+      'Read the arenas the game shows this wallet. kolizeums: each lobby with id, fight, format (1, 3 or 6 a side), pledge_mist (the stake each seat pays), pot_mist, level_min and level_max, status, can_join and the seated fighters with their side. Names that players chose are never included. A seat is a wager: join one with bot_kolizeum_join and the exact pledge_mist read here. tournaments: each event with id, status, format, start_before_ms, entry_fee_mist, max_level, its team and match counts and its prize pools, and next: for each owned hero, the one action the tournament rules offer it now (register, add a team mate, open or join its match, record or end a match, start or expire the event, claim a prize), or the reason nothing is offered. bot_tournament_step performs that action. A wallet funds its own stakes and fees; the bot never tops it up.',
+    call: (control, grant) => control.observe(grant, { view: 'arenas' }),
+  },
   bot_status: {
     scope: CONTROL_SCOPES.status,
     description:

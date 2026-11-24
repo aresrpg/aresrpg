@@ -80,6 +80,8 @@ describe('fight planning', () => {
         zones: {},
         tracked_zones: {},
         fight_phases: {},
+        kolizeums: [],
+        tournaments: [],
       },
     }
   }
@@ -285,6 +287,8 @@ describe('gameplay', () => {
           { id: character_id, custody: 'fight', active_fight: { id: fight_id, seat: Number(seat) } } as CharacterRow,
         ],
         fight_phases: {},
+        kolizeums: [],
+        tournaments: [],
         fights: { [fight_id]: row },
         clock: { chain_ms: 63_000, observed_at: 63_000 },
         observed_at: 63_000,
@@ -317,6 +321,8 @@ describe('gameplay', () => {
       'dungeon_fight',
       'dungeon_leave',
       'fight_forfeit',
+      'tournament_step',
+      'kolizeum_join',
       'market_buy',
       'market_sell',
       'market_delist',

@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import '@aresrpg/ui/styles.css'
 
 import { LanguageCard } from '../components/AccountControls.tsx'
+import { ItemDetailContext } from '../components/ItemDetailContext.ts'
 import { load_game_settings } from '../game/core/settings.ts'
 import { SITE_ADDRESSES } from '../site/routes.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
@@ -44,20 +45,23 @@ const Docs = ({ links }: Readonly<{ links: DocsLinks }>) => {
   return (
     <LocaleScope locale={language}>
       <DocsNavigation value={navigate}>
-        <DocsPage
-          copy={copy}
-          language={
-            <LanguageCard
-              compact
-              copy={copy}
-              locale={language}
-              change_locale={(next) => dispatch_app({ type: 'locale/changed', locale: next })}
-            />
-          }
-          links={links}
-          navigate={navigate}
-          pathname={pathname}
-        />
+        {/* The docs are reading: an item's sheet shows its recipe and sources with no game action. */}
+        <ItemDetailContext.Provider value="reference">
+          <DocsPage
+            copy={copy}
+            language={
+              <LanguageCard
+                compact
+                copy={copy}
+                locale={language}
+                change_locale={(next) => dispatch_app({ type: 'locale/changed', locale: next })}
+              />
+            }
+            links={links}
+            navigate={navigate}
+            pathname={pathname}
+          />
+        </ItemDetailContext.Provider>
       </DocsNavigation>
     </LocaleScope>
   )

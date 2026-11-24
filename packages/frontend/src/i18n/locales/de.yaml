@@ -1425,7 +1425,6 @@ encyclopedia_page:
   consumable_loot_box: Öffnet eine zufällige Belohnung
   consumable_reward_heading: BELOHNUNG
   consumable_rewards: MÖGLICHE BELOHNUNGEN
-  consumable_reward: '{{item}} · {{chance}}%'
   rune_effect: Fügt einem Gegenstand {{amount}} {{stat}} hinzu
   rune_obtained_by_crushing: Durch Zerstören von Gegenständen erhalten
   spell_n: ZAUBER {{n}}
@@ -2995,7 +2994,6 @@ tournament_page:
   cancel: Abbrechen
   waiting: Wartet
   live: Live
-  no_winner: Kein Sieger
   crank: Match fortsetzen
   spectate: Zuschauen
   claim: Abheben

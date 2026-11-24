@@ -7,7 +7,8 @@
 import type { TournamentLink } from '@aresrpg/protocol'
 import { type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
-import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/auth'
+import type { AuthSession, FightActions } from '@aresrpg/sdk/auth'
+import { fight_doors, fight_mode } from '@aresrpg/sdk/fight-doors'
 
 import { agent_watching } from '../agents/observation.ts'
 import type { AppModule, AppState } from '../store.ts'
@@ -97,77 +98,7 @@ export const turn_too_soon_refusal = (error: unknown): boolean => {
 export const end_turn_retry_delay_ms = (chain_delay_ms: number, retry_not_before_ms: number, now_ms: number): number =>
   Math.max(chain_delay_ms, Math.max(0, retry_not_before_ms - now_ms))
 
-const immediate_transaction = (
-  fight: string,
-  input: Readonly<FightInput>,
-  actions: Readonly<FightActions>,
-  checkpoint: Readonly<HydratedFightCheckpoint>,
-  custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
-): Promise<FightTransactionReceipt> | null => {
-  switch (input.type) {
-    case 'place':
-      return actions.place({ fight, fighter_idx: input.fighter, cell: input.cell })
-    case 'ready':
-      return actions.ready({ fight, fighter_idx: input.fighter })
-    case 'start':
-      return actions.start({ fight })
-    case 'crank':
-      return actions.crank({ fight })
-    case 'forfeit':
-      return actions.forfeit({ fight, fighter_idx: input.fighter, custody })
-    default:
-      return null
-  }
-}
-
-const kolizeum_transaction = (
-  kolizeum: string,
-  fight: string,
-  input: Readonly<FightInput>,
-  actions: Readonly<KolizeumActions>,
-  fight_actions: Readonly<FightActions>,
-  checkpoint: Readonly<HydratedFightCheckpoint>,
-  custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
-): Promise<FightTransactionReceipt> | null => {
-  switch (input.type) {
-    case 'ready':
-      return actions.ready({
-        kolizeum,
-        fight,
-        fighter_idx: input.fighter,
-      })
-    case 'start':
-      return actions.start({ kolizeum, fight })
-    case 'forfeit':
-      return checkpoint.contract.round === 0n
-        ? actions.exit({ kolizeum, fight, fighter_idx: input.fighter, custody })
-        : actions.forfeit({ fight, fighter_idx: input.fighter, custody })
-    default:
-      return immediate_transaction(fight, input, fight_actions, checkpoint, custody)
-  }
-}
-
-const tournament_transaction = (
-  manager: TournamentLink,
-  fight: string,
-  input: Readonly<FightInput>,
-  wallet: Readonly<Pick<AuthSession, 'fight' | 'tournament'>>,
-  checkpoint: Readonly<HydratedFightCheckpoint>,
-  custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
-): Promise<FightTransactionReceipt> | null => {
-  const args = { tournament: manager.id, index: manager.index, fight }
-  switch (input.type) {
-    case 'ready':
-      return wallet.tournament.ready({ ...args, fighter_indices: [input.fighter] })
-    case 'start':
-      return wallet.tournament.crank(args)
-    case 'forfeit':
-      return wallet.tournament.forfeit({ fight, fighter_idx: input.fighter, custody })
-    default:
-      return immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
-  }
-}
-
+/** Placement, cranks and turns are the shared machine; every other door belongs to the fight's mode. */
 const remote_transaction = ({
   fight,
   input,
@@ -188,13 +119,22 @@ const remote_transaction = ({
   tournament: TournamentLink | null
 }>): Promise<FightTransactionReceipt> | null => {
   if (input.type === 'end_turn') return wallet.fight.commit_turn({ fight, actions: turn_actions })
-  if (tournament) return tournament_transaction(tournament, fight, input, wallet, checkpoint, custody)
-  if (kolizeum) return kolizeum_transaction(kolizeum, fight, input, wallet.kolizeum, wallet.fight, checkpoint, custody)
-  if (input.type === 'forfeit' && checkpoint.contract.dungeon !== null)
-    return wallet.dungeon.give_up_fight({ fight, fighter_idx: input.fighter, custody })
-  return checkpoint.contract.wagered || checkpoint.contract.world === 'tournament'
-    ? null
-    : immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
+  const doors = fight_doors(wallet, fight, fight_mode(checkpoint.contract, { kolizeum, tournament }))
+  if (!doors) return null
+  switch (input.type) {
+    case 'place':
+      return wallet.fight.place({ fight, fighter_idx: input.fighter, cell: input.cell })
+    case 'crank':
+      return wallet.fight.crank({ fight })
+    case 'ready':
+      return doors.ready({ fighter_idx: input.fighter })
+    case 'start':
+      return doors.start()
+    case 'forfeit':
+      return doors.forfeit({ fighter_idx: input.fighter, custody, placement: checkpoint.contract.round === 0n })
+    default:
+      return null
+  }
 }
 
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {

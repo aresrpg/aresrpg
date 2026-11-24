@@ -120,12 +120,24 @@
   scrollbar-width: thin;
   padding: 12px;
 }
+/* The docs show the item large: its picture leads the sheet. */
+.aui-catalogue-item .item-detail-art {
+  width: 128px;
+  height: 128px;
+  filter: drop-shadow(0 8px 12px #0008);
+}
+@container (max-width: 420px) {
+  .aui-catalogue-item .item-detail-art {
+    width: 88px;
+    height: 88px;
+  }
+}
 .aui-related-item {
   display: grid;
-  grid-template-columns: 32px 28px minmax(0, 1fr);
+  grid-template-columns: 40px 28px minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
-  min-height: 44px;
+  gap: 9px;
+  min-height: 52px;
   padding: 6px 8px;
   text-align: left;
   background: var(--aui-raised);
@@ -146,8 +158,8 @@
   white-space: normal;
 }
 .aui-related-item img {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
 }
 .enc-browser.aui-catalogue-browser {
   flex-direction: column;

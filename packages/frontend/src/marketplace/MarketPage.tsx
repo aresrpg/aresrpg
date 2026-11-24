@@ -78,7 +78,7 @@ const TypeCard = ({ row }: Readonly<{ row: MarketType }>) => {
   const ui = useText()
   return (
     <ItemLink
-      className={`${CARD} market-card market-card--${card_tone(row.category) ?? 'plain'} transition-[translate,border-color] duration-180 ease-ui hover:-translate-y-[3px] hover:border-line-strong focus-visible:-translate-y-[3px] focus-visible:border-line-strong motion-reduce:transition-none`}
+      className={`${CARD} market-card market-card--${card_tone(row.category) ?? 'plain'} transition-[translate,border-color] duration-180 ease-ui hover:-translate-y-[3px] focus-visible:-translate-y-[3px] motion-reduce:transition-none`}
       item_type={row.item_type}
     >
       <ItemArt className={CARD_ART} item_type={row.item_type} />
