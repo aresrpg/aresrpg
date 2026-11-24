@@ -239,7 +239,9 @@ jobs:
     if: needs.changes.outputs.browsers == 'true'
     name: browsers (${{ matrix.project }})
     runs-on: macos-latest
-    timeout-minutes: 10
+    # A green interface run takes about 5 minutes; a slow checkout on a busy macOS runner once took 9 by itself.
+    # The limit leaves room for that, so a slow runner delays the gate instead of failing it.
+    timeout-minutes: 25
     strategy:
       fail-fast: true
       matrix:
