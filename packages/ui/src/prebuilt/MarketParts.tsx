@@ -5,8 +5,7 @@
 
 import type { ComponentType, ReactNode } from 'react'
 
-import { SegmentedControl } from '../components/controls.tsx'
-import { SUI_LOGO_PATH } from '../sui.ts'
+import { SuiLogo } from '../components/SuiLogo.tsx'
 
 export type MarketGlyph = ComponentType<
   Readonly<{ size?: number; strokeWidth?: number; color?: string; className?: string; 'aria-hidden'?: 'true' }>
@@ -14,17 +13,10 @@ export type MarketGlyph = ComponentType<
 /** Listing art: the item picture, or a short fallback mark when the item has none. */
 export type MarketArt = Readonly<{ icon: string | null; fallback?: ReactNode }>
 
-/** The official Sui droplet. Its colour follows the surrounding text. */
-export const SuiMark = ({ size = 16 }: Readonly<{ size?: number }>) => (
-  <svg aria-hidden="true" data-sui-logo height={size} viewBox="0 0 24 24" width={size}>
-    <path d={SUI_LOGO_PATH} fill="currentColor" />
-  </svg>
-)
-
 /** The compact SUI currency mark that follows every price. */
 export const MarketCurrency = ({ size = 10 }: Readonly<{ size?: number }>) => (
   <span className="aui-market-currency">
-    <SuiMark size={size} />
+    <SuiLogo size={size} />
     <span>SUI</span>
   </span>
 )
@@ -40,12 +32,6 @@ export const MarketCategoryGlyph = ({ art, Icon }: Readonly<{ art: string | null
   if (art) return <img src={art} alt="" className="aui-market-category-art" />
   return Icon ? <Icon size={18} aria-hidden="true" className="aui-market-category-symbol" /> : null
 }
-
-export const MarketCount = ({ title, value }: Readonly<{ title: string; value: string }>) => (
-  <span className="market-count" title={title} data-marketplace-type-count>
-    {value}
-  </span>
-)
 
 export const MarketEmpty = ({ text, Icon }: Readonly<{ text: string; Icon: MarketGlyph }>) => (
   <div className="aui-market-empty">
@@ -99,61 +85,4 @@ export const MarketCapitalization = ({
       </div>
     )}
   </aside>
-)
-
-export type MarketNotice = Readonly<{ key: string; Icon: MarketGlyph; color: string; text: string }>
-
-export const MarketDisclaimer = ({
-  labels,
-  notices,
-  acknowledge,
-}: Readonly<{
-  labels: Readonly<{ kicker: string; title: string; body: string; acknowledge: string }>
-  notices: readonly MarketNotice[]
-  acknowledge: () => void
-}>) => (
-  <section className="market-disclaimer aui-market-disclaimer" data-marketplace-disclaimer="">
-    <div className="aui-market-disclaimer-card">
-      <p className="aui-market-disclaimer-kicker">{labels.kicker}</p>
-      <h1 className="aui-market-disclaimer-title">{labels.title}</h1>
-      <p className="aui-market-disclaimer-body">{labels.body}</p>
-      <div className="aui-market-notices">
-        {notices.map(({ key, Icon, color, text }) => (
-          <div className="aui-market-notice" key={key}>
-            <Icon aria-hidden="true" className="aui-market-notice-icon" color={color} size={15} strokeWidth={1.6} />
-            <p className="aui-market-notice-text">{text}</p>
-          </div>
-        ))}
-      </div>
-      <button className="aui-market-disclaimer-action" onClick={acknowledge} type="button">
-        {labels.acknowledge}
-      </button>
-    </div>
-  </section>
-)
-
-export type MarketTabs<T extends string> = Readonly<{
-  label: string
-  value: T
-  options: readonly Readonly<{ value: T; label: string }>[]
-  on_change: (value: T) => void
-}>
-
-/** The framed marketplace page: tab switch and traded volumes above the active panel. */
-export const MarketPage = <T extends string>({
-  tabs,
-  volumes,
-  children,
-}: Readonly<{ tabs: MarketTabs<T>; volumes: ReactNode; children: ReactNode }>) => (
-  <section className="market-page aui-market-page">
-    <i className="aui-market-corner aui-market-corner-tl" />
-    <i className="aui-market-corner aui-market-corner-tr" />
-    <i className="aui-market-corner aui-market-corner-bl" />
-    <i className="aui-market-corner aui-market-corner-br" />
-    <header className="market-toolbar">
-      <SegmentedControl label={tabs.label} value={tabs.value} on_change={tabs.on_change} options={tabs.options} />
-      <div className="market-volumes">{volumes}</div>
-    </header>
-    <div className="aui-market-panel">{children}</div>
-  </section>
 )

@@ -11,12 +11,21 @@
 
 import { EventEmitter } from 'node:events'
 
-import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume, MarketPriceSnapshot } from '@aresrpg/protocol'
+import type { Redis } from 'ioredis'
+import type {
+  AdminBucket,
+  LeaderboardEntry,
+  LeaderboardMetric,
+  LeaderboardObservation,
+  LeaderboardSnapshot,
+  MarketVolume,
+  MarketPriceSnapshot,
+} from '@aresrpg/protocol'
 
 import { get_analytics_totals, type AnalyticsTotals } from './reads/get_analytics_totals.ts'
-import { get_leaderboard } from './reads/get_leaderboard.ts'
+import { get_leaderboard, get_leaderboard_rank } from './reads/get_leaderboard.ts'
 import { create_item_supply_reader } from './reads/get_item_supply.ts'
-import { get_market_prices } from './reads/get_market_prices.ts'
+import { get_market_changes, get_market_prices } from './reads/get_market_prices.ts'
 import { get_market_volume } from './reads/get_market_volume.ts'
 import {
   INDEXED_CHECKPOINT_KEY,
@@ -34,44 +43,31 @@ import logger from './logger.ts'
 
 const log = logger(import.meta)
 
-/** The slice of an ioredis connection the buses consume — injected, so tests never connect. */
-export type BusRedis = {
-  multi: (commands: (string | number)[][]) => {
-    exec: () => Promise<[Error | null, unknown][] | null>
-  }
-  pipeline?: () => {
-    hget: (key: string, field: string) => unknown
-    exec: () => Promise<[Error | null, unknown][] | null>
-  }
-  call?: (command: string, ...args: readonly (string | number)[]) => Promise<unknown>
-  on: (event: 'message' | 'end', listener: (...args: readonly string[]) => void) => void
-  subscribe: (channel: string) => Promise<unknown>
-  unsubscribe: (channel: string) => Promise<unknown>
-  publish: (channel: string, payload: string) => Promise<unknown>
-  setex: (key: string, seconds: number, value: string) => Promise<unknown>
-  get: (key: string) => Promise<string | null>
-  scan: (cursor: string, match: 'MATCH', pattern: string, count: 'COUNT', size: number) => Promise<[string, string[]]>
-  mget: (keys: string[]) => Promise<(string | null)[]>
-  zrevrange: (key: string, start: number, stop: number) => Promise<string[]>
-  zrange: (key: string, start: number, stop: string, with_scores: 'WITHSCORES') => Promise<string[]>
-  zrevrangebyscore: (
-    key: string,
-    max: number,
-    min: number,
-    limit: 'LIMIT',
-    offset: number,
-    count: number
-  ) => Promise<string[]>
-  zadd: (key: string, condition: 'GT', score: number, member: string) => Promise<unknown>
-  zcount: (key: string, min: number, max: number) => Promise<number>
-  zcard: (key: string) => Promise<number>
-  hgetall: (key: string) => Promise<Record<string, string>>
-  hvals: (key: string) => Promise<string[]>
-  expireat: (key: string, at_seconds: number) => Promise<unknown>
-  smembers: (key: string) => Promise<string[]>
-  scard: (key: string) => Promise<number>
-  disconnect: () => void
-}
+/** The slice of an ioredis connection the buses and their reads consume; injected, so tests never connect. */
+export type BusRedis = Pick<
+  Redis,
+  | 'call'
+  | 'pipeline'
+  | 'on'
+  | 'subscribe'
+  | 'unsubscribe'
+  | 'publish'
+  | 'setex'
+  | 'get'
+  | 'scan'
+  | 'mget'
+  | 'zrevrange'
+  | 'zrange'
+  | 'zadd'
+  | 'zcount'
+  | 'zcard'
+  | 'hgetall'
+  | 'hvals'
+  | 'expireat'
+  | 'smembers'
+  | 'scard'
+  | 'disconnect'
+>
 
 export type Bus = {
   emitter: EventEmitter
@@ -84,19 +80,22 @@ export type Bus = {
 /** The graph bus carries no `publish`: this server never publishes a chain event — evt:* is
  *  the indexer's voice alone (read-only law, now mechanical). */
 export type GraphBus = Omit<Bus, 'publish'> & {
-  leaderboard?: (observation: LeaderboardObservation, address: string) => Promise<LeaderboardSnapshot>
+  leaderboard: (observation: LeaderboardObservation) => Promise<LeaderboardSnapshot>
+  leaderboard_rank: (metric: LeaderboardMetric, address: string) => Promise<LeaderboardEntry | null>
   /** Latest checkpoint the bound indexer committed to both graph and its redis. */
   indexed_checkpoint: () => Promise<number | null>
-  indexed_state?: () => Promise<IndexedState | null>
+  indexed_state: () => Promise<IndexedState | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
-  market_prices?: (item_type: string, now_ms: number) => Promise<MarketPriceSnapshot>
-  market_volume?: (now_ms: number) => Promise<MarketVolume | null>
-  analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
-  analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
-  analytics_counts?: (keys: readonly string[]) => Promise<readonly number[]>
-  analytics_totals?: (keys: readonly string[]) => Promise<readonly AnalyticsTotals[]>
-  analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
+  market_prices: (item_type: string, now_ms: number) => Promise<MarketPriceSnapshot>
+  market_volume: (now_ms: number) => Promise<MarketVolume | null>
+  /** Stored daily average-price change per item type that sold on both of the last two full days. */
+  market_changes: (now_ms: number) => Promise<Readonly<Record<string, number>>>
+  analytics_hashes: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
+  analytics_sets: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
+  analytics_counts: (keys: readonly string[]) => Promise<readonly number[]>
+  analytics_totals: (keys: readonly string[]) => Promise<readonly AnalyticsTotals[]>
+  analytics_cumulative_counts: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
 }
 
 export type OnlinePopulation = Readonly<{
@@ -111,13 +110,30 @@ type OnlineSnapshot = Readonly<{
   agents: readonly string[]
 }>
 
+const DAY_MS = 86_400_000
+const TIER_MS: Readonly<Record<Exclude<AdminBucket, 'week' | 'month'>, number>> = {
+  '15m': 900_000,
+  hour: 3_600_000,
+  day: DAY_MS,
+}
+/** Where an analytics bucket of `tier` holding `at_ms` starts: weeks start on Monday 00:00 UTC, months on the 1st. */
+export const tier_start = (tier: AdminBucket, at_ms: number): number => {
+  if (tier === 'week') return Math.floor((at_ms - 4 * DAY_MS) / (7 * DAY_MS)) * (7 * DAY_MS) + 4 * DAY_MS
+  if (tier === 'month') return Date.UTC(new Date(at_ms).getUTCFullYear(), new Date(at_ms).getUTCMonth(), 1)
+  return Math.floor(at_ms / TIER_MS[tier]) * TIER_MS[tier]
+}
+
+/** One heartbeat key per pod: its whole online snapshot, with a 20-second TTL. */
+const POD_KEY = 'pod:'
+
 export type MeshBus = Bus & {
-  /** This pod's authenticated addresses and tracked character IDs, with a 20-second TTL. */
+  /** This pod's authenticated addresses, tracked character IDs and hosted-bot addresses, with a 20-second TTL. */
   heartbeat: (server_id: string, snapshot: OnlineSnapshot) => Promise<void>
   /** Cluster-wide identity unions across live pod snapshots (cached 4s). */
   cluster_online: () => Promise<OnlinePopulation>
-  record_online?: (online: number, at_ms: number) => Promise<void>
-  online_samples?: (keys: readonly string[]) => Promise<readonly (readonly number[])[]>
+  /** Samples the population: every address online, and its split into players and hosted bots when the bots are counted. */
+  record_online: (population: Pick<OnlinePopulation, 'online' | 'online_agents'>, at_ms: number) => Promise<void>
+  online_samples: (keys: readonly string[]) => Promise<readonly (readonly number[])[]>
 }
 
 /** The pair every player context carries — chain truth and player ephemera, never mixed. */
@@ -125,8 +141,8 @@ export type Pubsub = { graph: GraphBus; mesh: MeshBus }
 
 type BusWires = Readonly<{ subscriber: BusRedis; publisher: BusRedis; unsubscribe_grace_ms?: number }>
 
-/** Legacy synchronizer law: movement removes demand immediately, but Redis subscriptions cool
- * down later. This breaks the packet-rate → Redis-command coupling at zone boundaries. */
+/** Movement removes demand immediately, but Redis subscriptions cool down later: the packet rate
+ *  never drives the Redis command rate at zone boundaries. */
 const UNSUBSCRIBE_GRACE_MS = 10_000
 const online_sample_values = (values: readonly string[]): readonly number[] => {
   const samples = values.filter((_, index) => index % 2 === 1).map(Number)
@@ -138,46 +154,21 @@ const online_sample_values = (values: readonly string[]): readonly number[] => {
 const string_ids = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((id) => typeof id === 'string')
 
-/** Unique identities across the companion snapshots of the live pods; unknown while one pod has none. */
-const companion_union_count = (values: readonly (string | null)[]): number | null => {
-  if (values.includes(null)) return null
-  const identities = values.flatMap((raw) => {
-    const ids: unknown = JSON.parse(raw!)
-    if (!string_ids(ids)) throw new Error('companion heartbeat has an invalid shape')
-    return ids
-  })
-  return new Set(identities).size
+const online_snapshot = (raw: string): OnlineSnapshot => {
+  const { addresses, characters, agents } = (JSON.parse(raw) ?? {}) as Record<string, unknown>
+  if (!string_ids(addresses) || !string_ids(characters) || !string_ids(agents))
+    throw new Error('online heartbeat has an invalid shape')
+  return { addresses, characters, agents }
 }
 
-/** Old pods retain the address-only schema. Missing companion snapshots mean unknown characters.
- * Legacy numeric counts remain only a maximum floor alongside identity snapshots. */
-export const cluster_online_count = (
-  values: readonly (string | null)[],
-  character_values: readonly (string | null)[] = [],
-  agent_values: readonly (string | null)[] = []
-): OnlinePopulation => {
-  const addresses = new Set<string>()
-  const legacy: number[] = []
-  let has_snapshots = false
-  values.forEach((raw) => {
-    if (raw === null) return
-    const value: unknown = JSON.parse(raw)
-    if (string_ids(value)) {
-      has_snapshots = true
-      value.forEach((address) => addresses.add(address))
-      return
-    }
-    if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error('online heartbeat has an invalid shape')
-    legacy.push(Number(value))
-  })
-  const online = has_snapshots ? Math.max(addresses.size, 0, ...legacy) : legacy.reduce((a, b) => a + b, 0)
-  if (!Number.isSafeInteger(online)) throw new Error('online heartbeat count exceeds the safe integer range')
-  const live = (companions: readonly (string | null)[]) =>
-    values.flatMap((raw, index) => (raw === null ? [] : [companions[index] ?? null]))
+/** The cluster's population: unique identities across the snapshots of the live pods (an expired one is null). */
+export const cluster_online_count = (values: readonly (string | null)[]): OnlinePopulation => {
+  const snapshots = values.flatMap((raw) => (raw === null ? [] : [online_snapshot(raw)]))
+  const union = (pick: (snapshot: OnlineSnapshot) => readonly string[]): number => new Set(snapshots.flatMap(pick)).size
   return {
-    online,
-    online_characters: companion_union_count(live(character_values)),
-    online_agents: companion_union_count(live(agent_values)),
+    online: union(({ addresses }) => addresses),
+    online_characters: union(({ characters }) => characters),
+    online_agents: union(({ agents }) => agents),
   }
 }
 
@@ -311,6 +302,8 @@ export const create_graph_bus = ({
   publisher.on('end', lost('graph connection ended'))
   const { closed: _closed, publish: _publish, ...doors } = bus
   const item_supply = item_graph ? create_item_supply_reader(item_graph) : null
+  // Every market viewer's heartbeat asks for the volume: one sample per interval serves them all.
+  const market_volume = sampled_read((_key, now_ms) => get_market_volume(publisher, now_ms), 5_000)
   return {
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
@@ -324,14 +317,21 @@ export const create_graph_bus = ({
       ])
       return { history, total_units }
     }, 5_000),
-    market_volume: (now_ms) => get_market_volume(publisher, now_ms),
+    market_volume: (now_ms) => market_volume('volume', now_ms),
+    // A corrupt day bucket leaves every change unknown; it never blocks the listed-type catalogue.
+    market_changes: (now_ms) =>
+      get_market_changes(publisher, now_ms).catch((error: unknown) => {
+        log.warn({ err: error }, 'marketplace daily change unavailable')
+        return {}
+      }),
     analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),
     analytics_sets: (keys) => Promise.all(keys.map((key) => publisher.smembers(key))),
     analytics_counts: (keys) => Promise.all(keys.map((key) => publisher.scard(key))),
     analytics_totals: (keys) => get_analytics_totals(publisher, keys),
     analytics_cumulative_counts: (key, maxes) =>
       Promise.all([...maxes.map((max) => publisher.zcount(key, 0, max)), publisher.zcard(key)]),
-    leaderboard: (observation, address) => get_leaderboard(publisher, observation, address),
+    leaderboard: (observation) => get_leaderboard(publisher, observation),
+    leaderboard_rank: (metric, address) => get_leaderboard_rank(publisher, metric, address),
     indexed_checkpoint: async () => {
       try {
         return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
@@ -367,37 +367,19 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
   const read_online = async (): Promise<OnlinePopulation> => {
     const keys: string[] = []
     for (let cursor = '0'; ;) {
-      const [next, found] = await publisher.scan(cursor, 'MATCH', 'server:*', 'COUNT', 100)
+      const [next, found] = await publisher.scan(cursor, 'MATCH', `${POD_KEY}*`, 'COUNT', 100)
       keys.push(...found)
       if (next === '0') break
       cursor = next
     }
-    // One atomic read pairs each legacy membership key with its companions.
-    const families = ['server:', 'server-characters:', 'server-agents:']
-    const snapshots = keys.length
-      ? await publisher.mget(keys.flatMap((key) => families.map((family) => key.replace('server:', family))))
-      : []
-    const [addresses, characters, agents] = families.map((_, family) =>
-      snapshots.filter((_, index) => index % families.length === family)
-    )
-    online_cache.value = cluster_online_count(addresses!, characters, agents)
+    online_cache.value = cluster_online_count(keys.length ? await publisher.mget(keys) : [])
     online_cache.at_ms = Date.now()
     return online_cache.value
   }
   return {
     ...doors,
     heartbeat: async (server_id, snapshot) => {
-      // Keep server:* readable by existing binaries throughout a rolling update.
-      const result = await publisher
-        .multi([
-          ['setex', `server:${server_id}`, 20, JSON.stringify(snapshot.addresses)],
-          ['setex', `server-characters:${server_id}`, 20, JSON.stringify(snapshot.characters)],
-          ['setex', `server-agents:${server_id}`, 20, JSON.stringify(snapshot.agents)],
-        ])
-        .exec()
-      if (!result) throw new Error('heartbeat transaction was aborted')
-      const failed = result.find(([error]) => error)
-      if (failed) throw failed[0]
+      await publisher.setex(`${POD_KEY}${server_id}`, 20, JSON.stringify(snapshot))
     },
     cluster_online: async () => {
       if (Date.now() - online_cache.at_ms < 4_000) return online_cache.value
@@ -407,26 +389,33 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
         })
       return online_cache.pending
     },
-    record_online: async (online, at_ms) => {
+    record_online: async ({ online, online_agents }, at_ms) => {
       const minute = Math.floor(at_ms / 60_000) * 60_000
-      const interval = Math.floor(at_ms / 900_000) * 900_000
-      const hour = Math.floor(at_ms / 3_600_000) * 3_600_000
-      const day = Math.floor(at_ms / 86_400_000) * 86_400_000
-      const week = Math.floor((at_ms - 4 * 86_400_000) / (7 * 86_400_000)) * (7 * 86_400_000) + 4 * 86_400_000
-      const date = new Date(at_ms)
-      const month = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)
+      const [interval, hour, day, week, month] = (['15m', 'hour', 'day', 'week', 'month'] as const).map((tier) =>
+        tier_start(tier, at_ms)
+      ) as [number, number, number, number, number]
       const buckets = [
-        [`analytics:online:15m:${interval}`, minute, interval + 2 * 86_400_000],
-        [`analytics:online:hour:${hour}`, minute, hour + 8 * 86_400_000],
-        [`analytics:online:day:${day}`, hour, day + 401 * 86_400_000],
-        [`analytics:online:week:${week}`, hour, week + 105 * 86_400_000],
-        [`analytics:online:month:${month}`, hour, month + 401 * 86_400_000],
+        [`15m:${interval}`, minute, interval + 2 * 86_400_000],
+        [`hour:${hour}`, minute, hour + 8 * 86_400_000],
+        [`day:${day}`, hour, day + 401 * 86_400_000],
+        [`week:${week}`, hour, week + 105 * 86_400_000],
+        [`month:${month}`, hour, month + 401 * 86_400_000],
+      ] as const
+      const split = typeof online_agents === 'number'
+      const series = [
+        ['online', online],
+        ['online_players', split ? online - online_agents : null],
+        ['online_agents', split ? online_agents : null],
       ] as const
       await Promise.all(
-        buckets.flatMap(([key, sample_at, expires_ms]) => [
-          publisher.zadd(key, 'GT', online, String(sample_at)),
-          publisher.expireat(key, Math.floor(expires_ms / 1_000)),
-        ])
+        series.flatMap(([name, count]) =>
+          typeof count === 'number'
+            ? buckets.flatMap(([bucket, sample_at, expires_ms]) => [
+                publisher.zadd(`analytics:${name}:${bucket}`, 'GT', count, String(sample_at)),
+                publisher.expireat(`analytics:${name}:${bucket}`, Math.floor(expires_ms / 1_000)),
+              ])
+            : []
+        )
       )
     },
     online_samples: (keys) =>

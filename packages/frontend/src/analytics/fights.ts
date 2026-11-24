@@ -31,7 +31,7 @@ export const observe_fight = (
   if (!owned.length) return null
   const active = contract.fighters[Number(contract.queue[Number(contract.turn_ptr)])]
   const automatic =
-    state.analytics.fights[contract.id]?.control === 'automatic' ||
+    state.gameplay_analytics.fights[contract.id]?.control === 'automatic' ||
     owned.some(({ kind }) => kind.type === 'player' && kind.character === state.automation.run?.character_id)
   return {
     ended: contract.ended,
@@ -65,8 +65,8 @@ export const fold_fight_observation = (
 }
 
 export const fight_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] =>
-  Object.entries(state.analytics.fights).flatMap(([id, next]): readonly AnalyticsEvent[] => {
-    const before = previous.analytics.fights[id]
+  Object.entries(state.gameplay_analytics.fights).flatMap(([id, next]): readonly AnalyticsEvent[] => {
+    const before = previous.gameplay_analytics.fights[id]
     if (!before || before === next) return []
     const properties = { fight_kind: next.fight_kind, party_size: next.party_size, control: next.control }
     return [

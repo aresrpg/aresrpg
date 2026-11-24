@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // CHAT — pure off-chain ephemera, published on the mesh and never stored. Three doors:
-//   world   — heard by everyone standing in the same world (owner 2026-08-12),
+//   world   — heard by everyone standing in the same world,
 //   party   — network-wide on the party's chat channel (the party module owns the inbound watch),
 //   whisper — network-wide on the target address's chat door (watched here, standing).
 // The flood gate is one shared clock across all three doors; the parse door already bounded
@@ -22,7 +22,7 @@ export default {
   observe: ({ pubsub, events, send, address, get_state, signal, resolve_name }) => {
     /** the flood clock — validation bookkeeping, one law for all three doors */
     const clock = { last_ms: 0 }
-    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
+    const { watch, unwatch } = create_watcher(pubsub, signal)
 
     const flood_gated = (): boolean => {
       const now = Date.now()
@@ -126,9 +126,5 @@ export default {
       })
     }
     watch(mesh.chat_user(address), forward_whisper as (payload: never) => void)
-
-    signal.addEventListener('abort', () => {
-      for (const channel of watched()) unwatch(channel)
-    })
   },
 } satisfies PlayerModule

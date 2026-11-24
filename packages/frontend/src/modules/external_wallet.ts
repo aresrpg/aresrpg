@@ -3,7 +3,7 @@
 
 import { browser_auth_storage } from '../auth_storage.ts'
 import { env } from '../env.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import {
   initial_wallet_state,
   reduce_wallet,
@@ -13,6 +13,8 @@ import {
 } from '../wallet/model.ts'
 import { observe_wallet } from '../wallet/observer.ts'
 import { sui_session, type ExternalSession, type CryptoWalletSession } from '../wallet/external_session.ts'
+
+import { wallet_import_operation } from './wallet_import.ts'
 
 export type ExternalWalletState = WalletState<ExternalSession> &
   Readonly<{
@@ -51,7 +53,7 @@ const merge_discovery = (
     : { type: 'external_wallet/discovered', wallets }
 }
 
-const reduce = (state: AppState, event: AppInput): AppState => {
+const reduce = <S extends SiteState>(state: S, event: AppInput): S => {
   if (!event.type.startsWith('external_wallet/')) return state
   const input = event as ExternalWalletInput
   const current = state.external_wallet
@@ -73,7 +75,7 @@ const reduce = (state: AppState, event: AppInput): AppState => {
     }
   const busy = [
     state.distribution.pending,
-    state.wallet_import.pending,
+    wallet_import_operation(state.wallet_import),
     current.request,
     current.connector_request,
   ].some((operation) => operation !== null && operation !== 'load')
@@ -107,7 +109,7 @@ const reduce = (state: AppState, event: AppInput): AppState => {
   }
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ get_state, dispatch, events, signal }) => {
+const observe: NonNullable<SiteModule['observe']> = ({ get_state, dispatch, events, signal }) => {
   observe_wallet(
     {
       get_state: () => get_state().external_wallet,
@@ -124,4 +126,9 @@ const observe: NonNullable<AppModule['observe']> = ({ get_state, dispatch, event
   )
 }
 
-export default Object.freeze({ name: 'external_wallet', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'external_wallet',
+  initial: () => ({ external_wallet: initial_external_wallet_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

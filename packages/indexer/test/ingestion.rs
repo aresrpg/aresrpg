@@ -114,7 +114,7 @@ async fn restart_gap_uses_archive_when_streaming_ledger_has_pruned_history() {
     let (archive_client, _, gap_fill) = super::clients(args, &config, &registry).unwrap();
     let metrics = archive_client.metrics().clone();
     let requests = Arc::new(Mutex::new(Vec::new()));
-    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test/fixtures");
     let fixture = StoreIngestionClient::new(
         Arc::new(LocalFileSystem::new_with_prefix(fixtures).unwrap()),
         None,

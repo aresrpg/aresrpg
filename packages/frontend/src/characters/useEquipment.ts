@@ -5,9 +5,9 @@ import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
 import { item_stat_center, stat_names } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { useMemo, useState } from 'react'
+import { fold_equipment_stats } from '@aresrpg/protocol/character-stats'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
-import { fold_equipment_stats } from '../game/character_stats.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { localized_error } from '../i18n/error_text.ts'
 import { available_inventory_items, encumbered_asset_ids, inventory_groups } from '../inventory_stacks.ts'
@@ -155,14 +155,14 @@ export function useEquipment({
         ...(action.effect.type === 'city' ? { world: current_character.world } : {}),
         custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
       })
-      return { ...result, amount }
+      return { ...result, amount, before: { hp: current_character.hp, hp_ms: current_character.hp_ms } }
     })
     if (!transaction) return
     set_healing_item(null)
     set_committing(true)
     const pending = toast.loading(t('consume_pending'))
     void transaction
-      .then(({ digest, inventory_changes, amount }) => {
+      .then(({ digest, inventory_changes, amount, before }) => {
         if (read_app_state().session.wallet !== wallet) return pending.dismiss()
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         dispatch_app({
@@ -172,6 +172,7 @@ export function useEquipment({
           item_id: item.id,
           effect: action.effect.type,
           heal: action.heal * amount,
+          before,
         })
         pending.success(t('consume_success'))
       })

@@ -12,7 +12,7 @@ import { SDK } from './client.ts'
 import { kares_payment } from './kares_ptb.ts'
 import { prepare_trade_close } from './kares_economy.ts'
 import { resolve_kiosk_cap, retry_stale_kiosk_ref, type KioskCapLoader } from './kiosk_runner.ts'
-import { resolve_marketplace_transfer } from './marketplace.ts'
+import { offer_purchase_cap, resolve_marketplace_transfer } from './marketplace.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
 import {
   coalesced_settlement_rows,
@@ -46,19 +46,6 @@ const type_package = (sdk: GameSdk): string => {
 }
 
 const item_type_tag = (sdk: GameSdk): string => `${type_package(sdk)}::item::Item`
-
-const list_with_purchase_cap = (
-  tx: Transaction,
-  kiosk: TransactionObjectArgument,
-  kiosk_cap: TransactionObjectArgument,
-  object: string | TransactionArgument,
-  item_type: string
-) =>
-  tx.moveCall({
-    target: '0x2::kiosk::list_with_purchase_cap',
-    typeArguments: [item_type],
-    arguments: [kiosk, kiosk_cap, typeof object === 'string' ? tx.pure.id(object) : object, tx.pure.u64(0)],
-  })
 
 const own_side = (trade: Readonly<TradeRow>, address: string): Side => {
   if (trade.a === address) return 'a'
@@ -186,7 +173,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
       return offer_receipt(
         (tx) => {
           sdk.with_owner_kiosk(tx, owner, (kiosk, owner_cap) => {
-            const purchase_cap = list_with_purchase_cap(tx, kiosk, owner_cap, cap.object, item_type_tag(sdk))
+            const purchase_cap = offer_purchase_cap(sdk, tx, 'item', kiosk, owner_cap, cap.object)
             sdk.doors.trade_put_item(tx, {
               trade_object: trade.id,
               cap: purchase_cap,
@@ -240,7 +227,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
                 { kiosk: kiosk_arg, cap: owner_cap },
                 { item_id: addition.item.id, amount: addition.amount }
               )
-        const purchase_cap = list_with_purchase_cap(tx, kiosk_arg, owner_cap, object, item_type_tag(sdk))
+        const purchase_cap = offer_purchase_cap(sdk, tx, 'item', kiosk_arg, owner_cap, object)
         sdk.doors.trade_put_item(tx, { trade_object: trade.id, cap: purchase_cap, seen_offer_revision: revision })
         revision += 1
       }

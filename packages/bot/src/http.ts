@@ -9,17 +9,21 @@ import {
 } from '@aresrpg/protocol/request-limiter'
 import { parse_agent_pairing_request } from '@aresrpg/sdk/agent-pairing'
 
-import type { Bot, BotConfig, BotPolicy, OwnerChallenge } from './model.ts'
-import { public_bot } from './model.ts'
+import {
+  public_bot,
+  require_string,
+  type Bot,
+  type BotConfig,
+  type BotPolicy,
+  type OwnerChallenge,
+  type OwnerVerifier,
+} from './model.ts'
 import type { ControlStore } from './store.ts'
-import type { OwnerVerifier } from './owner_proof.ts'
 import { create_connect_service } from './connect.ts'
 import { read_owner_status } from './owner_status.ts'
 import { create_oauth_service } from './oauth.ts'
-import { create_control_service, type Observe } from './control.ts'
-import type { OwnerControl } from './owner_control.ts'
-import { create_mcp_handler } from './mcp.ts'
-import { require_string } from './security.ts'
+import { create_control_service, type Observe, type OwnerControl } from './control.ts'
+import { create_mcp_handler, MCP_PROTOCOL_VERSIONS } from './mcp.ts'
 import { request_pairing_proof, request_owner_provisioning } from './provisioning.ts'
 
 const response = (value: unknown, status = 200) =>
@@ -55,8 +59,6 @@ export const create_ingress = (
     ready?: () => boolean
     observe?: Observe
     dispatch?: OwnerControl
-    /** Records a verified owner on the Telegram waitlist. */
-    join_waitlist: (owner: string) => Promise<void>
     /** One allowance per visitor address before authentication, one per verified owner after it. */
     visitor_limiter?: RequestLimiter
     owner_limiter?: RequestLimiter
@@ -164,15 +166,6 @@ export const create_ingress = (
     ],
     ['/connect/bots', provision],
     ['/connect/proof', pairing_proof],
-    [
-      '/connect/waitlist',
-      async (request, body) => {
-        const id = require_string(body.authorization_id)
-        const { owner } = await connect.owner_session(id, session_cookie(request, id))
-        await options.join_waitlist(owner)
-        return response({ joined: true })
-      },
-    ],
     ['/oauth/register', async (_request, body) => response(await oauth.register(body), 201)],
     ['/oauth/token', async (_request, body) => response(await oauth.exchange(body))],
     [
@@ -186,8 +179,7 @@ export const create_ingress = (
       '/mcp',
       async (request, body) => {
         const version = request.headers.get('mcp-protocol-version')
-        if (version && !['2025-03-26', '2025-06-18', '2025-11-25'].includes(version))
-          throw new Error('unsupported_protocol_version')
+        if (version && !MCP_PROTOCOL_VERSIONS.includes(version)) throw new Error('unsupported_protocol_version')
         // A verified call is limited per owner. A call that does not verify is an unauthenticated
         // visitor like any other: it takes the visitor allowance, so guessing tokens is not free.
         const grant = await authenticated(request).catch((error: unknown) => {

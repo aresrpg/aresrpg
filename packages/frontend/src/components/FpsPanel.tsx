@@ -12,6 +12,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { connection_label, indexing_health_tone } from './connection_status.ts'
 import { FullscreenButton } from './FullscreenButton.tsx'
 import { OnlineCharacters } from './OnlineCharacters.tsx'
+import '../game/hud/hud_controls.css'
 
 export const FpsPanel = ({
   active,

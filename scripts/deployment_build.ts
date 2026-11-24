@@ -24,6 +24,7 @@ type PackagePublication = Readonly<{
 type CommandResult = Readonly<{ stdout: string; stderr: string }>
 type ReadVersion = (network: Network, package_id: string) => Promise<string>
 type ReadProtocol = (network: Network) => Promise<string>
+type ReadLinkage = (network: Network, package_id: string) => Promise<readonly string[]>
 type Execute = (command: string, args: readonly string[], cwd: string) => Promise<CommandResult>
 
 const exec_file = promisify(execFile)
@@ -64,6 +65,25 @@ const read_protocol_version: ReadProtocol = async (network) => {
   const client = new SuiGrpcClient({ network, baseUrl: `https://fullnode.${network}.sui.io:443` })
   const { protocolConfig: protocol } = await client.core.getProtocolConfig()
   return protocol.protocolVersion
+}
+
+/** Publication must name every package the dependency itself links, at the versions it links them. */
+const read_package_linkage: ReadLinkage = async (network, package_id) => {
+  const response = await fetch(`https://graphql.${network}.sui.io/graphql`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query: 'query ($id: SuiAddress!) { package(address: $id) { linkage { upgradedId } } }',
+      variables: { id: package_id },
+    }),
+  })
+  const body = (await response.json()) as Readonly<{
+    data?: { package?: { linkage?: readonly Readonly<{ upgradedId?: unknown }>[] } | null }
+  }>
+  const linkage = body.data?.package?.linkage?.map(({ upgradedId }) => upgradedId)
+  if (!response.ok || !linkage?.length || !linkage.every((id): id is string => typeof id === 'string'))
+    throw new Error(`Cannot read the ${network} linkage of package ${package_id}`)
+  return Object.freeze(linkage)
 }
 
 const PACKAGE_VERSION_PATTERN = /(const\s+PACKAGE_VERSION\s*:\s*u64\s*=\s*)(\d+)(\s*;)/
@@ -123,9 +143,11 @@ export const parse_contract_artifact = (
   })
 }
 
-const dump_args = (path: string, network: Network, pubfile?: string): readonly string[] =>
+const dump_args = (path: string, network: Network, pubfile?: string, resolve_on_network = false): readonly string[] =>
   Object.freeze([
     'move',
+    // A dependency this repository did not publish is fetched from the client's network, not the build's.
+    ...(resolve_on_network ? ['--client.env', network] : []),
     'build',
     '--path',
     path,
@@ -141,13 +163,22 @@ export const create_contract_build_service = ({
   run = run_build_command,
   read_version = read_publication_version,
   read_protocol = read_protocol_version,
-}: Readonly<{ repo_dir: string; run?: Execute; read_version?: ReadVersion; read_protocol?: ReadProtocol }>) => {
+  read_linkage = read_package_linkage,
+}: Readonly<{
+  repo_dir: string
+  run?: Execute
+  read_version?: ReadVersion
+  read_protocol?: ReadProtocol
+  read_linkage?: ReadLinkage
+}>) => {
   const math_dir = join(repo_dir, 'packages', 'move-math')
   const control_dir = join(repo_dir, 'packages', 'control')
   const combat_dir = join(repo_dir, 'packages', 'move-combat')
   const seed_dir = join(repo_dir, 'packages', 'seed')
   const kares_dir = join(repo_dir, 'packages', 'kares')
   const rewards_dir = join(repo_dir, 'packages', 'rewards')
+  const currency_dir = join(repo_dir, 'packages', 'currency')
+  const currency_lp_dir = join(repo_dir, 'packages', 'currency-lp')
   const game_dir = join(repo_dir, 'packages', 'move')
   const version_path = join(game_dir, 'sources', 'version.move')
   const chain_identifier = async (network: Network): Promise<string> => {
@@ -229,7 +260,8 @@ export const create_contract_build_service = ({
     network: Network,
     path: string,
     package_name: ContractArtifact['package_name'],
-    publications: readonly Readonly<{ path: string; publication: PackagePublication; version?: number }>[]
+    publications: readonly Readonly<{ path: string; publication: PackagePublication; version?: number }>[],
+    resolve_on_network = false
   ): Promise<ContractArtifact> => {
     await ensure_compiler()
     if (!publications.length) {
@@ -247,7 +279,7 @@ export const create_contract_build_service = ({
         ...(await publication_rows(network, publications)),
       ].join('\n')
       await writeFile(pubfile, source, { flag: 'wx' })
-      const { stdout } = await run('sui', dump_args(path, network, pubfile), repo_dir)
+      const { stdout } = await run('sui', dump_args(path, network, pubfile, resolve_on_network), repo_dir)
       return parse_contract_artifact(package_name, stdout)
     } finally {
       await rm(directory, { recursive: true, force: true })
@@ -295,6 +327,23 @@ export const create_contract_build_service = ({
       'aresrpg_rewards',
       rewards ? [{ path: rewards_dir, publication: rewards }] : []
     )
+  const compile_currency = async (network: Network): Promise<ContractArtifact> =>
+    compile_with_publications(network, currency_dir, 'aresrpg_currency', [])
+  /** The liquidity token calls Aftermath's AMM once, at publication; `amm` is that on-chain package. */
+  const compile_currency_lp = async (network: Network, amm: PackagePublication): Promise<ContractArtifact> => {
+    const artifact = await compile_with_publications(
+      network,
+      currency_lp_dir,
+      'aresrpg_currency_lp',
+      [{ path: join(currency_lp_dir, 'aftermath'), publication: amm }],
+      true
+    )
+    const linkage = await read_linkage(network, amm.package)
+    return Object.freeze({
+      ...artifact,
+      dependencies: Object.freeze([...new Set([...artifact.dependencies, ...linkage])]),
+    })
+  }
 
   const compile_game = async (
     network: Network,
@@ -364,6 +413,8 @@ export const create_contract_build_service = ({
     compile_combat,
     compile_seed,
     compile_rewards,
+    compile_currency,
+    compile_currency_lp,
     compile_game,
     verify_bytecode,
     prepare_upgrade,

@@ -3,6 +3,7 @@
 import { Button } from '@aresrpg/ui'
 import { AtSign, Check, Copy, Hash, Loader2, Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { Text } from '../i18n/Text.tsx'
@@ -15,7 +16,7 @@ import { SendModalShell as Shell, TransferFact as PropRow } from './SendModalShe
 import {
   send_error_text as error_text,
   send_text,
-  SuiTransferFailed as Failed,
+  SuiTransferEnded as Ended,
   SuiTransferSuccess as Success,
   truncate_address,
   type WalletTransferState,
@@ -164,7 +165,7 @@ const SendForm = ({
               {session.sui_balance_mist === null ? '-' : `${localized_numbers.sui(session.sui_balance_mist, 2)} SUI`}
             </span>
             <Button
-              className="cursor-pointer px-2 py-0.5 text-[9px] tracking-[0.2em] text-gold uppercase disabled:cursor-not-allowed disabled:opacity-30"
+              className="tracking-[0.2em] uppercase disabled:opacity-30"
               disabled={session.sui_balance_mist === null || session.sui_balance_mist <= 0n}
               onClick={max}
               type="button"
@@ -204,7 +205,7 @@ const SendForm = ({
       <div className="mt-2 flex gap-3">
         <Button
           tone="primary"
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 px-6 py-2.5 text-[10px] tracking-[0.2em] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-1 tracking-[0.2em] disabled:opacity-40"
           disabled={!can_submit}
           onClick={build}
           type="button"
@@ -212,11 +213,7 @@ const SendForm = ({
           <Send size={12} />
           {send_text(copy, 'submit')}
         </Button>
-        <Button
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={close}
-          type="button"
-        >
+        <Button className="flex-1 tracking-[0.2em]" onClick={close} type="button">
           {copy.wallet_send_shared.cancel}
         </Button>
       </div>
@@ -253,12 +250,7 @@ const Review = ({
           <span className="flex-1 break-all font-mono text-[10px] tracking-wide text-text/80">
             {transfer.recipient_address}
           </span>
-          <Button
-            aria-label={copy.wallet_copy_address}
-            className="shrink-0 cursor-pointer text-muted transition-colors hover:text-gold"
-            onClick={copy_address}
-            type="button"
-          >
+          <Button aria-label={copy.wallet_copy_address} className="shrink-0" onClick={copy_address} type="button">
             {copied ? <Check className="text-emerald-400" size={14} /> : <Copy className="opacity-60" size={14} />}
           </Button>
         </div>
@@ -316,22 +308,13 @@ const Review = ({
         </>
       )}
       <div className="mt-4 flex gap-3">
-        <Button
-          tone="primary"
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={confirm}
-          type="button"
-        >
+        <Button tone="primary" className="flex-1 tracking-[0.2em]" onClick={confirm} type="button">
           <span className="inline-flex items-center justify-center gap-2">
             <Send size={12} />
             {send_text(copy, 'send_confirm')}
           </span>
         </Button>
-        <Button
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={cancel}
-          type="button"
-        >
+        <Button className="flex-1 tracking-[0.2em]" onClick={cancel} type="button">
           {copy.wallet_send_shared.cancel}
         </Button>
       </div>
@@ -514,10 +497,16 @@ export const SendSuiModal = ({
       })
       .catch((error) => {
         console.error('SUI transfer failed.', error)
+        const uncertain = transaction_failure_kind(error) === 'uncertain'
+        // An unresolved transfer keeps the latch: it may have executed, so this window never sends again.
         // eslint-disable-next-line functional/immutable-data -- The component may retry after a reported failure.
-        executing.current = false
+        if (!uncertain) executing.current = false
         set_transfer(
-          Object.freeze({ ...pending, phase: 'failed', error: error instanceof Error ? error.message : String(error) })
+          Object.freeze({
+            ...pending,
+            phase: uncertain ? 'uncertain' : 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          })
         )
       })
   }
@@ -580,15 +569,5 @@ export const SendSuiModal = ({
         <Success close={close} copy={copy} reset={clear} transfer={current_transfer} />
       </Shell>
     )
-  return (
-    <Shell
-      close={close}
-      close_label={copy.wallet_close}
-      locked={false}
-      title={send_text(copy, 'failed_title')}
-      tone="danger"
-    >
-      <Failed close={close} copy={copy} open_funds={open_funds} reset={clear} transfer={current_transfer} />
-    </Shell>
-  )
+  return <Ended close={close} copy={copy} open_funds={open_funds} reset={clear} transfer={current_transfer} />
 }

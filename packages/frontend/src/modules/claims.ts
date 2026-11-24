@@ -4,11 +4,10 @@
 // entrypoint, including its persisted uncertainty barrier. Markers are intent, never entitlement.
 
 import type { ClaimRow } from '@aresrpg/protocol'
-import { item_template_id } from '@aresrpg/sdk/seed-ids'
-import { resolve_pins } from '@aresrpg/sdk/pins'
 import { LOOT_BOX_BATCH_LIMIT } from '@aresrpg/sdk/character'
 
-import { encyclopedia_catalog } from '../content/catalog.ts'
+import { items } from '../content/items.ts'
+import { rolled_item_types } from '../content/item_templates.ts'
 import { env } from '../env.ts'
 import { crush_results, projected_crush_items, type PendingCrushResult } from '../crush_result.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
@@ -23,26 +22,6 @@ export type ClaimsInput =
   | Readonly<{ type: 'claims/redeem'; claim_id: string }>
   | Readonly<{ type: 'claims/failed' | 'claims/started'; claim_ids: readonly string[] }>
 
-/** template id → item_type over the authored catalog — PURE derivation, zero chain reads. */
-export const rolled_item_types = (() => {
-  let map: Map<string, string> | null = null
-  return (): Map<string, string> => {
-    if (map) return map
-    const pins = resolve_pins(env.network) as { content_root?: { id?: string }; seed_package_original?: string }
-    const content_root = pins?.content_root?.id
-    const seed_original = pins?.seed_package_original
-    map = new Map(
-      content_root && seed_original
-        ? encyclopedia_catalog.items.map(({ item_type }) => [
-            item_template_id(content_root, seed_original, item_type),
-            item_type,
-          ])
-        : []
-    )
-    return map
-  }
-})()
-
 /** A BOX CLAIM WITHOUT ITS ROLL IS NOT READY — IT IS NOT BROKEN (2026-08-22). The open receipt
  *  names the CLAIM, never its contents: what it rolled is the PROJECTION's to tell, and it
  *  arrives on the streamed row. Settling before then threw "not in the authored catalog" — a
@@ -56,6 +35,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   let active_claim_id: string | null = null
   let lifetime = 0
 
+  // A settled crush waits here for its runes to show; the claim slot is already free.
   const publish_ready_crush_results = (): void => {
     const { inventory } = get_state().session
     for (const [claim_id, pending] of pending_crush_results) {
@@ -65,9 +45,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         Object.freeze({ digest: pending.digest, items, received_amounts: pending.received_amounts })
       )
       pending_crush_results.delete(claim_id)
-      if (active_claim_id === claim_id) active_claim_id = null
     }
-    if (!active_claim_id) sweep()
   }
 
   const settle = async (batch: readonly ClaimRow[]): Promise<PendingCrushResult | null> => {
@@ -94,7 +72,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       else await wallet.character.claim_loot_batch({ claims, custody })
       return null
     }
-    const runes = encyclopedia_catalog.items
+    const runes = items
       .filter((item) => item.category === 'rune')
       .map(({ item_type }) => ({
         item_type,
@@ -133,7 +111,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       .then((pending) => {
         if (!current()) return
         if (pending) pending_crush_results.set(claim.id, pending)
-        else active_claim_id = null
+        active_claim_id = null
         dispatch({ type: 'inventory/claims_settled', claim_ids: batch.map(({ id }) => id) })
         publish_ready_crush_results()
       })
@@ -195,4 +173,9 @@ const reduce: NonNullable<AppModule['reduce']> = (state, input) => {
   }
   return state
 }
-export default Object.freeze({ name: 'claims', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'claims',
+  initial: () => ({ claim_failures: [] }),
+  reduce,
+  observe,
+}) satisfies AppModule

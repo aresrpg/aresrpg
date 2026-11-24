@@ -35,9 +35,6 @@ export const sun_shafts_visibility = ({
   return 1 - smooth_progress
 }
 
-export const sun_shafts_visible = (input: Parameters<typeof sun_shafts_visibility>[0]): boolean =>
-  sun_shafts_visibility(input) > 0
-
 export const sun_shafts_source_threshold = (base: number, ndc_x: number, ndc_y: number): number => {
   const edge = Math.max(Math.abs(ndc_x), Math.abs(ndc_y))
   const peripheral = Math.max(0, Math.min(1, (edge - 1.05) / 1.2))

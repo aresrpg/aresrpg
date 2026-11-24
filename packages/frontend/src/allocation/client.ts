@@ -18,7 +18,7 @@ const measure = (name: string, started: number): void => {
   performance.measure(name, { start: started, end: performance.now() })
 }
 
-/** Campaign traffic uses the ordinary wallet-authenticated game connection. */
+/** Campaign traffic uses the ordinary wallet-authenticated connection, as a view: it never takes the game's seat. */
 export const create_allocation_client = (
   session: AuthSession,
   connect = connect_server,
@@ -50,6 +50,7 @@ export const create_allocation_client = (
   const start = () =>
     connect({
       session,
+      seat: false,
       dispatch: (input) => {
         if (LINK_FAILURES.has(input.type))
           fail(new Error(input.type === 'link/replaced' ? 'connection_replaced' : 'connection_failed'))

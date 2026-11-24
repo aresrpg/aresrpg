@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The user's ONE inventory: every Item held by any kiosk the address OWNS, flat. The kiosk id
-// rides on each row as a transaction-building convenience — never a grouping (owner 2026-08-12).
+// rides on each row as a transaction-building convenience, never a grouping.
 // Equipment is a CHARACTER concern and comes through the characters read.
 
 import type { ItemRow } from '@aresrpg/protocol'

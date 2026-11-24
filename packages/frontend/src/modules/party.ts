@@ -148,13 +148,9 @@ const party_has = (
   party: Readonly<PartyRow> | null,
   target: string | undefined,
   field: 'members' | 'invited'
-): boolean => !!target && !!party?.[field].some(({ character_id }) => character_id === target)
-const party_lacks = (
-  party: Readonly<PartyRow> | null,
-  target: string | undefined,
-  field: 'members' | 'invited'
-): boolean => !!party && !!target && !party_has(party, target, field)
+): boolean => !!party?.[field].some(({ character_id }) => character_id === target)
 
+/** The authority shows the operation's result. A party that is gone has no invite and no member left. */
 const party_operation_reconciled = (operation: string, party: Readonly<PartyRow> | null): boolean => {
   const [kind, target] = operation.split(':')
   switch (kind) {
@@ -163,11 +159,12 @@ const party_operation_reconciled = (operation: string, party: Readonly<PartyRow>
     case 'accept':
       return party?.id === target
     case 'invite':
-      return party_has(party, target, 'invited')
+      // an invitee who already accepted is a member, never invited
+      return party_has(party, target, 'invited') || party_has(party, target, 'members')
     case 'rescind':
-      return party_lacks(party, target, 'invited')
+      return !party_has(party, target, 'invited')
     case 'kick':
-      return party_lacks(party, target, 'members')
+      return !party_has(party, target, 'members')
     default:
       return false
   }
@@ -242,45 +239,32 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 }
 
 const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch }) => {
+  // A succeeded operation stays pending until the party packet shows its result; a failed one ends here.
   const run = (
     character_id: string,
     operation: string,
     wallet: AuthSession,
-    action: () => Promise<Readonly<{ digest: string }>>,
-    hold_success = false
+    action: () => Promise<Readonly<{ digest: string }>>
   ): void => {
     if (get_state().party.pending_by_character[character_id]) return
     dispatch({ type: 'party/pending', character_id, operation })
-    let succeeded = false
-    void action()
-      .then(() => {
-        succeeded = true
-      })
-      .catch((error) => {
-        if (get_state().session.wallet === wallet) toast.add(error)
-      })
-      .finally(() => {
-        const state = get_state()
-        if (succeeded && hold_success) return
-        if (state.session.wallet === wallet && state.party.pending_by_character[character_id] === operation)
-          dispatch({ type: 'party/pending', character_id, operation: null })
-      })
+    void action().catch((error) => {
+      const state = get_state()
+      if (state.session.wallet !== wallet) return
+      toast.add(error)
+      if (state.party.pending_by_character[character_id] === operation)
+        dispatch({ type: 'party/pending', character_id, operation: null })
+    })
   }
   events.on('party/invite', ({ character_id: invited, name }) => {
     const state = get_state()
     const actor = selected_character(state.session)
     const { wallet } = state.session
     if (!actor || !wallet || !party_invite_allowed(selected_party(state), actor.id, actor.custody !== 'fight')) return
-    run(
-      actor.id,
-      `invite:${invited}`,
-      wallet,
-      async () => {
-        const current = selected_party(get_state())
-        return wallet.party.invite(current, actor, { id: invited, name })
-      },
-      true
-    )
+    run(actor.id, `invite:${invited}`, wallet, async () => {
+      const current = selected_party(get_state())
+      return wallet.party.invite(current, actor, { id: invited, name })
+    })
   })
   const answer = (party_id: string, accept: boolean): void => {
     const state = get_state()
@@ -288,12 +272,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const invited = selected_party_invitation(state)?.id === party_id
     if (!character || !wallet || !invited || character.custody !== 'kiosk' || (accept && selected_party(state))) return
-    run(
-      character.id,
-      `${accept ? 'accept' : 'decline'}:${party_id}`,
-      wallet,
-      () => (accept ? wallet.party.accept(party_id, character) : wallet.party.decline(party_id, character)),
-      true
+    run(character.id, `${accept ? 'accept' : 'decline'}:${party_id}`, wallet, () =>
+      accept ? wallet.party.accept(party_id, character) : wallet.party.decline(party_id, character)
     )
   }
   events.on('party/accept', ({ party }) => answer(party, true))
@@ -304,7 +284,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const party = selected_party(state)
     if (leader && wallet && party)
-      run(leader.id, `rescind:${character_id}`, wallet, () => wallet.party.rescind(party, leader, character_id), true)
+      run(leader.id, `rescind:${character_id}`, wallet, () => wallet.party.rescind(party, leader, character_id))
   })
   events.on('party/leave', () => {
     const state = get_state()
@@ -312,13 +292,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const party = selected_party(state)
     if (!character || !wallet || !party) return
-    run(
-      character.id,
-      'leave',
-      wallet,
-      () =>
-        party.members.length === 1 ? wallet.party.disband(party, character) : wallet.party.leave(party, character),
-      true
+    run(character.id, 'leave', wallet, () =>
+      party.members.length === 1 ? wallet.party.disband(party, character) : wallet.party.leave(party, character)
     )
   })
   events.on('party/kick', ({ character_id }) => {
@@ -327,8 +302,13 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const party = selected_party(state)
     if (leader && wallet && party)
-      run(leader.id, `kick:${character_id}`, wallet, () => wallet.party.kick(party, leader, character_id), true)
+      run(leader.id, `kick:${character_id}`, wallet, () => wallet.party.kick(party, leader, character_id))
   })
 }
 
-export default Object.freeze({ name: 'party', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'party',
+  initial: () => ({ party: initial_party_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

@@ -3,16 +3,20 @@
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { GRID_CELLS, in_zone } from './combat_grid.ts'
-import { KINDS, sheet_of } from './fighters.ts'
+import { sheet_of } from './fighters.ts'
+import { EFFECT_KINDS } from './move_contract.gen.ts'
 import { mix } from './prng.ts'
-import { emit } from './runtime.ts'
+import { emit, retain_zones } from './runtime.ts'
 import type { BoardZone, FightRuntime, ResolveRows } from './types.ts'
 
 type IdentifiedZone = { zone: BoardZone; id: string }
 type ZonePartition = { fired: IdentifiedZone[]; kept: IdentifiedZone[] }
 
 const displacement_kind = (kind: bigint): boolean =>
-  kind === KINDS.push || kind === KINDS.pull || kind === KINDS.teleport || kind === KINDS.swap
+  kind === EFFECT_KINDS.push ||
+  kind === EFFECT_KINDS.pull ||
+  kind === EFFECT_KINDS.teleport ||
+  kind === EFFECT_KINDS.swap
 
 // The zone IS the payload's area: one authored fact (the trap's shape/size) decides who is
 // trigger-able, displayed, and affected — payload rows never carry a second area of their own.
@@ -98,22 +102,13 @@ export const fire_glyphs_under = (runtime: FightRuntime, fighter: bigint, resolv
   })
 }
 
-export const tick_board_zones = (runtime: FightRuntime, owner: bigint): void => {
-  const kept: BoardZone[] = []
-  const kept_ids: string[] = []
-  runtime.contract.zones.forEach((zone, index) => {
-    if (zone.owner_fighter === owner && zone.turns_left > 0n) {
-      const next = { ...zone, turns_left: zone.turns_left - 1n }
-      if (next.turns_left > 0n) {
-        kept.push(next)
-        kept_ids.push(runtime.render_ids.zones[index])
-      } else
-        emit(runtime, 'zone_removed', { zone_id: runtime.render_ids.zones[index], kind: 'glyph', reason: 'expired' })
-    } else {
-      kept.push(zone)
-      kept_ids.push(runtime.render_ids.zones[index])
-    }
-  })
-  runtime.contract.zones = kept
-  runtime.render_ids.zones = kept_ids
-}
+/** A glyph counts down only on its owner's turns; a zone without a duration stays. */
+export const tick_board_zones = (runtime: FightRuntime, owner: bigint): void =>
+  retain_zones(
+    runtime,
+    (zone) => {
+      if (zone.owner_fighter !== owner || zone.turns_left === 0n) return zone
+      return zone.turns_left === 1n ? null : { ...zone, turns_left: zone.turns_left - 1n }
+    },
+    'expired'
+  )

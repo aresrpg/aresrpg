@@ -4,10 +4,11 @@
 import { DragScroll } from '@aresrpg/ui'
 import type { ItemRow } from '@aresrpg/protocol'
 
-import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_is_pet_food } from '../content/item_resource_filters.ts'
+import { is_crafted } from '../content/recipes.ts'
 import { item_resource_kind } from '../content/resource_kind.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import './character_window.css'
 
 export const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 export type BagCategory = (typeof BAG_CATEGORIES)[number]
@@ -24,11 +25,7 @@ const resource_filter_of = (item: Readonly<ItemRow>) => {
   if (item.category === 'key') return 'keys'
   if (item.category === 'rune') return 'runes'
   if (item.category !== 'resource') return null
-  return item_resource_kind(
-    item.item_type,
-    !!encyclopedia_catalog.item(item.item_type)?.recipe,
-    item_is_pet_food(item.item_type)
-  )
+  return item_resource_kind(item.item_type, is_crafted(item.item_type), item_is_pet_food(item.item_type))
 }
 
 export const bag_item_matches = (item: Readonly<ItemRow>, category: BagCategory, filter: ResourceFilter): boolean =>

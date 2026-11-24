@@ -20,7 +20,7 @@ import {
 
 import './minimap.css'
 import { displayed_character } from '../../agents/observation.ts'
-import { titleize } from '../../content/catalog.ts'
+import { titleize } from '../../content/titles.ts'
 import { city_at_position, world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'

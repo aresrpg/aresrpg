@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { CharacterRow } from '@aresrpg/protocol'
-import { raid_entrants, raid_keys } from '@aresrpg/protocol/strategies'
+import type { CharacterRow, ItemRow, ListingRow, TradeRow } from '@aresrpg/protocol'
+import { available_inventory_items, encumbered_asset_ids } from '@aresrpg/protocol/inventory'
 
 import { inventory_read } from './actor_inventory.ts'
 import type { SelectedAction } from './behavior_targets.ts'
 import type { WorldSelection } from './behavior_world.ts'
 import { COMBAT_PROFILE_SCHEMA, type CombatProfile } from './combat_profile.ts'
-import { fight_checkpoint_id, hydrate_gameplay_fight } from './gameplay.ts'
-import { owned_character, type GameplayContext } from './gameplay_context.ts'
+import {
+  owned_character,
+  type GameplayContext,
+  fight_checkpoint_id,
+  hydrate_gameplay_fight,
+} from './gameplay_context.ts'
 import { identifier, nonempty, object_schema, type Schema } from './gameplay_schema.ts'
 import { dungeon_content, joinable_team } from './team_actions.ts'
 
@@ -61,7 +65,38 @@ export const select_join = (action: JoinAction, context: GameplayContext): World
   const joined = free ? open_fight(hero.id, action.allies, context) : undefined
   return joined ? { status: 'action', action: joined } : { status: 'failure', code: 'fight_not_joinable' }
 }
-/** A hero enters only when every listed teammate can follow: the shared rule names who can. */
+/** What a wallet holds as the bot observes it: every item, with the listings and trades that lock some. */
+type RaidBag = Readonly<{
+  items: readonly ItemRow[]
+  listings: readonly ListingRow[]
+  trades: readonly TradeRow[]
+}>
+/** The keys of one kiosk a raid can burn: certified on chain and neither listed nor in a trade. */
+export const raid_keys = (bag: RaidBag, key: string, kiosk: string): readonly ItemRow[] =>
+  available_inventory_items(bag.items, encumbered_asset_ids(bag.listings, bag.trades), kiosk).filter(
+    (item) => item.version && item.item_type === key
+  )
+/** Entering burns a key for good. Of the listed heroes, in their order, those who can be in this
+ * dungeon run: already inside it, or one hero per usable key of its kiosk. A hero the wallet does not
+ * hold cannot. A hero enters only when this is the whole team. */
+export const raid_entrants = (
+  raid: Readonly<{
+    dungeon: string
+    key: string
+    team: readonly string[]
+    heroes: readonly Readonly<Pick<CharacterRow, 'id' | 'kiosk' | 'dungeon_run'>>[]
+    bag: RaidBag
+  }>
+): readonly string[] => {
+  const members = raid.team.flatMap((id) => raid.heroes.find((hero) => hero.id === id) ?? [])
+  const outside = members.filter((hero) => hero.dungeon_run?.dungeon !== raid.dungeon)
+  const units = (kiosk: string) => raid_keys(raid.bag, raid.key, kiosk).reduce((total, { amount }) => total + amount, 0)
+  const keyed = outside.filter(
+    (hero, index) => outside.slice(0, index).filter(({ kiosk }) => kiosk === hero.kiosk).length < units(hero.kiosk)
+  )
+  return members.filter((hero) => !outside.includes(hero) || keyed.includes(hero)).map(({ id }) => id)
+}
+/** A hero enters only when every listed teammate can follow. */
 const entry_step = (action: DungeonAction, hero: CharacterRow, context: GameplayContext): WorldSelection => {
   const { character_id, world, dungeon } = action
   const { inventory, characters } = context.snapshot

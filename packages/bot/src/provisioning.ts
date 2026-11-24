@@ -3,11 +3,8 @@
 import { create_agent_identity } from '@aresrpg/sdk/agent-multisig'
 import { prepare_agent_pairing } from '@aresrpg/sdk/agent-signer'
 import { parse_agent_pairing_request, type AgentPairingRequest } from '@aresrpg/sdk/agent-pairing'
-import { fromBase64 } from '@mysten/sui/utils'
-import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 
-import type { Account, Bot, BotPolicy } from './model.ts'
-import { hash_secret } from './security.ts'
+import { google_owner, hash_secret, type Account, type Bot, type BotPolicy } from './model.ts'
 import type { ControlStore } from './store.ts'
 import type { ManagedKey, ManagedProvider } from './managed_signer.ts'
 
@@ -19,23 +16,11 @@ export type ProvisionRequest = Readonly<{
   status: 'requested' | 'ready'
   key: ManagedKey | null
 }>
-const verify_owner = (owner: string, identifier: string) => {
-  parse_agent_pairing_request({
-    version: 1,
-    nonce: '00000000-0000-4000-8000-000000000000',
-    network: 'mainnet',
-    owner,
-    zklogin_public_identifier: identifier,
-  })
-  const google = ZkLoginPublicIdentifier.fromBytes(fromBase64(identifier), { address: owner })
-  if (google.toSuiAddress() !== owner) throw new Error('CANONICAL_GOOGLE_OWNER_REQUIRED')
-  return google
-}
 export const request_provisioning = async (
   store: ControlStore,
   input: Omit<ProvisionRequest, 'status' | 'key'>
 ): Promise<ProvisionRequest> => {
-  verify_owner(input.owner, input.zklogin_public_identifier)
+  google_owner(input.owner, input.zklogin_public_identifier)
   const key = `provision:${input.id}`
   const owner_key = `account:${input.owner}`
   return store
@@ -112,7 +97,7 @@ export const run_provisioning = async (store: ControlStore, provider: ManagedPro
   if (request.status !== 'requested') throw new Error('PROVISION_STATE_CONFLICT')
   const { key, sealed } = await provider.prepare(id)
   const member = provider.signer(key, sealed)
-  const google = verify_owner(request.owner, request.zklogin_public_identifier)
+  const google = google_owner(request.owner, request.zklogin_public_identifier)
   const identity = create_agent_identity({ agent_public_key: member.public_key, zklogin_public_identifier: google })
   const challenge = new TextEncoder().encode(`aresrpg managed key verification:${id}:${key.key_id}`)
   const proof = await member.sign_personal_message(challenge)
@@ -228,7 +213,7 @@ export const request_pairing_proof = async (
 ) => {
   const request = parse_agent_pairing_request(input.request)
   if (request.owner !== input.owner) throw new Error('PAIRING_OWNER_MISMATCH')
-  verify_owner(input.owner, request.zklogin_public_identifier)
+  google_owner(input.owner, request.zklogin_public_identifier)
   const key = `proof:${input.authorization_id}:${request.nonce}`
   // Held before the commit that wakes the actor, so its answer cannot arrive unseen.
   const held = hold_request(key, deadline)

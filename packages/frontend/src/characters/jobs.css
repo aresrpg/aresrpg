@@ -8,11 +8,373 @@
  * numbers, no left-accent rails on cards, no glow soup. Reads tokens only.
  */
 
+.game-character-window--jobs .jobs {
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+}
+.game-character-window--jobs .jobs__list {
+  padding: 8px;
+  gap: 10px;
+  overflow-y: auto;
+}
+.game-character-window--jobs .jobs__list-head {
+  margin: 0;
+  font-size: 10px;
+}
+.game-character-window--jobs .jobs__list-entry {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.game-character-window--jobs .jobs__alternate-slot:empty {
+  display: none;
+}
+.game-character-window--jobs .jobs__alternate-slot:not(:empty) {
+  grid-row: 2;
+}
+.game-character-window--jobs .jobs__list-row {
+  gap: 8px;
+  min-height: 48px;
+  padding: 5px;
+}
+.game-character-window--jobs .jobs__list-name {
+  font-size: 12px;
+}
+.game-character-window--jobs .jobs__detail {
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+.game-character-window--jobs .jobs__detail-head {
+  padding: 0;
+  min-height: 40px;
+  gap: 8px;
+}
+.game-character-window--jobs .jobs__detail-sub {
+  font-size: 10px;
+}
+.game-character-window--jobs .jobs__icon {
+  width: 34px;
+  height: 36px;
+}
+.game-character-window--jobs .jobs__xp {
+  height: 12px;
+  flex: none;
+}
+.game-character-window--jobs .jobs__browse {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 0;
+}
+.game-character-window--jobs .jobs__gather-section {
+  flex: 0 1 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 100px;
+}
+.game-character-window--jobs .jobs__recipes-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 6px;
+}
+.game-character-window--jobs .jobs__section-head {
+  flex: none;
+  margin: 0;
+  padding: 4px 0;
+  font-size: 11px;
+  min-height: 24px;
+}
+.game-character-window--jobs .jobs__table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  column-width: auto;
+}
+.game-character-window--jobs .jobs__table-head,
+.game-character-window--jobs .jobs__table-row {
+  display: grid;
+  grid-template-columns: 32px 55px minmax(100px, 1fr) 60px 44px;
+  grid-column: auto;
+  gap: 6px;
+  padding: 6px;
+  font-size: 11px;
+  min-height: 40px;
+}
+.game-character-window--jobs .jobs__table-head {
+  flex: none;
+  min-height: 30px;
+  padding-block: 4px;
+}
+.game-character-window--jobs .jobs__gather-rows {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.game-character-window--jobs .jobs__col-name {
+  min-width: 0;
+}
+.game-character-window--jobs .jobs__col-name img {
+  width: 28px;
+  height: 28px;
+}
+.game-character-window--jobs .jobs__recipes.jobs__recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-auto-rows: 72px;
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  min-height: 0;
+}
+.game-character-window--jobs .jobs__recipe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 20%, transparent);
+  border-radius: 5px;
+  background: var(--aui-raised);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--aui-brass-hi) 4%, transparent);
+}
+.game-character-window--jobs .jobs__recipe:hover {
+  background: var(--aui-high);
+}
+.game-character-window--jobs .jobs__recipe.is-selected {
+  border-color: var(--aui-brass);
+  background: var(--aui-brass-deep);
+}
+.game-character-window--jobs .jobs__recipe.is-best-progress {
+  border-color: #76ad87;
+}
+.game-character-window--jobs .jobs__recipe.is-best-progress .aui-collection-badge {
+  color: #9dcbaa;
+}
+.game-character-window--jobs .jobs__recipe.is-locked {
+  opacity: 0.65;
+}
+.game-character-window--jobs .jobs__recipe > img {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-window--jobs .jobs {
+    grid-template-columns: 145px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .game-character-window--jobs .jobs__list {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px;
+    gap: 6px;
+  }
+  .game-character-window--jobs .jobs__list-row {
+    min-height: 44px;
+    padding: 4px;
+    gap: 5px;
+  }
+  .game-character-window--jobs .jobs__list-name {
+    font-size: 11px;
+  }
+  .game-character-window--jobs .jobs__detail {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  .game-character-window--jobs .jobs__detail-head {
+    min-height: 27px;
+    height: 27px;
+    padding: 0;
+  }
+  .game-character-window--jobs .jobs__detail-sub,
+  .game-character-window--jobs .jobs__icon {
+    display: none;
+  }
+  .game-character-window--jobs .jobs__detail-name {
+    font-size: 13px;
+  }
+  .game-character-window--jobs .jobs__detail-head > .flex {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .game-character-window--jobs .jobs__detail-head > .flex .text-sm {
+    font-size: 11px;
+  }
+  .game-character-window--jobs .jobs__xp {
+    height: 8px;
+  }
+  .game-character-window--jobs .jobs__xp-num {
+    font-size: 7px;
+    line-height: 8px;
+  }
+  .game-character-window--jobs .jobs__browse {
+    gap: 5px;
+  }
+  .game-character-window--jobs .jobs__section-head {
+    min-height: 16px;
+    height: 16px;
+    padding: 0;
+    font-size: 10px;
+  }
+  .game-character-window--jobs .jobs__gather-section {
+    flex: 0 0 68px;
+    min-height: 68px;
+    gap: 3px;
+  }
+  .game-character-window--jobs .jobs__table-head {
+    display: none;
+  }
+  .game-character-window--jobs .jobs__recipes-section {
+    gap: 4px;
+  }
+  .game-character-window--jobs .jobs__recipes.jobs__recipe-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, 68px);
+    grid-auto-columns: calc((100% - 18px) / 4);
+    grid-auto-rows: auto;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .game-character-window--jobs .jobs__browse:has(.jobs__gather-section) .jobs__recipe-grid {
+    grid-template-rows: repeat(2, 68px);
+  }
+  .game-character-window--jobs .jobs__recipe {
+    padding: 5px;
+    gap: 6px;
+  }
+  .game-character-window--jobs .jobs__recipe > img {
+    width: 28px;
+    height: 28px;
+  }
+  .game-character-window--jobs .jobs__craft-head {
+    padding-right: 30px;
+    font-size: 11px;
+  }
+}
+.game-character-window--jobs .jobs__list-lvl {
+  border: 0;
+  background: none;
+  color: var(--aui-brass-hi);
+  font-size: 10px;
+  padding: 0;
+  min-width: 0;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-window--jobs .jobs__recipes.jobs__recipe-grid {
+    height: 100%;
+    flex: 1;
+    grid-template-rows: repeat(3, minmax(44px, 1fr));
+    align-content: stretch;
+  }
+  .game-character-window--jobs .jobs__browse:has(.jobs__gather-section) .jobs__recipe-grid {
+    grid-template-rows: repeat(2, minmax(44px, 1fr));
+  }
+}
+.game-character-window--jobs .jobs__detail {
+  container: jobs-detail / inline-size;
+}
+/* Browsing keeps its full width; recipe inspection uses the shared movable item window. */
+.game-character-window--jobs .jobs__gather-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+}
+.game-character-window--jobs .jobs__table-head {
+  display: none;
+}
+.game-character-window--jobs .jobs__table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto;
+  height: auto;
+  gap: 4px 10px;
+  min-height: 76px;
+  padding: 8px;
+  border: 1px solid #ffffff12;
+  border-radius: 6px;
+  background: var(--aui-raised);
+}
+.game-character-window--jobs .jobs__col-name {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.game-character-window--jobs .jobs__col-name img {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.game-character-window--jobs .jobs__col-tier {
+  display: none;
+}
+.game-character-window--jobs .jobs__col-req,
+.game-character-window--jobs .jobs__col-yield,
+.game-character-window--jobs .jobs__col-xp {
+  grid-row: 2;
+  font-size: 10px;
+}
+.game-character-window--jobs .jobs__list-sub {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-transform: none;
+}
+.game-character-window--jobs .jobs__list-lvl {
+  flex: none;
+  white-space: nowrap;
+}
+.game-character-window--jobs .jobs__recipe-grid .jobs__recipe {
+  min-height: 58px;
+  height: auto;
+}
+@container aui-window (max-width: 650px) {
+  .game-character-window--jobs .jobs__gather-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.game-character-window--jobs .jobs__gather-section {
+  flex-basis: 270px;
+}
+@container aui-window (max-width:1100px) {
+  .game-character-window--jobs .jobs__gather-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container aui-window (max-width: 1100px) {
+  .game-character-window--jobs .jobs {
+    grid-template-columns: minmax(110px, 20%) minmax(0, 1fr);
+  }
+  .game-character-window--jobs .jobs__list {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
 .jobs {
   display: grid;
   grid-template-columns: minmax(390px, 420px) minmax(0, 1fr);
   width: 100%;
-  gap: var(--s-4);
+  gap: 16px;
   /* T72: fill the tab body + stretch the columns so the PANELS own the scroll (one owner), not the page —
      kills the double scrollbar (was: panels scrolled AND the page overflowed past the viewport-magic cap). */
   align-items: stretch;
@@ -26,15 +388,13 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
-  border-right: 1px solid var(--hair);
+  border-right: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
   /* T74: symmetric L/R padding (lead: left was 0; match the right, consistent ~16px across both panels). */
-  padding-left: var(--s-4);
-  padding-right: var(--s-4);
+  padding-left: 16px;
+  padding-right: 16px;
   /* T58-B: contain the rail — scroll WITHIN the panel, never off the page bottom. */
   min-height: 0;
   max-height: 100%;
-  overflow-y: auto;
 }
 
 .jobs__list-group {
@@ -46,19 +406,18 @@
 .jobs__list-head {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  margin-left: calc(var(--jobs-adviser-width) + var(--s-2));
-  padding: var(--s-1) 0 var(--s-2);
-  font-size: 0.6rem;
+  gap: 8px;
+  margin-left: calc(var(--jobs-adviser-width) + 8px);
+  padding: 4px 0 8px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-faint);
+  color: var(--aui-muted);
 }
 
 .jobs__list-glyph {
   width: 13px;
   height: 13px;
-  color: var(--accent);
+  color: var(--aui-brass);
   display: inline-flex;
   opacity: 0.7;
 }
@@ -71,26 +430,24 @@
 .jobs__list-row {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
   width: 100%;
   text-align: left;
-  padding: var(--s-2);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--r-2);
+  border-radius: 0;
   cursor: pointer;
   transition:
-    background var(--dur-1) var(--ease),
-    border-color var(--dur-1) var(--ease);
+    background 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jobs__list-row:hover {
-  background: var(--surface-2);
+  background: var(--aui-peak);
 }
 
 .jobs__list-row.is-selected {
-  background: var(--accent-dim);
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--aui-brass) 13%, transparent);
+  border-color: var(--aui-brass);
 }
 
 .jobs__list-id {
@@ -102,10 +459,9 @@
 }
 
 .jobs__list-name {
-  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--fg);
+  color: var(--aui-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,38 +469,28 @@
 
 .jobs__list-sub {
   font-size: 0.62rem;
-  color: var(--fg-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--aui-soft);
 }
 
 .jobs__list-lvl {
-  flex: none;
-  min-width: 22px;
   text-align: center;
-  font-size: 0.66rem;
-  color: var(--fg-muted);
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid var(--hair);
-  border-radius: var(--r-1);
-  padding: 1px 5px;
+  border-radius: 0;
 }
 
 .jobs__list-row.is-selected .jobs__list-lvl {
-  color: var(--fg);
-  border-color: var(--accent);
+  color: var(--aui-ink);
+  border-color: var(--aui-brass);
 }
 
 .jobs__list-tag {
   flex: none;
-  font-family: var(--font-mono);
+  font-family: var(--aui-font);
   font-size: 0.52rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-radius: var(--r-1);
+  color: var(--aui-brass-ink);
+  background: var(--aui-brass);
+  border-radius: 0;
   padding: 2px 5px;
 }
 
@@ -152,25 +498,20 @@
 .jobs__detail {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
   min-width: 0;
-  /* T74: symmetric L/R padding so content + the inner scrollbar never sit flush to either panel edge
-     (a reported "missing padding on the right"; lead: match left, consistent ~16px). The scroll now lives
-     in the child panes (.jobs__browse / .jobs__item-detail) — the header + XP stay pinned while the
-     browse + detail scroll independently (encyclopedia master/detail), so this column never scrolls. */
-  padding-left: var(--s-4);
-  padding-right: var(--s-4);
+  /* T74: symmetric L/R padding so content + the inner scrollbar never sit flush to either panel edge (a reported "missing padding on the right"; lead: match left, consistent ~16px). The scroll now lives in the child panes (.jobs__browse / .jobs__item-detail) — the header + XP stay pinned while the browse + detail scroll independently (encyclopedia master/detail), so this column never scrolls. */
+  padding-left: 16px;
+  padding-right: 16px;
   /* T58-B/T72: bound the height so the inner panes own the scroll, never the page. */
   min-height: 0;
   max-height: 100%;
-  overflow: hidden;
 }
 
 /* ── browse / item-detail split (encyclopedia master-detail) ──────── */
 .jobs__browse-area {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--s-4);
+  gap: 16px;
   flex: 1;
   min-height: 0;
   /* T74: force the grid to FILL the detail column's width — a flex item that's also a grid container
@@ -181,9 +522,6 @@
   min-width: 0;
 }
 .jobs__browse {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
@@ -192,20 +530,17 @@
 .jobs__detail-head {
   display: flex;
   align-items: center;
-  gap: var(--s-3);
 }
 
 .jobs__icon {
-  width: 40px;
-  height: 40px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--hair);
-  border-radius: var(--r-2);
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.22);
-  color: var(--accent);
+  color: var(--aui-brass);
 }
 
 .jobs__glyph {
@@ -224,39 +559,33 @@
 .jobs__detail-title-row {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: 8px;
 }
 
 .jobs__detail-name {
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--fg);
+  color: var(--aui-ink);
 }
 
 .jobs__detail-sub {
-  font-size: 0.7rem;
-  color: var(--fg-muted);
-}
-
-.jobs__tool {
-  color: var(--fg);
+  color: var(--aui-soft);
 }
 
 /* xp bar */
 .jobs__xp {
   position: relative;
-  height: 16px;
-  border-radius: var(--r-1);
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--hair);
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
   overflow: hidden;
 }
 
 .jobs__xp-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
-  transition: width var(--dur-2) var(--ease);
+  background: linear-gradient(90deg, var(--aui-brass), var(--aui-brass-hi));
+  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jobs__xp-num {
@@ -266,72 +595,30 @@
   align-items: center;
   justify-content: center;
   font-size: 0.58rem;
-  color: var(--fg);
+  color: var(--aui-ink);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   pointer-events: none;
-}
-
-/* gather affordance — targets the selected world node (Wave GATHER) */
-.jobs__gather {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  min-height: 30px;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--hair);
-  border-radius: var(--r-2);
-  background: var(--accent-dim);
-}
-.jobs__gather.is-active {
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--s-1);
-}
-.jobs__gather-btn {
-  flex: 0 0 auto;
-}
-.jobs__gather-label {
-  font-size: 0.62rem;
-  color: var(--fg);
-}
-.jobs__gather-hint {
-  font-size: 0.6rem;
-  color: var(--fg-muted);
-}
-.jobs__gather-bar {
-  position: relative;
-  height: 8px;
-  border-radius: var(--r-1);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--hair);
-  overflow: hidden;
-}
-.jobs__gather-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
-  transition: width var(--dur-2) var(--ease);
 }
 
 /* Resource and recipe section labels. */
 .jobs__section-head {
   display: flex;
-  border-bottom: 1px solid var(--hair);
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
 }
 
 .jobs__section-head > span {
-  font-family: var(--font-mono);
+  font-family: var(--aui-font);
   font-size: 0.62rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--fg);
-  padding: var(--s-1) 0 var(--s-2);
+  color: var(--aui-ink);
+  padding: 4px 0 8px;
 }
 
 /* ── resources table ───────────────────────────────────────────────────────── */
 .jobs__table {
-  display: grid;
   grid-template-columns: fit-content(20%) fit-content(20%) minmax(0, 1fr) fit-content(20%) fit-content(12%);
-  column-gap: var(--s-2);
+  column-gap: 8px;
 }
 
 .jobs__table-head,
@@ -340,8 +627,8 @@
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2);
+  gap: 8px;
+  padding: 8px;
 }
 
 .jobs__table-head > span,
@@ -351,24 +638,21 @@
 }
 
 .jobs__table-head {
-  font-size: 0.58rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--fg-faint);
-  border-bottom: 1px solid var(--hair);
+  color: var(--aui-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
 }
 
 /* rows are buttons (click -> the right-section item detail) — reset native chrome */
 .jobs__table-row {
   width: 100%;
-  border: none;
-  border-bottom: 1px solid var(--hair);
-  background: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-1) var(--ease);
+  transition: background 120ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jobs__table-row:hover {
@@ -385,97 +669,63 @@
 
 /* T74: mark the open item so the selection stays visible + switchable while the detail pane is open. */
 .jobs__table-row.is-selected {
-  background: var(--accent-dim);
+  background: color-mix(in srgb, var(--aui-brass) 13%, transparent);
 }
 
 .jobs__col-tier {
-  color: var(--accent);
+  color: var(--aui-brass);
   font-size: 0.72rem;
 }
 
 .jobs__col-req {
-  color: var(--fg-muted);
-  font-size: 0.72rem;
+  color: var(--aui-soft);
 }
 
 .jobs__col-name {
-  display: flex;
   align-items: center;
-  gap: var(--s-1);
-  color: var(--fg);
-  font-size: 0.82rem;
-  min-width: 0;
+  color: var(--aui-ink);
 }
 
 .jobs__col-yield {
   text-align: right;
-  font-size: 0.72rem;
-  color: var(--accent);
+  color: var(--aui-brass);
 }
 
 .jobs__col-xp {
   text-align: right;
-  font-size: 0.72rem;
-  color: var(--good);
+  color: #4ade80;
 }
 
 .jobs__table-row.is-locked .jobs__col-xp,
 .jobs__table-row.is-locked .jobs__col-yield {
-  color: var(--fg-faint);
+  color: var(--aui-muted);
 }
 
 /* ── recipes grid ──────────────────────────────────────────────────────────── */
 .jobs__recipes {
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
-}
-
-.jobs__recipe-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-}
-
-.jobs__recipe-block-head {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
-
-.jobs__recipe-block-head.is-locked {
-  color: var(--fg-faint);
+  gap: 16px;
 }
 
 .jobs__recipe-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: var(--s-2);
+  gap: 8px;
 }
 
 /* recipe chip — clickable; item icon + name/meta + a small quality DOT (NO left-accent rail). */
 .jobs__recipe {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
   width: 100%;
   text-align: left;
-  padding: var(--s-2);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--hair);
-  border-radius: var(--r-1);
-  min-width: 0;
   cursor: pointer;
   transition:
-    background var(--dur-1) var(--ease),
-    border-color var(--dur-1) var(--ease);
+    background 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jobs__recipe:hover {
-  background: var(--surface-2);
-  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  border-color: color-mix(in srgb, var(--aui-brass) 36%, transparent);
 }
 
 .jobs__recipe.is-locked {
@@ -484,67 +734,17 @@
 
 /* T74: the open recipe stays highlighted in the grid while its detail shows on the right. */
 .jobs__recipe.is-selected {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
-
-.jobs__recipe.is-best-progress {
-  border-color: color-mix(in srgb, var(--good) 52%, var(--hair));
-}
-
-.jobs__recipe-progress {
-  flex: none;
-  border: 1px solid color-mix(in srgb, var(--good) 42%, transparent);
-  border-radius: var(--r-1);
-  padding: 2px 4px;
-  background: color-mix(in srgb, var(--good) 12%, transparent);
-  color: var(--good);
-  font-size: 0.46rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.jobs__recipe-id {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.jobs__recipe-name {
-  font-size: 0.76rem;
-  color: var(--fg);
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.4;
-}
-
-.jobs__recipe-meta {
-  font-size: 0.6rem;
-  color: var(--fg-muted);
-  text-transform: capitalize;
-}
-
-.jobs__recipe-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-1);
-  min-width: 0;
+  background: color-mix(in srgb, var(--aui-brass) 13%, transparent);
+  border-color: var(--aui-brass);
 }
 
 /* NO QUALITY TIERS: the per-tier recipe dot + its q-* ramp died with the concept. */
 
 .jobs__recipe-empty {
   font-size: 0.74rem;
-  color: var(--fg-muted);
+  color: var(--aui-soft);
   font-style: italic;
-  padding: var(--s-2) 0;
+  padding: 8px 0;
 }
 
 /* ── item icon (real CDN art, glyph fallback) ──────────────────────────────── */
@@ -552,7 +752,7 @@
   flex: none;
   object-fit: contain;
   image-rendering: pixelated;
-  border-radius: var(--r-1);
+  border-radius: 0;
 }
 
 .jobs__item-glyph {
@@ -560,10 +760,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--r-1);
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.24);
-  border: 1px solid var(--hair);
-  color: var(--steel);
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+  color: var(--aui-high);
 }
 .jobs__item-glyph svg {
   width: 60%;
@@ -574,31 +774,31 @@
 .jobs__craft {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: 12px;
 }
 
 .jobs__craft-head {
   font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-faint);
-  border-top: 1px solid var(--hair);
-  padding-top: var(--s-3);
+  color: var(--aui-muted);
+  border-top: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+  padding-top: 12px;
 }
 
 .jobs__ingredients {
   display: flex;
   flex-direction: column;
-  gap: var(--s-1);
+  gap: 4px;
 }
 
 .jobs__ingredient {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-1) var(--s-2);
-  border-radius: var(--r-1);
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -607,7 +807,7 @@
   cursor: pointer;
 }
 .jobs__ingredient:hover {
-  background: var(--surface-2);
+  background: var(--aui-peak);
 }
 
 .jobs__ingredient-id {
@@ -621,7 +821,7 @@
 .jobs__ingredient-name {
   min-width: 0;
   font-size: 0.78rem;
-  color: var(--fg);
+  color: var(--aui-ink);
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.4;
@@ -629,7 +829,7 @@
 
 .jobs__ingredient-lvl {
   font-size: 0.66rem;
-  color: var(--fg-muted);
+  color: var(--aui-soft);
   font-variant-numeric: tabular-nums;
 }
 
@@ -640,10 +840,10 @@
   font-variant-numeric: tabular-nums;
 }
 .jobs__ingredient-amt.is-enough {
-  color: var(--good);
+  color: #4ade80;
 }
 .jobs__ingredient-amt.is-short {
-  color: var(--warn);
+  color: var(--aui-brass);
 }
 
 /* SUCCESS CHANCE (#2034) — the chain rolls this off the crafter's job level, so the player reads the bet
@@ -652,21 +852,21 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--s-3);
-  margin-top: var(--s-2);
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .jobs__craft-chance-label {
   font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-faint);
+  color: var(--aui-muted);
 }
 
 .jobs__craft-chance-value {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--aui-brass);
 }
 
 /* craft action bar — amount picker + the CRAFT button (enabled only at job level >= recipe level). */
@@ -675,10 +875,10 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-3);
-  margin-top: var(--s-3);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--hair);
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
 }
 
 .jobs__craft-bar[data-stackable-output='false'] {
@@ -688,7 +888,7 @@
 .jobs__craft-amount {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: 8px;
 }
 
 .jobs__craft-amount[hidden] {
@@ -697,7 +897,7 @@
 
 .jobs__craft-amount-label {
   font-size: 0.74rem;
-  color: var(--fg-muted);
+  color: var(--aui-soft);
 }
 
 .jobs__craft-input {
@@ -705,22 +905,20 @@
   padding: 5px 8px;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  background: var(--surface-2, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--edge);
-  border-radius: var(--r-1);
+  color: var(--aui-ink);
+  background: var(--aui-peak);
+  border: 1px solid var(--aui-hair);
+  border-radius: 0;
 }
 .jobs__craft-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--aui-brass);
 }
 
 .jobs__craft-btn {
   min-width: 110px;
 }
-.jobs__browse {
-  overflow: hidden;
-}
+
 .jobs__gather-section,
 .jobs__recipes-section {
   display: flex;
@@ -728,31 +926,10 @@
   gap: 6px;
   min-height: 0;
 }
-.jobs__gather-section {
-  flex: 0 1 230px;
-}
-.jobs__recipes-section {
-  flex: 1;
-}
-.jobs__table {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
+
 .jobs__table-head,
 .jobs__table-row {
   grid-template-columns: 32px 55px minmax(100px, 1fr) 60px 44px;
-}
-.jobs__gather-rows {
-  min-height: 0;
-  overflow-y: auto;
-}
-.jobs__recipes.jobs__recipe-grid {
-  display: grid;
-  overflow-y: auto;
-  min-height: 0;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  align-content: start;
 }
 
 /* A session adapter that cannot craft now says why, above the bar it closes. */
@@ -760,5 +937,5 @@
   margin: 0;
   font-size: 0.74rem;
   line-height: 1.4;
-  color: var(--warn);
+  color: var(--aui-brass);
 }

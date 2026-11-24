@@ -79,7 +79,6 @@ const patch_noise = (seed: number, fx: number, fy: number): number => {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy
 }
 
-/* eslint-disable complexity -- this is the restored linear procedural texture bake. */
 export const bake_fight_board_surface = (mask: BoardMask, width: number, height: number): DataTexture => {
   const seed = board_seed(mask, width, height)
   const px = Math.max(16, Math.min(PX_PER_CELL, Math.floor(2048 / Math.max(width, height))))
@@ -230,7 +229,6 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
   texture.needsUpdate = true
   return texture
 }
-/* eslint-enable complexity */
 
 export const build_fight_board_slab = (
   mask: BoardMask,

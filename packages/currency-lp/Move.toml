@@ -1,0 +1,12 @@
+[package]
+name = "aresrpg_currency_lp"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[dependencies]
+# Compile-time interface only; publication links Aftermath's own on-chain package.
+aftermath_amm = { local = "./aftermath" }
+
+[addresses]
+aresrpg_currency_lp = "0x0"

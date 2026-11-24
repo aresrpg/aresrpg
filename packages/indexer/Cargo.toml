@@ -54,7 +54,7 @@ hex = "0.4"
 url = "2"
 
 [dev-dependencies]
-# The Move↔indexer parity gate (src/gates.rs) parses the compiled Move build —
+# The Move↔indexer parity gates (test/gates.rs) parse the compiled Move build —
 # the same pinned Sui rev as the framework, so no version can ever drift apart.
 move-binary-format = { git = "https://github.com/MystenLabs/sui.git", rev = "e83d69069e4023cce4a2dcde2b9c74384418fee1" }
 

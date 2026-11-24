@@ -12,10 +12,9 @@ import {
   is_class_name,
   item_stat_center,
   stat_names,
-  type CharacteristicValues,
 } from '@aresrpg/immutable'
+import { character_max_hp, fold_equipment_stats, projected_hp } from '@aresrpg/protocol/character-stats'
 
-import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
 import type { AppInput } from '../store.ts'
 
 import type { SessionState } from './session.ts'
@@ -76,12 +75,25 @@ const with_scribe_folded = (
   return folded
 }
 
+/** The equipment change still applies: each unequipped slot holds its item and each equipped item is in the bag. */
+const equip_change_applies = (
+  session: SessionState,
+  character: Readonly<CharacterRow> | undefined,
+  input: Extract<AppInput, { type: 'character/equip_folded' }>
+): character is Readonly<CharacterRow> =>
+  !!character &&
+  input.unequipped.every(({ slot, item_id }) =>
+    character.equipment.some((row) => row.slot === slot && row.id === item_id)
+  ) &&
+  input.equipped.every(({ item_id }) => session.inventory.some(({ id }) => id === item_id))
+
 /** Fold a PROVEN character receipt — the exact state transition the transaction executed,
- *  nothing invented (chain-initialized state still arrives through the server stream). */
+ *  nothing invented. The roster streams every character change too, often before the receipt: a fold
+ *  applies only while the row still holds what the transaction started from. */
 export const fold_character_receipt = (session: SessionState, input: AppInput): SessionState => {
   if (input.type === 'character/equip_folded') {
     const character = session.characters.find(({ id }) => id === input.character_id)
-    if (!character) return session
+    if (!equip_change_applies(session, character, input)) return session
     const unequip_slots = new Set(input.unequipped.map(({ slot }) => slot))
     const freed = character.equipment
       .filter(({ slot }) => unequip_slots.has(slot))
@@ -103,11 +115,12 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
   }
   if (input.type === 'character/stats_raised')
     return with_character(session, input.character_id, (character) => {
-      if (!is_class_name(character.classe)) return character
-      const current = Object.fromEntries(
-        characteristic_names.map((stat) => [stat, character[stat]])
-      ) as CharacteristicValues
-      const quote = characteristic_spending_quote(character.classe, current, input.spending)
+      if (
+        !is_class_name(character.classe) ||
+        characteristic_names.some((stat) => character[stat] !== input.before[stat])
+      )
+        return character
+      const quote = characteristic_spending_quote(character.classe, input.before, input.spending)
       if (!quote) return character
       return Object.freeze({
         ...character,
@@ -121,24 +134,27 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
       })
     })
   if (input.type === 'character/spell_raised')
-    return with_character(session, input.character_id, (character) => {
-      const current = character.spells[input.spell] ?? 1
-      return Object.freeze({
-        ...character,
-        spells: Object.freeze({ ...character.spells, [input.spell]: current + 1 }),
-        available_spell_points: Math.max(0, character.available_spell_points - current),
-      })
-    })
+    return with_character(session, input.character_id, (character) =>
+      (character.spells[input.spell] ?? 1) === input.before
+        ? Object.freeze({
+            ...character,
+            spells: Object.freeze({ ...character.spells, [input.spell]: input.before + 1 }),
+            available_spell_points: Math.max(0, character.available_spell_points - input.before),
+          })
+        : character
+    )
   if (input.type === 'character/consumed') {
     if (session.consumption_result?.digest === input.digest) return session
     const now = Date.now()
     const consumed = with_character(session, input.character_id, (character) => {
       if (input.effect === 'heal')
-        return Object.freeze({
-          ...character,
-          hp: String(Math.min(character_max_hp(character), projected_hp(character, now) + input.heal)),
-          hp_ms: now,
-        })
+        return character.hp !== input.before.hp || character.hp_ms !== input.before.hp_ms
+          ? character
+          : Object.freeze({
+              ...character,
+              hp: String(Math.min(character_max_hp(character), projected_hp(character, now) + input.heal)),
+              hp_ms: now,
+            })
       // character.move reset_stats: the level-derived capital pool returns in full
       if (input.effect === 'reset_stats')
         return Object.freeze({
@@ -215,7 +231,9 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
       ...session,
       inventory: Object.freeze(
         session.inventory.map((row) =>
-          row.id === input.pet_id ? { ...row, pet_power: (row.pet_power ?? 0) + 1, pet_last_day: today } : row
+          row.id === input.pet_id && (row.pet_power ?? 0) === input.before
+            ? { ...row, pet_power: input.before + 1, pet_last_day: today }
+            : row
         )
       ),
     })
@@ -225,12 +243,12 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
     // Burn the receipt-proven aggregate plan and bank its total XP; stackable output arrives as
     // one item write, while unique successes arrive independently through the item stream.
     const characters = session.characters.map((character) =>
-      character.id === input.character_id
+      character.id === input.character_id && (character.jobs[input.job] ?? '0') === input.before
         ? Object.freeze({
             ...character,
             jobs: Object.freeze({
               ...character.jobs,
-              [input.job]: String(Number(character.jobs[input.job] ?? 0) + input.xp),
+              [input.job]: String(Number(input.before) + input.xp),
             }),
           })
         : character

@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { stat_names } from '@aresrpg/immutable'
 import type { EquippedItem } from '@aresrpg/protocol'
-
-import { item_stat_offset } from '../game/character_stats.ts'
+import { item_stat_offset } from '@aresrpg/protocol/character-stats'
 
 import { natural_slot_for, type EquipmentMap } from './equipment_stage.ts'
 

@@ -8,7 +8,7 @@ import move_packages from '../move-packages.json' with { type: 'json' }
 
 import { JOURNAL_CONTENT_PREFIXES, SCENE_COMPILER_FILES } from './release_inputs.mjs'
 
-const BROWSER_PACKAGES = ['ui', 'frontend', 'mobile', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
+const BROWSER_PACKAGES = ['ui', 'frontend', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
 const BROWSER_FILES = [
   ...SCENE_COMPILER_FILES,
   'bun.lock',
@@ -41,7 +41,11 @@ export const browser_checks_required = (paths, manifest_changed) =>
   })
 
 const ALL_CHECKS = { browsers: true, move: true, indexer: true }
-const MOVE_PATHS = move_packages.packages.map(({ path }) => `${path}/`)
+// Launch packages are published once, outside the game's upgrade slots.
+const MOVE_PATHS = [
+  ...[...move_packages.packages.map(({ path }) => path), ...move_packages.launch_packages].map((path) => `${path}/`),
+  '.github/actions/setup-sui/',
+]
 
 // Workflow job boundaries are explicit in this repository. Unrecognized structure fails open to all checks.
 const workflow_sections = (source) => {
@@ -135,6 +139,13 @@ export const source_checks_for_diff = (base, head, git) => {
   const before = git(['show', `${base}:package.json`])
   const after = git(['show', `${head}:package.json`])
   return !version_only_manifest_change(before, after)
+}
+
+// The gates that speak for a commit's tree: its own, and its parent's when the two trees differ at most in
+// the root package.json "version" line (a version commit). Any other difference leaves the commit alone.
+export const certifying_commits = (sha, git) => {
+  const parent = git(['rev-parse', `${sha}^`]).trim()
+  return source_checks_for_diff(parent, sha, git) ? [sha] : [sha, parent]
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

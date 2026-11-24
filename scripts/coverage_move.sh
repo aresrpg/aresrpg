@@ -82,6 +82,8 @@ cover_package() {
 
 cover_package packages/control 98.01
 cover_package packages/kares 100
+cover_package packages/currency 100 kares:100
+cover_package packages/currency-lp 100 af_lp:100
 cover_package packages/rewards 100 amounts:100 economy:100 community:100 combat_rewards:100 staking:100 tournament_rewards:100
 cover_package packages/seed 98.01 \
   registry:98.01 board_catalog:98.01 dungeon_content:98.01 item_rows:98.01 \

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared stateful session used by interactive and hosted fight clients.
 
-import { create_fight, type Fight, type FightInput, type FightMode } from './fight.ts'
+import { create_fight, type Fight, type FightInput, type FightMode, type FightResult } from './fight.ts'
 import { players_ready_after } from './fighters.ts'
 import type { FightEvent, FightRuntimeError, FightSetup, HydratedFightCheckpoint } from './types.ts'
 import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
@@ -48,7 +48,7 @@ const stamp_boundary = (
   input: Readonly<FightInput>,
   now: () => bigint,
   checkpoint: Readonly<HydratedFightCheckpoint>,
-  mode: FightMode | null
+  mode: FightMode
 ): FightInput => {
   if (input.type !== 'start' && input.type !== 'end_turn' && input.type !== 'crank' && input.type !== 'forfeit')
     return input
@@ -66,65 +66,64 @@ export const create_fight_session = ({
   now: () => bigint
   reconcile: (state: ActiveFightSession) => void
 }>) => {
-  let runtime: Fight | null = null
-  let mode: FightMode | null = null
-  let current: ActiveFightSession | null = null
+  /** Null while closed; an open session always holds its fight and the state it last published. */
+  let open: Readonly<{ runtime: Fight; current: ActiveFightSession }> | null = null
   let presentation_batch = 0
 
-  const reconcile_runtime = (
-    checkpoint: Readonly<HydratedFightCheckpoint>,
-    events: readonly Readonly<FightEvent>[],
-    error: Readonly<FightRuntimeError> | null
-  ): void => {
-    if (!mode) return
+  const publish = (runtime: Fight, mode: FightMode, { state, events, error }: Readonly<FightResult>): void => {
     if (events.length > 0) presentation_batch += 1
-    current = Object.freeze({
+    const current = Object.freeze({
       mode,
-      checkpoint,
-      zone_ids: Object.freeze([...(runtime?.zone_ids() ?? [])]),
+      checkpoint: state,
+      zone_ids: runtime.zone_ids(),
       events: Object.freeze([...events]),
       presentation_batch,
       error,
-      awaiting_turn_witness: runtime?.awaiting_witness() ?? false,
+      awaiting_turn_witness: runtime.awaiting_witness(),
     })
+    open = Object.freeze({ runtime, current })
     reconcile(current)
   }
 
-  const publish = (result: Readonly<ReturnType<Fight['apply']>>): void =>
-    reconcile_runtime(result.state, result.events, result.error)
+  const opened = (runtime: Fight, mode: FightMode): void =>
+    publish(runtime, mode, { state: runtime.state(), events: [], error: null })
 
   return Object.freeze({
     open: ({
       setup,
       state,
-      mode: next_mode,
+      mode,
       seed,
     }: Readonly<{ setup?: FightSetup; state?: HydratedFightCheckpoint; mode: FightMode; seed?: bigint }>): void => {
-      mode = next_mode
-      runtime = create_fight({ setup, state, mode, seed })
-      reconcile_runtime(runtime.state(), Object.freeze([]), null)
+      const runtime = create_fight({ setup, state, mode, seed })
+      opened(runtime, mode)
     },
     apply: (input: Readonly<FightInput>): boolean => {
-      if (!runtime) return false
+      if (!open) return false
+      const { runtime } = open
+      const { mode } = open.current
       const result = runtime.apply(stamp_boundary(input, now, runtime.state(), mode))
-      publish(result)
+      publish(runtime, mode, result)
       if (
         mode === 'local' &&
         input.type === 'ready' &&
         result.error === null &&
         players_ready_after(result.state.contract.fighters, null)
       )
-        publish(runtime.apply(stamp_boundary({ type: 'start' }, now, runtime.state(), mode)))
+        publish(runtime, mode, runtime.apply(stamp_boundary({ type: 'start' }, now, runtime.state(), mode)))
       return true
     },
     simulate_turn: (): boolean => {
-      if (!runtime || mode !== 'local') return false
+      if (open?.current.mode !== 'local') return false
+      const { runtime } = open
       const { contract } = runtime.state()
       const minimum = contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms
       const observed_ms = now()
       const boundary = { observed_ms: observed_ms < minimum ? minimum : observed_ms }
       const actor = contract.queue[Number(contract.turn_ptr)]
       publish(
+        runtime,
+        'local',
         contract.fighters[Number(actor)]?.settled
           ? runtime.apply({ type: 'crank', ...boundary })
           : runtime.simulate_turn(boundary)
@@ -132,46 +131,35 @@ export const create_fight_session = ({
       return true
     },
     cancel_pending_turn: (): boolean => {
-      if (!runtime) return false
-      publish(runtime.cancel_pending_turn())
+      if (!open) return false
+      publish(open.runtime, open.current.mode, open.runtime.cancel_pending_turn())
       return true
     },
     reset_turn: (): boolean => {
-      if (!runtime) return false
-      publish(runtime.reset_turn())
+      if (!open) return false
+      publish(open.runtime, open.current.mode, open.runtime.reset_turn())
       return true
     },
     replace: (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
-      if (!runtime || !mode) return false
-      const events = runtime.replace(checkpoint)
-      current = Object.freeze({
-        mode,
-        checkpoint: runtime.state(),
-        zone_ids: runtime.zone_ids(),
-        events: Object.freeze([...events]),
-        presentation_batch: events.length > 0 ? ++presentation_batch : presentation_batch,
-        error: null,
-        awaiting_turn_witness: runtime.awaiting_witness(),
-      })
-      reconcile(current)
+      if (!open) return false
+      const events = open.runtime.replace(checkpoint)
+      publish(open.runtime, open.current.mode, { state: open.runtime.state(), events, error: null })
       return true
     },
     restore: (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
-      if (!runtime || !mode) return false
-      runtime = create_fight({ state: checkpoint, mode })
-      reconcile_runtime(runtime.state(), Object.freeze([]), null)
+      if (!open) return false
+      const { mode } = open.current
+      opened(create_fight({ state: checkpoint, mode }), mode)
       return true
     },
     acknowledge: (batch: number): void => {
-      if (!current || current.presentation_batch !== batch) return
-      current = Object.freeze({ ...current, events: Object.freeze([]) })
+      if (open?.current.presentation_batch !== batch) return
+      open = Object.freeze({ ...open, current: Object.freeze({ ...open.current, events: Object.freeze([]) }) })
     },
     close: (): void => {
-      runtime = null
-      mode = null
-      current = null
+      open = null
       presentation_batch = 0
     },
-    state: (): ActiveFightSession | null => current,
+    state: (): ActiveFightSession | null => open?.current ?? null,
   })
 }

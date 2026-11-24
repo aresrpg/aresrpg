@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// LENS WATER — FIELD MATH (lossless port of deprecated/engine lens_water_field.js). Pure,
-// seed-driven CPU twins the GPU graph in lens_water.ts mirrors term-for-term: the wet-sheet →
+// Lens-water field math: the seed-driven lifecycle that lens_water.ts renders on the GPU, wet sheet →
 // fragmenting regions → bursting beads/splinters/trails → dry lifecycle that plays on the
 // camera glass when it exits the water. THE FLUID LAW: at any frozen frame, no straight edge
 // and no recognizable geometric shape — meandering trails, amorphous bead silhouettes, ragged
@@ -10,8 +9,7 @@
 // SCREEN-Y CONVENTION: WebGPU screenUV.y = 0 at the TOP of the frame, so +y = DOWN-screen —
 // beads slide down as y0 + slide·t and trails run down from their burst point.
 
-/** Tuning knobs (screen-space fractions / seconds unless noted) — the legacy owner-graded
- * calibration, carried verbatim. Density/burst/trail groups are the redial axes. */
+/** Tuning, in screen-space fractions and seconds unless noted. */
 export const LENS_WATER = Object.freeze({
   // ── bead field: dense onset, front-loaded, thinning as bursts eat it ──
   count: 48,
@@ -126,14 +124,6 @@ export const rand01 = (seed: number, salt: number): number => {
 export const decay_intensity = (t_since_splash: number | null | undefined, tau = LENS_WATER.tau): number => {
   if (t_since_splash == null || !Number.isFinite(t_since_splash) || t_since_splash < 0) return 0
   return Math.exp(-t_since_splash / tau)
-}
-
-/** Sheet envelope: 1 through `sheet_hold` (the whole lens is water), then smoothstep → 0 over
- * `sheet_fade` — the "looking through water" beat that recedes as the sheet breaks. */
-export const sheet_envelope = (t: number): number => {
-  if (t <= LENS_WATER.sheet_hold) return 1
-  const u = Math.min(1, (t - LENS_WATER.sheet_hold) / LENS_WATER.sheet_fade)
-  return 1 - u * u * (3 - 2 * u)
 }
 
 /** Wet-region noise ∈ [0,1]: 3-octave 2-axis sin·cos value-noise whose iso-contours are the wet
@@ -329,35 +319,3 @@ export const trail_state_at = (
   const region = region_level(trail.x, trail.y_top + length * 0.5, t - LENS_WATER.feature_lag)
   return { x: trail.x, y_top: trail.y_top, length, alpha: trail_life_fade(tb, trail.lifetime) * region }
 }
-
-// ── fluid geometry (pure twins of the shader's per-pixel trail/silhouette math) ──
-
-/** Meandering centreline at screen y: three incommensurate octaves, phases decorrelated per
- * trail — the stream S-bends past its own width; no traceable straight stroke. */
-export const trail_center_x = (x_base: number, y: number): number => {
-  const p = x_base * 43.75
-  return (
-    x_base +
-    (Math.sin(y * 9.1 + p) + Math.sin(y * 23.3 + p * 1.93) * 0.55 + Math.sin(y * 47.7 + p * 3.1) * 0.3) *
-      LENS_WATER.trail_meander
-  )
-}
-
-/** Half-width at screen y: pinches and bulges (±trail_width_var), strictly positive. */
-export const trail_halfwidth = (x_base: number, y: number): number => {
-  const q = x_base * 61.3
-  const v = Math.sin(y * 13.7 + q) * 0.6 + Math.sin(y * 31.9 + q * 2.3) * 0.4
-  return LENS_WATER.trail_width * (1 + v * LENS_WATER.trail_width_var)
-}
-
-/** Ragged head/tail cap y-offset across x — the caps are never straight horizontal cuts. */
-export const trail_edge_rag = (x: number, x_base: number, tail = false): number => {
-  const p = x_base * (tail ? 142.95 : 87.7)
-  return (Math.sin(x * 83 + p) + Math.sin(x * 197 + p * 2.7) * 0.5) * LENS_WATER.trail_rag
-}
-
-/** A bead's silhouette perturbation (±1.65): two incommensurate sin·cos octaves — an amorphous
- * blob outline, never a clean circle. r_eff = R·(1 + bump·meniscus_amp) stays > 0. */
-export const meniscus_bump = (ux: number, uy: number, sx: number, sy: number): number =>
-  Math.sin(ux * LENS_WATER.meniscus_freq + sx * 31) * Math.cos(uy * LENS_WATER.meniscus_freq + sy * 27) +
-  Math.sin(ux * 6.7 + sy * 53) * Math.cos(uy * 5.3 + sx * 47) * 0.65

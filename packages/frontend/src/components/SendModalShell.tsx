@@ -8,6 +8,7 @@ import { NativeModal, GameWindow } from '@aresrpg/ui'
 import { env } from '../env.ts'
 import { explorer_transaction_url } from '../explorer.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import '../funding/funding.css'
 
 export const TransferFact = ({ label, value }: Readonly<{ label: string; value: ReactNode }>) => (
   <div className="flex items-center justify-between gap-3 text-[10px] tracking-wide">

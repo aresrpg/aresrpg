@@ -7,8 +7,7 @@ import type { ServerPacket } from '@aresrpg/protocol'
 
 import { channels } from '../src/protocol.ts'
 
-import { create_player } from './helpers/player.ts'
-import { wire } from './helpers/world_wire.ts'
+import { create_player, wire } from './harness.ts'
 
 // Real loopback WebSockets and production player modules; graph and Redis are isolated fixtures.
 test('title equipment reaches observers, late joiners and reconnects over separate sockets', async () => {

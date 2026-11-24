@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
-/* The agent's own page once connected: one narrow column on the page's aura, with no panel. Colours
-   resolve only through the shared --aui-* tokens. Text sits on the radiance itself, so it uses ink,
-   soft and muted only: the faint token does not keep its contrast near the top of the page. */
+/* The AI page: one narrow column. Connected, the status line, then the log in one dark panel; otherwise
+   the setup card. Colours resolve only through the shared --aui-* tokens. Text uses ink, soft and
+   muted only: the faint token does not keep its contrast near the top of the page. */
 .agent-page {
   display: grid;
   gap: 16px;
@@ -32,6 +32,23 @@
   border-radius: 50%;
   background: var(--aui-success);
 }
+/* The log panel: its title, the heroes, the log and the line that says it only shows. */
+.agent-term {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  background: var(--aui-void);
+}
+.agent-term h2 {
+  margin: 0;
+  color: var(--aui-muted);
+  font: 700 12px/1.4 var(--aui-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 /* The shared segments, one per hero, each as wide as its name: they stand on the page itself, without
    the sunk track of a control that fills its row. Many heroes or long names wrap to more rows. */
 .agent-log-heroes .aui-segments {
@@ -48,12 +65,13 @@
   overflow-wrap: anywhere;
 }
 /* The log scrolls inside the page and stays on its newest line: a reversed column keeps the scroll
-   position at the end without script. Its height leaves the foot of the page to the aura's scene,
-   whose lit part is the lowest 30dvh (290px at most); 270px is the bar, status, heroes and note. */
+   position at the end without script. It keeps one box from the first paint: at least 200px, and at
+   most the window under the bar, status, panel title, heroes and notes (360px). */
 .agent-log {
   display: flex;
   flex-direction: column-reverse;
-  max-height: max(200px, calc(100dvh - 270px - min(30dvh, 290px)));
+  min-height: 200px;
+  max-height: max(200px, calc(100dvh - 360px));
   overflow-y: auto;
   padding: 12px 0 4px;
   border-top: 1px solid var(--aui-line);
@@ -124,28 +142,20 @@
     animation: none;
   }
 }
-.agent-log-wait {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--aui-line);
-  color: var(--aui-soft);
-  line-height: 1.5;
+/* While the account loads: the hero row's box, then the log's first lines as skeletons. */
+.agent-log-heroes-wait {
+  width: 220px;
+  height: 36px;
 }
-.agent-log-wait .aui-spinner {
-  flex: none;
-}
-.agent-log-wait[role='alert'] {
-  color: var(--aui-danger);
+.agent-log-skeleton {
+  flex-direction: column;
+  gap: 12px;
 }
 .agent-log-empty {
   display: grid;
+  align-content: start;
   gap: 8px;
   justify-items: start;
-  padding-top: 12px;
-  border-top: 1px solid var(--aui-line);
   color: var(--aui-soft);
   line-height: 1.5;
 }
@@ -161,7 +171,20 @@
 }
 .agent-log-note {
   margin: 0;
+  overflow-wrap: anywhere;
   color: var(--aui-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+.agent-log-note a {
+  color: var(--aui-brass-hi);
+}
+.agent-log-note[role='alert'] {
+  color: var(--aui-danger);
+}
+/* Without an agent the page lays the setup card in place, in the column's centre. */
+.agent-page > .agent-setup {
+  justify-self: center;
+  max-height: none;
+  overflow: visible;
 }

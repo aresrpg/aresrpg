@@ -10,6 +10,7 @@ import { error_text } from '../i18n/error_text.ts'
 
 import type { WalletSession, WalletView } from './model.ts'
 import { WALLET_NETWORK } from './WalletControl.tsx'
+import '../funding/funding.css'
 
 const SourceList = ({
   wallet,

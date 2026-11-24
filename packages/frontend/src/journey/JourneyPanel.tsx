@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useContext } from 'react'
+import type { ReactNode } from 'react'
 import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'lucide-react'
 
+import { NewTabLink } from '../components/links.tsx'
+import { market_item_href } from '../site/routes.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
+import { docs_path } from '../docs/routes.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { pathname_for_page } from '../modules/navigation.ts'
 import { dispatch_app } from '../store.ts'
 
 import { next_quest, type JourneyQuest } from './model.ts'
-import { JourneySourceContext, useJourneySource } from './source.tsx'
+import { useJourneySource } from './source.tsx'
 import './journey.css'
 
 const ItemArt = ({ item, className = '' }: Readonly<{ item: string; className?: string }>) => {
-  const source = useContext(JourneySourceContext)
-  const icon = source ? source.icon(item) : item_detail_icon(item)
+  const icon = item_detail_icon(item)
   return <img alt="" className={className} draggable={false} src={icon ?? undefined} />
 }
 
@@ -23,57 +26,61 @@ const open_path = (pathname: string): void => {
   dispatch_app({ type: 'path/open', pathname })
 }
 
+/** The quest's jobs link opens the world with the character window on its Jobs tab. */
+const open_jobs = (): void => {
+  open_path(pathname_for_page('world'))
+  dispatch_app({ type: 'dialog/open', dialog: 'character_jobs' })
+}
+
 const QuestActions = ({ quest, copy }: Readonly<{ quest: JourneyQuest; copy: AppCopy }>) => {
   const source = useJourneySource(copy)
   const { text } = source
-  const actions: Partial<Record<JourneyQuest['kind'], Readonly<{ label: string; open: () => void }>>> = {
-    harvest: { label: text('resource_details'), open: () => open_path(`/encyclopedia/items/${quest.item}`) },
-    hunt: { label: text('mob_details'), open: () => open_path(`/encyclopedia/bestiary/${quest.mob}`) },
-    map: {
-      label: copy_text(copy.world_hud)('world_map'),
-      open: () => {
-        open_path('/')
-        dispatch_app({ type: 'dialog/open', dialog: 'world_map' })
-      },
-    },
-  }
-  const information = actions[quest.kind]
-  if (source.activate || quest.kind === 'start')
-    return (
+  const { new_tab } = copy.site
+  const docs_link = (label: string, href: string) => (
+    <NewTabLink className="journey-button journey-button--secondary" href={href} new_tab={new_tab}>
+      {label} <ArrowRight size={14} />
+    </NewTabLink>
+  )
+  const details: Partial<Record<JourneyQuest['kind'], ReactNode>> = {
+    harvest: docs_link(text('resource_details'), docs_path('items', quest.item)),
+    hunt: docs_link(text('mob_details'), docs_path('bestiary', quest.mob)),
+    map: (
       <button
-        className="journey-button"
-        onClick={() => (source.activate ? source.activate(quest) : dispatch_app({ type: 'journey/start' }))}
+        className="journey-button journey-button--secondary"
+        onClick={() => {
+          open_path(pathname_for_page('world'))
+          dispatch_app({ type: 'dialog/open', dialog: 'world_map' })
+        }}
         type="button"
       >
-        {source.action_label ?? text(source.activate ? 'continue' : 'start')} <ArrowRight size={15} />
+        {copy_text(copy.world_hud)('world_map')} <ArrowRight size={14} />
+      </button>
+    ),
+  }
+  const information = details[quest.kind]
+  if (quest.kind === 'start')
+    return (
+      <button className="journey-button" onClick={() => dispatch_app({ type: 'journey/start' })} type="button">
+        {text('start')} <ArrowRight size={15} />
       </button>
     )
   if (quest.id === 'suize') return null
-  if (information)
-    return (
-      <button className="journey-button journey-button--secondary" onClick={information.open} type="button">
-        {information.label} <ArrowRight size={14} />
-      </button>
-    )
+  if (information) return information
   return (
     <div className="journey-actions">
-      <button className="journey-button" onClick={() => open_path(`/encyclopedia/items/${quest.item}`)} type="button">
+      <NewTabLink className="journey-button" href={docs_path('items', quest.item)} new_tab={new_tab}>
         {text(quest.kind === 'dungeon' ? 'key_details' : 'recipe')} <ArrowRight size={14} />
-      </button>
-      <button
-        className="journey-button journey-button--secondary"
-        onClick={() => open_path('/characters/jobs')}
-        type="button"
-      >
+      </NewTabLink>
+      <button className="journey-button journey-button--secondary" onClick={open_jobs} type="button">
         {text('jobs')}
       </button>
-      <button
+      <NewTabLink
         className="journey-button journey-button--secondary"
-        onClick={() => open_path('/marketplace')}
-        type="button"
+        href={market_item_href(quest.item)}
+        new_tab={new_tab}
       >
-        {copy.marketplace}
-      </button>
+        {copy.site.market}
+      </NewTabLink>
     </div>
   )
 }
@@ -190,13 +197,13 @@ const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean
         {kind === 'materials' && (
           <div className="journey-ingredients">
             {source.ingredients?.(item_type).map(({ item, have, need }) => (
-              <button key={item} type="button" onClick={() => open_path(`/encyclopedia/items/${item}`)}>
+              <NewTabLink key={item} href={docs_path('items', item)} new_tab={copy.site.new_tab}>
                 <ItemArt item={item} />
                 <span>{source.name(item)}</span>
                 <strong>
                   {have} / {need}
                 </strong>
-              </button>
+              </NewTabLink>
             ))}
           </div>
         )}

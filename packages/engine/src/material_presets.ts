@@ -122,9 +122,8 @@ const noise_pattern = ({
     return (coarse * 0.55 + fine * 0.3 + line * streak * 0.15 + fleck) * contrast
   })
 
-/** The useful part of the deprecated stone recipe: broad weathered facets, two fracture scales,
- * crevice shade, and fine tooth. All values remain relative to the
- * authored color, so the preset restores the old rock structure without restoring duplicate palettes. */
+/** Stone: broad weathered facets, two fracture scales, crevice shade and fine tooth, all relative to the
+ * authored color. */
 const stone_pattern: MaterialPattern = (x, y, size) => {
   const seed = 113
   const macro = (tile_fbm(x, y, size, 2, 2, seed) - 0.5) * 0.28

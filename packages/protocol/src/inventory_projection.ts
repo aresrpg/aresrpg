@@ -9,7 +9,7 @@ export type CatalogueProjection = Readonly<{
   catalogues: Readonly<Record<string, Readonly<{ version: string; owned: boolean }>>>
   departures: Readonly<Record<string, Readonly<Record<string, string>>>>
 }>
-export type TradeProjection = Readonly<{
+type TradeProjection = Readonly<{
   rows: readonly TradeRow[]
   tombstones: Readonly<Record<string, true>>
   awaiting_projection: Readonly<Record<string, TradeRow>>

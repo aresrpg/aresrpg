@@ -19,13 +19,7 @@
   padding: var(--app-top) var(--app-right) var(--app-bottom) var(--app-left);
 }
 
-.app-content {
-  container: app-content / inline-size;
-}
-
-.app-shell,
-.app-shell-row,
-.app-shell-column {
+.app-shell {
   gap: var(--app-gap);
 }
 
@@ -109,15 +103,21 @@
 .wallet-popover:not(:popover-open) {
   display: none;
 }
-/* On a light page the card opens under the chip that opened it: the chip sits in a centred bar, and
-   the corner rule above left the card against the window edge. The chip is the popover's invoker, so
-   it is its anchor without a name. The game HUD keeps the corner rule: its chip is in that corner,
-   and anchoring there threw the card to the left edge of the window (regression, 2026-11-22). */
-@supports (inset: anchor(bottom)) {
-  .light-page .wallet-popover {
-    inset: calc(anchor(bottom) + 6px) anchor(right) auto auto;
-    max-height: calc(100dvh - 96px);
-    position-try-fallbacks: flip-inline;
+/* The card opens just under the button that opened it, right-aligned to it, in the site bar and in the game
+   alike. The button names itself the card's anchor (`--wallet-anchor`, one name per card): an invoker is no
+   default anchor (`position-anchor: normal`). The card stays in the area below and left of the button, 12px
+   from the window's edges. A browser without anchor positioning keeps the corner rule above. */
+@supports (position-area: bottom span-left) {
+  .wallet-trigger {
+    anchor-name: var(--wallet-anchor);
+  }
+  .wallet-popover {
+    position-anchor: var(--wallet-anchor);
+    position-area: bottom span-left;
+    inset: auto;
+    margin-top: 6px;
+    max-width: calc(100% - 12px);
+    max-height: calc(100% - 18px);
   }
 }
 
@@ -150,26 +150,7 @@
   color: var(--aui-brass-hi);
   font-size: 14px;
 }
-.wallet-panel .aui-wallet-balances {
-  gap: 8px;
-}
-.wallet-panel .aui-wallet-balances > div {
-  min-width: 0;
-  grid-template-columns: 24px minmax(0, 1fr);
-  padding: 10px;
-  gap: 3px 8px;
-  background: var(--aui-sunk);
-}
-.wallet-panel .aui-wallet-balances :is(svg, img) {
-  grid-row: span 2;
-  width: 24px;
-  height: 24px;
-}
-.wallet-panel .aui-wallet-balances strong {
-  font-size: 18px;
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
+
 .wallet-popover__gas {
   display: flex;
   align-items: center;

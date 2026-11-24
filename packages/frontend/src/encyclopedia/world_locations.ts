@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { SeedDungeon, SeedWorld, WorldResource } from '../content/catalog.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { derive_mob_locations, type MobFilterSource } from '../content/mob_filters.ts'
 
 export type WorldPlace = Readonly<{

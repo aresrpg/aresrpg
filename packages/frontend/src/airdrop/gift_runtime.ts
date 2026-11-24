@@ -8,7 +8,9 @@ import { browser_auth_storage, type AuthStorage } from '../auth_storage.ts'
 import { create_remembered_auth } from '../remembered_auth.ts'
 import { report_error } from '../reporting.ts'
 
+import { forget_gift_link } from './gift_intent.ts'
 import {
+  gift_link_settled,
   initial_gift_state,
   reduce_gift,
   type GiftInput,
@@ -28,6 +30,8 @@ type GiftRuntimeOptions = Readonly<{
   policy: GiftPolicy
   storage?: AuthStorage | null
   load_auth?: () => Promise<() => GiftAuth>
+  /** Removes the saved link from the tab once the flow has settled it. */
+  forget_link?: () => void
 }>
 
 const failure_code = (error: unknown): string => {
@@ -41,6 +45,7 @@ export const create_gift_runtime = ({
   policy,
   storage = browser_auth_storage(),
   load_auth = async () => (await import('../auth.ts')).create_auth,
+  forget_link = forget_gift_link,
 }: GiftRuntimeOptions) => {
   const store = createStore<GiftState>(initial_gift_state)
   const dispatch = (input: GiftInput): void => {
@@ -142,6 +147,7 @@ export const create_gift_runtime = ({
     }
     const stop = store.subscribe((state, previous) => {
       observe_wallet(state, previous)
+      if (gift_link_settled(state) && !gift_link_settled(previous)) forget_link()
       if (state.task && state.task !== previous.task) start_task(state.task, state)
     })
     dispatch({ type: 'start' })

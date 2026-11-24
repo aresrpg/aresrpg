@@ -29,15 +29,12 @@ export const item_categories = Object.freeze([
 ] as const)
 
 export type ItemCategory = (typeof item_categories)[number]
-export type EquipmentCategory = (typeof equipment_categories)[number]
 export type WeaponCategory = (typeof weapon_categories)[number]
 
 export const is_item_category = (category: string): category is ItemCategory =>
   (item_categories as readonly string[]).includes(category)
 export const is_weapon_category = (category: string): category is WeaponCategory =>
   (weapon_categories as readonly string[]).includes(category)
-export const is_equipment_category = (category: string): category is EquipmentCategory =>
-  (equipment_categories as readonly string[]).includes(category)
 export const is_cosmetic_category = (category: string): boolean =>
   (cosmetic_categories as readonly string[]).includes(category)
 export const is_tool_category = (category: string): boolean => (tool_categories as readonly string[]).includes(category)
@@ -86,6 +83,5 @@ export const character_consumable_types = Object.freeze([
 export type CharacterConsumableType = (typeof character_consumable_types)[number]
 
 export const consumable_types = Object.freeze([...character_consumable_types, 'loot_box'] as const)
-export type ConsumableType = (typeof consumable_types)[number]
 
 export const item_stat_center = 32_768

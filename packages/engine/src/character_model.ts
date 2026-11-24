@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Proven legacy avatar contract: one scaled body owns hair, three-mask recoloring, and worn bone children.
+// Avatar contract: one scaled body owns hair, three-mask recoloring and worn bone children.
 import {
   Box3,
   CanvasTexture,

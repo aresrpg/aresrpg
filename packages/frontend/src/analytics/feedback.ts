@@ -15,7 +15,7 @@ export type FeedbackInput =
   | Readonly<{ type: 'analytics/feedback_answered'; answer: FeedbackAnswer }>
 
 export const feedback_target = (state: AppState): string | null => {
-  if (!state.copy || state.fight.mounted || state.session.auth_status === 'connecting') return null
+  if (!state.copy || state.fight.mounted || state.session.sign_in.status === 'connecting') return null
   return character_creation_surface(state.session, state.navigation) === 'welcome' ? 'funding' : null
 }
 
@@ -42,15 +42,17 @@ export const observe_feedback = ({ events, dispatch, get_state, signal }: AppCon
   const sync = (): void => {
     const state = get_state()
     const next =
-      state.analytics.feedback === 'available' && document.visibilityState !== 'hidden' ? feedback_target(state) : null
+      state.gameplay_analytics.feedback === 'available' && document.visibilityState !== 'hidden'
+        ? feedback_target(state)
+        : null
     if (next === target) return
     clearTimeout(timer)
     target = next
     if (next) timer = setTimeout(() => dispatch({ type: 'analytics/feedback_offered', stage: next }), 120_000)
   }
   events.on('STATE_UPDATED', (state, previous) => {
-    const { feedback } = state.analytics
-    if (typeof feedback === 'object' && typeof previous.analytics.feedback !== 'object') {
+    const { feedback } = state.gameplay_analytics
+    if (typeof feedback === 'object' && typeof previous.gameplay_analytics.feedback !== 'object') {
       try {
         localStorage.setItem(FEEDBACK_STORAGE_KEY, 'shown')
       } catch (error) {

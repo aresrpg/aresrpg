@@ -56,56 +56,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Metadata-only clone: the 1.8GB art tree restores from the actions cache below
-          # (keyed by its own git tree hash) — a run downloads art only when art CHANGED.
           filter: blob:none
           sparse-checkout: |
             /*
             !seed/icons
             !seed/models
           sparse-checkout-cone-mode: false
-      - name: art tree key
-        id: art
-        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
-      - name: cache the art tree
-        id: art_cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            seed/icons
-            seed/models
-          key: art-${{ steps.art.outputs.tree }}
-      - name: materialize the art tree (cache miss only)
-        if: steps.art_cache.outputs.cache-hit != 'true'
-        run: |
-          git sparse-checkout set --no-cone '/*'
-          git checkout HEAD -- seed/icons seed/models
-      - name: setup Bun
-        id: setup_bun
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: setup Bun (retry)
-        if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: cache bun downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - name: install
-        run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: setup Redis for agent pairing tests
         if: matrix.check == 'test'
         uses: ./.github/actions/setup-redis
       - name: verify
         env:
           TEST_BOT_REDIS_URL: redis://127.0.0.1:16379/15
-          TEST_TELEGRAM_REDIS_URL: redis://127.0.0.1:16379/14
         run: |
           if [ "${{ matrix.check }}" = test ]; then
             fixture=$(mktemp -d)
@@ -143,39 +106,13 @@ jobs:
             packages/seed
             packages/kares
             packages/rewards
+            packages/currency
+            packages/currency-lp
             scripts/coverage_move.sh
             scripts/assert_rewards_coverage.mjs
+            .github/actions/setup-sui
             move-packages.json
-      - name: sui version pin
-        id: sui_version
-        # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
-        # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: |
-          echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
-          echo "revision=$(jq -er '.sui_cli.revision' move-packages.json)" >> "$GITHUB_OUTPUT"
-      - name: cache sui
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/sui-bin
-          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}-${{ steps.sui_version.outputs.sha256 }}
-      - name: ensure sui — cached binary if it runs, release download otherwise
-        run: |
-          mkdir -p "$HOME/sui-bin"
-          echo "$HOME/sui-bin" >> "$GITHUB_PATH"
-          release='${{ steps.sui_version.outputs.version }}'
-          revision='${{ steps.sui_version.outputs.revision }}'
-          # version and commit of the pinned mainnet release, as `sui --version` prints them
-          expected="sui ${release##*-v}-${revision:0:12}"
-          actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
-          if [[ "$actual" != "$expected"* ]]; then
-            archive="$RUNNER_TEMP/sui.tgz"
-            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/$release/sui-$release-ubuntu-x86_64.tgz" -o "$archive"
-            echo "${{ steps.sui_version.outputs.sha256 }}  $archive" | sha256sum --check --strict
-            tar -xz -f "$archive" -C "$HOME/sui-bin" ./sui
-          fi
-          actual=$("$HOME/sui-bin/sui" --version)
-          [[ "$actual" == "$expected"* ]] || { echo "::error::unexpected Sui compiler: $actual"; exit 1; }
+      - uses: ./.github/actions/setup-sui
       - name: move-math — build
         run: sui move build --path packages/move-math
       - name: control + combat + seed — build
@@ -205,7 +142,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.indexer == 'true'
     # The chain projectionist's suite + the Move↔indexer parity gates (packages/indexer/
-    # src/gates.rs): the layout snapshot and the event census read the COMPILED Move build,
+    # test/gates.rs, test/gates/*.rs): the layout snapshot and the event census read the COMPILED Move build,
     # so both packages build first — a Move struct or event change reds HERE in the same
     # commit it lands, instead of rotting the graph behind an advancing watermark.
     name: tests (indexer)
@@ -234,36 +171,9 @@ jobs:
             packages/immutable
             scripts/coverage_indexer.sh
             .github/actions/setup-redis
+            .github/actions/setup-sui
             move-packages.json
-      - name: sui version pin
-        id: sui_version
-        # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
-        # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: |
-          echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
-          echo "revision=$(jq -er '.sui_cli.revision' move-packages.json)" >> "$GITHUB_OUTPUT"
-      - name: cache sui
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/sui-bin
-          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}-${{ steps.sui_version.outputs.sha256 }}
-      - name: ensure sui — cached binary if it runs, release download otherwise
-        run: |
-          mkdir -p "$HOME/sui-bin"
-          echo "$HOME/sui-bin" >> "$GITHUB_PATH"
-          release='${{ steps.sui_version.outputs.version }}'
-          revision='${{ steps.sui_version.outputs.revision }}'
-          expected="sui ${release##*-v}-${revision:0:12}"
-          actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
-          if [[ "$actual" != "$expected"* ]]; then
-            archive="$RUNNER_TEMP/sui.tgz"
-            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/$release/sui-$release-ubuntu-x86_64.tgz" -o "$archive"
-            echo "${{ steps.sui_version.outputs.sha256 }}  $archive" | sha256sum --check --strict
-            tar -xz -f "$archive" -C "$HOME/sui-bin" ./sui
-          fi
-          actual=$("$HOME/sui-bin/sui" --version)
-          [[ "$actual" == "$expected"* ]] || { echo "::error::unexpected Sui compiler: $actual"; exit 1; }
+      - uses: ./.github/actions/setup-sui
       - name: compile the Move packages (the parity gates' ground truth)
         run: |
           sui move build --path packages/move-math
@@ -301,56 +211,22 @@ jobs:
       - name: cargo test + LLVM coverage (includes the Move-parity gates)
         run: sh scripts/coverage_indexer.sh
   bundle-gate:
-    # Reproduces the deploy build on PULL REQUESTS so a bundle-tripping commit fails before it
-    # lands; on pushes the deploy workflow's own build is the proof, so this job skips there.
-    if: github.event_name == 'pull_request'
+    # A production build ships no sourcemap and no private endpoint or key. Every source change
+    # runs it, pushes included; the deploy waits for this gate, so a tripping bundle never ships.
+    needs: changes
+    if: needs.changes.outputs.source == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Same art-cache scheme as the gate job — art downloads only when art changed.
           filter: blob:none
           sparse-checkout: |
             /*
             !seed/icons
             !seed/models
           sparse-checkout-cone-mode: false
-      - name: art tree key
-        id: art
-        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
-      - name: cache the art tree
-        id: art_cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            seed/icons
-            seed/models
-          key: art-${{ steps.art.outputs.tree }}
-      - name: materialize the art tree (cache miss only)
-        if: steps.art_cache.outputs.cache-hit != 'true'
-        run: |
-          git sparse-checkout set --no-cone '/*'
-          git checkout HEAD -- seed/icons seed/models
-      - name: setup Bun
-        id: setup_bun
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: setup Bun (retry)
-        if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: cache bun downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - name: install
-        run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: bundle-cleanliness gate — game
         run: |
           bun run --cwd packages/frontend build
@@ -403,4 +279,4 @@ jobs:
           check_lane "${{ needs.tests_move.result }}" "${{ needs.changes.outputs.move }}"
           check_lane "${{ needs.tests_indexer.result }}" "${{ needs.changes.outputs.indexer }}"
           check_lane "${{ needs.browsers.result }}" "${{ needs.changes.outputs.browsers }}"
-          test "${{ github.event_name == 'push' || needs.bundle-gate.result == 'success' }}" = true
+          check_lane "${{ needs.bundle-gate.result }}" "${{ needs.changes.outputs.source }}"

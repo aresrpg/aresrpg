@@ -6,13 +6,17 @@ import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_NAME_MAX_LENGTH, is_valid_character_name } from '@aresrpg/sdk/character-name'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { NativeModal } from '@aresrpg/ui'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { character_creation_funding_text } from '../character_creation_funding.ts'
+import { docs_path } from '../docs/routes.ts'
 import type { CharacterRenderSource } from '../game/character_entities.ts'
 import { dispatch_app } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
+
+import { NewTabLink } from './links.tsx'
 
 type CharacterIdentity = Readonly<{
   name: string
@@ -37,7 +41,6 @@ export const CharacterCreateModal = ({
   create,
   insufficient,
   preview,
-  view_spells,
 }: Readonly<{
   copy: AppCopy
   cancel: () => void
@@ -48,7 +51,6 @@ export const CharacterCreateModal = ({
    * without a canvas draws a portrait.
    */
   preview: (source: CharacterRenderSource) => ReactNode
-  view_spells: (classe: string) => void
 }>) => {
   const localized_numbers = useNumbers()
   const [identity, set_identity] = useState<CharacterIdentity>(DEFAULT_IDENTITY)
@@ -84,7 +86,7 @@ export const CharacterCreateModal = ({
   }
 
   return (
-    <section className="absolute inset-0 z-[160] grid place-items-center bg-bg/72 p-5 backdrop-blur-lg">
+    <NativeModal close={null} label={copy.create_title} className="aui-modal-scrim">
       <form
         className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-border border-t-gold bg-surface/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
         onSubmit={submit}
@@ -123,14 +125,13 @@ export const CharacterCreateModal = ({
                   </button>
                 ))}
               </div>
-              <button
-                className="mt-2 h-9 w-full cursor-pointer border border-cyan/25 bg-cyan/5 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/55 hover:bg-cyan/10"
-                data-class-spells-link=""
-                onClick={() => view_spells(identity.classe)}
-                type="button"
+              <NewTabLink
+                className="mt-2 grid h-9 w-full place-items-center border border-cyan/25 bg-cyan/5 text-[8px] tracking-[0.14em] text-cyan uppercase hover:border-cyan/55 hover:bg-cyan/10"
+                href={docs_path('classes', identity.classe)}
+                new_tab={copy.site.new_tab}
               >
                 {copy.view_class_spells}
-              </button>
+              </NewTabLink>
             </fieldset>
             <fieldset>
               <legend className="mb-2 text-[9px] tracking-[0.18em] text-faint uppercase">{copy.sex_label}</legend>
@@ -243,6 +244,6 @@ export const CharacterCreateModal = ({
           </button>
         </div>
       </form>
-    </section>
+    </NativeModal>
   )
 }

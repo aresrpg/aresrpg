@@ -9,14 +9,10 @@ import {
   player_max_hp,
   manhattan,
   spell_level_of,
-  board_zone_cells,
-  primary_stat,
-  sheet_of,
   type FightCommandInput,
   type Fighter,
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
-import { CHANNELS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 
 import { support_beneficiaries } from './combat_support.ts'
 import type { FightTurnPayload } from './gameplay.ts'
@@ -192,109 +188,6 @@ const best_attack = (context: Context, { target, position }: Attack): Candidate 
       .sort((left, right) => damage_order(context, left, right))[0] ?? null
   )
 }
-/** What an effect is, whatever is left of it: a boost still running is the same effect. */
-const effect_key = ({ kind, element, stat, source }: Fighter['effects'][number]) =>
-  [kind, element, stat, source].join(':')
-/** The characteristic each element's damage scales with (`fight_math::primary_stat`), by stat channel. */
-const ELEMENT_OF_STAT: ReadonlyMap<bigint, string> = new Map([
-  [CHANNELS.strength, 'earth'],
-  [CHANNELS.intelligence, 'fire'],
-  [CHANNELS.chance, 'water'],
-  [CHANNELS.agility, 'air'],
-])
-/** The elements this hero deals damage in: its learned spells and its weapon. */
-const damage_elements = (context: Context): readonly string[] => {
-  const { checkpoint, seat } = context
-  const fighter = checkpoint.contract.fighters[Number(seat)]!
-  const source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : undefined
-  const cast = learned_spells(context).flatMap((name) => spell_level_of(checkpoint, seat, name)?.effects ?? [])
-  return [
-    ...new Set([
-      ...cast.map(({ element }) => element),
-      ...(source?.weapon?.damages ?? []).map(({ element }) => element),
-    ]),
-  ].filter(Boolean)
-}
-/**
- * The elements worth boosting: of those the hero deals damage in, the ones its build scales highest.
- * A hero built on intelligence gains nothing from an agility boost, so that boost is not cast; a hero
- * with no build yet scales them all alike, and every element it uses counts.
- */
-const boosted_elements = (context: Context): readonly string[] => {
-  const sheet = sheet_of(context.checkpoint, context.seat)
-  const elements = damage_elements(context)
-  const best = elements.reduce((most, element) => {
-    const scaling = primary_stat(element, sheet)
-    return scaling > most ? scaling : most
-  }, 0n)
-  return elements.filter((element) => primary_stat(element, sheet) === best)
-}
-/** A boost of an elemental characteristic is worth its points only in an element the hero plays;
- * any other boost (raw damage, action or movement points, range, critical, resistance) always is. */
-const worth = (stat: bigint, elements: readonly string[]): boolean => {
-  const element = ELEMENT_OF_STAT.get(stat)
-  return element === undefined || elements.includes(element)
-}
-/** A glyph helps its side when one of its effects is for allies or for its caster. */
-const HELPS: readonly bigint[] = [TARGET_FILTERS.not_enemy, TARGET_FILTERS.only_caster]
-/** The helpful glyphs of a fighter whose area covers a cell, with the stats they raise. */
-const own_glyphs = ({ contract }: HydratedFightCheckpoint, seat: bigint, cell: bigint) =>
-  contract.zones
-    .filter((zone) => zone.owner_fighter === seat && !zone.trap && board_zone_cells(zone).includes(cell))
-    .map(({ shape, size, effects }) => ({
-      key: `${shape}:${size}`,
-      stats: effects.filter(({ target_filter }) => HELPS.includes(target_filter)).map(({ stat }) => stat),
-    }))
-    .filter(({ stats }) => stats.length > 0)
-/**
- * A cast strengthens the hero when it leaves something the hero did not already have and can use, an
- * effect on itself or a helpful glyph under its feet, costs it no health and hurts no enemy. What is
- * already in place is therefore never cast again, and a boost of an element the hero does not play is
- * never cast at all.
- */
-const strengthens = (context: Context, { state }: Candidate, elements: readonly string[]): boolean => {
-  const before = context.checkpoint.contract.fighters[Number(context.seat)]!
-  const after = state.contract.fighters[Number(context.seat)]!
-  const held = new Set(before.effects.map(effect_key))
-  const laid = new Set(own_glyphs(context.checkpoint, context.seat, before.cell).map(({ key }) => key))
-  const gained =
-    after.effects.some((effect) => !held.has(effect_key(effect)) && worth(effect.stat, elements)) ||
-    own_glyphs(state, context.seat, before.cell).some(
-      ({ key, stats }) => !laid.has(key) && stats.some((stat) => worth(stat, elements))
-    )
-  return [gained, after.hp >= before.hp, !after.dead, enemy_hp_loss(context, { actions: [], state }) === 0n].every(
-    Boolean
-  )
-}
-/**
- * The learned spells that can boost at all, the costliest first: a spell with no effect for allies or
- * for its caster is never tried, and when the turn cannot pay for every boost the larger ones go first.
- */
-const boost_spells = (context: Context): readonly string[] => {
-  const level = (name: string) => spell_level_of(context.checkpoint, context.seat, name)
-  return learned_spells(context)
-    .filter((name) => level(name)?.effects.some(({ target_filter }) => HELPS.includes(target_filter)))
-    .toSorted((left, right) => compare(level(right)?.ap_cost ?? 0n, level(left)?.ap_cost ?? 0n))
-}
-/** How many cells around the hero a boost is tried on. The game lays a glyph on a free cell only, so
- * the hero's own cell is tried first and then the nearest ones, whose glyph still covers the hero. */
-const BOOST_CELLS = 7
-const boost_cells = ({ checkpoint, seat }: Context, spell: string): readonly bigint[] => {
-  const own = checkpoint.contract.fighters[Number(seat)]!.cell
-  return spell_target_cells(checkpoint, seat, spell)
-    .targetable.toSorted((left, right) => compare(manhattan(own, left), manhattan(own, right)) || compare(left, right))
-    .slice(0, BOOST_CELLS)
-}
-/** The next learned spell that strengthens the hero itself. */
-const boost_candidate = (context: Context): Candidate | null => {
-  const elements = boosted_elements(context)
-  for (const spell of boost_spells(context))
-    for (const cell of boost_cells(context, spell)) {
-      const candidate = simulate(context, { type: 'cast', spell, target_cell: String(cell) })
-      if (candidate && strengthens(context, candidate, elements)) return candidate
-    }
-  return null
-}
 const enemy_distance = (context: Context, state: HydratedFightCheckpoint): bigint => {
   const { cell } = state.contract.fighters[Number(context.seat)]!
   return (
@@ -348,19 +241,16 @@ type Draft = Readonly<{ context: Context; actions: readonly Action[]; skipped: r
 const turn_finished = ({ checkpoint, seat }: Context) =>
   checkpoint.contract.ended || checkpoint.contract.fighters[Number(seat)]?.dead !== false
 
-/** How many times one step may act in a turn. A repeated attack and a boost go on while they find
- * something to do; the bound only stops an action that would cost no action point from looping. */
+/** How many times one step may act in a turn. A repeated attack goes on while it finds something to
+ * do; the bound only stops an action that would cost no action point from looping. */
 const STEP_REPEATS = 8
-const step_runs = (step: CombatStep): number =>
-  step.type === 'boost' || (step.type === 'attack' && step.repeat) ? STEP_REPEATS : 1
+const step_runs = (step: CombatStep): number => (step.type === 'attack' && step.repeat ? STEP_REPEATS : 1)
 const step_candidate = (context: Context, step: CombatStep): Candidate | null => {
   switch (step.type) {
     case 'move':
       return movement_candidate(context, step.direction)
     case 'attack':
       return best_attack(context, step)
-    case 'boost':
-      return boost_candidate(context)
     default:
       return attack_candidate(context, step)
   }

@@ -8,10 +8,7 @@ export type EngineQuality = 'low' | 'medium' | 'high'
 
 export type PublicEnv = Readonly<{
   bot_service_url: string
-  /** The Telegram service's login callback; a request that returns there links a chat with no consent screen. */
-  telegram_callback_url: string
   /** Local and edge builds also offer an installed wallet at sign-in. Production offers Google alone. */
-  dev_sign_in: boolean
   privy_app_id: string
   posthog_project_token: string
   app_name: string
@@ -24,10 +21,7 @@ export type PublicEnv = Readonly<{
   meta_title: string
   network: Network
   sui_rpc_url: string
-  social_description: string
-  social_image_url: string
   server_ws_url: string
-  discord_url: string
   theme_color: string
 }>
 
@@ -55,28 +49,8 @@ export const resolve_bot_service_url = (value = ''): string => {
   return url.origin
 }
 
-/** The `callback_url` of the Telegram service, a peer address like the bot service's. Empty when unset. */
-const resolve_telegram_callback_url = (value = ''): string => {
-  if (!value) return ''
-  const url = new URL(value)
-  if (
-    ![
-      url.protocol === 'https:',
-      !url.username,
-      !url.password,
-      !url.search,
-      !url.hash,
-      url.pathname === '/oauth/callback',
-    ].every(Boolean)
-  )
-    throw new Error('VITE_TELEGRAM_CALLBACK_URL must be the HTTPS /oauth/callback address of the Telegram service')
-  return url.href
-}
-
 const resolve_optional_services = (source: Readonly<Record<string, string | undefined>>) => ({
   bot_service_url: resolve_bot_service_url(source.VITE_BOT_SERVICE_URL),
-  telegram_callback_url: resolve_telegram_callback_url(source.VITE_TELEGRAM_CALLBACK_URL),
-  dev_sign_in: source.VITE_DEPLOY_ENV === 'local' || source.VITE_DEPLOY_ENV === 'preview',
   privy_app_id: source.VITE_PRIVY_APP_ID ?? 'cmvpm31db00nk0gimsyylhwzk',
   posthog_project_token: source.VITE_POSTHOG_PROJECT_TOKEN ?? 'phc_pi5yrMJfu5h6rN86ugdURJcTWUkXQsGmCfMR6hSZ3RP8',
 })
@@ -108,14 +82,11 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     google_client_id: VITE_GOOGLE_CLIENT_ID,
     graphql_url: VITE_GRAPHQL_URL,
     meta_description:
-      'AresRPG is a browser-based voxel MMORPG on Sui where your characters, items, and progression live on-chain.',
-    meta_title: 'AresRPG · On-chain voxel MMORPG',
+      'Buy and sell AresRPG items and characters for SUI. AresRPG is an on-chain MMORPG on Sui that you can also play in your browser.',
+    meta_title: 'AresRPG · Market and on-chain MMORPG',
     network,
     sui_rpc_url: VITE_SUI_RPC_URL,
-    social_description: 'Explore a voxel world in your browser. Your characters, items, and progression live on Sui.',
-    social_image_url: new URL('social/home.jpg', app_url).href,
     server_ws_url: normalize_ws_url(VITE_SERVER_WS_URL),
-    discord_url: 'https://discord.gg/aresrpg',
     theme_color: '#070707',
   })
 }

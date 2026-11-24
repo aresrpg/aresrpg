@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The irreducible fight-VFX art table: legacy timing, palette, footprint, and anchor facts.
+// The fight-VFX art table: timing, palette, footprint and anchor facts.
 
 export type FightVfxProfile = Readonly<{
   appearance: 'flame' | 'water' | 'air' | 'neutral' | 'heal' | 'earth'

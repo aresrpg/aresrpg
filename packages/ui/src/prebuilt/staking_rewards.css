@@ -75,7 +75,6 @@
   color: var(--aui-muted);
   font-size: 12px;
 }
-
 .aui-staking-rewards {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

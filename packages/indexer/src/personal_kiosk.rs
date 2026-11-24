@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //! Personal ownership is immutable. Kiosk.owner is editable display metadata, never authority.
 
-use crate::decode::{self, Addr, Field, Id, MarkerKey, PersonalKioskCap};
+use crate::decode::{Addr, Field, Id, MarkerKey, PersonalKioskCap};
 use crate::ownership::{ObjView, OwnerKind, SUI_FRAMEWORK};
 use anyhow::{ensure, Result};
 use std::collections::HashMap;
@@ -24,7 +24,7 @@ fn proof(view: &ObjView<'_>) -> Result<Option<(Id, Owner)>> {
         && key.module == "personal_kiosk"
         && key.name == "PersonalKioskCap"
     {
-        let cap: PersonalKioskCap = decode::from_bytes(view.bytes)?;
+        let cap: PersonalKioskCap = view.decode()?;
         if let (OwnerKind::Address(address), Some(inner)) = (view.owner, cap.cap) {
             return Ok(Some((
                 inner.for_,
@@ -35,9 +35,7 @@ fn proof(view: &ObjView<'_>) -> Result<Option<(Id, Owner)>> {
             )));
         }
     }
-    let marker = key.package == SUI_FRAMEWORK
-        && key.module == "dynamic_field"
-        && key.name == "Field"
+    let marker = key.is(SUI_FRAMEWORK, "dynamic_field", "Field")
         && key
             .type_params
             .get(1)
@@ -46,7 +44,7 @@ fn proof(view: &ObjView<'_>) -> Result<Option<(Id, Owner)>> {
             key.type_params.first() == Some(&format!("{package}::personal_kiosk::OwnerMarker"))
         });
     if marker {
-        let field: Field<MarkerKey, Addr> = decode::from_bytes(view.bytes)?;
+        let field: Field<MarkerKey, Addr> = view.decode()?;
         if let OwnerKind::Object(kiosk) = view.owner {
             return Ok(Some((
                 kiosk,
@@ -85,7 +83,3 @@ pub fn owner(inputs: &[ObjView<'_>], outputs: &[ObjView<'_>], kiosk: Id) -> Resu
         .get(&kiosk)
         .map(|owner| owner.address))
 }
-
-#[cfg(test)]
-#[path = "../tests/leaderboards/personal_kiosk.rs"]
-mod tests;

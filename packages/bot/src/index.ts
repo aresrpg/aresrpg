@@ -5,16 +5,13 @@ import { readFile } from 'node:fs/promises'
 
 import { RedisClient } from 'bun'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
-import { create_telegram_access } from '@aresrpg/protocol/telegram-access'
 
 import { create_reporting } from './reporting.ts'
 import { read_config, deployment_integer, deployment_value } from './config.ts'
 import { create_redis_store, type ControlStore } from './store.ts'
-import { create_owner_verifier } from './owner_proof.ts'
 import { create_ingress } from './http.ts'
-import type { Observe } from './control.ts'
-import type { OwnerControl } from './owner_control.ts'
-import type { BotConfig } from './model.ts'
+import type { Observe, OwnerControl } from './control.ts'
+import { create_owner_verifier, type BotConfig } from './model.ts'
 import { shutdown_service, start_service_runtime } from './service_runtime.ts'
 
 type RuntimeOptions = Readonly<{
@@ -26,7 +23,7 @@ type RuntimeOptions = Readonly<{
   report_failure: (error: unknown) => void
 }>
 const start_http = (
-  { env, config, store, rpc_url, redis }: RuntimeOptions,
+  { env, config, store, rpc_url }: RuntimeOptions,
   observe: Observe,
   ready: () => boolean,
   dispatch: OwnerControl
@@ -39,7 +36,6 @@ const start_http = (
     dispatch,
     ready,
     verify_owner: create_owner_verifier(client),
-    join_waitlist: create_telegram_access((command, args) => redis.send(command, args)).join,
     policy: { revision: 1, scopes: config.scopes },
     observation_freshness_ms: config.observation_freshness_ms,
     provision_enabled: env.BOT_PROVISION_ENABLED === 'true',
@@ -48,12 +44,9 @@ const start_http = (
   return Bun.serve({ port: deployment_integer(env, 'BOT_PORT'), hostname: '0.0.0.0', fetch })
 }
 const start_actor = async ({ env, config, store, rpc_url, redis, report_failure }: RuntimeOptions) => {
-  const { create_key_provider, parse_signing_keyring } = await import('./managed_signer.ts')
+  const { create_key_provider } = await import('./managed_signer.ts')
   const { create_actor_runtime } = await import('./actor_runtime.ts')
-  const provider = create_key_provider(
-    store,
-    parse_signing_keyring(await readFile(deployment_value(env, 'BOT_SIGNING_KEYRING_FILE'), 'utf8'))
-  )
+  const provider = create_key_provider(store, await readFile(deployment_value(env, 'BOT_SIGNING_KEYRING_FILE'), 'utf8'))
   const lease_ms = deployment_integer(env, 'BOT_LEASE_MS')
   const tick_ms = deployment_integer(env, 'BOT_TICK_MS')
   const heartbeat_ms = deployment_integer(env, 'BOT_HEARTBEAT_MS')

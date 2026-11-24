@@ -166,156 +166,97 @@ export function parse_doors(move_source, include_names = null) {
 
 const MOVE_VALUE_VECTOR = /^vector<([A-Z][A-Za-z0-9_]*)>$/
 
-/** @param {DoorParam} param */
-const arg_expr = ({ name, strategy }) => {
-  switch (strategy.kind) {
-    case 'clock':
-      return `tx.object.clock()`
-    case 'random':
-      return `tx.object.random()`
-    case 'pin':
-      return `ctx.pin(tx, '${strategy.pin}', ${Boolean(strategy.mutable)})`
-    case 'pure':
-      return `ctx.pure.${strategy.helper}(tx, args.${name})`
-    case 'pure_option':
-      return `ctx.pure.option(tx, '${strategy.helper}', args.${name} ?? null)`
-    case 'pure_vector':
-      return `ctx.pure.vector(tx, '${strategy.helper}', args.${name})`
-    case 'move_vector': {
-      const value = MOVE_VECTOR_TYPES[strategy.type]
-      // type arguments name types by their DEFINING package — never the latest upgrade target
-      return `tx.makeMoveVec({ type: \`\${ctx.${value.type_package}}::${value.module}::${strategy.type}\`, elements: [...args.${name}] })`
-    }
-    case 'move_value':
-      return `args.${name}`
-    case 'receiving':
-      return `ctx.receiving(tx, args.${name})`
-    case 'object':
-      return `ctx.obj(tx, args.${name}, ${strategy.mutable})`
-    default:
-      throw new Error(`generate_doors: unreachable strategy ${strategy.kind}`)
-  }
+// One argument token per Move parameter: `<kind> <name>`, read by `bind_doors` in src/doors.ts.
+// Pins carry their pins.json key as the name; clock and random need no name.
+/** @type {Readonly<Record<string, (param: DoorParam) => string>>} */
+const ENCODE = {
+  clock: () => 'clock',
+  random: () => 'random',
+  pin: ({ strategy }) => `${strategy.mutable ? 'pin!' : 'pin'} ${strategy.pin}`,
+  pure: ({ name, strategy }) => `${strategy.helper} ${name}`,
+  pure_option: ({ name, strategy }) => `${strategy.helper}? ${name}`,
+  pure_vector: ({ name, strategy }) => `${strategy.helper}[] ${name}`,
+  // type arguments name types by their DEFINING package — never the latest upgrade target
+  move_vector: ({ name, strategy }) => {
+    const value = MOVE_VECTOR_TYPES[strategy.type]
+    return `${value.type_package}::${value.module}::${strategy.type}[] ${name}`
+  },
+  move_value: ({ name }) => `value ${name}`,
+  receiving: ({ name }) => `receiving ${name}`,
+  object: ({ name, strategy }) => `${strategy.mutable ? 'obj!' : 'obj'} ${name}`,
 }
 
 /** @type {Readonly<Record<string, string>>} */
-const pure_type = {
+const PURE_TYPE = {
   id: 'string',
   address: 'string',
   bool: 'boolean',
   u8: 'number',
   u16: 'number',
   u32: 'number',
-  u64: 'bigint | number | string',
+  u64: 'U64',
   string: 'string',
 }
 
-/** @param {DoorParam} param */
-const arg_type = ({ strategy }) => {
-  switch (strategy.kind) {
-    case 'pure':
-      return pure_type[strategy.helper]
-    case 'pure_option':
-      return `${pure_type[strategy.helper]} | null | undefined`
-    case 'pure_vector':
-      return `readonly (${pure_type[strategy.helper]})[]`
-    case 'move_vector':
-      return 'readonly TransactionObjectArgument[]'
-    case 'move_value':
-      return 'TransactionObjectArgument'
-    case 'receiving':
-    case 'object':
-      return 'Resolvable'
-    default:
-      throw new Error(`generate_doors: strategy ${strategy.kind} is not a caller argument`)
-  }
+/** @type {Readonly<Record<string, (param: DoorParam) => string>>} */
+const ARG_TYPE = {
+  pure: ({ strategy }) => PURE_TYPE[strategy.helper],
+  pure_option: ({ strategy }) => `${PURE_TYPE[strategy.helper]} | null | undefined`,
+  pure_vector: ({ strategy }) => `readonly ${PURE_TYPE[strategy.helper]}[]`,
+  move_vector: () => 'readonly TransactionObjectArgument[]',
+  move_value: () => 'TransactionObjectArgument',
+  receiving: () => 'Resolvable',
+  object: () => 'Resolvable',
 }
 
-/** Emit the doors module text. Deterministic: same source in, same bytes out. */
+/** @param {Door} door */
+const door_line = (door) => {
+  const target = `${door.module ?? 'api'}::${door.name}${door.token ? '<Token>' : ''}`
+  const args = door.params
+    .filter((param) => param.strategy.kind !== 'skip')
+    .map((param) => ENCODE[param.strategy.kind](param))
+  return `  ${door.export_name ?? door.name}: '${target}|${door.package_key ?? 'package'}|${args.join(',')}',`
+}
+
+/** @param {Door} door */
+const door_args = (door) => {
+  const fields = door.params
+    .filter((param) => ARG_TYPE[param.strategy.kind])
+    .map((param) => `${param.name}: ${ARG_TYPE[param.strategy.kind](param)}`)
+  const all = door.token ? [...fields, 'coin_type?: string'] : fields
+  return `  ${door.export_name ?? door.name}: ${all.length ? `{ ${all.join('; ')} }` : 'Record<string, never>'}`
+}
+
+/** Emit the door table text. Deterministic: same source in, same bytes out. */
 /** @param {readonly Door[]} doors */
-export function emit_doors(doors, { source = 'packages/move/sources/api.move', description = 'api.move doors' } = {}) {
-  const value_vector_import = doors.some((door) =>
-    door.params.some(({ strategy }) => strategy.kind === 'move_vector' || strategy.kind === 'move_value')
-  )
-    ? ', TransactionObjectArgument'
-    : ''
-  const header = `// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+function emit_doors(
+  doors,
+  { source = 'packages/move/sources/api.move', description = 'api.move doors', size_note = '' } = {}
+) {
+  const params = doors.flatMap((door) => door.params)
+  const uses = (/** @type {string[]} */ ...kinds) => params.some(({ strategy }) => kinds.includes(strategy.kind))
+  const imports = [
+    uses('move_vector', 'move_value')
+      ? "import type { TransactionObjectArgument } from '@mysten/sui/transactions'\n\n"
+      : '',
+    uses('object', 'receiving') ? "import type { Resolvable } from './doors.ts'\n" : '',
+  ].join('')
+  const u64 = params.some(({ strategy }) => strategy.helper === 'u64') ? 'type U64 = bigint | number | string\n\n' : ''
+  return `// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // GENERATED by scripts/generate_doors.mjs from ${source} — DO NOT EDIT.
-// One builder per ${description}: door(tx, ctx, args) composes the move call onto the given
-// Transaction and returns its Move result for further composition.
-// \`ctx\` is the SDK's bound context ({ pins, obj, pin, receiving, pure }) — every input is
-// emitted PRE-RESOLVED (objectRef / sharedObjectRef / offline system helpers), so building the
-// transaction costs ZERO RPC roundtrips. Doors marked terminal take &Random: THE TERMINAL LAW —
-// such a call must be the LAST command of its transaction (an inspectable roll is a free re-roll).
-/* eslint-disable max-lines -- generated projection: one builder per door, size follows the Move contract */
-
-import type { Transaction${value_vector_import} } from '@mysten/sui/transactions'
-
-import type { DoorCtx, Resolvable } from './client.ts'
-${doors.some((door) => door.token) ? "import { kares_coin_type } from './kares_ptb.ts'\n" : ''}
-`
-  const fns = doors
-    .map((door) => {
-      const export_name = door.export_name ?? door.name
-      const module = door.module ?? 'api'
-      const package_key = door.package_key ?? 'package'
-      const args = door.params.filter((p) => p.strategy.kind !== 'skip')
-      const caller_args = args.filter((p) => !['clock', 'random', 'pin'].includes(p.strategy.kind))
-      const arg_list = args.map(arg_expr).join(',\n      ')
-      const generic = door.token
-        ? {
-            fields: ['coin_type?: string'],
-            call: '    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],\n',
-          }
-        : { fields: [], call: '' }
-      const fields = [...caller_args.map((p) => `${p.name}: ${arg_type(p)}`), ...generic.fields]
-      const args_type = fields.length ? `{ ${fields.join('; ')} }` : 'Record<string, never>'
-      const terminal = door.params.some((p) => p.type === '&Random')
-      const jsdoc_params = args
-        .filter((p) => !['clock', 'random', 'pin'].includes(p.strategy.kind))
-        .map((p) => ` * @arg ${p.name} — ${p.type}`)
-        .join('\n')
-      return `/**
- * \`${module}::${door.name}\`${terminal ? ' — TERMINAL (&Random): last command of its transaction.' : ''}
-${jsdoc_params || ' * (no caller arguments)'}
- */
-export const ${export_name} = (tx: Transaction, ctx: DoorCtx, args: ${args_type}) =>
-  tx.moveCall({
-    target: \`\${ctx.pins.${package_key}}::${module}::${door.name}\`,
-${generic.call}    arguments: [
-      ${arg_list}
-    ],
-  })`
-    })
-    .join('\n\n')
-
-  const meta = `
-
-/** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */
-export const DOORS = {
-${doors
-  .map((door) => {
-    const export_name = door.export_name ?? door.name
-    const caller = door.params
-      .filter((p) => !['skip', 'clock', 'random', 'pin'].includes(p.strategy.kind))
-      .map((p) => `'${p.name}'`)
-      .join(', ')
-    const terminal = door.params.some((p) => p.type === '&Random')
-    return `  ${export_name}: { params: [${caller}], terminal: ${terminal} },`
-  })
-  .join('\n')}
-}
-`
-  return header + fns + meta
+// One line per ${description}: \`module::function[<Token>]|package pin|arguments\`, bound by bind_doors in doors.ts.
+// Every argument is pre-resolved, so building costs no RPC. A door with \`random\` must be the last command.
+${size_note}
+${imports}
+${u64}export type DoorArgs = {
+${doors.map(door_args).join('\n')}
 }
 
-/** The full projection: parse → emit → format with the REPO's prettier config, so the
- *  generated file obeys the same lint every hand-written file does (zero exemptions). */
-/** @param {string} move_source */
-export const generate = async (move_source) => {
-  const raw = emit_doors(parse_doors(move_source))
-  const config = await prettier.resolveConfig(DOORS_OUT_PATH)
-  return prettier.format(raw, { ...config, parser: 'typescript' })
+export const DOORS: Readonly<Record<keyof DoorArgs, string>> = {
+${doors.map(door_line).join('\n')}
+}
+`
 }
 
 const TRADE_DOORS = Object.freeze({
@@ -368,12 +309,12 @@ export const generate_game_doors = async (api_source, trade_source, tournament_s
       'expire',
     ])
   ).map((door) => ({ ...door, module: 'tournament', export_name: `tournament_${door.name}` }))
-  const raw = emit_doors([...active, ...trade, ...tournament], {
+  return generate_projected_doors([...active, ...trade, ...tournament], DOORS_OUT_PATH, {
     source: 'packages/move/sources/{api,trade,tournament}.move',
-    description: 'public game doors',
+    description: 'public game door',
+    size_note:
+      '/* eslint-disable max-lines -- generated projection: one line per door, size follows the Move contract */\n',
   })
-  const config = await prettier.resolveConfig(DOORS_OUT_PATH)
-  return prettier.format(raw, { ...config, parser: 'typescript' })
 }
 
 /** Project tournament limits from their Move owners. */
@@ -405,7 +346,7 @@ export const CHARACTER_PRICE_MIST = ${mist}n
   return prettier.format(raw, { ...config, parser: 'typescript' })
 }
 
-/** @param {readonly Door[]} doors @param {string} output_path @param {{source?: string, description?: string}} options */
+/** @param {readonly Door[]} doors @param {string} output_path @param {{source?: string, description?: string, size_note?: string}} options */
 export const generate_projected_doors = async (doors, output_path, options = {}) => {
   const raw = emit_doors(doors, options)
   const config = await prettier.resolveConfig(output_path)
@@ -428,6 +369,5 @@ if (invoked_directly) {
     )
   )
   writeFileSync(CHARACTER_PRICE_OUT_PATH, await generate_character_price(readFileSync(CHARACTER_MOVE_PATH, 'utf8')))
-  const count = (out.match(/^export const /gm) || []).length
-  console.log(`doors.gen.ts written — ${count - 1} doors; character_price.ts written`)
+  console.log('doors.gen.ts, tournament_rules.gen.ts and character_price.ts written')
 }

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The marketplace sell surface: the seller's listings, the sellable inventory and the sale form.
+// The marketplace sell surface: the seller's listings and the sale form.
 // Callers own filtering, pricing rules and writes; these views receive text, formatted values and callbacks.
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 import { Button } from '../components/controls.tsx'
+import { SuiLogo } from '../components/SuiLogo.tsx'
 
-import { MarketCurrency, MarketListingIcon, SuiMark, type MarketArt, type MarketGlyph } from './MarketParts.tsx'
+import { MarketCurrency, MarketListingIcon, type MarketArt, type MarketGlyph } from './MarketParts.tsx'
 
 export type MarketOwnListing = Readonly<{
   id: string
@@ -47,7 +48,7 @@ const MarketOwnListingCard = ({
     <span className="aui-market-own-price">
       {listing.price}
       <span className="aui-market-own-currency">
-        <SuiMark size={12} />
+        <SuiLogo size={12} />
       </span>
       <span className="aui-market-sr-only">SUI</span>
     </span>
@@ -98,8 +99,7 @@ const ListingPopover = ({ anchor, children }: Readonly<{ anchor: HTMLElement; ch
   )
 }
 
-/** Identical listings fold into one card; hovering or opening the stack lists each to withdraw.
- * Without `delist` the account cannot withdraw here, so no card shows the control. */
+/** Identical listings fold into one card; hovering or opening the stack lists each to withdraw. */
 export const MarketOwnListingStack = ({
   listings,
   stack,
@@ -113,7 +113,7 @@ export const MarketOwnListingStack = ({
   count_title: string
   pending: boolean
   withdraw: MarketWithdraw
-  delist?: (id: string) => void
+  delist: (id: string) => void
 }>) => {
   const [open, set_open] = useState(false)
   const anchor = useRef<HTMLElement>(null)
@@ -124,7 +124,7 @@ export const MarketOwnListingStack = ({
         listing={cheapest}
         withdraw={withdraw}
         pending={pending}
-        delist={delist && (() => delist(cheapest.id))}
+        delist={() => delist(cheapest.id)}
       />
     )
   return (
@@ -166,7 +166,7 @@ export const MarketOwnListingStack = ({
               listing={listing}
               withdraw={withdraw}
               pending={pending}
-              delist={delist && (() => delist(listing.id))}
+              delist={() => delist(listing.id)}
             />
           ))}
         </ListingPopover>
@@ -257,70 +257,6 @@ export const MarketOwnListings = ({
       )}
     </div>
   </section>
-)
-
-export type MarketSellableCharacter = Readonly<{
-  key: string
-  name: string
-  classe: string
-  level: string
-  choose: () => void
-}>
-
-/** The seller's listings beside the inventory they can list. */
-export const MarketSell = ({
-  listings,
-  labels,
-  Icon,
-  count,
-  filters,
-  cells,
-  empty,
-  characters,
-}: Readonly<{
-  listings: ReactNode
-  labels: Readonly<{ inventory: string; select_to_list: string; characters: string }>
-  Icon: MarketGlyph
-  count: string
-  filters: ReactNode
-  cells: ReactNode
-  /** The empty-state text, or null when items match. */
-  empty: string | null
-  characters: readonly MarketSellableCharacter[]
-}>) => (
-  <div className="market-sell aui-market-sell">
-    {listings}
-    <section className="market-inventory aui-market-inventory" aria-label={labels.inventory}>
-      <h3 className="market-panel-title">
-        <Icon size={16} aria-hidden="true" />
-        {labels.inventory}
-        <span className="market-count">{count}</span>
-      </h3>
-      <div className="aui-market-inventory-body">
-        <p className="aui-market-sell-hint">{labels.select_to_list}</p>
-        {filters}
-        <div className="market-inventory-grid aui-market-inventory-grid" data-marketplace-inventory>
-          {cells}
-        </div>
-        {empty !== null && <p className="aui-market-inventory-empty">{empty}</p>}
-        {characters.length > 0 && (
-          <>
-            <h4 className="aui-market-characters-title">{labels.characters}</h4>
-            <div className="aui-market-character-list">
-              {characters.map((row) => (
-                <button className="aui-market-character" key={row.key} onClick={row.choose} type="button">
-                  <span className="aui-market-block">{row.name}</span>
-                  <span className="aui-market-muted">
-                    {row.classe} · {row.level}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  </div>
 )
 
 export const MarketSaleAmount = ({ amount }: Readonly<{ amount: number }>) => (

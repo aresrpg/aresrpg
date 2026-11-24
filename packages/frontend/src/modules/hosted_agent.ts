@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { AuthSession } from '../auth.ts'
-import type { AppModule } from '../store.ts'
+import type { SiteContext, SiteModule } from '../store.ts'
 import { env } from '../env.ts'
 import {
   cancel_hosted_session,
@@ -13,7 +13,7 @@ import { owner_checkable } from '../agents/owner_state.ts'
 import { agent_identity_storage_key } from '../agents/pairing_storage.ts'
 
 export const observe_hosted_agent = (
-  { events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0],
+  { events, dispatch, get_state, signal }: SiteContext,
   service_url = env.bot_service_url
 ) => {
   if (!service_url || typeof window === 'undefined') return
@@ -27,7 +27,7 @@ export const observe_hosted_agent = (
     context = null
   }
   // One rule decides whether this owner can be checked; the page that shows the answer reads the same one.
-  const eligible = () => owner_checkable(get_state().session.wallet, service_url, location.search)
+  const eligible = () => owner_checkable(get_state().session.wallet, service_url, get_state().location.search)
   /**
    * Authorization is read when something says it may have changed: sign-in, focus, another tab. Never
    * on a clock. What the bot is doing is not read here: the bot pushes it on the game socket.
@@ -110,4 +110,4 @@ export const observe_hosted_agent = (
   )
   refresh()
 }
-export default { name: 'hosted_agent', reduce: undefined, observe: observe_hosted_agent } satisfies AppModule
+export default Object.freeze({ name: 'hosted_agent', observe: observe_hosted_agent }) satisfies SiteModule

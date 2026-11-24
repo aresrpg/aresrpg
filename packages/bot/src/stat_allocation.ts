@@ -9,7 +9,7 @@ import {
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { object_schema, identifier, decode } from './gameplay_schema.ts'
-import { owned_character, custody_of, type GameplayContext } from './gameplay_context.ts'
+import { owned_character, custody_of, gameplay_action, type GameplayContext } from './gameplay_context.ts'
 
 // Character capital, natural characteristics and api::raise_stat points use the existing Move u16 ABI.
 const MAX_CHARACTERISTIC = 65_535
@@ -30,14 +30,9 @@ const schema = object_schema({
     minProperties: 1,
   },
 })
-export const RAISE_STATS_ACTION = Object.freeze({
-  description:
-    'Spend exact available character capital through the SDK class-cost rules. Supply positive spending for vitality, wisdom, strength, intelligence, chance or agility; omit other stats. This never allocates spell points. Observe the resulting raised stats before continuing.',
-  input_schema: schema,
-  parse: (value: unknown) => decode<Payload>(schema, value),
-})
-export const validate_stat_allocation = (context: GameplayContext) => {
-  const payload = RAISE_STATS_ACTION.parse(context.command.payload)
+const parse = (value: unknown) => decode<Payload>(schema, value)
+const validate_stat_allocation = (context: GameplayContext) => {
+  const payload = parse(context.command.payload)
   const character = owned_character(context, payload.character_id)
   if (character.custody !== 'kiosk' || character.active_fight) throw new Error('character_not_available')
   const { classe, available_points } = character
@@ -53,12 +48,16 @@ export const validate_stat_allocation = (context: GameplayContext) => {
   const quote = characteristic_spending_quote(classe, character, payload.spending)
   if (!quote || characteristic_names.some((stat) => character[stat] + quote.gains[stat] > MAX_CHARACTERISTIC))
     throw new Error('invalid_stat_spending')
-  return {
-    kind: 'raise_stats' as const,
-    input: { character_id: character.id, spending: payload.spending, custody: custody_of(character) },
-  }
+  return { input: { character_id: character.id, spending: payload.spending, custody: custody_of(character) } }
 }
-export type StatAllocationPlan = ReturnType<typeof validate_stat_allocation>
+export const RAISE_STATS_ACTION = gameplay_action({
+  description:
+    'Spend exact available character capital through the SDK class-cost rules. Supply positive spending for vitality, wisdom, strength, intelligence, chance or agility; omit other stats. This never allocates spell points. Observe the resulting raised stats before continuing.',
+  input_schema: schema,
+  parse,
+  validate: validate_stat_allocation,
+  execute: (sdk, input) => sdk.raise_stats(input),
+})
 export type StatBaseline = Pick<CharacterRow, 'classe' | 'available_points' | CharacteristicName>
 export const stat_baseline = (character: CharacterRow): StatBaseline => ({
   classe: character.classe,

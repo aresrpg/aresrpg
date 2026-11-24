@@ -275,10 +275,7 @@
   z-index: 40;
   max-width: min(500px, 44vw);
 }
-.aui-performance .fullscreen-button {
-  min-height: 28px;
-  width: 28px;
-}
+
 .app-shell {
   padding: 0;
 }
@@ -311,7 +308,7 @@
     max-width: 36vw;
     gap: 4px;
   }
-  .aui-performance :is(select, .fullscreen-button, [data-fullscreen-toggle]) {
+  .aui-performance :is(select, [data-fullscreen-toggle]) {
     display: none;
   }
   .aui-performance {

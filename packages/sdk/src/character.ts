@@ -8,7 +8,7 @@ import { bcs } from '@mysten/sui/bcs'
 import { deriveDynamicFieldID, deriveObjectID } from '@mysten/sui/utils'
 
 import { SDK } from './client.ts'
-import { living_content } from './client.ts'
+import { living_content } from './pins.ts'
 import { receipt_digest, receipt_event } from './cache.ts'
 import { normalize_character_name } from './character_name.ts'
 import { CHARACTER_PRICE_MIST } from './character_price.ts'

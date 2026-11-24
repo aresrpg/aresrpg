@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The per-connection harness (legacy player.js pattern): ONE state, ONE reducer door, observers.
-// REDUCERS ARE PURE — `(state, action) => state`, no context, no I/O: their only role is to fold
-// actions into state. After each fold the loop emits the action's type and STATE_UPDATED on the
-// context's local `events` emitter (the legacy loop verbatim); OBSERVERS wire listeners there and
-// own every effect: a packet that needs validation is caught on its action event, validated
-// (async allowed), and re-enters as an internal `action/*` dispatch; the reducer folds it; the
-// STATE DELTA is what observers act on. A packet that needs no validation may fold directly.
-// Teardown rides the abort `signal`. No callback ever writes state.
+// The per-connection harness: one state, one reducer door, observers. Reducers are pure
+// `(state, action) => state`. After each fold the loop emits the action's type and STATE_UPDATED on
+// the local `events` emitter; observers own every effect: a packet that needs validation is caught
+// on its action event, validated (async allowed), and re-enters as an internal `action/*` dispatch.
+// Teardown rides the abort `signal`. No callback writes state. The connection's stage, fixed at
+// upgrade, selects the mounted modules from one table.
 
 import { EventEmitter } from 'node:events'
 
-import { create_request_limiter, type RequestLimiter } from '@aresrpg/protocol/request-limiter'
+import { create_request_limiter } from '@aresrpg/protocol/request-limiter'
 import {
   parse_client_packet,
   MAX_TRACKED_CHARACTERS,
   POSITION_INTERVAL_MS,
+  type Claim,
   type ClientPacket,
   type ServerPacket,
   type PresenceRow,
@@ -32,29 +31,24 @@ import { create_player_output, type PlayerSocket } from './player_output.ts'
 import type { PublicMarket } from './public_market.ts'
 import type { PublicWorld } from './public_world.ts'
 import logger from './logger.ts'
-import { channels } from './protocol.ts'
 import type { Graph } from './graph.ts'
 import type { GameState } from './game_state.ts'
 import type { IndexingHealth } from './indexing_health.ts'
 import type { Pubsub } from './pubsub_bus.ts'
-import player_load, { type AccountDomain } from './modules/player_load.ts'
+import account_streams, { type AccountDomain } from './modules/account_streams.ts'
 import player_info from './modules/player_info.ts'
-import player_events from './modules/player_events.ts'
+import player_equipment from './modules/player_equipment.ts'
 import player_agent_observation, { type AgentWatch } from './modules/player_agent_observation.ts'
 import player_world from './modules/player_world.ts'
 import player_dungeon from './modules/player_dungeon.ts'
 import player_chat from './modules/player_chat.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
-import player_items from './modules/player_items.ts'
 import player_inventory_observation from './modules/player_inventory_observation.ts'
+import player_agent_status from './modules/player_agent_status.ts'
 import player_market from './modules/player_market.ts'
-import player_leaderboards from './modules/player_leaderboards.ts'
+import player_leaderboards, { type Leaderboards } from './modules/player_leaderboards.ts'
 import type { ResolveName } from './suins.ts'
-import player_trade from './modules/player_trade.ts'
-import player_kolizeum from './modules/player_kolizeum.ts'
-import player_tournament from './modules/player_tournament.ts'
-import player_friends from './modules/player_friends.ts'
 import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
@@ -67,7 +61,6 @@ const log = logger(import.meta)
 const realtime_budget = (tracked: number) =>
   Math.ceil(1_000 / POSITION_INTERVAL_MS) * Math.max(MAX_TRACKED_CHARACTERS, tracked) + 30
 
-/** The embodied presence — a PresenceRow pinned to the world it walks in. */
 export type Embodied = PresenceRow & { world: string }
 export type MoveAnchor = Readonly<{ x: number; z: number; at_ms: number; blocks: number }>
 export type TrackedCharacter = Readonly<{
@@ -108,7 +101,6 @@ export type PlayerAction =
       at_ms: number
       budget_blocks: number
     }
-  /** the OWN character's visible-slot change (chain event folded back into presence truth) */
   | { type: 'action/equip'; character_id: string; slot: VisibleSlot; item_type: string | null }
   | {
       type: 'action/fight'
@@ -133,58 +125,57 @@ export type PlayerState = {
   agent?: true
   /** Every owned character tracked by this connection, keyed by explicit wire identity. */
   characters: Readonly<Record<string, TrackedCharacter>>
-  /** The authenticated indexed roster; it is also the complete server-managed tracking set. */
-  allowed_characters: ReadonlySet<string>
-  /** Chain-anchor signatures decide which server-managed track needs refreshing. */
-  character_signatures: Readonly<Record<string, string>>
-  roster_fights: Readonly<Record<string, string>>
-  /** friend addresses — address-wide visibility-cap bypass */
+  /** The indexed roster by id: the proof of ownership and the complete tracking set. */
+  roster: Readonly<Record<string, CharacterRow>>
+  /** Friend addresses pass the visibility cap. */
   friends: ReadonlySet<string>
   spectating: Readonly<Record<string, string>>
   fight_previews: Readonly<Record<string, string>>
   nearby_fight: Readonly<{ character_id: string; fight: string; world: string; x: number; z: number }> | null
-  /** the marketplace category window under observation */
   market_observation: MarketObservation | null
   market_price_observation: MarketPriceObservation | null
   inspection: Extract<ClientPacket, { type: 'packet/inspection_request' }> | null
   leaderboard_observation: LeaderboardObservation | null
 }
 
-export type PlayerContext = {
+/** What every stage's modules receive. It names no account: a public module reads public data. */
+export type PublicContext = {
   allocation?: Allocation
   public_world: PublicWorld
   public_market: PublicMarket
-  address: string
+  leaderboards: Leaderboards
+  /** Whom public reads are shaped for: a proven address leaves its own offers out of a market page
+   *  and gains its own rank; null reads both anonymously. */
+  viewer: string | null
   resolve_name?: ResolveName
   admin: boolean
   graph: Graph
-  /** the two pub/sub doors — `graph` (the bound indexer set's evt:* truth) and `mesh` (the
-   *  cluster redis for player-published ephemera); channel names route via create_watcher */
   pubsub: Pubsub
-  /** Shared cached comparison of indexed checkpoint against the fullnode head. */
   indexing_health: () => Promise<IndexingHealth>
-  /** Process-wide chain game state, loaded once and updated by the indexer wire. */
   game_state: GameState
-  /** Whether this process observed a content write after loading its bundled seed. */
-  /** the LOCAL loop emitter (legacy `events`): every folded action re-emits under its type,
-   *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
+  /** Every folded action re-emits under its type; every state change emits `STATE_UPDATED(state, previous)`. */
   events: EventEmitter
   send: (packet: ServerPacket) => void
   send_position: (position: PlayerPosition) => void
-  /** Kill the connection with a loud reason — the hacker door (speed, flood). */
+  /** The server's own decision to end this socket (speed, flood, a failed snapshot). */
   drop: (reason: string) => void
-  channels: typeof channels
   get_state: () => PlayerState
   dispatch: (action: PlayerAction) => void
-  /** aborts when the connection closes — observers hang their teardown here (legacy signal) */
+  /** Aborts when the connection closes. */
   signal: AbortSignal
 }
 
-export type PlayerModule = {
+/** What account and gameplay modules receive: the address this socket proved, and its stage. */
+export type PlayerContext = PublicContext & Readonly<{ address: string; stage: Exclude<Stage, 'open'> }>
+
+/** A packet no mounted module folds or listens to changes nothing on that socket. */
+export type PlayerModule<Context = PlayerContext> = {
   name: string
   reduce?: (state: PlayerState, action: PlayerAction) => PlayerState
-  observe?: (context: PlayerContext) => void
+  observe?: (context: Context) => void
 }
+/** A module every stage may mount: its observer is typed out of any address. */
+export type PublicModule = PlayerModule<PublicContext>
 
 export type Player = {
   /** Live tracked identities, including fights/dungeons; never the full ownership catalogue. */
@@ -195,37 +186,43 @@ export type Player = {
   on_close: () => void
 }
 
-const MODULES: PlayerModule[] = [
-  player_load,
-  player_info,
-  player_events,
-  player_friends,
-  player_agent_observation,
-  player_world,
-  player_dungeon,
-  player_chat,
-  player_fight,
-  player_party,
-  player_market,
-  player_leaderboards,
-  player_items,
-  player_inventory_observation,
-  player_trade,
-  player_kolizeum,
-  player_tournament,
-  player_requests,
-  player_allocation,
-  player_inspection,
-  player_admin,
-]
+type Stage = Claim['stage']
+type Mount =
+  Readonly<{ from: 'open'; module: PublicModule }> | Readonly<{ from: Exclude<Stage, 'open'>; module: PlayerModule }>
 
-/** Database-reaching packets — the ONE list the read gate matches on.
- *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
- *  loose enough — never per-module sprinkling). */
+/** THE STAGE TABLE — every module in mount (and fold) order with the first stage that mounts it;
+ *  the stages nest (open ⊂ signed ⊂ seated). `open` and `signed` mount no module that takes gameplay
+ *  input or publishes presence, so such a packet has no handler and changes nothing there. */
+const MODULES: readonly Mount[] = [
+  { from: 'signed', module: account_streams },
+  { from: 'open', module: player_info },
+  { from: 'seated', module: player_equipment },
+  { from: 'signed', module: player_agent_observation },
+  { from: 'seated', module: player_world },
+  { from: 'seated', module: player_dungeon },
+  { from: 'seated', module: player_chat },
+  { from: 'seated', module: player_fight },
+  { from: 'seated', module: player_party },
+  { from: 'open', module: player_market },
+  { from: 'open', module: player_leaderboards },
+  { from: 'signed', module: player_inventory_observation },
+  { from: 'seated', module: player_agent_status },
+  { from: 'open', module: player_requests },
+  { from: 'signed', module: player_allocation },
+  { from: 'open', module: player_inspection },
+  { from: 'seated', module: player_admin },
+]
+const STAGE_RANK: Readonly<Record<Stage, number>> = Object.freeze({ open: 0, signed: 1, seated: 2 })
+
+/** Whether a socket of `stage` mounts what `from` names; the stages nest. */
+export const reaches = (from: Stage, stage: Stage): boolean => STAGE_RANK[from] <= STAGE_RANK[stage]
+
+const modules_of = (stage: Stage): readonly Mount[] => MODULES.filter(({ from }) => reaches(from, stage))
+
+/** Graph-reaching packets: the one list the read gate matches. Modules never rate-limit themselves. */
 const READ_PACKETS = new Set<string>([
   'packet/agent_observe',
   'packet/inventory_observe',
-  'packet/market_floor_request',
   'packet/allocation_request',
   'packet/spectate',
   'packet/fight_preview',
@@ -268,9 +265,7 @@ const requests_graph = (packet: Readonly<ClientPacket>): boolean =>
 
 const INITIAL_STATE = (): PlayerState => ({
   characters: {},
-  allowed_characters: new Set(),
-  character_signatures: {},
-  roster_fights: {},
+  roster: {},
   friends: new Set(),
   spectating: {},
   fight_previews: {},
@@ -282,50 +277,52 @@ const INITIAL_STATE = (): PlayerState => ({
 })
 
 type PlayerWires = Pick<
-  PlayerContext,
-  'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name' | 'public_world' | 'public_market'
+  PublicContext,
+  | 'graph'
+  | 'pubsub'
+  | 'resolve_name'
+  | 'public_world'
+  | 'public_market'
+  | 'leaderboards'
+  | 'admin'
+  | 'allocation'
+  | 'game_state'
+  | 'indexing_health'
 > & {
-  allocation?: Allocation
-  game_state?: GameState
-  indexing_health?: () => Promise<IndexingHealth>
-  request_limiter?: RequestLimiter
-  realtime_limiter?: RequestLimiter
+  /** What this socket proved at its door; it alone selects the mounted modules. */
+  claim: Claim
   /** Called when the server itself drops this verified player for a violation: the one source of a cool-off. */
   penalize?: () => void
   ws: PlayerSocket
 }
 
-const UNKNOWN_GAME_STATE: GameState = Object.freeze({
-  get: () => null,
-  listen: () => () => {},
-  start: async () => {},
-})
+/** Both allowances belong to this socket alone, so one key names its whole bucket. */
+const SOCKET = 'socket'
 
-/** Mount one verified connection — returns the ws handler's whole surface. */
-export function create_player({
-  ws,
-  allocation,
-  address,
-  resolve_name,
-  admin,
-  graph,
-  pubsub,
-  public_world,
-  public_market,
-  game_state = UNKNOWN_GAME_STATE,
-  indexing_health = async () =>
-    Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }),
-  request_limiter = create_request_limiter(),
-  realtime_limiter,
-  penalize = () => undefined,
-}: PlayerWires): Player {
-  let state = INITIAL_STATE()
-  const realtime =
-    realtime_limiter ??
-    create_request_limiter({
-      capacity: () => realtime_budget(Object.keys(state.characters).length),
-      window_ms: 1_000,
+/** Observe every mounted module: an open socket hands its public modules the public context; an
+ *  account hands every mounted module the context that names its address. */
+const observe = (claim: Claim, mounts: readonly Mount[], context: PublicContext): void => {
+  if (claim.stage === 'open')
+    return mounts.forEach((mount) => {
+      if (mount.from === 'open') mount.module.observe?.(context)
     })
+  const account: PlayerContext = { ...context, address: claim.address, stage: claim.stage }
+  mounts.forEach(({ module }) => module.observe?.(account))
+}
+
+/** Mount one admitted connection — returns the ws handler's whole surface. */
+export function create_player(wires: PlayerWires): Player {
+  const { ws, claim, allocation, resolve_name, graph, pubsub, public_world, public_market, leaderboards } = wires
+  const mounts = modules_of(claim.stage)
+  const viewer = claim.stage === 'open' ? null : claim.address
+  // 60 graph reads a minute (the limiter's default), held by this socket alone.
+  const reads = create_request_limiter()
+  const penalize = wires.penalize ?? (() => undefined)
+  let state = INITIAL_STATE()
+  const realtime = create_request_limiter({
+    capacity: () => realtime_budget(Object.keys(state.characters).length),
+    window_ms: 1_000,
+  })
   let closed = false
   const controller = new AbortController()
   const { send, position: send_position } = create_player_output(ws, controller.signal)
@@ -337,29 +334,29 @@ export function create_player({
 
   const events = new EventEmitter()
   events.setMaxListeners(0)
-  const context: PlayerContext = {
+  const context: PublicContext = {
     allocation,
-    address,
     resolve_name,
-    admin,
+    admin: wires.admin,
     graph,
     pubsub,
     public_world,
     public_market,
-    game_state,
-    indexing_health,
+    leaderboards,
+    viewer,
+    game_state: wires.game_state,
+    indexing_health: wires.indexing_health,
     events,
     send,
     send_position,
     drop,
-    channels,
     get_state: () => state,
     signal: controller.signal,
     dispatch: (action) => {
       if (closed) return
       const previous = state
-      const next = MODULES.reduce(
-        (folded, module) => (module.reduce ? module.reduce(folded, action) : folded),
+      const next = mounts.reduce(
+        (folded, { module }) => (module.reduce ? module.reduce(folded, action) : folded),
         previous
       )
       state = next
@@ -369,8 +366,7 @@ export function create_player({
       if (next !== previous) events.emit('STATE_UPDATED', next, previous)
     },
   }
-
-  for (const module of MODULES) module.observe?.(context)
+  observe(claim, mounts, context)
 
   return {
     online_characters: () => Object.keys(state.characters),
@@ -378,10 +374,10 @@ export function create_player({
     dispatch: (action) => context.dispatch(action),
     on_message: (raw) => {
       if (closed) return
-      if (!realtime.take(address)) return drop('RATE_LIMIT')
+      if (!realtime.take(SOCKET)) return drop('RATE_LIMIT')
       try {
         const packet = parse_client_packet(raw)
-        if (requests_graph(packet) && !request_limiter.take(address)) {
+        if (requests_graph(packet) && !reads.take(SOCKET)) {
           const id = 'id' in packet ? { id: packet.id } : {}
           send(
             packet.type === 'packet/inspection_request'
@@ -392,7 +388,7 @@ export function create_player({
         }
         context.dispatch(packet)
       } catch (error) {
-        log.warn({ address, error: (error as Error).message }, 'packet refused')
+        log.warn({ address: viewer, error: (error as Error).message }, 'packet refused')
         send({ type: 'packet/error', reason: (error as Error).message })
       }
     },

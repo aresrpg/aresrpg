@@ -7,10 +7,11 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { format_text, type AppCopy } from '../i18n/copy.ts'
 
-import { DigestLink } from './SendModalShell.tsx'
+import { DigestLink, SendModalShell } from './SendModalShell.tsx'
 
 export type WalletTransferState = Readonly<{
-  phase: 'building' | 'review' | 'executing' | 'success' | 'failed'
+  /** `uncertain`: submitted, outcome unknown. It may have moved the funds, so nothing offers to send again. */
+  phase: 'building' | 'review' | 'executing' | 'success' | 'failed' | 'uncertain'
   amount_mist: bigint
   drain: boolean
   recipient_address: string
@@ -71,25 +72,29 @@ export const SuiTransferSuccess = ({
       </div>
       {transfer.digest && <DigestLink copy={copy} digest={transfer.digest} />}
       <div className="mt-2 flex w-full gap-3">
-        <Button
-          tone="primary"
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={reset}
-          type="button"
-        >
+        <Button tone="primary" className="flex-1 tracking-[0.2em]" onClick={reset} type="button">
           {send_text(copy, 'send_more')}
         </Button>
-        <Button
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={close}
-          type="button"
-        >
+        <Button className="flex-1 tracking-[0.2em]" onClick={close} type="button">
           {copy.wallet_send_shared.close}
         </Button>
       </div>
     </div>
   )
 }
+
+const SuiTransferUncertain = ({ close, copy }: Readonly<{ close: () => void; copy: AppCopy }>) => (
+  <div className="flex flex-col items-center gap-5">
+    <div className="text-center text-[11px] leading-relaxed tracking-wide text-text" role="status">
+      {copy.transaction_unknown_toast}
+    </div>
+    <div className="mt-2 flex w-full gap-3">
+      <Button className="flex-1 tracking-[0.2em]" onClick={close} type="button">
+        {copy.wallet_send_shared.close}
+      </Button>
+    </div>
+  </div>
+)
 
 const failure_key = (error: string | undefined): string => {
   const message = error?.toLowerCase() ?? ''
@@ -100,7 +105,7 @@ const failure_key = (error: string | undefined): string => {
   return 'tx_failed'
 }
 
-export const SuiTransferFailed = ({
+const SuiTransferFailed = ({
   close,
   copy,
   open_funds,
@@ -123,20 +128,47 @@ export const SuiTransferFailed = ({
       <div className="mt-2 flex w-full gap-3">
         <Button
           tone="primary"
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+          className="flex-1 tracking-[0.2em]"
           onClick={key === 'insufficient_balance' ? open_funds : reset}
           type="button"
         >
           {key === 'insufficient_balance' ? copy.wallet_send_shared.add_funds : copy.wallet_send_shared.retry}
         </Button>
-        <Button
-          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-          onClick={close}
-          type="button"
-        >
+        <Button className="flex-1 tracking-[0.2em]" onClick={close} type="button">
           {copy.wallet_send_shared.close}
         </Button>
       </div>
     </div>
   )
 }
+
+type Ended = Readonly<{
+  close: () => void
+  copy: AppCopy
+  open_funds: () => void
+  reset: () => void
+  transfer: WalletTransferState
+}>
+
+/** A sent transfer without a receipt: failed, so it may be sent again, or uncertain, so it may have executed. */
+export const SuiTransferEnded = ({ close, copy, open_funds, reset, transfer }: Ended) =>
+  transfer.phase === 'uncertain' ? (
+    <SendModalShell
+      close={close}
+      close_label={copy.wallet_close}
+      locked={false}
+      title={send_text(copy, 'executing_title')}
+    >
+      <SuiTransferUncertain close={close} copy={copy} />
+    </SendModalShell>
+  ) : (
+    <SendModalShell
+      close={close}
+      close_label={copy.wallet_close}
+      locked={false}
+      title={send_text(copy, 'failed_title')}
+      tone="danger"
+    >
+      <SuiTransferFailed close={close} copy={copy} open_funds={open_funds} reset={reset} transfer={transfer} />
+    </SendModalShell>
+  )

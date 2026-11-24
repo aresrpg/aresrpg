@@ -11,7 +11,8 @@ import type {
   StatName,
 } from '@aresrpg/immutable'
 
-import type { Resolvable, Sdk } from './client.ts'
+import type { Sdk } from './client.ts'
+import type { Resolvable } from './doors.ts'
 
 export type SeedEffect = Readonly<{
   kind: number

@@ -6,7 +6,7 @@ import { create_fight_state } from './create.ts'
 import { normalize_checkpoint } from './normalize.ts'
 import { mix } from './prng.ts'
 import { create_render_ids, create_runtime } from './runtime.ts'
-import type { FightCommand, FightEvent, FightRuntimeError, HydratedFightCheckpoint, SeedWitness } from './types.ts'
+import type { FightCommand, FightEvent, FightRuntimeError, HydratedFightCheckpoint } from './types.ts'
 
 export type FightMode = 'remote' | 'local'
 export type TurnWitness = { fighter: bigint; seed: bigint }
@@ -28,7 +28,6 @@ export type Fight = {
   apply: (input: FightInput) => FightResult
   cancel_pending_turn: () => FightResult
   reset_turn: () => FightResult
-  transform: (inputs: Iterable<FightInput>) => Generator<FightEvent, void, void>
   replace: (state: HydratedFightCheckpoint) => readonly FightEvent[]
   simulate_turn: (input: { observed_ms: bigint }) => FightResult
 }
@@ -82,17 +81,17 @@ export const create_fight = ({
 
   const run = (input: FightCommandInput, supplied_witnesses: readonly TurnWitness[] = []) => {
     let witnesses = [...(input.turn_witnesses ?? []), ...supplied_witnesses]
-    const seed_for = (fighter: bigint): SeedWitness | null => {
+    const seed_for = (fighter: bigint): bigint | null => {
       if (mode === 'local') {
         const next = seed_at(seed, seed_index)
         seed_index += 1n
-        return { seed: next, witnessed: true }
+        return next
       }
       const witness_index = witnesses.findIndex((witness) => witness.fighter === fighter)
       if (witness_index < 0) return null
       const witness = witnesses[witness_index]!
       witnesses = witnesses.filter((_, index) => index !== witness_index)
-      return { seed: witness.seed, witnessed: true }
+      return witness.seed
     }
     const runtime = create_runtime({
       contract: state.contract,
@@ -186,9 +185,6 @@ export const create_fight = ({
       seed_index = boundary_seed_index
       pending_turn = null
       return { state: snapshot(), events: [], error: null }
-    },
-    *transform(inputs: Iterable<FightInput>) {
-      for (const input of inputs) yield* apply(input).events
     },
     replace: (replacement: HydratedFightCheckpoint) => {
       const normalized = normalize_checkpoint(replacement) as HydratedFightCheckpoint

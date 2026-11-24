@@ -5,17 +5,16 @@ import { same_fight_turn } from '@aresrpg/fight'
 import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
 import { consumable_baseline, consumable_projected, type ConsumableBaseline } from './consumable_projection.ts'
-import { EQUIPMENT_ACTIONS, equipment_projected } from './equipment_actions.ts'
+import { equipment_projected } from './equipment_actions.ts'
 import { market_delist_projected, market_sell_projected } from './market_actions.ts'
 import { character_created_projected } from './character_actions.ts'
 import { loot_boxes_projected } from './loot_boxes.ts'
 import { team_projected } from './team_actions.ts'
 import { spell_projected } from './spell_allocation.ts'
 import { stat_baseline, stats_projected, type StatBaseline, type StatSpending } from './stat_allocation.ts'
-import { owned_character } from './gameplay_context.ts'
+import { owned_character, hydrate_gameplay_fight } from './gameplay_context.ts'
 import { zone_key } from './actor_world.ts'
 import { assert_lease, type Command, type Lane } from './control.ts'
-import { hydrate_gameplay_fight } from './gameplay.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import { step_observation, receipt_projected, type ProfessionBaseline } from './action_receipts.ts'
 import { inventory_projected } from './actor_inventory.ts'
@@ -101,7 +100,7 @@ const character_projected = (
   character: CharacterRow
 ): boolean => {
   const checks: Partial<Record<Command['kind'], () => boolean>> = {
-    equip_item: () => equipment_projected(EQUIPMENT_ACTIONS.equip_item.parse(command.payload), character),
+    equip_item: () => equipment_projected(command.payload as Parameters<typeof equipment_projected>[0], character),
     use_consumable: () => consumable_projected(command.action_baseline?.consumable, receipt, context, character),
     market_buy: () => inventory_projected(receipt, context.snapshot.inventory),
     market_sell: () => market_sell_projected(command, receipt, context.snapshot.inventory),

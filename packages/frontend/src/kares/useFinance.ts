@@ -6,7 +6,7 @@ import { useEffect, useMemo } from 'react'
 
 import { toast } from '../toast.ts'
 
-import type { FinanceSession } from './model.ts'
+import { failed_transaction, type FinanceSession } from './model.ts'
 import { create_finance_runtime, type FinanceOptions } from './runtime.ts'
 
 export const useFinance = (options: FinanceOptions, session?: FinanceSession | null, confirmation?: string) => {
@@ -22,10 +22,13 @@ export const useFinance = (options: FinanceOptions, session?: FinanceSession | n
       ),
     [options.network, options.rpc_url, options.managed, session]
   )
+  // A transaction says how it ended once, as a toast. A failed read leaves the figures already shown.
   useEffect(
     () =>
       runtime.store.subscribe((state, previous) => {
         if (confirmation && state.digest && state.digest !== previous.digest) toast.add(confirmation, 'success')
+        const failure = failed_transaction(state, previous)
+        if (failure) toast.add(failure, 'error')
       }),
     [runtime, confirmation]
   )

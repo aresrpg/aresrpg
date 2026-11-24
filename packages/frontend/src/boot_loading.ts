@@ -11,11 +11,21 @@ const bind_reload = (shell: Readonly<HTMLElement>): void => {
   }
 }
 
+/** Keeps the postcard as the document served it, so a failed start can show it again after React took the root. */
+const keep_served_postcard = (shell: Readonly<HTMLElement>): void => {
+  if (document.getElementById('boot-game')) return
+  const template = document.createElement('template')
+  template.setAttribute('id', 'boot-game')
+  template.content.append(shell.cloneNode(true))
+  document.body.append(template)
+}
+
 export const prepare_boot_loading = (): void => {
   const shell = document.querySelector<HTMLElement>('[data-boot-loading]')
   if (!shell) return
+  keep_served_postcard(shell)
   bind_reload(shell)
-  const context = location.pathname.startsWith('/demo') ? 'demo' : 'home'
+  const context = location.pathname.startsWith('/world/demo') ? 'demo' : 'home'
   const image = select_loading_image(context)
   shell.querySelector('[data-loading-art]')?.setAttribute('src', image)
   document.documentElement.setAttribute('data-loading-art-context', context)
@@ -28,18 +38,8 @@ export const prepare_boot_loading = (): void => {
   }
 }
 
-/** The engine-less shell of the document, shown while a light page's code loads. Its mood follows the page. */
-export const show_light_shell = (aura: 'sky' | 'ember' | 'moss'): void => {
-  const host = document.getElementById('root')
-  const template = document.getElementById('boot-light') as HTMLTemplateElement | null
-  if (!host || !template) return
-  const content = template.content.cloneNode(true) as DocumentFragment
-  content.firstElementChild?.setAttribute('data-aura', aura)
-  host.replaceChildren(content)
-}
-
-/** Restore the document-owned postcard when leaving the landing or recovering a failed import. */
-export const show_boot_loading = (): void => {
+/** Restore the document-owned postcard when recovering a failed import. */
+const show_boot_loading = (): void => {
   const host = document.getElementById('root')
   const template = document.getElementById('boot-game') as HTMLTemplateElement | null
   if (!host || !template) throw new Error('Game loading shell is missing')

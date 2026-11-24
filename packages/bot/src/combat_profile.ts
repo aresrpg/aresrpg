@@ -3,7 +3,7 @@
 import { spell_level_of, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import { catalog_spell, learned_spell_rank } from './spell_catalog.ts'
+import { catalog_spell, learned_spell_rank } from './catalog.ts'
 import { decode, nonempty, object_schema, type Schema } from './gameplay_schema.ts'
 
 /** A cast marked `if_learned` is skipped while its hero has not learned the spell; any other cast of
@@ -30,8 +30,6 @@ export type CombatStep =
       target: 'nearest_enemy' | 'lowest_hp_enemy' | 'highest_damage_enemy'
       repeat?: true
     }>
-  /** Every learned spell that strengthens the hero itself and is not in effect yet, each once. */
-  | Readonly<{ type: 'boost' }>
   | Readonly<{ type: 'move'; direction: 'retreat' | 'approach' }>
 export type CombatCondition =
   | Readonly<{ type: 'always' }>
@@ -75,7 +73,6 @@ const step_schema: Schema = {
       }),
       required: ['type', 'target'],
     },
-    object_schema({ type: { const: 'boost' } }),
     object_schema({ type: { const: 'move' }, direction: choices('retreat', 'approach') }),
   ],
 }
@@ -110,8 +107,17 @@ const spell_names = (steps: readonly Cast[]): readonly string[] => [...new Set(s
 /** The spells whose absence stops the hero: every cast not marked `if_learned`. */
 const required_spells = (profile: CombatProfile) => spell_names(casts(profile).filter((step) => !step.if_learned))
 
+/** The `boost` step was removed (owner, 2026-11-23): an AI casts its boosts as its own `cast` steps.
+ * A profile that still names it is refused by this code, at validation and at its next turn. */
+export const BOOST_REMOVED = 'combat_boost_removed'
+export const names_removed_step = (profile: unknown): boolean =>
+  Array.isArray((profile as { combos?: unknown } | null)?.combos) &&
+  (profile as { combos: readonly { steps?: unknown }[] }).combos.some(
+    (combo) => Array.isArray(combo?.steps) && combo.steps.some((step) => (step as { type?: unknown })?.type === 'boost')
+  )
 /** Saved preferences are data. They never allocate capital, equip gear or authorize a fight. */
 export const parse_combat_profile = (value: unknown): CombatProfile => {
+  if (names_removed_step(value)) throw new Error(BOOST_REMOVED)
   const profile = decode<CombatProfile>(COMBAT_PROFILE_SCHEMA, value)
   const names = new Set(profile.combos.map(({ name }) => name))
   if (names.size !== profile.combos.length) throw new Error('duplicate_combo')

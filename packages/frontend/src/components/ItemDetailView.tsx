@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { GameWindow, FloatingWindow } from '@aresrpg/ui'
-import { useRef, useContext, type ReactNode } from 'react'
+import { useContext, type ReactNode } from 'react'
 
 import { encyclopedia_catalog, type SeedItem } from '../content/catalog.ts'
 import { useText } from '../i18n/useText.ts'
@@ -10,14 +10,15 @@ import { MobInspection, WorldInspection } from './CatalogueInspection.tsx'
 import { ItemDetailContext } from './ItemDetailContext.ts'
 import { ItemAcquisition } from './ItemAcquisition.tsx'
 import { ItemCrafting } from './ItemCrafting.tsx'
-import { ItemPetDiet } from './ItemPetDiet.tsx'
-import { ItemDetailBody, type ItemDetailProps } from './ItemDetailBody.tsx'
+import type { ItemDetailProps } from './ItemDetailBody.tsx'
+import { ItemSummary } from './ItemSummary.tsx'
 import {
   InspectionContext,
   inspection_identity as identity,
   useInspections,
   type Inspection,
 } from './useInspections.ts'
+import './inspection.css'
 
 export {
   InlineField,
@@ -33,27 +34,27 @@ export type { Inspection } from './useInspections.ts'
 
 export const ItemDetailView = (props: ItemDetailProps) => {
   const context = useContext(ItemDetailContext)
-  const root = useRef<HTMLDivElement>(null)
-  const { inspections, open, close } = useInspections(root)
+  const { inspections, open, close } = useInspections()
   return (
-    <div ref={root} className="item-sheet-container">
-      <ItemDetailBody {...props}>
-        {props.children}
-        {!props.edit && props.category === 'pet' && (
-          <ItemPetDiet item_type={props.item_type} select_item={context === 'full' ? open('item') : undefined} />
-        )}
-        {!props.edit && context === 'full' && (
-          <>
-            <ItemCrafting item_type={props.item_type} session={props.craft_session} open_ingredient={open('item')} />
-            <ItemAcquisition
-              item_type={props.item_type}
-              select_item={open('item')}
-              select_mob={props.select_mob ?? open('mob')}
-              select_world={props.select_world ?? open('world')}
-            />
-          </>
-        )}
-      </ItemDetailBody>
+    <div className="item-sheet-container">
+      <ItemSummary
+        {...props}
+        select_item={context === 'full' ? open('item') : undefined}
+        sources={
+          !props.edit &&
+          context === 'full' && (
+            <>
+              <ItemCrafting item_type={props.item_type} session={props.craft_session} open_ingredient={open('item')} />
+              <ItemAcquisition
+                item_type={props.item_type}
+                select_item={open('item')}
+                select_mob={props.select_mob ?? open('mob')}
+                select_world={props.select_world ?? open('world')}
+              />
+            </>
+          )
+        }
+      />
       {inspections.map((entry) => (
         <InspectionWindow key={identity(entry)} entry={entry} props={props} close={() => close(entry)} open={open} />
       ))}

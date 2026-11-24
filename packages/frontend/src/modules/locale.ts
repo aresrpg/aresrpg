@@ -2,15 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { apply_document_locale } from '../i18n/document.ts'
-import { save_locale, type Locale } from '../i18n/locale.ts'
+import { load_locale, save_locale, type Locale } from '../i18n/locale.ts'
 import { load_app_copy, type AppCopy } from '../i18n/copy.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { SiteModule } from '../store.ts'
 
 export type LocaleInput =
   | Readonly<{ type: 'locale/changed'; locale: Locale }>
   | Readonly<{ type: 'locale/loaded'; locale: Locale; copy: AppCopy }>
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce: NonNullable<SiteModule['reduce']> = (state, input) => {
   if (input.type === 'locale/changed' && state.locale !== input.locale)
     return Object.freeze({ ...state, locale: input.locale })
   if (input.type === 'locale/loaded' && state.locale === input.locale)
@@ -18,7 +18,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
+const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_state, signal }) => {
   let generation = 0
   const load = (locale: Locale): void => {
     const own_generation = ++generation
@@ -38,4 +38,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   })
 }
 
-export default Object.freeze({ name: 'locale', reduce, observe }) satisfies AppModule
+/** The saved or the browser's language from the first state; the copy loads once the store starts. */
+export default Object.freeze({
+  name: 'locale',
+  initial: () => ({ locale: load_locale(), copy: null }),
+  reduce,
+  observe,
+}) satisfies SiteModule

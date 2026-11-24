@@ -1,24 +1,47 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ArrowUpRight, Gem, Loader2 } from 'lucide-react'
+import { ArrowUpRight, Gem } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { mastery_kares_price } from '@aresrpg/sdk/kares-economics'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
-import { content_catalog } from '../content/catalog.ts'
+import { NewTabLink } from '../components/links.tsx'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
-import { useInspections } from '../components/useInspections.ts'
-import { InspectionWindow } from '../components/ItemDetailView.tsx'
-import { CatalogueItemDetails } from '../encyclopedia/CatalogueItemDetails.tsx'
-import { encyclopedia_text } from '../encyclopedia/copy.ts'
-import { stat_name } from '../i18n/copy.ts'
+import { mastery_offers } from '../content/mastery.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
+import { CrateContents } from './CrateContents.tsx'
 import { MasteryKaresPurchase } from './MasteryKaresPurchase.tsx'
 import { useMasterySource } from './MasterySource.tsx'
-import { effective_mastery_points } from './model.ts'
+import { effective_mastery_points, offer_view } from './model.ts'
+
+const OFFER_FACE = 'group flex min-w-0 flex-1 cursor-pointer flex-col items-center text-center'
+
+/** An offer's face: a crate shows what it holds; any other item opens its docs page in a new tab. */
+const OfferFace = ({
+  copy,
+  item,
+  show_crate,
+  children,
+}: Readonly<{
+  copy: AppCopy
+  item: Readonly<{ item_type: string; name: string }>
+  show_crate: (item_type: string) => void
+  children: ReactNode
+}>) => {
+  const { href, contents } = offer_view(item.item_type)
+  return contents ? (
+    <button aria-label={item.name} className={OFFER_FACE} onClick={() => show_crate(item.item_type)} type="button">
+      {children}
+    </button>
+  ) : (
+    <NewTabLink className={OFFER_FACE} href={href} new_tab={copy.site.new_tab}>
+      {children}
+    </NewTabLink>
+  )
+}
 
 const offer_redeem_disabled = (
   affordable: boolean,
@@ -32,14 +55,12 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const text = copy_text(copy.mastery_page)
   const { balance, mastery, current_epoch, connected, dispatch: dispatch_app } = useMasterySource()
   const kares_balance = balance ?? 0n
-  const root = useRef<HTMLElement>(null)
-  const { inspections, open, close } = useInspections(root)
-  const encyclopedia = encyclopedia_text(copy)
+  const [crate, show_crate] = useState<string | null>(null)
   const points = effective_mastery_points(mastery.row, current_epoch)
   useEffect(() => {
     if (mastery.pending === null) dispatch_app({ type: 'wallet/refresh' })
   }, [mastery.pending, dispatch_app])
-  const offers = content_catalog.mastery.offers
+  const offers = mastery_offers
     .flatMap((authored) => {
       const state = mastery.offers.find((offer) => offer.item_type === authored.item_type)
       return authored.item && (state?.enabled || !mastery.loaded) ? [{ state, item: authored.item }] : []
@@ -51,8 +72,8 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     })
 
   return (
-    <section ref={root} className="mastery-shop">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <section className="flex min-h-0 min-w-0 flex-col">
+      <div className="flex flex-none flex-wrap items-center justify-between gap-4 border-b border-border pb-2.5">
         <div>
           <div className="text-[9px] font-semibold tracking-[0.24em] text-gold uppercase">{text('shop_title')}</div>
           <p className="mt-1 text-[9px] text-muted">{text('shop_lead')}</p>
@@ -67,7 +88,13 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span className="text-[9px] font-semibold tracking-[0.16em] text-gold uppercase">
               {copy.kares_page.points}
             </span>
-            <strong className="text-3xl leading-none font-bold text-gold tabular-nums">{numbers.number(points)}</strong>
+            {mastery.loaded ? (
+              <strong className="text-3xl leading-none font-bold text-gold tabular-nums">
+                {numbers.number(points)}
+              </strong>
+            ) : (
+              <span className="aui-skeleton h-7.5 w-[3ch]" />
+            )}
           </div>
         </div>
       </div>
@@ -75,7 +102,10 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {offers.length === 0 ? (
         <div className="py-12 text-center text-[9px] tracking-[0.16em] text-muted uppercase">{text('shop_empty')}</div>
       ) : (
-        <div className="mastery-offers" data-mastery-shop="">
+        <div
+          className="grid min-h-0 grid-cols-[repeat(auto-fit,minmax(190px,1fr))] content-start gap-2.5 overflow-y-auto px-0.5 py-1 [scrollbar-width:thin] @max-[1100px]/aui-window:grid-cols-[repeat(auto-fill,minmax(130px,1fr))] @max-[1100px]/aui-window:gap-1.5"
+          data-mastery-shop=""
+        >
           {offers.map(({ state, item }) => {
             const cost = BigInt(state?.cost ?? 0)
             const affordable =
@@ -88,37 +118,38 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             const icon = item_detail_icon(item.item_type)
             return (
               <article
-                className="mastery-offer aui-panel"
+                className="aui-panel flex flex-col gap-2.5 p-3 data-[affordable=true]:border-gold/40 @max-[1100px]/aui-window:gap-[5px] @max-[1100px]/aui-window:p-1.5"
                 data-affordable={affordable}
                 data-mastery-offer={item.item_type}
                 key={item.item_type}
               >
-                <button
-                  aria-label={item.name}
-                  className="group flex min-w-0 flex-1 cursor-pointer flex-col text-left"
-                  onClick={() => open('item')(item.item_type)}
-                  type="button"
-                >
-                  <div className="flex w-full items-start justify-between gap-4">
-                    <div className="grid size-20 shrink-0 place-items-center border border-white/8 bg-black/20 transition-colors group-hover:border-gold/35 group-hover:bg-gold/5">
+                <OfferFace copy={copy} item={item} show_crate={show_crate}>
+                  <div className="flex w-full items-start justify-center gap-4">
+                    <div className="grid h-[86px] w-24 shrink-0 place-items-center @max-[1100px]/aui-window:h-12 @max-[1100px]/aui-window:w-[54px]">
                       {icon ? (
-                        <img alt="" className="size-16 object-contain" src={icon} />
+                        <img
+                          alt=""
+                          className="size-[86px] object-contain @max-[1100px]/aui-window:size-12"
+                          src={icon}
+                        />
                       ) : (
                         <Gem className="text-gold/40" size={28} />
                       )}
                     </div>
                   </div>
-                  <div className="mt-4 min-w-0 flex-1">
-                    <h3 className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-text uppercase transition-colors group-hover:text-gold">
-                      <span className="truncate">{item.name}</span>
+                  <div className="mt-4 min-w-0 flex-1 @max-[900px]/aui-window:mt-1">
+                    <h3 className="flex items-center justify-center gap-2 font-ui text-[13px] leading-[normal] font-bold tracking-normal text-gold @max-[1100px]/aui-window:text-[11px]">
+                      <span className="overflow-hidden text-ellipsis">{item.name}</span>
                       <ArrowUpRight className="shrink-0 opacity-45 group-hover:opacity-100" size={12} />
                     </h3>
                   </div>
-                </button>
-                <div className="mt-5 flex flex-wrap gap-2">
+                </OfferFace>
+                <div className="flex flex-col flex-wrap gap-1.5">
                   <Button
+                    className="min-h-9 text-[11px]"
                     tone="primary"
                     data-mastery-payment="mastery"
+                    busy={busy}
                     disabled={offer_redeem_disabled(
                       points >= cost,
                       mastery.pending,
@@ -136,43 +167,12 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   </Button>
                   <MasteryKaresPurchase item_type={item.item_type} name={item.name} copy={copy} />
                 </div>
-                {busy && (
-                  <span className="mt-2 flex items-center gap-2 text-[9px] text-muted" role="status">
-                    <Loader2 className="animate-spin" size={11} />
-                    {text('buying')}
-                  </span>
-                )}
               </article>
             )
           })}
         </div>
       )}
-      {inspections.map((entry) => (
-        <InspectionWindow
-          key={`${entry.kind}:${entry.id}`}
-          entry={entry}
-          open={open}
-          close={() => close(entry)}
-          props={{
-            labels: {
-              characteristics: encyclopedia('characteristics'),
-              damages: encyclopedia('damages'),
-              level_short: '',
-              range_to: encyclopedia('range_to'),
-            },
-          }}
-          render_item={(item_type) => (
-            <CatalogueItemDetails
-              item_type={item_type}
-              select_item={open('item')}
-              select_mob={open('mob')}
-              select_world={open('world')}
-              text={encyclopedia}
-              stat_name={(stat) => stat_name(copy, stat)}
-            />
-          )}
-        />
-      ))}
+      {crate && <CrateContents copy={copy} item_type={crate} close={() => show_crate(null)} />}
     </section>
   )
 }

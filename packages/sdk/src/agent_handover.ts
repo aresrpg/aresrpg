@@ -13,7 +13,7 @@ import { same_agent_equipment } from './agent_equipment.ts'
 import { transaction_resolution_error } from './transaction_error.ts'
 
 export type AgentHandoverIntent = Extract<AgentTransferIntent, { kind: 'offer' | 'asset_offer' }>
-type Claim = Extract<AgentTransferIntent, { kind: 'claim' | 'asset_claim' | 'asset_cancel' }>
+type Claim = Extract<AgentTransferIntent, { kind: 'claim' | 'asset_claim' }>
 type Readers = Readonly<{
   characters: () => Promise<readonly AgentReturnOffer[]>
   items: () => Promise<readonly AgentItemReturnOffer[]>

@@ -6,6 +6,7 @@ import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { ObjectExplorerLink } from '../components/ObjectExplorerLink.tsx'
+import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { SendModalShell } from '../components/SendModalShell.tsx'
 import { inventory_groups } from '../inventory_stacks.ts'
@@ -17,6 +18,7 @@ import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
 import { bag_item_matches, type BagCategory, type ResourceFilter } from './InventoryResourceFilters.tsx'
 import { select_inventory_item } from './inventory_selection.ts'
+import './character_window.css'
 
 export const InventoryTransferGrid = ({
   owner = 'agent',
@@ -108,7 +110,7 @@ export const InventoryTransferGrid = ({
           close_label={copy.wallet_close}
           locked={false}
         >
-          <OwnedItemDetail item={inspected} copy={copy} />
+          <OwnedItemDetail Sheet={ItemDetailView} item={inspected} copy={copy} />
         </SendModalShell>
       )}
     </>

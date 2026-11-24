@@ -25,6 +25,23 @@ export const pins = {
   friend_registry: pin(10),
 }
 
+/** In-memory Storage: the browser tab record and the gas ledger both speak this interface. */
+export const memory_storage = () => {
+  const values = new Map<string, string>()
+  const reads: (string | null)[] = []
+  return {
+    values,
+    reads,
+    getItem: (key: string) => {
+      const value = values.get(key) ?? null
+      reads.push(value)
+      return value
+    },
+    setItem: (key: string, value: string) => void values.set(key, value),
+    removeItem: (key: string) => void values.delete(key),
+  }
+}
+
 export const changed = (
   object_id: string,
   version: string,
@@ -38,6 +55,11 @@ export const changed = (
   outputOwner: owner,
 })
 
+export const shared_row = (object_id: string): ChangedRow => ({
+  ...changed(object_id, '1', { $kind: 'Shared', Shared: { initialSharedVersion: '1' } }),
+  idOperation: 'Created',
+})
+
 const resolve_gas =
   (
     calls: { resolutions: number; simulations: number },
@@ -47,14 +69,16 @@ const resolve_gas =
   ): TransactionPlugin =>
   async (transaction_data, options, next) => {
     calls.resolutions += 1
-    // The gRPC simulation resolves the framework's well-known Random/Clock inputs.
+    // The gRPC simulation resolves every object input the composer left unresolved: Random and Clock
+    // are read-only shared objects, any other bare id resolves as the composer declared it.
     transaction_data.inputs.forEach((input, index) => {
-      if (input.$kind === 'UnresolvedObject' && [id(6), id(8)].includes(input.UnresolvedObject.objectId))
-        transaction_data.inputs[index] = Inputs.SharedObjectRef({
-          objectId: input.UnresolvedObject.objectId,
-          initialSharedVersion: '1',
-          mutable: false,
-        })
+      if (input.$kind !== 'UnresolvedObject') return
+      const { objectId, version, digest: object_digest, mutable } = input.UnresolvedObject
+      const system = [id(6), id(8)].includes(objectId)
+      transaction_data.inputs[index] =
+        version && object_digest && !system
+          ? Inputs.ObjectRef({ objectId, version, digest: object_digest })
+          : Inputs.SharedObjectRef({ objectId, initialSharedVersion: '1', mutable: !system && (mutable ?? true) })
     })
     if (!options.onlyTransactionKind) {
       if (resolution_failure) throw new Error(resolution_failure)
@@ -74,10 +98,35 @@ const created_objects = (created: Readonly<Record<string, string>> = {}) => ({
   types: Object.keys(created).length ? { objectTypes: created } : {},
 })
 
+const fetched = (
+  object_id: string,
+  lag: Map<string, number>,
+  owned_versions: Map<string, string[]>,
+  objects: Readonly<Record<string, FetchedObject>> | undefined
+): FetchedObject[] => {
+  // a node still behind answers with NOTHING for an object that already exists;
+  // each miss burns one tick, so the object appears once the lag is spent
+  const remaining = lag.get(object_id) ?? 0
+  if (remaining > 0) {
+    lag.set(object_id, remaining - 1)
+    return []
+  }
+  const exact = objects?.[object_id]
+  if (exact) return [exact]
+  const versions = owned_versions.get(object_id)
+  if (versions) {
+    const version = versions.length > 1 ? versions.shift()! : versions[0]!
+    return [{ objectId: object_id, version, digest, owner: { $kind: 'AddressOwner', AddressOwner: id(99) } }]
+  }
+  return [
+    { objectId: object_id, version: '2', digest, owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } } },
+  ]
+}
+
 export const fake_client = ({
   simulate_ok,
   execution_ok = true,
-  events = [],
+  events,
   execution_gate,
   visibility_gate,
   visibility_failures = 0,
@@ -86,9 +135,12 @@ export const fake_client = ({
   resolution_failure,
   lag = new Map<string, number>(),
   owned_versions = new Map<string, string[]>(),
+  objects,
+  gas_used,
   created,
 }: {
-  simulate_ok: boolean
+  /** a refused simulation is opt-in: only `false` refuses */
+  simulate_ok?: boolean
   execution_ok?: boolean
   events?: readonly { type: string; json: Record<string, unknown> }[]
   execution_gate?: Promise<void>
@@ -103,13 +155,18 @@ export const fake_client = ({
   lag?: Map<string, number>
   /** objectId → versions returned across reads, for receipt-fresh node-lag tests */
   owned_versions?: Map<string, string[]>
+  /** objectId → the exact object a read returns */
+  objects?: Readonly<Record<string, FetchedObject>>
+  /** gas figures every simulation and execution reports */
+  gas_used?: Readonly<{ computationCost: string; storageCost: string; storageRebate: string }>
   /** objectId → type of objects the executed transaction creates */
   created?: Readonly<Record<string, string>>
   /** Which branch a refused simulation arrives in — a `success: false` status can ride the
    *  Transaction branch, and the preflight must refuse that identically. */
   failure_branch?: 'FailedTransaction' | 'Transaction'
-}) => {
+} = {}) => {
   const made = created_objects(created)
+  const simulation_passes = simulate_ok !== false
   const calls = {
     simulations: 0,
     executions: 0,
@@ -120,11 +177,12 @@ export const fake_client = ({
     max_active_executions: 0,
     visibility_waits: [] as string[],
     digests: [] as string[],
+    submitted: [] as Uint8Array[],
   }
   return {
     calls,
     core: {
-      resolveTransactionPlugin: () => resolve_gas(calls, simulate_ok, failure_message, resolution_failure),
+      resolveTransactionPlugin: () => resolve_gas(calls, simulation_passes, failure_message, resolution_failure),
       getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1000' } }),
       getChainIdentifier: async () => ({ chainIdentifier: digest }),
       getBalance: async () => {
@@ -145,35 +203,15 @@ export const fake_client = ({
       }),
       getObjects: async ({ objectIds }: { objectIds: string[] }) => {
         calls.hydrations.push([...objectIds])
-        return {
-          objects: objectIds.flatMap<FetchedObject>((object_id: string) => {
-            // a node still behind answers with NOTHING for an object that already exists;
-            // each miss burns one tick, so the object appears once the lag is spent
-            const remaining = lag.get(object_id) ?? 0
-            if (remaining > 0) {
-              lag.set(object_id, remaining - 1)
-              return []
-            }
-            const versions = owned_versions.get(object_id)
-            if (versions) {
-              const version = versions.length > 1 ? versions.shift()! : versions[0]!
-              return [{ objectId: object_id, version, digest, owner: { $kind: 'AddressOwner', AddressOwner: id(99) } }]
-            }
-            return [
-              {
-                objectId: object_id,
-                version: '2',
-                digest,
-                owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
-              },
-            ]
-          }),
-        }
+        return { objects: objectIds.flatMap((object_id) => fetched(object_id, lag, owned_versions, objects)) }
       },
       simulateTransaction: async () => {
         calls.simulations += 1
-        if (simulate_ok)
-          return { $kind: 'Transaction', Transaction: { effects: { status: { success: true, error: null } } } }
+        if (simulation_passes)
+          return {
+            $kind: 'Transaction',
+            Transaction: { effects: { status: { success: true, error: null }, gasUsed: gas_used } },
+          }
         const effects = { status: { success: false, error: { message: failure_message } } }
         return failure_branch === 'Transaction'
           ? { $kind: 'Transaction', Transaction: { effects } }
@@ -183,6 +221,7 @@ export const fake_client = ({
         calls.executions += 1
         calls.active_executions += 1
         calls.max_active_executions = Math.max(calls.max_active_executions, calls.active_executions)
+        calls.submitted.push(transaction)
         await execution_gate
         calls.active_executions -= 1
         const gas_object = changed(id(50), '4', {
@@ -199,6 +238,7 @@ export const fake_client = ({
                 ? { success: true, error: null }
                 : { success: false, error: { message: failure_message } },
               gasObject: gas_object,
+              gasUsed: gas_used,
               changedObjects: [gas_object, ...made.rows],
             },
             ...made.types,
@@ -221,3 +261,6 @@ export const fake_client = ({
 }
 
 export const signer = new Ed25519Keypair()
+export type FakeClient = ReturnType<typeof fake_client>
+/** Net 2,500,000 MIST: what a priced simulation or execution reports when a test passes it as `gas_used`. */
+export const sample_gas = { computationCost: '2000000', storageCost: '1000000', storageRebate: '500000' }

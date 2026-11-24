@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/** Presentation mirror pinned to the rewards package by contract tests. */
+/** Presentation mirror pinned to the currency and rewards packages by contract tests. */
 export const KARES_UNIT = 1_000_000_000n
 export const KARES_SUPPLY = 1_000_000_000n * KARES_UNIT
 export const KARES_PER_MASTERY_POINT = 1_000n
 export const COMMUNITY_VESTING_MS = 1_825n * 86_400_000n
 export const KARES_ALLOCATION = Object.freeze({
   rewards: 200_000_000n * KARES_UNIT,
-  team: 30_000_000n * KARES_UNIT,
+  team: 50_000_000n * KARES_UNIT,
   combat: 100_000_000n * KARES_UNIT,
   community: 110_000_000n * KARES_UNIT,
+  liquidity: 540_000_000n * KARES_UNIT,
 })
 export const COMBAT_DAILY_BUDGET = KARES_ALLOCATION.combat / 1_825n
 export const KARES_RESERVE_SUPPLY = KARES_ALLOCATION.rewards + KARES_ALLOCATION.combat + KARES_ALLOCATION.community

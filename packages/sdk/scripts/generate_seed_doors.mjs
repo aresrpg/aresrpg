@@ -235,7 +235,7 @@ const key_sources = [
   ),
 ]
 
-export const seed_string_keys = () =>
+const seed_string_keys = () =>
   key_sources.flatMap(({ path, module }) =>
     [...readFileSync(path, 'utf8').matchAll(/public struct (\w+Key)\(String\)\s+has[^;]*;/g)].map(([, name]) => ({
       name,

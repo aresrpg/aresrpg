@@ -3,7 +3,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { finish_startup_recovery } from '../startup_recovery.ts'
 import { load_app_copy } from '../i18n/copy.ts'
 import { load_locale } from '../i18n/locale.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
@@ -19,7 +18,6 @@ export const boot_gift = async (): Promise<void> => {
   const link = capture_gift_intent()
   const locale = load_locale()
   const copy = await load_app_copy(locale)
-  finish_startup_recovery()
   const runtime = create_gift_runtime({ link, policy: gift_content().policy })
   createRoot(document.getElementById('root')!, react_error_handlers).render(
     <StrictMode>
@@ -28,5 +26,4 @@ export const boot_gift = async (): Promise<void> => {
       </LocaleScope>
     </StrictMode>
   )
-  // The game registers its offline cache after the player leaves this lightweight flow.
 }

@@ -4,7 +4,7 @@
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import type { ZoneReveal } from '../modules/world.ts'
 import { useAppStore } from '../store.ts'
 

@@ -1,0 +1,152 @@
+@layer components {
+  /* The catalogue page: a rail of entries beside one live preview. */
+  .aui-workshop {
+    container: aui-viewport / size;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px 24px;
+    overflow: hidden;
+    padding: 72px 24px 24px;
+    background: var(--aui-bg);
+    color: var(--aui-ink);
+    font-family: var(--aui-font);
+  }
+  .aui-workshop-heading {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--aui-hair);
+  }
+  .aui-workshop-heading h1 {
+    margin: 0;
+    font: 600 16px/1 var(--aui-font-display);
+    color: var(--aui-soft);
+  }
+  .aui-workshop-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .aui-workshop-navigation > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .aui-workshop-navigation h2 {
+    margin: 0 0 4px;
+    font: 700 10px/1 var(--aui-font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aui-faint);
+  }
+  .aui-workshop-preview {
+    container: aui-window / inline-size;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+  .aui-workshop-device {
+    display: block;
+    width: 932px;
+    max-width: 100%;
+    height: 430px;
+    border: 1px solid var(--aui-hair);
+    background: var(--aui-bg);
+  }
+  .aui-workshop-embedded {
+    container: aui-viewport / size;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    overflow: auto;
+    padding: 12px;
+    background: var(--aui-bg);
+    color: var(--aui-ink);
+    font-family: var(--aui-font);
+  }
+  .aui-workshop-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .aui-workshop-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+  }
+  .aui-workshop-scroll {
+    flex-wrap: nowrap;
+    max-width: 480px;
+    overflow-x: auto;
+  }
+  .aui-workshop-copy {
+    margin: 0;
+    padding: 12px 16px;
+    color: var(--aui-soft);
+  }
+  .aui-workshop-sheet {
+    width: min(420px, 100%);
+  }
+  .aui-workshop-map {
+    width: 100%;
+    min-height: 160px;
+    background: repeating-conic-gradient(var(--aui-raised) 0 25%, var(--aui-lifted) 0 50%) 0 0 / 24px 24px;
+  }
+  .aui-workshop-ground {
+    position: relative;
+    isolation: isolate;
+    contain: paint;
+    width: 640px;
+    max-width: 100%;
+    height: 360px;
+    border: 1px solid var(--aui-hair);
+    border-radius: var(--aui-radius);
+  }
+  .aui-workshop-swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    max-width: 880px;
+  }
+  .aui-workshop-swatches span {
+    display: flex;
+    align-items: flex-end;
+    height: 56px;
+    padding: 6px;
+    border: 1px solid var(--aui-hair);
+    border-radius: var(--aui-radius);
+    font: 10px/1.2 var(--aui-font-mono);
+    color: var(--aui-ink);
+    text-shadow: 0 1px 2px var(--aui-void);
+  }
+  @media (max-height: 500px) and (orientation: landscape) {
+    .aui-workshop {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 8px;
+      padding: 64px 12px 12px;
+    }
+    .aui-workshop-navigation {
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .aui-workshop-navigation > div {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+}

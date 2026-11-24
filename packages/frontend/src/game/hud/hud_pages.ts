@@ -5,17 +5,12 @@ import type { AppCopy } from '../../i18n/copy.ts'
 import type { Page } from '../../modules/navigation.ts'
 
 type Label = { [K in keyof AppCopy]: AppCopy[K] extends string ? K : never }[keyof AppCopy]
-export const HUD_PAGE_META: Readonly<Record<Page, Readonly<{ label: Label; icon: CarvedSymbol; class_name: string }>>> =
-  {
-    world: { label: 'world', icon: 'map', class_name: '' },
-    characters: { label: 'characters', icon: 'characters', class_name: 'aui-characters-port' },
-    leaderboard: { label: 'leaderboard', icon: 'leaderboard', class_name: 'aui-rankings-port' },
-    mastery: { label: 'mastery', icon: 'mastery', class_name: 'aui-mastery-port' },
-    kares: { label: 'kares', icon: 'kares', class_name: 'aui-staking-port' },
-    encyclopedia: { label: 'encyclopedia', icon: 'encyclopedia', class_name: 'aui-codex-port' },
-    marketplace: { label: 'marketplace', icon: 'marketplace', class_name: 'aui-market-port' },
-    airdrop: { label: 'airdrop', icon: 'airdrop', class_name: 'aui-airdrop-port' },
-    kolizeum: { label: 'kolizeum', icon: 'kolizeum', class_name: 'aui-arena-port' },
-    settings: { label: 'settings', icon: 'settings', class_name: 'aui-settings-port' },
-    admin: { label: 'admin', icon: 'admin', class_name: 'aui-admin-port' },
-  }
+/** The pages the game opens in a window. The world is the canvas itself; Settings draws its own frame. */
+type WindowPage = Exclude<Page, 'world' | 'settings'>
+export const HUD_PAGE_META: Readonly<
+  Record<WindowPage, Readonly<{ label: Label; icon: CarvedSymbol; class_name: string }>>
+> = {
+  mastery: { label: 'mastery', icon: 'mastery', class_name: 'mastery-window' },
+  kolizeum: { label: 'kolizeum', icon: 'kolizeum', class_name: 'arena-window' },
+  admin: { label: 'admin', icon: 'admin', class_name: 'admin-window' },
+}

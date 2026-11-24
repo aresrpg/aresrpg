@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import { tier_unlock_level } from '@aresrpg/immutable'
 
-import { encyclopedia_catalog, titleize, type WorldResource } from '../content/catalog.ts'
+import { encyclopedia_catalog, type WorldResource } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { item_icon, mob_icon } from '../content/assets.ts'
 
 import { EntityIcon } from './components.tsx'

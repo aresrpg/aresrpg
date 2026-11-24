@@ -3,7 +3,8 @@
 
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedRecipe } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 import { EntityButton, EntityGrid } from './components.tsx'

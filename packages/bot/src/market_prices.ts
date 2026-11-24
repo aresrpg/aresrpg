@@ -5,7 +5,15 @@ import type { MarketPriceObservation } from '@aresrpg/protocol'
 
 import type { GameplayContext } from './gameplay_context.ts'
 import type { ActorInventory } from './actor_inventory.ts'
-import { object_schema, nonempty, decimal, type Schema } from './gameplay_schema.ts'
+import {
+  object_schema,
+  nonempty,
+  decimal,
+  compare,
+  comparison_schema,
+  type Comparison,
+  type Schema,
+} from './gameplay_schema.ts'
 
 export const MARKET_PRICE_OBSERVATION_SCHEMA = object_schema({
   item_type: nonempty,
@@ -23,11 +31,11 @@ export const MARKET_PRICE_CONDITION_SCHEMA = object_schema({
       'total_units',
     ].map((value) => ({ const: value })),
   },
-  op: { oneOf: ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'].map((value) => ({ const: value })) },
+  op: comparison_schema(),
   value: decimal,
 }) satisfies Schema
 
-export type MarketPriceMetric =
+type MarketPriceMetric =
   | 'lowest_ask_mist'
   | 'lowest_buyer_total_mist'
   | 'lowest_unit_mist'
@@ -37,7 +45,7 @@ export type MarketPriceMetric =
 export type MarketPriceCondition = Readonly<{
   item_type: string
   metric: MarketPriceMetric
-  op: 'eq' | 'ne' | 'lt' | 'lte' | 'gt' | 'gte'
+  op: Comparison
   value: string
 }>
 type Price = Readonly<{ mist: bigint; units: bigint }>
@@ -87,19 +95,5 @@ export const market_price = (item_type: string, metric: MarketPriceMetric, conte
 export const market_price_condition = (condition: MarketPriceCondition, context: GameplayContext): boolean | null => {
   const price = market_price(condition.item_type, condition.metric, context)
   if (!price) return null
-  const difference = price.mist - BigInt(condition.value) * price.units
-  switch (condition.op) {
-    case 'eq':
-      return difference === 0n
-    case 'ne':
-      return difference !== 0n
-    case 'lt':
-      return difference < 0n
-    case 'lte':
-      return difference <= 0n
-    case 'gt':
-      return difference > 0n
-    case 'gte':
-      return difference >= 0n
-  }
+  return compare(condition.op, price.mist, BigInt(condition.value) * price.units)
 }

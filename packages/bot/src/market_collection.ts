@@ -21,7 +21,7 @@ export const AUTO_COLLECT_MIN_MIST = 100_000_000n
 
 /** The projected slice. `change` names what the last balance push showed and the latest sale known
  * then; `issued` is the change a collection was last sent for. */
-export type Proceeds = Readonly<{ sale: string | null; kiosks: readonly string[]; change: string; issued: string }>
+type Proceeds = Readonly<{ sale: string | null; kiosks: readonly string[]; change: string; issued: string }>
 export const empty_proceeds = (): Proceeds => ({ sale: null, kiosks: [], change: '', issued: '' })
 
 /** A sale only enriches the next balance push: it makes that push a new change even when the kiosk

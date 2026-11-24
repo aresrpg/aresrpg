@@ -47,14 +47,20 @@ Leaderboards require replay from the original publication checkpoint. An older s
 leaderboard metadata refuses startup rather than presenting partial seasons. Rebuild that private
 store before running this version; do not initialize scores from current Character balances.
 
-Existing numeric analytics convert before indexing resumes; see the upgrade procedure below.
-Ordinary resumes remain network-free and append the configured latest package to the stored activity lineage.
+Boot marks a fresh store with the numeric analytics format (`idx:analytics_schema` =
+`compact-v1`) and refuses a store holding any other format. Ordinary resumes remain network-free and append the configured latest package to the stored activity lineage.
 
 ## Storage laws
 
-- Output objects, dynamic fields, custody, and deleted pre-state are the graph writers.
+- Output objects, their pre-state inputs, dynamic fields, custody, and deleted pre-state are the
+  only graph writers.
 - Events feed pub/sub, sales history, and analytics; successful non-deployment game-package calls feed activity.
-  Realized market price remains the sole event-derived graph value because no object contains it.
+- A kiosk reaches the graph only once it holds or lists a game Item or Character; its profits,
+  owner and personal cap then update that node, and an unrelated kiosk leaves no record.
+- The indexer counts only what the game's packages did: calls must target a certified game
+  version, events and objects must carry the original game type. Royalty revenue is the balance
+  the game's own `TransferPolicy` objects collected; an exclusive sale counts only when the sold
+  type's policy collected royalty in that transaction.
 - Numeric analytics use the compact checkpoint-marked format described in [ARCHITECTURE.md](../../ARCHITECTURE.md).
   Character lifecycle records and distinct-address membership retain their separate semantics.
 - Server-mesh online samples are best effort and expire.
@@ -69,31 +75,9 @@ The current labels, relationships, and channel names live in
 `packages/server/src/protocol.ts`, which mirrors `graph.rs`, `publish.rs`, and `events.rs` and is
 covered by server/indexer gates. Do not maintain another schema table here.
 
-## Source layout
+`AresHandler::writes` is the pure core: one lifted checkpoint in, its ordered write list out.
 
-```text
-src/
-├── main.rs       boot and sequential pipeline assembly
-├── analytics.rs  exact activity and calendar buckets
-├── analytics_totals.rs  compact checkpoint-marked numeric totals
-├── analytics_migration.rs  verified existing-data conversion
-├── leaderboards.rs       transaction contributions
-├── leaderboard_store.rs exact rankings and replay-safe commit
-├── boot.rs       indexes, package binding, lineage, start checkpoint
-├── pipeline.rs   checkpoint filtering and write-batch composition
-├── decode.rs     BCS layout twins
-├── ownership.rs  custody resolution
-├── personal_kiosk.rs immutable kiosk ownership proofs
-├── graph.rs      decoded objects and deletes to Cypher
-├── events.rs     Move event BCS twins and evt:* routing
-├── publish.rs    projection notifications and market history
-├── store.rs      FalkorDB execution and watermark-last commit
-└── gates.rs      layout, event, zone-size, and package-size parity
-```
-
-`decode`, `ownership`, `graph`, `events`, and `publish` are pure checkpoint-to-output transforms.
-
-## Parity gates
+## Tests and parity gates
 
 Run from this package:
 
@@ -101,15 +85,20 @@ Run from this package:
 cargo test
 ```
 
-The suite requires compiled Move output and `redis-server` on PATH. Storage tests start isolated
-Unix-socket Redis processes and remove them afterward. It fails when:
+Tests live in `test/`. `test/core.rs` is the one core suite: each case drives a whole scenario
+through `AresHandler::writes`, a store commit, a decoder or boot, and captured payloads sit in
+`test/fixtures/` with their provenance. `test/gates.rs` holds the Move parity gates. The suite
+requires compiled Move output and `redis-server` on PATH; storage cases start isolated Unix-socket
+Redis processes. The gates fail when:
 
 - A projected Move layout differs from `tests/layout_snapshot.txt`.
-- A routed event's fields differ from compiled bytecode.
-- A Move event is neither routed nor explicitly deferred.
-- A route references an event that no longer exists.
-- The zone-size twin differs.
-- The production Move package exceeds its publication headroom.
+- A decoded event's fields differ from compiled bytecode.
+- A Move event is neither decoded nor explicitly deferred.
+- A decoded event no longer exists.
+- The zone-size or character-price twin differs.
+- The production Move package exceeds its publication headroom, or a Random door is exposed.
+
+`tests/` keeps only the layout snapshot and two captured fixtures the SDK tests also import.
 
 After an intentional projected layout change, update the Rust twin and consumers, then ratify the
 snapshot with:
@@ -117,24 +106,3 @@ snapshot with:
 ```bash
 UPDATE_LAYOUTS=1 cargo test
 ```
-
-
-## Existing-database numeric analytics upgrade
-
-The indexer converts old transaction, gas, and revenue hashes before registering its sequential pipeline.
-It uses the committed watermark, verifies compact writes, and retains the original hashes for at most
-seven days afterward. Failed conversion leaves those originals unexpired and does not start the writer.
-Restarting resumes conversion safely. No database wipe or historical chain replay is required.
-
-Deployment order matters: update the indexer and wait for `numeric analytics ready` and checkpoint
-catch-up before updating server readers. The admin response format is unchanged. Old reader binaries
-see a frozen numeric snapshot during this interval; new readers refuse an unconverted schema rather
-than display zero history. Gameplay graph and protocol data remain compatible.
-
-The one-time conversion holds one legacy hash at a time plus the small destination bucket map.
-Its peak memory depends on the largest legacy hash. Measure and preserve a database backup before a
-production rollout. Only one indexer may write this database, as required by the normal architecture.
-
-The retained originals are verification material, not a live rollback replica. Once new checkpoints
-use compact totals, reverting to an old binary requires restoring the pre-upgrade backup and replaying
-from its watermark, or retaining the new analytics writer. Do not downgrade blindly.

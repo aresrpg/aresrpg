@@ -41,8 +41,9 @@ export const practice_character_source = (character: Readonly<CharacterRow>): Pl
 export const open_practice = (character: Readonly<CharacterRow>): void => {
   const { session, external_wallet } = read_app_state()
   if ([session.wallet, external_wallet.session].some((wallet) => wallet && !wallet.is_transaction_idle())) return
-  // A full document boot selects only local observers. History carries a disposable, unsigned snapshot.
-  globalThis.history.pushState({ practice_source: practice_character_source(character) }, '', '/practice')
+  // Practice is a document load of its own, with local observers only. The history entry carries a disposable,
+  // unsigned snapshot of the character to it: its big integers survive there, and they would not in storage.
+  globalThis.history.pushState({ practice_source: practice_character_source(character) }, '', '/world/practice')
   globalThis.location.reload()
 }
 

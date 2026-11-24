@@ -13,7 +13,7 @@ export const same_agent_equipment = (
   return JSON.stringify(entries(left)) === JSON.stringify(entries(right))
 }
 
-export const decode_agent_equipment = (json: Record<string, unknown> | null | undefined): readonly EquipChange[] => {
+const decode_agent_equipment = (json: Record<string, unknown> | null | undefined): readonly EquipChange[] => {
   const value = json?.value as { contents?: unknown } | undefined
   if (!Array.isArray(value?.contents)) throw new Error('Character equipment is unavailable.')
   return Object.freeze(
@@ -28,7 +28,7 @@ export const decode_agent_equipment = (json: Record<string, unknown> | null | un
 
 /** The exact equipment map used by naked_rule. Missing field means never equipped;
  * failed reads and incomplete pagination never masquerade as a naked character. */
-export const find_character_field = async (client: SuiGrpcClient, type_name: string, character_id: string) => {
+const find_character_field = async (client: SuiGrpcClient, type_name: string, character_id: string) => {
   const type = normalizeStructTag(type_name)
   const seen = new Set<string>()
   let cursor: string | null | undefined

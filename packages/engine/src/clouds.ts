@@ -23,7 +23,7 @@ import {
 } from 'three/tsl'
 
 import type { create_sky_node } from './sky/sky_node.ts'
-import type { EngineQuality, Vec3 } from './types.ts'
+import type { EngineQuality } from './types.ts'
 import { derive_sub_seed } from './world_noise.ts'
 
 const CLOUD_HEIGHT = 180
@@ -33,32 +33,9 @@ const CLOUD_SHADOW = Object.freeze({ medium: 0.35, high: 0.55 })
 const CLOUD_THRESHOLD_DRY = 0.6
 const CLOUD_THRESHOLD_HUMID = 0.42
 
-type ShadowProjection = Readonly<{ height: number; sun_direction: Vec3; cloud_height: number }>
-
-/** Pure coordinate twin of the shader projection. Visible samples omit `shadow`; ground samples
- * travel toward the sun until they meet the cloud plane. Both then subtract the same drift. */
-export const cloud_sample_xz = (
-  xz: readonly [number, number],
-  drift: readonly [number, number],
-  shadow?: ShadowProjection
-): readonly [number, number] => {
-  if (shadow === undefined) return [xz[0] - drift[0], xz[1] - drift[1]]
-  const sun_y = Math.max(0.12, shadow.sun_direction[1])
-  const distance_y = Math.max(0, shadow.cloud_height - shadow.height)
-  return [
-    xz[0] + (shadow.sun_direction[0] * distance_y) / sun_y - drift[0],
-    xz[1] + (shadow.sun_direction[2] * distance_y) / sun_y - drift[1],
-  ]
-}
-
 export const cloud_shadow_strength = (quality: EngineQuality): number => (quality === 'low' ? 0 : CLOUD_SHADOW[quality])
 export const cloud_layer_visible = (quality: EngineQuality, fight_active: boolean, enabled = true): boolean =>
   enabled && quality !== 'low' && !fight_active
-
-export const cloud_coverage_threshold = (humidity: number): number => {
-  const amount = Math.min(1, Math.max(0, humidity))
-  return CLOUD_THRESHOLD_DRY + (CLOUD_THRESHOLD_HUMID - CLOUD_THRESHOLD_DRY) * amount
-}
 
 export type Clouds = Readonly<{
   shadow_at: (world_xz: Node<'vec2'>, world_y: Node<'float'>) => Node<'float'>

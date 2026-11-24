@@ -71,6 +71,11 @@ const task = (state: GiftState, kind: GiftTaskKind, advance: GiftTask['advance']
 
 const PAID_STAGES: ReadonlySet<GiftStatus['stage']> = new Set(['available', 'voucher', 'crate', 'reward'])
 
+/** The link is settled once the chain shows anything but an unclaimed card (claimed into the account, or spent), or
+ * once the SDK refused it as not valid: no retry can claim it. */
+export const gift_link_settled = ({ status, error }: GiftState): boolean =>
+  error === 'invalid' || (status !== null && status.stage !== 'available')
+
 /** Every remaining gift step is player-paid, so an account below the floor funds before any step starts. */
 export const gift_needs_funding = ({ task, status, balance }: GiftState): boolean =>
   !task && !!status && PAID_STAGES.has(status.stage) && balance !== null && balance < GIFT_FUNDING_MIST
@@ -145,7 +150,11 @@ const inputs: {
       : state,
   completed: (state, input) =>
     state.task?.id === input.task ? completions[input.result.kind](state, input.result as never) : state,
-  failed: (state, input) => (state.task?.id === input.task ? { ...state, task: null, error: input.error } : state),
+  // A link the SDK refused as not valid is never inspected again: a later check reads the account.
+  failed: (state, input) =>
+    state.task?.id === input.task
+      ? { ...state, task: null, error: input.error, skip_link: state.skip_link || input.error === 'invalid' }
+      : state,
   invalidated: (state, input) =>
     state.wallet === input.wallet
       ? { ...initial_gift_state(), ready: true, sequence: state.sequence, error: 'unauthorized' }

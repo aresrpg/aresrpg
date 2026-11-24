@@ -11,14 +11,12 @@
 //! origins and the start checkpoint derive from chain state at boot.
 
 mod analytics;
-mod analytics_migration;
 mod analytics_totals;
 mod boot;
 mod character_changes;
 mod character_deletions;
 mod decode;
 mod events;
-mod gates;
 mod graph;
 mod ingestion;
 mod leaderboard_store;
@@ -27,7 +25,6 @@ mod market_prices;
 mod market_volume;
 mod notification_events;
 mod notification_loot;
-mod notification_sales;
 mod ownership;
 mod personal_kiosk;
 mod pipeline;
@@ -87,8 +84,7 @@ struct Args {
     #[arg(long, env = "PACKAGE_LATEST")]
     package_latest: String,
 
-    /// The seed (living-content) package's ORIGINAL id — content events and
-    /// content-typed objects match this second origin.
+    /// The seed (living-content) package's ORIGINAL id. The store binds to it at boot.
     #[arg(long, env = "SEED_PACKAGE_ORIGINAL")]
     seed_package_original: String,
 
@@ -102,8 +98,7 @@ struct Args {
     graphql_url: String,
 
     /// Ceiling on concurrent checkpoint fetches against the shared public
-    /// bucket (the 2026-07-14 rate-limit incident: the framework's adaptive
-    /// default self-inflicts 429 storms against Mysten's shared bucket).
+    /// bucket: the framework's adaptive default causes 429 storms there.
     #[arg(
         long = "ingest-max-concurrency",
         env = "INGEST_MAX_CONCURRENCY",
@@ -152,6 +147,7 @@ async fn main() -> Result<()> {
         .context("boot connection")?;
     boot::ensure_indexes(&mut boot_conn).await?;
     boot::bind_projection(&mut boot_conn, &package_original, &seed_package_original).await?;
+    boot::bind_analytics_schema(&mut boot_conn).await?;
     // A RESUMING deploy (a watermark exists) never touches the network at boot
     // (README): lineage was validated when the store was fresh, and the store
     // itself is bound to its chain by the chain-id guard.
@@ -181,8 +177,6 @@ async fn main() -> Result<()> {
         fresh,
     )
     .await?;
-
-    analytics_migration::initialize(&mut boot_conn, fresh).await?;
 
     info!(
         redis_url = %redacted_url(&args.redis_url),
@@ -236,15 +230,10 @@ async fn main() -> Result<()> {
     // The ONE pipeline: objects → graph; transactions/events → analytics, sales, and pub/sub.
     indexer
         .sequential_pipeline(
-            AresHandler::new(
-                &package_original,
-                &package_latest,
-                &seed_package_original,
-                &activity_lineage,
-            )?,
+            AresHandler::new(&package_original, &package_latest, &activity_lineage)?,
             // Explicit channel sizes: the framework defaults derive them from num_cpus/2,
-            // which is 0 under a 1-CPU container limit — mpsc::channel(0) panics at boot
-            // (2026-08-19, first k8s deploy). Sized for one sequential pipeline, not cores.
+            // which is 0 under a 1-CPU container limit, and mpsc::channel(0) panics at boot.
+            // Sized for one sequential pipeline, not cores.
             SequentialConfig {
                 ingestion: PipelineIngestionConfig {
                     subscriber_channel_size: Some(4),
@@ -265,33 +254,13 @@ async fn main() -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::redacted_url;
-
-    #[test]
-    fn boot_logs_never_carry_the_password() {
-        assert_eq!(
-            redacted_url("redis://admin:hunter2@falkor.internal:6379"),
-            "redis://***@falkor.internal:6379"
-        );
-        // a password containing '@' still redacts — the LAST '@' separates the host
-        assert_eq!(
-            redacted_url("redis://admin:p@ss@falkor.internal:6379"),
-            "redis://***@falkor.internal:6379"
-        );
-        // credential-free urls survive whole: the endpoint IS the fact worth logging
-        assert_eq!(
-            redacted_url("redis://127.0.0.1:6379"),
-            "redis://127.0.0.1:6379"
-        );
-        assert_eq!(
-            redacted_url("https://checkpoints.testnet.sui.io"),
-            "https://checkpoints.testnet.sui.io"
-        );
-        assert_eq!(redacted_url("not-a-url"), "not-a-url");
-    }
-}
+#[path = "../test/redis.rs"]
+mod test_redis;
 
 #[cfg(test)]
-#[path = "../tests/support/redis.rs"]
-mod test_redis;
+#[path = "../test/core.rs"]
+mod core_suite;
+
+#[cfg(test)]
+#[path = "../test/gates.rs"]
+mod gates;

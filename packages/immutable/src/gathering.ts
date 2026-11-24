@@ -13,15 +13,6 @@ export type Gatherable = Readonly<{
   rare_item_type: string
 }>
 
-export type ProtectorLevelRange = Readonly<{ level_min: number; level_max: number }>
-
-export const protector_level_range = (tier: number, resource_level: number): ProtectorLevelRange => {
-  if (tier <= 1) return Object.freeze({ level_min: 1, level_max: 5 })
-  if (tier === 2) return Object.freeze({ level_min: 8, level_max: 12 })
-  if (tier === 3) return Object.freeze({ level_min: 15, level_max: 25 })
-  return Object.freeze({ level_min: Math.max(1, resource_level - 10), level_max: resource_level + 10 })
-}
-
 const gatherable_rows: readonly Gatherable[] = [
   {
     item_type: 'wheat',

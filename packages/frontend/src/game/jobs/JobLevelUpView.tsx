@@ -10,6 +10,7 @@ import { item_icon } from '../../content/assets.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { useVocabulary } from '../../i18n/useVocabulary.ts'
 import type { JobLevelUp } from '../../modules/job_level_up.ts'
+import './progression.css'
 
 export const JobLevelUpView = ({
   copy,

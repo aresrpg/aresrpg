@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity -- the HUD exhaustively composes sealed placement, turn, result, and spectator states. */
 // The production fight HUD. It is a pure reader of the shared fight projection; its two
 // commands re-enter the same fight input door as board and streamed actions.
 
@@ -117,7 +116,7 @@ const FightSpells = ({
 }
 
 // 6px is the radius this HUD's own controls carry (`.fight-hud__controls button`)
-const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
+const BANNER_BUTTON = 'mt-1'
 
 export const placement_readiness = (
   checkpoint: Parameters<typeof owned_placement_readiness>[0],
@@ -212,9 +211,9 @@ const CrankBanner = ({
   return (
     <div className="fight-hud__crank" role="status">
       <span>{text.crank_prompt}</span>
-      <button className={`btn-gold ${BANNER_BUTTON}`} onClick={on_crank} type="button">
+      <Button tone="primary" className={BANNER_BUTTON} onClick={on_crank}>
         {text.crank_button}
-      </button>
+      </Button>
     </div>
   )
 }

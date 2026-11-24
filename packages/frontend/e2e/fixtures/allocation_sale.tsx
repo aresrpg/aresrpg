@@ -12,6 +12,9 @@ import { initial_sale } from '../../src/allocation/sale.ts'
 import { allocation_view } from '../../src/allocation/view.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
+import external_wallet from '../../src/modules/external_wallet.ts'
+import session_module from '../../src/modules/session.ts'
+import { start_app } from '../../src/store.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import '../../src/tailwind.css'
 import '../../src/allocation/allocation.css'
@@ -55,6 +58,11 @@ const session = {
   },
 } as unknown as AuthSession
 const proof = { index: '0', cap_mist: String(125n * SUI), siblings: ['ab'.repeat(32)] }
+// As the page does: the shared funding window reads the account slices, which start empty and observe nothing.
+start_app(
+  [session_module, external_wallet].map(({ name, initial, reduce }) => ({ name, initial, reduce })),
+  { seat: false }
+)
 const runtime = create_allocation_runtime()
 runtime.store.setState({
   session,

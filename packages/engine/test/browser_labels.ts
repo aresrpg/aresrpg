@@ -15,12 +15,11 @@ export const probe_label_scene = (canvas: HTMLCanvasElement) => {
     world_updates++
     update_world(force)
   }
-  const context = { canvas, scene, camera, entities: { live_crown: () => new Vector3() } }
-  const layer = create_entity_label_layer(context)
+  const layer = create_entity_label_layer({ canvas, camera })
   const element = document.createElement('div')
   const anchor = new Vector3()
   layer.resize(640, 480)
-  layer.set_static('resource', element, () => anchor)
+  layer.set('resource', element, () => anchor)
   layer.render()
   const first = element.style.transform
   const attached = element.isConnected

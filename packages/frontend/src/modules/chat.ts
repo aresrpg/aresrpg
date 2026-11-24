@@ -254,10 +254,31 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const line = wire_chat_line(packet)
     if (line) dispatch({ type: 'chat/line', line, at_ms: Date.now() })
   })
+  events.on('chat/speak', ({ channel, parts }) => {
+    const character_id = get_state().session.selected_character_id
+    if (character_id)
+      dispatch({
+        type: 'server/send',
+        packet:
+          channel === 'party'
+            ? { type: 'packet/chat_party', character_id, parts }
+            : { type: 'packet/chat', character_id, parts },
+      })
+  })
+  events.on('chat/whisper', ({ to, parts }) => {
+    const character_id = get_state().session.selected_character_id
+    if (character_id)
+      dispatch({ type: 'server/send', packet: { type: 'packet/chat_whisper', character_id, to, parts } })
+  })
 }
 
 // pure reducer — the feeds live in the modules that own each stream (fight feeds combat)
-export default Object.freeze({ name: 'chat', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'chat',
+  initial: () => ({ chat: initial_chat_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule
 
 export const speech_text = (speech: PlayerSpeech | undefined): string | undefined => {
   const message = speech?.line.values.message

@@ -41,9 +41,6 @@
   .aui-mob-stats {
     gap: 6px;
   }
-  .aui-mob-section {
-    padding: 6px 12px;
-  }
   .aui-mob > footer {
     padding: 5px 10px;
   }
@@ -57,47 +54,11 @@
   .aui-progression > header h2 {
     font-size: 19px;
   }
-  .aui-progression-body {
-    padding: 12px;
-    gap: 10px;
-  }
   .aui-progression-hero > img {
     width: 64px;
     height: 64px;
   }
-  .aui-reward {
-    padding: 8px;
-  }
-  .aui-reward > img {
-    width: 40px;
-    height: 40px;
-  }
 }
-.aui-mob-spells {
-  flex-wrap: wrap;
-}
-.aui-mob-spells > span {
-  padding: 4px 7px;
-  background: var(--aui-peak);
-  border: 1px solid var(--aui-surface);
-  border-radius: 3px;
-  font-size: 12px;
-  color: var(--aui-ink);
-}
-.aui-mob-loot {
-  display: flex;
-  gap: 7px;
-}
-.aui-mob-loot > img {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  background: var(--aui-high);
-  border: 1px solid var(--aui-surface);
-  border-radius: 4px;
-  padding: 2px;
-}
-
 @media (max-width: 1023px), (pointer: coarse) {
   .aui-combat-hud.aui-panel,
   .aui-combat-hud > div {

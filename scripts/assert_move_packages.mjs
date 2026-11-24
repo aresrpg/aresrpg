@@ -58,12 +58,12 @@ const covered_paths = [
 ]
   .map(([, path]) => path)
   .sort()
+// Launch packages are published once and never upgraded: they own no slot, but their code is covered like any other.
+if (!Array.isArray(manifest.launch_packages) || !manifest.launch_packages.every((path) => typeof path === 'string'))
+  throw new Error('move-packages.json must list its launch packages')
 if (
   covered_paths.join(',') !==
-  manifest.packages
-    .map(({ path }) => path)
-    .sort()
-    .join(',')
+  [...manifest.packages.map(({ path }) => path), ...manifest.launch_packages].sort().join(',')
 )
   throw new Error('Every manifest Move package must have exactly one native coverage gate')
 

@@ -1,0 +1,120 @@
+{
+  "network": "mainnet",
+  "endpoint": "https://graphql.mainnet.sui.io/graphql",
+  "checkpoint": {
+    "sequenceNumber": 348639410,
+    "captured": "2026-11-24"
+  },
+  "objects": [
+    {
+      "address": "0x9fbd33852b7a016162360202417f4b1e4e833e5f1dd4e205608968dfc1966f62",
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0x6720319bf8c5d524f471dc9d11e6e704bc17690e0e2463883cb2ab410403854b"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0x13b731a60955f83c9e592720327bf13a631daf90173adfcb02453a85289a67cc::act_airdrop_transponders::ACTAirdropTransponder"
+          },
+          "json": {
+            "id": "0x9fbd33852b7a016162360202417f4b1e4e833e5f1dd4e205608968dfc1966f62",
+            "name": "Takibi",
+            "colourway": "Takibi",
+            "rarity": "Mythic"
+          }
+        }
+      }
+    },
+    {
+      "address": "0x6720319bf8c5d524f471dc9d11e6e704bc17690e0e2463883cb2ab410403854b",
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0xf4cc1a9e498b1f0505ebafadabbe525120460672aee37c37eaa9a253d6273030"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0xb42dbb7413b79394e1a0175af6ae22b69a5c7cc5df259cd78072b6818217c027::listings::NftDfKey>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>"
+          },
+          "json": {
+            "id": "0x6720319bf8c5d524f471dc9d11e6e704bc17690e0e2463883cb2ab410403854b",
+            "name": {
+              "name": {
+                "dummy_field": false
+              }
+            },
+            "value": "0x9fbd33852b7a016162360202417f4b1e4e833e5f1dd4e205608968dfc1966f62"
+          }
+        }
+      }
+    },
+    {
+      "address": "0xf4cc1a9e498b1f0505ebafadabbe525120460672aee37c37eaa9a253d6273030",
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0xa75db4523fbdc2904506772277fe08d7f4296a6b00c4230dd8b43c3ad5117b39"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0xb42dbb7413b79394e1a0175af6ae22b69a5c7cc5df259cd78072b6818217c027::listings::Listing"
+          },
+          "json": {
+            "id": "0xf4cc1a9e498b1f0505ebafadabbe525120460672aee37c37eaa9a253d6273030",
+            "seller": "0x7f23cd2b6d0069d215ec8dba4d4b6471d14366bd5e70a490d35ca7dde5adac71",
+            "price": "200000000000",
+            "commission": "6000000000",
+            "beneficiary": "0xbca3b5c01c8d1a93aed3a036feff45145518292dd3c1db1d67cc99a699a7b517"
+          }
+        }
+      }
+    },
+    {
+      "address": "0xa75db4523fbdc2904506772277fe08d7f4296a6b00c4230dd8b43c3ad5117b39",
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0x47cba0b6309a12ce39f9306e28b899ed4b3698bce4f4911fd0c58ff2329a2ff6"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>"
+          },
+          "json": {
+            "id": "0xa75db4523fbdc2904506772277fe08d7f4296a6b00c4230dd8b43c3ad5117b39",
+            "name": {
+              "name": "0xf4cc1a9e498b1f0505ebafadabbe525120460672aee37c37eaa9a253d6273030"
+            },
+            "value": "0xf4cc1a9e498b1f0505ebafadabbe525120460672aee37c37eaa9a253d6273030"
+          }
+        }
+      }
+    },
+    {
+      "address": "0x47cba0b6309a12ce39f9306e28b899ed4b3698bce4f4911fd0c58ff2329a2ff6",
+      "owner": {
+        "__typename": "Shared",
+        "initialSharedVersion": 3377344
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0xb42dbb7413b79394e1a0175af6ae22b69a5c7cc5df259cd78072b6818217c027::listings::Store"
+          },
+          "json": {
+            "id": "0x47cba0b6309a12ce39f9306e28b899ed4b3698bce4f4911fd0c58ff2329a2ff6"
+          }
+        }
+      }
+    }
+  ]
+}

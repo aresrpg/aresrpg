@@ -1,0 +1,201 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.item-detail-view .jobs__craft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 14%, transparent);
+  border-radius: 5px;
+  background: var(--aui-sunk);
+}
+.item-detail-view .jobs__craft-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--aui-brass-hi);
+}
+.item-detail-view .jobs__ingredients {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+}
+.item-detail-view .jobs__ingredient {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ffffff09;
+  border-radius: 3px;
+  background: var(--aui-lifted);
+  color: var(--aui-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.item-detail-view .jobs__ingredient-id {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.item-detail-view .jobs__ingredient-name {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.item-detail-view .jobs__ingredient-lvl {
+  font-size: 9px;
+  color: var(--aui-muted);
+}
+.item-detail-view .jobs__ingredient-amt {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.item-detail-view .jobs__ingredient-amt.is-short {
+  color: #e88b80;
+}
+.item-detail-view .jobs__ingredient-amt.is-enough {
+  color: #b8d396;
+}
+.item-detail-view .jobs__craft-chance {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--aui-soft);
+}
+.item-detail-view .jobs__craft-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.item-detail-view .jobs__craft-amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 10px;
+}
+.item-detail-view .jobs__craft-input {
+  width: calc(4ch + 2rem);
+  flex: none;
+  height: 30px;
+  padding: 4px;
+  background: var(--aui-bg);
+  border: 1px solid color-mix(in srgb, var(--aui-steel) 27%, transparent);
+  border-radius: 3px;
+  color: var(--aui-ink);
+}
+.item-detail-view .jobs__craft-amount[hidden] {
+  display: none;
+}
+.item-detail-view .jobs__craft-btn {
+  margin-left: auto;
+}
+@container aui-item-sheet (min-width: 600px) {
+  .item-detail-view:has(> .jobs__craft) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 1fr);
+    align-content: start;
+    gap: 12px 22px;
+  }
+  .item-detail-view:has(> .jobs__craft) > * {
+    grid-column: 1;
+  }
+  .item-detail-view:has(> .jobs__craft) > .jobs__craft {
+    grid-column: 2;
+    grid-row: 1 / span 8;
+  }
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .item-detail-view .jobs__craft {
+    padding: 8px;
+    gap: 6px;
+  }
+  .item-detail-view .jobs__ingredients {
+    grid-template-rows: repeat(var(--ingredient-rows), 44px);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, 1fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .item-detail-view .jobs__ingredient {
+    padding: 4px;
+  }
+  .item-detail-view .jobs__ingredient img {
+    width: 26px;
+    height: 26px;
+  }
+  .item-detail-view .jobs__ingredient-lvl {
+    display: none;
+  }
+}
+.item-detail-view .jobs__craft-profession {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--aui-muted);
+  font: 10px var(--aui-font);
+}
+.item-detail-view > .jobs__craft {
+  align-self: start;
+}
+/* The item sheet owns scrolling; ingredients never create a second scroll area. */
+.item-detail-view > .jobs__craft {
+  max-height: none;
+}
+.item-detail-view .jobs__ingredients {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(44px, auto);
+  overflow: visible;
+  flex: none;
+}
+.item-detail-view .jobs__craft-head {
+  padding-top: 0;
+  border: 0;
+}
+.item-detail-view .jobs__craft-chance {
+  margin: 0;
+  padding: 0;
+}
+.item-detail-view .jobs__craft-bar {
+  margin: 0;
+  padding: 4px 0 0;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.item-detail-view .jobs__craft-amount {
+  min-width: 0;
+  gap: 4px;
+}
+.item-detail-view .jobs__craft-bar .aui-button {
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.item-detail-view .jobs__craft-btn {
+  min-width: 0;
+}
+.item-detail-view:has(> .jobs__craft) .aui-item-source-list {
+  max-height: none;
+  overflow: visible;
+}
+
+.item-detail-view .jobs__craft {
+  background-image: url('../assets/panel_grain.webp'), linear-gradient(180deg, #ffffff0b, transparent 62%);
+  background-size:
+    256px 256px,
+    100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: soft-light, normal;
+}

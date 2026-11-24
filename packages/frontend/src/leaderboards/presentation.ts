@@ -4,33 +4,6 @@
 import { application_suins_name, display_address, display_suins_name } from '@aresrpg/immutable'
 import type { LeaderboardMetric, LeaderboardEntry } from '@aresrpg/protocol'
 
-/** Retained Hytale leaderboard colors; identities follow the current game vocabulary. */
-export const BADGE_COLORS: Readonly<Record<string, readonly [string, string]>> = {
-  senshi: ['#C0392B', '#E74C3C'],
-  yajin: ['#8E44AD', '#9B59B6'],
-  ikari: ['#96281B', '#C0392B'],
-  mori: ['#27AE60', '#2ECC71'],
-  tokei: ['#2980B9', '#3498DB'],
-  shugo: ['#F39C12', '#F1C40F'],
-  yogen: ['#16A085', '#1ABC9C'],
-  rojin: ['#D35400', '#E67E22'],
-  shusen: ['#7F8C8D', '#95A5A6'],
-  tomoda: ['#6C3483', '#8E44AD'],
-  asobi: ['#A04000', '#D35400'],
-  iyashi: ['#1A5276', '#2980B9'],
-  FARMER: ['#27AE60', '#2ECC71'],
-  HERBALIST: ['#16A085', '#1ABC9C'],
-  MINER: ['#7F8C8D', '#95A5A6'],
-  FORGER: ['#C0392B', '#E74C3C'],
-  CARVER: ['#A04000', '#D35400'],
-  TAILOR: ['#8E44AD', '#9B59B6'],
-  TANNER: ['#B9770E', '#F39C12'],
-  JEWELER: ['#6C3483', '#8E44AD'],
-  HANDYMAN: ['#2C3E50', '#34495E'],
-  ALCHEMIST: ['#1A5276', '#2980B9'],
-  BAKER: ['#D4AC0D', '#F1C40F'],
-}
-
 export const leaderboard_score = (score: string, metric: LeaderboardMetric, locale: string): string => {
   const amount = BigInt(score)
   if (metric !== 'marketplace' && metric !== 'kolizeum') return amount.toLocaleString(locale)

@@ -11,13 +11,15 @@ import { Button, SpellRow, ValueBadge } from '@aresrpg/ui'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { spell_icon } from '../content/assets.ts'
-import { titleize, type SpellLevel } from '../content/catalog.ts'
+import { type SpellLevel } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { effect_color } from '../encyclopedia/SpellCardEffects.tsx'
 import { type AppCopy } from '../i18n/copy.ts'
 
 import type { CharacterSession } from './character_session.ts'
 import { useSpells } from './useSpells.ts'
+import './spellbook.css'
 
 const spell_tint = (level: Readonly<SpellLevel> | undefined): string => {
   const damage = level?.effects.find((effect) => effect.element !== '')

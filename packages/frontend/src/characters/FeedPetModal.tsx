@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useReducer } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Heart, Loader2, Utensils } from 'lucide-react'
+import { Button } from '@aresrpg/ui'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -103,15 +104,10 @@ const FeedingControls = ({
           <PlayerError error={state.error} />
         </p>
       )}
-      <button
-        type="button"
-        className="btn-gold flex min-h-11 items-center justify-center gap-2 px-4 text-[10px] disabled:opacity-40"
-        disabled={action.disabled}
-        onClick={action.run}
-      >
+      <Button tone="primary" disabled={action.disabled} onClick={action.run}>
         <Utensils size={13} />
         {action.label}
-      </button>
+      </Button>
     </>
   )
 }
@@ -167,7 +163,7 @@ export const FeedPetModal = ({
     void transaction
       .then(({ inventory_changes }) => {
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
-        dispatch_app({ type: 'inventory/pet_fed', pet_id: pet.id, food_id: food.id })
+        dispatch_app({ type: 'inventory/pet_fed', pet_id: pet.id, before: pet.pet_power ?? 0 })
         dispatch({ type: 'succeeded' })
         pending.success(t('feed_success'))
       })
@@ -179,7 +175,7 @@ export const FeedPetModal = ({
   }
 
   return (
-    <ModalFrame close={close} close_label={copy.wallet_close} label={t('feed_title')} max_width="max-w-md" soft>
+    <ModalFrame close={close} close_label={copy.wallet_close} label={t('feed_title')} max_width="max-w-md">
       <div className="pet-feed flex flex-col gap-4 p-6" data-pet-feeding="" data-phase={state.phase}>
         <header className="pr-6">
           <p className="text-[8px] tracking-[0.24em] text-gold uppercase">{t('feed_title')}</p>

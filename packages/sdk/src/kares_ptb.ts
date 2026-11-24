@@ -95,14 +95,16 @@ export type RewardsSetup = Readonly<{
   victory_type: string
 }>
 
-/** Explicit one-shot funding; upgrade authority stays with its owner until the later project freeze. */
-export const create_rewards_setup_transaction = (sdk: Sdk, terms: RewardsSetup): Transaction => {
-  const tx = new Transaction()
-  const coin_type = kares_coin_type(terms.coin_type)
-  const reserve = tx.add(coinWithBalance({ type: coin_type, balance: KARES_RESERVE_SUPPLY, useGasCoin: false }))
+/** Locks exactly the reserve share; upgrade authority stays with its owner until the later project freeze. */
+export const add_rewards_setup = (
+  sdk: Sdk,
+  tx: Transaction,
+  terms: RewardsSetup,
+  reserve: TransactionObjectArgument
+): void => {
   tx.moveCall({
     target: `${address(terms.package, 'rewards package')}::economy::setup`,
-    typeArguments: [coin_type, terms.victory_type],
+    typeArguments: [kares_coin_type(terms.coin_type), terms.victory_type],
     arguments: [
       sdk.door_context.obj(tx, terms.setup, true),
       kares_shared(tx, terms.economy),
@@ -113,6 +115,18 @@ export const create_rewards_setup_transaction = (sdk: Sdk, terms: RewardsSetup):
       kares_clock(tx),
     ],
   })
+}
+
+/** Funding alone, from coins the treasury already holds. The launch funds inside its own transaction. */
+export const create_rewards_setup_transaction = (sdk: Sdk, terms: RewardsSetup): Transaction => {
+  const tx = new Transaction()
+  const coin_type = kares_coin_type(terms.coin_type)
+  add_rewards_setup(
+    sdk,
+    tx,
+    terms,
+    tx.add(coinWithBalance({ type: coin_type, balance: KARES_RESERVE_SUPPLY, useGasCoin: false }))
+  )
   return tx
 }
 

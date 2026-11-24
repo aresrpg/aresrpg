@@ -47,8 +47,8 @@ export const movement_sample = (
     visible,
     state.session.link_status === 'ready',
     pose.character_id === character.id,
-    state.analytics.loading?.world === character.world,
-    state.analytics.loading?.stage === 'ready',
+    state.gameplay_analytics.loading?.world === character.world,
+    state.gameplay_analytics.loading?.stage === 'ready',
   ].every(Boolean)
   if (!ready) return null
   return {

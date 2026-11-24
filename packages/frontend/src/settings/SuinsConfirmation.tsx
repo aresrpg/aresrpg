@@ -33,7 +33,7 @@ export const SuinsConfirmation = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           </div>
           <p>{t('suins_confirm_parent', { name })}</p>
         </div>
-        <div className="aui-confirm-actions shrink-0 flex-wrap gap-3">
+        <div className="aui-confirm-actions shrink-0 flex-wrap">
           <Button type="button" onClick={cancel}>
             {copy.ui.agent_cancel}
           </Button>

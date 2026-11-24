@@ -18,7 +18,8 @@ import { useMemo, useState } from 'react'
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedSpell } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { copy_text, format_text, spell_name, stat_name, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
@@ -33,6 +34,7 @@ import {
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { LoadoutSection } from './LoadoutSection.tsx'
+import '../characters/spellbook.css'
 import '../components/character_surfaces.css'
 
 const GOLD = '#c8963c'

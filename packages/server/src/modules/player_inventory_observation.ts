@@ -14,7 +14,7 @@ import { get_my_listings } from '../reads/get_user_economy.ts'
 import { get_trades } from '../reads/get_trades.ts'
 import { coalesced_reader, latest_keyed_reader } from '../latest_read.ts'
 import { create_watcher } from '../pubsub_bus.ts'
-import { mesh, type EventEnvelope } from '../protocol.ts'
+import { channels, mesh, type EventEnvelope } from '../protocol.ts'
 import logger from '../logger.ts'
 
 const log = logger(import.meta)
@@ -26,7 +26,7 @@ const observe_inventory = (
   observation: AgentObservation,
   controller: AbortController
 ): void => {
-  const { graph, pubsub, channels } = context
+  const { graph, pubsub } = context
   const { signal } = controller
   const { address } = observation.pairing
   const send = (packet: InventoryPacket) => {
@@ -139,11 +139,10 @@ const observe_inventory = (
     .catch(fail)
 }
 
+/** The owner's read of a paired bot account, its relayed status included. The bot's own status
+ *  publication is the seat's `player_agent_status`. */
 export default {
   name: 'player_inventory_observation',
-  // The first shared status marks this socket as a hosted bot for the cluster's population count.
-  reduce: (state, action) =>
-    action.type === 'packet/agent_status' && !state.agent ? { ...state, agent: true } : state,
   observe: (context) => {
     let lifetime: AbortController | null = null
     context.events.on('packet/inventory_observe', ({ id, observation }) => {
@@ -165,22 +164,6 @@ export default {
         log.warn({ err: error }, 'inventory observation identity rejected')
         context.send({ type: 'packet/inventory_observed', id, packet: null })
       }
-    })
-    // A status speaks only for the address that signed this socket; the server relays it and keeps nothing.
-    const relay = (status: AgentStatus | null) => {
-      void context.pubsub.mesh.publish(mesh.agent_status(context.address), status)
-    }
-    let sharing = false
-    context.events.on('packet/agent_status', ({ status }) => {
-      if (!sharing) {
-        sharing = true
-        // From its first status on, this socket answers owners who start watching, and says when it closes.
-        void create_watcher(context.pubsub, context.signal)
-          .watch(mesh.agent_status_wanted(context.address), () => context.send({ type: 'packet/agent_status_wanted' }))
-          .catch((error: unknown) => log.warn({ err: error }, 'agent status request watch failed'))
-        context.signal.addEventListener('abort', () => relay(null), { once: true })
-      }
-      relay(status)
     })
     context.signal.addEventListener('abort', () => lifetime?.abort(), { once: true })
   },

@@ -29,6 +29,8 @@ const screen_for = (state: GiftState): GiftScreen => {
   if (state.celebrate || state.task?.kind === 'open') return 'opening'
   if (!state.wallet) return 'welcome'
   if (gift_needs_funding(state)) return 'funding'
+  // A link the SDK refused as not valid cannot be retried: it ends like a spent card, with the reason as its alert.
+  if (!state.status && state.error === 'invalid') return 'missing'
   return state.status ? STATUS_SCREENS[state.status.stage] : 'working'
 }
 export const gift_presentation = (state: GiftState) => {

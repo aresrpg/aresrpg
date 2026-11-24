@@ -77,10 +77,8 @@ export async function get_characters(graph: Graph, { address }: { address: strin
       RETURN c AS character, k AS kiosk_node, collect({ slot: e.slot, item: i }) AS equipment`,
       { address }
     ),
-    // the seated half: a character in a fight has NO holding kiosk, and the roster is the only
-    // door back to it — omit it and the client drops the selection, so the player sees an empty
-    // character list and can never embody, forfeit, or finish the fight (incident 2026-08-21).
-    // Its custody pair is the caller's own kiosk, the one it re-locks into when it leaves.
+    // The seated half: a character in a fight has no holding kiosk, and the roster is its only door
+    // back. Its custody pair is the caller's own kiosk, the one it re-locks into when it leaves.
     graph.read(
       `
       MATCH (f:Fight)-[s:FIGHTER]->(c:Character {owner: $address})

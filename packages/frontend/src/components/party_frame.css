@@ -2,6 +2,61 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
 .party-frame {
+  top: calc(24px + var(--game-minimap-size));
+  width: var(--game-minimap-size);
+  min-width: 0;
+  border-color: color-mix(in srgb, var(--aui-faint) 27%, transparent);
+  background: color-mix(in srgb, var(--aui-surface) 93%, transparent);
+  font-family: var(--aui-font);
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--aui-ink) 7%, transparent),
+    0 6px 18px #0005;
+}
+.party-frame > header span {
+  color: var(--aui-brass);
+  letter-spacing: 0.5px;
+}
+.party-frame__member {
+  min-height: 42px;
+  border-bottom-color: color-mix(in srgb, var(--aui-muted) 8%, transparent);
+}
+.party-frame__member.is-selected {
+  background: #638ba020;
+}
+@media (max-height: 500px) {
+  .party-frame {
+    max-height: 100px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .party-frame__member {
+    min-height: 38px;
+  }
+}
+@media (max-height: 500px) {
+  .party-frame {
+    width: 230px;
+    max-height: none;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .party-frame > header {
+    grid-column: 1 / -1;
+  }
+  .party-frame__member {
+    min-width: 0;
+    grid-template-columns: 12px minmax(0, 1fr) 20px;
+    min-height: 44px;
+    padding: 4px;
+    font-size: 9px;
+  }
+  .party-frame__member > span {
+    min-width: 0;
+  }
+}
+
+.party-frame {
   pointer-events: auto;
   position: absolute;
   top: 340px;

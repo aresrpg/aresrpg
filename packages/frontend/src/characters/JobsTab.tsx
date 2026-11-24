@@ -14,12 +14,13 @@ import {
 } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 import { ArrowRightLeft } from 'lucide-react'
-import { useMemo, useState, useRef, type ComponentProps, type ReactNode } from 'react'
+import { useMemo, useState, type ComponentProps, type ReactNode } from 'react'
 
 import { item_icon } from '../content/assets.ts'
 import { useInspections } from '../components/useInspections.ts'
 import { ItemDetailView, InspectionWindow } from '../components/ItemDetailView.tsx'
-import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedRecipe } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -28,11 +29,11 @@ import { dispatch_app, useAppStore } from '../store.ts'
 
 import type { CharacterSession } from './character_session.ts'
 import { GatheringTime } from './GatheringTime.tsx'
-import { job_from_path, job_path } from './job_navigation.ts'
 import { JobEmblem } from './JobEmblem.tsx'
 import { job_progress } from './job_progress.ts'
 import { JobItemIcon } from './JobItemIcon.tsx'
 
+import './craft.css'
 import './jobs.css'
 import './jobs_adviser.css'
 import './jobs_recipe_sections.css'
@@ -167,21 +168,17 @@ export default function JobsTab({
   character,
   copy,
   session,
-  navigate_job,
 }: Readonly<{
   character: Readonly<CharacterRow>
   copy: AppCopy
   session?: CharacterSession
-  navigate_job?: (pathname: string) => void
 }>) {
   const vocabulary = useVocabulary()
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
   const { roster, craft_session } = useJobSession(session, character)
-  const pathname = useAppStore(({ navigation }) => navigation.pathname)
-  const [selected_job, set_selected_job] = useState<JobSlug>(() => job_from_path(pathname))
-  const root = useRef<HTMLDivElement>(null)
-  const { inspections, open, close } = useInspections(root)
+  const [selected_job, set_selected_job] = useState<JobSlug>('FARMER')
+  const { inspections, open, close } = useInspections()
   const selected = inspections.at(-1)?.id ?? null
 
   const xp_of = (job: JobSlug): number => Number(character.jobs[job] ?? 0)
@@ -245,7 +242,7 @@ export default function JobsTab({
   }
 
   return (
-    <div ref={root} className="jobs" data-tutorial-target="character_jobs">
+    <div className="jobs" data-tutorial-target="character_jobs">
       {/* LEFT rail — jobs grouped by category, each a selectable row with a level chip */}
       <div className="jobs__list">
         {CATEGORY_ORDER.map((kind) => (
@@ -285,10 +282,7 @@ export default function JobsTab({
                     </div>
                     <button
                       className={`jobs__list-row${selected_job === job ? ' is-selected' : ''}`}
-                      onClick={() => {
-                        set_selected_job(job)
-                        navigate_job?.(job_path(job))
-                      }}
+                      onClick={() => set_selected_job(job)}
                       type="button"
                     >
                       <JobEmblem job={job} />

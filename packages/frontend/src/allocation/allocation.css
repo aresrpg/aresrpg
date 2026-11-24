@@ -179,17 +179,7 @@ a {
     inset 0 1px color-mix(in srgb, var(--aui-brass-hi) 40%, transparent),
     inset 0 -2px color-mix(in srgb, var(--aui-brass-deep) 40%, transparent);
 }
-.btn-google .g {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 11px;
-  font-weight: 800;
-}
+
 .btn-small {
   min-height: 30px;
   padding: 0 10px;

@@ -34,23 +34,8 @@ export const moon_texture = (): Texture => {
   return moon_texture_cache
 }
 
-const cross3 = (a: Rgb, b: Rgb): Rgb => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
-]
-const dot3 = (a: Rgb, b: Rgb): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-const norm3 = (value: Rgb): Rgb => {
-  const length = Math.sqrt(dot3(value, value)) || 1e-6
-  return [value[0] / length, value[1] / length, value[2] / length]
-}
-
-export const disc_space_uv_js = (view_direction: Rgb, body_direction: Rgb): readonly [number, number] => {
-  const tangent_u = norm3(cross3([0, 1, 0], body_direction))
-  const tangent_v = cross3(body_direction, tangent_u)
-  return [dot3(view_direction, tangent_u), dot3(view_direction, tangent_v)]
-}
-
+// A disc-local coordinate built from the body direction and world up, never the camera, so a texture keyed
+// on it stays painted on the body. Raw magnitude is the angular offset in radians for small angles.
 export const disc_space_uv = (view_direction: Node<'vec3'>, body_direction: Node<'vec3'>): Node<'vec2'> => {
   const tangent_u = vec3(0, 1, 0).cross(body_direction).normalize()
   const tangent_v = body_direction.cross(tangent_u)

@@ -7,7 +7,8 @@ import { useMemo, useState } from 'react'
 
 import { type FacetOption } from '../components/FacetRail.tsx'
 import { mob_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { element_colors } from '../visual_identity.ts'
 
 import { CatalogueMobDetails } from './CatalogueMobDetails.tsx'
@@ -20,6 +21,7 @@ import {
   SearchField,
 } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
+import './catalogue.css'
 
 const LEVEL_BRACKETS = Object.freeze([
   { label: '1–20', minimum: 1, maximum: 20 },

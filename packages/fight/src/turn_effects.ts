@@ -2,28 +2,27 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
-import { KINDS, STATS, add_ap, add_mp, heal_seat, hit, spend_ap, spend_mp } from './fighters.ts'
+import { add_ap, add_mp, heal_seat, hit, is_removal, spend_ap, spend_mp } from './fighters.ts'
 import { reduce_damage } from './damage.ts'
+import { CHANNELS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { effect_id_at, emit } from './runtime.ts'
 import { fire_glyphs_under, tick_board_zones } from './zones.ts'
 import { resolve_rows } from './effects.ts'
 import type { ActiveEffect, FightRuntime } from './types.ts'
 
-const removes_points = (kind: bigint): boolean =>
-  kind === KINDS.remove || kind === KINDS.steal || kind === KINDS.fixed_remove
-
 const is_periodic_hp = (row: Readonly<ActiveEffect>): boolean =>
-  row.stat === STATS.hp && (row.kind === KINDS.add || row.kind === KINDS.remove || row.kind === KINDS.steal)
+  row.stat === CHANNELS.hp &&
+  (row.kind === EFFECT_KINDS.add || row.kind === EFFECT_KINDS.remove || row.kind === EFFECT_KINDS.steal)
 
 export const apply_pool_effects = (runtime: FightRuntime, fighter: bigint): void => {
   const rows = [...runtime.contract.fighters[Number(fighter)].effects]
   rows.forEach((row) => {
-    if (row.kind === KINDS.add) {
-      if (row.stat === STATS.ap) add_ap(runtime, fighter, row.value, 'timed_pool', row.source)
-      else if (row.stat === STATS.mp) add_mp(runtime, fighter, row.value, 'timed_pool', row.source)
-    } else if (removes_points(row.kind)) {
-      if (row.stat === STATS.ap) spend_ap(runtime, fighter, row.value, 'timed_pool', row.source)
-      else if (row.stat === STATS.mp) spend_mp(runtime, fighter, row.value, 'timed_pool', row.source)
+    if (row.kind === EFFECT_KINDS.add) {
+      if (row.stat === CHANNELS.ap) add_ap(runtime, fighter, row.value, 'timed_pool', row.source)
+      else if (row.stat === CHANNELS.mp) add_mp(runtime, fighter, row.value, 'timed_pool', row.source)
+    } else if (is_removal(row.kind)) {
+      if (row.stat === CHANNELS.ap) spend_ap(runtime, fighter, row.value, 'timed_pool', row.source)
+      else if (row.stat === CHANNELS.mp) spend_mp(runtime, fighter, row.value, 'timed_pool', row.source)
     }
   })
 }
@@ -35,7 +34,7 @@ export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void =>
     if (!is_periodic_hp(row) || row.turns_left === 0n) return
     // Consume an actual tick, never the casting turn's end. Newly applied glyph rows wait.
     target.effects[index] = { ...row, turns_left: row.turns_left - 1n }
-    if (row.kind === KINDS.add) {
+    if (row.kind === EFFECT_KINDS.add) {
       heal_seat(runtime, {
         target: fighter,
         amount: row.value,
@@ -84,7 +83,7 @@ export const expire_turn_effects = (runtime: FightRuntime, fighter: bigint): voi
       channel: row.stat,
     })
   })
-  if (rows.some((row) => row.kind === KINDS.invis) && !kept.some((row) => row.kind === KINDS.invis))
+  if (rows.some((row) => row.kind === EFFECT_KINDS.invis) && !kept.some((row) => row.kind === EFFECT_KINDS.invis))
     emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason: 'expired' })
   target.effects = kept
   runtime.render_ids.effects[Number(fighter)] = kept_ids

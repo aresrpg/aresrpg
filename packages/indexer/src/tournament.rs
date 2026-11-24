@@ -37,7 +37,3 @@ pub fn pending(t: &Tournament, team: usize, seat: usize) -> bool {
                 reward.place == roster.place && member.items_claimed & (1u64 << i) == 0
             }))
 }
-
-#[cfg(test)]
-#[path = "../test/tournament.rs"]
-mod tests;

@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The one rate limit of every service: an allowance per caller in fixed windows, held in process
 // memory. A service takes it at its public door, keyed by whoever is calling (the visitor address
-// before authentication, the verified identity after), and never inside a module
-// (owner 2026-08-16: one global gate, loose enough). No allowance is ever shared between callers.
+// before authentication, the verified identity after; on the realtime server, the socket itself),
+// and never inside a module. No allowance is shared between callers.
 
 /** The HTTP door of every service: 600 requests a minute per caller. */
 export const HTTP_DOOR = Object.freeze({ capacity: 600, window_ms: 60_000 })
@@ -63,10 +63,8 @@ export const create_request_limiter = ({
 
 export type RequestLimiter = ReturnType<typeof create_request_limiter>
 
-/**
- * Takes from the visitor's own allowance. A request the edge did not carry came from inside the
- * cluster: it is one of our own services and is never limited (owner 2026-11-18).
- */
+/** Takes from the visitor's own allowance. A request the edge did not carry came from inside the
+ *  cluster: it is one of our own services and is never limited. */
 export const admit_visitor = (limiter: RequestLimiter, request: Request): boolean => {
   const visitor = visitor_of(request)
   return visitor === null || limiter.take(visitor)

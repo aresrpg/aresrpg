@@ -39,7 +39,7 @@ availability. Provider compatibility and production publication require separate
 
 - [Source repository](https://github.com/aresrpg/aresrpg): SDK source, license and matching release.
 - [Deployment pins](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/pins.json): Verify against the intended deployment.
-- [Game](https://aresrpg.world/): Connect Your Agent and browser gameplay.
+- [Game](https://aresrpg.world/world): Browser gameplay. Connect Your Agent opens at https://aresrpg.world/agent.
 
 Sui's permissionless execution model still allows other clients. That technical fact does not
 make manual wallet onboarding a parallel officially supported bot setup recommendation.

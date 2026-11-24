@@ -31,7 +31,7 @@ export const verified_gift_package = (policy: GiftPolicy, storage_id: string, or
 }
 
 /** No arbitrary PTBs: exactly one game door plus its ordinary kiosk/branding scaffold. */
-export const gift_transaction_call = (policy: GiftPolicy, action: GiftAction, data: TransactionData): MoveCall => {
+const gift_transaction_call = (policy: GiftPolicy, action: GiftAction, data: TransactionData): MoveCall => {
   const door = `${policy.pins.package}::api::${door_names[action]}`
   const allowed = new Set([`${policy.pins.math_package}::aresrpg::aresrpg`, door])
   const single_open = `${policy.pins.package}::api::open_loot_box`

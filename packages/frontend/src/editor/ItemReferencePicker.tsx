@@ -11,7 +11,8 @@ import {
   type PickerItem,
 } from '../components/SearchPickerModal.tsx'
 import { item_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import type { ItemFilterRow } from './content_list.ts'
 import { item_filter_value, item_filter_view } from './item_filter_view.ts'

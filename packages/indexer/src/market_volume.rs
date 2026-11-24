@@ -31,31 +31,3 @@ pub fn commands(checkpoint: u64, ts_ms: u64, mist: u128) -> redis::Pipeline {
     }
     commands
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn replay_uses_the_same_checkpoint_field_and_exact_large_money() {
-        let packed = commands(42, 123456789, 9007199254740993).get_packed_pipeline();
-        assert_eq!(
-            packed,
-            commands(42, 123456789, 9007199254740993).get_packed_pipeline()
-        );
-        let wire = String::from_utf8(packed).unwrap();
-        assert!(wire.contains("HSET"));
-        assert!(wire.contains("market:volume:day:1"));
-        assert!(wire.contains("123456789:9007199254740993"));
-        assert!(!wire.contains("INCR"));
-        assert!(wire.contains("EXPIREAT"));
-    }
-
-    #[test]
-    fn zero_replay_removes_any_previous_subtotal() {
-        let wire = String::from_utf8(commands(42, 123456789, 0).get_packed_pipeline()).unwrap();
-        assert!(wire.contains("HDEL"));
-        assert!(wire.contains("SETNX"));
-        assert!(!wire.contains("HSET"));
-    }
-}

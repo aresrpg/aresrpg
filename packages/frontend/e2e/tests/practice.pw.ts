@@ -2,24 +2,25 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
-// Exercise the production entry, observer registry, renderer, controls and local result lifecycle.
+// The production game document, its practice surface, renderer, controls and local result lifecycle.
 test('practice plays a local bot turn and returns to its bracket without connecting a wallet or server', async ({
   page,
-}, info) => {
+}) => {
   const sockets: string[] = []
   const errors: string[] = []
   page.on('websocket', (socket) => sockets.push(socket.url()))
   page.on('pageerror', (error) => errors.push(error.message))
-  await page.addInitScript(() => {
-    localStorage.setItem('ares_language', 'en')
+  await page.addInitScript(() => localStorage.setItem('ares_language', 'en'))
+  // A hero's practice opens as the game does: its character rides the history entry into /world/practice.
+  await page.goto('/llms.txt')
+  await page.evaluate(() => {
+    history.pushState({ practice_source: { name: 'Hero', classe: 'senshi', level: 30n } }, '', '/world/practice')
+    location.reload()
   })
-  await page.goto('/e2e/fixtures/tournament.html?hud&scenario=open_funded')
-  await page.getByRole('button', { name: 'Open Autumn Championship tournament', exact: true }).first().click()
-  await page.getByRole('button', { name: 'Practice for free', exact: true }).click()
-  await expect(page).toHaveURL(/\/practice$/)
-  await expect(page.getByText('LOCAL PRACTICE · 1v1', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Play next match', exact: true }).click({ trial: true })
-  await page.screenshot({ path: info.outputPath('practice-bracket.png') })
+  await expect(page).toHaveURL(/\/world\/practice$/)
+  await expect(page.getByText('LOCAL PRACTICE · 1v1', { exact: true })).toBeVisible({ timeout: 30_000 })
+  // The world's loading window covers the bracket until the stage has loaded, as it does for a player.
+  await expect(page.locator('dialog.loading-modal[open]')).toHaveCount(0, { timeout: 30_000 })
   await page.getByRole('button', { name: 'Play next match', exact: true }).click()
   const end_turn = page.getByRole('button', { name: 'End turn', exact: true })
   await expect(end_turn).toBeEnabled({ timeout: 30_000 })

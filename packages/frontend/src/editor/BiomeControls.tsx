@@ -120,7 +120,6 @@ export const SplineEditor = ({
   fill = false,
   selected,
   select,
-  disabled = false,
   x_domain,
   y_domain,
   y_value_domain,
@@ -132,7 +131,6 @@ export const SplineEditor = ({
   fill?: boolean
   selected?: number
   select?: (index: number) => void
-  disabled?: boolean
   x_domain?: readonly [number, number]
   y_domain?: readonly [number, number]
   y_value_domain?: readonly [number, number]
@@ -194,13 +192,10 @@ export const SplineEditor = ({
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-[9px] tracking-[0.14em] text-gold uppercase">{name.replaceAll('_', ' ')}</h3>
-          <p className="mt-1 text-[7px] text-faint">
-            {disabled ? 'Rebuilding the exact voxel field…' : 'Drag a blue knot; release once to rebuild terrain.'}
-          </p>
+          <p className="mt-1 text-[7px] text-faint">Drag a blue knot; release once to rebuild terrain.</p>
         </div>
         <button
           className={button_class}
-          disabled={disabled}
           onClick={() => {
             const gaps = draft_knots
               .slice(1)
@@ -223,8 +218,7 @@ export const SplineEditor = ({
         </button>
       </div>
       <svg
-        aria-disabled={disabled}
-        className={`w-full touch-none border border-white/6 bg-bg ${fill ? 'min-h-40 flex-1' : ''} ${disabled ? 'pointer-events-none cursor-wait opacity-55' : ''}`}
+        className={`w-full touch-none border border-white/6 bg-bg ${fill ? 'min-h-40 flex-1' : ''}`}
         onPointerMove={(event) =>
           dragging === null ||
           preview_drag(
@@ -254,7 +248,6 @@ export const SplineEditor = ({
             fill="none"
             key={`${index}-${x}`}
             onPointerDown={(event) => {
-              if (disabled) return
               event.currentTarget.setPointerCapture(event.pointerId)
               select?.(index)
               set_dragging(index)
@@ -280,7 +273,6 @@ export const SplineEditor = ({
               <span className="px-1 text-[7px] text-faint">{index + 1}</span>
               <input
                 className={`${input_class} w-14`}
-                disabled={disabled}
                 onChange={(event) => change(move_spline_knot(draft_knots, index, [Number(event.target.value), y]))}
                 step="0.01"
                 type="number"
@@ -288,7 +280,6 @@ export const SplineEditor = ({
               />
               <input
                 className={`${input_class} w-14`}
-                disabled={disabled}
                 onChange={(event) => change(move_spline_knot(draft_knots, index, [x, Number(event.target.value)]))}
                 step="0.01"
                 type="number"
@@ -296,7 +287,7 @@ export const SplineEditor = ({
               />
               <button
                 className={button_class}
-                disabled={disabled || draft_knots.length <= 2}
+                disabled={draft_knots.length <= 2}
                 onClick={() => change(draft_knots.filter((_, knot) => knot !== index))}
                 type="button"
               >

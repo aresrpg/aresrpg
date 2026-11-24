@@ -5,6 +5,7 @@ import type { AllocationRequest, AllocationResult } from '@aresrpg/protocol'
 import type { AllocationStatus } from '@aresrpg/immutable/allocation'
 
 import type { Auth, AuthSession } from '../auth.ts'
+import { x_post_url } from '../components/links.tsx'
 import { create_remembered_auth } from '../remembered_auth.ts'
 
 import { restore_allocation_wallet } from './restoration.ts'
@@ -70,7 +71,7 @@ export const reduce_allocation = (state: AllocationState, input: Input): Allocat
 export const share_intent = (url: string, locale: string, text: string): string => {
   const preview = new URL(url)
   preview.searchParams.set('locale', locale)
-  return `https://x.com/intent/tweet?${new URLSearchParams({ text, url: preview.href })}`
+  return x_post_url(text, preview.href)
 }
 type Request = (request: AllocationRequest) => Promise<AllocationResult>
 const verify = async (request: Request, wallet: AuthSession): Promise<void> => {

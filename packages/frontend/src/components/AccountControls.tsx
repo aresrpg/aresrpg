@@ -7,6 +7,7 @@ import { Button, IconButton, LanguageView } from '@aresrpg/ui'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { LOCALES, type Locale } from '../i18n/locale.ts'
+import { SITE_ADDRESSES } from '../site/routes.ts'
 
 export const LanguageCard = ({
   copy,
@@ -60,7 +61,7 @@ export const LanguageCard = ({
 export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <a
     className="group relative flex w-[var(--app-sidebar-width)] items-center justify-center gap-2 overflow-hidden border border-[#5865f2]/30 bg-[linear-gradient(135deg,rgba(88,101,242,0.18)_0%,rgba(114,137,218,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(88,101,242,0.08)] transition-all hover:border-[#5865f2]/70"
-    href="https://discord.gg/aresrpg"
+    href={SITE_ADDRESSES.discord}
     data-discord-card=""
     rel="noopener noreferrer"
     target="_blank"
@@ -81,7 +82,7 @@ export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
 export const TelegramCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <a
     className="group relative flex w-[var(--app-sidebar-width)] items-center justify-center gap-2 overflow-hidden border border-[#229ed9]/30 bg-[linear-gradient(135deg,rgba(34,158,217,0.18)_0%,rgba(42,171,238,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(34,158,217,0.08)] transition-all hover:border-[#229ed9]/70"
-    href="https://t.me/aresrpg"
+    href={SITE_ADDRESSES.telegram}
     data-telegram-card=""
     rel="noopener noreferrer"
     target="_blank"

@@ -28,10 +28,11 @@ export const create_terrain_planner = (
   let next_id = 1
   let active: PlannerRequest | null = null
   let queued: PlannerRequest | null = null
-  let disposed = false
-  let worker_error: Error | null = null
-  const report_failure = (error: Error): void => {
-    worker_error = error
+  // Set once by a worker fault or disposal; every later plan rejects with it.
+  let ended: Error | null = null
+  const reject_all = (error: Error): void => {
+    if (ended) return
+    ended = error
     active?.reject(error)
     queued?.reject(error)
     active = null
@@ -43,7 +44,7 @@ export const create_terrain_planner = (
     try {
       worker.postMessage({ type: 'plan', id: request.id, columns: request.columns })
     } catch (error) {
-      report_failure(error instanceof Error ? error : new Error(String(error)))
+      reject_all(error instanceof Error ? error : new Error(String(error)))
     }
   }
   worker.addEventListener('message', ({ data }: MessageEvent<WorkerReply<readonly TerrainColumnPlan[]>>) => {
@@ -56,17 +57,16 @@ export const create_terrain_planner = (
     queued = null
     if (next) start(next)
   })
-  worker.addEventListener('error', (event) => report_failure(new Error(event.message)))
-  worker.addEventListener('messageerror', () => report_failure(new Error('terrain planner reply could not be decoded')))
+  worker.addEventListener('error', (event) => reject_all(new Error(event.message)))
+  worker.addEventListener('messageerror', () => reject_all(new Error('terrain planner reply could not be decoded')))
   try {
     worker.postMessage({ type: 'initialize', world: terrain_recipe(world) })
   } catch (error) {
-    report_failure(error instanceof Error ? error : new Error(String(error)))
+    reject_all(error instanceof Error ? error : new Error(String(error)))
   }
   return Object.freeze({
     plan: (columns) => {
-      if (disposed) return Promise.reject(new Error('terrain planner is disposed'))
-      if (worker_error) return Promise.reject(worker_error)
+      if (ended) return Promise.reject(ended)
       if (columns.length === 0) return Promise.resolve([])
       const id = next_id
       next_id += 1
@@ -80,15 +80,6 @@ export const create_terrain_planner = (
         queued = request
       })
     },
-    dispose: () => {
-      if (disposed) return
-      disposed = true
-      worker.terminate()
-      const error = new Error('terrain planner is disposed')
-      active?.reject(error)
-      queued?.reject(error)
-      active = null
-      queued = null
-    },
+    dispose: () => reject_all(new Error('terrain planner is disposed')),
   })
 }

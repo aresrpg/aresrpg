@@ -18,9 +18,8 @@ import { character_creation_failure_message, character_creation_insufficient } f
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { SuinsConfirmation } from './settings/SuinsConfirmation.tsx'
 import { WalletImportWindow } from './settings/WalletImport.tsx'
-import { Login, sign_in_asked } from './components/Login.tsx'
-import { AddFundsModal } from './components/AddFundsModal.tsx'
-import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
+import { FundingHost } from './components/FundingHost.tsx'
+import { GiftClaimNotice } from './airdrop/GiftClaimNotice.tsx'
 import {
   CANVAS_OVERLAY_CLASS,
   dungeon_lobby_visible,
@@ -74,7 +73,6 @@ export function PlayerRuntime({
 }>) {
   const loading_scene = useSyncExternalStore(subscribe_scene, read_scene, read_scene)
   const session = useAppStore(({ session }) => session)
-  const distribution = useAppStore((state) => state.distribution)
   const navigation = useAppStore(({ navigation }) => navigation)
   const settings = useAppStore((state) => state.settings)
   const locale = useAppStore((state) => state.locale)
@@ -98,7 +96,6 @@ export function PlayerRuntime({
     },
     [wallet, selected_world]
   )
-  const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState<string | null>(null)
   const attached_canvas = useRef<HTMLCanvasElement | null>(null)
   const in_app = !!wallet
@@ -156,7 +153,7 @@ export function PlayerRuntime({
     graphics_notice_dismissed === notice_kind,
     notice_kind !== null
   )
-  const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
+  const loading_universe = session.sign_in.status === 'connecting' || (in_app && !session.roster_loaded)
   if (!copy) return <main className="fixed inset-0 bg-bg" />
 
   return (
@@ -236,17 +233,7 @@ export function PlayerRuntime({
           <PlayerContextMenu copy={copy} />
           <JourneyHost copy={copy} />
         </OwnedGameplay>
-        {in_app && wallet && navigation.funding_cost_mist !== null && (
-          <AddFundsModal
-            key={wallet.address}
-            address={wallet.address}
-            authorization={navigation.funding_authorization}
-            copy={copy}
-            cost_mist={navigation.funding_cost_mist}
-            on_close={() => dispatch_app({ type: 'funding/close' })}
-            warning={gift_funding_text(copy, distribution, session)}
-          />
-        )}
+        <FundingHost copy={copy} />
         {creation_surface === 'character_create' && (
           <CharacterCreateModal
             cancel={() =>
@@ -256,9 +243,6 @@ export function PlayerRuntime({
             create={create_character}
             insufficient={sui_insufficient}
             preview={(source) => <CharacterPreviewCanvas source={source} />}
-            view_spells={(classe) => {
-              open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
-            }}
           />
         )}
         <OwnedGameplay>{in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}</OwnedGameplay>
@@ -279,19 +263,6 @@ export function PlayerRuntime({
             minimum_graphics={notice_kind === 'minimum'}
             dismiss={() => set_graphics_notice_dismissed(notice_kind)}
             reload={() => globalThis.location.reload()}
-          />
-        )}
-
-        {sign_in_asked(session) && (
-          <Login
-            auth_ready={session.auth_ready}
-            wallets={session.wallets}
-            copy={copy}
-            gift={navigation.page === 'airdrop'}
-            login_google={() => dispatch_app({ type: 'auth/login_google' })}
-            login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
-            set_show_wallets={set_show_wallets}
-            show_wallets={show_wallets}
           />
         )}
 

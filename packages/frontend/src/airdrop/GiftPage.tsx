@@ -5,6 +5,7 @@ import { useStore } from 'zustand'
 import { Button, GameWindow, CarvedIcon } from '@aresrpg/ui'
 import { Volume2, VolumeX } from 'lucide-react'
 
+import { SITE_ADDRESSES } from '../site/routes.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { items_by_type } from '../content/items.ts'
 import { item_icon } from '../content/assets.ts'
@@ -62,7 +63,7 @@ export const GiftPage = ({ runtime, copy }: Readonly<{ runtime: GiftRuntime; cop
   const phase = !state.celebrate && roll ? 'reveal' : animation.phase
   const enter_game = (): void => {
     clear_gift_intent()
-    globalThis.location.assign('/')
+    globalThis.location.assign(SITE_ADDRESSES.world)
   }
   useEffect(() => runtime.observe(), [runtime])
   useEffect(() => {

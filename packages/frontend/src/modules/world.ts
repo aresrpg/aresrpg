@@ -87,7 +87,8 @@ export type WorldState = Readonly<{
   spawns: Readonly<Record<string, ZonePopulation>>
   fights: Readonly<Record<string, FightRow>>
   pending_engages: Readonly<Record<string, PendingEngage>>
-  pending_zone_searches: Readonly<Record<string, true>>
+  /** Searches by zone key, from the press until the zone shows the search or the submission fails. */
+  pending_zone_searches: Readonly<Record<string, ZoneSearchTarget>>
   player_menu: PlayerMenu | null
   /** Optimistic immediately, then corrected to the chain checkpoint's future timestamp. */
   gathering: Gatherings
@@ -279,7 +280,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
           state,
           Object.freeze({
             ...state.world,
-            pending_zone_searches: Object.freeze({ ...state.world.pending_zone_searches, [input.target.key]: true }),
+            pending_zone_searches: Object.freeze({
+              ...state.world.pending_zone_searches,
+              [input.target.key]: input.target,
+            }),
           })
         )
   if (input.type === 'world/search_zone_failed' || input.type === 'world/search_zone_confirmed') {
@@ -402,22 +406,17 @@ export const zone_discovery_summary = (
 const zone_biome_name = (world: string, zone_x: number, zone_z: number): string =>
   world_biome_at_zone(world, zone_x, zone_z) ?? 'unknown'
 
-/** How long the world has to actually SHOW a searched zone before we call it a failure. The
- *  transaction is certified in a second or two; the row still has to be projected by the indexer
- *  and streamed by the server. Generous, because a slow answer is not a wrong one. */
+/** How long an executed search or engage may wait for its row before the player hears the read layer
+ *  is behind. Generous: the row is projected by the indexer, then streamed, and slow is not wrong. */
 const ZONE_ARRIVAL_TIMEOUT_MS = 30_000
 
 const observe: NonNullable<AppModule['observe']> = (context) => {
   const { events, get_state, dispatch } = context
-  /** the world transactions this tab has already fired, by their target's key. Neither door is
-   *  instant, and the chain refuses neither for a repeat — a second search re-reads the same
-   *  seed, a second engage aborts on a group already taken — so an unguarded double press
-   *  only burns gas. Zone keys and group ids never collide (a group id ends in `:mN`). */
+  /** Engages this tab fired, by group id: a second engage on a taken group aborts and only burns gas. */
   const in_flight = new Map<string, ReturnType<typeof toast.loading>>()
   observe_world_gather(context)
   let reveal_timer: ReturnType<typeof setTimeout> | null = null
-  /** transactions whose projected result is not visible yet — zone rows and fight boards use
-   * the same observed-delta completion rule. */
+  /** Transactions whose zone row or fight board is not visible yet: both complete on the observed delta. */
   const awaiting = new Map<
     string,
     Readonly<{
@@ -433,26 +432,23 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     if (!pending) return
     clearTimeout(pending.timer)
     awaiting.delete(key)
-    // the press re-arms only now: a search stays "in flight" until its zone SHOWS UP, not until
-    // its transaction lands. Re-searching inside the 2h TTL is a successful no-op on chain
-    // (zone.move returns the same seed with `fresh: false`), so nothing would refuse the extra
-    // presses — they would just burn gas while the player waits on a row that is already paid for
     in_flight.delete(pending.lock_key)
     finish(pending.notice)
   }
 
-  events.on('world/search_zone', ({ target }) => {
-    const state = get_state()
+  // One newly pending search opens one transaction. Once it executed, it stays pending until its zone SHOWS
+  // UP: a re-search inside the 2h TTL is a successful no-op on chain (zone.move returns the same seed with
+  // `fresh: false`) that only burns gas. A slow read layer is said once; it releases nothing.
+  const submit_search = (state: AppState, target: ZoneSearchTarget): void => {
     const { wallet, selected_character_id } = state.session
     const character = selected_character(state.session)
     const { key } = target
-    if (!wallet || !selected_character_id || !character || character.world !== target.world || in_flight.has(key)) {
+    if (!wallet || !selected_character_id || !character || character.world !== target.world) {
       dispatch({ type: 'world/search_zone_failed', key })
       return
     }
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     const notice = toast.loading(text('zone_searching'))
-    in_flight.set(key, notice)
     void wallet.character
       .search_zone({
         character_id: selected_character_id,
@@ -464,26 +460,34 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       })
       // Wait for projection; the stream can arrive before or after the receipt.
       .then(() => {
-        if (context.signal.aborted) return
+        if (context.signal.aborted || !get_state().world.pending_zone_searches[key]) return notice.dismiss()
         awaiting.set(key, {
           lock_key: key,
           notice,
           previous_searched_at_ms: target.previous_searched_at_ms,
-          timer: setTimeout(() => {
-            settle(key, (pending) => pending.error(localized_error(text('zone_never_arrived'))))
-            dispatch({ type: 'world/search_zone_failed', key })
-          }, ZONE_ARRIVAL_TIMEOUT_MS) as unknown as number,
+          timer: setTimeout(
+            () => notice.error(localized_error(text('zone_never_arrived'))),
+            ZONE_ARRIVAL_TIMEOUT_MS
+          ) as unknown as number,
         })
         settle_arrivals(get_state())
       })
       .catch((error: unknown) => {
         console.error('Zone search failed.', error)
-        if (context.signal.aborted) return
-        in_flight.delete(key)
+        if (context.signal.aborted) return notice.dismiss()
         dispatch({ type: 'world/search_zone_failed', key, ...world_action_failure(error, performance.now()) })
         notice.error(error)
       })
-  })
+  }
+
+  /** A search that left the state stops waiting here; a new one is submitted. */
+  const follow_searches = (state: AppState, before: WorldState['pending_zone_searches']): void => {
+    const now = state.world.pending_zone_searches
+    const dropped = Object.keys(before).filter((key) => !now[key])
+    const added = Object.entries(now).filter(([key]) => !before[key])
+    dropped.forEach((key) => settle(key, (notice) => notice.dismiss()))
+    added.forEach(([, target]) => submit_search(state, target))
+  }
 
   const settle_arrivals = (state: AppState): void => {
     if (awaiting.size === 0) return
@@ -572,15 +576,25 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     )
       settle_arrivals(state)
     new_pending_engages(state.world, previous.world).forEach((pending) => submit_engage(state, pending))
+    if (state.world.pending_zone_searches !== previous.world.pending_zone_searches)
+      follow_searches(state, previous.world.pending_zone_searches)
   })
   context.signal.addEventListener('abort', () => {
     if (reveal_timer) clearTimeout(reveal_timer)
     reveal_timer = null
-    awaiting.forEach(({ timer }) => clearTimeout(timer))
+    awaiting.forEach(({ timer, notice }) => {
+      clearTimeout(timer)
+      notice.dismiss()
+    })
     awaiting.clear()
     in_flight.forEach((notice) => notice.dismiss())
     in_flight.clear()
   })
 }
 
-export default Object.freeze({ name: 'world', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'world',
+  initial: () => ({ world: initial_world_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

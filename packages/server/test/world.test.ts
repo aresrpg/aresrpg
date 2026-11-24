@@ -1,132 +1,327 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+// The seat in the world, through the real player harness: tracking from the indexed roster, presence
+// between accounts, the speed law and checkpoint provenance, chat, and the fight relay's authority.
 
-import { describe, expect, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 
-import { ZONE_RECENTER_MS } from '../src/modules/player_world.ts'
+import { channels } from '../src/protocol.ts'
 
-import { create_player } from './helpers/player.ts'
-import { wire, make_character, flush } from './helpers/world_wire.ts'
+import { create_player, fight_node, flush, settle, types_of, wire, type Wire } from './harness.ts'
 
 const UNMOUNTED = Object.freeze({ riding: false, gliding: false })
+const ZONE_RECENTER_MS = 1_000
+const step = (
+  f: Wire,
+  character_id: string,
+  x: number,
+  motion: object = UNMOUNTED,
+  checkpoint = f.checkpoint(character_id)
+) => JSON.stringify({ type: 'packet/position', character_id, checkpoint, x, y: 0, z: 100, ...motion })
+const chat = (type: string, character_id: string, text: string, to?: string) =>
+  JSON.stringify({ type, character_id, ...(to ? { to } : {}), parts: [{ kind: 'text', text }] })
+const moves = (f: Wire, kind: string, character_id?: string) =>
+  f.published.filter(({ payload }) => payload.kind === kind && (!character_id || payload.character_id === character_id))
+const stranger = (index: number) => ({
+  character_id: `0xp${index}`,
+  world: 'overworld',
+  ...UNMOUNTED,
+  name: `p${index}`,
+  classe: 'senshi',
+  sex: 'male',
+  level: 1,
+  color_1: 0,
+  color_2: 0,
+  color_3: 0,
+  pet: null,
+  x: 100,
+  y: 0,
+  z: 100,
+})
 
-describe('the world module', () => {
-  test('party membership is reread after the character channel becomes ready', async () => {
-    const { sent, ws, graph, pubsub } = wire({ party_after_watch: true, character_ids: ['0xabc'] })
-    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    await flush()
-    await flush()
+test('the roster mounts each hero window; two accounts see each other move and talk, and a later joiner is answered', async () => {
+  const first = wire({ character_ids: ['0xa'] })
+  const first_player = create_player({ ...first, address: '0xfirst' })
+  await settle()
+  expect(first.sent).toContainEqual(expect.objectContaining({ type: 'packet/tracked_zones', character_id: '0xa' }))
+  expect(types_of(first.sent)).toContain('packet/zones')
+  expect(moves(first, 'appear').length + moves(first, 'who').length).toBeGreaterThan(1)
+  const second = wire({ character_ids: ['0xb'], shared_pubsub: first.pubsub })
+  const second_player = create_player({ ...second, address: '0xsecond' })
+  try {
+    await settle()
+    const appeared = (f: Wire, id: string) =>
+      f.sent.some((packet) => packet.type === 'packet/player_appeared' && packet.player.character_id === id)
+    expect([appeared(first, '0xb'), appeared(second, '0xa')]).toEqual([true, true])
+    second_player.on_message(step(second, '0xb', 101))
+    await Bun.sleep(60)
     expect(
-      sent.filter((packet) => packet.type === 'packet/party' && packet.character_id === '0xabc').at(-1)
-    ).toMatchObject({ party: { id: '0xp' } })
-  })
-
-  test('embody mounts the spiral and pushes zones + an appearance on the mesh', async () => {
-    const { sent, ws, graph, pubsub, published } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    expect(sent.some((packet) => packet.type === 'packet/tracked_zones' && packet.character_id === '0xabc')).toBeTrue()
-    expect(sent.some((packet) => packet.type === 'packet/zones')).toBe(true)
-    expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(true)
-  })
-
-  test('tracks and moves two owned characters without replacing either window or anchor', async () => {
-    const { sent, ws, graph, pubsub, published, dropped, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdef', tracked: true }))
-    await flush()
-    await flush()
-
-    expect(
-      sent.flatMap((packet) => (packet.type === 'packet/tracked_zones' ? [packet.character_id] : [])).sort()
-    ).toEqual(['0xabc', '0xdef'])
-    expect(
-      sent.flatMap((packet) => (packet.type === 'packet/tracked_zones' ? [packet.character_id] : [])).sort()
-    ).toEqual(['0xabc', '0xdef'])
-
-    published.length = 0
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xdef',
-        checkpoint: checkpoint('0xdef'),
-        x: 701,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(dropped).toEqual([])
-    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeTrue()
-
-    published.length = 0
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdef', tracked: false }))
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xdef',
-        checkpoint: checkpoint('0xdef'),
-        x: 702,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeTrue()
-  })
-
-  test('a fighting character keeps its zone window but leaves world presence immediately', async () => {
-    const { ws, graph, pubsub, published, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    await flush()
-    published.length = 0
-
-    player.dispatch({ type: 'action/fight', character_id: '0xdef', fight: '0xfight', seat: 0 })
-    expect(published.some(({ payload }) => payload.kind === 'leave' && payload.character_id === '0xdef')).toBeTrue()
-
-    published.length = 0
-    pubsub.emitter.emit('pos:overworld:1:0', {
+      first.sent.some((packet) => packet.type === 'packet/players_moved' && packet.positions[0]?.character_id === '0xb')
+    ).toBe(true)
+    second_player.on_message(chat('packet/chat', '0xb', 'hello'))
+    second_player.on_message(chat('packet/chat', '0xb', 'again'))
+    await settle()
+    expect(first.sent.find(({ type }) => type === 'packet/chat_message')).toMatchObject({
+      channel: 'world',
+      from: '0xsecond',
+      parts: [{ text: 'hello' }],
+    })
+    expect(second.sent).toContainEqual({ type: 'packet/error', reason: 'chat too fast' })
+    expect(first.published.filter(({ channel }) => channel.startsWith('chat:world:'))).toHaveLength(1)
+    // A later joiner probing my zone is answered once, on its own reply door.
+    first.published.length = 0
+    first.pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'who',
-      address: '0xother',
+      reply_to: 'presence:reply:t',
+      request: 't',
+      address: '0xlater',
       world: 'overworld',
-      zx: 1,
+      zx: 0,
       zz: 0,
     })
+    expect(first.published.filter(({ payload }) => payload.kind === 'reply').map(({ channel }) => channel)).toEqual([
+      'presence:reply:t',
+      'presence:reply:t',
+    ])
+  } finally {
+    first_player.on_close()
+    second_player.on_close()
+  }
+})
+
+test('a whisper lands on the target door, party chat needs a party, and party chat stays in the acting party', async () => {
+  const f = wire({ character_ids: ['0xabc'] })
+  const player = create_player({ ...f, address: '0xme' })
+  try {
+    await settle()
+    player.on_message(chat('packet/chat_party', '0xabc', 'anyone?'))
+    expect(f.sent).toContainEqual({ type: 'packet/error', reason: 'no party' })
+    player.on_message(chat('packet/chat_whisper', '0xabc', 'psst', '0xpal'))
+    await settle()
+    expect(f.published.find(({ channel }) => channel === 'chat:user:0xpal')?.payload).toMatchObject({
+      character: 'nox',
+      parts: [{ text: 'psst' }],
+    })
+    f.pubsub.emitter.emit('chat:user:0xme', {
+      address: '0xpal',
+      character_id: '0xnyx',
+      character: 'nyx',
+      parts: [{ kind: 'text', text: 'yo' }],
+    })
+    expect(f.sent.find(({ type }) => type === 'packet/chat_message')).toMatchObject({
+      channel: 'whisper',
+      from: '0xpal',
+    })
+    f.pubsub.emitter.emit(channels.character('0xabc'), {
+      type: 'PartyJoined',
+      data: { party: '0xp', character: '0xabc' },
+    })
+    await settle()
+    expect(f.sent.filter(({ type }) => type === 'packet/party').at(-1)).toMatchObject({
+      character_id: '0xabc',
+      party: { id: '0xp' },
+    })
+    await Bun.sleep(1_000)
+    player.on_message(chat('packet/chat_party', '0xabc', 'ready'))
+    await settle()
+    expect(f.published.some(({ channel }) => channel === 'chat:party:0xp')).toBe(true)
+    f.pubsub.emitter.emit('chat:party:0xp', {
+      address: '0xher',
+      character_id: '0xnyx',
+      character: 'nyx',
+      parts: [{ kind: 'text', text: 'go' }],
+    })
+    expect(f.sent.filter(({ type }) => type === 'packet/chat_message').at(-1)).toMatchObject({
+      channel: 'party',
+      scope: '0xp',
+      from: '0xher',
+    })
+  } finally {
+    player.on_close()
+  }
+})
+
+test('party membership read after the character channel is armed reaches the seat', async () => {
+  const f = wire({ character_ids: ['0xabc'], party: '0xp' })
+  const player = create_player({ ...f, address: '0xme' })
+  try {
+    await settle()
     expect(
-      published.some(({ payload }) => payload.kind === 'appear' && payload.player?.character_id === '0xdef')
-    ).toBeFalse()
+      f.sent.filter((packet) => packet.type === 'packet/party' && packet.character_id === '0xabc').at(-1)
+    ).toMatchObject({ party: { id: '0xp' } })
+    f.pubsub.emitter.emit(channels.character('0xabc'), {
+      type: 'PartyInvitesChanged',
+      data: { party: '0xp1', character: '0xabc' },
+    })
+    await settle()
+    expect(f.sent.filter(({ type }) => type === 'packet/party_invites').at(-1)).toEqual({
+      type: 'packet/party_invites',
+      character_id: '0xabc',
+      parties: [],
+    })
+  } finally {
+    player.on_close()
+  }
+})
 
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xdef',
-        checkpoint: checkpoint('0xdef'),
-        x: 701,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeFalse()
+test('the speed law: an impossible move drops, a buffered burst spends the bank, and a mount raises the authored ceiling', async () => {
+  const walker = wire()
+  const walking = create_player({ ...walker, address: '0xme' })
+  await settle()
+  // The first move prices against the checkpoint's own timestamp: 500 blocks in 60 s is legal.
+  walking.on_message(step(walker, '0xabc', 600))
+  for (let offset = 1; offset <= 6; offset++) walking.on_message(step(walker, '0xabc', 600 + offset))
+  expect(walker.dropped).toEqual([])
+  expect(moves(walker, 'move', '0xabc').length).toBeGreaterThan(0)
+  walking.on_message(step(walker, '0xabc', 700))
+  expect(walker.dropped).toEqual(['SPEED'])
+  walking.on_close()
+  // 850 blocks over the checkpoint's 60 s: above the 11.5 walking law, below the 17.25 mounted one.
+  for (const [pet, motion, dropped] of [
+    [false, UNMOUNTED, ['SPEED']],
+    [true, { riding: true, gliding: false }, []],
+  ] as const) {
+    const f = wire({ pet })
+    const player = create_player({ ...f, address: '0xme' })
+    await settle()
+    player.on_message(step(f, '0xabc', 950, motion))
+    expect(f.dropped).toEqual([...dropped])
+    player.on_close()
+  }
+  // A glide stands only on an equipped pet and an active ride.
+  for (const [pet, riding, gliding] of [
+    [false, true, false],
+    [true, false, false],
+    [true, true, true],
+  ] as const) {
+    const f = wire({ pet, character_ids: ['0xabc'] })
+    const player = create_player({ ...f, address: '0xme' })
+    await settle()
+    player.on_message(step(f, '0xabc', 100, { riding, gliding: true }))
+    expect(moves(f, 'move')[0]?.payload).toMatchObject({ gliding })
+    player.on_close()
+  }
+})
+
+test('a position outside the roster or under an old checkpoint is ignored; walking resumes on the new checkpoint', async () => {
+  let recalled = false
+  const f = wire({
+    character_ids: ['0xabc'],
+    respond: (query) =>
+      recalled && query.includes('[:HOLDS]->(c:Character)')
+        ? [
+            {
+              character: {
+                properties: {
+                  id: '0xabc',
+                  name: 'nox',
+                  world: 'overworld',
+                  checkpoint_world: 'overworld',
+                  x: 5_000,
+                  z: 100,
+                  at_ms: Date.now(),
+                },
+              },
+              kiosk_node: { properties: { id: '0xk' } },
+              equipment: [],
+            },
+          ]
+        : undefined,
   })
+  const player = create_player({ ...f, address: '0xme' })
+  try {
+    await settle()
+    const old_checkpoint = f.checkpoint('0xabc')
+    player.on_message(step(f, '0xother', 10_000, UNMOUNTED, old_checkpoint))
+    expect([f.dropped, moves(f, 'move')]).toEqual([[], []])
+    recalled = true
+    f.pubsub.emitter.emit(channels.character('0xabc'), { type: 'CharacterTeleported', data: { character: '0xabc' } })
+    await settle()
+    const fresh = `overworld:5000:100:${f.sent.filter((p) => p.type === 'packet/characters').at(-1)?.characters[0]?.at_ms}`
+    // A late packet from before the recall is ignored, not priced against the new anchor.
+    player.on_message(step(f, '0xabc', 101, UNMOUNTED, old_checkpoint))
+    expect([f.dropped, moves(f, 'move')]).toEqual([[], []])
+    player.on_message(step(f, '0xabc', 5_001, UNMOUNTED, fresh))
+    expect([f.dropped, moves(f, 'move', '0xabc').length]).toEqual([[], 1])
+    player.on_message(step(f, '0xabc', 9_000, UNMOUNTED, fresh))
+    expect(f.dropped).toEqual(['SPEED'])
+  } finally {
+    player.on_close()
+  }
+})
 
-  test('a dungeon character leaves world presence, ignores movement, and receives only its lobby', async () => {
-    const dungeon_run = '{"dungeon":"tangled_aftermath","room":"1","seed":"9"}'
-    const { sent, ws, graph, pubsub, published, dropped, checkpoint } = wire({ dungeon_run, character_ids: ['0xabc'] })
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    await flush()
+test('a zone crossing retires the departed window, and a refused read there drops that socket alone', async () => {
+  let refused = false
+  const f = wire({
+    character_ids: ['0xabc'],
+    respond: (query) => {
+      if (refused && query.includes(':Fight {world:')) throw new Error('Max pending queries exceeded')
+      return undefined
+    },
+  })
+  const player = create_player({ ...f, address: '0xme' })
+  await settle()
+  f.pubsub.emitter.emit('pos:overworld:-1:0', {
+    kind: 'appear',
+    address: '0xold',
+    player: { ...stranger(1), character_id: '0xold', x: -100 },
+  })
+  await settle()
+  expect(types_of(f.sent)).toContain('packet/player_appeared')
+  refused = true
+  player.dispatch({
+    type: 'action/move',
+    character_id: '0xabc',
+    x: 1_100,
+    y: 0,
+    z: 100,
+    ...UNMOUNTED,
+    at_ms: Date.now(),
+    budget_blocks: 0,
+  })
+  await Bun.sleep(ZONE_RECENTER_MS + 100)
+  expect(f.sent).toContainEqual({ type: 'packet/player_left', character_id: '0xold' })
+  expect(f.dropped).toContain('SNAPSHOT_FAILED')
+  player.on_close()
+})
 
-    expect(sent.some(({ type }) => type === 'packet/tracked_zones')).toBeFalse()
-    expect(sent).toContainEqual({
+test('visibility caps strangers at 100 while friends always pass, and far movers are throttled', async () => {
+  const f = wire({ friends: ['0xbestie'] })
+  const player = create_player({ ...f, address: '0xme' })
+  try {
+    await settle()
+    for (let index = 0; index < 120; index++)
+      f.pubsub.emitter.emit('pos:overworld:0:0', { kind: 'appear', address: `0xs${index}`, player: stranger(index) })
+    f.pubsub.emitter.emit('pos:overworld:0:0', { kind: 'appear', address: '0xbestie', player: stranger(999) })
+    await settle()
+    expect(f.sent.filter(({ type }) => type === 'packet/player_appeared')).toHaveLength(101)
+    const move = (index: number, x: number) =>
+      f.pubsub.emitter.emit('pos:overworld:0:0', {
+        kind: 'move',
+        ...UNMOUNTED,
+        character_id: `0xp${index}`,
+        address: `0xs${index}`,
+        x,
+        y: 0,
+        z: 300,
+      })
+    move(115, 105)
+    for (let offset = 0; offset < 4; offset++) move(6, 300 + offset)
+    await Bun.sleep(60)
+    const moved = f.sent.flatMap((packet) => (packet.type === 'packet/players_moved' ? packet.positions : []))
+    expect(moved.map(({ character_id, x }) => [character_id, x])).toEqual([['0xp6', 303]])
+  } finally {
+    player.on_close()
+  }
+})
+
+test('a dungeon hero leaves world presence, ignores movement and receives only its lobby', async () => {
+  const f = wire({ dungeon_run: '{"dungeon":"tangled_aftermath","room":"1","seed":"9"}', character_ids: ['0xabc'] })
+  const player = create_player({ ...f, address: '0xme' })
+  try {
+    await settle()
+    expect(types_of(f.sent)).not.toContain('packet/tracked_zones')
+    expect(f.sent).toContainEqual({
       type: 'packet/dungeon_lobby',
       lobby: {
         dungeon: 'tangled_aftermath',
@@ -134,414 +329,220 @@ describe('the world module', () => {
         fights: [],
       },
     })
-    pubsub.emitter.emit('evt:dungeon:tangled_aftermath', {
-      ckpt: 2,
-      tx: 0,
-      evt: 0,
-      ts_ms: Date.now(),
-      type: 'DungeonLobbyChanged',
-      data: { world: 'overworld', x: 120, z: 140 },
+    f.pubsub.emitter.emit('evt:dungeon:tangled_aftermath', { type: 'DungeonLobbyChanged', data: {} })
+    await settle()
+    expect(f.sent.filter(({ type }) => type === 'packet/dungeon_lobby')).toHaveLength(2)
+    player.on_message(step(f, '0xabc', 130))
+    expect([f.published.filter(({ payload }) => payload.kind === 'move'), f.dropped]).toEqual([[], []])
+  } finally {
+    player.on_close()
+  }
+})
+
+test('a seated hero embodies on its seat; only that seat relays on its turn, and a spectator never speaks for it', async () => {
+  const active = fight_node({ queue: [0] }, 'active')
+  const f = wire({ seated: active })
+  const player = create_player({ ...f, address: '0xme' })
+  const watcher = wire({ owns: true, shared_pubsub: f.pubsub, character_ids: ['0xw'] })
+  const spectator = create_player({ ...watcher, address: '0xwatcher' })
+  try {
+    await settle()
+    expect(f.sent.find(({ type }) => type === 'packet/characters')).toMatchObject({
+      characters: expect.arrayContaining([
+        expect.objectContaining({ id: '0xabc', custody: 'fight', kiosk: '0xk', active_fight: { id: '0xf1', seat: 0 } }),
+      ]),
     })
-    await flush()
-    expect(sent.filter(({ type }) => type === 'packet/dungeon_lobby')).toHaveLength(2)
-    published.length = 0
+    expect(f.sent.find(({ type }) => type === 'packet/fight_state')).toMatchObject({
+      fight: '0xf1',
+      seats: { '0xabc': 0 },
+    })
+    expect(f.sent.filter((packet) => packet.type === 'packet/error')).toEqual([])
+    const action = { type: 'move_to', fighter: '0', path: ['7'] } as const
+    player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
+    expect(f.published.filter(({ channel }) => channel === 'act:fight:0xf1')).toHaveLength(1)
+    f.pubsub.emitter.emit('act:fight:0xf1', { kind: 'action', address: '0xfoe', action })
+    expect(f.sent.find(({ type }) => type === 'packet/fight_action')).toEqual({
+      type: 'packet/fight_action',
+      fight: '0xf1',
+      from: '0xfoe',
+      action,
+    })
     player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 130,
-        y: 0,
-        z: 140,
-        ...UNMOUNTED,
-      })
+      JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action: { ...action, fighter: '1' } })
     )
-    expect(published).toEqual([])
-    expect(dropped).toEqual([])
+    expect(f.sent).toContainEqual({ type: 'packet/error', reason: 'not in this fight' })
+    spectator.on_message(JSON.stringify({ type: 'packet/spectate', character_id: '0xw', fight: '0xf1' }))
+    await settle()
+    expect(watcher.sent.some(({ type }) => type === 'packet/fight_state')).toBe(true)
+    spectator.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
+    expect(watcher.sent).toContainEqual({ type: 'packet/error', reason: 'not your fighter' })
+    // A participant asks every watcher to resync; a spectator rereads alone; a stranger is refused.
+    const relays = f.published.length
+    player.on_message(JSON.stringify({ type: 'packet/fight_resync', fight: '0xf1' }))
+    spectator.on_message(JSON.stringify({ type: 'packet/fight_resync', fight: '0xf1' }))
+    spectator.on_message(JSON.stringify({ type: 'packet/fight_resync', fight: '0xf2' }))
+    expect(f.published.slice(relays).map(({ payload }) => payload.kind)).toEqual(['resync'])
+    expect(watcher.sent.at(-1)).toEqual({ type: 'packet/error', reason: 'not in this fight' })
+  } finally {
+    player.on_close()
+    spectator.on_close()
+  }
+})
+
+test('the fight stream follows the chain from seat to close, and a stale checkpoint read never overwrites a newer one', async () => {
+  const reads: ReturnType<typeof Promise.withResolvers<void>>[] = []
+  let gated = false
+  const f = wire({
+    character_ids: ['0xabc'],
+    respond: async (query) => {
+      if (!gated || !query.includes('k:Kolizeum {fight_id: $fight_id}')) return undefined
+      const read = Promise.withResolvers<void>()
+      reads.push(read)
+      await read.promise
+      return [{ fight: fight_node({}, reads.length === 1 ? 'placement' : 'active'), tournament: null }]
+    },
   })
-
-  test('two accounts receive each other symmetrically across presence, movement, and world chat', async () => {
-    const first = wire({ character_ids: ['0xa'] })
-    const first_player = create_player({
-      ws: first.ws,
-      address: '0xfirst',
-      admin: false,
-      graph: first.graph,
-      pubsub: first.pubsub,
+  const player = create_player({ ...f, address: '0xme' })
+  const states = () => f.sent.filter((packet) => packet.type === 'packet/fight_state')
+  try {
+    await settle()
+    gated = true
+    f.pubsub.emitter.emit(channels.character('0xabc'), {
+      type: 'CharacterSeated',
+      data: { fight: '0xf1', character: '0xabc', seat: 0 },
     })
-    await flush()
-    await flush()
-    const second = wire({ character_ids: ['0xb'], shared_pubsub: first.pubsub })
-    const second_player = create_player({
-      ws: second.ws,
-      address: '0xsecond',
-      admin: false,
-      graph: second.graph,
-      pubsub: second.pubsub,
+    await settle()
+    f.pubsub.emitter.emit(channels.fight('0xf1'), { type: 'FighterJoined', data: { fight: '0xf1' } })
+    await settle()
+    reads[1]!.resolve()
+    await settle()
+    reads[0]!.resolve()
+    await settle()
+    expect(states().map((packet) => packet.state.contract)).toEqual([expect.objectContaining({ round: 1 })])
+    gated = false
+    for (const [type, data] of [
+      ['TurnSeedUsed', { fight: '0xf1', seat: '2', seed: '99' }],
+      ['DropsRolled', { fight: '0xf1', fighter: '0', kares: '0', drops: [{ item_type: 'silk', qty: 3 }] }],
+      ['FightProjected', { fight: '0xf1' }],
+      ['FightEnded', { fight: '0xf1', winner: 0 }],
+      ['TurnSeedUsed', { fight: '0xf1', seat: '3', seed: '1' }],
+      ['FightClosed', { fight: '0xf1' }],
+    ] as const)
+      f.pubsub.emitter.emit(channels.fight('0xf1'), { type, data })
+    await settle()
+    expect(f.sent.filter(({ type }) => type === 'packet/turn_seed')).toHaveLength(2)
+    expect(f.sent).toContainEqual({
+      type: 'packet/fight_drops',
+      fight: '0xf1',
+      fighter: '0',
+      kares: '0',
+      drops: [{ item_type: 'silk', qty: 3 }],
     })
+    expect(f.sent).toContainEqual({ type: 'packet/fight_ended', fight: '0xf1', winner: 0 })
+    expect(types_of(f.sent).filter((type) => type === 'packet/closable_fights')).toHaveLength(2)
+    f.pubsub.emitter.emit(channels.character('0xabc'), { type: 'CharacterHeld', data: { character: '0xabc' } })
     await flush()
-    await flush()
+    const seeds = types_of(f.sent).filter((type) => type === 'packet/turn_seed').length
+    f.pubsub.emitter.emit(channels.fight('0xf1'), {
+      type: 'TurnSeedUsed',
+      data: { fight: '0xf1', seat: '4', seed: '2' },
+    })
+    await settle()
+    expect(types_of(f.sent).filter((type) => type === 'packet/turn_seed')).toHaveLength(seeds)
+  } finally {
+    player.on_close()
+  }
+})
 
+test('a seat never acts for a character of another address: every packet naming one changes nothing', async () => {
+  const seat = (character: string, owner: string) => ({
+    team: 0,
+    kind: { player: { character, owner, level: 10 } },
+    hp: 100,
+    settled: false,
+  })
+  const fight = fight_node({ queue: [0], fighters: [seat('0xa2', '0xalice'), seat('0xb2', '0xbob')] }, 'active')
+  const alice = wire({ character_ids: ['0xa2', '0xa'], seated: fight })
+  const bob = wire({ character_ids: ['0xb2', '0xb'], seated: fight, shared_pubsub: alice.pubsub })
+  const intruder = create_player({ ...alice, address: '0xalice' })
+  const owner = create_player({ ...bob, address: '0xbob' })
+  const seen = () => bob.sent.filter(({ type }) => !['packet/server_info', 'packet/game_state'].includes(type))
+  const named = (character_id: string, checkpoint: string) => [
+    step(alice, character_id, 701, UNMOUNTED, checkpoint),
+    chat('packet/chat', character_id, 'hello'),
+    chat('packet/chat_party', character_id, 'party'),
+    chat('packet/chat_whisper', character_id, 'psst', '0xbob'),
+    ...['packet/spectate', 'packet/fight_preview', 'packet/fight_nearby'].map((type) =>
+      JSON.stringify({ type, character_id, fight: '0xf1' })
+    ),
+  ]
+  try {
+    await settle(10)
+    expect([intruder.online_characters().toSorted(), owner.online_characters().toSorted()]).toEqual([
+      ['0xa', '0xa2'],
+      ['0xb', '0xb2'],
+    ])
+    const before = {
+      published: alice.published.length,
+      reads: alice.reads.length,
+      seen: seen().length,
+      sent: alice.sent.length,
+    }
+    for (const raw of [
+      ...named('0xb', bob.checkpoint('0xb')),
+      ...named('0xb2', bob.checkpoint('0xb2')),
+      JSON.stringify({
+        type: 'packet/fight_action',
+        fight: '0xf1',
+        action: { type: 'move_to', fighter: '1', path: ['7'] },
+      }),
+      JSON.stringify({ type: 'packet/equip', character_id: '0xb', slot: 'hat', item: '0xi' }),
+      JSON.stringify({ type: 'packet/gather', character_id: '0xb', zone: '0', pack: 1 }),
+    ])
+      intruder.on_message(raw)
+    await Bun.sleep(60)
+    await settle()
+    // Nothing is published, nothing is read, the owner hears nothing, and only refusals come back.
+    expect([alice.published.length, alice.reads.length, seen().length, alice.dropped]).toEqual([
+      before.published,
+      before.reads,
+      before.seen,
+      [],
+    ])
     expect(
-      first.sent.some((packet) => packet.type === 'packet/player_appeared' && packet.player.character_id === '0xb')
-    ).toBeTrue()
+      alice.sent.slice(before.sent).map((packet) => (packet.type === 'packet/error' ? packet.reason : packet.type))
+    ).toEqual(['not in this fight', 'unknown packet type "packet/equip"', 'unknown packet type "packet/gather"'])
+    expect(owner.online_characters().toSorted()).toEqual(['0xb', '0xb2'])
+    // The same packets naming its own characters act.
+    intruder.on_message(step(alice, '0xa', 701))
+    intruder.on_message(chat('packet/chat', '0xa', 'hello'))
+    intruder.on_message(JSON.stringify({ type: 'packet/spectate', character_id: '0xa', fight: '0xf1' }))
+    intruder.on_message(
+      JSON.stringify({
+        type: 'packet/fight_action',
+        fight: '0xf1',
+        action: { type: 'move_to', fighter: '0', path: ['7'] },
+      })
+    )
+    await Bun.sleep(60)
+    await settle()
+    // Chat publishes after the sender's name resolves, so only the set is ordered here.
     expect(
-      second.sent.some((packet) => packet.type === 'packet/player_appeared' && packet.player.character_id === '0xa')
-    ).toBeTrue()
-
-    second_player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xb',
-        checkpoint: second.checkpoint('0xb'),
-        x: 101,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
+      alice.published
+        .slice(before.published)
+        .map(({ channel }) => channel)
+        .sort()
+    ).toEqual(['act:fight:0xf1', 'chat:world:overworld', 'pos:overworld:1:0'])
+    expect(types_of(seen().slice(before.seen))).toEqual(
+      expect.arrayContaining(['packet/players_moved', 'packet/chat_message', 'packet/fight_action'])
     )
-    await new Promise((resolve) => setTimeout(resolve, 60))
-    expect(
-      first.sent.some(
-        (packet) =>
-          packet.type === 'packet/players_moved' && packet.positions.some(({ character_id }) => character_id === '0xb')
-      )
-    ).toBeTrue()
-
-    second_player.on_message(
-      JSON.stringify({ type: 'packet/chat', character_id: '0xb', parts: [{ kind: 'text', text: 'hello' }] })
-    )
-    await flush()
-    const chat = first.sent.find((packet) => packet.type === 'packet/chat_message' && packet.character === 'nox')
-    expect(chat).toMatchObject({ parts: [{ kind: 'text', text: 'hello' }] })
-    void first_player
-  })
-
-  test('a duplicate client tracking request cannot remount an already server-tracked character', async () => {
-    const { ws, graph, pubsub, published } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    await flush()
-    published.length = 0
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    expect(published).toHaveLength(0)
-    await flush()
-    expect(published).toHaveLength(0)
-  })
-
-  test("a position carrying another character's id is never priced against the current anchor", async () => {
-    const { ws, graph, pubsub, published, dropped, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xother',
-        checkpoint: checkpoint('0xother'),
-        x: 10_000,
-        y: 0,
-        z: 10_000,
-        ...UNMOUNTED,
-      })
-    )
-
-    expect(dropped).toEqual([])
-    expect(published.some(({ payload }) => payload.kind === 'move')).toBeFalse()
-    await flush()
-  })
-
-  test('a character outside the capped roster remains completely invisible to tracking requests', async () => {
-    const { sent, ws, graph, pubsub, published } = wire({ owns: false })
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdead', tracked: true }))
-    await flush()
-    expect(sent.find((packet) => packet.type === 'packet/tracked_zones')).toBeUndefined()
-    expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(false)
-  })
-
-  test('an impossible move drops the connection', async () => {
-    const { ws, graph, pubsub, dropped, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    // The FIRST move prices against the CHECKPOINT'S OWN TIMESTAMP (the chain's travel_ok
-    // semantics): a player who walked 500 blocks off-anchor since a 60s-old checkpoint is
-    // LEGAL (500/60 ≈ 8.3 b/s) — the 2026-08-19 bug priced it against embody wall-clock and
-    // drop-looped every session into load-snapshot spam.
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 600,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(dropped).toEqual([])
-    // 10,000 further blocks in one tick — far past any authored budget
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 10600,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(dropped).toEqual(['SPEED'])
-  })
-
-  test('a buffered burst of legal steps spends the banked budget instead of dropping', async () => {
-    // 2026-08-20 production drop: a network stall flushed queued positions in ONE millisecond;
-    // the old law re-anchored on the first and priced the rest against a zero-second window
-    // (`elapsed_s: 0`), so 3.2 blocks of ordinary walking read as infinite speed.
-    const { ws, graph, pubsub, dropped, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 600,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    // six buffered samples land back-to-back, one block apart — 6 blocks in ~0ms, all legal
-    for (let step = 1; step <= 6; step++)
-      player.on_message(
-        JSON.stringify({
-          type: 'packet/position',
-          character_id: '0xabc',
-          checkpoint: checkpoint('0xabc'),
-          x: 600 + step,
-          y: 0,
-          z: 100,
-          ...UNMOUNTED,
-        })
-      )
-    expect(dropped).toEqual([])
-    // the bank is finite: a same-instant TELEPORT still overdraws it
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 700,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(dropped).toEqual(['SPEED'])
-  })
-
-  test('the speed ceiling is the AUTHORED one — mounted passes what unmounted drops', async () => {
-    // 14 blocks in ~1s: above 11.5 (walk), below 17.25 (mounted)
-    const walker = wire()
-    const walking = create_player({
-      ws: walker.ws,
-      address: '0xme',
-      admin: false,
-      graph: walker.graph,
-      pubsub: walker.pubsub,
-    })
-    await flush()
-    walking.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    // 850 blocks over the checkpoint's 60s budget: ~14.2 b/s — above 11.5 (walk), below
-    // 17.25 (mounted). The budget prices distance-from-anchor over elapsed-since-anchor.
-    walking.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: walker.checkpoint('0xabc'),
-        x: 950,
-        y: 0,
-        z: 100,
-        ...UNMOUNTED,
-      })
-    )
-    expect(walker.dropped).toEqual(['SPEED'])
-
-    const rider = wire({ pet: true })
-    const riding = create_player({
-      ws: rider.ws,
-      address: '0xme',
-      admin: false,
-      graph: rider.graph,
-      pubsub: rider.pubsub,
-    })
-    await flush()
-    riding.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    riding.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: rider.checkpoint('0xabc'),
-        x: 950,
-        y: 0,
-        z: 100,
-        riding: true,
-        gliding: false,
-      })
-    )
-    expect(rider.dropped).toEqual([])
-  })
-
-  test('visibility caps at 100 strangers — friends ALWAYS pass', async () => {
-    const { sent, ws, graph, pubsub } = wire({ friends: ['0xbestie'] })
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    const appear = (index: number, address: string) =>
-      pubsub.emitter.emit('pos:overworld:0:0', {
-        kind: 'appear',
-        address,
-        player: {
-          character_id: `0xp${index}`,
-          world: 'overworld',
-          ...UNMOUNTED,
-          name: `p${index}`,
-          classe: 'senshi',
-          sex: 'male',
-          level: 1,
-          color_1: 0,
-          color_2: 0,
-          color_3: 0,
-          pet: false,
-          x: 100,
-          y: 0,
-          z: 100,
-        },
-      })
-    for (let index = 0; index < 120; index++) appear(index, `0xstranger${index}`)
-    appear(999, '0xbestie') // the friend arrives past the cap
-    await flush()
-    const appeared = sent.filter((packet) => packet.type === 'packet/player_appeared')
-    expect(appeared).toHaveLength(101) // 100 strangers + the friend
-    // a NEAR uncapped stranger's move flows; a capped one's is silent
-    pubsub.emitter.emit('pos:overworld:0:0', {
-      kind: 'move',
-      ...UNMOUNTED,
-      character_id: '0xp5',
-      address: '0xstranger5',
-      x: 105,
-      y: 0,
-      z: 105,
-    })
-    pubsub.emitter.emit('pos:overworld:0:0', {
-      kind: 'move',
-      ...UNMOUNTED,
-      character_id: '0xp115',
-      address: '0xstranger115',
-      x: 105,
-      y: 0,
-      z: 105,
-    })
-    await new Promise((resolve) => setTimeout(resolve, 60))
-    const moves = sent.flatMap((packet) => (packet.type === 'packet/players_moved' ? packet.positions : []))
-    expect(moves.map(({ character_id }) => character_id)).toEqual(['0xp5'])
-    // a FAR player's moves throttle to 1-in-4 (legacy tuning: >100 blocks skips 3)
-    for (let step = 0; step < 4; step++)
-      pubsub.emitter.emit('pos:overworld:0:0', {
-        kind: 'move',
-        ...UNMOUNTED,
-        character_id: '0xp6',
-        address: '0xstranger6',
-        x: 300 + step,
-        y: 0,
-        z: 300,
-      })
-    await new Promise((resolve) => setTimeout(resolve, 60))
-    const far_moves = sent
-      .flatMap((packet) => (packet.type === 'packet/players_moved' ? packet.positions : []))
-      .filter(({ character_id }) => character_id === '0xp6')
-    expect(far_moves).toHaveLength(1)
-    expect((far_moves[0] as { x: number }).x).toBe(303)
-  })
-
-  test('crossing a zone retires players from the departed subscription window', async () => {
-    const { sent, ws, graph, pubsub } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    pubsub.emitter.emit('pos:overworld:-1:0', {
-      kind: 'appear',
-      address: '0xold',
-      player: {
-        ...make_character().properties,
-        character_id: '0xold',
-        owner: '0xold',
-        x: -100,
-        ...UNMOUNTED,
-        y: 0,
-      },
-    })
-    await flush()
-    expect(sent.some((packet) => packet.type === 'packet/player_appeared')).toBe(true)
-
-    player.dispatch({
-      type: 'action/move',
-      character_id: '0xabc',
-      x: 600,
-      y: 0,
-      z: 100,
-      ...UNMOUNTED,
-      at_ms: Date.now(),
-      budget_blocks: 0,
-    })
-    await Bun.sleep(ZONE_RECENTER_MS + 50)
-    expect(sent.some((packet) => packet.type === 'packet/player_left' && packet.character_id === '0xold')).toBe(true)
-  })
-
-  test('a later joiner probes tracked zones and a standing player re-announces to it', async () => {
-    const { graph, ws, pubsub, published } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    const probes = published.filter(({ payload }) => payload.kind === 'who')
-    expect(probes.length).toBeGreaterThan(0)
-    published.length = 0
-    // someone else probes MY zone — I stand there, so I re-announce myself
-    pubsub.emitter.emit('pos:overworld:0:0', {
-      kind: 'who',
-      reply_to: 'presence:reply:test',
-      request: 'test',
-      address: '0xlater',
-      world: 'overworld',
-      zx: 0,
-      zz: 0,
-    })
-    const announces = published.filter(({ payload }) => payload.kind === 'reply')
-    expect(announces).toHaveLength(1)
-    expect(announces[0]?.channel).toBe('presence:reply:test')
-    // the other owned character stands in zone 1 and answers even while not selected
-    published.length = 0
-    pubsub.emitter.emit('pos:overworld:0:0', {
-      kind: 'who',
-      reply_to: 'presence:reply:test',
-      request: 'test',
-      address: '0xlater',
-      world: 'overworld',
-      zx: 1,
-      zz: 0,
-    })
-    expect(published.filter(({ payload }) => payload.kind === 'reply')).toHaveLength(1)
-  })
+    expect(alice.reads.length).toBeGreaterThan(before.reads)
+    await Bun.sleep(1_000)
+    intruder.on_message(chat('packet/chat_whisper', '0xa', 'psst', '0xbob'))
+    await settle()
+    expect(seen().at(-1)).toMatchObject({ type: 'packet/chat_message', channel: 'whisper', from: '0xalice' })
+  } finally {
+    intruder.on_close()
+    owner.on_close()
+  }
 })

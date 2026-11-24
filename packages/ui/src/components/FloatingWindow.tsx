@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useLayoutEffect, useRef, useContext, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 
 import { front_window, show_floating_window } from './NativeModal.tsx'
-import { PreviewContext } from './PreviewSurface.tsx'
-import { usePreviewBounds } from './usePreviewBounds.ts'
 
 /** Manual popovers share the top layer without making previous windows inert. */
 export const FloatingWindow = ({
@@ -21,8 +19,6 @@ export const FloatingWindow = ({
   close: () => void
 }>) => {
   const root = useRef<HTMLDivElement>(null)
-  const embedded = useContext(PreviewContext)
-  usePreviewBounds(root, embedded)
   useLayoutEffect(() => {
     const element = root.current!
     show_floating_window(element)

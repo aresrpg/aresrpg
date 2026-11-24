@@ -3,26 +3,25 @@
 // Admin dashboard effects cross the authenticated server link here; results still re-enter the
 // owning admin reducer as ordinary inputs.
 
-import type { AdminOverviewSection } from '@aresrpg/protocol'
+import type { AdminOverviewSection, ClientPacket } from '@aresrpg/protocol'
 
-import type { ServerLink } from '../server_link.ts'
 import type { AppInput, AppState } from '../store.ts'
 
 type DashboardRequestWires = Readonly<{
   state: AppState
   previous: AppState
-  link: ServerLink | null
+  send: (packet: Readonly<ClientPacket>) => boolean
   dispatch: (input: AppInput) => void
   next_id: () => number
 }>
 
-const send_overview_request = ({ state, previous, link, dispatch, next_id }: DashboardRequestWires): void => {
+const send_overview_request = ({ state, previous, send, dispatch, next_id }: DashboardRequestWires): void => {
   const started = previous.admin.overview.status !== 'loading'
   if (state.admin.overview.status !== 'loading' || !started) return
   const id = next_id()
   dispatch({ type: 'admin/overview_requested', request_id: id })
   if (
-    !link?.send({
+    !send({
       type: 'packet/admin_request',
       id,
       kind: 'overview',
@@ -37,14 +36,14 @@ const send_overview_request = ({ state, previous, link, dispatch, next_id }: Das
     dispatch({ type: 'admin/overview_failed', request_id: id, error: 'The game server is unavailable' })
 }
 
-const send_overview_sections = ({ state, link, dispatch, next_id }: DashboardRequestWires): void => {
+const send_overview_sections = ({ state, send, dispatch, next_id }: DashboardRequestWires): void => {
   Object.entries(state.admin.overview.pending).forEach(([section, pending]) => {
     if (!pending || pending.request_id !== null) return
     const id = next_id()
     const typed_section = section as AdminOverviewSection
     dispatch({ type: 'admin/overview_section_requested', section: typed_section, request_id: id })
     if (
-      !link?.send({
+      !send({
         type: 'packet/admin_request',
         id,
         kind: 'overview_section',

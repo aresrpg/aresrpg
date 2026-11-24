@@ -23,13 +23,8 @@ const SPECTATE_RADIUS = 1
 
 type FighterEntry = { kind: { type: string; character?: string; owner?: string }; settled?: boolean }
 
-/** Only the newest requested checkpoint may publish. Graph reads are async; without this gate,
- * a slow placement read can arrive after a completed mob wave and roll every client back. */
-export const latest_fight_state_reader = latest_keyed_reader
-
 export default {
   name: 'player_fight',
-
   reduce: (state, action) => {
     if (action.type === 'action/nearby_fight') return { ...state, nearby_fight: action.nearby }
     if (action.type === 'action/fight') {
@@ -67,7 +62,7 @@ export default {
 
   observe: (context) => {
     const { pubsub, graph, public_world, events, send, address, dispatch, get_state, signal } = context
-    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
+    const { watch, unwatch } = create_watcher(pubsub, signal)
     const fight_tails = new Map<string, Promise<void>>()
     const pending_observations = new Map<string, Readonly<{ character_id: string }>>()
     const enqueue_fight = (fight: string, work: () => Promise<void>): void => {
@@ -111,7 +106,8 @@ export default {
 
     /** The full projected checkpoint — pushed on arm and on every STRUCTURAL beacon
      *  (roster/queue changes the light packets cannot carry); the client replaces into it. */
-    const read_latest_state = latest_fight_state_reader(public_world.fight_checkpoint, (fight_id, state) => {
+    // Only the newest requested checkpoint publishes: a slow read must not roll a later wave back.
+    const read_latest_state = latest_keyed_reader(public_world.fight_checkpoint, (fight_id, state) => {
       if (signal.aborted || !fights_of(get_state()).has(fight_id)) return
       const projected = project_authority(fight_id, state)
       if (projected) send({ type: 'packet/fight_state', fight: fight_id, ...projected })
@@ -123,7 +119,7 @@ export default {
     const fights_of = (value: PlayerState): Set<string> =>
       new Set([
         ...Object.values(value.characters).flatMap(({ fight }) => (fight ? [fight] : [])),
-        ...Object.values(value.roster_fights),
+        ...Object.values(value.roster).flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : [])),
         ...(observed_character(value)?.active_fight ? [observed_character(value)!.active_fight!.id] : []),
         ...Object.values(value.spectating),
         ...Object.values(value.fight_previews),
@@ -287,8 +283,7 @@ export default {
     events.on('packet/fight_preview', (action) => observe_fight(action, 'action/fight_preview'))
 
     // LIVE TURN INTENT — relayed to the other watchers of the same fight.
-    // TODO(sim): once the simulation package lands, validate the action is LEGAL for the
-    // current fight state before relaying (owner 2026-08-12) — shape-checked-only until then.
+    // The relay checks the shape and the seat's turn only; legality is the chain's.
     events.on('packet/fight_action', (action: Extract<PlayerAction, { type: 'packet/fight_action' }>) => {
       const state = get_state()
       const fighter = Number(action.action.fighter)
@@ -351,7 +346,6 @@ export default {
       pending_observations.clear()
       nearby_version++
       clearTimeout(nearby_expiry)
-      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

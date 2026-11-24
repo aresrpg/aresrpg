@@ -1,25 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One market category's live PUBLIC listings — the slice pushed when a player observes a
-// category (exclusive listings are private p2p offers; they never reach the browse surface).
+// The market's live PUBLIC listings: the page of one query, and the listed-type catalogue
+// (exclusive listings are private p2p offers; they never reach the browse surface).
 
 import { ITEM_STAT_FIELDS } from '@aresrpg/fight/move_contract'
 import { MARKET_GROUP_PAGE_SIZE, MARKET_OFFERS_PER_GROUP } from '@aresrpg/protocol'
 import {
   max_level as character_max_level,
+  marketplace_lot_sizes,
   stackable_item_categories,
-  is_item_category,
   type ItemCategory,
 } from '@aresrpg/immutable'
-import type {
-  ListingRow,
-  MarketObservation,
-  MarketSnapshot,
-  MarketPage,
-  MarketType,
-  MarketTypeCounts,
-  ItemRow,
-} from '@aresrpg/protocol'
+import type { ListingRow, MarketObservation, MarketSnapshot, MarketPage, MarketType, ItemRow } from '@aresrpg/protocol'
+
+type PageObservation = Extract<MarketObservation, { kind: 'offers' | 'characters' }>
 
 import { type Graph, type Node, type GraphRow } from '../graph.ts'
 
@@ -77,11 +71,15 @@ const ROLL_KEY = `CASE WHEN asset.category IN $stackable THEN 'lot:' + toString(
 const OFFER = `{group_key: group_key, asset: asset, kinds: labels(asset), price_mist: listing.price, at_ms: listing.at_ms,
   kiosk: kiosk.id, market_version: kiosk.market_version, version: listing.version, seller: owner.address}`
 
-const listing_query = (observation: Extract<MarketObservation, { kind: 'offers' | 'characters' }>) => {
+// A viewer's own listings leave the page before ranking; an anonymous page (`$address` null) keeps
+// every row, because `x <> null` is null in openCypher and would filter them all.
+const NOT_THE_VIEWER = '($address IS NULL OR owner.address <> $address)'
+
+const listing_query = (observation: PageObservation) => {
   if (observation.kind === 'characters')
     return {
       match: `MATCH (asset:Character)-[listing:LISTED_IN {exclusive: false}]->(kiosk:Kiosk)<-[:OWNS]-(owner:User)
-      WHERE owner.address <> $address AND ($classe IS NULL OR asset.classe = $classe)
+      WHERE ${NOT_THE_VIEWER} AND ($classe IS NULL OR asset.classe = $classe)
         AND asset.level >= $min_level AND asset.level <= $max_level`,
       group_key: 'asset.id',
       params: {
@@ -92,18 +90,21 @@ const listing_query = (observation: Extract<MarketObservation, { kind: 'offers' 
     }
   return {
     match: `MATCH (asset:Item {item_type: $item_type})-[listing:LISTED_IN {exclusive: false}]->(kiosk:Kiosk)<-[:OWNS]-(owner:User)
-      WHERE owner.address <> $address AND asset.category = $category`,
+      WHERE ${NOT_THE_VIEWER} AND asset.category = $category`,
     group_key: ROLL_KEY,
     params: { item_type: observation.item_type, category: observation.category },
   }
 }
 
+/** `address` is the viewer whose own listings the page excludes; null reads the anonymous page. */
 export async function get_market_slice(
   graph: Graph,
-  { observation, address, kiosks = [] }: { observation: MarketObservation; address: string; kiosks?: readonly string[] }
+  {
+    observation,
+    address,
+    kiosks = [],
+  }: { observation: PageObservation; address: string | null; kiosks?: readonly string[] }
 ): Promise<MarketPage> {
-  if (observation.kind === 'types' || observation.kind === 'overview')
-    return { listings: [], kiosk_versions: {}, next_cursor: null }
   const plan = listing_query(observation)
   const [snapshot] = await graph.read(
     `${plan.match}
@@ -136,33 +137,38 @@ export async function get_market_slice(
   }
 }
 
-export async function get_market_types(graph: Graph, category: ItemCategory): Promise<readonly MarketType[]> {
+/** Each paid standard lot size of one type and the cheapest public asking price of a lot of that size. */
+const lot_floors = (lots: readonly GraphRow[]): Readonly<Record<string, string>> =>
+  Object.fromEntries(lots.flatMap(({ amount, price }) => (typeof price === 'string' ? [[String(amount), price]] : [])))
+
+/** Every publicly listed item type, each with its quote: the cheapest lot per paid standard size and
+ *  the listed units, in one read. Viewer-free: own listings count like any other; private offers never
+ *  do. `changes` are the stored daily changes. */
+export async function get_market_types(
+  graph: Graph,
+  changes: Readonly<Record<string, number>> = {}
+): Promise<readonly MarketType[]> {
   const rows = await graph.read(
-    `MATCH (asset:Item {category: $category})-[:LISTED_IN {exclusive: false}]->(:Kiosk)<-[:OWNS]-(:User)
-    RETURN asset.item_type AS item_type, min(asset.name) AS name, min(asset.level) AS level
+    `MATCH (asset:Item)-[listing:LISTED_IN {exclusive: false}]->(:Kiosk)<-[:OWNS]-(:User)
+    WITH asset, listing ORDER BY size(listing.price), listing.price
+    WITH asset.item_type AS item_type, asset.amount AS amount, min(asset.name) AS name, min(asset.level) AS level,
+      min(asset.category) AS category, sum(asset.amount) AS units,
+      collect(CASE WHEN asset.amount IN $lots AND listing.price <> '0' THEN listing.price END)[0] AS price
+    WITH item_type, min(name) AS name, min(level) AS level, min(category) AS category, sum(units) AS units,
+      collect({amount: amount, price: price}) AS lots
+    RETURN item_type, name, level, category, units, lots
     ORDER BY level, item_type`,
-    { category }
+    { lots: [...marketplace_lot_sizes] }
   )
-  return rows.map(({ item_type, name, level }) => ({
+  return rows.map(({ item_type, name, level, category, units, lots }) => ({
     item_type: String(item_type),
     name: String(name),
     level: Number(level),
-    category,
+    category: category as ItemCategory,
+    quote: {
+      lots: lot_floors(lots as GraphRow[]),
+      units: Number(units),
+      change_bps: changes[String(item_type)] ?? null,
+    },
   }))
-}
-
-/** One small public catalogue summary, independent of viewer and listing quantity. */
-export async function get_market_type_counts(graph: Graph): Promise<MarketTypeCounts> {
-  const rows = await graph.read(
-    `MATCH (asset:Item)-[:LISTED_IN {exclusive: false}]->(:Kiosk)<-[:OWNS]-(:User)
-     RETURN asset.category AS category, count(DISTINCT asset.item_type) AS types`
-  )
-  return Object.fromEntries(
-    rows.map(({ category, types }) => {
-      const count = Number(types)
-      if (!is_item_category(category) || !Number.isSafeInteger(count) || count < 0)
-        throw new Error('invalid marketplace type count')
-      return [category, count]
-    })
-  )
 }

@@ -42,7 +42,6 @@ export const JourneyHost = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       close_label={text('close')}
       label={text('title')}
       max_width="max-w-2xl"
-      soft
     >
       <JourneyPanel compact={false} copy={copy} />
     </ModalFrame>

@@ -3,11 +3,9 @@
 
 import type { MasteryOfferRow, MasteryRow } from '@aresrpg/protocol'
 
-import { content_catalog } from '../content/catalog.ts'
-import { mastery_world_witness } from '../mastery/model.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteContext, SiteModule, SiteState } from '../store.ts'
 import { toast } from '../toast.ts'
 
 import { character_custody } from './session.ts'
@@ -30,12 +28,12 @@ export type MasteryInput =
 export const initial_mastery_state = (): MasteryState =>
   Object.freeze({ loaded: false, row: null, offers: Object.freeze([]), pending: null, error: null })
 
-const with_mastery = (state: AppState, mastery: MasteryState): AppState => Object.freeze({ ...state, mastery })
+const with_mastery = <S extends SiteState>(state: S, mastery: MasteryState): S => Object.freeze({ ...state, mastery })
 
 const reconciled_mastery = (state: MasteryState, row: MasteryRow | null): MasteryState =>
   Object.freeze({ ...state, loaded: true, row: row ?? state.row, pending: null, error: null })
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   if (input.type === 'server/packet' && input.packet.type === 'packet/mastery')
     return with_mastery(
       state,
@@ -57,8 +55,13 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
-  type Wallet = NonNullable<AppState['session']['wallet']>
+type Wallet = NonNullable<SiteState['session']['wallet']>
+/** How a Mastery write ends: only the account that started it learns the row, and the player reads a toast. */
+export const mastery_outcomes = ({
+  dispatch,
+  get_state,
+  signal,
+}: Pick<SiteContext, 'dispatch' | 'get_state' | 'signal'>) => {
   const current = (wallet: Wallet): boolean => !signal.aborted && get_state().session.wallet === wallet
   const finish = (wallet: Wallet, mastery: MasteryRow | null, message: 'quest_started' | 'offer_purchased'): void => {
     if (!current(wallet)) return
@@ -73,18 +76,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     dispatch({ type: 'mastery/failed', error: message })
     toast.add(error)
   }
-  events.on('mastery/start', ({ world: world_name }) => {
-    const state = get_state()
-    const { wallet, characters } = state.session
-    const world = content_catalog.world(world_name)
-    const witness = world ? mastery_world_witness(characters, world) : null
-    if (!wallet || !world || !witness || state.mastery.pending) return
-    dispatch({ type: 'mastery/pending', operation: 'start' })
-    void wallet.mastery
-      .start({ world: world.world, character_id: witness.id, custody: character_custody(witness) })
-      .then(({ mastery }) => finish(wallet, mastery, 'quest_started'))
-      .catch((error: unknown) => fail(wallet, error))
-  })
+  return Object.freeze({ finish, fail })
+}
+
+const observe: NonNullable<SiteModule['observe']> = (context) => {
+  const { events, dispatch, get_state } = context
+  const { finish, fail } = mastery_outcomes(context)
   events.on('mastery/redeem', ({ item_type, payment, count }) => {
     const state = get_state()
     const { wallet, inventory, characters } = state.session
@@ -111,4 +108,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
 }
 
-export default Object.freeze({ name: 'mastery', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'mastery',
+  initial: () => ({ mastery: initial_mastery_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

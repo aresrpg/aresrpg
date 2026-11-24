@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import {
-  CHUNK_EDGE,
-  apply_voxel_operation,
-  compile_runtime_world_recipe,
-  load_generated_city_artifacts_for,
-  sample_world_column,
-  structure_voxels,
-} from '../data.ts'
+import { load_generated_city_artifacts_for } from '../cities/generated_city.ts'
+import { structure_voxels } from '../structure_placement.ts'
+import { CHUNK_EDGE } from '../voxel_data.ts'
+import { apply_voxel_operation } from '../voxel_operation.ts'
+import { compile_runtime_world_recipe, sample_world_column } from '../world_recipe.ts'
 
 import { walkable_spawn_height } from './collision.ts'
 
@@ -68,9 +65,7 @@ export const create_world_collision = (
   compiled: ReturnType<typeof compile_runtime_world_recipe>,
   on_error: (error: unknown) => void
 ) => {
-  // World oracles for the ported physics/camera: columns are analytic (the compiled recipe), so
-  // solidity is "below the surface" and liquid fills up to the authored absolute sea plane — the
-  // faithful adaptation until client-side block edits exist (legacy read per-block ids).
+  // Columns are analytic: solid below the surface, liquid up to the authored sea plane.
   const column_at = (x: number, z: number): ReturnType<typeof sample_world_column> =>
     sample_world_column(compiled, x, z)
   const surface_y = (x: number, z: number): number => column_at(x, z).surface_y

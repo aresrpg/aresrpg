@@ -3,11 +3,12 @@
 import { Button, FilterMenu } from '@aresrpg/ui'
 import { is_stat_name, type StatName } from '@aresrpg/immutable'
 
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import type { ItemFilterGroup, ItemFilterRow } from '../content/item_filters.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import type { EncyclopediaText } from './copy.ts'
+import './catalogue.css'
 export type ItemFilterSelection = Readonly<Partial<Record<ItemFilterGroup, string>>>
 const GROUPS = ['category', 'stat', 'resource', 'job', 'world', 'family'] as const
 const TITLES = {

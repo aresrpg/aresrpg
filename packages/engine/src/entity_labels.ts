@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// In-scene DOM labels over entities — three's CSS2DRenderer positions each element from the SAME
-// camera matrices the frame renders with, in the same draw, so a label never lags or glitches
-// the way an out-of-band overlay does. The element anchors at the entity's rendered crown
-// (live_crown = animated bounds top), so off-pivot or mid-animation models still tag the head.
+// In-scene DOM labels. three's CSS2DRenderer positions each element from the same camera matrices the
+// frame renders with, so a label never lags the way an out-of-band overlay does. Each label reads its
+// anchor every frame; a null anchor hides it.
 
 import { Scene, type Camera, type Vector3 } from 'three'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 
-type LabelAnchors = Readonly<{ live_crown: (id: string) => Vector3 | null }>
+type Label = Readonly<{ object: CSS2DObject; anchor: () => Vector3 | null }>
 
 export const create_entity_label_layer = ({
   canvas,
   camera,
-  entities,
-}: Readonly<{ canvas: HTMLCanvasElement; camera: Camera; entities: LabelAnchors }>) => {
-  // CSS2D updates and traverses its input tree. World-space anchors need only a label root,
-  // never a second matrix update and traversal of the game's animated meshes and skeletons.
+}: Readonly<{ canvas: HTMLCanvasElement; camera: Camera }>) => {
+  // CSS2D traverses its input tree, so labels live in their own root instead of the game scene.
   const scene = new Scene()
   const renderer = new CSS2DRenderer()
   const surface = renderer.domElement
@@ -25,72 +22,40 @@ export const create_entity_label_layer = ({
   surface.style.pointerEvents = 'none'
   surface.style.overflow = 'hidden'
   canvas.parentElement?.appendChild(surface)
-  const labels = new Map<string, CSS2DObject>()
-  /** world-dressing tags (the star gate) — anchored at one fixed point, never an entity */
-  const statics = new Map<string, CSS2DObject>()
-  /** Static tags read their owner’s current anchor each frame. */
-  const static_anchors = new Map<string, () => Vector3 | null>()
+  const labels = new Map<string, Label>()
+
+  const place = ({ object, anchor }: Label): void => {
+    const position = anchor()
+    object.visible = position !== null
+    if (position) object.position.copy(position)
+  }
 
   return Object.freeze({
-    /** attach (or replace) the DOM element floating over an entity; null detaches */
-    set: (id: string, element: HTMLElement | null): void => {
+    /** Attach or replace the element for `id`; a null element detaches it. */
+    set: (id: string, element: HTMLElement | null, anchor: () => Vector3 | null): void => {
       const existing = labels.get(id)
-      if (existing?.element === element) return
-      if (existing) {
-        scene.remove(existing)
+      if (existing && existing.object.element !== element) {
+        scene.remove(existing.object)
         labels.delete(id)
       }
       if (!element) return
-      const label = new CSS2DObject(element)
+      const label = {
+        object: existing?.object.element === element ? existing.object : new CSS2DObject(element),
+        anchor,
+      }
       labels.set(id, label)
-      scene.add(label)
-    },
-    /** Attach a DOM element at a live world position; null detaches. */
-    set_static: (id: string, element: HTMLElement | null, anchor: (() => Vector3 | null) | Vector3): void => {
-      const existing = statics.get(id)
-      const read_anchor = typeof anchor === 'function' ? anchor : () => anchor
-      if (existing?.element === element) {
-        const next = read_anchor()
-        existing.visible = next !== null
-        if (next) existing.position.copy(next)
-        static_anchors.set(id, read_anchor)
-        return
-      }
-      if (existing) {
-        scene.remove(existing)
-        statics.delete(id)
-        static_anchors.delete(id)
-      }
-      if (!element) return
-      const label = new CSS2DObject(element)
-      const next = read_anchor()
-      label.visible = next !== null
-      if (next) label.position.copy(next)
-      statics.set(id, label)
-      static_anchors.set(id, read_anchor)
-      scene.add(label)
+      scene.add(label.object)
+      place(label)
     },
     resize: (width: number, height: number): void => renderer.setSize(width, height),
     render: (): void => {
-      if (labels.size === 0 && statics.size === 0) return
-      labels.forEach((label, id) => {
-        const anchor = entities.live_crown(id)
-        label.visible = anchor !== null
-        if (anchor) label.position.copy(anchor)
-      })
-      statics.forEach((label, id) => {
-        const anchor = static_anchors.get(id)?.()
-        label.visible = anchor !== null && anchor !== undefined
-        if (anchor) label.position.copy(anchor)
-      })
+      if (labels.size === 0) return
+      labels.forEach(place)
       renderer.render(scene, camera)
     },
     dispose: (): void => {
-      labels.forEach((label) => scene.remove(label))
+      labels.forEach(({ object }) => scene.remove(object))
       labels.clear()
-      statics.forEach((label) => scene.remove(label))
-      statics.clear()
-      static_anchors.clear()
       surface.remove()
     },
   })

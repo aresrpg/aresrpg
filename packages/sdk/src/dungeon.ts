@@ -3,7 +3,8 @@
 // Dungeon writes are a thin coordinator over kiosk custody, living content, and normal fights.
 
 import { prepare_boss_rewards } from './kares_economy.ts'
-import { SDK, living_content } from './client.ts'
+import { SDK } from './client.ts'
+import { living_content } from './pins.ts'
 import { changed_object_ids, receipt_digest, receipt_event, spending_receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import {

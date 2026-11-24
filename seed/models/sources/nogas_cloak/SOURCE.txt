@@ -1,0 +1,20 @@
+Nogas Cloak — partner cosmetic cloak (NOGAS, "All frog. No gas.")
+
+Open nogas_cloak.blend in Blender 5.2 or newer. The Model scene holds the exported mesh.
+
+Visual design
+NOGAS is the world's least inflatable frog: big from the front, paper-thin from the side.
+The cloak is that frog worn flat on the back: lime body, tired half-lidded eyes, one straight
+mouth line and a thick ink outline, three voxels thick. Both faces carry the frog.
+
+Production contract
+Cape-bone-local voxels at the 0.043 unit of the shipped cloaks, in their frame: the mesh hangs
+down from the anchor and sits behind the body. One packed palette strip, no variants.
+
+Supported embedded scripts
+- build_nogas_cloak.py rebuilds the voxels and the palette.
+- export_nogas_cloak.py writes seed/models/equipment/nogas_cloak.glb.
+
+Reference provenance
+Brand read from https://nogas.site and the NOGAS presale page on Blast on 2026-11-24.
+The reference guided identity; no image is embedded.

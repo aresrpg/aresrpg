@@ -12,11 +12,9 @@ const micro_label = 'block text-[7px] tracking-[0.1em] text-faint uppercase'
 export const BiomeAtmosphere = ({
   recipe,
   replace,
-  begin_preview_update,
 }: Readonly<{
   recipe: WorldRecipe
   replace: (path: JsonPath, value: JsonValue) => void
-  begin_preview_update: () => void
 }>) => {
   const [selected_biome, set_selected_biome] = useState(recipe.biomes[0]!.name)
   const biome_index = Math.max(
@@ -25,13 +23,11 @@ export const BiomeAtmosphere = ({
   )
   const biome = recipe.biomes[biome_index]!
   const selected = biome.structure_packs ?? []
-  const toggle = (pack: string): void => {
-    begin_preview_update()
+  const toggle = (pack: string): void =>
     replace(
       ['terrain', 'biomes', biome_index, 'structure_packs'],
       (selected.includes(pack) ? selected.filter((name) => name !== pack) : [...selected, pack]) as JsonValue
     )
-  }
   const category_color = Object.freeze({ trees: '#4f9b63', rocks: '#8a9094', ruins: '#c8963c' })
   const ordered = Object.entries(STRUCTURE_PACKS).toSorted(([left], [right]) => {
     const left_match = Number(!left.startsWith(`${biome.name}_`))
@@ -59,10 +55,7 @@ export const BiomeAtmosphere = ({
       </section>
       <button
         className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.mountain_passes ? 'border-gold bg-gold/10 text-gold-light' : 'border-surface-raised bg-black/16 text-faint hover:bg-white/[0.025]'}`}
-        onClick={() => {
-          begin_preview_update()
-          replace(['terrain', 'biomes', biome_index, 'mountain_passes'], !biome.mountain_passes)
-        }}
+        onClick={() => replace(['terrain', 'biomes', biome_index, 'mountain_passes'], !biome.mountain_passes)}
         type="button"
       >
         <span>
@@ -73,10 +66,7 @@ export const BiomeAtmosphere = ({
       </button>
       <button
         className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.ravines ? 'border-[#a5634d] bg-[#a5634d]/10 text-gold-light' : 'border-surface-raised bg-black/16 text-faint hover:bg-white/[0.025]'}`}
-        onClick={() => {
-          begin_preview_update()
-          replace(['terrain', 'biomes', biome_index, 'ravines'], !biome.ravines)
-        }}
+        onClick={() => replace(['terrain', 'biomes', biome_index, 'ravines'], !biome.ravines)}
         type="button"
       >
         <span>

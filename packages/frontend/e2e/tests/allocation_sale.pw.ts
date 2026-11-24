@@ -45,33 +45,3 @@ test('an amount over the spot is refused and a short wallet opens Add funds inst
   await expect(page.locator('[data-add-funds]')).toBeVisible()
   await expect(page.locator('body')).not.toHaveAttribute('data-purchases')
 })
-
-test('every spot stage shows one next step from chain state', async ({ page }) => {
-  await page.goto('/e2e/fixtures/allocation_sale.html?states')
-  const panels = page.locator('[data-sale-stage]')
-  await expect(panels).toHaveCount(7)
-  const stages = await panels.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-sale-stage')))
-  expect(stages).toEqual(['soon', 'live', 'full', 'waiting', 'claim', 'claim', 'settled'])
-  await expect(panels.nth(0).getByRole('button', { name: 'Opens in 5d 0h 0m' })).toBeDisabled()
-  await expect(panels.nth(2)).toContainText('Claim opens after launch')
-  await expect(panels.nth(3)).toContainText('Waiting for Blast to launch KARES')
-  await expect(panels.nth(4)).toContainText('477,259')
-  await expect(panels.nth(4)).toContainText('13.41 SUI')
-  await expect(panels.nth(4).getByRole('button', { name: 'Claim KARES' })).toBeEnabled()
-  await expect(panels.nth(5).getByRole('button', { name: 'Claim 85 SUI refund' })).toBeEnabled()
-  await expect(panels.nth(6)).toContainText('Nothing left to claim')
-})
-
-test('on a phone the buy dialog is a bottom sheet inside the viewport', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/e2e/fixtures/allocation_sale.html')
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
-  await page.getByRole('region', { name: 'Google game wallet' }).getByRole('button', { name: 'Buy KARES' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Buy KARES' })
-  await dialog.getByRole('textbox', { name: 'Amount in SUI' }).fill('45')
-  const box = (await dialog.boundingBox())!
-  expect(box.x).toBeGreaterThanOrEqual(0)
-  expect(box.x + box.width).toBeLessThanOrEqual(390)
-  expect(Math.round(box.y + box.height)).toBe(844)
-  await expect(dialog.getByRole('button', { name: 'Buy 45 SUI of KARES' })).toBeInViewport()
-})

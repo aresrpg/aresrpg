@@ -2,11 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Gift, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '@aresrpg/ui'
+import { Button, SuiLogo } from '@aresrpg/ui'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
 
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { env } from '../env.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'

@@ -7,7 +7,7 @@ import { element_names } from '@aresrpg/immutable'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 export type SpellCardPath = readonly (string | number)[]
 export type SpellCardValue =

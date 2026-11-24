@@ -10,10 +10,10 @@ import {
   job_max_level,
   tier_unlock_level,
 } from './experience.ts'
-import { mob_loot_chance_scaled } from './mob_scaling.ts'
+import { mob_band_scaled, mob_centered_band_scaled, mob_loot_chance_scaled } from './mob_scaling.ts'
 import { gatherable_catalog } from './gathering.ts'
 import { dofus_weapon_damage_envelope } from './item_power.ts'
-import { item_stat_center, weapon_categories } from './item.ts'
+import { element_names, item_stat_center, weapon_categories } from './item.ts'
 
 export type AcquisitionRange = Readonly<{ minimum_seconds: number; maximum_seconds: number }>
 export type AcquisitionIngredient = Readonly<{
@@ -93,7 +93,6 @@ export type AcquisitionContent = Readonly<{
   spells?: readonly EconomySpell[]
 }>
 
-const ELEMENTS = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
 const WEAPON_AP = Object.freeze({ daggers: 3, spear: 4, bow: 4, axe: 5, sword: 5 })
 const PLAYER_AP = 6
 const FARMED_MOBS_PER_FIGHT = 5
@@ -116,14 +115,12 @@ const range = (minimum_seconds: number, maximum_seconds: number): AcquisitionRan
   })
 
 const scaled = (base: number, low: number, high: number, level: number): number =>
-  high === low ? base : Math.floor((base * (6 * (high - low) + 10 * (level - low))) / (10 * (high - low)))
+  Number(mob_band_scaled(BigInt(base), BigInt(low), BigInt(high), BigInt(level)))
 
-const scaled_resistance = (encoded: number, low: number, high: number, level: number): number => {
-  const deviation = encoded - item_stat_center
-  if (deviation >= 0) return scaled(deviation, low, high, level)
-  if (high === low) return deviation
-  return -Math.floor((Math.abs(deviation) * (16 * (high - low) - 10 * (level - low))) / (10 * (high - low)))
-}
+const scaled_resistance = (encoded: number, low: number, high: number, level: number): number =>
+  Number(
+    mob_centered_band_scaled(BigInt(encoded), BigInt(item_stat_center), BigInt(low), BigInt(high), BigInt(level))
+  ) - item_stat_center
 
 const player_profile = (item_level: number): Readonly<{ level: number; elemental_stat: number }> =>
   item_level <= 100
@@ -168,9 +165,11 @@ const player_area_coverage = (content: AcquisitionContent, item_level: number): 
 const fight_seconds_at = (mob: EconomyMob, item_level: number, level: number, content: AcquisitionContent): number => {
   const count = mob.role === 'normal' ? FARMED_MOBS_PER_FIGHT : 1
   const average_resistance =
-    ELEMENTS.map((element) =>
-      scaled_resistance(mob.resistances[element] ?? item_stat_center, mob.level_min, mob.level_max, level)
-    ).reduce((sum, resistance) => sum + resistance, 0) / ELEMENTS.length
+    element_names
+      .map((element) =>
+        scaled_resistance(mob.resistances[element] ?? item_stat_center, mob.level_min, mob.level_max, level)
+      )
+      .reduce((sum, resistance) => sum + resistance, 0) / element_names.length
   const damage = Math.max(1, player_turn_damage(item_level) * (1 - average_resistance / 100))
   const coverage = count === 1 ? 1 : player_area_coverage(content, item_level)
   const pack_hp = scaled(mob.hp, mob.level_min, mob.level_max, level) * count

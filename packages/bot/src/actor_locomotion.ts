@@ -5,8 +5,8 @@ import type { ClientPacket } from '@aresrpg/protocol'
 import { create_locomotion } from './locomotion.ts'
 import { idle_travels } from './idle.ts'
 import type { Lane } from './control.ts'
-import { validate_gameplay, type GameplayContext } from './gameplay.ts'
-import { gameplay_observation_ready } from './gameplay_context.ts'
+import { validate_gameplay } from './gameplay.ts'
+import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
 
 export const create_actor_locomotion = (
   options: Readonly<{

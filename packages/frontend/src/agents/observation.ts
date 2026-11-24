@@ -98,7 +98,8 @@ export const fold_agent_view = (session: SessionState, input: AppInput): Session
 }
 
 export const agent_subscription = (session: SessionState, previous: SessionState): readonly ClientPacket[] => {
-  if (session.link_status !== 'ready') return []
+  // A bot belongs to an account: a link without one (the site's public stage) observes none.
+  if (session.link_status !== 'ready' || !session.wallet) return []
   if (session.agent_view.serial === previous.agent_view.serial && previous.link_status === 'ready') return []
   return [{ type: 'packet/agent_observe', id: session.agent_view.serial, observation: session.agent_view.request }]
 }

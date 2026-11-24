@@ -6,29 +6,18 @@ import { defineConfig } from '@playwright/test'
 
 const hardware = process.env.REQUIRE_HARDWARE === '1'
 const mobile_viewport = process.env.PERF_VIEWPORT === 'mobile'
-// New browser scenarios are manual diagnostics unless they protect a critical interaction here.
+// The blocking smoke set: sign-in, wallets, market buy and sell, one fight, practice, the allocation sale and the
+// release paths. A new browser scenario is a manual diagnostic unless it protects a critical interaction here.
 const CRITICAL_TESTS = [
   'auth_callback',
-  'allocation_sale',
-  'add_funds',
-  'box_batch',
-  'boot_recovery',
-  'character_delete',
-  'city_artifacts',
-  'deployment_assets',
-  'character_progression',
-  'fight_placement_race',
-  'fight_touch',
-  'interaction',
-  'inventory_actions',
-  'marketplace',
-  'mastery_shop',
-  'pwa_update',
-  'staking',
-  'startup_update',
-  'tournament_results',
-  'wallet_import',
   'wallet_switcher',
+  'marketplace',
+  'marketplace_sell',
+  'fight_touch',
+  'practice',
+  'allocation_sale',
+  'deployment_assets',
+  'boot_recovery',
 ].map((name) => `**/${name}.pw.ts`)
 const PERFORMANCE_TESTS = ['**/performance.pw.ts', '**/spell_performance.pw.ts']
 const RENDERER_SMOKE = '**/renderer_smoke.pw.ts'

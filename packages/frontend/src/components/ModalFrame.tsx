@@ -16,7 +16,6 @@ export const ModalFrame = ({
   close_label: string
   label: string
   max_width?: string
-  soft?: boolean
 }>) => (
   <NativeModal close={close} label={label} className="aui-modal-scrim">
     <GameWindow

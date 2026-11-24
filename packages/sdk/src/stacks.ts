@@ -6,7 +6,6 @@ import type { Transaction, TransactionArgument, TransactionObjectArgument } from
 
 import { created_object_id, receipt_digest } from './cache.ts'
 import type { Sdk } from './client.ts'
-import { merge_stacks, split_stack } from './doors.gen.ts'
 import { create_kiosk_runner, type KioskCapLoader } from './kiosk_runner.ts'
 
 type StackContext = Readonly<{ kiosk_cap: KioskCapLoader }>
@@ -32,14 +31,14 @@ export const split_stack_ptb = (
   tx: Transaction,
   custody: KioskArguments,
   { item_id, amount }: Readonly<{ item_id: string; amount: number }>
-): TransactionArgument => split_stack(tx, sdk.door_context, { ...custody, item_id, amount })
+): TransactionArgument => sdk.doors.split_stack(tx, { ...custody, item_id, amount })
 
 export const merge_stacks_ptb = (
   sdk: Sdk,
   tx: Transaction,
   custody: KioskArguments,
   { target_id, source_id }: Readonly<{ target_id: string; source_id: string }>
-): TransactionArgument => merge_stacks(tx, sdk.door_context, { ...custody, target_id, source_id })
+): TransactionArgument => sdk.doors.merge_stacks(tx, { ...custody, target_id, source_id })
 
 export type StackActions = Readonly<{
   split: (

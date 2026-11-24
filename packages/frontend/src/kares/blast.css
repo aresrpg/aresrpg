@@ -112,19 +112,19 @@
     display: none;
   }
 }
-/* The home page header keeps the same pink on one line; narrow windows wrap it. */
+/* The site's sale line: the same pink on one band across the top of the page, always one line of one height.
+   The shell holds its row before the sale state arrives, so the page does not move. It scrolls away with the page. */
 .blast-sale-bar {
-  /* It stays at the top of the page's own scroll container while the sale is live. */
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  isolation: isolate;
+  position: relative;
+  box-sizing: border-box;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 6px 16px;
-  padding: 9px max(16px, env(safe-area-inset-right, 0px)) 9px max(16px, env(safe-area-inset-left, 0px));
+  gap: 16px;
+  height: 100%;
+  overflow: hidden;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+  white-space: nowrap;
   color: #fff4ea;
   /* A lit centre over a deep edge, then a soft top light: the bar reads as a band of light, not a flat fill. */
   background:
@@ -138,36 +138,6 @@
   line-height: 1.3;
   text-decoration: none;
   text-shadow: 0 1px #6b0c3a8c;
-}
-/* The shared panel grain, and a slow sheen that crosses the band. */
-.blast-sale-bar::before,
-.blast-sale-bar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-.blast-sale-bar::before {
-  background: url('../../../ui/src/assets/panel_grain.webp') 0 0 / 220px;
-  mix-blend-mode: overlay;
-  opacity: 0.55;
-}
-.blast-sale-bar::after {
-  background: linear-gradient(105deg, #ffffff00 40%, #ffffff33 50%, #ffffff00 60%) 0 0 / 300% 100%;
-  animation: blast-sale-bar-sheen 7s linear infinite;
-}
-@keyframes blast-sale-bar-sheen {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -50% 0;
-  }
-}
-/* Anchors of the page land under the band, not behind it. */
-.landing:has(> .blast-sale-bar) {
-  scroll-padding-top: 64px;
 }
 .blast-sale-bar:hover .blast-sale-bar-action {
   background: #fff4ea;
@@ -192,6 +162,10 @@
   width: 50px;
   height: 20px;
   object-fit: contain;
+}
+.blast-sale-bar-brand,
+.blast-sale-bar-action {
+  flex: none;
 }
 .blast-sale-bar-funding {
   font-variant-numeric: tabular-nums;
@@ -229,16 +203,28 @@
     background-color 160ms ease,
     color 160ms ease;
 }
-/* A phone keeps the band to two rows while it follows the scroll: the public opening is on the sale page. */
-@media (max-width: 560px) {
+/* A narrow window keeps the line whole by dropping detail: first the public opening, then the track and the title. */
+@media (max-width: 1000px) {
   .blast-sale-bar-track ~ .blast-sale-bar-funding {
     display: none;
   }
 }
+@media (max-width: 640px) {
+  .blast-sale-bar {
+    gap: 10px;
+  }
+  .blast-sale-bar > strong,
+  .blast-sale-bar-track {
+    display: none;
+  }
+  /* The Blast mark alone names the sale here. */
+  .blast-sale-bar-brand {
+    font-size: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .blast-sale-bar::after {
+  .blast-sale-bar {
     animation: none;
-    background: none;
   }
   .blast-sale-bar-action {
     transition: none;

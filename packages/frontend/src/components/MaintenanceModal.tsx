@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { SITE_ADDRESSES } from '../site/routes.ts'
 
 export const MaintenanceModal = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <section
@@ -21,7 +21,7 @@ export const MaintenanceModal = ({ copy }: Readonly<{ copy: AppCopy }>) => (
       <p className="mt-3 text-[11px] leading-6 text-[#d9b8ae]">{copy.game_maintenance_body}</p>
       <a
         className="mt-6 inline-flex h-10 items-center border border-[#f79009]/45 bg-[#f79009]/10 px-5 text-[9px] tracking-[0.16em] text-gold-light uppercase transition hover:border-gold-light/70 hover:bg-[#f79009]/16"
-        href={env.discord_url}
+        href={SITE_ADDRESSES.discord}
         rel="noopener noreferrer"
         target="_blank"
       >

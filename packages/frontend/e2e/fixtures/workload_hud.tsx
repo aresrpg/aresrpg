@@ -8,11 +8,14 @@ import { create_world } from '../../src/game/core/world.ts'
 import { Minimap } from '../../src/game/hud/Minimap.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
-import { dispatch_app } from '../../src/store.ts'
+import { dispatch_app, start_app } from '../../src/store.ts'
 import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
+import { all_modules } from '../support/app.ts'
 
 import { workload_equipped } from './workload_population.tsx'
 import { measure_scene } from './workload_solo.ts'
+
+start_app(all_modules(), { seat: true })
 
 export const run_hud_workload = async (moving = false) => {
   const recipe = world_terrain('nauvis')

@@ -169,18 +169,13 @@ export const check_agent_return = async (
   sdk: Pick<Sdk, 'get_owned_kiosks' | 'game_type_package'>,
   recipient: string,
   intent: Readonly<{
-    agent_address?: string
+    agent_address: string
     purchase_cap: string
     seller_kiosk: string
     character_id?: string
     equipment?: readonly ReturnEquipment[]
   }>
 ): Promise<void> => {
-  // Legacy bare-cap SDK operations carry no equipment association; the app supplies a source.
-  if (!intent.agent_address) {
-    if ('equipment' in intent) throw new Error('Equipment return requires a verified source identity.')
-    return
-  }
   const offers = await read_agent_returns(client, sdk, recipient, intent.agent_address)
   const offer = offers.find((row) => row.purchase_cap === intent.purchase_cap)
   if (!offer) throw new Error('Return capability is no longer available.')

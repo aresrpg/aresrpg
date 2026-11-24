@@ -5,7 +5,7 @@ import type { TournamentLink } from '@aresrpg/protocol'
 
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { content_catalog } from '../content/catalog.ts'
-import { mastery_dungeon_slug } from '../mastery/model.ts'
+import { dungeon_slug } from '../content/dungeons.ts'
 import { localized_error } from '../i18n/error_text.ts'
 import { toast } from '../toast.ts'
 import type { AppModule, AppState } from '../store.ts'
@@ -31,7 +31,7 @@ const mastery_completion = (
     current_epoch !== null,
     quest_epoch === current_epoch,
     !quest_completed,
-    dungeon?.dungeon === mastery_dungeon_slug(quest_dungeon),
+    dungeon?.dungeon === dungeon_slug(quest_dungeon),
     dungeon?.room === final_room,
   ].every(Boolean)
   return eligible ? Object.freeze({ id, fighter_idx: BigInt(winner.fighter) }) : null

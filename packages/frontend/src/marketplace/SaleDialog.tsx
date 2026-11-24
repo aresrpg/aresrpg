@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useEffect } from 'react'
 import { MarketFloor, MarketSaleAmount, MarketSaleForm, MarketSaleSummary } from '@aresrpg/ui'
+import { useEffect } from 'react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 import { useText } from '../i18n/useText.ts'
-import { useAppStore } from '../store.ts'
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { useMarketCraftSession, useMarketDispatch, useMarketState } from './MarketSource.tsx'
 import { item_listing, character_listing, type Selection, type useMarketSell } from './useMarketSell.ts'
 import { listing_art, listing_name, useCategoryLabel } from './marketplace_model.tsx'
 
@@ -26,6 +26,11 @@ export const SaleDialog = ({
   close: () => void
 }>) => {
   const { price, set_price, lot, set_lot, stackable, lot_sizes, can_list, list } = sale
+  // The floor prices from the market's listed types: the form observes them while it is open.
+  useEffect(() => {
+    dispatch_app({ type: 'market/observed', query: { kind: 'types' } })
+    return () => dispatch_app({ type: 'market/observed', query: null })
+  }, [])
   return (
     <ModalFrame label={text('list_for_sale')} close={close} close_label={text('cancel')} max_width="max-w-lg">
       <MarketSaleForm
@@ -39,7 +44,7 @@ export const SaleDialog = ({
         summary={<SelectedCard selected={selected} />}
         floor={
           selected.kind === 'item' && (
-            <LowestPrice item_type={selected.row.item_type} amount={stackable ? lot : 1} sale={sale} text={text} />
+            <LowestPrice item_type={selected.row.item_type} amount={stackable ? lot : 1} text={text} />
           )
         }
         price={{ value: price, change: set_price }}
@@ -53,14 +58,13 @@ export const SaleDialog = ({
 }
 
 const SelectedCard = ({ selected }: Readonly<{ selected: Selection }>) => {
-  const craft_session = useMarketCraftSession()
-  const copy = useAppStore((state) => state.copy)
+  const copy = useSiteStore((state) => state.copy)
   const ui = useText()
   const category_label = useCategoryLabel()
   if (selected.kind === 'item' && copy)
     return (
       <>
-        <OwnedItemDetail craft_session={craft_session} item={selected.row} copy={copy} />
+        <OwnedItemDetail item={selected.row} copy={copy} />
         {selected.total_amount > 1 && <MarketSaleAmount amount={selected.total_amount} />}
       </>
     )
@@ -82,29 +86,21 @@ const SelectedCard = ({ selected }: Readonly<{ selected: Selection }>) => {
 const LowestPrice = ({
   item_type,
   amount,
-  sale,
   text,
 }: Readonly<{
   item_type: string
   amount: number
-  sale: ReturnType<typeof useMarketSell>
   text: CopyText
 }>) => {
-  const dispatch = useMarketDispatch()
-  const { floor } = useMarketState()
-  useEffect(() => {
-    dispatch({ type: 'market/floor_selected', item_type })
-    return () => dispatch({ type: 'market/floor_selected', item_type: null })
-  }, [dispatch, item_type])
-  const current = floor?.item_type === item_type ? floor : null
-  const price = current?.prices[String(amount)]
+  // The cheapest public lot of this size, from the market's one list of listed types.
+  const types = useSiteStore(({ marketplace }) => marketplace.types)
+  const numbers = useNumbers()
+  const price = types?.find((row) => row.item_type === item_type)?.quote.lots[String(amount)]
   const message =
-    !current || current.status === 'loading'
+    types === null
       ? text('floor_loading')
-      : current.status === 'unavailable'
-        ? text('floor_unavailable')
-        : price === undefined
-          ? text('floor_empty')
-          : `${sale.localized_numbers.decimal(Number(price) / 1_000_000_000, 3)} SUI`
+      : price === undefined
+        ? text('floor_empty')
+        : `${numbers.decimal(Number(price) / 1_000_000_000, 3)} SUI`
   return <MarketFloor label={text('floor_price', { amount })} message={message} />
 }

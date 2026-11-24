@@ -9,15 +9,15 @@ import type { ItemCategory } from '@aresrpg/immutable'
 import type { CopyText } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { MARKET_GROUPS, market_categories, type MarketGroup } from '../modules/marketplace.ts'
+import { useSiteStore } from '../store.ts'
 
 import { MarketCategoryIcon } from './MarketCategoryIcon.tsx'
-import { useMarketState } from './MarketSource.tsx'
 import { OwnListingStack } from './OwnListingStack.tsx'
 import { own_listing_stacks } from './own_listing_stacks.ts'
 import { listing_name, useCategoryLabel } from './marketplace_model.tsx'
 
 export const OwnListings = ({ text }: Readonly<{ text: CopyText }>) => {
-  const market = useMarketState()
+  const market = useSiteStore(({ marketplace }) => marketplace)
   const localized_numbers = useNumbers()
   const [query, set_query] = useState('')
   const [group, set_group] = useState<MarketGroup | ''>('')

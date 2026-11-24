@@ -121,8 +121,7 @@ export const create_board_occlusion = () => {
   }
 }
 
-/** The fade: 1 fully visible, 0 fully dissolved. Pure over the fragment and the uniforms; its
- *  ramp is pinned against `occlusion_fade_value` so the shader and the host cannot drift. */
+/** The fade: 1 fully visible, 0 fully dissolved. */
 export const occlusion_fade_node = (occlusion: BoardOcclusion) => {
   const u = occlusion.uniforms
   const frag_ndc = screenCoordinate.div(screenSize).mul(float(2)).sub(float(1))
@@ -156,60 +155,6 @@ export const occlusion_dither_discard = (occlusion: BoardOcclusion): void => {
   If(fade.lessThan(interleavedGradientNoise(screenCoordinate)), () => {
     Discard()
   })
-}
-
-const smoothstep_host = (edge0: number, edge1: number, x: number): number => {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
-  return t * t * (3 - 2 * t)
-}
-
-/** The host mirror of the ramp — the only way to test this maths without a GPU. */
-export const occlusion_fade_value = ({
-  frag_ndc,
-  frag_dist,
-  frag_world,
-  center_ndc,
-  half_ndc,
-  view_dist,
-  floor_y = -1e9,
-  clear_center = [0, 0],
-  clear_half = [-1, -1],
-  active = true,
-  camera_active,
-}: {
-  frag_ndc: readonly [number, number]
-  frag_dist: number
-  frag_world?: readonly [number, number, number]
-  center_ndc: readonly [number, number]
-  /** the SKIRTED half-extent, as the uniform carries it */
-  half_ndc: readonly [number, number]
-  view_dist: number
-  floor_y?: number
-  clear_center?: readonly [number, number]
-  clear_half?: readonly [number, number]
-  active?: boolean
-  camera_active?: boolean
-}): number => {
-  if (!active) return 1
-  const nx = (frag_ndc[0] - center_ndc[0]) / half_ndc[0]
-  const ny = (frag_ndc[1] - center_ndc[1]) / half_ndc[1]
-  const inside = 1 - smoothstep_host(MELT_CORE_R, MELT_OUTER_R, Math.hypot(nx, ny))
-  const in_front = smoothstep_host(0, DEPTH_FEATHER_M, view_dist - frag_dist - DEPTH_BIAS_M)
-  const above_floor = frag_world ? smoothstep_host(floor_y + 0.1, floor_y + 0.5, frag_world[1]) : 1
-  const between = Number(camera_active !== false) * inside * in_front * above_floor
-  const footprint = frag_world
-    ? Math.min(
-        1 -
-          smoothstep_host(
-            clear_half[0] - FOOTPRINT_FEATHER_M,
-            clear_half[0],
-            Math.abs(frag_world[0] - clear_center[0])
-          ),
-        1 -
-          smoothstep_host(clear_half[1] - FOOTPRINT_FEATHER_M, clear_half[1], Math.abs(frag_world[2] - clear_center[1]))
-      ) * smoothstep_host(floor_y, floor_y + FOOTPRINT_FLOOR_M, frag_world[1])
-    : 0
-  return 1 - Math.max(between, footprint)
 }
 
 /** Project a board's world footprint to a screen AABB plus its view distance — the per-frame CPU

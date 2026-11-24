@@ -51,12 +51,16 @@ import { get_quality_profile } from './quality.ts'
 import { create_material_texture, MATERIAL_TEXTURE_BLOCK_SPAN } from './material_texture.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { material_emission_node, macro_tint_nodes } from './terrain_tint.ts'
-import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS, LIT_FACE_BRIGHTNESS } from './terrain_lighting.ts'
 import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion.ts'
 import type { EngineQuality, RenderedChunk } from './types.ts'
 import type { CompiledWorld } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
+
+const FACE_BRIGHTNESS = Object.freeze([0.6, 0.6, 1, 0.5, 0.8, 0.8] as const)
+const LIT_FACE_BRIGHTNESS = Object.freeze([1, 1, 1, 1, 1, 1] as const)
+const AO_LEVELS = Object.freeze([0.35, 0.82, 0.92, 1] as const)
+const AO_FLOOR = Object.freeze({ top: 0.45, side: 0.58 })
 
 export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 3072 })
 const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
@@ -159,7 +163,7 @@ const build_material = (
   )
   // The four corner AO levels are PER BLOCK. A merged quad spans many blocks, so the corner
   // gradient must repeat per block cell, not stretch across the whole quad — evaluated in the
-  // fragment from the cell-local position (the legacy voxel AO look).
+  // fragment from the cell-local position.
   const ao_fraction_of = (slot: number): Node<'float'> => {
     const level = float(word_b.shiftRight(uint(20 + slot * 2)).bitAnd(uint(3)))
     return level
@@ -203,7 +207,7 @@ const build_material = (
     .a.sub(texture_sample.a)
   const environment_light =
     terrain_kind === 'flat' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
-  // The legacy NG-TINT macro field (moisture, climate, underlayer patches, and macro gradient)
+  // The macro tint field (moisture, climate, underlayer patches and macro gradient)
   // layers OVER the grain — world-space continuous, so the greedy quads dissolve.
   const tint = macro_tint_nodes({
     material_id,

@@ -1,71 +1,25 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { AtmosphereTuning } from './atmosphere_tuning.ts'
-import type { WorldCaption } from './caption_types.ts'
-import type {
-  CameraProjection,
-  ChunkRenderOutcome,
-  EntityRender,
-  EntityPathMotion,
-  EntityScreenAnchor,
-  FightPresentationCue,
-  EngineQuality,
-  EngineRenderState,
-  FightBlobRender,
-  FightBoardRender,
-  FightSwordMarker,
-  ResourceNodeMarker,
-  DungeonPortalMarker,
-  DungeonStageRender,
-  RenderChunkRequest,
-  Vec3,
-  WorldPanel,
-} from './types.ts'
+import type { Engine, FightBlobRender } from './types.ts'
 
-export type EngineBackend = Readonly<{
-  kind: 'webgpu'
-  /** Advance CPU animation and cue completion, including while the canvas is hidden. */
-  tick: (now: number) => void
-  render: (now: number) => void
-  prepare_scene: () => Promise<boolean>
-  set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
-  /** The followed character's FEET — character-anchored presentation (the night lantern) rides
-   * this, never the camera target (which leads the character). Null when nobody is followed. */
-  set_character_anchor: (position: Vec3 | null) => void
-  set_quality: (quality: EngineQuality, render_distance?: number | null) => void
-  set_audio_volume: (volume: number) => void
-  set_time_of_day: (time: number) => void
-  set_atmosphere: (overrides: Partial<AtmosphereTuning> | null) => void
-  set_clouds_visible: (visible: boolean) => void
-  set_fight_board: (board: FightBoardRender | null) => void
-  set_entities: (entities: readonly EntityRender[]) => void
-  set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => void
-  set_fight_sword_label: (id: string, element: HTMLElement | null) => void
-  set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => void
-  set_resource_node_label: (id: string, element: HTMLElement | null) => void
-  /** the star-gate approach tooltip — anchored at the world origin's fixed dressing point */
-  set_portal_label: (element: HTMLElement | null) => void
-  set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => void
-  set_dungeon_stage: (stage: DungeonStageRender | null) => void
-  animate_entity: (motion: EntityPathMotion) => Promise<boolean>
-  prepare_fight_effects: (atlas_urls: readonly string[]) => Promise<void>
-  prepare_fight_cue: (cue: FightPresentationCue) => Promise<FightPresentationCue>
-  play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
-  play_jump_puff: (position: Vec3) => void
-  project_entity: (id: string) => EntityScreenAnchor | null
-  hit_entity_caption: (id: string, client_x: number, client_y: number) => boolean
-  set_entity_caption: (id: string, caption: WorldCaption | null) => void
-  set_entity_label: (id: string, element: HTMLElement | null) => void
-  set_world_panel: (id: string, panel: WorldPanel | null) => void
-  set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
-  entity_height: (id: string) => number | null
-  entity_position: (id: string, height?: number) => Vec3 | null
-  upsert_fight_blob: (blob: FightBlobRender) => void
-  remove_fight_blob: (id: string) => void
-  pick_fight_cell: (client_x: number, client_y: number) => number | null
-  render_chunk: (chunk: RenderChunkRequest) => Promise<ChunkRenderOutcome>
-  remove_chunk: (key: string) => void
-  chunk_count: () => number
-  render_state: () => EngineRenderState
-  dispose: () => void
-}>
+// The renderer facade owns lifecycle, frame cadence and fight-blob identity; the backend draws.
+export type EngineBackend = Readonly<
+  Omit<
+    Engine,
+    | 'start'
+    | 'stop'
+    | 'frame_count'
+    | 'quality'
+    | 'backend'
+    | 'fail'
+    | 'status'
+    | 'subscribe_status'
+    | 'create_fight_blob'
+    | 'update_fight_blob'
+  > & {
+    /** Advance CPU animation and cue completion, including while the canvas is hidden. */
+    tick: (now: number) => void
+    render: (now: number) => void
+    upsert_fight_blob: (blob: FightBlobRender) => void
+  }
+>

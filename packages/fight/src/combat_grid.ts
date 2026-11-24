@@ -4,15 +4,15 @@
 
 import { AREA_SHAPES, CONTRACT_CONSTANTS, DIRECTIONS } from './move_contract.gen.ts'
 
-const GRID_W = BigInt(CONTRACT_CONSTANTS.grid_w)
-const GRID_H = BigInt(CONTRACT_CONSTANTS.grid_h)
-export const GRID_CELLS = BigInt(CONTRACT_CONSTANTS.grid_cells)
+const GRID_W = CONTRACT_CONSTANTS.grid_w
+const GRID_H = CONTRACT_CONSTANTS.grid_h
+export const GRID_CELLS: bigint = CONTRACT_CONSTANTS.grid_cells
 const MASK_WORDS = Number(CONTRACT_CONSTANTS.mask_words)
-const DIR_POSITIVE_X = BigInt(DIRECTIONS.positive_x)
-const DIR_NEGATIVE_X = BigInt(DIRECTIONS.negative_x)
-const DIR_POSITIVE_Y = BigInt(DIRECTIONS.positive_y)
-const DIR_NEGATIVE_Y = BigInt(DIRECTIONS.negative_y)
-const DIR_NONE = BigInt(DIRECTIONS.none)
+const DIR_POSITIVE_X = DIRECTIONS.positive_x
+const DIR_NEGATIVE_X = DIRECTIONS.negative_x
+const DIR_POSITIVE_Y = DIRECTIONS.positive_y
+const DIR_NEGATIVE_Y = DIRECTIONS.negative_y
+const DIR_NONE = DIRECTIONS.none
 const DIRECTION_STEPS = Object.freeze([
   Object.freeze({ x: 1n, y: 0n }),
   Object.freeze({ x: -1n, y: 0n }),
@@ -35,7 +35,6 @@ type CastCellSearch = {
   obstacles: bigint[]
 }
 
-const shape = (name: keyof typeof AREA_SHAPES): bigint => BigInt(AREA_SHAPES[name])
 const absolute_difference = (left: bigint, right: bigint): bigint => (left > right ? left - right : right - left)
 const cell_x = (cell: bigint): bigint => cell % GRID_W
 const cell_y = (cell: bigint): bigint => cell / GRID_W
@@ -265,11 +264,11 @@ export const step_cell = (cell: bigint, direction: bigint): bigint | null => {
 
 export const in_zone = (shape_code: bigint, size: bigint, anchor: bigint, cell: bigint): boolean => {
   if (!in_grid(cell)) return false
-  if (shape_code === shape('point')) return cell === anchor
-  if (shape_code === shape('allmap')) return true
+  if (shape_code === AREA_SHAPES.point) return cell === anchor
+  if (shape_code === AREA_SHAPES.allmap) return true
   const distance = manhattan(anchor, cell)
-  if (shape_code === shape('ring')) return distance === size
-  if (shape_code === shape('cross')) return distance <= size && same_line(cell, anchor)
+  if (shape_code === AREA_SHAPES.ring) return distance === size
+  if (shape_code === AREA_SHAPES.cross) return distance <= size && same_line(cell, anchor)
   return distance <= size
 }
 
@@ -375,11 +374,11 @@ export const zone_rank = (
   cell: bigint
 ): bigint | null => {
   if (!in_grid(cell)) return null
-  if (shape_code === shape('point')) return cell === anchor ? 0n : null
-  if (shape_code === shape('line')) return line_rank(anchor, caster, size, cell)
-  if (shape_code === shape('tbar')) return tbar_rank(anchor, caster, size, cell)
-  if (shape_code === shape('podium')) return podium_rank(anchor, caster, size, cell)
-  if (shape_code === shape('cone')) return cone_rank(anchor, caster, size, cell)
+  if (shape_code === AREA_SHAPES.point) return cell === anchor ? 0n : null
+  if (shape_code === AREA_SHAPES.line) return line_rank(anchor, caster, size, cell)
+  if (shape_code === AREA_SHAPES.tbar) return tbar_rank(anchor, caster, size, cell)
+  if (shape_code === AREA_SHAPES.podium) return podium_rank(anchor, caster, size, cell)
+  if (shape_code === AREA_SHAPES.cone) return cone_rank(anchor, caster, size, cell)
   return in_zone(shape_code, size, anchor, cell) ? cell : null
 }
 
@@ -426,16 +425,16 @@ const cone_cells = (anchor: bigint, caster: bigint, size: bigint): bigint[] => {
 }
 
 export const zone_cells = (shape_code: bigint, size: bigint, anchor: bigint, caster: bigint): bigint[] => {
-  if (shape_code === shape('point')) return [anchor]
-  if (shape_code === shape('line')) return [anchor, ...walk_direction(anchor, away_dir(caster, anchor), size)]
-  if (shape_code === shape('tbar')) return tbar_cells(anchor, caster, size)
-  if (shape_code === shape('podium')) {
+  if (shape_code === AREA_SHAPES.point) return [anchor]
+  if (shape_code === AREA_SHAPES.line) return [anchor, ...walk_direction(anchor, away_dir(caster, anchor), size)]
+  if (shape_code === AREA_SHAPES.tbar) return tbar_cells(anchor, caster, size)
+  if (shape_code === AREA_SHAPES.podium) {
     const forward = step_cell(anchor, away_dir(caster, anchor))
     return [...tbar_cells(anchor, caster, size), ...(forward === null ? [] : [forward])]
   }
-  if (shape_code === shape('cone')) return cone_cells(anchor, caster, size)
+  if (shape_code === AREA_SHAPES.cone) return cone_cells(anchor, caster, size)
   // allmap is the ONE shape a box would silently amputate — it keeps the board scan.
-  if (shape_code === shape('allmap'))
+  if (shape_code === AREA_SHAPES.allmap)
     return Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) =>
       in_zone(shape_code, size, anchor, cell)
     )

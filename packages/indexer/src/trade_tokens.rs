@@ -8,21 +8,13 @@ use crate::decode::{self, Balance, Field, Id, Trade};
 use crate::ownership::{ObjView, OwnerKind, SUI_FRAMEWORK};
 use crate::publish::TxView;
 
-fn is_trade(object: &ObjView<'_>, game: &str) -> bool {
-    object.type_key.package == game
-        && object.type_key.module == "trade"
-        && object.type_key.name == "Trade"
-}
-
 fn field_parent(object: &ObjView<'_>, tx: &TxView<'_>, game: &str) -> Option<Id> {
     let OwnerKind::Object(parent) = object.owner else {
         return None;
     };
     let tag = object.type_key;
     let balance = format!("vector<{SUI_FRAMEWORK}::balance::Balance<");
-    if tag.package != SUI_FRAMEWORK
-        || tag.module != "dynamic_field"
-        || tag.name != "Field"
+    if !tag.is(SUI_FRAMEWORK, "dynamic_field", "Field")
         || tag.type_params.len() != 2
         || tag.type_params[0] != "vector<u8>"
         || !tag.type_params[1].starts_with(&balance)
@@ -34,7 +26,7 @@ fn field_parent(object: &ObjView<'_>, tx: &TxView<'_>, game: &str) -> Option<Id>
     tx.inputs
         .iter()
         .chain(tx.outputs)
-        .find(|row| row.id == parent && is_trade(row, game))?;
+        .find(|row| row.id == parent && row.type_key.is(game, "trade", "Trade"))?;
     Some(parent)
 }
 
@@ -81,7 +73,7 @@ fn write(parent: Id, values: [u64; 2], checkpoint: u64) -> String {
 pub fn changes(tx: &TxView<'_>, game: &str) -> Result<Vec<(Trade, bool)>> {
     let mut changed = BTreeSet::new();
     for object in tx.outputs.iter().chain(tx.deleted) {
-        if is_trade(object, game) {
+        if object.type_key.is(game, "trade", "Trade") {
             changed.insert(object.id.hex());
         }
         if let Some((parent, _)) = balances(object, tx, game)? {
@@ -95,15 +87,11 @@ pub fn changes(tx: &TxView<'_>, game: &str) -> Result<Vec<(Trade, bool)>> {
                 .outputs
                 .iter()
                 .chain(tx.inputs)
-                .find(|row| row.id.hex() == id && is_trade(row, game))
+                .find(|row| row.id.hex() == id && row.type_key.is(game, "trade", "Trade"))
                 .ok_or_else(|| anyhow::anyhow!("trade change lacks its typed parent"))?;
             let deleted = tx.deleted.iter().any(|row| row.id == parent.id)
                 && !tx.outputs.iter().any(|row| row.id == parent.id);
-            Ok((decode::from_bytes(parent.bytes)?, deleted))
+            Ok((parent.decode()?, deleted))
         })
         .collect()
 }
-
-#[cfg(test)]
-#[path = "../tests/trade_tokens/mod.rs"]
-mod tests;

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { city_at_position } from '../content/worlds.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { play_audio } from '../game/audio/audio_registry.ts'
 import { pose_matches_character, useWorldPose } from '../game/core/pose_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'

@@ -11,13 +11,8 @@ import {
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
 
-import {
-  fight_turn_inputs,
-  gameplay_observed_ms,
-  owned_fight,
-  parse_fight_turn,
-  type GameplayContext,
-} from './gameplay.ts'
+import { fight_turn_inputs, owned_fight, parse_fight_turn } from './gameplay.ts'
+import { gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
 
 const active_turn = ({ contract }: HydratedFightCheckpoint, seat: bigint) =>
   contract.round > 0n &&

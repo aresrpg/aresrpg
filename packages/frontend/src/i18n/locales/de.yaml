@@ -20,23 +20,18 @@ quality: Qualität
 low: Niedrig
 medium: Mittel
 high: Hoch
-identity_connected: Identität verbunden
 sign_in_to_play: Zum Spielen anmelden
 loading_universe: Universum wird geladen
 continue_google: Mit Google fortfahren
 wallet_session_ended: Deine Wallet-Sitzung ist beendet. Melde dich erneut an.
 connect_wallet: Wallet verbinden
 no_wallet: Keine kompatible Wallet installiert
-sign_in: Zum Spielen anmelden
 drag_hint: Ziehen zum Verschieben · Scrollen zum Zoomen
 navigation: Navigation
 world: Welt
 characters: Charaktere
-leaderboard: Rangliste
 mastery: Meisterschaft
 encyclopedia: Enzyklopädie
-marketplace: Marktplatz
-airdrop: Airdrop
 kolizeum: Kolizeum
 settings: Einstellungen
 admin: Admin
@@ -44,7 +39,6 @@ online: Online
 account: Konto
 join_discord: Discord beitreten
 join_telegram: Telegram beitreten
-sui_universe: Sui-Universum
 server_disconnected: Getrennt
 server_connecting: Verbindung
 server_reconnecting: Erneute Verbindung
@@ -53,14 +47,13 @@ server_connected: Verbunden
 server_violation: Getrennt — Regelverstoß. Bald erneuter Versuch.
 server_replaced: Woanders verbunden
 session_replaced_title: Von einem anderen Ort verbunden
-session_replaced_body: 'Dein Konto hat sich in einem anderen Fenster verbunden: im 3D-Spiel oder in der Web-App. Es kann immer nur eines verbunden sein, deshalb wurde dieses Fenster getrennt. Verbinde dich hier neu, um dieses Fenster zu nutzen.'
+session_replaced_body: 'Dein Konto hat sich in einem anderen Tab oder auf einem anderen Gerät mit dem Spiel verbunden. Es kann immer nur eine Verbindung bestehen, deshalb wurde dieses Fenster getrennt. Verbinde dich hier neu, um dieses Fenster zu nutzen.'
 session_replaced_reconnect: Hier neu verbinden
 latency_unit: ms
 indexing_health: Indexierungsstatus
 online_accounts: Konten online
 online_characters: Charaktere online
 online_characters_body: In allen Welten, einschließlich Kämpfen und Dungeons.
-indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
 indexing_block_title: Welt wird synchronisiert
 indexing_block_body: Der Verlauf der Chain wird noch indexiert. Das Spiel wird automatisch freigeschaltet, sobald der Server das sichere Live-Fenster erreicht.
 indexing_block_progress: Fortschritt
@@ -76,7 +69,6 @@ fight_path_changed_toast: Das Spielfeld hat sich vor deinem Zug geändert. Dein 
 party_member_unavailable_toast: Dieser Charakter ist bereits in einer Gruppe.
 fight_turn_already_forced_toast: Jemand hat diesen Zug bereits zwangsweise beendet.
 fight_placement_unavailable_toast: Dieses Startfeld ist nicht verfügbar. Wähle ein anderes freies Feld.
-network_testnet: TESTNET
 welcome_title: Willkommen bei AresRPG
 welcome_body: AresRPG ist ein vollständig On-Chain-MMORPG mit einer spielergesteuerten Wirtschaft. Erstelle deinen ersten Charakter, betrete die Welt und finde Monster zum Kämpfen.
 welcome_need_sui: 'Dein erster Charakter kostet {{price}}. Behalte mindestens {{fee}} für Transaktionsgebühren in deiner Wallet. Füge unten Guthaben hinzu, um loszulegen.'
@@ -105,13 +97,7 @@ wallet_send: Senden
 wallet_add_funds: Guthaben hinzufügen
 wallet_gas_spent: Gas-Ausgaben (24 Std.)
 wallet_disconnect: Trennen
-wallet_fund_body: Sende SUI an diese Wallet-Adresse. Dein Guthaben wird bei der Rückkehr zur App aktualisiert.
-wallet_send_title: SUI senden
 wallet_recipient: Empfängeradresse
-wallet_amount: Betrag (SUI)
-wallet_send_pending: SUI wird gesendet…
-wallet_send_success: SUI gesendet
-wallet_send_failed: Die SUI-Übertragung ist fehlgeschlagen
 wallet_close: Schließen
 kolizeum_page:
   title: Kolizeum — Kriegstisch
@@ -155,13 +141,10 @@ friends_panel:
   title: Freunde
   observed: In der Nähe gesehen
   unseen: Derzeit nicht gesehen
-  none_observed: Keine Freunde in der Nähe gesehen
   empty: Noch keine Freunde
   placeholder: Name, SuiNS oder 0x-Adresse
   add: Freund hinzufügen
   remove: Entfernen
-  remove_title: Freund entfernen
-  remove_body: '{{name}} aus deiner Freundesliste entfernen?'
   error_no_suins: Keine SuiNS-Adresse entspricht {{name}}.
   error_target: Gib einen Charakter, SuiNS-Namen oder eine vollständige Sui-Adresse ein.
   error_self: Du kannst dich nicht selbst hinzufügen.
@@ -178,7 +161,6 @@ party_panel:
   disband: Auflösen
   kick: Entfernen
   rescind: Einladung zurückziehen
-  invite_owned: Eigenen Charakter einladen
   follow_leader: Anführer folgen
   run_to_position: Zur Position laufen
   run_to_started: Du läufst zur letzten On-Chain-Position von {{name}}. Dies ist möglicherweise nicht die aktuelle Live-Position.
@@ -246,7 +228,6 @@ world_hud:
   fight_press_join_touch: 'Tippen zum Beitreten'
   fight_press_spectate_touch: 'Tippen zum Zuschauen'
   dungeon_talk_touch: 'Tippen zum Sprechen'
-  character_options_touch: 'Tippen für Aktionen'
   spawn_welcome: 'Willkommen, Abenteurer! Dieses Spiel ist im Early Access. Versuche zu überleben und genieße deine Zeit.'
   compass_label: Kompass
   zone: ZONE
@@ -276,7 +257,6 @@ world_hud:
   portal_prompt: 'Drücke {{key}}, um in eine andere Welt zu reisen'
   dungeon_portal: Dungeonportal
   dungeon_city: 'Stadt {{city}}'
-  dungeon_press_enter: Betreten
   dungeon_talk: 'Sprechen'
   dungeon_guard_requires_key: 'Ohne {{key}} kann ich dich nicht durchlassen.'
   dungeon_entry_body: Benutze den Dungeonschlüssel, um die private Lobby dieses Portals zu betreten.
@@ -308,12 +288,9 @@ world_hud:
   dungeon_key_required: '{{key}} wird für diesen Dungeon benötigt.'
   dungeon_group_refusal: Dieser Kampf ist für die Gruppe des Eröffners gesperrt.
   travel_title: Sternentor
-  travel_search: 'Suche {{title}}…'
   travel_entry_level: 'Benötigte Stufe {{level}}'
   travel_pending: Das Tor öffnet sich…
   travel_success: 'Willkommen in {{world}}'
-  travel_empty: Keine Welten
-  travel_showing: '{{filtered}} / {{total}} Ergebnisse'
   travel_selected: 'Ausgewählt · {{label}}'
   fight_press_join: 'Drücke {{key}} zum Beitreten'
   fight_press_spectate: 'Drücke {{key}} zum Zuschauen'
@@ -363,10 +340,8 @@ world_hud:
   resource_gathered: 'Ressource gesammelt'
   resource_gathered_amount: '{{quantity}} × {{name}} gesammelt'
   resource_gathered_amount_ambushed: '{{quantity}} × {{name}} gesammelt · Ein Beschützer greift dich an'
-  resource_ambushed: 'Ein Beschützer greift dich an'
   resource_resolving_ambush: 'Der Beschützer versperrt deinen Weg…'
   resource_ambush_title: 'Beschützer-Hinterhalt'
-  resource_face_protector: 'Drücke {{key}}, um zu kämpfen'
   zone_never_arrived: 'Die Suche ging durch, aber die Welt zeigte sie nie — die Leseschicht hängt womöglich zurück'
 demo_page:
   animation_loop: Animation wiederholen
@@ -486,16 +461,6 @@ marketplace_page:
   volume_unavailable: 'Das Volumen ist vorübergehend nicht verfügbar.'
   title: Marktplatz
   subtitle: Spielerangebote auf Sui
-  disclaimer_kicker: Vor dem Handeln
-  disclaimer_title: Handle für deinen Fortschritt, nicht für Profit
-  disclaimer_body: Gegenstände werden direkt zwischen Spielern gegen SUI gehandelt.
-  disclaimer_supply: Gegenstände sind keine langfristigen Anlagen. Wenn mehr Spieler sie farmen, steigt das Angebot und Preise können fallen.
-  disclaimer_fun: Kaufe und verkaufe passend zu deinem Fortschritt aus Spaß und für den Spielnutzen, nicht in Erwartung eines Gewinns.
-  disclaimer_wallet: Bewahre in AresRPG nur SUI auf, die du verwenden möchtest. Lege größere Ersparnisse in einer getrennten selbstverwahrten Wallet ab, deren Wiederherstellungsschlüssel du kontrollierst.
-  disclaimer_acknowledge: Verstanden
-  tab_buy: Kaufen
-  tab_sell: Verkaufen
-  tab_history: Verlauf
   browse: Stöbern
   group_equipment: Ausrüstung
   group_pets: Begleiter
@@ -503,13 +468,20 @@ marketplace_page:
   group_consumable: Verbrauchsgüter
   group_resources: Ressourcen
   group_characters: Charaktere
-  level: Stufe
-  class: Klasse
   search: Gegenstände suchen…
   no_results: Noch keine Angebote
-  select_item: Gegenstand auswählen
+  group_empty: 'In dieser Gruppe ist noch nichts gelistet'
+  featured: 'Empfohlen'
+  rarest: 'Das Seltenste auf dem Markt'
+  rarest_on_sale: 'Nur {{count}} im Angebot.'
+  view_offers: 'Angebote ansehen'
+  see_all: 'Alle ansehen'
+  results_for: 'Ergebnisse für „{{query}}“'
+  change_24h: '24 Std.'
+  change_hint: 'Letzter voller Tag im Vergleich zum Vortag'
+  listed: 'Angeboten'
+  cheapest_offers: 'Günstigste Angebote'
   listing_count: '{{count}} Angebote'
-  rolled_stats: Gewürfelte Werte
   characteristics: Eigenschaften
   damages: Schaden
   range_to: bis
@@ -523,15 +495,11 @@ marketplace_page:
   no_listings: Keine aktiven Angebote
   withdraw: Entfernen
   list_for_sale: Zum Verkauf anbieten
-  select_to_list: Gegenstand aus dem Inventar auswählen
   price: Preis
   lot_size: Losgröße
   paid_automatically: Verkaufserlöse landen automatisch in deinem Kiosk.
-  lot_required: 'Dieser Stapel hat ×{{amount}}. Erlaubt sind ×1, ×10, ×100 oder ×1000.'
-  inventory: Inventar
   characters: Charaktere
   items: Gegenstände
-  empty_inventory: Nichts kann angeboten werden
   revenue_30d: Letzte 30 Tage
   sales_count: '{{count}} Verkäufe'
   unclaimed: Nicht abgeholte Erlöse
@@ -576,33 +544,21 @@ mastery_page:
   world_reward: +{{points}}pts
   shop_title: Meisterschaftsladen
   shop_lead: Gib Meisterschaftspunkte aus, um einzigartige Lootboxen zu kaufen.
+  shop_line: Punkte für Lootboxen ausgeben
+  quest_in_game: Starte deine tägliche Quest im Spiel
   shop_empty: Noch keine Meisterschaftsgegenstände im Angebot
-  ready_to_buy: Kaufbereit
   points_missing: '{{points}} Punkte fehlen'
-  buying: Wird gekauft…
   buy: Kaufen · {{cost}} Pkt.
   quest_started: Tägliche Quest zugewiesen.
   offer_purchased: Meisterschaftsbelohnung gekauft.
 
 airdrop_page:
-  crew_view_sale: 'KARES-Verkauf ansehen'
-  crew_dialogue:
-    intro: 'Nimm am KARES-Tokenverkauf teil, dann habe ich ein Geschenk für dich.'
-    connect: 'Verbinde die Wallet, die du beim Verkauf verwendet hast. Mal sehen, ob dein Geschenk da ist.'
-    checking: 'Ich prüfe deine Geschenke…'
-    ready: 'Dein Crew-Helm ist da!'
-    claiming: 'Einen Moment, deine Geschenke werden abgeholt.'
-    claimed: 'Ich habe dir deinen Crew-Helm bereits gegeben. Trage ihn mit Stolz!'
-    empty: 'Für diese Wallet ist gerade kein Crew-Helm verfügbar. Er wurde vielleicht schon abgeholt, oder die Verteilung steht noch aus.'
-    unavailable: 'Ich konnte deine Geschenke nicht prüfen. Bitte versuche es erneut.'
   reward_title: 'Du hast ein Geschenk erhalten!'
   reward_received: 'Du hast {items} erhalten!'
   reward_needs_sui: 'Dein Geschenk ist sicher in deiner Wallet. Füge etwas SUI für die Transaktionsgebühr hinzu und hole dann deine Belohnung ab.'
   reward_complete: 'Deine Belohnung ist in deinem Inventar verfügbar.'
   reward_redeeming: 'Dein Geschenk ist angekommen. Es wird deinem Inventar hinzugefügt…'
   reward_held: 'Dein Geschenk ist in deiner Wallet. Löse es ein, um die Belohnung deinem Inventar hinzuzufügen.'
-  reward_used_title: 'Karte bereits eingelöst'
-  reward_used_body: 'Diese Karte wurde bereits eingelöst oder ist nicht mehr verfügbar. Jede Karte kann nur einmal verwendet werden.'
   reward_continue: 'Weiter'
   reward_item: 'Geschenk'
   destination: 'Spiel-Wallet:'
@@ -613,16 +569,8 @@ airdrop_page:
   holder_title: 'Externe Wallet'
   holder_connect_hint: 'Verbinde die Wallet mit deinen Geschenkkarten'
   holder_connect: 'Wallet verbinden'
-  holder_connecting: 'Verbindung…'
-  holder_connected: 'Verbunden'
-  holder_select: 'Auswählen'
-  holder_close: 'Wallet-Auswahl schließen'
-  holder_wallet_missing: 'Kein kompatibles Sui-Wallet installiert'
   giftcards_title: 'Einlösbare Geschenkkarten'
   gift_login: 'Fahre mit Google fort, um dieses Geschenk in dein Spiel-Wallet zu übertragen'
-  gift_ready: 'Deine gedruckte Geschenkkarte kann jetzt abgeholt werden'
-  gift_claiming: 'Gedruckte Geschenkkarte wird abgeholt…'
-  gift_retry: 'Geschenkkarte abholen'
   redeem: 'Einlösen'
   empty: 'Keine Geschenkkarten in dieser Wallet'
   claim_all: 'Belohnungen abholen'
@@ -665,6 +613,15 @@ airdrop_page:
     title_enforcer:
       title: 'Enforcer Machin'
       description: 'Der Titel „Der Vollstrecker“ für berechtigte Enforcer Machin-Besitzer.'
+    act_operator:
+      title: 'ACT'
+      description: 'Ein Operator-Titel und -Körper für Inhaber eines ACT Airdrop Transponder zum Snapshot. Einer pro Wallet, in Vesper, Dusk oder Blood Ivory.'
+    act_warlords:
+      title: 'ACT-Kriegsherren'
+      description: 'Eine ACT-Airdrop-Kiste für die Spieler, die die ACT-Rangliste auswählt. Sie enthält einen Helios-Warlord-Helm.'
+    nogas_presale:
+      title: 'Nogas'
+      description: 'Ein flacher Frosch-Umhang für jede Wallet, die am NOGAS-Presale auf Blast teilgenommen hat. Prüfe die Wallet, die du für den Presale benutzt hast.'
     blast_crew:
       title: 'Crew-Helm'
       description: 'Ein kosmetisches Geschenk für Teilnehmer am KARES-Verkauf auf Blast. Verbinde nach der Verteilung die verwendete Wallet.'
@@ -819,41 +776,18 @@ admin_page:
   inspecting: Prüfung…
   plan: Seed-Plan
   targets: deterministische Ziele
-  not_inspected: Füge die veröffentlichten Objekt-IDs hinzu und prüfe dann den Plan.
   execute: Ausführen
   executing: Ausführung…
-  seal_title: Dauerhafte Versiegelung
-  seal_body: Die Versiegelung entfernt jede künftige Schreibmöglichkeit für Inhalte. Kein Upgrade oder Admin-Recht kann sie aufheben.
-  arm_seal: Versiegelung vorbereiten
-  seal_forever: Inhalt endgültig versiegeln
-  sealed: Inhalt ist versiegelt
-  admin_wallet: Admin-Wallet
-  admin_wallet_body: Separater Signierer für Veröffentlichung und Einnahmenabhebung.
-  connect_admin_wallet: Verbinden
-  choose_admin_wallet: Wallet auswählen
-  choose_admin_address: Adresse auswählen
-  cancel_wallet_selection: Abbrechen
-  wallet_account: Konto
   select_wallet: Auswählen
   connecting: Verbindung…
-  loading_wallets: Wallets werden geladen…
-  no_admin_wallet: Keine kompatible Browser-Wallet installiert.
   royalties: Lizenzgebühren
-  cap_owned: Berechtigung vorhanden
-  cap_missing: Berechtigung fehlt
-  reading_royalties: Richtlinien werden gelesen…
   reading: Lesen…
-  refresh_revenue: Einnahmen aktualisieren
   claiming: Abhebung…
-  disconnect_admin_wallet: Trennen
-  claim_digest: Abhebungstransaktion
   range_24h: 24 Stunden
   range_7d: 7 Tage
   range_30d: 30 Tage
   range_90d: 90 Tage
   range_1y: 1 Jahr
-  overview_title: Übersicht
-  overview_body: Spieleraktivität und Einnahmen ohne Leitstandrauschen.
   overview_unavailable: Übersicht nicht verfügbar
   loading_overview: Übersicht wird geladen…
   all_systems_current: Alle Systeme sind aktuell
@@ -863,15 +797,15 @@ admin_page:
   active_players: Aktive Spieler
   active_players_bucket: Aktive Spieler pro Intervall
   daily_active: Täglich aktive Spieler
-  active_interval: Aktiv pro Intervall
   active_30d: 30 Tage aktive Spieler
   active_last_30d: aktiv in den letzten 30 Tagen
   player_activity: Spieleraktivität
   population: Population
   player_activity_body: Tägliche Aktivität und gleitende 30-Tage-Reichweite
-  stickiness: DAU / 30T
   online_players: Spieler online
-  online_players_body: Maximale eindeutige authentifizierte Spieler pro Zeitfenster
+  online_players_body: 'Höchstzahl gleichzeitig verbundener Spieler und gehosteter Bots pro Zeitraum'
+  players: Spieler
+  hosted_bots: Gehostete Bots
   online_now: Spieler online
   online_split: Online-Aufteilung
   online_split_detail: 'Spieler · gehostete Bots'
@@ -890,12 +824,7 @@ admin_page:
   game_transactions_over_time: Transaktionen im Zeitverlauf
   game_transactions_body: Erfolgreiche AresRPG-Transaktionen, einmal pro PTB gezählt
   today: Heute
-  selected_period: Gewählter Zeitraum
   lifetime: insgesamt
-  average_order: durchschnittliche Bestellung
-  chart_revenue: Einnahmen
-  chart_players: Spieler
-  chart_online: Online
   bucket_15m: 15-Minuten-Intervalle
   bucket_hour: Stündliche Intervalle
   bucket_day: Tagesintervalle
@@ -922,8 +851,6 @@ admin_page:
   when: Zeitpunkt
   transaction: Transaktion
   treasury: Schatzkammer
-  treasury_body: Aktuelle Guthaben, getrennt von verdienten Einnahmen
-  available_balance: Verfügbares Guthaben
   claim: Abheben
   close: Schließen
   loading: Wird geladen…
@@ -963,22 +890,17 @@ simulator_page:
   class_ikari_title: Berserker
   class_shusen_title: Raufbold
   delete_character: Charakter löschen
-  assigned_cell: Zugewiesen · Feld {cell}
   pick_character: Charakter wählen
   pick_mob: Monster wählen
-  character_editor: Lokaler Charakter
-  character_editor_hint: Identität, Aussehen, Stufe, Werte und freigeschaltete Zauber
   character_level: Charakterstufe
   character_stats: Verteilte Werte
   character_spells: Zauberstufen
   stat_points: '{points} Attributspunkte übrig'
   spell_points: '{points} Zauberpunkte übrig'
-  spell_unlock: Freischaltung {level}
   reset: Zurücksetzen
   delete_confirm: Löschen bestätigen
   class_change_hint: Ein Klassenwechsel setzt natürliche Attribute und investierte Zauberstufen zurück
   spells_unavailable: Auf dieser Stufe sind keine Zauber freigeschaltet
-  save_character: Charakter speichern
   equipment: Ausrüstung, Relikte und Kosmetik
   max_roll: Maximaler Wurf
   remove_mob: Monster entfernen
@@ -1046,7 +968,6 @@ fight_hud:
   crank_button: Zugende erzwingen
   end_turn: Zug beenden
   end_turn_queued: Zugende vorgemerkt
-  reset_turn: Neustart
   weapon_attack: Waffenangriff
   bare_hands: Unbewaffnet
   log_fight_started: Der Kampf beginnt
@@ -1104,9 +1025,6 @@ fight_hud:
   result_enemies: Gegner
   result_victory: Sieg
   result_defeat: Niederlage
-  result_you: Du
-  result_fallen: Gefallen
-  result_survived: Überlebt
   result_collecting: Beute wird eingesammelt…
   result_collecting_progress: Charakterbeute · {completed}/{total}
   result_collecting_complete: Gesamte Beute eingesammelt · {completed}/{total}
@@ -1123,7 +1041,6 @@ fight_hud:
   level_up_spell_points: Zauberpunkte
   level_up_new_spell: Neuer Zauber freigeschaltet
   level_up_new_worlds: Neue Welten freigeschaltet
-  level_up_worlds_note: Neue Reiseziele sind jetzt verfügbar
   level_up_allocate: Punkte verteilen
   level_up_later: Später
 wallet_legacy:
@@ -1181,70 +1098,12 @@ wallet_legacy:
   funding_failed: 'Die Einzahlung konnte nicht abgeschlossen werden.'
   funding_pending: 'Transfer läuft. Sende keine weitere Zahlung.'
   sui: SUI
-  how_to_get: Wie man SUI bekommt
   your_address: 'SUI-Adresse'
   send_sui: 'SUI über das Sui-Netzwerk senden. Zum Kopieren klicken.'
-  buy_directly: Direkt kaufen
-  buy_with_card: Kaufe SUI mit Kreditkarte. Direkt in dein Wallet geliefert.
-  buy_on_exchange: Auf einer Börse kaufen
-  withdraw_to_wallet: Kaufe SUI auf einer Börse und überweise es an die oben angezeigte
-    Wallet-Adresse.
-  faq: FAQ
-  wallet_description: Dein persönliches Wallet. Nur du hast Zugriff. Zahle SUI für
-    Netzwerkgebühren und Handel mit anderen Spielern ein.
-  moonpay_desc: Kreditkarte, Apple Pay, Banküberweisung
-  transak_desc: Kreditkarte, Banküberweisung, 100+ Länder
-  faq_what_is_sui: Was ist SUI?
-  faq_what_is_sui_answer: SUI ist eine digitale Währung, wie digitales Bargeld. Sie
-    existiert auf einem schnellen, sicheren Netzwerk namens Sui blockchain. Du verwendest
-    kleine Beträge für Netzwerkgebühren und den Handel mit anderen Spielern.
-  faq_why_sui: Warum nutzt AresRPG SUI?
-  faq_why_sui_answer: SUI ist unsere bevorzugte Zahlungsmethode. Transaktionen sind
-    sofort (unter 1 Sekunde) und kosten Bruchteile eines Cents. Keine Zwischenhändler-Gebühren.
-    In Zukunft werden wir möglicherweise traditionelle Währungen (USD, EUR usw.) unterstützen,
-    aber das erfordert erheblichen rechtlichen Aufwand und bringt hohe Gebühren und
-    Steuern mit sich, die wir noch nicht tragen können.
-  faq_legal: Ist das legal?
-  faq_legal_answer: Ja. Der Kauf und Besitz von Kryptowährung ist in den meisten Ländern
-    legal. SUI ist ein legitimes digitales Asset, das auf großen regulierten Börsen
-    weltweit gehandelt wird. AresRPG nutzt es für Netzwerkgebühren und den Handel zwischen Spielern.
-  faq_eula: Ist es laut den Nutzungsbedingungen des Spiels erlaubt?
-  faq_eula_answer: Ja. Solange Kryptowährung ausschließlich als Zahlungsmittel verwendet
-    wird und keine NFTs oder spekulative Krypto-Machenschaften involviert sind, ist
-    es vollständig konform. Viele Spiele unterstützen sogar Krypto-Zahlungen.
-  faq_access: Wer kann auf mein Wallet zugreifen?
-  faq_access_answer: "Nur du. Dein Wallet wird aus deinem Google-Login über Sui's
-    zkLogin-Technologie erstellt. Niemand (nicht einmal das AresRPG-Team) kann auf
-    deine Mittel zugreifen oder sie bewegen. Wichtig: Dieses Wallet ist nur für AresRPG-Aktivitäten
-    gedacht. Lagere hier keine großen Beträge."
-  faq_balance: Ich habe SUI gesendet, aber mein Guthaben hat sich nicht aktualisiert?
-  faq_balance_answer: Keine Sorge. Unser Aktualisierungssystem kann vorübergehend
-    langsam sein. Überprüfe, ob du SUI an die richtige Adresse gesendet hast (kopiere
-    sie von oben), und wenn es immer noch nicht angezeigt wird, kontaktiere das Team
-    auf Discord mit deiner Transaktions-ID für weitere Hilfe.
   add_funds: Guthaben aufladen
   testnet_faucet_title: Testnet-SUI
   testnet_faucet_body: AresRPG läuft im Sui Testnet. Testnet-SUI ist kostenlos und hat keinen Geldwert. Fordere Token beim offiziellen Sui Faucet an.
   testnet_faucet_action: Sui Faucet öffnen
-  how_to_pay: Wie möchtest du bezahlen?
-  add_funds_desc: Wähle deine bevorzugte Zahlungsmethode. SUI wird direkt in dein
-    Wallet geliefert.
-  method_paypal: PayPal
-  method_paypal_desc: Mit deinem PayPal-Konto bezahlen
-  method_apple_pay: Apple Pay
-  method_apple_pay_desc: Mit Face ID / Touch ID bezahlen
-  method_google_pay: Google Pay
-  method_google_pay_desc: Mit deinem Google-Konto bezahlen
-  method_bank: Banküberweisung
-  method_bank_desc: SEPA (EU) oder ACH (US)
-  paypal_note: In den USA, UK und den meisten europäischen Ländern über MoonPay verfügbar
-  card_note: Wähle einen Anbieter unten. Alle akzeptieren Visa und Mastercard
-  bank_note: Niedrigste Gebühren (~1%). SEPA für Europa, ACH für die USA.
-  steps_paypal: 1. Klicke auf den Link unten  2. Wähle PayPal als Zahlung  3. Gib
-    den Betrag ein. SUI landet in deinem Wallet
-  steps_wallet: Sende SUI an deine Wallet-Adresse unten. Es kommt in Sekunden an.
-  advanced_exchange: 'Erweitert: Auf einer Börse kaufen'
-  age_notice: Alle Zahlungsanbieter verlangen, dass du mindestens 18 Jahre alt bist.
   send:
     button: Senden
     title: SUI senden
@@ -1275,18 +1134,12 @@ wallet_legacy:
     suins_resolving: Name wird aufgelöst…
     suins_resolved: 'Name aufgelöst: {{name}}'
     err:
-      recipient_not_found: Kein Spieler namens {{name}} gefunden.
-      recipient_no_wallet: '{{name}} hat noch kein Wallet in der Web-App verknüpft.
-        Bitte sie/ihn, sich zuerst auf aresrpg.world anzumelden.'
       self_send: Du kannst kein SUI an dein eigenes Wallet senden.
       invalid_address: Die eingegebene Adresse ist keine gültige Sui-Adresse.
       insufficient_balance: Nicht genug SUI in deinem Wallet für diesen Transfer.
       rate_limited: Zu viele Transfers. Warte eine Minute und versuche es erneut.
       tx_failed: Transaktion fehlgeschlagen. Es wurden keine Mittel bewegt.
       user_rejected: Die Signatur wurde in deinem Wallet abgelehnt.
-      recipient_required: Empfänger erforderlich
-      suins_not_found: Kein SuiNS-Name „{{name}}” gefunden.
-      amount_positive: Gib einen Betrag größer als 0 ein.
       amount_invalid: Das ist kein gültiger Betrag.
     send_confirm: Senden
     drain_hint: MAX leert dein Wallet — die Netzwerkgebühr wird vom Transfer abgezogen.
@@ -1310,7 +1163,6 @@ wallet_send_shared:
   transaction: Transaktion
 
 encyclopedia_page:
-  tokenomics_tab: Tokenökonomie
   world_locations: 'Orte'
   world_search_places: 'Biom, Stadt, Monster oder Ressource suchen…'
   world_entry: 'Zugang St. {{level}}'
@@ -1321,9 +1173,6 @@ encyclopedia_page:
   world_gatherables: 'Sammelressourcen'
   world_gather_level: '{{job}} · Beruf St. {{level}}'
   world_protector: 'Beschützer'
-  minimum: MIN
-  maximum: MAX
-  terrain_seed: Geländeschlüssel
   sea_level: Meereshöhe
   world_role:
     trash: Gewöhnlich
@@ -1336,23 +1185,17 @@ encyclopedia_page:
     herbalist: Kräuterkundler
     miner: Bergmann
   world_resource_tier: T{{tier}}
-  world_address_copied: Kopiert!
   search_items: GEGENSTÄNDE SUCHEN...
   search_mobs: MONSTER SUCHEN...
   all_families: ALLE FAMILIEN
   elements_filter: ELEMENTE
-  advanced_filters: ERWEITERTE FILTER
-  no_entries: Keine Einträge gefunden
   select_item: Wähle einen Gegenstand für Details
   select_mob: Wähle ein Monster für Details
   select_class: Wähle eine Klasse für Details
-  loading_details: Details werden geladen...
-  loading_encyclopedia: Enzyklopädie wird geladen...
   items: Gegenstände
   mobs: Monster
   pets: Haustiere
   classes: Klassen
-  gameplay_tab: Gameplay
   jobs_tab: Berufe
   search_jobs: BERUFE SUCHEN...
   select_job: BERUF AUSWAHLEN
@@ -1376,12 +1219,8 @@ encyclopedia_page:
     HANDYMAN: 'Handwerker fertigen Werkzeuge, Schlüssel und Zwischenprodukte.'
     ALCHEMIST: 'Alchemisten fertigen Tränke und Zwischenprodukte.'
     BAKER: 'Bäcker fertigen Brote und Zwischenprodukte.'
-  dungeons_tab: DUNGEONS
-  search_dungeons: DUNGEONS SUCHEN...
-  select_dungeon: DUNGEON AUSWÄHLEN
   showing_count: '{{count}} VON {{total}}'
   sort_name: NAME A-Z
-  clear_filters: ALLE LÖSCHEN
   no_results: KEINE GEGENSTÄNDE ENTSPRECHEN DEN FILTERN
   filter_by_category: NACH KATEGORIE
   filter_by_stat: NACH ATTRIBUT
@@ -1389,23 +1228,11 @@ encyclopedia_page:
   filter_by_job: NACH HANDWERKSBERUF
   filter_by_world: NACH WELT
   filter_by_mob_family: NACH MONSTERFAMILIE
-  filter_biome: BIOM
-  filter_city: STADT
-  group_armor: RÜSTUNG
   group_weapons: WAFFEN
-  group_accessories: ZUBEHÖR
-  group_pets: BEGLEITER
-  group_runes: RUNEN
-  group_relics: RELIKTE
-  group_tools: WERKZEUGE
-  group_consumables: VERBRAUCHSGÜTER
   group_raw_resources: ROHSTOFFE
   group_gatherable_resources: SAMMELBARE RESSOURCEN
   group_intermediary_resources: ZWISCHENRESSOURCEN
   group_pet_food_resources: HAUSTIERFUTTER
-  item_category_pet_food: HAUSTIERFUTTER
-  stats_filter: STATS
-  filter_life_steal: LEBENSRAUB
   gameplay:
     game_mechanics: SPIELMECHANIKEN
     section_combat: KAMPF
@@ -1563,47 +1390,26 @@ encyclopedia_page:
   dropped_by: GEDROPPT VON
   recipe: REZEPT
   price_history: PREISVERLAUF
-  no_price_data: Noch keine Preisdaten
-  no_recipe: Keine Rezeptdaten verfügbar
   ingredient_of: ZUTAT VON
-  no_ingredient_of: In keinem Rezept verwendet
   no_drops: Keine bekannten Dropquellen
-  pet_stats: HAUSTIERWERTE
   pet_diet: HAUSTIERNAHRUNG
-  food_sources: NAHRUNGSQUELLEN
-  stat_bonuses_max: STAT-BONI (BEI MAX. STÄRKE)
   characteristics: EIGENSCHAFTEN
   damages: Schaden
   range_to: bis
   level_short: Lv. {{level}}
   no_diet: Keine Nahrungsinformationen
-  newborn: Neugeboren
-  max_power: Max. Stärke
   back_to_list: Zurück zur Liste
   view_all: ALLE
   item_type: TYP
-  view_by_zone: NACH ZONE
   view_by_level: NACH LEVEL
-  view_by_family: NACH FAMILIE
-  unknown_family: Unbekannte Familie
   showing_mobs: '{{count}} VON {{total}} MONSTERN'
   no_mobs_match: KEINE MONSTER ENTSPRECHEN IHREN FILTERN
-  boss_only: NUR BOSSE
-  clear_all: ALLE LOSCHEN
-  all_jobs: ALLE BERUFE
   sort_level_asc: 'STUFE ↑'
   sort_level_desc: 'STUFE ↓'
   sort_name_asc: NAME A-Z
-  sort_newest: NEUESTE
   level_bracket: 'STUFE {{range}}'
-  unknown_zone: UNBEKANNT
-  unlocks_at_level: FREISCHALTEN BEI LV. {{level}}
   level: STUFE
-  aoe_radius: AoE-RADIUS
   effects: EFFEKTE
-  life_cost: Lebenskosten
-  duration_short: 'DAU: {{duration}}s'
-  coming_soon: DEMNÄCHST
   health: LEBEN
   spells_count: ZAUBER ({{count}})
   mob_spells: ZAUBER
@@ -1624,13 +1430,7 @@ encyclopedia_page:
   spell_n: ZAUBER {{n}}
   range: REICHWEITE
   range_modifiability: REICHWEITENÄNDERUNG
-  no_spells_minted: Keine Zauber on-chain geprägt
-  xp_suffix: +{{xp}} EP
-  boss_badge: BOSS
-  archi_badge: ARCHI
-  recommended_short: Empf. {{level}}
   level_range: Lv. {{min}}-{{max}}
-  up_to_plus: Bis zu +{{val}}
   element:
     fire: Feuer
     water: Wasser
@@ -1652,23 +1452,13 @@ encyclopedia_page:
   characteristic_costs_desc: Natürliche Punkte folgen der Leiter dieser Klasse. Ausrüstung ändert die Kosten nicht.
   characteristic_cost_band: '{{cost}} Pkt. → +{{gain}} · ≤{{cap}}'
   characteristic_cost_unlimited: '{{cost}} Pkt. → +{{gain}} · unbegrenzt'
-  turns_value: '{{n}} RUNDEN'
   targeting: ZIELERFASSUNG
-  effect_zone: WIRKUNGSBEREICH
   line_of_sight: SICHTLINIE
-  los_required: ERFORDERLICH
-  los_not_required: NICHT ERFORDERLICH
   target_cell: ZIELFELD
   target_cell_empty: MUSS LEER SEIN
-  target_cell_any: BELIEBIG (LEER ODER BESETZT)
   cast_line: WIRKLINIE
-  cast_line_straight: NUR GERADE LINIE
-  cast_line_free: FREIES ZIELEN
   critical: KRITISCH
   crit_chance: KRIT-CHANCE
-  crit_chance_value: 1 ZU {{n}}
-  on_crit: BEI KRITISCH
-  proc_chance: '{{n}}% CHANCE'
   aoe_shape:
     point: EINZELZIEL
     circle: KREIS {{size}}
@@ -1678,28 +1468,13 @@ encyclopedia_page:
     ring: RING {{size}}
     allmap: GANZES SPIELFELD
     cone: KEGEL {{size}}
-  no_items_onchain: Noch keine Item-Vorlagen on-chain
-  no_mobs_onchain: Noch keine Kreaturen on-chain
-  obtention_crafted: Herstellbar
-  obtention_dropped_by: Fällt von {{count}} Monstern
-  obtention_unknown: Herkunft unbekannt
   total_supply: Gesamtmenge
-  marketcap: Marktwert
-  marketcap_unknown: Unbekannt
   worlds_tab: Welten
-  search_worlds: Weltnamen suchen…
-  no_worlds: Keine Welten on-chain
   select_world: Welt auswählen
-  world_level_unknown: Levelbereich noch nicht verfügbar
   world_biomes: Biome
-  world_no_mobs: Keine Monster bekannt
   world_cities: Städte
   world_no_resources: Keine Ressourcen bekannt
-  world_gap_note: Noch nicht vom RPC bereitgestellt
   world_dungeon: Verlies
-  world_dungeon_room: Raum {{n}}
-  world_stat_lean: Statuslastigkeit
-  world_appears_in: 'Erscheint in:'
   found_in: ZU FINDEN IN
   item_descriptions:
     abyssal_blood_wheat: ''
@@ -1843,7 +1618,6 @@ encyclopedia_page:
     wither_concentrate: ''
     wither_petal: ''
     witherbloom: ''
-out_of_sui_body: Dir ist das SUI für Transaktionsgebühren ausgegangen. Bitte lade dein Wallet auf, um weiterzuspielen.
 characters_page:
   inventory_selection: '{{count}} ausgewählt · Umschalt-Klick zum Auswählen von Ausrüstung'
   crush_cta_count: 'Zerschlagen ({{count}})'
@@ -1877,7 +1651,6 @@ characters_page:
   level: 'Stufe {{level}}'
   experience: Erfahrung
   equipment_head: Ausrüstung
-  equipped_totals: Angelegte Summen
   no_gear_equipped: Keine Ausrüstung angelegt
   bag_equipment: Ausrüstung
   bag_consumables: Verbrauchsgüter
@@ -1905,29 +1678,21 @@ characters_page:
   refusal_item_listed: Dieser Gegenstand steht zum Verkauf
   refusal_unavailable: 'Dieser Charakter oder Gegenstand hat sich geändert oder ist nicht verfügbar. Versuche es im Ruhezustand erneut.'
   points_to_assign: Punkte zu verteilen
-  spend_hint: Verteile Punkte auf die sechs Attribute und bestätige dann
   reset: Zurücksetzen
   confirm: Bestätigen
   tx_pending: Wird bestätigt…
-  stats_pending: Punkte werden verteilt…
-  stats_success: Punkte verteilt
   health: Leben
   action: Aktion
   movement: Bewegung
   characteristics: Attribute
   resistances: Resistenzen
   secondary: Sekundär
-  element_fire: Feuer
-  element_water: Wasser
-  element_earth: Erde
-  element_air: Luft
   add_point: 'Einen Punkt zu {{stat}} hinzufügen'
   remove_point: 'Einen Punkt von {{stat}} entfernen'
   grimoire: Grimoire
   spell_points: Zauberpunkte
   unlocked: '{{unlocked}} / {{total}} freigeschaltet'
   unlocks_at: 'Ab Stufe {{level}}'
-  unlock_line: 'Stufe {{level}}'
   lv_of: '{{current}} / {{max}}'
   locked: Gesperrt
   mastered: Gemeistert
@@ -1966,7 +1731,6 @@ characters_page:
   no_runes: Keine Runen im Beutel
   menu_feed: Füttern
   menu_consume: Verbrauchen
-  menu_crush: Zerschlagen
   menu_destroy: Zerstören
   menu_view_recipes: Rezepte ansehen
   menu_explorer: Im Explorer ansehen
@@ -1988,7 +1752,6 @@ characters_page:
   feed_unavailable: 'Dieses Haustier ist nicht mehr verfügbar.'
   claim_success: Belohnung abgeholt
   crush_title: Ausrüstung zerschlagen
-  crush_success: Ausrüstung zerschlagen
   crush_result_title: Ergebnis des Zerschlagens
   crush_result_empty: Mehr Glück beim nächsten Mal.
   destroy_title: Gegenstand zerstören
@@ -2007,8 +1770,6 @@ characters_page:
     movement: 'BP'
     action: 'AP'
     range: 'Reichweite'
-    critical_chance: 'Kritische Chance'
-    critical_outcomes: 'Kritische Chance'
     vitality: 'Vitalität'
     wisdom: 'Weisheit'
     strength: 'Stärke'
@@ -2017,7 +1778,6 @@ characters_page:
     agility: 'Agilität'
     heal: 'Heilung'
     critical_hit: 'Kritischer Treffer'
-    percent_damage: 'Schaden'
     raw_damage: 'Rohschaden'
     fire_resistance: 'Feuerwiderstand'
     water_resistance: 'Wasserwiderstand'
@@ -2030,7 +1790,6 @@ characters_page:
     level: 'Lv. {{level}}'
     adventurer: 'Abenteurer'
     points_to_assign: 'Zu verteilende Punkte'
-    spend_hint: 'Verteile sie auf deine Eigenschaften'
     reset: 'Zurücksetzen'
     health: 'Leben'
     action: 'Aktion'
@@ -2058,7 +1817,6 @@ characters_page:
     point_cost: '{{cost}} Pkt. → +{{gain}}'
     tx_success: 'Stat-Punkte verteilt'
   spells:
-    range_modifiable: 'Veränderbare Reichweite'
     no_character: 'Kein Charakter ausgewählt'
     select_prompt: 'Zauber auswählen'
     level: 'Stufe {{level}}'
@@ -2079,25 +1837,13 @@ characters_page:
     unlimited: 'Unbegrenzt'
     description: 'Beschreibung'
     effects: 'Effekte'
-    levels_head: 'Stufen'
     mastered: 'Gemeistert'
     upgrade_success: '{{spell}} verbessert!'
     upgrading: 'Wird verbessert…'
     level_up_spell: 'Zauber verbessern'
     pts: '{{count}} Pkt'
-    pts_one: '{{count}} Pkt'
-    pts_other: '{{count}} Pkt'
     requires_lv: 'Benötigt Stufe {{level}}'
     no_points: 'Keine Punkte'
-    tag_self: 'Selbst'
-    tag_melee: 'Nahkampf'
-    tag_ranged: 'Fernkampf'
-    tag_zone: 'Zone'
-    tag_line_of_sight: 'Sichtlinie'
-    el_fire: 'Feuer'
-    el_water: 'Wasser'
-    el_earth: 'Erde'
-    el_air: 'Luft'
     buff: 'Verstärkung'
     utility: 'Unterstützung'
     heal: 'Heilung'
@@ -2105,13 +1851,10 @@ characters_page:
     element: 'Element'
     damage: 'Schaden'
     turns: 'Züge'
-    crit_val: 'krit {{value}}'
-    range_fixed: 'FEST — REICHWEITE-STAT WIRKT NICHT'
   jobs:
     level_up_title: Berufsstufe
     level_up_reached: Stufe erreicht
     level_up_character: '{{name}} hat sich verbessert'
-    level_up_progress: 'Stufe {{before}} → {{after}}'
     level_up_continue: Weiter
     category:
       gathering: 'Sammeln'
@@ -2130,13 +1873,10 @@ characters_page:
       yield: 'Ertrag'
       xp: 'XP'
       unlocks_at: '{{name}} (freigeschaltet ab Level {{level}})'
-      gather_detail: '{{name}} · Sammeln {{gather}}s · Respawn {{respawn}}s'
       locked: 'gesperrt'
     lv_badge: 'St {{level}}'
     tier_badge: 'T{{tier}}'
     craft:
-      recipe_head: 'Rezept'
-      recipe_not_seeded: 'Dieses Rezept ist noch nicht im Content enthalten.'
       ingredients_head: 'Zutaten'
       requires_level: 'Erfordert {{job}} St {{required}} (du bist St {{level}})'
       not_enough: 'Nicht genug Zutaten'
@@ -2150,9 +1890,6 @@ characters_page:
       craft_result: '{{successes}} / {{attempts}} {{name}} hergestellt'
       locked_level: 'Gesperrt · St {{level}}'
     detail:
-      close_aria: 'Objektdetails schließen'
-      item_not_seeded: 'Dieser Gegenstand ist nicht im Content enthalten.'
-      tool_label: 'Werkzeug'
       crafts_label: 'Herstellung: {{covers}}'
       xp_progress: '{{current}} / {{needed}} XP'
       gather_time: 'Sammelzeit: {{seconds}} s'
@@ -2449,7 +2186,6 @@ item_categories:
   tool: 'Werkzeug'
   relic_slot: 'Relikt {{number}}'
 
-kares: 'Staking'
 kares_page:
   ledger_intro: 'Der Token für AresRPG-Belohnungen, Staking und Kisten. Einmal ausgegeben: Verbrennungen verringern das Angebot.'
   buy_aftermath: 'Auf Aftermath kaufen'
@@ -2501,7 +2237,6 @@ kares_page:
   upgradeability_note: 'Die Belohnungsverträge bleiben bis zur endgültigen Sperrung des Projekts aktualisierbar. Neue Token können weiterhin nicht geprägt werden.'
   claim_batch: '{{count}} von {{total}} Positionen beanspruchen'
   withdraw_batch: 'Bis zu {{count}} Positionen pro Auszahlung. Wiederholen, um den restlichen Einsatz abzuheben.'
-  token_sale: 'Token-Verkauf'
   locked_liquidity: 'Gesperrte Liquidität'
   stake_more: 'Mehr staken'
   additional_daily: 'Zusätzlich / Tag'
@@ -2525,34 +2260,30 @@ kares_page:
   no_wallet: 'Installiere eine Sui-Wallet, um teilzunehmen.'
   refresh: 'Aktualisieren'
   loading: 'On-Chain-Daten werden geladen…'
-  pending: 'Transaktion wird bestätigt…'
   confirmed: 'Transaktion bestätigt'
   amount: 'Betrag'
   balance: 'Verfügbares Guthaben'
   amount_invalid: 'Gib einen positiven Betrag mit höchstens 9 Nachkommastellen ein.'
   insufficient: 'Der Betrag übersteigt dein verfügbares Guthaben.'
-  gas_note: 'Behalte SUI für Transaktionsgebühren.'
   testnet: 'Testnet · nur Testguthaben'
-  back_game: 'AresRPG entdecken'
-  staking_title: Dein Stake. Dein Anteil.
   your_stake: 'Dein Stake'
   claimable: 'Aufgelaufene Belohnungen'
   stake: 'KARES staken'
   withdraw: 'Stake abheben'
   claim_rewards: 'Belohnungen abholen'
   inactive: 'Staking öffnet, sobald seine Reserven finanziert sind.'
-  position: 'Position'
   tokenomics: 'KARES-Tokenökonomie'
   tabs_label: 'KARES-Bereiche'
   tab_tokenomics: 'Tokenomics'
   tab_staking: 'Staking'
-  signin_title: 'Zum Staken anmelden'
-  signin_body: 'Staking nutzt dein Spielkonto. Melde dich mit Google an, um deinen Einsatz zu sehen und deine Belohnungen abzuholen.'
+  staking_line: 'KARES und SUI verdienen'
+  tokenomics_line: 'Angebot, Burns und Belohnungspools'
+  signin_body: 'Dieser Bereich nutzt dein Spielkonto. Melde dich mit Google an, um ihn zu öffnen.'
   community: 'PvP-Wettbewerbe und saisonale Ranglisten'
   team: 'Team-Zuteilung'
   five_years: 'Staking-Belohnungen der Gemeinschaft'
   mastery_title: 'Kisten'
-  mastery_note: 'Kaufe Kisten im Spiel mit KARES. Die Zahlung verbrennt KARES dauerhaft beim Kauf, nicht beim Öffnen.'
+  mastery_note: 'Kaufe Kisten mit KARES im Bereich Meisterschaft der Staking-Seite. Die Zahlung verbrennt KARES dauerhaft beim Kauf, nicht beim Öffnen.'
   rewards_note: 'Belohnungen werden über 1.825 aktive Tage freigegeben. Jeder kann KARES oder SUI spenden: Die Verteilung beginnt am nächsten aktiven Tageswechsel und dauert 30 aktive Tage, ohne ältere Zeitpläne zu verlängern. Spenden sind nicht rückforderbar. Ohne Einsätze pausiert die Uhr; verdiente Belohnungen bleiben abrufbar.'
   revenue_note: '20 % der eingesammelten Marktplatzgebühren fließen in SUI-Staking-Belohnungen. Die Höhe hängt von Einnahmen und teilnehmendem Stake ab.'
   points: 'Meisterschaftspunkte'
@@ -2562,11 +2293,8 @@ kares_page:
   community_detail: 'Diese Reserve finanziert PvP-Wettbewerbe und Preise für saisonale Ranglisten. Die Schatzkammer verteilt freigegebene Token manuell.'
   supply_detail: 'Einmal ausgegeben. Keine weitere Prägung. Verbrennen verringert das Angebot.'
   emissions_detail: 'Alle Belohnungen verwenden vorhandene Token. Auszahlungen prägen keine neuen Token.'
-  confirmed_refresh: 'Transaktion bestätigt. Aktualisiere, um deine neuen Guthaben zu laden.'
   staking_unavailable: 'Staking ist in diesem Netzwerk noch nicht verfügbar.'
   combat_rewards: 'Bossbelohnungen'
-
-  combat_detail: 'Bosslevel bestimmen eine Prämie, die siegreiche Charaktere gleichmäßig teilen. Die Grenze beträgt {{cap}} KARES pro Tag ab Einrichtung. Die Epochenaktivität passt die Prämie an. Ruhige Tage erzeugen keinen Nachholanspruch; Spenden verlängern die Reserve.'
 
   error_generic: 'Die Aktion konnte nicht abgeschlossen werden.'
   error_rejected: 'Die Anfrage wurde abgebrochen.'
@@ -2597,7 +2325,6 @@ leaderboard_page:
   feeding: 'Tierfütterung'
   gathering: 'Sammeln'
   category: 'Kategorie'
-  loading: 'Wird geladen…'
   user: 'Nutzer'
   score: 'Punkte'
   you: 'Du'
@@ -2789,11 +2516,13 @@ title_names:
   title_fudbuster: 'FUD-Jäger'
   title_pug_paladin: 'Mops-Paladin'
   title_enforcer: 'Der Vollstrecker'
+  title_operator_vesper: 'Vesper-Operator'
+  title_operator_dusk: 'Dusk-Operator'
+  title_operator_blood_ivory: 'Blood Ivory-Operator'
 ui:
   view_on_suivision: Auf SuiVision ansehen
   funding_game_wallet: Spiel-Wallet
   funding_external_wallet: Andere Wallet
-  agent_wallet: 'Agent-Wallet'
   wallet_tabs: 'Wallet'
   wallet_game: 'Spiel'
   wallet_bot: 'Bot'
@@ -2828,8 +2557,9 @@ ui:
   agent_needs_sui: 'Dein Agent braucht SUI zum Spielen. Lade Guthaben auf und wiederhole deine Aktion.'
   agent_funding_unverified: 'Der Empfänger kann nicht überprüft werden. Aktualisiere den Rückruf, bevor du Guthaben hinzufügst.'
   agent_watch: 'Agenten beobachten'
+  agent_recall: 'Zurückholen'
+  agent_transfer_unavailable: 'Lege die Ausrüstung dieses Charakters ab und beende seinen Kampf vor der Übertragung.'
   agent_watching: 'Agent wird beobachtet'
-  agent_watch_empty: 'Keine Charaktere zum Beobachten.'
   agent_watch_failed: 'Dieser Agent kann nicht beobachtet werden. Versuche es erneut.'
   portrait_backdrop: 'Hintergrund'
   portrait_transparent: 'Transparent'
@@ -2848,21 +2578,13 @@ ui:
   portrait_failed: 'Porträt oder Link nicht verfügbar. Du kannst den Link unten auswählen.'
   portrait_close: 'Schließen'
   portrait_preview: 'Charakterporträt'
-  agent_asset_proceeds: 'Kioskerlöse'
-  agent_asset_collect: 'An Multisig auszahlen'
-  agent_asset_delist: 'Angebot stornieren'
   agent_asset_reserved: 'Exklusives Angebot · PurchaseCap erforderlich'
   agent_asset_unconfigured: 'Für diese Bereitstellung nicht konfiguriert'
-  agent_asset_fee_budget: 'Maximales Gasbudget'
   agent_label: 'Agent'
   agent_kiosk_badge: 'KIOSK'
   agent_kiosk: 'Agenten-Kiosk'
-  agent_coin_direct: 'Coins werden direkt in einer Transaktion übertragen. Der Absender zahlt die Gasgebühren.'
   agent_pair_for_deposit: 'Bestätige vor einer Einzahlung einen dauerhaften Agenten-Signierer.'
-  agent_inventory_connect: 'Prüfe die vollständige Adresse deines Agenten, um sein Inventar zu nutzen.'
   agent_transfer_interrupted: 'Ein vorheriger Übertragungsversuch benötigt deine Bestätigung zum Fortfahren.'
-  agent_transfer_sender: 'Absender'
-  agent_source_balance: 'Guthaben des Absenders'
   agent_inventory: 'Agenteninventar'
   agent_asset_available: 'Verfügbar'
   agent_asset_listed: 'Gelistet · zuerst Angebot abbrechen'
@@ -2870,32 +2592,12 @@ ui:
   agent_asset_sui: 'SUI-Betrag'
   agent_asset_kares: 'KARES-Betrag'
   agent_asset_reserve: 'SUI nach Gebühren behalten'
-  agent_asset_positions: 'Gestakte KARES'
-  agent_asset_unstake: 'An Multisig auszahlen'
-  agent_asset_owned: 'Andere eigene Objekte (nur lesen)'
-  agent_asset_incoming: 'Eingehende Gegenstände'
-  agent_asset_scope: 'Wähle genaue Gegenstände und Beträge. Stapel werden vollständig übertragen. Ausrüstung wird zuerst abgelegt; Angebote müssen vorher storniert werden. Gestakte KARES auszahlen, dann vor dem Transfer aktualisieren. Behalte SUI für weitere Schritte. Andere Objekttypen sind nur lesbar; Kämpfe müssen zuerst abgeschlossen sein.'
-  agent_setup_prompt: 'Richte meinen AresRPG-Agenten gemäß {guide} mit diesem privaten temporären Link ein: {url}. Sende den öffentlichen Nachweis automatisch zurück. Dies erlaubt keine Vermögensübertragungen oder Spielaktionen.'
   agent_cancel: 'Abbrechen'
   agent_pair_connect: 'Verbinden'
-  agent_setup_request: 'Einrichtungsanfrage'
-  agent_pair_failed_title: 'Verbindung fehlgeschlagen'
-  agent_pair_pending: 'Warte auf deinen Assistenten…'
-  agent_pair_failed: 'Die Einrichtung ist abgelaufen oder fehlgeschlagen. Verbinde erneut.'
-  agent_pair_verified: 'Agentenschlüssel bestätigt. Dies bestätigt weder die Serveranmeldung noch den Charakterbesitz.'
-  agent_environment: 'Wähle einen Assistenten mit einer dauerhaft verfügbaren Agentenumgebung, etwa ChatGPT dots oder Grok Bot.'
-  agent_pair_ephemeral: 'Nur Prüfung des öffentlichen Schlüssels. Dieser temporäre Schlüssel geht beim Beenden des Agentenprozesses verloren. Sende niemals Vermögenswerte an diese Identität.'
-  agent_pair_instructions: 'Sende diese Anfrage an deinen Assistenten. Das Ergebnis erscheint hier automatisch.'
-  agent_pair_blocked: 'Diese Wallet stellt keine öffentliche Google-Kennung zur Kopplung bereit. Melde dich mit Google an, um eine öffentliche Anfrage zu erstellen.'
   agent_copy_request: 'Verbindungs-URL kopieren'
   agent_copy_failed: 'Kopieren fehlgeschlagen. Markiere und kopiere die Anfrage oben manuell.'
-  agent_handoff_request: 'Bereite {{provider}} für Connect Your Agent gemäß {{url}} vor. Melde fehlende Signierkonfiguration und frage bei Bedarf nach dem temporären Link. Dies erlaubt weder das Erstellen von Zugangsdaten noch Vermögensübertragungen oder Spielaktionen.'
   agent_connect_your: 'Verbinde deinen Agenten'
-  agent_page_body: 'Lass einen KI-Assistenten Helden für dich spielen. Er spielt aus seiner eigenen Bot-Wallet, einer Multisig, aus der dein Google-Konto Vermögenswerte jederzeit zurückholen kann.'
   agent_page_signin: 'Melde dich mit Google an, um deinen Agenten und seine Bot-Wallet einzurichten.'
-  agent_page_world: '3D-Welt öffnen'
-  agent_bootstrap: 'Einrichtungsanleitung öffnen'
-  agent_character_offer_hint: 'Dies sendet ein Angebot. Dein Agent übernimmt den Charakter separat. Es gelten die üblichen Gebühren.'
   agent_connected: 'Agent verbunden'
   agent_disconnect_title: 'Trennen und Vermögen zurückholen?'
   agent_disconnect_body: 'Stoppe den Bot und hole seine Charaktere, Gegenstände und Guthaben in deine Wallet zurück. Laufende Kämpfe und Dungeons werden aufgegeben. Deine Wallet kann Gebühren übernehmen.'
@@ -2904,25 +2606,10 @@ ui:
   agent_return_complete: 'Bot getrennt. Vermögen zurückgeholt.'
   agent_return_resume: 'Rückgabe fortsetzen'
   agent_return_needs_sui: 'Füge SUI hinzu, um die Rückgabegebühren zu decken.'
-  agent_hint_desktop: 'Klicke mit der rechten Maustaste auf das Porträt oder den Tab deines Charakters und wähle An Agent senden.'
-  agent_hint_create: 'Erstelle über den normalen Bildschirm einen Charakter und öffne dann sein Aktionsmenü, um ihn an deinen Agenten zu senden.'
   agent_sending: 'Wird gesendet…'
-  agent_pair_storage_failed: 'Deine Wiederherstellungsidentität konnte nicht gespeichert werden. Erlaube Browserspeicher und verbinde dich erneut.'
-  agent_pair_disposable: 'Dieser Agent verwendet temporäre Zugangsdaten. Bitte ihn, dauerhaften Speicher einzurichten, und verbinde dich erneut.'
-  agent_signer_persistent: 'Dauerhafter Transaktionssignierer verifiziert.'
-  agent_hosted_intro: 'Dein Assistent nutzt MCP ohne Signaturschlüssel. Der AresRPG-Dienstschlüssel und deine Google-Wallet können jeweils allein die Vermögenswerte des Bots bewegen, ohne Zustimmung des anderen.'
-  agent_hosted_unavailable: 'Du brauchst dein Google-Spielwallet und einen konfigurierten HTTPS-Botdienst. Wiederherstellung bleibt im Inventar verfügbar.'
   agent_hosted_ambiguous: 'Mehrere gehostete Wallets müssen geprüft werden. Keine Wallet wurde ausgewählt.'
-  agent_other_wallets: 'Andere gespeicherte Wallets'
-  agent_hosted_pending: 'Verbindung wird hergestellt…'
-  agent_hosted_authenticate: 'Mit Google-Wallet authentifizieren'
-  agent_hosted_ready: 'Einrichtung abgeschlossen'
   agent_hosted_consent: 'Assistenten verbinden'
   agent_checking: 'Agentenstatus wird geprüft…'
-  signing_in: 'Du wirst angemeldet…'
-  telegram_link_title: 'Telegram verknüpfen'
-  telegram_link_signin: 'Melde dich mit Google an, um diesen Telegram-Chat mit deinem Spielkonto zu verknüpfen.'
-  telegram_link_failed: 'Telegram konnte nicht verknüpft werden. Gehe zurück zu Telegram und melde dich erneut an.'
   agent_hosted_review: 'Ein Assistent bittet um Zugriff auf deinen Bot. Fahre fort, um die Anfrage zu sehen; nichts wird geteilt, bevor du verbindest.'
   agent_hosted_authority: 'Kann spielen und das Vermögen dieses Bots ausgeben.'
   agent_hosted_read_access: 'Kann diesen Bot ansehen.'
@@ -2949,9 +2636,7 @@ ui:
   agent_guide_acknowledge: 'Ich verstehe und möchte fortfahren'
   agent_guide_create_plugin: 'Als Plugin erstellen'
   agent_guide_continue: 'Weiter'
-  agent_hosted_recovery: 'Nutze Inventar und Rückruf zur unabhängigen Rückholung. Dadurch verliert der Dienstschlüssel nicht die Kontrolle über die beim Bot verbliebenen Vermögenswerte.'
   agent_choose: 'Wähle deinen Agenten'
-  agent_unavailable: 'Die Kopplung ist noch nicht verfügbar. Kein Agent ist verbunden.'
   agent_setup: 'Agenten einrichten'
   agent_send: 'An Agenten übergeben'
   feedback_question: 'Was erschwert dir das Weiterspielen?'
@@ -2968,58 +2653,26 @@ ui:
   equipment_comparison: 'Attributänderungen beim Ausrüsten'
   equipment_replacing: 'Ersetzt {{name}}'
   equipment_unchanged: 'Keine Änderung der Attributboni'
-  preview_only: 'Interaktive Vorschau · keine Transaktion wird gesendet'
-  inspect_details: 'Ansehen'
-  design_minimap: 'Minikarte'
-  design_party_invitation: 'Gruppeneinladung'
-  design_trade_invitation: 'Handelseinladung'
   progression_rewards: 'Belohnungen'
   inventory_selected_count: '{{count}} ausgewählt'
   inventory_select: 'Auswählen'
   inventory_deselect: 'Abwählen'
   inventory_use: 'Benutzen'
   attack: 'Angreifen'
-  character_summary: 'Übersicht'
   character_details: 'Details'
-  allocate_points: 'Verteilen'
   inventory_search: 'Inventar durchsuchen…'
   design_titles: 'Titel'
-  design_no_title: 'Kein Titel'
-  design_library: 'Designwerkstatt'
-  design_controls: 'Bedienelemente'
-  design_components: 'Komponenten'
-  design_prebuilt: 'Vorgefertigt'
-  design_windows: 'Fenster'
-  design_feedback: 'Rückmeldung'
-  design_tokens: 'Tokens'
-  design_dialog: 'Dialog öffnen'
-  design_disabled: 'Nicht verfügbar'
-  design_details: 'Details'
-  design_description: 'Gemeinsame Spielkomponenten. Teste lokale Beispiele und ihre Zustände und anpassbaren Layouts.'
   design_volume: 'Lautstärke'
-  design_motion: 'Animation'
-  design_search: 'Suchen'
-  design_equipment_hint: 'Wähle einen Gegenstand zum Ausrüsten. Tippe ausgerüstete Gegenstände zum Ablegen an.'
   design_equip: 'Ausrüsten'
   design_combat: 'Kampf'
-  design_journal: 'Journal und Fortschritt'
-  design_complete: 'Abgeschlossen'
-  design_viewport: 'Vorschaugröße'
-  design_desktop: 'Desktop'
-  design_mobile: 'Mobil'
   leave_game_title: 'Möchtest du das Spiel verlassen?'
   stay_in_game: 'Weiterspielen'
   leave_game_confirm: 'Zur Startseite'
   mobile_move: 'Bewegen'
   mobile_jump: 'Springen'
-  mobile_chat: 'Chat'
-  mobile_party: 'Gruppe'
   mobile_confirm_action: 'Aktion bestätigen'
   mobile_item_actions: 'Gegenstandsaktionen'
   mobile_unequip: 'Ablegen'
-  mobile_use_item: 'Benutzen / ausrüsten'
-  mobile_language: 'Sprache'
-  mobile_menu: 'Menü'
   mobile_rotate_title: 'Drehen und spielen'
   mobile_rotate: 'Drehe dein Gerät, um im Querformat zu spielen.'
   character: 'Charakter'
@@ -3463,9 +3116,6 @@ tournament_page:
   reason_finished: Keine Belohnungen abzuholen
   reason_cancelled: Turnier abgesagt
   reason_cannot_watch: Beende deinen Kampf, bevor du einen anderen ansiehst
-  custody_kiosk: Kiosk
-  custody_fight: Im Kampf
-  custody_trade: Im Handel
   latest_start_notice: 'Ab diesem Zeitpunkt kann jeder das Turnier starten.'
   champion: '{{team}} gewinnt'
   prize_pool: Preispool
@@ -3494,7 +3144,6 @@ tournament_page:
   open_window: Turnier öffnen
   older_claims: In {{count}} älteren Veranstaltungen warten Belohnungen
   result_line: '{{team}} ist weiter'
-  live_count: '{{count}} live'
   prize_split: Preisverteilung
   invalid_percentage: Prozentwerte mit höchstens zwei Nachkommastellen eingeben.
   allocation_excess: '{{amount}}% zu viel zugeteilt'
@@ -3526,315 +3175,11 @@ tournament_page:
   deployment_metadata: Bereitstellungsmetadaten
   display_notice: Anzeigemetadaten werden einmal pro Bereitstellung eingerichtet, nicht für jedes Turnier.
   submitted_notice: Die Aktion wurde gesendet. Prüfe den aktuellen Stand vor einer erneuten Übermittlung.
-  custody_undefined: Verwahrung unbekannt
   wagered: Mit Einsatz
   complete_notice: Nur vollständige Teams nehmen am Turnier teil. Andere werden beim Start ausgeschlossen.
   find_review: Ein Team für {{character}} finden und diesen Charakter anmelden?
   joined_count: '{{count}}/{{total}} dabei'
   versus: gegen {{team}}
-
-landing_page:
-  sound_on: Musik einschalten
-  sound_off: Musik stummschalten
-  new_tab: ' (öffnet einen neuen Tab)'
-  sign_alt: AresRPG
-  nav_label: Ressourcen
-  nav:
-    docs: Docs
-    journal: Journal
-    discord: Discord
-  kares:
-    trigger: $KARES
-    trigger_detail: Tokenomics
-  account:
-    login: Anmelden
-    logging_in: Anmeldung läuft…
-    signed_in: Angemeldet als {{address}}
-    failed: Die Anmeldung wurde nicht abgeschlossen. Versuch es erneut.
-    logout: Abmelden
-    dev_only: 'Nur für die Entwicklung. Zum Spielen nicht empfohlen.'
-  hero:
-    eyebrow:
-      - Taktisches MMORPG-Protokoll
-      - On-Chain auf Sui
-    title:
-      - 'Eine Welt, on-chain.'
-      - 'Spiel sie auf deine Art.'
-      - 'Behalte, was du findest.'
-    lede: AresRPG ist ein taktisches MMORPG-Protokoll auf Sui. Charaktere, Beute und Marktplatz liegen
-      on-chain, und jede Oberfläche kann sie spielen. Räume Dungeons mit deiner Gruppe, stelle her
-      und handle mit anderen Spielern oder übergib die Steuerung einem Agenten.
-    play: 'In 3D spielen'
-    play_bots: 'Mit Bots spielen'
-    ways:
-      - Eine Welt
-      - Unbegrenzt viele Spielweisen
-  chooser:
-    section: Oberflächen
-    title: Wähle, wie du spielst.
-    intro: AresRPG ist ein On-Chain-Spiel ohne festen Zugang. Dieselben Charaktere, dieselbe Beute,
-      derselbe Markt. Hier sind fünf Oberflächen für den Einstieg, und jeder kann die nächste bauen.
-    interface: Oberfläche
-    specs:
-      runs_in: Läuft in
-      role: Deine Rolle
-      good_for: Ideal für
-      status: Status
-    play:
-      manual: Manuell
-      automated: Automatisch
-    items:
-      world:
-        name: Voxelwelt
-        line: Das komplette 3D-Spiel in deinem Browser. Aufwendige Grafik, jeder Zug gehört dir.
-        tech: Gebaut mit three.js
-        status: Spielbar
-        body: Das komplette Spiel in deinem Browser. Erkunde die Planeten, bilde eine Gruppe und kämpfe
-          selbst auf dem Raster. Auf dem Handy wechselt derselbe Client zur Touch-Steuerung.
-        runs_in: Browser mit starker GPU
-        role: Du spielst jeden Zug
-        good_for: Erkunden und Gruppenkämpfe
-        cta: Spielen
-        preview: Ein Charakter läuft einen Erdweg durch Mosswoods Voxel-Pilzwald, vor ihm Klippen,
-          Wasserfälle und Goblins.
-      dapp:
-        name: Web-dapp
-        line: Kein 3D. Schick dein Team von jedem Handy aus auf Quests und Dungeon-Raids.
-        tech: Läuft auf jedem Gerät
-        status: Spielbar
-        body: Das Spiel ohne 3D-Engine. Schick deine Charaktere auf Quests, raide Dungeons mit deinem Team
-          und handle mit der Beute, alles auf einer leichten Seite, die auf jedem Handy läuft.
-        runs_in: Jeder Browser, jedes Handy
-        role: Team losschicken, Beute einsammeln
-        good_for: Schwache Geräte, kurze Sessions
-        cta: Dapp öffnen
-        preview: 'Designvorschau der Web-dapp: ein Charakter auf Quest mit Lebensleiste, ein Dungeon-Raid,
-          der auf einen Schlüssel wartet, und Buttons, um auf Quest zu schicken, einen Dungeon zu
-          raiden oder den Markt zu öffnen.'
-      agent:
-        name: Dein Agent
-        line: Claude, ChatGPT oder Grok übernimmt die Steuerung, während du zusiehst.
-        tech: Claude / ChatGPT / Grok
-        status: In Arbeit
-        body: Verbinde Claude, ChatGPT oder Grok mit einem gehosteten AresRPG-Bot. Legt gemeinsam ein Ziel
-          fest, dann sieh im Spiel zu, wie er deinen Charakter spielt.
-        runs_in: ChatGPT, Claude oder Grok
-        role: Ziel festlegen, dann zusehen
-        good_for: Spielen ohne Eingreifen
-        cta: Agenten verbinden
-        preview: 'Beispielsitzung: Du bittest deinen Agenten, die Goblins auf dem Weg zu besiegen, und er
-          ruft gehostete Bot-Tools auf, während er dir berichtet.'
-      telegram:
-        name: Telegram
-        line: 'Steuere deine Helden aus einem Chat. Strategie wählen, genehmigen, verfolgen.'
-        tech: Ein Telegram-Chat
-        status: Warteliste
-        body: 'Dein gehosteter Bot in einem Telegram-Chat. Wähle eine geprüfte Strategie für einen Helden, lies, was sie tun wird, und genehmige sie. Verfolge dann ihren Fortschritt oder stoppe sie im selben Chat.'
-        runs_in: Ein Telegram-Chat
-        role: Strategie wählen, bestätigen
-        good_for: 'Freihändiges Spielen vom Handy'
-        cta: Auf die Warteliste
-        preview: 'Beispielchat: Wähle eine Strategie, prüfe, was sie tut, bestätige sie und sieh dann ihren
-          Status ein oder stoppe sie.'
-      sdk:
-        name: Dein eigener Client
-        line: Baue einen Client, ein Tool oder einen Bot auf dem öffentlichen SDK.
-        tech: Öffentliches SDK
-        status: Quellcode verfügbar
-        body: Baue auf dem öffentlichen SDK auf, das auch das Spiel selbst nutzt. Die Lizenz erlaubt
-          kommerzielle Clients, Remakes, Fan-Tools und Bots, die auf dem offiziellen Deployment
-          laufen. Dein Client oder Bot signiert mit seiner eigenen Sui-Wallet.
-        runs_in: Alles, was du baust
-        role: Du schreibst den Client
-        good_for: Eigene Clients, Tools, Bots
-        cta: Playbook lesen
-        preview: 'Terminalansicht des Index des öffentlichen Agenten-Playbooks: SDK-Bausteine, Zustands- und
-          Transaktionsdisziplin, das Quell-Repository und die Deployment-Pins.'
-    waitlist:
-      joining: Eintrag in die Warteliste…
-      joined: Du stehst auf der Warteliste
-      failed: Der Eintrag in die Warteliste hat nicht geklappt. Versuch es noch einmal.
-    agent_guide: Anleitung lesen
-    source: Quellcode ansehen
-    previews:
-      keys_then: dann
-      dapp:
-        title: Web-dapp
-        label: Designvorschau
-        character: Senshi
-        questing: Auf Quest
-        dungeon: Ivory Rampart
-        needs_key: Braucht einen Schlüssel
-        raid: Dungeon-Raid für dein Team
-        actions:
-          - Auf Quest schicken
-          - Dungeon raiden
-          - Markt
-      agent:
-        title: Gehosteter Bot / MCP
-        label: Beispielsitzung
-        you: du
-        agent: agent
-        call: aufruf
-        lines:
-          - Besiege die Goblins auf dem Weg.
-          - Mach ich. Sieh von hier aus zu.
-          - Goblins auf dem Weg vor uns. Ich fordere sie heraus.
-          - Kampf gestartet. Ich wähle ein Feld auf dem Raster.
-      telegram:
-        choose: Strategie wählen
-        patrol: Stadtpatrouille · 1 Monster
-        gather: Sammeln & Herstellen
-        review: Strategie prüfen
-        review_detail: Kämpft in dieser Stadt gegen Gruppen aus einem Monster, bis sie gestoppt wird.
-        approve: Bestätigen
-        menu: Menü
-        running: Strategie läuft
-        status: Status
-        stop: Strategie stoppen
-      sdk:
-        label: Playbook-Index
-        build: Den Bot bauen
-        build_lines:
-          - 'SDK-Bausteine: Aktionskomposition, Offline-Planung und Kampfsimulation.'
-          - 'Zustands- und Transaktionsdisziplin: Aktualität, Belege und Wiederherstellung.'
-        source: Quellcode und Deployment
-        source_lines:
-          - 'Quell-Repository: SDK-Quellcode, Lizenz und passendes Release.'
-          - 'Deployment-Pins: gegen das vorgesehene Deployment prüfen.'
-  earn:
-    section: Wirtschaft
-    title: Lass dich in SUI bezahlen. Auf drei Arten.
-    intro: Andere Spieler bezahlen dich. Du verkaufst an sie, stellst für sie her oder schlägst sie.
-    paths:
-      - tag: Marktplatz
-        title: Raide Dungeons.
-        accent: Verkaufe die Beute.
-        body: Räume mit deinem Team einen Dungeon und biete die Drops an. Der Käufer bezahlt dich in SUI.
-      - tag: Berufe
-        title: Sammle und stelle her.
-        accent: Verkaufe die Ausrüstung.
-        body: Level einen Beruf, stelle her, was Kämpfer brauchen, und verkaufe es oder die Rohstoffe.
-        link: Alle Gegenstände ansehen
-      - tag: Turniere
-        title: Gewinne Kämpfe.
-        accent: Hol dir den Preis.
-        body: Wenn ein Turnier läuft, entscheidet deine Endplatzierung über deinen Anteil am Preis.
-  control:
-    section: Steuerung
-    title: Automatisiere es oder signiere jeden Zug.
-    intro: Zwei Arten, die Steuerung zu halten. Beide laufen auf demselben On-Chain-Spiel, und du kannst
-      je einen Charakter auf jede Art spielen.
-    you: Du
-    holds: hält den Charakter
-    used_by: Genutzt von
-    automated:
-      tag: Automatisiert
-      title: Ein gehosteter Agent spielt für dich.
-      body: Übergib einen Charakter an ein gemeinsames Konto und lege ein Ziel fest. Unser gehosteter
-        Agent spielt ihn rund um die Uhr, während du zusiehst oder etwas anderes machst.
-      figure: 'Diagramm: Du und der gehostete Agent haltet je einen von zwei Schlüsseln zu einem
-        gemeinsamen Multisig-Konto, das den Charakter hält.'
-      you_detail: Google-Anmeldung
-      vault: 1-of-2 multisig
-      agent: Gehosteter Agent
-      agent_detail: spielt die Züge
-      points:
-        - Der Agent erhält nie deinen Wallet-Schlüssel.
-        - Du bestätigst den genauen Bot und was er tun darf, bevor er startet.
-        - Hol deinen Charakter jederzeit über dein Inventar zurück, auch wenn der Agent offline ist.
-    self:
-      tag: Selbstverwahrt
-      title: Du signierst jeden Zug selbst.
-      body: Melde dich mit Google an. Deine Charaktere und Gegenstände bleiben in deinem Konto, und nichts
-        geschieht ohne deine Signatur.
-      figure: 'Diagramm: Du signierst mit deinem Google-Konto, und dein eigenes Konto hält den Charakter.'
-      you_detail: Google-Anmeldung
-      vault: Dein Konto
-      points:
-        - Niemand sonst kann deine Charaktere bewegen oder deine SUI ausgeben.
-        - Jeder Kampf, jedes Herstellen und jeder Verkauf ist eine Transaktion, die du signierst.
-        - Übergib einen Charakter später an einen gehosteten Agenten und hol ihn zurück, wann du
-          willst.
-  end:
-    title: Starte dein Abenteuer
-    body: Melde dich an, erstelle deinen Charakter und ziehe in deinen ersten rundenbasierten Kampf.
-    play: Spielen
-    discord: Discord beitreten
-    pick: 'Deine Wahl:'
-  footer:
-    wordmark: AresRPG
-    tagline: Ein taktisches Voxel-MMORPG auf Sui, über mehrere Planeten hinweg.
-    game: Spiel
-    community: Community
-    play: Spielen
-    encyclopedia: Gegenstands-Enzyklopädie
-    journal: Journal
-    discord: Discord
-    telegram: Telegram
-    x: X
-    allocation: Prüfe deinen Whitelist-Platz
-    colophon: eine Welt, unbegrenzt viele Oberflächen
-
-telegram_companion:
-  welcome: "⚔️ Willkommen bei AresRPG\n\nDeine Helden leben on-chain. In diesem Chat verfolgst du sie, wählst eine Strategie, und sie kämpfen und sammeln für dich.\n\nMelde dich zuerst mit Google an. Die Seite öffnet sich in deinem Browser und bringt dich danach hierher zurück."
-  disconnect: '🔓 Google trennen'
-  connect_google: '🔑 Mit Google anmelden'
-  waiting: 'Dein Spielkonto hat noch keinen Telegram-Zugang. Trag dich in die Warteliste ein, um ihn anzufragen.'
-  on_waitlist: '✅ Du stehst auf der Warteliste. Sobald dein Spielkonto zugelassen ist, öffnet Zugang prüfen deine Helden.'
-  join_waitlist: 'Auf die Warteliste'
-  check_access: 'Zugang prüfen'
-  inventory: '🎒 Inventar'
-  inventory_empty: 'Deine Tasche ist leer'
-  observation_unknown: 'Noch nicht verfügbar'
-  no_strategy: 'Kein Charakter führt gerade eine Strategie aus.'
-  strategy_active: 'Strategie aktiv'
-  strategy_waiting: 'Strategie wartet'
-  replace_strategy: 'Dies ersetzt die laufende Strategie dieses Charakters. Gesendete Aktionen können noch enden.'
-  fight: '⚔️ Im Kampf'
-  ambush: '🛡 Wächter wartet'
-  idle: 'Bereit für eine Strategie'
-  external_strategy: 'Strategie aus einer anderen App'
-  menu: '🧙 Wähle deinen Charakter'
-  loading: '⏳ Charaktere werden geladen'
-  empty: '🧙 Kein spielbarer Agent-Charakter verfügbar'
-  play: '▶️ Spielen'
-  back: '☰ Menü'
-  status: '📍 Status'
-  approve: '✅ Bestätigen'
-  unlinked: '🔓 Verbindung getrennt'
-  browser_expired: 'Dieser Link ist nicht mehr gültig. Gehe zurück zu Telegram und sende eine Nachricht, um einen neuen zu erhalten.'
-  check_status: '📍 Status prüfen'
-  log_in_again: '🔑 Erneut anmelden'
-  balance: '💰 Agent-Guthaben'
-  pause: '⏸ Agent pausieren'
-  resume: '▶️ Agent fortsetzen'
-  wallet_scope: 'Betrifft das gesamte Agent-Wallet und andere Verbindungen · Gesendete Transaktionen können noch enden'
-  paused: '⏸ Agent pausiert'
-  resumed: '▶️ Agent fortgesetzt'
-  choose_strategy: 'Strategie wählen'
-  failure_changed: 'Das wurde inzwischen aktualisiert. Hier ist der aktuelle Stand.'
-  failure_reconnect: 'Deine Anmeldung ist abgelaufen. Melde dich erneut an:'
-  failure_unlink_first: 'Dieser Chat oder dieses Google-Konto ist bereits verbunden. Trenne Google und versuche es erneut.'
-  failure_temporary: 'Das hat diesmal nicht geklappt. Versuche es gleich noch einmal.'
-  failure_busy: 'Dieser Charakter beendet noch eine Aktion, oder der Agent ist pausiert. Falls du ihn pausiert hast, setze ihn fort und prüfe dann den Status.'
-  failure_run_limit: 'Dein Agent führt bereits so viele Charaktere, wie er kann. Stoppe einen und starte dann diesen.'
-  review: 'Strategie prüfen'
-  effects: 'Bekämpft Gruppen aus einem Monster in dieser Stadt bis zum Stopp. Jede Aktion kostet SUI-Gas, ohne Gesamtlimit. Kein Sieg garantiert; ein Neustart kann Schritte wiederholen. Stopp widerruft keine gesendeten Aktionen.'
-  stop: 'Strategie stoppen'
-  stop_scope: 'Wähle den Charakter, der stoppen soll. Die anderen spielen weiter; gesendete Transaktionen können noch abgeschlossen werden.'
-  stop_all: 'Alle stoppen'
-  stopped: 'Strategie gestoppt'
-  completed: 'Strategie abgeschlossen'
-  attention: 'Die Strategie braucht Aufmerksamkeit. Prüfe deinen Charakter im Spiel, dann nutze Status oder Stopp.'
-  unknown: 'Das Ergebnis ist noch nicht bestätigt. Prüfe zuerst den Status.'
-  city_review: 'Stadt: {city}'
-  city_required: 'Gehe im Spiel in eine Stadt, öffne dann das Menü und prüfe die Auswahl erneut.'
-  world_review: 'Welt: {world}'
-  gather_effects: 'Fertigt nützliche Rezepte aus vorhandenen Zutaten für Berufsfortschritt; sonst sammelt es mit verfügbaren Werkzeugen und erkundet diese Welt. Bekämpft Beschützer mit einfachen Taktiken. Läuft bis zum Stopp. SUI-Gas und Zutaten ohne Gesamtlimit; Fehlschläge möglich. Ein Neustart kann Schritte wiederholen. Stopp widerruft keine gesendeten Aktionen.'
-  strategies:
-    fight_nearby: '⚔️ Stadtpatrouille · 1 Monster'
-    gather_craft: '🌿 Sammeln & Herstellen'
 
 docs_page:
   title: Docs
@@ -3846,7 +3191,6 @@ docs_page:
   next: Weiter
   search: Guides, Gegenstände und Monster durchsuchen
   search_empty: Keine Seite passt zu dieser Suche.
-  new_tab: ' (öffnet einen neuen Tab)'
   data_note: Die Zahlen auf diesen Seiten stammen aus denselben Inhaltsdateien wie das Spiel.
   kinds:
     guide: Guide
@@ -3890,9 +3234,43 @@ docs_page:
       - 'Handle mit anderen Spielern auf dem Marktplatz, für SUI.'
   ways:
     lede: 'Das Protokoll hat nicht nur einen Zugang. Jede Oberfläche unten spielt dieselben Charaktere, mit derselben Beute und demselben Markt. Sie unterscheiden sich darin, wer die Züge macht und was du zum Ausführen brauchst.'
-    note: 'Du kannst mehrere Oberflächen nutzen, mit einer Grenze: eine aktive Verbindung pro Konto. Das Öffnen des 3D-Spiels ersetzt eine Web-Dapp-Sitzung desselben Kontos.'
+    note: 'Du kannst mehrere Oberflächen gleichzeitig nutzen. Jedes Konto spielt in einer Spielsitzung zur selben Zeit; die Seiten der Website können daneben offen bleiben.'
+    specs:
+      runs_in: Läuft in
+      role: Deine Rolle
+      good_for: Ideal für
+      status: Status
+    play:
+      manual: Manuell
+      automated: Automatisch
+    items:
+      world:
+        name: Voxelwelt
+        status: Spielbar
+        body: Das komplette Spiel in deinem Browser. Erkunde die Planeten, bilde eine Gruppe und kämpfe
+          selbst auf dem Raster. Auf dem Handy wechselt derselbe Client zur Touch-Steuerung.
+        runs_in: Browser mit starker GPU
+        role: Du spielst jeden Zug
+        good_for: Erkunden und Gruppenkämpfe
+      agent:
+        name: Dein Agent
+        status: In Arbeit
+        body: Verbinde Claude, ChatGPT oder Grok mit einem gehosteten AresRPG-Bot. Legt gemeinsam ein Ziel
+          fest, dann sieh im Spiel zu, wie er deinen Charakter spielt.
+        runs_in: ChatGPT, Claude oder Grok
+        role: Ziel festlegen, dann zusehen
+        good_for: Spielen ohne Eingreifen
+      sdk:
+        name: Dein eigener Client
+        status: Quellcode verfügbar
+        body: Baue auf dem öffentlichen SDK auf, das auch das Spiel selbst nutzt. Die Lizenz erlaubt
+          kommerzielle Clients, Remakes, Fan-Tools und Bots, die auf dem offiziellen Deployment
+          laufen. Dein Client oder Bot signiert mit seiner eigenen Sui-Wallet.
+        runs_in: Alles, was du baust
+        role: Du schreibst den Client
+        good_for: Eigene Clients, Tools, Bots
   bots:
-    lede: 'Ein gehosteter Bot spielt deine Helden für dich auf den Servern von AresRPG. Die Web-Dapp, Telegram und ein verbundener Assistent steuern alle denselben Bot.'
+    lede: 'Ein gehosteter Bot spielt deine Helden für dich auf den Servern von AresRPG.'
     wallet_title: 'Die Bot-Wallet'
     wallet:
       - 'Ein Bot spielt aus seiner eigenen Wallet, getrennt von deiner Spiel-Wallet. Sie ist eine 1-von-2-Multisig: Der gehostete Dienst kann für sie signieren, und dein Google-Konto ebenfalls.'
@@ -3907,8 +3285,6 @@ docs_page:
       - 'Ein Bot wartet, wenn nichts Genehmigtes zu tun ist oder seine Wallet kein SUI für Gebühren hat.'
     control_title: 'Wer ihn steuern kann'
     control:
-      - 'Die Web-Dapp: Aktivitäten starten und stoppen, Werte und Zauber steigern und als Bot auf dem Markt handeln.'
-      - 'Telegram: eine geprüfte Strategie wählen und genehmigen.'
       - 'Ein Assistent (ChatGPT, Claude oder Grok): Vereinbare im Chat ein Ziel. Er ruft die Werkzeuge des Bots im Rahmen deiner Genehmigung auf.'
   first_hour:
     lede: 'Das Ziel deiner ersten Stunde: ein Charakter, ein paar gewonnene Kämpfe und ein selbst
@@ -3990,130 +3366,46 @@ docs_page:
       Lizenz- und Copyright-Hinweise bei, wenn du weiterverbreitest.
     license_link: Lizenz lesen
 
-dapp_page:
-  brand: 'Expeditionen'
-  nav_label: 'Bereiche'
-  nav_market: 'Markt'
-  bot_balance: 'Bot: {amount} SUI'
-  bot_balance_hint: 'SUI, die dein gehosteter Bot hält. Damit zahlt er die Netzwerkgebühren deiner Helden und deine Käufe auf dem Markt.'
-  bot_balance_low: 'Dein Bot hat wenig SUI. Füge seiner Wallet SUI hinzu, sonst halten deine Helden an.'
-  asking_bot: 'Dein Bot wird geweckt und gefragt, was er tut…'
-  connect_proving: 'Nachweis, dass dieses Konto dir gehört…'
-  connect_creating: 'Die Wallet deines Bots wird erstellt…'
-  connect_checking: 'Die Wallet deines Bots wird geprüft…'
-  connect_naming: 'Der Name deines Bots wird gesetzt…'
-  connect_approving: 'Die Verbindung wird genehmigt…'
-  connect_returning: 'Die Verbindung wird abgeschlossen…'
-  loading: 'Wird geladen…'
-  signing_in: 'Anmeldung läuft…'
-  signin_title: 'Schick deine Helden auf Expedition'
-  signin_body: 'Melde dich mit Google an, um deine Helden zu sehen und deinen gehosteten Bot für sie spielen zu lassen. Gleiches Konto, gleiche Helden und Gegenstände wie in der 3D-Welt.'
-  signin_failed: 'Die Anmeldung wurde nicht abgeschlossen. Versuch es erneut.'
-  google_title: 'Google-Anmeldung erforderlich'
-  google_body: 'Gehostete Helden gehören zu deinem Google-Konto. Melde dich ab und fahre mit Google fort, um diese Seite zu nutzen.'
-  unavailable_title: 'Der automatische Dienst antwortet nicht'
-  unavailable_body: 'Bitte nutze vorerst die 3D-Welt.'
-  unavailable_action: '3D-Welt öffnen'
-  connect_title: 'Dein Bot ist nicht verbunden'
-  connect_body: 'Verbinde ihn, um deine Helden loszuschicken.'
-  connect_action: 'Verbinden'
-  connect_busy: 'Verbinde…'
-  reading_heroes: 'Deine Helden werden gelesen…'
-  syncing: 'Dein Bot holt den Weltstand auf. Diese Seite aktualisiert sich von selbst.'
-  observe_failed: 'Dein Bot ist nicht erreichbar. Lade diese Seite neu, um es erneut zu versuchen.'
-  heroes_failed_title: 'Deine Helden konnten nicht gelesen werden'
-  heroes_failed: 'Der Spielserver hat deine Helden nicht gesendet. Lade diese Seite neu, um es erneut zu versuchen.'
+agent_page:
+  log_title: 'Agenten-Protokoll'
+  manage_note: 'Um deinem Bot Helden oder Gegenstände zu senden, sie zurückzuholen oder ihn zu trennen, öffne dein Portfolio.'
+  stage_wallet_title: 'Eine eigene Wallet'
+  stage_wallet: 'Dein Agent spielt und signiert mit einer eigenen Bot-Wallet.'
+  stage_log_title: 'Ein Protokoll'
+  stage_log: 'Diese Seite zeigt seinen Status und was er tut.'
+  stage_charge_title: 'Du behältst die Kontrolle'
+  stage_charge: 'Sende ihm Helden und hol sie zurück, in deinem Portfolio.'
   heroes_title: 'Deine Helden'
   hero_level: 'Stufe {level}'
-  hero_xp: 'Erfahrung'
-  status_free: 'Bereit'
-  status_activity: 'Bei einer Aktivität'
-  status_fight: 'Im Kampf'
-  status_dungeon: 'Im Dungeon'
+  heroes_failed: 'Der Spielserver hat deine Helden nicht gesendet. Lade diese Seite neu, um es erneut zu versuchen.'
+  empty_title: 'Hier ist noch nichts'
+  empty_body: 'Was dein KI-Assistent tut, erscheint hier.'
   activity_other: 'Aktivität'
-  activity_train: 'Training'
-  activity_gather: 'Sammeln'
-  activity_raid: 'Raid'
-  blocker_command_pending: 'Warte auf die Antwort deines Bots…'
-  blocker_no_free_hero: 'Dafür ist gerade kein Held frei.'
-  blocker_hero_busy: '{names}: gerade im Kampf oder in einem Dungeon.'
-  blocker_hero_unknown: '{names}: Dein Bot liest diesen Helden noch ein. Versuch es gleich noch einmal.'
-  blocker_world_required: '{names}: in einer anderen Welt.'
-  blocker_key_missing: '{names}: kein Schlüssel für diesen Dungeon.'
-  key_find: '{item} auf dem Markt suchen'
-  key_unsold: 'Gerade verkauft niemand {item}.'
-  raid_short_title: 'Nicht genug Schlüssel für das ganze Team'
-  raid_short_body: 'Deine Schlüssel reichen nur für {count}. Den Dungeon betreten nur: {names}. Wenn du mehr Helden schicken willst, finde oder kaufe die fehlenden Schlüssel.'
-  raid_short_action: 'Raid mit {count} starten'
-  cancel: 'Abbrechen'
-  close: 'Schließen'
-  command_uncertain: 'Die Antwort deines Bots konnte nicht bestätigt werden. Diese Seite prüft selbst erneut; nichts wird doppelt gesendet.'
-  command_refused: '{names}: {reason}'
   position_running: 'Läuft'
+  position_finished: 'Beendet'
+  position_xp: 'Gewonnene Erfahrung'
+  position_dungeon: '{dungeon} · Raum {room}'
   run_notice_funding: 'Dein Bot hat kein SUI mehr. Füge seiner Wallet SUI hinzu, dann macht er von selbst weiter.'
   run_notice_requirement: 'Diesem Helden fehlt ein Werkzeug, eine Stufe oder Material für diese Aktivität. Gib ihm, was er braucht, oder wähle eine andere Aktivität.'
   run_notice_plan: 'Dein Bot braucht einen neuen Plan für diese Aktivität. Stoppe sie und starte sie neu, oder bitte deinen KI-Client, sie anzupassen.'
-  position_stopping: 'Wird gestoppt…'
-  position_finished: 'Beendet'
-  position_ended_issue: 'Dein Bot hat diese Aktivität gestoppt. Prüfe sein Guthaben und deinen Helden und starte sie erneut.'
-  position_hp: 'Leben'
-  position_xp: 'Gewonnene Erfahrung'
-  position_levels: 'Stufe +{count}'
-  position_job_xp: 'Berufserfahrung'
-  position_fights: 'Kämpfe'
-  position_dungeon: '{dungeon} · Raum {room}'
-  position_team: 'Kämpft mit {names}'
-  position_stop: 'Stoppen'
-  position_dismiss: 'Entfernen'
-  bag_title: 'Tasche'
-  bag_empty: 'Die Tasche ist leer.'
-  bag_loading: 'Die Tasche deines Bots wird gelesen…'
-  bag_feed_title: 'Neueste Gegenstände'
-  bag_feed_empty: 'Was deine Helden mitbringen, erscheint hier.'
-  detail_locked: 'Ausrüstung, Attribute, Zauber und Herstellung sind offen, solange dieser Held nicht kämpft und dein Bot keine andere Anfrage offen hat.'
-  detail_stats: 'Eigenschaften'
+  run_notice_place: 'Von seinem Standort aus kommt er zu Fuß nicht an diesen Ort. Stoppe ihn und wähle einen anderen Ort.'
+  run_ended_objective_reached: 'Das von dir gesetzte Ziel ist erreicht.'
+  run_ended_fee_cap_reached: 'Das von dir gesetzte Gebührenlimit ist erreicht.'
+  run_ended_run_cap_reached: 'Die gewünschten Durchläufe sind abgeschlossen.'
+  run_ended_completed: 'Der Plan ist abgeschlossen.'
   error_unknown: 'Etwas ist schiefgelaufen. Versuch es erneut.'
-  error_expired: 'Die Verbindung zu deinem Bot ist abgelaufen. Verbinde dich erneut.'
-  error_google_required: 'Fahre mit Google fort, um einen gehosteten Bot zu verbinden.'
-  error_consent_failed: 'Die Verbindung wurde nicht bestätigt. Versuch es erneut.'
-  error_owner_mismatch: 'Dieser Bot gehört zu einem anderen Konto. Melde dich mit dem richtigen Google-Konto an.'
-  error_storage_unavailable: 'Dieser Browser blockiert den Speicher, den die Verbindung braucht. Erlaube Websitedaten und versuch es erneut.'
   error_bot_busy_or_paused: 'Dein Bot ist pausiert oder beendet noch die letzte Aktion dieses Helden. Versuch es gleich noch einmal.'
   error_run_limit_reached: 'Dein Bot spielt bereits so viele Helden, wie er kann. Stoppe einen und versuch es erneut.'
   error_needs_resync: 'Dein Bot holte noch auf. Versuch es in ein paar Sekunden erneut.'
-  error_start_unconfirmed: 'Nichts läuft: Dein Bot hat die Aktivität nicht übernommen. Du kannst sie erneut starten.'
   error_unavailable: 'Dein Bot antwortet nicht. Versuch es gleich noch einmal.'
   error_invalid_token: 'Die Verbindung zu deinem Bot ist abgelaufen. Verbinde dich erneut.'
   error_insufficient_scope: 'Diese Verbindung erlaubt das nicht. Verbinde dich erneut, um es zu erlauben.'
   error_behavior_run_not_found: 'Für diesen Helden läuft nichts mehr.'
   error_insufficient_character_points: 'Nicht genug Punkte übrig.'
   error_spell_rank_capped: 'Dieser Zauber hat bereits seine höchste Stufe.'
-  error_tool_failed: 'Dein Bot konnte das nicht tun. Versuch es später erneut.'
-  error_insufficient_funds: 'Dein Bot hat dafür nicht genug SUI. Lade SUI auf deinen Bot und versuch es dann erneut.'
   error_listing_changed_or_ineligible: 'Dieses Angebot hat sich geändert oder ist weg. Prüfe den aktuellen Preis und versuch es dann erneut.'
   error_character_not_available: 'Dafür ist gerade kein Held frei: Ein Kampf läuft. Versuch es gleich noch einmal.'
   error_sale_source_changed_or_unavailable: 'Dieser Gegenstand hat sich geändert, oder kein einzelner Stapel davon ist groß genug. Wähle ihn erneut aus.'
-  disconnect_action: 'Diese Seite trennen'
-  disconnect_failed: 'Dein Bot hat nicht bestätigt. Diese Seite hat weiterhin Zugriff. Versuche es erneut.'
-  direct_queued: 'Dein Bot hat deine Anfrage. Er signiert sie nach der laufenden Aktion.'
-  direct_done_raise_stats: 'Attribute aktualisiert.'
-  direct_done_raise_spell: 'Zauberstufe erhöht.'
-  direct_done_equip_item: 'Ausrüstung geändert.'
-  direct_done_use_consumable: '{name} hat {item} benutzt.'
-  direct_done_dungeon_leave: '{name} hat den Dungeon verlassen.'
-  direct_done_market_buy: 'Gekauft: {amount} × {item}. Es liegt in der Tasche deiner Helden.'
-  direct_done_market_sell: 'Zum Verkauf eingestellt: {amount} × {item}.'
-  direct_done_market_delist: 'Angebot zurückgezogen: {amount} × {item} ist wieder in deiner Tasche.'
-  direct_done_create_character: '{name} ist bereit.'
-  level_up_toast: '{name} hat Stufe {level} erreicht.'
-  run_wait_travel: 'Unterwegs dorthin. Das Spiel legt die Laufzeit fest.'
-  run_wait_other: 'Wartet auf den richtigen Moment zum Handeln.'
-  run_notice_place: 'Von seinem Standort aus kommt er zu Fuß nicht an diesen Ort. Stoppe ihn und wähle einen anderen Ort.'
-  blocker_work_unknown: '{names}: kann diese Arbeit in der Welt, in der er steht, nicht ausführen.'
-  blocker_job_level_required: '{names}: Berufsstufe dafür zu niedrig.'
-  blocker_tool_required: '{names}: hat kein Werkzeug für diesen Beruf.'
-  error_direct_failed: 'Dein Bot konnte das nicht ausführen. Prüfe sein Guthaben und deinen Helden, bevor du es erneut versuchst.'
-  error_direct_unconfirmed: 'Diese Anfrage konnte nicht bestätigt werden, und diese Seite sieht keine Änderung. Prüfe es, bevor du es erneut versuchst.'
   error_invalid_character_name: 'Ein Name hat 4 bis 19 Buchstaben, Ziffern oder Symbole, ohne Leerzeichen.'
   error_character_name_taken: 'Dieser Name ist schon vergeben. Wähle einen anderen.'
   error_funding_required: 'Dein Bot hat dafür nicht genug SUI. Füge deinem Bot SUI hinzu und versuch es erneut.'
@@ -4134,236 +3426,64 @@ dapp_page:
   error_insufficient_consumables: 'Davon ist nicht mehr genug übrig.'
   error_unsupported_consumable: 'Dein Bot kann diesen Gegenstand nicht benutzen.'
   error_idempotency_conflict: 'Diese Anfrage wurde schon gesendet. Warte auf ihre Antwort.'
-  run_needs_help: 'Braucht deine Hilfe'
-  run_waiting: 'Wartet'
-  run_objective: 'Ziel: {objective}'
-  run_results: 'Gewonnen {won} · verloren {lost}'
-  run_dungeon_runs: 'Abgeschlossene Dungeons'
-  run_drops_title: 'Letzte Beute'
-  run_drops_empty: 'Beute erscheint hier nach jedem Kampf.'
-  run_send_again: 'Erneut losschicken'
-  fees_run: 'Gezahlte Gebühren: {amount} SUI'
-  item_sell: 'Verkaufen'
-  sell_loot: 'Beute verkaufen'
-  drops_place_title: 'Alles, was in {place} fällt'
-  drops_dungeon_title: 'Jede Beute in {dungeon}'
-  drops_rate: '~{rate}% pro Sieg'
-  drops_room: 'Raum {room}'
-  drops_boss_room: 'Bossraum'
-  next_title: 'Bester nächster Schritt'
-  next_funds_title: 'Dein Bot hat kein SUI mehr'
-  next_funds_body: 'Deine Helden haben angehalten, weil dein Bot die Netzwerkgebühren nicht zahlen kann. Füge der Wallet des Bots im Wallet-Menü SUI hinzu, dann machen sie von selbst weiter.'
-  next_raid_title: '{dungeon} wartet'
-  next_raid_body: 'Deine Schlüssel dafür: {count}. Ein Held ist frei und kann los.'
-  next_raid_action: 'Raid planen'
-  next_quest_title: '{name} ist frei'
-  next_quest_body: 'Schick den Helden in den Kampf um Beute und Schlüssel oder zur Arbeit.'
-  next_quest_action: 'Auf Quest schicken'
-  next_out_title: 'Alle Helden sind unterwegs'
-  next_out_body: 'Verfolge sie im Tab Quests.'
-  next_out_action: 'Quests ansehen'
-  hero_send_quest: 'Auf Quest schicken'
-  hero_raid: 'Dungeon raiden'
-  hero_watch_raid: 'Raid ansehen'
-  add_hero_title: 'Neuer Held'
-  add_hero_body: '{count} Klassen · {price} SUI, zahlt dein Bot'
-  add_hero_action: 'Held erstellen'
-  add_hero_funds: 'Dein Bot braucht {price} SUI für den Helden und {fee} SUI für Netzwerkgebühren. Füge deinem Bot im Wallet-Menü SUI hinzu.'
-  create_sent: 'Dein Bot erstellt {name}. Der Held erscheint hier, sobald das Spiel ihn bestätigt.'
-  welcome_title: 'Willkommen bei Expeditionen'
-  welcome_body: 'Deine Helden spielen das echte Spiel für dich. Drei Schritte bis zu deinem ersten Raid.'
-  step_create_title: 'Erstelle deinen ersten Helden'
-  step_create_body: 'Wähle eine Klasse. Ein Held gehört dir für immer.'
-  step_quest_title: 'Schick ihn auf eine Quest nach einem Schlüssel'
-  step_quest_body: 'Monster aus {city} lassen {key} fallen.'
-  step_raid_title: 'Raid in {dungeon}'
-  step_raid_body: 'Jeder Held bringt einen Schlüssel mit. Im Bossraum liegt die seltenste Beute.'
-  quest_title: 'Quests'
-  quest_intro: 'Jeder Kampf würfelt um Ausrüstung und Schlüssel. Arbeiter machen aus Beute Ausrüstung.'
-  quest_fight: 'Um Beute kämpfen'
-  quest_fight_body: 'Ausrüstung, Schlüssel und Erfahrung aus jedem Kampf'
-  quest_work: 'Arbeiten gehen'
-  quest_work_body: 'Rohstoffe sammeln oder Ausrüstung und Tränke herstellen'
-  quest_who: 'Wer'
-  quest_where: 'Wo'
-  quest_here: 'Wo jeder Held gerade steht'
-  quest_pick_hero: 'Wähle einen Helden'
-  quest_send: '{names} losschicken'
-  quest_until_stop: 'Läuft, bis du es stoppst.'
-  quest_empty: 'Noch kein Held. Erstelle einen im Tab Start und schick ihn dann auf eine Quest.'
-  quest_empty_action: 'Zu Start'
-  quest_walks: '{names}: läuft zuerst dorthin. Jede Zone auf dem Weg kostet eine Netzwerkgebühr.'
-  quest_run_fight: 'Kämpfen in {place}'
-  quest_run_work_job: 'Arbeiten als {job}'
-  quest_run_gather: '{item} sammeln'
-  quest_run_craft: '{item} herstellen'
-  world_locked: '{world} öffnet sich ab Heldenstufe {level}.'
-  place_levels: 'Monster der Stufe {min}–{max}'
-  place_key_drop: '{key}: ~{rate}% pro Sieg über {mob}'
-  place_rarest: 'Seltenste Beute: {item}, ~{rate}% von {mob}'
-  place_level_warning: 'Die Monster hier sind Stufe {min}–{max}. {name} ist Stufe {level}.'
-  place_all_drops: 'Alle Beute an diesem Ort'
-  difficulty_label: 'Schwierigkeit'
-  difficulty_none: 'Beliebig'
-  difficulty_easy: 'Leicht'
-  difficulty_medium: 'Mittel'
-  difficulty_hard: 'Schwer'
-  difficulty_none_hint: 'Jede Gruppe, überall an diesem Ort.'
-  difficulty_hint: 'Gruppen von {min} bis {max} Monstern. Die Größe einer Gruppe hängt von ihrer Entfernung zur Weltmitte ab.'
-  difficulty_hint_one: 'Gruppen von {size} Monstern. Die Größe einer Gruppe hängt von ihrer Entfernung zur Weltmitte ab.'
-  difficulty_unfit: '{city} liegt nicht in dieser Entfernung. Wähle einen anderen Ort oder eine andere Schwierigkeit.'
-  travel_needed: '{name} ist nicht in {city}.'
-  travel_potion_held: 'Du hast {count} × {item}. Damit ist der Held sofort dort.'
-  travel_potion_use: 'Mit Trank reisen'
-  travel_potion_none: '{item} bringt einen Helden sofort dorthin. Alchemisten brauen solche Tränke.'
-  fee_cap: 'Gebührenlimit'
-  fee_cap_none: 'Kein Limit'
-  fee_cap_hint: 'Jeder Held stoppt, sobald sein eigener Lauf {amount} SUI an Netzwerkgebühren gezahlt hat. Seinen Kampf bringt er vorher zu Ende.'
-  fee_cap_invalid: 'Gib einen SUI-Betrag über null ein oder lass das Feld leer für kein Limit.'
-  work_auto: 'Deinen Bot wählen lassen'
-  work_auto_body: 'Dein Bot sammelt und stellt her, was diesem Helden mit seinen eigenen Werkzeugen den meisten Berufsfortschritt bringt.'
-  work_gather: 'Einen Rohstoff sammeln'
-  work_craft: 'Ein Rezept herstellen'
-  work_worker: 'Arbeiter'
-  work_job: 'Beruf'
-  work_job_any: 'Beliebiger Beruf'
-  work_job_level: '{job} Stufe {level}'
-  work_job_new: 'Neu als {job}'
-  work_gather_hint: '{name} erntet {min}–{max} alle {seconds} s und erhält pro Ernte {xp} Berufserfahrung.'
-  work_craft_hint: '{name} hat bei {percent}% der Versuche Erfolg und erhält {xp} Berufserfahrung pro Versuch.'
-  work_rare_find: 'Eine Ernte kann auch {item} bringen. {mob} kann den Ort verteidigen.'
-  work_objective: 'Ziel'
-  work_goal_level: 'Stufe erreichen'
-  work_goal_gather: 'Menge sammeln'
-  work_goal_craft: 'Menge herstellen'
-  work_goal_until: 'Bis ich stoppe'
-  work_how_many: 'Wie viele'
-  work_target_level: 'Zu erreichende Berufsstufe'
-  work_amount_invalid: 'Gib eine ganze Zahl über null ein.'
-  work_level_invalid: 'Gib eine Stufe von {min} bis {max} ein.'
-  work_tries: 'Versuche: etwa {tries}, für {amount} × {item}'
-  work_harvests: 'Ernten: etwa {tries}, für {amount} × {item}'
-  work_needs: 'Was du brauchst'
-  work_tool_worn: '{item} angelegt'
-  work_tool_bag: '{item} ist in deiner Tasche. {name} legt es an, wenn die Arbeit beginnt.'
-  work_tool_missing: 'Braucht {tool}. Handwerker fertigen Werkzeuge.'
-  work_material_missing: '{item}: benötigt {need}, in deiner Tasche {have}, fehlt {missing}'
-  work_material_ready: '{item}: benötigt {need}, in deiner Tasche {have}'
-  work_never_buys: 'Kauf, was fehlt, auf dem Markt oder besorg es selbst. Ein Held kauft nie.'
-  work_locked: 'Ab {job} Stufe {level}'
-  work_pick_resource: 'Wähle einen Rohstoff.'
-  work_pick_recipe: 'Wähle ein Rezept.'
-  work_start: 'Starten'
-  out_now_title: 'Gerade unterwegs'
-  raid_title: 'Jagd auf {boss}'
-  raid_intro: 'Jeder Raum ist ein Kampf mit eigener Beute. Die Beute geräumter Räume bleibt dir.'
-  raid_dungeon: 'Dungeon'
-  raid_dungeon_facts: '{rooms} Räume · {monsters} Monster · Boss {boss}'
-  raid_keys_held: 'Schlüssel im Besitz: {count}. Jeder Held bringt einen mit.'
-  raid_team: 'Team'
-  raid_team_count: '{count} von {size}'
-  raid_best_team: 'Bestes Team'
-  raid_seat_add: 'Hinzufügen'
-  raid_seat_title: 'Platz {seat}'
-  raid_seat_remove: 'Entfernen'
-  raid_seat_swap: 'Einwechseln'
-  raid_seat_key: 'Hat einen Schlüssel'
-  raid_seat_no_key: 'Kein Schlüssel'
-  raid_seat_none: 'Alle Helden sind schon im Team.'
-  raid_seat_stop_note: 'Einen Helden zu stoppen beendet seine Aktivität. Was er gefunden hat, ist schon in deiner Tasche.'
-  raid_no_seat: 'Füge mindestens einen freien Helden hinzu. Tippe auf einen Platz oder nutze Bestes Team.'
-  raid_levels_title: 'Dein Team und die Räume'
-  raid_alone: '{name} geht allein.'
-  raid_drops_title: 'Was ein Durchlauf bringen kann'
-  raid_rooms: 'Räume {first}–{last}'
-  raid_stake: 'Verbrauchte Schlüssel: {count}, einer pro Held'
-  raid_walk: '{name}: mindestens {time} zu Fuß bis zum Tor'
-  raid_repeats: 'Das Team raidet erneut, solange jeder Held einen Schlüssel hat. Drücke Stoppen, um aufzuhören.'
-  raid_enter: 'Betreten · Schlüssel: {count}'
-  raid_keys_short: 'Noch {count} {item} für dieses Team'
-  raid_quest_for_keys: 'Quest für Schlüssel'
-  raid_room: 'Raum {room} von {rooms}'
-  raid_boss_room: 'Bossraum · {boss}'
-  raid_walking: 'Auf dem Weg zum Tor'
-  raid_loot: 'Beute aus geräumten Räumen'
-  raid_loot_empty: 'Die Beute jedes geräumten Raums erscheint hier.'
-  raid_next_drops: 'Der nächste Raum kann bringen'
-  raid_stop_note: 'Stoppen beendet den Raid. Jeder Held bleibt im Dungeon, in seinem Raum. Um einen Durchlauf aufzugeben, stoppe zuerst den Helden und verlasse dann den Dungeon.'
-  raid_stop_team: 'Team stoppen'
-  raid_plan: 'Weiteren Raid planen'
-  raid_back: 'Zurück zum Raid'
-  raid_inside_title: 'Noch in einem Dungeon'
-  raid_inside_body: 'Diese Helden haben mitten in einem Dungeon-Durchlauf angehalten. Raide erneut, um weiterzumachen, oder verlasse den Dungeon.'
-  raid_leave: 'Dungeon verlassen'
-  raid_leave_body: 'Der Durchlauf endet für diesen Helden. Sein Schlüssel wird nicht zurückgegeben.'
-  raid_result_won: 'Sieg'
-  raid_result_lost: 'Niederlage'
-  raid_result_bag: 'Alles unten ist in deiner Tasche.'
-  raid_keys_left: 'Übrige Schlüssel: {count}'
-  raid_change_team: 'Team ändern'
-  raid_again: 'Erneut raiden'
-  raid_empty_title: 'Noch kein Team'
-  raid_empty_body: 'Erstelle einen Helden, schick ihn auf eine Quest nach einem Schlüssel und komm dann zurück.'
-  raid_runs: 'Durchläufe'
-  raid_runs_all: 'Solange Schlüssel reichen'
-  raid_runs_count: 'Durchläufe pro Held: {count}'
-  nav_home: 'Start'
-  heroes_intro: 'Ausrüstung, Attribute, Zauber und Berufe.'
-  heroes_empty_title: 'Noch kein Held'
-  heroes_empty_body: 'Erstelle einen Helden im Tab Start. Seine Ausrüstung, Attribute, Zauber und Berufe erscheinen hier.'
-  heroes_empty_action: 'Zu Start'
-  nav_quest: 'Quest'
-  nav_raid: 'Raid'
-  nav_heroes: 'Helden'
-  keys_chip: 'Dungeon-Schlüssel: {count}'
-  empty_title: 'Hier ist noch nichts'
-  empty_body: 'Was dein KI-Assistent tut, erscheint hier.'
-  run_ended_objective_reached: 'Das von dir gesetzte Ziel ist erreicht.'
-  run_ended_fee_cap_reached: 'Das von dir gesetzte Gebührenlimit ist erreicht.'
-  run_ended_run_cap_reached: 'Die gewünschten Durchläufe sind abgeschlossen.'
-  run_ended_completed: 'Der Plan ist abgeschlossen.'
-  direct_done_craft: '{name} hat {item} hergestellt (Versuche: {amount}). Was gelungen ist, liegt in der Tasche.'
   error_ingredients_required: 'Dieser Held hat nicht mehr alle Zutaten. Prüfe das Rezept und versuch es erneut.'
   error_crafting_level_required: 'Die Berufsstufe dieses Helden ist für dieses Rezept zu niedrig.'
   error_craft_batch_limit: 'Das sind zu viele Versuche für eine Anfrage. Wähle weniger.'
   error_recipe_unavailable: 'Dieses Rezept kann gerade nicht hergestellt werden.'
-  home_title: 'Was jetzt tun'
-  fees_wallet_label: 'Netzwerkgebühren, die dein Bot gezahlt hat'
-  sui_amount: '{amount} SUI'
-  found_more: '+{count} weitere'
-  raid_ledger_keys_used: 'Verbrauchte Schlüssel'
-  raid_ledger_keys_used_value: '{count}, einer pro Held'
-  raid_ledger_keys_left: 'Übrige Schlüssel'
-  raid_ledger_travel: 'Weg'
-  raid_travel_none: 'Am Tor'
-  raid_travel_fee: 'Jede Zone auf dem Weg kostet eine Netzwerkgebühr.'
-  raid_buy_key: 'Auf dem Markt kaufen'
-  quest_pick_place: 'Wähle einen Ort'
-  plan_levels: 'Monsterstufe'
-  plan_range: '{min}–{max}'
-  plan_group: 'Gruppengröße'
-  plan_key: 'Schlüsselbeute'
-  plan_rarest: 'Seltenste Beute'
-  plan_arrive: 'Ankunft'
-  plan_walk: 'Zu Fuß, mindestens {time}'
-  plan_walk_far: 'Zu Fuß'
-  plan_potion: 'Sofortige Ankunft'
-  about: '~{value}'
-  work_what: 'Was'
-  work_per_harvest: 'Pro Ernte'
-  work_harvest_time: 'Eine Ernte'
-  work_xp: 'Berufserfahrung'
-  work_rare: 'Seltener Fund'
-  work_success: 'Erfolg pro Versuch'
-  work_tries_label: 'Versuche'
-  work_harvests_label: 'Ernten'
-  work_tool: 'Werkzeug'
-  work_tool_held: '{item} in deiner Tasche'
-  work_tool_none: '{tool} fehlt'
-  work_have: '{have} von {need}'
-  hero_forfeit: 'Kampf aufgeben'
-  direct_done_fight_forfeit: '{name} hat den Kampf aufgegeben und ist wieder frei.'
   error_fight_unavailable: 'Dieser Held ist in keinem Kampf mehr.'
-  game_heroes_title: 'In deinem Spielkonto'
-  hero_give_bot: 'Dem Bot geben'
-  hero_take_back: 'Zurückholen'
+
+portfolio_page:
+  signin_title: 'Melde dich an, um deinen Besitz zu sehen'
+  signin_body: 'Deine Helden, Gegenstände und Angebote, auf deinem Spielkonto und bei deinem Bot.'
+  stage_heroes: 'Jeder Held mit seiner Stufe, seiner Stärke und seiner Ausrüstung.'
+  stage_bag: 'Deine Gegenstände. Biete einen zum Verkauf an oder sende ihn an deinen Bot.'
+  stage_for_sale: 'Was du auf dem Markt anbietest und was verkauft wurde.'
+  tabs_label: 'Anzeigen'
+  tab_heroes: 'Helden'
+  tab_bag: 'Tasche'
+  tab_for_sale: 'Im Verkauf'
+  failed: 'Der Spielserver hat dieses Konto nicht gesendet. Lade die Seite neu, um es erneut zu versuchen.'
+  heroes_empty: 'Kein Held auf diesem Konto.'
+  bag_empty: 'Noch nichts hier. Kaufe auf dem Markt oder spiele, um Gegenstände zu finden.'
+  bag_group_empty: 'Nichts dieser Art in dieser Tasche.'
+  bot_sells: 'Dein Bot stellt seine eigenen Gegenstände ein und verkauft sie. Bitte deinen KI-Assistenten darum.'
+  power: 'Stärke'
+  power_hint: 'Die Stärke zählt die Werte der angelegten Gegenstände zusammen, gewichtet wie Schmiederunen. Sie dient nur zur Anzeige.'
+  send_to_bot: 'An den Bot senden'
+  recall_to_player: 'Zum Spieler zurückholen'
+  share: 'Teilen'
+  share_text: 'Mein {classe}, Stufe {level}, hat eine Stärke von {power} in @AresRPG.'
+  share_title: '{name} teilen'
+  share_preview: 'Die Karte, die dein Post für {name} zeigt'
+  share_copy: 'Link kopieren'
+  share_post: 'Auf X posten'
+  share_image_failed: 'Die Karte wurde nicht geladen. Schließe dieses Fenster und versuche es erneut.'
+  share_copy_failed: 'Dein Browser hat das Kopieren nicht erlaubt. Versuche es erneut.'
+  transfer_to_bot: 'An den Bot übertragen'
+  transfer_to_player: 'An den Spieler übertragen'
+  view_market: 'Auf dem Markt ansehen'
+
+site:
+  nav_label: 'Website'
+  menu_open: 'Menü öffnen'
+  menu_close: 'Menü schließen'
+  login: Anmelden
+  new_tab: ' (öffnet einen neuen Tab)'
+  log_in_first: 'Zuerst anmelden'
+  docs: Docs
+  encyclopedia: Gegenstands-Enzyklopädie
+  journal: Journal
+  discord: Discord
+  telegram: Telegram
+  x: X
+  market: 'Markt'
+  play: 'Spielen'
+  agent: 'KI'
+  staking: 'Staking'
+  leaderboards: 'Bestenlisten'
+  portfolio: 'Portfolio'
+  footer_learn: 'Lernen'
+  footer_community: 'Community'
+  indexing_healthy: 'Aktuell'
+  indexing_catching_up: 'Holt auf'
+  indexing_lagging: 'Im Rückstand'

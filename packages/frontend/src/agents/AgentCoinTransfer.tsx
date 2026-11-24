@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
-import { Button, Field, SegmentedControl, WalletTransfer, type TransferLeg } from '@aresrpg/ui'
+import { Button, Field, SegmentedControl, WalletTransfer, type TransferLeg, SuiLogo } from '@aresrpg/ui'
 import { GAS_BUDGET_MIST } from '@aresrpg/sdk'
 import { Bot, Gamepad2, Loader2 } from 'lucide-react'
 
@@ -11,11 +11,11 @@ import { useAppStore } from '../store.ts'
 import { readable_transaction_error } from '../transaction_guard.ts'
 import { SendModalShell } from '../components/SendModalShell.tsx'
 import { send_text } from '../components/SuiTransferResult.tsx'
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 
 import type { AgentKioskController } from './useAgentKiosk.ts'
 import { coin_transfer_intent, type TransferDirection, type TransferToken } from './inventory_transfer.ts'
+import '../funding/funding.css'
 
 const token_balance = (value: string | null): bigint | null => (value === null ? null : BigInt(value))
 const reserve = format_sui(GAS_BUDGET_MIST, 2)

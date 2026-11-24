@@ -1,12 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { hydrate_fight_checkpoint, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { chain_now } from '@aresrpg/protocol/chain-clock'
-import { character_checkpoint, PLAYABLE_INDEXING_LAG, travel_proof_ready, type CharacterRow } from '@aresrpg/protocol'
+import {
+  character_checkpoint,
+  PLAYABLE_INDEXING_LAG,
+  travel_proof_ready,
+  type CharacterRow,
+  type FightStateRow,
+} from '@aresrpg/protocol'
+import type { create_agent_actions } from '@aresrpg/sdk/agent-actions'
+
+import spells from '../../../seed/content/spells.json'
 
 import type { Travel } from './locomotion.ts'
 import type { ActorSnapshot } from './actor_snapshot.ts'
+import type { ActorWorld } from './actor_world.ts'
 import type { Command } from './control.ts'
-import { identifier, matches } from './gameplay_schema.ts'
+import { hash_secret } from './model.ts'
+import { identifier, matches, type Schema } from './gameplay_schema.ts'
 
 export type GameplayContext = Readonly<{
   balance?: Readonly<{ address: string; balance_mist: string; sampled_at: number; expires_at: number }> | null
@@ -17,6 +29,41 @@ export type GameplayContext = Readonly<{
   now: number
   freshness_ms: number
 }>
+type AgentActions = ReturnType<typeof create_agent_actions>
+/** Every SDK door a gameplay command may call, built for the one wallet that signs it. */
+export type GameplayExecutor = AgentActions['fight'] &
+  AgentActions['character'] &
+  AgentActions['marketplace'] &
+  Readonly<{ dungeon: AgentActions['dungeon']; create_character: AgentActions['create_character'] }>
+/** One gameplay command kind. `validate` reads the observed context and is rechecked at signing and
+ * submission; `execute` sends what it validated through the SDK. */
+export type GameplayAction<Input> = Readonly<{
+  description: string
+  input_schema: Schema
+  parse: (value: unknown) => unknown
+  validate: (context: GameplayContext) => Readonly<{ input: Input; travel?: Travel }>
+  execute: (sdk: GameplayExecutor, input: Input) => Promise<unknown>
+}>
+/** Ties a kind's validated input to the SDK door that takes it. */
+export const gameplay_action = <Input>(action: GameplayAction<Input>) => Object.freeze(action)
+export const gameplay_json = (value: unknown): string =>
+  JSON.stringify(value, (_, field: unknown) => (typeof field === 'bigint' ? field.toString() : field))
+export const fight_checkpoint_id = (row: FightStateRow): string => hash_secret(gameplay_json(row))
+export const zone_checkpoint_id = (row: ActorWorld['zones'][string]): string => hash_secret(gameplay_json(row))
+export const hydrate_gameplay_fight = (row: FightStateRow): HydratedFightCheckpoint =>
+  hydrate_fight_checkpoint({
+    contract: row.contract,
+    sources: { players: row.players, spells: Object.fromEntries(spells.map((spell) => [spell.name, spell])) },
+  })
+/** The fight a command names, as observed at the checkpoint it names. */
+export const observed_fight = (
+  payload: Readonly<{ fight: string; checkpoint_id: string }>,
+  context: Pick<GameplayContext, 'snapshot'>
+) => {
+  const row = context.snapshot.fights[payload.fight]
+  if (!row || fight_checkpoint_id(row) !== payload.checkpoint_id) throw new Error('needs_resync')
+  return { row, checkpoint: hydrate_gameplay_fight(row) }
+}
 export const gameplay_observed_ms = ({
   snapshot,
   now,
@@ -40,7 +87,7 @@ export const gameplay_observed_ms = ({
   return BigInt(Math.floor(chain_ms))
 }
 
-export const gameplay_observation_ready = (context: GameplayContext) => {
+export const gameplay_observation_ready = (context: Pick<GameplayContext, 'snapshot' | 'now' | 'freshness_ms'>) => {
   try {
     gameplay_observed_ms(context)
     return true

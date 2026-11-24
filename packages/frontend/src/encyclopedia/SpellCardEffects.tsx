@@ -19,7 +19,7 @@ import { useText } from '../i18n/useText.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import type { EffectLineView } from '../components/EffectLine.tsx'
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
 import { critical_effect_text, effect_target_text, spell_effect_text } from './spell_effect_text.ts'

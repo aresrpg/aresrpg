@@ -15,6 +15,8 @@ import {
   type BagCategory,
   type ResourceFilter,
 } from './InventoryResourceFilters.tsx'
+import './inventory_search.css'
+import './character_window.css'
 
 const category_art = { equipment: 'theban_scrapblade', consumables: 'recall_potion', resources: 'wheat_barley' }
 

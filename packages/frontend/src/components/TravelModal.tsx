@@ -6,7 +6,7 @@
 import { Lock, MapPin, Snowflake, Trees } from 'lucide-react'
 import { useState } from 'react'
 
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { world_card_rows } from '../content/world_cards.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -49,7 +49,7 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   }
 
   return (
-    <ModalFrame close={close} close_label={copy.cancel} label={text('travel_title')} max_width="max-w-5xl" soft>
+    <ModalFrame close={close} close_label={copy.cancel} label={text('travel_title')} max_width="max-w-5xl">
       <section className="p-6 sm:p-8">
         <div className="grid gap-4 md:grid-cols-2">
           {world_card_rows().map((world) => {

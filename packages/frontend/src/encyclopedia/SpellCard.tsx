@@ -10,7 +10,7 @@ import { spell_icon } from '../content/assets.ts'
 import type { SpellLevel } from '../content/catalog.ts'
 import { useText } from '../i18n/useText.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import { EntityIcon } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'

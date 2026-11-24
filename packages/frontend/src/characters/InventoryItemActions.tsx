@@ -9,6 +9,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 
 import { natural_slot_for } from './equipment_stage.ts'
 import { is_loot_box, type InventoryMenuEntry } from './InventoryOverlays.tsx'
+import './character_window.css'
 
 export const primary_item_action = (
   item: Readonly<Pick<ItemRow, 'item_type' | 'category'>>,

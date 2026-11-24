@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Handshake } from 'lucide-react'
+import { Button } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -39,17 +40,15 @@ export const TradeInviteCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   })}
             </span>
             {incoming && (
-              <button
-                className="btn-gold"
+              <Button
+                tone="primary"
                 disabled={!!pending}
                 onClick={() => dispatch_app({ type: 'trade/join', trade: request.id })}
-                type="button"
               >
                 {text('accept_request')}
-              </button>
+              </Button>
             )}
-            <button
-              className="btn-outline"
+            <Button
               disabled={!!pending}
               onClick={() =>
                 dispatch_app({
@@ -57,10 +56,9 @@ export const TradeInviteCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   trade: request.id,
                 })
               }
-              type="button"
             >
               {text(incoming ? 'decline' : 'cancel_request')}
-            </button>
+            </Button>
           </section>
         )
       })}

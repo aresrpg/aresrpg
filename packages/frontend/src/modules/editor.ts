@@ -288,4 +288,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   })
 }
 
-export default Object.freeze({ name: 'editor', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'editor',
+  initial: () => ({ editor: initial_editor_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

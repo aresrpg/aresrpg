@@ -7,10 +7,11 @@ import { useMemo, useState } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { item_icon } from '../content/assets.ts'
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { items_by_type } from '../content/items.ts'
+import { titleize } from '../content/titles.ts'
 import type { CopyText } from '../i18n/copy.ts'
+import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { useMarketState, useMarketDispatch } from './MarketSource.tsx'
 import { short_address } from './marketplace_model.tsx'
 
 const PAGE = 30
@@ -29,9 +30,8 @@ const relative_time = (at_ms: number, locale: string): string => {
 }
 
 export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: CopyText }>) => {
-  const dispatch_app = useMarketDispatch()
   const localized_numbers = useNumbers()
-  const market = useMarketState()
+  const market = useSiteStore(({ marketplace }) => marketplace)
   const [limit, set_limit] = useState(PAGE)
   const profits = useMemo(
     () => market.profits.reduce((sum, row) => sum + BigInt(row.amount_mist), 0n),
@@ -66,7 +66,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
       sales={rows.map((row) => ({
         key: `${row.object}:${row.ts_ms}`,
         icon: row.item_type ? item_icon(row.item_type) : null,
-        name: sale_name(row, row.item_type ? content_catalog.item(row.item_type)?.item.name : undefined),
+        name: sale_name(row, row.item_type ? items_by_type[row.item_type]?.name : undefined),
         suffix: row.amount > 1 ? ` ×${row.amount}` : '',
         date: relative_time(row.ts_ms, locale),
         price: localized_numbers.sui(BigInt(row.price_mist), 2),

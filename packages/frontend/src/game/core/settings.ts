@@ -44,7 +44,6 @@ export type GameSettings = Readonly<{
   /** Null/absent disables the Jobs-tab character lock. */
   always_craft_from_character_id?: string | null
   placement_gas_warning_disabled?: boolean
-  marketplace_disclaimer_acknowledged?: boolean
   journey_collapsed?: boolean
   render_distance: number | null
   fight_access?: 0 | 1
@@ -90,7 +89,6 @@ export const load_game_settings = (
     auto_switch_fighter: true,
     always_craft_from_character_id: null,
     placement_gas_warning_disabled: false,
-    marketplace_disclaimer_acknowledged: false,
     journey_collapsed: false,
     render_distance: null,
     fight_access: 0 as const,
@@ -115,7 +113,6 @@ export const load_game_settings = (
       Reflect.get(record, 'always_craft_from_character_id')
     )
     const placement_gas_warning_disabled = Reflect.get(record, 'placement_gas_warning_disabled') === true
-    const marketplace_disclaimer_acknowledged = Reflect.get(record, 'marketplace_disclaimer_acknowledged') === true
     const stored_distance = Reflect.get(record, 'render_distance')
     const fight_access = fight_access_from(Reflect.get(record, 'fight_access'))
     const render_distance =
@@ -139,7 +136,6 @@ export const load_game_settings = (
       auto_switch_fighter,
       always_craft_from_character_id,
       placement_gas_warning_disabled,
-      marketplace_disclaimer_acknowledged,
       journey_collapsed: Reflect.get(record, 'journey_collapsed') === true,
       render_distance,
       fight_access,

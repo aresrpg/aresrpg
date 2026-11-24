@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { item_icon } from '../content/assets.ts'
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { content_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { useDungeonPortalPrompt } from '../game/core/dungeon_portal_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -69,7 +70,6 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           close_label={text('fight_close')}
           label={text('dungeon_portal')}
           max_width="max-w-lg"
-          soft
         >
           <div className="relative rounded-[11px] bg-surface-low p-5" data-dungeon-entry-card>
             <div className="flex items-start gap-3 border-b border-white/8 pb-4">

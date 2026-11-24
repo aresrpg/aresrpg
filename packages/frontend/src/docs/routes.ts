@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The docs are guides plus the encyclopedia's reference views under one `/docs` path space.
+// The docs are guides plus the encyclopedia's reference views, all addressed under `/docs`.
 
 export const DOCS_ROOT = '/docs'
 
@@ -21,8 +21,8 @@ export const DOCS_GUIDES = [
 ] as const
 export type DocsGuide = (typeof DOCS_GUIDES)[number]
 
-/** Reference sections are the encyclopedia's own views; their ids are its route segments. Its live KARES view is
- * left out on purpose: the token is not launched, so the docs state that instead of showing chain figures. */
+/** Reference sections are the encyclopedia's views. KARES is a written guide: the token's live figures are the
+ * Staking page's. */
 export const DOCS_REFERENCES = ['classes', 'jobs', 'worlds', 'items', 'bestiary'] as const
 export type DocsReference = (typeof DOCS_REFERENCES)[number]
 export type DocsSection = DocsGuide | DocsReference
@@ -46,31 +46,40 @@ export const is_mechanic = (value: string): value is DocsMechanic =>
   (DOCS_MECHANICS as readonly string[]).includes(value)
 const is_reference = (value: string): value is DocsReference => (DOCS_REFERENCES as readonly string[]).includes(value)
 
+/** A reference view names its object by id; a world view may also name a place as `kind:name`. */
+export type ReferenceView = Readonly<{ section: DocsReference; id: string | null; place: string | null }>
+
 export type DocsView =
-  | Readonly<{ kind: 'guide'; section: DocsGuide }>
-  /** `encyclopedia_path` is the same location in the encyclopedia's own route space. */
-  | Readonly<{ kind: 'reference'; section: DocsReference; encyclopedia_path: string }>
+  Readonly<{ kind: 'guide'; section: DocsGuide }> | (ReferenceView & Readonly<{ kind: 'reference' }>)
 
 const OVERVIEW: DocsView = Object.freeze({ kind: 'guide', section: 'overview' })
+
+const reference_view = (section: DocsReference, [id, place_kind, place]: readonly string[]): DocsView => {
+  const view = (id: string | null, place: string | null): DocsView =>
+    Object.freeze({ kind: 'reference', section, id, place })
+  if (!id) return view(null, null)
+  try {
+    return view(decodeURIComponent(id), place ? `${place_kind}:${decodeURIComponent(place)}` : null)
+  } catch (error) {
+    console.warn('Ignoring a malformed docs reference.', error)
+    return view(null, null)
+  }
+}
 
 export const docs_view = (pathname: string): DocsView => {
   const [root, section = 'overview', ...rest] = pathname.split('/').filter(Boolean)
   if (`/${root}` !== DOCS_ROOT) return OVERVIEW
   if (is_guide(section)) return Object.freeze({ kind: 'guide', section })
   if (!is_reference(section)) return OVERVIEW
-  return Object.freeze({
-    kind: 'reference',
-    section,
-    encyclopedia_path: ['/encyclopedia', section, ...rest].join('/'),
-  })
+  return reference_view(section, rest)
 }
 
-export const docs_path = (section: DocsSection, id?: string): string =>
-  section === 'overview' ? DOCS_ROOT : `${DOCS_ROOT}/${section}${id ? `/${encodeURIComponent(id)}` : ''}`
-
-/** Encyclopedia views navigate in their own route space; the docs keep them under `/docs`. */
-export const docs_path_of_encyclopedia = (encyclopedia_path: string): string =>
-  encyclopedia_path.replace(/^\/encyclopedia/, DOCS_ROOT)
+/** A place is written as `kind:name` and lives under its world's path. */
+export const docs_path = (section: DocsSection, id?: string | null, place?: string | null): string => {
+  if (section === 'overview') return DOCS_ROOT
+  const object = id ? [id, ...(place ? place.split(':') : [])] : []
+  return [DOCS_ROOT, section, ...object.map(encodeURIComponent)].join('/')
+}
 
 export const is_docs_path = (pathname: string): boolean => {
   const path = pathname.replace(/\/+$/, '')

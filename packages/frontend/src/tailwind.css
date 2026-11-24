@@ -1,11 +1,14 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
+/* Layer order, lowest first: theme, base, components (every @aresrpg/ui rule), utilities; then every unlayered
+   feature stylesheet. `@import 'tailwindcss'` declares it; ui's styles.css and document.css repeat the same statement
+   because they can load first. */
 @import 'tailwindcss';
 @import './components/app_layout.css';
-@source '../../mobile/src/**/*.tsx';
 
-/* One palette: every colour name below is an alias of a `--aui-*` token owned by packages/ui/src/base.css. */
+/* One design source: every colour, font, radius and easing name below aliases a `--aui-*` token owned by
+   packages/ui/src/base.css. */
 @theme {
   --color-void: var(--aui-void);
   --color-bg: var(--aui-bg);
@@ -24,7 +27,32 @@
   --color-gold: var(--aui-brass);
   --color-gold-light: var(--aui-brass-hi);
   --color-gold-dark: var(--aui-brass-lo);
+  --color-gold-deep: var(--aui-brass-deep);
   --color-cyan: var(--aui-blue);
+  --color-line: var(--aui-line);
+  --color-line-strong: var(--aui-line-strong);
+  --color-hair: var(--aui-hair);
+  --color-sui: var(--aui-sui);
+  --color-success: var(--aui-success);
+  --color-danger: var(--aui-danger);
+  --color-orange: var(--aui-orange);
+  --color-hue-gold: var(--aui-hue-gold);
+  --color-hue-sky: var(--aui-hue-sky);
+  --color-hue-lilac: var(--aui-hue-lilac);
+  --font-ui: var(--aui-font);
+  --font-title: var(--aui-font-title);
+  /* `font-mono` is the house mono, for figures and technical labels. */
+  --font-mono: var(--aui-font-mono);
+  --radius-ui: var(--aui-radius);
+  --ease-ui: var(--aui-ease);
+}
+
+/* A row that scrolls sideways without a visible bar. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 :root {
@@ -42,17 +70,6 @@
 
 [data-content-editor-shell] :is(input, select, textarea):focus {
   background-color: var(--color-surface-low);
-}
-
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 @keyframes glow-pulse {
@@ -74,61 +91,6 @@
     opacity: 1;
     transform: scale(1);
   }
-}
-
-/* No browser gives `<button>` a pointer cursor, and Preflight does not add one either, so the
-   affordance belongs to the role classes themselves — one home, instead of every call site
-   repeating `cursor-pointer` and every new button forgetting it. */
-.btn-gold,
-.btn-outline {
-  cursor: pointer;
-}
-
-.btn-gold:disabled,
-.btn-outline:disabled {
-  cursor: not-allowed;
-}
-
-.btn-gold {
-  border: 0;
-  background: linear-gradient(
-    180deg,
-    var(--aui-orange),
-    color-mix(in srgb, var(--aui-orange) 82%, var(--aui-orange-lo))
-  );
-  color: var(--aui-orange-ink);
-  box-shadow:
-    0 0 18px color-mix(in srgb, var(--aui-orange) 22%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  font-weight: 600;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-}
-
-.btn-gold:hover {
-  box-shadow:
-    0 0 28px color-mix(in srgb, var(--aui-orange) 40%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(-1px);
-}
-
-.btn-gold:disabled {
-  box-shadow: none;
-  opacity: 0.4;
-  transform: none;
-}
-
-.btn-outline {
-  border: 1px solid var(--aui-line-strong);
-  background: transparent;
-  color: var(--color-gold);
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-}
-
-.btn-outline:hover {
-  border-color: var(--aui-brass);
-  background: color-mix(in srgb, var(--aui-brass) 8%, transparent);
 }
 
 /* Native modal ownership also owns scrolling, including terminal and nested dialogs. */

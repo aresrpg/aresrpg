@@ -6,6 +6,7 @@ import { SendModalShell } from '../components/SendModalShell.tsx'
 import { AgentCoinTransfer } from './AgentCoinTransfer.tsx'
 import type { TransferDirection } from './inventory_transfer.ts'
 import { useAgentKiosk } from './useAgentKiosk.ts'
+import '../funding/funding.css'
 
 /**
  * The wallet's Transfer step. It is the game's one coin transfer between the owner's two wallets:

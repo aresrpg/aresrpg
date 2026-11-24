@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { PlayerContext, PlayerState } from './player.ts'
+import type { PublicContext, PlayerState } from './player.ts'
 import type { EventEnvelope } from './protocol.ts'
 import logger from './logger.ts'
 
 const log = logger(import.meta)
 
 /** One bounded reader for the selected item; the periodic refresh repairs missed pub/sub and UTC rollover. */
-export const observe_market_prices = ({ pubsub, events, send, get_state, signal }: PlayerContext) => {
+export const observe_market_prices = ({ pubsub, events, send, get_state, signal }: PublicContext) => {
   let running = false
   let queued = false
   let last_started = 0
@@ -22,10 +22,8 @@ export const observe_market_prices = ({ pubsub, events, send, get_state, signal 
     const current = (): boolean => !signal.aborted && get_state().market_price_observation === observation
     running = true
     last_started = Date.now()
-    void (async () => {
-      if (!pubsub.graph.market_prices) throw new Error('marketplace price reader unavailable')
-      return pubsub.graph.market_prices(observation.item_type, Date.now())
-    })()
+    void pubsub.graph
+      .market_prices(observation.item_type, Date.now())
       .then((snapshot) => {
         if (current()) send({ type: 'packet/market_prices', observation, ...snapshot })
       })

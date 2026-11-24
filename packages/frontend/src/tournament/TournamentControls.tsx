@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
+import { Button, GameWindow, NativeModal, SuiLogo } from '@aresrpg/ui'
 import { useId, type ReactNode, type CSSProperties } from 'react'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
@@ -8,7 +8,6 @@ import type { TournamentRow } from '@aresrpg/protocol'
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 import {

@@ -72,23 +72,8 @@
 .aui-button.aui-icon-button:has(> [data-carved-symbol='characters']) {
   --carved-accent: #a1afa0;
 }
-.aui-button.aui-icon-button:has(> [data-carved-symbol='leaderboard']) {
-  --carved-accent: #c6ae6f;
-}
 .aui-button.aui-icon-button:has(> [data-carved-symbol='mastery']) {
   --carved-accent: #8ca5be;
-}
-.aui-button.aui-icon-button:has(> [data-carved-symbol='kares']) {
-  --carved-accent: #b8b981;
-}
-.aui-button.aui-icon-button:has(> [data-carved-symbol='encyclopedia']) {
-  --carved-accent: #8c91bf;
-}
-.aui-button.aui-icon-button:has(> [data-carved-symbol='marketplace']) {
-  --carved-accent: #78ad92;
-}
-.aui-button.aui-icon-button:has(> [data-carved-symbol='airdrop']) {
-  --carved-accent: #bc91aa;
 }
 .aui-button.aui-icon-button:has(> [data-carved-symbol='kolizeum']) {
   --carved-accent: #bb8580;

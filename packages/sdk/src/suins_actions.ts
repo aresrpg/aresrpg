@@ -205,7 +205,7 @@ const eligible_parent = (
   ].every(Boolean)
 
 /** A clean, correctly targeted leaf is already reconciled; replacements discard every old detail. */
-export const leaf_change = (
+const leaf_change = (
   record: NameRecord | null,
   parent_nft: string,
   target: string | undefined,

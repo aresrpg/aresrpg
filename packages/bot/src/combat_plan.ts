@@ -5,10 +5,15 @@ import type { CharacterRow } from '@aresrpg/protocol'
 
 import { target_fields, type TargetOptions } from './target_constraints.ts'
 import { joinable_team } from './team_actions.ts'
-import { validate_profile_checkpoint, type CombatProfile } from './combat_profile.ts'
+import { BOOST_REMOVED, names_removed_step, validate_profile_checkpoint, type CombatProfile } from './combat_profile.ts'
 import { plan_combat_turn } from './combat_tactics.ts'
-import { gameplay_observation_ready, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
-import { owned_fight, fight_checkpoint_id, validate_gameplay, type GameplayActionName } from './gameplay.ts'
+import {
+  gameplay_observation_ready,
+  gameplay_observed_ms,
+  type GameplayContext,
+  fight_checkpoint_id,
+} from './gameplay_context.ts'
+import { owned_fight, validate_gameplay, type GameplayActionName } from './gameplay.ts'
 
 /** `allies` are teammates whose own trees may join this fight; `dungeon` names the run a room belongs to. */
 type CombatIntent = Readonly<{
@@ -89,6 +94,8 @@ const owned_turn_action = (
 ): CombatNext => {
   const { contract } = checkpoint
   const configured = run.profiles.find((profile) => profile.character_id === character_id)!
+  // A tree stored before a step was removed waits for its author instead of playing a profile it lost.
+  if (names_removed_step(configured.profile)) return { state: 'awaiting_ai', issue: BOOST_REMOVED }
   const unavailable = validate_profile_checkpoint(configured.profile, checkpoint, seat)
   if (unavailable.length) return { state: 'failure', issue: `unavailable_spells:${unavailable.join(',')}` }
   const observed_ms = gameplay_observed_ms(context)

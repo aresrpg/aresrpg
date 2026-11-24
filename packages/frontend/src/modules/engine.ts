@@ -49,9 +49,8 @@ import { nearby_fight } from './nearby_fight.ts'
 import { sword_fights } from './world_engage.ts'
 import { sync_world_activity } from './engine_activity.ts'
 import { run_to_target } from './run_to.ts'
-import { receive_engine_status, receive_frame_rate } from './engine_state.ts'
+import { initial_engine_state, receive_engine_status, receive_frame_rate } from './engine_state.ts'
 
-export { initial_engine_state, type EngineState, type EngineInput } from './engine_state.ts'
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'engine/status') return { ...state, engine: receive_engine_status(state.engine, input.status) }
   if (input.type !== 'engine/frames') return state
@@ -597,4 +596,5 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   })
 }
 
-export default Object.freeze({ name: 'engine', reduce, observe }) satisfies AppModule
+const initial = () => ({ engine: initial_engine_state() })
+export default Object.freeze({ name: 'engine', initial, reduce, observe }) satisfies AppModule

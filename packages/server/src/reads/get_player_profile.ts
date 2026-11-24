@@ -58,5 +58,31 @@ export const get_profile_equipment = async (
   return { kind: 'equipment', equipment: rows.length ? equipment : null }
 }
 
+/** One hero's public card: what the profile shows (name, class, level, worn items) and the appearance its on-chain
+ *  Display image already publishes (sex, three colors). Null for an unknown or unowned character. */
+export const get_hero_card = async (graph: Graph, { character_id }: Readonly<{ character_id: string }>) => {
+  const [row] = await graph.read(
+    `MATCH (c:Character {id: $character_id}) WHERE c.owner IS NOT NULL
+    OPTIONAL MATCH (c)-[:EQUIPS]->(i:Item)
+    RETURN c.name AS name, c.classe AS classe, c.sex AS sex, c.level AS level,
+      c.color_1 AS color_1, c.color_2 AS color_2, c.color_3 AS color_3, collect(i) AS items
+    LIMIT 1`,
+    { character_id }
+  )
+  if (!row || typeof row.name !== 'string' || typeof row.classe !== 'string' || typeof row.sex !== 'string') return null
+  return {
+    name: row.name,
+    classe: row.classe,
+    sex: row.sex,
+    level: Number(row.level),
+    color_1: Number(row.color_1),
+    color_2: Number(row.color_2),
+    color_3: Number(row.color_3),
+    equipment: (row.items as Node[]).flatMap((item) =>
+      item ? [shape_item(item.properties) as Readonly<{ item_type: string; stats?: Record<string, number> }>] : []
+    ),
+  }
+}
+
 export const read_inspection = (graph: Graph, query: InspectionQuery): Promise<InspectionResult> =>
   query.kind === 'profile' ? get_player_profile(graph, query) : get_profile_equipment(graph, query)

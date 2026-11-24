@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { RENDER_DISTANCE_MIN, save_game_settings, type GameSettings } from '../game/core/settings.ts'
+import {
+  load_game_settings,
+  RENDER_DISTANCE_MIN,
+  save_game_settings,
+  type GameSettings,
+} from '../game/core/settings.ts'
 import { master_volume_from, set_master_audio_volume } from '../game/core/audio_volume.ts'
 import { dispose_audio, play_audio, sync_audio_volumes } from '../game/audio/audio_registry.ts'
 import { observe_interface_audio } from '../game/audio/interface_audio.ts'
+import { env } from '../env.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { next_engine_recovery } from './engine_state.ts'
@@ -32,19 +38,13 @@ export const audible_settings_signature = (settings: GameSettings): string =>
     Object.fromEntries(
       Object.entries(settings)
         .filter(
-          ([key]) =>
-            ![
-              'completed_tutorials',
-              'placement_gas_warning_disabled',
-              'marketplace_disclaimer_acknowledged',
-              'journey_collapsed',
-            ].includes(key)
+          ([key]) => !['completed_tutorials', 'placement_gas_warning_disabled', 'journey_collapsed'].includes(key)
         )
         .sort(([a], [b]) => a.localeCompare(b))
     )
   )
 
-const observe = ({ events, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
+const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   signal.addEventListener('abort', dispose_audio, { once: true })
   observe_interface_audio(signal)
   let previous_settings = audible_settings_signature(get_state().settings)
@@ -58,6 +58,12 @@ const observe = ({ events, get_state, signal }: Parameters<NonNullable<AppModule
     previous_settings = next
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    // The settings page shows the account's SuiNS names: opening it reads them again, leaving it drops an edit.
+    const settings_page = state.navigation.page === 'settings'
+    const identity_changed = state.session.wallet !== previous.session.wallet
+    if (!settings_page && previous.navigation.page === 'settings') dispatch({ type: 'suins/close' })
+    if (settings_page && previous.navigation.page !== 'settings' && state.session.wallet && !identity_changed)
+      dispatch({ type: 'suins/refresh' })
     if (state.settings === previous.settings) return
     set_master_audio_volume(master_volume_from(state.settings.master_volume))
     sync_audio_volumes()
@@ -66,4 +72,12 @@ const observe = ({ events, get_state, signal }: Parameters<NonNullable<AppModule
   })
 }
 
-export default Object.freeze({ name: 'settings', reduce, observe }) satisfies AppModule
+/** The saved settings for this device; a local build may ask for a graphics quality in the address. */
+const initial = (): Pick<AppState, 'settings'> => ({
+  settings: load_game_settings(
+    env.engine_quality,
+    import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
+  ),
+})
+
+export default Object.freeze({ name: 'settings', initial, reduce, observe }) satisfies AppModule

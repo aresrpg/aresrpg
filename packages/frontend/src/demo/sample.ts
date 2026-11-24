@@ -11,11 +11,12 @@ import {
   type StatName,
 } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
+import { fold_equipment_stats } from '@aresrpg/protocol/character-stats'
 
 import guide from '../../../../seed/content/guide.json'
-import { encyclopedia_catalog, titleize, type SeedItem } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedItem } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { mob_level_from_scalar } from '../content/mob_levels.ts'
-import { fold_equipment_stats } from '../game/character_stats.ts'
 import {
   affordable_stat_value,
   initial_simulator_state,

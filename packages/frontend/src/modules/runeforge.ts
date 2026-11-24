@@ -77,6 +77,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return runeforge === state.runeforge ? state : Object.freeze({ ...state, runeforge })
 }
 
-const runeforge: AppModule = Object.freeze({ name: 'runeforge', reduce })
+const runeforge: AppModule = Object.freeze({
+  name: 'runeforge',
+  initial: () => ({ runeforge: initial_runeforge_state() }),
+  reduce,
+})
 
 export default runeforge

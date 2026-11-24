@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { SDK, living_content } from './client.ts'
+import { SDK } from './client.ts'
+import { living_content } from './pins.ts'
 import { receipt_digest, receipt_event, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { project_fight_boundary_receipt, type FightReceipt } from './fight.ts'

@@ -5,6 +5,7 @@
 
 import {
   fight_discoverable,
+  visible_equipment,
   zone_of,
   SPEED_BUDGET_BLOCKS_PER_SECOND,
   PET_SPEED_MULTIPLIER,
@@ -13,7 +14,6 @@ import {
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
-import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { mounted_motion, refreshed_roster_anchors, refreshed_world_anchor } from '../world_anchor.ts'
@@ -29,12 +29,10 @@ const log = logger(import.meta)
 
 const TRACKING_RADIUS = 1
 /** Windows follow movement on this clock, never on a move packet: a client oscillating across a
- *  zone border costs at most one re-track per window per tick (audit SERVER-2). */
-export const ZONE_RECENTER_MS = 1_000
-/** The travel bucket banks at most this much time — the burst allowance between packets.
- *  (2026-08-20: pricing each packet against a re-anchored wall clock dropped legal walks —
- *  a network stall flushes buffered positions in ONE millisecond, and a zero-second window
- *  reads any step as infinite speed. A bucket spends distance against banked time instead.) */
+ *  zone border costs at most one re-track per window per tick. */
+const ZONE_RECENTER_MS = 1_000
+/** The travel bucket banks at most this much time: the burst allowance between packets. A network
+ *  stall flushes buffered positions in one millisecond, so distance is spent against banked time. */
 const BUDGET_CAP_S = 1
 const TRANSIENT_SLACK_BLOCKS = 3
 /** The spiral: every zone within TRACKING_RADIUS of the center. */
@@ -44,22 +42,63 @@ const spiral = (zx: number, zz: number) =>
     zz: zz + (Math.floor(index / (2 * TRACKING_RADIUS + 1)) - TRACKING_RADIUS),
   }))
 
+/** What a roster change must re-track: the chain anchor, custody and dungeon run. */
+const anchor_signature = (row: CharacterRow | undefined): string | undefined =>
+  row &&
+  `${row.world ?? ''}:${row.checkpoint_world ?? ''}:${row.at_ms ?? 0}:${row.custody}:${JSON.stringify(row.dungeon_run ?? null)}`
+
+/** The tracking a roster row proves: its presence in the world it last checkpointed, from that
+ *  checkpoint's own timestamp, so travel accrues from the last proven position. */
+const track_action = (
+  row: CharacterRow,
+  owner: string
+): Omit<Extract<PlayerAction, { type: 'action/track_character' }>, 'party'> | null => {
+  const world = row.world ?? row.checkpoint_world
+  if (!world) return null
+  const { id, name, classe, sex, level, color_1, color_2, color_3, x = 0, z = 0, at_ms = 0 } = row
+  const fight = row.active_fight ?? { id: null, seat: null }
+  return {
+    type: 'action/track_character',
+    character: {
+      character_id: id,
+      owner,
+      name,
+      classe,
+      sex,
+      level,
+      color_1,
+      color_2,
+      color_3,
+      ...visible_equipment(row.equipment),
+      x,
+      y: null,
+      z,
+      riding: false,
+      gliding: false,
+      world,
+    },
+    fight: fight.id,
+    fight_seat: fight.seat,
+    dungeon_run: row.dungeon_run ?? null,
+    at_ms,
+  }
+}
+
 /** The `world:zx:zz` a tracking window is centred on; null for an absent or emptied window. */
 const window_center = (window?: Readonly<{ world: string; zones: readonly { zx: number; zz: number }[] }>) => {
   const center = window?.zones[Math.floor(window.zones.length / 2)]
   return center ? `${window!.world}:${center.zx}:${center.zz}` : null
 }
 
-/** The same mount, still standing? — a move/refit; anything else remounts whole. */
+/** The same mount, still standing: a move or refit; anything else remounts whole. */
 const same_mount = (before: Embodied, current: Embodied) =>
   before.character_id === current.character_id && before.world === current.world
 
 export default {
   name: 'player_world',
-
   reduce: (state, action) => {
     if (action.type === 'action/track_character') {
-      if (!state.allowed_characters.has(action.character.character_id)) return state
+      if (!state.roster[action.character.character_id]) return state
       const existing = state.characters[action.character.character_id]
       const refreshed = refreshed_world_anchor(existing, action.character, action.at_ms)
       return {
@@ -77,30 +116,8 @@ export default {
         },
       }
     }
-    if (action.type === 'action/character_roster') {
-      const signatures = Object.freeze(
-        Object.fromEntries(
-          action.characters.map((character) => [
-            character.id,
-            `${character.world ?? ''}:${character.checkpoint_world ?? ''}:${character.at_ms ?? 0}:${character.custody}:${JSON.stringify(character.dungeon_run ?? null)}`,
-          ])
-        )
-      )
-      const character_ids = new Set(Object.keys(signatures))
-      return {
-        ...state,
-        allowed_characters: character_ids,
-        character_signatures: signatures,
-        roster_fights: Object.freeze(
-          Object.fromEntries(
-            action.characters.flatMap((character) =>
-              character.active_fight ? [[character.id, character.active_fight.id] as const] : []
-            )
-          )
-        ),
-        characters: refreshed_roster_anchors(state.characters, action.characters),
-      }
-    }
+    if (action.type === 'action/character_roster')
+      return { ...state, characters: refreshed_roster_anchors(state.characters, action.characters) }
     if (action.type === 'action/move') {
       const tracked = state.characters[action.character_id]
       if (!tracked) return state
@@ -144,9 +161,6 @@ export default {
 
   observe: (context: PlayerContext) => {
     const { graph, pubsub, events, signal, send, address, dispatch, get_state, drop, public_world } = context
-    const tracking_generations = new Map<string, number>()
-
-    /** channel → forwarder — the subscription machinery, rebuilt by mount/unmount */
     const { watch, unwatch, has, watched } = create_watcher(pubsub, signal)
     const position_zone = ({ x = 0, z = 0 }: Pick<CharacterRow, 'x' | 'z'>) => zone_of(x, z)
     const follow_observed = (position: PlayerPosition): void => {
@@ -414,79 +428,26 @@ export default {
       })
     }
 
-    // THE VALIDATION DOOR — nothing here writes state; what survives re-enters as an action.
-    const track_character = (character_id: string, refresh = false): void => {
-      if (!get_state().allowed_characters.has(character_id)) return
-      if (!refresh && get_state().characters[character_id]) return
-      const generation = (tracking_generations.get(character_id) ?? 0) + 1
-      tracking_generations.set(character_id, generation)
-      void (async () => {
-        const owned = await get_owned_character(graph, { address, character_id })
-        if (
-          signal.aborted ||
-          generation !== tracking_generations.get(character_id) ||
-          !get_state().allowed_characters.has(character_id)
-        )
-          return
-        if (!owned) {
-          send({ type: 'packet/error', reason: 'not your character' })
-          return
-        }
-        const { character, visuals, party, fight } = owned
-        const world = (character.world ?? character.checkpoint_world) as string | undefined
-        if (!world) return // never joined a world yet — nothing to mount
-        const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null }
-        dispatch({
-          type: 'action/track_character',
-          character: {
-            character_id: character.id as string,
-            owner: address,
-            name: character.name as string,
-            classe: character.classe as string,
-            sex: character.sex as string,
-            level: character.level as number,
-            color_1: character.color_1 as number,
-            color_2: character.color_2 as number,
-            color_3: character.color_3 as number,
-            ...visuals,
-            x: (character.x as number) ?? 0,
-            y: null,
-            z: (character.z as number) ?? 0,
-            riding: false,
-            gliding: false,
-            world,
-          },
-          party,
-          fight: fight_id,
-          fight_seat,
-          dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null,
-          // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok
-          // semantics): the travel budget accrues from the last PROVEN position — a player
-          // legitimately far off an old anchor must not read as a speed hack on first move
-          // (2026-08-19: that misread drop-looped every session into load-snapshot spam).
-          at_ms: (character.at_ms as number) ?? 0,
-        })
-      })().catch((error: Error) => {
-        if (generation !== tracking_generations.get(character_id)) return
-        log.error({ address, error: error.message }, 'character tracking failed')
-        send({ type: 'packet/error', reason: 'character tracking failed' })
-      })
+    /** Track one roster character: the roster row is the proof of ownership. */
+    const track_character = (character_id: string): void => {
+      const row = get_state().roster[character_id]
+      const action = row && track_action(row, address)
+      // The membership is read once the channel is armed (player_party); tracking keeps it.
+      if (action) dispatch({ ...action, party: get_state().characters[character_id]?.party ?? null })
     }
 
-    events.on('action/character_watch_ready', ({ character_id }: { character_id: string }) => {
-      track_character(character_id, true)
-    })
+    events.on('action/character_watch_ready', ({ character_id }: { character_id: string }) =>
+      track_character(character_id)
+    )
     events.on('packet/position', (action: Extract<PlayerAction, { type: 'packet/position' }>) => {
       const tracked = get_state().characters[action.character_id]
       if (!tracked || tracked.fight || tracked.dungeon_run || action.checkpoint !== tracked.checkpoint) return
       const { presence: character, move_anchor } = tracked
       const now = Date.now()
-      // THE AUTHORED SPEED LAW as a token bucket: time banks travel allowance (uncapped
-      // accrual — the chain's travel_ok semantics: a long gap legitimately covers a long
-      // walk), each step SPENDS its distance, and the leftover carries capped at one banked
-      // second — so a burst of buffered packets spends the bank instead of dividing by zero,
-      // while a sustained overspeed drains it and a teleport overdraws it instantly.
-      const ceiling = SPEED_BUDGET_BLOCKS_PER_SECOND * (character.pet !== null ? PET_SPEED_MULTIPLIER : 1)
+      // The authored speed law as a token bucket: time banks travel allowance (a long gap covers a
+      // long walk, as the chain's travel_ok), each step spends its distance, and the leftover carries
+      // capped at one banked second; a sustained overspeed drains it and a teleport overdraws it.
+      const ceiling = SPEED_BUDGET_BLOCKS_PER_SECOND * (character.pet === null ? 1 : PET_SPEED_MULTIPLIER)
       const available = move_anchor.blocks + ceiling * Math.max(0, (now - move_anchor.at_ms) / 1000)
       const step = Math.hypot(action.x - move_anchor.x, action.z - move_anchor.z)
       if (step > available + TRANSIENT_SLACK_BLOCKS) {
@@ -500,7 +461,6 @@ export default {
         x: action.x,
         y: action.y,
         z: action.z,
-        // a petless rider is a lie — the flag only stands while a pet is equipped (chain truth)
         ...mounted_motion({ ...action, pet: character.pet }),
         at_ms: now,
         budget_blocks: Math.min(Math.max(available - step, 0), ceiling * BUDGET_CAP_S),
@@ -543,18 +503,14 @@ export default {
         .catch(tracking_failed)
     }
 
-    // THE EFFECT DOOR — everything the world does is a reaction to a state DELTA.
+    // Everything the world does is a reaction to a state delta.
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       sync_observed(state, previous)
-      if (state.character_signatures !== previous.character_signatures) {
-        Object.keys(previous.characters).forEach((character_id) => {
-          if (state.allowed_characters.has(character_id)) return
-          tracking_generations.set(character_id, (tracking_generations.get(character_id) ?? 0) + 1)
+      if (state.roster !== previous.roster)
+        Object.keys(state.roster).forEach((character_id) => {
+          if (anchor_signature(previous.roster[character_id]) !== anchor_signature(state.roster[character_id]))
+            track_character(character_id)
         })
-        Object.entries(state.character_signatures).forEach(([character_id, signature]) => {
-          if (previous.character_signatures[character_id] !== signature) track_character(character_id, true)
-        })
-      }
       const ids = new Set([...Object.keys(previous.characters), ...Object.keys(state.characters)])
       ids.forEach((character_id) => {
         const before_tracked = previous.characters[character_id]
@@ -594,7 +550,6 @@ export default {
     signal.addEventListener('abort', () => {
       clearInterval(recenter)
       zone_watches.forEach((stop) => stop())
-      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

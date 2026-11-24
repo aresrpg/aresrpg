@@ -4,15 +4,12 @@ import {
   create_fight,
   encode_fight_action,
   fight_loot_types,
-  hydrate_fight_checkpoint,
   type HydratedFightCheckpoint,
   type FightCommandInput,
 } from '@aresrpg/fight'
-import { live_mob_groups, zone_of, type ClientPacket, type FightStateRow } from '@aresrpg/protocol'
+import { live_mob_groups, zone_of, type ClientPacket } from '@aresrpg/protocol'
 import type { Sdk } from '@aresrpg/sdk'
 import { create_agent_actions } from '@aresrpg/sdk/agent-actions'
-
-import spells from '../../../seed/content/spells.json'
 
 import {
   assert_target_context,
@@ -24,32 +21,12 @@ import {
   target_schema,
   type TargetOptions,
 } from './target_constraints.ts'
-import {
-  EQUIPMENT_ACTIONS,
-  validate_equip_item,
-  validate_consumable,
-  equipment_executors,
-  type EquipmentActionPlan,
-} from './equipment_actions.ts'
-import {
-  TEAM_ACTIONS,
-  assert_supported_fight,
-  team_executors,
-  settle_executor,
-  validate_dungeon_enter,
-  validate_dungeon_fight,
-  validate_dungeon_leave,
-  validate_fight_forfeit,
-  validate_fight_join,
-  type SettlePlan,
-  type TeamActionPlan,
-  type TeamExecutor,
-} from './team_actions.ts'
-import { LOOT_BOX_ACTIONS, validate_open_boxes, validate_claim_loot, type LootBoxPlan } from './loot_boxes.ts'
-import { RAISE_SPELL_ACTION, validate_spell_allocation, type SpellAllocationPlan } from './spell_allocation.ts'
-import { RAISE_STATS_ACTION, validate_stat_allocation, type StatAllocationPlan } from './stat_allocation.ts'
-import { zone_key, type ActorWorld } from './actor_world.ts'
-import { hash_secret } from './security.ts'
+import { EQUIPMENT_ACTIONS } from './equipment_actions.ts'
+import { TEAM_ACTIONS, assert_supported_fight } from './team_actions.ts'
+import { LOOT_BOX_ACTIONS } from './loot_boxes.ts'
+import { RAISE_SPELL_ACTION } from './spell_allocation.ts'
+import { RAISE_STATS_ACTION } from './stat_allocation.ts'
+import { zone_key } from './actor_world.ts'
 import {
   object_schema,
   identifier,
@@ -67,41 +44,18 @@ import {
   assert_travel,
   travel_destination,
   assert_tracked_zone,
+  gameplay_action,
+  observed_fight,
+  zone_checkpoint_id,
+  type GameplayAction,
   type GameplayContext,
+  type GameplayExecutor,
 } from './gameplay_context.ts'
-export { gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
-import {
-  PROFESSION_ACTIONS,
-  validate_profession_action,
-  profession_action_executors,
-  type ProfessionActionPlan,
-} from './profession_actions.ts'
-import {
-  MARKET_ACTIONS,
-  market_validators,
-  market_executors,
-  type MarketExecutor,
-  type MarketPlan,
-} from './market_actions.ts'
-import { CHARACTER_ACTIONS, character_validators, character_executors } from './character_actions.ts'
-import type { CreateCharacterPlan } from './character_actions.ts'
+import { PROFESSION_ACTIONS } from './profession_actions.ts'
+import { MARKET_ACTIONS } from './market_actions.ts'
+import { CHARACTER_ACTIONS } from './character_actions.ts'
 
-type AgentActions = ReturnType<typeof create_agent_actions>
-type Actions = AgentActions['fight'] &
-  Pick<
-    AgentActions['character'],
-    | 'search_zone'
-    | 'equip'
-    | 'gather'
-    | 'craft'
-    | 'resolve_ambush'
-    | 'raise_stats'
-    | 'raise_spell'
-    | 'open_loot_boxes'
-    | 'claim_loot_batch'
-    | 'use_consumable'
-  >
-type TurnInput = Parameters<Actions['commit_turn']>[0]
+type TurnInput = Parameters<GameplayExecutor['commit_turn']>[0]
 type FightPayload = Readonly<{
   character_id: string
   fight: string
@@ -205,105 +159,6 @@ export const parse_fight_turn = (value: unknown): FightTurnPayload => {
   turn_input(payload)
   return payload
 }
-/** One catalog supplies both MCP descriptions/schemas and admission parsing. */
-export const GAMEPLAY_ACTIONS = Object.freeze({
-  ...PROFESSION_ACTIONS,
-  ...LOOT_BOX_ACTIONS,
-  raise_stats: RAISE_STATS_ACTION,
-  raise_spell: RAISE_SPELL_ACTION,
-  ...EQUIPMENT_ACTIONS,
-  ...TEAM_ACTIONS,
-  ...MARKET_ACTIONS,
-  ...CHARACTER_ACTIONS,
-  world_search: Object.freeze({
-    description:
-      "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
-    input_schema: search_schema,
-    parse: (value: unknown) => decode<SearchPayload>(search_schema, value),
-  }),
-  fight_engage: Object.freeze({
-    description:
-      'Engage an available observed roaming PvE mob group with an owned kiosk-held character. Uses the SDK default open access.',
-    input_schema: engage_schema,
-    parse: parse_engage,
-  }),
-  fight_place: Object.freeze({
-    description: 'Place an owned fighter in its ordinary PvE placement phase.',
-    input_schema: place_schema,
-    parse: parse_place,
-  }),
-  fight_ready: Object.freeze({
-    description: 'Ready an owned PvE fighter. The final ready may start combat atomically.',
-    input_schema: fight_schema,
-    parse: parse_fight,
-  }),
-  fight_start: Object.freeze({
-    description: 'Start an owned PvE fight when all players are ready or observed chain time permits force start.',
-    input_schema: fight_schema,
-    parse: parse_fight,
-  }),
-  fight_crank: Object.freeze({
-    description: 'Advance an owned active PvE fight when the canonical dead-seat or turn-timeout rule permits.',
-    input_schema: fight_schema,
-    parse: parse_fight,
-  }),
-  fight_turn: Object.freeze({
-    description: 'Validate and commit one complete owned PvE turn through the shared fight twin and SDK.',
-    input_schema: FIGHT_TURN_SCHEMA,
-    parse: parse_fight_turn,
-  }),
-  fight_settle: Object.freeze({
-    description:
-      'Settle one owned terminal PvE seat and collect its canonical loot into its original personal kiosk. No caller-supplied loot or merge targets.',
-    input_schema: fight_schema,
-    parse: parse_fight,
-  }),
-})
-export type GameplayActionName = keyof typeof GAMEPLAY_ACTIONS
-export const parse_gameplay_action = (kind: string, payload: unknown) => {
-  if (!Object.hasOwn(GAMEPLAY_ACTIONS, kind)) throw new Error('invalid_action')
-  const parsed = GAMEPLAY_ACTIONS[kind as GameplayActionName].parse(payload)
-  parse_target_options((parsed as { target_options?: unknown }).target_options)
-  parse_world_area((parsed as { area?: unknown }).area)
-  return parsed
-}
-export const gameplay_json = (value: unknown): string =>
-  JSON.stringify(value, (_, field: unknown) => (typeof field === 'bigint' ? field.toString() : field))
-export const fight_checkpoint_id = (row: FightStateRow): string => hash_secret(gameplay_json(row))
-export const zone_checkpoint_id = (row: ActorWorld['zones'][string]): string => hash_secret(gameplay_json(row))
-export const hydrate_gameplay_fight = (row: FightStateRow): HydratedFightCheckpoint =>
-  hydrate_fight_checkpoint({
-    contract: row.contract,
-    sources: { players: row.players, spells: Object.fromEntries(spells.map((spell) => [spell.name, spell])) },
-  })
-type Plan<K extends GameplayActionName, M extends keyof Actions> = Readonly<{
-  kind: K
-  travel?: import('./locomotion.ts').Travel
-  input: Parameters<Actions[M]>[0]
-}>
-export type GameplayPlan =
-  | EquipmentActionPlan
-  | MarketPlan
-  | CreateCharacterPlan
-  | ProfessionActionPlan
-  | StatAllocationPlan
-  | SpellAllocationPlan
-  | LootBoxPlan
-  | TeamActionPlan
-  | Plan<'world_search', 'search_zone'>
-  | Plan<'fight_engage', 'engage'>
-  | Plan<'fight_place', 'place'>
-  | Plan<'fight_ready', 'ready'>
-  | Plan<'fight_start', 'start'>
-  | Plan<'fight_crank', 'crank'>
-  | Plan<'fight_turn', 'commit_turn'>
-  | SettlePlan
-
-const observed_fight = (payload: Pick<FightPayload, 'fight' | 'checkpoint_id'>, context: GameplayContext) => {
-  const row = context.snapshot.fights[payload.fight]
-  if (!row || fight_checkpoint_id(row) !== payload.checkpoint_id) throw new Error('needs_resync')
-  return { row, checkpoint: hydrate_gameplay_fight(row) }
-}
 export const owned_fight = (payload: FightPayload, context: GameplayContext) => {
   const { row, checkpoint } = observed_fight(payload, context)
   const { contract } = checkpoint
@@ -350,7 +205,8 @@ const preview = (checkpoint: HydratedFightCheckpoint, input: FightCommandInput) 
   const result = create_fight({ state: checkpoint, mode: 'remote' }).apply(input)
   if (result.error) throw new Error('illegal_fight_action:' + result.error.code)
 }
-const validate_turn = (context: GameplayContext, observed_ms: bigint): Plan<'fight_turn', 'commit_turn'> => {
+const validate_turn = (context: GameplayContext) => {
+  const observed_ms = assert_fresh(context)
   const payload = parse_fight_turn(context.command.payload)
   const { checkpoint, seat } = owned_fight(payload, context)
   const { contract } = checkpoint
@@ -368,35 +224,32 @@ const validate_turn = (context: GameplayContext, observed_ms: bigint): Plan<'fig
     const boundary = runtime.apply({ type: 'end_turn', fighter: seat, observed_ms })
     if (boundary.error) throw new Error('illegal_fight_turn:' + boundary.error.code)
   }
-  return { kind: 'fight_turn', input }
+  return { input }
 }
-const validate_place = (context: GameplayContext): Plan<'fight_place', 'place'> => {
+const validate_place = (context: GameplayContext) => {
   const payload = parse_place(context.command.payload)
   const { checkpoint, seat } = owned_fight(payload, context)
   const cell = u64(payload.cell)
   preview(checkpoint, { type: 'place', fighter: seat, cell })
-  return { kind: 'fight_place', input: { fight: payload.fight, fighter_idx: seat, cell } }
+  return { input: { fight: payload.fight, fighter_idx: seat, cell } }
 }
-const validate_ready = (context: GameplayContext): Plan<'fight_ready', 'ready'> => {
+const validate_ready = (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
   const { checkpoint, seat } = owned_fight(payload, context)
   preview(checkpoint, { type: 'ready', fighter: seat })
-  return { kind: 'fight_ready', input: { fight: payload.fight, fighter_idx: seat } }
+  return { input: { fight: payload.fight, fighter_idx: seat } }
 }
-const validate_boundary = <K extends 'fight_start' | 'fight_crank'>(
-  context: GameplayContext,
-  kind: K
-): Plan<K, 'start'> => {
+const validate_boundary = (type: 'start' | 'crank') => (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
   const { checkpoint } = owned_fight(payload, context)
   // Unlocking a timeout requires an observed chain timestamp, never interpolation alone.
   preview(checkpoint, {
-    type: kind === 'fight_start' ? 'start' : 'crank',
+    type,
     observed_ms: BigInt(context.snapshot.clock!.chain_ms),
   })
-  return { kind, input: { fight: payload.fight } }
+  return { input: { fight: payload.fight } }
 }
-const validate_settle = (context: GameplayContext): SettlePlan => {
+const validate_settle = (context: GameplayContext) => {
   const payload = parse_fight(context.command.payload)
   const { checkpoint, character, seat } = owned_fight(payload, context)
   const { contract } = checkpoint
@@ -406,7 +259,6 @@ const validate_settle = (context: GameplayContext): SettlePlan => {
     (fighter, index) => fighter.kind.type !== 'player' || fighter.settled || fighter.forfeited || BigInt(index) === seat
   )
   return {
-    kind: 'fight_settle',
     input: {
       fight: payload.fight,
       custody: custody_of(character),
@@ -417,8 +269,9 @@ const validate_settle = (context: GameplayContext): SettlePlan => {
     },
   }
 }
-const validate_search = (context: GameplayContext): Plan<'world_search', 'search_zone'> => {
-  const payload = GAMEPLAY_ACTIONS.world_search.parse(context.command.payload)
+const parse_search = (value: unknown) => decode<SearchPayload>(search_schema, value)
+const validate_search = (context: GameplayContext) => {
+  const payload = parse_search(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const { zx, zz } = zone_of(payload.x, payload.z)
   assert_tracked_zone(context, payload.character_id, payload.world, zx, zz)
@@ -427,7 +280,6 @@ const validate_search = (context: GameplayContext): Plan<'world_search', 'search
   assert_area_position(payload.area, payload.world, payload.x, payload.z)
   assert_travel(character, payload, payload.x, payload.z, context.snapshot.clock!.chain_ms)
   return {
-    kind: 'world_search',
     travel: { ...travel_destination(character, payload.x, payload.z), area: payload.area },
     input: {
       ...payload,
@@ -436,7 +288,7 @@ const validate_search = (context: GameplayContext): Plan<'world_search', 'search
     },
   }
 }
-const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage'> => {
+const validate_engage = (context: GameplayContext) => {
   const payload = parse_engage(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const key = zone_key(payload.world, payload.zone_x, payload.zone_z)
@@ -456,7 +308,6 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
   })
   assert_travel(character, payload, group.x, group.z, context.snapshot.clock!.chain_ms)
   return {
-    kind: 'fight_engage',
     travel: { ...travel_destination(character, group.x, group.z), area },
     input: {
       character_id: payload.character_id,
@@ -469,92 +320,115 @@ const validate_engage = (context: GameplayContext): Plan<'fight_engage', 'engage
     },
   }
 }
-/** Rechecked at final signing and submission admission against the current actor snapshot. */
-export const validate_gameplay = (context: GameplayContext): GameplayPlan => {
-  const observed_ms = assert_fresh(context)
-  parse_target_options(context.command.payload.target_options)
-  const validators: Partial<Record<GameplayContext['command']['kind'], () => GameplayPlan>> = {
-    equip_item: () => validate_equip_item(context),
-    use_consumable: () => validate_consumable(context),
-    ...market_validators(context),
-    ...character_validators(context),
-    raise_stats: () => validate_stat_allocation(context),
-    raise_spell: () => validate_spell_allocation(context),
-    open_loot_boxes: () => validate_open_boxes(context),
-    claim_loot: () => validate_claim_loot(context),
-    fight_join: () => validate_fight_join(context, (payload) => observed_fight(payload, context)),
-    dungeon_enter: () => validate_dungeon_enter(context),
-    dungeon_fight: () => validate_dungeon_fight(context),
-    dungeon_leave: () => validate_dungeon_leave(context),
-    fight_forfeit: () => validate_fight_forfeit(context),
-    world_search: () => validate_search(context),
-    fight_engage: () => validate_engage(context),
-    fight_place: () => validate_place(context),
-    fight_ready: () => validate_ready(context),
-    fight_start: () => validate_boundary(context, 'fight_start'),
-    fight_crank: () => validate_boundary(context, 'fight_crank'),
-    fight_turn: () => validate_turn(context, observed_ms),
-    fight_settle: () => validate_settle(context),
-  }
-  return validators[context.command.kind]?.() ?? validate_profession_action(context)
+const FIGHT_ACTIONS = {
+  world_search: gameplay_action({
+    description:
+      "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
+    input_schema: search_schema,
+    parse: parse_search,
+    validate: validate_search,
+    execute: (sdk, input) => sdk.search_zone(input),
+  }),
+  fight_engage: gameplay_action({
+    description:
+      'Engage an available observed roaming PvE mob group with an owned kiosk-held character. Uses the SDK default open access.',
+    input_schema: engage_schema,
+    parse: parse_engage,
+    validate: validate_engage,
+    execute: (sdk, input) => sdk.engage(input),
+  }),
+  fight_place: gameplay_action({
+    description: 'Place an owned fighter in its ordinary PvE placement phase.',
+    input_schema: place_schema,
+    parse: parse_place,
+    validate: validate_place,
+    execute: (sdk, input) => sdk.place(input),
+  }),
+  fight_ready: gameplay_action({
+    description: 'Ready an owned PvE fighter. The final ready may start combat atomically.',
+    input_schema: fight_schema,
+    parse: parse_fight,
+    validate: validate_ready,
+    execute: (sdk, input) => sdk.ready(input),
+  }),
+  fight_start: gameplay_action({
+    description: 'Start an owned PvE fight when all players are ready or observed chain time permits force start.',
+    input_schema: fight_schema,
+    parse: parse_fight,
+    validate: validate_boundary('start'),
+    execute: (sdk, input) => sdk.start(input),
+  }),
+  fight_crank: gameplay_action({
+    description: 'Advance an owned active PvE fight when the canonical dead-seat or turn-timeout rule permits.',
+    input_schema: fight_schema,
+    parse: parse_fight,
+    validate: validate_boundary('crank'),
+    execute: (sdk, input) => sdk.crank(input),
+  }),
+  fight_turn: gameplay_action({
+    description: 'Validate and commit one complete owned PvE turn through the shared fight twin and SDK.',
+    input_schema: FIGHT_TURN_SCHEMA,
+    parse: parse_fight_turn,
+    validate: validate_turn,
+    execute: (sdk, input) => sdk.commit_turn(input),
+  }),
+  fight_settle: gameplay_action({
+    description:
+      'Settle one owned terminal PvE seat and collect its canonical loot into its original personal kiosk. No caller-supplied loot or merge targets.',
+    input_schema: fight_schema,
+    parse: parse_fight,
+    validate: validate_settle,
+    // A room settles through its dungeon door, which also advances or ends the run.
+    execute: (sdk, { dungeon, ...input }) => (dungeon ? sdk.dungeon.settle({ ...input, dungeon }) : sdk.settle(input)),
+  }),
 }
-export type GameplayActions = Pick<
-  Actions,
-  | 'search_zone'
-  | 'engage'
-  | 'place'
-  | 'ready'
-  | 'start'
-  | 'crank'
-  | 'commit_turn'
-  | 'settle'
-  | 'equip'
-  | 'gather'
-  | 'craft'
-  | 'resolve_ambush'
-  | 'raise_stats'
-  | 'raise_spell'
-  | 'open_loot_boxes'
-  | 'claim_loot_batch'
-  | 'use_consumable'
->
-type WalletExecutor = MarketExecutor & Parameters<typeof character_executors>[0]
-export type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
+/** One catalog supplies the MCP descriptions and schemas, admission parsing, validation and execution. */
+export const GAMEPLAY_ACTIONS = Object.freeze({
+  ...PROFESSION_ACTIONS,
+  ...LOOT_BOX_ACTIONS,
+  raise_stats: RAISE_STATS_ACTION,
+  raise_spell: RAISE_SPELL_ACTION,
+  ...EQUIPMENT_ACTIONS,
+  ...TEAM_ACTIONS,
+  ...MARKET_ACTIONS,
+  ...CHARACTER_ACTIONS,
+  ...FIGHT_ACTIONS,
+})
+export type GameplayActionName = keyof typeof GAMEPLAY_ACTIONS
+const gameplay_record = (kind: string): GameplayAction<unknown> => {
+  if (!Object.hasOwn(GAMEPLAY_ACTIONS, kind)) throw new Error('invalid_action')
+  return GAMEPLAY_ACTIONS[kind as GameplayActionName] as GameplayAction<unknown>
+}
+export const parse_gameplay_action = (kind: string, payload: unknown) => {
+  const parsed = gameplay_record(kind).parse(payload)
+  parse_target_options((parsed as { target_options?: unknown }).target_options)
+  parse_world_area((parsed as { area?: unknown }).area)
+  return parsed
+}
+/** Rechecked at final signing and submission admission against the current actor snapshot. */
+export const validate_gameplay = (context: GameplayContext) => {
+  assert_fresh(context)
+  parse_target_options(context.command.payload.target_options)
+  return gameplay_record(context.command.kind).validate(context)
+}
+type GameplayPacketSender = (packet: ClientPacket) => Promise<boolean>
 export const execute_gameplay_actions = async (
   context: GameplayContext,
-  actions: GameplayActions & WalletExecutor & TeamExecutor,
+  sdk: GameplayExecutor,
   send?: GameplayPacketSender
 ) => {
-  const plan = validate_gameplay(context)
-  const executors = {
-    ...profession_action_executors(actions),
-    ...equipment_executors(actions),
-    ...team_executors(actions),
-    ...market_executors(actions),
-    ...character_executors(actions),
-    raise_stats: actions.raise_stats,
-    raise_spell: actions.raise_spell,
-    open_loot_boxes: actions.open_loot_boxes,
-    claim_loot: actions.claim_loot_batch,
-    world_search: actions.search_zone,
-    fight_engage: actions.engage,
-    fight_place: actions.place,
-    fight_ready: actions.ready,
-    fight_start: actions.start,
-    fight_crank: actions.crank,
-    fight_turn: actions.commit_turn,
-    fight_settle: settle_executor(actions),
-  } satisfies { [Plan in GameplayPlan as Plan['kind']]: (input: Plan['input']) => Promise<unknown> }
-  // The mapped type checks each key/input pair; the discriminated plan preserves that correlation at dispatch.
-  const execute = () => executors[plan.kind](plan.input as never)
-  if (plan.kind !== 'fight_turn' || !send) return execute()
+  const action = gameplay_record(context.command.kind)
+  const { input } = validate_gameplay(context)
+  const execute = () => action.execute(sdk, input)
+  if (context.command.kind !== 'fight_turn' || !send) return execute()
+  const turn = input as TurnInput
   try {
     const fighter = BigInt(String(context.command.payload.fighter_idx))
-    for (const action of plan.input.actions) {
+    for (const step of turn.actions) {
       const sent = await send({
         type: 'packet/fight_action',
-        fight: plan.input.fight,
-        action: encode_fight_action({ ...preview_command(fighter, action), observed_ms: assert_fresh(context) }),
+        fight: turn.fight,
+        action: encode_fight_action({ ...preview_command(fighter, step), observed_ms: assert_fresh(context) }),
       })
       if (!sent) throw new Error('fight_connection_not_ready')
     }
@@ -562,7 +436,7 @@ export const execute_gameplay_actions = async (
   } catch (error) {
     // The normal resync door rolls watchers back after a refused or uncertain draft; it never retries a write.
     try {
-      await send({ type: 'packet/fight_resync', fight: plan.input.fight })
+      await send({ type: 'packet/fight_resync', fight: turn.fight })
     } catch (resync_error) {
       throw new AggregateError([error, resync_error], 'Fight submission and presentation resync failed', {
         cause: resync_error,
@@ -570,11 +444,6 @@ export const execute_gameplay_actions = async (
     }
     throw error
   }
-}
-export const execute_fight_turn = async (context: GameplayContext, actions: Pick<Actions, 'commit_turn'>) => {
-  const plan = validate_gameplay(context)
-  if (plan.kind !== 'fight_turn') throw new Error('invalid_action')
-  return actions.commit_turn(plan.input)
 }
 export const execute_gameplay = ({
   sdk,

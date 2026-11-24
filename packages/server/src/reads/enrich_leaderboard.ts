@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { LeaderboardEntry, LeaderboardSnapshot } from '@aresrpg/protocol'
+import type { LeaderboardEntry, LeaderboardMetric } from '@aresrpg/protocol'
 
 import type { Graph } from '../graph.ts'
 import type { ResolveName } from '../suins.ts'
@@ -13,12 +13,12 @@ const log = logger(import.meta)
 const ENRICHMENT_BUDGET_MS = 250
 
 /** Character badges are current presentation. Neither their presence nor their count gates rank. */
-export const enrich_leaderboard = async (
+export const enrich_entries = async (
   graph: Graph,
   resolve_name: ResolveName,
-  snapshot: LeaderboardSnapshot
-): Promise<LeaderboardSnapshot> => {
-  const entries = snapshot.self ? [...snapshot.entries, snapshot.self] : snapshot.entries
+  metric: LeaderboardMetric,
+  entries: readonly LeaderboardEntry[]
+): Promise<readonly LeaderboardEntry[]> => {
   const addresses = [...new Set(entries.map(({ address }) => address))]
   let timer: ReturnType<typeof setTimeout>
   const deadline = new Promise<void>((resolve) => {
@@ -40,7 +40,7 @@ export const enrich_leaderboard = async (
     addresses.map(async (address) => [address, await within(() => resolve_name(address), null)] as const)
   )
   const rows_read =
-    snapshot.observation.metric === 'xp' && addresses.length
+    metric === 'xp' && addresses.length
       ? within(
           () =>
             graph.read(
@@ -54,7 +54,7 @@ export const enrich_leaderboard = async (
         )
       : Promise.resolve([])
   const jobs_read =
-    snapshot.observation.metric === 'jobs' && addresses.length
+    metric === 'jobs' && addresses.length
       ? within(
           () =>
             graph.read(
@@ -77,5 +77,5 @@ export const enrich_leaderboard = async (
     characters: (badges.get(entry.address)?.characters ?? []) as LeaderboardEntry['characters'],
     character_count: Number(badges.get(entry.address)?.total ?? 0),
   })
-  return { ...snapshot, entries: snapshot.entries.map(enrich), self: snapshot.self ? enrich(snapshot.self) : null }
+  return entries.map(enrich)
 }

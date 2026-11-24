@@ -271,4 +271,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   })
 }
 
-export default Object.freeze({ name: 'dungeon', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'dungeon',
+  initial: () => ({ dungeon: initial_dungeon_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

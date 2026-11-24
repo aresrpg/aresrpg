@@ -3,41 +3,41 @@
 
 // Two-wallet distribution: an external holder pays to send a voucher to the authenticated game
 // wallet; the game wallet pays to redeem it. A failed second leg stays recoverable as a held card.
+// A printed card's link is claimed on the gift page alone (`airdrop/gift_runtime.ts`), never here.
 
 import type { GiftcardRow } from '@aresrpg/protocol'
-import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/auth'
+import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/giftcard-batch'
 
 import { sui_session } from '../wallet/external_session.ts'
 import type { AuthSession } from '../auth.ts'
-import { content_catalog } from '../content/catalog.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import { items_by_type } from '../content/items.ts'
+import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { env } from '../env.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
-import { gift_link_from_url, GIFT_LINK_STORAGE_KEY } from '../airdrop/gift_intent.ts'
 import { toast } from '../toast.ts'
+import { rolled_item_types } from '../content/item_templates.ts'
 
-import { rolled_item_types } from './claims.ts'
 import { create_giftcard_attempts } from './giftcard_attempts.ts'
 
 export type DistributionState = Readonly<{
   holder_giftcards: readonly GiftcardRow[] | null
-  gift_link_ready: boolean
   pending: string | null
   error: string | null
-  notice: Readonly<{ kind: 'received'; giftcards: readonly GiftcardRow[] } | { kind: 'unavailable' }> | null
+  /** Vouchers that reached the game wallet while it was signed in; the reward notice shows them. */
+  notice: Readonly<{ giftcards: readonly GiftcardRow[] }> | null
+  /** The airdrop view is on screen: the one fact the holder read and the automatic redemption follow. The
+   * view sets it; it is a fact of the page, not of the account, so a sign-out keeps it. */
+  open: boolean
 }>
 
 export type DistributionInput =
+  | Readonly<{ type: 'distribution/viewed'; open: boolean }>
   | Readonly<{ type: 'distribution/refresh_holder' }>
   | Readonly<{ type: 'distribution/holder_loaded'; holder: AuthSession; giftcards: readonly GiftcardRow[] }>
   | Readonly<{ type: 'distribution/claim_all' }>
   | Readonly<{ type: 'distribution/import' }>
   | Readonly<{ type: 'distribution/imported'; giftcards: readonly string[] }>
-  | Readonly<{ type: 'distribution/claim_gift_link' }>
-  | Readonly<{ type: 'distribution/gift_link_ready' }>
-  | Readonly<{ type: 'distribution/gift_link_claimed' }>
-  | Readonly<{ type: 'distribution/gift_link_unavailable' }>
   | Readonly<{ type: 'distribution/gifts_received'; giftcards: readonly GiftcardRow[] }>
   | Readonly<{ type: 'distribution/notice_dismissed' }>
   | Readonly<{
@@ -53,84 +53,21 @@ export type DistributionInput =
 export const initial_distribution_state = (): DistributionState =>
   Object.freeze({
     holder_giftcards: null,
-    gift_link_ready: false,
     pending: null,
     error: null,
     notice: null,
+    open: false,
   })
 
-export { gift_link_from_url } from '../airdrop/gift_intent.ts'
-
-const gift_intent_from_url = (href: string): string | null =>
-  ['/gift', '/claim'].includes(new URL(href).pathname) ? href : null
-
-const resumable_gift_intent = (scanned: string | null, saved: string | null): string | null =>
-  [scanned, saved].find((intent) => intent !== null && gift_link_from_url(intent) !== null) ?? scanned ?? saved
-
-const session_storage = (): Storage | null => {
-  try {
-    return globalThis.sessionStorage ?? null
-  } catch (error) {
-    console.warn('Gift-link session storage is unavailable.', error)
-    return null
-  }
-}
-
-const stored_gift_intent = (storage: Storage | null): string | null => {
-  try {
-    const saved = storage?.getItem(GIFT_LINK_STORAGE_KEY)
-    return saved ? gift_intent_from_url(saved) : null
-  } catch (error) {
-    console.warn('The saved gift link could not be read.', error)
-    return null
-  }
-}
-
-const remember_gift_intent = (storage: Storage | null, link: string | null): void => {
-  try {
-    if (link) storage?.setItem(GIFT_LINK_STORAGE_KEY, link)
-    else storage?.removeItem(GIFT_LINK_STORAGE_KEY)
-  } catch (error) {
-    console.warn('The gift link could not be saved.', error)
-  }
-}
-
-const scanned_gift_intent = (): string | null => {
-  if (typeof globalThis.location === 'undefined') return null
-  try {
-    return gift_intent_from_url(globalThis.location.href)
-  } catch (error) {
-    console.warn('The scanned gift link is invalid.', error)
-    return null
-  }
-}
-
-const hide_gift_secret = (): void => {
-  if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') return
-  globalThis.history.replaceState(null, '', `${globalThis.location.pathname}${globalThis.location.search}`)
-}
-
-const with_distribution = (state: AppState, distribution: DistributionState): AppState =>
+const with_distribution = <S extends SiteState>(state: S, distribution: DistributionState): S =>
   Object.freeze({ ...state, distribution })
 
-const reduce_gift_link_input = (current: DistributionState, input: AppInput): DistributionState | null => {
-  if (input.type === 'distribution/gift_link_ready')
-    return Object.freeze({ ...current, gift_link_ready: true, error: null })
-  if (input.type === 'distribution/gift_link_claimed')
-    return Object.freeze({ ...current, gift_link_ready: false, pending: null, error: null })
-  if (input.type === 'distribution/gift_link_unavailable')
-    return Object.freeze({
-      ...current,
-      gift_link_ready: false,
-      pending: null,
-      error: null,
-      notice: Object.freeze({ kind: 'unavailable' }),
-    })
+const reduce_notice_input = (current: DistributionState, input: AppInput): DistributionState | null => {
   if (input.type === 'distribution/notice_dismissed') return Object.freeze({ ...current, notice: null })
   if (input.type === 'distribution/gifts_received') {
-    const previous = current.notice?.kind === 'received' ? current.notice.giftcards : []
+    const previous = current.notice?.giftcards ?? []
     const giftcards = [...new Map([...previous, ...input.giftcards].map((card) => [card.id, card])).values()]
-    return Object.freeze({ ...current, notice: Object.freeze({ kind: 'received', giftcards }) })
+    return Object.freeze({ ...current, notice: Object.freeze({ giftcards }) })
   }
   return null
 }
@@ -150,12 +87,13 @@ const reduce_distribution_input = (current: DistributionState, input: AppInput):
       error: null,
     })
   if (input.type === 'distribution/failed') return Object.freeze({ ...current, pending: null, error: input.error })
+  if (input.type === 'distribution/viewed') return Object.freeze({ ...current, open: input.open })
   return null
 }
 
 const holder_operation = (operation: string | null): boolean => operation === 'load' || operation === 'import'
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   if (input.type === 'distribution/holder_loaded')
     return input.holder === state.external_wallet.session
       ? with_distribution(state, { ...state.distribution, holder_giftcards: input.giftcards, pending: null })
@@ -172,25 +110,19 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       pending: holder_pending ? null : state.distribution.pending,
       error: null,
     })
-  const next = reduce_gift_link_input(state.distribution, input) ?? reduce_distribution_input(state.distribution, input)
+  const next = reduce_notice_input(state.distribution, input) ?? reduce_distribution_input(state.distribution, input)
   if (next) return with_distribution(state, next)
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
-    return with_distribution(
-      state,
-      Object.freeze({
-        ...initial_distribution_state(),
-        gift_link_ready: state.distribution.gift_link_ready,
-      })
-    )
+    return with_distribution(state, Object.freeze({ ...initial_distribution_state(), open: state.distribution.open }))
   return state
 }
 
-const redeemable = (state: AppState, card: GiftcardRow): boolean => {
+const redeemable = (state: SiteState, card: GiftcardRow): boolean => {
   const item_type = rolled_item_types().get(card.template)
-  return Boolean(state.session.wallet && state.session.roster_loaded && item_type && content_catalog.item(item_type))
+  return Boolean(state.session.wallet && state.session.roster_loaded && item_type && items_by_type[item_type])
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
+const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_state, signal }) => {
   let game_lifetime = 0
   let holder_lifetime = 0
   const current_operation = (holder = false): (() => boolean) => {
@@ -198,12 +130,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const external = holder_lifetime
     return () => !signal.aborted && game === game_lifetime && (!holder || external === holder_lifetime)
   }
-  const storage = session_storage()
-  const scanned = scanned_gift_intent()
-  const intent = resumable_gift_intent(scanned, stored_gift_intent(storage))
-  let gift_link = intent ? gift_link_from_url(intent) : null
-  remember_gift_intent(storage, gift_link ?? scanned)
-  if (scanned) hide_gift_secret()
   const attempts = create_giftcard_attempts(browser_auth_storage(), env.network)
   const message_of = (error: unknown): string => (error instanceof Error ? error.message : String(error))
   const mark_failed = (error: unknown): string => {
@@ -220,43 +146,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     mark_failed(error)
     toast.add(error)
   }
-  if (gift_link) dispatch({ type: 'distribution/gift_link_ready' })
-  if (intent) dispatch({ type: 'path/open', pathname: new URL(intent).pathname })
-  events.on('auth/connected', ({ session }) => {
-    if (!gift_link) {
-      remember_gift_intent(storage, null)
-      return
-    }
-    if (session.identity !== 'zklogin') {
-      dispatch({ type: 'auth/disconnected' })
-      dispatch({ type: 'distribution/failed', error: copy_text(get_state().copy?.airdrop_page ?? {})('gift_login') })
-      return
-    }
-    dispatch({ type: 'distribution/claim_gift_link' })
-  })
-  events.on('distribution/claim_gift_link', () => {
-    const state = get_state()
-    const { wallet } = state.session
-    if (!gift_link || !wallet || !state.session.roster_loaded || state.distribution.pending) return
-    const current = current_operation()
-    dispatch({ type: 'distribution/pending', operation: 'gift-link' })
-    void wallet
-      .claim_giftcard_link(gift_link)
-      .then((result) => {
-        if (!current()) return
-        gift_link = null
-        remember_gift_intent(storage, null)
-        if (!result) return dispatch({ type: 'distribution/gift_link_unavailable' })
-        const { digest, giftcard } = result
-        dispatch({ type: 'distribution/gift_link_claimed' })
-        if (!signal.aborted && get_state().session.wallet === wallet) dispatch({ type: 'giftcard/received', giftcard })
-        dispatch({ type: 'distribution/redeem', giftcards: [giftcard], automatic: true, received_transaction: digest })
-      })
-      .catch((error) => {
-        if (current()) fail_holder(error)
-        else console.error('Gift-link claim failed after the account changed.', error)
-      })
-  })
   const refresh_holder = (): void => {
     const { pending } = get_state().distribution
     const holder = sui_session(get_state().external_wallet.session)
@@ -347,29 +236,23 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (giftcards.length) dispatch({ type: 'distribution/gifts_received', giftcards })
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.navigation.page !== 'airdrop' || state.distribution.error) return
-    if (state.distribution.holder_giftcards !== null && previous.navigation.page === 'airdrop') return
+    if (!state.distribution.open || state.distribution.error) return
+    if (state.distribution.holder_giftcards !== null && previous.distribution.open) return
     refresh_holder()
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    if (
-      state.session === previous.session &&
-      state.distribution === previous.distribution &&
-      state.navigation === previous.navigation
-    )
-      return
+    if (state.session === previous.session && state.distribution === previous.distribution) return
     queueMicrotask(() => {
       if (signal.aborted) return
       const state = get_state()
       if (
-        state.navigation.page !== 'airdrop' ||
+        !state.distribution.open ||
         state.session.wallet?.identity !== 'zklogin' ||
         !state.session.roster_loaded ||
         state.distribution.pending ||
         state.distribution.error
       )
         return
-      if (gift_link) return dispatch({ type: 'distribution/claim_gift_link' })
       const cards = state.session.giftcards
         .filter(({ id }) => !attempts.has(state.session.wallet!.address, id))
         .slice(0, MAX_GIFTCARDS_PER_TRANSACTION)
@@ -377,8 +260,11 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         dispatch({ type: 'distribution/redeem', giftcards: cards, automatic: true })
     })
   })
-  if (gift_link && get_state().session.wallet?.identity === 'zklogin')
-    dispatch({ type: 'distribution/claim_gift_link' })
 }
 
-export default Object.freeze({ name: 'distribution', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'distribution',
+  initial: () => ({ distribution: initial_distribution_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

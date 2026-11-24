@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Stable public files consumed by Sui Display. Authored art stays in seed/; Vite only derives
-// the unfingerprinted URL contract that wallets and explorers read outside the application.
+// Stable public files derived from seed/icons: the art Sui Display reads outside the application, and every icon
+// the application shows, at `/icons/<family>/<file>`. An icon's URL is its identity, so a page loads only the icons
+// it shows. Development serves the files straight from seed/ (never cached, so an edited icon shows at once);
+// the build emits the same files at the same paths.
 
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -13,7 +15,7 @@ import type { Plugin } from 'vite'
 import { character_model_basenames } from './src/content/character_model_catalog.ts'
 
 export type DisplayAssetRow = Readonly<{
-  content_type: 'image/jpeg' | 'image/png'
+  content_type: 'image/jpeg' | 'image/png' | 'image/webp'
   output_name: string
   route: string
   source_path: string
@@ -56,19 +58,49 @@ const character_asset_rows = (characters_dir: string): readonly DisplayAssetRow[
     )
   )
 
+/** The icon families the application shows, by folder of seed/icons. HD renders stay out: they are Display art. */
+const ICON_FAMILIES = Object.freeze([
+  { family: 'items', extension: '.png', content_type: 'image/png' },
+  { family: 'mobs', extension: '.png', content_type: 'image/png' },
+  { family: 'spells', extension: '.webp', content_type: 'image/webp' },
+  { family: 'characters', extension: '.png', content_type: 'image/png' },
+  { family: 'nameplates', extension: '.png', content_type: 'image/png' },
+] as const)
+
+const icon_rows = async (icons_dir: string): Promise<readonly DisplayAssetRow[]> =>
+  (
+    await Promise.all(
+      ICON_FAMILIES.map(async ({ family, extension, content_type }) =>
+        (await readdir(join(icons_dir, family)))
+          .filter((name) => name.endsWith(extension) && !name.endsWith(`_hd${extension}`))
+          .map((name) =>
+            Object.freeze({
+              content_type,
+              output_name: `icons/${family}/${name}`,
+              route: `/icons/${family}/${name}`,
+              source_path: join(icons_dir, family, name),
+            })
+          )
+      )
+    )
+  ).flat()
+
 export const display_asset_rows = async ({
-  characters_dir,
-  items_dir,
-}: Readonly<{ characters_dir: string; items_dir: string }>): Promise<readonly DisplayAssetRow[]> =>
-  Object.freeze([...(await item_asset_rows(items_dir)), ...character_asset_rows(characters_dir)])
+  icons_dir,
+}: Readonly<{ icons_dir: string }>): Promise<readonly DisplayAssetRow[]> =>
+  Object.freeze([
+    ...(await item_asset_rows(join(icons_dir, 'items'))),
+    ...character_asset_rows(join(icons_dir, 'characters')),
+    ...(await icon_rows(icons_dir)),
+  ])
 
 export const display_asset_for_route = async (
-  directories: Readonly<{ characters_dir: string; items_dir: string }>,
+  directories: Readonly<{ icons_dir: string }>,
   route: string
 ): Promise<DisplayAssetRow | null> => (await display_asset_rows(directories)).find((row) => row.route === route) ?? null
 
 export const display_asset_bytes = async (row: DisplayAssetRow): Promise<Uint8Array> => {
-  if (row.content_type === 'image/png') return readFile(row.source_path)
+  if (row.content_type !== 'image/jpeg') return readFile(row.source_path)
   const image = await loadImage(row.source_path)
   const canvas = createCanvas(image.width, image.height)
   const context = canvas.getContext('2d')
@@ -78,9 +110,7 @@ export const display_asset_bytes = async (row: DisplayAssetRow): Promise<Uint8Ar
   return canvas.encode('jpeg', 92)
 }
 
-export const display_assets_plugin = (
-  directories: Readonly<{ characters_dir: string; items_dir: string }>
-): readonly Plugin[] => {
+export const display_assets_plugin = (directories: Readonly<{ icons_dir: string }>): readonly Plugin[] => {
   const build_plugin: Plugin = {
     name: 'aresrpg-display-assets-build',
     apply: 'build',
@@ -104,7 +134,7 @@ export const display_assets_plugin = (
             if (!row) return next()
             const source = await display_asset_bytes(row)
             response.writeHead(200, {
-              'cache-control': 'public, max-age=3600',
+              'cache-control': 'no-store',
               'content-length': source.byteLength,
               'content-type': row.content_type,
             })

@@ -23,23 +23,18 @@ quality: Качество
 low: Низкое
 medium: Среднее
 high: Высокое
-identity_connected: Личность подключена
 sign_in_to_play: Войти в игру
 loading_universe: Загрузка вселенной
 continue_google: Продолжить с Google
 wallet_session_ended: Сеанс кошелька завершён. Войдите снова.
 connect_wallet: Подключить кошелёк
 no_wallet: Совместимый кошелёк не установлен
-sign_in: Войти в игру
 drag_hint: Перетаскивание — перемещение · Колесо — масштаб
 navigation: Навигация
 world: Мир
 characters: Персонажи
-leaderboard: Рейтинг
 mastery: Мастерство
 encyclopedia: Энциклопедия
-marketplace: Рынок
-airdrop: Аирдроп
 kolizeum: Колизей
 settings: Настройки
 admin: Управление
@@ -47,7 +42,6 @@ online: В сети
 account: Аккаунт
 join_discord: Присоединиться к Discord
 join_telegram: Присоединиться к Telegram
-sui_universe: Вселенная Sui
 server_disconnected: Отключено
 server_connecting: Подключение
 server_reconnecting: Переподключение
@@ -56,14 +50,13 @@ server_connected: Подключено
 server_violation: Отключено за нарушение правил. Скоро повторим подключение.
 server_replaced: Подключено в другом месте
 session_replaced_title: Вход из другого места
-session_replaced_body: 'Ваш аккаунт подключился в другом окне: в 3D-игре или в веб-приложении. Одновременно может быть подключено только одно окно, поэтому это окно отключено. Подключитесь здесь снова, чтобы пользоваться этим окном.'
+session_replaced_body: 'Ваш аккаунт подключился к игре в другой вкладке или на другом устройстве. Одновременно может быть подключено только одно окно, поэтому это окно отключено. Подключитесь здесь снова, чтобы пользоваться этим окном.'
 session_replaced_reconnect: Подключиться здесь
 latency_unit: мс
 indexing_health: Состояние индексации
 online_accounts: Аккаунты в сети
 online_characters: Персонажи в сети
 online_characters_body: Во всех мирах, включая бои и подземелья.
-indexing_lag_warning: Игровые действия могут задерживаться
 indexing_block_title: Синхронизация мира
 indexing_block_body: История блокчейна ещё индексируется. Игра откроется автоматически, когда сервер достаточно приблизится к актуальному состоянию.
 indexing_block_progress: Прогресс
@@ -79,7 +72,6 @@ fight_path_changed_toast: Поле изменилось до отправки х
 party_member_unavailable_toast: Этот персонаж уже в группе.
 fight_turn_already_forced_toast: Кто-то уже принудительно завершил этот ход.
 fight_placement_unavailable_toast: Начальная клетка недоступна. Выберите другую свободную клетку.
-network_testnet: ТЕСТОВАЯ СЕТЬ
 welcome_title: Добро пожаловать в AresRPG
 welcome_body: AresRPG — полностью ончейн-MMORPG с экономикой игроков. Создайте первого персонажа, войдите в мир и сражайтесь с монстрами.
 welcome_need_sui: 'Первый персонаж стоит {{price}}. Оставьте в кошельке минимум {{fee}} на комиссии за транзакции. Пополните баланс ниже, чтобы начать.'
@@ -108,13 +100,7 @@ wallet_send: Отправить
 wallet_add_funds: Пополнить
 wallet_gas_spent: Потрачено газа (24 ч)
 wallet_disconnect: Отключить
-wallet_fund_body: Отправьте SUI на этот адрес. Баланс обновится при возвращении в приложение.
-wallet_send_title: Отправить SUI
 wallet_recipient: Адрес получателя
-wallet_amount: Сумма (SUI)
-wallet_send_pending: Отправка SUI…
-wallet_send_success: SUI отправлены
-wallet_send_failed: Перевод SUI не удался
 wallet_close: Закрыть
 kolizeum_page:
   title: Колизей — Стол войны
@@ -158,13 +144,10 @@ friends_panel:
   title: Друзья
   observed: Замечены рядом
   unseen: Сейчас не видны
-  none_observed: Рядом нет замеченных друзей
   empty: Пока нет друзей
   placeholder: Имя, SuiNS или адрес 0x
   add: Добавить друга
   remove: Удалить
-  remove_title: Удалить друга
-  remove_body: Удалить {{name}} из списка друзей?
   error_no_suins: Для {{name}} не найден адрес SuiNS.
   error_target: Введите имя персонажа, имя SuiNS или полный адрес Sui.
   error_self: Нельзя добавить себя.
@@ -181,7 +164,6 @@ party_panel:
   disband: Распустить
   kick: Исключить
   rescind: Отозвать приглашение
-  invite_owned: Пригласить своего персонажа
   follow_leader: Следовать за лидером
   run_to_position: Бежать к позиции
   run_to_started: Вы бежите к последней ончейн-позиции {{name}}. Она может отличаться от текущей позиции игрока.
@@ -249,7 +231,6 @@ world_hud:
   fight_press_join_touch: 'Коснитесь, чтобы присоединиться'
   fight_press_spectate_touch: 'Коснитесь, чтобы наблюдать'
   dungeon_talk_touch: 'Коснитесь, чтобы поговорить'
-  character_options_touch: 'Коснитесь для выбора действий'
   spawn_welcome: 'Добро пожаловать, искатель приключений! Игра в раннем доступе. Постарайся выжить и приятно провести время.'
   compass_label: Компас
   zone: ЗОНА
@@ -279,7 +260,6 @@ world_hud:
   portal_prompt: Нажмите {{key}}, чтобы отправиться в другой мир
   dungeon_portal: Портал подземелья
   dungeon_city: Город {{city}}
-  dungeon_press_enter: Войти
   dungeon_talk: 'Поговорить'
   dungeon_guard_requires_key: 'Я не могу пропустить тебя без {{key}}.'
   dungeon_entry_body: Используйте ключ подземелья, чтобы войти в отдельное подготовительное лобби портала.
@@ -311,12 +291,9 @@ world_hud:
   dungeon_key_required: Для входа в подземелье нужен {{key}}.
   dungeon_group_refusal: Этот бой доступен только группе создателя.
   travel_title: Звёздные врата
-  travel_search: 'Поиск: {{title}}…'
   travel_entry_level: 'Уровень входа: {{level}}'
   travel_pending: Открываем врата…
   travel_success: Добро пожаловать в {{world}}
-  travel_empty: Нет миров
-  travel_showing: 'Результаты: {{filtered}} / {{total}}'
   travel_selected: Выбрано · {{label}}
   fight_press_join: Нажмите {{key}}, чтобы присоединиться
   fight_press_spectate: Нажмите {{key}}, чтобы наблюдать
@@ -366,10 +343,8 @@ world_hud:
   resource_gathered: Ресурс собран
   resource_gathered_amount: 'Собрано: {{quantity}} × {{name}}'
   resource_gathered_amount_ambushed: 'Собрано: {{quantity}} × {{name}} · На вас напал защитник'
-  resource_ambushed: На вас напал защитник
   resource_resolving_ambush: Защитник преградил путь…
   resource_ambush_title: Засада защитника
-  resource_face_protector: Нажмите {{key}}, чтобы встретить его
   zone_never_arrived: Поиск выполнен, но мир не обновился — данные могут запаздывать
 demo_page:
   animation_loop: Зациклить анимацию
@@ -489,16 +464,6 @@ marketplace_page:
   volume_unavailable: Объём временно недоступен.
   title: Рынок
   subtitle: Объявления игроков на Sui
-  disclaimer_kicker: Перед обменом
-  disclaimer_title: Торгуйте ради развития, а не прибыли
-  disclaimer_body: Предметы продаются напрямую между игроками за SUI.
-  disclaimer_supply: Предметы не являются долгосрочными инвестициями. Чем больше игроков их добывает, тем выше предложение и тем ниже могут стать цены.
-  disclaimer_fun: Покупайте и продавайте ради удовольствия и пользы для развития, а не в ожидании прибыли.
-  disclaimer_wallet: Храните в AresRPG только SUI для игры. Значимые сбережения держите в отдельном некастодиальном кошельке с ключами восстановления под вашим контролем.
-  disclaimer_acknowledge: Понятно
-  tab_buy: Купить
-  tab_sell: Продать
-  tab_history: История
   browse: Обзор
   group_equipment: Снаряжение
   group_pets: Питомцы
@@ -506,13 +471,20 @@ marketplace_page:
   group_consumable: Расходники
   group_resources: Ресурсы
   group_characters: Персонажи
-  level: Уровень
-  class: Класс
   search: Поиск предметов…
   no_results: Здесь пока нет объявлений
-  select_item: Выберите предмет для просмотра объявлений
+  group_empty: 'В этой группе пока ничего не выставлено'
+  featured: 'Избранное'
+  rarest: 'Самое редкое на рынке'
+  rarest_on_sale: 'В продаже всего: {{count}}.'
+  view_offers: 'Смотреть предложения'
+  see_all: 'Все'
+  results_for: 'Результаты по запросу «{{query}}»'
+  change_24h: '24 ч'
+  change_hint: 'Последний полный день по сравнению с предыдущим'
+  listed: 'В продаже'
+  cheapest_offers: 'Самые дешёвые предложения'
   listing_count: 'Объявлений: {{count}}'
-  rolled_stats: Полученные характеристики
   characteristics: Характеристики
   damages: урон
   range_to: до
@@ -526,15 +498,11 @@ marketplace_page:
   no_listings: У вас нет активных объявлений
   withdraw: Снять с продажи
   list_for_sale: Выставить на продажу
-  select_to_list: Выберите предмет из инвентаря
   price: Цена
   lot_size: Размер лота
   paid_automatically: Выручка автоматически поступает в ваш киоск.
-  lot_required: В стопке ×{{amount}}. Размер лота для стопок должен быть ×1, ×10, ×100 или ×1000.
-  inventory: Инвентарь
   characters: Персонажи
   items: Предметы
-  empty_inventory: Нет предметов для продажи
   revenue_30d: За последние 30 дней
   sales_count: 'Продаж: {{count}}'
   unclaimed: Неполученная выручка
@@ -579,32 +547,20 @@ mastery_page:
   world_reward: +{{points}} очк.
   shop_title: Магазин мастерства
   shop_lead: Тратьте очки мастерства на уникальные сундуки.
+  shop_line: Тратьте очки на сундуки
+  quest_in_game: Начните ежедневное задание в игре
   shop_empty: Товары мастерства пока не продаются
-  ready_to_buy: Можно купить
   points_missing: Не хватает {{points}} очков
-  buying: Покупка…
   buy: Купить · {{cost}} очк.
   quest_started: Ежедневное задание назначено.
   offer_purchased: Награда мастерства куплена.
 airdrop_page:
-  crew_view_sale: 'Открыть продажу KARES'
-  crew_dialogue:
-    intro: 'Участвуй в продаже токена KARES, и у меня будет для тебя подарок.'
-    connect: 'Подключи кошелёк, который использовался в продаже, и посмотрим, здесь ли твой подарок.'
-    checking: 'Сейчас проверю твои подарки…'
-    ready: 'Твой шлем Crew здесь!'
-    claiming: 'Подожди немного, идёт получение подарков.'
-    claimed: 'Я уже отдала тебе шлем Crew. Носи с гордостью!'
-    empty: 'Сейчас для этого кошелька нет доступного шлема Crew. Возможно, его уже забрали или распределение ещё не завершено.'
-    unavailable: 'Не удалось проверить подарки. Попробуй ещё раз.'
   reward_title: 'Вы получили подарок!'
   reward_received: 'Вы получили {items}!'
   reward_needs_sui: 'Ваш подарок в безопасности в кошельке. Добавьте немного SUI для оплаты транзакции, затем заберите награду.'
   reward_complete: 'Ваша награда доступна в инвентаре.'
   reward_redeeming: 'Ваш подарок получен. Добавляем его в инвентарь…'
   reward_held: 'Ваш подарок находится в кошельке. Заберите его, чтобы добавить награду в инвентарь.'
-  reward_used_title: 'Карта уже использована'
-  reward_used_body: 'Эта карта уже использована или больше недоступна. Каждую карту можно использовать только один раз.'
   reward_continue: 'Продолжить'
   reward_item: 'Подарок'
   destination: 'Игровой кошелёк:'
@@ -615,16 +571,8 @@ airdrop_page:
   holder_title: Внешний кошелёк
   holder_connect_hint: Подключите кошелёк с подарочными картами
   holder_connect: Подключить кошелёк
-  holder_connecting: Подключение…
-  holder_connected: Подключено
-  holder_select: Выбрать
-  holder_close: Закрыть выбор кошелька
-  holder_wallet_missing: Совместимый кошелёк Sui не установлен
   giftcards_title: Подарочные карты к обмену
   gift_login: Продолжите с Google, чтобы получить подарок в игровой кошелёк
-  gift_ready: Ваша печатная карта готова к получению
-  gift_claiming: Получение печатной подарочной карты…
-  gift_retry: Получить подарочную карту
   redeem: Обменять
   empty: В кошельке нет подарочных карт
   claim_all: Получить награды
@@ -667,6 +615,15 @@ airdrop_page:
     title_enforcer:
       title: 'Enforcer Machin'
       description: 'Титул «Исполнитель» для владельцев Enforcer Machin, соответствующих условиям.'
+    act_operator:
+      title: 'ACT'
+      description: 'Титул и тело Оператора для держателей ACT Airdrop Transponder на момент снимка. Один на кошелёк: Vesper, Dusk или Blood Ivory.'
+    act_warlords:
+      title: 'Военачальники ACT'
+      description: 'Ящик ACT Airdrop для игроков, выбранных по рейтингу ACT. В нём один шлем Helios Warlord.'
+    nogas_presale:
+      title: 'Nogas'
+      description: 'Плащ с плоской лягушкой для каждого кошелька, участвовавшего в пресейле NOGAS на Blast. Проверьте кошелёк, с которого вы участвовали.'
     blast_crew:
       title: 'Шлем Crew'
       description: 'Косметический подарок участникам продажи KARES на Blast. После распределения подключите использованный кошелёк.'
@@ -820,41 +777,18 @@ admin_page:
   inspecting: Проверка…
   plan: План контента
   targets: детерминированные цели
-  not_inspected: Добавьте ID опубликованных объектов и проверьте план.
   execute: Выполнить
   executing: Выполнение…
-  seal_title: Вечная печать
-  seal_body: Печать закрывает все будущие способы записи контента. Ни обновление, ни права администратора не отменят её.
-  arm_seal: Подготовить вечную печать
-  seal_forever: Запечатать навсегда
-  sealed: Контент запечатан
-  admin_wallet: Кошелёк администратора
-  admin_wallet_body: Отдельный подписант для публикации и вывода рыночных средств.
-  connect_admin_wallet: Подключить
-  choose_admin_wallet: Выбрать кошелёк
-  choose_admin_address: Выбрать адрес
-  cancel_wallet_selection: Отмена
-  wallet_account: Аккаунт
   select_wallet: Выбрать
   connecting: Подключение…
-  loading_wallets: Загрузка кошельков…
-  no_admin_wallet: Совместимый браузерный кошелёк не установлен.
   royalties: роялти
-  cap_owned: право есть
-  cap_missing: права нет
-  reading_royalties: Чтение политик…
   reading: Чтение…
-  refresh_revenue: Обновить выручку
   claiming: Получение…
-  disconnect_admin_wallet: Отключить
-  claim_digest: Транзакция получения
   range_24h: 24 часа
   range_7d: 7 дней
   range_30d: 30 дней
   range_90d: 90 дней
   range_1y: 1 год
-  overview_title: Обзор
-  overview_body: Активность игроков и выручка без лишних панелей управления.
   overview_unavailable: Обзор недоступен
   loading_overview: Загрузка обзора…
   all_systems_current: Все системы актуальны
@@ -864,15 +798,15 @@ admin_page:
   active_players: Активные игроки
   active_players_bucket: Активные игроки по интервалам
   daily_active: Активные игроки за день
-  active_interval: Активность за интервал
   active_30d: Активные за 30 дней
   active_last_30d: активны за последние 30 дней
   player_activity: Активность игроков
   population: Население
   player_activity_body: Дневная активность и охват за скользящие 30 дней
-  stickiness: День / 30 дней
   online_players: Игроков в сети
-  online_players_body: Пик уникальных подтверждённых игроков за интервал
+  online_players_body: 'Пик игроков и пик размещённых ботов онлайн за период'
+  players: Игроки
+  hosted_bots: Размещённые боты
   online_now: Игроков в сети
   online_split: Состав онлайна
   online_split_detail: 'игроки · размещённые боты'
@@ -891,12 +825,7 @@ admin_page:
   game_transactions_over_time: Транзакции во времени
   game_transactions_body: Успешные транзакции AresRPG, по одной на PTB
   today: Сегодня
-  selected_period: Выбранный период
   lifetime: за всё время
-  average_order: средний заказ
-  chart_revenue: Выручка
-  chart_players: Игроки
-  chart_online: В сети
   bucket_15m: Интервалы по 15 минут
   bucket_hour: Часовые интервалы
   bucket_day: Дневные интервалы
@@ -923,8 +852,6 @@ admin_page:
   when: Когда
   transaction: Транзакция
   treasury: Казначейство
-  treasury_body: Текущий баланс отдельно от заработанной выручки
-  available_balance: Доступный баланс
   claim: Получить
   close: Закрыть
   loading: Загрузка…
@@ -964,22 +891,17 @@ simulator_page:
   class_ikari_title: Берсерк
   class_shusen_title: Боец
   delete_character: Удалить персонажа
-  assigned_cell: Назначено · Клетка {cell}
   pick_character: Выбрать персонажа
   pick_mob: Выбрать монстра
-  character_editor: Локальный персонаж
-  character_editor_hint: Личность, внешность, уровень, характеристики и открытые заклинания
   character_level: Уровень персонажа
   character_stats: Распределённые характеристики
   character_spells: Уровни заклинаний
   stat_points: 'Осталось очков характеристик: {points}'
   spell_points: 'Осталось очков заклинаний: {points}'
-  spell_unlock: Открывается на {level}
   reset: Сбросить
   delete_confirm: Подтвердить удаление
   class_change_hint: Смена класса сбрасывает базовые характеристики и уровни улучшенных заклинаний
   spells_unavailable: На этом уровне нет открытых заклинаний
-  save_character: Сохранить персонажа
   equipment: Снаряжение и реликвии
   max_roll: Максимальный результат
   remove_mob: Убрать монстра
@@ -1047,7 +969,6 @@ fight_hud:
   crank_button: Завершить ход принудительно
   end_turn: Завершить ход
   end_turn_queued: Завершение хода в очереди
-  reset_turn: Сбросить
   weapon_attack: Атака оружием
   bare_hands: Голые руки
   log_fight_started: Бой начинается
@@ -1105,9 +1026,6 @@ fight_hud:
   result_enemies: Враги
   result_victory: Победа
   result_defeat: Поражение
-  result_you: Вы
-  result_fallen: Погиб
-  result_survived: Выжил
   result_collecting: Получение добычи…
   result_collecting_progress: Получение добычи персонажей · {completed}/{total}
   result_collecting_complete: Вся добыча персонажей получена · {completed}/{total}
@@ -1124,7 +1042,6 @@ fight_hud:
   level_up_spell_points: Очки заклинаний
   level_up_new_spell: Открыто новое заклинание
   level_up_new_worlds: Открыты новые миры
-  level_up_worlds_note: Доступны новые направления
   level_up_allocate: Распределить очки
   level_up_later: Позже
 wallet_legacy:
@@ -1182,50 +1099,12 @@ wallet_legacy:
   funding_failed: 'Не удалось завершить пополнение.'
   funding_pending: 'Перевод выполняется. Не отправляйте ещё один платёж.'
   sui: SUI
-  how_to_get: Как получить SUI
   your_address: 'Адрес SUI'
   send_sui: 'Отправляйте SUI через сеть Sui. Нажмите, чтобы скопировать.'
-  buy_directly: Купить напрямую
-  buy_with_card: Купите SUI картой с доставкой прямо в кошелёк.
-  buy_on_exchange: Купить на бирже
-  withdraw_to_wallet: Купите SUI на бирже и выведите на адрес кошелька выше.
-  faq: Частые вопросы
-  wallet_description: Ваш личный кошелёк. Доступ есть только у вас. Пополняйте SUI для комиссий и торговли с игроками.
-  moonpay_desc: Карта, Apple Pay, банковский перевод
-  transak_desc: Карта, банковский перевод, более 100 стран
-  faq_what_is_sui: Что такое SUI?
-  faq_what_is_sui_answer: SUI — цифровая валюта, подобная цифровым наличным. Она работает в быстрой и безопасной сети Sui. Небольшие суммы нужны для комиссий и прямой торговли с игроками на рынке.
-  faq_why_sui: Почему AresRPG использует SUI?
-  faq_why_sui_answer: SUI — наш основной способ оплаты. Транзакции проходят мгновенно, менее чем за секунду, и стоят доли цента без посредников. В будущем возможны обычные валюты, но это требует значительной юридической работы, комиссий и налоговых расходов, к которым мы пока не готовы.
-  faq_legal: Это законно?
-  faq_legal_answer: Да. В большинстве стран покупка и хранение криптовалюты разрешены. SUI — цифровой актив, торгуемый на крупных регулируемых биржах мира. AresRPG использует его для комиссий и торговли между игроками.
-  faq_eula: Это разрешено правилами игры?
-  faq_eula_answer: Да. Когда криптовалюта служит только способом оплаты без NFT и спекулятивных схем, это соответствует правилам. Многие крупные игровые магазины тоже поддерживают такие платежи.
-  faq_access: Кто может получить доступ к кошельку?
-  faq_access_answer: 'Только вы. Кошелёк создаётся через ваш вход Google с технологией zkLogin Sui. Никто, даже команда AresRPG, не может получить доступ к средствам или переместить их. Кошелёк предназначен только для игры: не храните большие суммы, вносите лишь то, что собираетесь использовать.'
-  faq_balance: Отправил SUI, но баланс не изменился?
-  faq_balance_answer: Обновление может временно задерживаться. Проверьте адрес получателя, скопировав его выше. Если средства не отображаются, обратитесь в Discord и укажите ID транзакции.
   add_funds: Пополнить
   testnet_faucet_title: Тестовые SUI
   testnet_faucet_body: AresRPG работает в тестовой сети Sui. Тестовые SUI бесплатны и не имеют денежной стоимости. Запросите токены в официальном кране Sui.
   testnet_faucet_action: Открыть кран Sui
-  how_to_pay: Как вы хотите оплатить?
-  add_funds_desc: Выберите способ оплаты. SUI поступят прямо в кошелёк.
-  method_paypal: PayPal
-  method_paypal_desc: Оплата аккаунтом PayPal
-  method_apple_pay: Apple Pay
-  method_apple_pay_desc: Оплата с Face ID / Touch ID
-  method_google_pay: Google Pay
-  method_google_pay_desc: Оплата аккаунтом Google
-  method_bank: Банковский перевод
-  method_bank_desc: SEPA (ЕС) или ACH (США)
-  paypal_note: Доступно в США, Великобритании и большей части Европы через MoonPay
-  card_note: Выберите провайдера ниже. Все принимают Visa и Mastercard
-  bank_note: Минимальные комиссии (около 1%). SEPA для Европы, ACH для США.
-  steps_paypal: 1. Откройте ссылку ниже  2. Выберите PayPal  3. Укажите сумму. SUI поступят в кошелёк
-  steps_wallet: Отправьте SUI на адрес ниже. Они поступят за несколько секунд.
-  advanced_exchange: 'Для опытных: купить на бирже'
-  age_notice: Все платёжные провайдеры требуют возраста от 18 лет.
   send:
     button: Отправить
     title: Отправить SUI
@@ -1256,17 +1135,12 @@ wallet_legacy:
     suins_resolving: Разрешение имени…
     suins_resolved: 'Имя найдено: {{name}}'
     err:
-      recipient_not_found: Игрок {{name}} не найден.
-      recipient_no_wallet: '{{name}} ещё не привязал кошелёк в веб-приложении. Попросите подключиться на aresrpg.world.'
       self_send: Нельзя отправлять SUI на свой же кошелёк.
       invalid_address: Введённый адрес не является корректным адресом Sui.
       insufficient_balance: В кошельке недостаточно SUI для перевода.
       rate_limited: Слишком много переводов. Подождите минуту.
       tx_failed: Транзакция не удалась в блокчейне. Средства не перемещены.
       user_rejected: Подпись отклонена в кошельке.
-      recipient_required: Перед отправкой укажите получателя.
-      suins_not_found: Имя SuiNS «{{name}}» не найдено.
-      amount_positive: Введите сумму больше нуля.
       amount_invalid: Некорректная сумма.
     drain_hint: Максимум опустошит кошелёк — комиссия вычитается из перевода.
     drain_warning: Кошелёк будет опустошён. Комиссия оплачивается из перевода, поэтому остаток составит ровно 0 SUI.
@@ -1286,7 +1160,6 @@ wallet_send_shared:
   total: Итого
   transaction: Транзакция
 encyclopedia_page:
-  tokenomics_tab: Токеномика
   world_locations: 'Места'
   world_search_places: 'Найти биом, город, монстра или ресурс…'
   world_entry: 'Вход: ур. {{level}}'
@@ -1297,9 +1170,6 @@ encyclopedia_page:
   world_gatherables: 'Ресурсы для сбора'
   world_gather_level: '{{job}} · Профессия: ур. {{level}}'
   world_protector: 'Защитник'
-  minimum: МИН.
-  maximum: МАКС.
-  terrain_seed: Сид рельефа
   sea_level: Уровень моря
   world_role:
     trash: Обычный
@@ -1312,23 +1182,17 @@ encyclopedia_page:
     herbalist: Травник
     miner: Шахтёр
   world_resource_tier: Ст. {{tier}}
-  world_address_copied: Скопировано!
   search_items: ПОИСК ПРЕДМЕТОВ…
   search_mobs: ПОИСК МОНСТРОВ…
   all_families: ВСЕ СЕМЕЙСТВА
   elements_filter: СТИХИИ
-  advanced_filters: РАСШИРЕННЫЕ ФИЛЬТРЫ
-  no_entries: Записей не найдено
   select_item: Выберите предмет для подробностей
   select_mob: Выберите монстра для подробностей
   select_class: Выберите класс для подробностей
-  loading_details: Загрузка подробностей…
-  loading_encyclopedia: Загрузка энциклопедии…
   items: Предметы
   mobs: Монстры
   pets: Питомцы
   classes: Классы
-  gameplay_tab: Механики
   jobs_tab: Профессии
   search_jobs: ПОИСК ПРОФЕССИЙ…
   select_job: ВЫБЕРИТЕ ПРОФЕССИЮ
@@ -1352,42 +1216,26 @@ encyclopedia_page:
     HANDYMAN: Умельцы создают инструменты, ключи и промежуточные материалы.
     ALCHEMIST: Алхимики создают зелья и промежуточные материалы.
     BAKER: Пекари создают хлеб и промежуточные материалы.
-  dungeons_tab: ПОДЗЕМЕЛЬЯ
-  search_dungeons: ПОИСК ПОДЗЕМЕЛИЙ…
-  select_dungeon: ВЫБЕРИТЕ ПОДЗЕМЕЛЬЕ
   dropped_by: ДОБЫЧА С
   recipe: РЕЦЕПТ
   price_history: ИСТОРИЯ ЦЕН
-  no_price_data: История цен недоступна
-  no_recipe: Данные рецепта недоступны
   ingredient_of: ИНГРЕДИЕНТ ДЛЯ
-  no_ingredient_of: Не используется в рецептах
   no_drops: Источники добычи неизвестны
-  pet_stats: ХАРАКТЕРИСТИКИ ПИТОМЦА
   pet_diet: РАЦИОН ПИТОМЦА
-  food_sources: ИСТОЧНИКИ ЕДЫ
-  stat_bonuses_max: БОНУСЫ ПРИ МАКСИМАЛЬНОЙ МОЩИ
   characteristics: ХАРАКТЕРИСТИКИ
   damages: урон
   range_to: до
   level_short: Ур. {{level}}
   no_diet: Нет сведений о рационе
-  newborn: Новорождённый
-  max_power: Максимальная мощь
   back_to_list: Назад к списку
   showing_mobs: ПОКАЗАНО {{count}} ИЗ {{total}} МОНСТРОВ
   no_mobs_match: НЕТ МОНСТРОВ ПО ВАШИМ ФИЛЬТРАМ
-  clear_all: ОЧИСТИТЬ ВСЁ
-  all_jobs: ВСЕ ПРОФЕССИИ
   sort_name_asc: ИМЯ А–Я
   level_bracket: УРОВЕНЬ {{range}}
-  unknown_zone: НЕИЗВЕСТНО
   showing_count: ПОКАЗАНО {{count}} ИЗ {{total}}
   sort_level_asc: УРОВЕНЬ ↑
   sort_level_desc: УРОВЕНЬ ↓
   sort_name: ИМЯ А–Я
-  sort_newest: НОВЕЙШИЕ
-  clear_filters: ОЧИСТИТЬ ВСЁ
   no_results: НЕТ ПРЕДМЕТОВ ПО ВАШИМ ФИЛЬТРАМ
   filter_by_category: ПО КАТЕГОРИИ
   filter_by_stat: ПО ХАРАКТЕРИСТИКЕ
@@ -1395,30 +1243,14 @@ encyclopedia_page:
   filter_by_job: ПО ПРОФЕССИИ
   filter_by_world: ПО МИРУ
   filter_by_mob_family: ПО СЕМЕЙСТВУ МОНСТРОВ
-  filter_biome: БИОМ
-  filter_city: ГОРОД
-  group_armor: БРОНЯ
   group_weapons: ОРУЖИЕ
-  group_accessories: АКСЕССУАРЫ
-  group_pets: ПИТОМЦЫ
-  group_runes: РУНЫ
-  group_relics: РЕЛИКВИИ
-  group_tools: ИНСТРУМЕНТЫ
-  group_consumables: РАСХОДНИКИ
   group_raw_resources: СЫРЬЁ
   group_gatherable_resources: СОБИРАЕМЫЕ РЕСУРСЫ
   group_intermediary_resources: ПРОМЕЖУТОЧНЫЕ МАТЕРИАЛЫ
   group_pet_food_resources: ЕДА ДЛЯ ПИТОМЦЕВ
-  item_category_pet_food: ЕДА ПИТОМЦА
-  boss_only: ТОЛЬКО БОССЫ
   view_all: ВСЕ
   item_type: ТИП
-  view_by_zone: ПО ЗОНЕ
   view_by_level: ПО УРОВНЮ
-  view_by_family: ПО СЕМЕЙСТВУ
-  unknown_family: Неизвестное семейство
-  stats_filter: ХАРАКТЕРИСТИКИ
-  filter_life_steal: КРАЖА ЗДОРОВЬЯ
   gameplay:
     game_mechanics: МЕХАНИКИ ИГРЫ
     section_combat: БОЙ
@@ -1573,13 +1405,8 @@ encyclopedia_page:
     chance_loot_desc: Средняя действующая Удача победителей, включая эффекты, множит все шансы добычи. При 600 шанс удваивается, но не превышает 100%.
     mob_loot_band: УРОВЕНЬ МОНСТРА И ДОБЫЧА
     mob_loot_band_desc: Заданный шанс — средняя точка. В диапазоне уровней он меняется с 80% до 120%, но не выше 100%. Монстры фиксированного уровня используют исходный шанс. Количество добычи от уровня не зависит.
-  unlocks_at_level: ОТКРЫВАЕТСЯ НА УР. {{level}}
   level: УРОВЕНЬ
-  aoe_radius: РАДИУС ОБЛАСТИ
   effects: ЭФФЕКТЫ
-  life_cost: затраты здоровья
-  duration_short: 'ДЛИТ.: {{duration}} с'
-  coming_soon: СКОРО
   health: ЗДОРОВЬЕ
   spells_count: ЗАКЛИНАНИЯ ({{count}})
   mob_spells: ЗАКЛИНАНИЯ
@@ -1600,13 +1427,7 @@ encyclopedia_page:
   spell_n: ЗАКЛИНАНИЕ {{n}}
   range: ДАЛЬНОСТЬ
   range_modifiability: ИЗМЕНЕНИЕ ДАЛЬНОСТИ
-  no_spells_minted: В блокчейне ещё нет заклинаний
-  xp_suffix: +{{xp}} ОП
-  boss_badge: БОСС
-  archi_badge: АРХИ
-  recommended_short: Рек. {{level}}
   level_range: Ур. {{min}}–{{max}}
-  up_to_plus: До +{{val}}
   element:
     fire: Огонь
     water: Вода
@@ -1628,23 +1449,13 @@ encyclopedia_page:
   characteristic_costs_desc: Базовые очки следуют этой шкале класса. Снаряжение не меняет стоимость.
   characteristic_cost_band: '{{cost}} очк. → +{{gain}} · ≤{{cap}}'
   characteristic_cost_unlimited: '{{cost}} очк. → +{{gain}} · без лимита'
-  turns_value: 'ХОДОВ: {{n}}'
   targeting: ВЫБОР ЦЕЛИ
-  effect_zone: ОБЛАСТЬ ЭФФЕКТА
   line_of_sight: ЛИНИЯ ВИДИМОСТИ
-  los_required: ТРЕБУЕТСЯ
-  los_not_required: НЕ ТРЕБУЕТСЯ
   target_cell: ЦЕЛЕВАЯ КЛЕТКА
   target_cell_empty: ДОЛЖНА БЫТЬ ПУСТОЙ
-  target_cell_any: ЛЮБАЯ (ПУСТАЯ ИЛИ ЗАНЯТАЯ)
   cast_line: ЛИНИЯ ПРИМЕНЕНИЯ
-  cast_line_straight: ТОЛЬКО ПРЯМАЯ
-  cast_line_free: СВОБОДНОЕ ПРИЦЕЛИВАНИЕ
   critical: КРИТИЧЕСКИЙ
   crit_chance: ШАНС КРИТА
-  crit_chance_value: 1 ИЗ {{n}}
-  on_crit: ПРИ КРИТЕ
-  proc_chance: ШАНС {{n}}%
   aoe_shape:
     point: ОДНА ЦЕЛЬ
     circle: КРУГ {{size}}
@@ -1654,28 +1465,13 @@ encyclopedia_page:
     ring: КОЛЬЦО {{size}}
     allmap: ВСЁ ПОЛЕ
     cone: КОНУС {{size}}
-  no_items_onchain: Нет шаблонов предметов в блокчейне
-  no_mobs_onchain: Нет существ в блокчейне
-  obtention_crafted: Можно создать
-  obtention_dropped_by: Выпадает с {{count}} монстров
-  obtention_unknown: Получение неизвестно
   total_supply: Общее предложение
-  marketcap: Капитализация
-  marketcap_unknown: Неизвестно
   worlds_tab: Миры
-  search_worlds: Поиск названия мира…
-  no_worlds: Нет миров в блокчейне
   select_world: Выберите мир
-  world_level_unknown: Диапазон уровней пока неизвестен
   world_biomes: Биомы
-  world_no_mobs: Монстры неизвестны
   world_cities: Города
   world_no_resources: Ресурсы неизвестны
-  world_gap_note: Пока не предоставляется RPC
   world_dungeon: Подземелье
-  world_dungeon_room: Комната {{n}}
-  world_stat_lean: Уклон характеристик
-  world_appears_in: 'Встречается в:'
   found_in: ВСТРЕЧАЕТСЯ В
   item_descriptions:
     abyssal_blood_wheat: ''
@@ -1819,7 +1615,6 @@ encyclopedia_page:
     wither_concentrate: ''
     wither_petal: ''
     witherbloom: ''
-out_of_sui_body: SUI для оплаты комиссий закончились. Пополните кошелёк, чтобы продолжить игру.
 characters_page:
   inventory_selection: Выбрано {{count}} · Shift-клик по экипировке меняет выбор
   crush_cta_count: Раздробить ({{count}})
@@ -1853,7 +1648,6 @@ characters_page:
   level: Ур. {{level}}
   experience: Опыт
   equipment_head: Снаряжение
-  equipped_totals: Суммарные бонусы снаряжения
   no_gear_equipped: Ничего не надето
   bag_equipment: Снаряжение
   bag_consumables: Расходники
@@ -1881,29 +1675,21 @@ characters_page:
   refusal_item_listed: Предмет выставлен на продажу
   refusal_unavailable: 'Персонаж или предмет изменился либо недоступен. Повторите, когда персонаж будет свободен.'
   points_to_assign: Очки для распределения
-  spend_hint: Распределите очки между шестью характеристиками и подтвердите
   reset: Сбросить
   confirm: Подтвердить
   tx_pending: Подтверждение…
-  stats_pending: Распределение очков…
-  stats_success: Очки распределены
   health: Здоровье
   action: Действие
   movement: Передвижение
   characteristics: Характеристики
   resistances: Сопротивления
   secondary: Вторичные
-  element_fire: Огонь
-  element_water: Вода
-  element_earth: Земля
-  element_air: Воздух
   add_point: Добавить очко в {{stat}}
   remove_point: Убрать очко из {{stat}}
   grimoire: Гримуар
   spell_points: Очки заклинаний
   unlocked: Открыто {{unlocked}} / {{total}}
   unlocks_at: Открывается на ур. {{level}}
-  unlock_line: Ур. {{level}}
   lv_of: '{{current}} / {{max}}'
   locked: Закрыто
   mastered: Освоено
@@ -1942,7 +1728,6 @@ characters_page:
   no_runes: В инвентаре нет рун
   menu_feed: Покормить
   menu_consume: Использовать
-  menu_crush: Раздробить
   menu_destroy: Уничтожить
   menu_view_recipes: Посмотреть рецепты
   menu_explorer: Посмотреть в обозревателе
@@ -1964,7 +1749,6 @@ characters_page:
   feed_unavailable: Питомец больше недоступен.
   claim_success: Награда получена
   crush_title: Раздробить снаряжение
-  crush_success: Снаряжение раздроблено
   crush_result_title: Результат дробления
   crush_result_empty: Повезёт в следующий раз.
   destroy_title: Уничтожить предмет
@@ -1983,8 +1767,6 @@ characters_page:
     movement: ОМ
     action: ОД
     range: Дальность
-    critical_chance: Шанс критического удара
-    critical_outcomes: Шанс критического удара
     vitality: Живучесть
     wisdom: Мудрость
     strength: Сила
@@ -1993,7 +1775,6 @@ characters_page:
     agility: Ловкость
     heal: Лечение
     critical_hit: Критический удар
-    percent_damage: Урон
     raw_damage: Фиксированный урон
     fire_resistance: Сопротивление огню
     water_resistance: Сопротивление воде
@@ -2006,7 +1787,6 @@ characters_page:
     level: Ур. {{level}}
     adventurer: Искатель приключений
     points_to_assign: Очки для распределения
-    spend_hint: Распределите их по характеристикам
     reset: Сбросить
     health: Здоровье
     action: Действие
@@ -2034,7 +1814,6 @@ characters_page:
     point_cost: '{{cost}} очк. → +{{gain}}'
     tx_success: Очки характеристик распределены
   spells:
-    range_modifiable: Изменяемая дальность
     no_character: Персонаж не выбран
     select_prompt: Выберите заклинание
     level: Уровень {{level}}
@@ -2055,25 +1834,13 @@ characters_page:
     unlimited: Без ограничений
     description: Описание
     effects: Эффекты
-    levels_head: Уровни
     mastered: Освоено
     upgrade_success: Уровень {{spell}} повышен!
     upgrading: Повышение уровня…
     level_up_spell: Улучшить заклинание
     pts: '{{count}} очк.'
-    pts_one: '{{count}} очк.'
-    pts_other: '{{count}} очк.'
     requires_lv: Нужен ур. {{level}}
     no_points: Нет очков
-    tag_self: На себя
-    tag_melee: Ближний бой
-    tag_ranged: Дальний бой
-    tag_zone: Зона
-    tag_line_of_sight: Линия видимости
-    el_fire: Огонь
-    el_water: Вода
-    el_earth: Земля
-    el_air: Воздух
     buff: Усиление
     utility: Поддержка
     heal: Лечение
@@ -2081,13 +1848,10 @@ characters_page:
     element: Стихия
     damage: Урон
     turns: ходов
-    crit_val: крит {{value}}
-    range_fixed: ФИКСИРОВАНО — БОНУС ДАЛЬНОСТИ НЕ ДЕЙСТВУЕТ
   jobs:
     level_up_title: Новый уровень профессии
     level_up_reached: Достигнут уровень
     level_up_character: '{{name}} стал опытнее'
-    level_up_progress: Уровень {{before}} → {{after}}
     level_up_continue: Продолжить
     category:
       gathering: Сбор
@@ -2106,13 +1870,10 @@ characters_page:
       yield: Выход
       xp: ОП
       unlocks_at: '{{name}} (открывается на уровне {{level}})'
-      gather_detail: '{{name}} · сбор {{gather}} с · восстановление {{respawn}} с'
       locked: закрыто
     lv_badge: Ур. {{level}}
     tier_badge: Ст. {{tier}}
     craft:
-      recipe_head: Рецепт
-      recipe_not_seeded: Этот рецепт пока недоступен.
       ingredients_head: Ингредиенты
       requires_level: Нужен {{job}} ур. {{required}} (у вас ур. {{level}})
       not_enough: Недостаточно ингредиентов
@@ -2126,9 +1887,6 @@ characters_page:
       craft_result: Создано {{successes}} / {{attempts}} × {{name}}
       locked_level: Закрыто · Ур. {{level}}
     detail:
-      close_aria: Закрыть сведения о предмете
-      item_not_seeded: Этот предмет пока недоступен.
-      tool_label: Инструмент
       crafts_label: 'Создаёт: {{covers}}'
       xp_progress: '{{current}} / {{needed}} ОП'
       gather_time: 'Время сбора: {{seconds}} с'
@@ -2423,7 +2181,6 @@ item_categories:
   weapon: Оружие
   tool: Инструмент
   relic_slot: Реликвия {{number}}
-kares: Стейкинг
 kares_page:
   ledger_intro: 'Токен наград, стейкинга и ящиков AresRPG. Выпущен один раз: каждое сжигание уменьшает предложение.'
   buy_aftermath: 'Купить на Aftermath'
@@ -2475,7 +2232,6 @@ kares_page:
   upgradeability_note: 'Контракты наград можно обновлять до окончательной заморозки проекта. Выпуск новых токенов остаётся отключённым.'
   claim_batch: 'Получить награды с {{count}} из {{total}} позиций'
   withdraw_batch: 'До {{count}} позиций за вывод. Повторите, чтобы вывести оставшуюся ставку.'
-  token_sale: 'Продажа токенов'
   locked_liquidity: 'Заблокированная ликвидность'
   stake_more: Добавить в стейкинг
   additional_daily: Дополнительно в день
@@ -2499,34 +2255,30 @@ kares_page:
   no_wallet: Установите кошелёк Sui для участия.
   refresh: Обновить
   loading: Чтение состояния блокчейна…
-  pending: Подтверждение транзакции…
   confirmed: Транзакция подтверждена
   amount: Сумма
   balance: Доступный баланс
   amount_invalid: Введите положительную сумму, до 9 знаков после запятой.
   insufficient: Сумма превышает доступный баланс.
-  gas_note: Оставьте немного SUI на комиссии.
   testnet: Тестовая сеть · только тестовые активы
-  back_game: Исследовать AresRPG
-  staking_title: Ваш стейк. Ваша доля.
   your_stake: Ваш стейк
   claimable: Накопленные награды
   stake: Стейкать KARES
   withdraw: Вывести стейк
   claim_rewards: Получить награды
   inactive: 'Стейкинг откроется после пополнения резервов.'
-  position: Позиция
   tokenomics: Токеномика KARES
   tabs_label: 'Разделы KARES'
   tab_tokenomics: 'Токеномика'
   tab_staking: 'Стейкинг'
-  signin_title: 'Войдите, чтобы стейкать'
-  signin_body: 'Стейкинг использует ваш игровой аккаунт. Войдите через Google, чтобы увидеть свой стейк и забрать награды.'
+  staking_line: 'Зарабатывайте KARES и SUI'
+  tokenomics_line: 'Предложение, сжигание и пулы наград'
+  signin_body: 'Этот раздел использует ваш игровой аккаунт. Войдите через Google, чтобы открыть его.'
   community: 'PvP-соревнования и сезонные рейтинги'
   team: Доля команды
   five_years: Награды стейкинга сообщества
   mastery_title: 'Ящики'
-  mastery_note: 'Покупайте ящики за KARES в игре. KARES навсегда сжигаются при покупке, а не при открытии ящика.'
+  mastery_note: 'Покупайте ящики за KARES в разделе «Мастерство» на странице «Стейкинг». KARES навсегда сжигаются при покупке, а не при открытии ящика.'
   rewards_note: 'Награды выдаются в течение 1 825 активных дней. Любой может пожертвовать KARES или SUI: распределение начинается со следующих активных суток и длится 30 активных дней, не продлевая прежние графики. Пожертвования нельзя забрать. Без ставок часы останавливаются; заработанные награды остаются доступными.'
   revenue_note: 20% собранных роялти рынка поступает в награды SUI. Награды зависят от выручки и объёма стейкинга.
   points: Очки мастерства
@@ -2536,10 +2288,8 @@ kares_page:
   community_detail: 'Этот резерв финансирует PvP-соревнования и награды сезонных рейтингов. Казначейство вручную распределяет разблокированные токены.'
   supply_detail: 'Выпускается один раз. Дополнительной эмиссии нет. Сжигание уменьшает предложение.'
   emissions_detail: 'Все награды используют существующие токены. Выплаты не создают новые токены.'
-  confirmed_refresh: Транзакция подтверждена. Обновите данные баланса.
   staking_unavailable: Стейкинг пока недоступен в этой сети.
   combat_rewards: Награды боссов
-  combat_detail: 'Уровни боссов определяют одну награду, поровну разделённую между победившими персонажами. Лимит — {{cap}} KARES за сутки от момента настройки. Активность эпохи изменяет размер награды. Тихие дни не накапливают долг; пожертвования продлевают резерв.'
   error_generic: Не удалось завершить действие.
   error_rejected: Запрос отменён.
   error_funds: Недостаточно средств для действия и комиссий.
@@ -2568,7 +2318,6 @@ leaderboard_page:
   feeding: Кормление питомцев
   gathering: Сбор
   category: Категория
-  loading: Загрузка…
   user: Игрок
   score: Очки
   you: Вы
@@ -2755,11 +2504,13 @@ title_names:
   title_fudbuster: 'Охотник на FUD'
   title_pug_paladin: 'Мопс-паладин'
   title_enforcer: 'Исполнитель'
+  title_operator_vesper: 'Оператор Vesper'
+  title_operator_dusk: 'Оператор Dusk'
+  title_operator_blood_ivory: 'Оператор Blood Ivory'
 ui:
   view_on_suivision: Посмотреть в SuiVision
   funding_game_wallet: Игровой кошелёк
   funding_external_wallet: Другой кошелёк
-  agent_wallet: 'Кошелёк агента'
   wallet_tabs: 'Кошелёк'
   wallet_game: 'Игра'
   wallet_bot: 'Бот'
@@ -2794,8 +2545,9 @@ ui:
   agent_needs_sui: 'Агенту нужны SUI для игры. Пополните баланс и повторите действие.'
   agent_funding_unverified: 'Не удалось проверить получателя. Обновите возврат, прежде чем пополнять баланс.'
   agent_watch: 'Наблюдать за агентом'
+  agent_recall: 'Вернуть'
+  agent_transfer_unavailable: 'Перед передачей снимите с этого персонажа снаряжение и завершите его бой.'
   agent_watching: 'Наблюдение за агентом'
-  agent_watch_empty: 'Нет персонажей для наблюдения.'
   agent_watch_failed: 'Не удалось подключиться к наблюдению за агентом. Попробуйте ещё раз.'
   portrait_backdrop: 'Фон'
   portrait_transparent: 'Прозрачный'
@@ -2814,21 +2566,13 @@ ui:
   portrait_failed: 'Не удалось загрузить портрет или скопировать ссылку. Вы можете выделить ссылку ниже.'
   portrait_close: 'Закрыть'
   portrait_preview: 'Портрет персонажа'
-  agent_asset_proceeds: 'Доход киосков'
-  agent_asset_collect: 'Собрать в мультиподпись'
-  agent_asset_delist: 'Отменить продажу'
   agent_asset_reserved: 'Эксклюзивное предложение · нужен PurchaseCap'
   agent_asset_unconfigured: 'Не настроено для этого развёртывания'
-  agent_asset_fee_budget: 'Максимальный бюджет газа'
   agent_label: 'Агент'
   agent_kiosk_badge: 'КИОСК'
   agent_kiosk: 'Киоск агента'
-  agent_coin_direct: 'Монеты переводятся напрямую одной транзакцией. Газ оплачивает отправитель.'
   agent_pair_for_deposit: 'Перед внесением средств подтвердите постоянного подписанта агента.'
-  agent_inventory_connect: 'Проверьте полный адрес агента, чтобы использовать его инвентарь.'
   agent_transfer_interrupted: 'Для продолжения предыдущей попытки передачи требуется ваше подтверждение.'
-  agent_transfer_sender: 'Отправитель'
-  agent_source_balance: 'Баланс отправителя'
   agent_inventory: 'Инвентарь агента'
   agent_asset_available: 'Доступно'
   agent_asset_listed: 'Выставлено · сначала отмените продажу'
@@ -2836,32 +2580,12 @@ ui:
   agent_asset_sui: 'Количество SUI'
   agent_asset_kares: 'Количество KARES'
   agent_asset_reserve: 'Оставить SUI после комиссий'
-  agent_asset_positions: 'KARES в стейкинге'
-  agent_asset_unstake: 'Вывести в мультиподпись'
-  agent_asset_owned: 'Прочие собственные объекты (просмотр)'
-  agent_asset_incoming: 'Входящие возвраты предметов'
-  agent_asset_scope: 'Выберите предметы и точные суммы. Стопки переносятся целиком. Снаряжение сначала снимается, продажи нужно отменить. Выведите KARES из стейкинга и обновите данные перед переводом. Оставьте SUI для следующих шагов. Другие типы объектов доступны только для просмотра; сначала завершите бой.'
-  agent_setup_prompt: 'Настрой моего агента AresRPG по руководству {guide} с приватной временной ссылкой: {url}. Автоматически отправь публичное подтверждение. Настройка не разрешает перевод активов или игру.'
   agent_cancel: 'Отмена'
   agent_pair_connect: 'Подключить'
-  agent_setup_request: 'Запрос настройки'
-  agent_pair_failed_title: 'Не удалось подключиться'
-  agent_pair_pending: 'Ожидание помощника…'
-  agent_pair_failed: 'Срок настройки истёк или её не удалось завершить. Подключитесь снова.'
-  agent_pair_verified: 'Ключ агента проверен. Это не подтверждает вход на сервер или владение персонажем.'
-  agent_environment: 'Выберите помощника с постоянной средой для агента, например ChatGPT dots или Grok Bot.'
-  agent_pair_ephemeral: 'Только проверка открытого ключа. Этот временный ключ теряется при завершении процесса агента. Никогда не отправляйте активы на этот адрес.'
-  agent_pair_instructions: 'Отправьте этот запрос помощнику. Результат появится здесь автоматически.'
-  agent_pair_blocked: 'Этот кошелёк не предоставляет публичный идентификатор Google для сопряжения. Подключитесь через Google, чтобы создать публичный запрос.'
   agent_copy_request: 'Копировать URL подключения'
   agent_copy_failed: 'Не удалось скопировать. Выделите и скопируйте запрос выше вручную.'
-  agent_handoff_request: 'Подготовь {{provider}} к Connect Your Agent по {{url}}. Сообщи о недостающей настройке подписи и при необходимости запроси временную ссылку. Запрос не разрешает создание учётных данных, перевод активов или игру.'
   agent_connect_your: 'Подключить своего агента'
-  agent_page_body: 'Позвольте ИИ-ассистенту играть героями за вас. Он играет из собственного кошелька бота — мультиподписи, из которой ваш аккаунт Google всегда может вернуть активы.'
   agent_page_signin: 'Войдите через Google, чтобы настроить агента и его кошелёк бота.'
-  agent_page_world: 'Открыть 3D-мир'
-  agent_bootstrap: 'Открыть инструкции'
-  agent_character_offer_hint: 'Это отправляет предложение. Агент забирает персонажа отдельной операцией. Действуют обычные комиссии.'
   agent_connected: 'Агент подключён'
   agent_disconnect_title: 'Отключить и вернуть активы?'
   agent_disconnect_body: 'Остановите бота и верните его персонажей, предметы и средства в свой кошелёк. Текущие бои и подземелья будут покинуты. Комиссии могут списываться с вашего кошелька.'
@@ -2870,25 +2594,10 @@ ui:
   agent_return_complete: 'Бот отключён. Активы возвращены.'
   agent_return_resume: 'Продолжить возврат'
   agent_return_needs_sui: 'Добавьте SUI для оплаты комиссий возврата.'
-  agent_hint_desktop: 'Нажмите правой кнопкой на портрет или вкладку персонажа и выберите «Отправить агенту».'
-  agent_hint_create: 'Создайте персонажа на обычном экране создания, затем откройте его меню действий для отправки агенту.'
   agent_sending: 'Отправка…'
-  agent_pair_storage_failed: 'Не удалось сохранить данные восстановления. Разрешите хранение данных в браузере и подключитесь снова.'
-  agent_pair_disposable: 'Этот агент использует временные учётные данные. Попросите его настроить постоянное хранилище и подключитесь снова.'
-  agent_signer_persistent: 'Постоянный подписант транзакций проверен.'
-  agent_hosted_intro: 'Ассистент использует MCP без ключа подписи. Ключ сервиса AresRPG и ваш Google-кошелёк могут каждый самостоятельно перемещать активы бота без одобрения другой стороны.'
-  agent_hosted_unavailable: 'Нужны игровой Google-кошелёк и настроенный HTTPS-сервис бота. Восстановление остаётся доступным в инвентаре.'
   agent_hosted_ambiguous: 'Нужно проверить несколько размещённых кошельков. Кошелёк не выбран.'
-  agent_other_wallets: 'Другие сохранённые кошельки'
-  agent_hosted_pending: 'Подключение…'
-  agent_hosted_authenticate: 'Подтвердить Google-кошелёк'
-  agent_hosted_ready: 'Настройка завершена'
   agent_hosted_consent: 'Подключите помощника'
   agent_checking: 'Проверяем состояние агента…'
-  signing_in: 'Выполняется вход…'
-  telegram_link_title: 'Привязать Telegram'
-  telegram_link_signin: 'Войдите через Google, чтобы привязать этот чат Telegram к игровому аккаунту.'
-  telegram_link_failed: 'Не удалось привязать Telegram. Вернитесь в Telegram и войдите снова.'
   agent_hosted_review: 'Ассистент запрашивает доступ к вашему боту. Продолжите, чтобы увидеть запрос; до подключения ничего не передаётся.'
   agent_hosted_authority: 'Может играть и расходовать активы этого бота.'
   agent_hosted_read_access: 'Может просматривать этого бота.'
@@ -2915,9 +2624,7 @@ ui:
   agent_guide_acknowledge: 'Я понимаю и хочу продолжить'
   agent_guide_create_plugin: 'Создать как плагин'
   agent_guide_continue: 'Продолжить'
-  agent_hosted_recovery: 'Используйте Инвентарь и Отзыв для независимого возврата активов. Возврат не отменяет контроль ключа сервиса над активами, оставшимися у бота.'
   agent_choose: 'Выберите агента'
-  agent_unavailable: 'Сопряжение пока недоступно. Агент не подключён.'
   agent_setup: 'Настроить агента'
   agent_send: 'Передать агенту'
   feedback_question: 'Что мешает вам продолжить?'
@@ -2934,58 +2641,26 @@ ui:
   equipment_comparison: 'Изменения при экипировке'
   equipment_replacing: 'Заменяет {{name}}'
   equipment_unchanged: 'Бонусы характеристик не изменятся'
-  preview_only: 'Интерактивный просмотр · транзакции не отправляются'
-  inspect_details: 'Осмотреть'
-  design_minimap: 'Мини-карта'
-  design_party_invitation: 'Приглашение в группу'
-  design_trade_invitation: 'Приглашение к обмену'
   progression_rewards: 'Награды'
   inventory_selected_count: 'Выбрано: {{count}}'
   inventory_select: 'Выбрать'
   inventory_deselect: 'Снять выбор'
   inventory_use: 'Использовать'
   attack: 'Атаковать'
-  character_summary: 'Обзор'
   character_details: 'Подробности'
-  allocate_points: 'Распределить'
   inventory_search: 'Поиск в инвентаре…'
   design_titles: 'Титулы'
-  design_no_title: 'Без титула'
-  design_library: 'Мастерская интерфейса'
-  design_controls: 'Элементы управления'
-  design_components: 'Компоненты'
-  design_prebuilt: 'Готовые'
-  design_windows: 'Окна'
-  design_feedback: 'Отклик'
-  design_tokens: 'Токены'
-  design_dialog: 'Открыть диалог'
-  design_disabled: 'Недоступно'
-  design_details: 'Подробности'
-  design_description: 'Общие компоненты игры. Проверяйте состояния и адаптивные макеты на локальных примерах.'
   design_volume: 'Громкость'
-  design_motion: 'Анимация'
-  design_search: 'Поиск'
-  design_equipment_hint: 'Выберите предмет для экипировки. Нажмите на надетый предмет, чтобы снять его.'
   design_equip: 'Надеть'
   design_combat: 'Бой'
-  design_journal: 'Журнал и развитие'
-  design_complete: 'Завершено'
-  design_viewport: 'Размер предпросмотра'
-  design_desktop: 'Компьютер'
-  design_mobile: 'Телефон'
   leave_game_title: 'Хотите выйти из игры?'
   stay_in_game: 'Продолжить игру'
   leave_game_confirm: 'На главный экран'
   mobile_move: 'Движение'
   mobile_jump: 'Прыгнуть'
-  mobile_chat: 'Чат'
-  mobile_party: 'Группа'
   mobile_confirm_action: 'Подтвердить действие'
   mobile_item_actions: 'Действия с предметом'
   mobile_unequip: 'Снять'
-  mobile_use_item: 'Использовать / надеть'
-  mobile_language: 'Язык'
-  mobile_menu: 'Меню'
   mobile_rotate_title: 'Поверните, чтобы играть'
   mobile_rotate: 'Поверните устройство, чтобы играть в альбомном режиме.'
   character: Персонаж
@@ -3429,9 +3104,6 @@ tournament_page:
   reason_finished: Нет наград для получения
   reason_cancelled: Турнир отменён
   reason_cannot_watch: Завершите свой бой, прежде чем смотреть другой
-  custody_kiosk: Киоск
-  custody_fight: В бою
-  custody_trade: В обмене
   latest_start_notice: 'Начиная с этого времени любой может запустить турнир.'
   champion: Побеждает {{team}}
   prize_pool: Призовой фонд
@@ -3460,7 +3132,6 @@ tournament_page:
   open_window: Открыть турнир
   older_claims: Награды ожидают в {{count}} прошлых турнирах
   result_line: '{{team}} проходит дальше'
-  live_count: 'Идёт: {{count}}'
   prize_split: Распределение призов
   invalid_percentage: Введите проценты с максимум двумя знаками после запятой.
   allocation_excess: 'Лишнее распределение: {{amount}}%'
@@ -3492,313 +3163,11 @@ tournament_page:
   deployment_metadata: Метаданные развёртывания
   display_notice: Метаданные отображения настраиваются один раз на развёртывание, а не для каждого турнира.
   submitted_notice: Действие отправлено. Проверьте текущее состояние перед повторной отправкой.
-  custody_undefined: Местонахождение неизвестно
   wagered: Со ставкой
   complete_notice: В турнире участвуют только полные команды. Остальные исключаются при старте.
   find_review: Найти команду для {{character}} и зарегистрировать этого персонажа?
   joined_count: '{{count}}/{{total}} вошли'
   versus: против {{team}}
-
-landing_page:
-  sound_on: Включить музыку
-  sound_off: Выключить музыку
-  new_tab: ' (откроется в новой вкладке)'
-  sign_alt: AresRPG
-  nav_label: Ресурсы
-  nav:
-    docs: Документация
-    journal: Журнал
-    discord: Discord
-  kares:
-    trigger: $KARES
-    trigger_detail: Токеномика
-  account:
-    login: Войти
-    logging_in: Вход…
-    signed_in: Вы вошли как {{address}}
-    failed: Вход не завершён. Попробуйте ещё раз.
-    logout: Выйти
-    dev_only: 'Только для разработки. Не рекомендуется для игры.'
-  hero:
-    eyebrow:
-      - Тактический MMORPG-протокол
-      - Ончейн на Sui
-    title:
-      - 'Один мир, ончейн.'
-      - 'Играйте по-своему.'
-      - 'Найденное остаётся вашим.'
-    lede: AresRPG — тактический MMORPG-протокол на Sui. Персонажи, добыча и рынок хранятся ончейн, и
-      играть ими может любой интерфейс. Проходите подземелья с группой, создавайте предметы и
-      торгуйте с другими игроками или передайте управление агенту.
-    play: 'Играть в 3D'
-    play_bots: 'Играть с ботами'
-    ways:
-      - Один мир
-      - Бесконечно много способов играть
-  chooser:
-    section: Интерфейсы
-    title: Выберите, как играть.
-    intro: AresRPG — одна ончейн-игра без единственного входа. Те же персонажи, та же добыча, тот же
-      рынок. Вот пять интерфейсов для начала, а следующий может создать кто угодно.
-    interface: Интерфейс
-    specs:
-      runs_in: Где работает
-      role: Ваша роль
-      good_for: Подходит для
-      status: Статус
-    play:
-      manual: Вручную
-      automated: Автоматически
-    items:
-      world:
-        name: Воксельный мир
-        line: Полная 3D-игра в браузере. Мощная графика, каждый ход — ваш.
-        tech: Создан на three.js
-        status: Доступен
-        body: Полная игра в браузере. Путешествуйте по планетам, собирайте группу и сражайтесь на поле сами.
-          На телефоне тот же клиент переключается на сенсорное управление.
-        runs_in: Браузер с мощной видеокартой
-        role: Вы делаете каждый ход
-        good_for: Исследование и групповые бои
-        cta: Играть
-        preview: Персонаж идёт по грунтовой тропе через воксельный грибной лес Mosswood, впереди скалы,
-          водопады и гоблины.
-      dapp:
-        name: Веб-dapp
-        line: Без 3D. Отправляйте команду в задания и рейды на подземелья с любого телефона.
-        tech: Работает на любом устройстве
-        status: Доступен
-        body: Игра без 3D-движка. Отправляйте персонажей в задания, проходите подземелья с командой и
-          торгуйте добычей — всё на лёгкой странице, которая работает на любом телефоне.
-        runs_in: Любой браузер, любой телефон
-        role: Отправьте команду, заберите добычу
-        good_for: Слабые устройства, короткие сессии
-        cta: Открыть dapp
-        preview: 'Макет веб-dapp: персонаж в задании с полоской здоровья, рейд на подземелье, для которого
-          нужен ключ, и кнопки, чтобы отправить в задание, начать рейд или открыть рынок.'
-      agent:
-        name: Ваш агент
-        line: Claude, ChatGPT или Grok берёт управление, а вы наблюдаете.
-        tech: Claude / ChatGPT / Grok
-        status: В работе
-        body: Подключите Claude, ChatGPT или Grok к размещённому боту AresRPG. Договоритесь о цели и
-          наблюдайте прямо в игре, как он играет вашим персонажем.
-        runs_in: ChatGPT, Claude или Grok
-        role: Задайте цель и наблюдайте
-        good_for: Игра без вашего участия
-        cta: Подключить агента
-        preview: 'Пример сессии: вы просите агента перебить гоблинов на тропе, а он вызывает инструменты
-          размещённого бота и докладывает о ходе дел.'
-      telegram:
-        name: Telegram
-        line: 'Управляйте героями из чата. Выберите стратегию, одобрите её, следите за ней.'
-        tech: Чат в Telegram
-        status: Список ожидания
-        body: 'Ваш размещённый бот в чате Telegram. Выберите проверенную стратегию для героя, прочитайте, что она будет делать, и одобрите её. Затем следите за ходом или остановите её в том же чате.'
-        runs_in: Чат в Telegram
-        role: Выберите стратегию, подтвердите
-        good_for: 'Игра без рук с телефона'
-        cta: Записаться в список ожидания
-        preview: 'Пример чата: выберите стратегию, посмотрите, что она делает, подтвердите её, затем
-          проверяйте статус или остановите её.'
-      sdk:
-        name: Свой клиент
-        line: Создайте клиент, инструмент или бота на публичном SDK.
-        tech: Публичный SDK
-        status: Исходники доступны
-        body: Стройте на публичном SDK, который использует сама игра. Лицензия разрешает коммерческие
-          клиенты, ремейки, фанатские инструменты и ботов, работающих на официальном развёртывании.
-          Ваш клиент или бот подписывает собственным кошельком Sui.
-        runs_in: Всё, что вы создадите
-        role: Вы пишете клиент
-        good_for: Свои клиенты, инструменты, боты
-        cta: Читать плейбук
-        preview: 'Терминал с оглавлением публичного плейбука для агентов: блоки SDK, дисциплина состояния и
-          транзакций, репозиторий исходного кода и закреплённые версии развёртывания.'
-    waitlist:
-      joining: Запись в список ожидания…
-      joined: Вы в списке ожидания
-      failed: Не удалось записаться в список ожидания. Попробуйте ещё раз.
-    agent_guide: Читать руководство
-    source: Исходный код
-    previews:
-      keys_then: затем
-      dapp:
-        title: Веб-dapp
-        label: Макет
-        character: Senshi
-        questing: В задании
-        dungeon: Ivory Rampart
-        needs_key: Нужен ключ
-        raid: Рейд для вашей команды
-        actions:
-          - Отправить в задание
-          - Рейд на подземелье
-          - Рынок
-      agent:
-        title: Размещённый бот / MCP
-        label: Пример сессии
-        you: вы
-        agent: агент
-        call: вызов
-        lines:
-          - Перебей гоблинов на тропе.
-          - Принято. Смотрите отсюда.
-          - Впереди на тропе гоблины. Вызываю их на бой.
-          - Бой начался. Выбираю клетку на поле.
-      telegram:
-        choose: Выберите стратегию
-        patrol: Городской патруль · 1 монстр
-        gather: Сбор и ремесло
-        review: Проверьте стратегию
-        review_detail: Сражается с группами из одного монстра в этом городе, пока её не остановят.
-        approve: Подтвердить
-        menu: Меню
-        running: Стратегия работает
-        status: Статус
-        stop: Остановить стратегию
-      sdk:
-        label: Оглавление плейбука
-        build: Создание бота
-        build_lines:
-          - 'Блоки SDK: составление действий, офлайн-планирование и симуляция боя.'
-          - 'Дисциплина состояния и транзакций: актуальность, квитанции и восстановление.'
-        source: Код и развёртывание
-        source_lines:
-          - 'Репозиторий: исходный код SDK, лицензия и соответствующий релиз.'
-          - 'Закреплённые версии: сверяйте с нужным развёртыванием.'
-  earn:
-    section: Экономика
-    title: Зарабатывайте SUI. Тремя способами.
-    intro: Вам платят другие игроки. Вы продаёте им, создаёте для них или побеждаете их.
-    paths:
-      - tag: Рынок
-        title: Проходите подземелья.
-        accent: Продавайте добычу.
-        body: Пройдите подземелье с командой и выставьте трофеи на продажу. Покупатель платит вам в SUI.
-      - tag: Профессии
-        title: Собирайте и создавайте.
-        accent: Продавайте снаряжение.
-        body: Прокачайте профессию, создавайте то, что нужно бойцам, и продавайте это или сырьё.
-        link: Все предметы
-      - tag: Турниры
-        title: Побеждайте в боях.
-        accent: Забирайте приз.
-        body: Когда идёт турнир, итоговое место определяет вашу долю приза.
-  control:
-    section: Управление
-    title: Автоматизируйте или подписывайте каждый ход.
-    intro: Два способа держать управление. Оба работают в одной ончейн-игре, и можно вести по одному
-      персонажу каждым из них.
-    you: Вы
-    holds: владеет персонажем
-    used_by: Использует
-    automated:
-      tag: Автоматически
-      title: Размещённый агент играет за вас.
-      body: Передайте персонажа на общий аккаунт и задайте цель. Наш размещённый агент играет им
-        круглосуточно, пока вы наблюдаете или заняты другим.
-      figure: 'Схема: у вас и у размещённого агента по одному из двух ключей к общему мультисиг-аккаунту,
-        который владеет персонажем.'
-      you_detail: Вход через Google
-      vault: 1-of-2 multisig
-      agent: Размещённый агент
-      agent_detail: делает ходы
-      points:
-        - Агент никогда не получает ключ от вашего кошелька.
-        - Вы утверждаете конкретного бота и его права до запуска.
-        - Верните персонажа из инвентаря когда угодно, даже если агент не в сети.
-    self:
-      tag: Некастодиально
-      title: Каждый ход вы подписываете сами.
-      body: Войдите через Google. Ваши персонажи и предметы остаются на вашем аккаунте, и ничего не
-        происходит без вашей подписи.
-      figure: 'Схема: вы подписываете аккаунтом Google, а персонаж хранится на вашем собственном аккаунте.'
-      you_detail: Вход через Google
-      vault: Ваш аккаунт
-      points:
-        - Никто другой не может перемещать ваших персонажей или тратить ваши SUI.
-        - Каждый бой, крафт и продажа — это транзакция, которую подписываете вы.
-        - Позже передайте персонажа размещённому агенту и заберите обратно, когда захотите.
-  end:
-    title: Начните своё приключение
-    body: Войдите, создайте персонажа и вступите в первый пошаговый бой.
-    play: Играть
-    discord: Присоединиться к Discord
-    pick: 'Ваш выбор:'
-  footer:
-    wordmark: AresRPG
-    tagline: Тактическая воксельная MMORPG на Sui, раскинувшаяся на нескольких планетах.
-    game: Игра
-    community: Сообщество
-    play: Играть
-    encyclopedia: Энциклопедия предметов
-    journal: Журнал
-    discord: Discord
-    telegram: Telegram
-    x: X
-    allocation: Проверьте место в белом списке
-    colophon: один мир, бесконечные интерфейсы
-
-telegram_companion:
-  welcome: "⚔️ Добро пожаловать в AresRPG\n\nВаши герои живут в блокчейне. В этом чате вы следите за ними, выбираете стратегию, а они сражаются и добывают ресурсы за вас.\n\nДля начала войдите через Google. Страница откроется в браузере, а затем вернёт вас сюда."
-  disconnect: '🔓 Отключить Google'
-  connect_google: '🔑 Войти через Google'
-  waiting: 'У вашего игрового аккаунта пока нет доступа в Telegram. Запишитесь в список ожидания, чтобы запросить его.'
-  on_waitlist: '✅ Вы в списке ожидания. Когда ваш игровой аккаунт допустят, «Проверить доступ» откроет ваших героев.'
-  join_waitlist: 'Записаться в список ожидания'
-  check_access: 'Проверить доступ'
-  inventory: '🎒 Инвентарь'
-  inventory_empty: 'Ваша сумка пуста'
-  observation_unknown: 'Пока недоступно'
-  no_strategy: 'Ни один персонаж сейчас не выполняет стратегию.'
-  strategy_active: 'Стратегия активна'
-  strategy_waiting: 'Стратегия ожидает'
-  replace_strategy: 'Это заменит стратегию, которую выполняет этот персонаж. Отправленные действия ещё могут завершиться.'
-  fight: '⚔️ В бою'
-  ambush: '🛡 Защитник ожидает'
-  idle: 'Готов к стратегии'
-  external_strategy: 'Стратегия из другого приложения'
-  menu: '🧙 Выберите персонажа'
-  loading: '⏳ Загрузка персонажей'
-  empty: '🧙 Нет доступного персонажа агента'
-  play: '▶️ Играть'
-  back: '☰ Меню'
-  status: '📍 Статус'
-  approve: '✅ Разрешить'
-  unlinked: '🔓 Привязка удалена'
-  browser_expired: 'Эта ссылка больше не действует. Вернитесь в Telegram и отправьте сообщение, чтобы получить новую.'
-  check_status: '📍 Проверить статус'
-  log_in_again: '🔑 Войти снова'
-  balance: '💰 Баланс агента'
-  pause: '⏸ Приостановить агента'
-  resume: '▶️ Возобновить агента'
-  wallet_scope: 'Затрагивает весь кошелёк агента и другие подключения · Отправленные транзакции могут завершиться'
-  paused: '⏸ Агент приостановлен'
-  resumed: '▶️ Агент возобновлён'
-  choose_strategy: 'Выберите стратегию'
-  failure_changed: 'Это уже обновилось. Вот текущее состояние.'
-  failure_reconnect: 'Срок входа истёк. Войдите снова:'
-  failure_unlink_first: 'Этот чат или аккаунт Google уже подключён. Отключите Google и попробуйте снова.'
-  failure_temporary: 'В этот раз не получилось. Попробуйте ещё раз чуть позже.'
-  failure_busy: 'Этот персонаж ещё завершает действие, или агент приостановлен. Если вы приостановили его, возобновите его, затем проверьте статус.'
-  failure_run_limit: 'Ваш агент уже ведёт столько персонажей, сколько может. Остановите одного, затем запустите этого.'
-  review: 'Проверьте стратегию'
-  effects: 'Сражается с группами из одного монстра в этом городе до остановки. Каждое действие расходует газ SUI без общего лимита. Победа не гарантирована; перезапуск может повторить шаг. Остановка не отменяет отправленные действия.'
-  stop: 'Остановить стратегию'
-  stop_scope: 'Выберите персонажа, которого нужно остановить. Остальные продолжат играть; отправленные транзакции ещё могут завершиться.'
-  stop_all: 'Остановить всех'
-  stopped: 'Стратегия остановлена'
-  completed: 'Стратегия завершена'
-  attention: 'Стратегия требует внимания. Проверьте персонажа в игре, затем выберите статус или остановку.'
-  unknown: 'Результат ещё не подтверждён. Сначала проверьте статус.'
-  city_review: 'Город: {city}'
-  city_required: 'Войдите в город в игре, затем откройте меню и проверьте выбор снова.'
-  world_review: 'Мир: {world}'
-  gather_effects: 'Создаёт полезные рецепты из доступных ингредиентов для развития профессий; иначе собирает ресурсы доступными инструментами и исследует этот мир. Сражается с защитниками простыми приёмами. Работает до остановки. Газ SUI и ингредиенты без общего лимита; возможны неудачи. Перезапуск может повторить шаг. Остановка не отменяет отправленные действия.'
-  strategies:
-    fight_nearby: '⚔️ Патруль города · 1 монстр'
-    gather_craft: '🌿 Сбор и ремесло'
 
 docs_page:
   title: Документация
@@ -3810,7 +3179,6 @@ docs_page:
   next: Далее
   search: Поиск по руководствам, предметам и монстрам
   search_empty: По этому запросу страниц не найдено.
-  new_tab: ' (откроется в новой вкладке)'
   data_note: Цифры на этих страницах берутся из тех же файлов контента, что и в игре.
   kinds:
     guide: Руководство
@@ -3854,9 +3222,43 @@ docs_page:
       - 'Торгуйте с другими игроками на рынке за SUI.'
   ways:
     lede: 'У протокола нет единственного входа. Каждый интерфейс ниже играет теми же персонажами, с той же добычей и тем же рынком. Они различаются тем, кто делает ходы и что нужно для запуска.'
-    note: 'Можно пользоваться несколькими интерфейсами, с одним ограничением: одно активное подключение на аккаунт. Открытие 3D-игры заменяет сессию веб-dapp того же аккаунта.'
+    note: 'Можно пользоваться несколькими интерфейсами одновременно. Каждый аккаунт играет в одной игровой сессии за раз; страницы сайта могут оставаться открытыми рядом с ней.'
+    specs:
+      runs_in: Где работает
+      role: Ваша роль
+      good_for: Подходит для
+      status: Статус
+    play:
+      manual: Вручную
+      automated: Автоматически
+    items:
+      world:
+        name: Воксельный мир
+        status: Доступен
+        body: Полная игра в браузере. Путешествуйте по планетам, собирайте группу и сражайтесь на поле сами.
+          На телефоне тот же клиент переключается на сенсорное управление.
+        runs_in: Браузер с мощной видеокартой
+        role: Вы делаете каждый ход
+        good_for: Исследование и групповые бои
+      agent:
+        name: Ваш агент
+        status: В работе
+        body: Подключите Claude, ChatGPT или Grok к размещённому боту AresRPG. Договоритесь о цели и
+          наблюдайте прямо в игре, как он играет вашим персонажем.
+        runs_in: ChatGPT, Claude или Grok
+        role: Задайте цель и наблюдайте
+        good_for: Игра без вашего участия
+      sdk:
+        name: Свой клиент
+        status: Исходники доступны
+        body: Стройте на публичном SDK, который использует сама игра. Лицензия разрешает коммерческие
+          клиенты, ремейки, фанатские инструменты и ботов, работающих на официальном развёртывании.
+          Ваш клиент или бот подписывает собственным кошельком Sui.
+        runs_in: Всё, что вы создадите
+        role: Вы пишете клиент
+        good_for: Свои клиенты, инструменты, боты
   bots:
-    lede: 'Размещённый бот играет вашими героями за вас на серверах AresRPG. Веб-dapp, Telegram и подключённый ассистент управляют одним и тем же ботом.'
+    lede: 'Размещённый бот играет вашими героями за вас на серверах AresRPG.'
     wallet_title: 'Кошелёк бота'
     wallet:
       - 'Бот играет из собственного кошелька, отдельного от вашего игрового. Это мультиподпись 1 из 2: за неё может подписывать сервис, и ваш аккаунт Google тоже.'
@@ -3871,8 +3273,6 @@ docs_page:
       - 'Бот ждёт, когда ему нечего делать из одобренного или когда в его кошельке нет SUI на комиссии.'
     control_title: 'Кто может им управлять'
     control:
-      - 'Веб-dapp: запускать и останавливать занятия, повышать характеристики и заклинания, торговать на рынке от имени бота.'
-      - 'Telegram: выбрать проверенную стратегию и одобрить её.'
       - 'Ассистент (ChatGPT, Claude или Grok): договоритесь о цели в чате. Он вызывает инструменты бота в рамках того, что вы одобрили.'
   first_hour:
     lede: 'Цель первого часа: персонаж, несколько выигранных боёв и инструмент, созданный своими
@@ -3950,130 +3350,46 @@ docs_page:
       Сохраняйте лицензию и уведомления об авторских правах при распространении.
     license_link: Читать лицензию
 
-dapp_page:
-  brand: 'Экспедиции'
-  nav_label: 'Разделы'
-  nav_market: 'Рынок'
-  bot_balance: 'Бот: {amount} SUI'
-  bot_balance_hint: 'SUI, которые хранит ваш размещённый бот. Ими он оплачивает сетевые комиссии ваших героев и ваши покупки на рынке.'
-  bot_balance_low: 'У вашего бота мало SUI. Пополните его кошелёк, иначе герои остановятся.'
-  asking_bot: 'Будим вашего бота и узнаём, чем он занят…'
-  connect_proving: 'Подтверждаем, что это ваш аккаунт…'
-  connect_creating: 'Создаём кошелёк вашего бота…'
-  connect_checking: 'Проверяем кошелёк вашего бота…'
-  connect_naming: 'Задаём имя вашего бота…'
-  connect_approving: 'Подтверждаем подключение…'
-  connect_returning: 'Завершаем подключение…'
-  loading: 'Загрузка…'
-  signing_in: 'Выполняется вход…'
-  signin_title: 'Отправьте героев в экспедицию'
-  signin_body: 'Войдите через Google, чтобы видеть героев и позволить размещённому боту играть за них. Тот же аккаунт, герои и предметы, что и в 3D-мире.'
-  signin_failed: 'Вход не завершился. Попробуйте снова.'
-  google_title: 'Нужен вход через Google'
-  google_body: 'Размещённые герои принадлежат вашему аккаунту Google. Выйдите и продолжите через Google, чтобы пользоваться этой страницей.'
-  unavailable_title: 'Автоматический сервис не отвечает'
-  unavailable_body: 'Пока используйте 3D-мир.'
-  unavailable_action: 'Открыть 3D-мир'
-  connect_title: 'Ваш бот не подключён'
-  connect_body: 'Подключите его, чтобы отправить героев.'
-  connect_action: 'Подключить'
-  connect_busy: 'Подключение…'
-  reading_heroes: 'Читаем ваших героев…'
-  syncing: 'Ваш бот догоняет состояние мира. Страница обновится сама.'
-  observe_failed: 'Не удалось связаться с ботом. Перезагрузите страницу, чтобы повторить попытку.'
-  heroes_failed_title: 'Не удалось прочитать ваших героев'
-  heroes_failed: 'Игровой сервер не прислал ваших героев. Перезагрузите страницу, чтобы повторить.'
+agent_page:
+  log_title: 'Журнал агента'
+  manage_note: 'Чтобы отправить боту героев или предметы, забрать их или отключить бота, откройте портфель.'
+  stage_wallet_title: 'Собственный кошелёк'
+  stage_wallet: 'Ваш агент играет и подписывает своим кошельком бота.'
+  stage_log_title: 'Один журнал'
+  stage_log: 'На этой странице видно его состояние и что он делает.'
+  stage_charge_title: 'Управляете вы'
+  stage_charge: 'Отправляйте ему героев и забирайте их в портфеле.'
   heroes_title: 'Ваши герои'
   hero_level: 'Уровень {level}'
-  hero_xp: 'Опыт'
-  status_free: 'Готов'
-  status_activity: 'Занят делом'
-  status_fight: 'В бою'
-  status_dungeon: 'В подземелье'
+  heroes_failed: 'Игровой сервер не прислал ваших героев. Перезагрузите страницу, чтобы повторить.'
+  empty_title: 'Здесь пока ничего нет'
+  empty_body: 'Здесь появится всё, что делает ваш ИИ-ассистент.'
   activity_other: 'Занятие'
-  activity_train: 'Тренировка'
-  activity_gather: 'Сбор'
-  activity_raid: 'Рейд'
-  blocker_command_pending: 'Ждём ответа бота…'
-  blocker_no_free_hero: 'Сейчас для этого нет свободного героя.'
-  blocker_hero_busy: '{names}: сейчас в бою или в подземелье.'
-  blocker_hero_unknown: '{names}: бот ещё считывает этого героя. Попробуйте чуть позже.'
-  blocker_world_required: '{names}: в другом мире.'
-  blocker_key_missing: '{names}: нет ключа от этого подземелья.'
-  key_find: 'Найти {item} на рынке'
-  key_unsold: 'Сейчас никто не продаёт {item}.'
-  raid_short_title: 'Ключей не хватает на всю команду'
-  raid_short_body: 'Ключей хватает только на {count}. В подземелье войдут только: {names}. Чтобы отправить больше героев, найдите или купите недостающие ключи.'
-  raid_short_action: 'Начать рейд: {count}'
-  cancel: 'Отмена'
-  close: 'Закрыть'
-  command_uncertain: 'Не удалось подтвердить ответ бота. Страница проверит сама; ничего не будет отправлено дважды.'
-  command_refused: '{names}: {reason}'
   position_running: 'Идёт'
+  position_finished: 'Завершено'
+  position_xp: 'Получено опыта'
+  position_dungeon: '{dungeon} · комната {room}'
   run_notice_funding: 'У вашего бота закончились SUI. Пополните его кошелёк, и он продолжит сам.'
   run_notice_requirement: 'Этому герою не хватает инструмента, уровня или материалов для этого занятия. Дайте ему нужное или выберите другое занятие.'
   run_notice_plan: 'Вашему боту нужен новый план для этого занятия. Остановите и запустите его снова или попросите ваш ИИ-клиент изменить план.'
-  position_stopping: 'Остановка…'
-  position_finished: 'Завершено'
-  position_ended_issue: 'Бот остановил это занятие. Проверьте его баланс и героя, затем начните снова.'
-  position_hp: 'Здоровье'
-  position_xp: 'Получено опыта'
-  position_levels: 'Уровень +{count}'
-  position_job_xp: 'Опыт профессий'
-  position_fights: 'Бои'
-  position_dungeon: '{dungeon} · комната {room}'
-  position_team: 'В бою вместе с: {names}'
-  position_stop: 'Остановить'
-  position_dismiss: 'Убрать'
-  bag_title: 'Сумка'
-  bag_empty: 'Сумка пуста.'
-  bag_loading: 'Читаем сумку вашего бота…'
-  bag_feed_title: 'Недавние предметы'
-  bag_feed_empty: 'Здесь появится то, что принесут ваши герои.'
-  detail_locked: 'Снаряжение, характеристики, заклинания и ремесло доступны, пока герой не в бою и у бота нет другого открытого запроса.'
-  detail_stats: 'Характеристики'
+  run_notice_place: 'Оттуда, где он стоит, пешком в это место не дойти. Остановите его и выберите другое место.'
+  run_ended_objective_reached: 'Заданная вами цель достигнута.'
+  run_ended_fee_cap_reached: 'Достигнут заданный вами лимит комиссий.'
+  run_ended_run_cap_reached: 'Запрошенные забеги завершены.'
+  run_ended_completed: 'План выполнен.'
   error_unknown: 'Что-то пошло не так. Попробуйте снова.'
-  error_expired: 'Подключение к боту истекло. Подключитесь снова.'
-  error_google_required: 'Продолжите через Google, чтобы подключить размещённого бота.'
-  error_consent_failed: 'Подключение не было одобрено. Попробуйте снова.'
-  error_owner_mismatch: 'Этот бот принадлежит другому аккаунту. Войдите с правильным аккаунтом Google.'
-  error_storage_unavailable: 'Браузер блокирует хранилище, нужное для подключения. Разрешите данные сайта и попробуйте снова.'
   error_bot_busy_or_paused: 'Бот на паузе или ещё завершает последнее действие этого героя. Попробуйте чуть позже.'
   error_run_limit_reached: 'Бот уже играет столькими героями, сколькими может. Остановите одного и попробуйте снова.'
   error_needs_resync: 'Бот ещё догонял мир. Попробуйте через несколько секунд.'
-  error_start_unconfirmed: 'Ничего не запущено: бот не принял занятие. Можно начать его снова.'
   error_unavailable: 'Бот не отвечает. Попробуйте чуть позже.'
   error_invalid_token: 'Подключение к боту истекло. Подключитесь снова.'
   error_insufficient_scope: 'Это подключение не даёт такого права. Подключитесь снова, чтобы выдать его.'
   error_behavior_run_not_found: 'Для этого героя уже ничего не запущено.'
   error_insufficient_character_points: 'Недостаточно очков.'
   error_spell_rank_capped: 'Это заклинание уже на максимальном уровне.'
-  error_tool_failed: 'Бот не смог это сделать. Попробуйте позже.'
-  error_insufficient_funds: 'У бота не хватает SUI на это. Пополните бота SUI и попробуйте снова.'
   error_listing_changed_or_ineligible: 'Это предложение изменилось или исчезло. Проверьте текущую цену и попробуйте снова.'
   error_character_not_available: 'Сейчас для этого нет свободного героя: идёт бой. Попробуйте чуть позже.'
   error_sale_source_changed_or_unavailable: 'Этот предмет изменился, или ни одна его стопка не достаточно велика. Выберите его снова.'
-  disconnect_action: 'Отключить эту страницу'
-  disconnect_failed: 'Бот не подтвердил. У этой страницы всё ещё есть доступ. Попробуйте снова.'
-  direct_queued: 'Бот получил ваш запрос. Он подпишет его после текущего действия.'
-  direct_done_raise_stats: 'Характеристики обновлены.'
-  direct_done_raise_spell: 'Уровень заклинания повышен.'
-  direct_done_equip_item: 'Снаряжение изменено.'
-  direct_done_use_consumable: '{name}: использовано {item}.'
-  direct_done_dungeon_leave: '{name}: подземелье покинуто.'
-  direct_done_market_buy: 'Куплено: {amount} × {item}. Лежит в сумке ваших героев.'
-  direct_done_market_sell: 'Выставлено на продажу: {amount} × {item}.'
-  direct_done_market_delist: 'Лот снят: {amount} × {item} снова в вашей сумке.'
-  direct_done_create_character: '{name}: герой готов.'
-  level_up_toast: '{name}: достигнут уровень {level}.'
-  run_wait_travel: 'Идёт туда пешком. Время в пути задаёт игра.'
-  run_wait_other: 'Ждёт подходящего момента для действия.'
-  run_notice_place: 'Оттуда, где он стоит, пешком в это место не дойти. Остановите его и выберите другое место.'
-  blocker_work_unknown: '{names}: в этом мире такую работу выполнить нельзя.'
-  blocker_job_level_required: '{names}: уровень профессии слишком низкий.'
-  blocker_tool_required: '{names}: нет инструмента для этой профессии.'
-  error_direct_failed: 'Бот не смог это сделать. Проверьте его баланс и героя, прежде чем пробовать снова.'
-  error_direct_unconfirmed: 'Запрос не удалось подтвердить, и страница не видит изменений. Проверьте, прежде чем пробовать снова.'
   error_invalid_character_name: 'Имя: от 4 до 19 латинских букв, цифр или символов, без пробелов.'
   error_character_name_taken: 'Это имя уже занято. Выберите другое.'
   error_funding_required: 'У бота не хватает SUI. Пополните бота и попробуйте снова.'
@@ -4094,236 +3410,64 @@ dapp_page:
   error_insufficient_consumables: 'Этого предмета осталось недостаточно.'
   error_unsupported_consumable: 'Бот не может использовать этот предмет.'
   error_idempotency_conflict: 'Этот запрос уже отправлен. Дождитесь ответа.'
-  run_needs_help: 'Нужна ваша помощь'
-  run_waiting: 'Ожидание'
-  run_objective: 'Цель: {objective}'
-  run_results: 'Побед {won} · поражений {lost}'
-  run_dungeon_runs: 'Пройдено подземелий'
-  run_drops_title: 'Последняя добыча'
-  run_drops_empty: 'Добыча появляется здесь после каждого боя.'
-  run_send_again: 'Отправить снова'
-  fees_run: 'Уплачено комиссий: {amount} SUI'
-  item_sell: 'Продать'
-  sell_loot: 'Продать добычу'
-  drops_place_title: 'Вся добыча в {place}'
-  drops_dungeon_title: 'Вся добыча в {dungeon}'
-  drops_rate: '~{rate}% за убийство'
-  drops_room: 'Комната {room}'
-  drops_boss_room: 'Комната босса'
-  next_title: 'Лучший следующий шаг'
-  next_funds_title: 'У вашего бота закончились SUI'
-  next_funds_body: 'Ваши герои остановились, потому что бот не может оплатить сетевые комиссии. Добавьте SUI в кошелёк бота через меню кошелька, и они продолжат сами.'
-  next_raid_title: '{dungeon} ждёт'
-  next_raid_body: 'Ваших ключей от него: {count}. Есть свободный герой.'
-  next_raid_action: 'Спланировать рейд'
-  next_quest_title: '{name}: герой свободен'
-  next_quest_body: 'Отправьте героя сражаться за добычу и ключи или работать.'
-  next_quest_action: 'Отправить на задание'
-  next_out_title: 'Все герои заняты'
-  next_out_body: 'Следите за ними на вкладке «Задания».'
-  next_out_action: 'К заданиям'
-  hero_send_quest: 'Отправить на задание'
-  hero_raid: 'Рейд в подземелье'
-  hero_watch_raid: 'Смотреть рейд'
-  add_hero_title: 'Новый герой'
-  add_hero_body: 'Классов: {count} · {price} SUI, платит ваш бот'
-  add_hero_action: 'Создать героя'
-  add_hero_funds: 'Боту нужно {price} SUI на героя и {fee} SUI на сетевые комиссии. Пополните бота SUI в меню кошелька.'
-  create_sent: 'Ваш бот создаёт героя {name}. Герой появится здесь, когда игра это подтвердит.'
-  welcome_title: 'Добро пожаловать в Экспедиции'
-  welcome_body: 'Ваши герои играют в настоящую игру за вас. Три шага до первого рейда.'
-  step_create_title: 'Создайте первого героя'
-  step_create_body: 'Выберите класс. Герой остаётся у вас навсегда.'
-  step_quest_title: 'Отправьте героя на задание за ключом'
-  step_quest_body: 'С монстров города {city} падает {key}.'
-  step_raid_title: 'Рейд: {dungeon}'
-  step_raid_body: 'Каждый герой берёт один ключ. В комнате босса — самая редкая добыча.'
-  quest_title: 'Задания'
-  quest_intro: 'Каждый бой даёт шанс на снаряжение и ключи. Работники превращают добычу в снаряжение.'
-  quest_fight: 'Сражаться за добычу'
-  quest_fight_body: 'Снаряжение, ключи и опыт за каждый бой'
-  quest_work: 'Работать'
-  quest_work_body: 'Собирать ресурсы или создавать снаряжение и зелья'
-  quest_who: 'Кто'
-  quest_where: 'Куда'
-  quest_here: 'Там, где стоит каждый герой'
-  quest_pick_hero: 'Выберите героя'
-  quest_send: 'Отправить: {names}'
-  quest_until_stop: 'Идёт, пока вы не остановите.'
-  quest_empty: 'Героев пока нет. Создайте героя на вкладке «Главная», затем отправьте на задание.'
-  quest_empty_action: 'На главную'
-  quest_walks: '{names}: сначала идут туда пешком. Каждая зона на пути стоит сетевой комиссии.'
-  quest_run_fight: 'Бои: {place}'
-  quest_run_work_job: 'Работа: {job}'
-  quest_run_gather: 'Сбор: {item}'
-  quest_run_craft: 'Создание: {item}'
-  world_locked: '{world} откроется на {level} уровне героя.'
-  place_levels: 'Монстры {min}–{max} уровня'
-  place_key_drop: '{key}: ~{rate}% за каждое убийство ({mob})'
-  place_rarest: 'Самая редкая добыча: {item}, ~{rate}% ({mob})'
-  place_level_warning: 'Монстры здесь {min}–{max} уровня. {name}: уровень {level}.'
-  place_all_drops: 'Всё, что здесь выпадает'
-  difficulty_label: 'Сложность'
-  difficulty_none: 'Любая'
-  difficulty_easy: 'Лёгкая'
-  difficulty_medium: 'Средняя'
-  difficulty_hard: 'Сложная'
-  difficulty_none_hint: 'Любая группа в любой части места.'
-  difficulty_hint: 'Группы от {min} до {max} монстров. Размер группы зависит от расстояния до центра мира.'
-  difficulty_hint_one: 'Группы по {size} монстров. Размер группы зависит от расстояния до центра мира.'
-  difficulty_unfit: 'Город {city} находится на другом расстоянии. Выберите другое место или другую сложность.'
-  travel_needed: '{name}: не в городе {city}.'
-  travel_potion_held: 'У вас {count} × {item}. Зелье сразу переносит героя туда.'
-  travel_potion_use: 'Переместиться зельем'
-  travel_potion_none: '{item} сразу переносит героя туда. Их варят алхимики.'
-  fee_cap: 'Лимит комиссий'
-  fee_cap_none: 'Без лимита'
-  fee_cap_hint: 'Каждый герой остановится, когда его задание потратит {amount} SUI на сетевые комиссии. Сначала он закончит бой.'
-  fee_cap_invalid: 'Введите сумму SUI больше нуля или оставьте поле пустым, чтобы не ставить лимит.'
-  work_auto: 'Пусть выберет бот'
-  work_auto_body: 'Бот собирает и создаёт то, что сильнее всего развивает профессии этого героя, его инструментами.'
-  work_gather: 'Собирать один ресурс'
-  work_craft: 'Создавать по одному рецепту'
-  work_worker: 'Работник'
-  work_job: 'Профессия'
-  work_job_any: 'Любая профессия'
-  work_job_level: '{job}: уровень {level}'
-  work_job_new: '{job}: новичок'
-  work_gather_hint: '{name}: добывает {min}–{max} каждые {seconds} с и получает {xp} опыта профессии за каждую единицу.'
-  work_craft_hint: '{name}: успех в {percent}% попыток, {xp} опыта профессии за попытку.'
-  work_rare_find: 'Добыча может принести и {item}. Это место может защищать {mob}.'
-  work_objective: 'Цель'
-  work_goal_level: 'Достичь уровня'
-  work_goal_gather: 'Собрать количество'
-  work_goal_craft: 'Создать количество'
-  work_goal_until: 'Пока я не остановлю'
-  work_how_many: 'Сколько'
-  work_target_level: 'Целевой уровень профессии'
-  work_amount_invalid: 'Введите целое число больше нуля.'
-  work_level_invalid: 'Введите уровень от {min} до {max}.'
-  work_tries: 'Попыток: около {tries}, на {amount} × {item}'
-  work_harvests: 'Сборов: около {tries}, на {amount} × {item}'
-  work_needs: 'Что нужно'
-  work_tool_worn: '{item}: экипировано'
-  work_tool_bag: '{item} в вашей сумке. {name} экипирует его, когда начнётся работа.'
-  work_tool_missing: 'Нужно: {tool}. Их создают умельцы.'
-  work_material_missing: '{item}: нужно {need}, в сумке {have}, не хватает {missing}'
-  work_material_ready: '{item}: нужно {need}, в сумке {have}'
-  work_never_buys: 'Купите недостающее на рынке или добудьте сами. Герой никогда ничего не покупает.'
-  work_locked: 'Доступно с {level} уровня профессии {job}'
-  work_pick_resource: 'Выберите ресурс.'
-  work_pick_recipe: 'Выберите рецепт.'
-  work_start: 'Начать'
-  out_now_title: 'Сейчас в деле'
-  raid_title: 'Охота: {boss}'
-  raid_intro: 'Каждая комната — бой со своей добычей. Добыча из пройденных комнат остаётся у вас.'
-  raid_dungeon: 'Подземелье'
-  raid_dungeon_facts: 'Комнат: {rooms} · монстров: {monsters} · босс {boss}'
-  raid_keys_held: 'Ключей в наличии: {count}. Каждый герой берёт один.'
-  raid_team: 'Команда'
-  raid_team_count: '{count} из {size}'
-  raid_best_team: 'Лучшая команда'
-  raid_seat_add: 'Добавить'
-  raid_seat_title: 'Место {seat}'
-  raid_seat_remove: 'Убрать'
-  raid_seat_swap: 'Поставить сюда'
-  raid_seat_key: 'Есть ключ'
-  raid_seat_no_key: 'Нет ключа'
-  raid_seat_none: 'Все герои уже в команде.'
-  raid_seat_stop_note: 'Остановка героя завершает его занятие. Найденное уже в вашей сумке.'
-  raid_no_seat: 'Добавьте хотя бы одного свободного героя. Нажмите на место или используйте «Лучшая команда».'
-  raid_levels_title: 'Ваша команда и комнаты'
-  raid_alone: '{name}: идёт в одиночку.'
-  raid_drops_title: 'Что может выпасть за забег'
-  raid_rooms: 'Комнаты {first}–{last}'
-  raid_stake: 'Ключей потратится: {count}, по одному на героя'
-  raid_walk: '{name}: не меньше {time} пешком до входа'
-  raid_repeats: 'Команда повторяет рейд, пока у каждого героя есть ключ. Нажмите «Остановить», чтобы закончить.'
-  raid_enter: 'Войти · Ключей: {count}'
-  raid_keys_short: 'Ещё {item} для этой команды: {count}'
-  raid_quest_for_keys: 'Задание за ключами'
-  raid_room: 'Комната {room} из {rooms}'
-  raid_boss_room: 'Комната босса · {boss}'
-  raid_walking: 'Идут к входу'
-  raid_loot: 'Добыча из пройденных комнат'
-  raid_loot_empty: 'Здесь появится добыча из каждой пройденной комнаты.'
-  raid_next_drops: 'Может выпасть в следующей комнате'
-  raid_stop_note: 'Остановка завершает рейд. Каждый герой остаётся в подземелье, в своей комнате. Чтобы бросить забег, сначала остановите героя, затем покиньте подземелье.'
-  raid_stop_team: 'Остановить команду'
-  raid_plan: 'Спланировать новый рейд'
-  raid_back: 'Назад к рейду'
-  raid_inside_title: 'Ещё в подземелье'
-  raid_inside_body: 'Эти герои остановились посреди забега в подземелье. Начните рейд снова, чтобы продолжить, или покиньте подземелье.'
-  raid_leave: 'Покинуть подземелье'
-  raid_leave_body: 'Забег этого героя закончится. Ключ не вернётся.'
-  raid_result_won: 'Победа'
-  raid_result_lost: 'Поражение'
-  raid_result_bag: 'Всё ниже уже в вашей сумке.'
-  raid_keys_left: 'Осталось ключей: {count}'
-  raid_change_team: 'Сменить команду'
-  raid_again: 'Снова в рейд'
-  raid_empty_title: 'Команды пока нет'
-  raid_empty_body: 'Создайте героя, отправьте его на задание за ключом и возвращайтесь.'
-  raid_runs: 'Забеги'
-  raid_runs_all: 'Пока есть ключи'
-  raid_runs_count: 'Забегов на героя: {count}'
-  nav_home: 'Главная'
-  heroes_intro: 'Снаряжение, характеристики, заклинания и профессии.'
-  heroes_empty_title: 'Героев пока нет'
-  heroes_empty_body: 'Создайте героя на вкладке «Главная». Здесь появятся его снаряжение, характеристики, заклинания и профессии.'
-  heroes_empty_action: 'На главную'
-  nav_quest: 'Задание'
-  nav_raid: 'Рейд'
-  nav_heroes: 'Герои'
-  keys_chip: 'Ключей подземелий: {count}'
-  empty_title: 'Здесь пока ничего нет'
-  empty_body: 'Здесь появится всё, что делает ваш ИИ-ассистент.'
-  run_ended_objective_reached: 'Заданная вами цель достигнута.'
-  run_ended_fee_cap_reached: 'Достигнут заданный вами лимит комиссий.'
-  run_ended_run_cap_reached: 'Запрошенные забеги завершены.'
-  run_ended_completed: 'План выполнен.'
-  direct_done_craft: '{name}: изготовление {item} завершено (попыток: {amount}). Удачные предметы в сумке.'
   error_ingredients_required: 'У героя больше нет всех ингредиентов. Проверьте рецепт и попробуйте снова.'
   error_crafting_level_required: 'Уровень профессии героя слишком низкий для этого рецепта.'
   error_craft_batch_limit: 'Слишком много попыток для одного запроса. Укажите меньше.'
   error_recipe_unavailable: 'Этот рецепт сейчас нельзя изготовить.'
-  home_title: 'Что делать сейчас'
-  fees_wallet_label: 'Сетевые комиссии, оплаченные ботом'
-  sui_amount: '{amount} SUI'
-  found_more: 'ещё +{count}'
-  raid_ledger_keys_used: 'Ключей потратится'
-  raid_ledger_keys_used_value: '{count}, по одному на героя'
-  raid_ledger_keys_left: 'Ключей останется'
-  raid_ledger_travel: 'Путь'
-  raid_travel_none: 'У входа'
-  raid_travel_fee: 'Каждая зона на пути стоит сетевой комиссии.'
-  raid_buy_key: 'Купить на рынке'
-  quest_pick_place: 'Выберите место'
-  plan_levels: 'Уровень монстров'
-  plan_range: '{min}–{max}'
-  plan_group: 'Размер группы'
-  plan_key: 'Ключ в добыче'
-  plan_rarest: 'Самая редкая добыча'
-  plan_arrive: 'Прибытие'
-  plan_walk: 'Пешком, не меньше {time}'
-  plan_walk_far: 'Пешком'
-  plan_potion: 'Сразу на месте'
-  about: '~{value}'
-  work_what: 'Что'
-  work_per_harvest: 'За сбор'
-  work_harvest_time: 'Один сбор'
-  work_xp: 'Опыт профессии'
-  work_rare: 'Редкая находка'
-  work_success: 'Успех за попытку'
-  work_tries_label: 'Попыток'
-  work_harvests_label: 'Сборов'
-  work_tool: 'Инструмент'
-  work_tool_held: '{item} в вашей сумке'
-  work_tool_none: '{tool}: нет'
-  work_have: '{have} из {need}'
-  hero_forfeit: 'Сдаться в бою'
-  direct_done_fight_forfeit: '{name}: бой сдан, герой снова свободен.'
   error_fight_unavailable: 'Герой уже не в бою.'
-  game_heroes_title: 'В вашем игровом аккаунте'
-  hero_give_bot: 'Передать боту'
-  hero_take_back: 'Забрать'
+
+portfolio_page:
+  signin_title: 'Войдите, чтобы увидеть своё имущество'
+  signin_body: 'Ваши герои, предметы и лоты на игровом аккаунте и у бота.'
+  stage_heroes: 'Каждый герой с его уровнем, силой и надетым снаряжением.'
+  stage_bag: 'Ваши предметы. Выставьте любой на продажу или отправьте боту.'
+  stage_for_sale: 'Что вы выставили на рынок и что уже продано.'
+  tabs_label: 'Показать'
+  tab_heroes: 'Герои'
+  tab_bag: 'Сумка'
+  tab_for_sale: 'На продаже'
+  failed: 'Игровой сервер не прислал этот аккаунт. Обновите страницу, чтобы попробовать снова.'
+  heroes_empty: 'На этом аккаунте нет героев.'
+  bag_empty: 'Здесь пока пусто. Купите на рынке или играйте, чтобы находить предметы.'
+  bag_group_empty: 'В этой сумке нет предметов этого типа.'
+  bot_sells: 'Бот сам выставляет и продаёт свои предметы. Попросите об этом ИИ-ассистента.'
+  power: 'Сила'
+  power_hint: 'Сила складывает характеристики надетых предметов с весами кузнечных рун. Только для показа.'
+  send_to_bot: 'Отправить боту'
+  recall_to_player: 'Вернуть игроку'
+  share: 'Поделиться'
+  share_text: 'Мой {classe}, уровень {level}, сила {power} в @AresRPG.'
+  share_title: 'Поделиться: {name}'
+  share_preview: 'Карточка {name}, которую покажет ваш пост'
+  share_copy: 'Копировать ссылку'
+  share_post: 'Опубликовать в X'
+  share_image_failed: 'Карточка не загрузилась. Закройте окно и попробуйте снова.'
+  share_copy_failed: 'Браузер не разрешил копирование. Попробуйте снова.'
+  transfer_to_bot: 'Перевести боту'
+  transfer_to_player: 'Перевести игроку'
+  view_market: 'Посмотреть на рынке'
+
+site:
+  nav_label: 'Сайт'
+  menu_open: 'Открыть меню'
+  menu_close: 'Закрыть меню'
+  login: Войти
+  new_tab: ' (откроется в новой вкладке)'
+  log_in_first: 'Сначала войдите'
+  docs: Документация
+  encyclopedia: Энциклопедия предметов
+  journal: Журнал
+  discord: Discord
+  telegram: Telegram
+  x: X
+  market: 'Рынок'
+  play: 'Играть'
+  agent: 'ИИ'
+  staking: 'Стейкинг'
+  leaderboards: 'Рейтинги'
+  portfolio: 'Портфель'
+  footer_learn: 'Узнать'
+  footer_community: 'Сообщество'
+  indexing_healthy: 'В норме'
+  indexing_catching_up: 'Догоняет'
+  indexing_lagging: 'Отстаёт'

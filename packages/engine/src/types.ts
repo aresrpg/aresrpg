@@ -199,7 +199,6 @@ export type QualityProfile = Readonly<{
     horizon_radius: number
     horizon_step: number
   }>
-  sky: EngineQuality
   terrain: Readonly<{ kind: 'flat' | 'lit'; texture_size: 16 | 32 }>
   fog: Readonly<{ near: number; far: number }>
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
@@ -223,6 +222,14 @@ export type QualityProfile = Readonly<{
     }> | null
   }>
 }>
+
+export type LabelAnchor =
+  | Readonly<{ kind: 'entity'; id: string }>
+  | Readonly<{ kind: 'resource'; id: string }>
+  | Readonly<{ kind: 'sword'; id: string }>
+  | Readonly<{ kind: 'portal' }>
+  | Readonly<{ kind: 'world'; position: Vec3 }>
+export type WorldLabel = Readonly<{ element: HTMLElement; anchor: LabelAnchor }>
 
 export type WorldPanel = Readonly<{
   canvas: HTMLCanvasElement
@@ -426,13 +433,9 @@ export type Engine = Readonly<{
   set_clouds_visible: (visible: boolean) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
-  /** planted fight swords — the join-window clock made physical (whole-set replace) */
+  /** Planted fight swords, the join-window clock; replaces the whole set. */
   set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => void
-  set_fight_sword_label: (id: string, element: HTMLElement | null) => void
   set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => void
-  set_resource_node_label: (id: string, element: HTMLElement | null) => void
-  /** float the approach tooltip at the star gate (a fixed world-origin anchor); null detaches */
-  set_portal_label: (element: HTMLElement | null) => void
   set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => void
   set_dungeon_stage: (stage: DungeonStageRender | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
@@ -442,12 +445,10 @@ export type Engine = Readonly<{
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
   hit_entity_caption: (id: string, client_x: number, client_y: number) => boolean
-  /** float a DOM element over an entity's rendered crown, positioned by the frame's own camera
-   *  pass (three CSS2D labels — never lags the render); null detaches */
   set_entity_caption: (id: string, caption: WorldCaption | null) => void
-  set_entity_label: (id: string, element: HTMLElement | null) => void
   set_world_panel: (id: string, panel: WorldPanel | null) => void
-  set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
+  /** Float a DOM element at an anchor, positioned by the frame's own camera pass; null detaches. */
+  set_label: (id: string, label: WorldLabel | null) => void
   entity_height: (id: string) => number | null
   entity_position: (id: string, height?: number) => Vec3 | null
   create_fight_blob: (blob: FightBlobSpec) => string

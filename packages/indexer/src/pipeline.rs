@@ -90,9 +90,6 @@ pub struct CheckpointWrites {
 
 /// The game projection handler.
 pub struct AresHandler {
-    /// The seed (living-content) package's original id — the SECOND origin:
-    /// content events (ContentWritten, template creations) are typed by it.
-    seed_original: String,
     /// Canonical lineage identity used by the projection. New types may originate in any
     /// certified upgrade; raw defining IDs are normalized at checkpoint extraction.
     package_original: String,
@@ -104,7 +101,6 @@ impl AresHandler {
     pub fn new(
         package_original: &str,
         package_latest: &str,
-        seed_original: &str,
         game_packages: &[String],
     ) -> Result<Self> {
         let package_original = canonical(package_original)?;
@@ -120,7 +116,6 @@ impl AresHandler {
         Ok(Self {
             game_packages,
             package_original,
-            seed_original: canonical(seed_original)?,
         })
     }
 }
@@ -143,36 +138,40 @@ pub fn canonical(id: &str) -> Result<String> {
 // ╔════════════════ [ Framework → owned views (stage 1) ] ════════════════════ ]
 
 /// An owned object view — the borrow-free stage every `ObjView` points into.
-struct OwnedObj {
-    id: Id,
-    version: u64,
-    owner: OwnerKind,
-    type_key: TypeKey,
-    bytes: Vec<u8>,
+#[derive(Debug, Clone)]
+pub struct OwnedObj {
+    pub id: Id,
+    pub version: u64,
+    pub owner: OwnerKind,
+    pub type_key: TypeKey,
+    pub bytes: Vec<u8>,
 }
 
 /// One event, lifted whole. `index` = the intra-checkpoint ordinal.
-struct OwnedEvent {
-    package: String,
-    module: String,
-    name: String,
-    type_params: Vec<String>,
-    bytes: Vec<u8>,
-    index: u64,
+#[derive(Debug, Clone)]
+pub struct OwnedEvent {
+    pub package: String,
+    pub module: String,
+    pub name: String,
+    pub type_params: Vec<String>,
+    pub bytes: Vec<u8>,
+    pub index: u64,
 }
 
 /// One transaction, lifted whole.
-struct OwnedTx {
-    lamport_version: u64,
-    sender: Addr,
-    digest: String,
-    successful: bool,
-    gas_mist: i64,
-    move_calls: Vec<String>,
-    events: Vec<OwnedEvent>,
-    inputs: Vec<OwnedObj>,
-    outputs: Vec<OwnedObj>,
-    deleted: Vec<OwnedObj>,
+#[derive(Debug, Clone)]
+pub struct OwnedTx {
+    pub lamport_version: u64,
+    pub sender: Addr,
+    pub digest: String,
+    pub successful: bool,
+    pub gas_mist: i64,
+    pub move_calls: Vec<String>,
+    pub events: Vec<OwnedEvent>,
+    pub inputs: Vec<OwnedObj>,
+    pub outputs: Vec<OwnedObj>,
+    /// Certified deletions, as their pre-state input views.
+    pub deleted: Vec<OwnedObj>,
 }
 
 fn addr32(bytes: &[u8]) -> [u8; 32] {
@@ -183,7 +182,7 @@ fn addr32(bytes: &[u8]) -> [u8; 32] {
 
 /// A type keeps its defining ID on-chain. Projection identity follows only certified game
 /// versions, recursively including keys and values embedded in framework dynamic fields.
-fn game_type(
+pub(crate) fn game_type(
     mut tag: TypeTag,
     original: &str,
     versions: &std::collections::HashSet<String>,
@@ -244,16 +243,6 @@ fn owned(
     })
 }
 
-fn clone_obj(o: &OwnedObj) -> OwnedObj {
-    OwnedObj {
-        id: o.id,
-        version: o.version,
-        owner: o.owner,
-        type_key: o.type_key.clone(),
-        bytes: o.bytes.clone(),
-    }
-}
-
 /// Every MoveCall target, canonical `0xpkg::module::function`.
 fn move_calls(data: &TransactionData) -> Vec<String> {
     let TransactionKind::ProgrammableTransaction(pt) = &data.as_v1().kind else {
@@ -273,25 +262,24 @@ fn move_calls(data: &TransactionData) -> Vec<String> {
         .collect()
 }
 
-fn is_game_activity(
-    successful: bool,
-    calls: &[String],
+/// The `module::function` of a call into a certified game version; `None` for any other
+/// package, however its module and function are named.
+pub(crate) fn game_target<'a>(
+    call: &'a str,
     game_packages: &std::collections::HashSet<String>,
-) -> bool {
-    successful && is_game_transaction(calls, game_packages)
+) -> Option<&'a str> {
+    let (package, target) = call.split_once("::")?;
+    game_packages.contains(package).then_some(target)
 }
 
+/// A call into any certified game version, excluding deployment-only doors.
 fn is_game_transaction(
     calls: &[String],
     game_packages: &std::collections::HashSet<String>,
 ) -> bool {
-    let game_calls = calls
+    calls
         .iter()
-        .filter_map(|call| call.split_once("::"))
-        .filter(|(package, _)| game_packages.contains(*package))
-        .map(|(_, target)| target);
-    game_calls
-        .clone()
+        .filter_map(|call| game_target(call, game_packages))
         .any(|target| !is_deployment_only_target(target))
 }
 
@@ -314,26 +302,23 @@ pub(crate) fn is_deployment_only_target(target: &str) -> bool {
     )
 }
 
-fn game_activity_txs<'a>(
-    txs: &'a [OwnedTx],
-    game_packages: &'a std::collections::HashSet<String>,
-) -> impl Iterator<Item = &'a OwnedTx> {
-    txs.iter()
-        .filter(|tx| is_game_activity(tx.successful, &tx.move_calls, game_packages))
-}
-
-fn game_gas_txs<'a>(
-    txs: &'a [OwnedTx],
-    game_packages: &'a std::collections::HashSet<String>,
-) -> impl Iterator<Item = &'a OwnedTx> {
-    txs.iter()
-        .filter(|tx| is_game_transaction(&tx.move_calls, game_packages))
-}
-
-fn is_character(obj: &OwnedObj, game: &str) -> bool {
-    obj.type_key.package == game
-        && obj.type_key.module == "character"
-        && obj.type_key.name == "Character"
+/// Successful game senders, and the gas of every game transaction (a failed one pays too).
+fn game_activity(
+    txs: &[OwnedTx],
+    game_packages: &std::collections::HashSet<String>,
+) -> Option<(Vec<Addr>, i64)> {
+    let game_txs = txs
+        .iter()
+        .filter(|tx| is_game_transaction(&tx.move_calls, game_packages));
+    let senders = game_txs
+        .clone()
+        .filter(|tx| tx.successful)
+        .map(|tx| tx.sender)
+        .collect();
+    let gas = game_txs
+        .map(|tx| tx.gas_mist)
+        .try_fold(0i64, i64::checked_add)?;
+    Some((senders, gas))
 }
 
 fn character_facts(txs: &[OwnedTx], checkpoint: u64, ts_ms: u64, game: &str) -> Vec<CharacterFact> {
@@ -348,12 +333,14 @@ fn character_facts(txs: &[OwnedTx], checkpoint: u64, ts_ms: u64, game: &str) -> 
             let created = tx
                 .outputs
                 .iter()
-                .filter(move |obj| is_character(obj, game) && !inputs.contains(&obj.id))
+                .filter(move |obj| {
+                    obj.type_key.is(game, "character", "Character") && !inputs.contains(&obj.id)
+                })
                 .map(|obj| (obj.id, true));
             let deleted = tx
                 .deleted
                 .iter()
-                .filter(|obj| is_character(obj, game))
+                .filter(|obj| obj.type_key.is(game, "character", "Character"))
                 .map(|obj| (obj.id, false));
             created
                 .chain(deleted)
@@ -395,7 +382,7 @@ fn lift(
                 .into_iter()
                 .filter_map(|r| {
                     let id = Id(addr32(r.0.as_ref()));
-                    inputs.iter().find(|o| o.id == id).map(clone_obj)
+                    inputs.iter().find(|o| o.id == id).cloned()
                 })
                 .collect();
             let events = tx
@@ -464,12 +451,23 @@ impl Processor for AresHandler {
 
     async fn process(&self, checkpoint: &Arc<Checkpoint>) -> Result<Vec<Self::Value>> {
         let summary = &checkpoint.summary;
-        let ckpt = summary.sequence_number;
-        let ts_ms = summary.timestamp_ms;
+        let txs = lift(checkpoint, &self.package_original, &self.game_packages);
+        Ok(vec![CheckpointWrites {
+            sequence_number: summary.sequence_number,
+            writes: self.writes(
+                summary.sequence_number,
+                summary.epoch,
+                summary.timestamp_ms,
+                &txs,
+            )?,
+        }])
+    }
+}
+
+impl AresHandler {
+    /// The pure core: one lifted checkpoint in, its ordered write list out.
+    pub fn writes(&self, ckpt: u64, epoch: u64, ts_ms: u64, txs: &[OwnedTx]) -> Result<Vec<Write>> {
         let game = self.package_original.as_str();
-
-        let txs = lift(checkpoint, game, &self.game_packages);
-
         // the wire: per-tx event views borrowing the owned stage
         let event_views: Vec<Vec<EventView<'_>>> = txs
             .iter()
@@ -497,6 +495,7 @@ impl Processor for AresHandler {
             .map(|(i, tx)| TxView {
                 deleted: &deleted_views[i],
                 tx_index: i as u64,
+                digest: &tx.digest,
                 sender: tx.sender,
                 move_calls: &tx.move_calls,
                 events: &event_views[i],
@@ -504,15 +503,7 @@ impl Processor for AresHandler {
                 outputs: &output_views[i],
             })
             .collect();
-        let digests = txs.iter().map(|tx| tx.digest.clone()).collect::<Vec<_>>();
-        let mut wire = publish::analyze_with_digests(
-            ckpt,
-            ts_ms,
-            &tx_views,
-            &digests,
-            game,
-            self.seed_original.as_str(),
-        )?;
+        let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game, &self.game_packages)?;
         // A transaction's outputs are its final state, while inputs only resolve unchanged
         // parents. Retired wrappers must never reassert pre-transaction custody.
         let mut cypher = vec![];
@@ -527,43 +518,27 @@ impl Processor for AresHandler {
                 })
                 .cloned()
                 .collect();
-            crate::character_deletions::route(&mut wire, ckpt, ts_ms, tx, &deleted_views[i], game);
+            crate::character_deletions::route(&mut wire, tx, game);
             let custody = ownership::resolve(&final_views, game)?;
-            publish::route_character_custody(&mut wire, ckpt, ts_ms, &custody);
+            publish::route_character_custody(&mut wire, &custody);
             cypher.extend(graph::project(
                 &CheckpointView {
                     lamport_version: txs[i].lamport_version,
                     ckpt,
                     ts_ms,
+                    inputs: tx.inputs,
                     outputs: tx.outputs,
                     deleted: &deleted_views[i],
                     custody: &custody,
-                    market: &[],
-                    fight_lifecycle: &[],
                 },
                 game,
             )?);
             cypher.extend(crate::trade_tokens::project(tx, game, ckpt)?);
         }
-        cypher.extend(graph::project(
-            &CheckpointView {
-                lamport_version: 0,
-                ckpt,
-                ts_ms,
-                outputs: &[],
-                deleted: &[],
-                custody: &[],
-                market: &wire.market,
-                fight_lifecycle: &wire.fight_lifecycle,
-            },
-            game,
-        )?);
 
-        let mut notifications = crate::notification_sales::extract(&wire.sales, &digests)?;
-        for (tx, digest) in tx_views.iter().zip(&digests) {
-            notifications.extend(crate::notification_events::extract(
-                ckpt, ts_ms, tx, digest, game,
-            )?);
+        let mut notifications = std::mem::take(&mut wire.notifications);
+        for tx in &tx_views {
+            notifications.extend(crate::notification_events::extract(ckpt, ts_ms, tx, game)?);
         }
         let mut leaderboard_facts = wire.leaderboard;
         for tx in &tx_views {
@@ -590,20 +565,14 @@ impl Processor for AresHandler {
             checkpoint: ckpt,
             mist: wire.market_volume_mist,
         });
-        let mut transaction_count = 0u64;
-        for tx in game_activity_txs(&txs, &self.game_packages) {
-            transaction_count += 1;
-            writes.push(Write::Activity(ActivityFact {
-                address: tx.sender,
-                ts_ms,
-            }));
-        }
-        let transaction_gas_mist =
-            game_gas_txs(&txs, &self.game_packages).try_fold(0i64, |total, tx| {
-                total
-                    .checked_add(tx.gas_mist)
-                    .ok_or_else(|| anyhow::anyhow!("game gas total overflow at checkpoint {ckpt}"))
-            })?;
+        let (senders, transaction_gas_mist) = game_activity(txs, &self.game_packages)
+            .ok_or_else(|| anyhow::anyhow!("game gas total overflow at checkpoint {ckpt}"))?;
+        let transaction_count = senders.len() as u64;
+        writes.extend(
+            senders
+                .into_iter()
+                .map(|address| Write::Activity(ActivityFact { address, ts_ms })),
+        );
         if transaction_count > 0 || transaction_gas_mist != 0 || !wire.money.is_empty() {
             writes.push(Write::Numeric {
                 ts_ms,
@@ -616,7 +585,7 @@ impl Processor for AresHandler {
             });
         }
         writes.extend(
-            character_facts(&txs, ckpt, ts_ms, game)
+            character_facts(txs, ckpt, ts_ms, game)
                 .into_iter()
                 .map(Write::Character),
         );
@@ -643,16 +612,11 @@ impl Processor for AresHandler {
             key: LATEST_CHECKPOINT_KEY.to_string(),
             value: serde_json::json!({
                 "sequence_number": ckpt,
-                "epoch": summary.epoch,
-                "timestamp_ms": ts_ms,
-                "transaction_count": checkpoint.transactions.len(),
+                "epoch": epoch,
             })
             .to_string(),
         });
-        Ok(vec![CheckpointWrites {
-            sequence_number: ckpt,
-            writes,
-        }])
+        Ok(writes)
     }
 }
 
@@ -738,14 +702,9 @@ impl Handler for AresHandler {
                                 .arg(&address)
                                 .query_async(conn.connection())
                                 .await?;
-                            let keep = if tier == "day" || tier == "week" || tier == "month" {
-                                analytics::DAILY_ACTIVITY_RETENTION_MS
-                            } else {
-                                retention
-                            };
                             let _: () = redis::cmd("EXPIREAT")
                                 .arg(key)
-                                .arg(analytics::expiry_seconds(bucket, width, keep))
+                                .arg(analytics::expiry_seconds(bucket, width, retention))
                                 .query_async(conn.connection())
                                 .await?;
                         }
@@ -771,7 +730,7 @@ impl Handler for AresHandler {
                             .arg(analytics::expiry_seconds(
                                 bucket,
                                 analytics::DAY_MS,
-                                analytics::DAILY_ACTIVITY_RETENTION_MS,
+                                analytics::LONG_RETENTION_MS,
                             ))
                             .query_async(conn.connection())
                             .await?;
@@ -805,168 +764,3 @@ impl Handler for AresHandler {
         Ok(executed)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn canonical_normalizes_short_and_mixed_ids() {
-        assert_eq!(
-            canonical("0x2").unwrap(),
-            "0x0000000000000000000000000000000000000000000000000000000000000002"
-        );
-        let full = format!("0x{}", "ab".repeat(32));
-        assert_eq!(canonical(&full.to_uppercase()).unwrap(), full);
-        assert!(canonical("not-hex").is_err());
-        assert!(canonical(&"f".repeat(65)).is_err());
-    }
-
-    #[test]
-    fn activity_requires_a_successful_call_into_the_game_lineage() {
-        let game = canonical("0xaa").unwrap();
-        let old_upgrade = canonical("0xbb").unwrap();
-        let packages = std::collections::HashSet::from([game.clone(), old_upgrade.clone()]);
-        let game_call = vec![format!("{game}::api::redeem_giftcard")];
-        let multi_call = vec![
-            format!("{game}::kiosk::borrow"),
-            format!("{game}::api::redeem_giftcard"),
-        ];
-        let old_call = vec![format!("{old_upgrade}::world::join")];
-        let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
-        let deployment_calls = vec![
-            format!("{game}::version::admin_update"),
-            format!("{game}::version::admin_freeze"),
-            format!("{game}::protected_policy::mint_and_share"),
-            format!("{game}::listing_rule::add"),
-            format!("{game}::lot_rule::add"),
-            format!("{game}::naked_rule::add"),
-            format!("{game}::world::create"),
-            format!("{game}::distribution::new_giftcard"),
-            format!("{game}::loot_box::add_loot_reward"),
-            format!("{game}::loot_box::clear_loot_table"),
-        ];
-        let mixed_calls = vec![
-            format!("{game}::version::admin_update"),
-            format!("{game}::api::redeem_giftcard"),
-        ];
-        assert!(is_game_activity(true, &game_call, &packages));
-        assert!(is_game_activity(true, &multi_call, &packages));
-        assert!(is_game_activity(true, &old_call, &packages));
-        assert!(!is_game_activity(false, &game_call, &packages));
-        assert!(!is_game_activity(true, &foreign_call, &packages));
-        assert!(!is_game_activity(true, &deployment_calls, &packages));
-        assert!(!is_game_transaction(&deployment_calls, &packages));
-        assert!(is_game_activity(true, &mixed_calls, &packages));
-    }
-
-    #[test]
-    fn package_content_and_authority_operations_never_count_as_gameplay_or_gas() {
-        let game = canonical("0xaa").unwrap();
-        let seed = canonical("0xbb").unwrap();
-        let control = canonical("0xcc").unwrap();
-        let system = canonical("0x2").unwrap();
-        let packages = std::collections::HashSet::from([game]);
-        let operations = [
-            vec![],
-            vec![format!("{system}::package::authorize_upgrade")],
-            vec![format!("{system}::package::commit_upgrade")],
-            vec![format!("{seed}::registry::write_item")],
-            vec![format!("{control}::admin::mint_temp_admin_cap")],
-        ];
-        for calls in operations {
-            assert!(!is_game_activity(true, &calls, &packages));
-            assert!(!is_game_transaction(&calls, &packages));
-        }
-    }
-
-    #[test]
-    fn a_multi_call_ptb_is_one_game_transaction() {
-        let game = canonical("0xaa").unwrap();
-        let packages = std::collections::HashSet::from([game.clone()]);
-        let tx = |successful: bool, move_calls: Vec<String>| OwnedTx {
-            lamport_version: 1,
-            sender: Addr([0; 32]),
-            digest: String::new(),
-            successful,
-            gas_mist: 7,
-            move_calls,
-            events: vec![],
-            inputs: vec![],
-            outputs: vec![],
-            deleted: vec![],
-        };
-        let txs = vec![
-            tx(
-                true,
-                vec![
-                    format!("{game}::kiosk::borrow"),
-                    format!("{game}::api::redeem_giftcard"),
-                ],
-            ),
-            tx(false, vec![format!("{game}::api::redeem_giftcard")]),
-            tx(
-                true,
-                vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())],
-            ),
-        ];
-
-        let activity = game_activity_txs(&txs, &packages).collect::<Vec<_>>();
-        assert_eq!(activity.len(), 1);
-        assert_eq!(activity.iter().map(|tx| tx.gas_mist).sum::<i64>(), 7);
-        assert_eq!(
-            game_gas_txs(&txs, &packages)
-                .map(|tx| tx.gas_mist)
-                .sum::<i64>(),
-            14
-        );
-    }
-
-    #[test]
-    fn character_totals_count_birth_and_deletion_but_not_custody_moves() {
-        let game = canonical("0xaa").unwrap();
-        let character = |byte: u8| OwnedObj {
-            version: 1,
-            id: Id([byte; 32]),
-            owner: OwnerKind::Shared,
-            type_key: TypeKey {
-                package: game.clone(),
-                module: "character".to_string(),
-                name: "Character".to_string(),
-                type_params: vec![],
-            },
-            bytes: vec![],
-        };
-        let tx = |inputs: Vec<OwnedObj>, outputs: Vec<OwnedObj>, deleted: Vec<OwnedObj>| OwnedTx {
-            lamport_version: 1,
-            sender: Addr([0; 32]),
-            digest: String::new(),
-            successful: true,
-            gas_mist: 0,
-            move_calls: vec![],
-            events: vec![],
-            inputs,
-            outputs,
-            deleted,
-        };
-        let moved = character(2);
-        let deleted = character(3);
-        let facts = character_facts(
-            &[
-                tx(vec![], vec![character(1)], vec![]),
-                tx(vec![clone_obj(&moved)], vec![moved], vec![]),
-                tx(vec![clone_obj(&deleted)], vec![], vec![deleted]),
-            ],
-            9,
-            10,
-            &game,
-        );
-        assert_eq!(facts.len(), 2);
-        assert_eq!(facts[0].delta, 1);
-        assert_eq!(facts[1].delta, -1);
-    }
-}
-
-#[cfg(test)]
-#[path = "../test/type_origins.rs"]
-mod type_origin_tests;

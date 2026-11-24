@@ -10,6 +10,10 @@
       "destination": "https://server.aresrpg.world/api/allocation"
     },
     {
+      "source": "/api/share",
+      "destination": "https://server.aresrpg.world/api/share"
+    },
+    {
       "source": "/ingest/static/:path(.*)",
       "destination": "https://us-assets.i.posthog.com/static/:path"
     },
@@ -22,7 +26,11 @@
       "destination": "https://us.i.posthog.com/:path"
     },
     {
-      "source": "/((?!api/|ingest(?:/|$)|assets/|branding/|portrait-share/|providers/|landing/|agents(?:/|$)|links(?:/|$)|llms\\.txt$|item/|classe/|social/|sw\\.js$|workbox-[^/]+\\.js$).*)",
+      "source": "/world/:path*",
+      "destination": "/world/index.html"
+    },
+    {
+      "source": "/((?!api/|ingest(?:/|$)|assets/|branding/|portrait-share/|providers/|agents(?:/|$)|links(?:/|$)|llms\\.txt$|item/|classe/|icons/|social/|sw\\.js$|workbox-[^/]+\\.js$).*)",
       "destination": "/index.html"
     }
   ],
@@ -31,7 +39,7 @@
       "maxDuration": 15
     },
     "api/portrait.ts": {
-      "includeFiles": "{../../seed/{icons/characters/*_hd.png,portraits/*.png},public/portrait-share/backgrounds/*.png}"
+      "includeFiles": "{../../seed/{icons/characters/*_hd.png,icons/items/!(*_hd).png,portraits/*.png},../ui/src/{base.css,assets/font/*.ttf},public/{logo-192.png,portrait-share/backgrounds/*.png},src/i18n/locales/en.yaml}"
     }
   },
   "headers": [

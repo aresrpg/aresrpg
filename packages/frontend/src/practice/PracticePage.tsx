@@ -13,6 +13,7 @@ import { worlds_source } from '../content/worlds.ts'
 import { PracticeBracket } from './PracticeBracket.tsx'
 import { next_practice_match } from './bracket.ts'
 import { read_practice_source } from './entry.ts'
+import '../kolizeum/arena.css'
 import '../tournament/tournament.css'
 
 const fresh_seed = (): bigint => BigInt(crypto.getRandomValues(new Uint32Array(1))[0]!)
@@ -48,7 +49,7 @@ export const PracticePage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             icon={<Swords size={18} />}
             close={leave}
             close_label={t('practice_leave')}
-            className="aui-arena-port"
+            className="arena-window"
           >
             <section className="tourney-panel">
               <header className="tourney-practice-heading">

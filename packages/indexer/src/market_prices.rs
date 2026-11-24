@@ -158,7 +158,3 @@ pub async fn commit(
     writes.query_async::<()>(conn).await?;
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../tests/market_prices/store.rs"]
-mod tests;

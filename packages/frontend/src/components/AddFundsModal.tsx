@@ -24,6 +24,7 @@ import { funding_recipient_current, type FundingAuthorization } from '../funding
 import { useFundingCheckout } from '../funding/useFundingCheckout.ts'
 
 import { WalletAddressBlock } from './WalletAddressBlock.tsx'
+import '../funding/funding.css'
 
 const FundingDialog = lazy(() => import('../funding/FundingDialog.tsx'))
 const FundingCheckout = lazy(() =>
@@ -70,7 +71,7 @@ const FaucetFunding = ({ address, copy }: FundingProps) => (
   <section className="space-y-4 text-xs text-muted" data-testnet-faucet="">
     <p>{wallet_text(copy, 'testnet_faucet_body')}</p>
     <WalletAddressBlock address={address} copy={copy} method="faucet" compact />
-    <a className="btn-outline block p-3 text-center" href={SUI_FAUCET_URL} target="_blank" rel="noopener noreferrer">
+    <a className="aui-button w-full" href={SUI_FAUCET_URL} target="_blank" rel="noopener noreferrer">
       {wallet_text(copy, 'testnet_faucet_action')}
     </a>
   </section>

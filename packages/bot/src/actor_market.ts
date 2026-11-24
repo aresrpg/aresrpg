@@ -15,7 +15,7 @@ export type ActorMarket = Readonly<{
   pages: readonly Page[]
   complete: boolean
 }>
-export const same_market_observation = (left: MarketObservation | undefined, right: MarketObservation) =>
+const same_market_observation = (left: MarketObservation | undefined, right: MarketObservation) =>
   left !== undefined &&
   JSON.stringify(parse_market_observation(left)) === JSON.stringify(parse_market_observation(right))
 const projection = (state: ActorInventory) => ({

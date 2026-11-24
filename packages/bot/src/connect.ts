@@ -11,7 +11,11 @@ import {
 import { run_keys, same_run } from './run_ref.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
 import {
+  google_owner,
+  hash_secret,
   public_bot,
+  random_secret,
+  secret_matches,
   type Account,
   type AuthorizationRequest,
   type Bot,
@@ -19,11 +23,10 @@ import {
   type Grant,
   type OAuthClient,
   type OwnerChallenge,
+  type OwnerVerifier,
 } from './model.ts'
-import { hash_secret, random_secret, secret_matches } from './security.ts'
 import { empty_lane, lane_key_for, type Lane } from './control.ts'
 import { begin_owner_return, complete_owner_return, stop_return_runs, type ReturnTransition } from './owner_return.ts'
-import { validate_owner, type OwnerVerifier } from './owner_proof.ts'
 
 const require_session = (
   request: AuthorizationRequest | null,
@@ -103,7 +106,7 @@ export const create_connect_service = (
     return { owner, bots: bots.filter((bot): bot is Bot => !!bot && bot.owner === owner).map(public_bot) }
   }
   const challenge = async (input: HostedChallengeInput, existing_session: string) => {
-    validate_owner(input.owner, input.zklogin_public_identifier)
+    google_owner(input.owner, input.zklogin_public_identifier)
     if (input.purpose !== 'session' && input.purpose !== 'consent') throw new Error('invalid_request')
     const session = input.authorization_id ? existing_session : random_secret()
     const id = input.authorization_id ?? random_secret()

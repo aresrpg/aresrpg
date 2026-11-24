@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The docs shell: a top bar, a floating category rail, then a written guide or an encyclopedia reference view.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Ground } from '@aresrpg/ui'
 
 import { content_catalog } from '../content/catalog.ts'
-import { ENCYCLOPEDIA_TABS, EncyclopediaContent } from '../encyclopedia/EncyclopediaContent.tsx'
+import { EncyclopediaContent } from '../encyclopedia/EncyclopediaContent.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 
@@ -15,7 +16,6 @@ import {
   DOCS_ORDER,
   DOCS_REFERENCES,
   docs_path,
-  docs_path_of_encyclopedia,
   is_mechanic,
   docs_view,
   type DocsReference,
@@ -30,12 +30,21 @@ type Titles = (section: DocsSection) => string
 const is_reference = (section: DocsSection): section is DocsReference =>
   (DOCS_REFERENCES as readonly string[]).includes(section)
 
-/** Guides are titled by the docs copy; reference views keep the encyclopedia's own tab names. */
+/** The encyclopedia copy key that titles each reference view. */
+const REFERENCE_TITLES: Readonly<Record<DocsReference, string>> = Object.freeze({
+  items: 'items',
+  bestiary: 'mobs',
+  classes: 'classes',
+  jobs: 'jobs_tab',
+  worlds: 'worlds_tab',
+})
+
+/** Guides are titled by the docs copy; reference views keep the encyclopedia's own names. */
 const section_titles = (copy: AppCopy): Titles => {
   const text = encyclopedia_text(copy)
   return (section) =>
     is_reference(section)
-      ? text(ENCYCLOPEDIA_TABS.find(({ id }) => id === section)?.label ?? section)
+      ? text(REFERENCE_TITLES[section])
       : is_mechanic(section)
         ? sentence_case(text(`gameplay.section_${section}`))
         : guide_title(copy.docs_page, section)
@@ -157,7 +166,8 @@ export const DocsPage = ({
   }, [view.section])
   const group = DOCS_NAV.find(({ sections }) => sections.includes(view.section))?.group ?? 'start'
   return (
-    <div className="docs aui-aura" data-menu={menu_open ? '' : undefined}>
+    <div className="docs" data-menu={menu_open ? '' : undefined}>
+      <Ground />
       <header className="docs-bar">
         <button
           aria-controls="docs-rail"
@@ -190,10 +200,10 @@ export const DocsPage = ({
               <p className="docs-crumb">{docs.groups[group]}</p>
               <h1>{titles(view.section)}</h1>
               <GuideBody
-                chooser={copy.landing_page.chooser}
                 copy={docs}
                 guide={view.section}
                 links={links}
+                new_tab={copy.site.new_tab}
                 text={encyclopedia_text(copy)}
               />
               <Neighbours copy={docs} current={view.section} titles={titles} />
@@ -206,11 +216,7 @@ export const DocsPage = ({
               {docs.groups[group]} / {titles(view.section)}
             </p>
             <section className="enc-page docs-reference flex min-h-0 min-w-0 flex-1 flex-col [&_button:not(:disabled)]:cursor-pointer">
-              <EncyclopediaContent
-                copy={copy}
-                navigate={(encyclopedia_path) => navigate(docs_path_of_encyclopedia(encyclopedia_path))}
-                pathname={view.encyclopedia_path}
-              />
+              <EncyclopediaContent copy={copy} navigate={navigate} view={view} />
             </section>
           </main>
         )}

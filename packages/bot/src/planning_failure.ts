@@ -3,8 +3,6 @@
 
 import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
-export const PLANNING_DIAGNOSTIC_PREFIX = 'run_planning_internal_error '
-
 /** Facts not observed yet: the leaf waits instead of failing. */
 const waiting = new Set([
   'needs_resync',
@@ -71,25 +69,25 @@ export const planning_issue = (error: unknown) => {
     return { state: 'failure' as const, issue: error.message }
   return undefined
 }
-export const planning_diagnostic = (error: unknown, kind: string, run: Readonly<{ id: string; revision?: number }>) => {
-  const type = [TypeError, RangeError, SyntaxError].find((constructor) => error instanceof constructor)?.name ?? 'Error'
-  return new Error(
-    `${PLANNING_DIAGNOSTIC_PREFIX}${JSON.stringify({ kind, run_id: run.id, revision: run.revision ?? 0, type })}`
-  )
-}
-
-export const planning_blocker = <Run extends Readonly<{ id: string; revision?: number }>>(
-  error: unknown,
-  kind: string,
-  run: Run
-) => {
+export const PLANNING_FAULT = 'run_planning_internal_error'
+/** A planning fault the run survives. Its message is a fixed code and its operation holds only our own
+ * identifiers, so reporting sends it as it is. */
+const planning_diagnostic = (error: unknown, run: Readonly<{ id: string; revision?: number }>) =>
+  Object.assign(new Error(PLANNING_FAULT), {
+    operation: {
+      run_id: run.id,
+      revision: run.revision ?? 0,
+      type: [TypeError, RangeError, SyntaxError].find((constructor) => error instanceof constructor)?.name ?? 'Error',
+    },
+  })
+export const planning_blocker = <Run extends Readonly<{ id: string; revision?: number }>>(error: unknown, run: Run) => {
   const known = planning_issue(error)
   // A planning fault is never a decision: the run waits and evaluates its tree again next tick.
   return {
     state: 'waiting' as const,
     issue: known?.issue ?? 'internal_error',
     record: run,
-    diagnostic: known ? undefined : planning_diagnostic(error, kind, run),
+    diagnostic: known ? undefined : planning_diagnostic(error, run),
   }
 }
 

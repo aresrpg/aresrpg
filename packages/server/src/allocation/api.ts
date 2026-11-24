@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { Redis } from 'ioredis'
 
+import { allocation_preview } from '../share_preview.ts'
+
 import { allocation_error, type AllocationOptions } from './service.ts'
-import { share_preview } from './preview.ts'
 
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, {
@@ -21,8 +22,8 @@ export const serve_allocation = async (
   try {
     if (request.method !== 'GET') throw new Error('unauthorized')
     const routes = new Map([
-      ['preview', () => share_preview(request, redis, options.origin)],
-      ['image', () => share_preview(request, redis, options.origin)],
+      ['preview', () => allocation_preview(request, redis, options.origin)],
+      ['image', () => allocation_preview(request, redis, options.origin)],
     ])
     const route = routes.get(action)
     if (!route) throw new Error('invalid_request')

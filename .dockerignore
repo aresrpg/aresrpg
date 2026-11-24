@@ -10,10 +10,6 @@
 !patches/**
 !packages
 packages/*
-!packages/telegram
-packages/telegram/*
-!packages/telegram/package.json
-
 !packages/bot
 packages/bot/*
 !packages/bot/package.json
@@ -37,9 +33,9 @@ packages/frontend/src/*
 !packages/frontend/src/i18n
 packages/frontend/src/i18n/*
 !packages/frontend/src/i18n/locales
-!packages/mobile
-packages/mobile/*
-!packages/mobile/package.json
+!packages/frontend/src/components
+packages/frontend/src/components/*
+!packages/frontend/src/components/portrait_share.ts
 !packages/journal
 packages/journal/*
 !packages/journal/package.json
@@ -71,6 +67,9 @@ packages/server/*
 seed/*
 !seed/content
 !seed/structures
+!seed/portraits
+seed/portraits/*
+!seed/portraits/manifest.json
 !seed/icons
 seed/icons/*
 !seed/icons/items
@@ -91,6 +90,9 @@ packages/frontend/public/branding/*
 !packages/frontend/public/branding/kares
 packages/frontend/public/branding/kares/*
 !packages/frontend/public/branding/kares/*.webp
+!packages/frontend/public/portrait-share
+packages/frontend/public/portrait-share/*
+!packages/frontend/public/portrait-share/manifest.json
 
 # Never, whatever the ladder above re-admits.
 **/node_modules

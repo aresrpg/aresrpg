@@ -6,6 +6,7 @@
     "revision": "e83d69069e4023cce4a2dcde2b9c74384418fee1",
     "linux_archive_sha256": "35f714a8130f62612bb0ec4d15a5a43cd04015b52c2cc0a37d92e8e7181df06c"
   },
+  "launch_packages": ["packages/currency", "packages/currency-lp"],
   "packages": [
     {
       "slot": "math",

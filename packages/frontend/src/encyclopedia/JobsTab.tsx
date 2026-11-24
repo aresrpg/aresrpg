@@ -11,11 +11,13 @@ import { Text } from '../i18n/Text.tsx'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaBrowser, SearchField } from './components.tsx'
 import { JobRecipesSection } from './JobRecipesSection.tsx'
+import './catalogue.css'
 
 const JOB_CATEGORIES = Object.freeze(Object.keys(job_groups) as JobKind[])
 const JOB_ICONS: Readonly<Record<JobKind, ComponentType<{ size?: number; className?: string }>>> = Object.freeze({

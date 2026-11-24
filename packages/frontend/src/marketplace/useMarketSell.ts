@@ -5,12 +5,9 @@ import { item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow, ListingRow } from '@aresrpg/protocol'
 import { useState } from 'react'
 
-import { useNumbers } from '../i18n/useNumbers.ts'
-import { useText } from '../i18n/useText.ts'
 import { available_inventory_items, coalesced_stack_groups, encumbered_asset_ids } from '../inventory_stacks.ts'
+import { dispatch_app, useSiteStore } from '../store.ts'
 import { parse_sui_amount } from '../wallet_amount.ts'
-
-import { useMarketState, useMarketAccount, useMarketDispatch, useMarketTradeRows } from './MarketSource.tsx'
 
 type ItemSelection = Readonly<{
   kind: 'item'
@@ -61,30 +58,40 @@ export const character_listing = (
   at_ms: Date.now(),
 })
 
+/** The account's items it can list: each unique item, and each stackable type as one stack with the stacks of
+ *  the same kiosk that merge into it before the listing. Listed and traded objects are not listable. */
+export const sellable_items = (
+  inventory: readonly ItemRow[],
+  encumbered: ReadonlySet<string>
+): readonly ItemSelection[] => [
+  ...available_inventory_items(inventory, encumbered)
+    .filter((row) => !item_is_stackable(row.category))
+    .map((row) => Object.freeze({ kind: 'item' as const, row, total_amount: row.amount, merge_sources: [] })),
+  ...coalesced_stack_groups(inventory, encumbered).map(({ target, total_amount, source_ids }) =>
+    Object.freeze({ kind: 'item' as const, row: target, total_amount, merge_sources: source_ids })
+  ),
+]
+
+/** The account's heroes it can list: naked, out of a fight, not listed or traded already. */
+export const sellable_characters = (
+  characters: readonly CharacterRow[],
+  encumbered: ReadonlySet<string>
+): readonly CharacterRow[] =>
+  characters.filter(
+    ({ id, equipment, custody }) => !encumbered.has(id) && custody !== 'fight' && equipment.length === 0
+  )
+
+/** The account's sale form: what it can list, the chosen asset, its price and lot, and the one list request. */
 export const useMarketSell = () => {
-  const dispatch_app = useMarketDispatch()
-  const localized_numbers = useNumbers()
-  const ui = useText()
-  const session = useMarketAccount()
-  const market = useMarketState()
-  const trades = useMarketTradeRows()
+  const session = useSiteStore(({ session }) => session)
+  const market = useSiteStore(({ marketplace }) => marketplace)
+  const trades = useSiteStore(({ trade }) => trade.rows)
   const [selected_key, set_selected_key] = useState<string | null>(null)
   const [price, set_price] = useState('')
   const [lot, set_lot] = useState(1)
   const encumbered = encumbered_asset_ids(market.own_listings, trades)
-  const inventory = available_inventory_items(session.inventory, encumbered)
-  const stack_groups = coalesced_stack_groups(session.inventory, encumbered)
-  const items: readonly ItemSelection[] = [
-    ...inventory
-      .filter((row) => !item_is_stackable(row.category))
-      .map((row) => Object.freeze({ kind: 'item' as const, row, total_amount: row.amount, merge_sources: [] })),
-    ...stack_groups.map(({ target, total_amount, source_ids }) =>
-      Object.freeze({ kind: 'item' as const, row: target, total_amount, merge_sources: source_ids })
-    ),
-  ]
-  const characters = session.characters.filter(
-    ({ id, equipment, custody }) => !encumbered.has(id) && custody !== 'fight' && equipment.length === 0
-  )
+  const items = sellable_items(session.inventory, encumbered)
+  const characters = sellable_characters(session.characters, encumbered)
   const selections: readonly Selection[] = [...items, ...characters.map((row) => ({ kind: 'character' as const, row }))]
   const selected = selections.find(({ kind, row }) => `${kind}:${row.id}` === selected_key)
   const parsed_price = parse_sui_amount(price)
@@ -122,25 +129,14 @@ export const useMarketSell = () => {
   }
 
   return {
-    localized_numbers,
-    ui,
-    session,
-    market,
-    trades,
-    selected_key,
     set_selected_key,
     price,
     set_price,
     lot,
     set_lot,
-    encumbered,
-    inventory,
-    stack_groups,
     items,
     characters,
-    selections,
     selected,
-    parsed_price,
     stackable,
     lot_sizes,
     can_list,

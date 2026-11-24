@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Button, NativeModal } from '@aresrpg/ui'
+import { Button, NativeModal, SuiLogo } from '@aresrpg/ui'
 import { Check, Sparkles, Trophy } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'

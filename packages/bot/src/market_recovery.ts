@@ -61,5 +61,3 @@ export const read_market_receipts = async (store: ControlStore, lane: Lane): Pro
 }
 export const fold_market_receipts = (proofs: readonly MarketProof[], inventory: ActorInventory): ActorInventory =>
   proofs.reduce((state, { command, receipt }) => fold_market_receipt(state, command, receipt), inventory)
-export const restore_market_receipts = async (store: ControlStore, lane: Lane, inventory: ActorInventory) =>
-  fold_market_receipts(await read_market_receipts(store, lane), inventory)

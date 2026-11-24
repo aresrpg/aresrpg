@@ -27,50 +27,7 @@ import { bake_stone_texture, build_obstacle_rocks } from './fight_board_rocks.ts
 import { create_fight_blob_layer } from './fight_blobs.ts'
 import { TRANSPARENT_ORDER } from './transparent_order.ts'
 import type { create_water_surface } from './water.ts'
-import type { FightBoardRender, FightBoardRenderCell } from './types.ts'
-
-export type FightBoardInstance = Readonly<{
-  cell: number
-  position: readonly [number, number, number]
-}>
-export type FightBoardInstances = Readonly<{
-  floor: readonly FightBoardInstance[]
-  obstacle: readonly FightBoardInstance[]
-  hole: readonly FightBoardInstance[]
-  start_a: readonly FightBoardInstance[]
-  start_b: readonly FightBoardInstance[]
-}>
-
-const position_of = (
-  board: Readonly<FightBoardRender>,
-  cell: Readonly<FightBoardRenderCell>,
-  lift: number
-): readonly [number, number, number] =>
-  Object.freeze([
-    board.origin.x + (cell.x + 0.5) * board.cell_size,
-    board.origin.y + lift,
-    board.origin.z + (cell.y + 0.5) * board.cell_size,
-  ])
-
-export const fight_board_instances = (board: Readonly<FightBoardRender>): FightBoardInstances => {
-  const rows = (kind: FightBoardRenderCell['kind'], lift: number): readonly FightBoardInstance[] =>
-    Object.freeze(
-      board.cells
-        .filter((cell) => cell.kind === kind)
-        .map((cell) => Object.freeze({ cell: cell.cell, position: position_of(board, cell, lift) }))
-    )
-  return Object.freeze({
-    floor: Object.freeze(
-      board.cells
-        .filter(({ kind }) => kind !== 'hole')
-        .map((cell) => Object.freeze({ cell: cell.cell, position: position_of(board, cell, 0) }))
-    ),
-    obstacle: rows('obstacle', board.cell_size * 0.38),
-    hole: rows('hole', -board.cell_size * 0.24),
-    start_a: rows('start_a', 0.2),
-    start_b: rows('start_b', 0.2),
-  })
-}
+import type { FightBoardRender } from './types.ts'
 
 type BoardResources = Readonly<{
   geometries: readonly { dispose: () => void }[]

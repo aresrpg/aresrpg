@@ -19,7 +19,27 @@ export type Schema = Readonly<{
   maximum?: number
   const?: string | number | boolean
   oneOf?: readonly Schema[]
+  description?: string
 }>
+/** The comparisons a condition may name: equality for any fact, order for numbers and amounts. */
+const COMPARISONS = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'] as const
+export type Comparison = (typeof COMPARISONS)[number]
+export const comparison_schema = (ops: readonly Comparison[] = COMPARISONS): Schema => ({
+  oneOf: ops.map((op) => ({ const: op })),
+})
+export const compare = <Value extends bigint | number | string | boolean>(
+  op: Comparison,
+  value: Value,
+  threshold: Value
+): boolean =>
+  ({
+    eq: value === threshold,
+    ne: value !== threshold,
+    lt: value < threshold,
+    lte: value <= threshold,
+    gt: value > threshold,
+    gte: value >= threshold,
+  })[op]
 export const object_schema = (properties: Readonly<Record<string, Schema>>): Schema => ({
   type: 'object',
   properties,
@@ -32,7 +52,7 @@ export const nonempty: Schema = { type: 'string', minLength: 1 }
 // The zone key is the existing Move u32 ABI, not a hosted product limit.
 export const coordinate: Schema = { type: 'integer', minimum: 0, maximum: 4294967295 }
 export const world_coordinate: Schema = { type: 'integer', minimum: 0, maximum: world_size - 1 }
-export const object_matches = (schema: Schema, value: unknown): boolean => {
+const object_matches = (schema: Schema, value: unknown): boolean => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const row = value as Record<string, unknown>
   return (
@@ -43,12 +63,12 @@ export const object_matches = (schema: Schema, value: unknown): boolean => {
     )
   )
 }
-export const string_matches = (schema: Schema, value: unknown): boolean =>
+const string_matches = (schema: Schema, value: unknown): boolean =>
   typeof value === 'string' &&
   value.length >= (schema.minLength ?? 0) &&
   value.length <= (schema.maxLength ?? Infinity) &&
   (!schema.pattern || new RegExp(schema.pattern).test(value))
-export const type_matches: Record<NonNullable<Schema['type']>, (schema: Schema, value: unknown) => boolean> = {
+const type_matches: Record<NonNullable<Schema['type']>, (schema: Schema, value: unknown) => boolean> = {
   boolean: (_schema, value) => typeof value === 'boolean',
   object: object_matches,
   string: string_matches,
@@ -62,10 +82,11 @@ export const type_matches: Record<NonNullable<Schema['type']>, (schema: Schema, 
     typeof value === 'number' &&
     [Number.isSafeInteger(value), value >= schema.minimum!, value <= schema.maximum!].every(Boolean),
 }
+/** A schema with no type, `oneOf` or `const` accepts any value, as in JSON Schema. */
 export const matches = (schema: Schema, value: unknown): boolean => {
   if (schema.oneOf) return schema.oneOf.filter((candidate) => matches(candidate, value)).length === 1
   if (schema.const !== undefined) return value === schema.const
-  return schema.type ? type_matches[schema.type](schema, value) : false
+  return schema.type ? type_matches[schema.type](schema, value) : true
 }
 export const u64 = (value: string): bigint => {
   const integer = BigInt(value)

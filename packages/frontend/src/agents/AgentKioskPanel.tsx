@@ -2,15 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
 import { Bot } from 'lucide-react'
-import { Button } from '@aresrpg/ui'
+import { Button, SuiLogo } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
-import { SuiLogo } from '../components/SuiLogo.tsx'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { InventoryTransferGrid } from '../characters/InventoryTransferGrid.tsx'
 
+import { AgentKioskStatus } from './AgentKioskStatus.tsx'
 import type { AgentKioskController, KioskInventory } from './useAgentKiosk.ts'
 import { agent_inventory_groups, type TransferToken } from './inventory_transfer.ts'
 import { AgentTransferFunding } from './AgentTransferFunding.tsx'
@@ -28,6 +28,7 @@ export const AgentKioskPanel = ({
   disabled: boolean
 }>) => {
   const [coin, set_coin] = useState<TransferToken | null>(null)
+  const connected = useAppStore((app) => owner_connected(app.session))
   const { snapshot, pairing, state } = kiosk
   const busy = [disabled, kiosk.busy, state.phase === 'loading'].some(Boolean)
   const controls_disabled = [busy, kiosk.blocked, state.phase !== 'ready'].some(Boolean)
@@ -44,6 +45,7 @@ export const AgentKioskPanel = ({
         <span className="agent-kiosk__badge">{copy.ui.agent_kiosk_badge}</span>
         <span>{snapshot ? agent_inventory_groups(snapshot.inventory.items).length : '—'}</span>
       </header>
+      {connected && kiosk.pairing && <p role="status">{copy.ui.agent_connected}</p>}
       <AgentKioskStatus kiosk={kiosk} copy={copy} />
       {snapshot && (
         <>
@@ -95,26 +97,3 @@ const AgentBalances = ({
     })}
   </div>
 )
-
-const AgentKioskStatus = ({ kiosk, copy }: Readonly<{ kiosk: AgentKioskController; copy: AppCopy }>) => {
-  const connected = useAppStore((app) => owner_connected(app.session))
-  if (!kiosk.pairing) return null
-  const failure =
-    kiosk.state.error ||
-    kiosk.transaction.error ||
-    (kiosk.item_recovery_blocked ? copy.ui.agent_transfer_interrupted : null)
-  const retry = kiosk.item_recovery_blocked ? kiosk.retry_items : kiosk.state.error ? kiosk.refresh : kiosk.retry
-  return (
-    <>
-      {connected && <p role="status">{copy.ui.agent_connected}</p>}
-      <p className="agent-transfer-error" role="alert" hidden={!failure}>
-        {failure}
-      </p>
-      {failure && (
-        <Button disabled={kiosk.busy || kiosk.state.phase === 'loading'} onClick={retry}>
-          {copy.ui.agent_hosted_retry}
-        </Button>
-      )}
-    </>
-  )
-}

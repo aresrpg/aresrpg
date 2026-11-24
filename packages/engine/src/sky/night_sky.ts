@@ -1,36 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity, max-lines -- the night-sky shader graph remains one cohesive GPU composition boundary. */
-// NIGHT SKY — the real one — target: "the moon still looks like a lamp, it should
-// illuminate a bit the sky, we should see beautiful stars, and according to the world seed and settings,
-// even other planets, milky way, a real amazing sky"). ONE home consumed by BOTH sky paths — sky_node.js
-// (LOW analytic) and sky_hillaire/hillaire_sky.js (MEDIUM/HIGH physical) — so the tiers cannot drift:
-//
-//   • MOON ATMOSPHERE — kills the "lamp" read (a windowed corona's visible boundary on black — the same
-//     disease the sun's corona had). Replaced by BOUNDARY-FREE terms: a tight rational spike + a pow tail
-//     hugging the disc, blending into a BROAD inverse-power sky illumination (tens of degrees) with a
-//     slight horizon lift — the moon lights the SKY, not a bubble.
-//   • NIGHT BASE — a deep blue-grey vertical gradient (never pure black; hillaire's LUT sky is ~0 at
-//     night). Mirrors sky_node.js's SKY_NIGHT palette (one colour home).
-//   • STARS — 3 magnitude tiers of direction-hashed cell stars (technique: Overdraw.xyz "Using cellular
-//     noise to generate procedural stars" — per-cell hash offset + radial falloff, radius SHRUNK by the
-//     offset magnitude so no star clips its cell border; layered scales per Casual-Effects/marian42
-//     starfield lineage). Temperature tint variation, subtle time-twinkle on the smallest tier only,
-//     fading near the moon glow + at the horizon haze + to zero in daylight (gradual dusk fade-in).
-//   • MILKY WAY — a seed-oriented great-circle band: gaussian profile × wispy fBm × darker dust lanes
-//     (fBm band + dust-lane subtraction — the standard shadertoy galactic-band construction), faint
-//     warm-white core, humble near the moon. MEDIUM/HIGH only (LOW skips — tier budget).
-//   • PLANETS — two small bright non-twinkling discs (one warm, one pale), positions seed-derived,
-//     drifting VERY slowly with the time of day (CPU-ticked uniforms off the sun azimuth).
-//
-// PER-WORLD: `derive_night_sky_params(seed)` (FNV hash01 — texture_noise.js) → galaxy orientation basis,
-// planet orbit bases/phases/drifts, a slight star-density variance. TSL laws: flat chains only (no
-// If/Loop/discard — nowhere near the naga 127-nesting cliff), scalars folded as constants, the only
-// uniforms are the two CPU-ticked planet directions. Everything multiplies through a night gate that is
-// EXACTLY 0 in daylight, so the day sky is untouched.
-//
-// TERRAIN LAW: this node feeds background_node ONLY — sample_sky / sample_sky_dome / fog / ambient
-// (sky_light_coupling) never see it, so night terrain contrast and water<terrain read are preserved.
+// The night sky, shared by the analytic and Hillaire skies so the tiers cannot drift: a boundary-free
+// moon glow and halo (a windowed corona reads as a lamp), a blue-grey base, hashed-cell stars in four
+// tiers, a seed-oriented milky way with dust lanes, optional nebula clouds and two drifting planets.
+// The world seed orients the galaxy and planet orbits. Everything passes a night gate that is exactly 0
+// in daylight. Only the sky background reads this node; fog and ambient light never see it.
 
 import { Vector3 } from 'three'
 import type { Node } from 'three/webgpu'
@@ -94,7 +68,7 @@ type NightSkyCfg = Readonly<{
 }>
 
 type Orbit = Readonly<{ a: Rgb; b: Rgb; phase: number; drift: number }>
-export type NightSkyParams = Readonly<{
+type NightSkyParams = Readonly<{
   galaxy_n: Rgb
   galaxy_a: Rgb
   galaxy_b: Rgb
@@ -104,184 +78,80 @@ export type NightSkyParams = Readonly<{
   regions: readonly Readonly<{ dir: Rgb }>[]
 }>
 
-// ── moon atmosphere (all boundary-free — the anti-"lamp" kernel family, sized under the 2.05 knee) ──────
-/** broad sky illumination: peak linear intensity of the moonlit sky dome at the moon. */
-export const MOON_SKY_GLOW = 0.1
-/** inverse-power falloff: glow = 1/(1 + K·(1−cosθ))^P — no window, decays smoothly across the whole dome. */
-export const MOON_SKY_GLOW_K = 40
-export const MOON_SKY_GLOW_P = 1.4
-/** cool moonlight sky tint (matches sky_light_coupling's MOON_TINT family). */
-export const MOON_SKY_GLOW_RGB: Rgb = [0.58, 0.7, 1.0]
-/** horizon lift: the glow is boosted up to ×(1+this) as the view drops to the horizon (moon-side sky). */
-export const MOON_HORIZON_LIFT = 0.5
-/** near-disc halo — same rational-spike + pow-tail family as the sun's boundary-free glare. */
-export const MOON_HALO_VIS = 0.0016
-export const MOON_HALO_SPIKE_GAIN = 0.12
-export const MOON_HALO_POW = 260
-export const MOON_HALO_TAIL_GAIN = 0.22
+// Moon glow: an inverse-power dome illumination plus a rational-spike and pow-tail halo, with no window.
+const MOON_SKY_GLOW = 0.1
+const MOON_SKY_GLOW_K = 40
+const MOON_SKY_GLOW_P = 1.4
+const MOON_SKY_GLOW_RGB: Rgb = [0.58, 0.7, 1.0]
+/** The glow grows up to (1 + lift) as the view drops to the horizon. */
+const MOON_HORIZON_LIFT = 0.5
+const MOON_HALO_VIS = 0.0016
+const MOON_HALO_SPIKE_GAIN = 0.12
+const MOON_HALO_POW = 260
+const MOON_HALO_TAIL_GAIN = 0.22
 
-// ── night gate (dusk fade-in: 0 until the sun is ~2° below the horizon, full by ~8° below) ─────────────
-export const NIGHT_GATE_HI = -0.03
-export const NIGHT_GATE_LO = -0.14
+// The night gate starts about 2 degrees below the horizon and is full by about 8 degrees below.
+const NIGHT_GATE_HI = -0.03
+const NIGHT_GATE_LO = -0.14
 
-// ── stars ────────────────────────────────────────────────────────────────────────────────────────────
-/** 4 magnitude tiers (Overdraw cell technique per tier): lattice freq (cells/radian), existence threshold
- *  (higher = sparser), linear brightness, base radius in cell units. Tier 3 twinkles; tier 4 is the
- *  BAND DUST — a high-frequency grain layer that mostly exists inside the milky-way band (its granular
- *  "river of stars" texture). [round-2/3 capture-driven] first cut read ~8 stars on the wide framing; the
- *  killers were SUB-PIXEL radii + a mid-grey auto-exposed night base washing 1px dots out — so radii sized
- *  ≥2px at 800px, brightness floors raised (knee-checked: worst white star ×(1+band_bright) + band glow +
- *  base < 2.05, unit-tested), tiers densified. band_boost: +band×boost on the existence hash ≡ a lower
- *  in-band threshold — stars CONCENTRATE along the band; band_bright: extra in-band brightness. */
-export const STAR_TIERS = [
+/** Star tiers: lattice frequency in cells per radian, existence threshold, brightness and radius in cell
+ *  units. Tier 4 is fine dust that mostly exists inside the milky-way band. Radii stay at least 2 px at
+ *  800 px so stars survive the night exposure. band_boost lowers the threshold inside the band. */
+const STAR_TIERS = [
   { freq: 14, thresh: 0.98, bright: 1.7, radius: 0.13, twinkle: false, band_boost: 0.03, band_bright: 0 },
   { freq: 26, thresh: 0.93, bright: 1.5, radius: 0.12, twinkle: false, band_boost: 0.08, band_bright: 0.2 },
   { freq: 44, thresh: 0.82, bright: 1.2, radius: 0.13, twinkle: true, band_boost: 0.08, band_bright: 0.2 },
   { freq: 90, thresh: 0.986, bright: 0.6, radius: 0.3, twinkle: false, band_boost: 0.12, band_bright: 0 },
 ]
-/** star temperature palette: cool blue-white → white → warm. */
-export const STAR_COOL_RGB: Rgb = [0.72, 0.82, 1.0]
-/** @type {import('./sky_node.js').Rgb} */
-export const STAR_WARM_RGB: Rgb = [1.0, 0.86, 0.7]
-/** rare faint RED GIANT — only the extreme hash tail (cfg.star_red_giant fraction) reaches it. */
-export const STAR_RED_RGB: Rgb = [1.0, 0.55, 0.42]
-/** stars fade to this fraction inside the full moon glow (never fully dead — the brightest survive). */
-export const STAR_MOON_SUPPRESS = 0.85
-/** horizon fade band on view elevation (haze eats stars near the horizon). Narrow (≈1-7°) — kept as the
- *  NEUTRAL-reference cutoff for milky way/nebula/stars; LIVE opts into the wider `horizon_fade` cfg below. */
-export const STAR_HORIZON_FADE = [0.02, 0.12]
-/** stars never fully vanish at the horizon under the wide `horizon_fade` ramp (below) — they only dim to this
- *  floor ("shouldn't vanish entirely"). Milky way / nebula fade all the way to 0 instead. */
-export const STAR_HORIZON_FLOOR = 0.5
+const STAR_COOL_RGB: Rgb = [0.72, 0.82, 1.0]
+const STAR_WARM_RGB: Rgb = [1.0, 0.86, 0.7]
+/** Only the extreme hash tail reaches the red-giant colour. */
+const STAR_RED_RGB: Rgb = [1.0, 0.55, 0.42]
+/** Stars fade to this fraction inside the full moon glow. */
+const STAR_MOON_SUPPRESS = 0.85
+/** Narrow horizon cutoff on view elevation; planets and configs without `horizon_fade` use it. */
+const STAR_HORIZON_FADE = [0.02, 0.12]
+/** Under the wide `horizon_fade` ramp, stars dim to this floor instead of vanishing. */
+const STAR_HORIZON_FLOOR = 0.5
 
-// ── milky way ────────────────────────────────────────────────────────────────────────────────────────
-export const MW_INTENSITY = 0.075
-export const MW_WIDTH = 0.16 // gaussian sigma on the band coordinate (≈9°)
-/** @type {import('./sky_node.js').Rgb} */
-export const MW_CORE_RGB: Rgb = [1.0, 0.9, 0.78]
-export const MW_DUST_STRENGTH = 0.65
-export const MW_MOON_HUMILITY = 0.6 // ×(1 − this·moonglow): humble near the moon, full on the far side
+const MW_DUST_STRENGTH = 0.65
+const MW_MOON_HUMILITY = 0.6 // ×(1 − this·moonglow): humble near the moon, full on the far side
 
-// ── planets ──────────────────────────────────────────────────────────────────────────────────────────
-export const PLANET_TINTS: readonly Readonly<{ rgb: Rgb; intensity: number }>[] = [
+const PLANET_TINTS: readonly Readonly<{ rgb: Rgb; intensity: number }>[] = [
   { rgb: [1.0, 0.82, 0.62], intensity: 1.7 }, // the warm one
   { rgb: [0.85, 0.92, 1.0], intensity: 1.3 }, // the pale one
 ]
-export const PLANET_COS_OUTER = Math.cos(0.005)
-export const PLANET_COS_INNER = Math.cos(0.002)
-/** ring (option B's "space panel" Saturn): an in-band-plane annulus in the planet's disc-space uv. */
-export const RING_INNER = 1.7 // ×disc radius
-export const RING_OUTER = 2.9
-export const RING_SQUASH = 0.32 // v-axis squash → the ring reads as a tilted ellipse
-export const RING_RGB: Rgb = [0.9, 0.78, 0.55]
-export const RING_INTENSITY = 0.9
+const PLANET_COS_OUTER = Math.cos(0.005)
+const PLANET_COS_INNER = Math.cos(0.002)
+/** A ring is an annulus in the band plane, drawn in the planet's disc-space uv. */
+const RING_INNER = 1.7 // ×disc radius
+const RING_OUTER = 2.9
+const RING_SQUASH = 0.32 // v-axis squash → the ring reads as a tilted ellipse
+const RING_RGB: Rgb = [0.9, 0.78, 0.55]
+const RING_INTENSITY = 0.9
 
-// ── nebula (deep-space colour clouds — the "space exploration panel" layer; OFF at neutral) ─────────────
-// A low-frequency fBm over the galactic frame, tinted across a deep blue→purple→orange palette, concentrated
-// toward the band + a warm galactic-core pocket. CHROMA-dominant on purpose: deep saturated darks survive the
-// AgX shoulder where luminance washes to grey (the whole "no colors" complaint). MEDIUM/HIGH only (reuses the
-// milky-way frame q). intensity 0 ⇒ the node is SKIPPED entirely, so the shipped graph is byte-unchanged.
-/** @type {import('./sky_node.js').Rgb} */
-export const NEBULA_BLUE: Rgb = [0.06, 0.12, 0.34]
-/** @type {import('./sky_node.js').Rgb} */
-export const NEBULA_PURPLE: Rgb = [0.18, 0.07, 0.32]
-/** @type {import('./sky_node.js').Rgb} */
-export const NEBULA_ORANGE: Rgb = [0.6, 0.24, 0.06]
+// Nebula: low-frequency fBm over the galactic frame, tinted blue to purple to orange and concentrated
+// toward the band. It is chroma-dominant because saturated darks survive tone mapping where luminance greys.
 
-/**
- * The knobs the night-sky OPTIONS differ on. NEUTRAL = today's exact look (nebula off, every mult 1) so the
- * live game is unchanged until a look is picked; the pick lands as a config swap + a small follow-up. Every
- * scalar/array folds into a JS constant at build time ⇒ with NEUTRAL the TSL graph is identical to the
- * pre-config build (special-cased where a round-trip like acos∘cos could drift a constant).
- * @typedef {object} NightSkyCfg
- * @property {SkyPalette|null} base_palette deep dome gradient (nadir/horizon/zenith) when with_base; null = SKY_NIGHT
- * @property {number} star_thresh_shift additive existence-threshold shift (negative = denser stars)
- * @property {number} star_bright_mul brightness multiplier across all tiers
- * @property {number} mw_intensity milky-way band peak intensity
- * @property {Rgb} mw_rgb milky-way core colour
- * @property {number} mw_width gaussian sigma of the band (smaller = thinner/brighter)
- * @property {number} planet_scale multiplies each planet disc's angular radius
- * @property {number} planet_count how many of the 2 planets to draw (1 or 2)
- * @property {number} ringed_planet index of a Saturn-ringed planet, or -1
- * @property {number} [moon_glow_mul] scales ONLY the visible moonlit-sky wash (1 = full; lower = deeper night;
- *   star/nebula suppression + moon halo unchanged) — lets the deep-space colour read while the moon is up
- * @property {number} [star_cluster] 0 = off; >0 = low-freq CLUSTERING (constellation-like groupings + voids)
- * @property {number} [star_red_giant] 0 = off; >0 = fraction of the hash tail that goes faint RED giant
- * @property {{rgb:Rgb, amount:number}|null} [arcane_tint] faint global dome tint (the "arcane" wash)
- * @property {{start_deg:number, end_deg:number}|null} [horizon_fade] wide horizon-extinction ramp (
- *   2026-07-13: "the sky should not cut straight like this, it should go behind mountains") — milky-way band
- *   + nebula fade to 0 and stars dim to STAR_HORIZON_FLOOR across the elevation window from `start_deg`
- *   (fully visible) down to `end_deg` (fully extinct; 0 = the true horizon); zenith and everything above
- *   start_deg is untouched. Degrees, ascending (start_deg > end_deg — smoothstep's WGSL edge law). null = OFF:
- *   falls back to the old narrow STAR_HORIZON_FADE cutoff (NEUTRAL's byte-unchanged reference look).
- * @property {{intensity:number, along_band:number, orange_core:number, orange_core_k:number,
- *   blue:Rgb, purple:Rgb, orange:Rgb,
- *   regions?: {rgb:Rgb, k:number, gain:number}[]}} nebula the colour-cloud layer. `regions` (the VARIANT
- *   axis) paints N distinct-hue fields at seed-derived directions — each a directional falloff over the SHARED
- *   density fBm, so multiple hues cost ZERO extra noise. Empty ⇒ the single blue→purple hue-walk + orange core.
- * @typedef {import('./sky_node.js').SkyPalette} SkyPalette
- * @typedef {import('./sky_node.js').Rgb} Rgb
- */
-/** @type {NightSkyCfg} */
-export const NIGHT_SKY_NEUTRAL: NightSkyCfg = {
-  base_palette: null, // read lazily as SKY_NIGHT at call time (circular-import safe — sky_node imports us)
-  star_thresh_shift: 0,
-  star_bright_mul: 1,
-  mw_intensity: MW_INTENSITY,
-  mw_rgb: MW_CORE_RGB,
-  mw_width: MW_WIDTH,
-  planet_scale: 1,
-  planet_count: 2,
-  ringed_planet: -1,
-  moon_glow_mul: 1,
-  star_cluster: 0,
-  star_red_giant: 0,
-  arcane_tint: null,
-  horizon_fade: null,
-  nebula: {
-    intensity: 0,
-    along_band: 0.7,
-    orange_core: 0,
-    orange_core_k: 4,
-    blue: NEBULA_BLUE,
-    purple: NEBULA_PURPLE,
-    orange: NEBULA_ORANGE,
-    regions: [],
-  },
-}
-
-/**
- * THE LIVE night sky — the SHIPPED DEFAULT (pick "second one" = HYBRID_2, the
- * max-variant B×C hybrid). Near-black violet dome + THREE distinct-hue nebula regions (cold blue-violet /
- * warm amber-magenta / teal — the "more variant" axis, ZERO extra per-pixel noise), dense clustered stars
- * with red giants, a faint arcane wash, two planets one ringed. Ships ON by default (no-flags law: the
- * landed config IS the game). Star BRIGHTNESS held at the knee-safe baseline (star_bright_mul 1 — density +
- * clustering carry "more stars") without washing out the band palette. NIGHT_SKY_NEUTRAL above is retained
- * as the pre-pick reference.
- * @type {NightSkyCfg}
- */
-export const NIGHT_SKY_LIVE: NightSkyCfg = {
+/** The shipped night sky: a near-black violet dome, three nebula regions of distinct hue, clustered stars
+ *  with red giants, a faint arcane wash and two planets. */
+const NIGHT_SKY_LIVE: NightSkyCfg = {
   base_palette: { zenith: [0.004, 0.005, 0.017], horizon: [0.011, 0.011, 0.03], nadir: [0.004, 0.005, 0.015] },
   star_thresh_shift: -0.06,
   star_bright_mul: 1.0,
   star_cluster: 0.35,
   star_red_giant: 0.06,
-  // in-engine tune (2026-07-13 ship gate): the Hillaire physical-sky night base washed the band
-  // to a pale grey column, drowning the colour. Taming mw (0.18→0.10) kills the grey wash, and pushing
-  // nebula (0.6→0.9) lets the blue/violet/amber dominate the pale base — the probe→engine fidelity gap fix.
+  // A lower milky-way intensity and a stronger nebula keep the Hillaire night base from greying the band.
   mw_intensity: 0.1,
   mw_rgb: [0.82, 0.8, 0.95],
   mw_width: 0.12,
   planet_scale: 3.2,
   planet_count: 2,
-  // OFF until the planet BODY renders inside it — the annulus alone read as a naked white
-  // torus beside the moon (owner report 2026-08-19; repro scratchpad/ring-hunt.md).
+  // Off until the planet body renders inside the ring; the annulus alone reads as a white torus.
   ringed_planet: -1,
-  moon_glow_mul: 0.3, // in-engine: the full moon-glow washed the deep colour grey; 0.3 keeps a gentle lift
+  moon_glow_mul: 0.3,
   arcane_tint: { rgb: [0.04, 0.05, 0.08], amount: 0.012 },
-  // HORIZON FADE (ship-gate rider: "curve a bit the horizon... it should go behind
-  // mountains" — the band/nebula wash held full brightness right up to the mountain silhouette then cut hard
-  // against it). 14°→0° sinks the last stretch of sky into the terrain line like real atmospheric extinction.
+  // Band and nebula sink into the terrain line over the last 14 degrees instead of cutting against it.
   horizon_fade: { start_deg: 14, end_deg: 0 },
   nebula: {
     intensity: 0.9,
@@ -299,61 +169,18 @@ export const NIGHT_SKY_LIVE: NightSkyCfg = {
   },
 }
 
-/** @param {number} x @param {number} lo @param {number} hi @returns {number} */
-const clampf = (x: number, lo: number, hi: number): number => (x < lo ? lo : x > hi ? hi : x)
-/** @param {number} e0 @param {number} e1 @param {number} x @returns {number} Hermite smoothstep. */
-const smoothf = (e0: number, e1: number, x: number): number => {
-  const t = clampf((x - e0) / (e1 - e0), 0, 1)
-  return t * t * (3 - 2 * t)
-}
-/** @param {number[]} a @param {number[]} b @returns {number[]} */
 const cross3 = (a: Rgb, b: Rgb): Rgb => [
   a[1] * b[2] - a[2] * b[1],
   a[2] * b[0] - a[0] * b[2],
   a[0] * b[1] - a[1] * b[0],
 ]
-/** @param {number[]} a @returns {number[]} */
 const norm3 = (a: Rgb): Rgb => {
   const l = Math.hypot(a[0], a[1], a[2]) || 1e-9
   return [a[0] / l, a[1] / l, a[2] / l]
 }
 
-// ── pure JS twins (unit-tested; the TSL below mirrors them op-for-op) ────────────────────────────────
-
-/** Night gate: 0 in daylight, 1 in deep night, GRADUAL through dusk. @param {number} sun_y @returns {number} */
-export function night_gate_js(sun_y: number): number {
-  return 1 - smoothf(NIGHT_GATE_LO, NIGHT_GATE_HI, sun_y)
-}
-
-/** Horizon extinction ramp (pure twin of the TSL term in `create_night_sky_node`) — 0 at/below `end_deg`
- *  elevation, 1 at/above `start_deg`, smooth between. Takes the view direction's y component directly
- *  (≈ sin(elevation)) to match the file's sine-space convention (NIGHT_GATE_HI/LO, STAR_HORIZON_FADE) — the
- *  shader never needs an asin() node, degrees only convert the two edges (constants, folded once).
- *  @param {number} view_y view_dir.y  @param {{start_deg:number, end_deg:number}|null} [hf]  @returns {number}
- *    in [0,1]; always 1 when `hf` is null (the OFF/NEUTRAL case). */
-export function horizon_fade_js(view_y: number, hf: HorizonFade | null = null): number {
-  if (!hf) return 1
-  const y_end = Math.sin((hf.end_deg * Math.PI) / 180)
-  const y_start = Math.sin((hf.start_deg * Math.PI) / 180)
-  return smoothf(y_end, y_start, view_y)
-}
-
-/**
- * @typedef {object} NightSkyParams
- * @property {number[]} galaxy_n unit galactic pole (band = great circle where dot(view,n)=0)
- * @property {number[]} galaxy_a unit in-band basis
- * @property {number[]} galaxy_b unit in-band basis (n×a)
- * @property {{a:number[], b:number[], phase:number, drift:number}[]} planets orbit bases (unit, ⟂), phase rad, drift rad/rad
- * @property {number} density_shift additive star-threshold shift (±0.02 — slight per-world density variance)
- * @property {number} lattice_offset per-world star-lattice decorrelation offset
- * @property {{dir:number[]}[]} regions 3 seed-placed nebula-region directions (cfg supplies each one's hue)
- */
-
-/**
- * Derive the per-world night-sky parameter set from the world seed — pure, deterministic (FNV hash01).
- * @param {string|number} seed @returns {NightSkyParams}
- */
-export function derive_night_sky_params(seed: string | number): NightSkyParams {
+/** Per-world night-sky parameters, derived deterministically from the world seed. */
+function derive_night_sky_params(seed: string | number): NightSkyParams {
   const codes = typeof seed === 'number' ? [seed | 0] : [...String(seed)].map((c) => c.codePointAt(0) ?? 0)
   const h = (i: number): number => hash01(...codes, i)
   // galactic pole: uniform azimuth; elevation kept in |y| ≤ 0.72 so the band never degenerates into a
@@ -377,8 +204,7 @@ export function derive_night_sky_params(seed: string | number): NightSkyParams {
     const b = cross3(n_i, a)
     return { a, b, phase: h(12 + i) * Math.PI * 2, drift: 0.04 + 0.04 * h(14 + i) }
   })
-  // nebula regions: 3 directions along the band at spread in-band angles, each lifted off the plane by its own
-  // hash so the fields sit at DIFFERENT points of the sky (the "multiple distinct regions" variant axis).
+  // Three nebula directions spread along the band, each lifted off the plane by its own hash.
   const regions = [0, 1, 2].map((i) => {
     const ang = (i / 3) * Math.PI * 2 + h(20 + i) * 1.2
     const lift = (h(23 + i) - 0.5) * 0.7
@@ -400,29 +226,15 @@ export function derive_night_sky_params(seed: string | number): NightSkyParams {
   }
 }
 
-/**
- * Planet world direction at a given sun azimuth (the tod drift signal) — pure twin of the tick below.
- * @param {NightSkyParams['planets'][0]} p @param {number} sun_az radians @returns {number[]} unit dir
- */
-export function planet_dir_js(p: Orbit, sun_az: number): Rgb {
+/** Planet world direction at a sun azimuth; the tick below uses it. */
+function planet_dir_js(p: Orbit, sun_az: number): Rgb {
   const th = p.phase + sun_az * p.drift
   const c = Math.cos(th)
   const s = Math.sin(th)
   return norm3([p.a[0] * c + p.b[0] * s, p.a[1] * c + p.b[1] * s, p.a[2] * c + p.b[2] * s])
 }
 
-/**
- * Build the night-sky ADD node for a sky background + its per-frame CPU tick (planet drift).
- * @param {object} opts
- * @param {string|number} [opts.seed] world seed (defaults to the master seed)
- * @param {*} opts.sun_dir vec3 node/uniform — the shared world sun direction (moon = its antipode)
- * @param {*} opts.view_dir vec3 node — normalized world view direction
- * @param {boolean} [opts.with_base] add the deep blue-grey night gradient (hillaire: yes — its LUT sky is
- *   black at night; LOW analytic: no — SKY_NIGHT palette already paints it)
- * @param {boolean} [opts.with_milky_way] add the galactic band (MEDIUM/HIGH; LOW skips — tier budget)
- * @param {NightSkyCfg} [opts.cfg] the option knobs — NEUTRAL (today's look) unless a variant has been picked
- * @returns {{ node: *, tick: (sun_dir: {x:number,y:number,z:number}) => void, params: NightSkyParams }}
- */
+/** The night-sky node added to a sky background, plus its per-frame planet-drift tick. */
 export function create_night_sky_node({
   seed = 'aresrpg',
   sun_dir,
@@ -447,15 +259,13 @@ export function create_night_sky_node({
   const moon_up = clamp(moon_dir.y.add(0.02).div(0.14), 0, 1)
   const cos_vm = view_dir.dot(moon_dir)
   const view_up = clamp(view_dir.y, 0, 1)
-  // the moon body OCCLUDES stars/planets/milky-way (physically right, and it hard-bounds the worst-case
-  // luminance: a planet in conjunction can never stack its radiance on top of the disc+halo peak).
+  // The moon body occludes stars, planets and the milky way, which also bounds the worst-case luminance.
   const moon_occ = float(1).sub(smoothstep(float(MOON_DISC_COS), float(MOON_DISC_INNER_COS), cos_vm).mul(moon_up))
 
-  // ── moon atmosphere: broad sky glow (+ horizon lift) + boundary-free near halo ────────────────────
   const glow_shape = float(1).div(
     pow(float(1).add(float(MOON_SKY_GLOW_K).mul(float(1).sub(cos_vm))), float(MOON_SKY_GLOW_P))
   )
-  const glow_norm = glow_shape.mul(moon_up) // ALSO the star/milky-way suppression field
+  const glow_norm = glow_shape.mul(moon_up)
   const horizon_lift = float(1).add(float(MOON_HORIZON_LIFT).mul(float(1).sub(view_up)))
   const sky_glow = c3(MOON_SKY_GLOW_RGB).mul(glow_norm.mul(MOON_SKY_GLOW * (cfg.moon_glow_mul ?? 1)).mul(horizon_lift))
   const vm = clamp(cos_vm, 0, 1)
@@ -470,12 +280,8 @@ export function create_night_sky_node({
       .mul(moon_up)
   )
 
-  // ── horizon extinction: additive night content sinks into the terrain silhouette across the LAST
-  // stretch of elevation instead of cutting hard against the mountain line ("the sky
-  // should not cut straight like this, it should go behind mountains"). Reuses view_dir.y — the SAME
-  // elevation basis both the LOW analytic (sky_node.js) and MEDIUM/HIGH hillaire tiers already pass in as
-  // `view_dir` (no new node/uniform/pass — one extra smoothstep). Degrees fold to view_dir.y's sine-space
-  // ONCE in JS (matches NIGHT_GATE_HI/LO / STAR_HORIZON_FADE's convention — no asin() node in the shader).
+  // Horizon extinction sinks night content into the terrain silhouette. Degrees convert to the sine of
+  // view_dir.y once in JS, so the shader needs no asin.
   const hf = cfg.horizon_fade
     ? smoothstep(
         float(Math.sin((cfg.horizon_fade.end_deg * Math.PI) / 180)),
@@ -483,13 +289,11 @@ export function create_night_sky_node({
         view_dir.y
       )
     : null
-  // the OLD narrow cutoff — kept for planets (out of this fix's scope) and as the `hf`-off fallback so
-  // NEUTRAL's graph stays byte-unchanged.
+  // Planets and configs without `horizon_fade` keep the narrow cutoff.
   const old_horizon_cut = smoothstep(float(STAR_HORIZON_FADE[0]), float(STAR_HORIZON_FADE[1]), view_dir.y)
   const ext_band = hf ?? old_horizon_cut // milky way + nebula: fade all the way to 0 at the horizon
   const ext_star = hf ? mix(float(STAR_HORIZON_FLOOR), float(1), hf) : old_horizon_cut // stars: floor at 50%
 
-  // ── night base gradient (hillaire only): SKY_NIGHT palette, zenith darker ─────────────────────────
   const base_pal = cfg.base_palette ?? SKY_NIGHT
   let base: Node<'vec3'> = with_base
     ? mix(
@@ -498,27 +302,23 @@ export function create_night_sky_node({
         smoothstep(0.0, 0.55, view_dir.y)
       )
     : vec3(0, 0, 0)
-  // faint global ARCANE tint (esoteric axis) — a low, mystical dome wash; gated OFF at neutral.
   if (with_base && cfg.arcane_tint) base = base.add(c3(cfg.arcane_tint.rgb).mul(cfg.arcane_tint.amount))
 
-  // ── milky-way band factor — computed BEFORE the stars so the lattice can densify inside it ────────
-  // (band = 0 node when the band is off ⇒ LOW's star field is untouched by the coupling terms).
+  // The band factor comes before the stars so they can concentrate inside it; it is 0 without the band.
   const q = with_milky_way
     ? vec3(view_dir.dot(c3(P.galaxy_a)), view_dir.dot(c3(P.galaxy_b)), view_dir.dot(c3(P.galaxy_n)))
     : null
   const band_coordinate = q ? q.z.div(cfg.mw_width) : float(0)
   const band = q ? exp(band_coordinate.mul(band_coordinate).negate()) : float(0)
 
-  // ── stars: 3 hashed-cell tiers (Overdraw kernel), tint + twinkle + fades + band densification ─────
   const star_fade = float(1).sub(glow_norm.mul(STAR_MOON_SUPPRESS)).mul(ext_star)
-  // constellation CLUSTERING (esoteric axis): ONE low-freq field (not per-tier — zero extra noise per tier)
-  // modulates star presence into groupings + voids. Gated OFF at neutral (no eval, graph unchanged).
+  // One low-frequency field groups stars into clusters and voids.
   const cluster_gate =
-    /** @type {number} */ cfg.star_cluster > 0
+    cfg.star_cluster > 0
       ? mix(
           float(1),
           smoothstep(0.34, 0.76, mx_fractal_noise_float(view_dir.mul(1.5), 2, float(2), float(0.5)).mul(0.5).add(0.5)),
-          float(/** @type {number} */ cfg.star_cluster)
+          float(cfg.star_cluster)
         )
       : null
   let stars: Node<'vec3'> = vec3(0, 0, 0)
@@ -527,7 +327,7 @@ export function create_night_sky_node({
     const off = 200 + P.lattice_offset // per-world lattice decorrelation
     const cell = floor(p).add(vec3(off, off, off))
     const f = fract(p).sub(0.5)
-    // per-cell scalar seed → 4 decorrelated PCG hashes (three/tsl `hash` — pcg-random.org via XlGcRh).
+    // One per-cell seed feeds four decorrelated PCG hashes.
     const s = cell.dot(vec3(127.1, 311.7, 74.7))
     const h_exist = hash(s)
     const h_ox = hash(s.add(19.19))
@@ -535,11 +335,10 @@ export function create_night_sky_node({
     const h_oz = hash(s.add(73.73))
     const h_tint = hash(s.add(101.7))
     const o = vec3(h_ox, h_oy, h_oz).sub(0.5).mul(0.7)
-    // Overdraw anti-clip: the star's radius shrinks with its offset so it never crosses the cell border.
+    // The radius shrinks with the offset so a star never crosses its cell border.
     const r = float(tier.radius).mul(float(1).sub(length(o).mul(0.8)))
     const d = length(f.sub(o))
     const core = clamp(float(1).sub(d.div(r)), 0, 1)
-    // in-band densification: +band×band_boost on the hash ≡ a lower threshold where the band runs.
     const t0 = tier.thresh + P.density_shift + cfg.star_thresh_shift
     const exists = smoothstep(float(t0), float(t0 + 0.004), h_exist.add(band.mul(tier.band_boost)))
     const temp2 = h_tint.mul(2)
@@ -548,9 +347,8 @@ export function create_night_sky_node({
       c3(STAR_WARM_RGB),
       clamp(temp2.sub(1), 0, 1)
     )
-    // faint RED GIANTS in the extreme hash tail (variant axis) — gated OFF at neutral.
-    if (/** @type {number} */ cfg.star_red_giant > 0) {
-      const rg = /** @type {number} */ cfg.star_red_giant
+    if (cfg.star_red_giant > 0) {
+      const rg = cfg.star_red_giant
       tint = mix(tint, c3(STAR_RED_RGB), smoothstep(float(1 - rg), float(1 - rg * 0.4), h_tint))
     }
     const twinkle = tier.twinkle
@@ -564,12 +362,10 @@ export function create_night_sky_node({
   }
   stars = stars.mul(star_fade).mul(moon_occ)
 
-  // ── milky way glow underlay: the band × wispy fBm × dust lanes (the stars above are its body) ─────
+  // Milky-way glow: the band times wispy fBm minus dust lanes.
   let milky_way: Node<'vec3'> = vec3(0, 0, 0)
   if (q) {
-    // ANISOTROPIC noise frame: low frequency ALONG the band (x,y — the in-plane pair), high ACROSS (z) —
-    // wisps stretch into flowing streaks along the band instead of an isotropic smoke column
-    // (capture-proven: the isotropic q·3.0 read as a vertical cloud, not a galaxy).
+    // Low frequency along the band and high across it stretch the wisps into streaks.
     const qa = vec3(q.x.mul(2.2), q.y.mul(2.2), q.z.mul(6.0))
     const wisp = mx_fractal_noise_float(qa, 3, float(2.2), float(0.55)).mul(0.5).add(0.5)
     const dust = smoothstep(
@@ -591,10 +387,8 @@ export function create_night_sky_node({
       .mul(moon_occ)
   }
 
-  // ── nebula: deep-space colour clouds (OFF at neutral — built only when picked). Reuses the galactic
-  // frame q, so it rides the same band the milky way does. Two decorrelated low-freq fBm channels shape
-  // density + hue; the hue walks blue→purple, and a seed-fixed in-band "galactic core" adds the warm
-  // orange pocket. All the same fades as the milky way (moon humility / horizon / occlusion). ────────────
+  // Nebula density and hue come from two decorrelated fBm channels in the galactic frame; a fixed in-band
+  // core adds a warm pocket. It shares the milky way's moon, horizon and occlusion fades.
   let nebula: Node<'vec3'> | null = null
   if (q && cfg.nebula.intensity > 0) {
     const nb = cfg.nebula
@@ -602,7 +396,6 @@ export function create_night_sky_node({
     const dens = mx_fractal_noise_float(nf, 3, float(2.0), float(0.55)).mul(0.5).add(0.5)
     const hue = mx_fractal_noise_float(nf.mul(0.6).add(17.3), 2, float(2.0), float(0.5)).mul(0.5).add(0.5)
     const band_conc = mix(float(1), band, float(nb.along_band)) // 0 = whole-dome haze, 1 = hugs the band
-    // orange galactic core: a warm glow around galaxy_a (a fixed point on the band), exp falloff.
     const core = exp(
       float(1)
         .sub(view_dir.dot(c3(P.galaxy_a)))
@@ -613,9 +406,7 @@ export function create_night_sky_node({
       c3(nb.orange),
       clamp(core, 0, 1)
     )
-    // VARIANT axis: N seed-placed distinct-hue regions — each a cheap DIRECTIONAL falloff (dot+exp, ZERO extra
-    // noise) blended over the shared density field, so a cold blue-violet field one way and a warm amber core
-    // another read as different regions of the same sky.
+    // Seed-placed regions blend distinct hues over the shared density with directional falloffs only.
     const regions = nb.regions ?? []
     for (let i = 0; i < regions.length && i < P.regions.length; i += 1) {
       const w = exp(
@@ -634,9 +425,9 @@ export function create_night_sky_node({
       .mul(moon_occ)
   }
 
-  // ── planets: CPU-ticked discs (non-twinkling; mildly humble near the moon). planet_scale grows the
-  // disc, planet_count draws 1 or both, ringed_planet gets a tilted Saturn annulus in disc-space uv. ─────
-  const one = cfg.planet_scale === 1 // byte-safe: avoid an acos∘cos round-trip drifting the neutral constant
+  // Planets are CPU-ticked, non-twinkling discs; a ringed planet gets a tilted annulus.
+  // Scale 1 skips an acos(cos) round trip that could drift the constant.
+  const one = cfg.planet_scale === 1
   const p_outer = one ? PLANET_COS_OUTER : Math.cos(Math.acos(PLANET_COS_OUTER) * cfg.planet_scale)
   const p_inner = one ? PLANET_COS_INNER : Math.cos(Math.acos(PLANET_COS_INNER) * cfg.planet_scale)
   const p_ang = Math.acos(p_outer) // planet disc angular radius (rad) — the ring uv normalizer
@@ -658,16 +449,13 @@ export function create_night_sky_node({
   }
   planets = planets
     .mul(float(1).sub(glow_norm.mul(0.4)))
-    .mul(old_horizon_cut) // unchanged (out of this fix's scope) — planets keep the old narrow cutoff
+    .mul(old_horizon_cut)
     .mul(moon_occ)
 
-  // neutral: nebula is null ⇒ the add is skipped ⇒ the shipped graph is unchanged.
   let sky_add: Node<'vec3'> = base.add(sky_glow).add(halo).add(stars).add(milky_way)
   if (nebula) sky_add = sky_add.add(nebula)
   const node = sky_add.add(planets).mul(night_f)
 
-  /** per-frame planet drift — CPU (Math.atan2 of the live sun dir; deterministic per tod).
-   *  @param {{x:number,y:number,z:number}} sd */
   const tick = (sd: Readonly<{ x: number; y: number; z: number }>): void => {
     const az = Math.atan2(sd.x, sd.z)
     for (let i = 0; i < u_planets.length; i += 1) u_planets[i].value.fromArray(planet_dir_js(P.planets[i], az))

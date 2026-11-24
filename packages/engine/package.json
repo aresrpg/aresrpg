@@ -7,8 +7,6 @@
     ".": "./src/index.ts",
     "./spell-audio": "./src/spell_audio.ts",
     "./data": "./src/data.ts",
-    "./recipe": "./src/world_recipe.ts",
-    "./biomes": "./src/biome_grid.ts",
     "./locomotion/*": "./src/locomotion/*.ts"
   },
   "scripts": {

@@ -1,29 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import {
-  useContext,
-  useLayoutEffect,
-  useRef,
-  type MouseEvent as ReactMouseEvent,
-  type ReactNode,
-  type ComponentProps,
-} from 'react'
+import { useLayoutEffect, useRef, type MouseEvent as ReactMouseEvent, type ReactNode, type ComponentProps } from 'react'
 import { createPortal } from 'react-dom'
-
-import { usePreviewBounds } from './usePreviewBounds.ts'
-import { PreviewContext } from './PreviewSurface.tsx'
 
 type CloseDoor = (() => void) | null
 
-const modal_scope = (element: Readonly<Element>): ParentNode =>
-  element.closest('.aui-preview-surface') ?? element.ownerDocument
-const open_dialogs = (scope: Readonly<ParentNode>): readonly HTMLDialogElement[] =>
-  Array.from(scope.querySelectorAll<HTMLDialogElement>('.aui-native-modal[open]')).filter(
-    (element) => modal_scope(element) === scope
-  )
-const sync_modal_backdrops = (scope: Readonly<ParentNode>): void => {
-  open_dialogs(scope).forEach((element, index) => element.toggleAttribute('data-modal-nested', index > 0))
+const open_dialogs = (document: Readonly<Document>): readonly HTMLDialogElement[] => [
+  ...document.querySelectorAll<HTMLDialogElement>('.aui-native-modal[open]'),
+]
+const sync_modal_backdrops = (document: Readonly<Document>): void => {
+  open_dialogs(document).forEach((element, index) => element.toggleAttribute('data-modal-nested', index > 0))
 }
 
 export const front_window = (document: Readonly<Document>): HTMLElement | undefined =>
@@ -103,10 +90,9 @@ export const show_floating_window = (element: Readonly<HTMLElement>): void => {
 }
 
 /** Browser top-layer order and DOM order stay together; no second modal registry is retained. */
-export const focus_modal = (identity: string, from?: Readonly<Element> | null): boolean => {
+export const focus_modal = (identity: string): boolean => {
   if (typeof document === 'undefined') return false
-  const scope = from ? modal_scope(from) : document
-  const target = Array.from(scope.querySelectorAll<HTMLElement>('[data-modal-identity]')).find(
+  const target = Array.from(document.querySelectorAll<HTMLElement>('[data-modal-identity]')).find(
     (element) =>
       element.dataset.modalIdentity === identity && element.closest('dialog[open],.aui-floating-window:popover-open')
   )
@@ -122,26 +108,24 @@ export const focus_modal = (identity: string, from?: Readonly<Element> | null): 
   existing.parentElement?.append(existing)
   mark_front(existing)
   existing.showModal()
-  sync_modal_backdrops(scope)
+  sync_modal_backdrops(document)
   existing.focus()
   return true
 }
 
-const useModalDialog = (embedded: boolean) => {
+const useModalDialog = () => {
   const dialog = useRef<HTMLDialogElement>(null)
-  usePreviewBounds(dialog, embedded)
   useLayoutEffect(() => {
     const element = dialog.current
     if (!element) return
-    const scope = modal_scope(element)
     mark_front(element)
     element.showModal()
-    sync_modal_backdrops(scope)
+    sync_modal_backdrops(element.ownerDocument)
     return () => {
       element.close()
-      sync_modal_backdrops(scope)
+      sync_modal_backdrops(element.ownerDocument)
     }
-  }, [embedded])
+  }, [])
   return dialog
 }
 
@@ -171,14 +155,12 @@ export const NativeModal = ({
 }: Readonly<
   Omit<ComponentProps<'dialog'>, 'ref' | 'open' | 'onCancel'> & { close: CloseDoor; label: string; identity?: string }
 >) => {
-  const embedded = useContext(PreviewContext)
-  const dialog = useModalDialog(embedded)
+  const dialog = useModalDialog()
   const content = (
     <dialog
       {...attributes}
       aria-label={label}
       data-modal-identity={identity}
-      data-preview-dialog={embedded || undefined}
       onClose={(event) => {
         // React bubbles native close through portals, including lifecycle cleanup. Parent dialogs must not dismiss.
         event.stopPropagation()
@@ -203,5 +185,5 @@ export const NativeModal = ({
       {children}
     </dialog>
   )
-  return embedded ? content : mount_modal(content)
+  return mount_modal(content)
 }

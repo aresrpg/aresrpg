@@ -17,6 +17,10 @@ const STORED_OWNER_TYPES = Object.freeze([
   '0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Kiosk',
   '0xd5dd28cc24009752905689b2ba2bf90bfc8de4549b9123f93519bb8ba9bf9981::marketplace::Listing',
 ])
+// Its unlist door aborts unless the sender is the stored seller, then returns the listing's own child NFT to it.
+const SELLER_LISTING_TYPE = '0xb42dbb7413b79394e1a0175af6ae22b69a5c7cc5df259cd78072b6818217c027::listings::Listing'
+const TRADEPORT_LISTING =
+  /^0xff2251ea99230ed1cbe3a347a209352711c6723fcdcd9286e16636e65bb55cab::tradeport_listings::SimpleListing<.+>$/u
 const AVATAR_ITEM_TYPE = '0x193a33b36a30444128353f8cefe2fab8fefac3f918f4c267c763f6adb44ead35::avatar::AvatarItem'
 const STAKING_PACKAGE = '0x3412f5d7819fddb9d504a422177e3cc62c029f08002a0d51c0f7cfd93cfdfbcc'
 // Both inspected versions issue key-only tickets to the sender, with no transfer door.
@@ -255,9 +259,12 @@ const custodian_owner = (object, nft, staking_owners) => {
   const json = field(contents, 'json')
   // The deployed avatar contract keys deposits by the sender and only lets that sender withdraw.
   const avatar = type === AVATAR_ITEM_TYPE && field(json, 'nft_id') === nft
+  // TradePort's cancel door aborts unless the sender is the stored seller, then returns the NFT to that seller.
+  const tradeport = TRADEPORT_LISTING.test(type ?? '') && field(json, 'nft_id') === nft
   // The legacy listing's delist door authenticates its stored seller; unrelated owner fields are not trusted.
-  if (!STORED_OWNER_TYPES.includes(type) && !avatar) return null
-  const owner = field(json, 'owner')
+  const seller = tradeport || type === SELLER_LISTING_TYPE
+  if (!STORED_OWNER_TYPES.includes(type) && !avatar && !seller) return null
+  const owner = field(json, seller ? 'seller' : 'owner')
   if (typeof owner !== 'string' || !SUI_ADDRESS.test(owner)) return null
   return owner.toLowerCase()
 }

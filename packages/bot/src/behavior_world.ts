@@ -9,7 +9,7 @@ import { gameplay_observed_ms, owned_character, type GameplayContext } from './g
 import { coordinate, identifier, nonempty, object_schema } from './gameplay_schema.ts'
 import type { SelectedAction } from './behavior_targets.ts'
 
-export type WorldRegion = Readonly<{ min_zx: number; max_zx: number; min_zz: number; max_zz: number }>
+type WorldRegion = Readonly<{ min_zx: number; max_zx: number; min_zz: number; max_zz: number }>
 export type DiscoverAction = Readonly<{
   type: 'discover'
   character_id: string
@@ -51,7 +51,7 @@ export const WORLD_ACTION_SCHEMAS = [
 
 /** Adjacent Hamiltonian cycle of the world's even-sized zone grid; the first column closes the route.
  * Position is the only cursor. Refresh receipts move the authoritative checkpoint into the next zone. */
-export const onward_zone = (zx: number, zz: number) => {
+const onward_zone = (zx: number, zz: number) => {
   const side = Math.ceil(world_size / ZONE_SIZE)
   if (zx === 0) return zz === 0 ? { zx: 1, zz: 0 } : { zx: 0, zz: zz - 1 }
   if (zz % 2 === 0) return zx < side - 1 ? { zx: zx + 1, zz } : { zx, zz: zz + 1 }

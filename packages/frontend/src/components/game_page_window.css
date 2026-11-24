@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.aui-live-page-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.aui-live-page-content > * {
+  min-height: 0;
+}
+
+.game-page-window {
+  width: min(1540px, calc(100cqw - 28px));
+  height: min(900px, calc(100cqh - 28px));
+}
+.game-page-window .aui-workspace-main {
+  padding: 0;
+  gap: 0;
+}
+.game-page-window button {
+  font-family: var(--aui-font);
+}
+.game-page-window button:not(.aui-button) {
+  border-radius: 4px;
+  min-height: 36px;
+  transition: background-color 0.12s;
+}
+.game-page-window button:not(.aui-button):hover {
+  background-color: color-mix(in srgb, var(--aui-brass) 7%, transparent);
+}
+.game-page-window input,
+.game-page-window select {
+  min-height: 36px;
+  border-radius: 4px;
+  background: var(--aui-sunk);
+  color: var(--aui-ink);
+}
+.game-page-window [class*='uppercase'] {
+  text-transform: none;
+  letter-spacing: normal;
+}
+.game-page-window .market-ask {
+  min-height: 58px;
+}
+.game-page-window [data-item-detail-view] > header {
+  padding: 8px;
+  gap: 12px;
+}
+.game-page-window [data-item-detail-view] > header img {
+  width: 64px;
+  height: 64px;
+}
+.game-page-window .market-own-listings {
+  width: 28%;
+}
+.game-page-window .market-sale-form {
+  width: 32%;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-page-window {
+    width: calc(100cqw - 12px);
+    height: calc(100cqh - 12px);
+  }
+}
+
+/* Feature ports keep market captions in sentence case, as for every other uppercase caption. */
+.game-page-window
+  :is(
+    .aui-market-empty-text,
+    .aui-market-volume-label,
+    .aui-market-stat-label,
+    .aui-market-lot-heading,
+    .aui-market-lot-buy,
+    .aui-market-seller-label,
+    .aui-market-ask-price-label,
+    .aui-market-ask-buy,
+    .aui-market-sale-name,
+    .aui-market-sale-meta,
+    .aui-market-sale-label,
+    .aui-market-sale-lots-label,
+    .aui-market-sale-submit,
+    .aui-market-sale-cancel,
+    .aui-market-revenue-label,
+    .aui-market-revenue-count,
+    .aui-market-profits-label,
+    .aui-market-collect,
+    .aui-market-history-heading,
+    .aui-market-history-date,
+    .aui-market-load-more
+  ) {
+  text-transform: none;
+  letter-spacing: normal;
+}

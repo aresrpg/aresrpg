@@ -50,17 +50,19 @@ snapshots.
 1. Edit the canonical files under seed/.
 2. Run seed validation.
 3. Reject accidental immutable-identity changes.
-4. Open /demo#boards and inspect every generated board.
+4. Open `/world/demo#boards` and inspect every generated board.
 5. Run the relevant package tests, Move builds/tests, indexer parity, lint, and type checks.
 6. Confirm no wagered fight would be unfairly changed by the planned spell or mob update.
 7. Before starting source-bound publication, build every package for the selected network with
    the pinned Sui compiler and review its `Move.lock` resolution. First-mainnet builds add mainnet
    lock entries; those changes must be settled before capturing the publication source identity.
-   If Move changed, prepare its compatible upgrades or fresh publication and push the resulting
-   hardcoded pins to `edge` before versioning.
-8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level).
-   Dispatch preparation CI on that exact tag. Its staged build reads the production token from
-   the GitHub `Production` environment; the release operator approves that request for the run
+   If Move changed, prepare its compatible upgrades or fresh publication first; the version commit
+   carries the resulting hardcoded pins.
+8. From clean, current `edge`, the release operator commits the root version at the intended semver
+   level (with the live `pins.json` and the generated `version.move`), tags it and pushes `edge` and
+   the tag atomically. Dispatch preparation CI on that exact tag. It certifies on the first green gate
+   of the tag commit or of its parent, whose tree differs only in the version line. Its staged build
+   reads the production token from the GitHub `Production` environment; the release operator approves that request for the run
    it dispatched. Wait for changed backend images and the staged
    production Vercel build. CI gives the frontend build and prebuilt output one custom deployment ID;
    `scripts/pin_vercel_deployment.ts` must run after `vercel build` and before upload. This keeps
@@ -68,8 +70,8 @@ snapshots.
 9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL. Unchanged images retain the previous certified digest;
    deployment configuration consumes those digests, never mutable semver aliases.
-   New schema-two manifests include server, indexer, Discord, hosted bot and Telegram images. A legacy
-   manifest without the hosted bot or Telegram image cannot certify its first rollout; preparation builds it.
+   New schema-two manifests include server, indexer, Discord and hosted bot images. A legacy
+   manifest without the hosted bot image cannot certify its first rollout; preparation builds it.
    Image publication alone does not satisfy application configuration or security prerequisites.
    Verify those privately before separately authorized activation.
 10. Pause gameplay when content or package work requires it.
@@ -110,13 +112,6 @@ never enter the public catalogue.
 Use `giftcard_batches` for one item/amount sent to a recipient list; the SDK derives one voucher identity per address.
 Use `custody` for the initial recipient or distribution wallet. Publication already batches creation and transfer.
 Set `network` to `mainnet` or `testnet` when an allocation belongs to only one network; omitted means both.
-`scripts/prepare_holder_gifts.mjs` reads `seed/content/snapshots/collections.json`, saves each
-collection at one mainnet checkpoint, and appends its recipient batches to `airdrop.json`. It performs no
-chain writes. Existing snapshot files are reused, and an existing gift identity cannot change its
-recipient. Review the prepared rows, then use content synchronization to mint and send them.
-An optional collection `limit` selects that many verified holders by SHA-256 of `batch_id:address`,
-independently of input order. Both Suifren collections are capped at 500. Unresolved custody is recorded
-in the snapshot; it blocks uncapped distributions and is excluded from capped selection.
 Prime Machin object destinations are mainnet-only; testnet does not contain those NFTs.
 For later delivery, prepare a JSON manifest of `{ "id": "0xGiftcard", "recipient": "0xWalletOrNFT" }` rows.
 The object ID is the destination when sending to a Prime Machin; do not resolve it to the current holder.
@@ -172,38 +167,6 @@ Keep bearer files outside the repository with owner-only access. Never upload th
 the cards are intentionally distributed. If execution returns a digest and fails, inspect that digest
 and current object custody; never retry automatically.
 
-## Telegram companion
-
-The companion is one listener beside the hosted bot. It holds no key and signs nothing. Release CI runs
-none of these steps; each one needs explicit owner approval.
-
-1. Preparation builds, publishes and attests `ghcr.io/aresrpg/telegram:<version>` from
-   `packages/telegram/Dockerfile` when the companion's own inputs changed; an unchanged release aliases the
-   previous certified digest. Deploy the digest the release manifest names, like every other image.
-2. Run exactly one replica, and replace it instead of rolling it: its navigation is process-local.
-3. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_LOCAL_SECRET`, `TELEGRAM_STORAGE_KEY`, `TELEGRAM_REDIS_URL`,
-   `TELEGRAM_LOCAL_PORT`, `TELEGRAM_MAX_REQUEST_BYTES`, `TELEGRAM_CONNECTED_CONFIG`, and
-   `TELEGRAM_BIND_HOST=0.0.0.0` inside a container. `packages/telegram/README.md` owns their meaning.
-   `TELEGRAM_REDIS_URL` and the hosted bot's `BOT_REDIS_URL` must name the same Redis and the same logical
-   database: the hosted bot writes the home page's waitlist joins where the companion reads them.
-   Where Redis users are restricted, the companion's user needs the set and sorted-set commands
-   `SADD SREM SISMEMBER SMEMBERS ZADD ZSCORE ZRANGE` on `telegram:*` beside its record commands, and the
-   hosted bot's user needs `ZADD` on `telegram:waitlist`.
-   The frontend build sets `VITE_TELEGRAM_CALLBACK_URL` to the exact `callback_url` of
-   `TELEGRAM_CONNECTED_CONFIG`. A wrong or missing value shows the assistants' consent dialog on a Telegram
-   login and approves nothing by itself. Keep `link_ttl_ms` at or below the hosted bot's request lifetime.
-4. Route `/telegram`, `/link/*` and `/oauth/callback` on the public host to the listener: the webhook, the
-   login link and the Google return. Once it answers behind public TLS, register the webhook with Telegram
-   `setWebhook`: the public
-   `https://<host>/telegram` URL, `secret_token` equal to `TELEGRAM_LOCAL_SECRET` (Telegram accepts 1–256
-   characters of `A-Z a-z 0-9 _ -`), and `allowed_updates` `["message","callback_query"]`. Confirm it with
-   `getWebhookInfo`.
-5. The allowlist starts empty, so every linked owner first meets the waitlist. Admit one owner with
-   `bun run --cwd packages/telegram waitlist admit 0x<64 hex>` in the running container; `waitlist` alone
-   lists who waits. Admission needs no restart.
-6. Before announcing it, exercise one login, one admitted start, Status and Stop against the deployed hosted
-   bot. The local tests use a stand-in bot and prove none of that.
-
 ## Adding and editing worlds
 
 The ordered rows in `seed/content/worlds.json` are the world roster. Add a row there to add a world;
@@ -240,42 +203,51 @@ witness, so a fresh game lineage cannot inherit combat payouts. Production migra
 
 ## KARES reward operations
 
-Blast owns the standalone presale, its start, settlement and external-market migration. The
-administrative SDK publishes and funds reward reserves; it never issues currency or starts a sale.
-Mainnet publication, funding, upgrades and permanent freeze require explicit owner approval.
+The project issues the currency and locks its market in one launch. The administrative SDK builds
+the three launch transactions; the operator's Launch token action runs them. Mainnet publication,
+launch, upgrades and permanent freeze require explicit owner approval.
 
-1. Publish `packages/rewards` from the intended reserve-funding wallet. Record the shared Economy,
-   unique Setup and genuine unrestricted UpgradeCap. Publication creates no token and funds no pool.
+Before the launch:
+
+1. Publish `packages/rewards` from the treasury wallet. Record the shared Economy, unique Setup and
+   genuine unrestricted UpgradeCap. Publication creates no token and funds no pool.
    Compatible upgrades may precede funding. Keep Setup and UpgradeCap; funding verifies their original rewards lineage.
 2. Compile and deploy the game with both the compatibility ABI and active rewards dependency.
-   Record the unfunded Economy pin. Follow the normal Version activation runbook. Boss settlement
-   pays zero KARES while that Economy is unfunded; ordinary gameplay does not require a token.
-3. Inspect the external native Currency object. Require nine decimals, unregulated status and
-   burn-only supply. Blast accepts `burnable`; it must be true. Nine decimals are not guaranteed
-   by its standalone presale. Verify the reviewed one-billion-token issuance.
-4. Record the full coin type, shared Currency reference and existing treasury. Optionally record
-   `blast_presale: { id, package_original, package, package_version, url }`. Require an HTTPS URL on
-   Blast's domain. `package` and `package_version` enable allowlisted purchases on `/allocation`;
-   then run `bun scripts/allocation_campaign.ts proofs`, which stores Blast's proofs only if each reaches the sale's on-chain root.
-   These are verified external facts, not locally published objects.
-   A sale may be pinned alone, before any token is adopted: add `coin_type` to the `blast_presale`
-   entry and leave `kares_coin_type` and `kares_currency` unset. The sale card, the home page line
-   and the `/allocation` purchase then work while every game token feature stays off and the
-   Economy stays unbound. If the sale fails, replace that one entry with the new sale.
-5. Ensure external migration delivered at least 410 million spendable tokens to the treasury.
-   Escrowed or vested tokens cannot fund reserves. The treasury must sign funding and own both Setup and UpgradeCap.
-   If custody changed after publication, explicitly transfer both capabilities before funding.
-   Review the exact Currency, treasury and `<original_game_package>::fight_rewards::BossVictory`.
-6. Execute setup once against the published Economy. It consumes Setup and allocates 200M staking,
-   100M combat and 110M community. It only borrows UpgradeCap. Record the three pools from certified
-   effects. Reject any receipt that destroyed upgrade authority. Recover uncertain digests; never retry them.
-7. Read back Economy links, treasury, witness and balances. Funding immediately enables boss rewards
-   on-chain. There is no separate payout activation. Include the certified currency and pool pins
-   in the frontend release for staking, trade and Mastery interfaces.
-8. Reconcile the separate 30M team allocation with Blast's allocations or a reviewed transfer.
-   Reward setup never sends it. Do not duplicate an external payout.
-9. Exercise Mastery (1 point = 1,000 KARES), staking, boss payouts and trade. Capture the actual
-   presale JSON response and deployment provenance for the read adapter when its object exists.
+   Record the unfunded Economy pin. Boss settlement pays zero KARES while that Economy is unfunded.
+3. Confirm the failed Blast sale is `Cancelled` on-chain. Its buyers refund on `/allocation`. Never
+   launch while that sale can still take commitments: two KARES coins would be on sale at once.
+4. Fund the treasury wallet with the SUI seed plus gas. The seed is the only SUI the pool starts with
+   and can never be withdrawn. State the seed in `.operator/networks/<network>/launch.json`.
+5. Compare `AFTERMATH_MAINNET` in `packages/sdk/src/kares_launch.ts` with Aftermath's live
+   `/api/addresses`. Aftermath upgrades its packages; a stale id fails the simulation, never silently.
+
+The launch, signed by the treasury, one transaction at a time:
+
+6. **Publish.** One transaction publishes `packages/currency` and `packages/currency-lp` and makes both
+   immutable. The treasury receives the non-transferable Genesis (the whole supply), the metadata
+   authority and Aftermath's pool-creation cap. Nothing is tradable yet.
+7. **Register.** One transaction promotes the currency to its shared registry object.
+8. **Launch.** One atomic transaction: open Genesis into 540M liquidity, 410M reserves and 50M team;
+   create the Aftermath pool (80% KARES, 20% SUI, 0.1% pool fee) with the liquidity share and the SUI
+   seed; wrap it in the 2% DAO fee paid to the treasury; send every liquidity token to `0x0`; fund
+   the Economy with the reserve share; send the team share and the fee authority to the treasury.
+   Before the wallet opens, the SDK simulates the launch and refuses it unsigned unless the pool is
+   shared, every liquidity token is at `0x0`, the fee authority and exactly the 50M team share are in
+   the treasury, and only the seed plus gas is spent. Still read the signer page line by line: the
+   weights and fees are checked by the builder's tests and, after certification, by the operator.
+9. Record the coin type, Currency, three reward pools and market pool from certified effects. Recover
+   uncertain digests; never retry them. Funding immediately enables boss rewards on-chain; there is
+   no separate payout activation. Release the frontend with these pins in the same session.
+10. Exercise Mastery (1 point = 1,000 KARES), staking, boss payouts, trade and one small market buy.
+
+After the launch:
+
+- The pool's weights and its 0.1% fee are permanent. Only the DAO fee rate and recipient can change,
+  through the treasury-held fee authority. Announce any change first; never raise it silently.
+- SUI returned to the pool is a deposit that mints new liquidity tokens. Send them to `0x0` in the
+  same transaction, or that liquidity is not locked.
+- The metadata authority can change the name, description and icon. Supply can only fall, by burns.
+- Delete the Blast sale pin, reader and `/allocation` once the sale holds no commitment.
 
 Rewards upgrades retain their own treasury-held UpgradeCap. A future migration must preserve
 staking principal and accrued rewards; no withdrawal or witness-rotation door is currently exposed.
@@ -285,7 +257,7 @@ requires an explicit rewards migration when reserves are already funded.
 Community vesting lasts 1,825 wall-clock days from setup. Staking emissions advance for 1,825 active
 days, only while principal is nonzero. Supplemental deposits begin at the next active-day boundary,
 stream for 30 active days, and cannot be withdrawn. Marketplace claims fund staking with 20% of
-actual withdrawn SUI royalties. External market fees remain a separate treasury arrangement.
+actual withdrawn SUI royalties. The market's 2% DAO fee is treasury income outside these contracts.
 
 Local read stacks must replace their derived projection when the branch's game or seed original changes and
 may preserve it only across compatible upgrades of the same original. The client blocks play while

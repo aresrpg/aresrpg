@@ -9,8 +9,8 @@ import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useText } from '../i18n/useText.ts'
+import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { useMarketCapabilities, useMarketDispatch, useMarketState } from './MarketSource.tsx'
 import { listing_art, listing_name, ListingIcon, useCategoryLabel } from './marketplace_model.tsx'
 
 const ListingHoverIcon = ({ listing }: Readonly<{ listing: ListingRow }>) =>
@@ -23,9 +23,7 @@ const ListingHoverIcon = ({ listing }: Readonly<{ listing: ListingRow }>) =>
   )
 
 export const OwnListingStack = ({ listings, text }: Readonly<{ listings: readonly ListingRow[]; text: CopyText }>) => {
-  const dispatch_app = useMarketDispatch()
-  const { pending } = useMarketState()
-  const { withdraw } = useMarketCapabilities()
+  const pending = useSiteStore(({ marketplace }) => marketplace.pending)
   const localized_numbers = useNumbers()
   const ui = useText()
   const category_label = useCategoryLabel()
@@ -48,14 +46,10 @@ export const OwnListingStack = ({ listings, text }: Readonly<{ listings: readonl
       count_title={text('listing_count', { count: listings.length })}
       pending={!!pending}
       withdraw={{ label: text('withdraw'), Icon: X }}
-      delist={
-        withdraw
-          ? (id) => {
-              const listing = listings.find((row) => row.id === id)
-              if (listing) dispatch_app({ type: 'market/delist_requested', listing })
-            }
-          : undefined
-      }
+      delist={(id) => {
+        const listing = listings.find((row) => row.id === id)
+        if (listing) dispatch_app({ type: 'market/delist_requested', listing })
+      }}
     />
   )
 }

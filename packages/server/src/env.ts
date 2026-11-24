@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Every value has a working local default — a bare boot never throws (legacy law).
+// Every value has a working local default: a bare boot never throws.
 
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
@@ -17,21 +17,25 @@ const {
   SUI_RPC_URL = `https://fullnode.${SUI_NETWORK}.sui.io:443`,
   ADMIN_ADDRESSES: RAW_ADMIN_ADDRESSES = DEFAULT_ADMIN_ADDRESS,
   MAX_PLAYERS: RAW_MAX_PLAYERS = '1000',
+  MAX_VIEWERS: RAW_MAX_VIEWERS = '5000',
   ALLOWED_ORIGINS: RAW_ALLOWED_ORIGINS = 'http://localhost:5173,https://aresrpg.world',
 } = process.env
 
 export { GRAPH_URL, MESH_REDIS_URL, GRAPH_NAME, SUI_NETWORK, SUI_RPC_URL }
 
 export const PORT = Number(RAW_PORT)
+/** Live game seats per pod. */
 export const MAX_PLAYERS = Number(RAW_MAX_PLAYERS)
+/** Live non-seat sockets (open and signed: no gameplay input, no presence) per pod; never seats or online. */
+export const MAX_VIEWERS = Number(RAW_MAX_VIEWERS)
 export const ALLOWED_ORIGINS = new Set(
   RAW_ALLOWED_ORIGINS.split(',')
     .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean)
 )
 
-/** This pod's ephemeral identity — heartbeat key + player_connect beacon (legacy SERVER_ID).
- *  Random per boot on purpose: pods are cattle, the 20s key TTL is the only membership. */
+/** This pod's identity for the heartbeat key and the player_connect beacon. Random per boot: the
+ *  20 s key TTL is the only membership. */
 export const SERVER_ID = crypto.randomUUID()
 
 /** Whitelisted admin addresses — comma-separated; empty = no admin surface at all. */

@@ -283,9 +283,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     // command two abort 1725), so authoritative replacement always invalidates the draft.
     clear_buffer(fight)
   })
-  events.on('fight/reset_turn', ({ fight }) => {
-    if (fight) clear_buffer(fight)
-  })
   events.on('fight/restored', ({ checkpoint }) => clear_buffer(checkpoint.contract.id))
   events.on('fight/closed', ({ fight }) => {
     if (fight) {

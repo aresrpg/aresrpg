@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { run_ending, type RunEnding } from '@aresrpg/protocol'
-import { run_live } from '@aresrpg/protocol/strategies'
 
 type References = Readonly<{
   /** The hero run a command belongs to. */
@@ -17,6 +16,10 @@ type References = Readonly<{
 /** The owner's limit on concurrent hero runs in one wallet. Wallet funding stays the only spending limit. */
 export const MAX_WALLET_RUNS = 30
 export const run_key = (id: string) => `behavior:${id}`
+/** A run in one of these states holds its hero: it plays, or it is blocked and waits for its author.
+ * A new tree for that hero replaces it; in any other state the hero is free to start one. */
+export const run_live = ({ status }: Readonly<{ status: string }>): boolean =>
+  ['active', 'waiting', 'awaiting_ai'].includes(status)
 /** The runs a record names: a command its own, a lane every hero run it hosts. */
 export const run_keys = (record: References) => [
   ...(record.run_id ? [run_key(record.run_id)] : []),

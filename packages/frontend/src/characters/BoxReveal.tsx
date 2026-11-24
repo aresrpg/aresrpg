@@ -14,7 +14,7 @@ import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 import { Button, NativeModal } from '@aresrpg/ui'
 
-import { rolled_item_types } from '../modules/claims.ts'
+import { rolled_item_types } from '../content/item_templates.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'

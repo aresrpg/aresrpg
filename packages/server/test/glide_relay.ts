@@ -7,8 +7,7 @@ import type { ServerWebSocket } from 'bun'
 
 import type { Player } from '../src/player.ts'
 
-import { create_player } from './helpers/player.ts'
-import { wire } from './helpers/world_wire.ts'
+import { create_player, wire } from './harness.ts'
 
 export const start_glide_relay = () => {
   const shared = wire({ pet: true })

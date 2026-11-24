@@ -16,7 +16,7 @@ import pet_wings from '../../../seed/content/pet_wings.json'
 import { run_keys } from './run_ref.ts'
 import { gameplay_observed_ms, travel_destination, type GameplayContext } from './gameplay_context.ts'
 import type { Lane } from './control.ts'
-import { profession_item } from './profession_catalog.ts'
+import { profession_item } from './catalog.ts'
 
 const IDLE_RADIUS = 50
 const IDLE_GAITS = [
@@ -32,18 +32,15 @@ const JUMP_PRESSES = [
     [200, 2500],
   ],
 ] as const
+/** How long a wallet without work keeps its game seat (owner, 2026-11-23: "if the bot is idle for
+ * more than 20 minutes, it should disconnect from the server until the AI gives a new instruction"). */
+export const SLEEP_AFTER_IDLE_MS = 20 * 60_000
+/** A wallet is idle when it hosts no hero run and holds no direct command, no command in flight, no
+ * envelope and no receipt to reconcile. The seat is the wallet's, so idle is the wallet's too. */
+export const wallet_idle = (lane: Lane) =>
+  ![run_keys(lane).length, lane.direct, lane.active_command, lane.pending, lane.reconciliation_command].some(Boolean)
 export const idle_travels = (context: GameplayContext, lane: Lane) => {
-  if (
-    [
-      lane.paused,
-      lane.needs_resync,
-      lane.active_command,
-      lane.pending,
-      lane.reconciliation_command,
-      run_keys(lane).length,
-    ].some(Boolean)
-  )
-    return null
+  if (lane.paused || lane.needs_resync || !wallet_idle(lane)) return null
   const chain_ms = gameplay_observed_ms(context)
   return context.snapshot.characters
     .filter((character) =>

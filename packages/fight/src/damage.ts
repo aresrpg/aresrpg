@@ -2,11 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign -- The cursor is a reduction-local mirror of Move's &mut PRNG state. */
 
-import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
+import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { apply_centered_resistance, amplify_damage, primary_stat, remove_points, roll_in_range } from './fight_math.ts'
 import {
-  KINDS,
-  STATS,
   action_points_of,
   base_ap_of,
   base_mp_of,
@@ -21,7 +19,7 @@ import { draw } from './prng.ts'
 import { effect_id_at, emit } from './runtime.ts'
 import type { FightRuntime, FightSheet, PrngCursor, SpellEffect } from './types.ts'
 
-const SHIFT = BigInt(CONTRACT_CONSTANTS.item_stat_shift)
+const SHIFT = CONTRACT_CONSTANTS.item_stat_shift
 
 export const full_damage = (
   runtime: FightRuntime,
@@ -42,11 +40,13 @@ export const resist = (runtime: FightRuntime, target: bigint, element: string, d
 const returns_at = (runtime: FightRuntime, target: bigint, cast_level: bigint): boolean =>
   cast_level > 0n &&
   cast_level < 6n &&
-  runtime.contract.fighters[Number(target)].effects.some((row) => row.kind === KINDS.return && row.value >= cast_level)
+  runtime.contract.fighters[Number(target)].effects.some(
+    (row) => row.kind === EFFECT_KINDS.return && row.value >= cast_level
+  )
 
 const redirect_source = (runtime: FightRuntime, target: bigint): bigint | null => {
   const row = runtime.contract.fighters[Number(target)].effects.find(
-    (effect) => effect.kind === KINDS.redirect && !runtime.contract.fighters[Number(effect.source)].dead
+    (effect) => effect.kind === EFFECT_KINDS.redirect && !runtime.contract.fighters[Number(effect.source)].dead
   )
   return row ? row.source : null
 }
@@ -73,7 +73,7 @@ export const reduce_damage = (
   if (runtime.contract.ended || runtime.contract.fighters[Number(target)].dead) return 0n
   const shield_rows = runtime.contract.fighters[Number(target)].effects
     .map((row, index) => ({ row, index }))
-    .filter(({ row }) => row.kind === KINDS.reduce && (row.element === '' || row.element === element))
+    .filter(({ row }) => row.kind === EFFECT_KINDS.reduce && (row.element === '' || row.element === element))
   const shield = shield_rows.reduce((total, { row }) => total + row.value, 0n)
   const damage = raw_damage > shield ? raw_damage - shield : 0n
   if (shield > 0n) {
@@ -109,7 +109,7 @@ export const deal = ({ runtime, caster, sheet, target, element, base, cast_level
   const hp_before = runtime.contract.fighters[Number(final_target)].hp
   const landed = hit(runtime, { target: final_target, amount: damage, source: caster, cause, element })
   if (final_target === target) {
-    const reflect = sum_effect_rows(runtime, target, KINDS.reflect, STATS.any)
+    const reflect = sum_effect_rows(runtime, target, EFFECT_KINDS.reflect, CHANNELS.any)
     if (reflect > 0n && caster !== target && !runtime.contract.ended) {
       emit(runtime, 'damage_reflected', { source: target, target: caster, amount: reflect })
       hit(runtime, { target: caster, amount: reflect, source: target, cause: 'reflect', element: '' })
@@ -119,7 +119,8 @@ export const deal = ({ runtime, caster, sheet, target, element, base, cast_level
 }
 
 export const rolls_magnitude = (row: Readonly<SpellEffect>): boolean =>
-  row.kind <= KINDS.pull || [KINDS.reduce, KINDS.reflect, KINDS.fixed_remove].includes(row.kind)
+  row.kind <= EFFECT_KINDS.pull ||
+  [EFFECT_KINDS.reduce, EFFECT_KINDS.reflect, EFFECT_KINDS.fixed_remove].some((kind) => kind === row.kind)
 
 export const roll_value = (row: SpellEffect, cursor: PrngCursor): bigint => {
   if (row.value_max <= row.value) return row.value
@@ -133,7 +134,7 @@ export const contest_points = (
   row: SpellEffect,
   cursor: PrngCursor
 ): bigint => {
-  const is_ap = row.stat === STATS.ap
+  const is_ap = row.stat === CHANNELS.ap
   const fighter = runtime.contract.fighters[Number(target)]
   const active = runtime.contract.queue[Number(runtime.contract.turn_ptr)] === target
   const result = remove_points({
@@ -141,7 +142,7 @@ export const contest_points = (
     value: row.value,
     dodge: true,
     caster_wisdom: sheet.wisdom,
-    target_wisdom: contest_stat(runtime, target, STATS.wisdom),
+    target_wisdom: contest_stat(runtime, target, CHANNELS.wisdom),
     current: active
       ? is_ap
         ? fighter.ap

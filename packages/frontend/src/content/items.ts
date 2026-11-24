@@ -10,6 +10,10 @@ export const items_by_type: Readonly<Record<string, SeedItem>> = Object.freeze(
   Object.fromEntries(items.map((item) => [item.item_type, item]))
 )
 
+/** What a pet eats, as items. */
+export const pet_foods_of = (item_type: string): readonly SeedItem[] =>
+  Object.freeze((items_by_type[item_type]?.pet_foods ?? []).flatMap((food_type) => items_by_type[food_type] ?? []))
+
 export const title_item = (item_type: string | null | undefined): SeedItem | undefined => {
   const item = item_type ? items_by_type[item_type] : undefined
   return item?.category === 'title' ? item : undefined

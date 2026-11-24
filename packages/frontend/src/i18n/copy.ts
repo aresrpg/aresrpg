@@ -5,7 +5,6 @@ import type { StatName } from '@aresrpg/immutable'
 
 import type { DocsCopy } from '../docs/docs_parts.tsx'
 import type { KaresCopy } from '../kares/copy.ts'
-import type { LandingCopy } from '../landing/landing_types.ts'
 
 import type { Locale } from './locale.ts'
 
@@ -70,7 +69,6 @@ export type AppCopy = Readonly<{
   low: string
   medium: string
   high: string
-  identity_connected: string
   sign_in_to_play: string
   loading_universe: string
   continue_google: string
@@ -78,21 +76,44 @@ export type AppCopy = Readonly<{
   connect_wallet: string
   no_wallet: string
   menu_build: string
-  sign_in: string
   drag_hint: string
   navigation: string
   world: string
   characters: string
-  leaderboard: string
   mastery: string
-  kares: string
   kares_page: KaresCopy
-  landing_page: LandingCopy
   docs_page: DocsCopy
-  dapp_page: Readonly<Record<string, string>>
+  agent_page: Readonly<Record<string, string>>
+  portfolio_page: Readonly<Record<string, string>>
+  site: Readonly<
+    Record<
+      | 'nav_label'
+      | 'menu_open'
+      | 'menu_close'
+      | 'market'
+      | 'play'
+      | 'agent'
+      | 'staking'
+      | 'leaderboards'
+      | 'portfolio'
+      | 'login'
+      | 'new_tab'
+      | 'log_in_first'
+      | 'docs'
+      | 'encyclopedia'
+      | 'journal'
+      | 'discord'
+      | 'telegram'
+      | 'x'
+      | 'footer_learn'
+      | 'footer_community'
+      | 'indexing_healthy'
+      | 'indexing_catching_up'
+      | 'indexing_lagging',
+      string
+    >
+  >
   encyclopedia: string
-  marketplace: string
-  airdrop: string
   kolizeum: string
   settings: string
   admin: string
@@ -103,7 +124,6 @@ export type AppCopy = Readonly<{
   account: string
   join_discord: string
   join_telegram: string
-  sui_universe: string
   server_disconnected: string
   server_connecting: string
   server_reconnecting: string
@@ -119,7 +139,6 @@ export type AppCopy = Readonly<{
   online_accounts: string
   online_characters: string
   online_characters_body: string
-  indexing_lag_warning: string
   indexing_block_title: string
   indexing_block_body: string
   indexing_block_progress: string
@@ -137,11 +156,9 @@ export type AppCopy = Readonly<{
   fight_placement_unavailable_toast: string
   party_member_unavailable_toast: string
   fight_turn_already_forced_toast: string
-  network_testnet: string
   welcome_title: string
   welcome_body: string
   welcome_need_sui: string
-  out_of_sui_body: string
   insufficient_sui: string
   create_character: string
   create_title: string
@@ -167,13 +184,7 @@ export type AppCopy = Readonly<{
   wallet_add_funds: string
   wallet_gas_spent: string
   wallet_disconnect: string
-  wallet_fund_body: string
-  wallet_send_title: string
   wallet_recipient: string
-  wallet_amount: string
-  wallet_send_pending: string
-  wallet_send_success: string
-  wallet_send_failed: string
   wallet_close: string
   wallet_legacy: Readonly<Record<string, unknown>>
   tutorial: Readonly<Record<string, string>>
@@ -244,10 +255,4 @@ const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = O
   pt: () => import('./locales/pt.yaml'),
 })
 
-export const with_english_ui = (localized: AppCopy, english: AppCopy): AppCopy =>
-  Object.freeze({ ...localized, ui: Object.freeze({ ...english.ui, ...localized.ui }) })
-
-export const load_app_copy = async (locale: Locale): Promise<AppCopy> => {
-  const [localized, english] = await Promise.all([loaders[locale](), loaders.en()])
-  return with_english_ui(localized.default as AppCopy, english.default as AppCopy)
-}
+export const load_app_copy = async (locale: Locale): Promise<AppCopy> => (await loaders[locale]()).default as AppCopy

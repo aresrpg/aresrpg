@@ -511,7 +511,7 @@
   gap: 4px;
   margin-top: 8px;
 }
-.journey-ingredients button {
+.journey-ingredients a {
   display: flex;
   align-items: center;
   gap: 6px;

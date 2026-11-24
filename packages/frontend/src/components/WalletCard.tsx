@@ -2,19 +2,19 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { ArrowLeftRight, Bot, Check, Copy, Gamepad2, LogOut, Plus, Send } from 'lucide-react'
-import { Button, IconButton, WalletView } from '@aresrpg/ui'
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react'
+import { Button, IconButton, WalletView, SuiLogo } from '@aresrpg/ui'
+import { useCallback, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { display_suins_name } from '@aresrpg/immutable'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
-import { AgentTransferFunding } from '../agents/AgentTransferFunding.tsx'
+import { dispatch_app, useSiteStore } from '../store.ts'
 import { WalletTransferModal } from '../agents/WalletTransferModal.tsx'
+import { recall_funding_authorization } from '../funding/recipient.ts'
+import { toast } from '../toast.ts'
 
 import { SendSuiModal } from './SendSuiModal.tsx'
-import { SuiLogo } from './SuiLogo.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
 
 const wallet_identity = (address: string | null, name: string | null, fallback: string): string => {
@@ -24,11 +24,14 @@ const wallet_identity = (address: string | null, name: string | null, fallback: 
 const balance_label = (value: bigint | null, format: (value: bigint) => string): string =>
   value === null ? '—' : format(value)
 
-type Shown = 'game' | 'bot'
-type WalletModal = 'send' | 'funds' | 'transfer' | null
+export type WalletShown = 'game' | 'bot'
+type WalletModal = 'send' | 'transfer' | null
 /** The owner's bot wallet, once its hosted signer is verified for this account. */
-const bot_pairing = ({ wallet, inventory_pairing }: SessionState) =>
+export const bot_pairing = ({ wallet, inventory_pairing }: SessionState) =>
   wallet && inventory_pairing?.signer_mode === 'host-persistent' ? inventory_pairing : null
+/** The wallet on screen: the bot's only while the owner has a verified bot, else the game wallet. */
+export const shown_wallet = (session: SessionState, chosen: WalletShown): WalletShown =>
+  chosen === 'bot' && bot_pairing(session) ? 'bot' : 'game'
 
 /** Copies the address on screen; the tick shows for two seconds. */
 const AddressLine = ({ copy, address, text }: Readonly<{ copy: AppCopy; address: string | null; text: string }>) => {
@@ -87,18 +90,14 @@ const shown_account = (
 const WalletSteps = ({
   copy,
   session,
-  account,
   on_bot,
   modal,
-  open,
   close,
 }: Readonly<{
   copy: AppCopy
   session: SessionState
-  account: Account
   on_bot: boolean
   modal: WalletModal
-  open: (modal: Exclude<WalletModal, null>) => void
   close: () => void
 }>) => {
   const { wallet } = session
@@ -116,18 +115,12 @@ const WalletSteps = ({
         close={close}
         copy={copy}
         on_sent={() => dispatch_app({ type: 'wallet/refresh' })}
-        open_funds={() => open('funds')}
+        open_funds={() => {
+          close()
+          dispatch_app({ type: 'funding/open' })
+        }}
         resolve_character={resolve_character}
         wallet={wallet}
-      />
-    ),
-    funds: () => (
-      <AgentTransferFunding
-        copy={copy}
-        wallet={wallet}
-        sender={account.address}
-        pairing={on_bot ? pairing : undefined}
-        close={close}
       />
     ),
     transfer: () =>
@@ -148,16 +141,10 @@ const WalletFooter = ({
         <span>{copy.wallet_gas_spent}</span>
         <strong>{numbers.sui(session.gas_spent_mist, 4)} SUI</strong>
       </div>
-      {session.wallet ? (
-        <Button onClick={disconnect}>
-          <LogOut size={16} />
-          {copy.wallet_disconnect}
-        </Button>
-      ) : (
-        <a className="aui-button aui-button--primary" href="/">
-          {copy.sign_in}
-        </a>
-      )}
+      <Button disabled={!session.wallet} onClick={disconnect}>
+        <LogOut size={16} />
+        {copy.wallet_disconnect}
+      </Button>
     </>
   )
 }
@@ -181,45 +168,63 @@ const useWalletStep = (wallet: string | null) => {
 }
 
 /**
+ * Add funds for the wallet on screen, through the one funding window: the game wallet's own top-up, or
+ * the bot wallet once the owner's proof of it verifies.
+ */
+const open_funding = (copy: AppCopy, session: SessionState, bot: ReturnType<typeof bot_pairing>): void => {
+  if (!bot) return dispatch_app({ type: 'funding/open' })
+  const authorization = recall_funding_authorization(session, bot)
+  if (!authorization) return toast.add(copy.ui.agent_funding_unverified, 'error')
+  dispatch_app({ type: 'funding/open', cost_mist: 0n, authorization })
+}
+
+/**
  * The one wallet of every page: the game wallet, and the bot wallet as a second tab once the owner
  * has a verified bot. Add funds pays into the wallet on screen; Transfer moves SUI or KARES between
  * the two and starts from the wallet on screen. Money leaves the bot wallet only through Transfer.
- * `standalone` pages have no player runtime, so the game wallet's funding opens here too.
+ * `compact` is the site bar's small trigger; `embedded` lays the card in its host with no trigger. A page
+ * whose content follows the wallet on screen holds that choice itself (`shown`).
  */
 export const WalletCard = ({
   copy,
   disconnect,
   session,
   embedded = false,
-  standalone = false,
+  compact = false,
+  shown,
 }: Readonly<{
   copy: AppCopy
   disconnect: () => void
   session: SessionState
   embedded?: boolean
-  standalone?: boolean
+  compact?: boolean
+  shown?: Readonly<{ value: WalletShown; change: (value: WalletShown) => void }>
 }>) => {
   const numbers = useNumbers()
-  const default_name = useAppStore((state) => state.suins.snapshot?.default_name ?? null)
+  const default_name = useSiteStore((state) => state.suins.snapshot?.default_name ?? null)
   const menu_id = useId()
   const menu = useRef<HTMLElement>(null)
-  const [chosen, set_chosen] = useState<Shown>('game')
+  const own = useState<WalletShown>('game')
+  const [chosen, set_chosen] = shown ? [shown.value, shown.change] : own
   const pairing = bot_pairing(session)
-  const on_bot = [pairing, chosen === 'bot'].every(Boolean)
-  const account = shown_account(session, on_bot ? pairing : null, copy, default_name)
+  const on_screen = shown_wallet(session, chosen)
+  const on_bot = on_screen === 'bot'
+  const bot = on_bot ? pairing : null
+  const account = shown_account(session, bot, copy, default_name)
   const steps = useWalletStep(account.address)
-  const open = (next: Exclude<WalletModal, null>) => {
+  const open = (next: Exclude<WalletModal, null> | 'funds') => {
     if (!embedded) menu.current?.hidePopover()
-    // The player runtime owns the game wallet's funding dialog where it exists.
-    const runtime_funding = [next === 'funds', !on_bot, !standalone].every(Boolean)
-    return runtime_funding ? dispatch_app({ type: 'dialog/open', dialog: 'top_up' }) : steps.open(next)
+    if (next === 'funds') open_funding(copy, session, bot)
+    else steps.open(next)
   }
+  // The trigger is the card's anchor: one name per card (`app_layout.css`).
+  const anchor = { '--wallet-anchor': `--wallet-${menu_id.replace(/[^a-z0-9_-]/gi, '')}` } as CSSProperties
   const panel_attributes = embedded
     ? { className: 'wallet-panel' }
-    : { className: 'aui-panel wallet-panel wallet-popover', popover: 'auto' as const, role: 'dialog' }
+    : { className: 'aui-panel wallet-panel wallet-popover', popover: 'auto' as const, role: 'dialog', style: anchor }
   const tabs = {
     label: copy.ui.wallet_tabs,
-    value: on_bot ? ('bot' as const) : ('game' as const),
+    value: on_screen,
     on_change: set_chosen,
     options: [
       { value: 'game' as const, label: copy.ui.wallet_game, icon: <Gamepad2 size={16} /> },
@@ -229,16 +234,17 @@ export const WalletCard = ({
   return (
     <>
       {!embedded && (
-        <WalletBalanceBox
+        <WalletTrigger
           label={copy.account}
           sui_balance_mist={session.sui_balance_mist}
           kares_balance={session.kares_balance}
           popover_target={menu_id}
-          compact={standalone}
+          anchor={anchor}
+          compact={compact}
         />
       )}
       <section {...panel_attributes} id={menu_id} ref={menu} aria-label={copy.account} data-wallet-card="">
-        <WalletView<Shown>
+        <WalletView<WalletShown>
           wallets={pairing ? tabs : undefined}
           signer={account.signer}
           address={<AddressLine copy={copy} address={account.address} text={account.text} />}
@@ -253,15 +259,7 @@ export const WalletCard = ({
           <WalletFooter copy={copy} session={session} disconnect={disconnect} />
         </WalletView>
       </section>
-      <WalletSteps
-        copy={copy}
-        session={session}
-        account={account}
-        on_bot={on_bot}
-        modal={steps.step}
-        open={open}
-        close={steps.close}
-      />
+      <WalletSteps copy={copy} session={session} on_bot={on_bot} modal={steps.step} close={steps.close} />
     </>
   )
 }
@@ -274,7 +272,7 @@ const WalletActions = ({
   send,
 }: Readonly<{
   copy: AppCopy
-  open: (modal: Exclude<WalletModal, null>) => void
+  open: (modal: Exclude<WalletModal, null> | 'funds') => void
   enabled: boolean
   transfer: boolean
   send: boolean
@@ -299,49 +297,45 @@ const WalletActions = ({
   </>
 )
 
-/** One compact balance presentation for both wallets. */
-export const WalletBalanceBox = ({
+/** The button that opens the card: the game wallet's two balances. */
+const WalletTrigger = ({
   label,
   sui_balance_mist,
   kares_balance,
   popover_target,
-  icon,
-  compact = false,
+  anchor,
+  compact,
 }: Readonly<{
   label: string
   sui_balance_mist: bigint | null
-  kares_balance?: bigint | null
-  popover_target?: string
-  icon?: ReactNode
-  compact?: boolean
+  kares_balance: bigint | null
+  popover_target: string
+  anchor: CSSProperties
+  compact: boolean
 }>) => {
   const numbers = useNumbers()
   const sui = balance_label(sui_balance_mist, numbers.sui)
-  const kares = balance_label(kares_balance ?? null, numbers.amount)
-  const Container = popover_target ? 'button' : 'div'
-  const controls = popover_target
-    ? { popoverTarget: popover_target, type: 'button' as const, 'aria-haspopup': 'dialog' as const }
-    : {}
+  const kares = balance_label(kares_balance, numbers.amount)
   return (
-    <Container
-      {...controls}
+    <button
+      type="button"
+      popoverTarget={popover_target}
+      aria-haspopup="dialog"
       className={compact ? 'aui-button wallet-trigger wallet-trigger--compact' : 'wallet-trigger'}
+      style={anchor}
       data-wallet-trigger=""
       aria-label={label}
-      aria-description={`${sui} SUI${kares_balance === undefined ? '' : ` · ${kares} KARES`}`}
+      aria-description={`${sui} SUI · ${kares} KARES`}
       title={label}
     >
-      {icon}
       <span className="wallet-trigger__balance" title={`${sui} SUI`}>
         <SuiLogo size={16} />
         <span>{sui}</span>
       </span>
-      {kares_balance !== undefined && (
-        <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares} KARES`}>
-          <KaresLogo size={16} />
-          <span>{kares}</span>
-        </span>
-      )}
-    </Container>
+      <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares} KARES`}>
+        <KaresLogo size={16} />
+        <span>{kares}</span>
+      </span>
+    </button>
   )
 }

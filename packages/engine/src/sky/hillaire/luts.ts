@@ -1,15 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// C9 Hillaire sky — THE FOUR LUTs as WebGPU/TSL compute kernels (the house `Fn(()=>{…}).compute(N)`
-// idiom, copied from render/sky/clouds.js's bake kernels) + their sampler nodes. One thread per texel;
-// `renderer.computeAsync(kernel)` runs them. All math is in KM (physics.js); the atmosphere uniform bag
-// `U` + the dynamic uniform bag `dyn` (sun dir, camera altitude, aerial frustum basis) drive them.
-//
-//   1. TRANSMITTANCE 256×64  — optical depth to the top of atmosphere (no scattering). Param-only rebuild.
-//   2. MULTIPLE-SCATTERING 32² — the isotropic ≥2nd-order geometric-series trick F_ms = 1/(1−f_ms),
-//      sphere-sampled directions. Param-only rebuild (sun is a LUT AXIS, not fixed).
-//   3. SKY-VIEW 200×100     — in-scatter along the view ray, non-linear horizon packing. Per-frame.
-//   4. AERIAL-PERSPECTIVE 32³ — camera-frustum froxels: RGB in-scatter + A mean transmittance. Per-frame.
+// The four Hillaire LUTs as TSL compute kernels, one thread per texel, plus their sampler nodes. All math is
+// in kilometres. Transmittance and multiple scattering rebuild on parameter changes; sky-view and the
+// aerial-perspective froxels rebuild when the sun or camera moves.
 
 import { HalfFloatType } from 'three'
 import { Storage3DTexture, StorageTexture, type Node } from 'three/webgpu'
@@ -54,13 +47,8 @@ const { PI } = Math
 
 /**
  * Allocate the four LUT textures + build the kernel factories and sampler nodes.
- * @param {object} args
- * @param {import('./physics.js').AtmoUniforms} args.U atmosphere uniform bag (km / per-km).
- * @param {*} args.dyn dynamic uniform bag: { sun_dir vec3, cam_height_km float, cam_fwd/cam_right/cam_up
- *   vec3, tan_half_x/tan_half_y float, aerial_range_km float, aerial_depth_power float }.
- * @param {import('./atmosphere_params.js').SkyTier} args.tier resolutions + step counts.
  */
-export type DynamicSkyUniforms = Readonly<{
+type DynamicSkyUniforms = Readonly<{
   sun_dir: Node<'vec3'>
   cam_height_km: Node<'float'>
   cam_fwd: Node<'vec3'>
@@ -87,22 +75,22 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
   const aerial = new Storage3DTexture(tier.aerial_res, tier.aerial_res, tier.aerial_slices)
   aerial.type = HalfFloatType
 
-  // float-coerce the radii (the uniform bag is typed `*`; `.mul(any)` would otherwise default to vec3).
+  // Float-coerce the radii; `.mul` on an untyped uniform would otherwise default to vec3.
   const ground = float(U.ground_radius)
   const top = float(U.top_radius)
 
   // ── sampler nodes (read the LUTs from other shaders) ──────────────────────────────────────────────
-  /** Transmittance to the top of atmosphere from radius `r` along zenith-cosine `mu`. @param {*} r @param {*} mu @returns {*} vec3 */
+  /** Transmittance to the top of atmosphere from radius `r` along zenith-cosine `mu`. */
   const sample_transmittance = (r: Node<'float'>, mu: Node<'float'>): Node<'vec3'> =>
     texture(transmittance, transmittance_params_to_uv(U, r, mu), 0).xyz
-  /** Multiple-scattering Psi_ms at radius `r` for sun zenith-cosine `sun_cos`. @param {*} r @param {*} sun_cos @returns {*} vec3 */
+  /** Multiple-scattering Psi_ms at radius `r` for sun zenith-cosine `sun_cos`. */
   const sample_multiscatter = (r: Node<'float'>, sun_cos: Node<'float'>): Node<'vec3'> => {
     const u = sun_cos.mul(0.5).add(0.5)
     const v = r.sub(ground).div(top.sub(ground))
     return texture(multiscatter, vec2(clamp(u, 0, 1), clamp(v, 0, 1)), 0).xyz
   }
   /** Sun transmittance INCLUDING the planet-shadow terminator (0 when the sun ray hits the ground).
-   *  @param {*} r @param {*} sun_cos @returns {*} vec3 */
+   */
   const sun_transmittance = (r: Node<'float'>, sun_cos: Node<'float'>): Node<'vec3'> =>
     ray_hits_ground(r, sun_cos, ground).select(vec3(0), sample_transmittance(r, sun_cos))
 
@@ -113,8 +101,7 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
     const N = tier.transmittance_steps
     const k = Fn(() => {
       const i = instanceIndex
-      // ComputeNode auto-prepends the `i ≥ count` bounds guard (count = W·H); a manual guard here emits a
-      // REDUNDANT second `return` — avoids an unreachable-return lint warning. Rely on the auto-guard.
+      // ComputeNode prepends the `i >= count` bounds guard.
       const x = i.mod(W)
       const y = i.div(W)
       const uv = vec2(float(x).add(0.5).div(W), float(y).add(0.5).div(H))
@@ -147,7 +134,7 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
     //   albedo (bounded <1), NOT an integral; a 4π/N weight would push f_ms>1 and diverge 1/(1−f_ms).
     const k = Fn(() => {
       const i = instanceIndex
-      // ComputeNode auto-guards `i ≥ count` (count = R·R); no manual bounds-return (was the unreachable-return).
+      // ComputeNode prepends the `i >= count` bounds guard.
       const x = i.mod(R)
       const y = i.div(R)
       const sun_cos = float(x).add(0.5).div(R).mul(2).sub(1) // u → cos sun zenith [−1,1]
@@ -215,7 +202,6 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
   // ── in-scatter march shared by SKY-VIEW + AERIAL (analytic step trick + multiscatter feedback) ────
   /**
    * March `origin → dir` for `n_steps` over `t_max` km, returning { L, throughput } after the ray.
-   * @param {*} origin vec3 @param {*} dir vec3 @param {*} sun vec3 @param {*} t_max float @param {number} n_steps
    */
   const integrate_inscatter = (
     origin: Node<'vec3'>,
@@ -256,8 +242,7 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
     const N = tier.skyview_steps
     const k = Fn(() => {
       const i = instanceIndex
-      // ComputeNode auto-prepends the `i ≥ count` bounds guard (count = W·H); a manual guard here emits a
-      // REDUNDANT second `return` — avoids an unreachable-return lint warning. Rely on the auto-guard.
+      // ComputeNode prepends the `i >= count` bounds guard.
       const x = i.mod(W)
       const y = i.div(W)
       const uv = vec2(float(x).add(0.5).div(W), float(y).add(0.5).div(H))
@@ -281,15 +266,13 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
   }
 
   // ── 4. AERIAL-PERSPECTIVE kernel (camera-frustum froxels) ────────────────────────────────────────
-  // ONE thread per (x,y) ray (AR² threads, NOT AR²·slices): march the ray ONCE, writing each slice's
-  // cumulative in-scatter + mean transmittance as it is crossed. The efficient Hillaire froxel build —
-  // ~AS× fewer marches than a per-texel dispatch, which matters for the per-frame rebuild budget.
+  // One thread per froxel column marches its ray once and writes each slice as it is crossed.
   const build_aerial_kernel = () => {
     const AR = tier.aerial_res
     const AS = tier.aerial_slices
     const k = Fn(() => {
       const i = instanceIndex
-      // ComputeNode auto-guards `i ≥ count` (count = AR·AR); no manual bounds-return (was the unreachable-return).
+      // ComputeNode prepends the `i >= count` bounds guard.
       const x = i.mod(AR)
       const y = i.div(AR)
       // reconstruct the world view ray for this froxel column from the camera frustum basis.
@@ -334,7 +317,6 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
 
   /**
    * Sky-view LUT sample for a world view direction (background + fog fallback). up = world +Y.
-   * @param {*} dir vec3 world view dir (normalized) @returns {*} vec3 in-scatter radiance
    */
   const sample_skyview = (dir: Node<'vec3'>): Node<'vec3'> => {
     const cam_r = dyn.cam_height_km.add(ground)
@@ -354,7 +336,6 @@ export function create_luts({ U, dyn, tier }: { U: AtmoUniforms; dyn: DynamicSky
 
   /**
    * Aerial LUT sample at a screen position + view distance → { inscatter vec3, transmittance float }.
-   * @param {*} screen_uv vec2 [0,1] @param {*} dist_km float @returns {{ inscatter:*, transmittance:* }}
    */
   const sample_aerial = (screen_uv: Node<'vec2'>, dist_km: Node<'float'>) => {
     const w = clamp(pow(dist_km.div(dyn.aerial_range_km).max(float(0)), float(1).div(dyn.aerial_depth_power)), 0, 1)

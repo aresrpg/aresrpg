@@ -89,9 +89,9 @@ export default {
   },
 
   observe: (context) => {
-    const { pubsub, graph, events, send, address, signal, get_state } = context
+    const { pubsub, graph, events, send, address, signal, get_state, dispatch } = context
     observe_agent_party(context)
-    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
+    const { watch, unwatch } = create_watcher(pubsub, signal)
 
     const forward_party_chat = (party: string) => (fact: ChatFact) => {
       if (fact.address === address) return
@@ -153,7 +153,12 @@ export default {
       })
     }
 
+    // Once the character's channel is armed, its membership and invitations are read once; the
+    // channel's party events keep them current.
     events.on('action/character_watch_ready', ({ character_id }: { character_id: string }) => {
+      void get_character_party(graph, { character_id })
+        .then(([party]) => dispatch({ type: 'action/party', character_id, party: party?.id ?? null }))
+        .catch((error: Error) => log.warn({ character_id, error: error.message }, 'party membership read failed'))
       void push_invites(character_id).catch((error: Error) =>
         log.warn({ character_id, error: error.message }, 'party invitation read failed')
       )
@@ -192,10 +197,6 @@ export default {
             })
             .catch((error: Error) => log.warn({ party: tracked.party, error: error.message }, 'party watch failed'))
       })
-    })
-
-    signal.addEventListener('abort', () => {
-      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

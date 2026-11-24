@@ -45,6 +45,7 @@ export const MasteryKaresPurchase = ({
   return (
     <>
       <Button
+        className="min-h-9 text-[11px]"
         tone="neutral"
         data-mastery-payment="kares"
         disabled={disabled}

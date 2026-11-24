@@ -396,9 +396,6 @@
 .gw-worldchat:has(.chat[data-collapsed='true']) > .chat__resize {
   display: none;
 }
-.gw-worldchat:has(.chat[data-collapsed='true']) > .current-event-hud {
-  width: min(440px, 80vw);
-}
 
 .gw-worldchat .chat > header {
   cursor: grab;

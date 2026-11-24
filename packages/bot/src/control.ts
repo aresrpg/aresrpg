@@ -6,13 +6,20 @@ import type { Receipt } from '@aresrpg/sdk/cache'
 import { create_behavior_control } from './behavior_control.ts'
 import type { ActionBaseline } from './action_reconciliation.ts'
 import type { FightReplay } from './fight_runtime.ts'
-import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
+import {
+  authorize,
+  CONTROL_SCOPES,
+  control_method,
+  hash_secret,
+  type Bot,
+  type BotConfig,
+  type ControlMethod,
+  type Grant,
+} from './model.ts'
 import { parse_gameplay_action, type GameplayActionName } from './gameplay.ts'
 import { lane_key_for, public_command, queue_command } from './command_admission.ts'
 import { create_combat_control } from './combat_control.ts'
-import { hash_secret } from './security.ts'
 import type { ControlStore } from './store.ts'
-import { route_owner_controls, type OwnerControl } from './owner_control.ts'
 
 export { admit_command, lane_key_for } from './command_admission.ts'
 
@@ -60,32 +67,33 @@ export type Lane = Readonly<{
   /** Net network fees of every receipt this wallet's bot settled, in MIST. Stored with the lane and never reset. */
   fees_mist?: string
 }>
-export type Command = Readonly<{
+/** An interface, so the gameplay catalogue it names can describe the context that holds it. */
+export interface Command {
   /** The hero run that issued this command; absent on a direct command. */
-  run_id?: string
-  behavior_binding?: Readonly<{ revision: number; node: string }>
-  waiting_for_resume?: boolean
-  action_baseline?: ActionBaseline
-  fight_baseline?: FightStateRow
-  id: string
-  grant_id: string
-  bot_id: string
-  lane_key: string
-  fingerprint: string
-  kind: 'observe' | GameplayActionName
-  payload: Readonly<Record<string, unknown>>
-  decision_revision: number
-  observation_revision: number
-  status: 'accepted' | 'executing' | 'completed' | 'failed' | 'uncertain' | 'cancelled'
-  result?: unknown
+  readonly run_id?: string
+  readonly behavior_binding?: Readonly<{ revision: number; node: string }>
+  readonly waiting_for_resume?: boolean
+  readonly action_baseline?: ActionBaseline
+  readonly fight_baseline?: FightStateRow
+  readonly id: string
+  readonly grant_id: string
+  readonly bot_id: string
+  readonly lane_key: string
+  readonly fingerprint: string
+  readonly kind: 'observe' | GameplayActionName
+  readonly payload: Readonly<Record<string, unknown>>
+  readonly decision_revision: number
+  readonly observation_revision: number
+  readonly status: 'accepted' | 'executing' | 'completed' | 'failed' | 'uncertain' | 'cancelled'
+  readonly result?: unknown
   /** The certified receipt, settled with result; process-local and never returned to a client. */
-  receipt?: Receipt
-  error?: string
+  readonly receipt?: Receipt
+  readonly error?: string
   /** The SUI balance a funding refusal was judged against; its run waits until the wallet holds more. */
-  funding_balance_mist?: string
+  readonly funding_balance_mist?: string
   /** When a command was refused before submission, at no gas cost; its run may try again on a clock. */
-  refused_at?: number
-}>
+  readonly refused_at?: number
+}
 /** Existing envelope/command work precedes objectives which depend on its reconciliation. */
 export const lane_work_key = (key: string, lane: Lane | null): string => {
   const command_id = lane?.pending?.command_id ?? lane?.active_command
@@ -113,6 +121,31 @@ export const assert_lease = (lane: Lane | null, actor_id: string, fence: number,
 export const lane_owned_elsewhere = (lane: Lane | null, actor_id: string, now: number): lane is Lane =>
   Boolean(lane && lane.actor_id !== actor_id && lane.lease_until > now)
 
+/** A control operation run at the process that owns the wallet's lane. */
+export type OwnerControl = (grant: Grant, method: ControlMethod, args: readonly unknown[]) => Promise<unknown>
+type OwnerExpectation = Readonly<{ actor_id: string; fence: number; deadline: number }>
+export type LocalOwnerControl = (
+  grant: Grant,
+  method: ControlMethod,
+  args: readonly unknown[],
+  expected: OwnerExpectation
+) => Promise<unknown>
+// Durable stop authority and static validation do not require a live actor. Stop writes only its
+// hero's run record. Pause writes the lane on purpose: it fences the whole wallet, so the only
+// in-flight transition its write can refuse is one that a paused wallet refuses anyway. Observation
+// has its own route.
+const LOCAL_METHODS: readonly string[] = ['observe', 'pause', 'stop_behavior', 'validate_behavior']
+const route_owner_controls = <T extends object>(local: T, route?: OwnerControl): T => {
+  if (!route) return local
+  return Object.fromEntries(
+    Object.entries(local).map(([method, operation]) => [
+      method,
+      control_method(method) && !LOCAL_METHODS.includes(method)
+        ? (grant: Grant, ...args: readonly unknown[]) => route(grant, method, args)
+        : operation,
+    ])
+  ) as T
+}
 export type Observe = (
   grant: Grant,
   payload: Readonly<Record<string, unknown>>,
@@ -129,12 +162,8 @@ export const create_control_service = (
   routed_control?: OwnerControl
 ) => {
   const observe: Observe = async (grant, payload) => {
-    const current = await store.read<Grant>(`grant:${grant.id}`)
-    if (!current || current.bot_id !== grant.bot_id || current.address !== grant.address)
-      throw new Error('invalid_token')
-    assert_live_grant(config, current, await store.read<Bot>(`bot:${current.bot_id}`), now())
-    if (!current.scopes.includes('bot:observe')) throw new Error('insufficient_scope')
-    return read_observation(current, payload)
+    const current = await authorize(store.read, config, grant, CONTROL_SCOPES.observe, now())
+    return read_observation(current.grant, payload)
   }
   const acquire = async (bot: Bot, actor_id: string, lease_ms: number) => {
     const key = lane_key_for(bot)
@@ -181,14 +210,12 @@ export const create_control_service = (
     grant: Grant,
     input: Readonly<{
       idempotency_key: string
-      kind: Command['kind']
+      kind: GameplayActionName
       payload: Readonly<Record<string, unknown>>
       decision_revision: number
       observation_revision: number
     }>
   ) => {
-    if (!input.idempotency_key) throw new Error('invalid_action')
-    if (input.kind === 'observe') throw new Error('invalid_action')
     parse_gameplay_action(input.kind, input.payload)
     const id = hash_secret(`${grant.id}:${input.idempotency_key}`)
     const lane_key = lane_key_for(grant)
@@ -197,10 +224,7 @@ export const create_control_service = (
     const held = (await store.read<Lane>(lane_key))?.direct
     const keys = [`grant:${grant.id}`, `bot:${grant.bot_id}`, lane_key, `command:${id}`]
     return store.transaction(held ? [...keys, `command:${held}`] : keys, async (tx) => {
-      const current = await tx.get<Grant>(`grant:${grant.id}`)
-      if (!current) throw new Error('invalid_token')
-      const bot = await tx.get<Bot>(`bot:${grant.bot_id}`)
-      assert_live_grant(config, current, bot, now())
+      const { grant: current } = await authorize(tx.get, config, grant, CONTROL_SCOPES.accept, now())
       const prior = await tx.get<Command>(`command:${id}`)
       if (prior) {
         if (prior.fingerprint !== fingerprint) throw new Error('idempotency_conflict')
@@ -229,6 +253,7 @@ export const create_control_service = (
     })
   }
   const status = async (grant: Grant, id: string) => {
+    await authorize(store.read, config, grant, CONTROL_SCOPES.status, now())
     const command = await store.read<Command>(`command:${id}`)
     if (!command || command.grant_id !== grant.id || command.bot_id !== grant.bot_id)
       throw new Error('command_not_found')
@@ -237,10 +262,7 @@ export const create_control_service = (
   const pause = async (grant: Grant) => {
     const key = lane_key_for(grant)
     await store.transaction([key, `grant:${grant.id}`, `bot:${grant.bot_id}`], async (tx) => {
-      const current = await tx.get<Grant>(`grant:${grant.id}`)
-      if (!current) throw new Error('invalid_token')
-      if (!current.scopes.includes('bot:pause')) throw new Error('insufficient_scope')
-      assert_live_grant(config, current, await tx.get<Bot>(`bot:${grant.bot_id}`), now())
+      await authorize(tx.get, config, grant, CONTROL_SCOPES.pause, now())
       const lane = (await tx.get<Lane>(key)) ?? empty_lane(grant)
       await tx.put(key, { ...lane, paused: true, decision_revision: lane.decision_revision + 1 })
     })
@@ -249,10 +271,7 @@ export const create_control_service = (
   const resume = async (grant: Grant, decision_revision: number, observation_revision: number) => {
     const key = lane_key_for(grant)
     await store.transaction([key, `grant:${grant.id}`, `bot:${grant.bot_id}`], async (tx) => {
-      const current = await tx.get<Grant>(`grant:${grant.id}`)
-      if (!current) throw new Error('invalid_token')
-      assert_live_grant(config, current, await tx.get<Bot>(`bot:${grant.bot_id}`), now())
-      if (!current.scopes.includes('bot:pause')) throw new Error('insufficient_scope')
+      await authorize(tx.get, config, grant, CONTROL_SCOPES.resume, now())
       const lane = (await tx.get<Lane>(key)) ?? empty_lane(grant)
       const unsafe = [
         lane.pending,
@@ -279,7 +298,7 @@ export const create_control_service = (
       pause,
       resume,
       ...create_behavior_control(store, config, now),
-      ...create_combat_control(store, config, now, observe),
+      ...create_combat_control(config, observe),
     },
     routed_control
   )

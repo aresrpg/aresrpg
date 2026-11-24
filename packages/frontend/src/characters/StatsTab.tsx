@@ -10,15 +10,16 @@ import {
 import type { CharacterRow } from '@aresrpg/protocol'
 import { Button, CarvedIcon, ProgressBar, vital_art } from '@aresrpg/ui'
 import { useState } from 'react'
+import { action_points, equipment_bonus, movement_points } from '@aresrpg/protocol/character-stats'
 
 import { character_icon } from '../content/assets.ts'
-import { titleize } from '../content/catalog.ts'
-import { action_points, equipment_bonus, movement_points } from '../game/character_stats.ts'
+import { titleize } from '../content/titles.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { stat_identities } from '../visual_identity.ts'
 
 import { useStats } from './useStats.ts'
 import { SkillsPanel } from './SkillsPanel.tsx'
+import './stats.css'
 import './skills.css'
 
 export default function StatsTab({

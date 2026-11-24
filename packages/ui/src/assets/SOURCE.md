@@ -1,6 +1,6 @@
 # Gray-slate HUD emblems
 
-Generated with the built-in image_gen tool on 2026-10-13. The inventory emblem is the material and lighting reference for the other sixteen symbols. Each runtime file is a 192 × 192 WebP export (quality 92), with the generated transparency preserved. The app draws the per-menu colored outline; the art stays neutral gray.
+Generated with the built-in image_gen tool on 2026-10-13. The inventory emblem is the material and lighting reference for the other thirteen symbols. Each runtime file is a 192 × 192 WebP export (quality 92), with the generated transparency preserved. The app draws the per-menu colored outline; the art stays neutral gray.
 
 ## carved_inventory.webp
 
@@ -34,10 +34,6 @@ Source: generated image artifact `exec-3827aa49-fadc-40bf-8446-67521882da98.png`
 
 Source: generated image artifact `exec-877df7fc-f78c-483d-8b20-b5e3fa588ee1.png`
 
-## carved_leaderboard.webp
-
-Source: generated image artifact `exec-c137b999-8ce1-4de1-b5fd-2aa0c207c9ea.png`
-
 ## carved_mastery.webp
 
 Source: generated image artifact `exec-e6e8224a-e32f-4196-98cc-bbc2eac50af3.png`
@@ -45,14 +41,6 @@ Source: generated image artifact `exec-e6e8224a-e32f-4196-98cc-bbc2eac50af3.png`
 ## carved_kares.webp
 
 Source: generated image artifact `exec-ad14adec-369a-41cc-a586-e31571e92339.png`
-
-## carved_encyclopedia.webp
-
-Source: generated image artifact `exec-e03ebc36-7c45-4f2a-b631-d84705f43cb7.png`
-
-## carved_marketplace.webp
-
-Source: generated image artifact `exec-4c474079-0fdc-4b4b-9189-8a79fa88d01b.png`
 
 ## carved_airdrop.webp
 

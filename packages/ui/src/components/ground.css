@@ -1,0 +1,33 @@
+/* The page's ground. The poster is the cloud's opening frame in plain gradients: the floor lifts toward the top, and the
+   colour wave starts warm on the left and cold on the right. The canvas fades in over it once and never moves. */
+.aui-ground {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--aui-orange) 5%, transparent),
+      color-mix(in srgb, var(--aui-sui) 6%, transparent)
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--aui-brass-lo) 17%, var(--aui-bg)),
+      color-mix(in srgb, var(--aui-brass-lo) 9%, var(--aui-bg))
+    );
+}
+.aui-ground-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 0.6s var(--aui-ease);
+}
+.aui-ground-canvas[data-live] {
+  opacity: 1;
+}

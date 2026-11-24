@@ -149,72 +149,6 @@
     height: 28px;
   }
 }
-.aui-catalogue-browser {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
-}
-.aui-catalogue-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  padding: 8px;
-  background: var(--aui-surface);
-  border-bottom: 1px solid color-mix(in srgb, var(--aui-faint) 16%, transparent);
-}
-.aui-catalogue-tools > input {
-  max-width: 250px;
-  flex: 1;
-}
-.aui-catalogue-tools > .aui-input,
-.aui-catalogue-tools input {
-  height: 32px;
-  min-height: 32px;
-  font-size: 11px;
-  padding: 4px 8px;
-}
-.aui-catalogue-tools > label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: var(--aui-muted);
-}
-.aui-catalogue-tools > label:not(.aui-search-field) > input {
-  width: 53px;
-}
-.aui-catalogue-tools > select {
-  width: auto;
-  max-width: 150px;
-}
-.aui-catalogue-tools > small {
-  margin-left: auto;
-  font-size: 9px;
-  color: var(--aui-faint);
-}
-.aui-catalogue-browser > .aui-collection {
-  flex: 1;
-}
-.aui-item-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--aui-faint) 16%, transparent);
-}
-.aui-item-filters > .aui-button {
-  min-height: 32px;
-  padding: 4px 9px;
-  font-size: 10px;
-}
-.aui-item-filters small {
-  font-size: 9px;
-  color: var(--aui-brass);
-}
 .aui-filter-trigger > svg {
   color: var(--aui-muted);
 }
@@ -275,32 +209,6 @@
   color: var(--aui-muted);
 }
 @container aui-viewport (max-height:500px) and (min-width:501px) {
-  .aui-catalogue-tools {
-    padding: 4px 6px;
-    gap: 5px;
-  }
-  .aui-catalogue-tools > input {
-    max-width: 200px;
-  }
-  .aui-catalogue-tools > label:not(.aui-search-field) > input {
-    width: 45px;
-  }
-  .aui-catalogue-tools > small {
-    font-size: 8px;
-  }
-  .aui-item-filters {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 4px 6px;
-    gap: 4px;
-  }
-  .aui-item-filters > .aui-button {
-    min-height: 32px;
-    font-size: 9px;
-    padding: 4px 7px;
-    flex: none;
-  }
   .aui-filter-options > .aui-button {
     min-height: 44px;
   }
@@ -308,113 +216,10 @@
     max-height: calc(100dvh - 16px);
   }
 }
-.aui-catalogue-details {
-  width: min(800px, calc(100cqw - 24px));
-  max-height: calc(100cqh - 24px);
-  height: auto;
-}
-.aui-catalogue-detail-body {
-  padding: 12px;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.aui-catalogue-detail-body > div {
-  padding: 0 !important;
-  overflow: visible;
-}
-.aui-catalogue-detail-body .enc-spell-card {
-  min-width: 0;
-}
-.aui-catalogue-item {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  max-height: calc(100cqh - 80px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  padding: 12px;
-}
-.aui-related-item {
-  display: grid;
-  grid-template-columns: 32px 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 7px;
-  min-height: 44px;
-  padding: 6px 8px;
-  text-align: left;
-  background: var(--aui-raised);
-  border: 1px solid color-mix(in srgb, var(--aui-faint) 18%, transparent);
-  border-radius: 4px;
-  box-shadow: none;
-}
-.aui-related-item > b {
-  font-size: 11px;
-  color: var(--aui-brass);
-  font-weight: 600;
-}
-.aui-related-item > span {
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.25;
-  color: var(--aui-ink);
-  white-space: normal;
-}
-.aui-related-item img {
-  width: 30px;
-  height: 30px;
-}
-.aui-inspection--item [data-owned-item-id] {
-  padding: 12px;
-}
-.aui-inspection--item > .item-sheet-container {
-  padding: 12px;
-}
-.enc-browser.aui-catalogue-browser {
-  flex-direction: column;
-}
-.aui-catalogue-browser > .enc-browser__list {
-  min-height: 0;
-  min-width: 0;
-  width: 100%;
-  flex: 1;
-}
-.aui-catalogue-browser > .aui-collection {
-  flex: 1;
-}
-.aui-catalogue-browser .enc-filters {
-  padding: 6px 8px;
-  gap: 5px;
-  flex: none;
-}
-.aui-catalogue-browser .enc-filters > div {
-  gap: 8px;
-}
-.aui-catalogue-browser .enc-filters > div > div:first-child {
-  max-width: 250px;
-  flex: 1;
-}
-.aui-catalogue-browser .enc-filters input,
-.aui-catalogue-browser .enc-filters select {
-  min-height: 32px;
-  height: 32px;
-  padding-block: 4px;
-  font-size: 10px;
-}
 .aui-filter-options > .aui-button > span > small {
   display: block;
   font-size: 8px;
   color: var(--aui-faint);
-}
-.aui-collection-tile > .aui-job-emblem {
-  width: 38px;
-  height: 42px;
-  flex: none;
-}
-.aui-collection-tile > .aui-job-emblem svg {
-  width: 29px;
-  height: 29px;
 }
 .aui-collection-glyph {
   display: grid;
@@ -428,42 +233,12 @@
   color: #c9cb9b;
   font: 800 22px var(--aui-font);
 }
-.aui-codex-port:has([data-encyclopedia-tab='classes']),
-.aui-codex-port:has([data-encyclopedia-tab='jobs']) {
-  height: auto;
-  max-height: calc(100cqh - 24px);
-}
 @container aui-viewport (max-height:500px) and (min-width:501px) {
   .aui-collection-glyph {
     width: 34px;
     height: 34px;
     font-size: 19px;
   }
-}
-
-.aui-search-field {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 140px;
-  min-height: 36px;
-  flex: 1;
-  border: 1px solid #ffffff18;
-  border-radius: 4px;
-  background: var(--aui-bg);
-  color: var(--aui-muted);
-}
-.aui-search-field > .aui-search-input {
-  width: 100%;
-  min-width: 0;
-  height: 36px;
-  padding: 5px 9px 5px 32px;
-  font-size: 12px;
-  background: transparent;
-  outline: none;
-}
-.aui-search-field:focus-within {
-  border-color: color-mix(in srgb, var(--aui-brass) 40%, transparent);
 }
 .aui-collection-tile::after {
   content: '';
@@ -491,50 +266,4 @@
 .aui-collection-copy small {
   max-height: 2.4em;
   overflow: hidden;
-}
-.aui-mob-catalogue {
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px;
-  scrollbar-width: thin;
-}
-.aui-world-inspection {
-  width: min(1050px, calc(100cqw - 24px));
-  height: min(700px, calc(100cqh - 24px));
-}
-
-/* Search and facets share one strip; the collection receives the remaining height. */
-.aui-catalogue-tools:has(> .aui-item-filters) {
-  gap: 5px;
-  padding: 4px;
-}
-.aui-catalogue-tools > .aui-item-filters {
-  flex: 1;
-  min-width: 0;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding: 0;
-  border: 0;
-}
-.aui-catalogue-tools > .aui-item-filters > * {
-  flex-shrink: 0;
-}
-.aui-catalogue-tools:has(> .aui-item-filters) > input {
-  flex: 0 1 160px;
-  min-width: 90px;
-  order: -2;
-}
-.aui-catalogue-tools:has(> .aui-item-filters) > select {
-  width: 110px;
-}
-.aui-catalogue-tools:has(> .aui-item-filters) > small {
-  display: none;
-}
-@container aui-window (max-width: 650px) {
-  .aui-catalogue-tools:has(> .aui-item-filters) {
-    flex-wrap: nowrap;
-  }
-  .aui-catalogue-tools:has(> .aui-item-filters) > select {
-    width: 80px;
-  }
 }

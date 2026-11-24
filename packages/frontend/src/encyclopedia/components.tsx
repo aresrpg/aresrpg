@@ -8,6 +8,7 @@ import { useId, type ReactNode } from 'react'
 import { useText } from '../i18n/useText.ts'
 
 import type { EncyclopediaText } from './copy.ts'
+import './catalogue.css'
 
 export const PANEL = 'border border-border bg-surface/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
 
@@ -123,15 +124,6 @@ export const Section = ({ title, children }: Readonly<{ title: string; children:
     </h3>
     {children}
   </section>
-)
-
-export const Fact = ({ label, value, color }: Readonly<{ label: string; value: ReactNode; color?: string }>) => (
-  <div className="flex min-h-8 items-center justify-between gap-3 border border-border bg-white/2 px-2.5 py-1.5">
-    <span className="text-[8px] tracking-[0.12em] text-faint uppercase">{label}</span>
-    <span className="text-right text-[10px] text-text" style={color ? { color } : undefined}>
-      {value}
-    </span>
-  </div>
 )
 
 export const Empty = ({ children }: Readonly<{ children: ReactNode }>) => (

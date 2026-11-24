@@ -65,10 +65,6 @@ impl Contribution {
     }
 }
 
-fn is_object(view: &ObjView<'_>, game: &str, module: &str, name: &str) -> bool {
-    view.type_key.package == game && view.type_key.module == module && view.type_key.name == name
-}
-
 #[derive(Debug, Clone, Copy)]
 struct Participant {
     character: Id,
@@ -89,12 +85,12 @@ fn rosters(tx: &TxView<'_>, game: &str) -> Result<HashMap<Id, Roster>> {
         .inputs
         .iter()
         .chain(tx.outputs)
-        .filter(|view| is_object(view, game, "fight", "Fight"))
+        .filter(|view| view.type_key.is(game, "fight", "Fight"))
     {
         if rosters.contains_key(&view.id) {
             continue;
         }
-        let fight: Fight = decode::from_bytes(view.bytes)?;
+        let fight: Fight = view.decode()?;
         let mut roster = Roster::default();
         for (authority, row) in fight.authorities.iter().zip(&fight.combat.fighters) {
             let player = match authority {
@@ -121,8 +117,8 @@ fn rosters(tx: &TxView<'_>, game: &str) -> Result<HashMap<Id, Roster>> {
 fn characters(views: &[ObjView<'_>], game: &str) -> Result<HashMap<Id, Character>> {
     views
         .iter()
-        .filter(|view| is_object(view, game, "character", "Character"))
-        .map(|view| Ok((view.id, decode::from_bytes(view.bytes)?)))
+        .filter(|view| view.type_key.is(game, "character", "Character"))
+        .map(|view| Ok((view.id, view.decode()?)))
         .collect()
 }
 
@@ -186,7 +182,7 @@ pub fn extract(tx: &TxView<'_>, game: &str) -> Result<Vec<Contribution>> {
     for view in tx
         .outputs
         .iter()
-        .filter(|view| is_object(view, game, "zone", "Zone"))
+        .filter(|view| view.type_key.is(game, "zone", "Zone"))
     {
         if !tx.inputs.iter().any(|input| input.id == view.id) {
             facts.push(Contribution::new(Metric::Zones, tx.sender, 1));
@@ -287,11 +283,3 @@ pub fn extract(tx: &TxView<'_>, game: &str) -> Result<Vec<Contribution>> {
     }
     Ok(facts)
 }
-
-#[cfg(test)]
-#[path = "../tests/leaderboards/extract.rs"]
-mod tests;
-
-#[cfg(test)]
-#[path = "../tests/leaderboards/authority.rs"]
-mod authority_tests;

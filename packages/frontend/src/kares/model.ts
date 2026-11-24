@@ -91,6 +91,11 @@ const finish_finance = (state: FinanceState, input: Extract<FinanceInput, { sequ
   }
 }
 
+/** A transaction that ended before its receipt: the reason, said once. A failed read is not one: the desk
+ * keeps the figures it shows, and a transaction that has its receipt already succeeded. */
+export const failed_transaction = (state: FinanceState, previous: FinanceState): string | null =>
+  previous.request?.kind === 'execute' && !state.request && !state.digest ? state.error : null
+
 /** SUI and KARES share nine decimal places; reuse the wallet's exact parser. */
 export const parse_amount = (value: string): bigint | null => {
   const amount = parse_sui_amount(value)

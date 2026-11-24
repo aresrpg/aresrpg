@@ -53,7 +53,7 @@ export const begin_owner_return = (
   )
 }
 
-export const inspect_owner_return = (
+const inspect_owner_return = (
   bot: Bot,
   lane: Lane,
   review: HostedBotDescriptor,

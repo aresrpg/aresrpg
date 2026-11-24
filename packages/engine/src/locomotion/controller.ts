@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity -- the frame controller mutates its owned simulation state and vectors in one measured hot path. */
-// The locomotion brain — ground/swim/jump feel from the proven legacy controller
-// (deprecated/engine/src/player/controller.js): WASD relative to camera yaw, linear accel/brake
+// The locomotion controller: WASD relative to camera yaw, linear accel/brake
 // ground curves with a minecraft-style multiplicative no-input stop, sprint, a real jump
 // (asymmetric gravity + coyote-time + jump-buffer + release-to-cut + double-jump), air control
 // preserving momentum, swim-float, auto-step visual smoothing, and mounted glide steering. Pure state + math over
@@ -11,7 +9,7 @@
 import { CHARACTER_HEIGHT, resolve_movement, type SolidFn, type Vec3Mut } from './collision.ts'
 import { accelerate_horizontal, airborne_velocity, AIR_ACCEL } from './air_motion.ts'
 
-// ═══ GAME-FEEL TUNABLES (ported verbatim — the A/B history lives in the legacy source) ═══
+// Game-feel tuning.
 const WALK_SPEED = 4.8
 export const RUN_SPEED = 10.5
 export const MOUNT_SPEED_SCALE = 1.5
@@ -181,7 +179,7 @@ export const step_controller = (
   const ground_speed = (input.walk ? WALK_SPEED : RUN_SPEED) * (input.speed_scale || 1)
 
   if (in_water) {
-    // water keeps the legacy exponential glide — swimming is MEANT to feel fluid, not crisp
+    // Water keeps an exponential glide so swimming feels fluid, not crisp.
     vel[0] = damp(vel[0], dir_x * SWIM_SPEED, SWIM_LAMBDA, dt)
     vel[2] = damp(vel[2], dir_z * SWIM_SPEED, SWIM_LAMBDA, dt)
   } else if (state.on_ground) {
@@ -312,27 +310,3 @@ export const classify_anim = (
   }
   return 'IDLE'
 }
-
-export const CONTROLLER_CONSTANTS = Object.freeze({
-  WALK_SPEED,
-  RUN_SPEED,
-  SWIM_SPEED,
-  GLIDE_GRAVITY,
-  GLIDE_TERMINAL_FALL,
-  GLIDE_DELAY_SECONDS,
-  GROUND_ACCEL,
-  GROUND_BRAKE,
-  MC_STOP_FACTOR,
-  STOP_SNAP_SPEED,
-  AIR_ACCEL,
-  RISE_GRAVITY,
-  FALL_GRAVITY_MULT,
-  JUMP_APEX_M,
-  JUMP_FORCE,
-  JUMP_CUT_MULT,
-  AIR_JUMP_MULT,
-  COYOTE_TIME,
-  JUMP_BUFFER,
-  FALL_ANIM_THRESHOLD,
-  STEP_SMOOTH_MS,
-})

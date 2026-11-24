@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@aresrpg/ui'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
-import { rolled_item_types } from '../modules/claims.ts'
+import { rolled_item_types } from '../content/item_templates.ts'
 import { useAppStore } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { EncyclopediaItemIcon } from '../encyclopedia/EncyclopediaItemIcon.tsx'

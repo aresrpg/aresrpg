@@ -29,7 +29,7 @@ const GameFightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 export const AppShell = ({ copy, page, session }: PlayerShellProps) => (
   <div className="app-shell pointer-events-none fixed inset-0 z-[10] flex flex-col" data-app-content="">
     {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
-    {session.game_frozen === true && !['admin', 'kares'].includes(page) && <MaintenanceModal copy={copy} />}
+    {session.game_frozen === true && page !== 'admin' && <MaintenanceModal copy={copy} />}
     {!session.agent_view.request && (
       <>
         <TradeInbox copy={copy} />

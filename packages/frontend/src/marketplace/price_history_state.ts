@@ -3,34 +3,42 @@
 
 import type { ClientPacket, MarketPriceHistory, MarketPriceObservation } from '@aresrpg/protocol'
 
-import type { AppInput, AppState } from '../store.ts'
+import { link_accepted } from '../server_link.ts'
+import type { AppInput, SiteState } from '../store.ts'
+
+/** An item's price read: asked for, then its daily history (null when the server keeps none) and its supply. */
+export type PriceRead =
+  | Readonly<{ status: 'waiting' }>
+  | Readonly<{ status: 'read'; history: MarketPriceHistory | null; total_units: string | null }>
 
 export type PriceHistoryState = Readonly<{
+  /** The item chart on screen; null while none is. The socket follows it. */
   observation: MarketPriceObservation | null
-  revision: number
-  history: MarketPriceHistory | null
-  total_units: string | null
-  status: 'loading' | 'ready' | 'unavailable'
+  read: PriceRead
 }>
 export type PriceHistoryInput = Readonly<{ type: 'market/price_item_selected'; item_type: string | null }>
 
-export const initial_price_history = (): PriceHistoryState => ({
-  observation: null,
-  revision: 0,
-  history: null,
-  total_units: null,
-  status: 'loading',
-})
+const PRICES_WAITING: PriceRead = Object.freeze({ status: 'waiting' })
 
+export const initial_price_history = (): PriceHistoryState => ({ observation: null, read: PRICES_WAITING })
+
+/** The read of one item's prices: waiting until the chart observes that item and its prices arrive. */
+export const price_read_of = (prices: PriceHistoryState, item_type: string): PriceRead =>
+  prices.observation?.item_type === item_type ? prices.read : PRICES_WAITING
+
+/** The line the chart shows in place of the plot: waiting, nothing kept, or no sale in the period. */
+export const price_empty_key = (read: PriceRead, legacy: boolean): string => {
+  if (read.status === 'waiting') return 'prices_loading'
+  if (read.history === null) return 'prices_unavailable'
+  return legacy ? 'prices_legacy' : 'prices_empty'
+}
+
+/** A chart that closes and opens again counts from one again: a packet answers it only for the same item and id. */
 const select_price_item = (state: PriceHistoryState, item_type: string | null): PriceHistoryState => {
   if (item_type === (state.observation?.item_type ?? null)) return state
-  const revision = state.revision + 1
   return {
-    revision,
-    observation: item_type ? { item_type, id: revision } : null,
-    history: null,
-    total_units: null,
-    status: 'loading',
+    observation: item_type ? { item_type, id: (state.observation?.id ?? 0) + 1 } : null,
+    read: PRICES_WAITING,
   }
 }
 
@@ -41,8 +49,9 @@ const fold_price_packet = (
   const { observation, history } = packet
   const same_observation = (['id', 'item_type'] as const).every((key) => state.observation?.[key] === observation[key])
   if (!same_observation) return state
-  if (history && state.history && history.sampled_at_ms < state.history.sampled_at_ms) return state
-  return { ...state, history, total_units: packet.total_units ?? null, status: history ? 'ready' : 'unavailable' }
+  const shown = state.read.status === 'read' ? state.read.history : null
+  if (history && shown && history.sampled_at_ms < shown.sampled_at_ms) return state
+  return { ...state, read: { status: 'read', history, total_units: packet.total_units ?? null } }
 }
 
 /** Folded only by the existing marketplace reducer. Range selection is local presentation. */
@@ -53,16 +62,17 @@ export const fold_price_history = (state: PriceHistoryState, input: AppInput): P
   return state
 }
 
-export const reduce_market_prices = (state: AppState, input: AppInput): AppState => {
+export const reduce_market_prices = <S extends SiteState>(state: S, input: AppInput): S => {
   const prices = fold_price_history(state.marketplace.prices, input)
   return prices === state.marketplace.prices ? state : { ...state, marketplace: { ...state.marketplace, prices } }
 }
 
-export const market_price_subscription = (state: AppState, previous: AppState): ClientPacket | null => {
-  const { open } = state.marketplace
-  const was_open = previous.marketplace.open
-  if (state.session.link_status !== 'ready' || (!open && !was_open)) return null
-  const changed = open !== was_open || state.marketplace.prices.observation !== previous.marketplace.prices.observation
-  if (previous.session.link_status === 'ready' && !changed) return null
-  return { type: 'packet/market_prices_observe', observation: open ? state.marketplace.prices.observation : null }
+/** The item chart's one observation: sent when it changes, and again as soon as a new link is accepted. */
+export const market_price_subscription = (state: SiteState, previous: SiteState): ClientPacket | null => {
+  const { observation } = state.marketplace.prices
+  if (!link_accepted(state.session.link_status)) return null
+  const unchanged = link_accepted(previous.session.link_status)
+    ? observation === previous.marketplace.prices.observation
+    : observation === null
+  return unchanged ? null : { type: 'packet/market_prices_observe', observation }
 }

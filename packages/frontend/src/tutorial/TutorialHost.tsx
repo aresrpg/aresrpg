@@ -166,7 +166,6 @@ export const TutorialHost = ({ blocked, copy }: Readonly<{ blocked: boolean; cop
   const id = tutorial_id_for(
     {
       page: navigation.page,
-      pathname: navigation.pathname,
       dialog: navigation.dialog,
       player_ready,
       selected_character_id,

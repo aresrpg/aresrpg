@@ -54,7 +54,8 @@ export const IconButton = ({
   </Button>
 )
 
-/** A selection group uses native buttons, so all options work with keyboard and touch. */
+/** A selection group uses native buttons, so all options work with keyboard and touch. An option with a
+ * `count` keeps a fixed-width cell for it: `null` holds the cell empty while the number loads, so nothing moves. */
 export const SegmentedControl = <T extends string>({
   label,
   options,
@@ -62,7 +63,7 @@ export const SegmentedControl = <T extends string>({
   on_change,
 }: Readonly<{
   label: string
-  options: readonly Readonly<{ value: T; label: string; icon?: ReactNode }>[]
+  options: readonly Readonly<{ value: T; label: string; icon?: ReactNode; count?: number | null }>[]
   value: T
   on_change: (value: T) => void
 }>) => (
@@ -71,6 +72,7 @@ export const SegmentedControl = <T extends string>({
       <Button key={option.value} aria-pressed={value === option.value} onClick={() => on_change(option.value)}>
         {option.icon}
         {option.label}
+        {option.count !== undefined && <span className="aui-segment-count">{option.count}</span>}
       </Button>
     ))}
   </div>

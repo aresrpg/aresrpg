@@ -3,7 +3,7 @@
 
 import { useCallback } from 'react'
 
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { useAppStore } from '../store.ts'
 
 export const useItemCategoryName = () => {

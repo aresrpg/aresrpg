@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { city_at_position, world_biome_at_zone, worlds_source } from '@aresrpg/engine/data'
-import { world_size } from '@aresrpg/immutable'
+import { center_distance, chain_to_client_coordinate, world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
-import { area_contains as shared_area_contains } from '@aresrpg/protocol/strategies'
 
 import mobs from '../../../seed/content/mobs.json'
 
@@ -39,7 +38,7 @@ export const parse_world_area = (value: unknown): WorldArea | undefined => {
   return area
 }
 const group_size: Schema = { type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER }
-export const TARGET_OPTIONS_SCHEMA: Schema = {
+const TARGET_OPTIONS_SCHEMA: Schema = {
   ...object_schema({
     min_size: group_size,
     max_size: group_size,
@@ -62,7 +61,7 @@ export const parse_target_options = (value: unknown): TargetOptions | undefined 
   if (options.area) validate_world_area(options.area)
   return options
 }
-export const validate_world_area = (area: WorldArea) => {
+const validate_world_area = (area: WorldArea) => {
   const source = worlds_source.find(({ world }) => world === area.world)
   const exists =
     source &&
@@ -72,9 +71,33 @@ export const validate_world_area = (area: WorldArea) => {
   if (!exists || !band_ordered(area)) throw new Error('invalid_target_options')
 }
 const band_ordered = ({ min_distance = 0, max_distance = world_size }: WorldArea) => min_distance <= max_distance
-const AREA_LOOKUPS = { city_at: city_at_position, biome_at: world_biome_at_zone } as const
-export const area_contains = (area: WorldArea, world: string, x: number, z: number): boolean =>
-  shared_area_contains(area, world, x, z, AREA_LOOKUPS)
+/** A zone belongs to a distance band by its centre, as the population rule sizes its groups. */
+const band_contains = (
+  { min_distance = 0, max_distance = world_size }: WorldArea,
+  zone_x: number,
+  zone_z: number
+): boolean => {
+  const distance = center_distance((zone_x + 0.5) * ZONE_SIZE, (zone_z + 0.5) * ZONE_SIZE)
+  return distance >= min_distance && distance <= max_distance
+}
+/**
+ * Whether a chain position lies inside a place: the one rule the bot fences targets and travel with.
+ * A city is its footprint; a biome is the land outside cities, taken by zone, so a zone whose centre
+ * is in a city belongs to that city.
+ */
+export const area_contains = (area: WorldArea, world: string, x: number, z: number): boolean => {
+  if (world !== area.world || ![x, z].every((value) => Number.isFinite(value) && value >= 0 && value < world_size))
+    return false
+  const zone_x = Math.floor(x / ZONE_SIZE)
+  const zone_z = Math.floor(z / ZONE_SIZE)
+  if (!band_contains(area, zone_x, zone_z)) return false
+  const city_of = (at_x: number, at_z: number) =>
+    city_at_position(world, chain_to_client_coordinate(at_x), chain_to_client_coordinate(at_z))
+  if (area.city) return city_of(x, z)?.id === area.city
+  if (!area.biome) return true
+  if (city_of((zone_x + 0.5) * ZONE_SIZE, (zone_z + 0.5) * ZONE_SIZE)) return false
+  return world_biome_at_zone(world, zone_x, zone_z) === area.biome
+}
 export const assert_area_position = (area: WorldArea | undefined, world: string, x: number, z: number) => {
   if (area && !area_contains(area, world, x, z)) throw new Error('target_outside_area')
 }

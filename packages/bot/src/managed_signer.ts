@@ -13,7 +13,7 @@ export type ManagedProvider = Readonly<{
   prepare: (request_id: string) => Promise<Readonly<{ key: ManagedKey; sealed: string }>>
   signer: (key: ManagedKey, sealed?: string) => ReturnType<typeof create_managed_agent_signer>
 }>
-export type SigningKeyring = Readonly<{
+type SigningKeyring = Readonly<{
   active_key_id: string
   keys: Readonly<Record<string, Uint8Array>>
 }>
@@ -28,7 +28,7 @@ type SealedKey = Readonly<{
 }>
 
 /** Config errors never include the supplied secret or JSON parser's input excerpt. */
-export const parse_signing_keyring = (encoded: string): SigningKeyring => {
+const parse_signing_keyring = (encoded: string): SigningKeyring => {
   try {
     const data = JSON.parse(encoded) as { active_key_id: string; keys: Record<string, string> }
     const keys = Object.fromEntries(Object.entries(data.keys).map(([id, value]) => [id, Buffer.from(value, 'base64')]))
@@ -84,16 +84,9 @@ const open = (encoded: string, key_id: string, keyring: SigningKeyring) => {
  * process; JS/SDK memory cannot guarantee zeroization. */
 export const create_key_provider = (
   store: ControlStore,
-  config: SigningKeyring
+  encoded_keyring: string
 ): ManagedProvider & Readonly<{ rewrap: (key: ManagedKey) => Promise<ManagedKey> }> => {
-  if (!config.active_key_id || !Object.hasOwn(config.keys, config.active_key_id))
-    throw new Error('INVALID_SIGNING_KEYRING')
-  if (Object.entries(config.keys).some(([id, value]) => !id || value.length !== 32))
-    throw new Error('INVALID_SIGNING_KEYRING')
-  const keyring = {
-    active_key_id: config.active_key_id,
-    keys: Object.fromEntries(Object.entries(config.keys).map(([id, key]) => [id, Buffer.from(key)])),
-  }
+  const keyring = parse_signing_keyring(encoded_keyring)
   const prefix = 'bot:signing:'
   const location = (request_id: string) => {
     if (!request_id) throw new Error('SIGNING_REQUEST_REQUIRED')

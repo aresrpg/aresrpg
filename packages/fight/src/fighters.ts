@@ -5,38 +5,28 @@
 
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { xp_for_player } from './fight_math.ts'
-import { add_effect_id, effect_id_at, emit } from './runtime.ts'
-import { drop_owned_zones } from './zone_lifecycle.ts'
+import { add_effect_id, effect_id_at, emit, retain_zones } from './runtime.ts'
+import type { FightReadState } from './spell_turn.ts'
 import type {
   ActiveEffect,
   FightRuntime,
   FightSheet,
   Fighter,
-  HydratedFightCheckpoint,
   MobFighter,
   MobSnapshot,
   PlayerFighter,
   PlayerSource,
 } from './types.ts'
 
-type FightReadState = Readonly<Pick<HydratedFightCheckpoint, 'contract' | 'sources'>>
-
 export const FIGHT_ELEMENTS = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
 export type FightElement = (typeof FIGHT_ELEMENTS)[number]
 export type FighterResistances = Readonly<Record<FightElement, bigint>>
 
-const SHIFT = BigInt(CONTRACT_CONSTANTS.item_stat_shift)
-const BASE_AP = BigInt(CONTRACT_CONSTANTS.base_ap)
-const BASE_MP = BigInt(CONTRACT_CONSTANTS.base_mp)
-const BASE_HP = BigInt(CONTRACT_CONSTANTS.base_hp)
-const HP_PER_LEVEL = BigInt(CONTRACT_CONSTANTS.hp_per_level)
+const SHIFT = CONTRACT_CONSTANTS.item_stat_shift
 
-export const KINDS = Object.fromEntries(
-  Object.entries(EFFECT_KINDS).map(([name, value]) => [name, BigInt(value)])
-) as Record<keyof typeof EFFECT_KINDS, bigint>
-export const STATS = Object.fromEntries(
-  Object.entries(CHANNELS).map(([name, value]) => [name, BigInt(value)])
-) as Record<keyof typeof CHANNELS, bigint>
+/** A row that takes points away: remove, steal or fixed remove. */
+export const is_removal = (kind: bigint): boolean =>
+  kind === EFFECT_KINDS.remove || kind === EFFECT_KINDS.steal || kind === EFFECT_KINDS.fixed_remove
 
 export const is_mob = (fighter: Fighter): fighter is MobFighter => fighter.kind.type === 'mob'
 export const is_player = (fighter: Fighter | undefined): fighter is PlayerFighter => fighter?.kind.type === 'player'
@@ -54,22 +44,22 @@ export const player_source = (runtime: FightReadState, seat: bigint): PlayerSour
 export const saturating_subtract = (left: bigint, right: bigint): bigint => (left > right ? left - right : 0n)
 export const effective = (base: bigint, folded: bigint): bigint => saturating_subtract(base + folded, SHIFT)
 
-const sum_rows = (runtime: FightReadState, seat: bigint, kind: bigint, stat: bigint): bigint =>
+export const sum_effect_rows = (runtime: FightReadState, seat: bigint, kind: bigint, stat: bigint): bigint =>
   runtime.contract.fighters[Number(seat)].effects
     .filter(
       (row) =>
         row.kind === kind &&
-        (stat === STATS.any || row.stat === stat) &&
-        (row.turns_left > 0n || (stat !== STATS.ap && stat !== STATS.mp))
+        (stat === CHANNELS.any || row.stat === stat) &&
+        (row.turns_left > 0n || (stat !== CHANNELS.ap && stat !== CHANNELS.mp))
     )
     .reduce((total, row) => total + row.value, 0n)
 
 const row_adjusted = (runtime: FightReadState, seat: bigint, base: bigint, stat: bigint): bigint =>
   saturating_subtract(
-    base + sum_rows(runtime, seat, KINDS.add, stat),
-    sum_rows(runtime, seat, KINDS.remove, stat) +
-      sum_rows(runtime, seat, KINDS.steal, stat) +
-      sum_rows(runtime, seat, KINDS.fixed_remove, stat)
+    base + sum_effect_rows(runtime, seat, EFFECT_KINDS.add, stat),
+    sum_effect_rows(runtime, seat, EFFECT_KINDS.remove, stat) +
+      sum_effect_rows(runtime, seat, EFFECT_KINDS.steal, stat) +
+      sum_effect_rows(runtime, seat, EFFECT_KINDS.fixed_remove, stat)
   )
 
 export const sheet_of = (runtime: FightReadState, seat: bigint): FightSheet => {
@@ -101,16 +91,16 @@ export const sheet_of = (runtime: FightReadState, seat: bigint): FightSheet => {
           level: source.level,
         }
       })()
-  const power = row_adjusted(runtime, seat, 0n, STATS.power)
+  const power = row_adjusted(runtime, seat, 0n, CHANNELS.power)
   return {
-    strength: row_adjusted(runtime, seat, base.strength, STATS.strength) + power,
-    intelligence: row_adjusted(runtime, seat, base.intelligence, STATS.intelligence) + power,
-    chance: row_adjusted(runtime, seat, base.chance, STATS.chance) + power,
-    agility: row_adjusted(runtime, seat, base.agility, STATS.agility) + power,
-    wisdom: row_adjusted(runtime, seat, base.wisdom, STATS.wisdom),
-    raw_damage: row_adjusted(runtime, seat, base.raw_damage, STATS.raw_damage),
-    critical: row_adjusted(runtime, seat, base.critical, STATS.critical),
-    range_bonus: row_adjusted(runtime, seat, base.range_bonus, STATS.range),
+    strength: row_adjusted(runtime, seat, base.strength, CHANNELS.strength) + power,
+    intelligence: row_adjusted(runtime, seat, base.intelligence, CHANNELS.intelligence) + power,
+    chance: row_adjusted(runtime, seat, base.chance, CHANNELS.chance) + power,
+    agility: row_adjusted(runtime, seat, base.agility, CHANNELS.agility) + power,
+    wisdom: row_adjusted(runtime, seat, base.wisdom, CHANNELS.wisdom),
+    raw_damage: row_adjusted(runtime, seat, base.raw_damage, CHANNELS.raw_damage),
+    critical: row_adjusted(runtime, seat, base.critical, CHANNELS.critical),
+    range_bonus: row_adjusted(runtime, seat, base.range_bonus, CHANNELS.range),
     level: base.level,
   }
 }
@@ -121,8 +111,9 @@ export const modifiable_range_max = (runtime: FightReadState, seat: bigint, auth
   const fighter = runtime.contract.fighters[Number(seat)]
   const base_bonus = is_mob(fighter) ? 0n : effective(0n, player_source(runtime, seat).folded_stats.range)
   return saturating_subtract(
-    authored_max + base_bonus + sum_rows(runtime, seat, KINDS.add, STATS.range),
-    sum_rows(runtime, seat, KINDS.remove, STATS.range) + sum_rows(runtime, seat, KINDS.steal, STATS.range)
+    authored_max + base_bonus + sum_effect_rows(runtime, seat, EFFECT_KINDS.add, CHANNELS.range),
+    sum_effect_rows(runtime, seat, EFFECT_KINDS.remove, CHANNELS.range) +
+      sum_effect_rows(runtime, seat, EFFECT_KINDS.steal, CHANNELS.range)
   )
 }
 
@@ -163,39 +154,41 @@ export const xp_award_of = (checkpoint: FightReadState, seat: bigint): bigint =>
 
 export const contest_stat = (runtime: FightRuntime, seat: bigint, stat: bigint): bigint => {
   const sheet = sheet_of(runtime, seat)
-  return stat === STATS.agility ? sheet.agility : sheet.wisdom
+  return stat === CHANNELS.agility ? sheet.agility : sheet.wisdom
 }
 
-export const max_hp_of = (runtime: FightRuntime, seat: bigint): bigint => {
-  const fighter = runtime.contract.fighters[Number(seat)]
-  if (is_mob(fighter)) return mob_snapshot(fighter).max_hp
-  const source = player_source(runtime, seat)
-  const base = BASE_HP + HP_PER_LEVEL * source.level + source.vitality
+export const player_max_hp = (source: Readonly<PlayerSource>): bigint => {
+  const base = CONTRACT_CONSTANTS.base_hp + CONTRACT_CONSTANTS.hp_per_level * source.level + source.vitality
   const folded = source.folded_stats.vitality
   if (folded >= SHIFT) return base + folded - SHIFT
   const malus = SHIFT - folded
   return malus >= base ? 1n : base - malus
 }
 
+export const max_hp_of = (runtime: FightReadState, seat: bigint): bigint => {
+  const fighter = runtime.contract.fighters[Number(seat)]
+  return is_mob(fighter) ? mob_snapshot(fighter).max_hp : player_max_hp(player_source(runtime, seat))
+}
+
 export const base_ap_of = (runtime: FightReadState, seat: bigint): bigint => {
   const fighter = runtime.contract.fighters[Number(seat)]
   return is_mob(fighter)
     ? mob_snapshot(fighter).ap
-    : effective(BASE_AP, player_source(runtime, seat).folded_stats.action)
+    : effective(CONTRACT_CONSTANTS.base_ap, player_source(runtime, seat).folded_stats.action)
 }
 
 export const base_mp_of = (runtime: FightReadState, seat: bigint): bigint => {
   const fighter = runtime.contract.fighters[Number(seat)]
   return is_mob(fighter)
     ? mob_snapshot(fighter).mp
-    : effective(BASE_MP, player_source(runtime, seat).folded_stats.movement)
+    : effective(CONTRACT_CONSTANTS.base_mp, player_source(runtime, seat).folded_stats.movement)
 }
 
 export const action_points_of = (runtime: FightReadState, seat: bigint): bigint =>
-  row_adjusted(runtime, seat, base_ap_of(runtime, seat), STATS.ap)
+  row_adjusted(runtime, seat, base_ap_of(runtime, seat), CHANNELS.ap)
 
 export const movement_points_of = (runtime: FightReadState, seat: bigint): bigint =>
-  row_adjusted(runtime, seat, base_mp_of(runtime, seat), STATS.mp)
+  row_adjusted(runtime, seat, base_mp_of(runtime, seat), CHANNELS.mp)
 
 const mob_resistance = (snapshot: MobSnapshot, element: string): bigint => {
   if (element === 'earth') return snapshot.earth_res
@@ -219,11 +212,11 @@ export const resistance_of = (runtime: FightReadState, seat: bigint, element: st
     ? mob_resistance(mob_snapshot(fighter), element)
     : player_resistance(player_source(runtime, seat), element)
   const rows = fighter.effects.filter(
-    (row) => row.stat === STATS.resist && (row.element.length === 0 || row.element === element)
+    (row) => row.stat === CHANNELS.resist && (row.element.length === 0 || row.element === element)
   )
-  const bonus = rows.filter((row) => row.kind === KINDS.add).reduce((total, row) => total + row.value, 0n)
+  const bonus = rows.filter((row) => row.kind === EFFECT_KINDS.add).reduce((total, row) => total + row.value, 0n)
   const malus = rows
-    .filter((row) => row.kind === KINDS.remove || row.kind === KINDS.steal)
+    .filter((row) => row.kind === EFFECT_KINDS.remove || row.kind === EFFECT_KINDS.steal)
     .reduce((total, row) => total + row.value, 0n)
   return saturating_subtract(base + bonus, malus)
 }
@@ -303,7 +296,7 @@ export const kill_fighter = (runtime: FightRuntime, seat: bigint, source: bigint
   fighter.dead = true
   fighter.hp = 0n
   if (!was_dead) emit(runtime, 'fighter_died', { fighter: seat, source, cause, cell: fighter.cell })
-  if (!was_dead) drop_owned_zones(runtime, seat, 'owner_died')
+  if (!was_dead) retain_zones(runtime, (zone) => (zone.owner_fighter === seat ? null : zone), 'owner_died')
   if (!runtime.contract.ended && living_count(runtime.contract.fighters, fighter.team) === 0n) {
     runtime.contract.ended = true
     const team_a = living_count(runtime.contract.fighters, 0n) > 0n
@@ -341,8 +334,8 @@ export const hit = (
     kill_fighter(runtime, target, source, cause)
     return landed
   }
-  const bonus_turns = BigInt(CONTRACT_CONSTANTS.chatiment_turns)
-  const stances = fighter.effects.filter((row) => row.kind === KINDS.chatiment)
+  const bonus_turns = CONTRACT_CONSTANTS.chatiment_turns
+  const stances = fighter.effects.filter((row) => row.kind === EFFECT_KINDS.chatiment)
   const groups = stances.reduce<readonly { stance: ActiveEffect; cap: bigint }[]>((result, stance) => {
     const existing = result.findIndex(({ stance: row }) => row.stat === stance.stat && row.element === stance.element)
     if (existing < 0) return [...result, { stance, cap: stance.value }]
@@ -356,7 +349,7 @@ export const hit = (
     // never their gain speed; each turn remains one five-turn standing bonus row.
     const standing = fighter.effects.findIndex(
       (gain) =>
-        gain.kind === KINDS.add &&
+        gain.kind === EFFECT_KINDS.add &&
         gain.stat === stance.stat &&
         gain.element === stance.element &&
         gain.source === turn_owner &&
@@ -370,7 +363,7 @@ export const hit = (
     const effect =
       standing < 0
         ? {
-            kind: KINDS.add,
+            kind: EFFECT_KINDS.add,
             element: stance.element,
             value: gained,
             turns_left: bonus_turns,
@@ -420,8 +413,6 @@ export const heal_seat = (
 
 export const has_row = (runtime: FightReadState, seat: bigint, kind: bigint): boolean =>
   runtime.contract.fighters[Number(seat)].effects.some((row) => row.kind === kind)
-
-export const sum_effect_rows = sum_rows
 
 // The ap_mp_change reasons born from EFFECTS (grants, removals, steals) — the one home every
 // presentation surface derives its pool-delta filters from. Costs/refills are the other family.

@@ -21,7 +21,7 @@ import type {
   SpellLevel,
 } from './types.ts'
 
-const SHIFT = BigInt(CONTRACT_CONSTANTS.item_stat_shift)
+const SHIFT = CONTRACT_CONSTANTS.item_stat_shift
 
 type RawRecord = Record<string, unknown>
 

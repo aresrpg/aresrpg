@@ -12,7 +12,8 @@ import { Button } from '@aresrpg/ui'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { useState, type CSSProperties } from 'react'
 
-import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedRecipe } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { type CopyText } from '../i18n/copy.ts'
 import { localized_error } from '../i18n/error_text.ts'
 import { useText } from '../i18n/useText.ts'
@@ -29,6 +30,7 @@ import { retry_after_version_race, run_direct_transaction } from '../transaction
 
 import type { CharacterSession } from './character_session.ts'
 import { JobItemIcon } from './JobItemIcon.tsx'
+import './craft.css'
 
 export const craft_result_tone = (successes: number): 'error' | 'success' => (successes === 0 ? 'error' : 'success')
 
@@ -152,6 +154,7 @@ export const CraftControls = ({
           character_id: character.id,
           job,
           xp: job_xp_gained,
+          before: character.jobs[job] ?? '0',
         })
         const message = t('jobs.craft.craft_result', { attempts: completed_attempts, successes, name })
         if (craft_result_tone(successes) === 'error') pending_toast.error(localized_error(message))

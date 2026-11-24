@@ -69,6 +69,39 @@ const policy_id = (sdk: Sdk, kind: MarketplaceAsset['kind']): string =>
     `${kind} policy`
   )
 
+/** Lists one kiosk asset at price zero. The returned PurchaseCap is the right to take that asset. */
+export const offer_purchase_cap = (
+  sdk: Sdk,
+  tx: Transaction,
+  kind: MarketplaceAsset['kind'],
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument,
+  asset: string | TransactionArgument
+) =>
+  tx.moveCall({
+    target: '0x2::kiosk::list_with_purchase_cap',
+    typeArguments: [asset_type(sdk, kind)],
+    arguments: [kiosk, cap, typeof asset === 'string' ? tx.pure.id(asset) : asset, tx.pure.u64(0)],
+  })
+
+/** Takes one zero-price offer into the buyer kiosk and settles the asset's transfer policy. */
+export const claim_purchase_cap = (
+  sdk: Sdk,
+  tx: Transaction,
+  kind: MarketplaceAsset['kind'],
+  offer: Readonly<{ asset_id: string; seller_kiosk: string; purchase_cap: string }>,
+  kiosk: TransactionObjectArgument,
+  cap: TransactionObjectArgument
+): void => {
+  const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
+  const [purchased, request] = tx.moveCall({
+    target: '0x2::kiosk::purchase_with_cap',
+    typeArguments: [asset_type(sdk, kind)],
+    arguments: [tx.object(offer.seller_kiosk), tx.object(offer.purchase_cap), zero],
+  })
+  resolve_marketplace_transfer(sdk, tx, kind, offer.asset_id, 0n, kiosk, cap, purchased!, request!, offer.seller_kiosk)
+}
+
 export const resolve_marketplace_transfer = (
   sdk: Sdk,
   tx: Transaction,

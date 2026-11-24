@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Macro ground-tint SHADER — LOSSLESS PORT of the legacy NG-TINT node builder
-// (deprecated/engine/src/render/terrain_tint.js): a world-XZ continuous two-octave field
-// (moisture + detail) drives climate chroma/value on natural surfaces, authored-subsurface
+// Macro ground-tint shader: a world-XZ continuous two-octave field (moisture and detail) drives climate chroma/value on natural surfaces, authored-subsurface
 // patches, role-based roughness, plus the dedicated long-period macro-gradient pair (the Veloren-style
 // global gradient). Samples positionWorld — no chunk term, seamless across chunk borders, so
 // the per-block tiles dissolve into dry-yellow ↔ lush ↔ humid-dark regions.
@@ -14,12 +12,9 @@ import type { Node } from 'three/webgpu'
 import { SURFACE_GRADIENT_LEVELS, material_tint_tables, NG_TINT, TERRAIN_PBR, TINT_SALT } from './terrain_tint_data.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 
-/** Hashed lattice value in [0,1) via three's PCG `hash` node (a hand-rolled uint avalanche
- * emitted invalid WGSL on the WebGPU backend — legacy bisect). */
-/** Lattice indices WRAP at 4096 cells before the fold — the raw legacy fold left f32's exact
- * integer range ~100 blocks from origin, freezing the field constant over most of the world
- * (perf audit catch). 4096-cell periods (≥53k blocks at the smallest octave) never repeat
- * inside a 100k world's visible span. Small primes keep every product f32-exact. */
+/** Hashed lattice value in [0,1) through three's PCG `hash`; a hand-rolled uint avalanche emitted invalid
+ * WGSL. Indices wrap at 4096 cells so products stay inside f32's exact integer range; the period is at
+ * least 53k blocks, wider than the visible span. Small primes keep every product f32-exact. */
 const lattice_hash = (ix: Node<'int'>, iz: Node<'int'>, salt: number) => {
   const wrap = (v: Node<'int'>) => float(v).sub(float(v).div(4096).floor().mul(4096))
   return hash(

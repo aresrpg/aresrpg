@@ -3,7 +3,7 @@
 
 import type { Transaction } from '@mysten/sui/transactions'
 
-import type { Resolvable } from './client.ts'
+import type { Resolvable } from './doors.ts'
 import type { SeedSdk } from './seed.ts'
 import type { SeedLedger, SeedSyncRow } from './seed_sync.ts'
 

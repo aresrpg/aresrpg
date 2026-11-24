@@ -8,7 +8,8 @@
     "./styles.css": "./src/styles.css",
     "./art": "./src/art.ts",
     "./identity": "./src/visual_identity.ts",
-    "./sui": "./src/sui.ts"
+    "./sui": "./src/sui.ts",
+    "./workshop": "./src/workshop/Workshop.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

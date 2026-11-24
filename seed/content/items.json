@@ -8675,5 +8675,90 @@
     "level": 1,
     "title_model": "enforcer_machin",
     "title_nameplate": "enforcer_machin_plate"
+  },
+  {
+    "item_type": "title_operator_vesper",
+    "name": "Vesper Operator",
+    "category": "title",
+    "level": 1,
+    "title_model": "act_operator_vesper",
+    "title_nameplate": "act_operator_plate"
+  },
+  {
+    "item_type": "title_operator_dusk",
+    "name": "Dusk Operator",
+    "category": "title",
+    "level": 1,
+    "title_model": "act_operator_dusk",
+    "title_nameplate": "act_operator_plate"
+  },
+  {
+    "item_type": "title_operator_blood_ivory",
+    "name": "Blood Ivory Operator",
+    "category": "title",
+    "level": 1,
+    "title_model": "act_operator_blood_ivory",
+    "title_nameplate": "act_operator_plate"
+  },
+  {
+    "item_type": "helios_warlord__vesper",
+    "name": "Vesper Helios Warlord",
+    "category": "cosmetic_hat",
+    "level": 1
+  },
+  {
+    "item_type": "helios_warlord__dusk",
+    "name": "Dusk Helios Warlord",
+    "category": "cosmetic_hat",
+    "level": 1
+  },
+  {
+    "item_type": "helios_warlord__blood_ivory",
+    "name": "Blood Ivory Helios Warlord",
+    "category": "cosmetic_hat",
+    "level": 1
+  },
+  {
+    "item_type": "helios_warlord__kin",
+    "name": "Golden Helios Warlord",
+    "category": "cosmetic_hat",
+    "level": 1
+  },
+  {
+    "item_type": "act_crate",
+    "name": "ACT Airdrop Crate",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "loot_box",
+      "rewards": [
+        {
+          "item_type": "helios_warlord__vesper",
+          "weight": 3,
+          "amount": 1
+        },
+        {
+          "item_type": "helios_warlord__dusk",
+          "weight": 3,
+          "amount": 1
+        },
+        {
+          "item_type": "helios_warlord__blood_ivory",
+          "weight": 3,
+          "amount": 1
+        },
+        {
+          "item_type": "helios_warlord__kin",
+          "weight": 1,
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "item_type": "nogas_cloak",
+    "name": "Nogas Cloak",
+    "category": "cosmetic_cloak",
+    "level": 1
   }
 ]

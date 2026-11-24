@@ -30,10 +30,11 @@ import {
   vec4,
 } from 'three/tsl'
 
-import { LOCAL_SHAFT_DEPTH } from './local_shafts_math.ts'
 import type { Clouds } from './clouds.ts'
 import type { WorldScenery, SceneryVolume } from './scenery_data.ts'
 import type { QualityProfile } from './types.ts'
+
+const LOCAL_SHAFT_DEPTH = Object.freeze({ base: 0.5, slope: 0.015 })
 
 type Config = NonNullable<QualityProfile['effects']['local_shafts']>
 type DepthNode = ReturnType<typeof texture<'vec4'>>

@@ -32,45 +32,24 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:alt" content="AresRPG voxel world" />
+    <meta property="og:image:alt" content="{{SOCIAL_IMAGE_ALT}}" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{META_TITLE}}" />
     <meta name="twitter:description" content="{{SOCIAL_DESCRIPTION}}" />
     <meta name="twitter:image" content="{{SOCIAL_IMAGE_URL}}" />
-    <meta name="twitter:image:alt" content="AresRPG voxel world" />
+    <meta name="twitter:image:alt" content="{{SOCIAL_IMAGE_ALT}}" />
 
     <title>{{META_TITLE}}</title>
-    <link rel="stylesheet" href="/src/landing/landing.css" />
-    <link rel="stylesheet" href="/src/document.css" />
+    <!-- The page's ground before any style or script has loaded. -->
     <style>
-      {{LOADING_STYLES}}
+      html {
+        background: {{THEME_COLOR}};
+      }
     </style>
   </head>
   <body>
-    <template id="boot-game">{{LOADING_SCREEN}}</template>
-    <!-- The shell of an engine-less page, painted before any script loads; React replaces it when ready. -->
-    <template id="boot-light">
-      <div class="light-page aui-aura" data-boot-light aria-busy="true">
-        <div class="light-page-scene" aria-hidden="true"></div>
-        <header class="light-page-header">
-          <span class="light-page-brand"><strong>AresRPG</strong></span>
-          <span class="aui-skeleton aui-skeleton--chip"></span>
-        </header>
-        <main class="light-page-main">
-          <section class="aui-panel light-page-card">
-            <span class="aui-skeleton aui-skeleton--title"></span>
-            <span class="aui-skeleton aui-skeleton--line"></span>
-            <span class="aui-skeleton aui-skeleton--line aui-skeleton--short"></span>
-            <span class="aui-skeleton aui-skeleton--block"></span>
-          </section>
-        </main>
-      </div>
-    </template>
-    <template id="boot-landing">{{LANDING_SCREEN}}</template>
     <div id="root"></div>
-    <script src="/landing/initial_shell.js"></script>
-    <noscript>{{LOADING_SCREEN}}</noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/site/entry.tsx"></script>
   </body>
 </html>

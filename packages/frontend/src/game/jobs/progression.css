@@ -1,0 +1,133 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .aui-reward {
+    padding: 8px;
+  }
+  .aui-reward > img {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.aui-reward {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 52px;
+  flex: 1 1 140px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+  border-radius: 5px;
+  background-color: var(--aui-raised);
+}
+.aui-reward > img,
+.aui-reward > .aui-carved-icon {
+  width: 33px;
+  height: 33px;
+  object-fit: contain;
+  flex: none;
+}
+.aui-reward strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--progress-accent);
+}
+.aui-reward p {
+  margin: 3px 0 0;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--aui-muted);
+}
+.aui-unlocks {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.aui-unlocks:empty {
+  display: none;
+}
+.aui-unlocks > .aui-reward {
+  flex: 1 0 150px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-reward {
+    padding: 6px;
+    min-height: 45px;
+    gap: 6px;
+  }
+  .aui-reward > img,
+  .aui-reward > .aui-carved-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .aui-reward strong {
+    font-size: 13px;
+  }
+  .aui-reward p {
+    font-size: 9px;
+  }
+}
+.aui-progression-hero .aui-job-emblem {
+  width: 110px;
+  height: 120px;
+  border-radius: 18px;
+  border-color: color-mix(in srgb, var(--aui-faint) 40%, transparent);
+  background-color: var(--aui-raised);
+  box-shadow:
+    inset 0 4px 12px #0009,
+    0 0 16px #8fc2a22a;
+  color: var(--aui-soft);
+}
+.aui-progression-hero .aui-job-emblem svg {
+  width: 78px;
+  height: 78px;
+}
+
+.aui-reward {
+  background-image: url('../assets/panel_grain.webp'), linear-gradient(180deg, #ffffff0b, transparent 62%);
+  background-size:
+    256px 256px,
+    100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: soft-light, normal;
+}
+
+.aui-job-emblem {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 36px;
+  border: 1px solid #9c896452;
+  border-radius: 5px;
+  background: var(--aui-surface) url('../assets/panel_grain.webp');
+  color: #b7a681;
+  box-shadow:
+    inset 0 2px 5px #0007,
+    inset 0 -1px color-mix(in srgb, var(--aui-brass-hi) 15%, transparent);
+}
+.aui-job-emblem svg {
+  width: 25px;
+  height: 25px;
+  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 color-mix(in srgb, var(--aui-brass) 20%, transparent));
+}
+.aui-job-emblem {
+  background-blend-mode: soft-light;
+  background-size: 160px;
+}
+
+.aui-collection-tile > .aui-job-emblem {
+  width: 38px;
+  height: 42px;
+  flex: none;
+}
+.aui-collection-tile > .aui-job-emblem svg {
+  width: 29px;
+  height: 29px;
+}

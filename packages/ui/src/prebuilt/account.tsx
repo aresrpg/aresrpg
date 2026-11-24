@@ -51,20 +51,6 @@ export const SettingRow = ({
   </div>
 )
 
-type WalletBalance = Readonly<{ label: string; value: string; icon: ReactNode }>
-
-export const WalletBalances = ({ balances }: Readonly<{ balances: readonly WalletBalance[] }>) => (
-  <div className="aui-wallet-balances">
-    {balances.map((balance) => (
-      <div key={balance.label}>
-        {balance.icon}
-        <span>{balance.label}</span>
-        <strong>{balance.value}</strong>
-      </div>
-    ))}
-  </div>
-)
-
 export const LanguageView = ({
   header,
   languages,

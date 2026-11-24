@@ -4,21 +4,30 @@ import { is_item_category, max_level, type ItemCategory } from '@aresrpg/immutab
 
 export const MARKET_GROUP_PAGE_SIZE = 20
 export const MARKET_OFFERS_PER_GROUP = 3
+/** One page of public listings: an item type's offers, or the listed heroes. */
 export type MarketQuery =
-  | Readonly<{ kind: 'overview' }>
-  | Readonly<{ kind: 'types'; category: ItemCategory }>
   | Readonly<{ kind: 'offers'; category: ItemCategory; item_type: string; cursor?: string }>
   | Readonly<{ kind: 'characters'; cursor?: string; classe?: string; min_level?: number; max_level?: number }>
-export type MarketObservation = MarketQuery & Readonly<{ request: number }>
-export type MarketTypeCounts = Readonly<Partial<Record<ItemCategory, number>>>
-export type MarketType = Readonly<{ item_type: string; category: ItemCategory; name: string; level: number }>
-/** Wire schema for connectors; semantic parsing remains parse_market_observation. */
+/** One open market surface. Every observation receives the listed types; a query also receives its
+ *  page. `types` is a surface that reads the listed types alone. */
+export type MarketObservation = (MarketQuery | Readonly<{ kind: 'types' }>) & Readonly<{ request: number }>
+/** One listed type at a glance. `lots` maps each paid standard lot size to the cheapest public asking
+ *  price of a lot of that size, in total mist; `units` counts every publicly listed unit; `change_bps`
+ *  is the last full UTC day's average unit sale price against the day before, in basis points, null
+ *  unless the type sold on both days. Viewer-free: own listings count like any other. */
+export type MarketQuote = Readonly<{ lots: Readonly<Record<string, string>>; units: number; change_bps: number | null }>
+export type MarketType = Readonly<{
+  item_type: string
+  category: ItemCategory
+  name: string
+  level: number
+  quote: MarketQuote
+}>
+/** Wire schema of the page queries for connectors; semantic parsing remains parse_market_observation. */
 export const MARKET_OBSERVATION_SCHEMA = {
   oneOf: [
     { type: 'null' },
     ...[
-      { kind: 'overview', fields: {}, required: [] },
-      { kind: 'types', fields: { category: { type: 'string' } }, required: ['category'] },
       {
         kind: 'offers',
         fields: { category: { type: 'string' }, item_type: { type: 'string' }, cursor: { type: 'string' } },
@@ -42,11 +51,9 @@ export const MARKET_OBSERVATION_SCHEMA = {
     })),
   ],
 } as const
-export const market_category = (observation: MarketQuery | null): ItemCategory | null =>
-  observation && (observation.kind === 'types' || observation.kind === 'offers') ? observation.category : null
 export const has_market_page = (
-  observation: MarketQuery | null
-): observation is Extract<MarketQuery, { kind: 'offers' | 'characters' }> =>
+  observation: MarketObservation | MarketQuery | null
+): observation is Extract<MarketObservation, { kind: MarketQuery['kind'] }> =>
   observation?.kind === 'offers' || observation?.kind === 'characters'
 
 const optional_text = (value: unknown, limit: number, pattern?: RegExp): string | undefined => {
@@ -61,18 +68,15 @@ const level_filter = (value: unknown): number | undefined => {
     throw new Error('invalid market level filter')
   return Number(value)
 }
-const category_of = (value: unknown): ItemCategory => {
-  if (typeof value !== 'string' || !is_item_category(value)) throw new Error('invalid market category')
-  return value
-}
 const parse_offers = (row: Readonly<Record<string, unknown>>): MarketQuery => {
   const item_type = optional_text(row.item_type, 128, /^[a-z0-9_]+$/)
   if (!item_type) throw new Error('invalid market item type')
-  return { kind: 'offers', category: category_of(row.category), item_type, cursor: optional_text(row.cursor, 4096) }
+  if (typeof row.category !== 'string' || !is_item_category(row.category)) throw new Error('invalid market category')
+  return { kind: 'offers', category: row.category, item_type, cursor: optional_text(row.cursor, 4096) }
 }
-const PARSERS = Object.freeze<Record<string, (row: Readonly<Record<string, unknown>>) => MarketQuery>>({
-  overview: () => ({ kind: 'overview' }),
-  types: (row) => ({ kind: 'types', category: category_of(row.category) }),
+type Parsed = MarketQuery | Readonly<{ kind: 'types' }>
+const PARSERS = Object.freeze<Record<string, (row: Readonly<Record<string, unknown>>) => Parsed>>({
+  types: () => ({ kind: 'types' }),
   offers: parse_offers,
   characters: (row) => ({
     kind: 'characters',

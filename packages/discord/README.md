@@ -28,11 +28,8 @@ reports process liveness.
 
 Release CI publishes the dedicated bot image. The publishing indexer must support the notification contract before the bot consumes it.
 
-For the visual gallery, run the frontend development server and open
-`http://127.0.0.1:5173/e2e/fixtures/notifications.html`. Its events are illustrative; it sends nothing.
-
 ```bash
-bun test packages/discord/test packages/server/test/suins.test.ts
+bun run --cwd packages/discord test
 bun run --cwd packages/discord typecheck
 cargo test --manifest-path packages/indexer/Cargo.toml notification
 ```

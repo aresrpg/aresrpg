@@ -3,7 +3,7 @@
 import type { BotConfig } from './model.ts'
 
 /** Source-owned operational defaults; explicit deployment overrides remain validated. */
-export const DEPLOYMENT_DEFAULTS: Readonly<Record<string, number>> = Object.freeze({
+const DEPLOYMENT_DEFAULTS: Readonly<Record<string, number>> = Object.freeze({
   BOT_PORT: 3000,
   BOT_OBSERVATION_FRESHNESS_MS: 15000,
   BOT_REQUEST_TTL_MS: 600000,

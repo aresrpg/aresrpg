@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { PlayerModule } from '../player.ts'
+import type { PublicModule } from '../player.ts'
 import { read_inspection } from '../reads/get_player_profile.ts'
 import logger from '../logger.ts'
 
@@ -39,4 +39,4 @@ export default {
       if (state.inspection !== previous.inspection) refresh()
     })
   },
-} satisfies PlayerModule
+} satisfies PublicModule

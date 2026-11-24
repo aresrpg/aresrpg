@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { create_world_preview, type WorldPreview, type WorldRecipe } from '@aresrpg/engine'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { WorldRecipe } from '@aresrpg/engine'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { biome_map_color, biome_preview } from './biome_editor.ts'
 
@@ -15,152 +15,6 @@ type SelectedColumn = Readonly<{
   biome: Readonly<{ name: string }>
   climate: Readonly<Record<string, number>>
 }>
-
-export const TerrainPreview = ({
-  recipe,
-  selected,
-  on_rendering_change,
-}: Readonly<{
-  recipe: WorldRecipe
-  selected: SelectedColumn | null
-  on_rendering_change: (rendering: boolean) => void
-}>) => {
-  const canvas = useRef<HTMLCanvasElement | null>(null)
-  const preview = useRef<WorldPreview | null>(null)
-  const drag = useRef<Readonly<{ x: number; y: number; mode: 'orbit' | 'pan' }> | null>(null)
-  const latest = useRef(recipe)
-  const focus = useRef<readonly [number, number]>([selected?.x ?? 0, selected?.z ?? 0])
-  const exact_radius = useRef(192)
-  const [radius, set_radius] = useState(192)
-  const [error, set_error] = useState<string | null>(null)
-
-  useEffect(() => {
-    const target = canvas.current
-    if (!target) return
-    let cancelled = false
-    on_rendering_change(true)
-    void (async () => {
-      try {
-        const created = await create_world_preview(target, latest.current)
-        if (cancelled) {
-          created.dispose()
-          return
-        }
-        preview.current = created
-        created.set_focus(focus.current[0], focus.current[1])
-        created.set_exact_radius(exact_radius.current)
-        await created.update(latest.current)
-        if (cancelled) return
-        set_error(null)
-        on_rendering_change(false)
-        // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- The preview failure is rendered inline below the canvas.
-      } catch (reason) {
-        if (!cancelled) {
-          set_error(reason instanceof Error ? reason.message : String(reason))
-          on_rendering_change(false)
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-      preview.current?.dispose()
-      preview.current = null
-      on_rendering_change(false)
-    }
-  }, [on_rendering_change])
-  useEffect(() => {
-    latest.current = recipe
-    const { current } = preview
-    if (!current) return
-    let active = true
-    on_rendering_change(true)
-    void current.update(recipe).then(
-      () => {
-        if (active) on_rendering_change(false)
-      },
-      (reason: unknown) => {
-        if (!active) return
-        set_error(reason instanceof Error ? reason.message : String(reason))
-        on_rendering_change(false)
-      }
-    )
-    return () => {
-      active = false
-    }
-  }, [on_rendering_change, recipe])
-  useEffect(() => {
-    focus.current = [selected?.x ?? 0, selected?.z ?? 0]
-    preview.current?.set_focus(focus.current[0], focus.current[1])
-  }, [selected?.x, selected?.z])
-
-  return (
-    <div className="absolute inset-0 bg-surface-low">
-      <canvas
-        className="size-full touch-none cursor-grab active:cursor-grabbing"
-        onContextMenu={(event) => event.preventDefault()}
-        onPointerDown={(event) => {
-          if (event.button !== 0 && event.button !== 2) return
-          event.currentTarget.setPointerCapture(event.pointerId)
-          drag.current = { x: event.clientX, y: event.clientY, mode: event.button === 2 ? 'pan' : 'orbit' }
-        }}
-        onPointerMove={(event) => {
-          const previous = drag.current
-          if (!previous) return
-          const x_delta = event.clientX - previous.x
-          const y_delta = event.clientY - previous.y
-          if (previous.mode === 'pan') {
-            const next_focus = preview.current?.pan(x_delta, y_delta)
-            if (next_focus) focus.current = next_focus
-          } else preview.current?.orbit(-x_delta * 0.006, y_delta * 0.004)
-          drag.current = { x: event.clientX, y: event.clientY, mode: previous.mode }
-        }}
-        onPointerCancel={() => {
-          if (drag.current?.mode === 'pan') preview.current?.settle_pan()
-          drag.current = null
-        }}
-        onPointerUp={() => {
-          if (drag.current?.mode === 'pan') preview.current?.settle_pan()
-          drag.current = null
-        }}
-        onWheel={(event) => preview.current?.zoom(event.deltaY)}
-        ref={canvas}
-      />
-      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-faint uppercase">
-        Left-drag orbit · Right-drag pan · Scroll zoom
-      </span>
-      <label className="absolute bottom-3 left-3 w-64 border border-white/10 bg-bg/88 px-3 py-2 backdrop-blur-sm">
-        <span className="mb-1.5 flex items-center justify-between text-[7px] tracking-[0.1em] uppercase">
-          <span className="text-faint">Exact voxel field</span>
-          <strong className="tabular-nums text-gold">
-            {radius} radius · {radius * 2 + 1}²
-          </strong>
-        </span>
-        <input
-          aria-label="Exact voxel preview radius"
-          className="h-3 w-full cursor-ew-resize accent-gold"
-          max="384"
-          min="64"
-          onBlur={() => preview.current?.set_exact_radius(exact_radius.current)}
-          onChange={(event) => {
-            const next = Number(event.target.value)
-            exact_radius.current = next
-            set_radius(next)
-          }}
-          onKeyUp={() => preview.current?.set_exact_radius(exact_radius.current)}
-          onPointerUp={() => preview.current?.set_exact_radius(exact_radius.current)}
-          step="32"
-          type="range"
-          value={radius}
-        />
-      </label>
-      {error && (
-        <span className="absolute inset-x-4 bottom-4 border border-[#ff5a8b]/35 bg-void/94 p-3 text-[8px] text-[#ff8caa]">
-          {error}
-        </span>
-      )}
-    </div>
-  )
-}
 
 export const BiomeMap = ({
   recipe,
@@ -218,7 +72,7 @@ export const BiomeMap = ({
         ref={canvas}
       />
       <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-faint uppercase">
-        Click a zone to focus the height preview · 196² authored zones
+        Click a zone to read its biome and height · 196² authored zones
       </span>
     </div>
   )

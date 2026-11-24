@@ -10,6 +10,7 @@ import type { FundingMethod } from '../funding/analytics.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 import { useCopy } from './useCopy.ts'
+import '../funding/funding.css'
 
 /** The game account's SUI address with copy: shared by Add Funds and the gift page's fund step. */
 export const WalletAddressBlock = ({

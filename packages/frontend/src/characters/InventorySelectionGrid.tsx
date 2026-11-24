@@ -9,6 +9,7 @@ import { useState, type ReactNode } from 'react'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 import type { ItemMenuState } from './InventoryOverlays.tsx'
+import './character_window.css'
 
 const equipment_slot_at = (point: Readonly<{ x: number; y: number }>) =>
   document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-equipment-slot]')?.dataset.equipmentSlot

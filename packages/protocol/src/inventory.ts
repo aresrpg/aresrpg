@@ -135,13 +135,13 @@ export const coalesced_stack_groups = (
   )
 }
 
-export type StackMergePlan = Readonly<{
+type StackMergePlan = Readonly<{
   target_id: string
   source_ids: readonly string[]
   kiosk: string
 }>
 
-export type CraftStackPlan = StackMergePlan &
+type CraftStackPlan = StackMergePlan &
   Readonly<{
     item_type: string
     amount: number
@@ -248,5 +248,4 @@ export {
   close_trade_projection,
   type InventoryProjection,
   type CatalogueProjection,
-  type TradeProjection,
 } from './inventory_projection.ts'

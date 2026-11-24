@@ -23,6 +23,7 @@ import {
   type StepState,
 } from './checkout_state.ts'
 import { chain_name } from './chains.ts'
+import './funding.css'
 
 type Checkout = ReturnType<typeof useFundingCheckout>
 const AMOUNT_PRESETS = ['2', '5', '10', '25'] as const
@@ -198,7 +199,7 @@ const PayButton = ({
   return (
     <Button
       tone="primary"
-      className="min-h-[52px] w-full text-sm font-bold"
+      className="w-full"
       disabled={busy || checkout.locked || !checkout.ready}
       onClick={review ? checkout.quote : checkout.send}
     >
@@ -371,15 +372,10 @@ const DeliveredActions = ({ close, more, text }: Readonly<{ close: () => void; m
   const countdown = { '--aui-autoclose': `${AUTO_CLOSE_MS}ms` } as CSSProperties
   return (
     <div className="flex gap-2.5">
-      <Button
-        tone="primary"
-        className="aui-funding-autoclose min-h-[52px] flex-1 text-sm font-bold"
-        style={countdown}
-        onClick={close}
-      >
+      <Button tone="primary" className="aui-funding-autoclose flex-1" style={countdown} onClick={close}>
         <span>{text('funding_back')}</span>
       </Button>
-      <Button className="min-h-[52px] px-5 text-sm" onClick={more}>
+      <Button className="" onClick={more}>
         {text('funding_more')}
       </Button>
     </div>
@@ -395,7 +391,7 @@ const TransferActions = ({
   if (checkout.state.stage === 'success') return <DeliveredActions close={close} more={reset} text={text} />
   return (
     checkout.state.stage === 'refunded' && (
-      <Button tone="primary" className="min-h-[52px] w-full text-sm font-bold" onClick={reset}>
+      <Button tone="primary" className="w-full" onClick={reset}>
         {text('funding_retry')}
       </Button>
     )

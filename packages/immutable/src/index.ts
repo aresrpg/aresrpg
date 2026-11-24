@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export {
-  experience_curve,
   experience_progress,
   craft_max_ingredients,
   craft_required_level,
@@ -13,7 +12,6 @@ export {
   gather_quantity_bounds,
   gather_time_ms,
   gather_xp,
-  job_experience_curve,
   job_experience_progress,
   job_level_from_xp,
   job_max_level,
@@ -30,7 +28,7 @@ export {
   application_suins_name,
   chat_suins_prefix,
 } from './player_label.ts'
-export { MODEL_VARIANT_SEPARATOR, model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
+export { model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
 export { archimob_rows, type ArchimobRow } from './archimob.ts'
 export {
   characteristic_allocation_quote,
@@ -39,9 +37,6 @@ export {
   characteristic_spending_quote,
   characteristic_value_cost,
   characteristic_values_cost,
-  type CharacteristicCostStep,
-  type CharacteristicLadder,
-  type CharacteristicQuote,
   type CharacteristicValues,
 } from './characteristics.ts'
 export {
@@ -51,10 +46,8 @@ export {
   gatherable_item_types,
   gatherable_of,
   rare_pet_food_tier,
-  protector_level_range,
   type Gatherable,
   type GatheringJob,
-  type ProtectorLevelRange,
 } from './gathering.ts'
 export {
   characteristic_names,
@@ -75,23 +68,13 @@ export {
   type StatName,
 } from './identity.ts'
 export { pet_max_feeds } from './pet.ts'
-export {
-  rune_effect,
-  rune_unit_weight,
-  rune_can_apply,
-  rune_max_weight,
-  format_rune_weight,
-  rune_unit_weights,
-  rune_weight_scale,
-  type RuneEffect,
-  type RuneTier,
-} from './rune.ts'
+export { rune_effect, rune_can_apply, format_rune_weight, type RuneEffect, type RuneTier } from './rune.ts'
 export {
   dofus_weapon_damage_envelope,
+  hero_power,
   item_budget_envelope,
   item_budget_standing,
   item_budget_stat_weight,
-  item_budget_stat_weights,
   type ItemBudgetEnvelope,
   type ItemBudgetStanding,
   type WeaponDamageEnvelope,
@@ -112,49 +95,36 @@ export {
   type AcquisitionEstimate,
   type AcquisitionIngredient,
   type AcquisitionRange,
-  type AcquisitionRoute,
-  type AcquisitionTargetStatus,
   type RecipeProgressionInput,
-  type RecipeProgressionIssue,
   type RecipeProgressRecommendation,
 } from './acquisition.ts'
+export { dofus_mob_power_envelope } from './mob_power.ts'
 export {
-  dofus_mob_power_envelope,
-  mob_power_cohort_of_role,
-  type MobPowerBand,
-  type MobPowerCohort,
-  type MobPowerEnvelope,
-} from './mob_power.ts'
-export {
-  character_consumable_types,
   craft_job_of,
-  accessory_categories,
-  armor_categories,
   consumable_types,
   element_names,
   equipment_categories,
-  cosmetic_categories,
   is_cosmetic_category,
   item_categories,
   item_is_stackable,
   craft_batch_limit,
   craft_stackable_batch_limit,
-  craft_unique_batch_limit,
   item_stat_center,
   is_item_category,
-  is_equipment_category,
   is_tool_category,
   is_weapon_category,
   stackable_item_categories,
-  tool_categories,
-  weapon_categories,
   type CharacterConsumableType,
-  type ConsumableType,
   type ElementName,
-  type EquipmentCategory,
   type ItemCategory,
-  type WeaponCategory,
 } from './item.ts'
+export {
+  mob_band_scaled,
+  mob_centered_band_scaled,
+  mob_effect_value_scaled,
+  mob_loot_chance_scaled,
+  mob_pool_scaled,
+} from './mob_scaling.ts'
 export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
 export {
   GROUP_SIZE_AVG3_AT,
@@ -168,7 +138,6 @@ export {
   character_equipment_slots,
   cosmetic_slots,
   worn_appearance,
-  combat_equipment_slots,
   equipment_slot_accepts,
   relic_slots,
   rig_slots,

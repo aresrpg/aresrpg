@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { encyclopedia_catalog } from '../content/catalog.ts'
+import { pet_foods_of } from '../content/items.ts'
 import { EncyclopediaItemIcon } from '../encyclopedia/EncyclopediaItemIcon.tsx'
 import { useText } from '../i18n/useText.ts'
 
@@ -10,7 +10,7 @@ export const ItemPetDiet = ({
   select_item,
 }: Readonly<{ item_type: string; select_item?: (id: string) => void }>) => {
   const text = useText()
-  const foods = encyclopedia_catalog.item(item_type)?.pet_foods ?? []
+  const foods = pet_foods_of(item_type)
   const Row = select_item ? 'button' : 'div'
   return (
     <section className="flex flex-col gap-2" data-pet-diet="">

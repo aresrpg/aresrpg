@@ -1,20 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The load snapshot's economy slice, one home: the user's kiosks, pending grind-safe claims,
-// giftcard vouchers, ACTIVE listings, and pending exclusive offers (held PurchaseCaps).
+// The account's economy reads: pending grind-safe claims, giftcard vouchers and active listings.
 
 import type { ClaimRow, GiftcardRow, MarketSnapshot } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
 import { shape_market_snapshot } from './get_market_slice.ts'
-
-export async function get_kiosks(graph: Graph, { address }: { address: string }) {
-  const rows = await graph.read(`MATCH (:User {address: $address})-[:OWNS]->(k:Kiosk) RETURN k.id AS kiosk`, {
-    address,
-  })
-  return rows.map(({ kiosk }) => kiosk as string)
-}
 
 export async function get_claims(graph: Graph, { address }: { address: string }): Promise<ClaimRow[]> {
   const rows = await graph.read(

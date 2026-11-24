@@ -113,9 +113,8 @@ export const analytics_enabled = (mode: string, pathname: string, token: string)
 export const analytics_available = (): boolean =>
   analytics_enabled(import.meta.env?.MODE ?? 'test', globalThis.location?.pathname ?? '/', env.posthog_project_token)
 
+/** The bound surface's projection says where the event happened: a page of the site or the game's own page. */
 const shared_properties = (): AnalyticsProperties => ({
-  surface: 'game',
-  onboarding_step: 'boot',
   authenticated: false,
   ...context_source.read(),
   network: env.network,
@@ -188,5 +187,5 @@ export const init_analytics = (): void => {
   })
   // A restored login will identify again. Pre-login events must not inherit a previous account.
   if (posthog.get_property('$user_id')) posthog.reset()
-  capture_analytics('site_visited', { surface: 'game' })
+  capture_analytics('site_visited')
 }

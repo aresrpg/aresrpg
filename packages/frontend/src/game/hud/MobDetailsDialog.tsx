@@ -20,6 +20,7 @@ import { encyclopedia_text } from '../../encyclopedia/copy.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { useNumbers } from '../../i18n/useNumbers.ts'
 import { element_colors } from '../../visual_identity.ts'
+import '../../components/inspection.css'
 
 export type ItemLookup = (item_type: string) => Readonly<SeedItem> | undefined
 export const catalog_item: ItemLookup = (id) => content_catalog.item(id)?.item

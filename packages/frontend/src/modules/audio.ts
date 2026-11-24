@@ -22,6 +22,8 @@ export type AudioSnapshot = Readonly<{
   levels: readonly string[]
   job_level: string | null
   mastery: Readonly<{ loaded: boolean; quest: string | null; completed: boolean }>
+  /** The account's sales history: a live sale adds one newest sale, a loaded history replaces it. */
+  sales: Readonly<{ newest: string | null; total: number }>
   inventory_open: boolean
 }>
 
@@ -43,6 +45,9 @@ const mastery_snapshot = ({ loaded, row }: AppState['mastery']): AudioSnapshot['
     quest: row ? `${row.id}:${row.quest_epoch}:${row.quest_started_ms}` : null,
     completed: row?.quest_completed ?? false,
   })
+
+const sales_snapshot = ({ history, history_total }: AppState['marketplace']): AudioSnapshot['sales'] =>
+  Object.freeze({ newest: history[0]?.id ?? null, total: history_total })
 
 const trade_invitation_ids = (state: AppState, identity: string | null): readonly string[] | null =>
   state.trade.loaded
@@ -93,10 +98,8 @@ export const audio_snapshot = (state: AppState): AudioSnapshot => {
     ...result_notices(state),
     job_level: state.job_level_up.current?.id ?? null,
     mastery: mastery_snapshot(mastery),
-    inventory_open:
-      state.navigation.dialog === 'character_equipment' ||
-      (state.navigation.page === 'characters' &&
-        ['/characters', '/characters/equipment'].includes(state.navigation.pathname)),
+    sales: sales_snapshot(state.marketplace),
+    inventory_open: state.navigation.dialog === 'character_equipment',
   })
 }
 
@@ -114,11 +117,15 @@ const changed_existing = <T>(
   changed: (before: T, after: T) => boolean
 ): boolean => Object.entries(after).some(([key, value]) => Object.hasOwn(before, key) && changed(before[key]!, value))
 
+const sold = (before: AudioSnapshot['sales'], after: AudioSnapshot['sales']): boolean =>
+  after.newest !== null && after.newest !== before.newest && after.total === before.total + 1
+
 const reward_cues = (before: AudioSnapshot, after: AudioSnapshot): readonly string[] => {
   return selected_cues([
     ['fight_over', has_added(before.completed_fights, after.completed_fights)],
     ['level_up', has_added(before.levels, after.levels)],
     ['job_level_up', after.job_level !== null && after.job_level !== before.job_level],
+    ['sale', sold(before.sales, after.sales)],
   ])
 }
 
@@ -164,8 +171,4 @@ export const create_game_audio_observer =
     })
   }
 
-export default Object.freeze({
-  name: 'audio',
-  reduce: undefined,
-  observe: create_game_audio_observer(),
-}) satisfies AppModule
+export default Object.freeze({ name: 'audio', observe: create_game_audio_observer() }) satisfies AppModule

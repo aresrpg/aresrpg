@@ -47,6 +47,12 @@ const location_resources = (world: FilterWorld, kind: 'world' | 'biome' | 'city'
   )
 }
 
+/** The items a rare pet-food recipe makes. */
+export const pet_food_outputs = (recipes: readonly FilterRecipe[]): ReadonlySet<string> =>
+  new Set(
+    recipes.flatMap((recipe) => (rare_pet_food_tier(Object.keys(recipe.inputs)) !== null ? [recipe.output_type] : []))
+  )
+
 export const derive_item_filter_rows = <Recipe extends FilterRecipe>(
   items: readonly FilterItem[],
   recipes: readonly Recipe[],
@@ -56,9 +62,7 @@ export const derive_item_filter_rows = <Recipe extends FilterRecipe>(
   worlds: readonly FilterWorld[]
 ): readonly ItemFilterRow[] => {
   const recipe_outputs = new Set(recipes.map(({ output_type }) => output_type))
-  const pet_food_outputs = new Set(
-    recipes.flatMap((recipe) => (rare_pet_food_tier(Object.keys(recipe.inputs)) !== null ? [recipe.output_type] : []))
-  )
+  const pet_foods = pet_food_outputs(recipes)
   const mobs_by_type = new Map(mobs.map((mob) => [mob.mob_type, mob] as const))
   const loot_for = (mob_types: readonly string[]): readonly string[] =>
     mob_types.flatMap((mob_type) => mobs_by_type.get(mob_type)?.loot.map(({ item_type }) => item_type) ?? [])
@@ -81,8 +85,7 @@ export const derive_item_filter_rows = <Recipe extends FilterRecipe>(
       kind,
       items.flatMap((item) =>
         item.category === 'resource' &&
-        item_resource_kind(item.item_type, recipe_outputs.has(item.item_type), pet_food_outputs.has(item.item_type)) ===
-          kind
+        item_resource_kind(item.item_type, recipe_outputs.has(item.item_type), pet_foods.has(item.item_type)) === kind
           ? [item.item_type]
           : []
       )

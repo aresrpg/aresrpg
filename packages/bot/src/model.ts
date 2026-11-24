@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+
+import { parse_agent_pairing_request } from '@aresrpg/sdk/agent-pairing'
+import { fromBase64, toBase64 } from '@mysten/sui/utils'
+import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
+import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
+
+import type { ControlTransaction } from './store.ts'
+
 export type BotPolicy = Readonly<{ revision: number; scopes: readonly string[] }>
 export type Bot = Readonly<{
   id: string
@@ -36,7 +45,7 @@ export type AuthorizationRequest = Readonly<{
   zklogin_public_identifier?: string
   consumed?: boolean
 }>
-export type BotConsent = Readonly<{
+type BotConsent = Readonly<{
   bot_id: string
   policy_revision: number
 
@@ -144,3 +153,87 @@ export const assert_live_grant = (config: BotConfig, grant: Grant, bot: Bot | nu
   )
     throw new Error('invalid_token')
 }
+/** The scope each control operation needs. MCP tools, the cross-process route and the operations
+ * themselves read it here. */
+export const CONTROL_SCOPES = {
+  observe: 'bot:observe',
+  accept: 'bot:play',
+  status: 'bot:observe',
+  pause: 'bot:pause',
+  resume: 'bot:pause',
+  validate_behavior: 'bot:observe',
+  behavior_status: 'bot:observe',
+  start_behavior: 'bot:play',
+  replace_behavior: 'bot:play',
+  stop_behavior: 'bot:pause',
+  validate_combat_profile: 'bot:observe',
+} as const
+export type ControlMethod = keyof typeof CONTROL_SCOPES
+export type Scope = (typeof CONTROL_SCOPES)[ControlMethod]
+export const control_method = (value: unknown): value is ControlMethod =>
+  typeof value === 'string' && Object.hasOwn(CONTROL_SCOPES, value)
+/** The grant as stored now, live under its bot and holding the scope; a null scope asks liveness
+ * only. An operation passes its transaction reader, so the check commits with its write. */
+export const authorize = async (
+  read: ControlTransaction['get'],
+  config: BotConfig,
+  grant: Pick<Grant, 'id' | 'bot_id' | 'address'>,
+  scope: Scope | null,
+  now: number
+) => {
+  const current = await read<Grant>(`grant:${grant.id}`)
+  if (!current || current.bot_id !== grant.bot_id || current.address !== grant.address) throw new Error('invalid_token')
+  const bot = await read<Bot>(`bot:${grant.bot_id}`)
+  assert_live_grant(config, current, bot, now)
+  if (scope && !current.scopes.includes(scope)) throw new Error('insufficient_scope')
+  return Object.freeze({ grant: current, bot: bot! })
+}
+/** A grant that died or lacks the scope is a fact its caller reports; any other fault is raised. */
+export const authority_fault = (error: unknown) => {
+  if (error instanceof Error && ['invalid_token', 'insufficient_scope'].includes(error.message)) return error.message
+  throw error
+}
+
+export const random_secret = () => randomBytes(32).toString('base64url')
+export const hash_secret = (value: string) => createHash('sha256').update(value).digest('base64url')
+export const secret_matches = (value: string, expected: string) => {
+  const actual = Buffer.from(hash_secret(value))
+  const target = Buffer.from(expected)
+  return actual.length === target.length && timingSafeEqual(actual, target)
+}
+export const opaque_parts = (token: string): readonly [string, string] => {
+  const parts = token.split('.')
+  if (parts.length !== 2 || parts.some((part) => !/^[A-Za-z0-9_-]{43}$/.test(part))) throw new Error('invalid_token')
+  return [parts[0]!, parts[1]!]
+}
+export const require_string = (value: unknown): string => {
+  if (typeof value !== 'string' || !value) throw new Error('invalid_request')
+  return value
+}
+
+export type OwnerVerifier = (challenge: OwnerChallenge, signature: string) => Promise<void>
+/** A hosted bot's owner is one canonical Google zkLogin identity on mainnet. */
+export const google_owner = (owner: string, identifier: string) => {
+  parse_agent_pairing_request({
+    version: 1,
+    nonce: '00000000-0000-4000-8000-000000000000',
+    network: 'mainnet',
+    owner,
+    zklogin_public_identifier: identifier,
+  })
+  const google = ZkLoginPublicIdentifier.fromBytes(fromBase64(identifier), { address: owner })
+  if (google.toSuiAddress() !== owner) throw new Error('CANONICAL_GOOGLE_OWNER_REQUIRED')
+  return google
+}
+export const create_owner_verifier =
+  (client: NonNullable<Parameters<typeof verifyPersonalMessageSignature>[2]>['client']): OwnerVerifier =>
+  async (challenge, signature) => {
+    google_owner(challenge.owner, challenge.zklogin_public_identifier)
+    if (fromBase64(signature)[0] !== 5) throw new Error('google_login_required')
+    const key = await verifyPersonalMessageSignature(new TextEncoder().encode(challenge.message), signature, {
+      client,
+      address: challenge.owner,
+    })
+    if (key.flag() !== 5 || toBase64(key.toRawBytes()) !== challenge.zklogin_public_identifier)
+      throw new Error('owner_identity_mismatch')
+  }

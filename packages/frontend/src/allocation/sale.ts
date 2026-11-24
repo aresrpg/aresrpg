@@ -59,9 +59,12 @@ export type SaleTask =
   | Readonly<{ kind: 'buy'; wallet: AuthSession; amount: bigint; proof: SpotProof }>
   | Readonly<{ kind: 'claim'; wallet: AuthSession }>
 export type SaleReceipt = Readonly<{ kind: SaleTask['kind']; address: string; amount: bigint; digest: string }>
+type ReadAt = Readonly<Record<string, number>>
 export type SaleState = Readonly<{
   commitments: Readonly<Record<string, BlastCommitment | null>>
   balances: Readonly<Record<string, bigint>>
+  /** The read each shown value came from, by address. Reads overlap; an older one never replaces a newer one. */
+  read_at: Readonly<{ commitments: ReadAt; balances: ReadAt }>
   task: SaleTask | null
   sequence: number
   receipt: SaleReceipt | null
@@ -70,6 +73,8 @@ export type SaleState = Readonly<{
 export type SaleInput =
   | Readonly<{
       type: 'read'
+      /** Reads are numbered in the order they started. */
+      read: number
       commitments: Readonly<Record<string, BlastCommitment | null>>
       balances: Readonly<Record<string, bigint>>
     }>
@@ -80,19 +85,34 @@ export type SaleInput =
 export const initial_sale = (): SaleState => ({
   commitments: {},
   balances: {},
+  read_at: { commitments: {}, balances: {} },
   task: null,
   sequence: 0,
   receipt: null,
   error: null,
 })
+const newer = <T>(values: Readonly<Record<string, T>>, read_at: ReadAt, read: number) =>
+  Object.fromEntries(Object.entries(values).filter(([address]) => (read_at[address] ?? 0) < read))
+const stamped = (read_at: ReadAt, values: Readonly<Record<string, unknown>>, read: number): ReadAt => ({
+  ...read_at,
+  ...Object.fromEntries(Object.keys(values).map((address) => [address, read])),
+})
+
 export const reduce_sale = (state: SaleState, input: SaleInput): SaleState => {
   switch (input.type) {
-    case 'read':
+    case 'read': {
+      const commitments = newer(input.commitments, state.read_at.commitments, input.read)
+      const balances = newer(input.balances, state.read_at.balances, input.read)
       return {
         ...state,
-        commitments: { ...state.commitments, ...input.commitments },
-        balances: { ...state.balances, ...input.balances },
+        commitments: { ...state.commitments, ...commitments },
+        balances: { ...state.balances, ...balances },
+        read_at: {
+          commitments: stamped(state.read_at.commitments, commitments, input.read),
+          balances: stamped(state.read_at.balances, balances, input.read),
+        },
       }
+    }
     case 'request':
       return state.task
         ? state
@@ -127,7 +147,10 @@ const execute = async (task: SaleTask): Promise<SaleReceipt> => {
 export const create_sale_runtime = (reader: Reader) => {
   const store = createStore<SaleState>(initial_sale)
   const dispatch = (input: SaleInput): void => store.setState((state) => reduce_sale(state, input), true)
+  let reads = 0
   const refresh = async (addresses: readonly string[], signers: readonly AuthSession[]): Promise<void> => {
+    reads += 1
+    const read = reads
     const [commitments, balances] = await Promise.all([
       Promise.all(
         addresses.map(async (address) => [address, await settle(reader.commitment(address), 'commitment')] as const)
@@ -138,7 +161,7 @@ export const create_sale_runtime = (reader: Reader) => {
     ])
     const known = <T>(rows: readonly (readonly [string, readonly [T] | readonly []])[]) =>
       Object.fromEntries(rows.flatMap(([address, value]) => (value.length ? [[address, value[0]]] : [])))
-    dispatch({ type: 'read', commitments: known(commitments), balances: known(balances) })
+    dispatch({ type: 'read', read, commitments: known(commitments), balances: known(balances) })
   }
   const start = (): (() => void) =>
     store.subscribe((state, previous) => {
@@ -160,4 +183,3 @@ export const create_sale_runtime = (reader: Reader) => {
     })
   return { store, dispatch, refresh, start }
 }
-export type SaleRuntime = ReturnType<typeof create_sale_runtime>

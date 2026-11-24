@@ -91,8 +91,6 @@ export type FightSessionInput =
     }>
   | Readonly<{ type: 'fight/cancel_pending_turn'; fight: string }>
   | Readonly<{ type: 'fight/runtime_input'; fight: string; input: FightInput }>
-  | Readonly<{ type: 'fight/reset_turn'; fight: string | null }>
-  | Readonly<{ type: 'fight/replaced'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/cached'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/checkpoint_confirmed'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/uncached'; fight: string }>

@@ -10,7 +10,7 @@ import { useText } from '../../i18n/useText.ts'
 import { useEffect, useState } from 'react'
 import { experience_progress, job_experience_progress, type JobSlug } from '@aresrpg/immutable'
 
-import { action_points, character_max_hp, movement_points, projected_hp } from '../character_stats.ts'
+import { action_points, character_max_hp, movement_points, projected_hp } from '@aresrpg/protocol/character-stats'
 import { useAppStore } from '../../store.ts'
 import { useVocabulary } from '../../i18n/useVocabulary.ts'
 import { WorldQuickslots } from './WorldQuickslots.tsx'

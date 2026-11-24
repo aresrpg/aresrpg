@@ -2,12 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Stable content identity for seed asset filenames and display names.
 
-import { slugify } from './catalog.ts'
+import { slugify } from './titles.ts'
 
-export const indexed_asset_key = (key: string): string => key.replaceAll('_', '')
-
+/** A spell's icon file name: its class, then its name as a slug without apostrophes. */
 export const spell_asset_basename = (classe: string, name: string): string =>
   `${classe}_${slugify(name.replaceAll(/[’']/g, ''))}`
-
-export const spell_asset_key = (classe: string, name: string): string =>
-  indexed_asset_key(spell_asset_basename(classe, name))

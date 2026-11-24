@@ -24,7 +24,7 @@ import dungeons from '../../../seed/content/dungeons.json'
 import spells from '../../../seed/content/spells.json'
 
 import { profession_inventory } from './actor_inventory.ts'
-import { recipe_job, profession_recipes } from './profession_catalog.ts'
+import { recipe_job, profession_recipes } from './catalog.ts'
 import { owned_character, type GameplayContext } from './gameplay_context.ts'
 import { nearest_gather, type SelectedAction } from './behavior_targets.ts'
 import { identifier, nonempty, object_schema, type Schema } from './gameplay_schema.ts'

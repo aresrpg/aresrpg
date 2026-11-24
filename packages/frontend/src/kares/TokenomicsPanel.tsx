@@ -12,7 +12,35 @@ import type { KaresCopy } from './copy.ts'
 import type { FinanceState } from './model.ts'
 import { useFinance } from './useFinance.ts'
 import { tokenomics_reading } from './tokenomics.ts'
-import './tokenomics.css'
+/** The ledger paints no frame of its own: its host supplies the surface it sits on. */
+export const LEDGER = 'grid w-full grid-cols-1 gap-7 leading-normal text-text'
+export const SECTION = 'grid grid-cols-1 gap-3'
+export const HEADING = 'font-mono text-[10px]/none font-bold tracking-[0.12em] text-muted uppercase'
+/** A figure, a pool or a use: a sunken tile. */
+const TILE = 'min-w-0 rounded-ui border border-line bg-surface-low/70 p-4'
+const TILES = 'grid grid-cols-3 gap-3'
+const METRIC = `${TILE} grid content-start gap-2`
+const METRIC_LABEL = 'text-[13px] font-bold text-muted'
+const METRIC_VALUE =
+  'font-mono text-[length:clamp(22px,2.4vw,30px)]/[1.1] font-semibold tracking-[-0.02em] wrap-anywhere text-text tabular-nums data-empty:text-faint'
+const METRIC_NOTE = 'text-[13px]/[1.45] text-muted'
+const POOL = `${TILE} grid content-start gap-2.5`
+const POOL_TITLE = 'flex items-center gap-2.5 text-[15px]/tight font-bold text-text'
+const POOL_LINE = 'text-[13px]/[1.45] text-soft'
+const USE = `${TILE} grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1`
+const USE_LINE = 'text-[13px]/[1.45] text-soft'
+const USE_TITLE = 'text-sm/normal text-text'
+const POOL_ICON = 'size-5.5 flex-none'
+const USE_ICON = 'row-[1/3] size-6'
+/** The status dot's colour for each phase of the read. */
+const STATUS_DOT = Object.freeze({
+  loading: 'before:bg-gold',
+  unavailable: 'before:bg-faint',
+  pre_funding: 'before:bg-hue-lilac',
+  ready: 'before:bg-success',
+  stale: 'before:bg-danger',
+  error: 'before:bg-danger',
+})
 
 const LedgerAmount = ({ value }: Readonly<{ value: bigint | null | undefined }>) => {
   const { amount } = useNumbers()
@@ -23,7 +51,9 @@ const LedgerAmount = ({ value }: Readonly<{ value: bigint | null | undefined }>)
       <span title={`${amount(value, 9)} KARES`} aria-label={`${amount(value, 9)} KARES`}>
         {amount(value, 2)}
       </span>
-      <small>KARES</small>
+      <small className="ml-[0.4em] font-mono text-[11px]/none font-bold tracking-[0.08em] whitespace-nowrap text-hue-gold">
+        KARES
+      </small>
     </>
   )
 }
@@ -37,12 +67,15 @@ const LedgerRow = ({
   value: bigint | null | undefined
   note?: string
 }>) => (
-  <div>
-    <dt>{label}</dt>
-    <dd data-empty={value == null || undefined}>
+  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5 border-t border-line py-2.25">
+    <dt className="text-[13px] wrap-anywhere text-muted">{label}</dt>
+    <dd
+      className="min-w-0 text-right font-mono text-[15px]/[1.2] font-semibold wrap-anywhere text-text tabular-nums data-empty:text-faint"
+      data-empty={value == null || undefined}
+    >
       <LedgerAmount value={value} />
     </dd>
-    {note && <dd className="pool-note">{note}</dd>}
+    {note && <dd className="col-span-full text-left font-ui text-xs/[1.4] text-faint">{note}</dd>}
   </div>
 )
 
@@ -62,10 +95,10 @@ const ICONS = {
   boss: ['#bd795c', 'M1 1h1v2h1v1h6V3h1V1h1v4h-1v4H9v2H3V9H2V5H1z', '#0c0f15', 'M4 6h1v1H4zM7 6h1v1H7z'],
   crate: ['#8a5a2b', 'M1 2h10v9H1z', '#c27c2c', 'M1 2h10v1H1zM1 10h10v1H1z'],
 } as const
-const LedgerIcon = ({ kind }: Readonly<{ kind: keyof typeof ICONS }>) => {
+const LedgerIcon = ({ kind, className }: Readonly<{ kind: keyof typeof ICONS; className: string }>) => {
   const [fill, path, highlight, detail] = ICONS[kind]
   return (
-    <svg viewBox="0 0 12 12" shapeRendering="crispEdges" aria-hidden="true">
+    <svg className={className} viewBox="0 0 12 12" shapeRendering="crispEdges" aria-hidden="true">
       <path fill={fill} d={path} />
       <path fill={highlight} d={detail} />
     </svg>
@@ -86,25 +119,30 @@ const TokenIdentity = ({ copy, token }: Readonly<{ copy: KaresCopy; token: strin
     }
   }
   return (
-    <section className="token-id">
-      <h3 className="tk-h" id={id}>
+    <section className="grid min-w-0 grid-cols-1 gap-2">
+      <h3 className={HEADING} id={id}>
         {copy.token_type}
       </h3>
-      <div className="token-row">
-        <output aria-labelledby={id}>{token ?? copy.token_pending}</output>
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+        <output
+          className="min-w-0 font-mono text-[13px]/[1.4] font-semibold wrap-anywhere text-text"
+          aria-labelledby={id}
+        >
+          {token ?? copy.token_pending}
+        </output>
         <button className="aui-button" type="button" disabled={!token} onClick={() => void copy_token()}>
           {copy.copy_token}
         </button>
       </div>
-      <small role="status">
+      <small className="max-w-[60ch] text-xs/normal text-muted" role="status">
         {result === 'copied' ? copy.token_copied : result === 'failed' ? copy.error_generic : copy.token_hint}
       </small>
     </section>
   )
 }
 
-/** The same accepted ledger is mounted inline in the encyclopedia and inside the landing dialog. */
-export const TokenomicsPanel = ({
+/** The token's live ledger: its supply, its pools and its uses, as the chain reports them. */
+const TokenomicsPanel = ({
   copy,
   state,
   refresh,
@@ -116,7 +154,7 @@ export const TokenomicsPanel = ({
   const title_id = useId()
   const locale = useLocale()
   const { amount } = useNumbers()
-  const { phase, snapshot, burned, circulating } = tokenomics_reading(state)
+  const { phase, snapshot, burned } = tokenomics_reading(state)
   const status = {
     loading: copy.loading,
     unavailable: copy.figures_unconfigured,
@@ -134,77 +172,98 @@ export const TokenomicsPanel = ({
     combat_pot: { balance: null },
   }
   return (
-    <div className="kares-ledger" role="region" aria-labelledby={title_id}>
-      <header className="tk-head">
-        <img className="tk-coin" data-kares-logo src={kares_logo} width={52} height={52} alt="" />
-        <h2 id={title_id}>$KARES</h2>
-        <p>{copy.ledger_intro}</p>
-        <div className="buy">
+    <div className={LEDGER} role="region" aria-labelledby={title_id}>
+      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 max-[599px]:grid-cols-[auto_minmax(0,1fr)]">
+        <img
+          className="col-1 row-1 size-11 object-contain"
+          data-kares-logo
+          src={kares_logo}
+          width={52}
+          height={52}
+          alt=""
+        />
+        <h2
+          className="col-2 row-1 font-title text-[length:clamp(28px,3.4vw,40px)]/none font-bold tracking-[-0.01em] text-text"
+          id={title_id}
+        >
+          $KARES
+        </h2>
+        <p className="col-[1/3] row-2 max-w-[60ch] text-[15px] text-soft">{copy.ledger_intro}</p>
+        <div className="col-3 row-[1/3] grid justify-items-end gap-2 self-center text-right max-[599px]:col-span-full max-[599px]:row-3 max-[599px]:justify-items-start max-[599px]:text-left">
           <a
-            className="aui-button aui-button--primary"
+            className="aui-button aui-button--primary min-h-10.5 px-4.5 no-underline"
             href="https://aftermath.finance/trade"
             target="_blank"
             rel="noopener noreferrer"
           >
             {copy.buy_aftermath}
           </a>
-          <small>{copy.swap_note}</small>
+          <small className="max-w-[30ch] text-xs/[1.4] text-muted">{copy.swap_note}</small>
         </div>
       </header>
-      <div className="tk-status" data-state={phase} role="status">
-        <b>{status[phase]}</b>
+      <div
+        className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-y border-line py-2.5 text-[13px] text-muted"
+        data-state={phase}
+        role="status"
+      >
+        <b
+          className={`inline-flex items-center gap-2.25 font-bold text-text before:size-1.5 before:flex-none before:rounded-full ${STATUS_DOT[phase]}`}
+        >
+          {status[phase]}
+        </b>
         {time && <span>{copy.read_at.replace('{{time}}', time)}</span>}
-        <button className="aui-button" type="button" disabled={phase === 'loading'} onClick={refresh}>
+        <button className="aui-button ml-auto" type="button" disabled={phase === 'loading'} onClick={refresh}>
           {copy.refresh}
         </button>
       </div>
-      <section>
-        <h3 className="tk-h">{copy.supply_heading}</h3>
-        <div className="supply-row">
-          <div className="metric">
-            <span>{copy.current_supply}</span>
-            <b data-empty={values.total_supply === null || undefined}>
+      <section className={SECTION}>
+        <h3 className={HEADING}>{copy.supply_heading}</h3>
+        <div className={`${TILES} max-[599px]:grid-cols-1`}>
+          <div className={METRIC}>
+            <span className={METRIC_LABEL}>{copy.current_supply}</span>
+            <b className={METRIC_VALUE} data-empty={values.total_supply === null || undefined}>
               <LedgerAmount value={values.total_supply} />
             </b>
-            <small>{copy.supply_cap.replace('{{cap}}', amount(KARES_SUPPLY))}</small>
+            <small className={METRIC_NOTE}>{copy.supply_cap.replace('{{cap}}', amount(KARES_SUPPLY))}</small>
           </div>
-          <div className="metric">
-            <span>{copy.burned}</span>
-            <b data-empty={burned === null || undefined}>
+          <div className={METRIC}>
+            <span className={METRIC_LABEL}>{copy.burned}</span>
+            <b className={METRIC_VALUE} data-empty={burned === null || undefined}>
               <LedgerAmount value={burned} />
             </b>
-            <small>{copy.mastery_note}</small>
+            <small className={METRIC_NOTE}>{copy.mastery_note}</small>
           </div>
-          <div className="metric">
-            <span>{copy.circulating_supply}</span>
-            <b data-empty>
-              <LedgerAmount value={circulating} />
+          <div className={METRIC}>
+            <span className={METRIC_LABEL}>{copy.circulating_supply}</span>
+            {/* No verified circulation accounting exists, so the figure is always unknown. */}
+            <b className={METRIC_VALUE} data-empty>
+              —
             </b>
-            <small>{copy.circulating_unknown}</small>
+            <small className={METRIC_NOTE}>{copy.circulating_unknown}</small>
           </div>
         </div>
       </section>
-      <section>
-        <h3 className="tk-h">{copy.pools_heading}</h3>
-        <div className="pools">
-          <article className="pool pool-staking">
-            <h4>
-              <LedgerIcon kind="stake" />
+      <section className={SECTION}>
+        <h3 className={HEADING}>{copy.pools_heading}</h3>
+        <div className={`${TILES} max-[899px]:grid-cols-1`}>
+          <article className={POOL}>
+            <h4 className={POOL_TITLE}>
+              <LedgerIcon className={POOL_ICON} kind="stake" />
               {copy.five_years}
             </h4>
-            <p>{copy.staking_summary}</p>
+            <p className={POOL_LINE}>{copy.staking_summary}</p>
             <dl>
               <LedgerRow label={copy.pool_held} value={values.pool.kares_rewards} note={copy.pool_held_note} />
               <LedgerRow label={copy.pool_forecast} value={values.pool.daily_kares} note={copy.pool_forecast_note} />
               <LedgerRow label={copy.total_staked} value={values.pool.total_staked} />
             </dl>
           </article>
-          <article className="pool pool-community">
-            <h4>
-              <LedgerIcon kind="community" />
+          <article className={POOL}>
+            <h4 className={POOL_TITLE}>
+              <LedgerIcon className={POOL_ICON} kind="community" />
               {copy.community}
             </h4>
-            <p>{copy.community_release_note}</p>
+            <p className={POOL_LINE}>{copy.community_release_note}</p>
             <dl>
               <LedgerRow label={copy.pool_held} value={values.community.remaining} />
               <LedgerRow
@@ -214,12 +273,12 @@ export const TokenomicsPanel = ({
               />
             </dl>
           </article>
-          <article className="pool pool-boss">
-            <h4>
-              <LedgerIcon kind="boss" />
+          <article className={POOL}>
+            <h4 className={POOL_TITLE}>
+              <LedgerIcon className={POOL_ICON} kind="boss" />
               {copy.combat_rewards}
             </h4>
-            <p>{copy.boss_summary}</p>
+            <p className={POOL_LINE}>{copy.boss_summary}</p>
             <dl>
               <LedgerRow label={copy.pool_held} value={values.combat_pot.balance} />
               <LedgerRow label={copy.daily_cap} value={COMBAT_DAILY_BUDGET} note={copy.daily_cap_note} />
@@ -227,23 +286,23 @@ export const TokenomicsPanel = ({
           </article>
         </div>
       </section>
-      <section>
-        <h3 className="tk-h">{copy.uses_heading}</h3>
-        <ul className="uses">
-          <li>
-            <LedgerIcon kind="crate" />
-            <b>{copy.mastery_title}</b>
-            <span>{copy.mastery_note}</span>
+      <section className={SECTION}>
+        <h3 className={HEADING}>{copy.uses_heading}</h3>
+        <ul className={`${TILES} max-[899px]:grid-cols-1`}>
+          <li className={USE}>
+            <LedgerIcon className={USE_ICON} kind="crate" />
+            <b className={USE_TITLE}>{copy.mastery_title}</b>
+            <span className={USE_LINE}>{copy.mastery_note}</span>
           </li>
-          <li>
-            <LedgerIcon kind="stake" />
-            <b>{copy.stake}</b>
-            <span>{copy.staking_revenue}</span>
+          <li className={USE}>
+            <LedgerIcon className={USE_ICON} kind="stake" />
+            <b className={USE_TITLE}>{copy.stake}</b>
+            <span className={USE_LINE}>{copy.staking_revenue}</span>
           </li>
-          <li>
-            <LedgerIcon kind="community" />
-            <b>{copy.compete}</b>
-            <span>{copy.compete_note}</span>
+          <li className={USE}>
+            <LedgerIcon className={USE_ICON} kind="community" />
+            <b className={USE_TITLE}>{copy.compete}</b>
+            <span className={USE_LINE}>{copy.compete_note}</span>
           </li>
         </ul>
       </section>

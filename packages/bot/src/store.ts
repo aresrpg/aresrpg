@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { RedisClient } from 'bun'
-import { hosted_keys } from '@aresrpg/protocol/hosted-keys'
 
 import {
   execution_record,
@@ -118,14 +117,23 @@ const released_keys = (writes: ReadonlyMap<string, unknown>, local: ReadonlyMap<
   [...writes].flatMap(([key, value]) => released_records(key, local.get(key), value))
 const decode = <T>(raw: string | null): T | null => (raw === null ? null : (JSON.parse(raw) as { value: T }).value)
 
+/** The Redis keys of one namespace: the bare namespace holds the layout marker, `pending` the record
+ * ids that still hold unfinished work, and `record:<id>` one control aggregate. Production uses
+ * `bot:control`; a test passes a disposable namespace. */
+const keys = (namespace: string) => {
+  const record_prefix = `${namespace}:record:`
+  return {
+    schema: namespace,
+    pending: `${namespace}:pending`,
+    record: (id: string) => `${record_prefix}${id}`,
+    id_of: (key: string) => key.slice(record_prefix.length),
+  }
+}
+
 /** Dedicated persistent Redis only. Conflicting callbacks fail closed and are never replayed:
  * a callback can perform managed signing, so replay is not a safe generic transaction policy. */
-export const create_redis_store = (redis: RedisClient, namespace?: string): ControlStore => {
-  const keyspace = hosted_keys('bot', namespace)
-  const schema_key = keyspace.namespace
-  const pending_key = keyspace.key('pending')
-  const physical = (key: string) => keyspace.key('record', key)
-  const logical = (key: string) => keyspace.parse(key)!.id!
+export const create_redis_store = (redis: RedisClient, namespace = 'bot:control'): ControlStore => {
+  const { schema: schema_key, pending: pending_key, record: physical, id_of: logical } = keys(namespace)
   const check_schema = () => redis.send('EVAL', [schema_script + 'return 1', '1', schema_key])
   const local = new Map<string, unknown>()
   const hydrate = <T>(key: string, raw: string | null): T | null =>

@@ -2,23 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { CharacterRow, RunEnding } from '@aresrpg/protocol'
 
-import { titleize } from '../content/catalog.ts'
-import { dapp_error, dapp_text, item_name } from '../dapp/copy.ts'
-import { format_text, type AppCopy } from '../i18n/copy.ts'
+import { titleize } from '../content/titles.ts'
+import { items_by_type } from '../content/items.ts'
+import { copy_text, format_text, type AppCopy } from '../i18n/copy.ts'
 
 import { hero_whereabouts, type HeroActivity, type HeroEvent, type RunPhase } from './activity.ts'
-
-/**
- * PENDING LOCALE KEYS. English fallbacks for `ui` keys the locale files do not hold yet. A key added
- * to the locales wins at once; when all four are there, delete this table and read `copy.ui` directly.
- */
-const PENDING_COPY = Object.freeze({
-  agent_activity_dungeon_left: 'Left the dungeon',
-  agent_activity_loot: 'Loot',
-  agent_activity_command: 'Action asked by your assistant',
-  agent_log_read_only: 'Read only. Your AI assistant decides what happens here.',
-})
-export const pending_text = (copy: AppCopy, key: keyof typeof PENDING_COPY): string => copy.ui[key] ?? PENDING_COPY[key]
 
 /** One line as the player reads it: what happened, its outcome under it, and whether the outcome is a problem. */
 export type ActivityText = Readonly<{ action: string; result?: string; tone?: 'alert' }>
@@ -29,19 +17,26 @@ type Told<K extends HeroEvent['kind']> = (
 ) => ActivityText
 
 const ui_text = (copy: AppCopy, key: string): string => copy.ui[key] ?? ''
+/** One sentence of the hosted-bot pages' own copy. */
+export const agent_text = (copy: AppCopy, key: string, values: Readonly<Record<string, string>> = {}): string =>
+  copy_text(copy.agent_page)(key, values)
+/** Refusal codes become one plain sentence; an unexpected code never reaches the player raw. */
+const agent_error = (copy: AppCopy, code: string): string =>
+  copy.agent_page[`error_${code}`] ?? agent_text(copy, 'error_unknown')
+const item_name = (item_type: string): string => items_by_type[item_type]?.name ?? item_type
 const said =
   (key: string): Told<HeroEvent['kind']> =>
   (copy) => ({ action: ui_text(copy, key) })
 
 /** The run's own title, in its author's words; a run of a retired shape has none and reads "Activity". */
 const run_title = (copy: AppCopy, title: string | null | undefined): string =>
-  title || dapp_text(copy, 'activity_other')
-/** A run's state in the words the dapp uses for it; a blocker is the one sentence of `run_notice`, and
+  title || agent_text(copy, 'activity_other')
+/** A run's state in words; a blocker is the one sentence of `run_notice`, and
  * a run that ended by itself the one sentence of its ending. */
 const phase_text = (copy: AppCopy, phase: RunPhase, ending?: RunEnding): Pick<ActivityText, 'result' | 'tone'> => {
-  if (phase === 'working') return { result: dapp_text(copy, 'position_running') }
-  if (phase === 'ended') return { result: dapp_text(copy, ending ? `run_ended_${ending}` : 'position_finished') }
-  return { result: dapp_text(copy, `run_notice_${phase}`), tone: 'alert' }
+  if (phase === 'working') return { result: agent_text(copy, 'position_running') }
+  if (phase === 'ended') return { result: agent_text(copy, ending ? `run_ended_${ending}` : 'position_finished') }
+  return { result: agent_text(copy, `run_notice_${phase}`), tone: 'alert' }
 }
 
 /** One home for what each line says. Bot codes are looked up here and never printed. */
@@ -51,26 +46,26 @@ const TEXT: { readonly [K in HeroEvent['kind']]: Told<K> } = {
   travel: said('agent_activity_travel'),
   fight_entered: said('agent_activity_fight_entered'),
   fight_left: said('agent_activity_fight_left'),
-  dungeon_left: (copy) => ({ action: pending_text(copy, 'agent_activity_dungeon_left') }),
+  dungeon_left: said('agent_activity_dungeon_left'),
   experience: (copy, { gained }, locale) => ({
-    action: dapp_text(copy, 'position_xp'),
+    action: agent_text(copy, 'position_xp'),
     result: `+${BigInt(gained).toLocaleString(locale)}`,
   }),
   dungeon: (copy, { dungeon, room }) => ({
-    action: dapp_text(copy, 'position_dungeon', { dungeon: titleize(dungeon), room: String(room) }),
+    action: agent_text(copy, 'position_dungeon', { dungeon: titleize(dungeon), room: String(room) }),
   }),
   fight_won: (copy) => ({ action: copy.fight_hud.result_victory ?? '' }),
   fight_lost: (copy) => ({ action: copy.fight_hud.result_defeat ?? '' }),
   loot: (copy, { drops }) => ({
-    action: pending_text(copy, 'agent_activity_loot'),
+    action: ui_text(copy, 'agent_activity_loot'),
     result: drops.map(({ item_type, qty }) => `${qty} × ${item_name(item_type)}`).join(', '),
   }),
   run: (copy, { title, phase, ending }) => ({ action: run_title(copy, title), ...phase_text(copy, phase, ending) }),
   command: (copy, { error }) => ({
-    action: pending_text(copy, 'agent_activity_command'),
+    action: ui_text(copy, 'agent_activity_command'),
     ...(error === null
-      ? { result: dapp_text(copy, 'position_finished') }
-      : { result: dapp_error(copy, error), tone: 'alert' }),
+      ? { result: agent_text(copy, 'position_finished') }
+      : { result: agent_error(copy, error), tone: 'alert' }),
   }),
 }
 

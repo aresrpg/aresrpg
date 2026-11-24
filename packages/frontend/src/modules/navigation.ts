@@ -2,33 +2,18 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { ServerPacket } from '@aresrpg/protocol'
-import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 
-import type { FundingAuthorization } from '../funding/recipient.ts'
 import { agent_tab_source } from '../agents/character_tabs.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
-export const pages = [
-  'world',
-  'characters',
-  'leaderboard',
-  'mastery',
-  'kares',
-  'encyclopedia',
-  'marketplace',
-  'airdrop',
-  'kolizeum',
-  'settings',
-  'admin',
-] as const
+export const pages = ['world', 'mastery', 'kolizeum', 'settings', 'admin'] as const
 
 export type Page = (typeof pages)[number]
 export type AppDialog =
   | 'welcome'
   | 'character_create'
-  | 'top_up'
   | 'travel'
   | 'leave_game'
   | 'world_map'
@@ -37,43 +22,46 @@ export type AppDialog =
   | `fight:${string}`
 
 export type NavigationState = Readonly<{
-  funding_authorization?: FundingAuthorization
-  funding_cost_mist: bigint | null
   page: Page
   pathname: string
   dialog: AppDialog | null
 }>
 
 export type NavigationInput =
-  | Readonly<{ type: 'funding/open'; cost_mist: bigint; authorization?: FundingAuthorization }>
-  | Readonly<{ type: 'funding/close' }>
   | Readonly<{ type: 'page/open'; page: Page }>
   | Readonly<{ type: 'path/open'; pathname: string }>
-  | Readonly<{ type: 'route/changed'; pathname: string }>
   | Readonly<{ type: 'dialog/open'; dialog: AppDialog | null }>
   | Readonly<{ type: 'auth/rejected'; error: string }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
 
 export const initial_navigation_state = (): NavigationState =>
-  Object.freeze({ page: 'world', pathname: '/', dialog: null, funding_cost_mist: null })
+  Object.freeze({ page: 'world', pathname: '/world', dialog: null })
 
 export const normalize_pathname = (pathname: string): string => {
   const normalized = `/${pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean).join('/') ?? ''}`
   return normalized === '' ? '/' : normalized
 }
 
+/** The game's document serves every address under this prefix. A game page's own path follows it. */
+const GAME_ROOT = '/world'
+/** The browser address of a game path: `/kolizeum/wagered` is `/world/kolizeum/wagered`; the world is the root itself. */
+export const game_address = (pathname: string): string =>
+  pathname === GAME_ROOT ? GAME_ROOT : `${GAME_ROOT}${pathname}`
+/** The game path of a browser address. An address outside the game's prefix is the world. */
+export const game_pathname = (address: string): string => {
+  const normalized = normalize_pathname(address)
+  return normalized.startsWith(`${GAME_ROOT}/`) ? normalized.slice(GAME_ROOT.length) : GAME_ROOT
+}
+
 export const page_from_pathname = (pathname: string): Page => {
   const [segment = ''] = normalize_pathname(pathname).split('/').filter(Boolean)
-  if (segment === 'gift' || segment === 'claim') return 'airdrop'
   return pages.find((page) => page === segment) ?? 'world'
 }
 
-export const pathname_for_page = (page: Page): string =>
-  page === 'airdrop' ? '/claim' : page === 'world' ? '/' : page === 'encyclopedia' ? '/encyclopedia/items' : `/${page}`
+/** Every page of the game has its own address; the game itself is `/world`, never the site's root. */
+export const pathname_for_page = (page: Page): string => `/${page}`
 
 export const is_world_page = (page: Page): boolean => page === 'world'
-
-export const is_jobs_pathname = (pathname: string): boolean => normalize_pathname(pathname) === '/characters/jobs'
 
 const open_page = (state: AppState, page: Page): AppState => {
   if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state
@@ -89,7 +77,7 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
   if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null))
     return Object.freeze({
       ...state,
-      navigation: Object.freeze({ ...state.navigation, page: 'world', pathname: '/' }),
+      navigation: Object.freeze({ ...state.navigation, page: 'world', pathname: pathname_for_page('world') }),
     })
   return Object.freeze({
     ...state,
@@ -98,15 +86,6 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
 }
 
 const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
-  if (dialog === 'top_up')
-    return {
-      ...state,
-      navigation: {
-        ...state.navigation,
-        funding_authorization: undefined,
-        funding_cost_mist: state.session.characters.length === 0 ? CHARACTER_PRICE_MIST : 0n,
-      },
-    }
   const host = dialog === 'character_create' ? open_page(state, 'world') : state
   return Object.freeze({ ...host, navigation: Object.freeze({ ...host.navigation, dialog }) })
 }
@@ -119,15 +98,6 @@ const return_from_kolizeum_fight = (
   const managed = state.fight.kolizeum_by_fight[input.checkpoint.contract.id] !== undefined
   return selected && input.checkpoint.contract.ended && managed ? open_page(state, 'world') : state
 }
-
-const logged_out_navigation = (state: AppState): NavigationState =>
-  state.distribution.gift_link_ready
-    ? Object.freeze({
-        ...initial_navigation_state(),
-        page: 'airdrop',
-        pathname: '/gift',
-      })
-    : initial_navigation_state()
 
 const arrived_fight = (state: AppState, reason: string): AppState => {
   const { run } = state.run_to
@@ -157,20 +127,6 @@ const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): App
 
 const reduce_window = (state: AppState, input: AppInput): AppState | null => {
   switch (input.type) {
-    case 'funding/open':
-      return {
-        ...state,
-        navigation: {
-          ...state.navigation,
-          funding_cost_mist: input.cost_mist,
-          funding_authorization: input.authorization,
-        },
-      }
-    case 'funding/close':
-      return {
-        ...state,
-        navigation: { ...state.navigation, funding_cost_mist: null, funding_authorization: undefined },
-      }
     case 'dialog/open':
       return open_dialog(state, input.dialog)
     default:
@@ -178,18 +134,16 @@ const reduce_window = (state: AppState, input: AppInput): AppState | null => {
   }
 }
 
-type RouteInput = Extract<AppInput, { type: 'page/open' | 'path/open' | 'route/changed' }>
+type RouteInput = Extract<AppInput, { type: 'page/open' | 'path/open' | 'location/changed' }>
 const NAVIGATION_TRANSFORMS: { [Input in RouteInput as Input['type']]: (state: AppState, input: Input) => AppState } = {
   'page/open': (state, input) => open_page(state, input.page),
   'path/open': (state, input) => open_path(state, input.pathname),
-  'route/changed': (state, input) => open_path(state, input.pathname),
+  // The address bar moved (back, forward): the page follows it.
+  'location/changed': (state, input) => open_path(state, game_pathname(input.location.pathname)),
 }
 
 const reduce_observed_navigation = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'agent/watch') return { ...state, navigation: initial_navigation_state() }
-  if (input.type === 'dialog/open' && input.dialog === 'top_up') return open_dialog(state, input.dialog)
-  if (input.type === 'funding/close')
-    return { ...state, navigation: { ...state.navigation, funding_cost_mist: null, funding_authorization: undefined } }
   return state
 }
 
@@ -202,24 +156,23 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const window = reduce_window(state, input)
   if (window) return window
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
-    return Object.freeze({ ...state, navigation: logged_out_navigation(state) })
+    return Object.freeze({ ...state, navigation: initial_navigation_state() })
   if (input.type === 'server/packet') return packet_navigation(state, input.packet)
   return state
 }
 
 const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
-  if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') return
   let initial_route_read = false
   let initial_route_scheduled = false
-  const read_route = (): void => dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
+  const read_route = (): void => dispatch({ type: 'path/open', pathname: game_pathname(get_state().location.pathname) })
   const schedule_initial_route = (): void => {
     if (initial_route_read || initial_route_scheduled || signal.aborted) return
     initial_route_scheduled = true
     globalThis.queueMicrotask(() => {
       initial_route_scheduled = false
       if (initial_route_read || signal.aborted) return
-      const { auth_ready, auth_status } = get_state().session
-      if (!auth_ready || auth_status === 'connecting') return
+      const { wallets, sign_in } = get_state().session
+      if (wallets === null || sign_in.status === 'connecting') return
       initial_route_read = true
       read_route()
     })
@@ -231,15 +184,16 @@ const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable
       return
     }
     const next_pathname = state.navigation.pathname
-    if (
-      next_pathname === previous.navigation.pathname ||
-      normalize_pathname(globalThis.location.pathname) === next_pathname
-    )
+    if (next_pathname === previous.navigation.pathname || game_pathname(state.location.pathname) === next_pathname)
       return
-    globalThis.history.pushState(null, '', next_pathname)
+    dispatch({ type: 'location/open', href: game_address(next_pathname) })
   })
-  globalThis.addEventListener('popstate', read_route, { signal })
   schedule_initial_route()
 }
 
-export default Object.freeze({ name: 'navigation', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'navigation',
+  initial: () => ({ navigation: initial_navigation_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

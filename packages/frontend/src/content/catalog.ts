@@ -31,23 +31,17 @@ import type {
 } from '@aresrpg/sdk/seed'
 import type { WorldMaterial } from '@aresrpg/engine'
 
-import mastery_source from '../../../../seed/content/mastery.json'
 import mobs_source from '../../../../seed/content/mobs.json'
-import recipes_source from '../../../../seed/content/recipes.json'
-import { campaigns as airdrop_campaigns } from '../../../../seed/content/airdrop.json'
 import spells_source from '../../../../seed/content/spells.json'
-import dungeons_source from '../../../../seed/content/dungeons.json'
 
+import { public_airdrop_campaigns } from './airdrop.ts'
+import { dungeons, type SeedDungeon } from './dungeons.ts'
+import { mastery_offers } from './mastery.ts'
 import { worlds_source } from './worlds.ts'
-import { items, items_by_type } from './items.ts'
+import { items, items_by_type, pet_foods_of } from './items.ts'
+import { recipes } from './recipes.ts'
 import { derive_item_filter_rows } from './item_filters.ts'
 import { derive_mob_filter_rows, derive_mob_locations } from './mob_filters.ts'
-
-type MasterySource = Readonly<{
-  offers: readonly Readonly<{ item_type: string; cost: number; enabled?: boolean }>[]
-}>
-
-const authored_mastery = mastery_source as unknown as MasterySource
 
 export type { ConsumableEffect, SeedItem, SeedMob, SeedRecipe, SeedSpell, SpellEffect, SpellLevel }
 export type LootRow = SeedMob['loot'][number]
@@ -71,11 +65,7 @@ export type WorldMob = Readonly<{
 
 export type WorldCity = Readonly<{ city: string; x: number; z: number; dungeon: string }>
 
-export type SeedDungeon = Readonly<{
-  dungeon: string
-  key: string
-  rooms: readonly (readonly Readonly<{ mob_type: string }>[])[]
-}>
+export type { SeedDungeon }
 
 export type SeedWorld = Readonly<{
   world: string
@@ -114,9 +104,7 @@ type RawSeedWorld = Omit<SeedWorld, 'mobs' | 'resources'> &
   }>
 
 const mobs = Object.freeze(mobs_source as unknown as readonly SeedMob[])
-const recipes = Object.freeze(recipes_source as unknown as readonly SeedRecipe[])
 const spells = Object.freeze(spells_source as unknown as readonly SeedSpell[])
-const dungeons = Object.freeze(dungeons_source as unknown as readonly SeedDungeon[])
 const worlds = Object.freeze(
   (worlds_source as unknown as readonly RawSeedWorld[]).map((world) =>
     Object.freeze({
@@ -235,7 +223,7 @@ const item = (item_type: string): ItemDetail | null => {
   return Object.freeze({
     item: row,
     rune: rune_effect(row.item_type),
-    pet_foods: Object.freeze((row.pet_foods ?? []).flatMap((food_type) => items_by_type[food_type] ?? [])),
+    pet_foods: pet_foods_of(row.item_type),
     recipe: recipe
       ? Object.freeze({
           job: recipe_job(recipe),
@@ -317,14 +305,6 @@ const jobs_by_id = keyed(jobs, ({ id }) => id)
 const mob_filters = derive_mob_filter_rows(mobs, mob_world_sources)
 const item_filters = derive_item_filter_rows(items, recipes, recipe_job, mobs, mob_filters, worlds)
 
-const mastery_offers = Object.freeze(
-  authored_mastery.offers.map((offer) =>
-    Object.freeze({
-      ...offer,
-      item: items_by_type[offer.item_type] ?? null,
-    })
-  )
-)
 export const content_catalog = Object.freeze({
   items,
   mobs,
@@ -338,9 +318,7 @@ export const content_catalog = Object.freeze({
   classes,
   jobs,
   mastery: Object.freeze({ offers: mastery_offers }),
-  airdrop: Object.freeze({
-    campaigns: Object.freeze(airdrop_campaigns.filter(({ visibility }) => visibility === 'public')),
-  }),
+  airdrop: Object.freeze({ campaigns: public_airdrop_campaigns }),
   item,
   mob,
   class: (id: string): ClassDetail | null => classes_by_id[id] ?? null,
@@ -355,15 +333,3 @@ export const content_catalog = Object.freeze({
 export { content_catalog as encyclopedia_catalog }
 
 export const centered_resistance = (value: number): number => value - item_stat_center
-
-export const titleize = (value: string): string =>
-  value
-    .replace(/^\d+_/, '')
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-
-export const slugify = (value: string): string =>
-  value
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')

@@ -6,7 +6,7 @@ import type { FinanceState } from './model.ts'
 
 export type TokenomicsPhase = 'loading' | 'unavailable' | 'pre_funding' | 'ready' | 'stale' | 'error'
 
-export const tokenomics_phase = (state: FinanceState): TokenomicsPhase => {
+const tokenomics_phase = (state: FinanceState): TokenomicsPhase => {
   if (state.request) return 'loading'
   if (state.error?.includes('is not configured')) return 'unavailable'
   if (state.error) return state.stale ? 'stale' : 'error'
@@ -24,6 +24,5 @@ export const tokenomics_reading = (state: FinanceState) => {
       snapshot && snapshot.total_supply >= 0n && snapshot.total_supply <= KARES_SUPPLY
         ? KARES_SUPPLY - snapshot.total_supply
         : null,
-    circulating: null,
   }
 }

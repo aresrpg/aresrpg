@@ -6,18 +6,18 @@ import type { ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
 import { trade_incoming, trade_own_offer, trade_offer_has_value } from '@aresrpg/sdk/trade'
 import { Check, Handshake } from 'lucide-react'
 import { useEffect, useState, type DragEvent } from 'react'
-import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
+import { Button, NativeModal, GameWindow, SuiLogo } from '@aresrpg/ui'
 
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, trade_stack_targets } from '../inventory_stacks.ts'
 import { visible_trade_rows } from '../modules/trade.ts'
 import { parse_amount } from '../kares/model.ts'
+import { dispatch_app } from '../store.ts'
 
-import { useTradeData, useTradeDispatch } from './TradeSource.tsx'
+import { useTradeData } from './TradeSource.tsx'
 import { TradeInventory } from './TradeInventory.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
-import { SuiLogo } from './SuiLogo.tsx'
 import { OfferCaps } from './TradeOfferCaps.tsx'
 import {
   input_sui,
@@ -28,6 +28,7 @@ import {
   trade_side_status,
   type TradeDraftAddition,
 } from './trade_view.ts'
+import './trade.css'
 
 const CURRENCIES = ['sui', 'kares'] as const
 type TradeCurrency = (typeof CURRENCIES)[number]
@@ -142,7 +143,6 @@ const TerminalFooter = ({
   pending,
   text,
 }: Readonly<{ trade: TradeRow; address: string; pending: boolean; text: CopyText }>) => {
-  const dispatch_app = useTradeDispatch()
   const offer = trade.phase === 'settling' ? trade_incoming(trade, address) : trade_own_offer(trade, address)
   const actionable = trade_offer_has_value(offer)
   const operation = trade.phase === 'settling' ? ('settle' as const) : ('recover' as const)
@@ -181,7 +181,6 @@ const NegotiatingFooter = ({
   confirm: () => void
   text: CopyText
 }>) => {
-  const dispatch_app = useTradeDispatch()
   const notice = dirty ? text('confirm_resets') : accepted ? text('waiting_for', { name: counterparty }) : ''
   return (
     <footer>
@@ -237,7 +236,6 @@ export const TradeDialog = ({
   const text = copy_text(copy.trade_panel)
   const category_text = copy_text(copy.characters_page)
   const { rows, pending_operation, inventory, balance, listings, own_name, players } = useTradeData()
-  const dispatch_app = useTradeDispatch()
   const center_rows = visible_trade_rows(rows).filter(({ phase }) => phase !== 'requested')
   const own_side = active.a === address ? ('a' as const) : ('b' as const)
   const other_side = own_side === 'a' ? ('b' as const) : ('a' as const)

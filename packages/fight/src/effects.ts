@@ -7,8 +7,6 @@ import { contest_points, deal, full_damage, life_steal, resist, roll_value, roll
 import { target_allowed, zone_targets } from './effect_targets.ts'
 import { amplify_damage, effect_seed, heal_amount, primary_stat, punishment_base } from './fight_math.ts'
 import {
-  KINDS,
-  STATS,
   add_ap,
   add_mp,
   heal_seat,
@@ -21,6 +19,7 @@ import {
   spend_mp,
 } from './fighters.ts'
 import { displace, fighter_at } from './movement.ts'
+import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { draw } from './prng.ts'
 import { add_effect_id, add_zone_id, effect_id_at, emit, fail } from './runtime.ts'
 import { spell_level_of, spell_turn_rows, type FightReadState } from './spell_turn.ts'
@@ -37,7 +36,6 @@ import type {
   SpellLevel,
 } from './types.ts'
 
-const NO_TARGET = 0xffff_ffffn
 export const legal_cell = (runtime: FightReadState, cell: bigint): boolean =>
   in_grid(cell) && !mask_get(runtime.contract.closed, cell)
 
@@ -65,17 +63,17 @@ const push_row = (runtime: FightRuntime, target: bigint, row: SpellEffect, sourc
   runtime.contract.fighters[Number(target)].effects.push(effect)
   const id = add_effect_id(runtime, target)
   emit_effect(runtime, target, effect, id)
-  if (effect.kind === KINDS.invis)
+  if (effect.kind === EFFECT_KINDS.invis)
     emit(runtime, 'invisibility_changed', { fighter: target, invisible: true, reason: 'applied' })
   return id
 }
 
 const drop_invisibility = (runtime: FightRuntime, fighter: bigint, reason: string): void => {
   const rows = runtime.contract.fighters[Number(fighter)].effects
-  if (!rows.some((row) => row.kind === KINDS.invis)) return
+  if (!rows.some((row) => row.kind === EFFECT_KINDS.invis)) return
   const kept = rows
     .map((row, index) => ({ row, id: effect_id_at(runtime, fighter, index) }))
-    .filter(({ row }) => row.kind !== KINDS.invis)
+    .filter(({ row }) => row.kind !== EFFECT_KINDS.invis)
   runtime.contract.fighters[Number(fighter)].effects = kept.map(({ row }) => row)
   runtime.render_ids.effects[Number(fighter)] = kept.map(({ id }) => id)
   emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason })
@@ -104,7 +102,7 @@ export const sight_blockers = (runtime: FightReadState, looker: bigint, target_c
   ...runtime.contract.fighters.flatMap((fighter, index) =>
     BigInt(index) === looker ||
     fighter.dead ||
-    has_row(runtime, BigInt(index), KINDS.invis) ||
+    has_row(runtime, BigInt(index), EFFECT_KINDS.invis) ||
     fighter.cell === target_cell
       ? []
       : [fighter.cell]
@@ -116,20 +114,20 @@ const visible_occupant = (runtime: FightReadState, caster: bigint, cell: bigint)
   if (occupant === null) return null
   const fighter = runtime.contract.fighters[Number(occupant)]
   const caster_fighter = runtime.contract.fighters[Number(caster)]
-  const invisible = has_row(runtime, occupant, KINDS.invis)
+  const invisible = has_row(runtime, occupant, EFFECT_KINDS.invis)
   return invisible && fighter.team !== caster_fighter.team ? null : occupant
 }
 
 const has_direct_damage = (rows: readonly SpellEffect[]): boolean =>
   rows.some(
     (row) =>
-      row.kind === KINDS.damage ||
-      row.kind === KINDS.pct_life ||
-      row.kind === KINDS.punishment ||
-      (row.kind === KINDS.steal && row.stat === STATS.hp && row.turns === 0n)
+      row.kind === EFFECT_KINDS.damage ||
+      row.kind === EFFECT_KINDS.pct_life ||
+      row.kind === EFFECT_KINDS.punishment ||
+      (row.kind === EFFECT_KINDS.steal && row.stat === CHANNELS.hp && row.turns === 0n)
   )
 
-const is_placement = (row: SpellEffect): boolean => row.kind === KINDS.trap || row.kind === KINDS.glyph
+const is_placement = (row: SpellEffect): boolean => row.kind === EFFECT_KINDS.trap || row.kind === EFFECT_KINDS.glyph
 
 export const split_placements = (
   rows: readonly SpellEffect[]
@@ -145,7 +143,7 @@ const placement_anchor_available = (
 ): boolean =>
   placements.length === 1 &&
   !runtime.contract.zones.some(({ anchor }) => anchor === target_cell) &&
-  (placements[0].kind !== KINDS.trap || fighter_at(runtime, target_cell) === null)
+  (placements[0].kind !== EFFECT_KINDS.trap || fighter_at(runtime, target_cell) === null)
 
 export const placement_rows_castable = (
   runtime: FightReadState,
@@ -166,9 +164,9 @@ const travel_order = (runtime: FightRuntime, targets: bigint[], pivot: bigint, p
   })
 
 const apply_fixed_points = ({ runtime, caster, row, target }: NumberRowInput, active: boolean): boolean => {
-  if (row.kind !== KINDS.fixed_remove) return false
+  if (row.kind !== EFFECT_KINDS.fixed_remove) return false
   if (active) {
-    if (row.stat === STATS.ap) spend_ap(runtime, target, row.value, 'effect_remove', caster)
+    if (row.stat === CHANNELS.ap) spend_ap(runtime, target, row.value, 'effect_remove', caster)
     else spend_mp(runtime, target, row.value, 'effect_remove', caster)
   }
   if (!active || row.turns > 0n) push_row(runtime, target, row, caster, row.value)
@@ -183,9 +181,9 @@ const apply_fixed_points = ({ runtime, caster, row, target }: NumberRowInput, ac
   return true
 }
 const apply_added_points = ({ runtime, caster, row, target }: NumberRowInput, active: boolean): boolean => {
-  if (row.kind !== KINDS.add) return false
+  if (row.kind !== EFFECT_KINDS.add) return false
   if (active) {
-    if (row.stat === STATS.ap) add_ap(runtime, target, row.value, 'effect_grant', caster)
+    if (row.stat === CHANNELS.ap) add_ap(runtime, target, row.value, 'effect_grant', caster)
     else add_mp(runtime, target, row.value, 'effect_grant', caster)
   }
   if (row.turns > 0n) push_row(runtime, target, row, caster, row.value)
@@ -202,16 +200,16 @@ const apply_contested_points = (
     channel: row.stat,
     attempted: row.value,
     removed,
-    stolen: row.kind === KINDS.steal,
+    stolen: row.kind === EFFECT_KINDS.steal,
   })
   if (removed === 0n) return
   if (active) {
-    if (row.stat === STATS.ap) spend_ap(runtime, target, removed, 'effect_remove', caster)
+    if (row.stat === CHANNELS.ap) spend_ap(runtime, target, removed, 'effect_remove', caster)
     else spend_mp(runtime, target, removed, 'effect_remove', caster)
   }
   if (!active || row.turns > 0n) push_row(runtime, target, row, caster, removed)
-  if (row.kind !== KINDS.steal) return
-  if (row.stat === STATS.ap) add_ap(runtime, caster, removed, 'effect_steal', target)
+  if (row.kind !== EFFECT_KINDS.steal) return
+  if (row.stat === CHANNELS.ap) add_ap(runtime, caster, removed, 'effect_steal', target)
   else add_mp(runtime, caster, removed, 'effect_steal', target)
 }
 const apply_point_row = (input: NumberRowInput): void => {
@@ -225,17 +223,17 @@ const apply_point_row = (input: NumberRowInput): void => {
 const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_level }: NumberRowInput): void => {
   const channel = row.stat
   const { turns } = row
-  if (channel === STATS.hp) {
-    if (row.kind === KINDS.add && turns === 0n) {
+  if (channel === CHANNELS.hp) {
+    if (row.kind === EFFECT_KINDS.add && turns === 0n) {
       heal_seat(runtime, {
         target,
         amount: heal_amount(row.value, sheet.intelligence),
         source: caster,
         cause: 'instant_heal',
       })
-    } else if (row.kind === KINDS.add) {
+    } else if (row.kind === EFFECT_KINDS.add) {
       push_row(runtime, target, row, caster, heal_amount(row.value, sheet.intelligence))
-    } else if (row.kind === KINDS.steal && turns === 0n) {
+    } else if (row.kind === EFFECT_KINDS.steal && turns === 0n) {
       life_steal({
         runtime,
         caster,
@@ -250,13 +248,13 @@ const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_le
     }
     return
   }
-  if (channel === STATS.ap || channel === STATS.mp) {
+  if (channel === CHANNELS.ap || channel === CHANNELS.mp) {
     apply_point_row({ runtime, caster, sheet, row, target, cursor, cast_level })
     return
   }
   push_row(runtime, target, row, caster, row.value)
-  if (row.kind === KINDS.steal) {
-    const gain = { ...row, kind: KINDS.add, turns: row.turns === 0n ? 1n : row.turns }
+  if (row.kind === EFFECT_KINDS.steal) {
+    const gain = { ...row, kind: EFFECT_KINDS.add, turns: row.turns === 0n ? 1n : row.turns }
     push_row(runtime, caster, gain, caster, row.value)
   }
 }
@@ -276,9 +274,9 @@ const apply_to = ({
 }: ApplyToInput): void => {
   const value = rolls_magnitude(authored) ? roll_value(authored, cursor) : authored.value
   const row = { ...authored, value, value_max: value }
-  if (row.kind === KINDS.damage) {
+  if (row.kind === EFFECT_KINDS.damage) {
     deal({ runtime, caster, sheet, target, element: row.element, base: row.value, cast_level, cause })
-  } else if (row.kind === KINDS.pct_life) {
+  } else if (row.kind === EFFECT_KINDS.pct_life) {
     const maximum = max_hp_of(runtime, target)
     hit(runtime, {
       target,
@@ -287,7 +285,7 @@ const apply_to = ({
       cause: 'percent_life',
       element: row.element,
     })
-  } else if (row.kind === KINDS.caster_damage) {
+  } else if (row.kind === EFFECT_KINDS.caster_damage) {
     hit(runtime, {
       target: caster,
       amount: resist(runtime, caster, row.element, row.value),
@@ -295,7 +293,7 @@ const apply_to = ({
       cause: 'caster_damage',
       element: row.element,
     })
-  } else if (row.kind === KINDS.punishment) {
+  } else if (row.kind === EFFECT_KINDS.punishment) {
     deal({
       runtime,
       caster,
@@ -306,28 +304,32 @@ const apply_to = ({
       cast_level,
       cause: 'punishment',
     })
-  } else if (row.kind === KINDS.reduce) {
+  } else if (row.kind === EFFECT_KINDS.reduce) {
     push_row(runtime, target, row, caster, amplify_damage(row.value, primary_stat(row.element, sheet), 0n))
-  } else if ([KINDS.add, KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(row.kind)) {
+  } else if (
+    [EFFECT_KINDS.add, EFFECT_KINDS.remove, EFFECT_KINDS.steal, EFFECT_KINDS.fixed_remove].some(
+      (kind) => kind === row.kind
+    )
+  ) {
     apply_number_row({ runtime, caster, sheet, row, target, cursor, cast_level })
-  } else if (row.kind === KINDS.push || row.kind === KINDS.pull) {
+  } else if (row.kind === EFFECT_KINDS.push || row.kind === EFFECT_KINDS.pull) {
     displace({
       runtime,
       sheet,
       source: caster,
       target,
       cells: row.value,
-      push: row.kind === KINDS.push,
+      push: row.kind === EFFECT_KINDS.push,
       origin,
       cursor,
       on_enter: (next_runtime, fighter, from) => on_enter(next_runtime, fighter, from, resolve_rows),
     })
-  } else if (row.kind === KINDS.return) {
+  } else if (row.kind === EFFECT_KINDS.return) {
     push_row(runtime, target, { ...row, value: cast_level, stat: 0n }, caster, cast_level)
-  } else if (row.kind === KINDS.dispel) {
+  } else if (row.kind === EFFECT_KINDS.dispel) {
     const fighter = runtime.contract.fighters[Number(target)]
     const removed_effect_ids = [...runtime.render_ids.effects[Number(target)]]
-    const was_invisible = fighter.effects.some((effect) => effect.kind === KINDS.invis)
+    const was_invisible = fighter.effects.some((effect) => effect.kind === EFFECT_KINDS.invis)
     fighter.effects = []
     runtime.render_ids.effects[Number(target)] = []
     emit(runtime, 'effects_dispelled', { target, removed_effect_ids })
@@ -340,7 +342,7 @@ const apply_to = ({
 type ApplyRowInput = Omit<ApplyToInput, 'target'> & { anchor: bigint }
 
 const apply_row = ({ runtime, caster, sheet, row, anchor, origin, cursor, cast_level, cause }: ApplyRowInput): void => {
-  if (row.kind === KINDS.teleport) {
+  if (row.kind === EFFECT_KINDS.teleport) {
     if (fighter_at(runtime, anchor) === null && legal_cell(runtime, anchor)) {
       const from = runtime.contract.fighters[Number(caster)].cell
       runtime.contract.fighters[Number(caster)].cell = anchor
@@ -356,7 +358,7 @@ const apply_row = ({ runtime, caster, sheet, row, anchor, origin, cursor, cast_l
     }
     return
   }
-  if (row.kind === KINDS.swap) {
+  if (row.kind === EFFECT_KINDS.swap) {
     const other = visible_occupant(runtime, caster, anchor)
     if (other !== null && other !== caster && target_allowed(runtime, caster, row, other)) {
       const caster_cell = runtime.contract.fighters[Number(caster)].cell
@@ -386,8 +388,8 @@ const apply_row = ({ runtime, caster, sheet, row, anchor, origin, cursor, cast_l
   }
   const targets = zone_targets(runtime, caster, row, anchor, origin)
   const ordered =
-    row.kind === KINDS.push || row.kind === KINDS.pull
-      ? travel_order(runtime, targets, origin, row.kind === KINDS.push)
+    row.kind === EFFECT_KINDS.push || row.kind === EFFECT_KINDS.pull
+      ? travel_order(runtime, targets, origin, row.kind === EFFECT_KINDS.push)
       : targets
   ordered.forEach((target) => {
     if (!runtime.contract.ended) apply_to({ runtime, caster, sheet, row, target, origin, cursor, cast_level, cause })
@@ -450,11 +452,10 @@ const cast_legality = ({
   const occupant = fighter_at(runtime, target_cell)
   if (level.casts_per_turn > 0n && casts_this_turn(runtime, name) >= level.casts_per_turn)
     return Object.freeze({ ok: false, code: 'cast_cap' })
-  const ledger_target = occupant ?? NO_TARGET
   if (
     level.casts_per_target > 0n &&
     occupant !== null &&
-    casts_this_turn(runtime, name, ledger_target) >= level.casts_per_target
+    casts_this_turn(runtime, name, occupant) >= level.casts_per_target
   )
     return Object.freeze({ ok: false, code: 'target_cap' })
   if (level.cooldown_turns > 0n && cooldown_left(runtime, caster, name) > 0n)
@@ -527,7 +528,7 @@ export const resolve_spell = ({
   const { critical, occupant, rows, sheet } = legality
   const caster_cell = runtime.contract.fighters[Number(caster)].cell
   const split = split_placements(rows)
-  const ledger_target = occupant ?? NO_TARGET
+  const ledger_target = occupant ?? CONTRACT_CONSTANTS.no_target
   const slot = runtime.contract.turn_slot
 
   spend_ap(runtime, caster, level.ap_cost, 'cast_cost', caster)
@@ -548,22 +549,22 @@ export const resolve_spell = ({
     split.placements.forEach((row) => {
       const zone = {
         owner_fighter: caster,
-        trap: row.kind === KINDS.trap,
+        trap: row.kind === EFFECT_KINDS.trap,
         shape: row.area_shape,
         size: row.area_size,
         anchor: target_cell,
-        turns_left: row.kind === KINDS.glyph ? row.turns : 0n,
+        turns_left: row.kind === EFFECT_KINDS.glyph ? row.turns : 0n,
         effects: split.payload,
       }
       runtime.contract.zones.push(zone)
       const id = add_zone_id(runtime)
-      emit(runtime, row.kind === KINDS.trap ? 'trap_placed' : 'glyph_placed', {
+      emit(runtime, row.kind === EFFECT_KINDS.trap ? 'trap_placed' : 'glyph_placed', {
         zone_id: id,
         owner: caster,
         anchor: target_cell,
         shape: row.area_shape,
         size: row.area_size,
-        ...(row.kind === KINDS.trap ? { visibility: 'owner' } : { turns: row.turns }),
+        ...(row.kind === EFFECT_KINDS.trap ? { visibility: 'owner' } : { turns: row.turns }),
       })
     })
     return runtime

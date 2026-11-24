@@ -212,33 +212,23 @@ const revenue_series = (
   copy: Readonly<Record<string, string>>,
   revenue: AdminRevenueOverview
 ): readonly MetricSeries[] =>
-  Object.freeze([
-    Object.freeze({
-      label: text(copy, 'item_royalties', 'Item royalties'),
-      color: COLORS.violet,
-      values: revenue.money.map((row) => sui_number(row.item_royalty_mist)),
-    }),
-    Object.freeze({
-      label: text(copy, 'character_royalties', 'Character royalties'),
-      color: COLORS.white,
-      values: revenue.money.map((row) => sui_number(row.character_royalty_mist)),
-    }),
-    Object.freeze({
-      label: text(copy, 'character_creation_revenue', 'Character creation'),
-      color: COLORS.cyan,
-      values: revenue.money.map((row) => sui_number(row.character_creation_mist)),
-    }),
-    Object.freeze({
-      label: text(copy, 'kolizeum_revenue', 'Kolizeum fees'),
-      color: COLORS.orange,
-      values: revenue.money.map((row) => sui_number(row.kolizeum_mist)),
-    }),
-    Object.freeze({
-      label: text(copy, 'tournament_revenue', 'Recorded tournament fees'),
-      color: COLORS.gold,
-      values: revenue.money.map((row) => sui_number(row.tournament_mist)),
-    }),
-  ])
+  Object.freeze(
+    (
+      [
+        ['item_royalties', 'Item royalties', COLORS.violet, 'item_royalty_mist'],
+        ['character_royalties', 'Character royalties', COLORS.white, 'character_royalty_mist'],
+        ['character_creation_revenue', 'Character creation', COLORS.cyan, 'character_creation_mist'],
+        ['kolizeum_revenue', 'Kolizeum fees', COLORS.orange, 'kolizeum_mist'],
+        ['tournament_revenue', 'Recorded tournament fees', COLORS.gold, 'tournament_mist'],
+      ] as const
+    ).map(([key, fallback, color, field]) =>
+      Object.freeze({
+        label: text(copy, key, fallback),
+        color,
+        values: revenue.money.map((row) => sui_number(row[field])),
+      })
+    )
+  )
 
 const player_series = (
   copy: Readonly<Record<string, string>>,
@@ -269,10 +259,15 @@ const transaction_series = (
 const online_series = (copy: Readonly<Record<string, string>>, online: AdminOnlineOverview): readonly MetricSeries[] =>
   Object.freeze([
     Object.freeze({
-      label: text(copy, 'peak', 'Peak'),
+      label: text(copy, 'players', 'Players'),
       color: COLORS.white,
-      values: online.online.map((row) => row.peak),
+      values: online.online.map((row) => row.players),
       area: true,
+    }),
+    Object.freeze({
+      label: text(copy, 'hosted_bots', 'Hosted bots'),
+      color: COLORS.orange,
+      values: online.online.map((row) => row.agents),
     }),
   ])
 
@@ -554,7 +549,7 @@ export const OverviewPageView = ({
             days={overview.ranges.online}
             loading={!!overview.pending.online}
             series={online_series(copy, online)}
-            subtitle={text(copy, 'online_players_body', 'Peak unique authenticated players per bucket')}
+            subtitle={text(copy, 'online_players_body', 'Most players and most hosted bots online at once, per bucket')}
             timestamps={online.online.map(({ at_ms }) => at_ms)}
             title={text(copy, 'online_players', 'Online players')}
             tone="activity"

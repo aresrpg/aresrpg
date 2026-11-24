@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useId, useReducer } from 'react'
 import { portrait_url, type PortraitAppearance } from '@aresrpg/immutable/portrait'
+import { Button } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
 
@@ -103,13 +104,17 @@ const PortraitShareContent = ({
         <PortraitStyleControls style={state} copy={copy} choose={(style) => dispatch({ type: 'style', style })} />
         <div className="flex flex-wrap justify-center gap-3">
           {loaded && (
-            <a className="btn-gold px-4 py-3" href={source} download={portrait_export_filename(appearance, state)}>
+            <a
+              className="aui-button aui-button--primary"
+              href={source}
+              download={portrait_export_filename(appearance, state)}
+            >
               {copy.ui.portrait_download}
             </a>
           )}
-          <button type="button" className="btn-outline px-4 py-3" disabled={!loaded} onClick={() => void copy_link()}>
+          <Button disabled={!loaded} onClick={() => void copy_link()}>
             {copy.ui.portrait_copy}
-          </button>
+          </Button>
         </div>
         <p role="status" className="text-center text-xs">
           {{ ready: '', copied: copy.ui.portrait_copied, failed: copy.ui.portrait_failed }[status]}

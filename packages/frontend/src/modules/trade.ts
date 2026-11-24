@@ -24,7 +24,7 @@ import {
 import { localized_error } from '../i18n/error_text.ts'
 import { encumbered_asset_ids, trade_stack_targets } from '../inventory_stacks.ts'
 import { copy_text } from '../i18n/copy.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import { toast } from '../toast.ts'
 
 type AwaitingRows = Readonly<Record<string, TradeRow>>
@@ -66,7 +66,7 @@ const addition_available = (
 }
 
 export const trade_offer_additions_available = (
-  state: Readonly<AppState>,
+  state: Readonly<SiteState>,
   additions: readonly TradeOfferAddition[],
   removals: readonly TradeOfferRemoval[] = []
 ): boolean => {
@@ -96,8 +96,6 @@ export type TradeInput =
   | Readonly<{ type: 'trade/cancel_request'; trade: string }>
   | Readonly<{ type: 'trade/decline_request'; trade: string }>
   | Readonly<{ type: 'trade/open'; trade: string | null }>
-  | Readonly<{ type: 'trade/deposit_item'; trade: string; item: ItemRow }>
-  | Readonly<{ type: 'trade/set_sui'; trade: string; amount: bigint }>
   | Readonly<{ type: 'trade/withdraw_cap'; trade: string; cap: TradeCapRow }>
   | Readonly<{
       type: 'trade/commit_offer'
@@ -190,18 +188,23 @@ export const trade_request_rows = (rows: readonly TradeRow[], address: string): 
 const own_acceptance = (trade: Readonly<TradeRow>, address: string): boolean =>
   trade[trade.a.toLowerCase() === address.toLowerCase() ? 'accept_a' : 'accept_b']
 
-const accept_projection_arrived = (pending: string | null, rows: readonly TradeRow[], address?: string): boolean => {
-  if (!pending?.startsWith('accept:') || !address) return false
-  const id = pending.slice('accept:'.length)
-  const row = rows.find((trade) => trade.id === id)
-  return !!row && (row.phase !== 'negotiating' || own_acceptance(row, address))
+/** The trade a pending operation (`<kind>:<trade>[:<revision>]`) acts on. A `create` names none yet. */
+const pending_trade = (pending: string | null): string | undefined => pending?.split(':')[1]
+
+/** What the authority shows on the row once a held operation took effect. */
+const RESULT_SHOWN: Readonly<
+  Record<string, (row: Readonly<TradeRow>, revision: string | undefined, address: string) => boolean>
+> = {
+  accept: (row, _revision, address) => row.phase !== 'negotiating' || own_acceptance(row, address),
+  offer: (row, revision) => row.offer_revision >= Number(revision),
 }
 
-const offer_projection_arrived = (pending: string | null, rows: readonly TradeRow[]): boolean => {
-  if (!pending?.startsWith('offer:')) return false
-  const [, id, revision] = pending.split(':')
+/** A trade's pending operation ends when the authority shows its result, or shows the trade gone. */
+const pending_after_rows = (pending: string | null, rows: readonly TradeRow[], address: string): string | null => {
+  const [kind = '', id, revision] = pending?.split(':') ?? []
   const row = rows.find((trade) => trade.id === id)
-  return !!row && row.offer_revision >= Number(revision)
+  if (!id || (row && !RESULT_SHOWN[kind]?.(row, revision, address))) return pending
+  return null
 }
 
 const awaiting_after_packet = (
@@ -231,7 +234,7 @@ const armed_after_rows = (
     )
   )
 
-const packet_trade_state = (state: Readonly<AppState>, packet_rows: readonly TradeRow[]): TradeState => {
+const packet_trade_state = (state: Readonly<SiteState>, packet_rows: readonly TradeRow[]): TradeState => {
   const packet_by_id = new Map(packet_rows.map((row) => [row.id, row]))
   const current_by_id = new Map(state.trade.rows.map((row) => [row.id, row]))
   const rows = packet_rows_merged(state.trade, packet_rows)
@@ -242,11 +245,8 @@ const packet_trade_state = (state: Readonly<AppState>, packet_rows: readonly Tra
     return before?.phase === 'requested' && row.phase === 'negotiating'
   })
   const active = active_row && trade_row_visible(active_row) ? active_row.id : (newly_joined?.id ?? null)
-  const pending =
-    accept_projection_arrived(state.trade.pending, rows, state.session.wallet?.address) ||
-    offer_projection_arrived(state.trade.pending, rows)
-      ? null
-      : state.trade.pending
+  const { wallet } = state.session
+  const pending = wallet ? pending_after_rows(state.trade.pending, rows, wallet.address) : state.trade.pending
   const settlement_armed = armed_after_rows(state.trade.settlement_armed, rows)
   return Object.freeze({
     ...state.trade,
@@ -288,12 +288,15 @@ const terminal_trade_state = (state: Readonly<TradeState>, delta: Readonly<Trade
   })
 }
 
-const closed_trade_state = (state: Readonly<TradeState>, id: string): TradeState =>
-  Object.freeze({
-    ...close_trade_projection(state, id),
+const closed_trade_state = (state: Readonly<TradeState>, id: string): TradeState => {
+  const closed = close_trade_projection(state, id)
+  return Object.freeze({
+    ...closed,
     active: state.active === id ? null : state.active,
+    pending: pending_trade(state.pending) === id ? null : state.pending,
     settlement_armed: without_key(state.settlement_armed, id),
   })
+}
 
 const local_trade_state = (state: Readonly<TradeState>, input: Readonly<AppInput>): TradeState => {
   switch (input.type) {
@@ -320,12 +323,12 @@ const local_trade_state = (state: Readonly<TradeState>, input: Readonly<AppInput
   }
 }
 
-const reset_trade = (state: Readonly<AppState>, input: Readonly<AppInput>): boolean => {
+const reset_trade = (state: Readonly<SiteState>, input: Readonly<AppInput>): boolean => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected') return true
   return input.type === 'auth/connected' && state.session.wallet === input.session
 }
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   if (reset_trade(state, input)) return Object.freeze({ ...state, trade: initial_trade_state() })
   if (input.type === 'server/packet' && input.packet.type === 'packet/trades')
     return Object.freeze({
@@ -339,8 +342,8 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 }
 
 export const trade_settlement_transition = (
-  state: Readonly<AppState>,
-  previous: Readonly<AppState>
+  state: Readonly<SiteState>,
+  previous: Readonly<SiteState>
 ): TradeRow | null => {
   const changed = state.trade.rows.find((row) => {
     const before = previous.trade.rows.find(({ id }) => id === row.id)
@@ -351,7 +354,7 @@ export const trade_settlement_transition = (
   return armed !== undefined && armed + 1 === changed.offer_revision ? changed : null
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch, signal }) => {
+const observe: NonNullable<SiteModule['observe']> = ({ events, get_state, dispatch, signal }) => {
   const running = new Map<string, symbol>()
   let auth_epoch = 0
   const reset_session = (): void => {
@@ -452,12 +455,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   events.on('trade/decline_request', ({ trade }) =>
     row_action(trade, 'decline_request', (wallet, row) => wallet.trade(row).decline_request(), close)
   )
-  events.on('trade/deposit_item', ({ trade, item }) =>
-    row_action(trade, 'deposit_item', (wallet, row) => wallet.trade(row).deposit_item(item), project)
-  )
-  events.on('trade/set_sui', ({ trade, amount }) =>
-    row_action(trade, 'set_sui', (wallet, row) => wallet.trade(row).set_sui(amount), project)
-  )
   events.on('trade/withdraw_cap', ({ trade, cap }) =>
     row_action(trade, 'withdraw_cap', (wallet, row) => wallet.trade(row).withdraw_cap(cap), project)
   )
@@ -504,7 +501,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     )
   })
 
-  const targets_for = (state: Readonly<AppState>, row: Readonly<TradeRow>, address: string) => {
+  const targets_for = (state: Readonly<SiteState>, row: Readonly<TradeRow>, address: string) => {
     const incoming = trade_incoming(row, address)
     const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
     return trade_stack_targets(state.session.inventory, encumbered, incoming.caps)
@@ -541,4 +538,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   })
 }
 
-export default Object.freeze({ name: 'trade', reduce, observe }) satisfies AppModule
+/** The account's trades: what locks an item is part of its bag, so the site folds them too. */
+export default Object.freeze({
+  name: 'trade',
+  initial: () => ({ trade: initial_trade_state() }),
+  reduce,
+}) satisfies SiteModule
+
+/** Opening, offering and settling a trade: the game alone acts on the account's trades. */
+export const trade_actions = Object.freeze({ name: 'trade_actions', observe }) satisfies SiteModule

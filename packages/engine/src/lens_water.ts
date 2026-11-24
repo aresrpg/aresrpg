@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// WET-LENS GPU graph (lossless port of deprecated/engine lens_water.js) — the droplets-on-glass
+// Wet-lens GPU graph: the droplets-on-glass
 // effect that plays when the camera exits the water. The field/lifecycle math lives in
-// lens_water_field.ts (pure, unit-tested); this module renders its packed per-frame output:
+// lens_water_field.ts; this module renders its packed per-frame output:
 // the wet SHEET (full-frame wobble fragmenting into fluid regions), the BEAD field (amorphous
 // dome lenses that burst into splinters), and the TRAILS (meandering water columns). The dry
 // graph is the input node itself; only an active splash pays for or samples the wet render target.
@@ -186,7 +186,7 @@ export const create_lens_water = ({ quality }: Readonly<{ quality: EngineQuality
         const alpha = d.w
         const raw = center.sub(screenUV) // toward the centre = the dome-normal direction
         const dist = length(raw)
-        // amorphous silhouette — mirror of meniscus_bump(): the outline is a lumpy fluid blob
+        // Amorphous silhouette: the outline is a lumpy fluid blob, never a clean circle.
         const ux = raw.x.div(R)
         const uy = raw.y.div(R)
         const bump = sin(ux.mul(LENS_WATER.meniscus_freq).add(d.x.mul(31)))
@@ -213,10 +213,8 @@ export const create_lens_water = ({ quality }: Readonly<{ quality: EngineQuality
         acc_glint.addAssign(exp(gd.mul(gd).negate()).mul(presence).mul(LENS_WATER.glint_strength))
       })
 
-      // ── TRAIL LOOP: each packed trail is a wandering wet stream running down from a burst —
-      // a cylindrical lens (bending across-x only) whose centreline meanders, whose width
-      // pinches/bulges, and whose caps are ragged. Mirrors of trail_center_x/trail_halfwidth/
-      // trail_edge_rag — at a frozen frame nothing here is straight.
+      // Each trail is a cylindrical lens running down from a burst: its centreline meanders, its
+      // width pinches and its caps are ragged, so nothing is straight at a frozen frame.
       Loop(trail_count, ({ i }: Readonly<{ i: Node<'int'> }>) => {
         const tr = u_trails.element(i) as unknown as Node<'vec4'>
         const t_alpha = tr.w

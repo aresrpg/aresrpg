@@ -7,7 +7,8 @@
 // the indexer → server stream.
 
 import { prepare_boss_rewards } from './kares_economy.ts'
-import { SDK, living_content } from './client.ts'
+import { SDK } from './client.ts'
+import { living_content } from './pins.ts'
 import { changed_object_ids, receipt_digest, receipt_event, receipt_events, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import {
@@ -70,7 +71,7 @@ export const fight_kares_rewards = (receipt: Receipt) =>
     })
   )
 
-export const last_settler_refusal = (error: unknown): boolean => {
+const last_settler_refusal = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error)
   const before_submission =
     !message.includes('failed on-chain') &&

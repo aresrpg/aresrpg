@@ -10,7 +10,8 @@ import type { FightStateRow, CharacterRow } from '@aresrpg/protocol'
 import { project_fight_boundary_receipt } from '@aresrpg/sdk/fight'
 import type { Receipt } from '@aresrpg/sdk/transaction-execution'
 
-import { hydrate_gameplay_fight, parse_fight_turn, gameplay_json, type FightTurnPayload } from './gameplay.ts'
+import { parse_fight_turn, type FightTurnPayload } from './gameplay.ts'
+import { hydrate_gameplay_fight, gameplay_json } from './gameplay_context.ts'
 import type { Command, Lane } from './control.ts'
 
 /** Process-local adapter state for the same session and submitted-turn latch used by the client. */

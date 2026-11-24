@@ -4,7 +4,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
-import { runInNewContext } from 'node:vm'
 
 import { compile_spell_shader } from './spell_shader.mjs'
 import { compile_spell_wgsl } from './spell_wgsl.mjs'
@@ -105,7 +104,6 @@ const write_artifact = (directory, name, text) => {
   } else writeFileSync(path, text)
 }
 
-const catalog_json = JSON.stringify(runInNewContext(catalog + '\nCLASSES'), null, 2) + '\n'
 for (const [name, text] of [
   ['claude_spell_source.js', program],
   [
@@ -114,7 +112,6 @@ for (const [name, text] of [
   ],
   ['claude_spell_audio.js', audio_program],
   ['claude_spell_synth.js', synth_program],
-  ['claude_spell_catalog.json', catalog_json],
 ]) {
   write_artifact('packages/engine/src/generated', name, text)
 }

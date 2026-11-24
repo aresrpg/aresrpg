@@ -6,14 +6,17 @@ import type { MasteryRow } from '@aresrpg/protocol'
 import type { CSSProperties } from 'react'
 import { Button } from '@aresrpg/ui'
 
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { content_catalog } from '../content/catalog.ts'
+import { dungeon_slug } from '../content/dungeons.ts'
+import { titleize } from '../content/titles.ts'
 import { world_card_rows } from '../content/world_cards.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { NewTabLink } from '../components/links.tsx'
+import { staking_section_href } from '../site/routes.ts'
 
 import { useMasterySource } from './MasterySource.tsx'
+import { mastery_quest_is_current, mastery_reward, mastery_world_witness } from './model.ts'
 import './mastery.css'
-import { MasteryShop } from './MasteryShop.tsx'
-import { mastery_dungeon_slug, mastery_quest_is_current, mastery_reward, mastery_world_witness } from './model.ts'
 
 const world_art_style = (art: string | null | undefined): CSSProperties =>
   Object.freeze({ backgroundImage: art ? `url(${JSON.stringify(art)})` : 'none' })
@@ -21,7 +24,7 @@ const world_art_style = (art: string | null | undefined): CSSProperties =>
 const mastery_quest_identity = (row: MasteryRow | null, cards: Readonly<ReturnType<typeof world_card_rows>>) => {
   if (!row) return Object.freeze({ dungeon: null, world_card: undefined })
   return Object.freeze({
-    dungeon: mastery_dungeon_slug(row.quest_dungeon),
+    dungeon: dungeon_slug(row.quest_dungeon),
     world_card: cards.find(({ id }) => id === row.quest_world),
   })
 }
@@ -142,9 +145,13 @@ export default function MasteryPage({ copy }: Readonly<{ copy: AppCopy }>) {
             </div>
           )}
         </section>
-
-        <MasteryShop copy={copy} />
       </div>
+      <p className="mastery-shop-link">
+        {text('shop_lead')}{' '}
+        <NewTabLink href={staking_section_href('mastery')} new_tab={copy.site.new_tab}>
+          {text('shop_title')}
+        </NewTabLink>
+      </p>
     </section>
   )
 }

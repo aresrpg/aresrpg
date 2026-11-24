@@ -1,30 +1,15 @@
 /* One material for every surface: fine grain under a top-lit glass sheen. Colour stays with each semantic surface. */
-.aui-mob-pack,
-.aui-inspection,
-.game-character-body .chr-equip__detail,
-.item-detail-view .jobs__craft,
 .aui-panel,
 .aui-surface,
 .aui-window,
 .aui-window-header,
 .aui-button,
-.aui-character-sheet,
-.aui-character-identity,
-.aui-character-statistics,
-.aui-character-statistics > h3,
 .aui-combat-vitals,
 .aui-combat-spells,
 .aui-combat-controls,
 .aui-mob-overview,
 .aui-mob > header,
-.aui-mob > footer,
-.aui-reward,
-.game-character-window,
-.game-character-window > .aui-window-header,
-.game-character-body .chr-equip__bag,
-.game-character-body .inv__doll--portrait,
-.game-character-body .chr-cell,
-.game-character-body .inv__slot {
+.aui-mob > footer {
   background-image: url('../assets/panel_grain.webp'), linear-gradient(180deg, #ffffff0b, transparent 62%);
   background-size:
     256px 256px,
@@ -32,7 +17,6 @@
   background-repeat: repeat, no-repeat;
   background-blend-mode: soft-light, normal;
 }
-
 /* Pixel trim belongs to the shared window, never the page backdrop. */
 .aui-window-header,
 .aui-mob > header,
@@ -68,16 +52,6 @@
   pointer-events: none;
   z-index: -1;
 }
-.game-character-body .inv__doll--portrait {
-  box-shadow:
-    inset 0 0 0 1px var(--aui-hair),
-    inset 0 0 24px #0006;
-  border-radius: 0 0 var(--aui-radius) var(--aui-radius);
-}
-.game-character-body .chr-equip__bag {
-  border-color: var(--aui-hair);
-}
-
 .aui-window {
   position: relative;
   isolation: isolate;
@@ -112,11 +86,6 @@
 }
 .aui-window > * {
   z-index: 1;
-}
-.game-character-body .chr-equip__bag {
-  position: relative;
-  isolation: isolate;
-  border-radius: var(--aui-radius);
 }
 /* Buttons: four corner pixels over the shared material. */
 .aui-button {

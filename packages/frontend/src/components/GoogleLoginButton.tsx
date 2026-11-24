@@ -1,10 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { ArrowRight } from 'lucide-react'
-
-import type { AppCopy } from '../i18n/copy.ts'
-import './google_login.css'
-
 export const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -24,22 +19,4 @@ export const GoogleIcon = () => (
       fill="#ea4335"
     />
   </svg>
-)
-
-export const GoogleLoginButton = ({
-  copy,
-  ready,
-  loading,
-  login,
-}: Readonly<{
-  copy: AppCopy
-  ready: boolean
-  loading: boolean
-  login: () => void
-}>) => (
-  <button className="google-login" type="button" disabled={!ready || loading} onClick={login}>
-    <GoogleIcon />
-    <span>{loading ? copy.loading_universe : copy.continue_google}</span>
-    <ArrowRight size={17} aria-hidden="true" />
-  </button>
 )

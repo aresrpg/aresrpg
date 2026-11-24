@@ -13,7 +13,7 @@ import { build_gift_transaction, create_gift_reader } from './gift_chain.ts'
 const GIFT_EXECUTION_INCLUDE = { effects: true, events: true, objectTypes: true } as const
 
 /** The signed bytes and their certified receipt prove the next stage; nothing rereads the chain. */
-export const advance_gift = (
+const advance_gift = (
   policy: GiftPolicy,
   address: string,
   action: GiftAction,

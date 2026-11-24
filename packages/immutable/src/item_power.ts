@@ -9,9 +9,8 @@ import {
   DOFUS_WEAPON_POWER,
 } from './dofus_item_power_corpus.gen.ts'
 import { is_stat_name } from './identity.ts'
+import { item_stat_center } from './item.ts'
 import { rune_unit_weights } from './rune.ts'
-
-export const item_budget_stat_weights = rune_unit_weights
 
 export type ItemBudgetEnvelope = Readonly<{
   median: number
@@ -161,4 +160,18 @@ export const dofus_weapon_damage_envelope = (
 }
 
 export const item_budget_stat_weight = (stat: string, maximum: number): number =>
-  maximum * (is_stat_name(stat) ? item_budget_stat_weights[stat] : 1)
+  maximum * (is_stat_name(stat) ? rune_unit_weights[stat] : 1)
+
+/** A hero's power, for show only: each equipped item's rolled stats (raw centered values, as projected)
+ * weighed by their rune weights, summed and rounded. It decides nothing in the game. */
+export const hero_power = (equipment: readonly Readonly<{ stats?: Readonly<Record<string, number>> }>[]): number =>
+  Math.round(
+    equipment.reduce(
+      (power, { stats = {} }) =>
+        Object.entries(stats).reduce(
+          (sum, [stat, raw]) => sum + item_budget_stat_weight(stat, raw - item_stat_center),
+          power
+        ),
+      0
+    )
+  )

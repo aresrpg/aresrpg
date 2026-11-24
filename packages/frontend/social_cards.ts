@@ -1,32 +1,39 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Link previews for crawlers, which never run the application. Each shareable route gets a copy of
-// the built shell with its own title, description and card; the application boots from it unchanged.
+// Link previews for crawlers, which never run the application. Each shareable route gets a copy of the built shell
+// with its own title, description and card; the application boots from it unchanged. Every card image is painted
+// here at build time by the one card painter, from the site's copy and `seed/content`, so none can go stale.
 
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { class_names } from '@aresrpg/immutable'
 import type { Plugin } from 'vite'
 import { parse } from 'yaml'
 
 import { character_model_basenames } from './src/content/character_model_catalog.ts'
-import { encyclopedia_item_path } from './src/encyclopedia/routes.ts'
-import { create_social_renderer, type EncyclopediaCard, type EntityCard } from './social_card_render.ts'
+import { docs_path } from './src/docs/routes.ts'
+import { SITE_ADDRESSES, SITE_PAGES, type SitePage } from './src/site/routes.ts'
+import {
+  create_card_painter,
+  type ArtCard,
+  type Card,
+  type CardBar,
+  type CardTone,
+  type EntityCard,
+  type PageObject,
+} from './social_card_render.ts'
 
 export type SocialDirectories = Readonly<{
   content_dir: string
   copy_path: string
   icons_dir: string
 }>
-export type SocialCard = Readonly<{
-  description: string
-  /** Present when the card image is painted from content at build time. */
-  entity: EntityCard | null
-  image: string
-  route: string
-  title: string
-}>
+/** One shareable route: its title, description and the card image its tags point at. */
+export type SocialCard = Readonly<{ description: string; image: string; route: string; title: string }>
+/** One image the build paints: its path under the site and what it shows. Routes may share an image. */
+export type SocialImage = Readonly<{ image: string; card: Card }>
 type Stats = Readonly<Record<'min' | 'max', Readonly<Record<string, number>>>>
 type Item = Readonly<{ category: string; item_type: string; level: number; name: string; stats?: Stats }>
 type Mob = Readonly<{
@@ -43,64 +50,220 @@ type Mob = Readonly<{
   spells: readonly Readonly<{ name: string }>[]
 }>
 type Spell = Readonly<{ classe: string; name: string; unlock_level: number }>
+type Words = Readonly<Record<string, string>>
 type Copy = Readonly<{
-  characters_page: Readonly<{ stat: Readonly<Record<string, string>> }>
-  item_categories: Readonly<Record<string, string>>
-  simulator_page: Readonly<Record<string, string>>
+  agent_page: Words
+  allocation_page: Words
+  characters_page: Readonly<{ stat: Words }>
+  docs_page: Readonly<{ title: string; overview: Readonly<{ counts: Words }> }>
+  encyclopedia_page: Readonly<{
+    world_role: Words
+    world_protector: string
+    items: string
+    mobs: string
+    classes: string
+  }>
+  item_categories: Words
+  portfolio_page: Words
+  simulator_page: Words
+  ui: Words
 }>
 
 const ENCYCLOPEDIA_IMAGE = '/social/encyclopedia.jpg'
-const MOSAIC_TILES = 30
+const MOSAIC_TILES = 12
+const JPEG_QUALITY = 84
+const frontend_file = (path: string): string => fileURLToPath(new URL(path, import.meta.url))
 const titleize = (value: string): string =>
   value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 const range = (min: number, max: number): string => (min === max ? String(min) : `${min} – ${max}`)
-const page = (route: string, card: string, title: string, description: string): SocialCard =>
-  Object.freeze({ description, entity: null, image: `/social/${card}.jpg`, route, title })
+/** A copy key the cards need; a missing one is a broken contract, never a blank label. */
+const word = (words: Words, key: string): string => {
+  const value = words[key]
+  if (value === undefined) throw new Error(`Social card copy is missing: ${key}`)
+  return value
+}
+/** The address a card prints: the site's host, then the route (the home is the host alone). */
+const address_of = (app_url: string, route: string): string => {
+  const url = new URL(route === SITE_PAGES[0].path ? '' : route.slice(1), app_url)
+  return `${url.host}${url.pathname}`.replace(/\/$/, '')
+}
 
-const GIFT_COPY = [
-  'A gift is waiting for you',
-  'Sign in with Google to claim it into your AresRPG game wallet.',
-] as const
-const ENCYCLOPEDIA_COPY = ['Encyclopedia', 'Every item, mob, class, spell and recipe in AresRPG.'] as const
-const PAGE_CARDS: readonly SocialCard[] = Object.freeze([
-  page('/claim', 'gift', ...GIFT_COPY),
-  page('/gift', 'gift', ...GIFT_COPY),
-  page(
-    '/marketplace',
-    'marketplace',
-    'Marketplace',
-    'Player listings on Sui. Gear and characters at any price you set.'
-  ),
-  page('/leaderboard', 'leaderboard', 'Leaderboard', 'Who runs the world? Ranked from on-chain history.'),
-  page('/mastery', 'mastery', 'Mastery', 'Complete daily dungeon quests to earn unique rewards.'),
-  page('/kares', 'kares', 'KARES staking', 'Stakers share 20% of collected marketplace royalties in SUI.'),
-  page(
-    '/allocation',
-    'allocation',
-    'KARES whitelist',
-    'Climb a leaderboard or post on X to get a Veteran or Member spot for the KARES sale on Blast.'
-  ),
-  page(
-    '/world',
-    'world',
-    'Enter the world',
-    'Explore, fight and trade in a voxel world where every action settles on Sui.'
-  ),
-  page(
-    '/dapp',
-    'dapp',
-    'Send your heroes on expeditions',
-    'Your bot trains, gathers and raids for you. Follow every hero from any browser, with no download.'
-  ),
-  page('/docs', 'encyclopedia', 'Docs', 'Guides and the full reference: every item, mob, class, spell and recipe.'),
-  // The docs show the encyclopedia's views under their own path space; both spaces share one card.
-  ...['/encyclopedia', '/encyclopedia/items', '/encyclopedia/bestiary', '/encyclopedia/classes'].map((route) =>
-    page(route, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
-  ),
-  ...['/docs/items', '/docs/bestiary', '/docs/classes'].map((route) =>
-    page(route, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
-  ),
+/** What the page cards draw from content and copy: named art, captioned item cards and the docs' figures. */
+type PageKit = Readonly<{
+  copy: Copy
+  item: (item_type: string) => ArtCard
+  item_art: (item_type: string) => string
+  character_art: (basename: string) => string
+  mosaic: readonly string[]
+  counts: readonly (readonly [number, string])[]
+}>
+type PageSpec = Readonly<{
+  image: string
+  routes: readonly string[]
+  tone: CardTone
+  headline: string
+  sub: string
+  show: (kit: PageKit) => Readonly<{ bar: CardBar; object: PageObject }>
+}>
+const lit = (page: SitePage | null): CardBar => ({ lit: page })
+/** The items the portfolio card's bag shows. */
+const BAG = Object.freeze([
+  'drakar',
+  'cloudstep_greaves',
+  'crowani_scale_ring',
+  'webbound_pendant',
+  'misui_razorfins',
+  'gravebrand',
+  'galeweb_spiral',
+  'emberweb_locket',
+  'pincer_lance',
+  'lorito_hat__chance',
+  'salvagers_cleaver',
+  'misui_iris',
 ])
+
+/** The site's page cards: the approved headlines and sub lines, and what each one shows. The first is the home's. */
+const PAGE_CARDS: readonly PageSpec[] = Object.freeze([
+  {
+    image: 'marketplace',
+    routes: [SITE_ADDRESSES.market],
+    tone: 'bone',
+    headline: 'Buy and sell heroes and gear for SUI.',
+    sub: 'The market of AresRPG, an on-chain MMORPG. Play the game when you want.',
+    show: ({ copy, item, character_art }) => ({
+      bar: lit('market'),
+      object: {
+        kind: 'shelf',
+        cards: [
+          {
+            art: character_art('senshi_female'),
+            name: titleize('senshi'),
+            caption: `${word(copy.ui, 'character')} · ${word(copy.simulator_page, 'class_senshi_title')}`,
+            fill: true,
+          },
+          ...['sunbound_concord', 'lorito_cloak__golden', 'five_biome_greatbow'].map(item),
+        ],
+      },
+    }),
+  },
+  {
+    image: 'world',
+    routes: [SITE_ADDRESSES.world],
+    tone: 'bone',
+    headline: 'Enter the world.',
+    sub: 'Explore, fight and trade in a voxel world where every action settles on Sui.',
+    show: () => ({ bar: lit(null), object: { kind: 'capture', art: frontend_file('./src/assets/social/world.png') } }),
+  },
+  {
+    image: 'agents',
+    routes: [SITE_ADDRESSES.agent],
+    tone: 'ember',
+    headline: 'Let your AI play your heroes.',
+    sub: 'Connect your AI assistant. It plays with a wallet of its own, and you stay in charge.',
+    show: ({ copy, character_art }) => ({
+      bar: lit('agent'),
+      object: {
+        kind: 'facts',
+        tabs: [word(copy.ui, 'wallet_game'), word(copy.ui, 'wallet_bot')],
+        lit: 1,
+        art: character_art('yogan_female'),
+        facts: ['wallet', 'log', 'charge'].map(
+          (fact) => [word(copy.agent_page, `stage_${fact}_title`), word(copy.agent_page, `stage_${fact}`)] as const
+        ),
+      },
+    }),
+  },
+  {
+    image: 'kares',
+    routes: [SITE_ADDRESSES.staking],
+    tone: 'sky',
+    headline: "Stake KARES. Share the market's royalties.",
+    sub: 'Stakers share collected marketplace royalties, paid in SUI.',
+    show: () => ({ bar: lit('staking'), object: { kind: 'coin', art: frontend_file('./public/kares.png') } }),
+  },
+  {
+    image: 'leaderboard',
+    routes: [SITE_ADDRESSES.leaderboards],
+    tone: 'bone',
+    headline: 'Who runs the world?',
+    sub: 'Combat, dungeons, professions and trade, ranked every month from on-chain play.',
+    show: ({ character_art }) => ({
+      bar: lit('leaderboards'),
+      object: {
+        kind: 'podium',
+        arts: [character_art('senshi_female'), character_art('ikari_male'), character_art('tomoda_male')],
+      },
+    }),
+  },
+  {
+    image: 'portfolio',
+    routes: [SITE_ADDRESSES.portfolio],
+    tone: 'bone',
+    headline: 'Everything you own, in one place.',
+    sub: 'Your heroes, items and listings on Sui, on your game account and on your bot.',
+    show: ({ copy, item_art }) => ({
+      bar: lit('portfolio'),
+      object: {
+        kind: 'bag',
+        tabs: ['tab_heroes', 'tab_bag', 'tab_for_sale'].map((key) => word(copy.portfolio_page, key)),
+        lit: 1,
+        arts: BAG.map(item_art),
+      },
+    }),
+  },
+  {
+    image: 'gift',
+    routes: ['/gift', '/claim'],
+    tone: 'bone',
+    headline: 'A gift is waiting for you.',
+    sub: 'Sign in with Google to claim it into your AresRPG game wallet.',
+    show: ({ item }) => ({
+      bar: { crumb: ['Gift'] },
+      object: { kind: 'shelf', cards: [{ ...item('sui_crate'), caption: 'Basecamp edition', fill: true }] },
+    }),
+  },
+  {
+    image: 'encyclopedia',
+    routes: [SITE_ADDRESSES.docs, ...(['items', 'bestiary', 'classes'] as const).map((section) => docs_path(section))],
+    tone: 'bone',
+    headline: 'Every item, mob, class and spell.',
+    sub: 'Guides and the full reference of AresRPG.',
+    show: ({ copy, mosaic, counts }) => ({
+      bar: { crumb: [copy.docs_page.title] },
+      object: { kind: 'mosaic', arts: mosaic, counts },
+    }),
+  },
+  {
+    image: 'allocation',
+    routes: [SITE_ADDRESSES.allocation],
+    tone: 'sky',
+    headline: 'Earn a spot in the KARES sale.',
+    sub: 'Climb a leaderboard or post on X to get a Veteran or Member spot for the KARES sale on Blast.',
+    show: ({ copy }) => ({
+      bar: { crumb: ['KARES sale'] },
+      object: {
+        kind: 'sale',
+        mark: 'KARES',
+        cards: (['member', 'veteran'] as const).map(
+          (tier) =>
+            [frontend_file(`./public/branding/kares/card-${tier}.webp`), word(copy.allocation_page, tier)] as const
+        ),
+      },
+    }),
+  },
+] satisfies readonly PageSpec[])
+
+/** A page card's title is its headline without the closing full stop. */
+const title_of = (headline: string): string => headline.replace(/\.$/, '')
+const image_path = (name: string): string => `/social/${name}.jpg`
+const HOME = PAGE_CARDS.find(({ routes }) => routes.includes(SITE_PAGES[0].path))!
+
+/** The root document's own preview: the home's card, so the site's default and its home cannot differ. */
+export const home_preview = (app_url: string): Readonly<{ description: string; image_url: string; alt: string }> => ({
+  description: HOME.sub,
+  image_url: new URL(image_path(HOME.image).slice(1), app_url).href,
+  alt: title_of(HOME.headline),
+})
 
 const read_json = async <T>(path: string): Promise<T> => JSON.parse(await readFile(path, 'utf8')) as T
 /** Resolves a content slug to its best authored icon, or null when no art exists yet. */
@@ -111,88 +274,119 @@ const art_lookup = async (directory: string) => {
     return name ? join(directory, name) : null
   }
 }
-const entity_card = (
-  kind: string,
-  slug: string,
-  route: string,
-  description: string,
-  art_path: string | null,
-  card: Omit<EntityCard, 'art_path'>
-): SocialCard =>
-  Object.freeze({
-    description,
-    entity: art_path ? Object.freeze({ ...card, art_path }) : null,
-    image: art_path ? `/social/${kind}/${slug}.jpg` : ENCYCLOPEDIA_IMAGE,
-    route,
-    title: card.title,
-  })
+const required = (lookup: (slug: string) => string | null) => (slug: string) => {
+  const path = lookup(slug)
+  if (!path) throw new Error(`Social card art is missing: ${slug}`)
+  return path
+}
 
-const item_card = (copy: Copy, art: (slug: string) => string | null, item: Item): SocialCard => {
+type Entry = Readonly<{ social: SocialCard; image: SocialImage | null }>
+type EntityFacts = Omit<EntityCard, 'kind' | 'bar' | 'address' | 'art'>
+/** An entry's card, or the docs card when the entry has no art of its own: it never borrows another entry's art. */
+const entity_entry = (
+  app_url: string,
+  [kind, slug, route, description]: readonly [string, string, string, string],
+  [section, art]: readonly [string, string | null],
+  facts: EntityFacts,
+  docs_title: string
+): Entry => {
+  const image = art ? `/social/${kind}/${slug}.jpg` : ENCYCLOPEDIA_IMAGE
+  const card: Card | null = art
+    ? { ...facts, kind: 'entity', art, bar: { crumb: [docs_title, section] }, address: address_of(app_url, route) }
+    : null
+  return Object.freeze({
+    social: Object.freeze({ description, image, route, title: facts.name }),
+    image: card && Object.freeze({ image, card }),
+  })
+}
+
+type Catalog = Readonly<{
+  copy: Copy
+  items: readonly Item[]
+  mobs: readonly Mob[]
+  spells: readonly Spell[]
+  art: Readonly<Record<'items' | 'mobs' | 'characters', (slug: string) => string | null>>
+  app_url: string
+}>
+
+const item_entry = ({ copy, art, app_url }: Catalog, item: Item): Entry => {
   const category = copy.item_categories[item.category] ?? titleize(item.category)
   const { min = {}, max = {} } = item.stats ?? {}
   const stats = Object.keys(min)
     .filter((stat) => min[stat] || max[stat])
-    .slice(0, 4)
     .map((stat) => [copy.characters_page.stat[stat] ?? titleize(stat), range(min[stat]!, max[stat] ?? 0)] as const)
   const detail = `Level ${item.level}`
-  return entity_card(
-    'item',
-    item.item_type,
-    encyclopedia_item_path(item.item_type),
-    [`${category} · ${detail}`, ...stats.map(([label, value]) => `${label} ${value}`)].join(' · '),
-    art(item.item_type),
+  const route = docs_path('items', item.item_type)
+  const description = [`${category} · ${detail}`, ...stats.slice(0, 4).map(([label, value]) => `${label} ${value}`)]
+  return entity_entry(
+    app_url,
+    ['item', item.item_type, route, description.join(' · ')],
+    [copy.encyclopedia_page.items, art.items(item.item_type)],
     {
+      tone: 'bone',
       accent: category,
-      crumb: 'Encyclopedia · Items',
       detail,
+      name: item.name,
       rows: stats.length ? stats : [['Category', category] as const, ['Level', String(item.level)] as const],
-      title: item.name,
-    }
+      bust: false,
+    },
+    copy.docs_page.title
   )
 }
-const mob_card = (art: (slug: string) => string | null, mob: Mob): SocialCard => {
-  const detail = `${titleize(mob.role)} · Level ${range(mob.level_min, mob.level_max)}`
+/** A mob's role in the docs' own words; a role the docs do not name is left out. */
+const role_word = (copy: Copy, role: string): string | null =>
+  ({
+    normal: copy.encyclopedia_page.world_role.trash,
+    archi: copy.encyclopedia_page.world_role.archi,
+    boss: copy.encyclopedia_page.world_role.boss,
+    protector: copy.encyclopedia_page.world_protector,
+  })[role] ?? null
+const ELEMENT_TONES: Readonly<Record<string, CardTone>> = Object.freeze({ fire: 'ember', water: 'sky' })
+const mob_entry = ({ copy, art, app_url }: Catalog, mob: Mob): Entry => {
+  const level = `Level ${range(mob.level_min, mob.level_max)}`
+  const detail = [role_word(copy, mob.role), level].filter(Boolean).join(' · ')
   const element = titleize(mob.element)
-  return entity_card(
-    'mob',
-    mob.mob_type,
-    `/encyclopedia/bestiary/${encodeURIComponent(mob.mob_type)}`,
-    `${element} ${detail} · ${mob.hp.toLocaleString('en-US')} HP · ${mob.ap} AP · ${mob.mp} MP`,
-    art(mob.mob_type),
+  const route = docs_path('bestiary', mob.mob_type)
+  return entity_entry(
+    app_url,
+    [
+      'mob',
+      mob.mob_type,
+      route,
+      `${element} ${detail} · ${mob.hp.toLocaleString('en-US')} HP · ${mob.ap} AP · ${mob.mp} MP`,
+    ],
+    [copy.encyclopedia_page.mobs, art.mobs(mob.mob_type)],
     {
+      tone: ELEMENT_TONES[mob.element] ?? 'bone',
       accent: element,
-      crumb: 'Encyclopedia · Bestiary',
       detail,
+      name: mob.name,
       rows: [
         ['Health', mob.hp.toLocaleString('en-US')],
         ['Action / Movement', `${mob.ap} AP · ${mob.mp} MP`],
         ['Agility', String(mob.agility)],
         ['Spells', mob.spells.map(({ name }) => name).join(' · ')],
       ],
-      title: mob.name,
-    }
+      bust: false,
+    },
+    copy.docs_page.title
   )
 }
-const class_card = (
-  copy: Copy,
-  art: (slug: string) => string | null,
-  spells: readonly Spell[],
-  classe: string
-): SocialCard => {
+const class_entry = ({ copy, art, spells, app_url }: Catalog, classe: string): Entry => {
   const role = copy.simulator_page[`class_${classe}_title`] ?? titleize(classe)
   const book = spells.filter((spell) => spell.classe === classe).toSorted((a, b) => a.unlock_level - b.unlock_level)
   // Classes still borrowing another class's model have no portrait of their own to show.
   const portrait = character_model_basenames(classe, true).body
-  return entity_card(
-    'classe',
-    classe,
-    `/encyclopedia/classes/${classe}`,
-    `${role} · ${book.length} spells. One of ${class_names.length} classes in AresRPG.`,
-    portrait.startsWith(classe) ? art(portrait) : null,
+  const route = docs_path('classes', classe)
+  return entity_entry(
+    app_url,
+    ['classe', classe, route, `${role} · ${book.length} spells. One of ${class_names.length} classes in AresRPG.`],
+    [copy.encyclopedia_page.classes, portrait.startsWith(classe) ? art.characters(portrait) : null],
     {
+      tone: 'ember',
       accent: 'Class',
-      crumb: 'Encyclopedia · Classes',
       detail: role,
+      name: titleize(classe),
       rows: [
         ['Spells', String(book.length)],
         [
@@ -203,16 +397,50 @@ const class_card = (
             .join(' · '),
         ],
       ],
-      title: titleize(classe),
-    }
+      bust: true,
+    },
+    copy.docs_page.title
   )
 }
 
-export const social_catalog = async ({
-  content_dir,
-  copy_path,
-  icons_dir,
-}: SocialDirectories): Promise<Readonly<{ cards: readonly SocialCard[]; encyclopedia: EncyclopediaCard }>> => {
+const page_kit = (catalog: Catalog, recipes: number): PageKit => {
+  const { copy, items, mobs, spells, art } = catalog
+  const item_art = required(art.items)
+  const by_type = new Map(items.map((item) => [item.item_type, item]))
+  const item = (item_type: string): ArtCard => {
+    const found = by_type.get(item_type)
+    if (!found) throw new Error(`Social card item is missing: ${item_type}`)
+    const category = copy.item_categories[found.category] ?? titleize(found.category)
+    return { art: item_art(item_type), name: found.name, caption: `${category} · Lv. ${found.level}`, fill: false }
+  }
+  // The docs card's mosaic: equipment spread across the levels, highest first.
+  const equipment = items
+    .filter((entry) => entry.stats && art.items(entry.item_type))
+    .toSorted((a, b) => b.level - a.level || a.item_type.localeCompare(b.item_type))
+  const stride = Math.max(1, Math.floor(equipment.length / MOSAIC_TILES))
+  const { counts } = copy.docs_page.overview
+  return {
+    copy,
+    item,
+    item_art,
+    character_art: required(art.characters),
+    mosaic: equipment
+      .filter((_, index) => index % stride === 0)
+      .slice(0, MOSAIC_TILES)
+      .map(({ item_type }) => item_art(item_type)),
+    counts: [
+      [items.length, word(counts, 'items')],
+      [mobs.length, word(counts, 'mobs')],
+      [spells.length, word(counts, 'spells')],
+      [recipes, word(counts, 'recipes')],
+    ],
+  }
+}
+
+export const social_catalog = async (
+  { content_dir, copy_path, icons_dir }: SocialDirectories,
+  app_url: string
+): Promise<Readonly<{ cards: readonly SocialCard[]; images: readonly SocialImage[] }>> => {
   const [items, mobs, spells, recipes] = await Promise.all([
     read_json<readonly Item[]>(join(content_dir, 'items.json')),
     read_json<readonly Mob[]>(join(content_dir, 'mobs.json')),
@@ -223,29 +451,43 @@ export const social_catalog = async ({
   const [item_art, mob_art, class_art] = await Promise.all(
     ['items', 'mobs', 'characters'].map((kind) => art_lookup(join(icons_dir, kind)))
   )
-  const equipment = items
-    .filter((item) => item.stats && item_art!(item.item_type))
-    .toSorted((a, b) => b.level - a.level || a.item_type.localeCompare(b.item_type))
-  const stride = Math.max(1, Math.floor(equipment.length / MOSAIC_TILES))
+  const catalog: Catalog = {
+    copy,
+    items,
+    mobs,
+    spells,
+    art: { items: item_art!, mobs: mob_art!, characters: class_art! },
+    app_url,
+  }
+  const kit = page_kit(catalog, recipes.length)
+  const pages = PAGE_CARDS.map((spec) => {
+    const { bar, object } = spec.show(kit)
+    const card: Card = {
+      kind: 'page',
+      tone: spec.tone,
+      bar,
+      address: address_of(app_url, spec.routes[0]!),
+      headline: spec.headline,
+      sub: spec.sub,
+      object,
+    }
+    const image = image_path(spec.image)
+    return {
+      cards: spec.routes.map((route) => ({ description: spec.sub, image, route, title: title_of(spec.headline) })),
+      image: { image, card },
+    }
+  })
+  const entries = [
+    ...items.map((item) => item_entry(catalog, item)),
+    ...mobs.map((mob) => mob_entry(catalog, mob)),
+    ...class_names.map((classe) => class_entry(catalog, classe)),
+  ]
   return Object.freeze({
-    cards: Object.freeze([
-      ...PAGE_CARDS,
-      ...items.map((item) => item_card(copy, item_art!, item)),
-      ...mobs.map((mob) => mob_card(mob_art!, mob)),
-      ...class_names.map((classe) => class_card(copy, class_art!, spells, classe)),
+    cards: Object.freeze([...pages.flatMap(({ cards }) => cards), ...entries.map(({ social }) => social)]),
+    images: Object.freeze([
+      ...pages.map(({ image }) => image),
+      ...entries.flatMap(({ image }) => (image ? [image] : [])),
     ]),
-    encyclopedia: Object.freeze({
-      art_paths: equipment
-        .filter((_, index) => index % stride === 0)
-        .slice(0, MOSAIC_TILES)
-        .map((item) => item_art!(item.item_type)!),
-      counts: [
-        [items.length, 'items'],
-        [mobs.length, 'mobs'],
-        [spells.length, 'spells'],
-        [recipes.length, 'recipes'],
-      ] as const,
-    }),
   })
 }
 
@@ -285,10 +527,7 @@ export const social_html = (shell: string, card: SocialCard, app_url: string): s
   ).reduce((html, [pattern, value]) => swap(html, pattern, value), shell)
 }
 
-export const social_cards_plugin = (
-  directories: SocialDirectories,
-  render: Readonly<{ app_url: string; font_path: string; logo_path: string; tokens_path: string }>
-): Plugin => ({
+export const social_cards_plugin = (directories: SocialDirectories, app_url: string): Plugin => ({
   name: 'aresrpg-social-cards',
   apply: 'build',
   writeBundle: async ({ dir }) => {
@@ -297,13 +536,16 @@ export const social_cards_plugin = (
       await mkdir(dirname(join(dir, path)), { recursive: true })
       await writeFile(join(dir, path), source)
     }
-    const { cards, encyclopedia } = await social_catalog(directories)
-    const renderer = await create_social_renderer(render)
-    const shell = await readFile(join(dir, 'index.html'), 'utf8')
-    await emit(ENCYCLOPEDIA_IMAGE.slice(1), await renderer.encyclopedia(encyclopedia))
-    for (const card of cards) {
-      if (card.entity) await emit(card.image.slice(1), await renderer.entity(card.entity))
-      await emit(`${card.route.slice(1)}/index.html`, social_html(shell, card, render.app_url))
-    }
+    const { cards, images } = await social_catalog(directories, app_url)
+    const painter = await create_card_painter()
+    // A card's page is a copy of the document that serves its address: the game's under `/world`, else the site's.
+    const [site, world] = await Promise.all(
+      ['index.html', 'world.html'].map((file) => readFile(join(dir, file), 'utf8'))
+    )
+    const shell_of = (route: string): string => (route === '/world' || route.startsWith('/world/') ? world! : site!)
+    for (const { image, card } of images)
+      await emit(image.slice(1), await (await painter.paint(card)).encode('jpeg', JPEG_QUALITY))
+    for (const card of cards)
+      await emit(`${card.route.slice(1)}/index.html`, social_html(shell_of(card.route), card, app_url))
   },
 })

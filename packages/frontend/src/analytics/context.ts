@@ -2,35 +2,18 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { is_admin_address } from '../admin_access.ts'
-import { next_quest } from '../journey/model.ts'
-import { character_creation_surface } from '../modules/character_creation.ts'
-import type { AppState } from '../store.ts'
+import { site_page_of } from '../site/routes.ts'
+import type { SiteState } from '../store.ts'
 
 export type AnalyticsProperties = Readonly<Record<string, string | number | boolean | null>>
 
-const onboarding_stage = ({ session, navigation, analytics }: AppState): string => {
-  if (!session.wallet) return 'login'
-  const creation = character_creation_surface(session, navigation)
-  if (creation) return creation
-  if (!session.selected_character_id) return 'character_selection'
-  return analytics.loading?.stage === 'ready' ? 'gameplay' : 'world_loading'
-}
-
-/** Both reporting transports read this projection; neither keeps a second onboarding state. */
-export const analytics_context = (state: AppState): AnalyticsProperties => {
-  const { session, navigation, journey } = state
-  const stage = onboarding_stage(state)
-  return {
-    surface: navigation.page,
-    onboarding_step: stage,
-    locale: state.locale,
-    authenticated: session.wallet !== null,
-    is_internal: is_admin_address(session.wallet?.address ?? null),
-    automation_active: state.automation.run !== null,
-    quality: state.settings.quality,
-    journey_step: journey.ready ? (next_quest(journey.completed)?.id ?? 'complete') : 'unknown',
-  }
-}
+/** What every event of the site says: its page, its language and the account. The game reports its own surface. */
+export const site_analytics_context = (state: SiteState): AnalyticsProperties => ({
+  surface: site_page_of(state.location.pathname).key,
+  locale: state.locale,
+  authenticated: state.session.wallet !== null,
+  is_internal: is_admin_address(state.session.wallet?.address ?? null),
+})
 
 /** A pseudonym, not anonymization: a public address can still be matched by recomputing its hash. */
 export const analytics_identity = async (network: string, address: string): Promise<string> => {

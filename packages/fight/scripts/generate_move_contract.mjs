@@ -6,7 +6,7 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import prettier from 'prettier'
@@ -89,51 +89,14 @@ const selected_constants = (source, names) => {
   )
 }
 
-const split_top_level = (source, delimiter) => {
-  const parts = []
-  let start = 0
-  let angle_depth = 0
-  let paren_depth = 0
-  let bracket_depth = 0
-  let brace_depth = 0
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index]
-    if (character === '<') angle_depth += 1
-    else if (character === '>') angle_depth -= 1
-    else if (character === '(') paren_depth += 1
-    else if (character === ')') paren_depth -= 1
-    else if (character === '[') bracket_depth += 1
-    else if (character === ']') bracket_depth -= 1
-    else if (character === '{') brace_depth += 1
-    else if (character === '}') brace_depth -= 1
-    else if (
-      character === delimiter &&
-      angle_depth === 0 &&
-      paren_depth === 0 &&
-      bracket_depth === 0 &&
-      brace_depth === 0
-    ) {
-      parts.push(source.slice(start, index))
-      start = index + 1
-    }
-  }
-  parts.push(source.slice(start))
-  return parts
-}
-
-const struct_schema = (source, name) => {
+const struct_fields = (source, name) => {
   const [, body] = required_match(
     source,
-    new RegExp(`public (?:enum|struct) ${name}(?: has [^{]+)? \\{([\\s\\S]*?)\\}`),
+    new RegExp(`public struct ${name}(?: has [^{]+)? \\{([^}]*)\\}`),
     `struct ${name}`
   )
-  const uncommented = body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
-  const fields = split_top_level(uncommented, ',').flatMap((part) => {
-    const match = part.trim().match(/^([a-z][a-z0-9_]*):\s*([\s\S]+)$/)
-    return match ? [{ name: match[1], type: match[2].trim().replace(/\s+/g, ' ') }] : []
-  })
-  if (fields.length === 0 && !body.includes('Player') && !body.includes('Mob'))
-    throw new Error(`generate_move_contract: struct ${name} parsed zero fields`)
+  const fields = [...body.matchAll(/^\s*([a-z][a-z0-9_]*):/gm)].map(([, field]) => field)
+  if (fields.length === 0) throw new Error(`generate_move_contract: struct ${name} parsed zero fields`)
   return fields
 }
 
@@ -210,81 +173,17 @@ const affinities = (source) =>
     )
   )
 
-const fight_doors = (source) => {
-  const [, section] = required_match(
-    source,
-    /\[ Fights \][\s\S]*?\n([\s\S]*?)\/\/ ╔[^\n]*\[ Party \]/,
-    'api fight section'
-  )
-  const stripped = section.replace(/\/\/[^\n]*/g, '')
-  return Object.fromEntries(
-    [...stripped.matchAll(/(?:public\s+entry\s+fun|public\s+fun|entry\s+fun)\s+(\w+)\s*\(([^)]*)\)/g)].map(
-      ([, name, params]) => {
-        const arguments_shape = params
-          .split(',')
-          .map((part) => part.trim())
-          .filter(Boolean)
-          .map((part) => {
-            const [argument, ...rest] = part.split(':')
-            return { name: argument.trim(), type: rest.join(':').trim().replace(/\s+/g, ' ') }
-          })
-        return [
-          name,
-          { arguments: arguments_shape, terminal_random: arguments_shape.some(({ type }) => type === '&Random') },
-        ]
-      }
-    )
-  )
-}
-
 const source_hash = createHash('sha256')
   .update(source_paths.map((path) => `${path}\0${sources[path]}`).join('\0'))
   .digest('hex')
 
-const fight = sources['packages/move/sources/fight.move']
 const combat = sources['packages/move-combat/sources/combat.move']
-const api = sources['packages/move/sources/api.move']
 const progression = sources['packages/move/sources/progression.move']
 const forgemagie = sources['packages/move/sources/forgemagie.move']
 const combat_grid = sources['packages/move-math/sources/combat_grid.move']
 const spell_effect = sources['packages/move-math/sources/spell_effect.move']
 const item_stats = sources['packages/move-math/sources/item_stats.move']
 const weapon = sources['packages/move-math/sources/weapon.move']
-
-const selected_structs = {
-  Effect: struct_schema(spell_effect, 'Effect'),
-  SpellLevel: struct_schema(spell_effect, 'SpellLevel'),
-  GridSpec: struct_schema(combat_grid, 'GridSpec'),
-  Fight: struct_schema(fight, 'Fight'),
-  FightRewards: struct_schema(sources['packages/move/sources/fight_rewards.move'], 'FightRewards'),
-  Fighter: struct_schema(combat, 'Fighter'),
-  MobSnapshot: struct_schema(combat, 'MobSnapshot'),
-  KitSpell: struct_schema(combat, 'KitSpell'),
-  TurnCast: struct_schema(combat, 'TurnCast'),
-  ActiveEffect: struct_schema(combat, 'ActiveEffect'),
-  Cooldown: struct_schema(combat, 'Cooldown'),
-  BoardZone: struct_schema(combat, 'BoardZone'),
-  RolledDrop: struct_schema(combat, 'RolledDrop'),
-  FightCreated: struct_schema(fight, 'FightCreated'),
-  FighterJoined: struct_schema(fight, 'FighterJoined'),
-  FightStarted: struct_schema(fight, 'FightStarted'),
-  FightEnded: struct_schema(fight, 'FightEnded'),
-  TurnSeedUsed: struct_schema(fight, 'TurnSeedUsed'),
-  DropsRolled: struct_schema(fight, 'DropsRolled'),
-  ItemStatistics: struct_schema(item_stats, 'ItemStatistics'),
-}
-
-const integer_widths = Object.fromEntries(
-  Object.entries(selected_structs).map(([name, fields]) => [
-    name,
-    Object.fromEntries(
-      fields.flatMap(({ name: field, type }) => {
-        const width = type.match(/\bu(8|16|32|64)\b/)
-        return width ? [[field, Number(width[1])]] : []
-      })
-    ),
-  ])
-)
 
 const contract_constants = {
   ...selected_constants(combat, [
@@ -340,7 +239,6 @@ const literal = (value, move_integers = false) => {
 const output = `// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // GENERATED by scripts/generate_move_contract.mjs — DO NOT EDIT.
-/* eslint-disable max-lines -- generated declaration projection; size follows the Move contract */
 
 export const MOVE_SOURCE_HASH = '${source_hash}'
 
@@ -350,18 +248,12 @@ export const AREA_SHAPES = Object.freeze(${literal(shape_values(spell_effect), t
 export const BOARD_SHAPES = Object.freeze(${literal(consts(combat_grid, 'SHAPE_'), true)})
 export const DIRECTIONS = Object.freeze(${literal(direction_values(combat_grid), true)})
 export const TARGET_FILTERS = Object.freeze(${literal(target_filters(spell_effect), true)})
-export const ACCESS = Object.freeze(${literal(consts(fight, 'ACCESS_'), true)})
 
 export const CONTRACT_CONSTANTS = Object.freeze(${literal(contract_constants, true)})
 
-export const STRUCT_SCHEMAS = Object.freeze(${literal(selected_structs)})
-export const INTEGER_WIDTHS = Object.freeze(${literal(integer_widths)})
-export const ITEM_STAT_FIELDS = Object.freeze(${literal(selected_structs.ItemStatistics.map(({ name }) => name))})
+export const ITEM_STAT_FIELDS = Object.freeze(${literal(struct_fields(item_stats, 'ItemStatistics'))})
 export const WEAPON_PHYSICS = Object.freeze(${literal(weapon_physics(weapon), true)})
 export const CLASS_AFFINITIES = Object.freeze(${literal(affinities(weapon))})
-export const API_FIGHT_DOORS = Object.freeze(${literal(fight_doors(api))})
-
-export const MOVE_SOURCES = Object.freeze(${literal(source_paths.map((path) => relative(repo_root, join(repo_root, path))))})
 `
 
 const formatted = await prettier.format(output, {

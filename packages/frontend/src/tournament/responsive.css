@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 @media (max-width: 1023px), (pointer: coarse) {
-  :is(.aui-arena-port:has(.tourney-panel), .tourney-dialog, .tourney-admin-window) > .aui-window-header {
+  :is(.arena-window:has(.tourney-panel), .tourney-dialog, .tourney-admin-window) > .aui-window-header {
     min-height: 44px;
     flex-shrink: 0;
   }
-  :is(.aui-arena-port:has(.tourney-panel), .tourney-dialog, .tourney-admin-window)
+  :is(.arena-window:has(.tourney-panel), .tourney-dialog, .tourney-admin-window)
     > .aui-window-header
     > .aui-icon-button {
     top: 0;
@@ -14,7 +14,7 @@
     min-width: 44px;
     min-height: 44px;
   }
-  .aui-arena-port:has(.tourney-panel) {
+  .arena-window:has(.tourney-panel) {
     width: 100cqw;
     height: 100cqh;
     max-height: 100cqh;
@@ -305,19 +305,19 @@
 }
 
 @media (max-width: 1023px), (pointer: coarse) {
-  .aui-native-modal.aui-modal-scrim:has(> .aui-arena-port .tourney-panel) {
+  .aui-native-modal.aui-modal-scrim:has(> .arena-window .tourney-panel) {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  .aui-arena-port:has(.tourney-panel) {
+  .arena-window:has(.tourney-panel) {
     width: 100%;
     height: 100%;
     max-height: 100%;
   }
-  .aui-arena-port .tourney-mode > .kz-tabs {
+  .arena-window .tourney-mode > .kz-tabs {
     top: 0;
     left: 6px;
   }
-  .aui-arena-port .tourney-mode > .kz-tabs .aui-button {
+  .arena-window .tourney-mode > .kz-tabs .aui-button {
     min-height: 44px;
     padding: 6px 9px;
   }

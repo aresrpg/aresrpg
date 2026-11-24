@@ -6,6 +6,7 @@
 // the chip's pixels have exactly one home.
 
 import { useEffect, type ReactNode, type ComponentProps } from 'react'
+import { KeyHint } from '@aresrpg/ui'
 
 import { world_keyboard_eligible } from '../game/core/world_input.ts'
 
@@ -44,12 +45,6 @@ export const PromptChip = ({
   </div>
 )
 
-export const PromptKey = ({ label }: Readonly<{ label: string }>) => (
-  <kbd className="inline-grid min-w-[18px] place-items-center rounded-[5px] border border-white/25 border-b-2 border-b-white/40 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold text-gold-light shadow-[inset_0_-1px_0_rgba(0,0,0,0.5)]">
-    {label}
-  </kbd>
-)
-
 export const PromptText = ({
   template,
   touch_template,
@@ -60,7 +55,7 @@ export const PromptText = ({
     <>
       <span className="inline-flex items-center gap-1.5 [@media(pointer:coarse)]:hidden">
         {before.trim()}
-        {template.includes('{{key}}') && <PromptKey label={label} />}
+        {template.includes('{{key}}') && <KeyHint>{label}</KeyHint>}
         {after.trim()}
       </span>
       <span className="hidden [@media(pointer:coarse)]:inline">{touch_template}</span>

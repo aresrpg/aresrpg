@@ -7,7 +7,7 @@ import { receipt_digest, receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 import type { Command } from './control.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import { inventory_projected } from './actor_inventory.ts'
-import { recipe_job } from './profession_catalog.ts'
+import { recipe_job } from './catalog.ts'
 import { zone_key } from './actor_world.ts'
 
 export type ProfessionBaseline = Readonly<{

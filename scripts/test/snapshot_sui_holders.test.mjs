@@ -13,6 +13,8 @@ import {
 
 import avatar_fixture from './fixtures/snapshot_avatar.mainnet.json'
 import listing_fixture from './fixtures/snapshot_listing.mainnet.json'
+import seller_listing_fixture from './fixtures/snapshot_seller_listing.mainnet.json'
+import tradeport_fixture from './fixtures/snapshot_tradeport_listing.mainnet.json'
 import staking_fixture from './fixtures/snapshot_staking.mainnet.json'
 import staking_upgrade_fixture from './fixtures/snapshot_staking_upgrade.mainnet.json'
 
@@ -150,6 +152,28 @@ test('credits the seller of a captured Capy held in a legacy marketplace listing
   const [nft, , listing] = listing_fixture.objects
   const rows = new Map(listing_fixture.objects.map((row) => [row.address, row]))
   expect(resolve_holder(nft.address, rows, new Map())).toBe(listing.asMoveObject.contents.json.owner)
+})
+
+test('credits the seller of a captured transponder held in a TradePort listing', () => {
+  const [nft, , listing] = tradeport_fixture.objects
+  const rows = new Map(tradeport_fixture.objects.map((row) => [row.address, row]))
+  expect(resolve_holder(nft.address, rows, new Map())).toBe(listing.asMoveObject.contents.json.seller)
+  const other = {
+    ...listing,
+    asMoveObject: {
+      contents: {
+        ...listing.asMoveObject.contents,
+        json: { ...listing.asMoveObject.contents.json, nft_id: listing.address },
+      },
+    },
+  }
+  expect(resolve_holder(nft.address, new Map(rows).set(listing.address, other), new Map())).toBeNull()
+})
+
+test('credits the seller of a captured transponder held in a seller-keyed listing', () => {
+  const [nft, , listing] = seller_listing_fixture.objects
+  const rows = new Map(seller_listing_fixture.objects.map((row) => [row.address, row]))
+  expect(resolve_holder(nft.address, rows, new Map())).toBe(listing.asMoveObject.contents.json.seller)
 })
 
 const snapshot_staked_capy = async (transaction = staking_fixture.objects[0].previousTransaction) => {

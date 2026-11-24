@@ -3,12 +3,11 @@
 // The written guides. Prose comes from the locale documents; every number and object comes from guide_facts.ts.
 import type { ReactNode } from 'react'
 
-import { ExternalLink } from '../components/links.tsx'
+import { NewTabLink } from '../components/links.tsx'
 import { format_text } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import type { EncyclopediaText } from '../encyclopedia/copy.ts'
-import type { AppCopy } from '../i18n/copy.ts'
 
 import { ItemChip, MobChip, type DocsCopy } from './docs_parts.tsx'
 import { MechanicBody } from './DocsMechanics.tsx'
@@ -16,7 +15,6 @@ import { character_price_sui, docs_counts, first_hour, market_terms } from './gu
 import { is_mechanic, type DocsGuide, type DocsMechanic } from './routes.ts'
 
 type Copy = Readonly<{ copy: DocsCopy }>
-type Chooser = AppCopy['landing_page']['chooser']
 export type GuideLinks = Readonly<{ source: string; playbook: string; agent_guide: string; license: string }>
 
 const Facts = ({ rows }: Readonly<{ rows: readonly (readonly [string, ReactNode])[] }>) => (
@@ -55,40 +53,38 @@ const Overview = ({ copy }: Copy) => {
 
 const WAYS = [
   ['world', 'manual'],
-  ['dapp', 'automated'],
   ['agent', 'automated'],
-  ['telegram', 'automated'],
   ['sdk', 'manual'],
 ] as const
-const WAY_HUES = { world: 'green', dapp: 'gold', agent: 'clay', telegram: 'sky', sdk: 'lilac' } as const
+const WAY_HUES = { world: 'green', agent: 'clay', sdk: 'lilac' } as const
 
-/** The interfaces of the protocol. Their names and figures are the home page's own, never a second copy. */
-const Ways = ({ copy, chooser }: Copy & Readonly<{ chooser: Chooser }>) => (
+/** The interfaces of the protocol: who makes the moves, what each needs and how far along it is. */
+const Ways = ({ copy: { ways } }: Copy) => (
   <>
-    <p className="docs-lede">{copy.ways.lede}</p>
+    <p className="docs-lede">{ways.lede}</p>
     <div className="docs-ways">
       {WAYS.map(([id, play]) => {
-        const way = chooser.items[id]
+        const way = ways.items[id]
         return (
           <section className="docs-way" data-hue={WAY_HUES[id]} key={id}>
             <header>
               <h2>{way.name}</h2>
-              <small>{chooser.play[play]}</small>
+              <small>{ways.play[play]}</small>
             </header>
             <p>{way.body}</p>
             <Facts
               rows={[
-                [chooser.specs.runs_in, way.runs_in],
-                [chooser.specs.role, way.role],
-                [chooser.specs.good_for, way.good_for],
-                [chooser.specs.status, way.status],
+                [ways.specs.runs_in, way.runs_in],
+                [ways.specs.role, way.role],
+                [ways.specs.good_for, way.good_for],
+                [ways.specs.status, way.status],
               ]}
             />
           </section>
         )
       })}
     </div>
-    <p className="docs-note">{copy.ways.note}</p>
+    <p className="docs-note">{ways.note}</p>
   </>
 )
 
@@ -186,7 +182,7 @@ const Kares = ({ copy }: Copy) => (
   </>
 )
 
-const Agents = ({ copy, links }: Copy & Readonly<{ links: GuideLinks }>) => {
+const Agents = ({ copy, links, new_tab }: Copy & Readonly<{ links: GuideLinks; new_tab: string }>) => {
   const { agents } = copy
   return (
     <>
@@ -200,31 +196,31 @@ const Agents = ({ copy, links }: Copy & Readonly<{ links: GuideLinks }>) => {
       </ol>
       <Points points={agents.points} />
       <p className="docs-links">
-        <ExternalLink className="docs-text-link" href={links.agent_guide} new_tab={copy.new_tab}>
+        <NewTabLink className="docs-text-link" href={links.agent_guide} new_tab={new_tab}>
           {agents.guide}
-        </ExternalLink>
-        <ExternalLink className="docs-text-link" href={links.playbook} new_tab={copy.new_tab}>
+        </NewTabLink>
+        <NewTabLink className="docs-text-link" href={links.playbook} new_tab={new_tab}>
           {agents.index}
-        </ExternalLink>
+        </NewTabLink>
       </p>
     </>
   )
 }
 
-const Build = ({ copy, links }: Copy & Readonly<{ links: GuideLinks }>) => {
+const Build = ({ copy, links, new_tab }: Copy & Readonly<{ links: GuideLinks; new_tab: string }>) => {
   const { build } = copy
   return (
     <>
       <p className="docs-lede">{build.lede}</p>
       <div className="docs-cards">
-        <ExternalLink className="docs-card" href={links.source} new_tab={copy.new_tab}>
+        <NewTabLink className="docs-card" href={links.source} new_tab={new_tab}>
           <b>{build.source_title}</b>
           {build.source_body}
-        </ExternalLink>
-        <ExternalLink className="docs-card" href={links.playbook} new_tab={copy.new_tab}>
+        </NewTabLink>
+        <NewTabLink className="docs-card" href={links.playbook} new_tab={new_tab}>
           <b>{build.playbook_title}</b>
           {build.playbook_body}
-        </ExternalLink>
+        </NewTabLink>
       </div>
       <h2>{build.blocks_title}</h2>
       <Points points={build.blocks} />
@@ -235,25 +231,25 @@ const Build = ({ copy, links }: Copy & Readonly<{ links: GuideLinks }>) => {
       <Points points={build.forbidden} />
       <p className="docs-note">{build.license_note}</p>
       <p className="docs-links">
-        <ExternalLink className="docs-text-link" href={links.license} new_tab={copy.new_tab}>
+        <NewTabLink className="docs-text-link" href={links.license} new_tab={new_tab}>
           {build.license_link}
-        </ExternalLink>
+        </NewTabLink>
       </p>
     </>
   )
 }
 
-type GuideProps = Readonly<{ links: GuideLinks; chooser: Chooser; text: EncyclopediaText }> & Copy
+type GuideProps = Readonly<{ links: GuideLinks; text: EncyclopediaText; new_tab: string }> & Copy
 /** One renderer per written guide. A mechanics page is rendered by its own module. */
 const GUIDES: Readonly<Record<Exclude<DocsGuide, DocsMechanic>, (props: GuideProps) => ReactNode>> = {
   overview: ({ copy }) => <Overview copy={copy} />,
-  ways: ({ copy, chooser }) => <Ways chooser={chooser} copy={copy} />,
+  ways: ({ copy }) => <Ways copy={copy} />,
   'first-hour': ({ copy }) => <FirstHour copy={copy} />,
   bots: ({ copy }) => <Bots copy={copy} />,
   market: ({ copy }) => <Market copy={copy} />,
   kares: ({ copy }) => <Kares copy={copy} />,
-  agents: ({ copy, links }) => <Agents copy={copy} links={links} />,
-  build: ({ copy, links }) => <Build copy={copy} links={links} />,
+  agents: ({ copy, links, new_tab }) => <Agents copy={copy} links={links} new_tab={new_tab} />,
+  build: ({ copy, links, new_tab }) => <Build copy={copy} links={links} new_tab={new_tab} />,
 }
 
 export const GuideBody = ({ guide, ...props }: Readonly<{ guide: DocsGuide }> & GuideProps) =>

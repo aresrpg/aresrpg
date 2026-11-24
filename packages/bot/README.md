@@ -1,169 +1,51 @@
-# Hosted bot operation
+# Hosted bot
 
-This is an unreleased prototype. Unit fixtures are not evidence that mainnet, Enoki or provider connectors are configured. Do not fund fixture identities. No deployment or real key provisioning is part of the local checks.
+The hosted bot is the OAuth/MCP door for external AI clients and the fenced actor that plays a hosted wallet on
+the game socket. How it works is the system law in [ARCHITECTURE.md](../../ARCHITECTURE.md#hosted-bot); this
+file covers running and configuring it. Do not fund fixture identities: the tests use publicly known test keys.
 
 ## Roles and startup
 
-Build the repository-root Docker context with `packages/bot/Dockerfile`. Connect/OAuth/MCP HTTP handlers and the fenced actor runtime share one trusted backend. Compromise of this backend is full authority over its hosted wallets. Application encryption protects persisted records at rest, not a compromised running service.
+Build the repository-root Docker context with `packages/bot/Dockerfile` (`build.ts` bundles the entry). One process
+serves the HTTP door (`/connect/*`, `/authorize`, `/oauth/*`, `/.well-known/*`, `/mcp`, `/health`) and runs the actor.
+A compromise of this process is full authority over its hosted wallets: Redis holds public descriptors and
+AES-256-GCM encrypted Ed25519 seeds, never a plaintext key.
 
-The application supports multiple processes under the [hosted actor law](../../ARCHITECTURE.md#authentication). Durable address leases retain sticky ownership and fencing; observations and execution-dependent control reach the current owner through authenticated ephemeral Redis pub/sub. Ambiguous mutation replies are not automatically retried or redirected. Each process needs an acknowledged subscription connection before claiming wallets. Subscriber loss fails `/health` and stops local actors. Local process fixtures verify this transport, not production configuration. Untrusted routing components must have no signing or storage credentials. A valid TLS bare-root `wss://` game endpoint remains required; wallet admission, Origin, rate and capacity checks always apply.
+Several processes may run. A durable lease per wallet address keeps one owner process and fences the others;
+observations and owner controls reach that owner through Redis pub/sub. A process needs an acknowledged subscription
+before it claims a wallet, and losing it fails `/health` and stops its actors. Stop every old actor before starting
+a new version.
 
-The control store requires Redis 7.2 or newer. Acknowledged fencing and consent state must remain durable and must not be evicted or rolled back by failover. Redis stores public descriptors and AES-256-GCM encrypted Ed25519 private seeds, never plaintext private keys. Ephemeral game state cannot substitute for durable control records.
+The store needs Redis 7.2 or newer with durable, non-evicting persistence. Every key is
+`<namespace>:<collection>[:<id>]`, built only by `keys` in `src/store.ts`: `bot:control` is the layout marker,
+`bot:control:pending` the index of unfinished records and `bot:control:record:<kind>:<identity>` one aggregate.
+Custody, grants, consent, authored trees and stop or lease decisions are durable. Commands, envelopes, receipts and
+tree progress live only in the process that executes them; a restarted process starts each tree again from its root.
 
-Every key follows the one grammar of the permanent Redis, `<namespace>:<collection>[:<id>]`, owned by `@aresrpg/protocol/hosted-keys`: the bare `bot:control` is the layout marker, `bot:control:pending` the index of unfinished records and `bot:control:record:<kind>:<identity>` one aggregate. Telegram keeps its own `telegram` namespace in the same Redis and the same logical database. The store keeps versioned durable JSON aggregates in those `record` string keys. Lua compare-and-set checks declared records atomically; temporary OAuth records retain absolute expiry. Custody keys, consent, authored script definitions and stop/lease decisions are durable. A lease-scoped busy bit lets another process wait for the current actor without storing a command ID, digest or envelope. An explicit field allowlist excludes execution progress. Commands exist only in process memory, each carrying its own settled receipt, as do pending unsigned/signed bytes, reconciliation baselines, fight latches and tree traversal. A command lives only while its lane names it as its latest, in-flight, unreconciled, market-proof or direct command, or as a hosted run's last one; admitting the next command releases the rest, so `bot_status` reads the wallet's latest direct command until the next one is accepted. Status replies carry the digest and outcome, never the receipt body. Per-key queues serialize local callbacks; cross-process conflicts fail closed without replaying callbacks that may sign. Callback failure publishes nothing. Redis reconnect/offline queues remain disabled. A lost process loses its command status and transaction evidence; it does not recover a signed envelope from Redis.
+## Configuration
 
-The scheduler combines durable pending intent with process-local pending execution, and rechecks each record before acting. An active script survives restart but begins at its root after fresh observations. The `records-v2` store reads old records through durable-field projections and ignores historical command/receipt records. This is not a live cleanup or deletion. Deployment must stop all old actors before starting the new version; mixed versions could retain or replay the obsolete execution model. Custody, grants and explicit stop remain authoritative.
+Required: `BOT_REDIS_URL`, `BOT_ISSUER` (HTTPS origin), `BOT_WEB_ORIGIN` (exact first-party HTTPS origin),
+`BOT_SUI_RPC_URL` (HTTPS), `BOT_GAME_ENDPOINT` (WSS root), `BOT_AUTHORITY_GENERATION`, `BOT_SIGNING_KEYRING_FILE` and
+`BOT_RECOVERY_MODE=true|false`. Provisioning and play stay off unless `BOT_PROVISION_ENABLED=true` and
+`BOT_PLAY_ENABLED=true`. Rotating `BOT_AUTHORITY_GENERATION` invalidates every grant; owners consent again.
 
-When replacing the split-role prototype, rotate `BOT_AUTHORITY_GENERATION` and require fresh owner consent. Legacy allowance-bearing grants remain rejected. Existing encrypted custody records and public recovery descriptors are preserved. Review current chain state before reactivating scripts; no old command or receipt history is imported into execution.
+Optional: `BOT_SENTRY_DSN` with `BOT_DEPLOY_ENV` and `BOT_RELEASE` sends errors-only events that carry fixed codes and
+bot source frames, never raw messages or wallet material. Without it the bot logs sanitized codes only.
 
-## Required configuration
+Defaults, each overridable by a positive integer (`src/config.ts`): `BOT_PORT=3000`,
+`BOT_OBSERVATION_FRESHNESS_MS=15000`, `BOT_REQUEST_TTL_MS=600000`, `BOT_CHALLENGE_TTL_MS=300000`,
+`BOT_CODE_TTL_MS=60000`, `BOT_ACCESS_TTL_MS=900000`, `BOT_REFRESH_TTL_MS=7776000000`, `BOT_MAX_BODY_BYTES=65536`,
+`BOT_MAX_REDIRECT_URIS=5`, `BOT_LEASE_MS=30000`, `BOT_HEARTBEAT_MS=10000` (shorter than the lease),
+`BOT_TICK_MS=1000`, `BOT_REFUSAL_RETRY_MS=30000`, `BOT_SCAN_LIMIT=100` (pending keys per tick and concurrent work).
+An invalid or empty override fails at startup.
 
-Wallet funding is the only SUI spending limit; no separate grant allowance is configured. The SDK requires a valid per-transaction gas budget, and chain execution enforces available funds. The managed service key and Google recovery member independently control bot assets.
+The keyring file is `{ "active_key_id": "<version>", "keys": { "<version>": "<base64 of 32 random bytes>" } }`. It is
+read at startup. Keep every key version that still seals a stored seed: deleting it loses that wallet. Wallet funding
+is the only spending limit; there is no grant allowance.
 
-Required application configuration: `BOT_REDIS_URL`, `BOT_ISSUER` (canonical HTTPS origin), `BOT_WEB_ORIGIN` (exact first-party HTTPS origin), `BOT_SUI_RPC_URL` (HTTPS), `BOT_GAME_ENDPOINT` (canonical WSS root), `BOT_AUTHORITY_GENERATION`, and explicit `BOT_RECOVERY_MODE=true|false`. Provisioning and gameplay remain disabled unless `BOT_PROVISION_ENABLED=true` and `BOT_PLAY_ENABLED=true` are supplied. Protect public connection endpoints with edge admission and request-rate controls; TTL and byte bounds do not replace flood protection.
+## Checks
 
-Unexpected runtime failures use the existing reporter callback and an errors-only Bun Sentry client when `BOT_SENTRY_DSN` is explicitly supplied. `BOT_DEPLOY_ENV` and `BOT_RELEASE` label those events. Without the bot DSN, reporting emits sanitized local codes only; the frontend DSN is never reused. Default integrations, tracing, logs, metrics, requests, PII and automatic breadcrumbs are disabled. Events retain fixed error codes, allowlisted run context and bot-source filename/line frames, never raw exception messages, causes, wallet material or transaction payloads. Shutdown allows up to 2,000 ms to flush telemetry; this does not change gameplay timing. Production ingestion requires an approved bot destination through the existing deployment environment configuration.
-
-Source-owned defaults are overrideable by validated positive integer deployment settings:
-
-- `BOT_PORT=3000`; `BOT_OBSERVATION_FRESHNESS_MS=15000`, bounded further by the shared chain-clock law.
-- `BOT_REQUEST_TTL_MS=600000`, `BOT_CHALLENGE_TTL_MS=300000`, `BOT_CODE_TTL_MS=60000`, `BOT_ACCESS_TTL_MS=900000`, `BOT_REFRESH_TTL_MS=7776000000` (90 days). The refresh-family deadline is fixed, not extended on rotation; reconnecting creates a new grant. Commands stay scoped to the grant that issued them; hero runs belong to the wallet, so the new grant reads, replaces and stops them, and a run stops when the grant it executes under is revoked.
-- `BOT_MAX_BODY_BYTES=65536`, `BOT_MAX_REDIRECT_URIS=5` bound input parsing and redirect registration.
-- `BOT_LEASE_MS=30000`, `BOT_HEARTBEAT_MS=10000`, `BOT_TICK_MS=1000`. Heartbeat must remain shorter than lease. Actor identity is a fresh UUID per process, not operator configuration.
-- `BOT_SCAN_LIMIT=100` is both the pending-key batch and concurrent-work ceiling, not a total-bot limit. Extra wallets wait for subsequent ticks. Adding a replica does not rebalance existing wallets.
-
-These are reviewed operational defaults, not measured capacity claims. Explicit invalid or empty overrides fail closed. `BOT_SIGNING_KEYRING_FILE` supplies the private custody encryption keyring. Transaction-envelope encryption keys are no longer used because transaction bytes never persist.
-
-Private seeds are encrypted before the Redis write. One atomic control-store commit persists the ciphertext, canonical bot descriptor, address binding, owner membership and ready provisioning result; concurrent creates converge on one identity. AES-256-GCM authenticates format version, record identity, public key and encryption-key ID. Every read verifies the decrypted seed's public key, and signing compares the expected descriptor. Missing or corrupt bound keys fail closed. Provisioning records the owner request first. An uncertain commit reconciles the same bot/request ID before returning a descriptor; only a committed identity can be published. Competing candidates compare the same request and bot revisions, so a delayed commit cannot replace the winning wallet. Plaintext exists transiently in trusted process memory; JavaScript and SDK internals cannot promise perfect memory zeroization. There is no plaintext fallback, key export endpoint or private-key logging.
-
-Signing-key encryption keys must remain separate from encrypted records. The signing keyring JSON shape is `{ "active_key_id": "<version>", "keys": { "<version>": "<base64 encoding of 32 random bytes>" } }`. Never commit plaintext keys or put them in Redis or logs. New signing records use the request hash; existing two-hash key IDs remain readable with the original authenticated ID and public-key checks, without automatic rewriting. Non-encrypted control metadata is sensitive even when wallet seeds are encrypted.
-
-The keyring is read at startup, not hot-reloaded. The internal `rewrap(persisted_key_reference)` verifies the original seed and compare-and-swaps fresh ciphertext without changing the public descriptor. Conflicts and uncertain replies require rereading. There is no public rotation endpoint. Retained ciphertext requires its matching key version; deleting that key can permanently prevent recovery. Encryption-key rotation does not revoke an exposed wallet seed.
-
-## Connection and recovery
-
-A server close (`REPLACED`, `ALREADY_CONNECTED`, a `SPEED` or `RATE_LIMIT` violation, an invalid packet or signature) is a fact, not a decision. The SDK reports it as `disconnected` with the reason; the actor logs `connection_closed: <reason>`, and the next pass that needs the socket, or the lease-renewal loop, reconnects it under the same lease and fence, so a retained envelope, the wallet decision revision and any waiting direct command survive. Only the actor's own stop (shutdown, lost lease, dead grant) is final. No human path logs in as a bot address; the lease fence decides which process holds the seat.
-
-The interactive client and bot share `@aresrpg/fight`’s stateful session and submitted-turn latch. Before signing a turn, its canonical baseline is retained with the exact command. Certified `TurnSeedUsed` witnesses replay through that same session, and receipt settlement atomically retains the replayed checkpoint and submitted-turn identity in the wallet lane. Within one process lifetime, socket updates, heartbeats and unrelated inventory changes cannot authorize another submission of that turn. Restart discards the latch and reads fresh authoritative fight state. The bot waits for a canonical next-turn projection before further action; it does not publish speculative replay as a server checkpoint or add an indexer version protocol. Terminal turns remain latched while the existing settlement action handles custody. Hot replay rows retire only after certified settlement of every owned seat and a complete authenticated character projection confirming exit, with no unresolved envelope; command and receipt evidence is process-local.
-
-OAuth is authorization-code + S256 PKCE with exact registered HTTPS redirects and resource binding. Registration supports public clients, not unsupported client-metadata-document discovery. The stateless JSON MCP transport advertises explicitly supported 2025 protocol versions; do not claim latest-protocol, ChatGPT publication, Claude or Grok readiness without live provider tests. `tools/list` is the source of implemented actions. External AI chooses and revises the strategy through MCP. The bot never calls an AI provider; it executes the accepted declarative behavior tree while the assistant is offline.
-
-The first-party owner signs a fresh session challenge. One verified Google identity reserves one hosted bot request atomically; retries and provider changes reuse that mapping. The API accepts no caller-selected creation ID, owner or wallet. A retained request may exist before its encrypted key and public wallet descriptor commit; it is not a funding destination. Existing multiple-wallet records fail closed for review rather than selecting or replacing a wallet. Connector consent binds the reviewed exact bot descriptor, generation, client, resource, scopes, policy revision. Connectors can share the selected bot and its single normal game socket.
-
-Prepared/signed bytes, digests and receipts survive only in process memory. Live uncertain submissions can reconcile their known digest without automatic transaction retry; the process keeps renewing that lane's lease while it holds the envelope, even after socket authority ends. If the lease is lost anyway, the command reports `uncertain`, never `failed`. Restart reloads the saved active script and evaluates from its root after fresh game observations; it does not restore signed bytes or consumed leaves. A non-idempotent leaf may repeat after an ambiguous crash, even if the old transaction settled while the game projection still lags. This tradeoff is intentional; fresh observation is not proof of nonexecution and there is no exactly-once guarantee. Pause, revoked consent and explicit stop/completion remain durable and do not resurrect on restart.
-
-Recovery from restored state requires explicit recovery mode and a fresh `BOT_AUTHORITY_GENERATION`: old requests, challenges and tokens must fail. Key mappings, descriptors and current chain state must be verified before explicit resume. Replacement encryption keys cannot repair missing keys. Owner-signed Google recovery and retained public multisig descriptors remain usable without this service or its signing keyring.
-
-## Verification
-
-`bun run --cwd packages/bot typecheck`, `bun test packages/bot/test`, repository lint, native suite and browser checks all remain required. Real Redis tests run only with `TEST_BOT_REDIS_URL=redis://127.0.0.1:<fixture-port>/15` targeting an explicitly disposable loopback instance; the normal suite otherwise reports it skipped. Fixtures use unfunded ephemeral identities and never submit chain transactions. Production release additionally needs managed-key lifecycle/restore tests, real zkLogin owner proof, TLS admission, provider OAuth registration/refresh/revocation and full game lifecycle verification.
-
-The bot image is locally buildable with the supplied Dockerfile. The release pipeline now wires bot image build/reuse, provenance attestation, schema-two manifest certification, and activation validation. No trusted bot image has yet been published or deployed. The production prerequisites above still apply.
-
-The typed catalog exposes the supported world, inventory, profession, marketplace and ordinary PvE actions. Each direct call carries the observed checkpoint and revisions. A direct call never needs an idle wallet: it is admitted as a one-shot entry of the wallet's signing queue, beside the hosted hero runs. It waits for the signature in flight and for the heroes whose own fight turn another wallet could pass, then takes the single signing slot before the other heroes and is validated against fresh state there; a stale payload fails without signing. A wallet holds one direct command at a time: a second one is refused `bot_busy_or_paused` until the first has signed or failed. A waiting `bot_market_buy` takes the wallet's one market view ahead of the hosted heroes and reads the current offers of its item itself, so its caller does not have to watch them first; it gives the view back once it signs or is refused, and it fails `market_unavailable` when another connector holds that view. The command is accepted under the current wallet decision revision and may carry an older observation revision; a pause, an owner return or a revoked grant while it waits fails it unsigned. There is no timeout and no queue length. Behavior trees compose that same catalog and resolve live targets through typed selectors; they cannot execute arbitrary code, network requests or transaction builders. `bot_observe` accepts canonical market and price watches. Observations return the current status directly, or `status: pending` until the authenticated baseline is ready. Retry the read with the same requested watches. Reads create no durable commands or result rows; watches and snapshots belong to the live connection. After process restart, a new explicit read recreates idle observation demand.
-
-Connected actors with a live `bot:play` grant retain ordinary player presence between tasks: short walking legs, pauses and occasional jumps around their stopping point, within roughly fifty blocks. A supported equipped pet enables mounted roaming, occasional double jumps and held glides through the real controller. This uses real collision/controller movement and normal position packets, with no transaction or new gameplay objective. Active work takes priority. Explicit pause, unavailable contract or terrain, lost authority and disconnection stop idle movement; the lease-renewal loop governs reconnects.
-
-The owner UI reads `/connect/status` only after a browser-bound Google owner proof. A connected result requires an exchanged, non-revoked grant with current authority, bot generation, policy and a live refresh family. It describes renewable connector authorization, never live actor presence or inference. Code exchange atomically records its grant ID in the owner lookup; existing owner lookups are initialized once from authoritative exchanged grants. Grant records remain the only authorization authority. Frontend status checks are single-flight, run at sign-in, on window focus and when another tab saves an identity, never on a clock, and fail closed on errors. HTTP requests time out after fifteen seconds; wallet approval remains bounded by its signed challenge expiry.
-
-Returning users resolve the unique backend bot, verify a fresh signer proof and recheck owner status before the inventory target is installed. Browser history never selects the active bot or restores signer trust. Normal connected inventory has no address-comparison checkbox or saved-wallet dropdown. Historical public identities remain separate recovery records and are not deleted or silently overwritten if unreadable. Characters use Send to agent; coin funding remains separate. OAuth consent is still one explicit approval of the actual provider request.
-
-`bot_pause` stops new gameplay admissions. A still-authorized connector can explicitly request a fresh `bot_observe` and use its revisions with `bot_resume` once there is no unresolved envelope or active command. Resume never restores revoked authority or bypasses recovery mode. Already signed or submitted transactions may still settle.
-
-Pause and stop recheck durable authority at execution admission. If signing/submission already passed its final check, the transaction may still settle. A live process retains its unresolved digest for reconciliation; a replacement process has no transaction history and must not claim cancellation or nonexecution.
-
-`BOT_SCAN_LIMIT` bounds pending page size and concurrent wallet work. Successful ordinary actions retain the authenticated socket and SDK session. Actual disconnects require fresh authentication and baseline; a replacement actor evaluates saved active intent from fresh game state, without restoring old transaction bytes. Existing live watches restore across transient transport reconnects. This is not high-scale or uninterrupted-event-continuity certification.
-
-The owner account permits one hosted wallet. Repeated requests cannot allocate additional signing identities. Service-wide admission and capacity limits remain a separate deployment concern; this invariant is not a global abuse-rate limit.
-
-The HTTP door uses the shared request limiter (`@aresrpg/protocol/request-limiter`), counted per process in memory. Every route allows 600 requests a minute per visitor address, except `/health`, which is never refused, and `/mcp`, which authenticates its bearer token first and then allows 600 calls a minute per verified owner across all of that owner's grants. A refused request answers 429 `{"error":"rate_limited"}`. The visitor is the visitor address the Cloudflare edge reports (`CF-Connecting-IP`): every public request arrives through the tunnel from the same pod addresses, so the socket address names nobody. A request without that header came from inside the cluster, is one of our own services, and is never limited. No allowance is shared between callers.
-
-`POST /connect/waitlist` with `{ "authorization_id" }` puts the verified owner of that first-party session on the Telegram waitlist (`telegram:waitlist`, once, with its joining time). The session is the proof: the browser signed the `session` challenge from `/connect/challenge` and `/connect/verify` accepted it, exactly as for Connect Your Agent. The request carries no address, and joining grants nothing; only the Telegram operator's allowlist admits an owner (see `packages/telegram/README.md`).
-
-Command status and idempotency are process-lifetime properties, not a permanent audit log. After ownership changes, old command IDs may be unavailable. Production capacity and latency validation remain deployment gates; no high-scale latency is certified here.
-
-## Durable behavior trees
-
-The external assistant reads `bot_observe`, authors a versioned JSON tree and calls `bot_validate_behavior`, then `bot_start_behavior` with an idempotency key and fresh observation/decision revisions. A tree acts for exactly one hero and a hero has one run; `bot_behavior_status`, `bot_replace_behavior` and `bot_stop_behavior` address it by `character_id`, for every live grant of the owner. A wallet hosts at most 30 hero runs and signs one transaction at a time, serving the hero whose fight turn expires first. `bot_behavior_status` returns the accepted tree, revision, memory, command and blocker. `bot_replace_behavior` requires the current run revision and the current wallet decision revision; it refuses while that hero's own command is signing, pending or unreconciled. Replacement starts a new traversal. Objective title, description and steps describe the plan; only the tree executes.
-
-The tree has `sequence`, priority `selector`, `loop`, `condition`, `action`, `wait`, `replan` and `complete` nodes. A sequence advances in order, retaining reconciled action completion while reevaluating its conditions. A selector reevaluates children from highest priority, chooses the first non-failing branch and clears abandoned branch memory on a switch. Unknown observations block evaluation instead of becoming false or admitting a lower-priority branch. Sequence failure clears its traversal memory. A domain refusal fails its leaf; a tree with no succeeding branch waits and is evaluated again on the next tick. A successful root repeats on the next scheduler tick. `loop` repeats its child after success; `complete` is the explicit terminal leaf. `wait` retains the objective, and `replan` yields its authored reason to the external assistant. A tree that never reaches `complete` can run indefinitely.
-
-There is no default action count or time cutoff. Authority, wallet funds, fresh game state and normal gameplay rules govern every command. One reducer drives the saved script through a fenced wallet lane and the ordinary SDK executor. Within a process, completion is consumed once after receipt and projection reconciliation; failed or uncertain commands do not fall through a selector into replacement spending. Traversal memory, cursor, command outcomes and action counts are not persisted. Restart starts at the root, so authors should express goals as conditions on observable game state rather than rely on remembered actions for cross-restart idempotency.
-
-Conditions expose character level, job level, available item quantity, custody, ambush and fight state; regional resource/mob availability and observed market prices are also typed facts. Missing observations remain unknown. Actions include exact catalog `call` payloads and live selectors: nearest eligible `gather` or `engage`; `discover` within an authored tracked region; `equip_owned` by item type and slot; `consume_owned` from an available stack; `observe_market`, `observe_prices`, `buy`, `sell`; and `combat` with explicit per-character profiles. These selectors choose only the requested targets. The assistant authors thresholds, recipes, acquisition alternatives, encounter choices and priority changes. No profession leveling strategy is built into the runtime. `tools/list` supplies the exact current schemas.
-
-A script may carry `strategy`, the entry of the shared catalogue (`seed/content/strategies.json`) it was bound from. The bot stores it with the run and reports it in `bot_observe` `runs` and `bot_behavior_status`. It is never executed or checked, and an authored tree has none.
-
-Growth leaves never block a tree. `spend_points` follows authored priority lists: stat points go to the first listed stat they can raise; spell points go to the first listed spell that still has a rank to gain, and wait until they pay for it. `equip_owned` wears an exact item (`lowest_id`) or the best owned item of a slot: `highest_level`, or `best_stats` with a list of item stats where an earlier stat outweighs every later one. A ranked order applies the ordinary equip refusals, replaces a worn item only with a strictly better one, and fails while its hero cannot change gear or when its list is empty. In a combat profile a cast marked `if_learned` is skipped until its hero has learned the spell; any other unlearned cast stops the hero with `unavailable_spells`. A `dungeon` leaf enters only when every listed teammate can follow under the shared key rule (`raid_entrants` in `@aresrpg/protocol/strategies`); a key listed on the market or held in a trade does not count.
-
-`bot_observe` exposes job XP, recipe access and authored acquisition sources in `planning_context.professions`; the bag is `bot_inventory`, whose `available` amount excludes listed and traded assets through the shared protocol selectors. A craft attempt consumes ingredients even when its item-success roll fails. Conditions must use observed progress, never estimated gains. Gather/craft commands wait for receipt-proven inventory and XP, with gathering additionally requiring the newer character checkpoint and consumed node. Equipment, consumables, loot and combat retain their corresponding ordinary reconciliation barriers.
-
-The accepted script is immutable within a revision. Fresh observations may change a selected, accepted but unprepared draft while preserving its command identity and replacing its reconciliation baseline atomically. Prepared/signed envelopes are never rewritten. Stop, pause, revocation and owner return fence further admissions; only a pre-submission signed envelope can be cancelled, while an already submitting envelope keeps exact digest recovery. `bot_stop_behavior` does not forfeit a fight. After reconciliation and fresh observation, the external assistant explicitly resumes wallet authority when needed and starts or replaces the intended behavior. `awaiting_ai` is an externally visible blocker; it never triggers an AI request from the bot.
-
-A failed or cancelled behavior command completes nothing. Its run waits with the command's safe reason (`funding_required`, a domain code, or `command_failed`) and its leaf selects again only once a fact it was judged on has moved: the observed game state, or for a funding refusal a fresh balance above the one it was refused at, so a refill resumes it. Any other refusal before submission, which spent no gas, is also tried again after `BOT_REFUSAL_RETRY_MS` (30 s by default); a failure that spent gas never retries on the clock: it waits for a new observation revision, from a changed game state or a reconnect's fresh snapshot. An uncertain command waits with `command_uncertain` while receipt recovery holds its envelope and is never prepared, signed or submitted again; once recovery settles it the run continues, and only an uncertain command with no envelope left yields `awaiting_ai`. Exact command status retains the diagnostic.
-
-Hero runs are the only run model. A stored run of a retired shape (a profession or combat run, or a tree saved before runs belonged to one hero) is never executed: the actor stops it on sight, which removes it from the pending index, and reports it once. Nothing is deleted, and a stored lane forgets its retired wallet-wide run reference when it is read. The read projection excludes obsolete execution fields without live data deletion or a second executor.
-
-## Marketplace actions and price observations
-
-`observe_market` follows the existing server cursors from the first page to completion before selecting a purchase. Pages belong to the live actor projection and share catalogue versions and departure tombstones with owned inventory. Refreshing an earlier page invalidates later pages. A completed multi-page sweep remains usable for that evaluation and then switches the existing subscription back to the first page, so later price changes on earlier pages are observed; partial new sweeps cannot authorize a best-offer purchase. A successful purchase removes its exact listing, invalidates the sweep and retains receipt-derived catalogue version evidence; restart discards this evidence and rebuilds catalogue state from fresh authoritative observations. Sale receipts identify the actual newly created lot when a stack was split and wait for its indexed listing.
-
-`buy` selects the lowest total or lowest per-unit buyer cost among eligible observed offers, using integer ratios and the shared royalty quote. It binds the exact listing ID, kiosk, version, quantity and ask. `max_total_mist` caps the actual on-chain ask plus royalty through one finite SDK payment coin; gas is separate. Excess funds return to the wallet. `sell` selects an owned, unencumbered sufficient stack, binds its source version and quantity, and lists the authored legal lot at the exact positive MIST price through the existing SDK list action. The service does not invent a price or trading strategy.
-
-The existing server returns at most the three cheapest listings per offer group. Following every page covers every returned group, not every listing in the marketplace. Pages can change while being read: this is a live, non-atomic sweep, not a guaranteed globally current best price. Purchase admission rechecks the selected listing, and chain execution remains authoritative. Price conditions expose lowest ask, buyer total or per-unit buyer cost, latest daily average, latest sale unit price when OHLC exists, and total supply. Missing history stays unknown; a known zero supply remains zero.
-
-Local proof (no funded keys, network execution or assets):
-
-```sh
-bun run --cwd packages/bot typecheck
-bun run --cwd packages/protocol typecheck
-bun test packages/bot/test
-bun test packages/bot/test/profession_sdk.test.ts
+```bash
+bun test               # the suites; Redis cases run when TEST_BOT_REDIS_URL names a loopback database 15
+bun run typecheck
 ```
-
-The SDK test builds/signs real gather and craft PTBs through the actual process-local transaction lifecycle, using a synthetic fullnode transport and synthetic game projections. It is not a live-game, full farming/combat or public connector certification. Production still requires independent security review, a disposable real database gate, provider connection tests, a real game-server/chain test, backups/restore validation, and explicit deployment authorization.
-
-The service health probe reads its durable Redis connection; a disconnected process reports unhealthy. Redis reconnect and offline queues remain disabled, so uncertain writes are never replayed by the connection.
-
-`bot_observe` returns live profession state without the full static recipe catalogue. Pass `recipes: []` explicitly for output IDs, then `recipes: ["<output_type>"]` for selected recipe details and acquisition sources. The same authored seed catalogue and immutable rules remain authoritative; no second catalogue or cache is maintained.
-
-`bot_observe` is a short status: heroes, owned fights, balance, bag counts, the zone each hero stands
-in, runs and revisions. It lists no packet, no bag and no zone, and writes no `null`: an absent key
-is an absent or unknown fact. The detail reads share its read path and scope: `bot_inventory` (one
-line per item and kiosk, plus own listings, trades and claims), `bot_item_stacks` (the object ids of
-one item, largest stacks first, 20 by default and 200 at most) and `bot_zones` (the zone of each
-hero, `nearby` for the tracked zones around it, `mobs` and `resources` to list their content).
-
-A `profession` behavior action binds `character_id`, `world` and `order: "best_progress"`. It selects
-one ordinary equip/gather/craft action from current observations. Positive-XP recipe ranking comes
-from the shared progression owner and checks available ingredients without discarding the full recipe
-graph. Otherwise it selects an eligible harvest with an available tool. A `discover` action with
-`order: "onward"` and that world follows adjacent zones in a deterministic cycle; `nearest` discovery
-still accepts an explicit region and optional area constraints. These are ordinary tree leaves, not a
-second automation service. Combine them with explicit protector/combat branches and a loop; missing
-observations wait and failed/uncertain mutations do not become fallback. Review ongoing SUI and ingredient
-costs before starting continuous work.
-
-## Reusable combat tactics
-
-A hero's tactics live only in the combat or dungeon leaf of its behavior tree. The external assistant checks a profile against the hero's learned spells with `bot_validate_combat_profile`, which stores nothing, then embeds it in the tree it starts or replaces. Stored `combat_profile:*` records of the earlier saved-profile shape have no reader and are left untouched.
-
-A behavior `combat` leaf binds one existing supported PvE fight and the explicit profile snapshots for its owned seats. Its process-local activation keeps that fight identity across placement, ready/start, owned turns, timing waits and settlement; it is complete only after the fight lifecycle reconciles. A higher-priority branch can preempt future admissions, but cannot erase an admitted command or its receipt barrier. Another fight requires an authored `engage` branch or a new external decision. A hero plays only its own seat; a teammate's seat belongs to that hero's own tree, and optional `allies` give free teammates the placement window to join. Dungeon rooms are played by the `dungeon` leaf of a tree that names the dungeon. Wagered, managed and tournament modes remain unsupported.
-
-Both `engage` and `combat` accept optional `target_options`: `min_size`, `max_size`, `mob_types`,
-and `area` as `{ "world": "nauvis", "city": "thebes" }` or a named `biome` instead of `city`.
-Use `min_size: 1` and `max_size: 1` for exactly one mob. The existing engagement `mob_types` filter
-still applies; an optional target type list narrows it further and also constrains combat recovery.
-Unknown areas/types and inverted bounds are rejected. City membership takes precedence over biome
-membership. Copy the same options to the combat leaf so restart or an already active fight cannot
-bypass encounter selection. Actual roster counts include dead mobs. The constraints remain on generated
-commands and are checked again before signing/submission. The existing movement follower rejects any
-segment leaving the area, including detours; a rejected route yields rather than silently relaxing bounds.
-No eligible observed group means waiting. These options do not discover new zones, guarantee victory,
-cap total gas or constrain unrelated activity after the script is stopped. Unconstrained trees remain compatible.
-
-Profiles contain finite named combos and ordered rules. Conditions are always, health below a percentage, or an enemy within a cell distance. Actions are cast, weapon strike, and approach/retreat movement. Targets are self, nearest enemy, lowest-HP enemy, or an empty legal cell near the nearest enemy for traps. Each rule executes once per turn. The first unavailable step ends that combo, retaining its legal prefix; later rules still execute. No-action fallback either ends the turn or yields `awaiting_ai`. Movement simulates every reachable destination, preferring surviving higher-HP outcomes then the desired enemy distance with stable cell ties. It is a heuristic, not optimal play or a victory guarantee.
-
-`bot_behavior_status` exposes the active tree and blocker; `bot_stop_behavior` fences new commands without forfeiting the fight. To revise active tactics, the assistant waits for admitted work to reconcile, reads fresh revisions and explicitly replaces the tree. The bot never interprets descriptive prose as a command or contacts an inference provider.
-
-The existing HTTP request-size ceiling also applies to profiles. There is no loop or recursive combo syntax. Finite rules and the canonical board bound planning work; no new numerical search cap is imposed. Existing fresh observation, lease, grant, turn timing and transaction gates remain mandatory. Profile/run records are ordinary non-expiring control aggregates; only active/waiting runs enter the existing pending index. Backups and restore use the same paused authority-generation reconciliation as other bot control records.

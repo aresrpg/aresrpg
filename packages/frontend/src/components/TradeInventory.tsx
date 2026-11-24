@@ -3,12 +3,12 @@
 import { useState, type CSSProperties } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { ChevronLeft } from 'lucide-react'
-import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
+import { Button, GameWindow, MarketCurrency, NativeModal } from '@aresrpg/ui'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
-import { SuiUnit } from '../marketplace/marketplace_model.tsx'
 
+import { ItemDetailView } from './ItemDetailView.tsx'
 import { OwnedItemDetail } from './OwnedItemDetail.tsx'
 import { TradeSlotFace } from './TradeOfferCaps.tsx'
 import {
@@ -17,6 +17,7 @@ import {
   trade_inventory_category,
   type TradeInventoryCategory,
 } from './trade_view.ts'
+import './inspection.css'
 
 /** One stack's amount, chosen in place of the inventory grid; opening it again starts from half the stack. */
 const TradeAmountPicker = ({
@@ -146,7 +147,7 @@ export const TradeInventory = ({
         <b>{text('inventory')}</b>
         <output aria-label={text('sui')} className="trade-wallet-balance">
           {balance === null ? '—' : localized_numbers.sui(balance, 2)}
-          <SuiUnit size={10} />
+          <MarketCurrency />
         </output>
       </header>
       <nav className="trade-inventory-tabs">
@@ -188,7 +189,7 @@ export const TradeInventory = ({
             draggable
             className="aui-inspection aui-inspection--item"
           >
-            <OwnedItemDetail item={inspected} copy={copy} />
+            <OwnedItemDetail Sheet={ItemDetailView} item={inspected} copy={copy} />
             <div className="aui-inspection-actions">
               <Button
                 tone="primary"

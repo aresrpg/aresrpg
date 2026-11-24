@@ -11,12 +11,10 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY patches ./patches
 COPY packages/bot/package.json packages/bot/
-COPY packages/telegram/package.json packages/telegram/
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/
 COPY packages/frontend/package.json packages/frontend/
-COPY packages/mobile/package.json packages/mobile/
 COPY packages/journal/package.json packages/journal/
 COPY packages/immutable/package.json packages/immutable/
 COPY packages/protocol/package.json packages/protocol/

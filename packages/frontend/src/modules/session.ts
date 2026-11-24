@@ -4,14 +4,13 @@ import type {
   AgentPairingIdentity,
   CharacterRow,
   ClaimRow,
+  ClientPacket,
   ItemAmountChange,
   GiftcardRow,
   ItemRow,
   ServerPacket,
 } from '@aresrpg/protocol'
-import { fold_inventory, fold_item_packet, is_item_packet } from '@aresrpg/protocol/inventory'
-import { fight_action_to_wire } from '@aresrpg/fight'
-import type { CharacteristicName } from '@aresrpg/immutable'
+import type { CharacteristicName, CharacteristicValues } from '@aresrpg/immutable'
 
 import {
   fold_agent_inventory,
@@ -24,34 +23,28 @@ import { fold_agent_view, agent_subscription } from '../agents/observation.ts'
 import { fold_agent_inventory_target, type AgentInventoryInput } from '../agents/inventory_target.ts'
 import type { AgentView, AgentViewInput } from '../agents/observation.ts'
 import type { AuthSession } from '../auth.ts'
-import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
 import { remember_selected_character_change } from '../auth_storage.ts'
 import { env } from '../env.ts'
 import { create_remembered_auth, type RememberedAuth } from '../remembered_auth.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
-import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, ModuleContext, SiteContext, SiteModule, SiteState } from '../store.ts'
 import { toast } from '../toast.ts'
-import { send_market_floor_request } from '../marketplace/floor_state.ts'
-import { market_price_subscription } from '../marketplace/price_history_state.ts'
 import { return_home } from '../components/app_layout.ts'
 
-import { leaderboard_subscription, inspection_subscription } from './leaderboards.ts'
 import { fold_character_creation, type CharacterCreation, type CharacterCreationInput } from './character_creation.ts'
-import { fold_character_deletion, with_character_roster } from './character_roster.ts'
+import { fold_character_deletion } from './character_roster.ts'
 import { fold_character_receipt, type CraftOutcome } from './character_folds.ts'
-import { reduce_craft_character_selection, with_craft_character_session } from './craft_character_lock.ts'
-import { fight_environment } from './fight.ts'
-import { nearby_watch_changes } from './nearby_fight.ts'
-import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
-import { observe_session_positions } from './session_positions.ts'
-import { fold_link_input } from './session_link.ts'
-import { initial_session_state } from './session_state.ts'
+import { accepted_link, fold_link_input } from './session_link.ts'
+import { fold_inventory_input, fold_session_packet, initial_session_state } from './session_state.ts'
+import { observe_character_requests, observe_wallet_balances } from './session_wallet.ts'
 export { initial_session_state } from './session_state.ts'
-export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
-export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
+export type AuthRequest = 'restore' | 'google'
+/** A sign-in in progress, or how the last one ended. The signed-in account is `wallet`; while it is set
+ *  no sign-in starts. Each attempt is a new object: a late answer to an older attempt finds another one. */
+export type SignIn =
+  Readonly<{ status: 'idle'; error: string | null }> | Readonly<{ status: 'connecting'; request: AuthRequest }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
-const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   agent_connection: OwnerConnection
   agent_view: AgentView
@@ -59,9 +52,7 @@ export type SessionState = Readonly<{
   agent_pairing_candidate: AgentPairingIdentity | null
   inventory_pairing: AgentPairingIdentity | null
   character_creation: CharacterCreation | null
-  auth_status: AuthStatus
-  auth_request: AuthRequest | null
-  auth_error: string | null
+  sign_in: SignIn
   link_status: LinkStatus
   link_error: string | null
   link_violation: string | null // red until a connection is accepted after a server rule violation
@@ -85,10 +76,10 @@ export type SessionState = Readonly<{
   online_characters: number | null
   /** Hosted bots among `online`. Only an admin's server sends it; absent or null is unknown. */
   online_agents: number | null | undefined
-  auth_ready: boolean
   /** Where a player's own sign-out leads. The observer acts on it after the wallet is released. */
   after_sign_out: 'home' | undefined
-  wallets: readonly string[]
+  /** The installed wallets this surface offers to sign in with; null until the sign-in code has loaded. */
+  wallets: readonly string[] | null
   wallet: AuthSession | null
   sui_balance_mist: bigint | null
   kares_balance: bigint | null
@@ -104,7 +95,6 @@ export type SessionInput =
   | Readonly<{ type: 'auth/connecting' }>
   | Readonly<{ type: 'auth/ready'; wallets: readonly string[] }>
   | Readonly<{ type: 'auth/login_google' }>
-  | Readonly<{ type: 'auth/login_wallet'; name: string }>
   | Readonly<{ type: 'auth/connected'; session: AuthSession }>
   | Readonly<{ type: 'auth/failed'; error: string }>
   | Readonly<{ type: 'auth/rejected'; error: string }>
@@ -117,6 +107,8 @@ export type SessionInput =
   | Readonly<{ type: 'link/violation'; reason: string }>
   | Readonly<{ type: 'link/latency'; latency_ms: number }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
+  /** The one door to the server: the live link sends the packet, and no link drops it. */
+  | Readonly<{ type: 'server/send'; packet: Readonly<ClientPacket> }>
   | Readonly<{ type: 'character/deleted'; character_id: string; wallet: AuthSession }>
   | Readonly<{ type: 'character/select'; character_id: string }>
   | Readonly<{ type: 'wallet/refresh' }>
@@ -129,12 +121,15 @@ export type SessionInput =
       equipped: readonly Readonly<{ slot: string; item_id: string }>[]
       unequipped: readonly Readonly<{ slot: string; item_id: string }>[]
     }>
+  /** `before`: the values the transaction was priced from. */
   | Readonly<{
       type: 'character/stats_raised'
       character_id: string
       spending: Readonly<Partial<Record<CharacteristicName, number>>>
+      before: CharacteristicValues
     }>
-  | Readonly<{ type: 'character/spell_raised'; character_id: string; spell: string }>
+  /** `before`: the spell's rank the transaction raised. */
+  | Readonly<{ type: 'character/spell_raised'; character_id: string; spell: string; before: number }>
   | Readonly<{
       type: 'character/consumed'
       digest: string
@@ -142,6 +137,8 @@ export type SessionInput =
       item_id: string
       effect: 'heal' | 'reset_stats' | 'reset_spells' | 'recall' | 'city'
       heal: number
+      /** The health the transaction healed from. */
+      before: Readonly<Pick<CharacterRow, 'hp' | 'hp_ms'>>
     }>
   | Readonly<{
       type: 'character/world_joined'
@@ -151,8 +148,10 @@ export type SessionInput =
   | Readonly<{ type: 'inventory/boxes_opened'; claims: readonly ClaimRow[] }>
   | Readonly<{ type: 'inventory/claims_settled'; claim_ids: readonly string[] }>
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
-  | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
-  | (CraftOutcome & Readonly<{ type: 'character/crafted'; character_id: string; xp: number }>)
+  /** `before`: the pet's power the feeding raised. */
+  | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; before: number }>
+  /** `before`: the job's experience the craft added to. */
+  | (CraftOutcome & Readonly<{ type: 'character/crafted'; character_id: string; xp: number; before: string }>)
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string
@@ -166,78 +165,61 @@ export const selected_character = (session: Readonly<SessionState>): CharacterRo
     : (session.characters.find(({ id }) => id === session.selected_character_id) ?? null)
 export const character_custody = (character: Readonly<CharacterRow>) =>
   Object.freeze({ kiosk: character.kiosk, ...(character.kiosk_cap ? { kiosk_cap: character.kiosk_cap } : {}) })
-const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
-const fold_inventory_input = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type === 'inventory/amounts_changed')
-    return input.changes.reduce((session, change) => {
-      if (change.amount === 0)
-        return {
-          ...session,
-          ...fold_item_packet(session, { type: 'packet/item_removed', item: change.id, version: change.version }),
-        }
-      const item = session.inventory.find(({ id }) => id === change.id)
-      return item
-        ? {
-            ...session,
-            ...fold_item_packet(session, {
-              type: 'packet/item_updated',
-              item: { ...item, amount: change.amount, version: change.version },
-            }),
-          }
-        : session
-    }, session)
-  if (input.type === 'giftcard/received')
-    return session.redeemed_giftcards.includes(input.giftcard.id) ||
-      session.giftcards.some(({ id }) => id === input.giftcard.id)
-      ? session
-      : Object.freeze({ ...session, giftcards: Object.freeze([...session.giftcards, input.giftcard]) })
-  if (input.type === 'giftcard/redeemed')
-    return Object.freeze({
-      ...session,
-      redeemed_giftcards: [...session.redeemed_giftcards, input.giftcard],
-      giftcards: session.giftcards.filter(({ id }) => id !== input.giftcard),
-    })
-  return session
-}
-const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): SessionState => {
-  if (packet.type === 'packet/characters') {
-    return Object.freeze({
-      ...with_character_roster(session, packet.characters),
-      roster_loaded: true,
-      link_status: 'ready',
-      link_error: null,
-    })
+const with_session = <S extends SiteState>(state: S, session: SessionState): S => Object.freeze({ ...state, session })
+const select_character = <S extends SiteState>(state: S, character_id: string): S =>
+  state.session.characters.some(({ id }) => id === character_id) && state.session.selected_character_id !== character_id
+    ? with_session(state, Object.freeze({ ...state.session, selected_character_id: character_id }))
+    : state
+/** The session a sign-out or a new account starts from: the sign-in offer survives, nothing of the account does. */
+const fresh_session = (session: SessionState): SessionState =>
+  Object.freeze({
+    ...initial_session_state(Math.max(session.agent_view.serial, session.agent_inventory.serial) + 1),
+    wallets: session.wallets,
+  })
+const with_sign_in = (session: SessionState, sign_in: SignIn): SessionState => Object.freeze({ ...session, sign_in })
+/** A sign-in starts only from a signed-out idle session whose sign-in code has loaded; a restore needs no code. */
+const start_sign_in = (session: SessionState, request: AuthRequest, needs_code = true): SessionState =>
+  session.sign_in.status === 'idle' && !session.wallet && (!needs_code || session.wallets !== null)
+    ? with_sign_in(session, Object.freeze({ status: 'connecting', request }))
+    : session
+const answered = (session: SessionState, answer: () => SessionState): SessionState =>
+  session.sign_in.status === 'connecting' ? answer() : session
+type SignInInput = Extract<
+  SessionInput,
+  {
+    type:
+      | 'auth/connecting'
+      | 'auth/ready'
+      | 'auth/login_google'
+      | 'auth/connected'
+      | 'auth/failed'
+      | 'auth/rejected'
+      | 'auth/disconnected'
   }
-  if (packet.type === 'packet/server_info')
-    return Object.freeze({
-      ...session,
-      online: packet.online,
-      online_characters: packet.online_characters,
-      online_agents: packet.online_agents,
-      indexing_lag: packet.indexing_lag,
-      current_epoch: packet.current_epoch,
-    })
-  if (packet.type === 'packet/game_state') return Object.freeze({ ...session, game_frozen: packet.frozen })
-  if (packet.type === 'packet/inventory')
-    return Object.freeze({ ...session, inventory: fold_inventory(session, packet.items) })
-  if (is_item_packet(packet)) return Object.freeze({ ...session, ...fold_item_packet(session, packet) })
-  if (packet.type === 'packet/claims')
-    return Object.freeze({
-      ...session,
-      claims: packet.claims.filter(({ id }) => !session.redeemed_claims.includes(id)),
-    })
-  if (packet.type === 'packet/giftcards')
-    return Object.freeze({
-      ...session,
-      giftcards: packet.giftcards.filter(({ id }) => !session.redeemed_giftcards.includes(id)),
-    })
-  if (packet.type === 'packet/error')
-    return packet.id === undefined ? Object.freeze({ ...session, link_error: packet.reason }) : session
-  return session
+>
+const SIGN_IN: {
+  [K in SignInInput['type']]: (session: SessionState, input: Extract<SignInInput, { type: K }>) => SessionState
+} = {
+  'auth/connecting': (session) => start_sign_in(session, 'restore', false),
+  'auth/ready': (session, { wallets }) => Object.freeze({ ...session, wallets }),
+  'auth/login_google': (session) => start_sign_in(session, 'google'),
+  'auth/connected': (session, input) =>
+    answered(session, () =>
+      Object.freeze({ ...fresh_session(session), wallet: input.session, link_status: 'connecting' })
+    ),
+  'auth/failed': (session, { error }) =>
+    answered(session, () => with_sign_in(session, Object.freeze({ status: 'idle', error }))),
+  'auth/rejected': (session, { error }) =>
+    with_sign_in(fresh_session(session), Object.freeze({ status: 'idle', error })),
+  'auth/disconnected': (session, input) => Object.freeze({ ...fresh_session(session), after_sign_out: input.then }),
 }
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce_sign_in = (session: SessionState, input: AppInput): SessionState => {
+  const step = SIGN_IN[input.type as SignInInput['type']] as
+    ((session: SessionState, input: SignInInput) => SessionState) | undefined
+  return step ? step(session, input as SignInInput) : session
+}
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   const current = state.session
-  const can_start_auth = current.auth_status === 'idle' && current.auth_ready
   const receipt = fold_inventory_input(
     fold_character_receipt(
       fold_character_deletion(
@@ -259,68 +241,9 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (creation !== current) return with_session(state, creation)
   const link_state = fold_link_input(current, input)
   if (link_state !== current) return with_session(state, link_state)
-  const craft_selection = reduce_craft_character_selection(state, input)
-  if (craft_selection) return craft_selection
-  if (input.type === 'auth/connecting' && current.auth_status === 'idle')
-    return with_session(
-      state,
-      Object.freeze({ ...current, auth_status: 'connecting', auth_request: 'restore', auth_error: null })
-    )
-  if (input.type === 'auth/ready')
-    return with_session(state, Object.freeze({ ...current, auth_ready: true, wallets: input.wallets }))
-  if (input.type === 'auth/login_google' && can_start_auth)
-    return with_session(
-      state,
-      Object.freeze({ ...current, auth_status: 'connecting', auth_request: 'google', auth_error: null })
-    )
-  if (input.type === 'auth/login_wallet' && can_start_auth && current.wallets.includes(input.name))
-    return with_session(
-      state,
-      Object.freeze({
-        ...current,
-        auth_status: 'connecting',
-        auth_request: Object.freeze({ wallet: input.name }),
-        auth_error: null,
-      })
-    )
-  if (input.type === 'auth/connected' && current.auth_status === 'connecting')
-    return with_session(
-      state,
-      Object.freeze({
-        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
-        wallet: input.session,
-        auth_status: 'authenticated',
-        auth_request: null,
-        link_status: 'connecting',
-        auth_ready: current.auth_ready,
-        wallets: current.wallets,
-      })
-    )
-  if (input.type === 'auth/failed' && current.auth_status === 'connecting')
-    return with_session(
-      state,
-      Object.freeze({ ...current, auth_status: 'idle', auth_request: null, auth_error: input.error })
-    )
-  if (input.type === 'auth/rejected')
-    return with_session(
-      state,
-      Object.freeze({
-        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
-        auth_error: input.error,
-        auth_ready: current.auth_ready,
-        wallets: current.wallets,
-      })
-    )
-  if (input.type === 'auth/disconnected')
-    return with_session(
-      state,
-      Object.freeze({
-        ...initial_session_state(Math.max(current.agent_view.serial, current.agent_inventory.serial) + 1),
-        auth_ready: current.auth_ready,
-        after_sign_out: input.then,
-        wallets: current.wallets,
-      })
-    )
+  if (input.type === 'character/select') return select_character(state, input.character_id)
+  const signed = reduce_sign_in(current, input)
+  if (signed !== current) return with_session(state, signed)
   if (input.type === 'wallet/refreshed')
     return with_session(
       state,
@@ -339,42 +262,50 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(state, Object.freeze({ ...current, latency_ms: input.latency_ms }))
   if (input.type === 'server/packet') {
     if (input.packet.type === 'packet/connection_accepted')
-      return with_session(
-        state,
-        Object.freeze({ ...current, link_status: 'connected', link_error: null, link_violation: null })
-      )
-    const next = fold_packet(current, input.packet)
-    return next === current ? state : with_craft_character_session(state, next)
+      return with_session(state, Object.freeze({ ...current, ...accepted_link(input.packet) }))
+    const next = fold_session_packet(current, input.packet)
+    return next === current ? state : with_session(state, next)
   }
   return state
 }
 /** What the session observer does outside the store. A test passes its own: no sign-in code, no socket. */
 export type SessionEffects = Readonly<{ account: RememberedAuth; connect: typeof connect_server }>
 const browser_effects = (): SessionEffects => ({
-  // The installed-wallet choice exists in local and edge builds only (owner ruling); players sign in with Google.
-  account: create_remembered_auth(undefined, undefined, { wallets: env.dev_sign_in }),
+  account: create_remembered_auth(),
   connect: connect_server,
 })
-const observe = (
-  { events, dispatch, signal, get_state }: AppContext,
-  { account, connect }: SessionEffects = browser_effects()
-): void => {
+/** A domain's subscription: what it asks the server to stream after a change, or nothing. */
+export type Subscription<S> = (
+  state: S,
+  previous: S
+) => Readonly<ClientPacket> | readonly Readonly<ClientPacket>[] | null
+/** Every module sends its subscriptions this way, through the one door the session forwards to the live link. */
+export const observe_subscriptions = <S>(
+  { events, dispatch }: Pick<ModuleContext<S>, 'events' | 'dispatch'>,
+  subscriptions: readonly Subscription<S>[]
+): void =>
+  events.on('STATE_UPDATED', (state, previous) =>
+    subscriptions
+      .flatMap((subscription) => subscription(state, previous) ?? [])
+      .forEach((packet) => dispatch({ type: 'server/send', packet }))
+  )
+/**
+ * Whether the session is known to be signed out. While a remembered session is being restored the answer is not
+ * known yet.
+ */
+export const signed_out = ({ wallet, sign_in }: Readonly<Pick<SessionState, 'wallet' | 'sign_in'>>): boolean =>
+  !wallet && !(sign_in.status === 'connecting' && sign_in.request === 'restore')
+
+const observe = (context: SiteContext, { account, connect }: SessionEffects = browser_effects()): void => {
+  const { events, dispatch, signal, get_state, seat } = context
   let link: ServerLink | null = null
-  let balance_request_id = 0
-  let next_request_id = 1
-  const next_id = (): number => {
-    next_request_id += 1
-    return next_request_id - 1
-  }
-  const character_requests = new Map<
-    number,
-    Readonly<{
-      character_id: string
-      timeout: ReturnType<typeof setTimeout>
-      resolve: (recipient: Readonly<{ address: string; name: string }>) => void
-      reject: (error: Readonly<Error>) => void
-    }>
-  >()
+  // The one link rule: the game links a signed-in account only; the site reads the public stage at once and
+  // upgrades to the account's link when a sign-in or a remembered restore ends.
+  const link_for = ({ wallet }: SessionState): ServerLink | null =>
+    wallet || !seat ? connect({ session: wallet, seat, dispatch }) : null
+  const send = (packet: Readonly<ClientPacket>): boolean => link?.send(packet) ?? false
+  const end_requests = observe_character_requests(context, send)
+  const refresh_wallet = observe_wallet_balances(context)
   // The sign-in code loads in the background. It says which sign-ins this surface offers; a restore awaits it itself.
   void account
     .provider()
@@ -389,76 +320,30 @@ const observe = (
       dispatch({ type: 'auth/ready', wallets: [] })
       dispatch({ type: 'auth/failed', error: error instanceof Error ? error.message : String(error) })
     })
-  const login = (request: AuthRequest, connect: () => Promise<AuthSession | null>): void => {
-    void connect()
+  const connect_request = (request: AuthRequest): Promise<AuthSession | null> => {
+    if (request === 'restore') return account.restore()
+    return account.connect()
+  }
+  // An answer counts only while its own attempt is the one in progress.
+  const login = (attempt: SignIn): void => {
+    if (attempt.status !== 'connecting') return
+    const current = (): boolean => !signal.aborted && get_state().session.sign_in === attempt
+    void connect_request(attempt.request)
       .then((connected) => {
-        if (signal.aborted || get_state().session.auth_request !== request) return
+        if (!current()) return
         if (!connected) throw new Error('The remembered wallet is unavailable')
         dispatch({ type: 'auth/connected', session: connected })
       })
       .catch((error) => {
-        if (signal.aborted || get_state().session.auth_request !== request) return
+        if (!current()) return
         console.error('Login failed.', error)
         dispatch({ type: 'auth/failed', error: error instanceof Error ? error.message : String(error) })
       })
   }
-
-  const refresh_wallet = (): void => {
-    const { wallet: connected, inventory_pairing: pairing } = get_state().session
-    if (!connected) return
-    balance_request_id += 1
-    const request_id = balance_request_id
-    void Promise.all([connected.read_sui_balance(), connected.read_kares_balance()])
-      .then(([balance_mist, kares_balance]) => {
-        if (request_id !== balance_request_id || connected !== get_state().session.wallet) return
-        dispatch({ type: 'wallet/refreshed', balance_mist, kares_balance, gas_spent_mist: connected.gas_spent_24h() })
-      })
-      .catch((error) => console.warn('Wallet balance could not be refreshed.', error))
-    if (pairing)
-      void connected
-        .read_agent_balances(pairing)
-        .then((balances) => {
-          if (request_id !== balance_request_id || connected !== get_state().session.wallet) return
-          dispatch({ type: 'agent/inventory_balances', wallet: connected, pairing, ...balances })
-        })
-        .catch((error) => console.warn('Agent balance could not be refreshed.', error))
-  }
-  events.on('wallet/refresh', refresh_wallet)
-  const balance_timer = setInterval(refresh_wallet, BALANCE_POLL_MS)
-  events.on('wallet/resolve_character', ({ name, resolve, reject }) => {
-    const connected = get_state().session.wallet
-    if (!connected) return reject(new Error('The wallet session is unavailable'))
-    try {
-      const character_id = connected.derive_character_id(name)
-      const id = next_id()
-      const timeout = setTimeout(() => {
-        const pending = character_requests.get(id)
-        if (!pending) return
-        character_requests.delete(id)
-        pending.reject(new Error('The character lookup timed out'))
-      }, 15_000)
-      character_requests.set(id, Object.freeze({ character_id, timeout, resolve, reject }))
-      if (link?.send({ type: 'packet/character_owner_request', id, character_id })) return
-      clearTimeout(timeout)
-      character_requests.delete(id)
-      reject(new Error('The game server is unavailable'))
-    } catch (error) {
-      reject(error instanceof Error ? error : new Error(String(error)))
-    }
-  })
-  const refresh_on_focus = (): void => {
-    if (globalThis.document?.visibilityState !== 'hidden') dispatch({ type: 'wallet/refresh' })
-  }
-  globalThis.addEventListener('focus', refresh_on_focus)
-  globalThis.document?.addEventListener('visibilitychange', refresh_on_focus)
   const dispose_link = (): void => {
     link?.dispose()
     link = null
-    for (const request of character_requests.values()) {
-      clearTimeout(request.timeout)
-      request.reject(new Error('The wallet session ended'))
-    }
-    character_requests.clear()
+    end_requests()
   }
   // Google sign-out clears its stored session in several asynchronous steps. A page change before
   // they finish would leave that session restorable, so the home page opens only afterwards.
@@ -471,129 +356,46 @@ const observe = (
         if (destination === 'home') return_home()
       })
   }
-  events.on('server/packet', ({ packet }) => {
-    if (packet.type === 'packet/character_owner_response') {
-      const request = character_requests.get(packet.id)
-      if (!request || request.character_id !== packet.character_id) return
-      clearTimeout(request.timeout)
-      character_requests.delete(packet.id)
-      request.resolve(Object.freeze({ address: packet.owner, name: packet.name }))
-      return
-    }
-    if (packet.type === 'packet/error' && packet.id !== undefined) {
-      const request = character_requests.get(packet.id)
-      if (!request) return
-      clearTimeout(request.timeout)
-      character_requests.delete(packet.id)
-      request.reject(new Error(packet.reason))
-      return
-    }
-  })
-  events.on('chat/speak', ({ channel, parts }) => {
-    const character_id = get_state().session.selected_character_id
-    if (character_id)
-      link?.send(
-        channel === 'party'
-          ? { type: 'packet/chat_party', character_id, parts }
-          : { type: 'packet/chat', character_id, parts }
-      )
-  })
-  events.on('chat/whisper', ({ to, parts }) => {
-    const character_id = get_state().session.selected_character_id
-    if (character_id) link?.send({ type: 'packet/chat_whisper', character_id, to, parts })
-  })
-  events.on('fight/watch', ({ character_id, fight }) => {
-    link?.send({ type: 'packet/fight_preview', character_id, fight })
-  })
-  events.on('fight/resync', ({ fight }) => link?.send({ type: 'packet/fight_resync', fight }))
-  observe_failure_toasts({ events, dispatch, get_state, signal })
-  const sync_market_subscription = (state: AppState, previous: AppState): void => {
-    const market_open = state.marketplace.open
-    const market_was_open = previous.marketplace.open
-    const link_became_ready = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
-    if (
-      !link ||
-      (!link_became_ready &&
-        market_open === market_was_open &&
-        (!market_open || state.marketplace.observation === previous.marketplace.observation))
-    )
-      return
-    link.send({
-      type: 'packet/market_observe',
-      observation: market_open ? state.marketplace.observation : null,
-    })
+  /** A sign-in or a sign-out ends the link of the previous account and opens the next one's. Opening a link
+   *  dispatches at once, so this runs again before `link` is assigned: only a changed account opens one. */
+  const follow_link = (session: SessionState, previous: SessionState): void => {
+    if (session.wallet === previous.wallet) return
+    if (session.wallet) link?.dispose()
+    else forget_session(previous.wallet, session.after_sign_out)
+    link = link_for(session)
+    if (session.wallet) dispatch({ type: 'wallet/refresh' })
   }
-  observe_inventory_subscription({
-    events,
-    dispatch,
-    send: (packet) => {
-      link?.send(packet)
-    },
-    refresh_balances: refresh_wallet,
-  })
+  /** The game has no sign-in of its own (owner ruling): signed out, it returns to the site, which holds the one. */
+  const leave_signed_out_game = (): void => {
+    if (seat && signed_out(get_state().session)) return_home()
+  }
+  events.on('server/send', ({ packet }) => void send(packet))
+  observe_failure_toasts(context)
+  observe_inventory_subscription({ events, dispatch, send, refresh_balances: refresh_wallet })
+  observe_subscriptions<SiteState>(context, [(state, previous) => agent_subscription(state.session, previous.session)])
   events.on('STATE_UPDATED', (state, previous) => {
-    sync_market_subscription(state, previous)
-    agent_subscription(state.session, previous.session).forEach((packet) => link?.send(packet))
-    const reconnected = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
-    nearby_watch_changes(state.fight.nearby, previous.fight.nearby, reconnected).forEach((packet) => {
-      publish_selected_position(true)
-      link?.send(packet)
-    })
     remember_selected_character_change(state.session.selected_character_id, previous.session.selected_character_id)
-    spectator_changes(state.fight.spectating_by_character, previous.fight.spectating_by_character, reconnected).forEach(
-      (change) => link?.send({ type: 'packet/spectate', ...change })
-    )
-    if (state.session.auth_request !== previous.session.auth_request) {
-      const request = state.session.auth_request
-      if (request === 'restore') login(request, account.restore)
-      else if (request === 'google') login(request, () => account.connect())
-      else if (request) login(request, () => account.connect(request.wallet))
-    }
-    if (state.session.wallet !== previous.session.wallet && state.session.wallet) {
-      link?.dispose()
-      link = connect({ session: state.session.wallet, dispatch })
-      dispatch({ type: 'wallet/refresh' })
-    }
-    send_market_floor_request({ state, link, dispatch, next_id })
-    send_admin_dashboard_requests({
-      state,
-      previous,
-      link,
-      dispatch,
-      next_id,
-    })
-    if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
-      forget_session(previous.session.wallet, state.session.after_sign_out)
-  })
-  const publish_selected_position = observe_session_positions(
-    { events, get_state, signal },
-    (packet) => link?.send(packet) ?? false
-  )
-  events.on('fight/input', ({ fight, input, origin }) => {
-    const state = get_state()
-    if (state.session.agent_view.request || input.type === 'end_turn') return
-    const action = fight_action_to_wire(input)
-    if (origin !== 'local' || !fight || fight_environment(state.fight, fight).transaction_pending || !action) return
-    link?.send({ type: 'packet/fight_action', fight, action })
-  })
-  events.on('STATE_UPDATED', (next, prior) => {
-    ;[leaderboard_subscription, inspection_subscription, market_price_subscription].forEach((subscribe) => {
-      const packet = subscribe(next, prior)
-      if (packet) link?.send(packet)
-    })
+    if (state.session.sign_in !== previous.session.sign_in) login(state.session.sign_in)
+    follow_link(state.session, previous.session)
+    // A remembered session that did not restore: nobody signed in on this document, so no sign-out is running.
+    if (!previous.session.wallet && state.session.sign_in !== previous.session.sign_in) leave_signed_out_game()
   })
   signal.addEventListener('abort', () => {
-    clearInterval(balance_timer)
     dispose_link()
     account.dispose()
-    globalThis.removeEventListener('focus', refresh_on_focus)
-    globalThis.document?.removeEventListener('visibilitychange', refresh_on_focus)
   })
   // A remembered wallet is known before the first render, so its restore starts now and not once the
-  // sign-in code has loaded: a returning player never sees the sign-in card. This stays the last step:
-  // the restore is started by the state listener above, from the change this input makes.
+  // sign-in code has loaded: a returning player's game does not wait for it. The restore is started by the
+  // state listener above, from the change this input makes.
   if (account.returning) dispatch({ type: 'auth/connecting' })
+  else leave_signed_out_game()
+  link ??= link_for(get_state().session)
 }
 // Named for the tests that pass their own effects; `observe` stays the name the complexity baseline keys on.
 export { observe as observe_session }
-export default Object.freeze({ name: 'session', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'session',
+  initial: () => ({ session: initial_session_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

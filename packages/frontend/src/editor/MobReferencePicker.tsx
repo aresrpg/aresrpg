@@ -11,7 +11,8 @@ import {
   type PickerItem,
 } from '../components/SearchPickerModal.tsx'
 import { mob_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import { mob_filter_rows, type MobFilterRow } from './content_list.ts'
 import type { JsonValue, SeedEntityRow } from './seed_editor.ts'

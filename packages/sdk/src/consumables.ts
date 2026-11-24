@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { spending_receipt } from './cache.ts'
-import { living_content, type SDK } from './client.ts'
+import type { SDK } from './client.ts'
+import { living_content } from './pins.ts'
 import type { create_kiosk_runner, KioskCustody } from './kiosk_runner.ts'
 import { item_template_id, world_content_id } from './seed_ids.ts'
 

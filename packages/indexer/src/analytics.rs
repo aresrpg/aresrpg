@@ -10,10 +10,8 @@ pub const DAY_MS: u64 = 24 * 60 * 60 * 1_000;
 pub const WEEK_MS: u64 = 7 * DAY_MS;
 pub const INTERVAL_RETENTION_MS: u64 = 2 * DAY_MS;
 pub const HOURLY_RETENTION_MS: u64 = 8 * DAY_MS;
-pub const WEEKLY_RETENTION_MS: u64 = 105 * DAY_MS;
-pub const MONTHLY_RETENTION_MS: u64 = 400 * DAY_MS;
-pub const DAILY_ACTIVITY_RETENTION_MS: u64 = 400 * DAY_MS;
-pub const ROYALTY_FLOOR_MIST: u64 = 1_000_000;
+/// Day, week and month series all keep 400 days.
+pub const LONG_RETENTION_MS: u64 = 400 * DAY_MS;
 pub const CHARACTER_CREATION_MIST: u64 = 10_000_000_000;
 
 pub const ADDRESS_FIRST_SEEN_KEY: &str = "analytics:addresses";
@@ -71,19 +69,10 @@ pub fn activity_buckets(ts_ms: u64) -> [(&'static str, u64, u64, u64); 5] {
             INTERVAL_RETENTION_MS,
         ),
         ("hour", bucket_hour(ts_ms), HOUR_MS, HOURLY_RETENTION_MS),
-        ("day", bucket_day(ts_ms), DAY_MS, 0),
-        ("week", bucket_week(ts_ms), WEEK_MS, WEEKLY_RETENTION_MS),
-        (
-            "month",
-            bucket_month(ts_ms),
-            31 * DAY_MS,
-            MONTHLY_RETENTION_MS,
-        ),
+        ("day", bucket_day(ts_ms), DAY_MS, LONG_RETENTION_MS),
+        ("week", bucket_week(ts_ms), WEEK_MS, LONG_RETENTION_MS),
+        ("month", bucket_month(ts_ms), 31 * DAY_MS, LONG_RETENTION_MS),
     ]
-}
-
-pub fn royalty_mist(gross_mist: u64) -> u64 {
-    (gross_mist / 10).max(ROYALTY_FLOOR_MIST)
 }
 
 pub fn expiry_seconds(bucket_ms: u64, bucket_width_ms: u64, retention_ms: u64) -> u64 {
@@ -97,13 +86,6 @@ pub struct MoneyDelta {
     pub character_creation_mist: u64,
     pub kolizeum_mist: u64,
     pub tournament_mist: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MoneyFact {
-    pub coordinate: String,
-    pub ts_ms: u64,
-    pub delta: MoneyDelta,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,29 +109,4 @@ impl CharacterFact {
 
 pub fn series_key(domain: &str, tier: &str, bucket: u64) -> String {
     format!("analytics:{domain}:{tier}:{bucket}")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        bucket_15m, bucket_day, bucket_hour, bucket_month, bucket_week, royalty_mist,
-        BUCKET_15M_MS, DAY_MS,
-    };
-
-    #[test]
-    fn checkpoint_time_selects_utc_buckets() {
-        assert_eq!(bucket_15m(BUCKET_15M_MS + 42), BUCKET_15M_MS);
-        assert_eq!(bucket_day(DAY_MS + 42), DAY_MS);
-        assert_eq!(bucket_hour(3_600_042), 3_600_000);
-        assert_eq!(bucket_week(4 * DAY_MS + 42), 4 * DAY_MS);
-        assert_eq!(bucket_month(1_787_961_600_000), 1_785_542_400_000); // 2026-08-29 → 2026-08-01
-    }
-
-    #[test]
-    fn royalty_uses_ten_percent_with_the_floor() {
-        assert_eq!(royalty_mist(1), 1_000_000);
-        assert_eq!(royalty_mist(10_000_000), 1_000_000);
-        assert_eq!(royalty_mist(100_000_000), 10_000_000);
-        assert_eq!(royalty_mist(1_000_000_000), 100_000_000);
-    }
 }

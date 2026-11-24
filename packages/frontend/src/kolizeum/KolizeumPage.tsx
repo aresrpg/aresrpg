@@ -18,6 +18,7 @@ import { format_sui } from '../wallet_amount.ts'
 import { KolizeumCreate, FormatChips, type Format } from './KolizeumControls.tsx'
 import { kolizeum_join_review, type KolizeumJoinReview } from './join_confirmation.ts'
 
+import './arena.css'
 import './kolizeum.css'
 
 type Tab = 'open' | 'mine'
@@ -155,10 +156,8 @@ const JoinConfirmation = ({
             })}
           </p>
           <div>
-            <Button className="btn-outline" onClick={close} type="button">
-              {copy.cancel}
-            </Button>
-            <Button className="btn-gold" disabled={pending} onClick={() => confirm(intent)} type="button">
+            <Button onClick={close}>{copy.cancel}</Button>
+            <Button tone="primary" disabled={pending} onClick={() => confirm(intent)}>
               {t('join_confirm_cta', { amount: numbers.amount(intent.stake_mist, 9), side })}
             </Button>
           </div>

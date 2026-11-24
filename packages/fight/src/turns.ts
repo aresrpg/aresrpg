@@ -3,7 +3,7 @@
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { GRID_CELLS, approach_field, bfs_cast_cell, cell_can_cast, in_zone, manhattan } from './combat_grid.ts'
-import { KINDS, STATS, base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, set_pools } from './fighters.ts'
+import { base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, set_pools } from './fighters.ts'
 import { casts_this_turn, placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
 import { walk_down, walk_toward, wall_mask } from './movement.ts'
 import { emit, fail } from './runtime.ts'
@@ -15,16 +15,8 @@ import {
   tick_turn_start,
 } from './turn_effects.ts'
 import { on_enter } from './zones.ts'
-import { CONTRACT_CONSTANTS, TARGET_FILTERS } from './move_contract.gen.ts'
-import type {
-  FightContract,
-  FightRuntime,
-  KitSpell,
-  MobFighter,
-  MobTurnObserver,
-  SeedProvider,
-  SpellLevel,
-} from './types.ts'
+import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS, TARGET_FILTERS } from './move_contract.gen.ts'
+import type { FightContract, FightRuntime, KitSpell, MobFighter, SeedProvider, SpellLevel } from './types.ts'
 
 export const weave = (contract: FightContract): bigint[] => {
   const side_a = contract.fighters
@@ -52,7 +44,7 @@ export const weave = (contract: FightContract): bigint[] => {
 }
 
 const is_invisible = (runtime: FightRuntime, seat: bigint): boolean =>
-  runtime.contract.fighters[Number(seat)].effects.some((row) => row.kind === KINDS.invis)
+  runtime.contract.fighters[Number(seat)].effects.some((row) => row.kind === EFFECT_KINDS.invis)
 
 const nearest_enemy = (runtime: FightRuntime, mob: bigint): bigint | null => {
   const fighter = runtime.contract.fighters[Number(mob)]
@@ -91,7 +83,7 @@ const nearest_ally = (runtime: FightRuntime, mob: bigint): bigint => {
 }
 
 const has_heal = (level: SpellLevel): boolean =>
-  level.effects.some((row) => row.kind === KINDS.add && row.stat === STATS.hp)
+  level.effects.some((row) => row.kind === EFFECT_KINDS.add && row.stat === CHANNELS.hp)
 
 const spell_rows = (level: SpellLevel) => [...level.effects, ...level.crit_effects]
 const aims_only_at_allies = (level: SpellLevel): boolean => {
@@ -271,14 +263,12 @@ const random_turn_start = (runtime: FightRuntime, actor: bigint): boolean => {
 export const run_until_player = ({
   runtime,
   seed_for,
-  on_mob_turn = null,
   now,
   opening,
   reason,
 }: {
   runtime: FightRuntime
   seed_for: SeedProvider
-  on_mob_turn?: MobTurnObserver | null
   now: bigint
   opening: boolean
   reason: string
@@ -303,10 +293,10 @@ export const run_until_player = ({
       hops += 1n
       continue
     }
-    const supplied = seed_for(actor, is_mob(fighter))
-    if (!supplied && random_turn_start(runtime, actor))
+    const seed = seed_for(actor)
+    if (seed === null && random_turn_start(runtime, actor))
       return fail(runtime, 'missing_turn_seed_witness', { seat: actor, phase: 'turn_start' })
-    runtime.contract.turn_seed = supplied?.seed ?? 0n
+    runtime.contract.turn_seed = seed ?? 0n
     runtime.contract.turn_slot = 0n
     runtime.contract.turn_casts = []
     expire_turn_effects(runtime, actor)
@@ -318,12 +308,11 @@ export const run_until_player = ({
     if (runtime.contract.ended) return runtime
     if (!runtime.contract.fighters[Number(actor)].dead) {
       if (!is_mob(runtime.contract.fighters[Number(actor)])) {
-        if (!supplied) return fail(runtime, 'missing_player_turn_seed', { seat: actor })
+        if (seed === null) return fail(runtime, 'missing_player_turn_seed', { seat: actor })
         runtime.contract.turn_started_ms = virtual_ms
         return runtime
       }
-      if (!supplied?.witnessed) return fail(runtime, 'missing_mob_turn_witness', { seat: actor, phase: 'mob_action' })
-      if (on_mob_turn) on_mob_turn(actor, supplied.seed)
+      if (seed === null) return fail(runtime, 'missing_mob_turn_witness', { seat: actor, phase: 'mob_action' })
       mob_turn(runtime, actor)
       if (runtime.contract.ended) return runtime
       tick_turn_end(runtime, actor)

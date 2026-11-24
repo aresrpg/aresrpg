@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { content_catalog, type WorldResource } from '../content/catalog.ts'
 import type { WorldPose } from '../game/core/pose_feed.ts'
 import type { AppState } from '../store.ts'
 
-import type { AutomationTarget, VisitedZones } from './automation_route.ts'
-import type { ZoneSearchTarget } from './world.ts'
+/** The resource node Collect All gathers, in the zone `key`. */
+export type AutomationTarget = Readonly<{ key: string; x: number; z: number; node: string }>
 
 export type AutomationStep =
-  | Readonly<{ type: 'planning' }>
-  | Readonly<{ type: 'moving'; target: AutomationTarget }>
   | Readonly<{ type: 'inspecting'; target: AutomationTarget }>
-  | Readonly<{ type: 'searching'; target: ZoneSearchTarget }>
   | Readonly<{ type: 'retrying'; target: AutomationTarget; retry_at_ms: number }>
   | Readonly<{
       type: 'gathering'
@@ -21,50 +19,33 @@ export type AutomationStep =
       seed: string
       attempt_id: string | null
       confirmed: boolean
-      fight: string | null
-      fighter: bigint | null
-      forfeit: 'idle' | 'pending' | 'confirmed'
     }>
-  | Readonly<{ type: 'waiting'; until_ms: number }>
 
+/** One Collect All: the pack it empties, node by node, and how many nodes it had at the start. */
 export type AutomationRun = Readonly<{
   id: string
   character_id: string
   world: string
   item_type: string
-  scope: Readonly<{ type: 'world' }> | Readonly<{ type: 'pack'; target: AutomationTarget; nodes: number }>
-  visited: VisitedZones
+  target: AutomationTarget
+  nodes: number
   step: AutomationStep
 }>
-export type AutomationReason = 'stopped' | 'unavailable' | 'blocked' | 'failed'
-export type AutomationState = Readonly<{
-  collapsed: boolean
-  item_type: string
-  quantity: number
-  reason: AutomationReason | null
-  run: AutomationRun | null
-}>
+export type AutomationState = Readonly<{ run: AutomationRun | null }>
 export type AutomationInput =
-  | Readonly<{ type: 'automation/collapse'; collapsed: boolean }>
-  | Readonly<{ type: 'automation/resource'; item_type: string }>
-  | Readonly<{ type: 'automation/start'; id: string }>
   | Readonly<{ type: 'automation/collect_all'; id: string; node: string; pose: WorldPose | null }>
-  | Readonly<{ type: 'automation/stop'; reason: AutomationReason }>
+  | Readonly<{ type: 'automation/stop' }>
   | Readonly<{ type: 'automation/tick'; world_ms: number | null; monotonic_ms: number; pose: WorldPose | null }>
 
-export const initial_automation_state = (): AutomationState => ({
-  collapsed: false,
-  item_type: '',
-  quantity: 0,
-  reason: null,
-  run: null,
+export const initial_automation_state = (): AutomationState => ({ run: null })
+export const with_automation_run = (state: AppState, run: AutomationRun | null): AppState => ({
+  ...state,
+  automation: { run },
 })
-export const with_automation = (state: AppState, automation: AutomationState): AppState => ({ ...state, automation })
-export const with_automation_run = (state: AppState, run: AutomationRun): AppState =>
-  with_automation(state, { ...state.automation, run })
-export const stop_automation = (state: AppState, reason: AutomationReason): AppState =>
-  with_automation(state, { ...state.automation, run: null, reason })
+export const stop_automation = (state: AppState): AppState =>
+  state.automation.run ? with_automation_run(state, null) : state
 
+/** A failure that names a retry moment waits for it; any other failure ends the run. */
 export const retry_automation = (
   state: AppState,
   run: AutomationRun,
@@ -72,5 +53,8 @@ export const retry_automation = (
   retry_at_ms: number | undefined
 ): AppState =>
   retry_at_ms === undefined
-    ? stop_automation(state, 'failed')
+    ? stop_automation(state)
     : with_automation_run(state, { ...run, step: { type: 'retrying', target, retry_at_ms } })
+
+export const gathering_resources = (world: string | null): readonly WorldResource[] =>
+  content_catalog.world(world ?? '')?.resources ?? []

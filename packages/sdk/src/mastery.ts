@@ -6,7 +6,8 @@ import { deriveObjectID, normalizeSuiObjectId } from '@mysten/sui/utils'
 import type { MasteryRow } from '@aresrpg/protocol'
 
 import { receipt_digest, receipt_event, owned_ref, type Receipt } from './cache.ts'
-import { SDK, living_content } from './client.ts'
+import { SDK } from './client.ts'
+import { living_content } from './pins.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { event_boolean, event_integer, event_string, event_u64 } from './receipt_decode.ts'
 import { item_template_id, mastery_offer_id, world_content_id } from './seed_ids.ts'
@@ -40,7 +41,7 @@ const option_u64 = (event: Readonly<Record<string, unknown>>, field: string): st
   return event_u64(event, field)
 }
 
-export const mastery_row_from_event = (event: Readonly<Record<string, unknown>>): MasteryRow =>
+const mastery_row_from_event = (event: Readonly<Record<string, unknown>>): MasteryRow =>
   Object.freeze({
     id: normalizeSuiObjectId(event_string(event, 'mastery')),
     owner: normalizeSuiObjectId(event_string(event, 'owner')),

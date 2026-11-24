@@ -4,7 +4,7 @@
 import { useMemo } from 'react'
 
 import { useAppStore } from '../store.ts'
-import { titleize } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import { copy_text } from './copy.ts'
 

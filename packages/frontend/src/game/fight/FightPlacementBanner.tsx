@@ -2,12 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useEffect, useReducer } from 'react'
+import { Button } from '@aresrpg/ui'
 
 import type { ReadyAllProgress } from '../../modules/fight.ts'
 import { chain_deadline_reached, chain_now } from '../../modules/chain_clock.ts'
 import { useAppStore } from '../../store.ts'
 
-const BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
+const BUTTON = 'mt-1'
 
 const usePlacementClock = (deadline: bigint | null) => {
   const clock = useAppStore((state) => state.chain_clock)
@@ -65,18 +66,13 @@ const PlacementReadyActions = ({
 }>) => (
   <div className="fight-hud__placement-ready">
     <div className="fight-hud__placement-actions">
-      <button className={`btn-gold ${BUTTON}`} disabled={ready || locked} onClick={on_ready} type="button">
+      <Button tone="primary" className={BUTTON} disabled={ready || locked} onClick={on_ready}>
         {ready ? (starting ? text.placement_starting : text.placement_waiting) : text.placement_ready}
-      </button>
+      </Button>
       {ready_all && (
-        <button
-          className={`btn-outline ${BUTTON}`}
-          disabled={ready_all_disabled || locked}
-          onClick={on_ready_all}
-          type="button"
-        >
+        <Button className={BUTTON} disabled={ready_all_disabled || locked} onClick={on_ready_all}>
           {ready_all_progress ? ready_all_progress_label(text, ready_all_progress) : text.placement_ready_all}
-        </button>
+        </Button>
       )}
     </div>
     {ready_all_progress && (
@@ -150,19 +146,14 @@ export const FightPlacementBanner = ({
         />
       )}
       {stalled && (
-        <button
-          className={`btn-gold ${BUTTON}`}
-          disabled={locked}
-          onClick={() => on_force_start(observed_ms)}
-          type="button"
-        >
+        <Button tone="primary" className={BUTTON} disabled={locked} onClick={() => on_force_start(observed_ms)}>
           {text.placement_force_button}
-        </button>
+        </Button>
       )}
       {can_forfeit && (
-        <button className={`btn-outline ${BUTTON}`} disabled={locked} onClick={on_forfeit} type="button">
+        <Button className={BUTTON} disabled={locked} onClick={on_forfeit}>
           {text.forfeit}
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -5,7 +5,7 @@ import { item_is_stackable } from '@aresrpg/immutable'
 
 import { profession_inventory } from './actor_inventory.ts'
 import { owned_character } from './gameplay_context.ts'
-import { MARKET_SELL_ACTION } from './market_actions.ts'
+import { MARKET_ACTIONS } from './market_actions.ts'
 import type { GameplayContext } from './gameplay_context.ts'
 import type { SelectedAction } from './behavior_targets.ts'
 
@@ -82,6 +82,6 @@ export const select_sale = (selection: SellSelection, context: GameplayContext) 
     amount: selection.amount,
     price_mist: selection.price_mist,
   }
-  MARKET_SELL_ACTION.parse(payload)
+  MARKET_ACTIONS.market_sell.parse(payload)
   return { kind: 'market_sell' as const, payload }
 }

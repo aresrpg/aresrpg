@@ -4,8 +4,9 @@
 import {
   parse_client_packet,
   parse_server_packet,
-  SERVER_PACKET_TYPES,
+  SEAT_FLAG,
   type CharacterRow,
+  type Claim,
   type ClientPacket,
   type ServerPacket,
 } from '@aresrpg/protocol'
@@ -67,6 +68,7 @@ const connection_url = ({ endpoint, origin, signer }: AgentConnectionOptions): s
     throw new Error('Origin must be an HTTP or HTTPS origin')
   if (!/^0x[0-9a-f]{64}$/.test(signer.address)) throw new Error('Signer address must be normalized')
   url.searchParams.set('address', signer.address)
+  url.searchParams.set(SEAT_FLAG.param, SEAT_FLAG.value)
   return url.href
 }
 
@@ -89,7 +91,7 @@ const valid_roster = (characters: readonly CharacterRow[]): boolean =>
 
 const decode_packet = (raw: string): ServerPacket => {
   const packet = parse_server_packet(raw)
-  if (!packet || !SERVER_PACKET_TYPES.includes(packet.type)) throw new Error('Unknown server packet')
+  if (!packet) throw new Error('Unknown server packet')
   if (packet.type === 'packet/game_state' && packet.frozen !== null && typeof packet.frozen !== 'boolean')
     throw new Error('Invalid game state')
   if (packet.type === 'packet/characters' && !valid_roster(packet.characters)) throw new Error('Invalid roster')
@@ -166,9 +168,10 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
       if (!socket) throw new Error('Transport unavailable')
       socket.send(JSON.stringify(packet))
     }
-    const accept = (address: string) => {
-      if (state.status !== 'authenticating' || address !== options.signer.address)
-        throw new Error('Unexpected connection acceptance')
+    /** The acceptance echoes the claim this connection asked for: the signer's own address. */
+    const accept = (accepted: Claim) => {
+      const own = 'address' in accepted && accepted.address === options.signer.address
+      if (state.status !== 'authenticating' || !own) throw new Error('Unexpected connection acceptance')
       dispatch({ type: 'status', status: 'resyncing' })
       if (initial_game_state) dispatch({ type: 'packet', packet: initial_game_state })
       initial_game_state = null
@@ -192,7 +195,7 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
           case 'packet/signature_request':
             return await send_proof(packet.payload)
           case 'packet/connection_accepted':
-            return accept(packet.address)
+            return accept(packet)
           default:
             application_packet(packet)
         }
@@ -217,7 +220,7 @@ export const create_agent_connection = (options: AgentConnectionOptions) => {
         socket = null
       }
     } catch (error) {
-      report_error(error)
+      if (current()) report_error(error)
     }
   }
   const request_fight_resync = (fight: string): boolean => {

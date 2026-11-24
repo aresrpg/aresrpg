@@ -7,10 +7,12 @@ for (const pathname of ['/enoki', '/enoki/']) {
   test(`the OAuth callback ${pathname} preserves its result when the popup inherits a gift intent`, async ({
     page,
   }) => {
-    const application_requests: string[] = []
+    // The sign-in popup's opener reads the result from the address: the page starts no site, page or socket.
+    const sockets: string[] = []
+    const pages: string[] = []
+    page.on('websocket', (socket) => sockets.push(socket.url()))
     page.on('request', (request) => {
-      if (/\/assets\/(app_boot|game_entry)-[^/]+\.js$/.test(new URL(request.url()).pathname))
-        application_requests.push(request.url())
+      if (/\/assets\/(MarketPage|start)-[^/]+\.js$/.test(new URL(request.url()).pathname)) pages.push(request.url())
     })
     await page.setViewportSize({ width: 390, height: 844 })
     await page.addInitScript(() => {
@@ -21,6 +23,7 @@ for (const pathname of ['/enoki', '/enoki/']) {
     expect(new URL(page.url()).pathname).toBe(pathname)
     expect(new URL(page.url()).hash).toBe('#id_token=test-oauth-result')
     await expect(page.locator('#root')).toBeEmpty()
-    expect(application_requests).toEqual([])
+    expect(pages).toEqual([])
+    expect(sockets).toEqual([])
   })
 }

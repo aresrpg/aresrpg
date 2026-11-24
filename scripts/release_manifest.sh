@@ -24,9 +24,6 @@ jq -n \
   --arg bot_version "$VERSION" \
   --arg bot_digest "$BOT_DIGEST" \
   --argjson bot_built "$BOT_BUILT" \
-  --arg telegram_version "$VERSION" \
-  --arg telegram_digest "$TELEGRAM_DIGEST" \
-  --argjson telegram_built "$TELEGRAM_BUILT" \
   --arg discord_version "$VERSION" \
   --arg discord_digest "$DISCORD_DIGEST" \
   --argjson discord_built "$DISCORD_BUILT" \
@@ -64,18 +61,17 @@ jq -n \
     },
     images: {
       bot: {repository: "ghcr.io/aresrpg/bot", version: $bot_version, digest: $bot_digest, built: $bot_built},
-      telegram: {repository: "ghcr.io/aresrpg/telegram", version: $telegram_version, digest: $telegram_digest, built: $telegram_built},
       discord: {repository: "ghcr.io/aresrpg/discord", version: $discord_version, digest: $discord_digest, built: $discord_built},
       server: {repository: "ghcr.io/aresrpg/server", version: $server_version, digest: $server_digest, built: $server_built},
       indexer: {repository: "ghcr.io/aresrpg/indexer", version: $indexer_version, digest: $indexer_digest, built: $indexer_built}
     }
   }' > "$RUNNER_TEMP/production-release/release-manifest.json"
 jq -e --arg version "$VERSION" '
-  .images | [.bot, .telegram, .server, .indexer, .discord] | all(
+  .images | [.bot, .server, .indexer, .discord] | all(
     .version == $version and (.built | type == "boolean") and
     (.digest | type == "string" and test("^sha256:[0-9a-f]{64}$"))
   )
 ' "$RUNNER_TEMP/production-release/release-manifest.json" >/dev/null || {
-  echo '::error::release requires five certified image identities'; exit 1;
+  echo '::error::release requires four certified image identities'; exit 1;
 }
 cat "$RUNNER_TEMP/production-release/release-manifest.json" >> "$GITHUB_STEP_SUMMARY"

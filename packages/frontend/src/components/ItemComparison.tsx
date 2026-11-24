@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { equipment_comparison } from '../characters/equipment_comparison.ts'
 import { useText } from '../i18n/useText.ts'
+import './inspection.css'
 
 type Comparison = Readonly<NonNullable<ReturnType<typeof equipment_comparison>>>
 type Stats = Readonly<{ min: Readonly<Record<string, number>>; max: Readonly<Record<string, number>> }>

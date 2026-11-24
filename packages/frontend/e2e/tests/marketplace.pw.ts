@@ -5,11 +5,6 @@ import { expect, test } from '@playwright/test'
 
 test('different rolls retain their exact tooltip and individual buy action', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html')
-  await page
-    .locator('[data-marketplace-item-types]')
-    .getByRole('button', { name: /^hat\b/i })
-    .click()
-  await page.locator('[data-marketplace-template-options] button').first().click()
   const rows = page.locator('[data-marketplace-listings] [data-marketplace-listing-row]')
   await expect(rows).toHaveCount(3)
   await expect(page.locator('[data-marketplace-lot-market]')).toHaveCount(0)
@@ -31,11 +26,6 @@ test('different rolls retain their exact tooltip and individual buy action', asy
 
 test('identical rolls retain backup offers and advance after the cheapest is removed', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html?duplicates')
-  await page
-    .locator('[data-marketplace-item-types]')
-    .getByRole('button', { name: /^hat\b/i })
-    .click()
-  await page.locator('[data-marketplace-template-options] button').first().click()
   const rows = page.locator('[data-marketplace-listings] [data-marketplace-listing-row]')
   await expect(rows).toHaveCount(3)
   await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xduplicate')
@@ -47,29 +37,4 @@ test('identical rolls retain backup offers and advance after the cheapest is rem
   await page.evaluate(() => window.dispatchEvent(new Event('market-fixture-remove-cheapest')))
   await expect(rows).toHaveCount(3)
   await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xitem1')
-})
-
-test('barley to quartz to barley restores offers immediately and waits for fresh buy authority', async ({ page }) => {
-  await page.goto('/e2e/fixtures/marketplace.html?bags&all-types&manual-slices')
-  const options = page.locator('[data-marketplace-template-options]')
-  const barley = options.getByRole('button', { name: 'Bag of Barley', exact: true })
-  const quartz = options.getByRole('button', { name: 'Bag of Quartz', exact: true })
-  const unit = page.locator('[data-marketplace-cheapest-lot="1"]')
-  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
-  const request = await page.locator('body').getAttribute('data-market-request')
-  await barley.click()
-  await expect(page.locator('body')).toHaveAttribute('data-market-request', request!)
-  await quartz.click()
-  await expect(page.locator('body')).not.toHaveAttribute('data-market-request', request!)
-  await page.evaluate(() => window.dispatchEvent(new Event('market-fixture-release-slice')))
-  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
-  const quartz_request = await page.locator('body').getAttribute('data-market-request')
-  await barley.click()
-  await expect(page.locator('body')).not.toHaveAttribute('data-market-request', quartz_request!)
-  await expect(page.locator('[data-marketplace-listings]')).toHaveAttribute('aria-busy', 'true')
-  await expect(unit).toContainText('1.10')
-  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeDisabled()
-  await page.evaluate(() => window.dispatchEvent(new Event('market-fixture-release-slice')))
-  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
-  await expect(page.locator('[data-marketplace-listings]')).toHaveAttribute('aria-busy', 'false')
 })

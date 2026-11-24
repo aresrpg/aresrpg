@@ -68,6 +68,7 @@ import type {
   ChunkRenderOutcome,
   EngineIssue,
   EngineQuality,
+  LabelAnchor,
   RenderChunkRequest,
   RenderedChunk,
   Vec3,
@@ -199,7 +200,7 @@ export const create_webgpu_backend = async (
     const pet_wings = own(create_pet_wing_layer(scene, camera, entities.mount_anchor, initial_quality))
     const world_panels = own(create_world_panels(scene))
     const captions = own(create_caption_layer({ renderer, canvas, camera }))
-    const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
+    const entity_labels = own(create_entity_label_layer({ canvas, camera }))
     const effects = own(create_transient_effects({ scene, entities, captions }))
     const motion_preference = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
     const reduced_motion = (): boolean => motion_preference.matches
@@ -437,7 +438,7 @@ export const create_webgpu_backend = async (
       try {
         const profile = get_quality_profile(next)
         replacement = create_hillaire_sky({
-          tier: profile.sky,
+          tier: next,
           seed: world.seed,
           sun_direction: analytic_sky.sun_direction,
           cool_tilt: FOG_COOL_TILT,
@@ -504,7 +505,7 @@ export const create_webgpu_backend = async (
       auras.set_quality(next)
       pet_wings.set_quality(next)
       frame_renderer.set_quality(next)
-      if (update_sky) void use_sky_quality(profile.sky)
+      if (update_sky) void use_sky_quality(next)
     }
 
     let ortho_blend = 0
@@ -625,7 +626,7 @@ export const create_webgpu_backend = async (
         suppressed: !resource_nodes_visible,
         dt: delta_seconds,
       })
-      hillaire?.tick(renderer, camera, delta_seconds)
+      hillaire?.tick(renderer, camera)
       // Only immersive boards open the camera peephole. Every board retains its local clearance,
       // including when its screen projection crosses or passes behind the eye.
       if (board_footprint) {
@@ -728,9 +729,24 @@ export const create_webgpu_backend = async (
     apply_quality(initial_quality, false)
     // Advanced atmosphere is progressive presentation, never a terrain boot gate. The analytic
     // sky remains valid while its replacement bakes, so attach the backend and stream chunks now.
-    void use_sky_quality(get_quality_profile(initial_quality).sky)
+    void use_sky_quality(initial_quality)
+    const label_anchor = (anchor: LabelAnchor): (() => Vector3 | null) => {
+      switch (anchor.kind) {
+        case 'entity':
+          return () => entity_anchors.live_crown(anchor.id)
+        case 'resource':
+          return () => resource_nodes.label_anchor(anchor.id)
+        case 'sword':
+          return () => fight_swords?.label_anchor(anchor.id) ?? null
+        case 'portal':
+          return portal.label_anchor
+        case 'world': {
+          const position = new Vector3(...anchor.position)
+          return () => position
+        }
+      }
+    }
     return Object.freeze({
-      kind: 'webgpu',
       tick: (now: number) => {
         fight_board.tick(now)
         entities.tick(now)
@@ -867,14 +883,7 @@ export const create_webgpu_backend = async (
         fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
         fight_swords.set_markers(markers)
       },
-      set_fight_sword_label: (id, element) =>
-        entity_labels.set_static(`fight:${id}`, element, () => fight_swords?.label_anchor(id) ?? null),
       set_resource_nodes: resource_nodes.set_markers,
-      set_resource_node_label: (id, element) =>
-        entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),
-      set_portal_label: (element) => {
-        entity_labels.set_static('portal', element, portal.label_anchor)
-      },
       set_dungeon_portals: dungeon_portals.set_markers,
       set_dungeon_stage: (stage) => {
         dungeon_stage_active = stage !== null
@@ -907,10 +916,9 @@ export const create_webgpu_backend = async (
       },
       hit_entity_caption: (id, x, y) => captions.hit_test(`entity:${id}`, x, y),
       set_entity_caption: (id, caption) => captions.set(`entity:${id}`, caption, () => entity_anchors.live_crown(id)),
-      set_entity_label: entity_labels.set,
       set_world_panel: world_panels.set,
-      set_world_label: (id, element, position) =>
-        entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
+      set_label: (id, label) =>
+        entity_labels.set(id, label?.element ?? null, label ? label_anchor(label.anchor) : () => null),
       entity_height: entity_anchors.entity_height,
       entity_position: (id, height) =>
         entities.entity_position(id, height) ?? character_crowd.entity_position(id, height),

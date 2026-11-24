@@ -20,7 +20,7 @@ import {
 
 import type { AuthSession } from '../auth.ts'
 import type { SessionState } from '../modules/session.ts'
-import type { AppInput, AppModule } from '../store.ts'
+import type { AppInput, SiteContext } from '../store.ts'
 
 export type AgentInventoryView = InventoryProjection &
   Readonly<{
@@ -134,7 +134,8 @@ export const fold_agent_inventory = (session: SessionState, previous: SessionSta
 }
 
 export const inventory_subscription = (session: SessionState, previous: SessionState) => {
-  if (session.link_status !== 'ready') return null
+  // A bot's bag belongs to an account: a link without one (the site's public stage) observes none.
+  if (session.link_status !== 'ready' || !session.wallet) return null
   if (session.agent_inventory.serial === previous.agent_inventory.serial && previous.link_status === 'ready')
     return null
   return { id: session.agent_inventory.serial, pairing: session.inventory_pairing }
@@ -154,7 +155,7 @@ export const observe_inventory_subscription = ({
   send,
   refresh_balances,
 }: Readonly<
-  Pick<Parameters<NonNullable<AppModule['observe']>>[0], 'events' | 'dispatch'> & {
+  Pick<SiteContext, 'events' | 'dispatch'> & {
     send: (packet: Readonly<ClientPacket>) => void
     refresh_balances: () => void
   }

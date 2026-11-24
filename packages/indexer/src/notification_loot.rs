@@ -7,8 +7,7 @@ use std::collections::BTreeMap;
 
 use crate::decode::{self, Field, FighterAuthority, FighterKind, Item, MarkerKey, RolledStats};
 use crate::events;
-use crate::graph::field_key;
-use crate::notification_events::{fights, game_object};
+use crate::notification_events::fights;
 use crate::ownership::{self, Custody, OwnerKind};
 use crate::publish::TxView;
 
@@ -59,7 +58,7 @@ fn claimed(tx: &TxView<'_>, game: &str) -> Result<Budget> {
             // A retired Fight must return this settled seat's Character in the same PTB.
             if output.is_none()
                 && !tx.outputs.iter().any(|view| {
-                    view.id == *character && game_object(view, game, "character", "Character")
+                    view.id == *character && view.type_key.is(game, "character", "Character")
                 })
             {
                 continue;
@@ -111,14 +110,14 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
     for view in tx
         .outputs
         .iter()
-        .filter(|view| game_object(view, game, "item", "Item"))
+        .filter(|view| view.type_key.is(game, "item", "Item"))
     {
-        let mut item: Item = decode::from_bytes(view.bytes)?;
+        let mut item: Item = view.decode()?;
         let previous = tx
             .inputs
             .iter()
             .find(|input| input.id == view.id)
-            .map(|input| decode::from_bytes::<Item>(input.bytes))
+            .map(|input| input.decode::<Item>())
             .transpose()?;
         let amount = item
             .amount
@@ -134,10 +133,10 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
         let key = format!("{game}::item::StatsKey");
         let field = tx.outputs.iter().find(|field| {
             field.owner == OwnerKind::Object(item.id)
-                && field_key(field.type_key) == Some(key.as_str())
+                && field.type_key.field_key() == Some(key.as_str())
         });
         let stats = field
-            .map(|field| decode::from_bytes::<Field<MarkerKey, RolledStats>>(field.bytes))
+            .map(|field| field.decode::<Field<MarkerKey, RolledStats>>())
             .transpose()?
             .map(|field| field.value);
         // Existing rolled gear and forged same-PTB results are not natural loot rolls.

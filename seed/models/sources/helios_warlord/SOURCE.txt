@@ -1,0 +1,22 @@
+Helios Warlord — partner cosmetic helmet (ACT, Advanced Combat Tactics)
+
+Open helios_warlord.blend in Blender 5.2 or newer. The Model scene holds the exported
+mesh; the Review scene shows it worn on the reference body through the head fit.
+
+Visual design
+ACT's Helios full-face helmet (Zenith Aerospace) pushed to a kabuto: wide dark V crest
+with a bright inner pair, tall swept centre fin, three-tier neck guard, lit visor slit,
+comms discs and a transponder antenna on the right disc. Warlord is ACT's top rank.
+
+Colourways
+One geometry, four palette strips packed as KHR material variants: vesper, dusk,
+blood_ivory and kin (full gold, the rare one). Item identity selects the variant, as
+helios_warlord__<variant>.
+
+Supported embedded scripts
+- build_helios_warlord.py rebuilds the voxels and the four palette strips.
+- export_helios_warlord.py writes seed/models/equipment/helios_warlord.glb.
+
+Reference provenance
+Helios helmet from the ACT master model supplied by the ACT team (2024-10-11). Names and
+skin colours were read from the live game at https://play.actuniverse.com on 2026-11-24.

@@ -3,6 +3,7 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The runtime is the reducer-owned structuredClone draft and render-action builder. */
 
 import type {
+  BoardZone,
   FightContract,
   FightEventPayloads,
   FightEventType,
@@ -62,6 +63,22 @@ export const emit = <Type extends FightEventType>(
   payload: FightEventPayloads[Type]
 ): void => {
   runtime.render_actions.push({ type, payload } as FightRuntime['render_actions'][number])
+}
+
+/** Keeps each zone `next` returns, announces each zone it drops, and keeps render ids aligned. */
+export const retain_zones = (
+  runtime: FightRuntime,
+  next: (zone: BoardZone) => BoardZone | null,
+  reason: string
+): void => {
+  const kept = runtime.contract.zones.flatMap((zone, index) => {
+    const zone_id = runtime.render_ids.zones[index]
+    const retained = next(zone)
+    if (retained === null) emit(runtime, 'zone_removed', { zone_id, kind: zone.trap ? 'trap' : 'glyph', reason })
+    return retained === null ? [] : [{ zone: retained, zone_id }]
+  })
+  runtime.contract.zones = kept.map(({ zone }) => zone)
+  runtime.render_ids.zones = kept.map(({ zone_id }) => zone_id)
 }
 
 export const fail = (runtime: FightRuntime, code: string, detail: unknown = null): FightRuntime => {

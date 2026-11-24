@@ -8,11 +8,14 @@ import { NativeModal, GameWindow } from '@aresrpg/ui'
 
 import { item_icon } from '../content/assets.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
+import { dispatch_app } from '../store.ts'
 
-import { useTradeInventory, useTradeDispatch } from './TradeSource.tsx'
+import { useTradeInventory } from './TradeSource.tsx'
+import { ItemDetailView } from './ItemDetailView.tsx'
 import { OwnedItemDetail } from './OwnedItemDetail.tsx'
 import { ItemSnapshotTooltip, useItemSnapshotHover, ItemSnapshotContent } from './ItemSnapshotTooltip.tsx'
 import { trade_cap_action } from './trade_view.ts'
+import './inspection.css'
 
 type TradeCapCellProps = Readonly<{ cap: TradeCapRow; remove?: () => void; remove_label: string }>
 
@@ -100,6 +103,7 @@ const SnapshotTradeCapCell = ({ copy, ...props }: TradeCapCellProps & Readonly<{
             className="aui-inspection aui-inspection--item"
           >
             <ItemSnapshotContent
+              Sheet={ItemDetailView}
               copy={copy}
               status={item_hover.hover?.status ?? 'loading'}
               item={item_hover.hover?.item ?? null}
@@ -127,6 +131,7 @@ const TradeCapCell = ({ copy, own, ...props }: TradeCapCellProps & Readonly<{ co
             className="aui-inspection aui-inspection--item"
           >
             <OwnedItemDetail
+              Sheet={ItemDetailView}
               item={
                 item ?? {
                   id: props.cap.object,
@@ -163,7 +168,6 @@ export const OfferCaps = ({
   text: CopyText
   remove_cap?: (cap: Readonly<TradeCapRow>) => void
 }>) => {
-  const dispatch_app = useTradeDispatch()
   const removable = trade_cap_action({ phase: trade.phase, own }) === 'withdraw' && !pending
   return (
     <div className="trade-offer-grid">

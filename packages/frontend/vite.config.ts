@@ -9,23 +9,19 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Connect, type Plugin } from 'vite'
 import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa'
 import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
-import { agent_connect_url } from './src/agents/entry_intent.ts'
-import { create_landing_assets, landing_links } from './src/landing/presentation.ts'
-import { LandingPage } from './src/landing/LandingPage.tsx'
-import type { LandingCopy } from './src/landing/landing_types.ts'
 import { LoadingPostcard, type LoadingCopy } from './src/components/LoadingPostcard.tsx'
 import { asset_inline_limit } from './asset_inline.ts'
 import { locale_manifest_plugin } from './locale_assets.ts'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { require_reporting_dsn } from './src/reporting_config.ts'
 import { display_assets_plugin } from './display_assets.ts'
-import { escape_html, social_cards_plugin } from './social_cards.ts'
+import { escape_html, home_preview, social_cards_plugin } from './social_cards.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
@@ -37,9 +33,7 @@ const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
 
 const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
-  const copy = parse(readFileSync(resolve(frontend_dir, 'src/i18n/locales/en.yaml'), 'utf8')) as LoadingCopy & {
-    landing_page: LandingCopy
-  }
+  const copy = parse(readFileSync(resolve(frontend_dir, 'src/i18n/locales/en.yaml'), 'utf8')) as LoadingCopy
   const asset_root = development ? `/@fs/${repo_dir}/seed/icons/loading` : '../../seed/icons/loading'
   const loading = renderToStaticMarkup(
     createElement(LoadingPostcard, {
@@ -53,34 +47,16 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
       boot: true,
     })
   )
-  const icon_root = development ? `/@fs/${repo_dir}/seed/icons` : '../../seed/icons'
-  const landing = renderToStaticMarkup(
-    createElement(LandingPage, {
-      copy: copy.landing_page,
-      assets: create_landing_assets({
-        portrait: `${icon_root}/characters/senshi_male_hd.png`,
-        item_key: `${icon_root}/items/key_of_ivory_rampart_hd.png`,
-        item_horn: `${icon_root}/items/tidal_horn_core_hd.png`,
-        item_bow: `${icon_root}/items/amberwood_recurve_hd.png`,
-        podium: [
-          './src/assets/leaderboards/podium-1.png',
-          './src/assets/leaderboards/podium-2.png',
-          './src/assets/leaderboards/podium-3.png',
-        ],
-      }),
-      links: landing_links(env.app_url, env.discord_url),
-      agent_connect_url: agent_connect_url(env.app_url),
-      on_play: () => {},
-    })
-  )
   const loading_css = readFileSync(resolve(frontend_dir, 'src/components/world_loading.css'), 'utf8')
+  const home = home_preview(env.app_url)
   const values = {
     APP_NAME: env.app_name,
     APP_URL: env.app_url,
     META_DESCRIPTION: env.meta_description,
     META_TITLE: env.meta_title,
-    SOCIAL_DESCRIPTION: env.social_description,
-    SOCIAL_IMAGE_URL: env.social_image_url,
+    SOCIAL_DESCRIPTION: home.description,
+    SOCIAL_IMAGE_URL: home.image_url,
+    SOCIAL_IMAGE_ALT: home.alt,
     THEME_COLOR: env.theme_color,
   }
   return {
@@ -90,14 +66,27 @@ const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
       handler: (html) =>
         Object.entries(values).reduce(
           (rendered, [name, value]) => rendered.replaceAll(`{{${name}}}`, escape_html(value)),
-          html
-            .replaceAll('{{LOADING_SCREEN}}', loading)
-            .replace('{{LANDING_SCREEN}}', landing)
-            .replace('{{LOADING_STYLES}}', loading_css)
+          html.replaceAll('{{LOADING_SCREEN}}', loading).replace('{{LOADING_STYLES}}', loading_css)
         ),
     },
   }
 }
+
+/** The game is a document of its own, under one address prefix. Every other address is the site's document. */
+const GAME_PREFIX = '/world'
+/** Dev and preview servers serve the game's document for every address under its prefix, as the hosting rule does. */
+const serve_game_document: Connect.NextHandleFunction = (request, _response, next) => {
+  const [path = '', query] = (request.url ?? '').split('?')
+  if (path === GAME_PREFIX || path.startsWith(`${GAME_PREFIX}/`))
+    // eslint-disable-next-line no-param-reassign -- the server reads the rewritten URL from this request object.
+    request.url = `/world.html${query ? `?${query}` : ''}`
+  next()
+}
+const game_document_plugin = (): Plugin => ({
+  name: 'aresrpg-game-document',
+  configureServer: (server) => void server.middlewares.use(serve_game_document),
+  configurePreviewServer: (server) => void server.middlewares.use(serve_game_document),
+})
 
 const yaml_plugin = (): Plugin => ({
   name: 'aresrpg-yaml',
@@ -116,7 +105,8 @@ export default defineConfig(({ mode, command }) => {
     name: env.app_name,
     short_name: env.app_name,
     description: env.meta_description,
-    start_url: '/',
+    // The installed app is the game.
+    start_url: GAME_PREFIX,
     scope: '/',
     lang: 'en',
     dir: 'ltr',
@@ -130,13 +120,14 @@ export default defineConfig(({ mode, command }) => {
       { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
-    screenshots: [{ src: '/social/home.jpg', sizes: '1200x630', type: 'image/jpeg', form_factor: 'wide' }],
+    screenshots: [{ src: '/social/world.jpg', sizes: '1200x630', type: 'image/jpeg', form_factor: 'wide' }],
   }
   return {
     // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
     server: {
       proxy: {
         '/api/allocation': { target: loaded_env.ALLOCATION_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
+        '/api/share': { target: loaded_env.ALLOCATION_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
         '/__game_server': {
           target: 'wss://server.aresrpg.world',
           ws: true,
@@ -157,27 +148,20 @@ export default defineConfig(({ mode, command }) => {
       portrait_dev_plugin(),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),
+      game_document_plugin(),
       html_env_plugin(env, command === 'serve'),
       yaml_plugin(),
       locale_manifest_plugin(manifest),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
       ...music_assets_plugin(resolve(repo_dir, 'music')),
-      ...display_assets_plugin({
-        characters_dir: resolve(repo_dir, 'seed/icons/characters'),
-        items_dir: resolve(repo_dir, 'seed/icons/items'),
-      }),
+      ...display_assets_plugin({ icons_dir: resolve(repo_dir, 'seed/icons') }),
       social_cards_plugin(
         {
           content_dir: resolve(repo_dir, 'seed/content'),
           copy_path: resolve(frontend_dir, 'src/i18n/locales/en.yaml'),
           icons_dir: resolve(repo_dir, 'seed/icons'),
         },
-        {
-          app_url: env.app_url,
-          font_path: resolve(repo_dir, 'packages/journal/public/assets/jetbrains-mono.woff2'),
-          logo_path: resolve(repo_dir, 'seed/scenes/aresrpg_text_logo.png'),
-          tokens_path: resolve(frontend_dir, '../ui/src/base.css'),
-        }
+        env.app_url
       ),
       ...(mode === 'development'
         ? [seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') })]
@@ -215,21 +199,20 @@ export default defineConfig(({ mode, command }) => {
       // Fetched models and city artifacts stay files: production connect-src excludes data URLs.
       assetsInlineLimit: asset_inline_limit,
       chunkSizeWarningLimit: 550,
-      ...(mode === 'test'
-        ? {
-            rollupOptions: {
-              input: {
-                app: resolve(frontend_dir, 'index.html'),
-                ...Object.fromEntries(
-                  readdirSync(resolve(frontend_dir, 'e2e/fixtures'))
-                    .filter((file) => file.endsWith('.html'))
-                    .sort()
-                    .map((file) => [file.slice(0, -5), resolve(frontend_dir, 'e2e/fixtures', file)])
-                ),
-              },
-            },
-          }
-        : {}),
+      rollupOptions: {
+        input: {
+          site: resolve(frontend_dir, 'index.html'),
+          world: resolve(frontend_dir, 'world.html'),
+          ...(mode === 'test'
+            ? Object.fromEntries(
+                readdirSync(resolve(frontend_dir, 'e2e/fixtures'))
+                  .filter((file) => file.endsWith('.html'))
+                  .sort()
+                  .map((file) => [file.slice(0, -5), resolve(frontend_dir, 'e2e/fixtures', file)])
+              )
+            : {}),
+        },
+      },
     },
   }
 })

@@ -9,8 +9,7 @@
 // (frontend/src/admin/seed_content.ts is the ceremony's identical derivation).
 
 import { draw, mix, rng_seed } from '@aresrpg/fight/prng'
-import { sample_biome_grid, type BiomeGrid } from '@aresrpg/engine/biomes'
-import { parse_world_recipe } from '@aresrpg/engine/recipe'
+import { parse_world_recipe, sample_biome_grid, type BiomeGrid } from '@aresrpg/engine/data'
 import { ZONE_SIZE as ZONE_BLOCKS, type MobGroupRow, type ResourcePackRow } from '@aresrpg/protocol'
 import {
   archimob_appearance_bp,
@@ -135,9 +134,6 @@ const biome_of_zone = (map: BiomeGrid, zx: number, zz: number): number => {
 /** The shared distance rule (`zone_math::distance_blocks`) at the centre of a zone. */
 const distance_blocks = (zx: number, zz: number): bigint =>
   BigInt(center_distance((zx + 0.5) * ZONE_BLOCKS, (zz + 0.5) * ZONE_BLOCKS))
-
-// The group-size rule has one home, shared with the strategy binder that names difficulty levels by it.
-export { mob_group_size_bounds }
 
 export const mob_level_scalar_bounds = (distance: bigint): readonly [bigint, bigint] =>
   Object.freeze([ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_LOW_CAP), ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_HIGH_CAP)])

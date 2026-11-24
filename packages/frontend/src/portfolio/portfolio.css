@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* A hero's portrait stands in a warm ember glow. */
+.portfolio-hero-art {
+  background:
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--aui-orange) 18%, transparent), transparent 70%),
+    var(--aui-sunk);
+}

@@ -35,14 +35,7 @@ type CharacterTransferIntent =
       seller_kiosk: string
       purchase_cap: string
       equipment?: readonly ReturnEquipment[]
-      agent_address?: string
-    }>
-  | Readonly<{
-      kind: 'cancel'
-      seller_kiosk: string
-      purchase_cap: string
-      equipment?: readonly ReturnEquipment[]
-      agent_address?: string
+      agent_address: string
     }>
 
 export type AgentTransferIntent = CharacterTransferIntent | AgentAssetIntent | AgentBatchIntent
@@ -65,7 +58,7 @@ export const agent_transfer_actions = (
     budget?: bigint | 'estimate'
     batch_limits?: AgentBatchLimits
     check_offer?: (intent: Extract<AgentTransferIntent, { kind: 'offer' }>) => Promise<void>
-    check_return?: (intent: Exclude<CharacterTransferIntent, { kind: 'offer' }>) => Promise<void>
+    check_return?: (intent: Extract<CharacterTransferIntent, { kind: 'claim' }>) => Promise<void>
     assets?: Readonly<{ client: SuiGrpcClient; recipient?: () => string }>
   }>
 ) => {
@@ -97,20 +90,15 @@ export const agent_transfer_actions = (
       )
     }
     if (is_asset_intent(intent)) return compose_assets(intent)
-    if (intent.kind !== 'offer') await check_return(intent)
-    switch (intent.kind) {
-      case 'offer': {
-        await check_offer(intent)
-        await sdk.hydrate((intent.unequip ?? []).map((row) => row.item_id))
-        const kiosk_cap = await resolve_kiosk_cap(context.kiosk_cap, { kiosk: intent.kiosk }, true)
-        if (!kiosk_cap) throw new Error('The selected character kiosk is unavailable.')
-        return builders.offer({ ...intent, sender: context.address, kiosk_cap })
-      }
-      case 'claim':
-        return builders.claim({ ...intent, recipient: context.address, kiosk_cap: await context.kiosk_cap() })
-      case 'cancel':
-        return builders.cancel({ ...intent, holder: context.address })
+    if (intent.kind === 'claim') {
+      await check_return(intent)
+      return builders.claim({ ...intent, recipient: context.address, kiosk_cap: await context.kiosk_cap() })
     }
+    await check_offer(intent)
+    await sdk.hydrate((intent.unequip ?? []).map((row) => row.item_id))
+    const kiosk_cap = await resolve_kiosk_cap(context.kiosk_cap, { kiosk: intent.kiosk }, true)
+    if (!kiosk_cap) throw new Error('The selected character kiosk is unavailable.')
+    return builders.offer({ ...intent, sender: context.address, kiosk_cap })
   }
   const simulate = (tx: Transaction) => sdk.simulate(tx, { budget: context.budget ?? 'estimate' })
   return Object.freeze({

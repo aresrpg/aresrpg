@@ -12,13 +12,12 @@ import type { ProfessionSelection } from './behavior_profession.ts'
 import { parse_target_options, parse_world_area, type TargetOptions } from './target_constraints.ts'
 import type { EquipOwnedAction, ConsumeOwnedAction } from './behavior_items.ts'
 import type { DungeonAction, JoinAction } from './behavior_team.ts'
-import type { SpendAction } from './behavior_growth.ts'
+import type { SpendAction } from './behavior_plan.ts'
 import type { GroupOrder } from './behavior_targets.ts'
-import { OBJECTIVE_SCHEMA } from './objective.ts'
-import { matches, nonempty } from './gameplay_schema.ts'
+import { matches, nonempty, type Comparison } from './gameplay_schema.ts'
 import { parse_gameplay_action, type GameplayActionName } from './gameplay.ts'
-import { parse_combat_profile, type CombatProfile } from './combat_profile.ts'
-import { BEHAVIOR_ACTION_SCHEMA, BEHAVIOR_CONDITION_SCHEMA } from './behavior_schema.ts'
+import { BOOST_REMOVED, names_removed_step, parse_combat_profile, type CombatProfile } from './combat_profile.ts'
+import { BEHAVIOR_ACTION_SCHEMA, BEHAVIOR_CONDITION_SCHEMA, OBJECTIVE_SCHEMA } from './behavior_schema.ts'
 import type { BehaviorMemory, BehaviorNode } from './behavior_tree.ts'
 import type { DiscoverAction, WorldAvailability } from './behavior_world.ts'
 import type { MarketPriceCondition } from './market_prices.ts'
@@ -71,23 +70,21 @@ export type BehaviorFact = Readonly<{
 }>
 export type StateCondition = Readonly<{
   fact: BehaviorFact
-  op: 'eq' | 'ne' | 'lt' | 'lte' | 'gt' | 'gte'
+  op: Comparison
   value: string | number | boolean
 }>
 /** A fact of the run itself, never of the game: what it tallied since its tree was accepted. */
 export type TallyCondition =
-  | Readonly<{ type: 'fees_spent'; op: StateCondition['op']; value: string }>
-  | Readonly<{ type: 'dungeon_runs'; op: StateCondition['op']; value: number }>
+  | Readonly<{ type: 'fees_spent'; op: Comparison; value: string }>
+  | Readonly<{ type: 'dungeon_runs'; op: Comparison; value: number }>
 export type BehaviorCondition =
   | StateCondition
   | TallyCondition
-  | Readonly<{ type: 'sui_balance'; op: StateCondition['op']; value: string }>
+  | Readonly<{ type: 'sui_balance'; op: Comparison; value: string }>
   | (MarketPriceCondition & Readonly<{ type: 'market_price' }>)
   | Readonly<{ type: 'world'; fact: WorldAvailability; op: 'eq' | 'ne'; value: boolean }>
 export type BehaviorScript = Readonly<{
   version: '1'
-  /** The catalogue entry a client bound this tree from. Reported back with the run; never executed or checked. */
-  strategy?: string
   objective: HostedObjective
   tree: BehaviorNode<BehaviorAction, BehaviorCondition>
 }>
@@ -144,7 +141,13 @@ const leaf_checks: { [Type in BehaviorAction['type']]?: (leaf: Extract<BehaviorA
     leaf.profiles.forEach(({ profile }) => parse_combat_profile(profile))
   },
 }
+/** The profiles a combat or dungeon leaf carries, before its schema is checked. */
+const leaf_profiles = (value: unknown): readonly unknown[] => {
+  const leaf = value as { profile?: unknown; profiles?: readonly { profile?: unknown }[] } | null
+  return [leaf?.profile, ...(Array.isArray(leaf?.profiles) ? leaf.profiles.map((entry) => entry?.profile) : [])]
+}
 const parse_action = (value: unknown) => {
+  if (leaf_profiles(value).some(names_removed_step)) throw new Error(BOOST_REMOVED)
   if (!matches(BEHAVIOR_ACTION_SCHEMA, value)) throw new Error('invalid_behavior_action')
   const action = value as BehaviorAction
   parse_target_options((value as { target_options?: unknown }).target_options)
@@ -189,9 +192,8 @@ const visitors: Readonly<Record<string, (node: Record<string, unknown>) => reado
 }
 /** Iterative validation avoids a call-stack depth limit; the existing HTTP body limit bounds input. */
 export const parse_behavior_script = (value: unknown): BehaviorScript => {
-  const script = strict_object(value, ['version', 'objective', 'tree'], ['strategy'])
-  const named = script.strategy === undefined || matches(nonempty, script.strategy)
-  if (![script.version === '1', named, matches(OBJECTIVE_SCHEMA, script.objective)].every(Boolean))
+  const script = strict_object(value, ['version', 'objective', 'tree'])
+  if (![script.version === '1', matches(OBJECTIVE_SCHEMA, script.objective)].every(Boolean))
     throw new Error('invalid_behavior_script')
   const pending = [script.tree]
   const seen = new Set<unknown>()

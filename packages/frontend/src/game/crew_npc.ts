@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { Vec3 } from '@aresrpg/engine'
 
-import { crew } from '../airdrop/crew_campaign.ts'
+import crew from '../../../../seed/content/crew.json'
 
 import { create_npc_guides } from './npc_guides.ts'
 import { publish_crew_prompt } from './core/crew_prompt_feed.ts'

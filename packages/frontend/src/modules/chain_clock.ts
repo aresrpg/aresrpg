@@ -3,11 +3,12 @@
 
 import { observe_chain_clock } from '@aresrpg/protocol/chain-clock'
 
-import type { AppModule } from '../store.ts'
+import type { SiteModule } from '../store.ts'
 export { chain_now, chain_deadline_reached, type ChainClock, type ChainClockInput } from '@aresrpg/protocol/chain-clock'
 
-const chain_clock: AppModule = {
+const chain_clock: SiteModule = {
   name: 'chain_clock',
+  initial: () => ({ chain_clock: null }),
   reduce: (state, input) => {
     if (input.type === 'clock/observed') {
       const next = observe_chain_clock(state.chain_clock, input)

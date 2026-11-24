@@ -1,0 +1,8 @@
+[package]
+name = "aftermath_amm"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[addresses]
+amm = "0xefe170ec0be4d762196bedecd7a065816576198a6527c99282a2551aaa7da38c"

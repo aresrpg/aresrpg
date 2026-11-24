@@ -3,6 +3,7 @@
 import { TournamentAdmin } from '../tournament/TournamentAdmin.tsx'
 
 import { AdminWalletControl } from './AdminWalletControl.tsx'
+import './admin_window.css'
 
 const AdminControls = () => (
   <div className="aui-admin-controls">

@@ -9,7 +9,8 @@ import { characteristic_ladders, characteristic_names, is_class_name } from '@ar
 import { character_icon } from '../content/assets.ts'
 import { Text } from '../i18n/Text.tsx'
 import { spell_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaBrowser } from './components.tsx'

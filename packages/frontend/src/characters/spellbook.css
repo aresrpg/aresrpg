@@ -1,0 +1,307 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.game-character-window--spells .sb {
+  padding: 8px;
+  font-family: var(--aui-font);
+}
+.game-character-window--spells .sb__top {
+  margin: 0 0 6px;
+  align-items: center;
+}
+.game-character-window--spells .sb__sigil {
+  display: none;
+}
+.game-character-window--spells .sb__name {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+.game-character-window--spells .sb__sub {
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__main {
+  grid-template-columns: minmax(180px, 28%) minmax(0, 1fr);
+  gap: 8px;
+}
+.game-character-window--spells .sb__detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.game-character-window--spells .sb__detail > .spell-card {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+.game-character-window--spells .sb__lup {
+  margin: 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid #ffffff12;
+  flex: none;
+}
+.game-character-window--spells .sb__actions {
+  padding: 6px;
+}
+.game-character-window--spells .sb__upgrade {
+  min-height: 40px;
+  font-size: 12px;
+}
+.game-character-window--spells .sb__lhead {
+  padding: 6px 8px;
+}
+.game-character-window--spells .sb__lhead-t,
+.game-character-window--spells .sb__lhead-n {
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__row {
+  border-left: 0;
+  min-height: 44px;
+  padding: 5px 8px;
+  gap: 7px;
+}
+.game-character-window--spells .sb__nm {
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__rl {
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__rowbtn {
+  border-left: 0;
+}
+.game-character-window--spells .sb__rowbtn.is-active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--aui-brass) 25%, transparent);
+  background: color-mix(in srgb, var(--aui-brass-deep) 27%, transparent);
+}
+.game-character-window--spells .spell-card > header {
+  padding: 0;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.game-character-window--spells .spell-card > header img {
+  width: 40px;
+  height: 40px;
+}
+.game-character-window--spells .spell-card [data-spell-level-tabs] {
+  padding: 4px;
+}
+.game-character-window--spells {
+  width: min(1100px, calc(100cqw - 24px));
+  height: min(620px, calc(100cqh - 24px));
+}
+.game-character-window--spells .game-character-body {
+  padding: 6px;
+}
+.game-character-window--spells .sb {
+  padding: 4px;
+}
+.game-character-window--spells .sb__top {
+  min-height: 32px;
+  margin-bottom: 5px;
+}
+.game-character-window--spells .sb__detail {
+  background: var(--aui-sunk);
+  border: 1px solid #ffffff10;
+}
+.game-character-window--spells .sb__list {
+  background: var(--aui-sunk);
+}
+.game-character-window--spells .spell-card {
+  background: transparent;
+  box-shadow: none;
+}
+.game-character-window--spells .spell-card > section {
+  background: transparent;
+  border: 0;
+}
+.game-character-window--spells .spell-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 0;
+}
+.game-character-window--spells .spell-content > * {
+  margin: 0;
+}
+.game-character-window--spells .spell-content > [data-spell-ap-cost] {
+  grid-column: 1 / -1;
+}
+.game-character-window--spells .spell-content .spell-constraints > div {
+  gap: 2px;
+}
+.game-character-window--spells .sb__mastered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  flex: none;
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-top: 1px solid #ffffff12;
+  background: var(--aui-raised);
+  color: var(--aui-brass);
+  font: 600 12px var(--aui-font);
+  letter-spacing: 0.03em;
+  text-shadow: none;
+  box-shadow: inset 0 1px #ffffff08;
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .game-character-window--spells .sb__top .aui-value-badge {
+    padding: 3px 8px;
+  }
+  .game-character-window--spells .sb__top .aui-value-badge > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .game-character-window--spells .spell-content > [data-spell-ap-cost] {
+    grid-column: 1;
+  }
+  .game-character-window--spells .spell-content > [data-spell-effects] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .game-character-window--spells .spell-content > .spell-constraints {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .game-character-window--spells .spell-constraints > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .game-character-window--spells .spell-constraints > div > div {
+    min-height: 24px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .game-character-window--spells .spell-constraints span {
+    font-size: 8px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Character spell list, shared simulator rows, and the spell upgrade controls.
+   SpellCard owns detail presentation. */
+.sb {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--aui-ink);
+}
+/* ── header: identity + spell-points capital ── */
+.sb__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sb__crest {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.sb__sigil {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--aui-high);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aui-brass) 12%, transparent), transparent);
+  color: var(--aui-brass);
+}
+.sb__name {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--aui-brass-hi);
+}
+.sb__sub {
+  color: var(--aui-muted);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+/* ── main split: list | detail ── */
+.sb__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+}
+/* ── LIST ── */
+.sb__list {
+  border: 1px solid var(--aui-high);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sb__lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-brass) 8%, transparent);
+  flex: none;
+}
+.sb__lhead-t {
+  color: var(--aui-brass);
+  text-transform: uppercase;
+}
+.sb__lhead-n {
+  color: var(--aui-muted);
+}
+/* DENSE list — a build editor lists a whole class at once (~20 spells). The grimoire's two-line row spends
+   three viewports on that, so the dense variant folds the element·kind subline INLINE after the name and
+   halves the art: same row, same facts, one line. The hover card is where the full detail already lives. */
+.sb__lvbadge {
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  color: var(--aui-brass);
+  border: 1px solid var(--aui-high);
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--aui-brass) 5%, transparent);
+  white-space: nowrap;
+}
+/* locked rows stay clickable (aspirational browsing), so the cursor stays the row's normal pointer;
+   only the dimmed art/name/sub + the lock chip signal "not yet unlocked". */
+.sb__lockchip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--aui-steel);
+  border: 1px dashed color-mix(in srgb, var(--aui-faint) 40%, transparent);
+  padding: 3px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* ── DETAIL ── */
+.sb__detail {
+  overflow-y: auto;
+}
+.sb__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--aui-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+/* upgrade block — current → current+1 (D49b) */
+
+/* actions */
+.sb__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.sb__mastered {
+  text-align: center;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}

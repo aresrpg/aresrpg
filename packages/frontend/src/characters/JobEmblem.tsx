@@ -14,6 +14,7 @@ import {
   Croissant,
 } from 'lucide-react'
 import type { JobSlug } from '@aresrpg/immutable'
+import '../game/jobs/progression.css'
 const GLYPHS = {
   FARMER: Wheat,
   HERBALIST: Leaf,

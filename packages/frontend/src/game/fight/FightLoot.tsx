@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { item_is_stackable } from '@aresrpg/immutable'
 import type { ItemRow } from '@aresrpg/protocol'
 
-import { InspectionWindow } from '../../components/ItemDetailView.tsx'
+import { InspectionWindow, ItemDetailView } from '../../components/ItemDetailView.tsx'
 import { OwnedItemDetail } from '../../components/OwnedItemDetail.tsx'
 import { useInspections } from '../../components/useInspections.ts'
 import { item_icon } from '../../content/assets.ts'
-import { content_catalog, titleize, type SeedItem } from '../../content/catalog.ts'
+import { content_catalog, type SeedItem } from '../../content/catalog.ts'
+import { titleize } from '../../content/titles.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { useText } from '../../i18n/useText.ts'
 import type { ResultLoot } from '../../modules/fight_result.ts'
@@ -43,8 +43,7 @@ export const FightLoot = ({
   /** Missing IDs cannot identify a delivered roll; those rewards use their catalogue details. */
   item_ids?: readonly string[]
 }>) => {
-  const root = useRef<HTMLButtonElement>(null)
-  const { inspections, open, close } = useInspections(root)
+  const { inspections, open, close } = useInspections()
   const inventory = useAppStore(({ session }) => session.inventory)
   const removed_item_versions = useAppStore(({ session }) => session.removed_item_versions)
   const text = useText()
@@ -54,13 +53,7 @@ export const FightLoot = ({
   const { received, missing, pending } = fight_loot_inventory(loot, item_ids, inventory, removed_item_versions)
   return (
     <>
-      <button
-        ref={root}
-        type="button"
-        onClick={() => open('item')(loot.item_type)}
-        aria-label={name}
-        className="fe-tile"
-      >
+      <button type="button" onClick={() => open('item')(loot.item_type)} aria-label={name} className="fe-tile">
         {item_icon(loot.item_type) ? (
           <img alt="" className="item-icon" src={item_icon(loot.item_type)!} />
         ) : (
@@ -85,7 +78,7 @@ export const FightLoot = ({
                   ? () => (
                       <div className="flex flex-col gap-6">
                         {received.map((item) => (
-                          <OwnedItemDetail key={item.id} item={item} copy={copy} />
+                          <OwnedItemDetail Sheet={ItemDetailView} key={item.id} item={item} copy={copy} />
                         ))}
                         {missing && (
                           <p>

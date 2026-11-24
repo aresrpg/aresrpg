@@ -3,17 +3,18 @@
 import { empty_behavior_memory } from './behavior_tree.ts'
 import { assert_lease, admit_command, type Command, type Lane } from './control.ts'
 import { direct_waiting } from './command_admission.ts'
-import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
-import type { ControlStore } from './store.ts'
+import { authority_fault, authorize, CONTROL_SCOPES, hash_secret, type BotConfig } from './model.ts'
+import type { ControlStore, ControlTransaction } from './store.ts'
 import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
 import { command_issue } from './planning_failure.ts'
 import { observed_balance } from './character_observability.ts'
-import { hash_secret } from './security.ts'
-import { run_hosted, run_key, ended_run } from './run_ref.ts'
-import { next_behavior_action } from './behavior_plan.ts'
+import { run_hosted, run_key, ended_run, run_keys } from './run_ref.ts'
+import { next_behavior_action, retain_behavior_draft } from './behavior_plan.ts'
 import type { BehaviorRun } from './behavior_script.ts'
+import { assert_run_admission } from './behavior_control.ts'
+import type { JournalBinding } from './transaction_lifecycle.ts'
 
-export type RunInput = Readonly<{
+type RunInput = Readonly<{
   store: ControlStore
   config: BotConfig
   run: BehaviorRun
@@ -23,17 +24,13 @@ export type RunInput = Readonly<{
   now: number
   report_failure?: (error: unknown) => void
 }>
-const authority_issue = (config: BotConfig, grant: Grant | null, bot: Bot | null, now: number) => {
-  try {
-    if (!grant) throw new Error('invalid_token')
-    assert_live_grant(config, grant, bot, now)
-    if (!grant.scopes.includes('bot:play')) throw new Error('insufficient_scope')
-    return undefined
-  } catch (error) {
-    if (error instanceof Error && ['invalid_token', 'insufficient_scope'].includes(error.message)) return error.message
-    throw error
-  }
-}
+/** The run's or command's grant, or the reason it no longer acts. */
+const authority = (input: Pick<RunInput, 'config' | 'now'>, read: ControlTransaction['get'], grant: GrantRef) =>
+  authorize(read, input.config, grant, CONTROL_SCOPES.accept, input.now).then(
+    (live) => ({ grant: live.grant, issue: undefined }),
+    (error: unknown) => ({ grant: undefined, issue: authority_fault(error) })
+  )
+type GrantRef = Parameters<typeof authorize>[2]
 /** The single signing slot is free only once the last signature settled, reconciled and was observed. */
 const slot_busy = (lane: Lane, context: GameplayContext) =>
   [
@@ -90,20 +87,15 @@ const gate = (
  * A pause, an owner return or a dead grant since it was accepted refuses it unsigned, and so does
  * the reason its caller found before the turn. */
 export const direct_tick = async (input: Omit<RunInput, 'run'> & Readonly<{ command: Command; refusal?: string }>) => {
-  const { store, config, context, now } = input
+  const { store, context, now } = input
   const { id, lane_key, bot_id, grant_id } = input.command
   return store.transaction([lane_key, `command:${id}`, `bot:${bot_id}`, `grant:${grant_id}`], async (tx) => {
     const lane = assert_lease(await tx.get<Lane>(lane_key), input.actor_id, input.fence, now)
     const command = await tx.get<Command>(`command:${id}`)
     if (!direct_waiting(lane, command)) return null
-    const authority = authority_issue(
-      config,
-      await tx.get<Grant>(`grant:${grant_id}`),
-      await tx.get<Bot>(`bot:${bot_id}`),
-      now
-    )
+    const { issue } = await authority(input, tx.get, { id: grant_id, bot_id, address: lane.address })
     const fenced = [lane.paused, lane.decision_revision !== command.decision_revision]
-    const refusal = authority ?? (fenced.some(Boolean) ? 'bot_busy_or_paused' : input.refusal)
+    const refusal = issue ?? (fenced.some(Boolean) ? 'bot_busy_or_paused' : input.refusal)
     if (refusal) {
       await tx.put(`command:${id}`, { ...command, status: 'failed', error: refusal })
       return null
@@ -199,9 +191,12 @@ export const run_tick = async (input: RunInput) => {
         await tx.put(run.lane_key, { ...lane, ...ended_run(lane, run.id, { status, issue }) })
       return status
     }
-    const grant = await tx.get<Grant>(`grant:${run.grant_id}`)
-    const authority = authority_issue(config, grant, await tx.get<Bot>(`bot:${run.bot_id}`), now)
-    const blocked = gate(input, lane, previous, context, authority)
+    const { grant, issue } = await authority(input, tx.get, {
+      id: run.grant_id,
+      bot_id: run.bot_id,
+      address: lane.address,
+    })
+    const blocked = gate(input, lane, previous, context, issue)
     if (blocked) return finish(blocked.status, blocked.issue)
     const next = next_behavior_action(run, previous, context)
     if (next.state !== 'action') {
@@ -248,3 +243,148 @@ export const run_tick = async (input: RunInput) => {
   })
   return report_outcome(outcome, input.report_failure)
 }
+/** Refresh only accepted drafts that have never crossed preparation; signed bytes are never replanned
+ * here. A run's draft is chosen again from its immutable tree. A direct command keeps its typed
+ * payload and only binds to the observation it is about to be validated against. */
+export const refresh_run_command = async (
+  store: ControlStore,
+  config: BotConfig,
+  binding: JournalBinding,
+  context: GameplayContext,
+  now: number
+): Promise<Command | null> => {
+  const { command, actor_id, fence } = binding
+  const result = await store.transaction(
+    [
+      ...run_keys(command),
+      command.lane_key,
+      `command:${command.id}`,
+      `grant:${command.grant_id}`,
+      `bot:${command.bot_id}`,
+    ],
+    async (tx) => {
+      const lane = assert_lease(await tx.get<Lane>(command.lane_key), actor_id, fence, now)
+      const current = await tx.get<Command>(`command:${command.id}`)
+      if (!current) throw new Error('execution_not_authorized')
+      await authorize(
+        tx.get,
+        config,
+        { id: command.grant_id, bot_id: command.bot_id, address: lane.address },
+        CONTROL_SCOPES.accept,
+        now
+      )
+      const valid = [
+        current.status === 'accepted',
+        current.fingerprint === command.fingerprint,
+        !lane.pending,
+        !lane.paused,
+        !lane.needs_resync,
+        !lane.reconciliation_command,
+        lane.active_command === command.id,
+        lane.decision_revision === command.decision_revision,
+        lane.observation_revision === context.snapshot.observation_revision,
+      ].every(Boolean)
+      if (!valid) throw new Error('execution_not_authorized')
+      await assert_run_admission(tx, current, lane)
+      if (!gameplay_observation_ready(context)) return null
+      const fresh: Command = { ...current, observation_revision: lane.observation_revision }
+      if (current.run_id)
+        return retain_behavior_draft(tx, (await tx.get<BehaviorRun>(run_key(current.run_id)))!, current, lane, {
+          ...context,
+          command: fresh,
+        })
+      await tx.put(`command:${current.id}`, fresh)
+      return fresh
+    }
+  )
+  if (result instanceof Error) throw result
+  return result
+}
+
+/** A stale prepare refusal is still an accepted intent, not a failed or uncertain transaction:
+ * a run's draft and a direct command alike keep the slot and bind to the next observation. */
+export const stale_run_draft = (command: Command, lane: Lane, error: unknown): boolean =>
+  [
+    command.status === 'accepted',
+    !lane.pending,
+    !lane.paused,
+    run_hosted(command, lane),
+    lane.active_command === command.id,
+    lane.decision_revision === command.decision_revision,
+    lane.observation_revision !== command.observation_revision,
+    error instanceof Error && ['needs_resync', 'execution_not_authorized'].includes(error.message),
+  ].every(Boolean)
+/** Retain an accepted intent, never an execution retry. The existing scheduler samples the
+ * server-pushed freeze state; the ordinary gameplay and SDK gates revalidate on release. */
+export const wait_for_contract = async (
+  store: ControlStore,
+  binding: JournalBinding,
+  context: GameplayContext,
+  now: number
+): Promise<Command | null> => {
+  const { command, actor_id, fence } = binding
+  const { snapshot } = context
+  if (!command.waiting_for_resume && snapshot.ready) return command
+  const keys = [command.lane_key, `command:${command.id}`, ...run_keys(command)]
+  return store.transaction(keys, async (tx) => {
+    const lane = assert_lease(await tx.get<Lane>(command.lane_key), actor_id, fence, now)
+    const current = await tx.get<Command>(`command:${command.id}`)
+    const valid = [
+      current?.status === 'accepted',
+      current?.fingerprint === command.fingerprint,
+      lane.active_command === command.id,
+      lane.decision_revision === command.decision_revision,
+      !lane.paused,
+      !lane.pending,
+    ].every(Boolean)
+    if (!valid) throw new Error('execution_not_authorized')
+    await assert_run_admission(tx, command, lane)
+    if (!gameplay_observation_ready(context)) {
+      if (!current!.waiting_for_resume) await tx.put(`command:${command.id}`, { ...current!, waiting_for_resume: true })
+      return null
+    }
+    const next = { ...current!, waiting_for_resume: false, observation_revision: snapshot.observation_revision }
+    await tx.put(`command:${command.id}`, next)
+    return next
+  })
+}
+
+export const ready_gameplay_command = async (
+  store: ControlStore,
+  config: BotConfig,
+  binding: JournalBinding,
+  context: GameplayContext,
+  now: number
+) => {
+  const command = await wait_for_contract(store, binding, context, now)
+  return command ? refresh_run_command(store, config, { ...binding, command }, context, now) : null
+}
+/** What a command that threw before its receipt becomes: still an intent when only its observation went
+ * stale, uncertain when an envelope or a later phase may have executed, failed otherwise. */
+export const record_command_failure = (
+  store: ControlStore,
+  { command, actor_id, fence }: JournalBinding,
+  error: unknown,
+  funding_balance_mist: string | undefined,
+  now: number
+) =>
+  store.transaction([command.lane_key, `command:${command.id}`], async (tx) => {
+    const lane = assert_lease(await tx.get<Lane>(command.lane_key), actor_id, fence, now)
+    const current = await tx.get<Command>(`command:${command.id}`)
+    if (!current || ['completed', 'failed', 'cancelled'].includes(current.status)) return
+    if (stale_run_draft(current, lane, error)) return
+    // A prepared command whose envelope is gone may still have executed.
+    const unknown = [lane.pending, current.status !== 'accepted'].some(Boolean)
+    await tx.put(`command:${command.id}`, {
+      ...current,
+      status: unknown ? 'uncertain' : 'failed',
+      error: String(error),
+      ...(funding_balance_mist ? { funding_balance_mist } : {}),
+      ...(unknown ? {} : { refused_at: now }),
+    })
+    await tx.put(command.lane_key, {
+      ...lane,
+      needs_resync: true,
+      active_command: lane.pending ? lane.active_command : null,
+    })
+  })

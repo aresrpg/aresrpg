@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { FAR_SURFACE_OFFSET } from './far_surface.ts'
 import { get_quality_profile } from './quality.ts'
 import type { EngineQuality } from './types.ts'
 import {
@@ -12,6 +11,9 @@ import {
   type CompiledWorld,
   type WorldRecipe,
 } from './world_recipe.ts'
+
+// The far shell sits half a block below the exact voxel surface so the two never z-fight.
+const FAR_SURFACE_OFFSET = 0.5
 
 type Request =
   | Readonly<{ type: 'initialize'; world: WorldRecipe }>

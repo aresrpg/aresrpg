@@ -180,11 +180,7 @@ export const SearchPickerModal = ({
     })
 
   return (
-    <NativeModal
-      close={on_close}
-      label={title}
-      className="modal-padded fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-    >
+    <NativeModal close={on_close} label={title} className="aui-modal-scrim">
       <section className="flex h-[90dvh] max-h-[min(700px,100%)] w-full max-w-[1000px] flex-col border border-border bg-surface text-text sm:h-[70dvh] sm:w-[70vw]">
         <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
           <Search className="shrink-0 text-faint" size={14} />

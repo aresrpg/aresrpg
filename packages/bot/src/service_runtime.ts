@@ -3,8 +3,7 @@
 import type { RedisClient } from 'bun'
 
 import type { create_actor_runtime } from './actor_runtime.ts'
-import { create_observation_router } from './observation_router.ts'
-import { create_owner_dispatch } from './owner_dispatch.ts'
+import { create_observation_router, create_owner_dispatch } from './observation_router.ts'
 import type { BotConfig } from './model.ts'
 import type { ControlStore } from './store.ts'
 

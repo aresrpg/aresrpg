@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-export { MAX_GIFTCARDS_PER_TRANSACTION } from './giftcard_batch.ts'
 import { registerEnokiWallets } from '@mysten/enoki'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
@@ -127,7 +126,6 @@ export type AuthSession = Readonly<{
   transfer_giftcards: (
     transfers: readonly GiftcardTransfer[]
   ) => Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>>
-  claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }> | null>
   redeem_giftcards: (
     cards: readonly GiftcardRow[],
     received_transaction?: string
@@ -339,10 +337,6 @@ const create_wallet_session = (
     transfer_giftcards: async (transfers) => {
       const { transfer_giftcards } = await import('./distribution.ts')
       return transfer_giftcards(resolution_client, sdk, account.address, transfers)
-    },
-    claim_giftcard_link: async (url) => {
-      const { claim_giftcard_link } = await import('./distribution.ts')
-      return claim_giftcard_link(resolution_client, sdk, url, account.address)
     },
     redeem_giftcards: async (cards, received_transaction) => {
       const { redeem_giftcards } = await import('./distribution.ts')

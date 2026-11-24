@@ -3,9 +3,7 @@
 
 .jobs__list-entry {
   display: grid;
-  grid-template-columns: var(--jobs-adviser-width) minmax(0, 1fr);
   align-items: stretch;
-  gap: var(--s-2);
 }
 
 .jobs__alternate-slot {
@@ -27,7 +25,7 @@
 }
 
 .jobs__alternate > span {
-  color: var(--fg-muted);
+  color: var(--aui-soft);
   font-size: 0.49rem;
   line-height: 1.35;
 }
@@ -39,13 +37,13 @@
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--accent);
+  color: var(--aui-brass);
   cursor: pointer;
-  font: 0.49rem var(--font-mono);
+  font: 0.49rem var(--aui-font);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .jobs__alternate > button:hover {
-  color: var(--fg);
+  color: var(--aui-ink);
 }

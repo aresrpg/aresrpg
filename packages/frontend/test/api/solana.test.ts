@@ -93,7 +93,7 @@ test('successful reads preserve u64 response bytes and forward no browser creden
 test('the relay preserves a captured Solana response', async () => {
   // Solana mainnet getBalance(System Program), Alchemy, captured 2026-10-01.
   // The response context slot pins its ledger provenance; the fixture contains no RPC URL.
-  const wire = await Bun.file(new URL('../fixtures/funding/solana_balance.json.txt', import.meta.url)).text()
+  const wire = await Bun.file(new URL('../fixtures/solana_balance.json.txt', import.meta.url)).text()
   const response = await relay_solana_rpc(request(), PRIVATE_URL, async () => new Response(wire))
   expect(response.status).toBe(200)
   expect(await response.text()).toBe(wire)

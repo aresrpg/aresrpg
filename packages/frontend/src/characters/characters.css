@@ -4,43 +4,127 @@
    components/character_surfaces.css (one home); this file carries only the page grids,
    bars, cells, and the small blocks the old drawer surfaces used. */
 
-.chr-eyebrow {
-  margin-top: 12px;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.chr-btn {
-  padding: 6px 14px;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.chr-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.chr-bar {
-  position: relative;
-  height: 5px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-}
-
-.chr-bar__fill {
+.game-character-window--runeforge .chr-forge {
   height: 100%;
-  transition: width 0.4s ease;
+  min-height: 0;
 }
-
-.chr-bar__fill--xp {
-  background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold));
+.game-character-window--runeforge [data-runeforge-history] {
+  min-height: 100px;
+}
+.game-character-window--runeforge [data-rune-effect] {
+  color: var(--aui-orange);
+  font-size: 15px;
+  font-weight: 700;
+}
+.game-character-window--runeforge .chr-forge__pool {
+  gap: 6px;
+}
+.game-character-window--runeforge button[role='tab'] {
+  background: var(--aui-lifted);
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 27%, transparent);
+  border-radius: 5px;
+  color: var(--aui-soft);
+}
+.game-character-window--runeforge button[role='tab'][aria-selected='true'] {
+  background: var(--aui-brass-deep);
+  color: var(--aui-brass-hi);
+}
+.game-character-window--runeforge .chr-forge__head {
+  display: none;
+}
+.game-character-window--runeforge .chr-forge__panels {
+  height: 100%;
+  min-height: 0;
+  gap: 12px;
+}
+.game-character-window--runeforge .chr-forge__panel {
+  background: var(--aui-surface);
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 18%, transparent);
+  border-radius: 6px;
+}
+.game-character-window--runeforge .chr-forge__ptitle {
+  padding: 9px;
+  font-size: 11px;
+  color: var(--aui-brass);
+  background: var(--aui-raised);
+}
+.game-character-window--runeforge .chr-forge__inventory > div:nth-child(2) > button {
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 19%, transparent);
+  border-radius: 5px;
+  background: var(--aui-lifted);
+  min-height: 40px;
+  color: var(--aui-soft);
+}
+.game-character-window--runeforge .chr-forge__inventory > div:nth-child(2) > .aui-button[aria-pressed='true'] {
+  background: var(--aui-brass-deep);
+  border-color: var(--aui-brass);
+  color: var(--aui-brass-hi);
+}
+@container aui-window (max-width: 1100px) {
+  .game-character-window--runeforge .chr-forge {
+    padding: 6px;
+  }
+  .game-character-window--runeforge .chr-forge__panels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    flex: 1;
+  }
+  .game-character-window--runeforge .chr-forge__panel {
+    min-width: 0;
+  }
+  .game-character-window--runeforge .chr-forge__inventory {
+    grid-column: auto;
+    grid-row: auto;
+    max-height: none;
+  }
+  .game-character-window--runeforge .chr-forge__workspace {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .game-character-window--runeforge .chr-forge__workspace > div {
+    flex: none;
+    gap: 8px;
+    overflow: visible;
+  }
+  .game-character-window--runeforge .chr-forge__workspace > div > div {
+    gap: 4px;
+  }
+  .game-character-window--runeforge .chr-forge__slot {
+    width: min(80px, 40%);
+    height: 90px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .game-character-window--runeforge .chr-forge__slot img {
+    width: 36px;
+    height: 36px;
+  }
+  .game-character-window--runeforge .chr-forge__pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 4px;
+  }
+  .game-character-window--runeforge .chr-forge__inspection > div:last-child,
+  .game-character-window--runeforge .chr-forge__inventory > div:last-child {
+    padding: 6px;
+    overflow-y: auto;
+  }
+  .game-character-window--runeforge [data-runeforge-history] {
+    flex: none;
+    min-height: 100px;
+  }
+  .game-character-window--runeforge .chr-forge__inventory > div:nth-child(2) {
+    flex-wrap: wrap;
+    padding: 4px;
+  }
+  .game-character-window--runeforge .chr-forge__inventory > div:nth-child(2) > button {
+    padding: 4px 6px;
+    min-height: 36px;
+  }
 }
 
 /* ── EQUIPMENT ─────────────────────────────────────────────────────────────── */
@@ -60,28 +144,8 @@
 }
 
 .chr-equip__side {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 8px;
   justify-content: flex-start;
-}
-
-.chr-equip__chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 10px 12px;
-}
-
-.chr-equip__totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  border: 1px solid var(--color-border);
-  padding: 10px 12px;
 }
 
 .chr-equip__total {
@@ -96,17 +160,10 @@
 
 .chr-equip__detail {
   margin-top: 10px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.015);
-  padding: 12px;
 }
 
 .chr-equip__bag {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.012);
 }
 
 .chr-equip__bagtabs {
@@ -138,14 +195,6 @@
   color: var(--color-gold);
 }
 
-.chr-equip__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 6px;
-  overflow-y: auto;
-  padding: 10px;
-}
-
 /* Drop-target slot state on the shared doll. */
 .inv__slot.is-valid {
   border-color: color-mix(in srgb, var(--aui-blue) 70%, transparent);
@@ -156,7 +205,6 @@
 
 .chr-forge {
   display: flex;
-  min-height: 0;
   min-width: 0;
   flex: 1;
   flex-direction: column;
@@ -165,7 +213,6 @@
 }
 
 .chr-forge__head {
-  display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
@@ -174,10 +221,8 @@
 
 .chr-forge__panels {
   display: grid;
-  min-height: 0;
   flex: 1;
   grid-template-columns: minmax(230px, 300px) minmax(280px, 1fr) minmax(230px, 320px);
-  gap: 14px;
 }
 
 @container app-content (max-width: 1100px) {
@@ -203,19 +248,14 @@
   display: flex;
   min-height: 0;
   flex-direction: column;
-  border: 1px solid var(--color-border);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--aui-brass) 3%, transparent) 0%, transparent 55%);
 }
 
 .chr-forge__ptitle {
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
-  padding: 9px 14px;
-  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--color-muted);
 }
 
 .chr-forge__slot {
@@ -256,13 +296,12 @@
 .chr-forge__pool {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 8px;
 }
 
 /* ── page placement (owner 2026-08-20): centre what is small, give the bag the room ─── */
 
 .gw-tab .stats {
-  padding: var(--s-5) var(--s-4);
+  padding: 24px 16px;
 }
 
 .gw-tab .sb {
@@ -275,20 +314,13 @@
   width: 100%;
   max-width: 1440px;
   margin-inline: auto;
-  padding: var(--s-5);
+  padding: 24px;
 }
 
 .gw-tab .chr-forge {
   max-width: 1440px;
   margin-inline: auto;
   width: 100%;
-}
-
-.stats__srow-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  object-fit: contain;
 }
 
 /* grimoire list groups — unlocked first, locked after (recipes-block idiom) */
@@ -310,7 +342,6 @@
   width: 100%;
   cursor: pointer;
   border: 0;
-  border-left: 2px solid transparent;
   background: transparent;
   padding: 0;
   text-align: left;
@@ -338,13 +369,6 @@
   opacity: 0.4;
 }
 
-/* Routed content width, rather than device width, owns each character layout. */
-.chr-tabs {
-  overflow-x: auto;
-}
-.chr-tabs > button {
-  min-height: 44px;
-}
 .jobs__list-entries {
   display: contents;
 }
@@ -379,20 +403,6 @@
     min-height: 44px;
     font-size: 11px;
   }
-  .gw-tab .jobs__browse-area.has-detail {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .gw-tab .jobs__browse-area.has-detail .jobs__browse {
-    display: none;
-  }
-  .gw-tab .jobs__item-detail {
-    border-left: 0;
-    padding: 48px 0 16px;
-  }
-  .gw-tab .jobs__detail-close {
-    width: 44px;
-    height: 44px;
-  }
 }
 
 @container app-content (max-width: 700px) {
@@ -402,12 +412,8 @@
     height: auto;
     padding: 12px;
   }
-  .gw-tab .chr-tabs > button {
-    padding-inline: 14px;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-  }
-  .gw-tab :is(.chr-btn, .chr-bagtab, .jobs__craft-btn),
+
+  .gw-tab :is(.chr-bagtab, .jobs__craft-btn),
   .gw-tab .chr-forge button,
   .gw-tab .jobs__craft-amount :is(input, button) {
     min-height: 44px;
@@ -435,9 +441,7 @@
   .gw-tab .sb__detail {
     overflow: visible;
   }
-  .gw-tab .sb__sub,
-  .gw-tab .sb__points-lab,
-  .gw-tab .sb__points-sub {
+  .gw-tab .sb__sub {
     font-size: 11px;
     letter-spacing: 0.08em;
   }
@@ -446,7 +450,7 @@
     overflow-x: auto;
     padding: 0 0 8px;
     border-right: 0;
-    border-bottom: 1px solid var(--hair);
+    border-bottom: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
   }
   .gw-tab .jobs__list-group {
     flex: none;
@@ -496,72 +500,4 @@
   .gw-tab .chr-forge__work {
     grid-row: 3;
   }
-}
-
-/* Reflow at a readable design width, then fit both axes into the actual character slot. */
-.character-workspace__content {
-  container: app-content / inline-size;
-}
-.gw-tab .character-workspace__content .stats {
-  height: auto;
-  max-width: none;
-  margin: 0;
-  padding: 12px;
-  overflow: visible;
-}
-.gw-tab .character-workspace__content :is(.stats__scroll, .stats__card, .sb__rows, .sb__detail, .chr-forge__panels) {
-  flex: none;
-  max-height: none;
-  overflow: visible;
-}
-.character-workspace__content .stats__scroll > * {
-  flex: none;
-}
-.character-workspace__content[data-dense='true'] .stats__card--primary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.character-workspace__content[data-dense='true'] :is(.stats__hero, .stats__assign, .stats__prow, .stats__srow) {
-  padding: 8px 12px;
-  gap: 8px;
-}
-.character-workspace__content[data-dense='true'] .stats__assign-actions {
-  width: auto;
-  margin-left: auto;
-}
-.character-workspace__content[data-dense='true'] .stats__resists {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.gw-tab .character-workspace__content[data-dense='true'] .sb__main {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  grid-template-rows: auto;
-  align-items: start;
-}
-.character-workspace__content[data-dense='true'] .sb__rows > div {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.character-workspace__content[data-dense='true'] .sb__group-head {
-  grid-column: 1 / -1;
-}
-.character-workspace__content[data-dense='true'] .sb__rowbtn {
-  min-width: 0;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
-  align-items: start;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels > div {
-  grid-row: auto;
-  grid-column: auto;
-  max-height: none;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels > div > div {
-  overflow: visible;
-}
-
-.gw-tab .character-workspace__content :is(.sb, .chr-forge) {
-  height: auto;
-  overflow: visible;
 }

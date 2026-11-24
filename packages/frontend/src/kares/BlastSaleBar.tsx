@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The home page's sale header: the in-game Blast card's facts on one line, present only while the
-// sale is live. It reads the same sale state and sends buyers to the same allocation page.
+// The site's sale line, in the row above the bar of every site page: the in-game Blast card's facts on one line,
+// present only while the sale is live. It reads the same sale state and sends buyers to the same allocation page.
 
 import { ArrowUpRight } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { public_line, useMinuteClock } from '../allocation/clock.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -51,7 +52,13 @@ export const BlastSaleBarView = ({ copy, state, now }: Readonly<{ copy: AppCopy;
   )
 }
 
-const BlastSaleBar = ({ copy }: Readonly<{ copy: AppCopy }>) => (
-  <BlastSaleBarView copy={copy} state={useBlastSale()} now={useMinuteClock()} />
-)
+/** `settle` tells the shell, once the sale's state is read, whether the line's row stays held. */
+const BlastSaleBar = ({ copy, settle }: Readonly<{ copy: AppCopy; settle: (live: boolean) => void }>) => {
+  const state = useBlastSale()
+  const phase = blast_phase(state)
+  useEffect(() => {
+    if (phase !== 'loading') settle(phase === 'live')
+  }, [phase, settle])
+  return <BlastSaleBarView copy={copy} state={state} now={useMinuteClock()} />
+}
 export default BlastSaleBar

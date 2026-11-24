@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
-/* Marketplace sell: own listings, sellable inventory and the sale form. `:where()` keeps these at zero specificity so ports and hosts refine them. */
+/* Marketplace sell: own listings and the sale form. `:where()` keeps these at zero specificity so ports and hosts refine them. */
 :where(.aui-market-help) {
   cursor: help;
 }
@@ -119,79 +119,6 @@
   height: 1px;
   flex: 1;
   background-color: var(--aui-market-line, var(--aui-high));
-}
-:where(.aui-market-sell) {
-  min-height: 0px;
-  min-width: 0px;
-  flex: 1;
-  background-color: var(--aui-market-bg, var(--aui-bg));
-}
-:where(.aui-market-inventory) {
-  display: flex;
-  min-height: 0px;
-  min-width: 0px;
-  flex-direction: column;
-  background-color: var(--aui-raised);
-}
-:where(.aui-market-inventory-body) {
-  min-height: 0px;
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.75rem;
-}
-:where(.aui-market-sell-hint) {
-  margin-bottom: 0.75rem;
-  font-size: 0.75rem;
-  line-height: calc(1 / 0.75);
-  color: var(--aui-muted);
-}
-:where(.aui-market-inventory-grid) {
-  margin-block: 0.75rem;
-}
-:where(.aui-market-inventory-empty) {
-  padding-block: 1.5rem;
-  text-align: center;
-  font-size: 0.75rem;
-  line-height: calc(1 / 0.75);
-  color: var(--aui-muted);
-}
-:where(.aui-market-characters-title) {
-  margin-top: 1.25rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  line-height: calc(1 / 0.75);
-  letter-spacing: 0.1em;
-  color: var(--aui-muted);
-  text-transform: uppercase;
-}
-:where(.aui-market-character-list) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-:where(.aui-market-character) {
-  min-height: 3.5rem;
-  cursor: pointer;
-  border-style: solid;
-  border-width: 1px;
-  border-color: var(--aui-market-line, var(--aui-high));
-  background-color: var(--aui-surface);
-  padding: 0.75rem;
-  text-align: left;
-  font-size: 0.75rem;
-  line-height: calc(1 / 0.75);
-  color: var(--aui-ink);
-}
-@media (hover: hover) {
-  :where(.aui-market-character:hover) {
-    border-color: var(--aui-brass);
-  }
-}
-:where(.aui-market-block) {
-  display: block;
-}
-:where(.aui-market-muted) {
-  color: var(--aui-muted);
 }
 :where(.aui-market-sale-amount) {
   margin-top: 0.5rem;

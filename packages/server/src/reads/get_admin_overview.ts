@@ -21,7 +21,7 @@ import type {
 } from '@aresrpg/protocol'
 
 import type { Graph } from '../graph.ts'
-import type { GraphBus, MeshBus } from '../pubsub_bus.ts'
+import { tier_start, type GraphBus, type MeshBus } from '../pubsub_bus.ts'
 
 import { ZERO_TOTALS, type AnalyticsTotals } from './get_analytics_totals.ts'
 
@@ -43,11 +43,6 @@ const recent_buckets = (to_ms: number, count: number, width_ms: number): readonl
   const last = bucket_start(to_ms, width_ms)
   return Object.freeze(Array.from({ length: count }, (_, index) => last - (count - index - 1) * width_ms))
 }
-const week_start = (at_ms: number): number => Math.floor((at_ms - 4 * DAY_MS) / WEEK_MS) * WEEK_MS + 4 * DAY_MS
-const month_start = (at_ms: number): number => {
-  const date = new Date(at_ms)
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)
-}
 const recent_months = (to_ms: number, count: number): readonly number[] => {
   const date = new Date(to_ms)
   return Object.freeze(
@@ -61,7 +56,7 @@ const range_buckets = (days: AdminRangeDays, now_ms: number) => {
   if (days === 7) return Object.freeze({ tier: 'hour' as const, values: recent_buckets(now_ms, 168, HOUR_MS) })
   if (days === 30) return Object.freeze({ tier: 'day' as const, values: recent_buckets(now_ms, 30, DAY_MS) })
   if (days === 90) {
-    const last = week_start(now_ms)
+    const last = tier_start('week', now_ms)
     return Object.freeze({
       tier: 'week' as const,
       values: Object.freeze(Array.from({ length: 13 }, (_, index) => last - (12 - index) * WEEK_MS)),
@@ -77,23 +72,10 @@ const safe_count = (value: bigint, label: string): number => {
   return count
 }
 
-const graph_doors = (graph: GraphBus) => {
-  const { analytics_hashes, analytics_counts, analytics_sets, analytics_cumulative_counts } = graph
-  if (!analytics_hashes || !analytics_counts || !analytics_sets || !analytics_cumulative_counts)
-    throw new Error('admin analytics projection is unavailable')
-  return Object.freeze({
-    analytics_hashes,
-    analytics_counts,
-    analytics_sets,
-    analytics_cumulative_counts,
-  })
-}
-
 const numeric_rows = async (
   graph: GraphBus,
   keys: readonly string[]
 ): Promise<ReadonlyMap<string, AnalyticsTotals>> => {
-  if (!graph.analytics_totals) throw new Error('compact analytics reader unavailable')
   const unique = [...new Set(keys)]
   const rows = await graph.analytics_totals(unique)
   return new Map(unique.map((key, index) => [key, rows[index]!]))
@@ -109,16 +91,17 @@ const money_point = (at_ms: number, rows: readonly AnalyticsTotals[]): AdminMone
     tournament_mist: rows.reduce((sum, row) => sum + bigint(row.tournament_mist), 0n).toString(),
   })
 
-const money_bucket = (tier: AdminBucket, at_ms: number): number => {
-  if (tier === '15m') return bucket_start(at_ms, INTERVAL_MS)
-  if (tier === 'hour') return bucket_start(at_ms, HOUR_MS)
-  if (tier === 'day') return bucket_start(at_ms, DAY_MS)
-  if (tier === 'week') return week_start(at_ms)
-  return month_start(at_ms)
+type OnlineSamples = Readonly<{ online: readonly number[]; players: readonly number[]; agents: readonly number[] }>
+/** A bucket sampled before the split existed counts everyone as a player, as the chart did then. */
+const online_point = (at_ms: number, { online, players, agents }: OnlineSamples): AdminOnlinePoint => {
+  const peak = Math.max(0, ...online)
+  return Object.freeze({
+    at_ms,
+    peak,
+    players: players.length ? Math.max(...players) : peak,
+    agents: Math.max(0, ...agents),
+  })
 }
-
-const online_point = (at_ms: number, samples: readonly number[]): AdminOnlinePoint =>
-  Object.freeze({ at_ms, peak: Math.max(0, ...samples) })
 
 const sum_money = (rows: readonly AdminMoneyPoint[]) =>
   rows.reduce(
@@ -142,7 +125,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
   const buckets = range_buckets(days, now_ms)
   const selected_keys = buckets.values.map((at_ms) => `analytics:totals:${buckets.tier}:${at_ms}`)
   const last_30d_start = recent_buckets(now_ms, 30, DAY_MS)[0]!
-  const mtd_start = month_start(now_ms)
+  const mtd_start = tier_start('month', now_ms)
   const daily = bucket_range(Math.min(last_30d_start, mtd_start), now_ms, DAY_MS)
   const day_key = (at_ms: number): string => `analytics:totals:day:${at_ms}`
   const rows = await numeric_rows(graph, [ALL_TOTALS_KEY, ...selected_keys, ...daily.map(day_key)])
@@ -184,7 +167,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
 }
 
 const load_players = async (graph: GraphBus, days: AdminRangeDays, now_ms: number): Promise<AdminPlayersOverview> => {
-  const { analytics_counts, analytics_sets } = graph_doors(graph)
+  const { analytics_counts, analytics_sets } = graph
   const buckets = range_buckets(days, now_ms)
   const active_keys = buckets.values.map((bucket) => `analytics:active:${buckets.tier}:${bucket}`)
   const rolling_days = recent_buckets(now_ms, 30, DAY_MS)
@@ -245,11 +228,20 @@ const load_transactions = async (
 
 const load_online = async (mesh: MeshBus, days: AdminRangeDays, now_ms: number): Promise<AdminOnlineOverview> => {
   const { online_samples } = mesh
-  if (!online_samples) throw new Error('admin online projection is unavailable')
   const buckets = range_buckets(days, now_ms)
-  const keys = buckets.values.map((bucket) => `analytics:online:${buckets.tier}:${bucket}`)
-  const rows = await online_samples(keys)
-  const online = Object.freeze(buckets.values.map((bucket, index) => online_point(bucket, rows[index] ?? [])))
+  const keys = (series: string) => buckets.values.map((bucket) => `analytics:${series}:${buckets.tier}:${bucket}`)
+  const [total, players, agents] = await Promise.all(
+    ['online', 'online_players', 'online_agents'].map((series) => online_samples(keys(series)))
+  )
+  const online = Object.freeze(
+    buckets.values.map((bucket, index) =>
+      online_point(bucket, {
+        online: total![index] ?? [],
+        players: players![index] ?? [],
+        agents: agents![index] ?? [],
+      })
+    )
+  )
   return Object.freeze({
     days,
     bucket: buckets.tier,
@@ -263,7 +255,7 @@ const load_addresses = async (
   days: AdminRangeDays,
   now_ms: number
 ): Promise<AdminAddressesOverview> => {
-  const { analytics_cumulative_counts } = graph_doors(graph)
+  const { analytics_cumulative_counts } = graph
   const buckets = range_buckets(days, now_ms)
   const ends = buckets.values.map((_, index) => (buckets.values[index + 1] ? buckets.values[index + 1]! - 1 : now_ms))
   const counts = await analytics_cumulative_counts('analytics:addresses', ends)
@@ -280,7 +272,7 @@ const load_characters = async (
   days: AdminRangeDays,
   now_ms: number
 ): Promise<AdminCharactersOverview> => {
-  const { analytics_hashes } = graph_doors(bus)
+  const { analytics_hashes } = bus
   const buckets = range_buckets(days, now_ms)
   const first_day = bucket_start(buckets.values[0]!, DAY_MS)
   const keys = bucket_range(first_day, now_ms, DAY_MS).map((day) => `analytics:characters:day:${day}`)
@@ -295,7 +287,7 @@ const load_characters = async (
     const row = JSON.parse(raw) as Record<string, unknown>
     if (typeof row.ts_ms !== 'number' || (row.delta !== 1 && row.delta !== -1))
       throw new Error('invalid Character lifecycle observation')
-    const bucket = money_bucket(buckets.tier, row.ts_ms)
+    const bucket = tier_start(buckets.tier, row.ts_ms)
     deltas.set(bucket, (deltas.get(bucket) ?? 0) + row.delta)
   })
   let cursor = total

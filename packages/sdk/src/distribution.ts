@@ -13,6 +13,7 @@ import { MAINNET_CONTRACT_IDS, TESTNET_CONTRACT_IDS, ZkSendClient } from '@myste
 
 import type { Sdk } from './client.ts'
 import { absorb_receipt, receipt_digest } from './cache.ts'
+import { GiftError } from './gift_contract.ts'
 import { MAX_GIFTCARDS_PER_TRANSACTION } from './giftcard_batch.ts'
 
 type GiftcardObject = Readonly<{
@@ -38,14 +39,18 @@ const canonical_giftcard = (object: GiftcardObject, expected_type: string): Gift
 
 const gift_link_network = (url: URL): 'testnet' | 'mainnet' => {
   const parameter = url.searchParams.get('network')
-  if (parameter !== null && parameter !== 'testnet') throw new Error('The printed giftcard network is invalid')
+  if (parameter !== null && parameter !== 'testnet') throw new GiftError('invalid')
   return parameter === 'testnet' ? 'testnet' : 'mainnet'
 }
 
-export const canonical_zksend_gift_url = (url: string, network: 'testnet' | 'mainnet'): string => {
-  const scanned = new URL(url)
-  if (!['/gift', '/claim'].includes(scanned.pathname) || !scanned.hash.startsWith('#$') || scanned.hash.length <= 2)
-    throw new Error('The printed giftcard link is invalid')
+// The bearer key after `#$` is zkSend's base64 Ed25519 secret: exactly 32 bytes, so 43 characters and one `=`.
+const GIFT_LINK_KEY = /^#\$[A-Za-z0-9+/]{43}=$/
+
+/** A link that can never load is refused here, before any network read: retrying cannot fix it. */
+const canonical_zksend_gift_url = (url: string, network: 'testnet' | 'mainnet'): string => {
+  const scanned = URL.parse(url)
+  if (!scanned || !['/gift', '/claim'].includes(scanned.pathname) || !GIFT_LINK_KEY.test(scanned.hash))
+    throw new GiftError('invalid')
   const link_network = gift_link_network(scanned)
   if (link_network !== network) throw new Error(`The giftcard belongs to ${link_network}, not ${network}`)
   const canonical = new URL('https://my.slush.app/claim')
@@ -72,7 +77,7 @@ const gift_link_missing = async (client: SuiGrpcClient, address: string): Promis
 /** Claims one bearer voucher through zkSend's hosted claim service. That service pays this
  * transport leg; the authenticated game wallet pays only the later AresRPG redemption.
  * A missing link returns null: it was already claimed, reclaimed, or never issued. */
-export const load_giftcard_link = async (client: SuiGrpcClient, sdk: Sdk, url: string) => {
+const load_giftcard_link = async (client: SuiGrpcClient, sdk: Sdk, url: string) => {
   const expected_type = giftcard_type(sdk)
   const link = await new ZkSendClient(client).loadLinkFromUrl(canonical_zksend_gift_url(url, sdk.network))
   if (!link.assets) {

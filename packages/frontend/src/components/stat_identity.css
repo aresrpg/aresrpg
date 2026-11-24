@@ -2,11 +2,11 @@
 .stats__prow {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
+  gap: 8px;
+  padding: 8px 12px;
 }
 .stats__prow:not(:last-child) {
-  border-bottom: 1px solid var(--hair);
+  border-bottom: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
 }
 .stats__prow-icon {
   display: grid;
@@ -14,7 +14,7 @@
   width: 26px;
   height: 26px;
   flex: none;
-  border-radius: var(--r-1);
+  border-radius: 0;
   background: color-mix(in srgb, var(--tint) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
 }
@@ -32,35 +32,18 @@
 }
 .stats__prow-label {
   font-size: 0.84rem;
-  color: var(--fg);
+  color: var(--aui-ink);
 }
 .stats__prow-desc {
   display: block;
-  font-family: var(--font-mono);
+  font-family: var(--aui-font);
   font-size: 0.62rem;
-  color: var(--fg-faint);
+  color: var(--aui-muted);
   white-space: normal;
   overflow-wrap: break-word;
 }
-.stats__prow-value {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.84rem;
-  color: var(--fg);
-  /* keep clear whitespace between the number and the +/- steppers */
-  margin-right: var(--s-1);
-}
-.stats__prow-allocation {
-  display: flex;
-  min-width: 88px;
-  flex-flow: column nowrap;
-  align-items: flex-end;
-}
+
 .stats__prow-bonus {
-  color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
-  font-size: 0.74rem;
-}
-.stats__prow-pending {
-  color: var(--accent);
+  color: color-mix(in srgb, var(--aui-brass) 42%, var(--aui-soft));
   font-size: 0.74rem;
 }

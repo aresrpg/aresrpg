@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { createContext, useContext } from 'react'
 import { job_groups, job_level_from_xp, type JobSlug } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
@@ -19,13 +18,6 @@ export type ItemCraftSession = Readonly<{
   craft?: CharacterSession['craft']
 }>
 
-export const ItemCraftSessionContext = createContext<ItemCraftSession | undefined>(undefined)
-
-const useCraftSession = (session: ItemCraftSession | undefined) => {
-  const contextual = useContext(ItemCraftSessionContext)
-  return session ?? contextual
-}
-
 /** Every item surface uses the same recipe, inventory checks and transaction controller. */
 export const ItemCrafting = ({
   item_type,
@@ -36,13 +28,10 @@ export const ItemCrafting = ({
   session?: ItemCraftSession
   open_ingredient: (item_type: string) => void
 }>) => {
-  const effective_session = useCraftSession(session)
-  const { inventory, craft }: Partial<ItemCraftSession> = effective_session ?? {}
+  const { inventory, craft }: Partial<ItemCraftSession> = session ?? {}
   const copy = useAppStore((state) => state.copy)
   const character = useAppStore((state) =>
-    effective_session?.inventory === undefined
-      ? crafting_character(state, effective_session?.character)
-      : effective_session.character
+    session?.inventory === undefined ? crafting_character(state, session?.character) : session.character
   )
   const detail = encyclopedia_catalog.item(item_type)
   const recipe = encyclopedia_catalog.recipes.find(({ output_type }) => output_type === item_type)

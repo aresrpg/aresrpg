@@ -13,7 +13,7 @@ import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 
 import { ContextMenu } from '../components/ContextMenu.tsx'
 import { env } from '../env.ts'
-import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
+import { docs_path } from '../docs/routes.ts'
 import { explorer_object_url } from '../explorer.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
@@ -28,6 +28,7 @@ import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { crush_selection, crush_blocked_ids } from './inventory_selection.ts'
 import { UseBoxModal } from './UseBoxModal.tsx'
 import { FeedPetModal } from './FeedPetModal.tsx'
+import '../components/inspection.css'
 
 export type ItemMenuState = Readonly<{
   x: number
@@ -157,22 +158,20 @@ export const InventoryMenuRows = ({
   entries: readonly InventoryMenuEntry[]
 }>) => {
   const t = copy_text(copy.characters_page)
-  const recipe_path = encyclopedia_item_path(menu.item.item_type)
   return (
     <>
       {menu.items.length === 1 && (
         <>
           <a
             className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
-            href={recipe_path}
-            onClick={(event) => {
-              event.preventDefault()
-              close_menu()
-              dispatch_app({ type: 'path/open', pathname: recipe_path })
-            }}
+            href={docs_path('items', menu.item.item_type)}
+            onClick={close_menu}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             <BookOpen className="opacity-60" size={11} />
             {t('menu_view_recipes')}
+            <span className="aui-sr">{copy.site.new_tab}</span>
           </a>
           <a
             className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"

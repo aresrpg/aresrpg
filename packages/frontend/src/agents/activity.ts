@@ -16,7 +16,7 @@ import type { AgentInventoryView } from './inventory_state.ts'
 import { owner_connected } from './owner_state.ts'
 
 type WalletState = AgentStatus['state']
-/** The kind of help a blocked run needs from the player: one sentence each, `dapp_page.run_notice_<notice>`. */
+/** The kind of help a blocked run needs from the player: one sentence each, `agent_page.run_notice_<notice>`. */
 export type RunNotice = 'funding' | 'requirement' | 'plan' | 'place'
 export type HeroActivity = Readonly<{
   status: WalletState
@@ -68,7 +68,7 @@ const NOTICE_OF: Readonly<Record<string, RunNotice>> = Object.freeze({
 })
 
 /**
- * What a run asks of the player, for the game overlay and the dapp alike. A run that waits for its
+ * What a run asks of the player, for the game overlay and the Connect Your Agent page alike. A run that waits for its
  * author needs a new plan whatever reason it gives; any other issue is a notice only when the table
  * lists its code (the part before a `:` detail). An unknown code and free text are never a notice,
  * so a code the bot adds later cannot reach the player raw.

@@ -20,23 +20,18 @@ quality: Якість
 low: Низька
 medium: Середня
 high: Висока
-identity_connected: Особу підключено
 sign_in_to_play: Увійдіть, щоб грати
 loading_universe: Завантаження всесвіту
 continue_google: Продовжити з Google
 wallet_session_ended: Сеанс вашого гаманця завершено. Увійдіть знову.
 connect_wallet: Підключити гаманець
 no_wallet: Сумісний гаманець не встановлено
-sign_in: Увійдіть, щоб грати
 drag_hint: Перетягуйте для руху · Крутіть для масштабу
 navigation: Навігація
 world: Світ
 characters: Персонажі
-leaderboard: Рейтинг
 mastery: Майстерність
 encyclopedia: Енциклопедія
-marketplace: Ринок
-airdrop: Аірдроп
 kolizeum: Колізеум
 settings: Налаштування
 admin: Адмін
@@ -44,7 +39,6 @@ online: Онлайн
 account: Акаунт
 join_discord: Приєднатися до Discord
 join_telegram: Приєднатися до Telegram
-sui_universe: Всесвіт Sui
 server_disconnected: Відключено
 server_connecting: Підключення
 server_reconnecting: Повторне підключення
@@ -53,14 +47,13 @@ server_connected: Підключено
 server_violation: Відключено — порушення правил. Скоро повторна спроба.
 server_replaced: Підключено в іншому місці
 session_replaced_title: Підключено з іншого місця
-session_replaced_body: 'Ваш обліковий запис підключився в іншому вікні: у 3D-грі або у вебзастосунку. Одночасно може бути підключене лише одне вікно, тому це вікно було відключено. Підключіться тут знову, щоб користуватися цим вікном.'
+session_replaced_body: 'Ваш обліковий запис підключився до гри в іншій вкладці або на іншому пристрої. Одночасно може бути підключене лише одне вікно, тому це вікно було відключено. Підключіться тут знову, щоб користуватися цим вікном.'
 session_replaced_reconnect: Повторно підключитися тут
 latency_unit: мс
 indexing_health: Стан індексації
 online_accounts: Облікові записи онлайн
 online_characters: Персонажі онлайн
 online_characters_body: В усіх світах, включно з боями та підземеллями.
-indexing_lag_warning: Дії в грі можуть відображатися із затримкою
 indexing_block_title: Синхронізація світу
 indexing_block_body: Історія ланцюжка ще індексується. Гра автоматично розблокується, коли сервер досягне безпечного активного вікна.
 indexing_block_progress: Прогрес
@@ -76,7 +69,6 @@ fight_path_changed_toast: Поле змінилося до надсилання 
 party_member_unavailable_toast: Цей персонаж уже перебуває в групі.
 fight_turn_already_forced_toast: Хтось уже примусово завершив цей хід.
 fight_placement_unavailable_toast: Ця стартова клітинка недоступна. Виберіть іншу вільну клітинку.
-network_testnet: TESTNET
 welcome_title: Ласкаво просимо до AresRPG
 welcome_body: AresRPG — це повністю ончейнова MMORPG з економікою, якою керують гравці. Створіть першого персонажа, увійдіть у світ і знайдіть монстрів для бою.
 welcome_need_sui: 'Перший персонаж коштує {{price}}. Залиште в гаманці щонайменше {{fee}} на комісії за транзакції. Поповніть баланс нижче, щоб почати.'
@@ -105,13 +97,7 @@ wallet_send: Надіслати
 wallet_add_funds: Поповнити
 wallet_gas_spent: Витрати газу (24 год)
 wallet_disconnect: Від’єднати
-wallet_fund_body: Надішліть SUI на цю адресу гаманця. Баланс оновиться після повернення до застосунку.
-wallet_send_title: Надіслати SUI
 wallet_recipient: Адреса отримувача
-wallet_amount: Сума (SUI)
-wallet_send_pending: Надсилання SUI…
-wallet_send_success: SUI надіслано
-wallet_send_failed: Не вдалося надіслати SUI
 wallet_close: Закрити
 kolizeum_page:
   title: Колізеум — Воєнний стіл
@@ -155,13 +141,10 @@ friends_panel:
   title: Друзі
   observed: Помічено поруч
   unseen: Зараз не помічено
-  none_observed: Друзів поруч не помічено
   empty: Друзів поки немає
   placeholder: Ім'я, SuiNS або адреса 0x
   add: Додати друга
   remove: Видалити
-  remove_title: Видалити друга
-  remove_body: Видалити {{name}} зі списку друзів?
   error_no_suins: Адресу SuiNS для {{name}} не знайдено.
   error_target: Введіть персонажа, ім'я SuiNS або повну адресу Sui.
   error_self: Не можна додати себе.
@@ -178,7 +161,6 @@ party_panel:
   disband: Розпустити
   kick: Виключити
   rescind: Скасувати запрошення
-  invite_owned: Запросити свого персонажа
   follow_leader: Слідувати за лідером
   run_to_position: Бігти до позиції
   run_to_started: Ви біжите до останньої ончейн-позиції {{name}}. Вона може не збігатися з поточною позицією наживо.
@@ -246,7 +228,6 @@ world_hud:
   fight_press_join_touch: 'Торкніться, щоб приєднатися'
   fight_press_spectate_touch: 'Торкніться, щоб спостерігати'
   dungeon_talk_touch: 'Торкніться, щоб поговорити'
-  character_options_touch: 'Торкніться для вибору дій'
   spawn_welcome: 'Вітаємо, шукачу пригод! Гра в ранньому доступі. Спробуй вижити та насолоджуйся пригодою.'
   compass_label: Компас
   zone: ЗОНА
@@ -276,7 +257,6 @@ world_hud:
   portal_prompt: 'Натисніть {{key}}, щоб подорожувати до іншого світу'
   dungeon_portal: Портал підземелля
   dungeon_city: 'Місто {{city}}'
-  dungeon_press_enter: Увійти
   dungeon_talk: 'Поговорити'
   dungeon_guard_requires_key: 'Я не можу пропустити тебе без {{key}}.'
   dungeon_entry_body: Використайте ключ підземелля, щоб увійти до приватного лобі цього порталу.
@@ -308,12 +288,9 @@ world_hud:
   dungeon_key_required: 'Для входу до цього підземелля потрібен {{key}}.'
   dungeon_group_refusal: Цей бій доступний лише групі того, хто його почав.
   travel_title: Зоряна брама
-  travel_search: 'Пошук {{title}}…'
   travel_entry_level: 'Потрібний рівень {{level}}'
   travel_pending: Ворота відкриваються…
   travel_success: 'Ласкаво просимо до {{world}}'
-  travel_empty: Немає світів
-  travel_showing: '{{filtered}} / {{total}} результатів'
   travel_selected: 'Вибрано · {{label}}'
   fight_press_join: 'Натисніть {{key}}, щоб приєднатися'
   fight_press_spectate: 'Натисніть {{key}}, щоб спостерігати'
@@ -363,10 +340,8 @@ world_hud:
   resource_gathered: 'Ресурс зібрано'
   resource_gathered_amount: 'Зібрано {{quantity}} × {{name}}'
   resource_gathered_amount_ambushed: 'Зібрано {{quantity}} × {{name}} · Захисник нападає'
-  resource_ambushed: 'Захисник нападає на вас'
   resource_resolving_ambush: 'Захисник перекриває шлях…'
   resource_ambush_title: 'Засідка захисника'
-  resource_face_protector: 'Натисніть {{key}}, щоб битися'
   zone_never_arrived: 'Пошук пройшов, але світ його не показав — шар читання, можливо, відстає'
 demo_page:
   animation_loop: Циклічна анімація
@@ -486,16 +461,6 @@ marketplace_page:
   volume_unavailable: 'Обсяг тимчасово недоступний.'
   title: Ринок
   subtitle: Оголошення гравців у Sui
-  disclaimer_kicker: Перед торгівлею
-  disclaimer_title: Торгуйте заради прогресу, а не прибутку
-  disclaimer_body: Предмети продаються безпосередньо між гравцями за SUI.
-  disclaimer_supply: Предмети не є довгостроковими інвестиціями. Що більше гравців їх здобуває, то більшою стає пропозиція і нижчими можуть бути ціни.
-  disclaimer_fun: Купуйте й продавайте предмети для задоволення та розвитку персонажа, а не в очікуванні прибутку.
-  disclaimer_wallet: Зберігайте в AresRPG лише ті SUI, які плануєте використовувати. Значні заощадження тримайте в окремому некастодіальному гаманці, ключі відновлення якого контролюєте ви.
-  disclaimer_acknowledge: Зрозуміло
-  tab_buy: Купити
-  tab_sell: Продати
-  tab_history: Історія
   browse: Перегляд
   group_equipment: Спорядження
   group_pets: Улюбленці
@@ -503,13 +468,20 @@ marketplace_page:
   group_consumable: Витратні предмети
   group_resources: Ресурси
   group_characters: Персонажі
-  level: Рівень
-  class: Клас
   search: Пошук предметів…
   no_results: Оголошень ще немає
-  select_item: Виберіть предмет
+  group_empty: 'У цій групі ще нічого не виставлено'
+  featured: 'Добірка'
+  rarest: 'Найрідкісніше на ринку'
+  rarest_on_sale: 'У продажу лише: {{count}}.'
+  view_offers: 'Переглянути пропозиції'
+  see_all: 'Усі'
+  results_for: 'Результати за запитом «{{query}}»'
+  change_24h: '24 год'
+  change_hint: 'Останній повний день порівняно з попереднім'
+  listed: 'У продажу'
+  cheapest_offers: 'Найдешевші пропозиції'
   listing_count: '{{count}} оголошень'
-  rolled_stats: Випадкові характеристики
   characteristics: Характеристики
   damages: шкоди
   range_to: до
@@ -523,15 +495,11 @@ marketplace_page:
   no_listings: Активних оголошень немає
   withdraw: Зняти
   list_for_sale: Виставити на продаж
-  select_to_list: Виберіть предмет з інвентарю
   price: Ціна
   lot_size: Розмір лота
   paid_automatically: Виручка автоматично надходить у ваш кіоск.
-  lot_required: 'У стосі ×{{amount}}. Дозволені лоти ×1, ×10, ×100 або ×1000.'
-  inventory: Інвентар
   characters: Персонажі
   items: Предмети
-  empty_inventory: Немає доступних предметів
   revenue_30d: Останні 30 днів
   sales_count: '{{count}} продажів'
   unclaimed: Неотримана виручка
@@ -576,33 +544,21 @@ mastery_page:
   world_reward: +{{points}}pts
   shop_title: Крамниця майстерності
   shop_lead: Витрачайте очки майстерності, щоб купувати унікальні скриньки зі здобиччю.
+  shop_line: Витрачайте очки на скриньки зі здобиччю
+  quest_in_game: Почніть щоденне завдання в грі
   shop_empty: У крамниці майстерності ще немає товарів
-  ready_to_buy: Можна купити
   points_missing: Бракує {{points}} очок
-  buying: Купівля…
   buy: Купити · {{cost}} оч.
   quest_started: Щоденне завдання призначено.
   offer_purchased: Нагороду майстерності придбано.
 
 airdrop_page:
-  crew_view_sale: 'Відкрити продаж KARES'
-  crew_dialogue:
-    intro: 'Візьми участь у продажу токена KARES, і я матиму для тебе подарунок.'
-    connect: 'Підключи гаманець, який використав для продажу, і перевірмо, чи тут твій подарунок.'
-    checking: 'Зараз перевірю твої подарунки…'
-    ready: 'Твій шолом Crew тут!'
-    claiming: 'Зачекай трохи, триває отримання подарунків.'
-    claimed: 'Я вже віддала тобі шолом Crew. Носи з гордістю!'
-    empty: 'Зараз для цього гаманця немає доступного шолома Crew. Можливо, його вже отримали або розподіл ще триває.'
-    unavailable: 'Не вдалося перевірити подарунки. Спробуй ще раз.'
   reward_title: 'Ви отримали подарунок!'
   reward_received: 'Ви отримали {items}!'
   reward_needs_sui: 'Ваш подарунок у безпеці в гаманці. Додайте трохи SUI для оплати транзакції, а потім заберіть нагороду.'
   reward_complete: 'Ваша нагорода доступна в інвентарі.'
   reward_redeeming: 'Ваш подарунок отримано. Додаємо його до інвентарю…'
   reward_held: 'Ваш подарунок у гаманці. Заберіть його, щоб додати нагороду до інвентарю.'
-  reward_used_title: 'Картку вже використано'
-  reward_used_body: 'Цю картку вже використано або вона більше недоступна. Кожну картку можна використати лише один раз.'
   reward_continue: 'Продовжити'
   reward_item: 'Подарунок'
   destination: 'Ігровий гаманець:'
@@ -613,16 +569,8 @@ airdrop_page:
   holder_title: 'Зовнішній гаманець'
   holder_connect_hint: 'Підключіть гаманець із подарунковими картками'
   holder_connect: 'Підключити гаманець'
-  holder_connecting: 'Підключення…'
-  holder_connected: 'Підключено'
-  holder_select: 'Обрати'
-  holder_close: 'Закрити вибір гаманця'
-  holder_wallet_missing: 'Сумісний гаманець Sui не встановлено'
   giftcards_title: 'Подарункові картки для погашення'
   gift_login: 'Продовжте через Google, щоб отримати цей подарунок у свій ігровий гаманець'
-  gift_ready: 'Ваша друкована подарункова картка готова до отримання'
-  gift_claiming: 'Отримання друкованої подарункової картки…'
-  gift_retry: 'Отримати картку'
   redeem: 'Погасити'
   empty: 'У цьому гаманці немає подарункових карток'
   claim_all: 'Отримати нагороди'
@@ -665,6 +613,15 @@ airdrop_page:
     title_enforcer:
       title: 'Enforcer Machin'
       description: 'Титул «Виконавець» для власників Enforcer Machin, які відповідають умовам.'
+    act_operator:
+      title: 'ACT'
+      description: 'Титул і тіло Оператора для власників ACT Airdrop Transponder на момент знімка. Один на гаманець: Vesper, Dusk або Blood Ivory.'
+    act_warlords:
+      title: 'Воєначальники ACT'
+      description: 'Скриня ACT Airdrop для гравців, обраних за рейтингом ACT. У ній один шолом Helios Warlord.'
+    nogas_presale:
+      title: 'Nogas'
+      description: 'Плащ із пласкою жабою для кожного гаманця, що брав участь у пресейлі NOGAS на Blast. Перевірте гаманець, з якого ви брали участь.'
     blast_crew:
       title: 'Шолом Crew'
       description: 'Косметичний подарунок учасникам продажу KARES на Blast. Після розподілу підключіть використаний гаманець.'
@@ -819,41 +776,18 @@ admin_page:
   inspecting: Перевірка…
   plan: План публікації
   targets: детерміновані цілі
-  not_inspected: Додайте ID опублікованих об’єктів, а потім перевірте план.
   execute: Виконати
   executing: Виконання…
-  seal_title: Постійна печатка
-  seal_body: Печатка назавжди прибирає всі способи запису вмісту. Оновлення чи права адміністратора не можуть її скасувати.
-  arm_seal: Підготувати постійну печатку
-  seal_forever: Запечатати вміст назавжди
-  sealed: Вміст запечатано
-  admin_wallet: Адміністративний гаманець
-  admin_wallet_body: Окремий підписант для публікації та виведення доходу.
-  connect_admin_wallet: Підключити
-  choose_admin_wallet: Вибрати гаманець
-  choose_admin_address: Вибрати адресу
-  cancel_wallet_selection: Скасувати
-  wallet_account: Обліковий запис
   select_wallet: Вибрати
   connecting: Підключення…
-  loading_wallets: Завантаження гаманців…
-  no_admin_wallet: Сумісний браузерний гаманець не встановлено.
   royalties: роялті
-  cap_owned: право наявне
-  cap_missing: право відсутнє
-  reading_royalties: Читання політик…
   reading: Читання…
-  refresh_revenue: Оновити дохід
   claiming: Виведення…
-  disconnect_admin_wallet: Відключити
-  claim_digest: Транзакція виведення
   range_24h: 24 години
   range_7d: 7 днів
   range_30d: 30 днів
   range_90d: 90 днів
   range_1y: 1 рік
-  overview_title: Огляд
-  overview_body: Активність гравців і дохід без зайвого шуму панелі керування.
   overview_unavailable: Огляд недоступний
   loading_overview: Завантаження огляду…
   all_systems_current: Усі системи актуальні
@@ -863,15 +797,15 @@ admin_page:
   active_players: Активні гравці
   active_players_bucket: Активні гравці за інтервал
   daily_active: Активні гравці за день
-  active_interval: Активні за інтервал
   active_30d: Активні гравці за 30 днів
   active_last_30d: активні за останні 30 днів
   player_activity: Активність гравців
   population: Населення
   player_activity_body: Денна активність і ковзне охоплення за 30 днів
-  stickiness: DAU / 30Д
   online_players: Гравці онлайн
-  online_players_body: Пікова кількість унікальних автентифікованих гравців за інтервал
+  online_players_body: 'Пік гравців і пік розміщених ботів онлайн за період'
+  players: Гравці
+  hosted_bots: Розміщені боти
   online_now: Гравці онлайн
   online_split: Склад онлайну
   online_split_detail: 'гравці · розміщені боти'
@@ -890,12 +824,7 @@ admin_page:
   game_transactions_over_time: Транзакції в часі
   game_transactions_body: Успішні транзакції AresRPG, пораховані один раз на PTB
   today: Сьогодні
-  selected_period: Вибраний період
   lifetime: за весь час
-  average_order: середнє замовлення
-  chart_revenue: Дохід
-  chart_players: Гравці
-  chart_online: Онлайн
   bucket_15m: 15-хвилинні інтервали
   bucket_hour: Погодинні інтервали
   bucket_day: Денні інтервали
@@ -922,8 +851,6 @@ admin_page:
   when: Коли
   transaction: Транзакція
   treasury: Казначейство
-  treasury_body: Поточні баланси окремо від заробленого доходу
-  available_balance: Доступний баланс
   claim: Вивести
   close: Закрити
   loading: Завантаження…
@@ -963,22 +890,17 @@ simulator_page:
   class_ikari_title: Берсерк
   class_shusen_title: Боєць
   delete_character: Видалити персонажа
-  assigned_cell: Розміщено · Клітинка {cell}
   pick_character: Вибрати персонажа
   pick_mob: Вибрати моба
-  character_editor: Локальний персонаж
-  character_editor_hint: Особистість, вигляд, рівень, характеристики та відкриті заклинання
   character_level: Рівень персонажа
   character_stats: Розподілені характеристики
   character_spells: Рівні заклинань
   stat_points: 'Залишилось очок характеристик: {points}'
   spell_points: 'Залишилось очок заклинань: {points}'
-  spell_unlock: Відкривається на рівні {level}
   reset: Скинути
   delete_confirm: Підтвердити видалення
   class_change_hint: Зміна класу скидає природні характеристики та вкладені рівні заклинань
   spells_unavailable: На цьому рівні немає відкритих заклинань
-  save_character: Зберегти персонажа
   equipment: Спорядження, реліквії та косметика
   max_roll: Максимальний рол
   remove_mob: Прибрати моба
@@ -1046,7 +968,6 @@ fight_hud:
   crank_button: Примусово завершити хід
   end_turn: Завершити хід
   end_turn_queued: Завершення ходу в черзі
-  reset_turn: Скинути
   weapon_attack: Атака зброєю
   bare_hands: Голіруч
   log_fight_started: Бій починається
@@ -1104,9 +1025,6 @@ fight_hud:
   result_enemies: Вороги
   result_victory: Перемога
   result_defeat: Поразка
-  result_you: Ви
-  result_fallen: Поліг
-  result_survived: Вижив
   result_collecting: Збираємо здобич…
   result_collecting_progress: Здобич персонажів · {completed}/{total}
   result_collecting_complete: Усю здобич зібрано · {completed}/{total}
@@ -1123,7 +1041,6 @@ fight_hud:
   level_up_spell_points: Очки заклинань
   level_up_new_spell: Відкрито нове заклинання
   level_up_new_worlds: Відкрито нові світи
-  level_up_worlds_note: Нові напрямки тепер доступні
   level_up_allocate: Розподілити очки
   level_up_later: Пізніше
 wallet_legacy:
@@ -1181,69 +1098,12 @@ wallet_legacy:
   funding_failed: 'Не вдалося завершити поповнення.'
   funding_pending: 'Переказ триває. Не надсилайте інший платіж.'
   sui: SUI
-  how_to_get: Як отримати SUI
   your_address: 'Адреса SUI'
   send_sui: 'Надсилайте SUI через мережу Sui. Натисніть, щоб скопіювати.'
-  buy_directly: Купити напряму
-  buy_with_card: Купіть SUI кредитною карткою. Доставка прямо на ваш гаманець.
-  buy_on_exchange: Купити на біржі
-  withdraw_to_wallet: Купіть SUI на біржі, потім виведіть його на адресу гаманця,
-    вказану вище.
-  faq: FAQ
-  wallet_description: Ваш особистий гаманець. Лише ви маєте до нього доступ. Поповніть
-    SUI для мережевих комісій та обміну між гравцями.
-  moonpay_desc: Кредитна картка, Apple Pay, банківський переказ
-  transak_desc: Кредитна картка, банківський переказ, 100+ країн
-  faq_what_is_sui: Що таке SUI?
-  faq_what_is_sui_answer: 'SUI: це цифрова валюта, як цифрова готівка. Вона існує
-    на швидкій та безпечній мережі під назвою Sui blockchain. Ви використовуєте невеликі
-    суми SUI для мережевих комісій та обміну між гравцями.'
-  faq_why_sui: Чому AresRPG використовує SUI?
-  faq_why_sui_answer: 'SUI: наш основний спосіб оплати. Транзакції миттєві (менше
-    1 секунди) і коштують частки цента. Без посередницьких комісій. У майбутньому
-    ми можемо додати підтримку традиційних валют (USD, EUR тощо), але це потребує
-    значної юридичної роботи та супроводжується великими комісіями і податками, які
-    ми поки не готові нести.'
-  faq_legal: Чи це законно?
-  faq_legal_answer: 'Так. Купівля та зберігання криптовалюти є законною у більшості
-    країн. SUI: це легітимний цифровий актив, що торгується на великих регульованих
-    біржах по всьому світу. AresRPG використовує його для мережевих комісій та обміну між гравцями.'
-  faq_eula: Чи дозволено це за умовами гри?
-  faq_eula_answer: Так. Доки криптовалюта використовується виключно як спосіб оплати
-    без NFT чи спекулятивних криптосхем, це повністю відповідає правилам. Багато великих
-    ігрових магазинів навіть підтримують крипто-платежі.
-  faq_access: Хто може отримати доступ до мого гаманця?
-  faq_access_answer: 'Тільки ви. Ваш гаманець створюється через ваш Google-вхід за
-    допомогою технології zkLogin від Sui. Ніхто (навіть команда AresRPG) не може отримати
-    доступ до ваших коштів чи переміщувати їх. Важливо: цей гаманець призначений лише
-    для активності в AresRPG. Не зберігайте тут великі суми.'
-  faq_balance: Я надіслав SUI, але мій баланс не оновився?
-  faq_balance_answer: Не хвилюйтесь. Наша система оновлення може тимчасово працювати
-    повільно. Переконайтеся, що ви надіслали SUI на правильну адресу (скопіюйте її
-    зверху), і якщо баланс досі не оновився, зверніться до команди в Discord з вашим
-    ID транзакції для подальшої допомоги.
   add_funds: Поповнити гаманець
   testnet_faucet_title: Тестова SUI
   testnet_faucet_body: AresRPG працює в тестовій мережі Sui. Тестова SUI безкоштовна й не має грошової вартості. Отримайте токени в офіційному крані Sui.
   testnet_faucet_action: Відкрити кран Sui
-  how_to_pay: Як ти хочеш оплатити?
-  add_funds_desc: Обери зручний спосіб оплати. SUI надходить прямо на твій гаманець.
-  method_paypal: PayPal
-  method_paypal_desc: Оплатити через PayPal-акаунт
-  method_apple_pay: Apple Pay
-  method_apple_pay_desc: Оплатити через Face ID / Touch ID
-  method_google_pay: Google Pay
-  method_google_pay_desc: Оплатити через Google-акаунт
-  method_bank: Банківський переказ
-  method_bank_desc: SEPA (Європа) або ACH (США)
-  paypal_note: Доступно в США, Великій Британії та більшості Європи через MoonPay
-  card_note: Обери провайдера нижче. Усі приймають Visa та Mastercard
-  bank_note: Найнижчі комісії (~1%). SEPA для Європи, ACH для США.
-  steps_paypal: 1. Натисни посилання нижче  2. Вибери PayPal як спосіб оплати  3.
-    Введи суму. SUI надійде на твій гаманець
-  steps_wallet: Надішли SUI на адресу гаманця нижче. Кошти надходять за кілька секунд.
-  advanced_exchange: 'Для досвідчених: купити на біржі'
-  age_notice: Всі платіжні провайдери вимагають, щоб ти мав(ла) не менше 18 років.
   send:
     button: Надіслати
     title: Надіслати SUI
@@ -1273,18 +1133,12 @@ wallet_legacy:
     suins_resolving: Визначення імені…
     suins_resolved: "Ім'я визначено: {{name}}"
     err:
-      recipient_not_found: Гравця з іменем {{name}} не знайдено.
-      recipient_no_wallet: "{{name}} ще не прив'язав гаманець у вебдодатку. Попросіть
-        підключитися на aresrpg.world."
       self_send: Ви не можете надіслати SUI на власний гаманець.
       invalid_address: Введена адреса не є коректною адресою Sui.
       insufficient_balance: У вашому гаманці недостатньо SUI для цього переказу.
       rate_limited: Забагато переказів. Зачекайте хвилину і спробуйте знову.
       tx_failed: Транзакція не вдалася у мережі. Кошти не переведено.
       user_rejected: Підпис було відхилено у вашому гаманці.
-      recipient_required: Потрібен отримувач
-      suins_not_found: Ім'я SuiNS «{{name}}» не знайдено.
-      amount_positive: Введіть суму, більшу за 0.
       amount_invalid: Це недійсна сума.
     send_confirm: Надіслати
     drain_hint: MAX спорожнює ваш гаманець — комісія мережі береться із самого переказу.
@@ -1308,7 +1162,6 @@ wallet_send_shared:
   transaction: Транзакція
 
 encyclopedia_page:
-  tokenomics_tab: Токеноміка
   world_locations: 'Місця'
   world_search_places: 'Знайти біом, місто, монстра або ресурс…'
   world_entry: 'Вхід: рів. {{level}}'
@@ -1319,9 +1172,6 @@ encyclopedia_page:
   world_gatherables: 'Ресурси для збору'
   world_gather_level: '{{job}} · Професія: рів. {{level}}'
   world_protector: 'Захисник'
-  minimum: МІН
-  maximum: МАКС
-  terrain_seed: Ключ генерації
   sea_level: Рівень моря
   world_role:
     trash: Звичайний
@@ -1334,23 +1184,17 @@ encyclopedia_page:
     herbalist: Травник
     miner: Шахтар
   world_resource_tier: T{{tier}}
-  world_address_copied: Скопійовано!
   search_items: ПОШУК ПРЕДМЕТІВ...
   search_mobs: ПОШУК МОБІВ...
   all_families: УСІ РОДИНИ
   elements_filter: СТИХІЇ
-  advanced_filters: РОЗШИРЕНІ ФІЛЬТРИ
-  no_entries: Записів не знайдено
   select_item: Оберіть предмет для перегляду деталей
   select_mob: Оберіть моба для перегляду деталей
   select_class: Оберіть клас для перегляду деталей
-  loading_details: Завантаження деталей...
-  loading_encyclopedia: Завантаження енциклопедії...
   items: Предмети
   mobs: Моби
   pets: Улюбленці
   classes: Класи
-  gameplay_tab: Геймплей
   jobs_tab: Професії
   search_jobs: ПОШУК ПРОФЕСІЙ...
   select_job: ОБЕРІТЬ ПРОФЕСІЮ
@@ -1374,12 +1218,8 @@ encyclopedia_page:
     HANDYMAN: 'Майстри виготовляють інструменти, ключі та проміжні матеріали.'
     ALCHEMIST: 'Алхіміки виготовляють зілля та проміжні матеріали.'
     BAKER: 'Пекарі виготовляють хліб та проміжні матеріали.'
-  dungeons_tab: ПІДЗЕМЕЛЛЯ
-  search_dungeons: ПОШУК ПІДЗЕМЕЛЬ...
-  select_dungeon: ОБЕРІТЬ ПІДЗЕМЕЛЛЯ
   showing_count: '{{count}} З {{total}}'
   sort_name: НАЗВА А-Я
-  clear_filters: ОЧИСТИТИ ВСЕ
   no_results: ЖОДЕН ПРЕДМЕТ НЕ ВІДПОВІДАЄ ФІЛЬТРАМ
   filter_by_category: ЗА КАТЕГОРІЄЮ
   filter_by_stat: ЗА ХАРАКТЕРИСТИКОЮ
@@ -1387,23 +1227,11 @@ encyclopedia_page:
   filter_by_job: ЗА ПРОФЕСІЄЮ
   filter_by_world: ЗА СВІТОМ
   filter_by_mob_family: ЗА РОДИНОЮ МОНСТРІВ
-  filter_biome: БІОМ
-  filter_city: МІСТО
-  group_armor: БРОНЯ
   group_weapons: ЗБРОЯ
-  group_accessories: АКСЕСУАРИ
-  group_pets: ВИХОВАНЦІ
-  group_runes: РУНИ
-  group_relics: РЕЛІКВІЇ
-  group_tools: ІНСТРУМЕНТИ
-  group_consumables: ВИТРАТНІ
   group_raw_resources: СИРОВИНА
   group_gatherable_resources: ЗБИРАЛЬНІ РЕСУРСИ
   group_intermediary_resources: ПРОМІЖНІ РЕСУРСИ
   group_pet_food_resources: КОРМ ДЛЯ УЛЮБЛЕНЦІВ
-  item_category_pet_food: КОРМ ДЛЯ УЛЮБЛЕНЦЯ
-  stats_filter: СТАТИСТИКА
-  filter_life_steal: КРАДІЖКА ЖИТТЯ
   gameplay:
     game_mechanics: ІГРОВІ МЕХАНІКИ
     section_combat: БІЙ
@@ -1561,47 +1389,26 @@ encyclopedia_page:
   dropped_by: ВИПАДАЄ З
   recipe: РЕЦЕПТ
   price_history: ІСТОРІЯ ЦІН
-  no_price_data: Даних про ціни ще немає
-  no_recipe: Дані рецепту відсутні
   ingredient_of: ІНГРЕДІЄНТ ДЛЯ
-  no_ingredient_of: Не використовується в жодному рецепті
   no_drops: Немає відомих джерел дропу
-  pet_stats: ХАРАКТЕРИСТИКИ УЛЮБЛЕНЦЯ
   pet_diet: РАЦІОН УЛЮБЛЕНЦЯ
-  food_sources: ДЖЕРЕЛА ЇЖІ
-  stat_bonuses_max: БОНУСИ ХАРАКТЕРИСТИК (НА МАКС. СИЛІ)
   characteristics: ХАРАКТЕРИСТИКИ
   damages: Шкода
   range_to: до
   level_short: Рів. {{level}}
   no_diet: Немає інформації про раціон
-  newborn: Новонароджений
-  max_power: Макс. сила
   back_to_list: Назад до списку
   view_all: ВСІ
   item_type: ТИП
-  view_by_zone: ЗА ЗОНОЮ
   view_by_level: ЗА РІВНЕМ
-  view_by_family: ЗА РОДИНОЮ
-  unknown_family: Невідома родина
   showing_mobs: ПОКАЗАНО {{count}} З {{total}} МОНСТРІВ
   no_mobs_match: ЖОДЕН МОНСТР НЕ ВІДПОВІДАЄ ФІЛЬТРАМ
-  boss_only: ЛИШЕ БОСИ
-  clear_all: ОЧИСТИТИ ВСЕ
-  all_jobs: УСІ ПРОФЕСІЇ
   sort_level_asc: РІВЕНЬ ↑
   sort_level_desc: РІВЕНЬ ↓
   sort_name_asc: ІМ'Я A-Z
-  sort_newest: НОВІШІ
   level_bracket: РІВЕНЬ {{range}}
-  unknown_zone: НЕВІДОМО
-  unlocks_at_level: РОЗБЛОКОВУЄТЬСЯ НА РІВ. {{level}}
   level: РІВЕНЬ
-  aoe_radius: РАДІУС AoE
   effects: ЕФЕКТИ
-  life_cost: витрата HP
-  duration_short: 'ТРВ: {{duration}}с'
-  coming_soon: НЕЗАБАРОМ
   health: ЗДОРОВ'Я
   spells_count: ЗАКЛИНАННЯ ({{count}})
   mob_spells: ЗАКЛИНАННЯ
@@ -1622,13 +1429,7 @@ encyclopedia_page:
   spell_n: ЗАКЛИНАННЯ {{n}}
   range: ДАЛЬНІСТЬ
   range_modifiability: МОЖЛИВІСТЬ ЗМІНИ ДАЛЬНОСТІ
-  no_spells_minted: Немає закарбованих заклять у мережі
-  xp_suffix: +{{xp}} XP
-  boss_badge: БОС
-  archi_badge: АРХІ
-  recommended_short: Рек. {{level}}
   level_range: Рів. {{min}}-{{max}}
-  up_to_plus: До +{{val}}
   element:
     fire: Вогонь
     water: Вода
@@ -1650,23 +1451,13 @@ encyclopedia_page:
   characteristic_costs_desc: Природні очки використовують шкалу цього класу. Спорядження не змінює вартість.
   characteristic_cost_band: '{{cost}} оч. → +{{gain}} · ≤{{cap}}'
   characteristic_cost_unlimited: '{{cost}} оч. → +{{gain}} · без обмежень'
-  turns_value: '{{n}} ХОДІВ'
   targeting: НАЦІЛЮВАННЯ
-  effect_zone: ЗОНА ДІЇ
   line_of_sight: ЛІНІЯ ЗОРУ
-  los_required: ПОТРІБНА
-  los_not_required: НЕ ПОТРІБНА
   target_cell: ЦІЛЬОВА КЛІТИНКА
   target_cell_empty: МАЄ БУТИ ПОРОЖНЬОЮ
-  target_cell_any: БУДЬ-ЯКА (ПОРОЖНЯ ЧИ ЗАЙНЯТА)
   cast_line: ЛІНІЯ ЗАКЛИНАННЯ
-  cast_line_straight: ЛИШЕ ПО ПРЯМІЙ
-  cast_line_free: ВІЛЬНЕ ПРИЦІЛЮВАННЯ
   critical: КРИТИЧНИЙ УДАР
   crit_chance: ШАНС КРИТУ
-  crit_chance_value: 1 З {{n}}
-  on_crit: ПРИ КРИТІ
-  proc_chance: ШАНС {{n}}%
   aoe_shape:
     point: ОДНА ЦІЛЬ
     circle: КОЛО {{size}}
@@ -1676,28 +1467,13 @@ encyclopedia_page:
     ring: КІЛЬЦЕ {{size}}
     allmap: УСЕ ПОЛЕ
     cone: КОНУС {{size}}
-  no_items_onchain: Ще немає шаблонів предметів у мережі
-  no_mobs_onchain: Ще немає істот у мережі
-  obtention_crafted: Можна виготовити
-  obtention_dropped_by: Випадає з {{count}} монстрів
-  obtention_unknown: Спосіб отримання невідомий
   total_supply: Загальна кількість
-  marketcap: Капіталізація
-  marketcap_unknown: Невідомо
   worlds_tab: Світи
-  search_worlds: Пошук назви світу…
-  no_worlds: Немає світів у мережі
   select_world: Виберіть світ
-  world_level_unknown: Діапазон рівнів поки що недоступний
   world_biomes: Біоми
-  world_no_mobs: Монстри невідомі
   world_cities: Міста
   world_no_resources: Ресурси невідомі
-  world_gap_note: Ще не надається RPC
   world_dungeon: Підземелля
-  world_dungeon_room: Кімната {{n}}
-  world_stat_lean: Основна характеристика
-  world_appears_in: 'Зустрічається в:'
   found_in: ЗУСТРІЧАЄТЬСЯ В
   item_descriptions:
     abyssal_blood_wheat: ''
@@ -1841,7 +1617,6 @@ encyclopedia_page:
     wither_concentrate: ''
     wither_petal: ''
     witherbloom: ''
-out_of_sui_body: У вас закінчилися SUI для оплати комісій за транзакції. Поповніть гаманець, щоб продовжити гру.
 characters_page:
   inventory_selection: 'Вибрано: {{count}} · Shift-клік перемикає вибір спорядження'
   crush_cta_count: 'Розтрощити ({{count}})'
@@ -1875,7 +1650,6 @@ characters_page:
   level: 'Рів {{level}}'
   experience: Досвід
   equipment_head: Спорядження
-  equipped_totals: Підсумки спорядження
   no_gear_equipped: Нічого не вдягнено
   bag_equipment: Спорядження
   bag_consumables: Витратні
@@ -1903,29 +1677,21 @@ characters_page:
   refusal_item_listed: Цей предмет виставлено на продаж
   refusal_unavailable: 'Персонаж або предмет змінився чи недоступний. Спробуйте знову, коли персонаж буде вільний.'
   points_to_assign: Очки для розподілу
-  spend_hint: Розподіліть очки між шістьма характеристиками та підтвердіть
   reset: Скинути
   confirm: Підтвердити
   tx_pending: Підтвердження…
-  stats_pending: Розподіл очок…
-  stats_success: Очки розподілено
   health: Здоровʼя
   action: Дія
   movement: Рух
   characteristics: Характеристики
   resistances: Опори
   secondary: Другорядні
-  element_fire: Вогонь
-  element_water: Вода
-  element_earth: Земля
-  element_air: Повітря
   add_point: 'Додати очко до {{stat}}'
   remove_point: 'Прибрати очко з {{stat}}'
   grimoire: Гримуар
   spell_points: Очки заклять
   unlocked: 'Відкрито {{unlocked}} / {{total}}'
   unlocks_at: 'Відкривається на рів {{level}}'
-  unlock_line: 'Рів {{level}}'
   lv_of: '{{current}} / {{max}}'
   locked: Заблоковано
   mastered: Опановано
@@ -1964,7 +1730,6 @@ characters_page:
   no_runes: У сумці немає рун
   menu_feed: Годувати
   menu_consume: Спожити
-  menu_crush: Розтрощити
   menu_destroy: Знищити
   menu_view_recipes: Переглянути рецепти
   menu_explorer: Переглянути в оглядачі
@@ -1986,7 +1751,6 @@ characters_page:
   feed_unavailable: 'Цей улюбленець більше недоступний.'
   claim_success: Нагороду отримано
   crush_title: Розтрощити спорядження
-  crush_success: Спорядження розтрощено
   crush_result_title: Результат розтрощення
   crush_result_empty: Нехай наступного разу пощастить.
   destroy_title: Знищити предмет
@@ -2005,8 +1769,6 @@ characters_page:
     movement: 'ОР'
     action: 'ОД'
     range: 'Дальність'
-    critical_chance: 'Шанс криту'
-    critical_outcomes: 'Шанс криту'
     vitality: 'Живучість'
     wisdom: 'Мудрість'
     strength: 'Сила'
@@ -2015,7 +1777,6 @@ characters_page:
     agility: 'Спритність'
     heal: 'Зцілення'
     critical_hit: 'Критичний Удар'
-    percent_damage: 'Шкода'
     raw_damage: 'Сира Шкода'
     fire_resistance: 'Вогнестійкість'
     water_resistance: 'Водостійкість'
@@ -2028,7 +1789,6 @@ characters_page:
     level: 'Рів. {{level}}'
     adventurer: 'Шукач пригод'
     points_to_assign: 'Очки для розподілу'
-    spend_hint: 'Розподіліть їх між характеристиками'
     reset: 'Скинути'
     health: 'Здоров’я'
     action: 'Дія'
@@ -2056,7 +1816,6 @@ characters_page:
     point_cost: '{{cost}} оч. → +{{gain}}'
     tx_success: 'Очки характеристик розподілено'
   spells:
-    range_modifiable: 'Змінна дальність'
     no_character: 'Персонажа не вибрано'
     select_prompt: 'Виберіть закляття'
     level: 'Рівень {{level}}'
@@ -2077,25 +1836,13 @@ characters_page:
     unlimited: 'Необмежено'
     description: 'Опис'
     effects: 'Ефекти'
-    levels_head: 'Рівні'
     mastered: 'Опановано'
     upgrade_success: '{{spell}} підвищено рівень!'
     upgrading: 'Підвищення рівня…'
     level_up_spell: 'Покращити закляття'
     pts: '{{count}} очок'
-    pts_one: '{{count}} очко'
-    pts_other: '{{count}} очок'
     requires_lv: 'Потрібен рівень {{level}}'
     no_points: 'Немає очок'
-    tag_self: 'На себе'
-    tag_melee: 'Ближній бій'
-    tag_ranged: 'Дальній бій'
-    tag_zone: 'Зона'
-    tag_line_of_sight: 'Лінія зору'
-    el_fire: 'Вогонь'
-    el_water: 'Вода'
-    el_earth: 'Земля'
-    el_air: 'Повітря'
     buff: 'Підсилення'
     utility: 'Допоміжне'
     heal: 'Зцілення'
@@ -2103,13 +1850,10 @@ characters_page:
     element: 'Стихія'
     damage: 'Шкода'
     turns: 'ходів'
-    crit_val: 'крит {{value}}'
-    range_fixed: 'ФІКСОВАНА — СТАТ. ДАЛЬНОСТІ НЕ ДІЄ'
   jobs:
     level_up_title: Новий рівень професії
     level_up_reached: Досягнуто рівня
     level_up_character: '{{name}} вдосконалюється'
-    level_up_progress: 'Рівень {{before}} → {{after}}'
     level_up_continue: Продовжити
     category:
       gathering: 'Збиральництво'
@@ -2128,13 +1872,10 @@ characters_page:
       yield: 'Врожай'
       xp: 'XP'
       unlocks_at: '{{name}} (розблоковується на рівні {{level}})'
-      gather_detail: '{{name}} · збір {{gather}}с · відродження {{respawn}}с'
       locked: 'заблоковано'
     lv_badge: 'Рв {{level}}'
     tier_badge: 'T{{tier}}'
     craft:
-      recipe_head: 'Рецепт'
-      recipe_not_seeded: 'Цього рецепта ще немає в контенті.'
       ingredients_head: 'Інгредієнти'
       requires_level: 'Потрібен {{job}} Рв {{required}} (у вас Рв {{level}})'
       not_enough: 'Недостатньо інгредієнтів'
@@ -2148,9 +1889,6 @@ characters_page:
       craft_result: 'Виготовлено {{successes}} / {{attempts}} {{name}}'
       locked_level: 'Заблоковано · Рв {{level}}'
     detail:
-      close_aria: 'Закрити деталі предмета'
-      item_not_seeded: 'Цього предмета немає в контенті.'
-      tool_label: 'Інструмент'
       crafts_label: 'Виробляє {{covers}}'
       xp_progress: '{{current}} / {{needed}} XP'
       gather_time: 'Час збору: {{seconds}} с'
@@ -2447,7 +2185,6 @@ item_categories:
   tool: 'Інструмент'
   relic_slot: 'Реліквія {{number}}'
 
-kares: 'Стейкінг'
 kares_page:
   ledger_intro: 'Токен нагород, стейкінгу та скринь AresRPG. Випущений один раз: кожне спалення зменшує пропозицію.'
   buy_aftermath: 'Купити на Aftermath'
@@ -2499,7 +2236,6 @@ kares_page:
   upgradeability_note: 'Контракти нагород можна оновлювати до остаточного замороження проєкту. Випуск нових токенів залишається вимкненим.'
   claim_batch: 'Отримати винагороди з {{count}} із {{total}} позицій'
   withdraw_batch: 'До {{count}} позицій за виведення. Повторіть, щоб вивести решту стейку.'
-  token_sale: 'Продаж токенів'
   locked_liquidity: 'Заблокована ліквідність'
   stake_more: 'Додати до стейку'
   additional_daily: 'Додатково / день'
@@ -2523,34 +2259,30 @@ kares_page:
   no_wallet: 'Установіть гаманець Sui для участі.'
   refresh: 'Оновити'
   loading: 'Зчитування даних мережі…'
-  pending: 'Підтвердження транзакції…'
   confirmed: 'Транзакцію підтверджено'
   amount: 'Сума'
   balance: 'Доступний баланс'
   amount_invalid: 'Уведіть додатну суму до 9 десяткових знаків.'
   insufficient: 'Сума перевищує доступний баланс.'
-  gas_note: 'Залиште SUI для комісій транзакцій.'
   testnet: 'Тестова мережа · тестові активи'
-  back_game: 'Відкрити AresRPG'
-  staking_title: Ваш стейк. Ваша частка.
   your_stake: 'Ваш стейк'
   claimable: 'Накопичені винагороди'
   stake: 'Стейкати KARES'
   withdraw: 'Вивести стейк'
   claim_rewards: 'Отримати винагороди'
   inactive: 'Стейкінг відкриється після поповнення резервів.'
-  position: 'Позиція'
   tokenomics: 'Токеноміка KARES'
   tabs_label: 'Розділи KARES'
   tab_tokenomics: 'Токеноміка'
   tab_staking: 'Стейкінг'
-  signin_title: 'Увійдіть, щоб стейкати'
-  signin_body: 'Стейкінг використовує ваш ігровий обліковий запис. Увійдіть через Google, щоб побачити свій стейк і забрати винагороди.'
+  staking_line: 'Заробляйте KARES і SUI'
+  tokenomics_line: 'Пропозиція, спалювання та пули нагород'
+  signin_body: 'Цей розділ використовує ваш ігровий акаунт. Увійдіть через Google, щоб відкрити його.'
   community: 'PvP-змагання та сезонні рейтинги'
   team: 'Розподіл команді'
   five_years: 'Винагороди спільноті за стейкінг'
   mastery_title: 'Скрині'
-  mastery_note: 'Купуйте скрині за KARES у грі. KARES назавжди спалюються під час купівлі, а не відкриття скрині.'
+  mastery_note: 'Купуйте скрині за KARES у розділі «Майстерність» на сторінці «Стейкінг». KARES назавжди спалюються під час купівлі, а не відкриття скрині.'
   rewards_note: 'Нагороди видаються протягом 1 825 активних днів. Будь-хто може пожертвувати KARES або SUI: розподіл починається з наступної активної доби й триває 30 активних днів, не подовжуючи попередні графіки. Пожертви не повертаються. Без ставок годинник зупиняється; зароблені нагороди залишаються доступними.'
   revenue_note: '20% зібраних роялті маркетплейсу спрямовуються у винагороди SUI. Розмір залежить від доходів і стейку учасників.'
   points: 'Очки майстерності'
@@ -2560,11 +2292,8 @@ kares_page:
   community_detail: 'Цей резерв фінансує PvP-змагання та нагороди сезонних рейтингів. Казначейство вручну розподіляє розблоковані токени.'
   supply_detail: 'Випускається один раз. Додаткової емісії немає. Спалювання зменшує пропозицію.'
   emissions_detail: 'Усі нагороди використовують наявні токени. Виплати не створюють нових токенів.'
-  confirmed_refresh: 'Транзакцію підтверджено. Оновіть, щоб завантажити нові баланси.'
   staking_unavailable: 'Стейкінг ще недоступний у цій мережі.'
   combat_rewards: 'Нагороди за босів'
-
-  combat_detail: 'Рівні босів визначають одну нагороду, порівну поділену між персонажами-переможцями. Ліміт — {{cap}} KARES на добу від налаштування. Активність епохи змінює розмір нагороди. Тихі дні не накопичують борг; пожертви подовжують резерв.'
 
   error_generic: 'Не вдалося завершити дію.'
   error_rejected: 'Запит скасовано.'
@@ -2595,7 +2324,6 @@ leaderboard_page:
   feeding: 'Годування улюбленців'
   gathering: 'Збирання'
   category: 'Категорія'
-  loading: 'Завантаження…'
   user: 'Користувач'
   score: 'Результат'
   you: 'Ви'
@@ -2787,11 +2515,13 @@ title_names:
   title_fudbuster: 'Мисливець на FUD'
   title_pug_paladin: 'Мопс-паладин'
   title_enforcer: 'Виконавець'
+  title_operator_vesper: 'Оператор Vesper'
+  title_operator_dusk: 'Оператор Dusk'
+  title_operator_blood_ivory: 'Оператор Blood Ivory'
 ui:
   view_on_suivision: Переглянути в SuiVision
   funding_game_wallet: Ігровий гаманець
   funding_external_wallet: Інший гаманець
-  agent_wallet: 'Гаманець агента'
   wallet_tabs: 'Гаманець'
   wallet_game: 'Гра'
   wallet_bot: 'Бот'
@@ -2826,8 +2556,9 @@ ui:
   agent_needs_sui: 'Агенту потрібні SUI для гри. Поповніть баланс і повторіть дію.'
   agent_funding_unverified: 'Не вдалося перевірити отримувача. Оновіть повернення, перш ніж поповнювати баланс.'
   agent_watch: 'Спостерігати за агентом'
+  agent_recall: 'Повернути'
+  agent_transfer_unavailable: 'Перед передаванням зніміть із цього персонажа спорядження та завершіть його бій.'
   agent_watching: 'Спостереження за агентом'
-  agent_watch_empty: 'Немає персонажів для спостереження.'
   agent_watch_failed: 'Не вдалося підключитися до спостереження за агентом. Спробуйте ще раз.'
   portrait_backdrop: 'Тло'
   portrait_transparent: 'Прозоре'
@@ -2846,21 +2577,13 @@ ui:
   portrait_failed: 'Не вдалося завантажити портрет або скопіювати посилання. Ви можете виділити посилання нижче.'
   portrait_close: 'Закрити'
   portrait_preview: 'Портрет персонажа'
-  agent_asset_proceeds: 'Дохід кіосків'
-  agent_asset_collect: 'Зібрати в мультипідпис'
-  agent_asset_delist: 'Скасувати продаж'
   agent_asset_reserved: 'Ексклюзивна пропозиція · потрібен PurchaseCap'
   agent_asset_unconfigured: 'Не налаштовано для цього розгортання'
-  agent_asset_fee_budget: 'Максимальний бюджет газу'
   agent_label: 'Агент'
   agent_kiosk_badge: 'КІОСК'
   agent_kiosk: 'Кіоск агента'
-  agent_coin_direct: 'Монети переказуються безпосередньо однією транзакцією. Газ оплачує відправник.'
   agent_pair_for_deposit: 'Перед внесенням коштів підтвердьте постійного підписувача агента.'
-  agent_inventory_connect: 'Перевірте повну адресу агента, щоб користуватися його інвентарем.'
   agent_transfer_interrupted: 'Для продовження попередньої спроби передачі потрібне ваше підтвердження.'
-  agent_transfer_sender: 'Відправник'
-  agent_source_balance: 'Баланс відправника'
   agent_inventory: 'Інвентар агента'
   agent_asset_available: 'Доступно'
   agent_asset_listed: 'Виставлено · спершу скасуйте продаж'
@@ -2868,32 +2591,12 @@ ui:
   agent_asset_sui: 'Кількість SUI'
   agent_asset_kares: 'Кількість KARES'
   agent_asset_reserve: 'Залишити SUI після комісій'
-  agent_asset_positions: 'KARES у стейкінгу'
-  agent_asset_unstake: 'Вивести в мультипідпис'
-  agent_asset_owned: 'Інші власні об’єкти (перегляд)'
-  agent_asset_incoming: 'Вхідні повернення предметів'
-  agent_asset_scope: 'Виберіть предмети й точні суми. Стеки переносяться повністю. Спорядження спочатку знімається, продажі слід скасувати. Виведіть KARES зі стейкінгу й оновіть дані перед переказом. Залиште SUI для наступних кроків. Інші типи об’єктів доступні лише для перегляду; спочатку завершіть бій.'
-  agent_setup_prompt: 'Налаштуй мого агента AresRPG за інструкцією {guide} з приватним тимчасовим посиланням: {url}. Автоматично надішли публічне підтвердження. Налаштування не дозволяє переказ активів чи гру.'
   agent_cancel: 'Скасувати'
   agent_pair_connect: 'Підключити'
-  agent_setup_request: 'Запит налаштування'
-  agent_pair_failed_title: 'Не вдалося підключитися'
-  agent_pair_pending: 'Очікування помічника…'
-  agent_pair_failed: 'Термін налаштування минув або його не вдалося завершити. Підключіться знову.'
-  agent_pair_verified: 'Ключ агента перевірено. Це не підтверджує вхід на сервер чи володіння персонажем.'
-  agent_environment: 'Виберіть помічника з постійним середовищем для агента, наприклад ChatGPT dots або Grok Bot.'
-  agent_pair_ephemeral: 'Лише перевірка відкритого ключа. Цей тимчасовий ключ втрачається після завершення процесу агента. Ніколи не надсилайте активи на цю адресу.'
-  agent_pair_instructions: 'Надішліть цей запит помічнику. Результат з’явиться тут автоматично.'
-  agent_pair_blocked: 'Цей гаманець не надає публічного ідентифікатора Google для сполучення. Підключіться через Google, щоб створити публічний запит.'
   agent_copy_request: 'Копіювати URL підключення'
   agent_copy_failed: 'Не вдалося скопіювати. Виділіть і скопіюйте запит вище вручну.'
-  agent_handoff_request: 'Підготуй {{provider}} до Connect Your Agent за {{url}}. Повідом про відсутні налаштування підпису та за потреби попроси тимчасове посилання. Запит не дозволяє створення облікових даних, переказ активів чи гру.'
   agent_connect_your: 'Підключити свого агента'
-  agent_page_body: 'Дозвольте ШІ-асистенту грати героями за вас. Він грає з власного гаманця бота — мультипідпису, з якого ваш акаунт Google завжди може повернути активи.'
   agent_page_signin: 'Увійдіть через Google, щоб налаштувати агента та його гаманець бота.'
-  agent_page_world: 'Відкрити 3D-світ'
-  agent_bootstrap: 'Відкрити інструкції'
-  agent_character_offer_hint: 'Це надсилає пропозицію. Агент забирає персонажа окремою операцією. Діють звичайні комісії.'
   agent_connected: 'Агента підключено'
   agent_disconnect_title: 'Відключити та повернути активи?'
   agent_disconnect_body: 'Зупиніть бота та поверніть його персонажів, предмети й кошти у свій гаманець. Поточні бої та підземелля буде покинуто. Комісії можуть списуватися з вашого гаманця.'
@@ -2902,25 +2605,10 @@ ui:
   agent_return_complete: 'Бота відключено. Активи повернуто.'
   agent_return_resume: 'Продовжити повернення'
   agent_return_needs_sui: 'Додайте SUI для оплати комісій повернення.'
-  agent_hint_desktop: 'Натисніть правою кнопкою на портрет або вкладку персонажа й виберіть «Надіслати агенту».'
-  agent_hint_create: 'Створіть персонажа на звичайному екрані створення, потім відкрийте його меню дій, щоб надіслати агенту.'
   agent_sending: 'Надсилання…'
-  agent_pair_storage_failed: 'Не вдалося зберегти дані відновлення. Дозвольте зберігання даних у браузері й підключіться знову.'
-  agent_pair_disposable: 'Цей агент використовує тимчасові облікові дані. Попросіть його налаштувати постійне сховище й підключіться знову.'
-  agent_signer_persistent: 'Постійного підписувача транзакцій перевірено.'
-  agent_hosted_intro: 'Асистент використовує MCP без ключа підпису. Ключ сервісу AresRPG і ваш Google-гаманець можуть кожен самостійно переміщувати активи бота без схвалення іншої сторони.'
-  agent_hosted_unavailable: 'Потрібні ігровий Google-гаманець і налаштований HTTPS-сервіс бота. Відновлення залишається в інвентарі.'
   agent_hosted_ambiguous: 'Потрібно перевірити кілька розміщених гаманців. Гаманець не вибрано.'
-  agent_other_wallets: 'Інші збережені гаманці'
-  agent_hosted_pending: 'Підключення…'
-  agent_hosted_authenticate: 'Підтвердити Google-гаманець'
-  agent_hosted_ready: 'Налаштування завершено'
   agent_hosted_consent: 'Підключіть асистента'
   agent_checking: 'Перевіряємо стан агента…'
-  signing_in: 'Виконується вхід…'
-  telegram_link_title: "Прив'язати Telegram"
-  telegram_link_signin: "Увійдіть через Google, щоб прив'язати цей чат Telegram до ігрового акаунта."
-  telegram_link_failed: "Не вдалося прив'язати Telegram. Поверніться в Telegram і увійдіть знову."
   agent_hosted_review: 'Асистент просить доступ до вашого бота. Продовжіть, щоб побачити запит; до підключення нічого не передається.'
   agent_hosted_authority: 'Може грати й витрачати активи цього бота.'
   agent_hosted_read_access: 'Може переглядати цього бота.'
@@ -2947,9 +2635,7 @@ ui:
   agent_guide_acknowledge: 'Я розумію та хочу продовжити'
   agent_guide_create_plugin: 'Створити як плагін'
   agent_guide_continue: 'Продовжити'
-  agent_hosted_recovery: 'Використовуйте Інвентар і Відкликання для незалежного повернення активів. Повернення не скасовує контроль ключа сервісу над активами, що залишилися в бота.'
   agent_choose: 'Виберіть агента'
-  agent_unavailable: 'Сполучення поки недоступне. Агента не підключено.'
   agent_setup: 'Налаштувати агента'
   agent_send: 'Передати агенту'
   feedback_question: 'Що заважає вам продовжити?'
@@ -2966,58 +2652,26 @@ ui:
   equipment_comparison: 'Зміни при спорядженні'
   equipment_replacing: 'Замінює {{name}}'
   equipment_unchanged: 'Бонуси характеристик не зміняться'
-  preview_only: 'Інтерактивний перегляд · транзакції не надсилаються'
-  inspect_details: 'Оглянути'
-  design_minimap: 'Мінімапа'
-  design_party_invitation: 'Запрошення до групи'
-  design_trade_invitation: 'Запрошення до обміну'
   progression_rewards: 'Нагороди'
   inventory_selected_count: 'Вибрано: {{count}}'
   inventory_select: 'Вибрати'
   inventory_deselect: 'Скасувати вибір'
   inventory_use: 'Використати'
   attack: 'Атакувати'
-  character_summary: 'Огляд'
   character_details: 'Подробиці'
-  allocate_points: 'Розподілити'
   inventory_search: 'Пошук в інвентарі…'
   design_titles: 'Титули'
-  design_no_title: 'Без титулу'
-  design_library: 'Майстерня інтерфейсу'
-  design_controls: 'Елементи керування'
-  design_components: 'Компоненти'
-  design_prebuilt: 'Готові'
-  design_windows: 'Вікна'
-  design_feedback: 'Відгук'
-  design_tokens: 'Токени'
-  design_dialog: 'Відкрити діалог'
-  design_disabled: 'Недоступно'
-  design_details: 'Подробиці'
-  design_description: 'Спільні компоненти гри. Перевіряйте стани й адаптивні макети на локальних прикладах.'
   design_volume: 'Гучність'
-  design_motion: 'Анімація'
-  design_search: 'Пошук'
-  design_equipment_hint: 'Виберіть предмет для спорядження. Натисніть на споряджений предмет, щоб зняти його.'
   design_equip: 'Спорядити'
   design_combat: 'Бій'
-  design_journal: 'Журнал і розвиток'
-  design_complete: 'Завершено'
-  design_viewport: 'Розмір перегляду'
-  design_desktop: 'Комп’ютер'
-  design_mobile: 'Телефон'
   leave_game_title: 'Бажаєте вийти з гри?'
   stay_in_game: 'Продовжити гру'
   leave_game_confirm: 'На головний екран'
   mobile_move: 'Рух'
   mobile_jump: 'Стрибнути'
-  mobile_chat: 'Чат'
-  mobile_party: 'Група'
   mobile_confirm_action: 'Підтвердити дію'
   mobile_item_actions: 'Дії з предметом'
   mobile_unequip: 'Зняти'
-  mobile_use_item: 'Використати / спорядити'
-  mobile_language: 'Мова'
-  mobile_menu: 'Меню'
   mobile_rotate_title: 'Поверніть, щоб грати'
   mobile_rotate: 'Поверніть пристрій, щоб грати в альбомному режимі.'
   character: 'Персонаж'
@@ -3461,9 +3115,6 @@ tournament_page:
   reason_finished: Немає нагород для отримання
   reason_cancelled: Турнір скасовано
   reason_cannot_watch: Завершіть свій бій, перш ніж дивитися інший
-  custody_kiosk: Кіоск
-  custody_fight: У бою
-  custody_trade: В обміні
   latest_start_notice: 'Будь-хто може розпочати турнір із цього часу.'
   champion: Перемагає {{team}}
   prize_pool: Призовий фонд
@@ -3492,7 +3143,6 @@ tournament_page:
   open_window: Відкрити турнір
   older_claims: Нагороди очікують у {{count}} минулих турнірах
   result_line: '{{team}} проходить далі'
-  live_count: 'Триває: {{count}}'
   prize_split: Розподіл призів
   invalid_percentage: Введіть відсотки з щонайбільше двома десятковими знаками.
   allocation_excess: 'Зайвий розподіл: {{amount}}%'
@@ -3524,314 +3174,11 @@ tournament_page:
   deployment_metadata: Метадані розгортання
   display_notice: Метадані відображення налаштовуються один раз на розгортання, а не для кожного турніру.
   submitted_notice: Дію надіслано. Перевірте поточний стан перед повторним надсиланням.
-  custody_undefined: Місцеперебування невідоме
   wagered: Зі ставкою
   complete_notice: У турнірі беруть участь лише повні команди. Решта виключаються на старті.
   find_review: Знайти команду для {{character}} і зареєструвати цього персонажа?
   joined_count: '{{count}}/{{total}} увійшли'
   versus: проти {{team}}
-
-landing_page:
-  sound_on: Увімкнути музику
-  sound_off: Вимкнути музику
-  new_tab: ' (відкривається в новій вкладці)'
-  sign_alt: AresRPG
-  nav_label: Ресурси
-  nav:
-    docs: Документація
-    journal: Журнал
-    discord: Discord
-  kares:
-    trigger: $KARES
-    trigger_detail: Токеноміка
-  account:
-    login: Увійти
-    logging_in: Вхід…
-    signed_in: Ви увійшли як {{address}}
-    failed: Вхід не завершено. Спробуйте ще раз.
-    logout: Вийти
-    dev_only: 'Лише для розробки. Не рекомендовано для гри.'
-  hero:
-    eyebrow:
-      - Тактичний MMORPG-протокол
-      - Ончейн на Sui
-    title:
-      - 'Один світ, ончейн.'
-      - 'Грайте по-своєму.'
-      - 'Знайдене лишається вашим.'
-    lede: AresRPG — тактичний MMORPG-протокол на Sui. Персонажі, здобич і ринок живуть ончейн, і грати в
-      них можна через будь-який інтерфейс. Проходьте підземелля з групою, виготовляйте предмети й
-      торгуйте з іншими гравцями або передайте керування агентові.
-    play: 'Грати в 3D'
-    play_bots: 'Грати з ботами'
-    ways:
-      - Один світ
-      - Безліч способів грати
-  chooser:
-    section: Інтерфейси
-    title: Оберіть, як грати.
-    intro: AresRPG — одна ончейн-гра без єдиного входу. Ті самі персонажі, та сама здобич, той самий
-      ринок. Ось п’ять інтерфейсів для початку, а наступний може створити будь-хто.
-    interface: Інтерфейс
-    specs:
-      runs_in: Працює в
-      role: Ваша роль
-      good_for: Підходить для
-      status: Стан
-    play:
-      manual: Вручну
-      automated: Автоматично
-    items:
-      world:
-        name: Воксельний світ
-        line: Повна 3D-гра у браузері. Вимоглива графіка, кожен хід — ваш.
-        tech: Створено на three.js
-        status: Доступно
-        body: Повна гра у вашому браузері. Подорожуйте планетами, збирайте групу й бийтеся на сітці самі. На
-          телефоні той самий клієнт перемикається на сенсорне керування.
-        runs_in: Браузер із потужним GPU
-        role: Ви робите кожен хід
-        good_for: Дослідження й групові бої
-        cta: Грати
-        preview: Персонаж іде ґрунтовою стежкою крізь воксельний грибний ліс Mosswood, а попереду скелі,
-          водоспади й гобліни.
-      dapp:
-        name: Веб-dapp
-        line: Без 3D. Відправляйте команду в завдання й рейди з будь-якого телефона.
-        tech: Працює на будь-якому пристрої
-        status: Доступно
-        body: Гра без 3D-рушія. Відправляйте персонажів у завдання, рейдуйте підземелля з командою й
-          торгуйте здобиччю — усе на легкій сторінці, що працює на будь-якому телефоні.
-        runs_in: Будь-який браузер і телефон
-        role: Відправте команду, заберіть здобич
-        good_for: Слабкі пристрої, короткі сесії
-        cta: Відкрити dapp
-        preview: 'Дизайн-прев’ю веб-dapp: персонаж у завданні зі смугою здоров’я, рейд у підземелля, що
-          чекає на ключ, і кнопки, щоб відправити в завдання, рейдувати підземелля або відкрити
-          ринок.'
-      agent:
-        name: Ваш агент
-        line: Claude, ChatGPT чи Grok керує, а ви дивитеся.
-        tech: Claude / ChatGPT / Grok
-        status: Робота триває
-        body: Підключіть Claude, ChatGPT або Grok до розміщеного бота AresRPG. Узгодьте мету, а потім
-          дивіться, як він грає вашим персонажем просто в грі.
-        runs_in: ChatGPT, Claude або Grok
-        role: Задайте мету й дивіться
-        good_for: Гра без вашої участі
-        cta: Підключити агента
-        preview: 'Приклад сесії: ви просите агента прибрати гоблінів на стежці, і він викликає інструменти
-          розміщеного бота та звітує вам.'
-      telegram:
-        name: Telegram
-        line: 'Керуйте героями з чату. Оберіть стратегію, схваліть її, стежте за нею.'
-        tech: Чат у Telegram
-        status: Список очікування
-        body: 'Ваш розміщений бот у чаті Telegram. Оберіть перевірену стратегію для героя, прочитайте, що вона робитиме, і схваліть її. Потім стежте за перебігом або зупиніть її в тому самому чаті.'
-        runs_in: Чат у Telegram
-        role: Оберіть стратегію, схваліть
-        good_for: 'Гра без рук із телефона'
-        cta: Записатися до списку очікування
-        preview: 'Приклад чату: оберіть стратегію, перегляньте, що вона робить, схваліть, а потім перевірте
-          її стан або зупиніть.'
-      sdk:
-        name: Власний клієнт
-        line: Створіть клієнт, інструмент чи бота на публічному SDK.
-        tech: Публічний SDK
-        status: Код доступний
-        body: Будуйте на публічному SDK, який використовує сама гра. Ліцензія дозволяє комерційні клієнти,
-          ремейки, фанатські інструменти й ботів, що працюють в офіційному розгортанні. Ваш клієнт
-          або бот підписує власним гаманцем Sui.
-        runs_in: Будь-що, що ви створите
-        role: Ви пишете клієнт
-        good_for: Власні клієнти, інструменти, боти
-        cta: Читати посібник
-        preview: 'Термінал зі змістом публічного посібника для агентів: складові SDK, дисципліна стану й
-          транзакцій, репозиторій коду та піни розгортання.'
-    waitlist:
-      joining: Запис до списку очікування…
-      joined: Ви у списку очікування
-      failed: Не вдалося записатися до списку очікування. Спробуйте ще раз.
-    agent_guide: Читати інструкцію
-    source: Переглянути код
-    previews:
-      keys_then: потім
-      dapp:
-        title: Веб-dapp
-        label: Дизайн-прев’ю
-        character: Senshi
-        questing: У завданні
-        dungeon: Ivory Rampart
-        needs_key: Потрібен ключ
-        raid: Рейд у підземелля для команди
-        actions:
-          - Відправити в завдання
-          - Рейд у підземелля
-          - Ринок
-      agent:
-        title: Розміщений бот / MCP
-        label: Приклад сесії
-        you: ви
-        agent: агент
-        call: виклик
-        lines:
-          - Прибери гоблінів на стежці.
-          - Уже роблю. Дивіться звідси.
-          - Попереду на стежці гобліни. Викликаю їх на бій.
-          - Бій почався. Обираю клітинку на сітці.
-      telegram:
-        choose: Оберіть стратегію
-        patrol: Патруль міста · 1 моб
-        gather: Збір і ремесло
-        review: Перегляньте стратегію
-        review_detail: Б’ється з групами з одного моба в цьому місті, доки ви не зупините.
-        approve: Схвалити
-        menu: Меню
-        running: Стратегія працює
-        status: Стан
-        stop: Зупинити стратегію
-      sdk:
-        label: Зміст посібника
-        build: Створіть бота
-        build_lines:
-          - 'Складові SDK: композиція дій, офлайн-планування й симуляція бою.'
-          - 'Дисципліна стану й транзакцій: актуальність, квитанції та відновлення.'
-        source: Код і розгортання
-        source_lines:
-          - 'Репозиторій коду: код SDK, ліцензія та відповідний реліз.'
-          - 'Піни розгортання: звіряйте з цільовим розгортанням.'
-  earn:
-    section: Економіка
-    title: Заробляйте SUI. Трьома способами.
-    intro: Вам платять інші гравці. Ви продаєте їм, виготовляєте для них або перемагаєте їх.
-    paths:
-      - tag: Ринок
-        title: Рейдуйте підземелля.
-        accent: Продавайте здобич.
-        body: Пройдіть підземелля з командою й виставте трофеї на продаж. Покупець платить вам у SUI.
-      - tag: Професії
-        title: Збирайте й виготовляйте.
-        accent: Продавайте спорядження.
-        body: Прокачайте професію, виготовляйте те, що потрібно бійцям, і продавайте це або сировину.
-        link: Переглянути всі предмети
-      - tag: Турніри
-        title: Вигравайте бої.
-        accent: Забирайте приз.
-        body: Коли йде турнір, ваше фінальне місце визначає вашу частку призу.
-  control:
-    section: Керування
-    title: Автоматизуйте або підписуйте кожен хід.
-    intro: Два способи керувати. Обидва працюють в одній ончейн-грі, і можна мати по персонажу в кожному
-      режимі.
-    you: Ви
-    holds: тримає персонажа
-    used_by: Використовує
-    automated:
-      tag: Автоматично
-      title: Розміщений агент грає за вас.
-      body: Передайте персонажа на спільний акаунт і задайте мету. Наш розміщений агент грає цілодобово, а
-        ви дивитеся або займаєтеся іншим.
-      figure: 'Схема: ви й розміщений агент тримаєте по одному з двох ключів від спільного
-        multisig-акаунта, на якому зберігається персонаж.'
-      you_detail: Вхід через Google
-      vault: 1-of-2 multisig
-      agent: Розміщений агент
-      agent_detail: робить ходи
-      points:
-        - Агент ніколи не отримує ключ вашого гаманця.
-        - Перед стартом ви схвалюєте конкретного бота й те, що йому дозволено.
-        - Повертайте персонажа зі свого інвентарю будь-коли, навіть коли агент офлайн.
-    self:
-      tag: Некастодіально
-      title: Ви самі підписуєте кожен хід.
-      body: Увійдіть через Google. Ваші персонажі та предмети залишаються на вашому акаунті, і нічого не
-        відбувається без вашого підпису.
-      figure: 'Схема: ви підписуєте акаунтом Google, а персонаж зберігається на вашому власному акаунті.'
-      you_detail: Вхід через Google
-      vault: Ваш акаунт
-      points:
-        - Ніхто інший не може переміщати ваших персонажів чи витрачати ваші SUI.
-        - Кожен бій, виріб і продаж — це транзакція, яку підписуєте ви.
-        - Згодом передайте персонажа розміщеному агентові й заберіть назад, коли захочете.
-  end:
-    title: Почніть свою пригоду
-    body: Увійдіть, створіть персонажа та вступіть у перший покроковий бій.
-    play: Грати
-    discord: Приєднатися до Discord
-    pick: 'Ваш вибір:'
-  footer:
-    wordmark: AresRPG
-    tagline: Тактична воксельна MMORPG на Sui, що охоплює кілька планет.
-    game: Гра
-    community: Спільнота
-    play: Грати
-    encyclopedia: Енциклопедія предметів
-    journal: Журнал
-    discord: Discord
-    telegram: Telegram
-    x: X
-    allocation: Перевірте місце в білому списку
-    colophon: один світ, безліч інтерфейсів
-
-telegram_companion:
-  welcome: "⚔️ Ласкаво просимо до AresRPG\n\nВаші герої живуть у блокчейні. У цьому чаті ви стежите за ними, обираєте стратегію, а вони б'ються та збирають ресурси за вас.\n\nДля початку увійдіть через Google. Сторінка відкриється в браузері, а потім поверне вас сюди."
-  disconnect: '🔓 Від’єднати Google'
-  connect_google: '🔑 Увійти через Google'
-  waiting: 'Ваш ігровий акаунт ще не має доступу в Telegram. Запишіться до списку очікування, щоб попросити його.'
-  on_waitlist: '✅ Ви в списку очікування. Коли ваш ігровий акаунт допустять, «Перевірити доступ» відкриє ваших героїв.'
-  join_waitlist: 'Записатися до списку очікування'
-  check_access: 'Перевірити доступ'
-  inventory: '🎒 Інвентар'
-  inventory_empty: 'Ваша сумка порожня'
-  observation_unknown: 'Ще недоступно'
-  no_strategy: 'Жоден персонаж зараз не виконує стратегію.'
-  strategy_active: 'Стратегія активна'
-  strategy_waiting: 'Стратегія очікує'
-  replace_strategy: 'Це замінить стратегію, яку виконує цей персонаж. Надіслані дії ще можуть завершитися.'
-  fight: '⚔️ У бою'
-  ambush: '🛡 Захисник очікує'
-  idle: 'Готовий до стратегії'
-  external_strategy: 'Стратегія з іншого застосунку'
-  menu: '🧙 Виберіть персонажа'
-  loading: '⏳ Завантаження персонажів'
-  empty: '🧙 Немає доступного персонажа агента'
-  play: '▶️ Грати'
-  back: '☰ Меню'
-  status: '📍 Стан'
-  approve: '✅ Дозволити'
-  unlinked: '🔓 Прив’язку видалено'
-  browser_expired: 'Це посилання більше не дійсне. Поверніться в Telegram і надішліть повідомлення, щоб отримати нове.'
-  check_status: '📍 Перевірити статус'
-  log_in_again: '🔑 Увійти знову'
-  balance: '💰 Баланс агента'
-  pause: '⏸ Призупинити агента'
-  resume: '▶️ Відновити агента'
-  wallet_scope: 'Впливає на весь гаманець агента й інші підключення · Надіслані транзакції можуть завершитися'
-  paused: '⏸ Агента призупинено'
-  resumed: '▶️ Агента відновлено'
-  choose_strategy: 'Виберіть стратегію'
-  failure_changed: 'Це вже оновилося. Ось поточний стан.'
-  failure_reconnect: 'Термін входу минув. Увійдіть знову:'
-  failure_unlink_first: 'Цей чат або акаунт Google уже підключено. Відключіть Google і спробуйте знову.'
-  failure_temporary: 'Цього разу не вдалося. Спробуйте ще раз трохи згодом.'
-  failure_busy: 'Цей персонаж ще завершує дію, або агента призупинено. Якщо ви його призупинили, відновіть його, а потім перевірте статус.'
-  failure_run_limit: 'Ваш агент уже веде стільки персонажів, скільки може. Зупиніть одного, а потім запустіть цього.'
-  review: 'Перевірте стратегію'
-  effects: 'Б’ється з групами з одного монстра в цьому місті до зупинки. Кожна дія витрачає газ SUI без загального ліміту. Перемогу не гарантовано; перезапуск може повторити крок. Зупинка не скасовує надісланих дій.'
-  stop: 'Зупинити стратегію'
-  stop_scope: 'Виберіть персонажа, якого треба зупинити. Інші продовжать грати; надіслані транзакції ще можуть завершитися.'
-  stop_all: 'Зупинити всіх'
-  stopped: 'Стратегію зупинено'
-  completed: 'Стратегію завершено'
-  attention: 'Стратегія потребує уваги. Перевірте персонажа в грі, а потім виберіть статус або зупинку.'
-  unknown: 'Результат ще не підтверджено. Спершу перевірте статус.'
-  city_review: 'Місто: {city}'
-  city_required: 'Увійдіть у місто в грі, потім відкрийте меню і перевірте вибір знову.'
-  world_review: 'Світ: {world}'
-  gather_effects: 'Створює корисні рецепти з доступних інгредієнтів для розвитку професій; інакше збирає ресурси доступними інструментами й досліджує цей світ. Б’ється із захисниками простими прийомами. Працює до зупинки. Газ SUI та інгредієнти без загального ліміту; можливі невдачі. Перезапуск може повторити крок. Зупинка не скасовує надісланих дій.'
-  strategies:
-    fight_nearby: '⚔️ Патруль міста · 1 монстр'
-    gather_craft: '🌿 Збирання й ремесло'
 
 docs_page:
   title: 'Документація'
@@ -3843,7 +3190,6 @@ docs_page:
   next: 'Далі'
   search: 'Пошук посібників, предметів і мобів'
   search_empty: 'Жодна сторінка не відповідає цьому пошуку.'
-  new_tab: ' (відкривається в новій вкладці)'
   data_note: 'Числа на цих сторінках беруться з тих самих файлів контенту, що й у грі.'
   kinds:
     guide: 'Посібник'
@@ -3887,9 +3233,43 @@ docs_page:
       - 'Торгуйте з іншими гравцями на ринку за SUI.'
   ways:
     lede: 'У протоколу немає єдиного входу. Кожен інтерфейс нижче грає тими самими персонажами, з тією самою здобиччю й тим самим ринком. Вони відрізняються тим, хто робить ходи і що потрібно для запуску.'
-    note: 'Можна користуватися кількома інтерфейсами, з одним обмеженням: одне активне з’єднання на акаунт. Відкриття 3D-гри замінює сесію вебдапу того самого акаунта.'
+    note: 'Можна користуватися кількома інтерфейсами одночасно. Кожен акаунт грає в одній ігровій сесії водночас; сторінки сайту можуть лишатися відкритими поруч із нею.'
+    specs:
+      runs_in: Працює в
+      role: Ваша роль
+      good_for: Підходить для
+      status: Стан
+    play:
+      manual: Вручну
+      automated: Автоматично
+    items:
+      world:
+        name: Воксельний світ
+        status: Доступно
+        body: Повна гра у вашому браузері. Подорожуйте планетами, збирайте групу й бийтеся на сітці самі. На
+          телефоні той самий клієнт перемикається на сенсорне керування.
+        runs_in: Браузер із потужним GPU
+        role: Ви робите кожен хід
+        good_for: Дослідження й групові бої
+      agent:
+        name: Ваш агент
+        status: Робота триває
+        body: Підключіть Claude, ChatGPT або Grok до розміщеного бота AresRPG. Узгодьте мету, а потім
+          дивіться, як він грає вашим персонажем просто в грі.
+        runs_in: ChatGPT, Claude або Grok
+        role: Задайте мету й дивіться
+        good_for: Гра без вашої участі
+      sdk:
+        name: Власний клієнт
+        status: Код доступний
+        body: Будуйте на публічному SDK, який використовує сама гра. Ліцензія дозволяє комерційні клієнти,
+          ремейки, фанатські інструменти й ботів, що працюють в офіційному розгортанні. Ваш клієнт
+          або бот підписує власним гаманцем Sui.
+        runs_in: Будь-що, що ви створите
+        role: Ви пишете клієнт
+        good_for: Власні клієнти, інструменти, боти
   bots:
-    lede: 'Розміщений бот грає вашими героями за вас на серверах AresRPG. Вебдап, Telegram і підключений асистент керують тим самим ботом.'
+    lede: 'Розміщений бот грає вашими героями за вас на серверах AresRPG.'
     wallet_title: 'Гаманець бота'
     wallet:
       - 'Бот грає з власного гаманця, окремого від вашого ігрового. Це мультипідпис 1 з 2: за нього може підписувати сервіс, і ваш акаунт Google також.'
@@ -3904,8 +3284,6 @@ docs_page:
       - 'Бот чекає, коли не має схвалених дій або коли в його гаманці немає SUI на комісії.'
     control_title: 'Хто може ним керувати'
     control:
-      - 'Вебдап: запускати й зупиняти заняття, підвищувати характеристики й закляття, торгувати на ринку від імені бота.'
-      - 'Telegram: обрати перевірену стратегію та схвалити її.'
       - 'Асистент (ChatGPT, Claude або Grok): домовтеся про мету в чаті. Він викликає інструменти бота в межах того, що ви схвалили.'
   first_hour:
     lede: 'Мета першої години — персонаж, кілька виграних боїв і інструмент, який ви виготовили самі. Шанси випадіння й рецепт нижче — справжні.'
@@ -3969,130 +3347,46 @@ docs_page:
     license_note: 'Ця сторінка — короткий виклад. Юридичну силу має текст ліцензії. Зберігайте ліцензію та повідомлення про авторські права під час повторного поширення.'
     license_link: 'Читати ліцензію'
 
-dapp_page:
-  brand: 'Експедиції'
-  nav_label: 'Розділи'
-  nav_market: 'Ринок'
-  bot_balance: 'Бот: {amount} SUI'
-  bot_balance_hint: 'SUI, які тримає ваш розміщений бот. Ними він оплачує мережеві комісії ваших героїв і ваші покупки на ринку.'
-  bot_balance_low: 'У вашого бота мало SUI. Поповніть його гаманець, інакше герої зупиняться.'
-  asking_bot: 'Будимо вашого бота й дізнаємося, що він робить…'
-  connect_proving: 'Підтверджуємо, що це ваш акаунт…'
-  connect_creating: 'Створюємо гаманець вашого бота…'
-  connect_checking: 'Перевіряємо гаманець вашого бота…'
-  connect_naming: "Задаємо ім'я вашого бота…"
-  connect_approving: 'Підтверджуємо підключення…'
-  connect_returning: 'Завершуємо підключення…'
-  loading: 'Завантаження…'
-  signing_in: 'Виконується вхід…'
-  signin_title: 'Відправте героїв в експедицію'
-  signin_body: 'Увійдіть через Google, щоб бачити героїв і дозволити розміщеному боту грати за них. Той самий акаунт, герої та предмети, що й у 3D-світі.'
-  signin_failed: 'Вхід не завершився. Спробуйте ще раз.'
-  google_title: 'Потрібен вхід через Google'
-  google_body: 'Розміщені герої належать вашому акаунту Google. Вийдіть і продовжте через Google, щоб користуватися цією сторінкою.'
-  unavailable_title: 'Автоматичний сервіс не відповідає'
-  unavailable_body: 'Поки що скористайтеся 3D-світом.'
-  unavailable_action: 'Відкрити 3D-світ'
-  connect_title: 'Ваш бот не підключено'
-  connect_body: 'Підключіть його, щоб відправити героїв.'
-  connect_action: 'Підключити'
-  connect_busy: 'Підключення…'
-  reading_heroes: 'Читаємо ваших героїв…'
-  syncing: 'Ваш бот наздоганяє стан світу. Сторінка оновиться сама.'
-  observe_failed: 'Не вдалося зв’язатися з ботом. Перезавантажте сторінку, щоб спробувати ще раз.'
-  heroes_failed_title: 'Не вдалося прочитати ваших героїв'
-  heroes_failed: 'Ігровий сервер не надіслав ваших героїв. Перезавантажте сторінку, щоб спробувати знову.'
+agent_page:
+  log_title: 'Журнал агента'
+  manage_note: 'Щоб надіслати боту героїв чи предмети, забрати їх або відключити бота, відкрийте портфель.'
+  stage_wallet_title: 'Власний гаманець'
+  stage_wallet: 'Ваш агент грає та підписує власним гаманцем бота.'
+  stage_log_title: 'Один журнал'
+  stage_log: 'На цій сторінці видно його стан і що він робить.'
+  stage_charge_title: 'Керуєте ви'
+  stage_charge: 'Надсилайте йому героїв і забирайте їх у портфелі.'
   heroes_title: 'Ваші герої'
   hero_level: 'Рівень {level}'
-  hero_xp: 'Досвід'
-  status_free: 'Готовий'
-  status_activity: 'Зайнятий справою'
-  status_fight: 'У бою'
-  status_dungeon: 'У підземеллі'
+  heroes_failed: 'Ігровий сервер не надіслав ваших героїв. Перезавантажте сторінку, щоб спробувати знову.'
+  empty_title: 'Тут поки нічого немає'
+  empty_body: 'Тут зʼявиться все, що робить ваш ШІ-асистент.'
   activity_other: 'Заняття'
-  activity_train: 'Тренування'
-  activity_gather: 'Збір'
-  activity_raid: 'Рейд'
-  blocker_command_pending: 'Чекаємо на відповідь бота…'
-  blocker_no_free_hero: 'Зараз для цього немає вільного героя.'
-  blocker_hero_busy: '{names}: зараз у бою або в підземеллі.'
-  blocker_hero_unknown: '{names}: бот ще зчитує цього героя. Спробуйте трохи згодом.'
-  blocker_world_required: '{names}: в іншому світі.'
-  blocker_key_missing: '{names}: немає ключа від цього підземелля.'
-  key_find: 'Знайти {item} на ринку'
-  key_unsold: 'Зараз ніхто не продає {item}.'
-  raid_short_title: 'Ключів не вистачає на всю команду'
-  raid_short_body: 'Ключів вистачає лише на {count}. У підземелля увійдуть лише: {names}. Щоб відправити більше героїв, знайдіть або купіть ключі, яких бракує.'
-  raid_short_action: 'Почати рейд: {count}'
-  cancel: 'Скасувати'
-  close: 'Закрити'
-  command_uncertain: 'Не вдалося підтвердити відповідь бота. Сторінка перевірить сама; нічого не буде надіслано двічі.'
-  command_refused: '{names}: {reason}'
   position_running: 'Триває'
+  position_finished: 'Завершено'
+  position_xp: 'Отримано досвіду'
+  position_dungeon: '{dungeon} · кімната {room}'
   run_notice_funding: 'У вашого бота закінчилися SUI. Поповніть його гаманець, і він продовжить сам.'
   run_notice_requirement: 'Цьому герою бракує інструмента, рівня або матеріалів для цього заняття. Дайте йому потрібне або оберіть інше заняття.'
   run_notice_plan: 'Вашому боту потрібен новий план для цього заняття. Зупиніть і запустіть його знову або попросіть ваш ШІ-клієнт змінити план.'
-  position_stopping: 'Зупинка…'
-  position_finished: 'Завершено'
-  position_ended_issue: 'Бот зупинив це заняття. Перевірте його баланс і героя, потім почніть знову.'
-  position_hp: "Здоров'я"
-  position_xp: 'Отримано досвіду'
-  position_levels: 'Рівень +{count}'
-  position_job_xp: 'Досвід професій'
-  position_fights: 'Бої'
-  position_dungeon: '{dungeon} · кімната {room}'
-  position_team: 'У бою разом із: {names}'
-  position_stop: 'Зупинити'
-  position_dismiss: 'Прибрати'
-  bag_title: 'Сумка'
-  bag_empty: 'Сумка порожня.'
-  bag_loading: 'Читаємо сумку вашого бота…'
-  bag_feed_title: 'Нещодавні предмети'
-  bag_feed_empty: 'Тут зʼявиться те, що принесуть ваші герої.'
-  detail_locked: 'Спорядження, характеристики, закляття та ремесло доступні, поки герой не в бою і бот не має іншого відкритого запиту.'
-  detail_stats: 'Характеристики'
+  run_notice_place: 'Звідти, де він стоїть, пішки до цього місця не дійти. Зупиніть його й виберіть інше місце.'
+  run_ended_objective_reached: 'Задану вами мету досягнуто.'
+  run_ended_fee_cap_reached: 'Досягнуто заданого вами ліміту комісій.'
+  run_ended_run_cap_reached: 'Замовлені забіги завершено.'
+  run_ended_completed: 'План виконано.'
   error_unknown: 'Щось пішло не так. Спробуйте ще раз.'
-  error_expired: 'Підключення до бота закінчилося. Підключіться знову.'
-  error_google_required: 'Продовжте через Google, щоб підключити розміщеного бота.'
-  error_consent_failed: 'Підключення не схвалено. Спробуйте ще раз.'
-  error_owner_mismatch: 'Цей бот належить іншому акаунту. Увійдіть із правильним акаунтом Google.'
-  error_storage_unavailable: 'Браузер блокує сховище, потрібне для підключення. Дозвольте дані сайту й спробуйте ще раз.'
   error_bot_busy_or_paused: 'Бот на паузі або ще завершує останню дію цього героя. Спробуйте трохи згодом.'
   error_run_limit_reached: 'Бот уже грає стількома героями, скількома може. Зупиніть одного й спробуйте ще раз.'
   error_needs_resync: 'Бот ще наздоганяв світ. Спробуйте за кілька секунд.'
-  error_start_unconfirmed: 'Нічого не запущено: бот не прийняв заняття. Можна почати його знову.'
   error_unavailable: 'Бот не відповідає. Спробуйте трохи згодом.'
   error_invalid_token: 'Підключення до бота закінчилося. Підключіться знову.'
   error_insufficient_scope: 'Це підключення не дає такого права. Підключіться знову, щоб надати його.'
   error_behavior_run_not_found: 'Для цього героя вже нічого не запущено.'
   error_insufficient_character_points: 'Недостатньо очок.'
   error_spell_rank_capped: 'Це закляття вже на максимальному рівні.'
-  error_tool_failed: 'Бот не зміг це зробити. Спробуйте пізніше.'
-  error_insufficient_funds: 'Боту бракує SUI на це. Поповніть бота SUI і спробуйте знову.'
   error_listing_changed_or_ineligible: 'Ця пропозиція змінилася або зникла. Перевірте поточну ціну і спробуйте знову.'
   error_character_not_available: 'Зараз для цього немає вільного героя: триває бій. Спробуйте трохи згодом.'
   error_sale_source_changed_or_unavailable: 'Цей предмет змінився, або жоден його стос не досить великий. Виберіть його знову.'
-  disconnect_action: 'Відключити цю сторінку'
-  disconnect_failed: 'Бот не підтвердив. Ця сторінка досі має доступ. Спробуйте ще раз.'
-  direct_queued: 'Бот отримав ваш запит. Він підпише його після поточної дії.'
-  direct_done_raise_stats: 'Характеристики оновлено.'
-  direct_done_raise_spell: 'Рівень закляття підвищено.'
-  direct_done_equip_item: 'Спорядження змінено.'
-  direct_done_use_consumable: '{name}: використано {item}.'
-  direct_done_dungeon_leave: '{name}: підземелля покинуто.'
-  direct_done_market_buy: 'Куплено: {amount} × {item}. Лежить у сумці ваших героїв.'
-  direct_done_market_sell: 'Виставлено на продаж: {amount} × {item}.'
-  direct_done_market_delist: 'Лот знято: {amount} × {item} знову у вашій сумці.'
-  direct_done_create_character: '{name}: герой готовий.'
-  level_up_toast: '{name}: досягнуто рівня {level}.'
-  run_wait_travel: 'Іде туди пішки. Час у дорозі визначає гра.'
-  run_wait_other: 'Чекає слушного моменту для дії.'
-  run_notice_place: 'Звідти, де він стоїть, пішки до цього місця не дійти. Зупиніть його й виберіть інше місце.'
-  blocker_work_unknown: '{names}: у цьому світі таку роботу виконати не можна.'
-  blocker_job_level_required: '{names}: рівень професії занизький.'
-  blocker_tool_required: '{names}: немає інструмента для цієї професії.'
-  error_direct_failed: 'Бот не зміг це зробити. Перевірте його баланс і героя, перш ніж пробувати знову.'
-  error_direct_unconfirmed: 'Запит не вдалося підтвердити, і сторінка не бачить змін. Перевірте, перш ніж пробувати знову.'
   error_invalid_character_name: 'Імʼя: від 4 до 19 латинських літер, цифр або символів, без пробілів.'
   error_character_name_taken: 'Це імʼя вже зайняте. Виберіть інше.'
   error_funding_required: 'У бота бракує SUI. Поповніть бота і спробуйте знову.'
@@ -4113,236 +3407,64 @@ dapp_page:
   error_insufficient_consumables: 'Цього предмета залишилося недостатньо.'
   error_unsupported_consumable: 'Бот не може використати цей предмет.'
   error_idempotency_conflict: 'Цей запит уже надіслано. Дочекайтеся відповіді.'
-  run_needs_help: 'Потрібна ваша допомога'
-  run_waiting: 'Очікування'
-  run_objective: 'Мета: {objective}'
-  run_results: 'Перемог {won} · поразок {lost}'
-  run_dungeon_runs: 'Пройдено підземель'
-  run_drops_title: 'Остання здобич'
-  run_drops_empty: 'Здобич зʼявляється тут після кожного бою.'
-  run_send_again: 'Відправити знову'
-  fees_run: 'Сплачено комісій: {amount} SUI'
-  item_sell: 'Продати'
-  sell_loot: 'Продати здобич'
-  drops_place_title: 'Уся здобич у {place}'
-  drops_dungeon_title: 'Уся здобич у {dungeon}'
-  drops_rate: '~{rate}% за вбивство'
-  drops_room: 'Кімната {room}'
-  drops_boss_room: 'Кімната боса'
-  next_title: 'Найкращий наступний крок'
-  next_funds_title: 'У вашого бота закінчилися SUI'
-  next_funds_body: 'Ваші герої зупинилися, бо бот не може оплатити мережеві комісії. Додайте SUI в гаманець бота через меню гаманця, і вони продовжать самі.'
-  next_raid_title: '{dungeon} чекає'
-  next_raid_body: 'Ваших ключів від нього: {count}. Є вільний герой.'
-  next_raid_action: 'Спланувати рейд'
-  next_quest_title: '{name}: герой вільний'
-  next_quest_body: 'Відправте героя битися за здобич і ключі або працювати.'
-  next_quest_action: 'Відправити на завдання'
-  next_out_title: 'Усі герої зайняті'
-  next_out_body: 'Стежте за ними на вкладці «Завдання».'
-  next_out_action: 'До завдань'
-  hero_send_quest: 'Відправити на завдання'
-  hero_raid: 'Рейд у підземелля'
-  hero_watch_raid: 'Дивитися рейд'
-  add_hero_title: 'Новий герой'
-  add_hero_body: 'Класів: {count} · {price} SUI, платить ваш бот'
-  add_hero_action: 'Створити героя'
-  add_hero_funds: 'Боту потрібно {price} SUI на героя і {fee} SUI на мережеві комісії. Поповніть бота SUI в меню гаманця.'
-  create_sent: 'Ваш бот створює героя {name}. Герой зʼявиться тут, щойно гра це підтвердить.'
-  welcome_title: 'Ласкаво просимо до Експедиції'
-  welcome_body: 'Ваші герої грають у справжню гру замість вас. Три кроки до першого рейду.'
-  step_create_title: 'Створіть першого героя'
-  step_create_body: 'Оберіть клас. Герой залишається вашим назавжди.'
-  step_quest_title: 'Відправте героя на завдання по ключ'
-  step_quest_body: 'З монстрів міста {city} випадає {key}.'
-  step_raid_title: 'Рейд: {dungeon}'
-  step_raid_body: 'Кожен герой бере один ключ. У кімнаті боса — найрідкісніша здобич.'
-  quest_title: 'Завдання'
-  quest_intro: 'Кожен бій дає шанс на спорядження й ключі. Працівники перетворюють здобич на спорядження.'
-  quest_fight: 'Битися за здобич'
-  quest_fight_body: 'Спорядження, ключі й досвід за кожен бій'
-  quest_work: 'Працювати'
-  quest_work_body: 'Збирати ресурси або виготовляти спорядження й зілля'
-  quest_who: 'Хто'
-  quest_where: 'Куди'
-  quest_here: 'Там, де стоїть кожен герой'
-  quest_pick_hero: 'Оберіть героя'
-  quest_send: 'Відправити: {names}'
-  quest_until_stop: 'Триває, доки ви не зупините.'
-  quest_empty: 'Героїв поки немає. Створіть героя на вкладці «Головна», потім відправте на завдання.'
-  quest_empty_action: 'На головну'
-  quest_walks: '{names}: спершу йдуть туди пішки. Кожна зона на шляху коштує мережевої комісії.'
-  quest_run_fight: 'Бої: {place}'
-  quest_run_work_job: 'Робота: {job}'
-  quest_run_gather: 'Збір: {item}'
-  quest_run_craft: 'Виготовлення: {item}'
-  world_locked: '{world} відкриється на {level} рівні героя.'
-  place_levels: 'Монстри {min}–{max} рівня'
-  place_key_drop: '{key}: ~{rate}% за кожне вбивство ({mob})'
-  place_rarest: 'Найрідкісніша здобич: {item}, ~{rate}% ({mob})'
-  place_level_warning: 'Монстри тут {min}–{max} рівня. {name}: рівень {level}.'
-  place_all_drops: 'Усе, що тут випадає'
-  difficulty_label: 'Складність'
-  difficulty_none: 'Будь-яка'
-  difficulty_easy: 'Легка'
-  difficulty_medium: 'Середня'
-  difficulty_hard: 'Складна'
-  difficulty_none_hint: 'Будь-яка група в будь-якій частині місця.'
-  difficulty_hint: 'Групи від {min} до {max} монстрів. Розмір групи залежить від відстані до центру світу.'
-  difficulty_hint_one: 'Групи по {size} монстрів. Розмір групи залежить від відстані до центру світу.'
-  difficulty_unfit: 'Місто {city} розташоване на іншій відстані. Оберіть інше місце або іншу складність.'
-  travel_needed: '{name}: не в місті {city}.'
-  travel_potion_held: 'У вас {count} × {item}. Зілля одразу переносить героя туди.'
-  travel_potion_use: 'Переміститися зіллям'
-  travel_potion_none: '{item} одразу переносить героя туди. Їх варять алхіміки.'
-  fee_cap: 'Ліміт комісій'
-  fee_cap_none: 'Без ліміту'
-  fee_cap_hint: 'Кожен герой зупиниться, коли його завдання витратить {amount} SUI на мережеві комісії. Спершу він завершить бій.'
-  fee_cap_invalid: 'Введіть суму SUI, більшу за нуль, або залиште поле порожнім, щоб не ставити ліміт.'
-  work_auto: 'Хай обере бот'
-  work_auto_body: 'Бот збирає й виготовляє те, що найбільше розвиває професії цього героя, його інструментами.'
-  work_gather: 'Збирати один ресурс'
-  work_craft: 'Виготовляти за одним рецептом'
-  work_worker: 'Працівник'
-  work_job: 'Професія'
-  work_job_any: 'Будь-яка професія'
-  work_job_level: '{job}: рівень {level}'
-  work_job_new: '{job}: новачок'
-  work_gather_hint: '{name}: видобуває {min}–{max} кожні {seconds} с і отримує {xp} досвіду професії за кожну одиницю.'
-  work_craft_hint: '{name}: успіх у {percent}% спроб, {xp} досвіду професії за спробу.'
-  work_rare_find: 'Видобуток може дати й {item}. Це місце може захищати {mob}.'
-  work_objective: 'Мета'
-  work_goal_level: 'Досягти рівня'
-  work_goal_gather: 'Зібрати кількість'
-  work_goal_craft: 'Виготовити кількість'
-  work_goal_until: 'Доки я не зупиню'
-  work_how_many: 'Скільки'
-  work_target_level: 'Цільовий рівень професії'
-  work_amount_invalid: 'Введіть ціле число, більше за нуль.'
-  work_level_invalid: 'Введіть рівень від {min} до {max}.'
-  work_tries: 'Спроб: близько {tries}, на {amount} × {item}'
-  work_harvests: 'Зборів: близько {tries}, на {amount} × {item}'
-  work_needs: 'Що потрібно'
-  work_tool_worn: '{item}: споряджено'
-  work_tool_bag: '{item} у вашій сумці. {name} спорядить його, коли почнеться робота.'
-  work_tool_missing: 'Потрібно: {tool}. Їх виготовляють майстри.'
-  work_material_missing: '{item}: потрібно {need}, у сумці {have}, бракує {missing}'
-  work_material_ready: '{item}: потрібно {need}, у сумці {have}'
-  work_never_buys: 'Купіть те, чого бракує, на ринку або здобудьте самі. Герой ніколи нічого не купує.'
-  work_locked: 'Доступно з {level} рівня професії {job}'
-  work_pick_resource: 'Оберіть ресурс.'
-  work_pick_recipe: 'Оберіть рецепт.'
-  work_start: 'Почати'
-  out_now_title: 'Зараз у справі'
-  raid_title: 'Полювання: {boss}'
-  raid_intro: 'Кожна кімната — бій зі своєю здобиччю. Здобич із пройдених кімнат залишається у вас.'
-  raid_dungeon: 'Підземелля'
-  raid_dungeon_facts: 'Кімнат: {rooms} · монстрів: {monsters} · бос {boss}'
-  raid_keys_held: 'Ключів у наявності: {count}. Кожен герой бере один.'
-  raid_team: 'Команда'
-  raid_team_count: '{count} з {size}'
-  raid_best_team: 'Найкраща команда'
-  raid_seat_add: 'Додати'
-  raid_seat_title: 'Місце {seat}'
-  raid_seat_remove: 'Прибрати'
-  raid_seat_swap: 'Поставити сюди'
-  raid_seat_key: 'Має ключ'
-  raid_seat_no_key: 'Немає ключа'
-  raid_seat_none: 'Усі герої вже в команді.'
-  raid_seat_stop_note: 'Зупинка героя завершує його заняття. Знайдене вже у вашій сумці.'
-  raid_no_seat: 'Додайте хоча б одного вільного героя. Торкніться місця або скористайтеся «Найкраща команда».'
-  raid_levels_title: 'Ваша команда і кімнати'
-  raid_alone: '{name}: іде поодинці.'
-  raid_drops_title: 'Що може випасти за забіг'
-  raid_rooms: 'Кімнати {first}–{last}'
-  raid_stake: 'Ключів витратиться: {count}, по одному на героя'
-  raid_walk: '{name}: щонайменше {time} пішки до входу'
-  raid_repeats: 'Команда повторює рейд, доки кожен герой має ключ. Натисніть «Зупинити», щоб завершити.'
-  raid_enter: 'Увійти · Ключів: {count}'
-  raid_keys_short: 'Ще {item} для цієї команди: {count}'
-  raid_quest_for_keys: 'Завдання по ключі'
-  raid_room: 'Кімната {room} з {rooms}'
-  raid_boss_room: 'Кімната боса · {boss}'
-  raid_walking: 'Ідуть до входу'
-  raid_loot: 'Здобич із пройдених кімнат'
-  raid_loot_empty: 'Тут зʼявиться здобич із кожної пройденої кімнати.'
-  raid_next_drops: 'Може випасти в наступній кімнаті'
-  raid_stop_note: 'Зупинка завершує рейд. Кожен герой залишається в підземеллі, у своїй кімнаті. Щоб покинути забіг, спершу зупиніть героя, потім вийдіть із підземелля.'
-  raid_stop_team: 'Зупинити команду'
-  raid_plan: 'Спланувати новий рейд'
-  raid_back: 'Назад до рейду'
-  raid_inside_title: 'Ще в підземеллі'
-  raid_inside_body: 'Ці герої зупинилися посеред забігу в підземеллі. Почніть рейд знову, щоб продовжити, або вийдіть із підземелля.'
-  raid_leave: 'Вийти з підземелля'
-  raid_leave_body: 'Забіг цього героя завершиться. Ключ не повернеться.'
-  raid_result_won: 'Перемога'
-  raid_result_lost: 'Поразка'
-  raid_result_bag: 'Усе нижче вже у вашій сумці.'
-  raid_keys_left: 'Залишилось ключів: {count}'
-  raid_change_team: 'Змінити команду'
-  raid_again: 'Знову в рейд'
-  raid_empty_title: 'Команди поки немає'
-  raid_empty_body: 'Створіть героя, відправте його на завдання по ключ і повертайтеся.'
-  raid_runs: 'Забіги'
-  raid_runs_all: 'Доки є ключі'
-  raid_runs_count: 'Забігів на героя: {count}'
-  nav_home: 'Головна'
-  heroes_intro: 'Спорядження, характеристики, закляття та професії.'
-  heroes_empty_title: 'Героїв поки немає'
-  heroes_empty_body: 'Створіть героя на вкладці «Головна». Тут зʼявляться його спорядження, характеристики, закляття та професії.'
-  heroes_empty_action: 'На головну'
-  nav_quest: 'Завдання'
-  nav_raid: 'Рейд'
-  nav_heroes: 'Герої'
-  keys_chip: 'Ключів підземель: {count}'
-  empty_title: 'Тут поки нічого немає'
-  empty_body: 'Тут зʼявиться все, що робить ваш ШІ-асистент.'
-  run_ended_objective_reached: 'Задану вами мету досягнуто.'
-  run_ended_fee_cap_reached: 'Досягнуто заданого вами ліміту комісій.'
-  run_ended_run_cap_reached: 'Замовлені забіги завершено.'
-  run_ended_completed: 'План виконано.'
-  direct_done_craft: '{name}: виготовлення {item} завершено (спроб: {amount}). Вдалі предмети в сумці.'
   error_ingredients_required: 'У героя вже немає всіх інгредієнтів. Перевірте рецепт і спробуйте знову.'
   error_crafting_level_required: 'Рівень професії героя занизький для цього рецепта.'
   error_craft_batch_limit: 'Забагато спроб для одного запиту. Вкажіть менше.'
   error_recipe_unavailable: 'Цей рецепт зараз не можна виготовити.'
-  home_title: 'Що робити зараз'
-  fees_wallet_label: 'Мережеві комісії, сплачені ботом'
-  sui_amount: '{amount} SUI'
-  found_more: 'ще +{count}'
-  raid_ledger_keys_used: 'Ключів витратиться'
-  raid_ledger_keys_used_value: '{count}, по одному на героя'
-  raid_ledger_keys_left: 'Ключів залишиться'
-  raid_ledger_travel: 'Шлях'
-  raid_travel_none: 'Біля входу'
-  raid_travel_fee: 'Кожна зона на шляху коштує мережевої комісії.'
-  raid_buy_key: 'Купити на ринку'
-  quest_pick_place: 'Оберіть місце'
-  plan_levels: 'Рівень монстрів'
-  plan_range: '{min}–{max}'
-  plan_group: 'Розмір групи'
-  plan_key: 'Ключ у здобичі'
-  plan_rarest: 'Найрідкісніша здобич'
-  plan_arrive: 'Прибуття'
-  plan_walk: 'Пішки, щонайменше {time}'
-  plan_walk_far: 'Пішки'
-  plan_potion: 'Одразу на місці'
-  about: '~{value}'
-  work_what: 'Що'
-  work_per_harvest: 'За збір'
-  work_harvest_time: 'Один збір'
-  work_xp: 'Досвід професії'
-  work_rare: 'Рідкісна знахідка'
-  work_success: 'Успіх за спробу'
-  work_tries_label: 'Спроб'
-  work_harvests_label: 'Зборів'
-  work_tool: 'Інструмент'
-  work_tool_held: '{item} у вашій сумці'
-  work_tool_none: '{tool}: немає'
-  work_have: '{have} з {need}'
-  hero_forfeit: 'Здатися в бою'
-  direct_done_fight_forfeit: '{name}: бій здано, герой знову вільний.'
   error_fight_unavailable: 'Герой уже не в бою.'
-  game_heroes_title: 'У вашому ігровому акаунті'
-  hero_give_bot: 'Передати боту'
-  hero_take_back: 'Забрати'
+
+portfolio_page:
+  signin_title: 'Увійдіть, щоб побачити своє майно'
+  signin_body: 'Ваші герої, предмети й лоти на ігровому акаунті та в бота.'
+  stage_heroes: 'Кожен герой із його рівнем, силою та спорядженням.'
+  stage_bag: 'Ваші предмети. Виставте будь-який на продаж або надішліть боту.'
+  stage_for_sale: 'Що ви виставили на ринок і що вже продано.'
+  tabs_label: 'Показати'
+  tab_heroes: 'Герої'
+  tab_bag: 'Сумка'
+  tab_for_sale: 'На продажу'
+  failed: 'Ігровий сервер не надіслав цей акаунт. Оновіть сторінку, щоб спробувати знову.'
+  heroes_empty: 'На цьому акаунті немає героїв.'
+  bag_empty: 'Тут поки порожньо. Купуйте на ринку або грайте, щоб знаходити предмети.'
+  bag_group_empty: 'У цій сумці немає предметів цього типу.'
+  bot_sells: 'Бот сам виставляє й продає свої предмети. Попросіть про це ШІ-асистента.'
+  power: 'Сила'
+  power_hint: 'Сила додає характеристики вдягнених предметів з вагами ковальських рун. Лише для показу.'
+  send_to_bot: 'Надіслати боту'
+  recall_to_player: 'Повернути гравцю'
+  share: 'Поділитися'
+  share_text: 'Мій {classe}, рівень {level}, сила {power} в @AresRPG.'
+  share_title: 'Поділитися: {name}'
+  share_preview: 'Картка {name}, яку покаже ваш допис'
+  share_copy: 'Копіювати посилання'
+  share_post: 'Опублікувати в X'
+  share_image_failed: 'Картка не завантажилася. Закрийте вікно й спробуйте знову.'
+  share_copy_failed: 'Браузер не дозволив копіювання. Спробуйте знову.'
+  transfer_to_bot: 'Переказати боту'
+  transfer_to_player: 'Переказати гравцю'
+  view_market: 'Переглянути на ринку'
+
+site:
+  nav_label: 'Сайт'
+  menu_open: 'Відкрити меню'
+  menu_close: 'Закрити меню'
+  login: Увійти
+  new_tab: ' (відкривається в новій вкладці)'
+  log_in_first: 'Спочатку увійдіть'
+  docs: Документація
+  encyclopedia: Енциклопедія предметів
+  journal: Журнал
+  discord: Discord
+  telegram: Telegram
+  x: X
+  market: 'Ринок'
+  play: 'Грати'
+  agent: 'ШІ'
+  staking: 'Стейкінг'
+  leaderboards: 'Рейтинги'
+  portfolio: 'Портфель'
+  footer_learn: 'Дізнатися'
+  footer_community: 'Спільнота'
+  indexing_healthy: 'В нормі'
+  indexing_catching_up: 'Наздоганяє'
+  indexing_lagging: 'Відстає'

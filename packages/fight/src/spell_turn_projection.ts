@@ -6,9 +6,9 @@ import { zone_cells } from './combat_grid.ts'
 import { roll_value, rolls_magnitude } from './damage.ts'
 import { legal_cell } from './effects.ts'
 import { amplify_damage, primary_stat, effect_seed } from './fight_math.ts'
-import { KINDS, STATS, sheet_of } from './fighters.ts'
+import { is_removal, sheet_of } from './fighters.ts'
 import { draw } from './prng.ts'
-import { AREA_SHAPES, TARGET_FILTERS } from './move_contract.gen.ts'
+import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from './move_contract.gen.ts'
 import { spell_level_of, spell_turn_rows } from './spell_turn.ts'
 import type { FightSheet, HydratedFightCheckpoint, PrngCursor, SpellEffect, SpellLevel } from './types.ts'
 import { weapon_level_of } from './weapon.ts'
@@ -22,7 +22,7 @@ export type SpellTurnProjection = Readonly<{
 }>
 
 const target_dependent_roll = (row: Readonly<SpellEffect>): boolean =>
-  ([KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(row.kind) && [STATS.ap, STATS.mp].includes(row.stat)) ||
+  (is_removal(row.kind) && (row.stat === CHANNELS.ap || row.stat === CHANNELS.mp)) ||
   (rolls_magnitude(row) &&
     row.value_max > row.value &&
     row.area_shape !== AREA_SHAPES.point &&
@@ -30,8 +30,8 @@ const target_dependent_roll = (row: Readonly<SpellEffect>): boolean =>
 
 /** Card-only damage, before any target resistance, shield, or overkill limit. */
 const display_damage = (sheet: FightSheet, effect: SpellTurnEffect): SpellTurnEffect => {
-  const hp_loss = effect.stat === STATS.hp && [KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(effect.kind)
-  if (effect.kind !== KINDS.damage && !hp_loss) return effect
+  const hp_loss = effect.stat === CHANNELS.hp && is_removal(effect.kind)
+  if (effect.kind !== EFFECT_KINDS.damage && !hp_loss) return effect
   const primary = primary_stat(effect.element, sheet)
   return Object.freeze({
     ...effect,

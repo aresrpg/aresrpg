@@ -48,41 +48,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Same art-cache scheme as the gate — the 1.8GB tree restores from cache, not git.
           filter: blob:none
           sparse-checkout: |
             /*
             !seed/icons
             !seed/models
           sparse-checkout-cone-mode: false
-      - name: art tree key
-        id: art
-        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
-      - name: cache the art tree
-        id: art_cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            seed/icons
-            seed/models
-          key: art-${{ steps.art.outputs.tree }}
-      - name: materialize the art tree (cache miss only)
-        if: steps.art_cache.outputs.cache-hit != 'true'
-        run: |
-          git sparse-checkout set --no-cone '/*'
-          git checkout HEAD -- seed/icons seed/models
-      - name: setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: cache bun downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - name: install
-        run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: pull the Vercel environment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

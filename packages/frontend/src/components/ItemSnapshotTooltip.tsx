@@ -5,16 +5,16 @@ import { stat_names } from '@aresrpg/immutable'
 import type { ItemSnapshot } from '@aresrpg/sdk/auth'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { item_stat_offset } from '@aresrpg/protocol/character-stats'
 
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
-import { item_stat_offset } from '../game/character_stats.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
-import { ItemDetailContext } from './ItemDetailContext.ts'
-import { ItemDetailView } from './ItemDetailView.tsx'
+import type { ItemDetailProps } from './ItemDetailBody.tsx'
+import { ItemSummary } from './ItemSummary.tsx'
 import './item_snapshot_tooltip.css'
 
 type ItemTooltipDetails = ItemSnapshot & Pick<ItemRow, 'damages'>
@@ -37,11 +37,18 @@ export const item_snapshot_detail = (item: Readonly<ItemTooltipDetails>) => {
   })
 }
 
+/** A read item's sheet: the summary by default; a window that shows the full sheet passes its own. */
 export const ItemSnapshotContent = ({
   copy,
   status,
   item,
-}: Readonly<{ copy: AppCopy; status: ItemSnapshotHover['status']; item: ItemTooltipDetails | null }>) => {
+  Sheet = ItemSummary,
+}: Readonly<{
+  copy: AppCopy
+  status: ItemSnapshotHover['status']
+  item: ItemTooltipDetails | null
+  Sheet?: ComponentType<ItemDetailProps>
+}>) => {
   if (status === 'loading')
     return (
       <span className="item-snapshot-tooltip__loading">
@@ -54,7 +61,7 @@ export const ItemSnapshotContent = ({
   const detail = item_snapshot_detail(item)
   const encyclopedia = encyclopedia_text(copy)
   return (
-    <ItemDetailView
+    <Sheet
       category={detail.category}
       damages={detail.damages ?? []}
       item_type={detail.item_type}
@@ -139,9 +146,7 @@ const ItemTooltipSurface = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: It
   }, [hover.anchor])
   return (
     <div ref={root} className="aui-panel item-snapshot-tooltip" role="tooltip" style={position}>
-      <ItemDetailContext.Provider value="summary">
-        <ItemSnapshotContent copy={copy} status={hover.status} item={hover.item} />
-      </ItemDetailContext.Provider>
+      <ItemSnapshotContent copy={copy} status={hover.status} item={hover.item} />
     </div>
   )
 }

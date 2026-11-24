@@ -95,16 +95,16 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
     <>
       <div
         aria-label={text('prices_inspect')}
-        className="h-64 w-full"
+        className="h-100 w-full max-[760px]:h-70"
         ref={element}
         role="img"
         title="TradingView Lightweight Charts™ · © 2025 TradingView, Inc."
         data-tradingview-prices
       />
+      {/* The line keeps its height when no day is hovered, so the page under the chart never moves. */}
       <div
         aria-live="polite"
-        className="mt-2 text-[11px] text-muted tabular-nums"
-        hidden={!hovered}
+        className="mt-2 min-h-4 text-[11px] leading-4 text-muted tabular-nums"
         data-price-inspection
       >
         {hovered ? (

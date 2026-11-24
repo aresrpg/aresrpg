@@ -3,10 +3,12 @@
 import { GameWindow, FloatingWindow } from '@aresrpg/ui'
 import { useState } from 'react'
 
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { CatalogueMobDetails } from '../encyclopedia/CatalogueMobDetails.tsx'
 import { WorldsTab } from '../encyclopedia/WorldsTab.tsx'
 import { useText } from '../i18n/useText.ts'
+import '../encyclopedia/catalogue.css'
 
 type InspectionProps = Readonly<{
   id: string | null

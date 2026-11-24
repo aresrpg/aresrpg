@@ -23,23 +23,18 @@ quality: Chất lượng
 low: Thấp
 medium: Trung bình
 high: Cao
-identity_connected: Đã kết nối danh tính
 sign_in_to_play: Đăng nhập để chơi
 loading_universe: Đang tải vũ trụ
 continue_google: Tiếp tục với Google
 wallet_session_ended: Phiên ví đã kết thúc. Hãy đăng nhập lại.
 connect_wallet: Kết nối ví
 no_wallet: Chưa cài ví tương thích
-sign_in: Đăng nhập để chơi
 drag_hint: Kéo để di chuyển · Cuộn để thu phóng
 navigation: Điều hướng
 world: Thế giới
 characters: Nhân vật
-leaderboard: Bảng xếp hạng
 mastery: Tinh thông
 encyclopedia: Bách khoa
-marketplace: Chợ
-airdrop: Airdrop
 kolizeum: Đấu trường
 settings: Cài đặt
 admin: Quản trị
@@ -47,7 +42,6 @@ online: Trực tuyến
 account: Tài khoản
 join_discord: Tham gia Discord
 join_telegram: Tham gia Telegram
-sui_universe: Vũ trụ Sui
 server_disconnected: Đã ngắt kết nối
 server_connecting: Đang kết nối
 server_reconnecting: Đang kết nối lại
@@ -56,14 +50,13 @@ server_connected: Đã kết nối
 server_violation: Đã ngắt kết nối do vi phạm quy tắc. Sẽ thử lại sớm.
 server_replaced: Đã kết nối ở nơi khác
 session_replaced_title: Đã đăng nhập từ nơi khác
-session_replaced_body: 'Tài khoản của bạn đã kết nối ở một cửa sổ khác: trò chơi 3D hoặc ứng dụng web. Mỗi lần chỉ một cửa sổ được kết nối, nên cửa sổ này đã bị ngắt. Kết nối lại tại đây để dùng cửa sổ này.'
+session_replaced_body: 'Tài khoản của bạn đã kết nối với trò chơi ở một thẻ khác hoặc trên một thiết bị khác. Mỗi lần chỉ một cửa sổ được kết nối, nên cửa sổ này đã bị ngắt. Kết nối lại tại đây để dùng cửa sổ này.'
 session_replaced_reconnect: Kết nối lại tại đây
 latency_unit: ms
 indexing_health: Trạng thái lập chỉ mục
 online_accounts: Tài khoản trực tuyến
 online_characters: Nhân vật trực tuyến
 online_characters_body: Trên mọi thế giới, kể cả chiến đấu và hầm ngục.
-indexing_lag_warning: Thao tác trong game có thể bị trễ
 indexing_block_title: Đang đồng bộ thế giới
 indexing_block_body: Lịch sử chuỗi vẫn đang được lập chỉ mục. Trò chơi sẽ tự mở khi máy chủ bắt kịp vùng dữ liệu trực tiếp an toàn.
 indexing_block_progress: Tiến độ
@@ -79,7 +72,6 @@ fight_path_changed_toast: Bàn đấu đã thay đổi trước khi gửi bướ
 party_member_unavailable_toast: Nhân vật đó đã ở trong một nhóm.
 fight_turn_already_forced_toast: Đã có người buộc kết thúc lượt này.
 fight_placement_unavailable_toast: Ô xuất phát đó không khả dụng. Hãy chọn ô trống khác.
-network_testnet: MẠNG THỬ NGHIỆM
 welcome_title: Chào mừng đến AresRPG
 welcome_body: AresRPG là MMORPG hoàn toàn trên chuỗi với nền kinh tế do người chơi vận hành. Tạo nhân vật đầu tiên, vào thế giới và chiến đấu với quái vật.
 welcome_need_sui: 'Nhân vật đầu tiên có giá {{price}}. Giữ lại ít nhất {{fee}} trong ví để trả phí giao dịch. Nạp tiền bên dưới để bắt đầu.'
@@ -108,13 +100,7 @@ wallet_send: Gửi
 wallet_add_funds: Nạp tiền
 wallet_gas_spent: Gas đã dùng (24 giờ)
 wallet_disconnect: Ngắt kết nối
-wallet_fund_body: Gửi SUI tới địa chỉ ví này. Số dư sẽ cập nhật khi bạn quay lại ứng dụng.
-wallet_send_title: Gửi SUI
 wallet_recipient: Địa chỉ người nhận
-wallet_amount: Số lượng (SUI)
-wallet_send_pending: Đang gửi SUI…
-wallet_send_success: Đã gửi SUI
-wallet_send_failed: Chuyển SUI thất bại
 wallet_close: Đóng
 kolizeum_page:
   title: Đấu trường — Bàn chiến sự
@@ -158,13 +144,10 @@ friends_panel:
   title: Bạn bè
   observed: Đã thấy ở gần
   unseen: Hiện chưa thấy
-  none_observed: Không thấy bạn bè ở gần
   empty: Chưa có bạn bè
   placeholder: Tên, SuiNS hoặc địa chỉ 0x
   add: Thêm bạn
   remove: Xóa
-  remove_title: Xóa bạn
-  remove_body: Xóa {{name}} khỏi danh sách bạn bè?
   error_no_suins: Không có địa chỉ SuiNS khớp với {{name}}.
   error_target: Nhập tên nhân vật, tên SuiNS hoặc địa chỉ Sui đầy đủ.
   error_self: Không thể thêm chính mình.
@@ -181,7 +164,6 @@ party_panel:
   disband: Giải tán
   kick: Mời ra
   rescind: Hủy lời mời
-  invite_owned: Mời nhân vật của mình
   follow_leader: Theo trưởng nhóm
   run_to_position: Chạy đến vị trí
   run_to_started: Bạn đang chạy đến vị trí trên chuỗi gần nhất của {{name}}. Đây có thể không phải vị trí hiện tại của họ.
@@ -249,7 +231,6 @@ world_hud:
   fight_press_join_touch: 'Chạm để tham gia'
   fight_press_spectate_touch: 'Chạm để theo dõi'
   dungeon_talk_touch: 'Chạm để trò chuyện'
-  character_options_touch: 'Chạm để chọn hành động'
   spawn_welcome: 'Chào mừng nhà thám hiểm! Trò chơi đang trong giai đoạn truy cập sớm. Hãy cố gắng sống sót và tận hưởng cuộc phiêu lưu.'
   compass_label: La bàn
   zone: KHU VỰC
@@ -279,7 +260,6 @@ world_hud:
   portal_prompt: Nhấn {{key}} để đến thế giới khác
   dungeon_portal: Cổng ngục tối
   dungeon_city: Thành phố {{city}}
-  dungeon_press_enter: Vào
   dungeon_talk: 'Trò chuyện'
   dungeon_guard_requires_key: 'Tôi không thể cho bạn qua nếu bạn không có {{key}}.'
   dungeon_entry_body: Dùng chìa khóa ngục tối để vào sảnh chuẩn bị riêng của cổng này.
@@ -311,12 +291,9 @@ world_hud:
   dungeon_key_required: Cần {{key}} để vào ngục tối này.
   dungeon_group_refusal: Trận này chỉ dành cho nhóm của người mở.
   travel_title: Cổng sao
-  travel_search: Tìm {{title}}…
   travel_entry_level: 'Cấp vào: {{level}}'
   travel_pending: Đang mở cổng…
   travel_success: Chào mừng đến {{world}}
-  travel_empty: Không có thế giới
-  travel_showing: '{{filtered}} / {{total}} kết quả'
   travel_selected: Đã chọn · {{label}}
   fight_press_join: Nhấn {{key}} để tham gia
   fight_press_spectate: Nhấn {{key}} để theo dõi
@@ -366,10 +343,8 @@ world_hud:
   resource_gathered: Đã thu thập tài nguyên
   resource_gathered_amount: Đã thu thập {{quantity}} × {{name}}
   resource_gathered_amount_ambushed: Đã thu thập {{quantity}} × {{name}} · Hộ vệ phục kích bạn
-  resource_ambushed: Hộ vệ phục kích bạn
   resource_resolving_ambush: Hộ vệ chặn đường bạn…
   resource_ambush_title: Hộ vệ phục kích
-  resource_face_protector: Nhấn {{key}} để đối mặt
   zone_never_arrived: Đã khám phá nhưng thế giới chưa hiển thị kết quả — dữ liệu đọc có thể đang chậm
 demo_page:
   animation_loop: Lặp hoạt ảnh
@@ -489,16 +464,6 @@ marketplace_page:
   volume_unavailable: Khối lượng tạm thời không khả dụng.
   title: Chợ
   subtitle: Gian hàng người chơi trên Sui
-  disclaimer_kicker: Trước khi giao dịch
-  disclaimer_title: Giao dịch để tiến bộ, không phải kiếm lời
-  disclaimer_body: Người chơi giao dịch vật phẩm trực tiếp bằng SUI.
-  disclaimer_supply: Vật phẩm không phải khoản đầu tư dài hạn. Khi nhiều người chơi thu thập, nguồn cung tăng và giá có thể giảm.
-  disclaimer_fun: Mua bán theo tiến trình để vui và hữu ích, đừng kỳ vọng lợi nhuận.
-  disclaimer_wallet: Chỉ giữ lượng SUI dự định dùng trong AresRPG. Cất khoản tiết kiệm quan trọng trong ví tự quản riêng mà bạn giữ khóa khôi phục.
-  disclaimer_acknowledge: Tôi hiểu
-  tab_buy: Mua
-  tab_sell: Bán
-  tab_history: Lịch sử
   browse: Duyệt
   group_equipment: Trang bị
   group_pets: Thú cưng
@@ -506,13 +471,20 @@ marketplace_page:
   group_consumable: Vật phẩm tiêu hao
   group_resources: Tài nguyên
   group_characters: Nhân vật
-  level: Cấp
-  class: Lớp
   search: Tìm vật phẩm…
   no_results: Chưa có gian hàng ở đây
-  select_item: Chọn vật phẩm để xem gian hàng
+  group_empty: 'Chưa có gì được rao bán trong nhóm này'
+  featured: 'Nổi bật'
+  rarest: 'Hiếm nhất trên chợ'
+  rarest_on_sale: 'Chỉ có {{count}} món đang bán.'
+  view_offers: 'Xem các chào bán'
+  see_all: 'Xem tất cả'
+  results_for: 'Kết quả cho “{{query}}”'
+  change_24h: '24 giờ'
+  change_hint: 'Ngày trọn vẹn gần nhất so với ngày trước đó'
+  listed: 'Đang bán'
+  cheapest_offers: 'Chào bán rẻ nhất'
   listing_count: '{{count}} gian hàng'
-  rolled_stats: Thuộc tính đã gieo
   characteristics: Thuộc tính
   damages: sát thương
   range_to: đến
@@ -526,15 +498,11 @@ marketplace_page:
   no_listings: Bạn chưa có gian hàng hoạt động
   withdraw: Gỡ bán
   list_for_sale: Đăng bán
-  select_to_list: Chọn vật phẩm trong túi
   price: Giá
   lot_size: Số lượng mỗi lô
   paid_automatically: Tiền bán tự động vào quầy của bạn.
-  lot_required: Chồng này có ×{{amount}}. Lô vật phẩm xếp chồng phải là ×1, ×10, ×100 hoặc ×1000.
-  inventory: Túi đồ
   characters: Nhân vật
   items: Vật phẩm
-  empty_inventory: Không có gì để đăng bán
   revenue_30d: 30 ngày qua
   sales_count: '{{count}} lần bán'
   unclaimed: Tiền bán chưa nhận
@@ -579,32 +547,20 @@ mastery_page:
   world_reward: +{{points}} điểm
   shop_title: Cửa hàng Tinh thông
   shop_lead: Dùng điểm Tinh thông mua rương thưởng độc đáo.
+  shop_line: Dùng điểm mua rương thưởng
+  quest_in_game: Bắt đầu nhiệm vụ ngày trong game
   shop_empty: Chưa có vật phẩm Tinh thông để bán
-  ready_to_buy: Có thể mua
   points_missing: Thiếu {{points}} điểm
-  buying: Đang mua…
   buy: Mua · {{cost}} điểm
   quest_started: Đã giao nhiệm vụ hằng ngày.
   offer_purchased: Đã mua phần thưởng Tinh thông.
 airdrop_page:
-  crew_view_sale: 'Xem đợt bán KARES'
-  crew_dialogue:
-    intro: 'Tham gia đợt bán token KARES nhé, tôi sẽ có một món quà dành cho bạn.'
-    connect: 'Kết nối ví bạn đã dùng để tham gia đợt bán, rồi xem quà của bạn đã đến chưa nhé.'
-    checking: 'Để tôi kiểm tra quà của bạn…'
-    ready: 'Mũ Crew của bạn đã đến!'
-    claiming: 'Chờ một chút, quà của bạn đang được nhận.'
-    claimed: 'Tôi đã trao mũ Crew cho bạn rồi. Hãy đội nó thật tự hào nhé!'
-    empty: 'Hiện chưa có quà mũ Crew cho ví này. Có thể bạn đã nhận rồi, hoặc việc phân phối vẫn đang chờ hoàn tất.'
-    unavailable: 'Tôi không kiểm tra được quà của bạn. Vui lòng thử lại.'
   reward_title: 'Bạn đã nhận được quà!'
   reward_received: 'Bạn đã nhận được {items}!'
   reward_needs_sui: 'Quà của bạn đã được giữ an toàn trong ví. Hãy nạp một ít SUI để trả phí giao dịch, rồi nhận phần thưởng.'
   reward_complete: 'Phần thưởng đã có trong túi đồ của bạn.'
   reward_redeeming: 'Quà đã đến. Đang thêm vào túi đồ…'
   reward_held: 'Quà đang ở trong ví của bạn. Hãy nhận để thêm phần thưởng vào túi đồ.'
-  reward_used_title: 'Thẻ đã được sử dụng'
-  reward_used_body: 'Thẻ này đã được sử dụng hoặc không còn khả dụng. Mỗi thẻ chỉ có thể dùng một lần.'
   reward_continue: 'Tiếp tục'
   reward_item: 'Quà'
   destination: 'Ví trò chơi:'
@@ -615,16 +571,8 @@ airdrop_page:
   holder_title: Ví bên ngoài
   holder_connect_hint: Kết nối ví chứa thẻ quà tặng
   holder_connect: Kết nối ví
-  holder_connecting: Đang kết nối…
-  holder_connected: Đã kết nối
-  holder_select: Chọn
-  holder_close: Đóng chọn ví
-  holder_wallet_missing: Chưa cài ví Sui tương thích
   giftcards_title: Thẻ quà tặng chờ đổi
   gift_login: Tiếp tục với Google để nhận quà vào ví trò chơi
-  gift_ready: Thẻ quà tặng giấy đã sẵn sàng nhận
-  gift_claiming: Đang nhận thẻ quà tặng giấy…
-  gift_retry: Nhận thẻ quà tặng
   redeem: Đổi
   empty: Ví này không có thẻ quà tặng
   claim_all: Nhận thưởng
@@ -667,6 +615,15 @@ airdrop_page:
     title_enforcer:
       title: 'Enforcer Machin'
       description: 'Danh hiệu “Người thực thi” dành cho người sở hữu Enforcer Machin đủ điều kiện.'
+    act_operator:
+      title: 'ACT'
+      description: 'Danh hiệu và thân hình Đặc vụ cho người nắm giữ ACT Airdrop Transponder tại thời điểm chụp. Mỗi ví một phần, màu Vesper, Dusk hoặc Blood Ivory.'
+    act_warlords:
+      title: 'Lãnh chúa ACT'
+      description: 'Một rương ACT Airdrop cho những người chơi được bảng xếp hạng ACT chọn. Mở ra nhận một mũ Helios Warlord.'
+    nogas_presale:
+      title: 'Nogas'
+      description: 'Áo choàng ếch dẹt cho mọi ví đã tham gia đợt mở bán trước NOGAS trên Blast. Hãy kiểm tra ví bạn đã dùng cho đợt mở bán.'
     blast_crew:
       title: 'Mũ Crew'
       description: 'Quà ngoại hình dành cho người tham gia đợt bán KARES trên Blast. Kết nối ví đã tham gia sau khi quà được phân phối.'
@@ -820,41 +777,18 @@ admin_page:
   inspecting: Đang kiểm tra…
   plan: Kế hoạch nội dung
   targets: mục tiêu tất định
-  not_inspected: Thêm ID đối tượng đã phát hành rồi kiểm tra kế hoạch.
   execute: Thực hiện
   executing: Đang thực hiện…
-  seal_title: Khóa vĩnh viễn
-  seal_body: Khóa sẽ xóa mọi cách ghi nội dung về sau. Nâng cấp hay quyền quản trị cũng không thể hoàn tác.
-  arm_seal: Chuẩn bị khóa vĩnh viễn
-  seal_forever: Khóa nội dung vĩnh viễn
-  sealed: Nội dung đã khóa
-  admin_wallet: Ví quản trị
-  admin_wallet_body: Người ký riêng để phát hành và rút tiền chợ.
-  connect_admin_wallet: Kết nối
-  choose_admin_wallet: Chọn ví
-  choose_admin_address: Chọn địa chỉ
-  cancel_wallet_selection: Hủy
-  wallet_account: Tài khoản
   select_wallet: Chọn
   connecting: Đang kết nối…
-  loading_wallets: Đang tải ví…
-  no_admin_wallet: Chưa cài ví trình duyệt tương thích.
   royalties: tiền bản quyền
-  cap_owned: có quyền
-  cap_missing: thiếu quyền
-  reading_royalties: Đang đọc chính sách…
   reading: Đang đọc…
-  refresh_revenue: Làm mới doanh thu
   claiming: Đang nhận…
-  disconnect_admin_wallet: Ngắt kết nối
-  claim_digest: Giao dịch nhận
   range_24h: 24 giờ
   range_7d: 7 ngày
   range_30d: 30 ngày
   range_90d: 90 ngày
   range_1y: 1 năm
-  overview_title: Tổng quan
-  overview_body: Hoạt động người chơi và doanh thu, không có thông tin điều khiển dư thừa.
   overview_unavailable: Tổng quan không khả dụng
   loading_overview: Đang tải tổng quan…
   all_systems_current: Mọi hệ thống đã cập nhật
@@ -864,15 +798,15 @@ admin_page:
   active_players: Người chơi hoạt động
   active_players_bucket: Người chơi hoạt động mỗi khoảng
   daily_active: Người chơi hoạt động mỗi ngày
-  active_interval: Hoạt động mỗi khoảng
   active_30d: Người chơi hoạt động 30 ngày
   active_last_30d: hoạt động trong 30 ngày qua
   player_activity: Hoạt động người chơi
   population: Quy mô người chơi
   player_activity_body: Hoạt động ngày và độ phủ 30 ngày trượt
-  stickiness: Ngày / 30 ngày
   online_players: Người chơi trực tuyến
-  online_players_body: Đỉnh người chơi xác thực duy nhất mỗi khoảng
+  online_players_body: 'Số người chơi và số bot được lưu trữ trực tuyến cao nhất, theo từng kỳ'
+  players: Người chơi
+  hosted_bots: Bot được lưu trữ
   online_now: Người chơi trực tuyến
   online_split: Phân bổ trực tuyến
   online_split_detail: 'người chơi · bot được lưu trữ'
@@ -891,12 +825,7 @@ admin_page:
   game_transactions_over_time: Giao dịch theo thời gian
   game_transactions_body: Giao dịch AresRPG thành công, tính một lần mỗi PTB
   today: Hôm nay
-  selected_period: Khoảng đã chọn
   lifetime: toàn thời gian
-  average_order: đơn trung bình
-  chart_revenue: Doanh thu
-  chart_players: Người chơi
-  chart_online: Trực tuyến
   bucket_15m: Khoảng 15 phút
   bucket_hour: Khoảng giờ
   bucket_day: Khoảng ngày
@@ -923,8 +852,6 @@ admin_page:
   when: Thời điểm
   transaction: Giao dịch
   treasury: Ngân quỹ
-  treasury_body: Số dư hiện tại, tách khỏi doanh thu đã kiếm
-  available_balance: Số dư khả dụng
   claim: Nhận
   close: Đóng
   loading: Đang tải…
@@ -964,22 +891,17 @@ simulator_page:
   class_ikari_title: Cuồng chiến binh
   class_shusen_title: Đấu sĩ
   delete_character: Xóa nhân vật
-  assigned_cell: Đã đặt · Ô {cell}
   pick_character: Chọn nhân vật
   pick_mob: Chọn quái
-  character_editor: Nhân vật cục bộ
-  character_editor_hint: Danh tính, ngoại hình, cấp, thuộc tính và phép đã mở
   character_level: Cấp nhân vật
   character_stats: Thuộc tính đã phân bổ
   character_spells: Cấp phép
   stat_points: Còn {points} điểm thuộc tính
   spell_points: Còn {points} điểm phép
-  spell_unlock: Mở ở cấp {level}
   reset: Đặt lại
   delete_confirm: Xác nhận xóa
   class_change_hint: Đổi lớp sẽ đặt lại thuộc tính tự nhiên và cấp phép đã nâng
   spells_unavailable: Cấp này chưa mở phép nào
-  save_character: Lưu nhân vật
   equipment: Trang bị và di vật
   max_roll: Chỉ số tối đa
   remove_mob: Xóa quái
@@ -1047,7 +969,6 @@ fight_hud:
   crank_button: Buộc kết thúc lượt
   end_turn: Kết thúc lượt
   end_turn_queued: Đã xếp hàng kết thúc lượt
-  reset_turn: Đặt lại
   weapon_attack: Tấn công vũ khí
   bare_hands: Tay không
   log_fight_started: Trận đấu bắt đầu
@@ -1105,9 +1026,6 @@ fight_hud:
   result_enemies: Kẻ địch
   result_victory: Chiến thắng
   result_defeat: Thất bại
-  result_you: Bạn
-  result_fallen: Gục ngã
-  result_survived: Sống sót
   result_collecting: Đang nhận chiến lợi phẩm…
   result_collecting_progress: Đang nhận chiến lợi phẩm nhân vật · {completed}/{total}
   result_collecting_complete: Đã nhận toàn bộ chiến lợi phẩm nhân vật · {completed}/{total}
@@ -1124,7 +1042,6 @@ fight_hud:
   level_up_spell_points: Điểm phép
   level_up_new_spell: Đã mở phép mới
   level_up_new_worlds: Đã mở thế giới mới
-  level_up_worlds_note: Đã có điểm đến mới
   level_up_allocate: Phân bổ điểm
   level_up_later: Để sau
 wallet_legacy:
@@ -1182,50 +1099,12 @@ wallet_legacy:
   funding_failed: 'Không thể hoàn tất nạp tiền.'
   funding_pending: 'Đang chuyển tiền. Không gửi thêm khoản thanh toán.'
   sui: SUI
-  how_to_get: Cách nhận SUI
   your_address: 'Địa chỉ SUI'
   send_sui: 'Gửi SUI qua mạng Sui. Nhấp để sao chép.'
-  buy_directly: Mua trực tiếp
-  buy_with_card: Mua SUI bằng thẻ tín dụng, nhận thẳng vào ví.
-  buy_on_exchange: Mua trên sàn
-  withdraw_to_wallet: Mua SUI trên sàn rồi rút về địa chỉ ví phía trên.
-  faq: Câu hỏi thường gặp
-  wallet_description: Ví cá nhân chỉ bạn có thể truy cập. Nạp SUI để trả phí mạng và giao dịch với người chơi.
-  moonpay_desc: Thẻ tín dụng, Apple Pay, chuyển khoản
-  transak_desc: Thẻ tín dụng, chuyển khoản, hơn 100 quốc gia
-  faq_what_is_sui: SUI là gì?
-  faq_what_is_sui_answer: SUI là tiền kỹ thuật số, giống tiền mặt số. Nó hoạt động trên mạng nhanh và an toàn gọi là chuỗi Sui. Bạn dùng lượng nhỏ SUI trả phí mạng và có thể giao dịch trực tiếp với người chơi trên chợ.
-  faq_why_sui: Vì sao AresRPG dùng SUI?
-  faq_why_sui_answer: SUI là phương thức thanh toán ưu tiên. Giao dịch tức thì, dưới một giây, phí chỉ một phần xu và không có phí trung gian. Tương lai có thể hỗ trợ USD, EUR và tiền truyền thống khác, nhưng cần nhiều thủ tục pháp lý cùng phí và thuế lớn mà chúng tôi chưa sẵn sàng đảm nhận.
-  faq_legal: Có hợp pháp không?
-  faq_legal_answer: Có. Mua và giữ tiền mã hóa là hợp pháp ở phần lớn quốc gia. SUI là tài sản số được giao dịch trên các sàn lớn được quản lý trên thế giới. AresRPG dùng nó cho phí mạng và giao dịch giữa người chơi.
-  faq_eula: Điều khoản trò chơi có cho phép không?
-  faq_eula_answer: Có. Khi tiền mã hóa chỉ dùng để thanh toán, không liên quan NFT hay mô hình đầu cơ, nó phù hợp điều khoản. Nhiều cửa hàng game lớn cũng hỗ trợ thanh toán bằng tiền mã hóa.
-  faq_access: Ai có thể truy cập ví của tôi?
-  faq_access_answer: Chỉ bạn. Ví được tạo từ đăng nhập Google bằng công nghệ zkLogin của Sui. Không ai, kể cả đội AresRPG, có thể truy cập hoặc chuyển tiền của bạn. Ví này chỉ dành cho hoạt động AresRPG. Không giữ số tiền lớn; chỉ nạp phần định dùng.
-  faq_balance: Đã gửi SUI nhưng số dư chưa cập nhật?
-  faq_balance_answer: Đừng lo, hệ thống cập nhật có thể đang chậm. Kiểm tra đã gửi đúng địa chỉ bằng cách sao chép phía trên. Nếu vẫn chưa thấy, liên hệ nhóm trên Discord kèm mã giao dịch.
   add_funds: Nạp tiền
   testnet_faucet_title: SUI mạng thử nghiệm
   testnet_faucet_body: AresRPG đang chạy trên mạng thử nghiệm Sui. SUI thử nghiệm miễn phí và không có giá trị tiền tệ. Xin token từ vòi Sui chính thức.
   testnet_faucet_action: Mở vòi Sui
-  how_to_pay: Bạn muốn thanh toán thế nào?
-  add_funds_desc: Chọn cách thanh toán. SUI được gửi thẳng vào ví.
-  method_paypal: PayPal
-  method_paypal_desc: Trả bằng tài khoản PayPal
-  method_apple_pay: Apple Pay
-  method_apple_pay_desc: Trả bằng Face ID / Touch ID
-  method_google_pay: Google Pay
-  method_google_pay_desc: Trả bằng tài khoản Google
-  method_bank: Chuyển khoản ngân hàng
-  method_bank_desc: SEPA (EU) hoặc ACH (Mỹ)
-  paypal_note: Có tại Mỹ, Anh và phần lớn châu Âu qua MoonPay
-  card_note: Chọn nhà cung cấp bên dưới. Tất cả nhận Visa và Mastercard
-  bank_note: Phí thấp nhất, khoảng 1%. SEPA cho châu Âu, ACH cho Mỹ.
-  steps_paypal: 1. Nhấp liên kết dưới  2. Chọn PayPal  3. Nhập số tiền. SUI sẽ vào ví
-  steps_wallet: Gửi SUI tới địa chỉ ví bên dưới. Sẽ nhận được sau vài giây.
-  advanced_exchange: 'Nâng cao: mua trên sàn'
-  age_notice: Mọi nhà cung cấp thanh toán đều yêu cầu từ 18 tuổi.
   send:
     button: Gửi
     title: Gửi SUI
@@ -1256,17 +1135,12 @@ wallet_legacy:
     suins_resolving: Đang phân giải tên…
     suins_resolved: 'Đã phân giải tên: {{name}}'
     err:
-      recipient_not_found: Không tìm thấy người chơi tên {{name}}.
-      recipient_no_wallet: '{{name}} chưa liên kết ví trên ứng dụng web. Hãy nhờ họ kết nối tại aresrpg.world trước.'
       self_send: Không thể gửi SUI cho chính ví của bạn.
       invalid_address: Địa chỉ đã nhập không phải địa chỉ Sui hợp lệ.
       insufficient_balance: Ví không đủ SUI cho lần chuyển này.
       rate_limited: Chuyển quá nhiều. Chờ một phút rồi thử lại.
       tx_failed: Giao dịch thất bại trên chuỗi. Không chuyển tiền.
       user_rejected: Chữ ký bị từ chối trong ví.
-      recipient_required: Nhập người nhận trước khi gửi.
-      suins_not_found: Không tìm thấy tên SuiNS “{{name}}”.
-      amount_positive: Nhập số lượng lớn hơn 0.
       amount_invalid: Số lượng không hợp lệ.
     drain_hint: Tối đa sẽ rút hết ví — phí mạng trừ từ khoản chuyển.
     drain_warning: Thao tác sẽ rút hết ví. Phí mạng lấy từ khoản chuyển nên số dư sau đó đúng 0 SUI.
@@ -1286,7 +1160,6 @@ wallet_send_shared:
   total: Tổng
   transaction: Giao dịch
 encyclopedia_page:
-  tokenomics_tab: Kinh tế token
   world_locations: 'Địa điểm'
   world_search_places: 'Tìm quần xã, thành phố, quái vật hoặc tài nguyên…'
   world_entry: 'Cấp vào cửa {{level}}'
@@ -1297,9 +1170,6 @@ encyclopedia_page:
   world_gatherables: 'Tài nguyên thu thập'
   world_gather_level: '{{job}} · Cấp nghề {{level}}'
   world_protector: 'Hộ vệ'
-  minimum: TỐI THIỂU
-  maximum: TỐI ĐA
-  terrain_seed: Hạt giống địa hình
   sea_level: Mực nước biển
   world_role:
     trash: Thường
@@ -1312,23 +1182,17 @@ encyclopedia_page:
     herbalist: Người hái thuốc
     miner: Thợ mỏ
   world_resource_tier: Bậc {{tier}}
-  world_address_copied: Đã sao chép!
   search_items: TÌM VẬT PHẨM…
   search_mobs: TÌM QUÁI…
   all_families: MỌI HỌ QUÁI
   elements_filter: NGUYÊN TỐ
-  advanced_filters: BỘ LỌC NÂNG CAO
-  no_entries: Không tìm thấy mục
   select_item: Chọn vật phẩm để xem chi tiết
   select_mob: Chọn quái để xem chi tiết
   select_class: Chọn lớp để xem chi tiết
-  loading_details: Đang tải chi tiết…
-  loading_encyclopedia: Đang tải bách khoa…
   items: Vật phẩm
   mobs: Quái vật
   pets: Thú cưng
   classes: Các lớp
-  gameplay_tab: Lối chơi
   jobs_tab: Nghề
   search_jobs: TÌM NGHỀ…
   select_job: CHỌN NGHỀ
@@ -1352,42 +1216,26 @@ encyclopedia_page:
     HANDYMAN: Thợ đa năng làm công cụ, chìa khóa và nguyên liệu trung gian.
     ALCHEMIST: Nhà giả kim làm thuốc và nguyên liệu trung gian.
     BAKER: Thợ bánh làm bánh mì và nguyên liệu trung gian.
-  dungeons_tab: NGỤC TỐI
-  search_dungeons: TÌM NGỤC TỐI…
-  select_dungeon: CHỌN NGỤC TỐI
   dropped_by: RƠI TỪ
   recipe: CÔNG THỨC
   price_history: LỊCH SỬ GIÁ
-  no_price_data: Chưa có lịch sử giá
-  no_recipe: Chưa có dữ liệu công thức
   ingredient_of: NGUYÊN LIỆU CỦA
-  no_ingredient_of: Không dùng trong công thức nào
   no_drops: Chưa biết nguồn rơi
-  pet_stats: CHỈ SỐ THÚ
   pet_diet: THỨC ĂN CỦA THÚ
-  food_sources: NGUỒN THỨC ĂN
-  stat_bonuses_max: CHỈ SỐ CỘNG THÊM KHI TỐI ĐA
   characteristics: THUỘC TÍNH
   damages: sát thương
   range_to: đến
   level_short: Cấp {{level}}
   no_diet: Chưa có thông tin thức ăn
-  newborn: Mới sinh
-  max_power: Uy lực tối đa
   back_to_list: Quay lại danh sách
   showing_mobs: HIỆN {{count}} / {{total}} QUÁI
   no_mobs_match: KHÔNG CÓ QUÁI KHỚP BỘ LỌC
-  clear_all: XÓA TẤT CẢ
-  all_jobs: MỌI NGHỀ
   sort_name_asc: TÊN A–Z
   level_bracket: CẤP {{range}}
-  unknown_zone: KHÔNG RÕ
   showing_count: HIỆN {{count}} / {{total}}
   sort_level_asc: CẤP ↑
   sort_level_desc: CẤP ↓
   sort_name: TÊN A–Z
-  sort_newest: MỚI NHẤT
-  clear_filters: XÓA TẤT CẢ
   no_results: KHÔNG CÓ VẬT PHẨM KHỚP BỘ LỌC
   filter_by_category: THEO DANH MỤC
   filter_by_stat: THEO CHỈ SỐ
@@ -1395,30 +1243,14 @@ encyclopedia_page:
   filter_by_job: THEO NGHỀ CHẾ TẠO
   filter_by_world: THEO THẾ GIỚI
   filter_by_mob_family: THEO HỌ QUÁI
-  filter_biome: QUẦN XÃ
-  filter_city: THÀNH PHỐ
-  group_armor: GIÁP
   group_weapons: VŨ KHÍ
-  group_accessories: PHỤ KIỆN
-  group_pets: THÚ CƯNG
-  group_runes: NGỌC KHẮC
-  group_relics: DI VẬT
-  group_tools: CÔNG CỤ
-  group_consumables: VẬT PHẨM TIÊU HAO
   group_raw_resources: TÀI NGUYÊN THÔ
   group_gatherable_resources: TÀI NGUYÊN THU THẬP
   group_intermediary_resources: NGUYÊN LIỆU TRUNG GIAN
   group_pet_food_resources: THỨC ĂN CHO THÚ
-  item_category_pet_food: THỨC ĂN CHO THÚ
-  boss_only: CHỈ TRÙM
   view_all: TẤT CẢ
   item_type: LOẠI
-  view_by_zone: THEO KHU VỰC
   view_by_level: THEO CẤP
-  view_by_family: THEO HỌ
-  unknown_family: Họ không rõ
-  stats_filter: THUỘC TÍNH
-  filter_life_steal: HÚT MÁU
   gameplay:
     game_mechanics: CƠ CHẾ TRÒ CHƠI
     section_combat: CHIẾN ĐẤU
@@ -1573,13 +1405,8 @@ encyclopedia_page:
     chance_loot_desc: May mắn hiệu lực trung bình của đội thắng, gồm hiệu ứng, nhân mọi tỷ lệ đồ rơi. Trung bình 600 sẽ gấp đôi tỷ lệ, nhưng không quá 100%.
     mob_loot_band: CẤP QUÁI VÀ TỶ LỆ RƠI
     mob_loot_band_desc: Tỷ lệ quy định là điểm giữa. Trong khoảng cấp quái, nó co giãn từ 80% tới 120%, tối đa 100%. Quái có cấp cố định dùng đúng tỷ lệ gốc. Số lượng rơi không đổi theo cấp.
-  unlocks_at_level: MỞ Ở CẤP {{level}}
   level: CẤP
-  aoe_radius: BÁN KÍNH VÙNG
   effects: HIỆU ỨNG
-  life_cost: tốn máu
-  duration_short: 'DÀI: {{duration}} giây'
-  coming_soon: SẮP CÓ
   health: MÁU
   spells_count: PHÉP ({{count}})
   mob_spells: PHÉP
@@ -1600,13 +1427,7 @@ encyclopedia_page:
   spell_n: PHÉP {{n}}
   range: TẦM
   range_modifiability: KHẢ NĂNG ĐỔI TẦM
-  no_spells_minted: Chưa có phép được tạo trên chuỗi
-  xp_suffix: +{{xp}} KN
-  boss_badge: TRÙM
-  archi_badge: BIẾN THỂ HIẾM
-  recommended_short: Gợi ý {{level}}
   level_range: Cấp {{min}}–{{max}}
-  up_to_plus: Tối đa +{{val}}
   element:
     fire: Lửa
     water: Nước
@@ -1628,23 +1449,13 @@ encyclopedia_page:
   characteristic_costs_desc: Điểm cơ bản theo thang của lớp này. Trang bị không đổi chi phí.
   characteristic_cost_band: '{{cost}} điểm → +{{gain}} · ≤{{cap}}'
   characteristic_cost_unlimited: '{{cost}} điểm → +{{gain}} · không giới hạn'
-  turns_value: '{{n}} LƯỢT'
   targeting: CHỌN MỤC TIÊU
-  effect_zone: VÙNG HIỆU ỨNG
   line_of_sight: TẦM NHÌN
-  los_required: BẮT BUỘC
-  los_not_required: KHÔNG BẮT BUỘC
   target_cell: Ô MỤC TIÊU
   target_cell_empty: PHẢI TRỐNG
-  target_cell_any: BẤT KỲ (TRỐNG HOẶC CÓ NGƯỜI)
   cast_line: HƯỚNG DÙNG PHÉP
-  cast_line_straight: CHỈ ĐƯỜNG THẲNG
-  cast_line_free: NGẮM TỰ DO
   critical: CHÍ MẠNG
   crit_chance: TỶ LỆ CHÍ MẠNG
-  crit_chance_value: 1 TRÊN {{n}}
-  on_crit: KHI CHÍ MẠNG
-  proc_chance: '{{n}}% CƠ HỘI'
   aoe_shape:
     point: MỘT MỤC TIÊU
     circle: TRÒN {{size}}
@@ -1654,28 +1465,13 @@ encyclopedia_page:
     ring: VÀNH {{size}}
     allmap: TOÀN BÀN
     cone: HÌNH NÓN {{size}}
-  no_items_onchain: Chưa có mẫu vật phẩm trên chuỗi
-  no_mobs_onchain: Chưa có sinh vật trên chuỗi
-  obtention_crafted: Có thể chế tạo
-  obtention_dropped_by: Rơi từ {{count}} quái
-  obtention_unknown: Chưa rõ cách nhận
   total_supply: Tổng cung
-  marketcap: Vốn hóa
-  marketcap_unknown: Không rõ
   worlds_tab: Các thế giới
-  search_worlds: Tìm tên thế giới…
-  no_worlds: Chưa có thế giới trên chuỗi
   select_world: Chọn thế giới
-  world_level_unknown: Chưa có khoảng cấp
   world_biomes: Quần xã
-  world_no_mobs: Chưa biết quái nào
   world_cities: Thành phố
   world_no_resources: Chưa biết tài nguyên
-  world_gap_note: RPC chưa cung cấp
   world_dungeon: Ngục tối
-  world_dungeon_room: Phòng {{n}}
-  world_stat_lean: Thiên hướng thuộc tính
-  world_appears_in: 'Xuất hiện tại:'
   found_in: TÌM THẤY Ở
   item_descriptions:
     abyssal_blood_wheat: ''
@@ -1819,7 +1615,6 @@ encyclopedia_page:
     wither_concentrate: ''
     wither_petal: ''
     witherbloom: ''
-out_of_sui_body: Bạn đã hết SUI để trả phí giao dịch. Hãy nạp ví để tiếp tục chơi.
 characters_page:
   inventory_selection: Đã chọn {{count}} · Shift-nhấp trang bị để đổi lựa chọn
   crush_cta_count: Nghiền ({{count}})
@@ -1853,7 +1648,6 @@ characters_page:
   level: Cấp {{level}}
   experience: Kinh nghiệm
   equipment_head: Trang bị
-  equipped_totals: Tổng chỉ số trang bị
   no_gear_equipped: Chưa có trang bị
   bag_equipment: Trang bị
   bag_consumables: Vật phẩm tiêu hao
@@ -1881,29 +1675,21 @@ characters_page:
   refusal_item_listed: Vật phẩm đang được đăng bán
   refusal_unavailable: 'Nhân vật hoặc vật phẩm đã thay đổi hay không khả dụng. Hãy thử lại khi nhân vật rảnh.'
   points_to_assign: Điểm chờ phân bổ
-  spend_hint: Phân điểm vào sáu thuộc tính rồi xác nhận
   reset: Đặt lại
   confirm: Xác nhận
   tx_pending: Đang xác nhận…
-  stats_pending: Đang phân bổ điểm…
-  stats_success: Đã phân bổ điểm
   health: Máu
   action: Hành động
   movement: Di chuyển
   characteristics: Thuộc tính
   resistances: Kháng
   secondary: Phụ
-  element_fire: Lửa
-  element_water: Nước
-  element_earth: Đất
-  element_air: Gió
   add_point: Thêm một điểm {{stat}}
   remove_point: Bớt một điểm {{stat}}
   grimoire: Sách phép
   spell_points: Điểm phép
   unlocked: Đã mở {{unlocked}} / {{total}}
   unlocks_at: Mở ở cấp {{level}}
-  unlock_line: Cấp {{level}}
   lv_of: '{{current}} / {{max}}'
   locked: Đã khóa
   mastered: Đã thành thạo
@@ -1942,7 +1728,6 @@ characters_page:
   no_runes: Túi không có ngọc khắc
   menu_feed: Cho ăn
   menu_consume: Sử dụng
-  menu_crush: Nghiền
   menu_destroy: Hủy vật phẩm
   menu_view_recipes: Xem công thức
   menu_explorer: Xem trên trình khám phá
@@ -1964,7 +1749,6 @@ characters_page:
   feed_unavailable: Thú này không còn khả dụng.
   claim_success: Đã nhận thưởng
   crush_title: Nghiền trang bị
-  crush_success: Đã nghiền trang bị
   crush_result_title: Kết quả nghiền
   crush_result_empty: Chúc may mắn lần sau.
   destroy_title: Hủy vật phẩm
@@ -1983,8 +1767,6 @@ characters_page:
     movement: ĐDC
     action: ĐHĐ
     range: Tầm
-    critical_chance: Tỷ lệ chí mạng
-    critical_outcomes: Tỷ lệ chí mạng
     vitality: Sinh lực
     wisdom: Trí tuệ
     strength: Sức mạnh
@@ -1993,7 +1775,6 @@ characters_page:
     agility: Nhanh nhẹn
     heal: Hồi máu
     critical_hit: Đòn chí mạng
-    percent_damage: Sát thương
     raw_damage: Sát thương cố định
     fire_resistance: Kháng lửa
     water_resistance: Kháng nước
@@ -2006,7 +1787,6 @@ characters_page:
     level: Cấp {{level}}
     adventurer: Nhà thám hiểm
     points_to_assign: Điểm chờ phân bổ
-    spend_hint: Dùng điểm cho thuộc tính
     reset: Đặt lại
     health: Máu
     action: Hành động
@@ -2034,7 +1814,6 @@ characters_page:
     point_cost: '{{cost}} điểm → +{{gain}}'
     tx_success: Đã phân điểm thuộc tính
   spells:
-    range_modifiable: Tầm có thể thay đổi
     no_character: Chưa chọn nhân vật
     select_prompt: Chọn phép
     level: Cấp {{level}}
@@ -2055,25 +1834,13 @@ characters_page:
     unlimited: Không giới hạn
     description: Mô tả
     effects: Hiệu ứng
-    levels_head: Các cấp
     mastered: Đã thành thạo
     upgrade_success: '{{spell}} đã lên cấp!'
     upgrading: Đang nâng cấp…
     level_up_spell: Nâng cấp phép
     pts: '{{count}} điểm'
-    pts_one: '{{count}} điểm'
-    pts_other: '{{count}} điểm'
     requires_lv: Cần cấp {{level}}
     no_points: Không có điểm
-    tag_self: Bản thân
-    tag_melee: Cận chiến
-    tag_ranged: Tầm xa
-    tag_zone: Vùng
-    tag_line_of_sight: Tầm nhìn
-    el_fire: Lửa
-    el_water: Nước
-    el_earth: Đất
-    el_air: Gió
     buff: Tăng cường
     utility: Hỗ trợ
     heal: Hồi máu
@@ -2081,13 +1848,10 @@ characters_page:
     element: Nguyên tố
     damage: Sát thương
     turns: lượt
-    crit_val: chí mạng {{value}}
-    range_fixed: TẦM CỐ ĐỊNH — KHÔNG NHẬN CHỈ SỐ TĂNG TẦM
   jobs:
     level_up_title: Nghề lên cấp
     level_up_reached: Đạt cấp
     level_up_character: '{{name}} đã tiến bộ'
-    level_up_progress: Cấp {{before}} → {{after}}
     level_up_continue: Tiếp tục
     category:
       gathering: Thu thập
@@ -2106,13 +1870,10 @@ characters_page:
       yield: Sản lượng
       xp: KN
       unlocks_at: '{{name}} (mở ở cấp {{level}})'
-      gather_detail: '{{name}} · thu {{gather}} giây · hồi {{respawn}} giây'
       locked: đã khóa
     lv_badge: Cấp {{level}}
     tier_badge: Bậc {{tier}}
     craft:
-      recipe_head: Công thức
-      recipe_not_seeded: Công thức này chưa khả dụng.
       ingredients_head: Nguyên liệu
       requires_level: Cần {{job}} cấp {{required}} (bạn cấp {{level}})
       not_enough: Không đủ nguyên liệu
@@ -2126,9 +1887,6 @@ characters_page:
       craft_result: Đã làm {{successes}} / {{attempts}} {{name}}
       locked_level: Đã khóa · Cấp {{level}}
     detail:
-      close_aria: Đóng chi tiết vật phẩm
-      item_not_seeded: Vật phẩm này chưa khả dụng.
-      tool_label: Công cụ
       crafts_label: Chế tạo {{covers}}
       xp_progress: '{{current}} / {{needed}} KN'
       gather_time: 'Thời gian thu: {{seconds}} giây'
@@ -2423,7 +2181,6 @@ item_categories:
   weapon: Vũ khí
   tool: Công cụ
   relic_slot: Di vật {{number}}
-kares: Staking
 kares_page:
   ledger_intro: 'Token cho phần thưởng, staking và rương của AresRPG. Chỉ phát hành một lần; mỗi lần đốt đều giảm nguồn cung.'
   buy_aftermath: 'Mua trên Aftermath'
@@ -2475,7 +2232,6 @@ kares_page:
   upgradeability_note: 'Hợp đồng phần thưởng vẫn có thể nâng cấp cho đến khi dự án đóng băng vĩnh viễn. Việc phát hành token mới vẫn bị vô hiệu hóa.'
   claim_batch: 'Nhận từ {{count}} trên {{total}} vị thế'
   withdraw_batch: 'Tối đa {{count}} vị thế mỗi lần rút. Lặp lại để rút số đã stake còn lại.'
-  token_sale: 'Bán token'
   locked_liquidity: 'Thanh khoản bị khóa'
   stake_more: Stake thêm
   additional_daily: Thêm mỗi ngày
@@ -2499,34 +2255,30 @@ kares_page:
   no_wallet: Cài ví Sui để tham gia.
   refresh: Làm mới
   loading: Đang đọc trạng thái trên chuỗi…
-  pending: Đang xác nhận giao dịch…
   confirmed: Đã xác nhận giao dịch
   amount: Số lượng
   balance: Số dư khả dụng
   amount_invalid: Nhập số dương với tối đa 9 chữ số thập phân.
   insufficient: Số tiền vượt số dư khả dụng.
-  gas_note: Giữ lại ít SUI để trả phí giao dịch.
   testnet: Mạng thử nghiệm · chỉ tài sản thử
-  back_game: Khám phá AresRPG
-  staking_title: Stake của bạn. Phần của bạn.
   your_stake: Stake của bạn
   claimable: Thưởng tích lũy
   stake: Stake KARES
   withdraw: Rút stake
   claim_rewards: Nhận thưởng
   inactive: 'Staking mở sau khi quỹ dự trữ được nạp đủ.'
-  position: Vị thế
   tokenomics: Kinh tế token KARES
   tabs_label: 'Các mục KARES'
   tab_tokenomics: 'Tokenomics'
   tab_staking: 'Staking'
-  signin_title: 'Đăng nhập để stake'
-  signin_body: 'Staking dùng tài khoản trò chơi của bạn. Đăng nhập bằng Google để xem khoản stake và nhận phần thưởng.'
+  staking_line: 'Kiếm KARES và SUI'
+  tokenomics_line: 'Nguồn cung, đốt và quỹ thưởng'
+  signin_body: 'Phần này dùng tài khoản trò chơi của bạn. Đăng nhập bằng Google để mở.'
   community: 'Thi đấu PvP và bảng xếp hạng theo mùa'
   team: Phân bổ đội ngũ
   five_years: Thưởng staking cộng đồng
   mastery_title: 'Rương'
-  mastery_note: 'Mua rương bằng KARES trong trò chơi. KARES thanh toán bị đốt vĩnh viễn khi mua, không phải khi mở rương.'
+  mastery_note: 'Mua rương bằng KARES trong mục Tinh thông của trang Staking. KARES thanh toán bị đốt vĩnh viễn khi mua, không phải khi mở rương.'
   rewards_note: 'Phần thưởng được phân phối trong 1.825 ngày hoạt động. Ai cũng có thể đóng góp KARES hoặc SUI: bắt đầu ở mốc ngày hoạt động tiếp theo và kéo dài 30 ngày hoạt động, không kéo dài lịch cũ. Khoản đóng góp không thể rút lại. Đồng hồ dừng khi không ai staking; phần thưởng đã kiếm được vẫn có thể nhận.'
   revenue_note: 20% tiền bản quyền chợ đã thu dùng thưởng SUI cho staking. Thưởng tùy doanh thu và lượng stake tham gia.
   points: Điểm Tinh thông
@@ -2536,10 +2288,8 @@ kares_page:
   community_detail: 'Quỹ này tài trợ các cuộc thi PvP và phần thưởng bảng xếp hạng theo mùa. Ngân quỹ phân phối thủ công số token đã được mở khóa.'
   supply_detail: 'Chỉ phát hành một lần. Không đúc thêm. Đốt token làm giảm nguồn cung.'
   emissions_detail: 'Mọi phần thưởng dùng token hiện có. Chi trả thưởng không tạo thêm nguồn cung.'
-  confirmed_refresh: Đã xác nhận giao dịch. Làm mới để tải số dư mới.
   staking_unavailable: Staking chưa có trên mạng này.
   combat_rewards: Thưởng trùm
-  combat_detail: 'Cấp độ boss quyết định một khoản thưởng chia đều cho các nhân vật chiến thắng. Giới hạn là {{cap}} KARES mỗi ngày tính từ lúc thiết lập. Hoạt động mỗi epoch điều chỉnh mức thưởng. Ngày ít hoạt động không tích lũy phần bù; khoản đóng góp kéo dài quỹ.'
   error_generic: Không thể hoàn thành thao tác.
   error_rejected: Yêu cầu đã bị hủy.
   error_funds: Không đủ tiền cho thao tác và phí.
@@ -2568,7 +2318,6 @@ leaderboard_page:
   feeding: Cho thú ăn
   gathering: Thu thập
   category: Danh mục
-  loading: Đang tải…
   user: Người dùng
   score: Điểm
   you: Bạn
@@ -2755,11 +2504,13 @@ title_names:
   title_fudbuster: 'Thợ săn FUD'
   title_pug_paladin: 'Thánh kỵ sĩ Pug'
   title_enforcer: 'Người thực thi'
+  title_operator_vesper: 'Đặc vụ Vesper'
+  title_operator_dusk: 'Đặc vụ Dusk'
+  title_operator_blood_ivory: 'Đặc vụ Blood Ivory'
 ui:
   view_on_suivision: Xem trên SuiVision
   funding_game_wallet: Ví trò chơi
   funding_external_wallet: Ví khác
-  agent_wallet: 'Ví của trợ lý'
   wallet_tabs: 'Ví'
   wallet_game: 'Trò chơi'
   wallet_bot: 'Bot'
@@ -2794,8 +2545,9 @@ ui:
   agent_needs_sui: 'Agent cần SUI để chơi. Hãy nạp tiền rồi thử lại thao tác.'
   agent_funding_unverified: 'Không thể xác minh người nhận. Hãy làm mới mục thu hồi trước khi nạp tiền.'
   agent_watch: 'Theo dõi tác nhân'
+  agent_recall: 'Thu hồi'
+  agent_transfer_unavailable: 'Hãy tháo trang bị của nhân vật này và kết thúc trận đấu trước khi chuyển.'
   agent_watching: 'Đang theo dõi tác nhân'
-  agent_watch_empty: 'Không có nhân vật nào để theo dõi.'
   agent_watch_failed: 'Không thể theo dõi tác nhân này. Vui lòng thử lại.'
   portrait_backdrop: 'Nền'
   portrait_transparent: 'Trong suốt'
@@ -2814,21 +2566,13 @@ ui:
   portrait_failed: 'Không thể tải chân dung hoặc sao chép liên kết. Bạn có thể chọn liên kết bên dưới.'
   portrait_close: 'Đóng'
   portrait_preview: 'Chân dung nhân vật'
-  agent_asset_proceeds: 'Doanh thu kiosk'
-  agent_asset_collect: 'Thu về ví đa chữ ký'
-  agent_asset_delist: 'Hủy bán'
   agent_asset_reserved: 'Đề nghị riêng · cần PurchaseCap'
   agent_asset_unconfigured: 'Chưa được cấu hình cho bản triển khai này'
-  agent_asset_fee_budget: 'Ngân sách gas tối đa'
   agent_label: 'Tác nhân'
   agent_kiosk_badge: 'KI-ỐT'
   agent_kiosk: 'Ki-ốt tác nhân'
-  agent_coin_direct: 'Tiền được chuyển trực tiếp trong một giao dịch. Người gửi trả phí gas.'
   agent_pair_for_deposit: 'Xác minh người ký lâu dài của tác nhân trước khi nạp.'
-  agent_inventory_connect: 'Xác minh toàn bộ địa chỉ tác nhân để sử dụng kho đồ.'
   agent_transfer_interrupted: 'Lần chuyển trước cần bạn xác nhận để tiếp tục.'
-  agent_transfer_sender: 'Người gửi'
-  agent_source_balance: 'Số dư người gửi'
   agent_inventory: 'Túi đồ của tác nhân'
   agent_asset_available: 'Có sẵn'
   agent_asset_listed: 'Đang bán · hãy hủy bán trước'
@@ -2836,32 +2580,12 @@ ui:
   agent_asset_sui: 'Số lượng SUI'
   agent_asset_kares: 'Số lượng KARES'
   agent_asset_reserve: 'SUI giữ lại sau phí'
-  agent_asset_positions: 'KARES đang stake'
-  agent_asset_unstake: 'Rút về ví đa chữ ký'
-  agent_asset_owned: 'Đối tượng sở hữu khác (chỉ xem)'
-  agent_asset_incoming: 'Vật phẩm chờ nhận'
-  agent_asset_scope: 'Chọn vật phẩm và số lượng chính xác. Chồng vật phẩm được chuyển toàn bộ. Trang bị được tháo trước; phải hủy bán trước khi chuyển. Rút KARES đang stake rồi làm mới trước khi chọn số lượng. Giữ SUI cho các bước thu hồi sau. Loại đối tượng khác chỉ xem; phải kết thúc trận trước.'
-  agent_setup_prompt: 'Thiết lập tác nhân AresRPG theo {guide} bằng liên kết tạm thời riêng tư này: {url}. Tự động gửi bằng chứng công khai. Thiết lập này không cho phép chuyển tài sản hay chơi game.'
   agent_cancel: 'Hủy'
   agent_pair_connect: 'Kết nối'
-  agent_setup_request: 'Yêu cầu thiết lập'
-  agent_pair_failed_title: 'Không thể kết nối'
-  agent_pair_pending: 'Đang chờ trợ lý của bạn…'
-  agent_pair_failed: 'Thiết lập đã hết hạn hoặc không thể hoàn tất. Hãy kết nối lại.'
-  agent_pair_verified: 'Đã xác minh khóa tác nhân. Điều này không xác nhận đăng nhập máy chủ hay quyền giữ nhân vật.'
-  agent_environment: 'Chọn trợ lý có môi trường tác nhân duy trì lâu dài, như ChatGPT dots hoặc Grok Bot.'
-  agent_pair_ephemeral: 'Chỉ xác minh khóa công khai. Khóa tạm thời này sẽ mất khi tiến trình tác nhân kết thúc. Không bao giờ gửi tài sản đến danh tính này.'
-  agent_pair_instructions: 'Gửi yêu cầu này cho trợ lý. Kết quả sẽ tự động xuất hiện ở đây.'
-  agent_pair_blocked: 'Ví này không cung cấp định danh công khai Google để ghép nối. Kết nối bằng Google để tạo yêu cầu công khai.'
   agent_copy_request: 'Sao chép URL kết nối'
   agent_copy_failed: 'Sao chép thất bại. Hãy chọn và sao chép thủ công yêu cầu ở trên.'
-  agent_handoff_request: 'Chuẩn bị {{provider}} cho Connect Your Agent theo {{url}}. Báo cáo cấu hình ký còn thiếu và yêu cầu liên kết tạm thời nếu cần. Yêu cầu này không cho phép tạo thông tin xác thực, chuyển tài sản hay chơi game.'
   agent_connect_your: 'Kết nối tác nhân của bạn'
-  agent_page_body: 'Hãy để trợ lý AI chơi anh hùng thay bạn. Nó chơi từ ví bot riêng, một ví đa chữ ký mà tài khoản Google của bạn luôn có thể rút tài sản về.'
   agent_page_signin: 'Đăng nhập bằng Google để thiết lập tác nhân và ví bot của nó.'
-  agent_page_world: 'Mở thế giới 3D'
-  agent_bootstrap: 'Mở hướng dẫn thiết lập'
-  agent_character_offer_hint: 'Thao tác này gửi một đề nghị. Tác nhân nhận nhân vật bằng thao tác riêng. Áp dụng phí thông thường.'
   agent_connected: 'Đã kết nối tác nhân'
   agent_disconnect_title: 'Ngắt kết nối và hoàn trả tài sản?'
   agent_disconnect_body: 'Dừng bot và hoàn trả nhân vật, vật phẩm cùng số dư về ví của bạn. Trận chiến và hầm ngục đang diễn ra sẽ bị bỏ. Ví của bạn có thể trả phí.'
@@ -2870,25 +2594,10 @@ ui:
   agent_return_complete: 'Đã ngắt bot. Đã hoàn trả tài sản.'
   agent_return_resume: 'Tiếp tục hoàn trả'
   agent_return_needs_sui: 'Thêm SUI để trả phí hoàn trả.'
-  agent_hint_desktop: 'Nhấp chuột phải vào chân dung hoặc thẻ nhân vật, rồi chọn Gửi cho tác nhân.'
-  agent_hint_create: 'Tạo nhân vật qua màn hình tạo nhân vật thông thường, rồi mở menu thao tác để gửi cho tác nhân.'
   agent_sending: 'Đang gửi…'
-  agent_pair_storage_failed: 'Không thể lưu danh tính khôi phục. Hãy cho phép lưu trữ trong trình duyệt rồi kết nối lại.'
-  agent_pair_disposable: 'Tác nhân này dùng thông tin xác thực tạm thời. Hãy yêu cầu thiết lập bộ nhớ bền vững rồi kết nối lại.'
-  agent_signer_persistent: 'Đã xác minh bên ký giao dịch lâu dài.'
-  agent_hosted_intro: 'Trợ lý dùng MCP mà không giữ khóa ký. Khóa dịch vụ AresRPG và ví Google của bạn đều có thể tự chuyển tài sản của bot mà không cần bên kia chấp thuận.'
-  agent_hosted_unavailable: 'Cần ví Google trong trò chơi và dịch vụ bot HTTPS đã cấu hình. Khôi phục vẫn có trong Túi đồ.'
   agent_hosted_ambiguous: 'Có nhiều ví lưu trữ cần kiểm tra. Chưa chọn ví nào.'
-  agent_other_wallets: 'Các ví khác đã lưu'
-  agent_hosted_pending: 'Đang kết nối…'
-  agent_hosted_authenticate: 'Xác thực bằng ví Google'
-  agent_hosted_ready: 'Thiết lập hoàn tất'
   agent_hosted_consent: 'Kết nối trợ lý'
   agent_checking: 'Đang kiểm tra trạng thái tác nhân…'
-  signing_in: 'Đang đăng nhập…'
-  telegram_link_title: 'Liên kết Telegram'
-  telegram_link_signin: 'Đăng nhập bằng Google để liên kết cuộc trò chuyện Telegram này với tài khoản trò chơi của bạn.'
-  telegram_link_failed: 'Không thể liên kết Telegram. Hãy quay lại Telegram và đăng nhập lại.'
   agent_hosted_review: 'Một trợ lý xin quyền truy cập bot của bạn. Tiếp tục để xem yêu cầu; không có gì được chia sẻ trước khi bạn kết nối.'
   agent_hosted_authority: 'Có thể chơi và sử dụng tài sản của bot này.'
   agent_hosted_read_access: 'Có thể xem bot này.'
@@ -2915,9 +2624,7 @@ ui:
   agent_guide_acknowledge: 'Tôi hiểu và muốn tiếp tục'
   agent_guide_create_plugin: 'Tạo dưới dạng plugin'
   agent_guide_continue: 'Tiếp tục'
-  agent_hosted_recovery: 'Dùng Kho đồ và Thu hồi để tự thu hồi tài sản. Việc thu hồi không hủy quyền kiểm soát của khóa dịch vụ đối với tài sản còn lại trong bot.'
   agent_choose: 'Chọn tác nhân của bạn'
-  agent_unavailable: 'Chưa hỗ trợ ghép nối. Chưa có tác nhân nào được kết nối.'
   agent_setup: 'Thiết lập tác nhân'
   agent_send: 'Gửi cho tác nhân'
   feedback_question: 'Điều gì khiến bạn khó tiếp tục?'
@@ -2934,58 +2641,26 @@ ui:
   equipment_comparison: 'Thay đổi chỉ số khi trang bị'
   equipment_replacing: 'Thay thế {{name}}'
   equipment_unchanged: 'Không thay đổi chỉ số cộng thêm'
-  preview_only: 'Bản xem thử tương tác · không gửi giao dịch'
-  inspect_details: 'Xem chi tiết'
-  design_minimap: 'Bản đồ nhỏ'
-  design_party_invitation: 'Lời mời tổ đội'
-  design_trade_invitation: 'Lời mời trao đổi'
   progression_rewards: 'Phần thưởng'
   inventory_selected_count: 'Đã chọn {{count}}'
   inventory_select: 'Chọn'
   inventory_deselect: 'Bỏ chọn'
   inventory_use: 'Dùng'
   attack: 'Tấn công'
-  character_summary: 'Tổng quan'
   character_details: 'Chi tiết'
-  allocate_points: 'Phân bổ'
   inventory_search: 'Tìm trong túi đồ…'
   design_titles: 'Danh hiệu'
-  design_no_title: 'Không có danh hiệu'
-  design_library: 'Xưởng thiết kế'
-  design_controls: 'Điều khiển'
-  design_components: 'Thành phần'
-  design_prebuilt: 'Dựng sẵn'
-  design_windows: 'Cửa sổ'
-  design_feedback: 'Phản hồi'
-  design_tokens: 'Token'
-  design_dialog: 'Mở hộp thoại'
-  design_disabled: 'Không khả dụng'
-  design_details: 'Chi tiết'
-  design_description: 'Các thành phần giao diện dùng chung. Tương tác với ví dụ cục bộ để xem trạng thái và bố cục thích ứng.'
   design_volume: 'Âm lượng'
-  design_motion: 'Hoạt ảnh'
-  design_search: 'Tìm kiếm'
-  design_equipment_hint: 'Chọn vật phẩm để trang bị. Chạm vào vật phẩm đã trang bị để tháo.'
   design_equip: 'Trang bị'
   design_combat: 'Chiến đấu'
-  design_journal: 'Nhật ký và tiến trình'
-  design_complete: 'Hoàn thành'
-  design_viewport: 'Kích thước xem trước'
-  design_desktop: 'Máy tính'
-  design_mobile: 'Di động'
   leave_game_title: 'Bạn muốn rời trò chơi?'
   stay_in_game: 'Chơi tiếp'
   leave_game_confirm: 'Về màn hình chính'
   mobile_move: 'Di chuyển'
   mobile_jump: 'Nhảy'
-  mobile_chat: 'Trò chuyện'
-  mobile_party: 'Nhóm'
   mobile_confirm_action: 'Xác nhận hành động'
   mobile_item_actions: 'Thao tác vật phẩm'
   mobile_unequip: 'Tháo trang bị'
-  mobile_use_item: 'Dùng / trang bị'
-  mobile_language: 'Ngôn ngữ'
-  mobile_menu: 'Menu'
   mobile_rotate_title: 'Xoay ngang để chơi'
   mobile_rotate: 'Xoay thiết bị để chơi ở chế độ ngang.'
   character: Nhân vật
@@ -3429,9 +3104,6 @@ tournament_page:
   reason_finished: Không có phần thưởng để nhận
   reason_cancelled: Giải đấu đã hủy
   reason_cannot_watch: Hãy kết thúc trận của bạn trước khi xem trận khác
-  custody_kiosk: Kiosk
-  custody_fight: Đang chiến đấu
-  custody_trade: Đang trao đổi
   latest_start_notice: 'Bất kỳ ai cũng có thể bắt đầu giải đấu từ thời điểm này.'
   champion: '{{team}} vô địch'
   prize_pool: Quỹ thưởng
@@ -3460,7 +3132,6 @@ tournament_page:
   open_window: Mở giải đấu
   older_claims: '{{count}} giải trước còn phần thưởng chưa nhận'
   result_line: '{{team}} đi tiếp'
-  live_count: '{{count}} trận đang đấu'
   prize_split: Phân bổ phần thưởng
   invalid_percentage: Nhập tỷ lệ phần trăm với tối đa hai chữ số thập phân.
   allocation_excess: Phân bổ thừa {{amount}}%
@@ -3492,314 +3163,11 @@ tournament_page:
   deployment_metadata: Siêu dữ liệu triển khai
   display_notice: Siêu dữ liệu hiển thị được thiết lập một lần cho mỗi lần triển khai, không cần cho từng giải đấu.
   submitted_notice: Thao tác đã gửi. Kiểm tra giải đấu hiện tại trước khi gửi lại.
-  custody_undefined: Chưa rõ nơi giữ
   wagered: Có cược
   complete_notice: Chỉ đội đủ người được tham gia giải đấu. Các đội khác bị loại khi bắt đầu.
   find_review: Tìm đội cho {{character}} và đăng ký nhân vật này?
   joined_count: '{{count}}/{{total}} đã vào'
   versus: đấu với {{team}}
-
-landing_page:
-  sound_on: Bật nhạc
-  sound_off: Tắt nhạc
-  new_tab: ' (mở trong tab mới)'
-  sign_alt: AresRPG
-  nav_label: Tài nguyên
-  nav:
-    docs: Tài liệu
-    journal: Nhật ký
-    discord: Discord
-  kares:
-    trigger: $KARES
-    trigger_detail: Kinh tế token
-  account:
-    login: Đăng nhập
-    logging_in: Đang đăng nhập…
-    signed_in: Đã đăng nhập bằng {{address}}
-    failed: Đăng nhập chưa hoàn tất. Hãy thử lại.
-    logout: Đăng xuất
-    dev_only: 'Chỉ dành cho phát triển. Không khuyến nghị dùng để chơi.'
-  hero:
-    eyebrow:
-      - Giao thức MMORPG chiến thuật
-      - On-chain trên Sui
-    title:
-      - 'Một thế giới, on-chain.'
-      - 'Chơi theo cách của bạn.'
-      - 'Giữ những gì bạn tìm thấy.'
-    lede: AresRPG là giao thức MMORPG chiến thuật trên Sui. Nhân vật, chiến lợi phẩm và chợ đều nằm
-      on-chain, và bất kỳ giao diện nào cũng có thể chơi. Cùng nhóm vượt ngục tối, chế tạo và giao
-      dịch với người chơi khác, hoặc giao quyền điều khiển cho tác nhân.
-    play: 'Chơi 3D'
-    play_bots: 'Chơi cùng bot'
-    ways:
-      - Một thế giới
-      - Vô số cách chơi
-  chooser:
-    section: Giao diện
-    title: Chọn cách bạn chơi.
-    intro: AresRPG là một trò chơi on-chain không có lối vào duy nhất. Cùng nhân vật, cùng chiến lợi
-      phẩm, cùng chợ. Đây là năm giao diện để bắt đầu, và ai cũng có thể xây giao diện tiếp theo.
-    interface: Giao diện
-    specs:
-      runs_in: Chạy trên
-      role: Vai trò của bạn
-      good_for: Phù hợp cho
-      status: Trạng thái
-    play:
-      manual: Thủ công
-      automated: Tự động
-    items:
-      world:
-        name: Thế giới voxel
-        line: Trò chơi 3D đầy đủ trên trình duyệt. Đồ họa nặng, mọi nước đi do bạn quyết định.
-        tech: Xây bằng three.js
-        status: Chơi được
-        body: Trò chơi đầy đủ ngay trên trình duyệt. Dạo khắp các hành tinh, lập nhóm và tự chiến đấu trên
-          lưới. Trên điện thoại, cùng client đó chuyển sang điều khiển cảm ứng.
-        runs_in: Trình duyệt có GPU đủ mạnh
-        role: Bạn tự thực hiện mọi nước đi
-        good_for: Khám phá và đánh theo nhóm
-        cta: Chơi
-        preview: Một nhân vật đi trên con đường đất xuyên qua khu rừng nấm voxel Mosswood, phía trước là
-          vách đá, thác nước và yêu tinh.
-      dapp:
-        name: DApp web
-        line: Không 3D. Gửi đội đi làm nhiệm vụ và đột kích ngục tối từ bất kỳ điện thoại nào.
-        tech: Chạy trên mọi thiết bị
-        status: Chơi được
-        body: Trò chơi không cần engine 3D. Gửi nhân vật đi làm nhiệm vụ, cùng đội đột kích ngục tối và giao
-          dịch chiến lợi phẩm, tất cả trên một trang nhẹ chạy được trên mọi điện thoại.
-        runs_in: Mọi trình duyệt, mọi điện thoại
-        role: Gửi đội đi, nhận chiến lợi phẩm
-        good_for: Máy cấu hình thấp, phiên ngắn
-        cta: Mở dapp
-        preview: 'Bản xem trước thiết kế của DApp web: một nhân vật đang làm nhiệm vụ với thanh máu, một
-          cuộc đột kích ngục tối đang chờ chìa khóa, và các nút gửi đi làm nhiệm vụ, đột kích ngục
-          tối hoặc mở chợ.'
-      agent:
-        name: Tác nhân của bạn
-        line: Claude, ChatGPT hoặc Grok điều khiển, còn bạn chỉ cần xem.
-        tech: Claude / ChatGPT / Grok
-        status: Đang hoàn thiện
-        body: Kết nối Claude, ChatGPT hoặc Grok với một bot AresRPG chạy trên máy chủ. Thống nhất mục tiêu,
-          rồi xem nó điều khiển nhân vật của bạn ngay trong game.
-        runs_in: ChatGPT, Claude hoặc Grok
-        role: Đặt mục tiêu, rồi theo dõi
-        good_for: Chơi không cần ra tay
-        cta: Kết nối tác nhân
-        preview: 'Phiên mẫu: bạn nhờ tác nhân dọn sạch yêu tinh trên đường, và nó gọi công cụ của bot trên
-          máy chủ trong khi báo cáo lại cho bạn.'
-      telegram:
-        name: Telegram
-        line: 'Điều khiển anh hùng từ một cuộc trò chuyện. Chọn chiến lược, phê duyệt, theo dõi.'
-        tech: Trò chuyện Telegram
-        status: Danh sách chờ
-        body: 'Bot lưu trữ của bạn trong một cuộc trò chuyện Telegram. Chọn một chiến lược đã được kiểm duyệt cho anh hùng, đọc xem nó sẽ làm gì rồi phê duyệt. Sau đó theo dõi tiến độ hoặc dừng nó ngay trong cuộc trò chuyện.'
-        runs_in: Trò chuyện Telegram
-        role: Chọn chiến lược, cho phép
-        good_for: 'Chơi rảnh tay từ điện thoại'
-        cta: Vào danh sách chờ
-        preview: 'Cuộc trò chuyện mẫu: chọn chiến lược, xem nó làm gì, cho phép, rồi kiểm tra trạng thái
-          hoặc dừng nó.'
-      sdk:
-        name: Client của riêng bạn
-        line: Xây client, công cụ hoặc bot trên SDK công khai.
-        tech: SDK công khai
-        status: Mã nguồn có sẵn
-        body: Phát triển trên SDK công khai mà chính trò chơi đang dùng. Giấy phép cho phép client thương
-          mại, bản làm lại, công cụ của fan và bot chạy trên bản triển khai chính thức. Client hoặc
-          bot của bạn ký bằng ví Sui riêng.
-        runs_in: Bất cứ thứ gì bạn xây
-        role: Bạn tự viết client
-        good_for: Client, công cụ, bot tùy chỉnh
-        cta: Đọc cẩm nang
-        preview: 'Terminal liệt kê mục lục cẩm nang tác nhân công khai: các khối xây dựng SDK, nguyên tắc
-          trạng thái và giao dịch, kho mã nguồn và các mốc triển khai.'
-    waitlist:
-      joining: Đang vào danh sách chờ…
-      joined: Bạn đang trong danh sách chờ
-      failed: Không vào được danh sách chờ. Hãy thử lại.
-    agent_guide: Đọc hướng dẫn
-    source: Xem mã nguồn
-    previews:
-      keys_then: rồi
-      dapp:
-        title: DApp web
-        label: Xem trước thiết kế
-        character: Senshi
-        questing: Đang làm nhiệm vụ
-        dungeon: Ivory Rampart
-        needs_key: Cần chìa khóa
-        raid: Đội đột kích ngục tối
-        actions:
-          - Gửi làm nhiệm vụ
-          - Đột kích ngục tối
-          - Chợ
-      agent:
-        title: Bot trên máy chủ / MCP
-        label: Phiên mẫu
-        you: bạn
-        agent: agent
-        call: gọi
-        lines:
-          - Dọn sạch yêu tinh trên đường.
-          - Rõ. Bạn cứ xem từ đây.
-          - Có yêu tinh trên đường phía trước. Tôi sẽ thách đấu chúng.
-          - Trận đấu bắt đầu. Đang chọn ô trên lưới.
-      telegram:
-        choose: Chọn chiến lược
-        patrol: Tuần tra thành phố · 1 quái
-        gather: Thu thập & chế tạo
-        review: Xem lại chiến lược này
-        review_detail: Đánh các nhóm chỉ có một quái trong thành phố này cho đến khi bị dừng.
-        approve: Cho phép
-        menu: Menu
-        running: Chiến lược đang chạy
-        status: Trạng thái
-        stop: Dừng chiến lược
-      sdk:
-        label: Mục lục cẩm nang
-        build: Xây bot
-        build_lines:
-          - 'Khối xây dựng SDK: kết hợp hành động, lập kế hoạch ngoại tuyến và mô phỏng chiến đấu.'
-          - 'Nguyên tắc trạng thái và giao dịch: độ mới, biên nhận và khôi phục.'
-        source: Mã nguồn và triển khai
-        source_lines:
-          - 'Kho mã nguồn: mã SDK, giấy phép và bản phát hành tương ứng.'
-          - 'Mốc triển khai: đối chiếu với bản triển khai dự kiến.'
-  earn:
-    section: Kinh tế
-    title: Kiếm SUI. Ba cách.
-    intro: Người chơi khác trả tiền cho bạn. Bạn bán cho họ, chế tạo cho họ, hoặc đánh bại họ.
-    paths:
-      - tag: Chợ
-        title: Đột kích ngục tối.
-        accent: Bán chiến lợi phẩm.
-        body: Cùng đội vượt ngục tối và đăng bán đồ rơi. Người mua trả bạn bằng SUI.
-      - tag: Nghề nghiệp
-        title: Thu thập và chế tạo.
-        accent: Bán trang bị.
-        body: Lên cấp một nghề, chế tạo thứ chiến binh cần, rồi bán món đó hoặc bán nguyên liệu thô.
-        link: Xem mọi vật phẩm
-      - tag: Giải đấu
-        title: Thắng trận.
-        accent: Nhận giải thưởng.
-        body: Khi có giải đấu, thứ hạng cuối cùng quyết định phần thưởng của bạn.
-  control:
-    section: Điều khiển
-    title: Tự động hóa, hoặc tự ký mọi nước đi.
-    intro: Hai cách nắm quyền điều khiển. Cả hai đều chạy trên cùng một trò chơi on-chain, và bạn có thể
-      dùng mỗi cách cho một nhân vật.
-    you: Bạn
-    holds: giữ nhân vật
-    used_by: Dùng bởi
-    automated:
-      tag: Tự động
-      title: Tác nhân trên máy chủ chơi thay bạn.
-      body: Giao nhân vật cho một tài khoản chung và đặt mục tiêu. Tác nhân trên máy chủ của chúng tôi
-        chơi suốt ngày đêm trong khi bạn xem hoặc làm việc khác.
-      figure: 'Sơ đồ: bạn và tác nhân trên máy chủ mỗi bên giữ một trong hai khóa của tài khoản multisig
-        chung đang giữ nhân vật.'
-      you_detail: Đăng nhập Google
-      vault: 1-of-2 multisig
-      agent: Tác nhân trên máy chủ
-      agent_detail: thực hiện nước đi
-      points:
-        - Tác nhân không bao giờ nhận khóa ví của bạn.
-        - Bạn duyệt chính xác bot nào và nó được làm gì trước khi bắt đầu.
-        - Gọi nhân vật về từ túi đồ bất cứ lúc nào, kể cả khi tác nhân ngoại tuyến.
-    self:
-      tag: Tự lưu ký
-      title: Bạn tự ký mọi nước đi.
-      body: Đăng nhập bằng Google. Nhân vật và vật phẩm ở lại trong tài khoản của bạn, và không có gì xảy
-        ra nếu thiếu chữ ký của bạn.
-      figure: 'Sơ đồ: bạn ký bằng tài khoản Google, và tài khoản của chính bạn giữ nhân vật.'
-      you_detail: Đăng nhập Google
-      vault: Tài khoản của bạn
-      points:
-        - Không ai khác có thể di chuyển nhân vật hay tiêu SUI của bạn.
-        - Mọi trận đấu, lần chế tạo và lần bán đều là giao dịch do bạn ký.
-        - Sau này có thể chuyển nhân vật sang tác nhân trên máy chủ, và lấy lại khi muốn.
-  end:
-    title: Bắt đầu cuộc phiêu lưu
-    body: Đăng nhập, tạo nhân vật và bước vào trận đấu theo lượt đầu tiên.
-    play: Chơi
-    discord: Tham gia Discord
-    pick: 'Lựa chọn của bạn:'
-  footer:
-    wordmark: AresRPG
-    tagline: MMORPG voxel chiến thuật trên Sui, trải khắp nhiều hành tinh.
-    game: Trò chơi
-    community: Cộng đồng
-    play: Chơi
-    encyclopedia: Bách khoa vật phẩm
-    journal: Nhật ký
-    discord: Discord
-    telegram: Telegram
-    x: X
-    allocation: Kiểm tra suất whitelist của bạn
-    colophon: một thế giới, vô số giao diện
-
-telegram_companion:
-  welcome: "⚔️ Chào mừng đến với AresRPG\n\nCác anh hùng của bạn sống trên chuỗi. Từ cuộc trò chuyện này bạn theo dõi họ, chọn chiến lược, và họ chiến đấu, thu thập thay bạn.\n\nĐể bắt đầu, hãy đăng nhập bằng Google. Trang sẽ mở trong trình duyệt, rồi đưa bạn trở lại đây."
-  disconnect: '🔓 Ngắt kết nối Google'
-  connect_google: '🔑 Đăng nhập bằng Google'
-  waiting: 'Tài khoản trò chơi của bạn chưa có quyền dùng Telegram. Hãy vào danh sách chờ để xin quyền.'
-  on_waitlist: '✅ Bạn đang ở trong danh sách chờ. Khi tài khoản trò chơi của bạn được chấp nhận, Kiểm tra quyền truy cập sẽ mở các anh hùng của bạn.'
-  join_waitlist: 'Vào danh sách chờ'
-  check_access: 'Kiểm tra truy cập'
-  inventory: '🎒 Túi đồ'
-  inventory_empty: 'Túi đồ trống'
-  observation_unknown: 'Chưa xác minh được'
-  no_strategy: 'Không có nhân vật nào đang chạy chiến lược.'
-  strategy_active: 'Chiến lược đang hoạt động'
-  strategy_waiting: 'Chiến lược đang chờ'
-  replace_strategy: 'Thao tác này thay chiến lược mà nhân vật này đang chạy. Các thao tác đã gửi vẫn có thể hoàn tất.'
-  fight: '⚔️ Đang chiến đấu'
-  ambush: '🛡 Hộ vệ đang chờ'
-  idle: 'Sẵn sàng chọn chiến lược'
-  external_strategy: 'Chiến lược từ ứng dụng khác'
-  menu: '🧙 Chọn nhân vật của bạn'
-  loading: '⏳ Đang tải nhân vật'
-  empty: '🧙 Không có nhân vật tác nhân có thể chơi'
-  play: '▶️ Chơi'
-  back: '☰ Menu'
-  status: '📍 Trạng thái'
-  approve: '✅ Cho phép'
-  unlinked: '🔓 Đã hủy liên kết'
-  browser_expired: 'Liên kết này không còn hiệu lực. Hãy quay lại Telegram và gửi một tin nhắn để nhận liên kết mới.'
-  check_status: '📍 Kiểm tra trạng thái'
-  log_in_again: '🔑 Đăng nhập lại'
-  balance: '💰 Số dư tác nhân'
-  pause: '⏸ Tạm dừng tác nhân'
-  resume: '▶️ Tiếp tục tác nhân'
-  wallet_scope: 'Ảnh hưởng toàn bộ ví tác nhân và các kết nối khác · Giao dịch đã gửi vẫn có thể hoàn tất'
-  paused: '⏸ Đã tạm dừng tác nhân'
-  resumed: '▶️ Đã tiếp tục tác nhân'
-  choose_strategy: 'Chọn chiến lược'
-  failure_changed: 'Nội dung đã được cập nhật. Đây là trạng thái hiện tại.'
-  failure_reconnect: 'Đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại:'
-  failure_unlink_first: 'Cuộc trò chuyện này hoặc tài khoản Google này đã được kết nối. Hãy ngắt kết nối Google rồi thử lại.'
-  failure_temporary: 'Lần này chưa thành công. Hãy thử lại sau giây lát.'
-  failure_busy: 'Nhân vật này vẫn đang hoàn tất một thao tác, hoặc tác nhân đang tạm dừng. Nếu bạn đã tạm dừng, hãy tiếp tục rồi kiểm tra trạng thái.'
-  failure_run_limit: 'Tác nhân của bạn đã điều khiển số nhân vật tối đa. Hãy dừng một nhân vật rồi bắt đầu nhân vật này.'
-  review: 'Xem lại chiến lược'
-  effects: 'Đánh các nhóm một quái trong thành phố này đến khi dừng. Mỗi hành động tốn gas SUI, không giới hạn tổng phí. Không bảo đảm thắng; khởi động lại có thể lặp một bước. Dừng không hủy hành động đã gửi.'
-  stop: 'Dừng chiến lược'
-  stop_scope: 'Chọn nhân vật cần dừng. Các nhân vật khác vẫn tiếp tục; giao dịch đã gửi vẫn có thể hoàn tất.'
-  stop_all: 'Dừng tất cả'
-  stopped: 'Đã dừng chiến lược'
-  completed: 'Chiến thuật hoàn tất'
-  attention: 'Chiến lược cần kiểm tra. Xem nhân vật trong trò chơi rồi chọn Trạng thái hoặc Dừng.'
-  unknown: 'Kết quả chưa được xác nhận. Hãy kiểm tra trạng thái trước.'
-  city_review: 'Thành phố: {city}'
-  city_required: 'Vào một thành phố trong trò chơi, rồi mở menu và xem lại.'
-  world_review: 'Thế giới: {world}'
-  gather_effects: 'Chế tạo công thức hữu ích từ nguyên liệu sẵn có để tăng cấp nghề; nếu không thì thu thập bằng dụng cụ có sẵn và khám phá thế giới này. Đánh hộ vệ bằng chiến thuật cơ bản. Chạy đến khi dừng. Không giới hạn tổng gas SUI hay nguyên liệu; có thể thất bại. Khởi động lại có thể lặp một bước. Dừng không hủy hành động đã gửi.'
-  strategies:
-    fight_nearby: '⚔️ Tuần tra thành phố · 1 quái'
-    gather_craft: '🌿 Thu thập và chế tạo'
 
 docs_page:
   title: 'Tài liệu'
@@ -3811,7 +3179,6 @@ docs_page:
   next: 'Tiếp'
   search: 'Tìm hướng dẫn, vật phẩm và quái'
   search_empty: 'Không có trang nào khớp với tìm kiếm này.'
-  new_tab: ' (mở trong tab mới)'
   data_note: 'Số liệu trên các trang này lấy từ cùng tệp nội dung với trò chơi.'
   kinds:
     guide: 'Hướng dẫn'
@@ -3855,9 +3222,43 @@ docs_page:
       - 'Giao dịch với người chơi khác trên chợ, bằng SUI.'
   ways:
     lede: 'Giao thức không chỉ có một lối vào. Mỗi giao diện dưới đây chơi cùng nhân vật, cùng chiến lợi phẩm và cùng một chợ. Chúng khác nhau ở việc ai thực hiện nước đi và bạn cần gì để chạy.'
-    note: 'Bạn có thể dùng nhiều giao diện, với một giới hạn: mỗi tài khoản một kết nối đang hoạt động. Mở trò chơi 3D sẽ thay thế phiên dapp web của cùng tài khoản.'
+    note: 'Bạn có thể dùng nhiều giao diện cùng lúc. Mỗi tài khoản chơi trong một phiên game tại một thời điểm; các trang của website vẫn có thể mở bên cạnh.'
+    specs:
+      runs_in: Chạy trên
+      role: Vai trò của bạn
+      good_for: Phù hợp cho
+      status: Trạng thái
+    play:
+      manual: Thủ công
+      automated: Tự động
+    items:
+      world:
+        name: Thế giới voxel
+        status: Chơi được
+        body: Trò chơi đầy đủ ngay trên trình duyệt. Dạo khắp các hành tinh, lập nhóm và tự chiến đấu trên
+          lưới. Trên điện thoại, cùng client đó chuyển sang điều khiển cảm ứng.
+        runs_in: Trình duyệt có GPU đủ mạnh
+        role: Bạn tự thực hiện mọi nước đi
+        good_for: Khám phá và đánh theo nhóm
+      agent:
+        name: Tác nhân của bạn
+        status: Đang hoàn thiện
+        body: Kết nối Claude, ChatGPT hoặc Grok với một bot AresRPG chạy trên máy chủ. Thống nhất mục tiêu,
+          rồi xem nó điều khiển nhân vật của bạn ngay trong game.
+        runs_in: ChatGPT, Claude hoặc Grok
+        role: Đặt mục tiêu, rồi theo dõi
+        good_for: Chơi không cần ra tay
+      sdk:
+        name: Client của riêng bạn
+        status: Mã nguồn có sẵn
+        body: Phát triển trên SDK công khai mà chính trò chơi đang dùng. Giấy phép cho phép client thương
+          mại, bản làm lại, công cụ của fan và bot chạy trên bản triển khai chính thức. Client hoặc
+          bot của bạn ký bằng ví Sui riêng.
+        runs_in: Bất cứ thứ gì bạn xây
+        role: Bạn tự viết client
+        good_for: Client, công cụ, bot tùy chỉnh
   bots:
-    lede: 'Bot lưu trữ chơi các anh hùng thay bạn trên máy chủ của AresRPG. Dapp web, Telegram và trợ lý được kết nối đều điều khiển cùng một bot.'
+    lede: 'Bot lưu trữ chơi các anh hùng thay bạn trên máy chủ của AresRPG.'
     wallet_title: 'Ví bot'
     wallet:
       - 'Bot chơi từ ví riêng, tách khỏi ví trò chơi của bạn. Đó là ví đa chữ ký 1-trên-2: dịch vụ lưu trữ có thể ký, và tài khoản Google của bạn cũng vậy.'
@@ -3872,8 +3273,6 @@ docs_page:
       - 'Bot chờ khi không có việc đã được duyệt, hoặc khi ví không có SUI để trả phí.'
     control_title: 'Ai có thể ra lệnh'
     control:
-      - 'Dapp web: bắt đầu và dừng hoạt động, nâng chỉ số và phép thuật, và giao dịch trên chợ với tư cách bot.'
-      - 'Telegram: chọn một chiến lược đã được kiểm duyệt và phê duyệt.'
       - 'Trợ lý (ChatGPT, Claude hoặc Grok): thống nhất mục tiêu trong cuộc trò chuyện. Nó gọi công cụ của bot trong phạm vi bạn đã duyệt.'
   first_hour:
     lede: 'Mục tiêu của giờ chơi đầu tiên: một nhân vật, vài trận thắng và một công cụ do chính bạn chế tạo. Tỉ lệ rơi và công thức bên dưới là số liệu thật.'
@@ -3937,130 +3336,46 @@ docs_page:
     license_note: 'Trang này chỉ là bản tóm tắt. Văn bản giấy phép mới có giá trị ràng buộc. Hãy giữ giấy phép và thông báo bản quyền khi phân phối lại.'
     license_link: 'Đọc giấy phép'
 
-dapp_page:
-  brand: 'Viễn chinh'
-  nav_label: 'Mục'
-  nav_market: 'Chợ'
-  bot_balance: 'Bot: {amount} SUI'
-  bot_balance_hint: 'Số SUI mà bot lưu trữ của bạn đang giữ. Bot dùng số này để trả phí mạng cho các anh hùng và những gì bạn mua ở chợ.'
-  bot_balance_low: 'Bot của bạn sắp hết SUI. Hãy nạp SUI vào ví của bot, nếu không các anh hùng sẽ dừng lại.'
-  asking_bot: 'Đang đánh thức bot và hỏi xem nó đang làm gì…'
-  connect_proving: 'Đang chứng minh tài khoản này là của bạn…'
-  connect_creating: 'Đang tạo ví cho bot của bạn…'
-  connect_checking: 'Đang kiểm tra ví của bot…'
-  connect_naming: 'Đang đặt tên cho bot của bạn…'
-  connect_approving: 'Đang chấp thuận kết nối…'
-  connect_returning: 'Đang hoàn tất kết nối…'
-  loading: 'Đang tải…'
-  signing_in: 'Đang đăng nhập…'
-  signin_title: 'Gửi anh hùng của bạn đi viễn chinh'
-  signin_body: 'Đăng nhập bằng Google để xem anh hùng và để bot lưu trữ chơi thay họ. Cùng tài khoản, anh hùng và vật phẩm như thế giới 3D.'
-  signin_failed: 'Đăng nhập chưa hoàn tất. Hãy thử lại.'
-  google_title: 'Cần đăng nhập bằng Google'
-  google_body: 'Anh hùng lưu trữ thuộc về tài khoản Google của bạn. Hãy đăng xuất rồi tiếp tục với Google để dùng trang này.'
-  unavailable_title: 'Dịch vụ tự động không phản hồi'
-  unavailable_body: 'Tạm thời hãy dùng thế giới 3D.'
-  unavailable_action: 'Mở thế giới 3D'
-  connect_title: 'Bot của bạn chưa được kết nối'
-  connect_body: 'Kết nối để cử các anh hùng lên đường.'
-  connect_action: 'Kết nối'
-  connect_busy: 'Đang kết nối…'
-  reading_heroes: 'Đang đọc anh hùng của bạn…'
-  syncing: 'Bot đang bắt kịp thế giới. Trang này tự cập nhật.'
-  observe_failed: 'Không liên lạc được với bot. Hãy tải lại trang để thử lại.'
-  heroes_failed_title: 'Không đọc được các anh hùng của bạn'
-  heroes_failed: 'Máy chủ trò chơi không gửi các anh hùng của bạn. Hãy tải lại trang này để thử lại.'
+agent_page:
+  log_title: 'Nhật ký tác nhân'
+  manage_note: 'Để gửi anh hùng hoặc vật phẩm cho bot, lấy lại chúng hoặc ngắt kết nối bot, hãy mở danh mục của bạn.'
+  stage_wallet_title: 'Ví riêng'
+  stage_wallet: 'Tác nhân chơi và ký bằng ví bot riêng của nó.'
+  stage_log_title: 'Một nhật ký'
+  stage_log: 'Trang này hiển thị trạng thái và việc nó làm.'
+  stage_charge_title: 'Bạn vẫn nắm quyền'
+  stage_charge: 'Gửi anh hùng cho nó và lấy lại từ danh mục của bạn.'
   heroes_title: 'Anh hùng của bạn'
   hero_level: 'Cấp {level}'
-  hero_xp: 'Kinh nghiệm'
-  status_free: 'Sẵn sàng'
-  status_activity: 'Đang hoạt động'
-  status_fight: 'Đang chiến đấu'
-  status_dungeon: 'Trong hầm ngục'
+  heroes_failed: 'Máy chủ trò chơi không gửi các anh hùng của bạn. Hãy tải lại trang này để thử lại.'
+  empty_title: 'Chưa có gì ở đây'
+  empty_body: 'Những gì trợ lý AI làm sẽ hiện ở đây.'
   activity_other: 'Hoạt động'
-  activity_train: 'Luyện tập'
-  activity_gather: 'Thu thập'
-  activity_raid: 'Đột kích'
-  blocker_command_pending: 'Đang chờ bot trả lời…'
-  blocker_no_free_hero: 'Hiện không có anh hùng nào rảnh cho việc này.'
-  blocker_hero_busy: '{names}: đang chiến đấu hoặc ở trong hầm ngục.'
-  blocker_hero_unknown: '{names}: bot vẫn đang đọc anh hùng này. Hãy thử lại sau giây lát.'
-  blocker_world_required: '{names}: ở thế giới khác.'
-  blocker_key_missing: '{names}: không có chìa khóa cho hầm ngục này.'
-  key_find: 'Tìm {item} ở chợ'
-  key_unsold: 'Hiện không ai bán {item}.'
-  raid_short_title: 'Không đủ chìa khóa cho cả đội'
-  raid_short_body: 'Bạn chỉ đủ chìa khóa cho {count} anh hùng, nên chỉ {names} vào hầm ngục. Muốn gửi thêm anh hùng, hãy tìm hoặc mua số chìa khóa còn thiếu.'
-  raid_short_action: 'Bắt đầu đột kích với {count}'
-  cancel: 'Hủy'
-  close: 'Đóng'
-  command_uncertain: 'Không thể xác nhận phản hồi của bot. Trang này sẽ tự kiểm tra lại; không có gì bị gửi hai lần.'
-  command_refused: '{names}: {reason}'
   position_running: 'Đang chạy'
+  position_finished: 'Đã xong'
+  position_xp: 'Kinh nghiệm nhận được'
+  position_dungeon: '{dungeon} · phòng {room}'
   run_notice_funding: 'Bot của bạn đã hết SUI. Hãy nạp SUI vào ví của bot và nó sẽ tự tiếp tục.'
   run_notice_requirement: 'Anh hùng này thiếu công cụ, cấp độ hoặc nguyên liệu cho hoạt động này. Hãy cung cấp thứ cần thiết hoặc chọn hoạt động khác.'
   run_notice_plan: 'Bot của bạn cần một kế hoạch mới cho hoạt động này. Hãy dừng rồi bắt đầu lại, hoặc nhờ ứng dụng AI của bạn điều chỉnh.'
-  position_stopping: 'Đang dừng…'
-  position_finished: 'Đã xong'
-  position_ended_issue: 'Bot đã dừng hoạt động này. Hãy kiểm tra số dư và anh hùng rồi bắt đầu lại.'
-  position_hp: 'Máu'
-  position_xp: 'Kinh nghiệm nhận được'
-  position_levels: 'Cấp +{count}'
-  position_job_xp: 'Kinh nghiệm nghề'
-  position_fights: 'Trận đấu'
-  position_dungeon: '{dungeon} · phòng {room}'
-  position_team: 'Đang chiến đấu cùng {names}'
-  position_stop: 'Dừng'
-  position_dismiss: 'Ẩn'
-  bag_title: 'Túi đồ'
-  bag_empty: 'Túi đồ đang trống.'
-  bag_loading: 'Đang đọc túi đồ của bot…'
-  bag_feed_title: 'Vật phẩm gần đây'
-  bag_feed_empty: 'Những gì anh hùng mang về sẽ hiện ở đây.'
-  detail_locked: 'Trang bị, chỉ số, phép thuật và chế tạo dùng được khi anh hùng này không chiến đấu và bot không có yêu cầu nào khác đang mở.'
-  detail_stats: 'Thuộc tính'
+  run_notice_place: 'Từ chỗ đang đứng, nó không thể đi bộ tới nơi đó. Hãy dừng nó và chọn nơi khác.'
+  run_ended_objective_reached: 'Đã đạt mục tiêu bạn đặt.'
+  run_ended_fee_cap_reached: 'Đã chạm giới hạn phí bạn đặt.'
+  run_ended_run_cap_reached: 'Đã xong số lượt bạn yêu cầu.'
+  run_ended_completed: 'Đã hoàn thành kế hoạch.'
   error_unknown: 'Đã có lỗi. Hãy thử lại.'
-  error_expired: 'Kết nối với bot đã hết hạn. Hãy kết nối lại.'
-  error_google_required: 'Tiếp tục với Google để kết nối bot lưu trữ.'
-  error_consent_failed: 'Kết nối chưa được chấp thuận. Hãy thử lại.'
-  error_owner_mismatch: 'Bot này thuộc tài khoản khác. Hãy đăng nhập đúng tài khoản Google.'
-  error_storage_unavailable: 'Trình duyệt chặn bộ nhớ mà kết nối cần. Hãy cho phép dữ liệu trang và thử lại.'
   error_bot_busy_or_paused: 'Bot đang tạm dừng hoặc vẫn đang hoàn tất hành động cuối của anh hùng này. Hãy thử lại sau giây lát.'
   error_run_limit_reached: 'Bot đã điều khiển số anh hùng tối đa có thể. Hãy dừng một anh hùng rồi thử lại.'
   error_needs_resync: 'Bot vẫn đang bắt kịp. Hãy thử lại sau vài giây.'
-  error_start_unconfirmed: 'Không có gì đang chạy: bot chưa nhận hoạt động. Bạn có thể bắt đầu lại.'
   error_unavailable: 'Bot không phản hồi. Hãy thử lại sau giây lát.'
   error_invalid_token: 'Kết nối với bot đã hết hạn. Hãy kết nối lại.'
   error_insufficient_scope: 'Kết nối này không cho phép việc đó. Hãy kết nối lại để cấp quyền.'
   error_behavior_run_not_found: 'Không còn gì đang chạy cho anh hùng này.'
   error_insufficient_character_points: 'Không đủ điểm.'
   error_spell_rank_capped: 'Phép này đã ở cấp cao nhất.'
-  error_tool_failed: 'Bot không làm được việc đó. Hãy thử lại sau.'
-  error_insufficient_funds: 'Bot không đủ SUI cho việc này. Hãy nạp thêm SUI cho bot rồi thử lại.'
   error_listing_changed_or_ineligible: 'Món này đã thay đổi hoặc không còn nữa. Hãy xem giá hiện tại rồi thử lại.'
   error_character_not_available: 'Lúc này không anh hùng nào rảnh cho việc này: đang có trận chiến. Hãy thử lại sau giây lát.'
   error_sale_source_changed_or_unavailable: 'Vật phẩm này đã thay đổi, hoặc không có chồng nào đủ lớn. Hãy chọn lại.'
-  disconnect_action: 'Ngắt kết nối trang này'
-  disconnect_failed: 'Bot chưa xác nhận. Trang này vẫn còn quyền truy cập. Hãy thử lại.'
-  direct_queued: 'Bot đã nhận yêu cầu của bạn. Nó sẽ ký sau hành động đang thực hiện.'
-  direct_done_raise_stats: 'Đã cập nhật chỉ số.'
-  direct_done_raise_spell: 'Đã nâng cấp phép thuật.'
-  direct_done_equip_item: 'Đã đổi trang bị.'
-  direct_done_use_consumable: '{name} đã dùng {item}.'
-  direct_done_dungeon_leave: '{name} đã rời hầm ngục.'
-  direct_done_market_buy: 'Đã mua: {amount} × {item}. Món này nằm trong túi đồ của các anh hùng.'
-  direct_done_market_sell: 'Đã đăng bán: {amount} × {item}.'
-  direct_done_market_delist: 'Đã gỡ món đăng bán: {amount} × {item} đã về lại túi đồ.'
-  direct_done_create_character: '{name} đã sẵn sàng.'
-  level_up_toast: '{name} đã đạt cấp {level}.'
-  run_wait_travel: 'Đang đi bộ tới đó. Trò chơi quy định thời gian đi.'
-  run_wait_other: 'Đang chờ thời điểm thích hợp để hành động.'
-  run_notice_place: 'Từ chỗ đang đứng, nó không thể đi bộ tới nơi đó. Hãy dừng nó và chọn nơi khác.'
-  blocker_work_unknown: '{names}: không thể làm việc này ở thế giới đang đứng.'
-  blocker_job_level_required: '{names}: cấp nghề quá thấp cho việc này.'
-  blocker_tool_required: '{names}: không có công cụ cho nghề này.'
-  error_direct_failed: 'Bot không làm được việc đó. Hãy kiểm tra số dư của bot và anh hùng trước khi thử lại.'
-  error_direct_unconfirmed: 'Không xác nhận được yêu cầu này và trang này không thấy thay đổi nào. Hãy kiểm tra trước khi thử lại.'
   error_invalid_character_name: 'Tên gồm 4 đến 19 chữ cái không dấu, chữ số hoặc ký hiệu, không có khoảng trắng.'
   error_character_name_taken: 'Tên này đã có người dùng. Hãy chọn tên khác.'
   error_funding_required: 'Bot không đủ SUI cho việc này. Hãy nạp SUI cho bot rồi thử lại.'
@@ -4081,236 +3396,64 @@ dapp_page:
   error_insufficient_consumables: 'Không còn đủ món đó.'
   error_unsupported_consumable: 'Bot không dùng được món đó.'
   error_idempotency_conflict: 'Yêu cầu đó đã được gửi. Hãy chờ kết quả.'
-  run_needs_help: 'Cần bạn giúp'
-  run_waiting: 'Đang chờ'
-  run_objective: 'Mục tiêu: {objective}'
-  run_results: 'Thắng {won} · thua {lost}'
-  run_dungeon_runs: 'Hầm ngục đã xong'
-  run_drops_title: 'Chiến lợi phẩm mới nhất'
-  run_drops_empty: 'Chiến lợi phẩm hiện ở đây sau mỗi trận.'
-  run_send_again: 'Cử đi lần nữa'
-  fees_run: 'Phí đã trả: {amount} SUI'
-  item_sell: 'Bán'
-  sell_loot: 'Bán chiến lợi phẩm'
-  drops_place_title: 'Mọi thứ rơi ở {place}'
-  drops_dungeon_title: 'Mọi chiến lợi phẩm ở {dungeon}'
-  drops_rate: '~{rate}% mỗi lần hạ'
-  drops_room: 'Phòng {room}'
-  drops_boss_room: 'Phòng trùm'
-  next_title: 'Bước tiếp theo nên làm'
-  next_funds_title: 'Bot của bạn đã hết SUI'
-  next_funds_body: 'Các anh hùng đã dừng vì bot của bạn không trả được phí mạng. Hãy nạp SUI vào ví của bot trong menu ví và họ sẽ tự tiếp tục.'
-  next_raid_title: '{dungeon} đang chờ'
-  next_raid_body: 'Số chìa khóa bạn có cho hầm ngục này: {count}. Có một anh hùng đang rảnh để đi.'
-  next_raid_action: 'Lên kế hoạch đột kích'
-  next_quest_title: '{name} đang rảnh'
-  next_quest_body: 'Hãy gửi anh hùng đi chiến đấu lấy chiến lợi phẩm và chìa khóa, hoặc đi làm việc.'
-  next_quest_action: 'Gửi đi làm nhiệm vụ'
-  next_out_title: 'Mọi anh hùng đều đang đi'
-  next_out_body: 'Theo dõi họ ở thẻ Nhiệm vụ.'
-  next_out_action: 'Xem nhiệm vụ'
-  hero_send_quest: 'Gửi đi làm nhiệm vụ'
-  hero_raid: 'Đột kích hầm ngục'
-  hero_watch_raid: 'Xem đột kích'
-  add_hero_title: 'Anh hùng mới'
-  add_hero_body: '{count} lớp · {price} SUI, do bot của bạn trả'
-  add_hero_action: 'Tạo anh hùng'
-  add_hero_funds: 'Bot của bạn cần {price} SUI cho anh hùng và {fee} SUI cho phí mạng. Hãy nạp SUI cho bot trong menu ví.'
-  create_sent: 'Bot của bạn đang tạo {name}. Anh hùng sẽ hiện ở đây khi trò chơi xác nhận.'
-  welcome_title: 'Chào mừng đến Viễn chinh'
-  welcome_body: 'Anh hùng của bạn chơi trò chơi thật thay bạn. Ba bước đến lần đột kích đầu tiên.'
-  step_create_title: 'Tạo anh hùng đầu tiên'
-  step_create_body: 'Chọn một lớp. Anh hùng thuộc về bạn mãi mãi.'
-  step_quest_title: 'Gửi anh hùng làm nhiệm vụ lấy chìa khóa'
-  step_quest_body: 'Quái ở {city} rơi ra {key}.'
-  step_raid_title: 'Đột kích {dungeon}'
-  step_raid_body: 'Mỗi anh hùng mang một chìa khóa. Phòng trùm có chiến lợi phẩm hiếm nhất.'
-  quest_title: 'Nhiệm vụ'
-  quest_intro: 'Mỗi trận đấu đều có cơ hội rơi trang bị và chìa khóa. Người làm nghề biến chiến lợi phẩm thành trang bị.'
-  quest_fight: 'Chiến đấu lấy chiến lợi phẩm'
-  quest_fight_body: 'Trang bị, chìa khóa và kinh nghiệm từ mỗi trận'
-  quest_work: 'Đi làm việc'
-  quest_work_body: 'Thu thập tài nguyên, hoặc chế tạo trang bị và thuốc'
-  quest_who: 'Ai'
-  quest_where: 'Ở đâu'
-  quest_here: 'Nơi mỗi anh hùng đang đứng'
-  quest_pick_hero: 'Chọn một anh hùng'
-  quest_send: 'Gửi {names}'
-  quest_until_stop: 'Chạy cho đến khi bạn dừng.'
-  quest_empty: 'Chưa có anh hùng. Hãy tạo một anh hùng ở thẻ Trang chủ, rồi gửi đi làm nhiệm vụ.'
-  quest_empty_action: 'Về Trang chủ'
-  quest_walks: '{names}: đi bộ tới đó trước. Mỗi vùng trên đường tốn một khoản phí mạng.'
-  quest_run_fight: 'Chiến đấu ở {place}'
-  quest_run_work_job: 'Làm nghề {job}'
-  quest_run_gather: 'Thu thập {item}'
-  quest_run_craft: 'Chế tạo {item}'
-  world_locked: '{world} mở khi anh hùng đạt cấp {level}.'
-  place_levels: 'Quái cấp {min}–{max}'
-  place_key_drop: '{key}: ~{rate}% mỗi lần hạ {mob}'
-  place_rarest: 'Vật phẩm hiếm nhất: {item}, ~{rate}% từ {mob}'
-  place_level_warning: 'Quái ở đây cấp {min}–{max}. {name} đang ở cấp {level}.'
-  place_all_drops: 'Mọi thứ rơi ra ở đây'
-  difficulty_label: 'Độ khó'
-  difficulty_none: 'Bất kỳ'
-  difficulty_easy: 'Dễ'
-  difficulty_medium: 'Trung bình'
-  difficulty_hard: 'Khó'
-  difficulty_none_hint: 'Bất kỳ nhóm nào, ở bất cứ đâu trong khu vực.'
-  difficulty_hint: 'Nhóm từ {min} đến {max} quái. Quy mô nhóm phụ thuộc vào khoảng cách tới trung tâm thế giới.'
-  difficulty_hint_one: 'Nhóm {size} quái. Quy mô nhóm phụ thuộc vào khoảng cách tới trung tâm thế giới.'
-  difficulty_unfit: '{city} không ở khoảng cách đó. Hãy chọn nơi khác hoặc độ khó khác.'
-  travel_needed: '{name} không ở {city}.'
-  travel_potion_held: 'Bạn có {count} × {item}. Vật phẩm này đưa anh hùng tới đó ngay lập tức.'
-  travel_potion_use: 'Dịch chuyển bằng thuốc'
-  travel_potion_none: '{item} đưa anh hùng tới đó ngay lập tức. Nhà giả kim pha chế loại thuốc này.'
-  fee_cap: 'Giới hạn phí'
-  fee_cap_none: 'Không giới hạn'
-  fee_cap_hint: 'Mỗi anh hùng sẽ dừng khi lượt chạy của chính mình đã trả {amount} SUI phí mạng. Anh hùng sẽ đánh xong trận đang dở trước.'
-  fee_cap_invalid: 'Hãy nhập số SUI lớn hơn 0, hoặc để trống nếu không muốn giới hạn.'
-  work_auto: 'Để bot chọn'
-  work_auto_body: 'Bot sẽ thu thập và chế tạo thứ giúp anh hùng này tiến bộ nghề nhiều nhất, bằng công cụ anh hùng đang có.'
-  work_gather: 'Thu thập một tài nguyên'
-  work_craft: 'Chế tạo một công thức'
-  work_worker: 'Người làm'
-  work_job: 'Nghề'
-  work_job_any: 'Nghề bất kỳ'
-  work_job_level: '{job} cấp {level}'
-  work_job_new: 'Mới học {job}'
-  work_gather_hint: '{name} thu hoạch {min}–{max} mỗi {seconds} giây và nhận {xp} kinh nghiệm nghề mỗi lần.'
-  work_craft_hint: '{name} thành công {percent}% số lần thử và nhận {xp} kinh nghiệm nghề mỗi lần thử.'
-  work_rare_find: 'Một lần thu hoạch cũng có thể ra {item}. {mob} có thể canh giữ chỗ đó.'
-  work_objective: 'Mục tiêu'
-  work_goal_level: 'Đạt cấp'
-  work_goal_gather: 'Thu thập số lượng'
-  work_goal_craft: 'Chế tạo số lượng'
-  work_goal_until: 'Đến khi tôi dừng'
-  work_how_many: 'Bao nhiêu'
-  work_target_level: 'Cấp nghề cần đạt'
-  work_amount_invalid: 'Hãy nhập số nguyên lớn hơn 0.'
-  work_level_invalid: 'Hãy nhập cấp từ {min} đến {max}.'
-  work_tries: 'Số lần thử: khoảng {tries}, cho {amount} × {item}'
-  work_harvests: 'Số lần thu hoạch: khoảng {tries}, cho {amount} × {item}'
-  work_needs: 'Những thứ cần có'
-  work_tool_worn: 'Đã trang bị {item}'
-  work_tool_bag: '{item} đang ở trong túi đồ. {name} sẽ trang bị khi bắt đầu làm việc.'
-  work_tool_missing: 'Cần {tool}. Thợ đa năng chế tạo công cụ này.'
-  work_material_missing: '{item}: cần {need}, trong túi {have}, thiếu {missing}'
-  work_material_ready: '{item}: cần {need}, trong túi {have}'
-  work_never_buys: 'Hãy mua thứ còn thiếu ở chợ, hoặc tự kiếm. Anh hùng không bao giờ tự mua.'
-  work_locked: 'Mở khi {job} đạt cấp {level}'
-  work_pick_resource: 'Hãy chọn một tài nguyên.'
-  work_pick_recipe: 'Hãy chọn một công thức.'
-  work_start: 'Bắt đầu'
-  out_now_title: 'Đang đi'
-  raid_title: 'Săn {boss}'
-  raid_intro: 'Mỗi phòng là một trận đấu với chiến lợi phẩm riêng. Chiến lợi phẩm của phòng đã dọn sạch được giữ lại.'
-  raid_dungeon: 'Hầm ngục'
-  raid_dungeon_facts: '{rooms} phòng · {monsters} quái · trùm {boss}'
-  raid_keys_held: 'Chìa khóa đang có: {count}. Mỗi anh hùng mang một chiếc.'
-  raid_team: 'Đội'
-  raid_team_count: '{count} trên {size}'
-  raid_best_team: 'Đội mạnh nhất'
-  raid_seat_add: 'Thêm'
-  raid_seat_title: 'Vị trí {seat}'
-  raid_seat_remove: 'Bỏ ra'
-  raid_seat_swap: 'Đổi vào'
-  raid_seat_key: 'Có chìa khóa'
-  raid_seat_no_key: 'Không có chìa khóa'
-  raid_seat_none: 'Mọi anh hùng đã ở trong đội.'
-  raid_seat_stop_note: 'Dừng anh hùng sẽ kết thúc hoạt động của anh hùng đó. Những gì đã tìm được đã nằm trong túi đồ của bạn.'
-  raid_no_seat: 'Hãy thêm ít nhất một anh hùng đang rảnh. Chạm vào một vị trí hoặc dùng Đội mạnh nhất.'
-  raid_levels_title: 'Đội của bạn và các phòng'
-  raid_alone: '{name} đi một mình.'
-  raid_drops_title: 'Những gì một lượt có thể rơi ra'
-  raid_rooms: 'Phòng {first}–{last}'
-  raid_stake: 'Chìa khóa dùng: {count}, mỗi anh hùng một chiếc'
-  raid_walk: '{name}: ít nhất {time} đi bộ tới cổng'
-  raid_repeats: 'Đội sẽ đột kích lại khi mỗi anh hùng còn chìa khóa. Nhấn Dừng để kết thúc.'
-  raid_enter: 'Vào · Chìa khóa: {count}'
-  raid_keys_short: 'Cần thêm {count} {item} cho đội này'
-  raid_quest_for_keys: 'Làm nhiệm vụ lấy chìa khóa'
-  raid_room: 'Phòng {room} trên {rooms}'
-  raid_boss_room: 'Phòng trùm · {boss}'
-  raid_walking: 'Đang đi bộ tới cổng'
-  raid_loot: 'Chiến lợi phẩm từ các phòng đã dọn'
-  raid_loot_empty: 'Chiến lợi phẩm của mỗi phòng đã dọn sẽ hiện ở đây.'
-  raid_next_drops: 'Phòng tiếp theo có thể rơi ra'
-  raid_stop_note: 'Dừng sẽ kết thúc cuộc đột kích. Mỗi anh hùng vẫn ở trong hầm ngục, tại phòng của mình. Muốn bỏ lượt, hãy dừng anh hùng trước rồi rời hầm ngục.'
-  raid_stop_team: 'Dừng cả đội'
-  raid_plan: 'Lên kế hoạch đột kích khác'
-  raid_back: 'Quay lại cuộc đột kích'
-  raid_inside_title: 'Vẫn đang trong hầm ngục'
-  raid_inside_body: 'Các anh hùng này đã dừng giữa lượt trong hầm ngục. Hãy đột kích lại để tiếp tục, hoặc rời hầm ngục.'
-  raid_leave: 'Rời hầm ngục'
-  raid_leave_body: 'Lượt chạy kết thúc với anh hùng này. Chìa khóa sẽ không được trả lại.'
-  raid_result_won: 'Chiến thắng'
-  raid_result_lost: 'Thất bại'
-  raid_result_bag: 'Mọi thứ bên dưới đã ở trong túi đồ của bạn.'
-  raid_keys_left: 'Chìa khóa còn lại: {count}'
-  raid_change_team: 'Đổi đội'
-  raid_again: 'Đột kích lại'
-  raid_empty_title: 'Chưa có đội'
-  raid_empty_body: 'Hãy tạo anh hùng, gửi đi làm nhiệm vụ lấy chìa khóa, rồi quay lại.'
-  raid_runs: 'Số lượt'
-  raid_runs_all: 'Đến khi hết chìa khóa'
-  raid_runs_count: 'Lượt cho mỗi anh hùng: {count}'
-  nav_home: 'Trang chủ'
-  heroes_intro: 'Trang bị, chỉ số, phép thuật và nghề.'
-  heroes_empty_title: 'Chưa có anh hùng'
-  heroes_empty_body: 'Hãy tạo một anh hùng ở tab Trang chủ. Trang bị, chỉ số, phép thuật và nghề của anh hùng sẽ hiện ở đây.'
-  heroes_empty_action: 'Về Trang chủ'
-  nav_quest: 'Nhiệm vụ'
-  nav_raid: 'Đột kích'
-  nav_heroes: 'Anh hùng'
-  keys_chip: 'Chìa khóa hầm ngục: {count}'
-  empty_title: 'Chưa có gì ở đây'
-  empty_body: 'Những gì trợ lý AI làm sẽ hiện ở đây.'
-  run_ended_objective_reached: 'Đã đạt mục tiêu bạn đặt.'
-  run_ended_fee_cap_reached: 'Đã chạm giới hạn phí bạn đặt.'
-  run_ended_run_cap_reached: 'Đã xong số lượt bạn yêu cầu.'
-  run_ended_completed: 'Đã hoàn thành kế hoạch.'
-  direct_done_craft: '{name} đã chế tạo xong {item} (số lần thử: {amount}). Những món thành công nằm trong túi đồ.'
   error_ingredients_required: 'Anh hùng này không còn đủ nguyên liệu. Hãy xem lại công thức rồi thử lại.'
   error_crafting_level_required: 'Cấp nghề của anh hùng này quá thấp cho công thức đó.'
   error_craft_batch_limit: 'Quá nhiều lần thử cho một yêu cầu. Hãy chọn ít hơn.'
   error_recipe_unavailable: 'Công thức này hiện chưa thể chế tạo.'
-  home_title: 'Việc cần làm bây giờ'
-  fees_wallet_label: 'Phí mạng bot của bạn đã trả'
-  sui_amount: '{amount} SUI'
-  found_more: '+{count} nữa'
-  raid_ledger_keys_used: 'Chìa khóa dùng'
-  raid_ledger_keys_used_value: '{count}, mỗi anh hùng một chiếc'
-  raid_ledger_keys_left: 'Chìa khóa còn lại'
-  raid_ledger_travel: 'Di chuyển'
-  raid_travel_none: 'Ở cổng'
-  raid_travel_fee: 'Mỗi vùng trên đường tốn một khoản phí mạng.'
-  raid_buy_key: 'Mua ở chợ'
-  quest_pick_place: 'Chọn một nơi'
-  plan_levels: 'Cấp quái'
-  plan_range: '{min}–{max}'
-  plan_group: 'Quy mô nhóm'
-  plan_key: 'Chìa khóa rơi ra'
-  plan_rarest: 'Vật phẩm hiếm nhất'
-  plan_arrive: 'Đến nơi'
-  plan_walk: 'Đi bộ, ít nhất {time}'
-  plan_walk_far: 'Đi bộ'
-  plan_potion: 'Đến ngay lập tức'
-  about: '~{value}'
-  work_what: 'Cái gì'
-  work_per_harvest: 'Mỗi lần thu hoạch'
-  work_harvest_time: 'Một lần thu hoạch'
-  work_xp: 'Kinh nghiệm nghề'
-  work_rare: 'Vật phẩm hiếm'
-  work_success: 'Thành công mỗi lần thử'
-  work_tries_label: 'Số lần thử'
-  work_harvests_label: 'Số lần thu hoạch'
-  work_tool: 'Công cụ'
-  work_tool_held: '{item} trong túi đồ'
-  work_tool_none: 'Không có {tool}'
-  work_have: '{have} / {need}'
-  hero_forfeit: 'Bỏ trận đấu'
-  direct_done_fight_forfeit: '{name} đã bỏ trận đấu và rảnh trở lại.'
   error_fight_unavailable: 'Anh hùng này không còn trong trận đấu.'
-  game_heroes_title: 'Trong tài khoản game của bạn'
-  hero_give_bot: 'Giao cho bot'
-  hero_take_back: 'Lấy lại'
+
+portfolio_page:
+  signin_title: 'Đăng nhập để xem bạn sở hữu gì'
+  signin_body: 'Anh hùng, vật phẩm và tin đăng của bạn, trên tài khoản trò chơi và trên bot.'
+  stage_heroes: 'Mỗi anh hùng với cấp độ, sức mạnh và trang bị đang mặc.'
+  stage_bag: 'Vật phẩm của bạn. Đăng bán một món hoặc gửi cho bot.'
+  stage_for_sale: 'Những gì bạn đăng bán trên chợ và những gì đã bán.'
+  tabs_label: 'Hiển thị'
+  tab_heroes: 'Anh hùng'
+  tab_bag: 'Túi'
+  tab_for_sale: 'Đang bán'
+  failed: 'Máy chủ trò chơi chưa gửi tài khoản này. Hãy tải lại trang để thử lại.'
+  heroes_empty: 'Tài khoản này chưa có anh hùng nào.'
+  bag_empty: 'Chưa có gì ở đây. Mua ở chợ hoặc chơi để tìm vật phẩm.'
+  bag_group_empty: 'Không có vật phẩm loại này trong túi.'
+  bot_sells: 'Bot tự đăng bán và bán vật phẩm của nó. Hãy nhờ trợ lý AI của bạn.'
+  power: 'Sức mạnh'
+  power_hint: 'Sức mạnh cộng các chỉ số của vật phẩm đang trang bị, theo trọng số của rune rèn. Chỉ để hiển thị.'
+  send_to_bot: 'Gửi cho bot'
+  recall_to_player: 'Gọi về người chơi'
+  share: 'Chia sẻ'
+  share_text: '{classe} của tôi, cấp {level}, sức mạnh {power} trong @AresRPG.'
+  share_title: 'Chia sẻ {name}'
+  share_preview: 'Thẻ bài đăng của bạn hiển thị cho {name}'
+  share_copy: 'Sao chép liên kết'
+  share_post: 'Đăng lên X'
+  share_image_failed: 'Không tải được thẻ. Hãy đóng cửa sổ này và thử lại.'
+  share_copy_failed: 'Trình duyệt không cho phép sao chép. Hãy thử lại.'
+  transfer_to_bot: 'Chuyển cho bot'
+  transfer_to_player: 'Chuyển cho người chơi'
+  view_market: 'Xem ở chợ'
+
+site:
+  nav_label: 'Trang web'
+  menu_open: 'Mở menu'
+  menu_close: 'Đóng menu'
+  login: Đăng nhập
+  new_tab: ' (mở trong tab mới)'
+  log_in_first: 'Hãy đăng nhập trước'
+  docs: Tài liệu
+  encyclopedia: Bách khoa vật phẩm
+  journal: Nhật ký
+  discord: Discord
+  telegram: Telegram
+  x: X
+  market: 'Chợ'
+  play: 'Chơi'
+  agent: 'AI'
+  staking: 'Staking'
+  leaderboards: 'Bảng xếp hạng'
+  portfolio: 'Danh mục'
+  footer_learn: 'Tìm hiểu'
+  footer_community: 'Cộng đồng'
+  indexing_healthy: 'Ổn định'
+  indexing_catching_up: 'Đang bắt kịp'
+  indexing_lagging: 'Chậm'

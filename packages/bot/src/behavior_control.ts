@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { run_live } from '@aresrpg/protocol/strategies'
-
-import { assert_live_grant, type Bot, type BotConfig, type Grant } from './model.ts'
+import { authorize, CONTROL_SCOPES, hash_secret, type BotConfig, type Grant } from './model.ts'
 import type { ControlStore, ControlTransaction } from './store.ts'
 import { lane_key_for } from './command_admission.ts'
 import type { Command, Lane } from './control.ts'
-import { hash_secret } from './security.ts'
 import { parse_behavior_script, type BehaviorRun } from './behavior_script.ts'
-import { behavior_actor } from './behavior_projection.ts'
+import { behavior_actor } from './behavior_plan.ts'
 import { empty_behavior_memory } from './behavior_tree.ts'
-import { MAX_WALLET_RUNS, released_run, run_hosted, run_key } from './run_ref.ts'
+import { MAX_WALLET_RUNS, released_run, run_hosted, run_key, run_live } from './run_ref.ts'
 
 type Revisions = Readonly<{ decision_revision: number; observation_revision: number }>
 type Start = Revisions & Readonly<{ idempotency_key: string; script: unknown }>
@@ -18,9 +15,6 @@ type Replace = Revisions & Readonly<{ character_id: string; expected_revision: n
 /** A hero has one run, so its identity is the hero. Any live grant of the wallet's one verified
  * owner sees and manages it; the grant that set its tree is the authority it executes under. */
 const hero_run_id = (bot_id: string, character_id: string) => hash_secret(`${bot_id}:hero:${character_id}`)
-const assert_revision = (value: number) => {
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error('invalid_argument')
-}
 /** Signing, an unsettled envelope or an unreconciled effect of this run's own last command. */
 const unresolved = (lane: Lane, run: BehaviorRun) =>
   Boolean(run.last_command_id) &&
@@ -32,14 +26,6 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
     lane_key_for(grant),
     `behavior:${hero_run_id(grant.bot_id, character_id)}`,
   ]
-  const authorize = async (tx: ControlTransaction, grant: Grant, scope: string) => {
-    const current = await tx.get<Grant>(`grant:${grant.id}`)
-    if (!current || current.bot_id !== grant.bot_id || current.address !== grant.address)
-      throw new Error('invalid_token')
-    assert_live_grant(config, current, await tx.get<Bot>(`bot:${grant.bot_id}`), now())
-    if (!current.scopes.includes(scope)) throw new Error('insufficient_scope')
-    return current
-  }
   const hero_run = async (tx: ControlTransaction, grant: Grant, character_id: string) => {
     const run = await tx.get<BehaviorRun>(`behavior:${hero_run_id(grant.bot_id, character_id)}`)
     if (!run) throw new Error('behavior_run_not_found')
@@ -48,8 +34,6 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
   /** A hero takes its own slot beside its neighbours and never needs the signing queue idle.
    * Wallet decisions still fence it; another hero's newer observation does not. */
   const host = (retained: Lane | null, run: BehaviorRun, prior: BehaviorRun | null, revisions: Revisions): Lane => {
-    assert_revision(revisions.decision_revision)
-    assert_revision(revisions.observation_revision)
     if (!retained) throw new Error('needs_resync')
     const lane = { ...retained, ...released_run(retained, run.id) }
     if ([lane.paused, prior && unresolved(retained, prior)].some(Boolean)) throw new Error('bot_busy_or_paused')
@@ -91,7 +75,9 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
   const validate_behavior = async (grant: Grant, value: unknown) => {
     const script = parse_behavior_script(value)
     const character_id = behavior_actor(script)
-    await store.transaction(keys(grant, character_id), (tx) => authorize(tx, grant, 'bot:observe'))
+    await store.transaction(keys(grant, character_id), (tx) =>
+      authorize(tx.get, config, grant, CONTROL_SCOPES.validate_behavior, now())
+    )
     return {
       valid: true,
       script,
@@ -102,16 +88,15 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
   }
   const behavior_status = (grant: Grant, character_id: string) =>
     store.transaction(keys(grant, character_id), async (tx) => {
-      await authorize(tx, grant, 'bot:observe')
+      await authorize(tx.get, config, grant, CONTROL_SCOPES.behavior_status, now())
       return hero_run(tx, grant, character_id)
     })
   const start_behavior = async (grant: Grant, input: Start) => {
-    if (!input.idempotency_key) throw new Error('invalid_argument')
     const script = parse_behavior_script(input.script)
     const fingerprint = hash_secret(JSON.stringify(input))
     const tree_keys = keys(grant, behavior_actor(script))
     return store.transaction(tree_keys, async (tx) => {
-      const current = await authorize(tx, grant, 'bot:play')
+      const { grant: current } = await authorize(tx.get, config, grant, CONTROL_SCOPES.start_behavior, now())
       const prior = await tx.get<BehaviorRun>(tree_keys[3]!)
       if (prior?.fingerprint === fingerprint) return prior
       const retained = await tx.get<Lane>(tree_keys[2]!)
@@ -127,12 +112,10 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
   }
   const replace_behavior = async (grant: Grant, input: Replace) => {
     const script = parse_behavior_script(input.script)
-    assert_revision(input.expected_revision)
-    assert_revision(input.expected_revision + 1)
     if (behavior_actor(script) !== input.character_id) throw new Error('behavior_character_changed')
     const tree_keys = keys(grant, input.character_id)
     return store.transaction(tree_keys, async (tx) => {
-      const current = await authorize(tx, grant, 'bot:play')
+      const { grant: current } = await authorize(tx.get, config, grant, CONTROL_SCOPES.replace_behavior, now())
       const prior = await hero_run(tx, current, input.character_id)
       if (prior.revision !== input.expected_revision) throw new Error('behavior_revision_conflict')
       const { fingerprint, execution_fence } = prior
@@ -147,7 +130,7 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
    * itself at once, and the owner's next queue pass frees its slot. */
   const stop_behavior = (grant: Grant, character_id: string) =>
     store.transaction(keys(grant, character_id).toSpliced(2, 1), async (tx) => {
-      await authorize(tx, grant, 'bot:pause')
+      await authorize(tx.get, config, grant, CONTROL_SCOPES.stop_behavior, now())
       const run = await hero_run(tx, grant, character_id)
       const next: BehaviorRun = { ...run, status: 'stopped', issue: 'explicit_stop' }
       await tx.put(run_key(run.id), next)

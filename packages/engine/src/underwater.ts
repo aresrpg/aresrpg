@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// UNDERWATER IMMERSION (ported from deprecated/engine underwater.js). Light that reaches the
+// Underwater immersion. Light that reaches the
 // camera through water is absorbed chromatically (red dies first), picks up the water's own
 // in-scattered colour — cyan looking UP toward the surface, navy looking DOWN — and the frame
 // dims with the eye's depth; a submerged eye also gets the classic time-driven refraction

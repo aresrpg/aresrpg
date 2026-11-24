@@ -5,60 +5,41 @@
 //! One checkpoint's views in, an ORDERED list of Cypher statements out; no
 //! store reads, ever. The laws this file carries (README):
 //!
-//! * **Objects are the primary writers** — every statement here derives from an
-//!   output object, custody fact, or pre-state delete view. `:Market` prices and Fight lifecycle
-//!   clocks are event-envelope facts computed by `publish.rs`.
+//! * **Objects are the sole writers** — every statement here derives from an
+//!   output object, its pre-state input, a custody fact, or a pre-state delete view.
 //! * **Per-property writes** — each decoded source SETs exactly its own
 //!   properties over a `MERGE` skeleton; nothing ever replaces a whole node.
 //! * **One ownership edge per object** — custody writes DELETE the standing
 //!   `HOLDS|FIGHTER|EQUIPS` edge before creating the new one.
 //! * **DF writes are parent-guarded, never parent-blocked** — a DF born WITH its
 //!   typed parent merges order-free; a DF arriving alone (equip/hp/scribe mutate
-//!   only the child — a `&mut` borrow emits no parent object, measured 2026-08-21)
+//!   only the child — a `&mut` borrow emits no parent object)
 //!   writes MATCH-guarded on the parent's label: a foreign or unknown parent
 //!   matches nothing (this still keeps ceremony-template DFs out of the item space).
 //! * **Strings ≥ 2⁵³** — seeds, bitmasks, MIST are string properties.
 //!
 //! Each transaction applies consumed pre-state before its surviving final outputs: nodes,
 //! dependent fields, custody and seat fixups. The pipeline preserves transaction order.
-//! Historical event stamps are independent of these final object effects.
 
 use std::collections::BTreeSet;
 
 use serde_json::{json, Value};
 
 use crate::decode::{self, Field, Id, MarkerKey};
-use crate::ownership::{Custody, ObjView, OwnerKind, TypeKey, SUI_FRAMEWORK};
+use crate::ownership::{Custody, ObjView, OwnerKind, SUI_FRAMEWORK};
 
-/// A realised per-unit sale price for one item type — computed by `publish.rs`
-/// (the ONE event-derived graph write; README law 9).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MarketStamp {
-    pub item_type: String,
-    pub price_per_unit_mist: u64,
-    pub ts_ms: u64,
-}
-
-/// A lifecycle timestamp derived from the checkpoint envelope of FightStarted/FightEnded.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FightLifecycleStamp {
-    pub fight: String,
-    pub started: bool,
-    pub ts_ms: u64,
-}
-
-/// One transaction's final effects, or the checkpoint's trailing event-derived stamps.
+/// One transaction's final effects.
 pub struct CheckpointView<'a> {
     pub lamport_version: u64,
     pub ckpt: u64,
     pub ts_ms: u64,
+    /// The transaction's pre-state inputs: lifecycle clocks are input → output deltas.
+    pub inputs: &'a [ObjView<'a>],
     /// Surviving outputs from exactly one transaction.
     pub outputs: &'a [ObjView<'a>],
     /// PRE-STATE views of that transaction's deleted ids (law 2).
     pub deleted: &'a [ObjView<'a>],
     pub custody: &'a [Custody],
-    pub market: &'a [MarketStamp],
-    pub fight_lifecycle: &'a [FightLifecycleStamp],
 }
 
 /// Project one transaction into Cypher statements; the pipeline retains certified transaction order.
@@ -74,33 +55,40 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
             emit_delete(&mut cypher, gone, game)?;
         }
     }
+    let is_kiosk = |output: &&ObjView<'_>| output.type_key.is(SUI_FRAMEWORK, "kiosk", "Kiosk");
     for output in view
         .outputs
         .iter()
-        .filter(|output| field_key(output.type_key).is_none())
+        .filter(|output| output.type_key.field_key().is_none() && !is_kiosk(output))
     {
         emit_object(&mut cypher, output, view, game)?;
     }
     for output in view
         .outputs
         .iter()
-        .filter(|output| field_key(output.type_key).is_some())
+        .filter(|output| output.type_key.field_key().is_some())
     {
         emit_object(&mut cypher, output, view, game)?;
     }
-    for fact in view
+    // Only a relation to a game asset (holding or listing it) creates a Kiosk node. The kiosk's
+    // own facts follow and update an existing node only, so an unrelated kiosk leaves no record.
+    let (kiosk_owners, relations): (Vec<_>, Vec<_>) = view
         .custody
         .iter()
-        .filter(|fact| matches!(fact, Custody::KioskOwned { .. }))
-    {
+        .partition(|fact| matches!(fact, Custody::KioskOwned { .. }));
+    for fact in relations.into_iter().chain(kiosk_owners) {
         emit_custody(&mut cypher, fact);
     }
-    for fact in view
-        .custody
-        .iter()
-        .filter(|fact| !matches!(fact, Custody::KioskOwned { .. }))
-    {
-        emit_custody(&mut cypher, fact);
+    for output in view.outputs.iter().filter(is_kiosk) {
+        let k = output.decode::<decode::Kiosk>()?;
+        child_set(
+            &mut cypher,
+            false,
+            "Kiosk",
+            &k.id,
+            view.ckpt,
+            &[format!("v.profits = {}", q(&k.profits.value.to_string()))],
+        );
     }
     for output in view.outputs {
         emit_fight_seat_teams(&mut cypher, output, game)?;
@@ -112,7 +100,7 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
         .outputs
         .iter()
         .chain(view.deleted)
-        .filter_map(|object| match (field_key(object.type_key), object.owner) {
+        .filter_map(|object| match (object.type_key.field_key(), object.owner) {
             (Some(key), OwnerKind::Object(kiosk)) if key == listing_key => Some(kiosk.hex()),
             _ => None,
         })
@@ -124,33 +112,12 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
             version = q(&view.lamport_version.to_string())
         ));
     }
-    for stamp in view.market {
-        cypher.push(format!(
-            "MERGE (m:Market {{item_type: {t}}}) SET m.last_sale_mist = {p}, m.last_sale_ms = {ts}, m.ckpt = {ckpt}",
-            t = q(&stamp.item_type),
-            p = q(&stamp.price_per_unit_mist.to_string()),
-            ts = stamp.ts_ms,
-            ckpt = view.ckpt,
-        ));
-    }
-    for stamp in view.fight_lifecycle {
-        cypher.push(format!(
-            "MATCH (f:Fight {{id: {fight}}}) SET f.{field} = {ts}",
-            fight = q(&stamp.fight),
-            field = if stamp.started {
-                "started_ms"
-            } else {
-                "ended_ms"
-            },
-            ts = stamp.ts_ms,
-        ));
-    }
     // Publish native Character versions only after all dependent fields and custody writes.
     // Root writes clear the old marker so partial replay cannot certify mixed state.
     for output in view
         .outputs
         .iter()
-        .filter(|output| is_game(output.type_key, game, "character", "Character"))
+        .filter(|output| output.type_key.is(game, "character", "Character"))
     {
         cypher.push(format!(
             "MATCH (c:Character {{id: {id}}}) SET c.version = {version}",
@@ -159,10 +126,6 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
         ));
     }
     Ok(cypher)
-}
-
-fn drift(what: &str, id: Id, error: anyhow::Error) -> anyhow::Error {
-    anyhow::anyhow!("layout drift: {what} {} failed decode: {error}", id.hex())
 }
 
 // ╔════════════════ [ Cypher building blocks ] ═══════════════════════════════ ]
@@ -254,19 +217,6 @@ fn merge_set(cypher: &mut Vec<String>, label: &str, id: &Id, ckpt: u64, assigns:
 
 // ╔════════════════ [ Object dispatch ] ══════════════════════════════════════ ]
 
-fn is_game(t: &TypeKey, game: &str, module: &str, name: &str) -> bool {
-    t.package == game && t.module == module && t.name == name
-}
-
-fn is_native(t: &TypeKey, module: &str, name: &str) -> bool {
-    t.package == SUI_FRAMEWORK && t.module == module && t.name == name
-}
-
-/// The `Field<K, V>` KEY type parameter, exactly.
-pub(crate) fn field_key(t: &TypeKey) -> Option<&str> {
-    (is_native(t, "dynamic_field", "Field")).then(|| t.type_params[0].as_str())
-}
-
 /// Character field vocabulary shared by graph projection and its post-projection invalidation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CharacterField {
@@ -297,8 +247,7 @@ pub(crate) fn character_field(key: &str, game: &str) -> Option<CharacterField> {
 
 /// The parent of a DF, from its owner edge. The bool marks TYPED CO-PRESENCE: the parent
 /// object rode the same transaction (a fresh parent+DF birth — write with MERGE, order-free).
-/// A DF arriving ALONE (equip/hp/scribe mutate only the child — measured 2026-08-21: the
-/// equip projection silently dropped for every real player) writes MATCH-guarded instead:
+/// A DF arriving ALONE (equip/hp/scribe mutate only the child) writes MATCH-guarded instead:
 /// the GRAPH's own label is the type guard, a foreign parent matches nothing.
 pub(crate) fn df_parent<'a>(
     view: &ObjView<'_>,
@@ -312,7 +261,7 @@ pub(crate) fn df_parent<'a>(
     };
     let co_present = outputs
         .iter()
-        .any(|o| o.id == parent && is_game(o.type_key, game, module, name));
+        .any(|o| o.id == parent && o.type_key.is(game, module, name));
     Some((parent, co_present))
 }
 
@@ -373,9 +322,8 @@ fn emit_object(
     let ckpt = view.ckpt;
 
     // ── game objects ──
-    if is_game(t, game, "character", "Character") {
-        let c = decode::from_bytes::<decode::Character>(o.bytes)
-            .map_err(|e| drift("character::Character", o.id, e))?;
+    if t.is(game, "character", "Character") {
+        let c = o.decode::<decode::Character>()?;
         merge_set(
             cypher,
             "Character",
@@ -403,9 +351,8 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "item", "Item") {
-        let i = decode::from_bytes::<decode::Item>(o.bytes)
-            .map_err(|e| drift("item::Item", o.id, e))?;
+    if t.is(game, "item", "Item") {
+        let i = o.decode::<decode::Item>()?;
         merge_set(
             cypher,
             "Item",
@@ -422,9 +369,8 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "zone", "Zone") {
-        let zone = decode::from_bytes::<decode::Zone>(o.bytes)
-            .map_err(|error| drift("zone::Zone", o.id, error))?;
+    if t.is(game, "zone", "Zone") {
+        let zone = o.decode::<decode::Zone>()?;
         let taken = Value::Array(zone.res_taken.iter().map(|count| json!(count)).collect());
         cypher.push(format!(
             "MERGE (v:Zone {{world: {world}, zx: {zone_x}, zz: {zone_z}}}) SET \
@@ -441,21 +387,20 @@ fn emit_object(
         ));
         return Ok(());
     }
-    if is_game(t, game, "fight", "Fight") {
-        return emit_fight(cypher, o, ckpt);
+    if t.is(game, "fight", "Fight") {
+        return emit_fight(cypher, o, view);
     }
-    if is_game(t, game, "party", "Party") {
+    if t.is(game, "party", "Party") {
         return emit_party(cypher, o, ckpt);
     }
-    if is_game(t, game, "trade", "Trade") {
+    if t.is(game, "trade", "Trade") {
         return emit_trade(cypher, o, ckpt);
     }
-    if is_game(t, game, "friends", "FriendList") {
+    if t.is(game, "friends", "FriendList") {
         return emit_friend_list(cypher, o);
     }
-    if is_game(t, game, "mastery", "Mastery") {
-        let mastery = decode::from_bytes::<decode::Mastery>(o.bytes)
-            .map_err(|error| drift("mastery::Mastery", o.id, error))?;
+    if t.is(game, "mastery", "Mastery") {
+        let mastery = o.decode::<decode::Mastery>()?;
         let owner = q(&mastery.owner.hex());
         let last_completed = mastery
             .last_completed_epoch
@@ -478,9 +423,8 @@ fn emit_object(
         ));
         return Ok(());
     }
-    if is_game(t, game, "mastery", "MasteryOffer") {
-        let offer = decode::from_bytes::<decode::MasteryOffer>(o.bytes)
-            .map_err(|error| drift("mastery::MasteryOffer", o.id, error))?;
+    if t.is(game, "mastery", "MasteryOffer") {
+        let offer = o.decode::<decode::MasteryOffer>()?;
         merge_set(
             cypher,
             "MasteryOffer",
@@ -495,9 +439,8 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "tournament", "KaresPool") {
-        let pool = decode::from_bytes::<decode::TournamentKaresPool>(o.bytes)
-            .map_err(|e| drift("tournament::KaresPool", o.id, e))?;
+    if t.is(game, "tournament", "KaresPool") {
+        let pool = o.decode::<decode::TournamentKaresPool>()?;
         let claims = pool
             .funds
             .claimed
@@ -523,9 +466,8 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "tournament", "Tournament") {
-        let tournament = decode::from_bytes::<decode::Tournament>(o.bytes)
-            .map_err(|e| drift("tournament::Tournament", o.id, e))?;
+    if t.is(game, "tournament", "Tournament") {
+        let tournament = o.decode::<decode::Tournament>()?;
         anyhow::ensure!(
             tournament.matches.len() == tournament.fights.len(),
             "tournament match links differ"
@@ -574,9 +516,8 @@ fn emit_object(
         }
         return Ok(());
     }
-    if is_game(t, game, "kolizeum", "Kolizeum") {
-        let k = decode::from_bytes::<decode::Kolizeum>(o.bytes)
-            .map_err(|e| drift("kolizeum::Kolizeum", o.id, e))?;
+    if t.is(game, "kolizeum", "Kolizeum") {
+        let k = o.decode::<decode::Kolizeum>()?;
         let allowed = k.allowed.as_ref().map(|set| addr_array(&set.contents));
         merge_set(
             cypher,
@@ -598,9 +539,8 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "distribution", "Giftcard") {
-        let g = decode::from_bytes::<decode::Giftcard>(o.bytes)
-            .map_err(|e| drift("distribution::Giftcard", o.id, e))?;
+    if t.is(game, "distribution", "Giftcard") {
+        let g = o.decode::<decode::Giftcard>()?;
         merge_set(
             cypher,
             "Giftcard",
@@ -613,53 +553,27 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "loot_box", "BoxClaim") {
-        let c = decode::from_bytes::<decode::BoxClaim>(o.bytes)
-            .map_err(|e| drift("loot_box::BoxClaim", o.id, e))?;
+    if t.is(game, "loot_box", "BoxClaim") {
+        let c = o.decode::<decode::BoxClaim>()?;
         merge_set(
             cypher,
             "BoxClaim",
             &c.id,
             ckpt,
             &[
-                format!("v.box_template = {}", q_id(&c.box_template)),
                 format!("v.rolled_template = {}", q_id(&c.rolled_template)),
                 format!("v.amount = {}", c.amount),
             ],
         );
         return Ok(());
     }
-    if is_game(t, game, "forgemagie", "CrushClaim") {
-        let c = decode::from_bytes::<decode::CrushClaim>(o.bytes)
-            .map_err(|e| drift("forgemagie::CrushClaim", o.id, e))?;
-        let owed = if c.revealed {
-            format!(
-                "[{}]",
-                c.owed
-                    .iter()
-                    .map(u64::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        } else {
-            "NULL".to_string()
-        };
-        merge_set(
-            cypher,
-            "CrushClaim",
-            &c.id,
-            ckpt,
-            &[
-                format!("v.seed = {}", q(&c.seed.to_string())),
-                format!("v.revealed = {}", c.revealed),
-                format!("v.owed = {owed}"),
-            ],
-        );
+    if t.is(game, "forgemagie", "CrushClaim") {
+        // The claim node anchors its HOLDS_CLAIM edge; readers need its id alone.
+        merge_set(cypher, "CrushClaim", &o.id, ckpt, &[]);
         return Ok(());
     }
-    if is_game(t, game, "version", "Version") {
-        let v = decode::from_bytes::<decode::Version>(o.bytes)
-            .map_err(|e| drift("version::Version", o.id, e))?;
+    if t.is(game, "version", "Version") {
+        let v = o.decode::<decode::Version>()?;
         cypher.push(format!(
             "MERGE (m:Meta {{id: 'meta'}}) SET m.version = {}, m.ckpt = {ckpt}",
             v.version
@@ -667,22 +581,8 @@ fn emit_object(
         return Ok(());
     }
 
-    // ── native kiosk ──
-    if is_native(t, "kiosk", "Kiosk") {
-        let k = decode::from_bytes::<decode::Kiosk>(o.bytes)
-            .map_err(|e| drift("kiosk::Kiosk", o.id, e))?;
-        merge_set(
-            cypher,
-            "Kiosk",
-            &k.id,
-            ckpt,
-            &[format!("v.profits = {}", q(&k.profits.value.to_string()))],
-        );
-        return Ok(());
-    }
-
     // ── dynamic fields, dispatched by KEY type ──
-    if let Some(key) = field_key(t) {
+    if let Some(key) = t.field_key() {
         emit_field(cypher, o, key, view, game)?;
     }
     Ok(())
@@ -702,12 +602,11 @@ pub(crate) fn current_world_output(
     let current_key = game_key(game, "world::CurrentWorldKey");
     for candidate in outputs {
         if !matches!(candidate.owner, OwnerKind::Object(owner) if owner == *parent)
-            || field_key(candidate.type_key) != Some(current_key.as_str())
+            || candidate.type_key.field_key() != Some(current_key.as_str())
         {
             continue;
         }
-        let field = decode::from_bytes::<Field<MarkerKey, String>>(candidate.bytes)
-            .map_err(|error| drift(&current_key, candidate.id, error))?;
+        let field = candidate.decode::<Field<MarkerKey, String>>()?;
         return Ok(Some(field.value));
     }
     Ok(None)
@@ -728,8 +627,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let field = decode::from_bytes::<Field<MarkerKey, decode::TournamentRules>>(o.bytes)
-            .map_err(|error| drift(key, o.id, error))?;
+        let field = o.decode::<Field<MarkerKey, decode::TournamentRules>>()?;
         child_set(
             cypher,
             co_present,
@@ -760,8 +658,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::Hp>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::Hp>>()?;
         child_set(
             cypher,
             co_present,
@@ -780,8 +677,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<decode::JobXpKey, u64>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<decode::JobXpKey, u64>>()?;
         // one flat prop per job — jobs are separate DFs, so a map prop would
         // need read-modify-write; the 11 slugs are immutable vocabulary.
         let slug: String = f
@@ -809,8 +705,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::SpellBook>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::SpellBook>>()?;
         let book: Value = Value::Object(
             f.value
                 .contents
@@ -833,8 +728,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::ItemStatistics>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::ItemStatistics>>()?;
         child_set(
             cypher,
             co_present,
@@ -849,8 +743,7 @@ fn emit_field(
         let Some((parent, _)) = df_parent(o, outputs, game, "character", "Character") else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::EquipmentMap>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::EquipmentMap>>()?;
         // the map is whole-value latest-wins: replace ALL the character's
         // EQUIPS edges, then recreate; each equipped item loses its standing
         // ownership edge (it left the kiosk when it was sent to the character).
@@ -876,8 +769,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, String>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, String>>()?;
         child_set(
             cypher,
             co_present,
@@ -893,8 +785,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<decode::CheckpointKey, decode::Checkpoint>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<decode::CheckpointKey, decode::Checkpoint>>()?;
         let current = current_world_output(outputs, &parent, game)?;
         if current.as_ref().is_some_and(|world| world != &f.name.0) {
             return Ok(());
@@ -920,8 +811,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::DungeonRun>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::DungeonRun>>()?;
         let run = json!({
             "dungeon": f.value.dungeon.clone(),
             "room": f.value.room.to_string(),
@@ -937,7 +827,6 @@ fn emit_field(
                 format!("v.dungeon_run = {}", q_json(&run)),
                 format!("v.dungeon = {}", q(&f.value.dungeon)),
                 format!("v.dungeon_room = {}", f.value.room),
-                format!("v.dungeon_seed = {}", q(&f.value.seed.to_string())),
             ],
         );
         return Ok(());
@@ -947,8 +836,7 @@ fn emit_field(
         else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::PendingAmbush>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::PendingAmbush>>()?;
         // written on EVERY gather (gas-uniform) — only a FIRED verdict is
         // state; a quiet one clears it.
         let assign = if f.value.fires {
@@ -973,8 +861,7 @@ fn emit_field(
         let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::RolledStats>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::RolledStats>>()?;
         child_set(
             cypher,
             co_present,
@@ -994,8 +881,7 @@ fn emit_field(
         let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, Vec<decode::ItemDamages>>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, Vec<decode::ItemDamages>>>()?;
         child_set(
             cypher,
             co_present,
@@ -1010,8 +896,7 @@ fn emit_field(
         let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::FeedState>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<MarkerKey, decode::FeedState>>()?;
         child_set(
             cypher,
             co_present,
@@ -1031,8 +916,7 @@ fn emit_field(
         let OwnerKind::Object(kiosk) = o.owner else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<decode::KioskListingKey, u64>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
+        let f = o.decode::<Field<decode::KioskListingKey, u64>>()?;
         // the listed object's label is unknown here (the DF names only the id,
         // and `kiosk::list` does not touch the object) — try both labels; the
         // wrong one MATCHes nothing and no-ops. Labeled = index-backed lookups.
@@ -1057,9 +941,33 @@ fn emit_field(
 
 // ╔════════════════ [ Fight — node + machine blob ] ══════════════════════════ ]
 
-fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
-    let f =
-        decode::from_bytes::<decode::Fight>(o.bytes).map_err(|e| drift("fight::Fight", o.id, e))?;
+fn emit_fight(
+    cypher: &mut Vec<String>,
+    o: &ObjView<'_>,
+    view: &CheckpointView<'_>,
+) -> anyhow::Result<()> {
+    let f = o.decode::<decode::Fight>()?;
+    let before = view
+        .inputs
+        .iter()
+        .find(|input| input.id == o.id)
+        .map(|input| input.decode::<decode::Fight>())
+        .transpose()?;
+    // Placement ends at round 1 and the end is one-way: each clock is the transaction's delta.
+    let clocks = [
+        (
+            "started_ms",
+            f.combat.round > 0 && before.as_ref().is_none_or(|b| b.combat.round == 0),
+        ),
+        (
+            "ended_ms",
+            f.combat.ended && before.as_ref().is_none_or(|b| !b.combat.ended),
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, changed)| *changed)
+    .map(|(clock, _)| format!("v.{clock} = {}", view.ts_ms));
+    let ckpt = view.ckpt;
     let phase = if f.combat.ended {
         "ended"
     } else if f.combat.round == 0 {
@@ -1088,10 +996,8 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             },
             format!("v.access_a = {}", f.access_a),
             format!("v.access_b = {}", f.access_b),
-            // the SIDE OPENERS ride the row, not just the machine blob: a reserved seat names
-            // the character it waits for, and the client that must answer the invitation reads
-            // it off the same marker row a bystander sees (2026-08-22 — matching a fight to a
-            // player by POSITION was the alternative, and it matched the wrong things)
+            // A reserved seat names the character it waits for: the invited client reads it
+            // off the same marker row a bystander sees.
             match &f.opener_a {
                 Some(id) => format!("v.opener_a = {}", q(&id.hex())),
                 None => "v.opener_a = NULL".to_string(),
@@ -1123,7 +1029,10 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.placement_ms = {}", f.combat.placement_started_ms),
             format!("v.turn_started_ms = {}", f.combat.turn_started_ms),
             format!("v.machine = {}", q_json(&fight_machine(&f))),
-        ],
+        ]
+        .into_iter()
+        .chain(clocks)
+        .collect::<Vec<_>>(),
     );
     cypher.push(format!(
         "MATCH (f:Fight {{id: {}}}) OPTIONAL MATCH (f)-[r:CLOSABLE_FOR]->() DELETE r",
@@ -1357,11 +1266,10 @@ fn emit_fight_seat_teams(
     o: &ObjView<'_>,
     game: &str,
 ) -> anyhow::Result<()> {
-    if !is_game(o.type_key, game, "fight", "Fight") {
+    if !o.type_key.is(game, "fight", "Fight") {
         return Ok(());
     }
-    let f =
-        decode::from_bytes::<decode::Fight>(o.bytes).map_err(|e| drift("fight::Fight", o.id, e))?;
+    let f = o.decode::<decode::Fight>()?;
     for (seat, authority) in f.authorities.iter().enumerate() {
         if let decode::FighterAuthority::Player {
             character, owner, ..
@@ -1396,8 +1304,7 @@ fn trade_phase(phase: &decode::TradePhase) -> &'static str {
 }
 
 fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
-    let t =
-        decode::from_bytes::<decode::Trade>(o.bytes).map_err(|e| drift("trade::Trade", o.id, e))?;
+    let t = o.decode::<decode::Trade>()?;
     let ids = |caps: &[Id]| {
         serde_json::to_string(&caps.iter().map(|c| c.hex()).collect::<Vec<_>>())
             .expect("string array json")
@@ -1426,8 +1333,7 @@ fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
 }
 
 fn emit_party(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
-    let p =
-        decode::from_bytes::<decode::Party>(o.bytes).map_err(|e| drift("party::Party", o.id, e))?;
+    let p = o.decode::<decode::Party>()?;
     let id = q_id(&p.id);
     merge_set(cypher, "Party", &p.id, ckpt, &[]);
     cypher.push(format!(
@@ -1457,8 +1363,7 @@ fn emit_party(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
 }
 
 fn emit_friend_list(cypher: &mut Vec<String>, o: &ObjView<'_>) -> anyhow::Result<()> {
-    let list = decode::from_bytes::<decode::FriendList>(o.bytes)
-        .map_err(|e| drift("friends::FriendList", o.id, e))?;
+    let list = o.decode::<decode::FriendList>()?;
     let owner = q(&list.owner.hex());
     let friends = addr_array(&list.friends.contents);
     cypher.push(format!(
@@ -1479,7 +1384,7 @@ fn emit_custody(cypher: &mut Vec<String>, fact: &Custody) {
             owner,
             personal_cap,
         } => {
-            cypher.push(format!("MERGE (k:Kiosk {{id: {kiosk}}}) WITH k OPTIONAL MATCH ()-[r:OWNS]->(k) DELETE r WITH DISTINCT k MERGE (u:User {{address: {owner}}}) MERGE (u)-[:OWNS]->(k)", kiosk = q_id(kiosk), owner = q(&owner.hex())));
+            cypher.push(format!("MATCH (k:Kiosk {{id: {kiosk}}}) WITH k OPTIONAL MATCH ()-[r:OWNS]->(k) DELETE r WITH DISTINCT k MERGE (u:User {{address: {owner}}}) MERGE (u)-[:OWNS]->(k)", kiosk = q_id(kiosk), owner = q(&owner.hex())));
             if let Some(cap) = personal_cap {
                 cypher.push(format!(
                     "MATCH (k:Kiosk {{id: {kiosk}}}) SET k.personal_cap = {cap}",
@@ -1571,7 +1476,7 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         ("trade", "Trade", "Trade"),
     ]
     .iter()
-    .find(|(module, name, _)| is_game(t, game, module, name))
+    .find(|(module, name, _)| t.is(game, module, name))
     .map(|(_, _, label)| *label);
     if let Some(label) = node {
         cypher.push(format!(
@@ -1580,14 +1485,14 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         ));
         return Ok(());
     }
-    if let Some(key) = field_key(t) {
+    if let Some(key) = t.field_key() {
         // the run DF is the one REMOVABLE game DF (end_run) — its deletion
         // clears the character's run (the pre-state owner IS the character).
         if character_field(key, game) == Some(CharacterField::DungeonRun) {
             if let OwnerKind::Object(character) = gone.owner {
                 cypher.push(format!(
                     "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL, c.dungeon = NULL, \
-                     c.dungeon_room = NULL, c.dungeon_seed = NULL",
+                     c.dungeon_room = NULL",
                     id = q_id(&character),
                 ));
             }
@@ -1595,8 +1500,7 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         }
         // a deleted listing DF ends the listing (delist or purchase).
         if key == format!("{SUI_FRAMEWORK}::kiosk::Listing") {
-            let f = decode::from_bytes::<Field<decode::KioskListingKey, u64>>(gone.bytes)
-                .map_err(|e| drift("deleted kiosk::Listing", gone.id, e))?;
+            let f = gone.decode::<Field<decode::KioskListingKey, u64>>()?;
             if let OwnerKind::Object(kiosk) = gone.owner {
                 for label in ["Item", "Character"] {
                     cypher.push(format!(
@@ -1611,608 +1515,3 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
     }
     Ok(())
 }
-
-// ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::decode::{Addr, Hp};
-
-    const GAME: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-
-    fn t(package: &str, module: &str, name: &str, params: &[&str]) -> TypeKey {
-        TypeKey {
-            package: package.into(),
-            module: module.into(),
-            name: name.into(),
-            type_params: params.iter().map(|p| p.to_string()).collect(),
-        }
-    }
-
-    #[test]
-    fn item_projection_keeps_the_certified_version_without_js_number_rounding() {
-        let item_type = t(GAME, "item", "Item", &[]);
-        let bytes = bcs::to_bytes(&decode::Item {
-            id: Id([1; 32]),
-            template: Id([2; 32]),
-            name: "Wool".into(),
-            item_type: "wool".into(),
-            category: "resource".into(),
-            level: 1,
-            amount: 3,
-        })
-        .unwrap();
-        let outputs = [ObjView {
-            id: Id([1; 32]),
-            version: 9_007_199_254_740_993,
-            owner: OwnerKind::Object(Id([3; 32])),
-            type_key: &item_type,
-            bytes: &bytes,
-        }];
-        let writes = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert!(writes
-            .iter()
-            .any(|write| write.contains("v.version = '9007199254740993'")));
-    }
-
-    fn view<'a>(
-        outputs: &'a [ObjView<'a>],
-        deleted: &'a [ObjView<'a>],
-        custody: &'a [Custody],
-    ) -> CheckpointView<'a> {
-        CheckpointView {
-            lamport_version: 2,
-            ckpt: 100,
-            ts_ms: 1_700_000_000_000,
-            outputs,
-            deleted,
-            custody,
-            market: &[],
-            fight_lifecycle: &[],
-        }
-    }
-
-    #[test]
-    fn escaping_defuses_injection() {
-        assert_eq!(q("it's"), "'it\\'s'");
-        assert_eq!(q(r"back\slash"), r"'back\\slash'");
-        let hostile = "'}) DETACH DELETE (n) //";
-        assert!(q(hostile).starts_with("'\\'"));
-    }
-
-    #[test]
-    fn character_object_writes_only_its_props() {
-        let chr = crate::decode::Character {
-            id: Id([1; 32]),
-            name: "aiden".into(),
-            classe: "yajin".into(),
-            sex: "male".into(),
-            experience: 10,
-            level: 2,
-            color_1: 1,
-            color_2: 2,
-            color_3: 3,
-            vitality: 5,
-            wisdom: 0,
-            strength: 0,
-            intelligence: 0,
-            chance: 0,
-            agility: 0,
-            available_points: 5,
-            available_spell_points: 2,
-        };
-        let bytes = bcs::to_bytes(&chr).unwrap();
-        let ty = t(GAME, "character", "Character", &[]);
-        let outputs = [ObjView {
-            version: 1,
-            id: Id([1; 32]),
-            owner: OwnerKind::Shared,
-            type_key: &ty,
-            bytes: &bytes,
-        }];
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 2);
-        assert!(cypher[0].contains("v.version = NULL"));
-        assert!(cypher[1].contains("SET c.version = '1'"));
-        assert!(cypher[0].starts_with("MERGE (v:Character {id: '0x"));
-        assert!(cypher[0].contains("v.name = 'aiden'"));
-        assert!(cypher[0].contains("v.experience = '10'"));
-        // per-property law: hp/world/jobs are OTHER sources' props — untouched.
-        assert!(!cypher[0].contains("v.hp"));
-        assert!(!cypher[0].contains("v.world"));
-    }
-
-    #[test]
-    fn mastery_object_replaces_the_address_wide_score_and_quest() {
-        let mastery = crate::decode::Mastery {
-            id: Id([1; 32]),
-            owner: Addr([2; 32]),
-            points: 7,
-            last_completed_epoch: Some(8),
-            quest_epoch: 9,
-            quest_started_ms: 100,
-            quest_world: "nauvis".into(),
-            quest_dungeon: Id([3; 32]),
-            quest_reward: 2,
-            quest_completed: false,
-        };
-        let bytes = bcs::to_bytes(&mastery).unwrap();
-        let ty = t(GAME, "mastery", "Mastery", &[]);
-        let outputs = [ObjView {
-            version: 1,
-            id: mastery.id,
-            owner: OwnerKind::Address(mastery.owner),
-            type_key: &ty,
-            bytes: &bytes,
-        }];
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 1);
-        assert!(cypher[0].starts_with("MERGE (u:User {address: '0x"));
-        assert!(cypher[0].contains("u.mastery_points = '7'"));
-        assert!(cypher[0].contains("u.mastery_quest_world = 'nauvis'"));
-        assert!(cypher[0].contains("u.mastery_quest_started_ms = '100'"));
-    }
-
-    #[test]
-    fn hp_field_needs_its_character_co_present() {
-        let field = Field {
-            id: Id([9; 32]),
-            name: false,
-            value: Hp {
-                current: 137,
-                last_ms: 5,
-            },
-        };
-        let bytes = bcs::to_bytes(&field).unwrap();
-        let key = format!("{GAME}::progression::HpKey");
-        let ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[&key, "u64"],
-        );
-        // parent ABSENT from the checkpoint → the write is MATCH-guarded: it lands on the
-        // character IF the graph knows it, and on nothing otherwise (2026-08-21: equip/hp
-        // transactions mutate only the DF — the old drop-it rule lost every such write)
-        let orphan = [ObjView {
-            version: 1,
-            id: Id([9; 32]),
-            owner: OwnerKind::Object(Id([1; 32])),
-            type_key: &ty,
-            bytes: &bytes,
-        }];
-        let lone = project(&view(&orphan, &[], &[]), GAME).unwrap();
-        assert_eq!(lone.len(), 1);
-        assert!(
-            lone[0].starts_with("MATCH (v:Character"),
-            "guarded, never MERGE: {}",
-            lone[0]
-        );
-        assert!(lone[0].contains("v.hp = '137'"));
-
-        // parent present → the two hp props land on the character node
-        let chr_ty = t(GAME, "character", "Character", &[]);
-        let chr_bytes = bcs::to_bytes(&crate::decode::Character {
-            id: Id([1; 32]),
-            name: "a".into(),
-            classe: "yajin".into(),
-            sex: "male".into(),
-            experience: 0,
-            level: 1,
-            color_1: 0,
-            color_2: 0,
-            color_3: 0,
-            vitality: 0,
-            wisdom: 0,
-            strength: 0,
-            intelligence: 0,
-            chance: 0,
-            agility: 0,
-            available_points: 0,
-            available_spell_points: 0,
-        })
-        .unwrap();
-        let outputs = [
-            ObjView {
-                version: 1,
-                id: Id([1; 32]),
-                owner: OwnerKind::Shared,
-                type_key: &chr_ty,
-                bytes: &chr_bytes,
-            },
-            ObjView {
-                version: 1,
-                id: Id([9; 32]),
-                owner: OwnerKind::Object(Id([1; 32])),
-                type_key: &ty,
-                bytes: &bytes,
-            },
-        ];
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        let hp_write = cypher.iter().find(|c| c.contains("v.hp = '137'")).unwrap();
-        assert!(hp_write.contains("v.hp_ms = 5"));
-        // Every prefix before the final write must be unable to certify this root version.
-        // Clearing the marker with the root write also fences partial checkpoint replay.
-        assert!(cypher[0].contains("v.version = NULL"));
-        assert!(cypher.last().unwrap().contains("SET c.version = '1'"));
-        assert!(cypher[..cypher.len() - 1]
-            .iter()
-            .all(|write| !write.contains("SET c.version =")));
-    }
-
-    #[test]
-    fn only_the_current_world_checkpoint_can_own_the_active_anchor() {
-        let character = Id([1; 32]);
-        let current_key = format!("{GAME}::world::CurrentWorldKey");
-        let checkpoint_key = format!("{GAME}::world::CheckpointKey");
-        let checkpoint_value = format!("{GAME}::world::Checkpoint");
-        let current_ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[&current_key, "0x1::string::String"],
-        );
-        let checkpoint_ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[&checkpoint_key, &checkpoint_value],
-        );
-        let current_yakutia = bcs::to_bytes(&Field {
-            id: Id([8; 32]),
-            name: false,
-            value: "yakutia".to_string(),
-        })
-        .unwrap();
-        let checkpoint_nauvis = bcs::to_bytes(&Field {
-            id: Id([9; 32]),
-            name: decode::CheckpointKey("nauvis".to_string()),
-            value: decode::Checkpoint {
-                x: 100,
-                z: 200,
-                at_ms: 300,
-                pet: false,
-            },
-        })
-        .unwrap();
-        let checkpoint_yakutia = bcs::to_bytes(&Field {
-            id: Id([7; 32]),
-            name: decode::CheckpointKey("yakutia".to_string()),
-            value: decode::Checkpoint {
-                x: 400,
-                z: 500,
-                at_ms: 600,
-                pet: true,
-            },
-        })
-        .unwrap();
-
-        let lone_checkpoint = [ObjView {
-            version: 1,
-            id: Id([9; 32]),
-            owner: OwnerKind::Object(character),
-            type_key: &checkpoint_ty,
-            bytes: &checkpoint_nauvis,
-        }];
-        let lone = project(&view(&lone_checkpoint, &[], &[]), GAME).unwrap();
-        assert!(lone[0].contains("WHERE v.world = 'nauvis'"));
-
-        let stale_outputs = [
-            ObjView {
-                version: 1,
-                id: Id([9; 32]),
-                owner: OwnerKind::Object(character),
-                type_key: &checkpoint_ty,
-                bytes: &checkpoint_nauvis,
-            },
-            ObjView {
-                version: 1,
-                id: Id([8; 32]),
-                owner: OwnerKind::Object(character),
-                type_key: &current_ty,
-                bytes: &current_yakutia,
-            },
-        ];
-        let stale = project(&view(&stale_outputs, &[], &[]), GAME).unwrap();
-        assert!(!stale
-            .iter()
-            .any(|write| write.contains("v.checkpoint_world")));
-
-        let current_outputs = [
-            ObjView {
-                version: 1,
-                id: Id([7; 32]),
-                owner: OwnerKind::Object(character),
-                type_key: &checkpoint_ty,
-                bytes: &checkpoint_yakutia,
-            },
-            ObjView {
-                version: 1,
-                id: Id([8; 32]),
-                owner: OwnerKind::Object(character),
-                type_key: &current_ty,
-                bytes: &current_yakutia,
-            },
-        ];
-        let current = project(&view(&current_outputs, &[], &[]), GAME).unwrap();
-        let active = current
-            .iter()
-            .find(|write| write.contains("v.checkpoint_world"))
-            .unwrap();
-        assert!(active.contains("v.checkpoint_world = 'yakutia'"));
-        assert!(active.contains("v.x = 400"));
-        assert!(!active.contains("WHERE v.world"));
-    }
-
-    #[test]
-    fn an_independent_zone_projects_without_its_world_parent() {
-        let zone_ty = t(GAME, "zone", "Zone", &[]);
-        let zone = bcs::to_bytes(&decode::Zone {
-            id: Id([9; 32]),
-            world: "01_first_shore".into(),
-            zone_x: 97,
-            zone_z: 98,
-            seed: 4_163_223_416,
-            searched_at_ms: 1_787_383_013_369,
-            mob_taken: 5,
-            res_taken: vec![1, 2],
-        })
-        .unwrap();
-        let outputs = [ObjView {
-            version: 1,
-            id: Id([9; 32]),
-            owner: OwnerKind::Shared,
-            type_key: &zone_ty,
-            bytes: &zone,
-        }];
-
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        let write = cypher.iter().find(|c| c.contains(":Zone")).unwrap();
-
-        assert!(write.contains("MERGE (v:Zone {world: '01_first_shore', zx: 97, zz: 98})"));
-        assert!(write.contains("v.id = '0x0909"));
-        assert!(write.contains("v.seed = '4163223416'"));
-        assert!(write.contains("v.mob_taken = '5'"));
-        assert!(write.contains("v.res_taken = [1,2]"));
-    }
-
-    #[test]
-    fn custody_replaces_the_one_ownership_edge() {
-        let facts = [Custody::FightSeats {
-            fight: Id([8; 32]),
-            seat: 2,
-            character: Id([1; 32]),
-        }];
-        let cypher = project(&view(&[], &[], &facts), GAME).unwrap();
-        assert_eq!(cypher.len(), 2);
-        assert!(cypher[0].contains("[r:HOLDS|FIGHTER|EQUIPS]"));
-        assert!(cypher[0].contains("DELETE r"));
-        assert!(cypher[1].contains("CREATE (f)-[:FIGHTER {seat: 2}]->(c)"));
-    }
-
-    #[test]
-    fn deleted_character_is_detach_deleted() {
-        let ty = t(GAME, "character", "Character", &[]);
-        let gone = [ObjView {
-            version: 1,
-            id: Id([1; 32]),
-            owner: OwnerKind::Shared,
-            type_key: &ty,
-            bytes: &[],
-        }];
-        let cypher = project(&view(&[], &gone, &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 1);
-        assert!(cypher[0].contains("DETACH DELETE"));
-    }
-
-    #[test]
-    fn deleted_listing_field_ends_the_listing() {
-        let field = Field {
-            id: Id([9; 32]),
-            name: crate::decode::KioskListingKey {
-                id: Id([5; 32]),
-                is_exclusive: false,
-            },
-            value: 1_000u64,
-        };
-        let bytes = bcs::to_bytes(&field).unwrap();
-        let key = format!("{}::kiosk::Listing", crate::ownership::SUI_FRAMEWORK);
-        let ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[&key, "u64"],
-        );
-        let gone = [ObjView {
-            version: 1,
-            id: Id([9; 32]),
-            owner: OwnerKind::Object(Id([2; 32])),
-            type_key: &ty,
-            bytes: &bytes,
-        }];
-        // one labeled reap per possible label — the wrong one MATCHes nothing
-        let cypher = project(&view(&[], &gone, &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 3);
-        assert!(cypher[0].contains(":Item") && cypher[1].contains(":Character"));
-        for statement in &cypher[..2] {
-            assert!(statement.contains("[r:LISTED_IN]"));
-            assert!(statement.contains(&Id([5; 32]).hex()));
-        }
-    }
-
-    #[test]
-    fn surviving_listing_wins_over_consumed_pre_state_in_one_transaction() {
-        let key = format!("{SUI_FRAMEWORK}::kiosk::Listing");
-        let ty = t(SUI_FRAMEWORK, "dynamic_field", "Field", &[&key, "u64"]);
-        let bytes = bcs::to_bytes(&Field {
-            id: Id([9; 32]),
-            name: decode::KioskListingKey {
-                id: Id([5; 32]),
-                is_exclusive: false,
-            },
-            value: 1000u64,
-        })
-        .unwrap();
-        let output = ObjView {
-            version: 2,
-            id: Id([9; 32]),
-            owner: OwnerKind::Object(Id([3; 32])),
-            type_key: &ty,
-            bytes: &bytes,
-        };
-        let gone = ObjView {
-            version: 1,
-            owner: OwnerKind::Object(Id([2; 32])),
-            ..output.clone()
-        };
-        let statements = project(&view(&[output], &[gone], &[]), GAME).unwrap();
-        assert!(statements
-            .iter()
-            .any(|statement| statement.contains("CREATE (o)-[:LISTED_IN")));
-        assert!(statements.last().unwrap().contains("SET k.market_version"));
-    }
-
-    #[test]
-    fn a_new_split_lot_exists_before_its_listing_edge_is_created() {
-        let item_id = Id([5; 32]);
-        let listing = bcs::to_bytes(&Field {
-            id: Id([9; 32]),
-            name: crate::decode::KioskListingKey {
-                id: item_id,
-                is_exclusive: false,
-            },
-            value: 1_000u64,
-        })
-        .unwrap();
-        let listing_key = format!("{}::kiosk::Listing", crate::ownership::SUI_FRAMEWORK);
-        let listing_ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[&listing_key, "u64"],
-        );
-        let item = bcs::to_bytes(&crate::decode::Item {
-            id: item_id,
-            template: Id([4; 32]),
-            name: "Wool".into(),
-            item_type: "wooling_wool".into(),
-            category: "resource".into(),
-            level: 1,
-            amount: 10,
-        })
-        .unwrap();
-        let item_ty = t(GAME, "item", "Item", &[]);
-        // Sui may return the listing field before the split Item it names.
-        let outputs = [
-            ObjView {
-                version: 1,
-                id: Id([9; 32]),
-                owner: OwnerKind::Object(Id([2; 32])),
-                type_key: &listing_ty,
-                bytes: &listing,
-            },
-            ObjView {
-                version: 1,
-                id: item_id,
-                owner: OwnerKind::Object(Id([2; 32])),
-                type_key: &item_ty,
-                bytes: &item,
-            },
-        ];
-
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        let item_write = cypher
-            .iter()
-            .position(|statement| statement.starts_with("MERGE (v:Item"))
-            .unwrap();
-        let listing_write = cypher
-            .iter()
-            .position(|statement| statement.contains("CREATE (o)-[:LISTED_IN"))
-            .unwrap();
-
-        assert!(item_write < listing_write);
-    }
-
-    #[test]
-    fn market_stamp_is_latest_wins_set() {
-        let stamps = [MarketStamp {
-            item_type: "wooling_wool".into(),
-            price_per_unit_mist: 15_000_000,
-            ts_ms: 1_700_000_000_000,
-        }];
-        let v = CheckpointView {
-            lamport_version: 2,
-            ckpt: 100,
-            ts_ms: 1_700_000_000_000,
-            outputs: &[],
-            deleted: &[],
-            custody: &[],
-            market: &stamps,
-            fight_lifecycle: &[],
-        };
-        let cypher = project(&v, GAME).unwrap();
-        assert_eq!(cypher.len(), 1);
-        assert!(cypher[0].contains("MERGE (m:Market {item_type: 'wooling_wool'})"));
-        assert!(cypher[0].contains("m.last_sale_mist = '15000000'"));
-    }
-
-    #[test]
-    fn fight_lifecycle_events_persist_the_checkpoint_clock() {
-        let stamps = [
-            FightLifecycleStamp {
-                fight: "0xf1".into(),
-                started: true,
-                ts_ms: 10_000,
-            },
-            FightLifecycleStamp {
-                fight: "0xf1".into(),
-                started: false,
-                ts_ms: 135_000,
-            },
-        ];
-        let v = CheckpointView {
-            lamport_version: 2,
-            ckpt: 100,
-            ts_ms: 135_000,
-            outputs: &[],
-            deleted: &[],
-            custody: &[],
-            market: &[],
-            fight_lifecycle: &stamps,
-        };
-
-        let cypher = project(&v, GAME).unwrap();
-        assert!(cypher[0].contains("f.started_ms = 10000"));
-        assert!(cypher[1].contains("f.ended_ms = 135000"));
-    }
-
-    #[test]
-    fn friend_list_replaces_all_edges() {
-        let list = crate::decode::FriendList {
-            id: Id([3; 32]),
-            owner: Addr([1; 32]),
-            friends: crate::decode::VecSet {
-                contents: vec![Addr([2; 32])],
-            },
-        };
-        let bytes = bcs::to_bytes(&list).unwrap();
-        let ty = t(GAME, "friends", "FriendList", &[]);
-        let outputs = [ObjView {
-            version: 1,
-            id: Id([3; 32]),
-            owner: OwnerKind::Address(Addr([1; 32])),
-            type_key: &ty,
-            bytes: &bytes,
-        }];
-        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 1);
-        assert!(cypher[0].contains("[r:FRIEND]->() DELETE r"));
-        assert!(cypher[0].contains("UNWIND friends AS friend"));
-        assert!(cypher[0].contains("CREATE (u)-[:FRIEND]->(f)"));
-    }
-}
-
-#[cfg(test)]
-#[path = "../tests/graph/transaction_order.rs"]
-mod transaction_order_tests;

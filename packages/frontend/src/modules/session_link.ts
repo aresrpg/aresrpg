@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { Claim } from '@aresrpg/protocol'
 
 type LinkState = Readonly<{
   link_status: 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
@@ -12,14 +13,22 @@ type LinkState = Readonly<{
 
 type LinkInput = Readonly<{ type: string; reason?: unknown; error?: unknown }>
 
+/** An accepted link clears its errors. An open link loads no account, so its acceptance is its ready barrier;
+ *  an account's link waits for its roster. */
+export const accepted_link = ({ stage }: Claim): Pick<LinkState, 'link_status' | 'link_error' | 'link_violation'> => ({
+  link_status: stage === 'open' ? 'ready' : 'connected',
+  link_error: null,
+  link_violation: null,
+})
+
 const message = (value: unknown): string | null => (typeof value === 'string' ? value : null)
 
 export const fold_link_input = <T extends LinkState>(session: T, input: LinkInput): T => {
+  // A retry keeps the reason of the failure before it: the link is in trouble until one is accepted.
   if (input.type === 'link/connecting')
     return {
       ...session,
       link_status: 'connecting',
-      link_error: null,
       latency_ms: null,
       online: null,
       online_characters: null,

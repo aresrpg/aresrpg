@@ -120,14 +120,9 @@ const semantic_snapshot = (value: ActorSnapshot) =>
   ])
 export const actor_snapshot_transition = (previous: ActorSnapshot, state: AgentConnectionState, now: number) => {
   const snapshot = reduce_actor_snapshot(previous, state, now)
-  const previous_ids = new Set(previous.characters.map((character) => character.id))
   return {
     snapshot,
     changed: semantic_snapshot(previous) !== semantic_snapshot(snapshot),
-    track_ids:
-      state.status === 'ready'
-        ? snapshot.characters.filter((character) => !previous_ids.has(character.id)).map((character) => character.id)
-        : [],
     resync_fights: Object.keys(snapshot.fight_phases).filter(
       (id) =>
         fight_state_regresses(snapshot.fight_phases[id] ?? 0, snapshot.fights[id]?.contract) &&

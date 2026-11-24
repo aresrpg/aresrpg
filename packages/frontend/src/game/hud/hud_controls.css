@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.aui-performance {
+  display: flex;
+  align-items: stretch;
+  width: fit-content;
+  padding: 0;
+  gap: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--aui-void) 88%, transparent);
+  font:
+    10px/1.4 'JetBrains Mono',
+    monospace;
+  pointer-events: auto;
+  box-shadow: inset 0 1px #fff1;
+}
+.aui-performance-reading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  color: var(--aui-faint);
+}
+.aui-performance-reading output {
+  color: var(--aui-blue);
+  width: 24px;
+  text-align: right;
+}
+.aui-performance select {
+  width: auto;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 0;
+  border-left: 1px solid #ffffff12;
+  background: transparent;
+  color: var(--aui-blue);
+  font: inherit;
+}
+.aui-performance option {
+  background: var(--aui-raised);
+}
+.aui-performance .aui-button {
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 0;
+  border-left: 1px solid #ffffff12;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  font: inherit;
+  color: var(--aui-brass);
+}
+@media (pointer: coarse) {
+  .aui-performance select {
+    min-height: 44px;
+  }
+}
+.aui-hud-shortcut-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 50px;
+  grid-template-rows: 50px;
+  gap: 5px;
+  pointer-events: auto;
+}
+.aui-hud-shortcut-row > .aui-icon-button {
+  width: 50px;
+  height: 50px;
+  padding: 4px;
+  flex: none;
+}
+@media (max-width: 1023px), (pointer: coarse), (max-height: 500px) {
+  .aui-hud-shortcut-row > .aui-icon-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 1023px), (pointer: coarse), (max-height: 500px) {
+  .aui-hud-shortcut-row {
+    grid-auto-columns: 44px;
+    grid-template-rows: 44px;
+    gap: 2px;
+  }
+}
+.aui-hud-shortcut-row > .aui-icon-button::after {
+  content: attr(aria-label);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%);
+  z-index: 4;
+  width: max-content;
+  max-width: 230px;
+  padding: 5px 8px;
+  border: 1px solid var(--aui-line-strong);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--aui-void) 94%, transparent);
+  box-shadow: 0 3px 9px #000a;
+  color: var(--aui-brass-hi);
+  font: 500 12px var(--aui-font);
+  letter-spacing: normal;
+  text-transform: none;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.aui-hud-shortcut-row > .aui-icon-button:is(:hover, :focus-visible) {
+  z-index: 5;
+}
+.aui-hud-shortcut-row > .aui-icon-button:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  visibility: visible;
+}

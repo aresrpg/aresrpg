@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { mob_loot_chance_scaled } from '../../immutable/src/mob_scaling.ts'
+import {
+  mob_band_scaled,
+  mob_centered_band_scaled,
+  mob_effect_value_scaled,
+  mob_loot_chance_scaled,
+  mob_pool_scaled,
+} from '../../immutable/src/mob_scaling.ts'
 
 import { generate_board } from './board_gen.ts'
 import { GRID_CELLS, empty_mask, mask_add_cells, mask_get } from './combat_grid.ts'
-import { CONTRACT_CONSTANTS, ITEM_STAT_FIELDS } from './move_contract.gen.ts'
+import { FIGHT_ELEMENTS, player_max_hp } from './fighters.ts'
+import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { normalize_checkpoint, normalize_sources } from './normalize.ts'
 import type {
   CharacterSourceInput,
@@ -17,45 +24,6 @@ import type {
   MobTemplateSource,
   PlayerSource,
 } from './types.ts'
-
-const ITEM_STAT_CENTER = 32_768n
-const BASE_HP = BigInt(CONTRACT_CONSTANTS.base_hp)
-const HP_PER_LEVEL = BigInt(CONTRACT_CONSTANTS.hp_per_level)
-
-export const mob_band_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
-  if (high === low) return base
-  const span = high - low
-  return (base * (6n * span + 10n * (level - low))) / (10n * span)
-}
-
-export const mob_effect_value_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
-  const scaled = mob_band_scaled(base, low, high, level)
-  return base > 0n && scaled === 0n ? 1n : scaled
-}
-
-export const mob_centered_band_scaled = (
-  value: bigint,
-  center: bigint,
-  low: bigint,
-  high: bigint,
-  level: bigint
-): bigint => {
-  if (value >= center) return center + mob_band_scaled(value - center, low, high, level)
-  if (high === low) return value
-  const span = high - low
-  const scaled = ((center - value) * (16n * span - 10n * (level - low))) / (10n * span)
-  return scaled >= center ? 0n : center - scaled
-}
-
-export { mob_loot_chance_scaled } from '../../immutable/src/mob_scaling.ts'
-
-export const mob_pool_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
-  if (high === low) return base
-  const span = high - low
-  const denominator = 10n * span
-  const numerator = base * (10n * span + 3n * (level - low))
-  return (numerator + denominator / 2n) / denominator
-}
 
 const scalable_mob_effect = (kind: bigint): boolean => kind <= 7n || kind === 14n || kind === 15n
 
@@ -84,7 +52,7 @@ const scale_mob_spell_level = (
   crit_effects: spell_level.crit_effects.map((effect) => scale_mob_effect(effect, low, high, level)),
 })
 
-export const create_mob_snapshot = (template: MobTemplateSource, scalar: bigint): MobSnapshot => {
+const create_mob_snapshot = (template: MobTemplateSource, scalar: bigint): MobSnapshot => {
   const level = template.level_min + ((template.level_max - template.level_min) * scalar) / 100n
   const kit = template.spells.map((spell) => ({
     name: spell.name,
@@ -99,34 +67,18 @@ export const create_mob_snapshot = (template: MobTemplateSource, scalar: bigint)
     mp: mob_pool_scaled(template.mp, template.level_min, template.level_max, level),
     agility: mob_band_scaled(template.agility, template.level_min, template.level_max, level),
     wisdom: mob_band_scaled(template.wisdom, template.level_min, template.level_max, level),
-    earth_res: mob_centered_band_scaled(
-      template.earth_res,
-      ITEM_STAT_CENTER,
-      template.level_min,
-      template.level_max,
-      level
-    ),
-    fire_res: mob_centered_band_scaled(
-      template.fire_res,
-      ITEM_STAT_CENTER,
-      template.level_min,
-      template.level_max,
-      level
-    ),
-    water_res: mob_centered_band_scaled(
-      template.water_res,
-      ITEM_STAT_CENTER,
-      template.level_min,
-      template.level_max,
-      level
-    ),
-    air_res: mob_centered_band_scaled(
-      template.air_res,
-      ITEM_STAT_CENTER,
-      template.level_min,
-      template.level_max,
-      level
-    ),
+    ...(Object.fromEntries(
+      FIGHT_ELEMENTS.map((element) => [
+        `${element}_res`,
+        mob_centered_band_scaled(
+          template[`${element}_res`],
+          CONTRACT_CONSTANTS.item_stat_shift,
+          template.level_min,
+          template.level_max,
+          level
+        ),
+      ])
+    ) as Pick<MobSnapshot, `${(typeof FIGHT_ELEMENTS)[number]}_res`>),
     kit,
     xp: mob_band_scaled(template.xp, template.level_min, template.level_max, level),
     loot: template.loot.map((row) => ({
@@ -144,65 +96,9 @@ export const mob_scalar_for_level = (template: MobTemplateSource, requested_leve
   return range === 0n ? 0n : ((level - low) * 100n + range - 1n) / range
 }
 
-const character_source_appearance = ({
-  sex = 'male',
-  color_1 = 0xffffff,
-  color_2 = 0xd9af57,
-  color_3 = 0x8b6539,
-  hat = null,
-  cloak = null,
-  title = null,
-}: CharacterSourceInput) => Object.freeze({ sex, color_1, color_2, color_3, hat, cloak, title })
-
-export const create_character_source = (input: CharacterSourceInput): PlayerSource => {
-  const {
-    name = '',
-    classe,
-    level = 1n,
-    experience = 0n,
-    vitality = 0n,
-    wisdom = 0n,
-    strength = 0n,
-    intelligence = 0n,
-    chance = 0n,
-    agility = 0n,
-    spell_levels = {},
-    folded_stats = {},
-    weapon = null,
-  } = input
-  const appearance = character_source_appearance(input)
-  return normalize_sources({
-    players: {
-      character: {
-        name,
-        classe,
-        ...appearance,
-        level,
-        experience,
-        vitality,
-        wisdom,
-        strength,
-        intelligence,
-        chance,
-        agility,
-        spell_levels,
-        folded_stats: Object.fromEntries(
-          ITEM_STAT_FIELDS.map((field) => [field, folded_stats[field] ?? ITEM_STAT_CENTER])
-        ),
-        weapon,
-      },
-    },
-    spells: {},
-  }).players.character
-}
-
-export const player_max_hp = (source: Readonly<PlayerSource>): bigint => {
-  const base = BASE_HP + HP_PER_LEVEL * source.level + source.vitality
-  const folded = source.folded_stats.vitality
-  if (folded >= ITEM_STAT_CENTER) return base + folded - ITEM_STAT_CENTER
-  const malus = ITEM_STAT_CENTER - folded
-  return malus >= base ? 1n : base - malus
-}
+/** A full character source from the fields a caller knows; every other field takes its normalized default. */
+export const create_character_source = (input: CharacterSourceInput): PlayerSource =>
+  normalize_sources({ players: { character: { ...input, level: input.level ?? 1n } } }).players.character
 
 /**
  * Health of one wallet's hero seated in a fight. A fight owns its fighters' health, so every client

@@ -8,13 +8,15 @@ import { useText } from '../i18n/useText.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { MobCoreStats } from '../components/MobCoreStats.tsx'
 import { mob_icon } from '../content/assets.ts'
-import { centered_resistance, encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { centered_resistance, encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { element_colors, item_category_colors, stat_identities } from '../visual_identity.ts'
 
 import { EntityIcon, Section } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
 import { SpellCard } from './SpellCard.tsx'
+import './catalogue.css'
 
 type MobLootRow = NonNullable<ReturnType<typeof encyclopedia_catalog.mob>>['loot'][number]
 const mob_loot_view = ({ drop, item }: MobLootRow) =>

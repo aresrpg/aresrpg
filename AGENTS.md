@@ -26,7 +26,7 @@ This is the first law of the repository; every other rule serves it.
   the old one in the same change. A working, tested second system beside the first is a defect.
 - If none of the three fits, stop before any edit and tell the owner: the existing system, why it does
   not fit, and the options. Never decide it locally.
-- First-party clients (3D game, web dapp, mobile, hosted actors) speak the realtime server's packet
+- First-party clients (the website, the 3D game, mobile, hosted actors) speak the realtime server's packet
   protocol over its WebSocket: one login, snapshot then deltas. Adding request/response or polling
   between our own clients and services conflicts with that system and is forbidden.
 - A caller that cannot hold that socket (an external AI client through MCP, a chat platform's webhook,
@@ -61,13 +61,15 @@ This is the first law of the repository; every other rule serves it.
   SCREAMING_SNAKE_CASE is for constants. React hooks remain `useX`.
 - No classes or `this`, except React error boundaries, `extends Error`, and Three.js
   `extends PhysicalLightingModel`.
-- Prefer cognitive complexity at most 10 and cyclomatic complexity at most 8. New code never
-  exceeds 15/12, inherited hotspot scores never rise, nesting never exceeds 4, and files stay at
-  most 600 lines. Extraction without removing decisions is not a complexity reduction.
+- Prefer cognitive complexity at most 10 and cyclomatic complexity at most 8. No function
+  exceeds 15/12 outside the files in `INHERITED_COMPLEXITY_FILES`, a list that only shrinks;
+  nesting never exceeds 4, and files stay at most 600 lines. Extraction without removing decisions
+  is not a complexity reduction.
 - Await promises or explicitly discard them with `void`. Never swallow a failure.
 - Handle discriminated unions exhaustively.
 - Every ESLint disable names the rule and gives the local reason.
-- Tests live under the package's sibling `test/` tree and mirror the source path.
+- Tests live under the package's sibling `test/` tree. Each package has one core suite of broad
+  scenarios, split by domain only to respect the file-size limit.
 - Wire/BCS decode tests pin at least one real captured payload with object/version/date provenance.
 
 Preserve unrelated work in a dirty tree. Never reset, overwrite, or broadly reformat user changes.
@@ -86,7 +88,11 @@ question that would close the evidence gap.
 
 ## Definition of done
 
-- A bug is red-first: retain a deterministic regression reproducing the reported reason.
+- A bug is red-first: reproduce the reported reason with a failing scenario before the fix. Keep it in the
+  package's core suite when it protects business logic, money, custody, authorization or wire decoding;
+  otherwise widen an existing scenario and add no file.
+- Test the core and the business logic through the package's public door. Do not test UI components,
+  rendered markup, single branches or test helpers. Few broad scenarios keep the coverage floors.
 - Correctness intent becomes a fast machine-runnable check. Taste intent remains a human review
   checkpoint.
 - Drive real behavior when practical. Exercise sad paths before happy paths.
@@ -111,7 +117,7 @@ question that would close the evidence gap.
 - `seed/` is the only authored content home. Do not add frontend content copies.
 - The frontend never imports `@mysten/*`; every client-side chain write goes through the SDK.
 - Commits use conventional subjects, bodies no longer than five lines, and one atomic concern.
-- Changelog entries are player-facing release copy. Follow `CONTRIBUTING.md`'s audience law.
+- Changelog entries are player-facing release copy.
 
 ### Player UI quality
 
@@ -155,7 +161,7 @@ Every production Move module targets more than 98%; raise its enforced floor in 
 coverage gains, and never lower a floor. The script is the sole list of current Move floors.
 No authored module is excluded. Rust coverage requires `cargo-llvm-cov` 0.9.0 plus
 `llvm-tools-preview` or Homebrew LLVM. Authored artifact freshness runs separately through `bun run validate:assets`; CI runs it once.
-Browser regressions use the production test build; `bun run test:performance` is opt-in.
+The browser smoke set uses the production test build; `bun run test:performance` is opt-in.
 The complete CI gate also includes indexer parity/package-size
 tests and the production frontend build.
 
@@ -189,8 +195,8 @@ surface changes.
   owner-signed semver tags are the production release boundary. Production, mainnet, permanent
   freeze, and deployment actions require explicit owner approval.
 - For a production release, use `CONTENT_UPGRADES.md` as the sole runbook. The fixed order is:
-  prepare hardcoded chain pins, create the root semver tag with `bun pm version`, wait for its CI
-  manifest, reconcile content and backend artifacts, activate that Vercel version, verify
+  the release operator freezes the source, commits the version and the live pins, and pushes the
+  owner-signed semver tag; then wait for its CI manifest, reconcile content and backend artifacts, activate that Vercel version, verify
   production, then resume gameplay. Never infer a later step completed from an earlier one.
 - Preserve linear history and follow `CONTRIBUTING.md` for contribution and release mechanics.
 
@@ -262,15 +268,15 @@ the census found mass — a cleaned domain gets promoted, never the reverse.
   needless wrappers (`x => f(x)` is `f`). → `prefer-arrow-callback` **ERROR** +
   `functional/prefer-tacit` WARN (typed tier).
 - **L-C3 — Small composable units.** Prefer cognitive complexity ≤10 and cyclomatic complexity
-  ≤8; new code never exceeds 15/12. The exact inherited hotspot distribution is a downward-only
-  baseline: a score increase reds, a reduction must ratchet the baseline, and a new soft hotspot
-  needs explicit review. Nesting is normally ≤3 and never exceeds 4; files remain ≤600 LoC.
-  Moving the same decisions into helpers is not a reduction. → `complexity-gate/cognitive` ·
-  `complexity-gate/cyclomatic` · `max-depth` **ERROR**; `max-lines` **WARN**; judgment verifies
-  that branches or concepts actually disappeared.
+  ≤8; no function exceeds 15/12. Files that held a hotspot when the stock rules landed are listed
+  in `INHERITED_COMPLEXITY_FILES`, where both ceilings are off; a file leaves the list when reduced
+  and none is added (a new hotspot is fixed). Nesting is normally ≤3 and never exceeds 4; files
+  remain ≤600 LoC. Moving the same decisions into helpers is not a reduction. →
+  `sonarjs/cognitive-complexity` (15) · `complexity` (12) · `max-depth` (4) **ERROR**;
+  `max-lines` **WARN**; judgment verifies that branches or concepts actually disappeared.
 - **L-C4 — Fold, don't iterate — where honest.** `map/filter/reduce` express intent; a loop is a
   perf tool, not a default. Engine hot paths (voxel meshing, gen) are sanctioned loop country. →
-  `functional/no-loop-statements` WARN on api/; judgment elsewhere.
+  judgment.
 - **L-C5 — Pointfree is seasoning, not law.** Use it where it clarifies. [MAG ch05] → judgment.
 - **L-C6 — Data last, curry to specialize.** Order params specializer-first/data-last so partial
   application composes. [MAG ch04] → judgment.
@@ -312,10 +318,9 @@ the census found mass — a cleaned domain gets promoted, never the reverse.
 ### Layout
 
 - **L-L1 — Tests live in `test/`; `src/` is source only.** Every `*.test.*` / `*.spec.*` file
-  lives under the package's sibling `test/`, mirroring the source subpath. _Why:_ `src/` is the
+  lives under the package's sibling `test/`, as that package's core scenario suite. _Why:_ `src/` is the
   tree consumers read and globs reason about; a path that means two things quietly covers the
-  wrong set. Frontend's remaining in-src tests are measured debt, not a carve-out.
-  `packages/frontend/e2e` (Playwright) and `packages/engine/bench` are their own genres. → judgment.
+  wrong set. `packages/frontend/e2e` (the Playwright smoke set) is its own genre. → judgment.
 
 ### Operating the law
 

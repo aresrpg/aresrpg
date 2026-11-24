@@ -84,7 +84,7 @@ const create_pipeline = (
     })
   const profile = get_quality_profile(quality)
   const { bloom: bloom_config, sun_shafts: shaft_config } = profile.effects
-  // One scene sample is the proven legacy path. Quality scales reconstruction; one final
+  // One scene sample per frame. Quality scales reconstruction; one final
   // display-space FXAA pass stabilizes voxel silhouettes without multisampling the world.
   const scene_pass = pass(scene, camera)
   scene_pass.setResolutionScale(profile.render.scene_scale)

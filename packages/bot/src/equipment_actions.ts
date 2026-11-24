@@ -3,15 +3,19 @@
 import { character_equipment_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 import { equip_refusal } from '@aresrpg/protocol/equipment'
-import type { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
 import { consumable_noop } from './consumable_projection.ts'
 import { profession_inventory } from './actor_inventory.ts'
-import { profession_item } from './profession_catalog.ts'
-import { owned_character, custody_of, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
+import { profession_item } from './catalog.ts'
+import {
+  owned_character,
+  custody_of,
+  gameplay_action,
+  gameplay_observed_ms,
+  type GameplayContext,
+} from './gameplay_context.ts'
 import { object_schema, identifier, decode } from './gameplay_schema.ts'
 
-type CharacterActions = ReturnType<typeof create_agent_actions>['character']
 export const EQUIPMENT_SLOT_SCHEMA = { oneOf: character_equipment_slots.map((slot) => ({ const: slot })) }
 /** No `item_id` empties the slot: its occupant goes back to the hero's kiosk. */
 type EquipPayload = Readonly<{ character_id: string; item_id?: string; slot: CharacterEquipmentSlot }>
@@ -25,20 +29,8 @@ const consume_schema = object_schema({
   item_id: identifier,
   amount: { const: 1 },
 })
-export const EQUIPMENT_ACTIONS = {
-  equip_item: {
-    description:
-      'Equip an exact available owned item into an authored slot, replacing its current occupant atomically. Omit item_id to empty the slot instead: its occupant returns to the hero kiosk.',
-    input_schema: equip_schema,
-    parse: (value: unknown) => decode<EquipPayload>(equip_schema, value),
-  },
-  use_consumable: {
-    description:
-      'Consume one available item through its existing heal, reset, recall or city effect. Does not choose a healing policy; loot boxes use their separate action.',
-    input_schema: consume_schema,
-    parse: (value: unknown) => decode<ConsumePayload>(consume_schema, value),
-  },
-}
+const parse_equip = (value: unknown) => decode<EquipPayload>(equip_schema, value)
+const parse_consume = (value: unknown) => decode<ConsumePayload>(consume_schema, value)
 /** Gear and consumables change only on a free hero: in its kiosk, in no fight and held by no protector. */
 export const character_free = (character: CharacterRow) =>
   character.custody === 'kiosk' && !character.active_fight && !character.ambush
@@ -63,14 +55,13 @@ const equippable_item = (context: GameplayContext, character: CharacterRow, payl
   if (character.equipment.some(({ id }) => id === item.id)) throw new Error('item_already_equipped')
   return item
 }
-export const validate_equip_item = (context: GameplayContext) => {
-  const payload = EQUIPMENT_ACTIONS.equip_item.parse(context.command.payload)
+const validate_equip_item = (context: GameplayContext) => {
+  const payload = parse_equip(context.command.payload)
   const character = available_character(context, payload.character_id)
   const previous = character.equipment.find(({ slot }) => slot === payload.slot)
   if (!payload.item_id && !previous) throw new Error('slot_empty')
   const item = payload.item_id ? equippable_item(context, character, payload) : null
   return {
-    kind: 'equip_item' as const,
     input: {
       character_id: character.id,
       custody: custody_of(character),
@@ -94,8 +85,8 @@ const consumable_world = (item_type: string, character: CharacterRow, chain_ms: 
   if (!character.world) throw new Error('needs_resync')
   return { world: character.world }
 }
-export const validate_consumable = (context: GameplayContext) => {
-  const payload = EQUIPMENT_ACTIONS.use_consumable.parse(context.command.payload)
+const validate_consumable = (context: GameplayContext) => {
+  const payload = parse_consume(context.command.payload)
   const character = available_character(context, payload.character_id)
   const items = profession_inventory(context.snapshot.inventory, character.kiosk)
   const item = items.find(({ id }) => id === payload.item_id)
@@ -103,7 +94,6 @@ export const validate_consumable = (context: GameplayContext) => {
   const world = consumable_world(item.item_type, character, Number(gameplay_observed_ms(context)))
   if (item.amount < payload.amount) throw new Error('insufficient_consumables')
   return {
-    kind: 'use_consumable' as const,
     input: {
       character_id: character.id,
       item_id: item.id,
@@ -114,11 +104,24 @@ export const validate_consumable = (context: GameplayContext) => {
     },
   }
 }
-export type EquipmentActionPlan = ReturnType<typeof validate_equip_item> | ReturnType<typeof validate_consumable>
-export const equipment_executors = (actions: Pick<CharacterActions, 'equip' | 'use_consumable'>) => ({
-  equip_item: actions.equip,
-  use_consumable: actions.use_consumable,
-})
+export const EQUIPMENT_ACTIONS = {
+  equip_item: gameplay_action({
+    description:
+      'Equip an exact available owned item into an authored slot, replacing its current occupant atomically. Omit item_id to empty the slot instead: its occupant returns to the hero kiosk.',
+    input_schema: equip_schema,
+    parse: parse_equip,
+    validate: validate_equip_item,
+    execute: (sdk, input) => sdk.equip(input),
+  }),
+  use_consumable: gameplay_action({
+    description:
+      'Consume one available item through its existing heal, reset, recall or city effect. Does not choose a healing policy; loot boxes use their separate action.',
+    input_schema: consume_schema,
+    parse: parse_consume,
+    validate: validate_consumable,
+    execute: (sdk, input) => sdk.use_consumable(input),
+  }),
+}
 export const equipment_projected = (payload: EquipPayload, character: CharacterRow) =>
   payload.item_id
     ? character.equipment.some(({ slot, id }) => slot === payload.slot && id === payload.item_id)

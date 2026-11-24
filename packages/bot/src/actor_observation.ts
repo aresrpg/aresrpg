@@ -19,8 +19,8 @@ import {
 } from './actor_observation_views.ts'
 import { fight_planning } from './fight_planning.ts'
 import { character_observability } from './character_observability.ts'
-import { gameplay_knowledge } from './gameplay_knowledge.ts'
-import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay.ts'
+import { gameplay_knowledge } from './catalog.ts'
+import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay_context.ts'
 
 /** What the status reads from the actor: what the wallet holds and does, in a few kilobytes. A bag,
  * the stacks of one item and the zones around a hero are detail views, asked for by name. */
@@ -66,8 +66,8 @@ const DETAIL_VIEWS = {
   stacks: ({ snapshot, command }: GameplayContext) => stacks_view(snapshot, command.payload),
   zones: ({ snapshot, command }: GameplayContext) => zones_view(snapshot, command.payload),
 }
-export type DetailView = keyof typeof DETAIL_VIEWS
-export const detail_view = (payload: Command['payload']): DetailView | null =>
+type DetailView = keyof typeof DETAIL_VIEWS
+const detail_view = (payload: Command['payload']): DetailView | null =>
   typeof payload.view === 'string' && Object.hasOwn(DETAIL_VIEWS, payload.view) ? (payload.view as DetailView) : null
 /** One read of the actor: the status, or the one detail view the command names. Nothing absent is
  * written as `null`. */
@@ -108,13 +108,10 @@ export const apply_actor_watches = async (
   }
 }
 
-/** A stored run of a retired shape holds no script: it is still listed, without a strategy. */
+/** A stored run of a retired shape holds no script: it is still listed, without an objective. */
 const script_of = (run: BehaviorRun) => run.script as BehaviorRun['script'] | undefined
 /** The wire shape of a run in `bot_observe`. */
-const observed_run = (run: BehaviorRun) => {
-  const { id, character_id, status, issue } = run
-  return { id, character_id, status, issue, strategy: script_of(run)?.strategy }
-}
+const observed_run = ({ id, character_id, status, issue }: BehaviorRun) => ({ id, character_id, status, issue })
 /** A run as its owner is told it: the observed row, the objective its tree was authored with, and
  * what it paid in fees and how many dungeon runs it saw end since that tree was accepted. */
 export const told_run = (run: BehaviorRun) => {
@@ -140,8 +137,7 @@ const ended_runs = async <Row>(store: ControlStore, lane: Lane | null, owner: Ow
   })
 }
 /** Every run the wallet hosts, one per hero, then every run that ended by itself, with `ended`. Any
- * live grant of this bot reads the same list: one verified owner holds one wallet. `strategy` is the
- * catalogue entry its tree was bound from, absent for an authored tree. `state` says whether any
+ * live grant of this bot reads the same list: one verified owner holds one wallet. `state` says whether any
  * hosted run still plays without the AI. `direct` is the wallet's one direct command with its outcome,
  * so a client follows its request from observations. */
 export const run_observation = async <Row extends Readonly<{ status: string }>>(

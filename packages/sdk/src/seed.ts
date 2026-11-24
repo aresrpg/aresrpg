@@ -9,8 +9,9 @@
 import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
 import { craft_job_of, craft_max_ingredients, item_stat_center, stat_names, type StatName } from '@aresrpg/immutable'
 
-import { bind_doors, type BoundDoors, type Resolvable, type Sdk } from './client.ts'
-import * as seed_projection from './seed_doors.gen.ts'
+import type { Sdk } from './client.ts'
+import { bind_doors, type BoundDoors, type Resolvable } from './doors.ts'
+import { DOORS as SEED_DOORS, type DoorArgs as SeedDoorArgs } from './seed_doors.gen.ts'
 import {
   board_catalog_id,
   dungeon_content_id,
@@ -52,10 +53,10 @@ export {
 } from './seed_ids.ts'
 export type * from './seed_types.ts'
 
-export type SeedSdk = Sdk & Readonly<{ seed_doors: BoundDoors<typeof seed_projection> }>
+export type SeedSdk = Sdk & Readonly<{ seed_doors: BoundDoors<SeedDoorArgs> }>
 
 export const seed_sdk = (sdk: Sdk): SeedSdk =>
-  Object.freeze({ ...sdk, seed_doors: bind_doors(seed_projection, sdk.door_context) })
+  Object.freeze({ ...sdk, seed_doors: bind_doors<SeedDoorArgs>(SEED_DOORS, sdk.door_context) })
 
 const recipe_inputs = (recipe: SeedRecipe): readonly (readonly [string, number])[] => {
   const inputs = Object.entries(recipe.inputs)
@@ -152,7 +153,7 @@ const consume_effect = (
 /** The tunable half of an item template (stat ranges, damage lines, consumable effect) —
  * one home for authoring AND rebalancing; `template` is the fresh add_item value at creation
  * or the shared object's id at rebalance. */
-export const item_facts = (
+const item_facts = (
   sdk: SeedSdk,
   tx: Transaction,
   cap: Resolvable,
@@ -336,7 +337,7 @@ export const slice_chunks = <T>(rows: readonly T[], size: number): readonly (rea
   return batches
 }
 
-export const item_cost = (item: SeedItem): number =>
+const item_cost = (item: SeedItem): number =>
   3 +
   (item.stats ? 3 : 0) +
   (item.damages?.length ?? 0) +
@@ -344,10 +345,10 @@ export const item_cost = (item: SeedItem): number =>
   (item.consumable ? 1 : 0) +
   (item.consumable?.type === 'loot_box' ? item.consumable.rewards.length : 0)
 
-export const spell_cost = (spell: SeedSpell): number =>
+const spell_cost = (spell: SeedSpell): number =>
   3 + spell.levels.reduce((sum, level) => sum + 3 + level.effects.length + level.crit_effects.length, 0)
 
-export const mob_cost = (mob: SeedMob): number =>
+const mob_cost = (mob: SeedMob): number =>
   4 +
   mob.loot.length +
   mob.spells.reduce(

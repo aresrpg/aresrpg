@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { MarketObservation, MarketPriceObservation } from '@aresrpg/protocol'
+import {
+  characteristic_cost_step,
+  characteristic_names,
+  is_class_name,
+  type CharacteristicName,
+  type ClassName,
+} from '@aresrpg/immutable'
 
 import { select_profession } from './behavior_profession.ts'
 import { planning_issue, planning_blocker } from './planning_failure.ts'
@@ -9,19 +16,64 @@ import { select_purchase, select_sale } from './behavior_market.ts'
 import { market_observation_progress } from './actor_market.ts'
 import { market_prices_observed } from './market_prices.ts'
 import { select_discovery, type WorldSelection } from './behavior_world.ts'
-import type { Command } from './control.ts'
-import type { GameplayContext } from './gameplay_context.ts'
+import type { Command, Lane } from './control.ts'
+import { hydrate_gameplay_fight, type GameplayContext, owned_character } from './gameplay_context.ts'
 import { validate_gameplay } from './gameplay.ts'
 import { next_combat_action, type CombatNext } from './combat_plan.ts'
 import { nearest_gather, select_group, type SelectedAction } from './behavior_targets.ts'
 import { select_dungeon_step, select_join } from './behavior_team.ts'
-import { select_spending } from './behavior_growth.ts'
-import { hydrate_gameplay_fight } from './gameplay.ts'
 import { evaluate_behavior, empty_behavior_memory, type BehaviorResult } from './behavior_tree.ts'
 import { behavior_condition } from './behavior_facts.ts'
-import type { BehaviorAction, BehaviorRun } from './behavior_script.ts'
+import type { BehaviorAction, BehaviorRun, BehaviorScript } from './behavior_script.ts'
 import { observe_dungeon } from './behavior_tally.ts'
+import type { ControlTransaction } from './store.ts'
+import { ended_run } from './run_ref.ts'
+import { identifier, nonempty, object_schema } from './gameplay_schema.ts'
+import { spell_upgrade_quote } from './catalog.ts'
 
+/** Authored priorities, never a hidden build. Stat points go to the first listed stat they can
+ * raise. Spell points go to the first listed spell that still has a rank to gain and wait until they
+ * pay for it, so a later spell never takes what an earlier one is saving for. A hero with nothing to
+ * spend fails the leaf, so its selector moves on. */
+export type SpendAction = Readonly<{
+  type: 'spend_points'
+  character_id: string
+  stats: readonly CharacteristicName[]
+  spells: readonly string[]
+}>
+export const SPEND_ACTION_SCHEMA = object_schema({
+  type: { const: 'spend_points' },
+  character_id: identifier,
+  stats: { type: 'array', uniqueItems: true, items: { oneOf: characteristic_names.map((stat) => ({ const: stat })) } },
+  spells: { type: 'array', uniqueItems: true, items: nonempty },
+})
+/** Every whole class-cost step the unspent capital pays for in one stat. */
+const stat_spending = (classe: ClassName, stat: CharacteristicName, value: number, points: number) => {
+  let [spent, gained] = [0, 0]
+  for (;;) {
+    const step = characteristic_cost_step(classe, stat, value + gained)
+    if (step.cost < 1 || spent + step.cost > points) return spent
+    spent += step.cost
+    gained += step.gain
+  }
+}
+export const select_spending = (action: SpendAction, context: GameplayContext): WorldSelection => {
+  const hero = owned_character(context, action.character_id)
+  const { classe, id: character_id } = hero
+  if (!is_class_name(classe) || hero.custody !== 'kiosk' || hero.active_fight)
+    return { status: 'failure', code: 'character_not_available' }
+  const points = (stat: CharacteristicName) => stat_spending(classe, stat, hero[stat], hero.available_points)
+  const stat = action.stats.find((name) => points(name) > 0)
+  if (stat)
+    return {
+      status: 'action',
+      action: { kind: 'raise_stats', payload: { character_id, spending: { [stat]: points(stat) } } },
+    }
+  const spell = action.spells.find((name) => spell_upgrade_quote(name, hero) !== null)
+  return spell && spell_upgrade_quote(spell, hero)!.cost <= hero.available_spell_points
+    ? { status: 'action', action: { kind: 'raise_spell', payload: { character_id, spell } } }
+    : { status: 'failure', code: 'nothing_to_spend' }
+}
 type Resolution = Readonly<{
   status: 'action' | 'failure' | 'waiting' | 'success' | 'replan'
   action?: SelectedAction
@@ -209,6 +261,76 @@ export const next_behavior_action = (run: BehaviorRun, previous: Command | null,
     return { ...evaluate_behavior_action(run, previous, context), diagnostic: undefined as Error | undefined }
     // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Persist a safe blocker; caller reports the diagnostic only after commit.
   } catch (error) {
-    return { ...planning_blocker(error, 'behavior', run), action: undefined, node: undefined }
+    return { ...planning_blocker(error, run), action: undefined, node: undefined }
   }
+}
+const action_characters = (action: BehaviorAction): readonly string[] => {
+  if ('character_id' in action) return [action.character_id]
+  if (action.type === 'combat') return action.profiles.map(({ character_id }) => character_id)
+  if (action.type !== 'call') return []
+  return typeof action.payload.character_id === 'string' ? [action.payload.character_id] : []
+}
+const nodes = (script: BehaviorScript) => {
+  const pending = [script.tree]
+  const visited: BehaviorScript['tree'][] = []
+  while (pending.length) {
+    const node = pending.pop()!
+    visited.push(node)
+    if ('children' in node) pending.push(...node.children)
+    if ('child' in node) pending.push(node.child)
+  }
+  return visited
+}
+const acting_ids = (script: BehaviorScript) =>
+  nodes(script).flatMap((node) => (node.type === 'action' ? action_characters(node.action) : []))
+/** A tree acts for exactly one hero, the key of its run. Conditions may still read teammates. */
+export const behavior_actor = (script: BehaviorScript): string => {
+  const ids = new Set(acting_ids(script))
+  if (ids.size !== 1) throw new Error('behavior_needs_one_character')
+  return [...ids][0]!
+}
+/** Accepted, unprepared drafts may refresh targets within the same tree leaf. A changed branch
+ * retires that draft; it can never inherit its command ID or be counted as successful execution. */
+export const retain_behavior_draft = async (
+  tx: ControlTransaction,
+  run: BehaviorRun,
+  current: Command,
+  lane: Lane,
+  context: GameplayContext
+): Promise<Command | null | Error> => {
+  const next = next_behavior_action(run, null, context)
+  const { node } = current.behavior_binding!
+  if ([next.state === 'waiting', next.record.activation?.node === node].every(Boolean)) return null
+  if ([next.state === 'action', next.node === node].every(Boolean)) {
+    const refreshed: Command = {
+      ...current,
+      ...next.action!,
+      observation_revision: lane.observation_revision,
+      action_baseline: undefined,
+      fight_baseline: undefined,
+    }
+    await tx.put(`command:${current.id}`, refreshed)
+    await tx.put(`behavior:${run.id}`, next.record)
+    return refreshed
+  }
+  const status = next.state === 'action' ? 'active' : next.state
+  await tx.put(`behavior:${run.id}`, {
+    ...next.record,
+    status,
+    last_command_id: null,
+    pending_node: null,
+    activation: null,
+    issue: next.issue,
+  })
+  await tx.put(`command:${current.id}`, {
+    ...current,
+    status: 'cancelled',
+    error: 'behavior_changed_before_preparation',
+  })
+  await tx.put(current.lane_key, {
+    ...lane,
+    active_command: null,
+    ...ended_run(lane, run.id, { status, issue: next.issue }),
+  })
+  return next.diagnostic ?? null
 }

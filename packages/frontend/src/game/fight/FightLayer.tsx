@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity -- the fight layer explicitly composes mutually exclusive interaction states. */
 import type { FightPresentationCue } from '@aresrpg/engine'
 import {
   movement_points_of,

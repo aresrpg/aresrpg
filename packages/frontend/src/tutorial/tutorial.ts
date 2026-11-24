@@ -66,7 +66,6 @@ export const completed_tutorials_from = (value: unknown): readonly TutorialId[] 
 
 export type TutorialFacts = Readonly<{
   page: Page
-  pathname: string
   dialog: AppDialog | null
   player_ready: boolean
   selected_character_id: string | null
@@ -75,13 +74,6 @@ export type TutorialFacts = Readonly<{
   world_available: boolean
 }>
 
-const character_tutorial = (pathname: string): TutorialId => {
-  const detail = pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean)[1]
-  if (detail === 'stats' || detail === 'spells' || detail === 'jobs' || detail === 'runeforge')
-    return `characters_${detail}`
-  return 'characters_equipment'
-}
-
 const tutorial_candidate = (facts: Readonly<TutorialFacts>): TutorialId | null => {
   if (facts.dialog) {
     const id = facts.dialog.replace('character_', 'characters_')
@@ -89,7 +81,6 @@ const tutorial_candidate = (facts: Readonly<TutorialFacts>): TutorialId | null =
   }
   if (facts.fight_mounted) return facts.fight_owned ? 'fight' : null
   if (facts.page === 'world' && facts.world_available) return 'world'
-  if (facts.page === 'characters') return character_tutorial(facts.pathname)
   return null
 }
 

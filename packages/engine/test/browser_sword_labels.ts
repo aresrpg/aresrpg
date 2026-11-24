@@ -15,7 +15,7 @@ export const probe_sword_labels = async (canvas: HTMLCanvasElement, url: string,
     backend.set_camera([0, 8, 20], [0, 3, 0])
     backend.set_audio_volume(0)
     backend.set_fight_swords(url, sound, [{ id: 'fight', x: 0, y: 0, z: 0, placement_ms: Date.now() - 60_000 }])
-    backend.set_fight_sword_label('fight', element)
+    backend.set_label('fight', { element, anchor: { kind: 'sword', id: 'fight' } })
     backend.render(performance.now())
     const attached = element.isConnected && element.style.display !== 'none'
     const before = element.style.transform
@@ -25,7 +25,7 @@ export const probe_sword_labels = async (canvas: HTMLCanvasElement, url: string,
     backend.set_fight_swords(url, sound, [])
     backend.render(performance.now() + 32)
     const hidden = element.style.display === 'none' || !element.isConnected
-    backend.set_fight_sword_label('fight', null)
+    backend.set_label('fight', null)
     return { attached, moved, hidden, detached: !element.isConnected }
   } finally {
     backend.dispose()

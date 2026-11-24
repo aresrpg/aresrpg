@@ -1,0 +1,579 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.arena-window {
+  width: min(1080px, calc(100cqw - 24px));
+  height: auto;
+  max-height: calc(100cqh - 20px);
+}
+.arena-window .aui-workspace-content,
+.arena-window .aui-workspace-main {
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+.arena-window .kz-page {
+  width: 100%;
+  margin: 0;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+}
+.arena-window .kz-header {
+  display: none;
+}
+.arena-window .kz-body {
+  display: flex;
+  min-height: 0;
+  padding: 10px;
+}
+.arena-window .kz-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(100cqh - 100px);
+  background: none;
+}
+.arena-window .kz-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.arena-window .kz-tabs > .aui-button:not(.aui-button--primary) {
+  font-size: 11px;
+  min-height: 36px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 27%, transparent);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--aui-soft) 7%, transparent);
+  background: var(--aui-lifted);
+  color: var(--aui-soft);
+}
+.arena-window .kz-tabs > .aui-button.is-active {
+  background: var(--aui-brass-deep);
+  color: var(--aui-brass-hi);
+  border-color: color-mix(in srgb, var(--aui-brass) 33%, transparent);
+}
+.arena-window .kz-chips {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.arena-window .kz-chips > .aui-button:not(.aui-button--primary) {
+  min-width: 52px;
+  min-height: 36px;
+  padding: 5px 8px;
+  border: 1px solid #66879844;
+  background: var(--aui-lifted);
+  color: var(--aui-soft);
+  border-radius: 5px;
+  font-size: 11px;
+}
+.arena-window .kz-chips > .aui-button.is-active {
+  background: var(--aui-brass-deep);
+  color: var(--aui-brass-hi);
+}
+.arena-window .kz-tabs > .aui-arena-create-trigger {
+  display: flex;
+  margin-left: 0;
+  white-space: nowrap;
+  min-height: 36px;
+  height: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.arena-window .kz-row {
+  display: grid;
+  grid-template-columns: 76px 80px 90px 90px 100px minmax(105px, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 45px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 0;
+  background: var(--aui-raised);
+  box-shadow: none;
+  font-size: 11px;
+  text-align: left;
+}
+.arena-window .kz-row > strong {
+  font-size: 13px;
+  color: #b9d6e3;
+  white-space: nowrap;
+}
+.arena-window .kz-row > small {
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.arena-window .kz-row > .kz-gold {
+  color: var(--aui-orange);
+}
+.arena-window .kz-lobby.is-selected {
+  background: var(--aui-brass-deep);
+}
+.arena-window .kz-selected {
+  margin: 8px 0 0;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 27%, transparent);
+  border-radius: 6px;
+  background: var(--aui-surface);
+  flex: none;
+}
+.arena-window .kz-selected > header {
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.arena-window .kz-rosters {
+  display: grid;
+  grid-template-columns: 1fr 95px 1fr;
+  gap: 10px;
+  padding: 10px;
+}
+.arena-window .kz-roster {
+  padding: 8px;
+  border: 1px solid #78a6b147;
+  border-radius: 5px;
+  background: var(--aui-raised);
+}
+.arena-window .kz-roster.is-b {
+  border-color: color-mix(in srgb, var(--aui-brass) 28%, transparent);
+  background: var(--aui-raised);
+}
+.arena-window .kz-roster > label {
+  color: #b6d7e4;
+  font-size: 11px;
+}
+.arena-window .kz-roster.is-b > label {
+  color: #e6b1b9;
+}
+.arena-window .kz-join-side.is-a {
+  background: var(--aui-high);
+  border-color: #668baf;
+  color: var(--aui-ink);
+}
+.arena-window .kz-join-side.is-b {
+  background: var(--aui-peak);
+  border-color: #a7737c;
+  color: #f4c8ca;
+}
+.arena-window .kz-pot {
+  align-self: center;
+  background: none;
+  padding: 4px;
+}
+.arena-window .kz-pot > b {
+  color: var(--aui-brass);
+  font-size: 17px;
+}
+.arena-window .kz-empty {
+  min-height: 64px;
+  padding: 12px;
+  text-align: center;
+}
+.aui-arena-confirm {
+  width: min(470px, calc(100cqw - 24px));
+  height: auto;
+}
+.aui-arena-confirm .kz-join-confirm {
+  padding: 15px;
+}
+.aui-arena-confirm .kz-join-confirm p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.aui-arena-create-window {
+  width: min(690px, calc(100cqw - 24px));
+  height: auto;
+  max-height: calc(100cqh - 20px);
+}
+.aui-arena-create-window .kz-create {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  width: auto;
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+}
+.kz-create-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.kz-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.kz-create-field > label {
+  font: 600 11px var(--aui-font);
+  color: var(--aui-soft);
+}
+.kz-create-field > .kz-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.kz-create-field .aui-button {
+  flex: 1;
+  min-height: 44px;
+  font-size: 12px;
+  padding: 6px;
+}
+.kz-create-field .aui-button.is-active {
+  background: var(--aui-brass-deep);
+  border-color: var(--aui-brass);
+  color: var(--aui-brass-hi);
+}
+.kz-create-field > .template-input {
+  height: 40px;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 24%, transparent);
+  border-radius: 5px;
+  background: var(--aui-sunk);
+  color: var(--aui-brass-hi);
+  font: 700 14px var(--aui-font);
+  width: 100%;
+}
+.kz-create-field > .kz-character {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 24%, transparent);
+  border-radius: 5px;
+  background: var(--aui-lifted);
+  color: var(--aui-soft);
+}
+.kz-create-field > .kz-character > b {
+  font-size: 13px;
+}
+.kz-create-field > .kz-character > span,
+.kz-create-field > .kz-character > small {
+  font-size: 11px;
+}
+.kz-create-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--aui-faint) 16%, transparent);
+}
+.kz-create-footer > p {
+  flex: 1;
+  font: 11px/1.4 var(--aui-font);
+  color: var(--aui-soft);
+  margin: 0;
+}
+.kz-create-footer > .aui-button:not(.aui-button--primary) {
+  min-height: 44px;
+  font-size: 12px;
+  padding: 7px 16px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .arena-window {
+    width: calc(100cqw - 16px);
+    height: auto;
+    max-height: calc(100cqh - 16px);
+  }
+  .arena-window .kz-body {
+    padding: 6px;
+  }
+  .arena-window .kz-main {
+    max-height: calc(100cqh - 68px);
+  }
+  .arena-window .kz-tabs {
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .arena-window .kz-tabs > .aui-button:not(.aui-button--primary) {
+    min-height: 34px;
+    font-size: 10px;
+    padding: 4px 7px;
+  }
+  .arena-window .kz-chips > .aui-button:not(.aui-button--primary) {
+    min-width: 44px;
+    min-height: 34px;
+    font-size: 10px;
+    padding: 4px;
+  }
+  .arena-window .kz-row {
+    grid-template-columns: 64px 70px 80px 80px 90px minmax(90px, 1fr) 16px;
+    gap: 6px;
+    min-height: 40px;
+    padding: 5px 8px;
+  }
+  .arena-window .kz-row > strong {
+    font-size: 12px;
+  }
+  .arena-window .kz-row > small {
+    font-size: 9px;
+  }
+  .arena-window .kz-rosters {
+    gap: 6px;
+    padding: 6px;
+    grid-template-columns: 1fr 85px 1fr;
+  }
+  .arena-window .kz-roster {
+    padding: 6px;
+    max-height: 145px;
+    overflow: hidden;
+  }
+  .arena-window .kz-fighter {
+    min-height: 29px;
+    padding: 3px;
+  }
+  .arena-window .kz-join-side {
+    min-height: 34px;
+    margin-top: 5px;
+  }
+  .aui-arena-create-window {
+    width: min(730px, calc(100cqw - 18px));
+  }
+  .aui-arena-create-window .kz-create {
+    padding: 10px;
+    gap: 8px;
+  }
+  .kz-create-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .kz-create-field {
+    gap: 4px;
+  }
+  .kz-create-field > label {
+    font-size: 10px;
+  }
+  .kz-create-field .aui-button {
+    min-height: 40px;
+    font-size: 11px;
+  }
+  .kz-create-field > .template-input,
+  .kz-create-field > .kz-character {
+    min-height: 38px;
+    height: 38px;
+  }
+  .kz-create-footer {
+    padding-top: 6px;
+  }
+  .kz-create-footer > .aui-button:not(.aui-button--primary) {
+    min-height: 40px;
+    font-size: 11px;
+  }
+}
+.arena-window .kz-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 0;
+}
+.arena-window .kz-main:has(> .kz-selected) {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+}
+.arena-window:has(.kz-empty):not(:has(.kz-selected)) {
+  width: min(760px, calc(100cqw - 24px));
+}
+.arena-window .kz-table:has(.kz-empty) .kz-columns {
+  display: none;
+}
+.arena-window .kz-tabs {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.arena-window .kz-table {
+  min-height: 0;
+  max-height: calc(100cqh - 160px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  border: 1px solid #ffffff0d;
+  border-radius: 5px;
+  background: var(--aui-surface);
+}
+.arena-window .kz-row {
+  grid-template-columns: 54px 64px 65px 72px 78px minmax(72px, 1fr) 10px;
+  padding: 7px;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+.arena-window .kz-columns {
+  color: var(--aui-muted);
+  background: var(--aui-lifted);
+  font-size: 9px;
+  text-transform: none;
+  letter-spacing: normal;
+  min-height: 30px;
+}
+.arena-window .kz-lobby:nth-of-type(even) {
+  background: var(--aui-raised);
+}
+.arena-window .kz-lobby.is-selected {
+  border-color: color-mix(in srgb, var(--aui-brass) 40%, transparent);
+  background: var(--aui-brass-deep);
+  box-shadow: none;
+}
+.arena-window .kz-selected {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--aui-surface);
+}
+.arena-window .kz-selected > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  padding: 10px;
+  border-bottom: 1px solid #ffffff0b;
+}
+.arena-window .kz-rosters {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  gap: 8px;
+}
+.arena-window .kz-pot {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px;
+}
+.arena-window .kz-roster {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-color: #607d9c44;
+  background: var(--aui-raised);
+}
+.arena-window .kz-roster.is-b {
+  background: var(--aui-raised);
+  border-color: #95677144;
+}
+.arena-window .kz-join-side {
+  font: 600 11px var(--aui-font);
+  letter-spacing: normal;
+  text-transform: none;
+  padding: 6px;
+  min-height: 36px;
+}
+.arena-window .kz-fighter {
+  padding: 5px;
+  gap: 6px;
+}
+.arena-window .kz-fighter b {
+  font-size: 11px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .arena-window .kz-main:has(> .kz-selected) {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 0.9fr);
+    gap: 7px;
+  }
+  .arena-window .kz-columns {
+    display: none;
+  }
+  .arena-window .kz-lobby {
+    position: relative;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: 66px;
+    padding: 7px;
+  }
+  .arena-window .kz-row-open {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+  }
+  .arena-window .kz-field-label {
+    display: block;
+    font-size: 8px;
+    color: var(--aui-muted);
+  }
+  .arena-window .kz-selected > header {
+    padding: 6px 8px;
+  }
+  .arena-window .kz-table {
+    max-height: calc(100cqh - 140px);
+  }
+  .arena-window .kz-roster {
+    max-height: calc(100cqh - 205px);
+  }
+}
+.arena-window :is(.kz-row, .kz-lobby, .kz-table) {
+  min-width: 0;
+}
+@container aui-window (max-width: 900px) {
+  .arena-window .kz-columns {
+    display: none;
+  }
+  .arena-window .kz-lobby {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .arena-window .kz-field-label {
+    display: block;
+    font-size: 9px;
+    color: var(--aui-muted);
+  }
+  .arena-window .kz-row-open {
+    display: none;
+  }
+}
+@container aui-window (max-width: 640px) {
+  .arena-window .kz-main:has(> .kz-selected) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 2fr);
+  }
+  .arena-window .kz-table {
+    max-height: 28cqh;
+  }
+  .arena-window .kz-tabs > .aui-button {
+    min-height: 40px;
+  }
+  .arena-window .kz-chips > .aui-button {
+    min-height: 40px;
+  }
+}
+.arena-window .kz-fighters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.arena-window .kz-fighter,
+.arena-window .kz-join-side {
+  flex-shrink: 0;
+}

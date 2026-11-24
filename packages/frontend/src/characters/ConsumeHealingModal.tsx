@@ -3,6 +3,7 @@
 
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { Heart } from 'lucide-react'
+import { Button } from '@aresrpg/ui'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { item_icon } from '../content/assets.ts'
@@ -32,7 +33,7 @@ export const ConsumeHealingModal = ({
   if (!item) return null
   const plan = consumable_plan(character, item, inventory, encumbered_asset_ids(listings, trades), Date.now())
   return (
-    <ModalFrame close={close} close_label={copy.wallet_close} label={item.name} max_width="max-w-md" soft>
+    <ModalFrame close={close} close_label={copy.wallet_close} label={item.name} max_width="max-w-md">
       <div className="p-6">
         <div className="flex items-center gap-3 pr-6">
           <img alt="" className="size-12 object-contain" src={item_icon(item.item_type) ?? undefined} />
@@ -60,25 +61,13 @@ export const ConsumeHealingModal = ({
           </div>
         </div>
         <div className="mt-5 flex items-stretch justify-end gap-2">
-          <button
-            className="btn-outline min-h-10 px-4 py-2 text-xs disabled:opacity-40"
-            disabled={plan.needed === 0 || plan.available < 1}
-            onClick={() => confirm(item, 'one')}
-            style={{ textTransform: 'none' }}
-            type="button"
-          >
+          <Button disabled={plan.needed === 0 || plan.available < 1} onClick={() => confirm(item, 'one')}>
             {t('consume_one')}
-          </button>
-          <button
-            className="btn-gold min-h-10 px-4 py-2 text-xs disabled:opacity-40"
-            disabled={plan.maximum_amount === 0}
-            onClick={() => confirm(item, 'full')}
-            style={{ textTransform: 'none' }}
-            type="button"
-          >
+          </Button>
+          <Button tone="primary" disabled={plan.maximum_amount === 0} onClick={() => confirm(item, 'full')}>
             {t(plan.available < plan.needed ? 'max' : 'consume_until_full')}{' '}
             <span className="ml-1.5 opacity-70 tabular-nums">×{plan.maximum_amount}</span>
-          </button>
+          </Button>
         </div>
       </div>
     </ModalFrame>

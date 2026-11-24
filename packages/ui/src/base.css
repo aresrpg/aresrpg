@@ -73,7 +73,7 @@
   --aui-hue-clay: #ec9370;
   --aui-hue-sky: #68baf5;
   --aui-hue-lilac: #c3b4f0;
-  /* The Sui droplet's own blue. It is a brand colour: only the Sui logo uses it. */
+  /* The Sui droplet's own blue. It is a brand colour: only the Sui logo and the cold half of the page's ground use it. */
   --aui-sui: #4da2ff;
   --aui-border: #020304;
   --aui-line: color-mix(in srgb, var(--aui-brass) 16%, transparent);
@@ -97,39 +97,6 @@
 :root:lang(zh) {
   --aui-font-display: var(--aui-font);
 }
-/* A page surface with a mood: radiance in one hue, and a pixel weave that fades with it. `--aura` picks the hue. */
-.aui-aura {
-  --aura: var(--aui-brass);
-  /* How strong the top radiance is: quiet for reading pages, brighter for a page with a mood. */
-  --aura-strength: 20%;
-  isolation: isolate;
-}
-.aui-aura::before,
-.aui-aura::after {
-  content: '';
-  position: fixed;
-  z-index: -1;
-  inset: 0;
-  pointer-events: none;
-}
-.aui-aura::before {
-  background:
-    radial-gradient(
-      78vmax 50vmax at 50% -12%,
-      color-mix(in srgb, var(--aura) var(--aura-strength), transparent),
-      transparent 66%
-    ),
-    radial-gradient(64vmax 44vmax at 104% 108%, color-mix(in srgb, var(--aura) 12%, transparent), transparent 62%),
-    var(--aui-bg);
-}
-.aui-aura::after {
-  background: repeating-conic-gradient(color-mix(in srgb, var(--aura) 16%, transparent) 0 25%, transparent 0 50%) 0 0 /
-    8px 8px;
-  mask-image:
-    radial-gradient(74vmax 48vmax at 50% -10%, #000, transparent 72%),
-    radial-gradient(56vmax 38vmax at 104% 108%, #000, transparent 66%);
-  opacity: 0.55;
-}
 /* A placeholder for content that is still loading: it holds the content's place and breathes slowly. */
 .aui-skeleton {
   display: block;
@@ -144,10 +111,6 @@
 }
 .aui-skeleton--short {
   width: 55%;
-}
-.aui-skeleton--chip {
-  width: 96px;
-  height: 30px;
 }
 .aui-skeleton--block {
   height: 46px;
@@ -374,6 +337,13 @@
   font-size: 12px;
   letter-spacing: 0;
   text-transform: none;
+}
+.aui-segment-count {
+  min-width: 3ch;
+  color: var(--aui-muted);
+  font: 500 12px var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 .aui-segments .aui-button[aria-pressed='true'] {
   background-color: var(--aui-brass-deep);
@@ -673,56 +643,6 @@
     transform: rotate(360deg);
   }
 }
-.aui-performance {
-  display: flex;
-  align-items: stretch;
-  width: fit-content;
-  padding: 0;
-  gap: 0;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--aui-void) 88%, transparent);
-  font:
-    10px/1.4 'JetBrains Mono',
-    monospace;
-  pointer-events: auto;
-  box-shadow: inset 0 1px #fff1;
-}
-.aui-performance-reading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  color: var(--aui-faint);
-}
-.aui-performance-reading output {
-  color: var(--aui-blue);
-  width: 24px;
-  text-align: right;
-}
-.aui-performance select {
-  width: auto;
-  min-height: 28px;
-  padding: 3px 7px;
-  border: 0;
-  border-left: 1px solid #ffffff12;
-  background: transparent;
-  color: var(--aui-blue);
-  font: inherit;
-}
-.aui-performance option {
-  background: var(--aui-raised);
-}
-.aui-performance .aui-button {
-  min-height: 28px;
-  padding: 3px 7px;
-  border: 0;
-  border-left: 1px solid #ffffff12;
-  background: transparent;
-  box-shadow: none;
-  border-radius: 0;
-  font: inherit;
-  color: var(--aui-brass);
-}
 @media (pointer: coarse) {
   .aui-button {
     min-height: 44px;
@@ -742,9 +662,6 @@
     width: 44px;
     height: 44px;
   }
-  .aui-performance select {
-    min-height: 44px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .aui-button {
@@ -760,28 +677,6 @@
   color: var(--aui-muted);
   font: 13px/1.45 var(--aui-font);
 }
-
-.aui-preview-surface {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  container: aui-viewport / size;
-  overflow: hidden;
-  background: var(--aui-lifted);
-}
-.aui-preview-surface .aui-native-modal {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-  inset: 0;
-}
-.aui-preview-surface .aui-modal-scrim,
-.aui-preview-surface .game-character-scrim {
-  background: transparent;
-}
-
 .aui-window-header[data-draggable] {
   cursor: grab;
   touch-action: none;
@@ -790,7 +685,6 @@
 .aui-window-header[data-draggable]:active {
   cursor: grabbing;
 }
-
 .aui-drag-scroll {
   cursor: grab;
   user-select: none;
@@ -799,46 +693,11 @@
 .aui-drag-scroll:active {
   cursor: grabbing;
 }
-
 .aui-icon-button > .aui-key {
   position: absolute;
   right: 2px;
   bottom: 2px;
 }
-
-.aui-hud-shortcut-row {
-  display: grid;
-  grid-template-columns: repeat(var(--hud-columns), 50px);
-  grid-template-rows: repeat(2, 50px);
-  gap: 5px;
-  pointer-events: auto;
-}
-.aui-hud-shortcut-row > .aui-icon-button {
-  width: 50px;
-  height: 50px;
-  padding: 4px;
-  flex: none;
-}
-@media (max-width: 1023px), (pointer: coarse), (max-height: 500px) {
-  .aui-hud-shortcut-row > [data-fullscreen-toggle] {
-    display: none;
-  }
-  .aui-hud-shortcut-row > .aui-icon-button {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
-  }
-}
-
-@media (max-width: 1023px), (pointer: coarse), (max-height: 500px) {
-  .aui-hud-shortcut-row {
-    grid-template-columns: repeat(var(--hud-mobile-columns), 44px);
-    grid-template-rows: repeat(2, 44px);
-    gap: 2px;
-  }
-}
-
 .aui-floating-window {
   position: fixed;
   inset: 0;
@@ -865,37 +724,6 @@
 .aui-floating-window > .aui-window {
   pointer-events: auto;
 }
-
-.aui-hud-shortcut-row > .aui-icon-button::after {
-  content: attr(aria-label);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 7px);
-  transform: translateX(-50%);
-  z-index: 4;
-  width: max-content;
-  max-width: 230px;
-  padding: 5px 8px;
-  border: 1px solid var(--aui-line-strong);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--aui-void) 94%, transparent);
-  box-shadow: 0 3px 9px #000a;
-  color: var(--aui-brass-hi);
-  font: 500 12px var(--aui-font);
-  letter-spacing: normal;
-  text-transform: none;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-}
-.aui-hud-shortcut-row > .aui-icon-button:is(:hover, :focus-visible) {
-  z-index: 5;
-}
-.aui-hud-shortcut-row > .aui-icon-button:is(:hover, :focus-visible)::after {
-  opacity: 1;
-  visibility: visible;
-}
-
 .aui-navigation-row {
   display: flex;
   align-items: center;

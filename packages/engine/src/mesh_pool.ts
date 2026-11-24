@@ -47,15 +47,17 @@ export const create_mesh_pool = (
   const queued: Job[] = []
   const active = new Map<MeshWorker, Job>()
   let next_id = 1
-  let disposed = false
-  let worker_error: Error | null = null
+  // Set once by a worker fault or disposal; every later request rejects with it.
+  let ended: Error | null = null
   let flora: Promise<FloraMeshData | null> | null = null
   let flora_request: Readonly<{
     resolve: (data: FloraMeshData | null) => void
     reject: (error: Error) => void
   }> | null = null
 
-  const stop = (error: Error): void => {
+  const reject_all = (error: Error): void => {
+    if (ended) return
+    ended = error
     flora_request?.reject(error)
     flora_request = null
     queued.splice(0).forEach(({ reject }) => reject(error))
@@ -63,10 +65,6 @@ export const create_mesh_pool = (
     active.clear()
     workers.forEach((worker) => worker.terminate())
     idle.length = 0
-  }
-  const report_failure = (error: Error): void => {
-    worker_error = error
-    stop(error)
   }
 
   const drain = (): void => {
@@ -78,7 +76,7 @@ export const create_mesh_pool = (
       try {
         worker.postMessage({ type: 'mesh', id: job.id, chunk: job.chunk })
       } catch (error) {
-        report_failure(error instanceof Error ? error : new Error(String(error)))
+        reject_all(error instanceof Error ? error : new Error(String(error)))
       }
     }
   }
@@ -102,18 +100,18 @@ export const create_mesh_pool = (
         drain()
       }
     )
-    worker.addEventListener('error', (event) => report_failure(new Error(event.message)))
-    worker.addEventListener('messageerror', () => report_failure(new Error('mesh worker reply could not be decoded')))
+    worker.addEventListener('error', (event) => reject_all(new Error(event.message)))
+    worker.addEventListener('messageerror', () => reject_all(new Error('mesh worker reply could not be decoded')))
   })
   try {
     workers.forEach((worker) => worker.postMessage({ type: 'initialize', world: terrain_recipe(world) }))
   } catch (error) {
-    report_failure(error instanceof Error ? error : new Error(String(error)))
+    reject_all(error instanceof Error ? error : new Error(String(error)))
   }
 
   return Object.freeze({
     prepare_flora: () => {
-      if (disposed || worker_error) return Promise.reject(worker_error ?? new Error('mesh pool is disposed'))
+      if (ended) return Promise.reject(ended)
       flora ??= new Promise<FloraMeshData | null>((resolve, reject) => {
         flora_request = { resolve, reject }
         workers[0]!.postMessage({ type: 'flora', rows: world.scenery?.plants ?? [] })
@@ -122,8 +120,8 @@ export const create_mesh_pool = (
     },
     mesh: (chunk: RenderChunkRequest, priority: number) =>
       new Promise<MeshResult>((resolve, reject) => {
-        if (disposed || worker_error) {
-          reject(worker_error ?? new Error('mesh pool is disposed'))
+        if (ended) {
+          reject(ended)
           return
         }
         for (let index = queued.length - 1; index >= 0; index -= 1) {
@@ -149,9 +147,6 @@ export const create_mesh_pool = (
       }
     },
     state: () => Object.freeze({ queued: queued.length, active: active.size }),
-    dispose: () => {
-      disposed = true
-      stop(new Error('mesh pool is disposed'))
-    },
+    dispose: () => reject_all(new Error('mesh pool is disposed')),
   })
 }

@@ -35,7 +35,7 @@ export type RunTo =
         world: string
         x: number
         z: number
-      } & ({ source: 'position' | 'map' | 'automation' } | { source: 'fight'; fight_id: string })
+      } & ({ source: 'position' | 'map' } | { source: 'fight'; fight_id: string })
     >
 
 export type RunToState = Readonly<{ run: RunTo | null }>
@@ -43,7 +43,7 @@ export type RunToState = Readonly<{ run: RunTo | null }>
 export type RunToInput =
   | Readonly<{ type: 'run_to/fight'; fight_id: string }>
   | Readonly<{ type: 'run_to/character'; character_id: string }>
-  | Readonly<{ type: 'run_to/position'; world: string; x: number; z: number; source?: 'automation' | 'map' }>
+  | Readonly<{ type: 'run_to/position'; world: string; x: number; z: number; source?: 'map' }>
   | Readonly<{
       type: 'run_to/resolved'
       request: RunToRequest
@@ -70,11 +70,7 @@ export const run_to_progress_percent = (initial: number, remaining: number): num
 export const run_to_target = (state: Readonly<AppState>): RunTarget | null => {
   const { run } = state.run_to
   return run?.status === 'running' && run.controlled_character_id === state.session.selected_character_id
-    ? Object.freeze({
-        x: chain_to_client_coordinate(run.x),
-        z: chain_to_client_coordinate(run.z),
-        ...(run.source === 'automation' ? { ride_pet: true } : {}),
-      })
+    ? Object.freeze({ x: chain_to_client_coordinate(run.x), z: chain_to_client_coordinate(run.z) })
     : null
 }
 
@@ -214,7 +210,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         toast.add(localized_error(text('run_to_position_wrong_world')))
       return
     }
-    if (input.source !== 'automation') toast.add(text('run_to_started_position'), 'info')
+    toast.add(text('run_to_started_position'), 'info')
   })
 
   events.on('run_to/stopped', ({ reason }) => {
@@ -222,4 +218,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   })
 }
 
-export default Object.freeze({ name: 'run_to', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'run_to',
+  initial: () => ({ run_to: initial_run_to_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

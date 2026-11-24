@@ -1,0 +1,44 @@
+ACT Operator — curated partner character (ACT, Advanced Combat Tactics)
+
+Open act_operator.blend in Blender 5.2 or newer. The single character scene is the
+editable canonical source, kept in the Vesper colourway. Geometry is individually
+authored for this partner; only the native male production rig, sockets and shared
+locomotion were reused.
+
+Visual design
+ACT's default Operator at chibi proportions: Helios full-face helmet (Zenith Aerospace)
+with shield visor, centre ridge and comms discs, Neo-Shogunate cuirass and stepped
+pauldrons (Obsidian Dynamics), belt pouches, and the lit thigh panels of the Panel legs.
+The black Helios V crest is the removable layer, so another hat hides it.
+
+Colourways
+One sculpt, three ACT skins: Vesper, Dusk and Blood Ivory. palettes.py owns the twelve
+palette roles and each skin's colours. export_variants.py repaints the palette strip,
+writes act_operator_<skin>.glb and act_operator_<skin>_hair.glb, then restores Vesper.
+
+Signature ATTACK
+Airdrop Call: a raised comms hand held for the call, then a sharp forward point.
+The gesture lasts one second at 24 fps. This is an animation asset, not a new damage,
+status-effect or ability rule. Runtime gameplay behavior remains in game content.
+
+Production contract
+Native 26-bone rig, mixamorig:Head and cape anchors, Rider parented to Hips, and the
+nondeforming Helmet child of Head. Head and crest are uniformly enlarged about the chin
+by proportions.py to the shared head ratio. IDLE, WALK, RUN, JUMP, JUMP_RUN, FALL, SIT,
+DANCE and DEATH are native clips. Flat palettes are packed; three transparent
+customization masks retain the four-material contract with fixed partner colours.
+
+Supported embedded scripts
+- build_act_operator.py rebuilds the geometry from the rig in this source, reauthors
+  the ATTACK, saves the source and exports all three colourways.
+- export_variants.py exports the current edited geometry in all three colourways.
+- palettes.py, proportions.py, authoring.py, author_attacks.py and export_curated.py
+  are the helpers those two use.
+Run a script in Blender's Text Editor or via --python-expr using its packed text.
+Do not run a rebuild after manual mesh edits unless replacing those edits is intended.
+
+Reference provenance
+ACT master model supplied by the ACT team (MasterModelConvertededitwww.fbx, 2024-10-11):
+Manny base, Helios helmet, Neo-Shogunate set. Names and skin colours were read from the
+live game at https://play.actuniverse.com on 2026-11-24. The reference guided anatomy
+and identity; it is not embedded.

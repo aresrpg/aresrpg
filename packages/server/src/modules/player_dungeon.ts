@@ -7,7 +7,7 @@ import { get_dungeon_lobby } from '../reads/get_dungeon_lobby.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 import { latest_keyed_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
-import type { EventEnvelope } from '../protocol.ts'
+import { channels, type EventEnvelope } from '../protocol.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 
 import { observed_character } from './player_agent_observation.ts'
@@ -25,8 +25,8 @@ const runs_of = (state: PlayerState) =>
 
 export default {
   name: 'player_dungeon',
-  observe: ({ pubsub, events, signal, graph, send, channels, get_state }) => {
-    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
+  observe: ({ pubsub, events, signal, graph, send, get_state }) => {
+    const { watch, unwatch } = create_watcher(pubsub, signal)
     const push = latest_keyed_reader(
       (key) => {
         const run = runs_of(get_state()).get(key)
@@ -53,10 +53,6 @@ export default {
           })
           .catch((error: Error) => log.error({ key, error: error.message }, 'dungeon lobby watch failed'))
       }
-    })
-
-    signal.addEventListener('abort', () => {
-      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

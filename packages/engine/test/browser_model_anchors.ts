@@ -22,7 +22,7 @@ export const probe_model_anchors = async (
   camera.position.set(104, 5, 18)
   camera.lookAt(104, 1, 0)
   camera.updateMatrixWorld(true)
-  const labels = create_entity_label_layer({ canvas, camera, entities: layer })
+  const labels = create_entity_label_layer({ canvas, camera })
   const captions = new Map<string, { caption: WorldCaption; anchor: () => Vector3 | null }>()
   const floats = create_fight_float_layer({
     entities: layer,
@@ -70,7 +70,7 @@ export const probe_model_anchors = async (
     const elements = ids.map((id) => {
       const element = document.createElement('div')
       element.textContent = `${id} · 100 HP`
-      labels.set(id, element)
+      labels.set(id, element, () => layer.live_crown(id))
       return element
     })
     labels.render()

@@ -3,10 +3,17 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
-import { createCanvas, loadImage } from '@napi-rs/canvas'
+import { createCanvas, loadImage, type Canvas, type Image } from '@napi-rs/canvas'
 
 import { parse_portrait_query, portrait_name, type PortraitAppearance } from '../../immutable/src/portrait.ts'
-import { parse_portrait_style, TRANSPARENT_PORTRAIT, type PortraitStyle } from '../src/components/portrait_share.ts'
+import {
+  parse_portrait_layout,
+  TRANSPARENT_PORTRAIT,
+  type PortraitLayout,
+  type PortraitPoster,
+  type PortraitStyle,
+} from '../src/components/portrait_share.ts'
+import { create_card_painter } from '../social_card_render.ts'
 import manifest from '../../../seed/portraits/manifest.json' with { type: 'json' }
 
 const linear_channel = (value: number): number => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
@@ -41,10 +48,7 @@ export const color_portrait_pixels = (
   return output
 }
 
-export const render_portrait = async (
-  appearance: PortraitAppearance,
-  style: PortraitStyle = TRANSPARENT_PORTRAIT
-): Promise<Buffer> => {
+const paint_portrait = async (appearance: PortraitAppearance, style: PortraitStyle): Promise<Canvas> => {
   const name = portrait_name(appearance)
   if (!name) throw new Error('Unknown portrait')
   const entry = manifest.portraits[name as keyof typeof manifest.portraits]
@@ -76,22 +80,61 @@ export const render_portrait = async (
     ).then(loadImage)
     ctx.drawImage(background, 0, 0)
   }
-  return canvas.toBuffer('image/png')
+  return canvas
 }
+
+export const render_portrait = async (
+  appearance: PortraitAppearance,
+  style: PortraitStyle = TRANSPARENT_PORTRAIT
+): Promise<Buffer> => (await paint_portrait(appearance, style)).toBuffer('image/png')
+
+// The poster: the card a shared hero post shows, painted by the site's one card painter with the Portfolio page lit.
+/** A worn item's icon, or null when the item has no icon file: the poster then shows its empty frame. */
+const gear_icon = (item_type: string): Promise<Image | null> =>
+  readFile(new URL(`../../../seed/icons/items/${item_type}.png`, import.meta.url))
+    .then(loadImage)
+    .catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null
+      throw error
+    })
+
+const render_poster = async (appearance: PortraitAppearance, poster: PortraitPoster, host: string): Promise<Buffer> => {
+  const [painter, portrait, gear] = await Promise.all([
+    create_card_painter(),
+    paint_portrait(appearance, TRANSPARENT_PORTRAIT),
+    Promise.all(poster.gear.map(gear_icon)),
+  ])
+  const card = await painter.paint({
+    kind: 'hero',
+    tone: 'ember',
+    bar: { lit: 'portfolio' },
+    address: host,
+    classe: appearance.classe,
+    level: poster.level,
+    name: poster.name,
+    power: poster.power,
+    gear,
+    portrait,
+  })
+  return card.toBuffer('image/png')
+}
+
+const render_layout = (appearance: PortraitAppearance, layout: PortraitLayout, host: string): Promise<Buffer> =>
+  layout.kind === 'poster' ? render_poster(appearance, layout.poster, host) : render_portrait(appearance, layout.style)
 
 export const serve_portrait = async (request: Request): Promise<Response> => {
   if (request.method !== 'GET' && request.method !== 'HEAD')
     return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } })
-  const query = new URL(request.url).searchParams
+  const { host, searchParams: query } = new URL(request.url)
   const appearance = parse_portrait_query(query)
-  const style = parse_portrait_style(query)
-  if (!appearance || !style)
+  const layout = parse_portrait_layout(query)
+  if (!appearance || !layout)
     return new Response('Unknown portrait, revision or palette', {
       status: 400,
       headers: { 'Cache-Control': 'no-store' },
     })
   try {
-    const png = await render_portrait(appearance, style)
+    const png = await render_layout(appearance, layout, host)
     const etag = `"${createHash('sha256').update(png).digest('hex')}"`
     const headers = {
       'Content-Type': 'image/png',

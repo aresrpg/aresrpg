@@ -15,7 +15,8 @@ import { fromBase64, normalizeSuiObjectId } from '@mysten/sui/utils'
 import type { Signer } from '@mysten/sui/cryptography'
 
 import { DEFAULT_NETWORK, resolve_pins, type Pins } from './pins.ts'
-import * as doors from './doors.gen.ts'
+import { DOORS, type DoorArgs } from './doors.gen.ts'
+import { PURE_KINDS, bind_doors, type DoorCtx, type Resolvable } from './doors.ts'
 import {
   create_cache,
   absorb_receipt,
@@ -34,20 +35,19 @@ import { GAS_BUDGET_MIST } from './gas_budget.ts'
 import {
   create_transaction_execution,
   type ExecutionCore,
+  type TransactionLock,
   type TransactionStorage,
   type TransactionJournal,
 } from './transaction_execution.ts'
 import { transaction_resolution_error } from './transaction_error.ts'
 
-export { doors, type Pins }
-export { DOORS } from './doors.gen.ts'
+export type { Pins }
 export * from './ptb.ts'
 export * from './cache.ts'
 export * from './gas.ts'
 export * from './gas_budget.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
-export { living_content } from './pins.ts'
 const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
   typeof value === 'object' &&
   value !== null &&
@@ -132,76 +132,16 @@ export type SdkOptions = {
    *  transaction itself (variable-cost batches); otherwise the game-door default applies */
   gas_budget?: bigint | 'estimate'
   transaction_storage?: TransactionStorage | null
+  /** orders this account's lane; defaults to the browser's Web Locks across tabs, else an in-memory FIFO */
+  transaction_lock?: TransactionLock
   transaction_journal?: TransactionJournal
 }
 
-/** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */
-export type Resolvable =
-  | string
-  | { objectId: string; version: string; digest: string }
-  | { objectId: string; initialSharedVersion: string }
-  | TransactionObjectArgument
-
-/** The composition context every generated door receives. */
-export type DoorCtx = {
-  pins: Pins
-  /** Addresses that NAME published types on-chain (first-publish ids) — never move-call targets. */
-  game_type_package: string | null
-  math_type_package: string | null
-  obj: (tx: Transaction, value: Resolvable, mutable: boolean) => TransactionObjectArgument
-  pin: (tx: Transaction, key: string, mutable: boolean) => TransactionObjectArgument
-  receiving: (tx: Transaction, value: Resolvable) => TransactionObjectArgument
-  pure: {
-    id: (tx: Transaction, value: string) => TransactionArgument
-    address: (tx: Transaction, value: string) => TransactionArgument
-    bool: (tx: Transaction, value: boolean) => TransactionArgument
-    u8: (tx: Transaction, value: number) => TransactionArgument
-    u16: (tx: Transaction, value: number) => TransactionArgument
-    u32: (tx: Transaction, value: number) => TransactionArgument
-    u64: (tx: Transaction, value: bigint | number | string) => TransactionArgument
-    string: (tx: Transaction, value: string) => TransactionArgument
-    option: (tx: Transaction, type: string, value: unknown) => TransactionArgument
-    vector: (tx: Transaction, type: string, value: readonly unknown[]) => TransactionArgument
-  }
-}
-
-type GeneratedDoor = (tx: Transaction, context: DoorCtx, args: never) => unknown
-export type BoundDoors<T> = {
-  [K in keyof T as T[K] extends GeneratedDoor ? K : never]: T[K] extends (
-    tx: infer Tx,
-    context: DoorCtx,
-    args: infer Args
-  ) => infer Result
-    ? (tx: Tx, args: Args) => Result
-    : never
-}
-
-export const bind_doors = <T extends Readonly<{ DOORS: Readonly<Record<string, unknown>> }>>(
-  projection: T,
-  context: DoorCtx
-): BoundDoors<T> => {
-  type DoorName = keyof T['DOORS'] & string
-  type BoundDoor = (tx: Transaction, args: never) => unknown
-  const table = projection as unknown as Record<DoorName, (tx: Transaction, context: DoorCtx, args: never) => unknown>
-  return Object.fromEntries(
-    (Object.keys(projection.DOORS) as DoorName[]).map((name) => [
-      name,
-      ((tx, args) => table[name](tx, context, args)) satisfies BoundDoor,
-    ])
-  ) as BoundDoors<T>
-}
-
 /**
- * SDK({ client, signer, network, graphql_url }) → the game client's one write surface.
- *
- * Composition-first: `sdk.tx()` opens a Transaction, `sdk.doors.<door>(tx, args)` composes
- * calls onto it (hot potatoes chain through returned results), `sdk.execute(tx)` signs,
- * dry-runs, executes, absorbs the receipt into the cache, and returns the receipt.
- *
- * THE RESOLVER LAW: an object argument that is a bare id string resolves from the cache —
- * shared → sharedObjectRef (stable initial version), owned → exact objectRef — and an id the
- * cache does not know THROWS. Hydrate first, or pass a full ref; the SDK never falls back to
- * an RPC lookup inside a build.
+ * The game client's one write surface: `sdk.tx()` opens a Transaction, `sdk.doors.<door>(tx, args)`
+ * composes calls, `sdk.execute(tx)` simulates, signs, submits once and absorbs the receipt.
+ * A bare object id resolves from the cache (shared or exact owned ref); an unknown id THROWS.
+ * Hydrate first or pass a full ref: a build never reads over RPC.
  */
 export function SDK({
   client,
@@ -214,6 +154,7 @@ export function SDK({
   pins: supplied_pins,
   gas_budget,
   transaction_storage,
+  transaction_lock,
   transaction_journal,
 }: SdkOptions = {}) {
   const pins = resolve_pins(network, supplied_pins)
@@ -242,13 +183,8 @@ export function SDK({
     client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
     network,
   })
-  // THE KIOSK LINEAGE SPLIT (2026-08-21, measured the hard way): the game's `kiosk_package`
-  // pin is an UPGRADE of Mysten's rules lineage (bd8fc194 v1 → official 0x06f6 v2, which
-  // defines personal_kiosk → the game's v3). Sui refuses two versions of one lineage in a
-  // transaction, and the game package links v3 — so CALLS (borrow_val/return_val) must
-  // target the pin. But owned-object TYPE FILTERS use the DEFINING version (v2, the SDK's
-  // network default) — so LOOKUPS must use the default client. One id serving both jobs is
-  // the trap that blinded getOwnedKiosks ("no personal kiosk" for a 27-cap wallet).
+  // The `kiosk_package` pin upgrades Mysten's kiosk rules lineage. Calls must target the pin (one
+  // lineage version per transaction); owned-object type filters must use the defining version.
   const { kiosk_package } = pins
   const kiosk_transaction_client =
     typeof kiosk_package === 'string' && kiosk_package
@@ -342,14 +278,12 @@ export function SDK({
       return tx.receivingRef(ref)
     },
     pure: {
-      id: (tx, value) => intern_pure(tx, 'id', value, () => tx.pure.id(value)),
-      address: (tx, value) => intern_pure(tx, 'address', value, () => tx.pure.address(value)),
-      bool: (tx, value) => intern_pure(tx, 'bool', value, () => tx.pure.bool(value)),
-      u8: (tx, value) => intern_pure(tx, 'u8', value, () => tx.pure.u8(value)),
-      u16: (tx, value) => intern_pure(tx, 'u16', value, () => tx.pure.u16(value)),
-      u32: (tx, value) => intern_pure(tx, 'u32', value, () => tx.pure.u32(value)),
-      u64: (tx, value) => intern_pure(tx, 'u64', value, () => tx.pure.u64(value)),
-      string: (tx, value) => intern_pure(tx, 'string', value, () => tx.pure.string(value)),
+      ...(Object.fromEntries(
+        PURE_KINDS.map((type) => [
+          type,
+          (tx: Transaction, value: never) => intern_pure(tx, type, value, () => tx.pure[type](value)),
+        ])
+      ) as Omit<DoorCtx['pure'], 'option' | 'vector'>),
       option: (tx, type, value) =>
         intern_pure(tx, `option:${type}`, value, () => tx.pure.option(type as never, value as never)),
       vector: (tx, type, value) =>
@@ -357,7 +291,7 @@ export function SDK({
     },
   }
 
-  const bound_doors = bind_doors(doors, ctx)
+  const bound_doors = bind_doors<DoorArgs>(DOORS, ctx)
 
   // ── the ONE sanctioned roundtrip: seed object refs. Sui cold-resolves gas. ─────────────
   const hydrate_objects = async (ids: readonly string[]): Promise<void> => {
@@ -368,27 +302,19 @@ export function SDK({
     for (const { objects } of results) for (const row of objects) absorb_object(cache, row)
   }
 
-  const unresolved_ids = (ids: readonly string[]): readonly string[] =>
-    ids.filter((id) => !owned_ref(cache, id) && !shared_ref(cache, id))
-
   const hydrate = async (ids: readonly string[] = []) => {
     await hydrate_objects(ids)
     return cache
   }
 
-  /** Fetch only the ids the cache does not already know — shared objects keep their initial
-   *  version for life, so a known ref is never worth a second network read. Absence is DATA
-   *  here: callers that merely ask whether an object exists yet get their answer, not a throw. */
+  /** Fetch only ids the cache does not know. A missing object is an answer, not a throw. */
   const hydrate_unknown = async (ids: readonly string[]) => {
-    const unknown = unresolved_ids([...new Set(ids)])
+    const unknown = [...new Set(ids)].filter((id) => !owned_ref(cache, id) && !shared_ref(cache, id))
     if (unknown.length) await hydrate_objects(unknown)
     return cache
   }
 
-  // A failed result's honest message, whatever depth the error hides at. The FailedTransaction
-  // branch is how a failed simulation normally arrives, but a `success: false` status inside the
-  // Transaction branch is the same verdict wearing a different hat — read BOTH, or a tx that the
-  // simulation already refused would submit anyway and burn its gas for the same failure.
+  // A failure arrives as the FailedTransaction branch or as `success: false` inside Transaction.
   const failure_of = (result: Receipt): string | null => {
     const failed =
       result?.FailedTransaction ??
@@ -426,8 +352,8 @@ export function SDK({
   const execution = create_transaction_execution({
     core: sui_client.core,
     key: `aresrpg:transaction:${network}:${sender}`,
-    address: sender,
     storage: transaction_storage,
+    lock: transaction_lock,
     journal: transaction_journal,
     on_receipt: (receipt, gas_scope, gas_payer = sender ?? undefined) => {
       log_transaction_receipt(receipt)
@@ -527,7 +453,6 @@ export function SDK({
     sui_client,
     hydrate,
     hydrate_unknown,
-    // lookup by the DEFINING package (the default client) — see the lineage-split note above
     get_owned_kiosks: (address: string, pagination?: Parameters<KioskClient['getOwnedKiosks']>[0]['pagination']) =>
       kiosk_client.getOwnedKiosks({ address, pagination }),
     get_kiosk: (id: string, options?: Parameters<KioskClient['getKiosk']>[0]['options']) =>
@@ -558,7 +483,6 @@ export function SDK({
     is_transaction_idle: execution.is_transaction_idle,
     recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
     synchronize_transactions: () => execution.enqueue(execution.before_next),
-    resume_pending_transaction: () => execution.enqueue(execution.resume_pending),
     execute_personal_kiosk,
     read_sui_balance_snapshot: () => balance.read_snapshot(sender ?? ''),
     read_sui_balance: () => balance.read(sender ?? ''),

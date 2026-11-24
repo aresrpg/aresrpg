@@ -22,7 +22,6 @@ export type DocsCopy = Readonly<{
   next: string
   search: string
   search_empty: string
-  new_tab: string
   data_note: string
   kinds: Readonly<{ guide: string; item: string; mob: string }>
   groups: Readonly<Record<DocsGroup, string>>
@@ -44,7 +43,19 @@ export type DocsCopy = Readonly<{
     loop_title: string
     loop: readonly string[]
   }>
-  ways: Readonly<{ lede: string; note: string }>
+  ways: Readonly<{
+    lede: string
+    note: string
+    specs: Readonly<{ runs_in: string; role: string; good_for: string; status: string }>
+    /** Who makes the moves. */
+    play: Readonly<{ manual: string; automated: string }>
+    items: Readonly<
+      Record<
+        'world' | 'agent' | 'sdk',
+        Readonly<{ name: string; body: string; runs_in: string; role: string; good_for: string; status: string }>
+      >
+    >
+  }>
   bots: Readonly<{
     lede: string
     wallet_title: string

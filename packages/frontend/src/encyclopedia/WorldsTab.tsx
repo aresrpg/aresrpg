@@ -4,7 +4,8 @@
 import { Globe2, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 
 import { Empty, SearchField } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'

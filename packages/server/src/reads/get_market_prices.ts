@@ -70,7 +70,6 @@ export const get_market_prices = async (
   if (first === null) return null
   if (!/^\d+$/.test(first) || !Number.isSafeInteger(Number(first)) || Number(first) > now_ms)
     throw new Error('invalid marketplace price start')
-  if (!redis.pipeline) throw new Error('marketplace price reader unavailable')
   const end_day = Math.floor(now_ms / MARKET_PRICE_DAY_MS)
   const start_day = Math.max(Math.floor(Number(first) / MARKET_PRICE_DAY_MS), end_day - MARKET_PRICE_RETENTION_DAYS)
   const days = Array.from({ length: end_day - start_day + 1 }, (_, index) => start_day + index)
@@ -84,4 +83,30 @@ export const get_market_prices = async (
     return bucket ? [bucket] : []
   })
   return { first_timestamp_ms: Number(first), sampled_at_ms: now_ms, buckets }
+}
+
+/** Average unit sale price change from `from` to `to`, in basis points, truncated toward zero. */
+const change_bps = (from: MarketPriceBucket, to: MarketPriceBucket): number => {
+  const before = BigInt(from.total_mist) * BigInt(to.units)
+  return Number(((BigInt(to.total_mist) * BigInt(from.units) - before) * 10_000n) / before)
+}
+
+/** Per item type, the last full UTC day's average unit sale price against the day before, from the
+ *  stored daily buckets in two hash reads. A type that did not sell on both days has no entry. */
+export const get_market_changes = async (
+  redis: Readonly<Pick<BusRedis, 'hgetall'>>,
+  now_ms: number
+): Promise<Readonly<Record<string, number>>> => {
+  const day = Math.floor(now_ms / MARKET_PRICE_DAY_MS) - 1
+  const [last, before] = await Promise.all([
+    redis.hgetall(`market:prices:day:${day}`),
+    redis.hgetall(`market:prices:day:${day - 1}`),
+  ])
+  return Object.fromEntries(
+    Object.entries(last).flatMap(([item_type, raw]) => {
+      const from = parse_price_bucket(before[item_type] ?? null, (day - 1) * MARKET_PRICE_DAY_MS)
+      const to = parse_price_bucket(raw, day * MARKET_PRICE_DAY_MS)
+      return from && to ? [[item_type, change_bps(from, to)]] : []
+    })
+  )
 }

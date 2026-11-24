@@ -4,6 +4,7 @@
 import { Gem, Hammer, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
+import { Button } from '@aresrpg/ui'
 
 import { player_error_text } from '../i18n/player_error.ts'
 import { ModalFrame } from '../components/ModalFrame.tsx'
@@ -18,7 +19,7 @@ export const CrushProgressDialog = ({
 }: Readonly<{ copy: AppCopy; items: readonly Readonly<ItemRow>[] }>) => {
   const t = copy_text(copy.characters_page)
   return (
-    <ModalFrame close={null} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg" soft>
+    <ModalFrame close={null} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg">
       <div className="grid min-h-72 place-items-center p-8" data-crush-progress="">
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="relative grid size-24 place-items-center border border-gold/30 bg-black/20 shadow-[0_0_45px_rgba(200,150,60,0.12)]">
@@ -44,13 +45,13 @@ export const CrushProgressDialog = ({
 const CrushFailureDialog = ({ close, copy, error }: Readonly<{ close: () => void; copy: AppCopy; error: string }>) => {
   const t = copy_text(copy.characters_page)
   return (
-    <ModalFrame close={close} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg" soft>
+    <ModalFrame close={close} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg">
       <div className="p-6 sm:p-8">
         <p className="text-[10px] tracking-[0.18em] text-[#ff7d94] uppercase">{t('crush_title')}</p>
         <p className="mt-4 text-[10px] leading-6 text-text">{player_error_text(copy, error)}</p>
-        <button className="btn-outline chr-btn mt-6 w-full" onClick={close} type="button">
+        <Button className="mt-6 w-full" onClick={close}>
           {copy.wallet_close}
-        </button>
+        </Button>
       </div>
     </ModalFrame>
   )
@@ -63,7 +64,7 @@ export const CrushResultDialog = ({
 }: Readonly<{ close: () => void; copy: AppCopy; result: Readonly<CrushResult> }>) => {
   const t = copy_text(copy.characters_page)
   return (
-    <ModalFrame close={close} close_label={copy.wallet_close} label={t('crush_result_title')} max_width="max-w-lg" soft>
+    <ModalFrame close={close} close_label={copy.wallet_close} label={t('crush_result_title')} max_width="max-w-lg">
       <div className="relative overflow-hidden p-6 sm:p-8">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_50%_0%,rgba(200,150,60,0.2),transparent_68%)]" />
         <header className="relative mb-6 flex items-center gap-4 border-b border-gold/20 pb-5">

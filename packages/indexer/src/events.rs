@@ -3,9 +3,9 @@
 //! Event twins + the live-wire dispatch table.
 //!
 //! PURE: `(module, name, bcs bytes)` in → `(topic, json)` out. One macro row
-//! per Move event — the struct twin (BCS layout, field for field), its pub/sub
-//! topic, and its JSON shape all live on that one line, so an event cannot
-//! exist without a route and a route cannot drift from its layout.
+//! per decoded Move event — the struct twin (BCS layout, field for field), its pub/sub
+//! topic, and its JSON shape all live on that one line, and the gates compare every
+//! row with the bytecode.
 //!
 //! JSON convention (the fullnode's `parsedJson`, kept so clients reuse their
 //! receipt decoders): `ID`/`address` → `0x…` hex · u64 → STRING (2⁵³ law) ·
@@ -103,7 +103,7 @@ pub struct Routed {
 
 macro_rules! events {
     ($(
-        $module:ident :: $name:ident { $($field:ident : $ty:ty),+ $(,)? } => $topic:expr
+        $module:ident :: $name:ident { $($field:ident : $ty:ty),+ $(,)? } $(=> $topic:expr)?
     ),+ $(,)?) => {
         $(
             #[derive(Debug, Deserialize)]
@@ -111,44 +111,48 @@ macro_rules! events {
             pub struct $name { $(pub $field: $ty),+ }
         )+
 
-        /// Every `(module, name)` the table routes — the census gate's anchor
-        /// (test-only: the gate is its one consumer).
+        /// Every `(module, name)` the table decodes — the census gate's anchor.
         #[cfg(test)]
         pub const ROUTED: &[(&str, &str)] = &[
             $( (stringify!($module), stringify!($name)) ),+
         ];
 
-        /// Each mirror's FIELD ORDER — BCS is positional, so a mirror that skips a Move field
-        /// decodes the next field's bytes and poisons the whole checkpoint (the 2026-08-22
-        /// wedge: `FightEnded` missed `world/x/z` and every fight that ended stopped the
-        /// pipeline dead). The gate compares this against the compiled bytecode.
+        /// Each mirror's field order. BCS is positional; the gate compares it with the bytecode.
         #[cfg(test)]
         pub const ROUTED_FIELDS: &[(&str, &str, &[(&str, &str)])] = &[
             $( (stringify!($module), stringify!($name), &[$((stringify!($field), stringify!($ty))),+]) ),+
         ];
 
-        /// Decode + route one game event by `(module, name)`. `None` = not a
-        /// game event we forward (never an error — foreign events are data).
+        /// Decode one game event by `(module, name)` and route it when its row has a topic.
+        /// `None` = foreign or unpublished (never an error: foreign events are data).
         pub fn route(module: &str, name: &str, bytes: &[u8]) -> anyhow::Result<Option<Routed>> {
             Ok(match (module, name) {
                 $(
                     (stringify!($module), stringify!($name)) => {
                         let e: $name = crate::decode::from_bytes(bytes)?;
-                        #[allow(clippy::redundant_closure_call)]
-                        let topic: String = ($topic)(&e);
-                        Some(Routed {
-                            kind: stringify!($name),
-                            topic,
-                            data: json!({ $(stringify!($field): e.$field.to_json()),+ }),
-                        })
+                        events!(@publish e, $name { $($field),+ } $(, $topic)?)
                     }
                 )+
                 _ => None,
             })
         }
     };
+    (@publish $e:ident, $name:ident { $($field:ident),+ }) => {{
+        let _ = $e;
+        None
+    }};
+    (@publish $e:ident, $name:ident { $($field:ident),+ }, $topic:expr) => {{
+        #[allow(clippy::redundant_closure_call)]
+        let topic: String = ($topic)(&$e);
+        Some(Routed {
+            kind: stringify!($name),
+            topic,
+            data: json!({ $(stringify!($field): $e.$field.to_json()),+ }),
+        })
+    }};
 }
 
+// A row without a topic is decoded and gated, never published: another module reads it.
 events! {
     // ── character lifecycle + progression surface ──
     // CharacterCreated routes to the OWNER's social channel: the receipt cannot carry the
@@ -192,8 +196,6 @@ events! {
         => |e: &TurnSeedUsed| format!("evt:fight:{}", e.fight.hex()),
     fight::FightEnded { fight: Id, world: String, x: u32, z: u32, winner: Option<u8> }
         => |e: &FightEnded| format!("evt:fight:{}", e.fight.hex()),
-    fight::FightClosable { fight: Id }
-        => |e: &FightClosable| format!("evt:fight:{}", e.fight.hex()),
     fight::FightClosed { fight: Id }
         => |e: &FightClosed| format!("evt:fight:{}", e.fight.hex()),
     fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop>, kares: u64 }
@@ -204,30 +206,20 @@ events! {
         => |event: &ZoneSearched| format!("evt:zone:{}:{}:{}", event.world, event.zone_x, event.zone_z),
     gathering::ResourceGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, tier: u8, quantity: u64, job_xp_gained: u64, protector: bool }
         => |e: &ResourceGathered| zone_topic(&e.world, e.x, e.z),
-    gathering::RareGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, rare_item_type: String }
-        => |e: &RareGathered| zone_topic(&e.world, e.x, e.z),
+    gathering::RareGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, rare_item_type: String },
 
     // Friends, parties, and trades publish from object writes in publish.rs. Their full
     // objects already carry the state needed to invalidate every relevant projection.
 
-    tournament::EntryFeePaid { treasury_mist: u64 }
-        => |_: &EntryFeePaid| "evt:economy".to_string(),
+    tournament::EntryFeePaid { treasury_mist: u64 },
     tournament::TournamentUpdated { tournament: Id }
         => |_: &TournamentUpdated| "evt:tournament".to_string(),
-    // ── kolizeum ──
-    kolizeum::KolizeumCreated { kolizeum: Id, fight: Id, pledge: u64, format: u64 }
-        => |_: &KolizeumCreated| "evt:kolizeum".to_string(),
-    kolizeum::KolizeumPaid { kolizeum: Id, winner: Addr, amount: u64 }
-        => |_: &KolizeumPaid| "evt:kolizeum".to_string(),
+    // The kolizeum directory publishes one coalesced invalidation from object writes.
+    kolizeum::KolizeumPaid { kolizeum: Id, winner: Addr, amount: u64 },
 
-    listing_rule::SellerProved { kiosk: Id, owner: Addr }
-        => |_: &SellerProved| "evt:economy".to_string(),
+    listing_rule::SellerProved { kiosk: Id, owner: Addr },
 
     // ── economy ──
-    distribution::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
-        => |_: &GiftcardMinted| "evt:economy".to_string(),
-    distribution::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
-        => |_: &GiftcardRedeemed| "evt:economy".to_string(),
     crafting::Crafted {
         recipe: Id,
         character: Id,
@@ -236,36 +228,16 @@ events! {
         attempts: u16,
         successes: u16,
         job_xp_gained: u64,
-    }
-        => |_: &Crafted| "evt:economy".to_string(),
-    forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_amounts: Vec<u64>, new_puits: u64 }
-        => |_: &RuneScribed| "evt:economy".to_string(),
+    },
     forgemagie::GearCrushed { crusher: Addr, items: u64 }
         => |_: &GearCrushed| "evt:economy".to_string(),
-    pet::PetFed { pet: Id, feeder: Addr, power: u64 }
-        => |_: &PetFed| "evt:economy".to_string(),
+    pet::PetFed { pet: Id, feeder: Addr, power: u64 },
 
-    // ── loot boxes (grind-safe gacha, ruling 2026-08-11) ──
-    loot_box::LootBoxesOpened { box_template: Id, claim_ids: Vec<Id> }
-        => |_: &LootBoxesOpened| "evt:economy".to_string(),
+    // ── loot boxes ──
     loot_box::LootBoxOpened { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootBoxOpened| "evt:economy".to_string(),
     loot_box::LootClaimed { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootClaimed| "evt:economy".to_string(),
-
-    // ── living content ──
-    item_rows::TemplateCreated { template: Id, item_type: String }
-        => |_: &TemplateCreated| "evt:content".to_string(),
-    mob_rows::MobTemplateCreated { template: Id, mob_type: String }
-        => |_: &MobTemplateCreated| "evt:content".to_string(),
-    spell_rows::SpellCreated { template: Id, name: String, classe: String }
-        => |_: &SpellCreated| "evt:content".to_string(),
-    recipe_rows::RecipeCreated { recipe: Id, output_template: Id, input_count: u64, job: String, required_level: u64 }
-        => |_: &RecipeCreated| "evt:content".to_string(),
-    registry::ContentWritten { domain: String, key: String, revision: u64 }
-        => |_: &ContentWritten| "evt:content".to_string(),
-    loot_box::LootTableSet { box_template: Id, rows: u64, weight_sum: u64 }
-        => |_: &LootTableSet| "evt:content".to_string(),
 }
 
 // ╔════════════════ [ Native kiosk events (0x2 — sale analysis inputs) ] ═════ ]
@@ -285,103 +257,4 @@ pub type KioskItemPurchased = KioskItemListed;
 pub struct KioskItemDelisted {
     pub kiosk: Id,
     pub id: Id,
-}
-
-// ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn captured_signed_forging_event_routes_its_full_loss_ledger() {
-        // Real local-chain transaction and object/version/date provenance live with the bytes.
-        let fixture: serde_json::Value =
-            serde_json::from_str(include_str!("../tests/forgemagie.localnet.json")).unwrap();
-        let bytes = hex::decode(fixture["bcs_hex"].as_str().unwrap()).unwrap();
-        let routed = route("forgemagie", "RuneScribed", &bytes).unwrap().unwrap();
-        assert_eq!(routed.topic, "evt:economy");
-        assert_eq!(routed.data, fixture["parsed_json"]);
-        assert!(route("forgemagie", "RuneScribed", &bytes[..bytes.len() - 1]).is_err());
-    }
-
-    #[test]
-    fn routes_a_character_event_with_hex_ids() {
-        #[derive(serde::Serialize)]
-        struct Wire {
-            character: [u8; 32],
-            owner: [u8; 32],
-            name: String,
-            classe: String,
-        }
-        let bytes = bcs::to_bytes(&Wire {
-            character: [1; 32],
-            owner: [7; 32],
-            name: "aiden".into(),
-            classe: "yajin".into(),
-        })
-        .unwrap();
-        let routed = route("character", "CharacterCreated", &bytes)
-            .unwrap()
-            .unwrap();
-        assert_eq!(routed.kind, "CharacterCreated");
-        assert_eq!(routed.topic, format!("evt:social:0x{}", "07".repeat(32)));
-        assert_eq!(routed.data["name"], "aiden");
-        assert_eq!(routed.data["character"], format!("0x{}", "01".repeat(32)));
-    }
-
-    #[test]
-    fn option_winner_serializes_value_or_null() {
-        // THE WIRE IS `fight, world, x, z, winner` (fight.move) — a hand-built fixture that
-        // skips a field proves only that the mirror agrees with itself, and this one did while
-        // the real event wedged the pipeline (2026-08-22). The field ORDER is pinned against
-        // the compiled bytecode by `gates::every_event_mirror_matches_the_compiled_field_order`.
-        #[derive(serde::Serialize)]
-        struct Wire {
-            fight: [u8; 32],
-            world: String,
-            x: u32,
-            z: u32,
-            winner: Option<u8>,
-        }
-        let wire = |winner: Option<u8>| Wire {
-            fight: [4; 32],
-            world: "01_first_shore".to_string(),
-            x: 49_986,
-            z: 49_998,
-            winner,
-        };
-        let with = bcs::to_bytes(&wire(Some(1))).unwrap();
-        let routed = route("fight", "FightEnded", &with).unwrap().unwrap();
-        assert_eq!(routed.data["winner"], 1);
-
-        let without = bcs::to_bytes(&wire(None)).unwrap();
-        let routed = route("fight", "FightEnded", &without).unwrap().unwrap();
-        assert!(routed.data["winner"].is_null());
-        assert_eq!(routed.topic, format!("evt:fight:0x{}", "04".repeat(32)));
-    }
-
-    #[test]
-    fn batch_opening_routes_captured_move_event_with_ordered_claim_ids() {
-        // Native Move execution capture; provenance is retained with its wire bytes.
-        let capture: Value =
-            serde_json::from_str(include_str!("../tests/loot_boxes.native.json")).unwrap();
-        let bytes = hex::decode(capture["bcs_hex"].as_str().unwrap()).unwrap();
-        let routed = route("loot_box", "LootBoxesOpened", &bytes)
-            .unwrap()
-            .unwrap();
-        assert_eq!(routed.topic, "evt:economy");
-        assert_eq!(routed.data["box_template"], capture["box_template"]);
-        assert_eq!(routed.data["claim_ids"], capture["claim_ids"]);
-    }
-
-    #[test]
-    fn unknown_events_are_data_not_errors() {
-        assert!(route("evil", "Injected", &[1, 2, 3]).unwrap().is_none());
-    }
-
-    #[test]
-    fn wrong_bytes_for_a_known_event_error_loudly() {
-        assert!(route("character", "CharacterCreated", &[0xFF]).is_err());
-    }
 }

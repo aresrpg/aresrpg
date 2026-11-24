@@ -66,7 +66,7 @@ const CreateCharacterTab = ({
   return (
     <Button
       aria-label={copy.create_character}
-      className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-faint transition-colors duration-200 hover:bg-gold/5 hover:text-gold-light"
+      className="w-[34px] shrink-0 place-items-center duration-200"
       data-character-tab-create=""
       onClick={create}
       title={copy.create_character}

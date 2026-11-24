@@ -61,7 +61,7 @@ export type ItemSnapshot = Readonly<{
   stats?: Readonly<Record<string, number>>
 }>
 
-export const LINKED_ITEM_CACHE_CAPACITY = 20
+const LINKED_ITEM_CACHE_CAPACITY = 20
 
 const dynamic_name = (
   fields: readonly Readonly<{ name: DynamicFieldName }>[],

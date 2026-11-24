@@ -8,7 +8,7 @@ import type { Sdk } from './client.ts'
 import { read_personal_kiosks } from './kiosk_discovery.ts'
 import { read_agent_equipment } from './agent_equipment.ts'
 import { read_agent_item_returns, type AgentItemReturnOffer } from './agent_returns.ts'
-import { resolve_marketplace_transfer, collect_marketplace_ptb, delist_asset_ptb } from './marketplace.ts'
+import { claim_purchase_cap, collect_marketplace_ptb, delist_asset_ptb, offer_purchase_cap } from './marketplace.ts'
 import { kares_payment } from './kares_ptb.ts'
 import { create_kares_transaction } from './kares_actions.ts'
 
@@ -31,11 +31,11 @@ export type AgentAssetIntent =
       kares_mist: string
       reserve_mist: string
     }>
-  | Readonly<{ kind: 'asset_claim' | 'asset_cancel'; agent_address: string; items: readonly AgentItemReturnOffer[] }>
+  | Readonly<{ kind: 'asset_claim'; agent_address: string; items: readonly AgentItemReturnOffer[] }>
   | Readonly<{ kind: 'asset_unstake'; items: readonly Readonly<{ id: string; amount: string }>[] }>
 
 export const is_asset_intent = (intent: Readonly<{ kind: string }>): intent is AgentAssetIntent =>
-  ['asset_offer', 'asset_claim', 'asset_cancel', 'asset_unstake', 'asset_collect', 'asset_delist'].includes(intent.kind)
+  ['asset_offer', 'asset_claim', 'asset_unstake', 'asset_collect', 'asset_delist'].includes(intent.kind)
 
 const amount = (value: string): bigint => {
   if (!/^\d+$/.test(value)) throw new Error('Enter a nonnegative integer token amount.')
@@ -80,7 +80,7 @@ const offer_items = async (
             slot: item.slot,
             receiving: item.item_id,
           })
-        return item_purchase_cap(sdk, tx, kiosk, owner, item.item_id)
+        return offer_purchase_cap(sdk, tx, 'item', kiosk, owner, item.item_id)
       })
       tx.transferObjects(purchase_caps, intent.recipient)
     })
@@ -178,21 +178,11 @@ const claim_items = async (
   client: SuiGrpcClient,
   sdk: Sdk,
   sender: string,
-  intent: Extract<AgentAssetIntent, { kind: 'asset_claim' | 'asset_cancel' }>
+  intent: Extract<AgentAssetIntent, { kind: 'asset_claim' }>
 ) => {
   await check_agent_item_claims(client, sdk, sender, intent)
   const tx = sdk.tx()
   tx.setSender(sender)
-  const type = `${sdk.game_type_package}::item::Item`
-  if (intent.kind === 'asset_cancel') {
-    for (const item of intent.items)
-      tx.moveCall({
-        target: '0x2::kiosk::return_purchase_cap',
-        typeArguments: [type],
-        arguments: [tx.object(item.seller_kiosk), tx.object(item.purchase_cap)],
-      })
-    return tx
-  }
   const caps = await read_personal_kiosks(sdk, sender)
   sdk.with_personal_kiosk(tx, caps[0] ?? null, (kiosk, cap) => {
     claim_agent_items(sdk, tx, kiosk, cap, intent.items)
@@ -238,18 +228,6 @@ const check_item_revision = async (client: SuiGrpcClient, item: RecallItem) => {
   if (object.version !== item.version) throw new Error('Selected item version changed. Refresh before signing.')
   return object
 }
-const item_purchase_cap = (
-  sdk: Sdk,
-  tx: Transaction,
-  kiosk: TransactionObjectArgument,
-  cap: TransactionObjectArgument,
-  id: string
-) =>
-  tx.moveCall({
-    target: '0x2::kiosk::list_with_purchase_cap',
-    typeArguments: [`${sdk.game_type_package}::item::Item`],
-    arguments: [kiosk, cap, tx.pure.id(id), tx.pure.u64(0)],
-  })
 const offer_direct_items = async (
   client: SuiGrpcClient,
   sdk: Sdk,
@@ -277,7 +255,7 @@ const offer_direct_items = async (
         typeArguments: [`${sdk.game_type_package}::item::Item`],
         arguments: [kiosk, owner, tx.object((sdk.pins.item_policy as { id: string }).id), tx.object(item.item_id)],
       })
-      return item_purchase_cap(sdk, tx, kiosk, owner, item.item_id)
+      return offer_purchase_cap(sdk, tx, 'item', kiosk, owner, item.item_id)
     })
     tx.transferObjects(caps, recipient)
   })
@@ -287,7 +265,7 @@ export const check_agent_item_claims = async (
   client: SuiGrpcClient,
   sdk: Sdk,
   sender: string,
-  intent: Extract<AgentAssetIntent, { kind: 'asset_claim' | 'asset_cancel' }>
+  intent: Extract<AgentAssetIntent, { kind: 'asset_claim' }>
 ) => {
   unique(intent.items.map((row) => row.purchase_cap))
   if (!intent.items.length) throw new Error('Select incoming item returns.')
@@ -311,14 +289,5 @@ export const claim_agent_items = (
   cap: TransactionObjectArgument,
   items: readonly AgentItemReturnOffer[]
 ) => {
-  const type = `${sdk.game_type_package}::item::Item`
-  for (const item of items) {
-    const zero = tx.moveCall({ target: '0x2::coin::zero', typeArguments: ['0x2::sui::SUI'] })
-    const [purchased, request] = tx.moveCall({
-      target: '0x2::kiosk::purchase_with_cap',
-      typeArguments: [type],
-      arguments: [tx.object(item.seller_kiosk), tx.object(item.purchase_cap), zero],
-    })
-    resolve_marketplace_transfer(sdk, tx, 'item', item.item_id, 0n, kiosk, cap, purchased!, request!, item.seller_kiosk)
-  }
+  for (const item of items) claim_purchase_cap(sdk, tx, 'item', { ...item, asset_id: item.item_id }, kiosk, cap)
 }

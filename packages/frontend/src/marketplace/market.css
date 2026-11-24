@@ -1,0 +1,48 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* The market page's fixed boxes: the first render and the loaded render have the same shape. The page's utilities
+   read these sizes. */
+.market {
+  --market-card-h: 262px;
+  --market-card-art: 132px;
+  --market-row-h: 56px;
+  --market-head-h: 40px;
+  --market-tokens-h: calc(var(--market-head-h) + 6 * var(--market-row-h) + 2px);
+  --market-spot-h: 280px;
+}
+@media (max-width: 760px) {
+  .market {
+    --market-card-h: 228px;
+    --market-card-art: 110px;
+  }
+}
+
+/* Below the fold a shelf, a card of a long grid or a row of a long table renders as it nears the screen, in the box
+   it will have. A shelf's own rows render with their shelf. */
+.market-shelf {
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(44px + 12px + 4px + var(--market-card-h));
+}
+.market-shelf[data-holds='tokens'] {
+  contain-intrinsic-size: auto calc(44px + 12px + var(--market-tokens-h));
+}
+.market-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--market-card-h);
+}
+.market-token:not(.market-shelf *) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--market-row-h);
+}
+
+/* The rarest item's spotlight and an item's header: a brass glow on the panel. */
+.market-spot {
+  background:
+    radial-gradient(60% 120% at 85% 50%, color-mix(in srgb, var(--aui-brass) 16%, transparent), transparent 70%),
+    var(--aui-lifted);
+}
+.market-item-head {
+  background:
+    radial-gradient(60% 160% at 0% 50%, color-mix(in srgb, var(--aui-brass) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--aui-high), var(--aui-lifted));
+}

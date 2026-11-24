@@ -1,324 +1,86 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
+// The one store: one queue of inputs, one event bus, one state. It knows no module: each entry starts it with
+// its surface's list, and the state, the reducers and the observers are exactly that list's.
 import { useStore } from 'zustand'
-import { createStore } from 'zustand/vanilla'
+import { createStore, type StoreApi } from 'zustand/vanilla'
 
-import practice, { initial_practice_state, type PracticeState, type PracticeInput } from './modules/practice.ts'
-import tournament, {
-  initial_tournament_state,
-  type TournamentInput,
-  type TournamentState,
-} from './modules/tournament.ts'
-import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
-import { initial_analytics_state } from './analytics/state.ts'
-import type { GameSettings } from './game/core/settings.ts'
-import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
-import journey, { type JourneyInput } from './modules/journey.ts'
-import { initial_journey_state, type JourneyState } from './journey/model.ts'
-import engine, { initial_engine_state, type EngineInput, type EngineState } from './modules/engine.ts'
-import fight, { initial_fight_session_state, type FightSessionInput, type FightSessionState } from './modules/fight.ts'
-import type { Locale } from './i18n/locale.ts'
-import type { AppCopy } from './i18n/copy.ts'
-import leaderboards, {
-  initial_leaderboards_state,
-  type LeaderboardsState,
-  type LeaderboardsInput,
-} from './modules/leaderboards.ts'
-import admin, { initial_admin_state, type AdminInput, type AdminState } from './modules/admin.ts'
-import editor, { initial_editor_state, type EditorInput, type SeedEditorState } from './modules/editor.ts'
-import chat, { initial_chat_state, type ChatInput, type ChatState } from './modules/chat.ts'
-import claims, { type ClaimsInput } from './modules/claims.ts'
-import duel, { type DuelInput } from './modules/duel.ts'
-import fight_chain from './modules/fight_chain.ts'
-import fight_result, {
-  initial_fight_result_state,
-  type FightResultInput,
-  type FightResultState,
-} from './modules/fight_result.ts'
-import locale, { type LocaleInput } from './modules/locale.ts'
-import navigation, {
-  initial_navigation_state,
-  type NavigationInput,
-  type NavigationState,
-} from './modules/navigation.ts'
-import hosted_agent from './modules/hosted_agent.ts'
-import session, { initial_session_state, type SessionInput, type SessionState } from './modules/session.ts'
-import suins, { initial_suins_state, type SuinsInput, type SuinsState } from './modules/suins.ts'
-import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
-import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
-import settings, { type SettingsInput } from './modules/settings.ts'
-import audio from './modules/audio.ts'
-import world, { initial_world_state, type WorldInput, type WorldState } from './modules/world.ts'
-import marketplace, {
-  initial_marketplace_state,
-  type MarketplaceInput,
-  type MarketplaceState,
-} from './modules/marketplace.ts'
-import dungeon, { initial_dungeon_state, type DungeonInput, type DungeonState } from './modules/dungeon.ts'
-import kolizeum, { initial_kolizeum_state, type KolizeumInput, type KolizeumState } from './modules/kolizeum.ts'
-import friends, { initial_friends_state, type FriendsInput, type FriendsState } from './modules/friends.ts'
-import party, { initial_party_state, type PartyInput, type PartyState } from './modules/party.ts'
-import party_follow from './modules/party_follow.ts'
-import run_to, { initial_run_to_state, type RunToInput, type RunToState } from './modules/run_to.ts'
-import automation, {
-  initial_automation_state,
-  type AutomationInput,
-  type AutomationState,
-} from './modules/automation.ts'
-import trade, { initial_trade_state, type TradeInput, type TradeState } from './modules/trade.ts'
-import runeforge, { initial_runeforge_state, type RuneforgeInput, type RuneforgeState } from './modules/runeforge.ts'
-import mastery, { initial_mastery_state, type MasteryInput, type MasteryState } from './modules/mastery.ts'
-import distribution, {
-  initial_distribution_state,
-  type DistributionInput,
-  type DistributionState,
-} from './modules/distribution.ts'
-import wallet_import, {
-  initial_wallet_import_state,
-  type WalletImportInput,
-  type WalletImportState,
-} from './modules/wallet_import.ts'
-import job_level_up, {
-  initial_job_level_up_state,
-  type JobLevelUpInput,
-  type JobLevelUpState,
-} from './modules/job_level_up.ts'
-import external_wallet, {
-  initial_external_wallet_state,
-  type ExternalWalletState,
-  type ExternalWalletInput,
-} from './modules/external_wallet.ts'
-import dapp, { initial_dapp_state, type DappInput, type DappState } from './modules/dapp.ts'
+import type { GameInput, GameState } from './game/game_modules.ts'
+import type { SiteInput, SiteState } from './site_modules.ts'
 
-export type AppState = Readonly<{
-  practice: PracticeState
-  analytics: AnalyticsState
-  claim_failures: readonly string[]
-  journey: JourneyState
-  chain_clock: ChainClock
-  session: SessionState
-  external_wallet: ExternalWalletState
-  navigation: NavigationState
-  settings: GameSettings
-  locale: Locale
-  engine: EngineState
-  fight: FightSessionState
-  fight_result: FightResultState
-  copy: AppCopy | null
-  simulator: SimulatorState
-  admin: AdminState
-  editor: SeedEditorState
-  chat: ChatState
-  world: WorldState
-  marketplace: MarketplaceState
-  leaderboards: LeaderboardsState
-  dungeon: DungeonState
-  tournament: TournamentState
-  kolizeum: KolizeumState
-  friends: FriendsState
-  party: PartyState
-  run_to: RunToState
-  automation: AutomationState
-  trade: TradeState
-  runeforge: RuneforgeState
-  mastery: MasteryState
-  distribution: DistributionState
-  wallet_import: WalletImportState
-  job_level_up: JobLevelUpState
-  suins: SuinsState
-  dapp: DappState
-}>
+export type { GameState, SiteState }
+export type AppState = SiteState & GameState
+export type AppInput = SiteInput | GameInput
 
-export type AppInput =
-  | PracticeInput
-  | AnalyticsInput
-  | JourneyInput
-  | ChainClockInput
-  | SessionInput
-  | ExternalWalletInput
-  | NavigationInput
-  | SettingsInput
-  | LocaleInput
-  | EngineInput
-  | SimulatorInput
-  | FightSessionInput
-  | FightResultInput
-  | AdminInput
-  | EditorInput
-  | ChatInput
-  | WorldInput
-  | DuelInput
-  | MarketplaceInput
-  | LeaderboardsInput
-  | DungeonInput
-  | TournamentInput
-  | KolizeumInput
-  | FriendsInput
-  | PartyInput
-  | RunToInput
-  | AutomationInput
-  | TradeInput
-  | RuneforgeInput
-  | MasteryInput
-  | DistributionInput
-  | WalletImportInput
-  | ClaimsInput
-  | JobLevelUpInput
-  | SuinsInput
-  | DappInput
-
-type EventArguments = {
+type EventArguments<S> = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
-} & { STATE_UPDATED: [AppState, AppState] }
+} & { STATE_UPDATED: [S, S] }
 
-export type AppEvents = Readonly<{
-  on: <K extends keyof EventArguments>(name: K, listener: (...arguments_: EventArguments[K]) => void) => void
+export type AppEvents<S = AppState> = Readonly<{
+  on: <K extends keyof EventArguments<S>>(name: K, listener: (...arguments_: EventArguments<S>[K]) => void) => void
 }>
 
-export type AppContext = Readonly<{
-  events: AppEvents
+/** What an observer works with: the bus, its lifetime, the state it may read and the one dispatch. */
+export type ModuleContext<S> = Readonly<{
+  events: AppEvents<S>
   signal: AbortSignal
-  get_state: () => AppState
+  get_state: () => S
   dispatch: (input: AppInput) => void
+  /** The surface plays the game, so a signed-in link takes the account's one seat. */
+  seat: boolean
+  /** An id no other request of this start has used: the server answers or fails a request by its id. */
+  next_request_id: () => number
 }>
+export type AppContext = ModuleContext<AppState>
+export type SiteContext = ModuleContext<SiteState>
 
+/** A module of the game. `initial` gives its own slices when the store starts. */
 export type AppModule = Readonly<{
   name: string
+  initial?: () => Partial<AppState>
   reduce?: (state: AppState, input: AppInput) => AppState
   observe?: (context: AppContext) => void
 }>
 
-// Registration owns observer availability. Keep reducer order explicit: session folds first.
-const MODULE_REGISTRY = [
-  [practice, 'practice'],
-  [session, 'account'],
-  // `owner` modules serve the 3D game and the light account pages. The web dapp stays out: it names the
-  // bot from its own grant and never arms a second wallet.
-  [hosted_agent, 'owner'],
-  // Hosted-bot consent names the agent wallet through SuiNS, so every signed-in surface runs its observer.
-  [suins, 'account'],
-  [chain_clock, 'account'],
-  [external_wallet, 'owner'],
-  [navigation, 'player'],
-  [analytics, 'public'],
-  [settings, 'shared'],
-  [audio, 'shared'],
-  [locale, 'shared'],
-  [engine, 'player'],
-  [simulator, 'demo'],
-  [fight, 'shared'],
-  [fight_result, 'player'],
-  [admin, 'player'],
-  [editor, 'demo'],
-  [chat, 'player'],
-  [world, 'player'],
-  [duel, 'player'],
-  [fight_chain, 'player'],
-  [claims, 'player'],
-  [marketplace, 'account'],
-  [leaderboards, 'player'],
-  [dungeon, 'player'],
-  [kolizeum, 'player'],
-  [tournament, 'player'],
-  [friends, 'player'],
-  [party, 'player'],
-  // Arrival consumers read the accepted target before run-to releases it.
-  [journey, 'player'],
-  [run_to, 'player'],
-  [automation, 'player'],
-  [party_follow, 'player'],
-  [trade, 'player'],
-  [runeforge, 'player'],
-  [mastery, 'player'],
-  [distribution, 'player'],
-  [wallet_import, 'player'],
-  [job_level_up, 'player'],
-  [dapp, 'dapp'],
-] as const satisfies readonly (readonly [
-  AppModule,
-  'player' | 'account' | 'owner' | 'dapp' | 'demo' | 'shared' | 'public' | 'practice',
-])[]
+/** A module the site runs. It reads the site's slices only and returns every other slice as it found it. */
+export type SiteModule = Readonly<{
+  name: string
+  initial?: () => Partial<SiteState>
+  reduce?: <S extends SiteState>(state: S, input: AppInput) => S
+  observe?: (context: SiteContext) => void
+}>
 
-const MODULES = MODULE_REGISTRY.map(([module]) => module)
-export type AppModuleName = (typeof MODULES)[number]['name']
+/** The state a list of modules starts with: each module's own slices. */
+export const initial_state_of = (modules: readonly AppModule[]): AppState =>
+  Object.freeze(modules.reduce((state, module) => ({ ...state, ...module.initial?.() }), {})) as AppState
 
-// `account` modules serve every signed-in surface: the 3D player and the engine-less web dapp.
-export const PLAYER_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => ['player', 'account', 'owner', 'shared', 'public'].includes(runtime)).map(
-    ([module]) => module.name
-  )
-)
-export const DAPP_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => ['dapp', 'account', 'shared', 'public'].includes(runtime)).map(
-    ([module]) => module.name
-  )
-)
-/** A light page that only needs the signed-in account: the KARES page. */
-export const ACCOUNT_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => ['account', 'owner', 'shared', 'public'].includes(runtime)).map(
-    ([module]) => module.name
-  )
-)
-export const PRACTICE_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'practice' || runtime === 'shared').map(([module]) => module.name)
-)
+/** One input folded through the modules' reducers, in list order. */
+export const reduce_with =
+  (modules: readonly AppModule[]) =>
+  (state: AppState, input: AppInput): AppState =>
+    modules.reduce((folded, module) => (module.reduce ? module.reduce(folded, input) : folded), state)
 
-export const DEMO_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'demo' || runtime === 'shared').map(([module]) => module.name)
-)
-
-export const initial_app_state = (settings_state: GameSettings): AppState =>
-  Object.freeze({
-    practice: initial_practice_state(),
-    claim_failures: [],
-    chain_clock: null,
-    journey: initial_journey_state(),
-    session: initial_session_state(),
-    suins: initial_suins_state(),
-    external_wallet: initial_external_wallet_state(),
-    navigation: initial_navigation_state(),
-    settings: settings_state,
-    analytics: initial_analytics_state(),
-    locale: 'en',
-    engine: initial_engine_state(),
-    fight: initial_fight_session_state(),
-    fight_result: initial_fight_result_state(),
-    copy: null,
-    simulator: initial_simulator_state(),
-    admin: initial_admin_state(),
-    editor: initial_editor_state(),
-    chat: initial_chat_state(),
-    world: initial_world_state(),
-    marketplace: initial_marketplace_state(),
-    leaderboards: initial_leaderboards_state(),
-    dungeon: initial_dungeon_state(),
-    kolizeum: initial_kolizeum_state(),
-    tournament: initial_tournament_state(),
-    friends: initial_friends_state(),
-    party: initial_party_state(),
-    run_to: initial_run_to_state(),
-    automation: initial_automation_state(),
-    trade: initial_trade_state(),
-    runeforge: initial_runeforge_state(),
-    mastery: initial_mastery_state(),
-    distribution: initial_distribution_state(),
-    wallet_import: initial_wallet_import_state(),
-    job_level_up: initial_job_level_up_state(),
-    dapp: initial_dapp_state(),
-  })
+/** The same modules, where only the named ones run their observer. The others keep their slices and reducers. */
+export const observing = <M extends Readonly<{ name: string; observe?: unknown }>>(
+  modules: readonly M[],
+  names: readonly string[]
+): readonly M[] =>
+  modules.map((module) => (names.includes(module.name) ? module : Object.freeze({ ...module, observe: undefined })))
 
 const create_events = () => {
-  const listeners = new Map<keyof EventArguments, Set<(arguments_: readonly unknown[]) => void>>()
+  const listeners = new Map<keyof EventArguments<AppState>, Set<(arguments_: readonly unknown[]) => void>>()
   return Object.freeze({
     api: Object.freeze({
-      on: <K extends keyof EventArguments>(name: K, listener: (...arguments_: EventArguments[K]) => void): void => {
+      on: <K extends keyof EventArguments<AppState>>(
+        name: K,
+        listener: (...arguments_: EventArguments<AppState>[K]) => void
+      ): void => {
         const bucket = listeners.get(name) ?? new Set<(arguments_: readonly unknown[]) => void>()
-        bucket.add((arguments_) => listener(...(arguments_ as EventArguments[K])))
+        bucket.add((arguments_) => listener(...(arguments_ as EventArguments<AppState>[K])))
         listeners.set(name, bucket)
       },
     }) satisfies AppEvents,
-    emit: <K extends keyof EventArguments>(name: K, ...arguments_: EventArguments[K]): void => {
+    emit: <K extends keyof EventArguments<AppState>>(name: K, ...arguments_: EventArguments<AppState>[K]): void => {
       for (const listener of listeners.get(name) ?? []) listener(arguments_)
     },
     clear: (): void => listeners.clear(),
@@ -326,23 +88,15 @@ const create_events = () => {
 }
 
 export const create_app = () => {
-  const default_settings = Object.freeze({
-    quality: 'medium',
-    music_enabled: true,
-    master_volume: 1,
-    footsteps_enabled: true,
-    completed_tutorials: Object.freeze([]),
-    follow_leader: false,
-    chat_visible_channels: CHAT_CHANNELS,
-    chat_speak_channel: 'general',
-    auto_switch_fighter: true,
-    placement_gas_warning_disabled: false,
-    render_distance: null,
-    fight_access: 0,
-  }) satisfies GameSettings
-  let state = initial_app_state(default_settings)
+  let state = Object.freeze({}) as AppState
+  let reduce: (state: AppState, input: AppInput) => AppState = (current) => current
   let active_observers: AbortController | null = null
-  const store = createStore<AppState>(() => state)
+  let started = state
+  // A render without a live subscription (a server render, a test) reads the state the surface started with.
+  const store: StoreApi<AppState> = Object.freeze({
+    ...createStore<AppState>(() => state),
+    getInitialState: () => started,
+  })
   const events = create_events()
   let input_queue: readonly AppInput[] = []
   let reducing = false
@@ -357,7 +111,7 @@ export const create_app = () => {
         input_queue = Object.freeze(remaining)
         if (!next_input) continue
         const previous = state
-        const next = reduce_app_state(previous, next_input)
+        const next = reduce(previous, next_input)
         state = next
         if (next !== previous) store.setState(next, true)
         events.emit(next_input.type, next_input as never)
@@ -368,38 +122,39 @@ export const create_app = () => {
     }
   }
 
-  return Object.freeze({
-    store,
-    dispatch,
-    initialize: (settings_state: GameSettings): void => {
-      state = initial_app_state(settings_state)
-      store.setState(state, true)
-    },
-    observe: (module_names: readonly AppModuleName[] | null = null): (() => void) => {
-      active_observers?.abort()
+  /** Starts the store with a surface's modules, replacing any earlier start. Returns the stop of this start. */
+  const start = (modules: readonly AppModule[], { seat }: Readonly<{ seat: boolean }>): (() => void) => {
+    active_observers?.abort()
+    events.clear()
+    const controller = new AbortController()
+    active_observers = controller
+    reduce = reduce_with(modules)
+    state = initial_state_of(modules)
+    started = state
+    store.setState(state, true)
+    let request_id = 0
+    const context: AppContext = Object.freeze({
+      events: events.api,
+      signal: controller.signal,
+      get_state: () => state,
+      dispatch,
+      seat,
+      next_request_id: () => {
+        request_id += 1
+        return request_id
+      },
+    })
+    for (const module of modules) module.observe?.(context)
+    return () => {
+      if (active_observers !== controller) return
+      controller.abort()
       events.clear()
-      const controller = new AbortController()
-      active_observers = controller
-      const selected = module_names ? new Set(module_names) : null
-      const context: AppContext = Object.freeze({
-        events: events.api,
-        signal: controller.signal,
-        get_state: () => state,
-        dispatch,
-      })
-      for (const module of MODULES) if (!selected || selected.has(module.name)) module.observe?.(context)
-      return () => {
-        if (active_observers !== controller) return
-        controller.abort()
-        events.clear()
-        active_observers = null
-      }
-    },
-  })
-}
+      active_observers = null
+    }
+  }
 
-export const reduce_app_state = (state: AppState, input: AppInput): AppState =>
-  MODULES.reduce((folded, module) => (module.reduce ? module.reduce(folded, input) : folded), state)
+  return Object.freeze({ store, dispatch, start })
+}
 
 // Lazy routes and already-mounted consumers must retain the same owner during live reload.
 const app = (import.meta.hot?.data.app as ReturnType<typeof create_app> | undefined) ?? create_app()
@@ -411,8 +166,9 @@ if (import.meta.hot) {
 }
 
 export const useAppStore = <T>(selector: (state: AppState) => T): T => useStore(app.store, selector)
+/** The hook for code the site loads: a selector that reads a slice of the game does not compile. */
+export const useSiteStore = <T>(selector: (state: SiteState) => T): T => useStore(app.store, selector)
 export const read_app_state = app.store.getState
 export const subscribe_app = app.store.subscribe
 export const dispatch_app = app.dispatch
-export const initialize_app_store = app.initialize
-export const observe_app = app.observe
+export const start_app = app.start

@@ -29,13 +29,13 @@ const physics_of = (category: string): WeaponPhysics =>
   }
 
 const hit = (element: string, from: bigint, to: bigint, area_shape: bigint, area_size: bigint): SpellEffect => ({
-  kind: BigInt(EFFECT_KINDS.damage),
+  kind: EFFECT_KINDS.damage,
   element,
   value: from,
   value_max: to,
-  area_shape: BigInt(area_shape),
-  area_size: BigInt(area_size),
-  target_filter: BigInt(TARGET_FILTERS.none),
+  area_shape,
+  area_size,
+  target_filter: TARGET_FILTERS.none,
   chance_bp: 10_000n,
   turns: 0n,
   stat: 0n,
@@ -43,20 +43,18 @@ const hit = (element: string, from: bigint, to: bigint, area_shape: bigint, area
 
 const assemble = (physics: WeaponPhysics, lines: WeaponDamage[], affinity: boolean): SpellLevel => {
   const scale = (value: bigint): bigint => (affinity ? (value * 110n) / 100n : value)
-  const effects = lines.map(({ element, from, to }) => {
-    const minimum = scale(BigInt(from))
-    const maximum = scale(BigInt(to))
-    return hit(element, minimum, maximum, physics.area_shape, physics.area_size)
-  })
+  const effects = lines.map(({ element, from, to }) =>
+    hit(element, scale(from), scale(to), physics.area_shape, physics.area_size)
+  )
   const crit_effects = effects.map((effect) => ({
     ...effect,
     value: (effect.value * 150n) / 100n,
     value_max: (effect.value_max * 150n) / 100n,
   }))
   return {
-    ap_cost: BigInt(physics.ap),
-    range_min: BigInt(physics.range_min),
-    range_max: BigInt(physics.reach),
+    ap_cost: physics.ap,
+    range_min: physics.range_min,
+    range_max: physics.reach,
     modifiable_range: physics.modifiable_range,
     line_of_sight: true,
     line_launch: physics.line_launch,
@@ -64,7 +62,7 @@ const assemble = (physics: WeaponPhysics, lines: WeaponDamage[], affinity: boole
     casts_per_turn: 0n,
     casts_per_target: 0n,
     cooldown_turns: 0n,
-    crit_1_in: BigInt(physics.crit_1_in),
+    crit_1_in: physics.crit_1_in,
     effects,
     crit_effects,
   }

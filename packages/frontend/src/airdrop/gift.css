@@ -1,5 +1,21 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* Geometry for the claim page; @aresrpg/ui owns its type, materials and controls. */
+
+.aui-service-note {
+  border: 1px solid color-mix(in srgb, var(--aui-brass) 20%, transparent);
+  background: color-mix(in srgb, var(--aui-brass) 4%, transparent);
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+  color: var(--aui-brass);
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-service-note {
+    padding: 7px;
+    font-size: 10px;
+  }
+}
+
 .gift-page {
   --color-bg: var(--aui-bg);
   --color-surface-low: var(--aui-surface);

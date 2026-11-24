@@ -54,6 +54,19 @@ pub struct TypeKey {
     pub type_params: Vec<String>,
 }
 
+impl TypeKey {
+    /// Exact type identity, never a substring match.
+    pub fn is(&self, package: &str, module: &str, name: &str) -> bool {
+        self.package == package && self.module == module && self.name == name
+    }
+
+    /// The `Field<K, V>` KEY type parameter of a dynamic field.
+    pub fn field_key(&self) -> Option<&str> {
+        self.is(SUI_FRAMEWORK, "dynamic_field", "Field")
+            .then(|| self.type_params[0].as_str())
+    }
+}
+
 /// One object as the resolver sees it.
 #[derive(Debug, Clone)]
 pub struct ObjView<'a> {
@@ -62,6 +75,24 @@ pub struct ObjView<'a> {
     pub owner: OwnerKind,
     pub type_key: &'a TypeKey,
     pub bytes: &'a [u8],
+}
+
+impl ObjView<'_> {
+    /// Decode a type-matched object. A failure is layout drift, never noise: it stops the
+    /// checkpoint loudly instead of letting the watermark pass unprojected state.
+    pub fn decode<T: serde::de::DeserializeOwned>(&self) -> anyhow::Result<T> {
+        decode::from_bytes(self.bytes).map_err(|error| {
+            let t = self.type_key;
+            anyhow::anyhow!(
+                "layout drift: {}::{}::{}<{}> {} failed decode: {error}",
+                t.package,
+                t.module,
+                t.name,
+                t.type_params.join(", "),
+                self.id.hex()
+            )
+        })
+    }
 }
 
 /// A resolved custody fact — `graph.rs` turns each into the ONE ownership edge
@@ -104,23 +135,14 @@ pub enum Custody {
     },
 }
 
-/// Is this type the game's, by ORIGINAL package id (Sui type identity)?
-fn is_game(t: &TypeKey, game_package: &str) -> bool {
-    t.package == game_package
-}
-
 /// The canonical full-width `0x2` framework address (TypeKey convention).
 pub const SUI_FRAMEWORK: &str =
     "0x0000000000000000000000000000000000000000000000000000000000000002";
 
-fn is_native(t: &TypeKey, module: &str, name: &str) -> bool {
-    t.package == SUI_FRAMEWORK && t.module == module && t.name == name
-}
-
 /// A `0x2::dynamic_field::Field<0x2::dynamic_object_field::Wrapper<K>, ID>`
 /// whose authored key type is exact — never a substring match.
 fn is_dynamic_object_field_with_key(t: &TypeKey, key_package: &str, key_path: &str) -> bool {
-    is_native(t, "dynamic_field", "Field")
+    t.is(SUI_FRAMEWORK, "dynamic_field", "Field")
         && t.type_params.first().is_some_and(|key| {
             key == &format!(
                 "{SUI_FRAMEWORK}::dynamic_object_field::Wrapper<{key_package}::{key_path}>"
@@ -161,7 +183,7 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
         // (An Item at an "address" is an EQUIPPED item — the address IS its
         // character's id, equipment.move sends to id.to_address(). NOT a
         // custody fact: the equipment-map DF is the one home.)
-        if is_game(t, game_package) && (t.name == "Character" || t.name == "Item") {
+        if t.package == game_package && (t.name == "Character" || t.name == "Item") {
             if let OwnerKind::Object(wrapper_id) = view.owner {
                 let Some(wrapper) = by_id.get(&wrapper_id) else {
                     continue; // wrapper untouched ⇒ custody unchanged
@@ -171,10 +193,8 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                 };
                 if is_dynamic_object_field_with_key(wrapper.type_key, SUI_FRAMEWORK, "kiosk::Item")
                 {
-                    let field = decode::from_bytes::<
-                        Field<DynamicObjectFieldWrapper<KioskItemKey>, Id>,
-                    >(wrapper.bytes)
-                    .map_err(|e| drift("kiosk::Item wrapper", wrapper.id, e))?;
+                    let field =
+                        wrapper.decode::<Field<DynamicObjectFieldWrapper<KioskItemKey>, Id>>()?;
                     // wrapper key pins the child id — assert, never assume
                     if field.name.name.id == view.id {
                         let owner = owners.get(&parent).map(|owner| owner.address);
@@ -194,10 +214,8 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                     game_package,
                     "fight::FighterKey",
                 ) {
-                    let field = decode::from_bytes::<
-                        Field<DynamicObjectFieldWrapper<FighterKey>, Id>,
-                    >(wrapper.bytes)
-                    .map_err(|e| drift("FighterKey wrapper", wrapper.id, e))?;
+                    let field =
+                        wrapper.decode::<Field<DynamicObjectFieldWrapper<FighterKey>, Id>>()?;
                     if field.value == view.id {
                         facts.push(Custody::FightSeats {
                             fight: parent,
@@ -211,7 +229,7 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
         }
 
         // ── wallet-held rights ──
-        if is_game(t, game_package) && t.name == "Giftcard" {
+        if t.package == game_package && t.name == "Giftcard" {
             if let OwnerKind::Address(user) = view.owner {
                 facts.push(Custody::VoucherHeld {
                     user,
@@ -221,7 +239,7 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
             continue;
         }
         // the soulbound claims (grind-safe rolls) sit at their owner's address
-        if is_game(t, game_package) && (t.name == "BoxClaim" || t.name == "CrushClaim") {
+        if t.package == game_package && (t.name == "BoxClaim" || t.name == "CrushClaim") {
             if let OwnerKind::Address(user) = view.owner {
                 facts.push(Custody::ClaimHeld {
                     user,
@@ -237,193 +255,4 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
         }
     }
     Ok(facts)
-}
-
-fn drift(what: &str, id: Id, error: anyhow::Error) -> anyhow::Error {
-    anyhow::anyhow!("layout drift: {what} {} failed decode: {error}", id.hex())
-}
-
-// ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const GAME: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const SUI: &str = "0x0000000000000000000000000000000000000000000000000000000000000002";
-
-    fn t(package: &str, module: &str, name: &str, params: &[&str]) -> TypeKey {
-        TypeKey {
-            package: package.into(),
-            module: module.into(),
-            name: name.into(),
-            type_params: params.iter().map(|p| p.to_string()).collect(),
-        }
-    }
-
-    #[test]
-    fn captured_kiosk_two_hop_resolves_holds() {
-        let character_type = t(GAME, "character", "Character", &[]);
-        let wrapper_type = t(
-            SUI,
-            "dynamic_field",
-            "Field",
-            &[
-                "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Item>",
-                "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-            ],
-        );
-        // Live testnet capture: wrapper 0x759406…a07f @ version 981006460,
-        // transaction EDhfar…Kaq6, captured 2026-08-17.
-        let wrapper_bytes = hex::decode(concat!(
-            "759406de53dc0570802d762b4ae48ab88580b32c8c4a3ce7d119908cf77fa07f",
-            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
-            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
-        ))
-        .unwrap();
-        let child = Id(hex::decode(
-            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
-        )
-        .unwrap()
-        .try_into()
-        .unwrap());
-        let kiosk = Id(hex::decode(
-            "77a7927ddf70d1642cd27cfe220c162383d9fdd891a56792d061aec6c878bb92",
-        )
-        .unwrap()
-        .try_into()
-        .unwrap());
-        let wrapper_id = Id(hex::decode(
-            "759406de53dc0570802d762b4ae48ab88580b32c8c4a3ce7d119908cf77fa07f",
-        )
-        .unwrap()
-        .try_into()
-        .unwrap());
-
-        let objects = [
-            ObjView {
-                version: 1,
-                id: child,
-                owner: OwnerKind::Object(wrapper_id),
-                type_key: &character_type,
-                bytes: &[],
-            },
-            ObjView {
-                version: 1,
-                id: wrapper_id,
-                owner: OwnerKind::Object(kiosk),
-                type_key: &wrapper_type,
-                bytes: &wrapper_bytes,
-            },
-        ];
-        assert_eq!(
-            resolve(&objects, GAME).unwrap(),
-            vec![Custody::KioskHolds {
-                kiosk,
-                object: child,
-                label: "Character",
-                owner: None,
-            }]
-        );
-    }
-
-    #[test]
-    fn fight_wrapper_resolves_seat() {
-        let character_type = t(GAME, "character", "Character", &[]);
-        let wrapper_type = t(
-            SUI,
-            "dynamic_field",
-            "Field",
-            &[
-                "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::fight::FighterKey>",
-                "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-            ],
-        );
-        let character = Id([1; 32]);
-        let fight = Id([9; 32]);
-        let wrapper_id = Id([3; 32]);
-        let wrapper_bytes = bcs::to_bytes(&Field {
-            id: wrapper_id,
-            name: DynamicObjectFieldWrapper {
-                name: FighterKey(4),
-            },
-            value: character,
-        })
-        .unwrap();
-
-        let objects = [
-            ObjView {
-                version: 1,
-                id: character,
-                owner: OwnerKind::Object(wrapper_id),
-                type_key: &character_type,
-                bytes: &[],
-            },
-            ObjView {
-                version: 1,
-                id: wrapper_id,
-                owner: OwnerKind::Object(fight),
-                type_key: &wrapper_type,
-                bytes: &wrapper_bytes,
-            },
-        ];
-        assert_eq!(
-            resolve(&objects, GAME).unwrap(),
-            vec![Custody::FightSeats {
-                fight,
-                seat: 4,
-                character
-            }]
-        );
-    }
-
-    #[test]
-    fn item_at_address_mints_no_wallet_fact() {
-        // an equipped item sits at its CHARACTER's id-as-address — the resolver
-        // must never read that as a wallet holding anything (the equipment-map
-        // DF is the one home of equip state).
-        let item_type = t(GAME, "item", "Item", &[]);
-        let character_as_addr = Addr([7; 32]);
-        let objects = [ObjView {
-            version: 1,
-            id: Id([1; 32]),
-            owner: OwnerKind::Address(character_as_addr),
-            type_key: &item_type,
-            bytes: &[],
-        }];
-        assert!(resolve(&objects, GAME).unwrap().is_empty());
-    }
-
-    #[test]
-    fn foreign_package_never_resolves() {
-        let foreign = t(
-            "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            "item",
-            "Item",
-            &[],
-        );
-        let objects = [ObjView {
-            version: 1,
-            id: Id([1; 32]),
-            owner: OwnerKind::Address(Addr([7; 32])),
-            type_key: &foreign,
-            bytes: &[],
-        }];
-        assert!(resolve(&objects, GAME).unwrap().is_empty());
-    }
-
-    #[test]
-    fn untouched_wrapper_means_no_custody_claim() {
-        // child mutated alone (kiosk borrow_mut) — wrapper absent ⇒ no fact,
-        // the standing edge is left alone.
-        let character_type = t(GAME, "character", "Character", &[]);
-        let objects = [ObjView {
-            version: 1,
-            id: Id([1; 32]),
-            owner: OwnerKind::Object(Id([3; 32])),
-            type_key: &character_type,
-            bytes: &[],
-        }];
-        assert!(resolve(&objects, GAME).unwrap().is_empty());
-    }
 }

@@ -11,10 +11,10 @@ import {
   type CharacteristicValues,
 } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
+import { character_max_hp, projected_hp } from '@aresrpg/protocol/character-stats'
 
 import { localized_error } from '../i18n/error_text.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
-import { character_max_hp, projected_hp } from '../game/character_stats.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -84,7 +84,7 @@ export function useStats({
     const pending = toast.loading(t('stats.tx_pending'))
     void transaction
       .then(() => {
-        dispatch_app({ type: 'character/stats_raised', character_id: character.id, spending })
+        dispatch_app({ type: 'character/stats_raised', character_id: character.id, spending, before: current })
         set_alloc(empty_allocation())
         pending.success(t('stats.tx_success'))
       })

@@ -45,7 +45,7 @@ export const is_indexer_channel = (channel: string): boolean => channel.startsWi
 
 // ╔════════════════ [ 1b. The SERVER mesh (published by server pods, never stored) ] ═ ]
 
-/** Channels the server itself publishes on — OFF-CHAIN ephemera ONLY (owner 2026-08-12):
+/** Channels the server itself publishes on, off-chain ephemera only:
  *  presence, chat, live fight-turn intents. On-chain facts are never re-broadcast; they ride
  *  the indexer's evt:* channels above. */
 export const mesh = {
@@ -53,7 +53,6 @@ export const mesh = {
   presence_owner: (address: string) => `presence:owner:${address}`,
   presence_reply: (session: string) => `presence:reply:${session}`,
   pos: (world: string, zx: number, zz: number) => `pos:${world}:${zx}:${zz}`,
-  /** one world's chat — everyone standing there hears it (owner 2026-08-12) */
   chat_world: (world: string) => `chat:world:${world}`,
   chat_party: (party: string) => `chat:party:${party}`,
   /** whispers (and only whispers) land on the target's own door */
@@ -64,7 +63,7 @@ export const mesh = {
   agent_status: (address: string) => `agent:status:${address}`,
   /** an owner's pod asks the pod holding that bot's socket for its current status */
   agent_status_wanted: (address: string) => `agent:status_wanted:${address}`,
-  /** cluster-wide connect beacon — cross-pod duplicate eviction (legacy player_connect) */
+  /** Cluster-wide connect beacon: a seat on another pod evicts its duplicate. */
   player_connect: 'player_connect',
 } as const
 

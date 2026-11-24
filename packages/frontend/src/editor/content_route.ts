@@ -3,18 +3,16 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-import { dispatch_app } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
 import { content_row_classe, row_address } from './content_list.ts'
 import { spell_editor_hash, spell_editor_route } from './content_route_model.ts'
 import type { SeedDomain, SeedEntityRow } from './seed_editor.ts'
 
-const replace_hash = (hash: string): void => {
-  if (typeof globalThis.history !== 'undefined') globalThis.history.replaceState(null, '', hash)
-}
+const replace_hash = (hash: string): void => dispatch_app({ type: 'location/open', href: hash, replace: true })
 
 export const useContentEditorRoute = (domain: SeedDomain, entity_id: string | null, rows: readonly SeedEntityRow[]) => {
-  const hash = typeof globalThis.location === 'undefined' ? '' : globalThis.location.hash
+  const hash = useAppStore((state) => state.location.hash)
   const route = useMemo(() => spell_editor_route(hash), [hash])
   const [spell_classe, set_spell_classe] = useState<string | null>(route?.classe ?? null)
 

@@ -99,17 +99,17 @@
   font-size: 14px;
   font-weight: 700;
 }
+/* A provider card's box while the owner check runs. */
+.agent-provider-wait {
+  height: 128px;
+  border-radius: 7px;
+}
 .agent-provider-card[aria-pressed='true'] span {
   color: var(--aui-brass-hi);
 }
 .agent-setup .agent-connect {
   width: 100%;
   min-height: 44px;
-}
-.agent-setup-status {
-  margin: 12px 0;
-  color: var(--aui-muted);
-  text-align: center;
 }
 .agent-setup-details {
   font-size: 12px;
@@ -164,15 +164,6 @@
   color: var(--aui-ink);
   font: inherit;
   line-height: 1.65;
-}
-.agent-character-send {
-  display: grid;
-  gap: 16px;
-}
-.agent-character-id {
-  font-size: 10px;
-  color: var(--aui-muted);
-  overflow-wrap: anywhere;
 }
 .agent-connect {
   min-height: 44px;

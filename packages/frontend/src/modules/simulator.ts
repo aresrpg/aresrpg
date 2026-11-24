@@ -53,7 +53,6 @@ export type SimulatorInput =
       name: string
       male: boolean
     }>
-  | Readonly<{ type: 'simulator/character_saved'; character: SimulatorCharacter }>
   | Readonly<{ type: 'simulator/character_removed'; character_id: string }>
   | Readonly<{ type: 'simulator/character_named'; character_id: string; name: string }>
   | Readonly<{ type: 'simulator/character_class_set'; character_id: string; classe: string }>
@@ -130,7 +129,7 @@ export const spell_point_cost = (level: number): number => (level * (level - 1))
 export const spell_budget = (level: number): number => level - 1
 const equipment_slots = new Set<string>(character_equipment_slots)
 
-export const valid_simulator_character = (character: Readonly<SimulatorCharacter>): boolean => {
+const valid_simulator_character = (character: Readonly<SimulatorCharacter>): boolean => {
   const stats = CHARACTER_STATS.map((stat) => character[stat])
   const spell_levels = Object.values(character.spell_levels)
   const classe = is_class_name(character.classe) ? character.classe : null
@@ -309,7 +308,6 @@ const clean_name = (name: string, fallback: string): string => {
   return trimmed || fallback
 }
 
-/* eslint-disable complexity -- one exhaustive pure reducer owns every simulator input. */
 export const reduce_simulator_state = (
   state: Readonly<SimulatorState>,
   input: Readonly<SimulatorInput>
@@ -352,25 +350,6 @@ export const reduce_simulator_state = (
       loadout: Object.freeze({}),
     })
     return Object.freeze({ ...state, characters: Object.freeze([...state.characters, character]) })
-  }
-  if (input.type === 'simulator/character_saved') {
-    if (!valid_simulator_character(input.character)) return state
-    const character = Object.freeze({
-      ...input.character,
-      name: input.character.name.trim(),
-      colors: Object.freeze([...input.character.colors]) as readonly [string, string, string],
-      spell_levels: Object.freeze({ ...input.character.spell_levels }),
-      loadout: Object.freeze({ ...input.character.loadout }),
-    })
-    const existing = state.characters.some(({ id }) => id === character.id)
-    return Object.freeze({
-      ...state,
-      characters: Object.freeze(
-        existing
-          ? state.characters.map((candidate) => (candidate.id === character.id ? character : candidate))
-          : [...state.characters, character]
-      ),
-    })
   }
   if (input.type === 'simulator/character_removed')
     return Object.freeze({
@@ -496,7 +475,6 @@ export const reduce_simulator_state = (
   }
   return state
 }
-/* eslint-enable complexity */
 
 export const can_start_simulator_fight = (state: Readonly<SimulatorState>): boolean =>
   Object.keys(state.character_placements).length > 0 && Object.keys(state.mob_placements).length > 0
@@ -523,4 +501,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   })
 }
 
-export default Object.freeze({ name: 'simulator', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'simulator',
+  initial: () => ({ simulator: initial_simulator_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

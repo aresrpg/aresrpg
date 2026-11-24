@@ -21,6 +21,8 @@ export type ContractArtifact = Readonly<{
     | 'aresrpg_seed'
     | 'aresrpg_kares'
     | 'aresrpg_rewards'
+    | 'aresrpg_currency'
+    | 'aresrpg_currency_lp'
     | 'kares_test_token'
     | 'aresrpg'
   digest: readonly number[]
@@ -28,7 +30,7 @@ export type ContractArtifact = Readonly<{
   dependencies: readonly string[]
 }>
 
-type DeploymentReceipt = Receipt &
+export type DeploymentReceipt = Receipt &
   Readonly<{
     Transaction?: NonNullable<Receipt['Transaction']> & Readonly<{ objectTypes?: Readonly<Record<string, string>> }>
   }>

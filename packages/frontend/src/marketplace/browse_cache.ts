@@ -10,12 +10,10 @@ type BrowseState = Readonly<{
   recent_pages: readonly RecentOfferPage[]
 }>
 
-export const market_query_key = (query: MarketQuery): string => {
+export const market_query_key = (query: MarketQuery | Readonly<{ kind: 'types' }>): string => {
   switch (query.kind) {
-    case 'overview':
-      return 'overview'
     case 'types':
-      return JSON.stringify(['types', query.category])
+      return 'types'
     case 'offers':
       return JSON.stringify(['offers', query.category, query.item_type, query.cursor ?? ''])
     case 'characters':

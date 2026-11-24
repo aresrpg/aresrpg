@@ -23,23 +23,18 @@ quality: 画质
 low: 低
 medium: 中
 high: 高
-identity_connected: 身份已连接
 sign_in_to_play: 登录开始游戏
 loading_universe: 正在加载宇宙
 continue_google: 使用Google继续
 wallet_session_ended: 钱包会话已结束。请重新登录。
 connect_wallet: 连接钱包
 no_wallet: 未安装兼容钱包
-sign_in: 登录开始游戏
 drag_hint: 拖动平移 · 滚动缩放
 navigation: 导航
 world: 世界
 characters: 角色
-leaderboard: 排行榜
 mastery: 精通
 encyclopedia: 百科
-marketplace: 市场
-airdrop: 空投
 kolizeum: 竞技场
 settings: 设置
 admin: 管理
@@ -47,7 +42,6 @@ online: 在线
 account: 账户
 join_discord: 加入Discord
 join_telegram: 加入Telegram
-sui_universe: Sui宇宙
 server_disconnected: 已断开
 server_connecting: 正在连接
 server_reconnecting: 正在重新连接
@@ -56,14 +50,13 @@ server_connected: 已连接
 server_violation: 已断开：违反规则。即将重试。
 server_replaced: 已在其他位置连接
 session_replaced_title: 账户已在其他位置登录
-session_replaced_body: '你的账户已在另一个窗口连接：3D 游戏或网页应用。同一时间只能连接一个窗口，因此此窗口已断开。在此重新连接即可使用此窗口。'
+session_replaced_body: '你的账户已在另一个标签页或另一台设备上连接到游戏。同一时间只能连接一个窗口，因此此窗口已断开。在此重新连接即可使用此窗口。'
 session_replaced_reconnect: 在此重新连接
 latency_unit: 毫秒
 indexing_health: 索引状态
 online_accounts: 在线账号
 online_characters: 在线角色
 online_characters_body: 所有世界，包括战斗和地下城。
-indexing_lag_warning: 游戏操作可能出现延迟
 indexing_block_title: 正在同步世界
 indexing_block_body: 区块链历史仍在建立索引。当服务器进入安全的实时范围后，游戏会自动解锁。
 indexing_block_progress: 进度
@@ -79,7 +72,6 @@ fight_path_changed_toast: 移动提交前棋盘已发生变化。回合已恢复
 party_member_unavailable_toast: 该角色已加入队伍。
 fight_turn_already_forced_toast: 已有其他人强制结束此回合。
 fight_placement_unavailable_toast: 该起始格不可用。请选择其他空格。
-network_testnet: 测试网
 welcome_title: 欢迎来到AresRPG
 welcome_body: AresRPG是一款完全链上的MMORPG，经济由玩家驱动。创建首个角色，进入世界并挑战怪物。
 welcome_need_sui: '创建首个角色需要{{price}}。请在钱包中至少保留{{fee}}用于交易手续费。在下方充值即可开始。'
@@ -108,13 +100,7 @@ wallet_send: 发送
 wallet_add_funds: 充值
 wallet_gas_spent: 已用Gas（24小时）
 wallet_disconnect: 断开连接
-wallet_fund_body: 向此钱包地址发送SUI。返回应用时余额会刷新。
-wallet_send_title: 发送SUI
 wallet_recipient: 收款地址
-wallet_amount: 数量（SUI）
-wallet_send_pending: 正在发送SUI…
-wallet_send_success: SUI已发送
-wallet_send_failed: SUI转账失败
 wallet_close: 关闭
 kolizeum_page:
   title: 竞技场 — 战争桌
@@ -158,13 +144,10 @@ friends_panel:
   title: 好友
   observed: 附近可见
   unseen: 当前不可见
-  none_observed: 附近没有可见好友
   empty: 暂无好友
   placeholder: 名字、SuiNS或0x地址
   add: 添加好友
   remove: 移除
-  remove_title: 移除好友
-  remove_body: 将{{name}}从好友列表中移除？
   error_no_suins: 没有与{{name}}匹配的SuiNS地址。
   error_target: 请输入角色名、SuiNS名称或完整Sui地址。
   error_self: 不能添加自己。
@@ -181,7 +164,6 @@ party_panel:
   disband: 解散
   kick: 移出
   rescind: 取消邀请
-  invite_owned: 邀请自己的角色
   follow_leader: 跟随队长
   run_to_position: 跑向位置
   run_to_started: 你正在跑向{{name}}最后的链上位置，该位置可能并非其实时位置。
@@ -249,7 +231,6 @@ world_hud:
   fight_press_join_touch: '轻点以加入'
   fight_press_spectate_touch: '轻点以观战'
   dungeon_talk_touch: '轻点以交谈'
-  character_options_touch: '轻点以选择操作'
   spawn_welcome: '欢迎，冒险者！本游戏正处于抢先体验阶段，努力生存，享受这段冒险吧。'
   compass_label: 指南针
   zone: 区域
@@ -279,7 +260,6 @@ world_hud:
   portal_prompt: 按{{key}}前往其他世界
   dungeon_portal: 地下城传送门
   dungeon_city: '{{city}}城'
-  dungeon_press_enter: 进入
   dungeon_talk: '交谈'
   dungeon_guard_requires_key: '没有{{key}}，我不能让你通过。'
   dungeon_entry_body: 使用地下城钥匙进入此传送门的私人准备大厅。
@@ -311,12 +291,9 @@ world_hud:
   dungeon_key_required: 进入此地下城需要{{key}}。
   dungeon_group_refusal: 此战斗仅限发起者的队伍。
   travel_title: 星门
-  travel_search: 搜索{{title}}…
   travel_entry_level: 进入等级{{level}}
   travel_pending: 正在开启星门…
   travel_success: 欢迎来到{{world}}
-  travel_empty: 没有世界
-  travel_showing: '{{filtered}} / {{total}}项结果'
   travel_selected: 已选择 · {{label}}
   fight_press_join: 按{{key}}加入
   fight_press_spectate: 按{{key}}观战
@@ -366,10 +343,8 @@ world_hud:
   resource_gathered: 资源已采集
   resource_gathered_amount: 已采集{{quantity}} × {{name}}
   resource_gathered_amount_ambushed: 已采集{{quantity}} × {{name}} · 守护者伏击了你
-  resource_ambushed: 守护者伏击了你
   resource_resolving_ambush: 守护者挡住了去路…
   resource_ambush_title: 守护者伏击
-  resource_face_protector: 按{{key}}迎战
   zone_never_arrived: 探索已执行，但世界未显示结果，读取层可能仍有延迟
 demo_page:
   animation_loop: 循环播放动画
@@ -489,16 +464,6 @@ marketplace_page:
   volume_unavailable: 交易量暂时不可用。
   title: 市场
   subtitle: Sui上的玩家挂单
-  disclaimer_kicker: 交易之前
-  disclaimer_title: 为成长而交易，而非获利
-  disclaimer_body: 玩家之间直接使用SUI交易物品。
-  disclaimer_supply: 物品不是长期投资。随着更多玩家收集物品，供应增加，价格可能下降。
-  disclaimer_fun: 根据成长需求买卖，追求乐趣和实用性，不要期待利润。
-  disclaimer_wallet: 仅在AresRPG中保留计划使用的SUI。重要储蓄应放在独立的自托管钱包中，恢复密钥由你掌控。
-  disclaimer_acknowledge: 我明白了
-  tab_buy: 购买
-  tab_sell: 出售
-  tab_history: 历史
   browse: 浏览
   group_equipment: 装备
   group_pets: 宠物
@@ -506,13 +471,20 @@ marketplace_page:
   group_consumable: 消耗品
   group_resources: 资源
   group_characters: 角色
-  level: 等级
-  class: 职业
   search: 搜索物品…
   no_results: 这里暂无挂单
-  select_item: 选择物品查看挂单
+  group_empty: '该分类暂无挂单'
+  featured: '精选'
+  rarest: '市场上最稀有'
+  rarest_on_sale: '仅有 {{count}} 件在售。'
+  view_offers: '查看在售'
+  see_all: '查看全部'
+  results_for: '“{{query}}”的搜索结果'
+  change_24h: '24小时'
+  change_hint: '最近一个完整日与前一日相比'
+  listed: '在售'
+  cheapest_offers: '最低价在售'
   listing_count: '{{count}}个挂单'
-  rolled_stats: 随机属性
   characteristics: 属性
   damages: 伤害
   range_to: 至
@@ -526,15 +498,11 @@ marketplace_page:
   no_listings: 你没有有效挂单
   withdraw: 下架
   list_for_sale: 上架出售
-  select_to_list: 从背包选择物品
   price: 价格
   lot_size: 每组数量
   paid_automatically: 销售收入会自动进入你的售货亭。
-  lot_required: 此堆叠数量为×{{amount}}。可堆叠物品的挂单数量必须为×1、×10、×100或×1000。
-  inventory: 背包
   characters: 角色
   items: 物品
-  empty_inventory: 没有可上架物品
   revenue_30d: 过去30天
   sales_count: '{{count}}次销售'
   unclaimed: 未领取收入
@@ -579,32 +547,20 @@ mastery_page:
   world_reward: +{{points}}点
   shop_title: 精通商店
   shop_lead: 使用精通点购买独特战利品箱。
+  shop_line: 用点数购买战利品箱
+  quest_in_game: 在游戏中开始每日任务
   shop_empty: 暂无精通商品出售
-  ready_to_buy: 可以购买
   points_missing: 还差{{points}}点
-  buying: 正在购买…
   buy: 购买 · {{cost}}点
   quest_started: 每日任务已分配。
   offer_purchased: 已购买精通奖励。
 airdrop_page:
-  crew_view_sale: '查看 KARES 发售'
-  crew_dialogue:
-    intro: '参加 KARES 代币发售吧，我会为你准备一份礼物。'
-    connect: '连接你参与发售时使用的钱包，看看礼物到了没有。'
-    checking: '让我看看你的礼物……'
-    ready: '你的 Crew 头盔到了！'
-    claiming: '稍等，正在领取你的礼物。'
-    claimed: 'Crew 头盔已经交给你啦。戴上它吧！'
-    empty: '这个钱包目前没有可领取的 Crew 头盔。可能已经领过，也可能还在等待发放。'
-    unavailable: '没能查到你的礼物，请再试一次。'
   reward_title: '你收到了礼物！'
   reward_received: '你收到了{items}！'
   reward_needs_sui: '礼物已安全存入你的钱包。请充值少量 SUI 支付领取交易的手续费，然后领取奖励。'
   reward_complete: '奖励已存入你的背包。'
   reward_redeeming: '礼物已到账，正在添加到背包…'
   reward_held: '礼物已在你的钱包中。领取后，奖励将添加到背包。'
-  reward_used_title: '卡片已被领取'
-  reward_used_body: '此卡片已被领取或已失效。每张卡片只能使用一次。'
   reward_continue: '继续'
   reward_item: '礼物'
   destination: 游戏钱包：
@@ -615,16 +571,8 @@ airdrop_page:
   holder_title: 外部钱包
   holder_connect_hint: 连接持有礼品卡的钱包
   holder_connect: 连接钱包
-  holder_connecting: 正在连接…
-  holder_connected: 已连接
-  holder_select: 选择
-  holder_close: 关闭钱包选择
-  holder_wallet_missing: 未安装兼容的Sui钱包
   giftcards_title: 待兑换礼品卡
   gift_login: 使用Google继续，将此礼物领取到游戏钱包
-  gift_ready: 纸质礼品卡已可领取
-  gift_claiming: 正在领取纸质礼品卡…
-  gift_retry: 领取礼品卡
   redeem: 兑换
   empty: 此钱包中没有礼品卡
   claim_all: 领取奖励
@@ -667,6 +615,15 @@ airdrop_page:
     title_enforcer:
       title: 'Enforcer Machin'
       description: '符合条件的Enforcer Machin持有者可获得“执法者”称号。'
+    act_operator:
+      title: 'ACT'
+      description: '为快照时持有 ACT Airdrop Transponder 的玩家准备的特工称号与身体。每个钱包一份，Vesper、Dusk 或 Blood Ivory 三选一。'
+    act_warlords:
+      title: 'ACT 战争领主'
+      description: '为 ACT 排行榜选出的玩家准备的 ACT 空投箱。打开可获得一顶 Helios Warlord 头盔。'
+    nogas_presale:
+      title: 'Nogas'
+      description: '为所有参与 Blast 上 NOGAS 预售的钱包准备的扁青蛙披风。请查看你参与预售时使用的钱包。'
     blast_crew:
       title: 'Crew 头盔'
       description: '送给 Blast 上 KARES 发售参与者的外观礼物。发放后，请连接参与时使用的钱包。'
@@ -820,41 +777,18 @@ admin_page:
   inspecting: 正在检查…
   plan: 种子计划
   targets: 确定性目标
-  not_inspected: 添加已发布对象ID，然后检查计划。
   execute: 执行
   executing: 正在执行…
-  seal_title: 永久封存
-  seal_body: 封存后将移除所有未来内容写入入口，升级或管理权限也无法撤销。
-  arm_seal: 准备永久封存
-  seal_forever: 永久封存内容
-  sealed: 内容已封存
-  admin_wallet: 管理钱包
-  admin_wallet_body: 用于发布和市场提现的独立签名者。
-  connect_admin_wallet: 连接
-  choose_admin_wallet: 选择钱包
-  choose_admin_address: 选择地址
-  cancel_wallet_selection: 取消
-  wallet_account: 账户
   select_wallet: 选择
   connecting: 正在连接…
-  loading_wallets: 正在加载钱包…
-  no_admin_wallet: 未安装兼容的浏览器钱包。
   royalties: 版税
-  cap_owned: 持有权限凭证
-  cap_missing: 缺少权限凭证
-  reading_royalties: 正在读取策略…
   reading: 正在读取…
-  refresh_revenue: 刷新收入
   claiming: 正在领取…
-  disconnect_admin_wallet: 断开连接
-  claim_digest: 领取交易
   range_24h: 24小时
   range_7d: 7天
   range_30d: 30天
   range_90d: 90天
   range_1y: 1年
-  overview_title: 概览
-  overview_body: 专注玩家活跃度和收入，排除多余控制信息。
   overview_unavailable: 概览不可用
   loading_overview: 正在加载概览…
   all_systems_current: 所有系统已同步
@@ -864,15 +798,15 @@ admin_page:
   active_players: 活跃玩家
   active_players_bucket: 每个区间的活跃玩家
   daily_active: 日活玩家
-  active_interval: 每个区间的活跃数
   active_30d: 30天活跃玩家
   active_last_30d: 过去30天内活跃
   player_activity: 玩家活跃度
   population: 玩家规模
   player_activity_body: 每日活跃与滚动30天覆盖人数
-  stickiness: 日活/30天活跃
   online_players: 在线玩家
-  online_players_body: 每个区间中已验证唯一玩家的峰值
+  online_players_body: '每个时段同时在线的玩家峰值和托管机器人峰值'
+  players: 玩家
+  hosted_bots: 托管机器人
   online_now: 在线玩家
   online_split: 在线构成
   online_split_detail: '玩家 · 托管机器人'
@@ -891,12 +825,7 @@ admin_page:
   game_transactions_over_time: 交易走势
   game_transactions_body: 成功的AresRPG交易，每个PTB只计一次
   today: 今天
-  selected_period: 选定周期
   lifetime: 累计
-  average_order: 平均订单
-  chart_revenue: 收入
-  chart_players: 玩家
-  chart_online: 在线
   bucket_15m: 15分钟区间
   bucket_hour: 小时区间
   bucket_day: 每日区间
@@ -923,8 +852,6 @@ admin_page:
   when: 时间
   transaction: 交易
   treasury: 金库
-  treasury_body: 当前余额，与已赚取收入分开
-  available_balance: 可用余额
   claim: 领取
   close: 关闭
   loading: 正在加载…
@@ -964,22 +891,17 @@ simulator_page:
   class_ikari_title: 狂战士
   class_shusen_title: 斗士
   delete_character: 删除角色
-  assigned_cell: 已分配 · 格子{cell}
   pick_character: 选择角色
   pick_mob: 选择怪物
-  character_editor: 本地角色
-  character_editor_hint: 身份、外观、等级、属性与已解锁技能
   character_level: 角色等级
   character_stats: 已分配属性
   character_spells: 技能等级
   stat_points: 剩余{points}属性点
   spell_points: 剩余{points}技能点
-  spell_unlock: '{level}级解锁'
   reset: 重置
   delete_confirm: 确认删除
   class_change_hint: 更换职业会重置基础属性和已投入的技能等级
   spells_unavailable: 当前等级尚未解锁技能
-  save_character: 保存角色
   equipment: 装备与遗物
   max_roll: 最大数值
   remove_mob: 移除怪物
@@ -1047,7 +969,6 @@ fight_hud:
   crank_button: 强制结束回合
   end_turn: 结束回合
   end_turn_queued: 结束回合已排队
-  reset_turn: 重置
   weapon_attack: 武器攻击
   bare_hands: 徒手
   log_fight_started: 战斗开始
@@ -1105,9 +1026,6 @@ fight_hud:
   result_enemies: 敌人
   result_victory: 胜利
   result_defeat: 失败
-  result_you: 你
-  result_fallen: 阵亡
-  result_survived: 存活
   result_collecting: 正在领取战利品…
   result_collecting_progress: 正在领取角色战利品 · {completed}/{total}
   result_collecting_complete: 所有角色战利品已领取 · {completed}/{total}
@@ -1124,7 +1042,6 @@ fight_hud:
   level_up_spell_points: 技能点
   level_up_new_spell: 解锁新技能
   level_up_new_worlds: 解锁新世界
-  level_up_worlds_note: 新的目的地现已开放
   level_up_allocate: 分配点数
   level_up_later: 稍后
 wallet_legacy:
@@ -1182,50 +1099,12 @@ wallet_legacy:
   funding_failed: '充值未能完成。'
   funding_pending: '转账处理中。请勿再次付款。'
   sui: SUI
-  how_to_get: 如何获取SUI
   your_address: 'SUI 地址'
   send_sui: '请通过 Sui 网络发送 SUI。点击复制。'
-  buy_directly: 直接购买
-  buy_with_card: 用信用卡购买SUI，直接发送到钱包。
-  buy_on_exchange: 在交易所购买
-  withdraw_to_wallet: 在交易所购买SUI，然后提取到上方钱包地址。
-  faq: 常见问题
-  wallet_description: 你的个人钱包，只有你能访问。存入SUI，用于网络费用和玩家市场交易。
-  moonpay_desc: 信用卡、Apple Pay、银行转账
-  transak_desc: 信用卡、银行转账，覆盖100多个国家
-  faq_what_is_sui: 什么是SUI？
-  faq_what_is_sui_answer: SUI是一种数字货币，类似数字现金。它运行于名为Sui区块链的快速安全网络。你使用少量SUI支付网络费用，也可在市场与其他玩家直接交易。
-  faq_why_sui: AresRPG为什么使用SUI？
-  faq_why_sui_answer: SUI是我们首选的支付方式。交易即时完成（不到1秒），费用不足一美分，无中间商费用。未来可能支持美元、欧元等传统货币，但这需要大量法律工作，并涉及我们尚未准备承担的高额费用和税务。
-  faq_legal: 这合法吗？
-  faq_legal_answer: 是的。在大多数国家，购买和持有加密货币是合法的。SUI是全球主要受监管交易所交易的合法数字资产。AresRPG将其用于网络费用和玩家市场交易。
-  faq_eula: 游戏条款允许吗？
-  faq_eula_answer: 是的。只要加密货币仅作为支付方式，不涉及NFT或投机性加密方案，就符合规定。许多大型游戏商店也支持加密货币支付。
-  faq_access: 谁能访问我的钱包？
-  faq_access_answer: 只有你。钱包通过Google登录和Sui的zkLogin技术创建。任何人，包括AresRPG团队，都不能访问或转移你的资金。此钱包仅用于AresRPG活动，请勿存入大额资金，只存入计划使用的金额。
-  faq_balance: 发送SUI后余额没有更新？
-  faq_balance_answer: 别担心，刷新可能暂时延迟。请确认发送到正确地址（可从上方复制）。若仍未显示，请在Discord联系团队并提供交易ID。
   add_funds: 充值
   testnet_faucet_title: 测试网SUI
   testnet_faucet_body: AresRPG正在Sui测试网上运行。测试网SUI免费且没有货币价值。请从官方Sui水龙头申请代币。
   testnet_faucet_action: 打开Sui水龙头
-  how_to_pay: 你想如何支付？
-  add_funds_desc: 选择支付方式，SUI将直接发送到钱包。
-  method_paypal: PayPal
-  method_paypal_desc: 使用PayPal账户支付
-  method_apple_pay: Apple Pay
-  method_apple_pay_desc: 使用Face ID/Touch ID支付
-  method_google_pay: Google Pay
-  method_google_pay_desc: 使用Google账户支付
-  method_bank: 银行转账
-  method_bank_desc: SEPA（欧盟）或ACH（美国）
-  paypal_note: 通过MoonPay支持美国、英国和欧洲大部分地区
-  card_note: 选择下方提供商，均支持Visa和Mastercard
-  bank_note: 费用最低（约1%）。欧洲使用SEPA，美国使用ACH。
-  steps_paypal: 1. 点击下方链接  2. 选择PayPal支付  3. 输入金额，SUI将进入钱包
-  steps_wallet: 向下方钱包地址发送SUI，几秒后即可到账。
-  advanced_exchange: 高级：在交易所购买
-  age_notice: 所有支付提供商均要求年满18岁。
   send:
     button: 发送
     title: 发送SUI
@@ -1256,17 +1135,12 @@ wallet_legacy:
     suins_resolving: 正在解析名称…
     suins_resolved: 名称已解析：{{name}}
     err:
-      recipient_not_found: 未找到名为{{name}}的玩家。
-      recipient_no_wallet: '{{name}}尚未在网页应用中关联钱包。请让其先在aresrpg.world连接。'
       self_send: 不能向自己的钱包发送SUI。
       invalid_address: 输入的地址不是有效Sui地址。
       insufficient_balance: 钱包中的SUI不足以完成此转账。
       rate_limited: 转账过于频繁。请等一分钟后重试。
       tx_failed: 链上交易失败，没有转移资金。
       user_rejected: 钱包中的签名被拒绝。
-      recipient_required: 发送前请输入收款人。
-      suins_not_found: 未找到SuiNS名称“{{name}}”。
-      amount_positive: 请输入大于0的数量。
       amount_invalid: 数量无效。
     drain_hint: 最大值会清空钱包，网络费用从转账金额中扣除。
     drain_warning: 此操作会清空钱包。网络费用从转账金额中支付，之后余额将恰好为0 SUI。
@@ -1286,7 +1160,6 @@ wallet_send_shared:
   total: 总计
   transaction: 交易
 encyclopedia_page:
-  tokenomics_tab: 代币经济
   world_locations: '地点'
   world_search_places: '搜索生态区、城市、怪物或资源…'
   world_entry: '进入等级 {{level}}'
@@ -1297,9 +1170,6 @@ encyclopedia_page:
   world_gatherables: '可采集资源'
   world_gather_level: '{{job}} · 职业等级 {{level}}'
   world_protector: '守护者'
-  minimum: 最低
-  maximum: 最大
-  terrain_seed: 地形种子
   sea_level: 海平面
   world_role:
     trash: 普通
@@ -1312,23 +1182,17 @@ encyclopedia_page:
     herbalist: 采药师
     miner: 矿工
   world_resource_tier: '{{tier}}阶'
-  world_address_copied: 已复制！
   search_items: 搜索物品…
   search_mobs: 搜索怪物…
   all_families: 所有家族
   elements_filter: 元素
-  advanced_filters: 高级筛选
-  no_entries: 未找到条目
   select_item: 选择物品查看详情
   select_mob: 选择怪物查看详情
   select_class: 选择职业查看详情
-  loading_details: 正在加载详情…
-  loading_encyclopedia: 正在加载百科…
   items: 物品
   mobs: 怪物
   pets: 宠物
   classes: 职业
-  gameplay_tab: 玩法
   jobs_tab: 专业
   search_jobs: 搜索专业…
   select_job: 选择专业
@@ -1352,42 +1216,26 @@ encyclopedia_page:
     HANDYMAN: 杂工制作工具、钥匙和中间材料。
     ALCHEMIST: 炼金术士制作药水和中间材料。
     BAKER: 面包师制作面包和中间材料。
-  dungeons_tab: 地下城
-  search_dungeons: 搜索地下城…
-  select_dungeon: 选择地下城
   dropped_by: 掉落来源
   recipe: 配方
   price_history: 价格历史
-  no_price_data: 暂无价格历史
-  no_recipe: 暂无配方数据
   ingredient_of: 用于制作
-  no_ingredient_of: 不用于任何配方
   no_drops: 没有已知掉落来源
-  pet_stats: 宠物属性
   pet_diet: 宠物食谱
-  food_sources: 食物来源
-  stat_bonuses_max: 属性加成（最大威力）
   characteristics: 属性
   damages: 伤害
   range_to: 至
   level_short: 等级{{level}}
   no_diet: 没有食谱信息
-  newborn: 初生
-  max_power: 最大威力
   back_to_list: 返回列表
   showing_mobs: 显示{{count}} / {{total}}只怪物
   no_mobs_match: 没有符合筛选条件的怪物
-  clear_all: 全部清除
-  all_jobs: 所有专业
   sort_name_asc: 名称A-Z
   level_bracket: 等级{{range}}
-  unknown_zone: 未知
   showing_count: 显示{{count}} / {{total}}
   sort_level_asc: 等级↑
   sort_level_desc: 等级↓
   sort_name: 名称A-Z
-  sort_newest: 最新
-  clear_filters: 全部清除
   no_results: 没有符合筛选条件的物品
   filter_by_category: 按类别
   filter_by_stat: 按属性
@@ -1395,30 +1243,14 @@ encyclopedia_page:
   filter_by_job: 按制作专业
   filter_by_world: 按世界
   filter_by_mob_family: 按怪物家族
-  filter_biome: 生物群系
-  filter_city: 城市
-  group_armor: 护甲
   group_weapons: 武器
-  group_accessories: 饰品
-  group_pets: 宠物
-  group_runes: 符文
-  group_relics: 遗物
-  group_tools: 工具
-  group_consumables: 消耗品
   group_raw_resources: 原始资源
   group_gatherable_resources: 可采集资源
   group_intermediary_resources: 中间材料
   group_pet_food_resources: 宠物食物
-  item_category_pet_food: 宠物食物
-  boss_only: 仅首领
   view_all: 全部
   item_type: 类型
-  view_by_zone: 按区域
   view_by_level: 按等级
-  view_by_family: 按家族
-  unknown_family: 未知家族
-  stats_filter: 属性
-  filter_life_steal: 吸血
   gameplay:
     game_mechanics: 游戏机制
     section_combat: 战斗
@@ -1573,13 +1405,8 @@ encyclopedia_page:
     chance_loot_desc: 获胜队伍的平均有效幸运（包括主动效果）会提高每项掉率。队伍平均幸运为600时，掉率翻倍，但不会超过100%。
     mob_loot_band: 怪物等级与掉率
     mob_loot_band_desc: 设定概率是中间值，在怪物等级段内从80%缩放至120%，最高100%。固定等级怪物使用原概率，掉落数量不随怪物等级变化。
-  unlocks_at_level: '{{level}}级解锁'
   level: 等级
-  aoe_radius: 作用半径
   effects: 效果
-  life_cost: 生命消耗
-  duration_short: 持续：{{duration}}秒
-  coming_soon: 即将推出
   health: 生命
   spells_count: 技能（{{count}}）
   mob_spells: 技能
@@ -1600,13 +1427,7 @@ encyclopedia_page:
   spell_n: 技能{{n}}
   range: 射程
   range_modifiability: 射程可变性
-  no_spells_minted: 链上尚未铸造技能
-  xp_suffix: +{{xp}}经验
-  boss_badge: 首领
-  archi_badge: 精英变种
-  recommended_short: 推荐{{level}}级
   level_range: 等级{{min}}–{{max}}
-  up_to_plus: 最多+{{val}}
   element:
     fire: 火
     water: 水
@@ -1628,23 +1449,13 @@ encyclopedia_page:
   characteristic_costs_desc: 基础点数遵循此职业的成长阶梯，装备不改变消耗。
   characteristic_cost_band: '{{cost}}点 → +{{gain}} · ≤{{cap}}'
   characteristic_cost_unlimited: '{{cost}}点 → +{{gain}} · 无上限'
-  turns_value: '{{n}}回合'
   targeting: 目标选择
-  effect_zone: 作用范围
   line_of_sight: 视线
-  los_required: 需要
-  los_not_required: 不需要
   target_cell: 目标格子
   target_cell_empty: 必须为空
-  target_cell_any: 任意（空或占用）
   cast_line: 施放方向
-  cast_line_straight: 仅直线
-  cast_line_free: 自由瞄准
   critical: 暴击
   crit_chance: 暴击概率
-  crit_chance_value: '{{n}}分之一'
-  on_crit: 暴击时
-  proc_chance: '{{n}}%概率'
   aoe_shape:
     point: 单体目标
     circle: 圆形{{size}}
@@ -1654,28 +1465,13 @@ encyclopedia_page:
     ring: 圆环{{size}}
     allmap: 整张棋盘
     cone: 锥形{{size}}
-  no_items_onchain: 链上没有物品模板
-  no_mobs_onchain: 链上没有生物
-  obtention_crafted: 可制作
-  obtention_dropped_by: 由{{count}}种怪物掉落
-  obtention_unknown: 获取方式未知
   total_supply: 总供应量
-  marketcap: 市值
-  marketcap_unknown: 未知
   worlds_tab: 世界
-  search_worlds: 搜索世界名称…
-  no_worlds: 链上没有世界
   select_world: 选择世界
-  world_level_unknown: 等级范围尚不可用
   world_biomes: 生物群系
-  world_no_mobs: 没有已知怪物
   world_cities: 城市
   world_no_resources: 没有已知资源
-  world_gap_note: RPC尚未提供
   world_dungeon: 地下城
-  world_dungeon_room: 房间{{n}}
-  world_stat_lean: 属性倾向
-  world_appears_in: 出现于：
   found_in: 发现于
   item_descriptions:
     abyssal_blood_wheat: ''
@@ -1819,7 +1615,6 @@ encyclopedia_page:
     wither_concentrate: ''
     wither_petal: ''
     witherbloom: ''
-out_of_sui_body: 你的SUI已不足以支付交易费用。请给钱包充值后继续游戏。
 characters_page:
   inventory_selection: 已选{{count}}件 · Shift点击装备切换选择
   crush_cta_count: 分解（{{count}}）
@@ -1853,7 +1648,6 @@ characters_page:
   level: 等级{{level}}
   experience: 经验
   equipment_head: 装备
-  equipped_totals: 装备总加成
   no_gear_equipped: 未装备物品
   bag_equipment: 装备
   bag_consumables: 消耗品
@@ -1881,29 +1675,21 @@ characters_page:
   refusal_item_listed: 此物品正在出售
   refusal_unavailable: '角色或物品已变化或当前不可用。请在空闲时重试。'
   points_to_assign: 待分配点数
-  spend_hint: 为六项属性分配点数，然后确认
   reset: 重置
   confirm: 确认
   tx_pending: 正在确认…
-  stats_pending: 正在分配点数…
-  stats_success: 点数已分配
   health: 生命
   action: 行动
   movement: 移动
   characteristics: 属性
   resistances: 抗性
   secondary: 次要属性
-  element_fire: 火
-  element_water: 水
-  element_earth: 地
-  element_air: 风
   add_point: 为{{stat}}增加一点
   remove_point: 从{{stat}}移除一点
   grimoire: 技能书
   spell_points: 技能点
   unlocked: 已解锁{{unlocked}} / {{total}}
   unlocks_at: '{{level}}级解锁'
-  unlock_line: 等级{{level}}
   lv_of: '{{current}} / {{max}}'
   locked: 已锁定
   mastered: 已精通
@@ -1942,7 +1728,6 @@ characters_page:
   no_runes: 背包中没有符文
   menu_feed: 喂养
   menu_consume: 使用
-  menu_crush: 分解
   menu_destroy: 销毁
   menu_view_recipes: 查看配方
   menu_explorer: 在浏览器中查看
@@ -1964,7 +1749,6 @@ characters_page:
   feed_unavailable: 此宠物已不可用。
   claim_success: 奖励已领取
   crush_title: 分解装备
-  crush_success: 装备已分解
   crush_result_title: 分解结果
   crush_result_empty: 下次好运。
   destroy_title: 销毁物品
@@ -1983,8 +1767,6 @@ characters_page:
     movement: 移动值
     action: 行动值
     range: 射程
-    critical_chance: 暴击概率
-    critical_outcomes: 暴击概率
     vitality: 体力
     wisdom: 智慧
     strength: 力量
@@ -1993,7 +1775,6 @@ characters_page:
     agility: 敏捷
     heal: 治疗
     critical_hit: 暴击
-    percent_damage: 伤害
     raw_damage: 固定伤害
     fire_resistance: 火系抗性
     water_resistance: 水系抗性
@@ -2006,7 +1787,6 @@ characters_page:
     level: 等级{{level}}
     adventurer: 冒险者
     points_to_assign: 待分配点数
-    spend_hint: 将点数分配到属性上
     reset: 重置
     health: 生命
     action: 行动
@@ -2034,7 +1814,6 @@ characters_page:
     point_cost: '{{cost}}点 → +{{gain}}'
     tx_success: 属性点已分配
   spells:
-    range_modifiable: 可调整射程
     no_character: 未选择角色
     select_prompt: 选择技能
     level: 等级{{level}}
@@ -2055,25 +1834,13 @@ characters_page:
     unlimited: 不限
     description: 描述
     effects: 效果
-    levels_head: 等级
     mastered: 已精通
     upgrade_success: '{{spell}}升级了！'
     upgrading: 正在升级…
     level_up_spell: 升级技能
     pts: '{{count}}点'
-    pts_one: '{{count}}点'
-    pts_other: '{{count}}点'
     requires_lv: 需要{{level}}级
     no_points: 没有点数
-    tag_self: 自身
-    tag_melee: 近战
-    tag_ranged: 远程
-    tag_zone: 范围
-    tag_line_of_sight: 视线
-    el_fire: 火
-    el_water: 水
-    el_earth: 地
-    el_air: 风
     buff: 增益
     utility: 辅助
     heal: 治疗
@@ -2081,13 +1848,10 @@ characters_page:
     element: 元素
     damage: 伤害
     turns: 回合
-    crit_val: 暴击{{value}}
-    range_fixed: 固定射程，不受射程加成影响
   jobs:
     level_up_title: 专业升级
     level_up_reached: 达到等级
     level_up_character: '{{name}}进步了'
-    level_up_progress: 等级{{before}} → {{after}}
     level_up_continue: 继续
     category:
       gathering: 采集
@@ -2106,13 +1870,10 @@ characters_page:
       yield: 产量
       xp: 经验
       unlocks_at: '{{name}}（{{level}}级解锁）'
-      gather_detail: '{{name}} · 采集{{gather}}秒 · 刷新{{respawn}}秒'
       locked: 未解锁
     lv_badge: 等级{{level}}
     tier_badge: '{{tier}}阶'
     craft:
-      recipe_head: 配方
-      recipe_not_seeded: 此配方尚不可用。
       ingredients_head: 材料
       requires_level: 需要{{job}}达到{{required}}级（当前{{level}}级）
       not_enough: 材料不足
@@ -2126,9 +1887,6 @@ characters_page:
       craft_result: 成功制作{{successes}} / {{attempts}}个{{name}}
       locked_level: 未解锁 · {{level}}级
     detail:
-      close_aria: 关闭物品详情
-      item_not_seeded: 此物品尚不可用。
-      tool_label: 工具
       crafts_label: 可制作{{covers}}
       xp_progress: '{{current}} / {{needed}}经验'
       gather_time: 采集时间：{{seconds}}秒
@@ -2423,7 +2181,6 @@ item_categories:
   weapon: 武器
   tool: 工具
   relic_slot: 遗物{{number}}
-kares: 质押
 kares_page:
   ledger_intro: '支撑AresRPG奖励、质押和宝箱的代币。仅发行一次，每次销毁都会减少供应量。'
   buy_aftermath: '在Aftermath购买'
@@ -2475,7 +2232,6 @@ kares_page:
   upgradeability_note: '奖励合约在项目最终冻结前仍可升级。新增代币铸造始终禁用。'
   claim_batch: '领取 {{total}} 个仓位中的 {{count}} 个'
   withdraw_batch: '每次最多提取 {{count}} 个仓位。重复操作可提取剩余质押。'
-  token_sale: '代币发售'
   locked_liquidity: '锁定流动性'
   stake_more: 增加质押
   additional_daily: 每日新增
@@ -2499,34 +2255,30 @@ kares_page:
   no_wallet: 安装Sui钱包即可参与。
   refresh: 刷新
   loading: 正在读取链上状态…
-  pending: 正在确认交易…
   confirmed: 交易已确认
   amount: 数量
   balance: 可用余额
   amount_invalid: 请输入正数，最多9位小数。
   insufficient: 金额超过可用余额。
-  gas_note: 请保留少量SUI支付交易费用。
   testnet: 测试网 · 仅测试资产
-  back_game: 探索AresRPG
-  staking_title: 你的质押，你的份额。
   your_stake: 你的质押
   claimable: 已累积奖励
   stake: 质押KARES
   withdraw: 提取质押
   claim_rewards: 领取奖励
   inactive: '奖励储备注资后开放质押。'
-  position: 仓位
   tokenomics: KARES代币经济
   tabs_label: 'KARES 栏目'
   tab_tokenomics: '代币经济'
   tab_staking: '质押'
-  signin_title: '登录后质押'
-  signin_body: '质押使用你的游戏账户。使用 Google 登录即可查看你的质押并领取奖励。'
+  staking_line: '赚取 KARES 和 SUI'
+  tokenomics_line: '供应、销毁与奖励池'
+  signin_body: '此部分使用你的游戏账户。使用 Google 登录即可打开。'
   community: 'PvP 竞赛与赛季排行榜'
   team: 团队分配
   five_years: 社区质押奖励
   mastery_title: '宝箱'
-  mastery_note: '在游戏中使用KARES购买宝箱。KARES在购买时永久销毁，而非开箱时。'
+  mastery_note: '在质押页面的精通板块使用KARES购买宝箱。KARES在购买时永久销毁，而非开箱时。'
   rewards_note: '质押奖励在 1,825 个活跃日内释放。任何人都可捐赠 KARES 或 SUI，从下一个活跃日边界起在 30 个活跃日内分配，不延长旧计划。捐赠不可撤回。无人质押时计时暂停；已获得的奖励仍可领取。'
   revenue_note: 市场已收取版税的20%用于SUI质押奖励。奖励随收入和参与质押量变化。
   points: 精通点
@@ -2536,10 +2288,8 @@ kares_page:
   community_detail: '该储备为 PvP 竞赛和赛季排行榜奖励提供资金。国库手动分配已解锁的代币。'
   supply_detail: '仅发行一次，不再增发。销毁代币会减少供应量。'
   emissions_detail: '所有奖励均使用已有代币。发放奖励不会增发代币。'
-  confirmed_refresh: 交易已确认。请刷新以加载最新余额。
   staking_unavailable: 此网络尚未开放质押。
   combat_rewards: 首领奖励
-  combat_detail: '首领等级决定一笔奖励，由获胜角色平均分配。从设置时刻起计算，每日上限为 {{cap}} KARES。每个纪元的活跃度会调整奖励金额。闲置日期的额度不会结转，捐赠可延长储备寿命。'
   error_generic: 无法完成此操作。
   error_rejected: 请求已取消。
   error_funds: 资金不足以支付此操作及其费用。
@@ -2568,7 +2318,6 @@ leaderboard_page:
   feeding: 宠物喂养
   gathering: 采集
   category: 类别
-  loading: 正在加载…
   user: 用户
   score: 分数
   you: 你
@@ -2755,11 +2504,13 @@ title_names:
   title_fudbuster: 'FUD克星'
   title_pug_paladin: '巴哥圣骑士'
   title_enforcer: '执法者'
+  title_operator_vesper: 'Vesper特工'
+  title_operator_dusk: 'Dusk特工'
+  title_operator_blood_ivory: 'Blood Ivory特工'
 ui:
   view_on_suivision: 在 SuiVision 上查看
   funding_game_wallet: 游戏钱包
   funding_external_wallet: 其他钱包
-  agent_wallet: '代理钱包'
   wallet_tabs: '钱包'
   wallet_game: '游戏'
   wallet_bot: '机器人'
@@ -2794,8 +2545,9 @@ ui:
   agent_needs_sui: '你的代理需要一些 SUI 才能游玩。充值后，请重试操作。'
   agent_funding_unverified: '无法验证收款方。请先刷新召回，再添加资金。'
   agent_watch: '观看智能体'
+  agent_recall: '召回'
+  agent_transfer_unavailable: '转移前，请卸下该角色的装备并结束其战斗。'
   agent_watching: '正在观看智能体'
-  agent_watch_empty: '没有可观看的角色。'
   agent_watch_failed: '无法观看此智能体。请重试。'
   portrait_backdrop: '背景'
   portrait_transparent: '透明'
@@ -2814,21 +2566,13 @@ ui:
   portrait_failed: '无法加载肖像或复制链接。你可以选择下方链接。'
   portrait_close: '关闭'
   portrait_preview: '角色肖像'
-  agent_asset_proceeds: '售货亭销售收益'
-  agent_asset_collect: '收取到多签'
-  agent_asset_delist: '取消上架'
   agent_asset_reserved: '专属报价 · 需要 PurchaseCap'
   agent_asset_unconfigured: '此部署尚未配置'
-  agent_asset_fee_budget: 'Gas 预算上限'
   agent_label: '代理'
   agent_kiosk_badge: '货亭'
   agent_kiosk: '代理货亭'
-  agent_coin_direct: '代币通过一笔交易直接转账，由发送方支付燃气费。'
   agent_pair_for_deposit: '存入前请验证代理的持久签名方。'
-  agent_inventory_connect: '验证代理的完整地址后即可使用其物品栏。'
   agent_transfer_interrupted: '继续之前需要你确认上一次转移尝试。'
-  agent_transfer_sender: '发送方'
-  agent_source_balance: '发送方余额'
   agent_inventory: '智能体物品栏'
   agent_asset_available: '可用'
   agent_asset_listed: '已上架 · 请先取消上架'
@@ -2836,32 +2580,12 @@ ui:
   agent_asset_sui: 'SUI 数量'
   agent_asset_kares: 'KARES 数量'
   agent_asset_reserve: '手续费后保留的 SUI'
-  agent_asset_positions: '已质押 KARES'
-  agent_asset_unstake: '提取到多签'
-  agent_asset_owned: '其他自有对象（只读）'
-  agent_asset_incoming: '待领取物品'
-  agent_asset_scope: '请选择具体物品和代币数量。选中的堆叠将整组转移。装备会先卸下，上架物品须先取消上架。先提取质押的 KARES 并刷新，再选择转移数量。请为后续召回保留 SUI。其他对象类型只读；战斗须先结算。'
-  agent_setup_prompt: '请按照 {guide}，使用此私密临时链接设置我的 AresRPG 智能体：{url}。自动返回公开证明。此设置不授权资产转移或游戏操作。'
   agent_cancel: '取消'
   agent_pair_connect: '连接'
-  agent_setup_request: '设置请求'
-  agent_pair_failed_title: '无法连接'
-  agent_pair_pending: '正在等待你的助手…'
-  agent_pair_failed: '设置已过期或无法完成。请重新连接。'
-  agent_pair_verified: '智能体密钥已验证。这不代表服务器认证或角色托管已完成。'
-  agent_environment: '请选择具有持久智能体运行环境的助手，例如 ChatGPT dots 或 Grok Bot。'
-  agent_pair_ephemeral: '仅验证公钥。智能体进程退出时，此临时密钥将丢失。切勿向此身份发送资产。'
-  agent_pair_instructions: '将此请求发送给助手。结果会自动显示在这里。'
-  agent_pair_blocked: '此钱包未提供用于配对的 Google 公开标识符。请通过 Google 连接以创建公开请求。'
   agent_copy_request: '复制连接网址'
   agent_copy_failed: '复制失败。请选中上方请求并手动复制。'
-  agent_handoff_request: '请按照 {{url}} 为 {{provider}} 准备 Connect Your Agent。报告缺失的签名配置，必要时请求临时设置链接。此请求不授权创建凭据、转移资产或游戏操作。'
   agent_connect_your: '连接你的智能体'
-  agent_page_body: '让 AI 助手替你操控英雄。它使用自己的机器人钱包（多签）游玩，你的 Google 账户随时可以取回其中的资产。'
   agent_page_signin: '使用 Google 登录以设置你的代理及其机器人钱包。'
-  agent_page_world: '打开 3D 世界'
-  agent_bootstrap: '打开设置说明'
-  agent_character_offer_hint: '此操作会发送一份要约。智能体需另行领取角色。适用正常费用。'
   agent_connected: '智能体已连接'
   agent_disconnect_title: '断开连接并返还资产？'
   agent_disconnect_body: '停止机器人，将其角色、物品和余额返还到你的钱包。进行中的战斗和地牢将被放弃。费用可能由你的钱包支付。'
@@ -2870,25 +2594,10 @@ ui:
   agent_return_complete: '机器人已断开。资产已返还。'
   agent_return_resume: '继续返还'
   agent_return_needs_sui: '请添加 SUI 以支付返还费用。'
-  agent_hint_desktop: '右键点击角色头像或标签，然后选择发送给智能体。'
-  agent_hint_create: '通过常规角色创建界面创建角色，然后打开其操作菜单，将其发送给智能体。'
   agent_sending: '正在发送…'
-  agent_pair_storage_failed: '无法保存恢复身份。请允许浏览器存储，然后重新连接。'
-  agent_pair_disposable: '此智能体使用临时凭据。请让它设置持久存储，然后重新连接。'
-  agent_signer_persistent: '持久交易签名者已验证。'
-  agent_hosted_intro: '助手通过MCP操作，不持有签名密钥。AresRPG服务密钥和你的Google钱包均可独立转移机器人的资产，无需另一方批准。'
-  agent_hosted_unavailable: '需要Google游戏钱包和已配置的HTTPS机器人服务。仍可在背包中恢复资产。'
   agent_hosted_ambiguous: '需要检查多个托管钱包，尚未选择任何钱包。'
-  agent_other_wallets: '其他已保存的钱包'
-  agent_hosted_pending: '正在连接…'
-  agent_hosted_authenticate: '使用Google钱包验证'
-  agent_hosted_ready: '设置完成'
   agent_hosted_consent: '连接你的助手'
   agent_checking: '正在检查代理状态…'
-  signing_in: '正在登录…'
-  telegram_link_title: '关联 Telegram'
-  telegram_link_signin: '使用 Google 登录，将此 Telegram 聊天关联到你的游戏账户。'
-  telegram_link_failed: '无法关联 Telegram。请返回 Telegram 并重新登录。'
   agent_hosted_review: '有助手请求访问你的机器人。继续以查看其请求；在你连接之前不会共享任何内容。'
   agent_hosted_authority: '可以游戏并使用此机器人的资产。'
   agent_hosted_read_access: '可以查看此机器人。'
@@ -2915,9 +2624,7 @@ ui:
   agent_guide_acknowledge: '我已了解并希望继续'
   agent_guide_create_plugin: '创建为插件'
   agent_guide_continue: '继续'
-  agent_hosted_recovery: '通过物品栏和召回功能可独立取回资产。取回操作不会撤销服务密钥对机器人中剩余资产的控制权。'
   agent_choose: '选择你的智能体'
-  agent_unavailable: '配对功能尚不可用。尚未连接任何智能体。'
   agent_setup: '设置智能体'
   agent_send: '移交给智能体'
   feedback_question: '是什么让你难以继续？'
@@ -2934,58 +2641,26 @@ ui:
   equipment_comparison: '装备后的属性变化'
   equipment_replacing: '替换 {{name}}'
   equipment_unchanged: '属性加成不变'
-  preview_only: '交互预览 · 不会提交交易'
-  inspect_details: '查看详情'
-  design_minimap: '小地图'
-  design_party_invitation: '组队邀请'
-  design_trade_invitation: '交易邀请'
   progression_rewards: '奖励'
   inventory_selected_count: '已选择 {{count}} 件'
   inventory_select: '选择'
   inventory_deselect: '取消选择'
   inventory_use: '使用'
   attack: '攻击'
-  character_summary: '概览'
   character_details: '详情'
-  allocate_points: '分配'
   inventory_search: '搜索背包…'
   design_titles: '称号'
-  design_no_title: '无称号'
-  design_library: '设计工坊'
-  design_controls: '控件'
-  design_components: '组件'
-  design_prebuilt: '预制'
-  design_windows: '窗口'
-  design_feedback: '反馈'
-  design_tokens: '令牌'
-  design_dialog: '打开对话框'
-  design_disabled: '不可用'
-  design_details: '详情'
-  design_description: '游戏共享组件。操作本地示例，查看不同状态和响应式布局。'
   design_volume: '音量'
-  design_motion: '动画'
-  design_search: '搜索'
-  design_equipment_hint: '选择物品进行装备。点击已装备的物品可将其卸下。'
   design_equip: '装备'
   design_combat: '战斗'
-  design_journal: '日志与成长'
-  design_complete: '已完成'
-  design_viewport: '预览尺寸'
-  design_desktop: '桌面'
-  design_mobile: '移动设备'
   leave_game_title: '要离开游戏吗？'
   stay_in_game: '继续游戏'
   leave_game_confirm: '返回主页'
   mobile_move: '移动'
   mobile_jump: '跳跃'
-  mobile_chat: '聊天'
-  mobile_party: '队伍'
   mobile_confirm_action: '确认操作'
   mobile_item_actions: '物品操作'
   mobile_unequip: '卸下'
-  mobile_use_item: '使用 / 装备'
-  mobile_language: '语言'
-  mobile_menu: '菜单'
   mobile_rotate_title: '横屏开始游戏'
   mobile_rotate: '请将设备横置以开始游戏。'
   character: 角色
@@ -3429,9 +3104,6 @@ tournament_page:
   reason_finished: 所有可领取奖励均已领取
   reason_cancelled: 锦标赛已取消
   reason_cannot_watch: 请先结束自己的战斗，再观看其他比赛
-  custody_kiosk: Kiosk
-  custody_fight: 战斗中
-  custody_trade: 交易中
   latest_start_notice: '任何人都可以在此时间或之后启动锦标赛。'
   champion: '{{team}} 获胜'
   prize_pool: 奖池
@@ -3460,7 +3132,6 @@ tournament_page:
   open_window: 打开锦标赛
   older_claims: '{{count}} 场往届赛事仍有奖励待领取'
   result_line: '{{team}} 已晋级'
-  live_count: '{{count}} 场进行中'
   prize_split: 奖励分配
   invalid_percentage: 请输入最多两位小数的百分比。
   allocation_excess: 超出 {{amount}}%
@@ -3492,296 +3163,11 @@ tournament_page:
   deployment_metadata: 部署元数据
   display_notice: 显示元数据每次部署仅需配置一次，无需为每届锦标赛单独配置。
   submitted_notice: 操作已提交。再次提交前，请检查当前赛事状态。
-  custody_undefined: 托管状态未知
   wagered: 下注竞技
   complete_notice: 仅满员队伍可以参赛，其他队伍将在开赛时排除。
   find_review: 为 {{character}} 寻找队伍并报名该角色？
   joined_count: '{{count}}/{{total}} 已入场'
   versus: 对阵 {{team}}
-
-landing_page:
-  sound_on: 开启音乐
-  sound_off: 关闭音乐
-  new_tab: ' (在新标签页中打开)'
-  sign_alt: AresRPG
-  nav_label: 资源
-  nav:
-    docs: 文档
-    journal: 日志
-    discord: Discord
-  kares:
-    trigger: $KARES
-    trigger_detail: 代币经济
-  account:
-    login: 登录
-    logging_in: 正在登录…
-    signed_in: 已登录为 {{address}}
-    failed: 登录未完成，请重试。
-    logout: 退出登录
-    dev_only: '仅供开发使用，不建议用于游玩。'
-  hero:
-    eyebrow:
-      - 战术MMORPG协议
-      - 运行在Sui链上
-    title:
-      - '一个世界，尽在链上。'
-      - '按你的方式游玩。'
-      - '找到的都归你。'
-    lede: AresRPG是Sui上的战术MMORPG协议。角色、战利品和市场都在链上，任何界面都能用来游玩。与队伍一起通关地下城，与其他玩家制作和交易，或者把操作交给代理。
-    play: '3D 游玩'
-    play_bots: '用机器人游玩'
-    ways:
-      - 一个世界
-      - 无限玩法
-  chooser:
-    section: 界面
-    title: 选择你的玩法。
-    intro: AresRPG是一款没有唯一入口的链上游戏。同样的角色、同样的战利品、同样的市场。这里有五种界面供你起步，任何人都可以打造下一个。
-    interface: 界面
-    specs:
-      runs_in: 运行环境
-      role: 你的职责
-      good_for: 适合
-      status: 状态
-    play:
-      manual: 手动
-      automated: 自动
-    items:
-      world:
-        name: 体素世界
-        line: 浏览器里的完整3D游戏。画面要求高，每一步都由你操作。
-        tech: 基于three.js
-        status: 可游玩
-        body: 浏览器中的完整游戏。漫游星球、组建队伍，亲自在网格上战斗。在手机上，同一客户端会切换为触屏操作。
-        runs_in: 配备高性能GPU的浏览器
-        role: 每一步都由你来走
-        good_for: 探索与组队战斗
-        cta: 开始游戏
-        preview: 一名角色走在穿过Mosswood体素蘑菇森林的土路上，前方有悬崖、瀑布和哥布林。
-      dapp:
-        name: Web dapp
-        line: 没有3D。用任何手机派队伍去做任务、袭击地下城。
-        tech: 任何设备均可运行
-        status: 可游玩
-        body: 去掉3D引擎的游戏版本。派角色去做任务、与队伍一起袭击地下城并交易战利品，全部在一个任何手机都能运行的轻量页面中完成。
-        runs_in: 任何浏览器、任何手机
-        role: 派出队伍，收取战利品
-        good_for: 低配设备、碎片时间
-        cta: 打开 dapp
-        preview: Web dapp设计预览：一个正在做任务的角色及其生命条、一场等待钥匙的地下城袭击，以及派去做任务、袭击地下城和打开市场的按钮。
-      agent:
-        name: 你的代理
-        line: 由Claude、ChatGPT或Grok操作，你只需观看。
-        tech: Claude / ChatGPT / Grok
-        status: 进行中
-        body: 将Claude、ChatGPT或Grok连接到托管的AresRPG机器人。商定目标后，在游戏内观看它操作你的角色。
-        runs_in: ChatGPT、Claude或Grok
-        role: 设定目标，然后观看
-        good_for: 放手托管
-        cta: 连接你的代理
-        preview: 示例会话：你让代理清理路上的哥布林，它一边调用托管机器人工具一边向你汇报。
-      telegram:
-        name: Telegram
-        line: '在聊天中指挥你的英雄。选择策略、批准，然后跟进。'
-        tech: Telegram聊天
-        status: 等候名单
-        body: '你的托管机器人就在 Telegram 聊天里。为英雄选择一个经过审核的策略，了解它会做什么，然后批准。之后可在同一聊天中查看进度或将其停止。'
-        runs_in: Telegram聊天
-        role: 选择策略并批准
-        good_for: '用手机轻松托管游玩'
-        cta: 加入等候名单
-        preview: 示例聊天：选择策略，查看其作用并批准，然后查看状态或停止它。
-      sdk:
-        name: 你自己的客户端
-        line: 基于公开SDK打造客户端、工具或机器人。
-        tech: 公开SDK
-        status: 源码可用
-        body: 使用游戏本身所用的公开SDK进行开发。许可证允许在官方部署上运行的商业客户端、重制版、粉丝工具和机器人。 你的客户端或机器人使用自己的 Sui 钱包签名。
-        runs_in: 你打造的任何东西
-        role: 由你编写客户端
-        good_for: 自定义客户端、工具、机器人
-        cta: 阅读手册
-        preview: 终端中列出的公开代理手册目录：SDK构建模块、状态与交易规范、源码仓库和部署锚定。
-    waitlist:
-      joining: 正在加入等候名单…
-      joined: 你已加入等候名单
-      failed: 无法加入等候名单。请重试。
-    agent_guide: 阅读指南
-    source: 查看源码
-    previews:
-      keys_then: 然后
-      dapp:
-        title: Web dapp
-        label: 设计预览
-        character: Senshi
-        questing: 任务中
-        dungeon: Ivory Rampart
-        needs_key: 需要钥匙
-        raid: 队伍地下城袭击
-        actions:
-          - 派去做任务
-          - 袭击地下城
-          - 市场
-      agent:
-        title: 托管机器人 / MCP
-        label: 示例会话
-        you: 你
-        agent: 代理
-        call: 调用
-        lines:
-          - 清理路上的哥布林。
-          - 收到。在这里看着就好。
-          - 前方路上有哥布林。我去挑战它们。
-          - 战斗开始。正在网格上选择格子。
-      telegram:
-        choose: 选择策略
-        patrol: 城市巡逻 · 1只怪物
-        gather: 采集与制作
-        review: 查看此策略
-        review_detail: 在本城市与单只怪物的怪物群战斗，直到停止。
-        approve: 批准
-        menu: 菜单
-        running: 策略运行中
-        status: 状态
-        stop: 停止策略
-      sdk:
-        label: 手册目录
-        build: 构建机器人
-        build_lines:
-          - SDK构建模块：动作组合、离线规划和战斗模拟。
-          - 状态与交易规范：新鲜度、回执和恢复。
-        source: 源码与部署
-        source_lines:
-          - 源码仓库：SDK源码、许可证和对应版本。
-          - 部署锚定：对照目标部署进行验证。
-  earn:
-    section: 经济
-    title: 赚取SUI。三种方式。
-    intro: 付钱给你的是其他玩家。你卖给他们、为他们制作，或者击败他们。
-    paths:
-      - tag: 市场
-        title: 袭击地下城。
-        accent: 出售战利品。
-        body: 与队伍通关地下城并上架掉落物。买家以SUI向你付款。
-      - tag: 生活职业
-        title: 采集与制作。
-        accent: 出售装备。
-        body: 提升生活职业等级，制作战斗者需要的物品，出售成品或原材料。
-        link: 浏览所有物品
-      - tag: 锦标赛
-        title: 赢下战斗。
-        accent: 拿走奖金。
-        body: 锦标赛举行时，你的最终名次决定你的奖金份额。
-  control:
-    section: 操控
-    title: 自动托管，或每步亲自签名。
-    intro: 两种掌控方式。两者都运行在同一个链上游戏中，你可以让不同角色各用一种。
-    you: 你
-    holds: 持有角色
-    used_by: 使用者
-    automated:
-      tag: 自动
-      title: 托管代理替你游玩。
-      body: 把角色交给一个共享账户并设定目标。我们的托管代理全天候游玩，你可以观看，也可以去做别的事。
-      figure: 示意图：你和托管代理各持有共享多签账户两把密钥中的一把，该账户持有角色。
-      you_detail: Google登录
-      vault: 1-of-2多签
-      agent: 托管代理
-      agent_detail: 执行操作
-      points:
-        - 代理永远拿不到你的钱包密钥。
-        - 开始前，你会确切批准使用哪个机器人以及它能做什么。
-        - 随时可从背包召回你的角色，即使代理离线也可以。
-    self:
-      tag: 非托管
-      title: 每一步都由你亲自签名。
-      body: 使用 Google 登录。角色和物品留在你的账户中，没有你的签名什么都不会发生。
-      figure: 示意图：你用 Google 账户签名，你自己的账户持有角色。
-      you_detail: Google登录
-      vault: 你的账户
-      points:
-        - 其他人无法移动你的角色或花费你的SUI。
-        - 每场战斗、每次制作和每笔出售都是你签名的交易。
-        - 之后可将角色切换给托管代理，想要时再收回。
-  end:
-    title: 开始你的冒险
-    body: 登录、创建角色，然后迎接第一场回合制战斗。
-    play: 开始游戏
-    discord: 加入Discord
-    pick: 你的选择：
-  footer:
-    wordmark: AresRPG
-    tagline: 横跨多个星球的Sui战术体素MMORPG。
-    game: 游戏
-    community: 社区
-    play: 开始游戏
-    encyclopedia: 物品百科
-    journal: 日志
-    discord: Discord
-    telegram: Telegram
-    x: X
-    allocation: 查看你的白名单名额
-    colophon: 一个世界，无限界面
-
-telegram_companion:
-  welcome: "⚔️ 欢迎来到 AresRPG\n\n你的英雄生活在链上。在这个聊天中你可以关注他们、选择策略，他们会替你战斗和采集。\n\n首先请使用 Google 登录。页面会在浏览器中打开，然后带你回到这里。"
-  disconnect: '🔓 断开 Google'
-  connect_google: '🔑 使用 Google 登录'
-  waiting: '你的游戏账号尚未获得 Telegram 使用权限。加入等候名单即可申请。'
-  on_waitlist: '✅ 你已在候补名单中。当你的游戏账户获准后，点击检查访问权限即可打开你的英雄。'
-  join_waitlist: '加入等候名单'
-  check_access: '检查访问权限'
-  inventory: '🎒 背包'
-  inventory_empty: '背包为空'
-  observation_unknown: '暂时无法确认'
-  no_strategy: '当前没有角色在运行策略。'
-  strategy_active: '策略已启用'
-  strategy_waiting: '策略等待中'
-  replace_strategy: '这会替换该角色正在运行的策略。已提交的操作可能仍会完成。'
-  fight: '⚔️ 战斗中'
-  ambush: '🛡 守护者等待中'
-  idle: '可开始策略'
-  external_strategy: '来自其他应用的策略'
-  menu: '🧙 选择你的角色'
-  loading: '⏳ 正在加载角色'
-  empty: '🧙 暂无可玩的代理角色'
-  play: '▶️ 开始'
-  back: '☰ 菜单'
-  status: '📍 状态'
-  approve: '✅ 批准'
-  unlinked: '🔓 已解除关联'
-  browser_expired: '此链接已失效。请返回 Telegram 并发送一条消息以获取新链接。'
-  check_status: '📍 查看状态'
-  log_in_again: '🔑 重新登录'
-  balance: '💰 代理余额'
-  pause: '⏸ 暂停代理'
-  resume: '▶️ 恢复代理'
-  wallet_scope: '这会影响整个代理钱包及其他连接 · 已提交的交易仍可能完成'
-  paused: '⏸ 代理已暂停'
-  resumed: '▶️ 代理已恢复'
-  choose_strategy: '选择策略'
-  failure_changed: '内容已更新。以下是当前状态。'
-  failure_reconnect: '你的登录已过期。请重新登录：'
-  failure_unlink_first: '此聊天或 Google 账户已连接。请先断开 Google，然后重试。'
-  failure_temporary: '这次没有成功。请稍后再试。'
-  failure_busy: '该角色仍在完成一项操作，或代理已暂停。如果是你暂停的，请先恢复，然后查看状态。'
-  failure_run_limit: '你的代理已在运行其所能支持的最多角色。请先停止一个，再启动这个角色。'
-  review: '确认此策略'
-  effects: '停止前会在这座城市战斗仅含1只怪物的怪物组。每次操作消耗SUI燃气费，没有总额上限。不保证胜利；重启可能重复步骤。停止不会取消已提交的操作。'
-  stop: '停止策略'
-  stop_scope: '选择要停止的角色。其他角色继续游玩；已提交的交易仍可能完成。'
-  stop_all: '全部停止'
-  stopped: '策略已停止'
-  completed: '策略已完成'
-  attention: '策略需要处理。请在游戏中查看角色，然后查看状态或停止。'
-  unknown: '结果尚未确认。请先查看状态。'
-  city_review: '城市：{city}'
-  city_required: '请先在游戏中进入城市，然后打开菜单重新确认。'
-  world_review: '世界：{world}'
-  gather_effects: '使用现有材料制作有助于职业升级的配方；否则使用可用工具采集并探索这个世界。以基础战术对抗守护者。持续运行至停止。SUI燃气费和材料没有总额上限，制作和战斗可能失败。 重启可能重复步骤。停止不会取消已提交的操作。'
-  strategies:
-    fight_nearby: '⚔️ 城市巡逻 · 1只怪物'
-    gather_craft: '🌿 采集与制作'
 
 docs_page:
   title: '文档'
@@ -3793,7 +3179,6 @@ docs_page:
   next: '下一页'
   search: '搜索指南、物品和怪物'
   search_empty: '没有与此搜索匹配的页面。'
-  new_tab: ' (在新标签页中打开)'
   data_note: '这些页面上的数值来自与游戏相同的内容文件。'
   kinds:
     guide: '指南'
@@ -3837,9 +3222,39 @@ docs_page:
       - '在市场上用 SUI 与其他玩家交易。'
   ways:
     lede: '这个协议没有唯一的入口。下面每个界面玩的都是同一批角色、同样的战利品和同一个市场。区别在于由谁来操作，以及运行它需要什么。'
-    note: '你可以使用多个界面，但有一个限制：每个账户只有一个活动连接。打开 3D 游戏会取代同一账户的网页 dapp 会话。'
+    note: '你可以同时使用多个界面。每个账户同一时间只在一个游戏会话中进行游戏；网站的页面可以在旁边保持打开。'
+    specs:
+      runs_in: 运行环境
+      role: 你的职责
+      good_for: 适合
+      status: 状态
+    play:
+      manual: 手动
+      automated: 自动
+    items:
+      world:
+        name: 体素世界
+        status: 可游玩
+        body: 浏览器中的完整游戏。漫游星球、组建队伍，亲自在网格上战斗。在手机上，同一客户端会切换为触屏操作。
+        runs_in: 配备高性能GPU的浏览器
+        role: 每一步都由你来走
+        good_for: 探索与组队战斗
+      agent:
+        name: 你的代理
+        status: 进行中
+        body: 将Claude、ChatGPT或Grok连接到托管的AresRPG机器人。商定目标后，在游戏内观看它操作你的角色。
+        runs_in: ChatGPT、Claude或Grok
+        role: 设定目标，然后观看
+        good_for: 放手托管
+      sdk:
+        name: 你自己的客户端
+        status: 源码可用
+        body: 使用游戏本身所用的公开SDK进行开发。许可证允许在官方部署上运行的商业客户端、重制版、粉丝工具和机器人。 你的客户端或机器人使用自己的 Sui 钱包签名。
+        runs_in: 你打造的任何东西
+        role: 由你编写客户端
+        good_for: 自定义客户端、工具、机器人
   bots:
-    lede: '托管机器人在 AresRPG 的服务器上替你操控英雄。网页 dapp、Telegram 和已连接的助手驱动的是同一个机器人。'
+    lede: '托管机器人在 AresRPG 的服务器上替你操控英雄。'
     wallet_title: '机器人钱包'
     wallet:
       - '机器人使用自己的钱包游玩，与你的游戏钱包分开。它是一个 1/2 多签：托管服务可以为它签名，你的 Google 账户也可以。'
@@ -3854,8 +3269,6 @@ docs_page:
       - '没有已批准的事可做，或钱包里没有支付费用的 SUI 时，机器人会等待。'
     control_title: '谁可以指挥它'
     control:
-      - '网页 dapp：开始和停止活动、提升属性和法术，并以机器人身份在市场交易。'
-      - 'Telegram：选择一个经过审核的策略并批准。'
       - '助手（ChatGPT、Claude 或 Grok）：在对话中约定目标。它在你批准的范围内调用机器人的工具。'
   first_hour:
     lede: '第一个小时的目标：一个角色、几场胜利，以及一件亲手制作的工具。下方的掉落概率和配方都是真实数据。'
@@ -3919,130 +3332,46 @@ docs_page:
     license_note: '本页仅为摘要，具有约束力的是许可证原文。再分发时请保留许可证和版权声明。'
     license_link: '阅读许可证'
 
-dapp_page:
-  brand: '远征'
-  nav_label: '分区'
-  nav_market: '市场'
-  bot_balance: '机器人：{amount} SUI'
-  bot_balance_hint: '托管机器人持有的 SUI，用于支付英雄的网络手续费和你在市场上的购买。'
-  bot_balance_low: '你的机器人SUI不足。请向其钱包充值SUI，否则英雄会停止。'
-  asking_bot: '正在唤醒你的机器人并询问它在做什么…'
-  connect_proving: '正在证明此账户属于你…'
-  connect_creating: '正在创建机器人的钱包…'
-  connect_checking: '正在检查机器人的钱包…'
-  connect_naming: '正在设置机器人的名称…'
-  connect_approving: '正在批准连接…'
-  connect_returning: '正在完成连接…'
-  loading: '加载中…'
-  signing_in: '正在登录…'
-  signin_title: '派你的英雄去远征'
-  signin_body: '使用 Google 登录，查看你的英雄并让托管机器人替他们游玩。与 3D 世界使用同一账户、同一批英雄和物品。'
-  signin_failed: '登录未完成。请重试。'
-  google_title: '需要使用 Google 登录'
-  google_body: '托管英雄属于你的 Google 账户。请退出登录，然后使用 Google 继续以使用此页面。'
-  unavailable_title: '自动服务没有响应'
-  unavailable_body: '请暂时使用 3D 世界。'
-  unavailable_action: '打开 3D 世界'
-  connect_title: '你的机器人未连接'
-  connect_body: '连接后即可派出英雄。'
-  connect_action: '连接'
-  connect_busy: '正在连接…'
-  reading_heroes: '正在读取你的英雄…'
-  syncing: '机器人正在追赶世界状态。此页面会自动更新。'
-  observe_failed: '无法联系你的机器人。请刷新页面重试。'
-  heroes_failed_title: '无法读取你的英雄'
-  heroes_failed: '游戏服务器没有发送你的英雄。请刷新此页面重试。'
+agent_page:
+  log_title: '智能体日志'
+  manage_note: '要向机器人发送英雄或物品、取回它们或断开机器人，请打开你的资产页。'
+  stage_wallet_title: '专属钱包'
+  stage_wallet: '你的代理使用自己的机器人钱包游戏和签名。'
+  stage_log_title: '一份日志'
+  stage_log: '此页显示它的状态和它在做什么。'
+  stage_charge_title: '由你掌控'
+  stage_charge: '在你的资产页向它发送英雄，或把英雄取回。'
   heroes_title: '你的英雄'
   hero_level: '等级 {level}'
-  hero_xp: '经验'
-  status_free: '就绪'
-  status_activity: '活动中'
-  status_fight: '战斗中'
-  status_dungeon: '地下城中'
+  heroes_failed: '游戏服务器没有发送你的英雄。请刷新此页面重试。'
+  empty_title: '这里还没有内容'
+  empty_body: '你的AI助手所做的操作会显示在这里。'
   activity_other: '活动'
-  activity_train: '训练'
-  activity_gather: '采集'
-  activity_raid: '突袭'
-  blocker_command_pending: '正在等待机器人回应…'
-  blocker_no_free_hero: '现在没有空闲的英雄可以做这件事。'
-  blocker_hero_busy: '{names}：正在战斗或身处地下城。'
-  blocker_hero_unknown: '{names}：机器人还在读取这位英雄。请稍后再试。'
-  blocker_world_required: '{names}：在另一个世界。'
-  blocker_key_missing: '{names}：没有这座地下城的钥匙。'
-  key_find: '在市场上寻找{item}'
-  key_unsold: '现在没有人出售{item}。'
-  raid_short_title: '钥匙不够全队使用'
-  raid_short_body: '你的钥匙只够 {count} 位英雄使用，所以只有{names}会进入地下城。想派出更多英雄，请找到或购买缺少的钥匙。'
-  raid_short_action: '以 {count} 位英雄开始突袭'
-  cancel: '取消'
-  close: '关闭'
-  command_uncertain: '无法确认机器人的回应。此页面会自动重新检查，不会重复发送。'
-  command_refused: '{names}：{reason}'
   position_running: '进行中'
+  position_finished: '已完成'
+  position_xp: '获得经验'
+  position_dungeon: '{dungeon} · 第 {room} 间'
   run_notice_funding: '你的机器人SUI已用完。向其钱包充值SUI后，它会自行继续。'
   run_notice_requirement: '这位英雄缺少此活动所需的工具、等级或材料。给它所需的东西，或选择其他活动。'
   run_notice_plan: '你的机器人需要为此活动制定新计划。请停止后重新开始，或让你的AI客户端调整。'
-  position_stopping: '正在停止…'
-  position_finished: '已完成'
-  position_ended_issue: '机器人停止了此活动。请检查其余额和你的英雄，然后重新开始。'
-  position_hp: '生命'
-  position_xp: '获得经验'
-  position_levels: '等级 +{count}'
-  position_job_xp: '职业经验'
-  position_fights: '战斗'
-  position_dungeon: '{dungeon} · 第 {room} 间'
-  position_team: '与 {names} 并肩作战'
-  position_stop: '停止'
-  position_dismiss: '移除'
-  bag_title: '背包'
-  bag_empty: '背包是空的。'
-  bag_loading: '正在读取机器人的背包…'
-  bag_feed_title: '最近获得'
-  bag_feed_empty: '英雄带回的物品会显示在这里。'
-  detail_locked: '当该英雄不在战斗中且机器人没有其他待处理请求时，可以更改装备、属性、法术并进行制作。'
-  detail_stats: '属性'
+  run_notice_place: '从它现在的位置无法步行到那里。请停止它并选择其他地点。'
+  run_ended_objective_reached: '已达到你设定的目标。'
+  run_ended_fee_cap_reached: '已达到你设定的手续费上限。'
+  run_ended_run_cap_reached: '已完成你要求的轮数。'
+  run_ended_completed: '已完成计划。'
   error_unknown: '出了点问题。请重试。'
-  error_expired: '与机器人的连接已过期。请重新连接。'
-  error_google_required: '请使用 Google 继续以连接托管机器人。'
-  error_consent_failed: '连接未获批准。请重试。'
-  error_owner_mismatch: '该机器人属于另一个账户。请使用正确的 Google 账户登录。'
-  error_storage_unavailable: '此浏览器阻止了连接所需的存储。请允许网站数据后重试。'
   error_bot_busy_or_paused: '机器人已暂停，或仍在完成这位英雄的上一个动作。请稍后再试。'
   error_run_limit_reached: '机器人能同时操控的英雄已达上限。请先停止一位再试。'
   error_needs_resync: '机器人仍在同步。请几秒后再试。'
-  error_start_unconfirmed: '没有活动在进行：机器人没有接受该活动。你可以重新开始。'
   error_unavailable: '机器人没有响应。请稍后再试。'
   error_invalid_token: '与机器人的连接已过期。请重新连接。'
   error_insufficient_scope: '此连接无权执行该操作。请重新连接以授权。'
   error_behavior_run_not_found: '这位英雄已经没有正在进行的活动。'
   error_insufficient_character_points: '点数不足。'
   error_spell_rank_capped: '该法术已达到最高等级。'
-  error_tool_failed: '机器人无法完成此操作。请稍后再试。'
-  error_insufficient_funds: '机器人的 SUI 不足。请先为机器人充值 SUI，然后再试。'
   error_listing_changed_or_ineligible: '这个报价已变更或已不存在。请查看当前价格后再试。'
   error_character_not_available: '现在没有空闲的英雄可以执行此操作：战斗进行中。请稍后再试。'
   error_sale_source_changed_or_unavailable: '该物品已变更，或没有足够大的一组。请重新选择。'
-  disconnect_action: '断开此页面'
-  disconnect_failed: '机器人未确认。此页面仍有访问权限。请重试。'
-  direct_queued: '机器人已收到你的请求。它会在当前操作完成后签名。'
-  direct_done_raise_stats: '属性已更新。'
-  direct_done_raise_spell: '法术等级已提升。'
-  direct_done_equip_item: '装备已更换。'
-  direct_done_use_consumable: '{name}使用了{item}。'
-  direct_done_dungeon_leave: '{name}已离开地下城。'
-  direct_done_market_buy: '已购买：{amount} × {item}。已放入英雄的背包。'
-  direct_done_market_sell: '已上架出售：{amount} × {item}。'
-  direct_done_market_delist: '已撤回上架：{amount} × {item}已回到你的背包。'
-  direct_done_create_character: '{name}已就绪。'
-  level_up_toast: '{name}达到了{level}级。'
-  run_wait_travel: '正在步行前往。步行时间由游戏决定。'
-  run_wait_other: '正在等待合适的时机行动。'
-  run_notice_place: '从它现在的位置无法步行到那里。请停止它并选择其他地点。'
-  blocker_work_unknown: '{names}：在所处的世界无法做这项工作。'
-  blocker_job_level_required: '{names}：职业等级不足。'
-  blocker_tool_required: '{names}：没有这个职业的工具。'
-  error_direct_failed: '机器人无法完成该操作。请检查其余额和你的英雄后再试。'
-  error_direct_unconfirmed: '无法确认该请求，本页面也没有看到任何变化。请先确认再重试。'
   error_invalid_character_name: '名字为4到19个英文字母、数字或符号，不能有空格。'
   error_character_name_taken: '这个名字已被占用。请换一个。'
   error_funding_required: '机器人的SUI不足。请为机器人充值SUI后再试。'
@@ -4063,236 +3392,64 @@ dapp_page:
   error_insufficient_consumables: '该物品数量不足。'
   error_unsupported_consumable: '机器人无法使用该物品。'
   error_idempotency_conflict: '该请求已发送。请等待结果。'
-  run_needs_help: '需要你处理'
-  run_waiting: '等待中'
-  run_objective: '目标：{objective}'
-  run_results: '胜 {won} · 负 {lost}'
-  run_dungeon_runs: '已完成的地下城'
-  run_drops_title: '最新掉落'
-  run_drops_empty: '每场战斗后的掉落会显示在这里。'
-  run_send_again: '再次派出'
-  fees_run: '已付手续费：{amount} SUI'
-  item_sell: '出售'
-  sell_loot: '出售战利品'
-  drops_place_title: '{place}的全部掉落'
-  drops_dungeon_title: '{dungeon}的全部掉落'
-  drops_rate: '每次击杀约{rate}%'
-  drops_room: '第{room}间'
-  drops_boss_room: '首领房间'
-  next_title: '下一步建议'
-  next_funds_title: '你的机器人SUI已用完'
-  next_funds_body: '你的机器人付不起网络手续费，所以英雄停下了。在钱包菜单中向机器人钱包充值SUI，他们会自行继续。'
-  next_raid_title: '{dungeon}正在等你'
-  next_raid_body: '你持有的钥匙：{count}。有英雄可以出发。'
-  next_raid_action: '规划突袭'
-  next_quest_title: '{name}有空'
-  next_quest_body: '派它去战斗赢取战利品和钥匙，或者去工作。'
-  next_quest_action: '派去做任务'
-  next_out_title: '所有英雄都已出发'
-  next_out_body: '在“任务”标签页中关注他们。'
-  next_out_action: '查看任务'
-  hero_send_quest: '派去做任务'
-  hero_raid: '突袭地下城'
-  hero_watch_raid: '观看突袭'
-  add_hero_title: '新英雄'
-  add_hero_body: '{count} 个职业 · {price} SUI，由你的机器人支付'
-  add_hero_action: '创建英雄'
-  add_hero_funds: '你的机器人需要 {price} SUI 购买英雄，另需 {fee} SUI 支付网络手续费。请在钱包菜单中为机器人充值 SUI。'
-  create_sent: '你的机器人正在创建{name}。游戏确认后，英雄会显示在这里。'
-  welcome_title: '欢迎来到远征'
-  welcome_body: '你的英雄会替你玩真正的游戏。只需三步即可开始第一次突袭。'
-  step_create_title: '创建你的第一位英雄'
-  step_create_body: '选择一个职业。英雄永远归你所有。'
-  step_quest_title: '派它去做任务获取钥匙'
-  step_quest_body: '{city}的怪物会掉落{key}。'
-  step_raid_title: '突袭{dungeon}'
-  step_raid_body: '每位英雄带一把钥匙。首领房间有最稀有的掉落。'
-  quest_title: '任务'
-  quest_intro: '每场战斗都有机会掉落装备和钥匙。工人会把战利品变成装备。'
-  quest_fight: '战斗赢取战利品'
-  quest_fight_body: '每场战斗都有装备、钥匙和经验'
-  quest_work: '去工作'
-  quest_work_body: '采集资源，或制作装备和药水'
-  quest_who: '谁'
-  quest_where: '去哪里'
-  quest_here: '每位英雄当前所在的位置'
-  quest_pick_hero: '选择英雄'
-  quest_send: '派出{names}'
-  quest_until_stop: '会一直进行，直到你停止。'
-  quest_empty: '还没有英雄。先在“主页”标签页创建一位，再派它去做任务。'
-  quest_empty_action: '前往主页'
-  quest_walks: '{names}：先步行前往。途经的每个区域都要支付网络手续费。'
-  quest_run_fight: '在{place}战斗'
-  quest_run_work_job: '以{job}身份工作'
-  quest_run_gather: '采集{item}'
-  quest_run_craft: '制作{item}'
-  world_locked: '{world}在英雄等级 {level} 时开放。'
-  place_levels: '怪物等级 {min}–{max}'
-  place_key_drop: '{key}：每击杀一只{mob} ~{rate}%'
-  place_rarest: '最稀有掉落：{item}，来自{mob}，~{rate}%'
-  place_level_warning: '这里的怪物等级为 {min}–{max}。{name}的等级是 {level}。'
-  place_all_drops: '这里掉落的所有物品'
-  difficulty_label: '难度'
-  difficulty_none: '任意'
-  difficulty_easy: '简单'
-  difficulty_medium: '中等'
-  difficulty_hard: '困难'
-  difficulty_none_hint: '此地任意位置的任意怪物群。'
-  difficulty_hint: '每群 {min} 到 {max} 只怪物。怪物群的规模取决于它与世界中心的距离。'
-  difficulty_hint_one: '每群 {size} 只怪物。怪物群的规模取决于它与世界中心的距离。'
-  difficulty_unfit: '{city}不在这个距离上。请选择其他地点或其他难度。'
-  travel_needed: '{name}不在{city}。'
-  travel_potion_held: '你持有 {count} × {item}。它能立刻把英雄带到那里。'
-  travel_potion_use: '使用药水前往'
-  travel_potion_none: '{item}能立刻把英雄带到那里。炼金术士会酿造它。'
-  fee_cap: '手续费上限'
-  fee_cap_none: '无上限'
-  fee_cap_hint: '每位英雄在自己的这次任务支付了 {amount} SUI 网络手续费后停止。它会先打完当前战斗。'
-  fee_cap_invalid: '请输入大于零的 SUI 数额，或留空表示无上限。'
-  work_auto: '让机器人选择'
-  work_auto_body: '机器人会用这位英雄拥有的工具，采集和制作最能提升其职业进度的东西。'
-  work_gather: '采集一种资源'
-  work_craft: '制作一种配方'
-  work_worker: '工人'
-  work_job: '职业'
-  work_job_any: '任意职业'
-  work_job_level: '{job} 等级 {level}'
-  work_job_new: '{job}新手'
-  work_gather_hint: '{name}每 {seconds} 秒收获 {min}–{max} 个，每个获得 {xp} 职业经验。'
-  work_craft_hint: '{name}的成功率为 {percent}%，每次尝试获得 {xp} 职业经验。'
-  work_rare_find: '收获时也可能获得{item}。{mob}可能会守卫此处。'
-  work_objective: '目标'
-  work_goal_level: '达到等级'
-  work_goal_gather: '采集指定数量'
-  work_goal_craft: '制作指定数量'
-  work_goal_until: '直到我停止'
-  work_how_many: '数量'
-  work_target_level: '要达到的职业等级'
-  work_amount_invalid: '请输入大于零的整数。'
-  work_level_invalid: '请输入 {min} 到 {max} 之间的等级。'
-  work_tries: '尝试次数：约{tries}次，用于{amount} × {item}'
-  work_harvests: '采集次数：约{tries}次，用于{amount} × {item}'
-  work_needs: '所需物品'
-  work_tool_worn: '已装备{item}'
-  work_tool_bag: '{item}在你的背包里。开始工作时{name}会装备它。'
-  work_tool_missing: '需要{tool}。杂工会制作。'
-  work_material_missing: '{item}：需要 {need}，背包中 {have}，缺少 {missing}'
-  work_material_ready: '{item}：需要 {need}，背包中 {have}'
-  work_never_buys: '缺少的东西请在市场上购买，或自己获取。英雄从不购买物品。'
-  work_locked: '{job}等级 {level} 时解锁'
-  work_pick_resource: '请选择一种资源。'
-  work_pick_recipe: '请选择一个配方。'
-  work_start: '开始'
-  out_now_title: '进行中'
-  raid_title: '猎杀{boss}'
-  raid_intro: '每个房间都是一场有独立掉落的战斗。已通关房间的战利品会保留。'
-  raid_dungeon: '地下城'
-  raid_dungeon_facts: '{rooms} 个房间 · {monsters} 只怪物 · 首领 {boss}'
-  raid_keys_held: '持有钥匙：{count}。每位英雄需要一把。'
-  raid_team: '队伍'
-  raid_team_count: '{count} / {size}'
-  raid_best_team: '最佳队伍'
-  raid_seat_add: '添加'
-  raid_seat_title: '位置 {seat}'
-  raid_seat_remove: '移除'
-  raid_seat_swap: '换入'
-  raid_seat_key: '持有钥匙'
-  raid_seat_no_key: '没有钥匙'
-  raid_seat_none: '所有英雄都已在队伍中。'
-  raid_seat_stop_note: '停止英雄会结束它的活动。它找到的东西已经在你的背包里。'
-  raid_no_seat: '请至少添加一位空闲英雄。点击一个位置，或使用“最佳队伍”。'
-  raid_levels_title: '你的队伍与房间'
-  raid_alone: '{name}独自前往。'
-  raid_drops_title: '一次突袭可能掉落的物品'
-  raid_rooms: '房间 {first}–{last}'
-  raid_stake: '消耗钥匙：{count}，每位英雄一把'
-  raid_walk: '{name}：步行到入口至少需要{time}'
-  raid_repeats: '只要每位英雄都还有钥匙，队伍就会再次突袭。按“停止”结束。'
-  raid_enter: '进入 · 钥匙：{count}'
-  raid_keys_short: '这支队伍还需要 {count} 个{item}'
-  raid_quest_for_keys: '做任务获取钥匙'
-  raid_room: '第 {room} 个房间，共 {rooms} 个'
-  raid_boss_room: '首领房间 · {boss}'
-  raid_walking: '正在步行前往入口'
-  raid_loot: '已通关房间的战利品'
-  raid_loot_empty: '每个已通关房间的战利品会显示在这里。'
-  raid_next_drops: '下一个房间可能掉落'
-  raid_stop_note: '停止会结束突袭。每位英雄会留在地下城中各自的房间里。要放弃这次突袭，请先停止英雄，再离开地下城。'
-  raid_stop_team: '停止队伍'
-  raid_plan: '规划新的突袭'
-  raid_back: '返回突袭'
-  raid_inside_title: '仍在地下城中'
-  raid_inside_body: '这些英雄在地下城中途停下了。再次突袭以继续，或离开地下城。'
-  raid_leave: '离开地下城'
-  raid_leave_body: '这位英雄的突袭将结束。钥匙不会退还。'
-  raid_result_won: '胜利'
-  raid_result_lost: '失败'
-  raid_result_bag: '以下物品都在你的背包里。'
-  raid_keys_left: '剩余钥匙：{count}'
-  raid_change_team: '更换队伍'
-  raid_again: '再次突袭'
-  raid_empty_title: '还没有队伍'
-  raid_empty_body: '创建一位英雄，派它去做任务获取钥匙，然后再回来。'
-  raid_runs: '次数'
-  raid_runs_all: '钥匙用完为止'
-  raid_runs_count: '每位英雄的轮数：{count}'
-  nav_home: '主页'
-  heroes_intro: '装备、属性、法术和职业。'
-  heroes_empty_title: '还没有英雄'
-  heroes_empty_body: '请在主页标签创建英雄。它的装备、属性、法术和职业会显示在这里。'
-  heroes_empty_action: '前往主页'
-  nav_quest: '任务'
-  nav_raid: '突袭'
-  nav_heroes: '英雄'
-  keys_chip: '地下城钥匙：{count}'
-  empty_title: '这里还没有内容'
-  empty_body: '你的AI助手所做的操作会显示在这里。'
-  run_ended_objective_reached: '已达到你设定的目标。'
-  run_ended_fee_cap_reached: '已达到你设定的手续费上限。'
-  run_ended_run_cap_reached: '已完成你要求的轮数。'
-  run_ended_completed: '已完成计划。'
-  direct_done_craft: '{name}已完成{item}的制作（尝试：{amount}次）。成功的成品已放入背包。'
   error_ingredients_required: '该英雄的材料已不齐全。请检查配方后再试。'
   error_crafting_level_required: '该英雄的职业等级不足以制作这个配方。'
   error_craft_batch_limit: '单次请求的尝试次数过多。请减少次数。'
   error_recipe_unavailable: '这个配方目前无法制作。'
-  home_title: '现在做什么'
-  fees_wallet_label: '机器人支付的网络手续费'
-  sui_amount: '{amount} SUI'
-  found_more: '还有 +{count}'
-  raid_ledger_keys_used: '消耗钥匙'
-  raid_ledger_keys_used_value: '{count}，每位英雄一把'
-  raid_ledger_keys_left: '剩余钥匙'
-  raid_ledger_travel: '路程'
-  raid_travel_none: '已在入口'
-  raid_travel_fee: '途经的每个区域都要支付网络手续费。'
-  raid_buy_key: '在市场购买'
-  quest_pick_place: '选择地点'
-  plan_levels: '怪物等级'
-  plan_range: '{min}–{max}'
-  plan_group: '怪物群规模'
-  plan_key: '钥匙掉落'
-  plan_rarest: '最稀有掉落'
-  plan_arrive: '抵达'
-  plan_walk: '步行，至少{time}'
-  plan_walk_far: '步行'
-  plan_potion: '立即抵达'
-  about: '~{value}'
-  work_what: '做什么'
-  work_per_harvest: '每次收获'
-  work_harvest_time: '单次收获'
-  work_xp: '职业经验'
-  work_rare: '稀有发现'
-  work_success: '每次尝试成功率'
-  work_tries_label: '尝试次数'
-  work_harvests_label: '采集次数'
-  work_tool: '工具'
-  work_tool_held: '背包里有{item}'
-  work_tool_none: '没有{tool}'
-  work_have: '{have} / {need}'
-  hero_forfeit: '放弃战斗'
-  direct_done_fight_forfeit: '{name}已放弃战斗，重新空闲。'
   error_fight_unavailable: '该英雄已不在战斗中。'
-  game_heroes_title: '在你的游戏账户中'
-  hero_give_bot: '交给机器人'
-  hero_take_back: '取回'
+
+portfolio_page:
+  signin_title: '登录以查看你的资产'
+  signin_body: '你在游戏账户和机器人上的英雄、物品和挂单。'
+  stage_heroes: '每位英雄的等级、战力和所穿装备。'
+  stage_bag: '你的物品。挂单出售，或发送给你的机器人。'
+  stage_for_sale: '你在市场上挂出的物品，以及已售出的。'
+  tabs_label: '显示'
+  tab_heroes: '英雄'
+  tab_bag: '背包'
+  tab_for_sale: '出售中'
+  failed: '游戏服务器没有发送此账户。请刷新页面重试。'
+  heroes_empty: '此账户没有英雄。'
+  bag_empty: '这里还没有东西。去市场购买，或在游戏中寻找物品。'
+  bag_group_empty: '这个背包里没有这类物品。'
+  bot_sells: '机器人会自己上架和出售它的物品。请让你的 AI 助手去做。'
+  power: '战力'
+  power_hint: '战力是已装备物品属性按锻造符文权重相加的结果，仅用于展示。'
+  send_to_bot: '发送给机器人'
+  recall_to_player: '召回给玩家'
+  share: '分享'
+  share_text: '我在 @AresRPG 的{classe}，等级 {level}，战力 {power}。'
+  share_title: '分享 {name}'
+  share_preview: '你的帖子为 {name} 显示的卡片'
+  share_copy: '复制链接'
+  share_post: '发布到 X'
+  share_image_failed: '卡片未能加载。请关闭此窗口后重试。'
+  share_copy_failed: '浏览器未允许复制。请重试。'
+  transfer_to_bot: '转给机器人'
+  transfer_to_player: '转给玩家'
+  view_market: '在市场查看'
+
+site:
+  nav_label: '站点'
+  menu_open: '打开菜单'
+  menu_close: '关闭菜单'
+  login: 登录
+  new_tab: ' (在新标签页中打开)'
+  log_in_first: '请先登录'
+  docs: 文档
+  encyclopedia: 物品百科
+  journal: 日志
+  discord: Discord
+  telegram: Telegram
+  x: X
+  market: '市场'
+  play: '开始游戏'
+  agent: 'AI'
+  staking: '质押'
+  leaderboards: '排行榜'
+  portfolio: '资产'
+  footer_learn: '了解'
+  footer_community: '社区'
+  indexing_healthy: '正常'
+  indexing_catching_up: '追赶中'
+  indexing_lagging: '滞后'

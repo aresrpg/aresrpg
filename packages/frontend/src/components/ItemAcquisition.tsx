@@ -2,10 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Button } from '@aresrpg/ui'
 
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { item_icon, mob_icon } from '../content/assets.ts'
 import { useText } from '../i18n/useText.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
+import './inspection.css'
 
 export const ItemAcquisition = ({
   item_type,

@@ -117,3 +117,33 @@ Sui object: 0x015603b773dc8a36d547a40ca03e1ab19c2a6c60b4f8081389101f0b2e77d284
 }
 
 Blast: existing seed/icons/characters/blast_girl.png and seed/icons/items/crew_helmet_hd.png. Rootlets: public Rootlet #51 metadata, cross-checked with the curated model. AEON: public Guardian #772 metadata.
+
+# ACT partner drop artwork provenance
+
+## act_operator_plate
+
+File: `act_operator_plate.png` (2172×724; 3:1, matching `enforcer_machin_plate.png`).
+
+Generated: 2026-11-24.
+
+Mode: built-in image generation, native transparent RGBA. No chroma-key workaround.
+
+Reference: ACT master model supplied by the ACT team (MasterModelConvertededitwww.fbx, 2024-10-11); `seed/models/characters/act_operator_dusk.glb` and `seed/models/sources/act_operator/act_operator.blend`.
+
+Style reference: `enforcer_machin_plate.png` supplies the canvas and blank-center layout; the generated Dusk Operator head supplies the painted tactical motif.
+
+Source: generated image artifact `exec-392a518b-1cd5-4fab-953d-207b3fa0fe6c.png`.
+
+Export: original generated 2172×724 RGBA PNG retained without pixel edits. Blank central text area preserved for runtime text; transparent exterior and corners. Palette: #0b0f17, #4d7cff, #e6ebf4.
+
+Generation: 1 initial attempt and 1 correction. The initial result added a red gem and retained claw/pipe ends; the correction removed the gem, changed the ends to solid armor plates, and made the lights electric blue.
+
+Final prompt:
+
+> Use case: precise-object-edit. Image 1 is the EDIT TARGET, a generated ACT nameplate. Image 2 is the ORIGINAL LAYOUT reference.
+> Make exactly these corrections to image 1:
+>
+> 1. REMOVE the red gem completely. Replace its spot with uninterrupted dark NAVY armor. The small black V crest at the top centre remains; no red, gold, yellow, green, orange, pink or purple anywhere. Palette is exclusively navy #0b0f17, electric blue #4d7cff, pale steel #e6ebf4 and their shaded highlights. Make emitted light lines and circular lights electric BLUE rather than turquoise.
+> 2. Replace the LEFT looped pipes and RIGHT claw/pincer with SOLID ANGULAR ARMOR-PLATE END ORNAMENTS: chunky beveled layered shield plates, uninterrupted solid armor, thin blue inlaid light lines. NO claws, hooks, fingers, pincers, loops, tubes or pipe cutouts. Retain the same left/right overall outer footprint as image 1, so these ornaments do not change the nameplate's layout or extend into the central panel.
+>    Preserve everything else. In particular keep the EXACT 2172 x 724 canvas, 3:1 aspect ratio, front-facing angle, border rails, thickness and geometry of the central frame, position and dimensions of the long entirely blank dark navy text panel. The text panel stays approximately x450..1685, y285..565; do not shift, shrink or decorate it. Keep the top central black V crest SMALL, same location. Preserve the chunky faceted hand-painted 3D-cartoon style.
+>    Real native RGBA transparent EXTERIOR background and corners; the central text panel stays solid dark navy. No text, letters, numbers, writing, logos, watermark, scenery, floor or shadows. Keep complete outer shapes and transparent margins without cropping.

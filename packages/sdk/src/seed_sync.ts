@@ -8,7 +8,7 @@
 import type { Transaction } from '@mysten/sui/transactions'
 
 import { canonical_json } from './canonical_json.ts'
-import type { Resolvable } from './client.ts'
+import type { Resolvable } from './doors.ts'
 import {
   board_value,
   box_rewards,

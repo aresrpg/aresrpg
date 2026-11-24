@@ -28,11 +28,11 @@
   overflow: hidden;
   background: var(--aui-surface);
 }
-.aui-arena-port:has(.tourney-panel) {
+.arena-window:has(.tourney-panel) {
   width: min(1320px, calc(100cqw - 32px));
   height: min(840px, calc(100cqh - 32px));
 }
-.aui-arena-port:has(.tourney-panel) :is(.aui-workspace-main, .aui-live-page-content) {
+.arena-window:has(.tourney-panel) :is(.aui-workspace-main, .aui-live-page-content) {
   flex: 1;
   min-height: 0;
 }
@@ -453,10 +453,10 @@
   border-color: var(--aui-orange);
 }
 
-.aui-arena-port:has(.tourney-panel) {
+.arena-window:has(.tourney-panel) {
   position: relative;
 }
-.aui-arena-port .tourney-mode > .kz-tabs {
+.arena-window .tourney-mode > .kz-tabs {
   position: absolute;
   top: 2px;
   left: 10px;

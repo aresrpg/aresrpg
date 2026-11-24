@@ -6,6 +6,7 @@ import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 import { type CharacterAnimationRender, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
 import { SegmentedControl } from '@aresrpg/ui'
+import { Workshop } from '@aresrpg/ui/workshop'
 import { ArrowLeft, FlaskConical, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -13,7 +14,8 @@ import { WorldLoading } from '../components/WorldLoading.tsx'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { fight_lab_surface } from '../components/app_layout.ts'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { content_catalog } from '../content/catalog.ts'
+import { titleize } from '../content/titles.ts'
 import { NPC_CHARACTER_MODELS } from '../content/character_model_catalog.ts'
 import { client_world_position, worlds_source, world_terrain } from '../content/worlds.ts'
 import { load_pet_companion } from '../content/pet_models.ts'
@@ -33,7 +35,6 @@ import { AtmosphereControls } from './AtmosphereControls.tsx'
 import { AssetWorkshop } from './AssetWorkshop.tsx'
 import { BoardGallery } from './BoardGallery.tsx'
 import { CharacterCrowdLab } from './CharacterCrowdLab.tsx'
-import { UiWorkshop } from './UiWorkshop.tsx'
 import { DemoCheckbox } from './DemoCheckbox.tsx'
 import { DemoDevPage } from './DemoDevPage.tsx'
 import { DEMO_VIEWS, VIEW_ICONS, demo_view, type DemoView } from './demo_views.ts'
@@ -480,7 +481,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   }
   const view_label = (candidate: DemoView): string =>
     ({
-      ui: copy.ui.design_library,
+      ui: 'UI',
       world: text.world_lab,
       assets: text.asset_gallery,
       fight: text.fight_lab,
@@ -502,7 +503,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {view === 'assets' && <AssetWorkshop copy={copy} />}
       {view === 'boards' && <BoardGallery text={text} />}
       <DemoDevPage view={view} />
-      {view === 'ui' && <UiWorkshop copy={copy} />}
+      {view === 'ui' && <Workshop />}
       <nav className="demo-nav">
         <SegmentedControl
           label={text.title}

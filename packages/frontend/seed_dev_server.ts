@@ -126,16 +126,6 @@ const response_json = (response: import('node:http').ServerResponse, status: num
   response.end(JSON.stringify(body))
 }
 
-export const read_seed_icon = async (
-  repo_dir: string,
-  domain: 'items' | 'mobs' | 'spells',
-  identity: string
-): Promise<Buffer | null> => {
-  if (!/^[a-z0-9_]+$/u.test(identity)) return null
-  const extension = domain === 'spells' ? 'webp' : 'png'
-  return readFile(join(repo_dir, 'seed', 'icons', domain, `${identity}.${extension}`)).catch(() => null)
-}
-
 const read_request_json = async (request: import('node:http').IncomingMessage): Promise<unknown> => {
   const chunks: Buffer[] = []
   let size = 0
@@ -164,8 +154,6 @@ export const seed_dev_plugin = ({
     // deliberately NOT invalidated here — clients get a custom event instead and choose their
     // own reload moment (the /demo editor defers it to the next tab switch).
     hotUpdate({ file }) {
-      if (['items', 'mobs', 'spells'].some((domain) => file.startsWith(`${join(repo_dir, 'seed', 'icons', domain)}/`)))
-        return []
       if (!file.startsWith(`${content_dir}/`) || !file.endsWith('.json')) return undefined
       // Atomic rename can arrive as create/update/delete. Vite 8 runs hotUpdate for all three;
       // legacy handleHotUpdate ran only for update and allowed create to full-reload /demo.
@@ -177,35 +165,6 @@ export const seed_dev_plugin = ({
     configureServer: (server) => {
       server.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
-        const icon_match = /^\/__seed\/assets\/(items|mobs|spells)\/([^/]+)\.(png|webp)$/u.exec(url.pathname)
-        if (icon_match && request.method === 'GET') {
-          const identity = (() => {
-            try {
-              return decodeURIComponent(icon_match[2]!)
-            } catch {
-              return null
-            }
-          })()
-          if (identity === null) {
-            response_json(response, 404, { error: 'Seed icon not found' })
-            return
-          }
-          const domain = icon_match[1] as 'items' | 'mobs' | 'spells'
-          const extension = domain === 'spells' ? 'webp' : 'png'
-          if (icon_match[3] !== extension) return next()
-          void read_seed_icon(repo_dir, domain, identity).then((bytes) => {
-            if (!bytes) {
-              response_json(response, 404, { error: 'Seed icon not found' })
-              return
-            }
-            response.writeHead(200, {
-              'content-type': domain === 'spells' ? 'image/webp' : 'image/png',
-              'cache-control': 'no-store',
-            })
-            response.end(bytes)
-          })
-          return
-        }
         if (url.pathname === '/__seed/files' && request.method === 'GET') {
           void Promise.all([service.read_all(), service.validate()]).then(
             ([files, validation]) => response_json(response, 200, { files, validation, token }),

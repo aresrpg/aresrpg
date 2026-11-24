@@ -3,25 +3,21 @@
 
 import { marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
-import { MarketCurrency, MarketListingIcon, MarketVolume, type MarketArt } from '@aresrpg/ui'
-
-export { buyer_total } from './price.ts'
+import { MarketListingIcon, MarketVolume, type MarketArt } from '@aresrpg/ui'
 
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useText } from '../i18n/useText.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
-import { content_catalog } from '../content/catalog.ts'
+import { items_by_type } from '../content/items.ts'
 import type { CopyText } from '../i18n/copy.ts'
 
 import { buyer_total, market_needs_funding } from './price.ts'
 
-export const listing_item = (listing: Readonly<Pick<ListingRow, 'item_type'>>) =>
-  listing.item_type ? (content_catalog.items.find(({ item_type }) => item_type === listing.item_type) ?? null) : null
-
+/** The content's name of a listed item, or the name the listing carries. */
 export const listing_name = (listing: Readonly<Pick<ListingRow, 'name' | 'item_type'>>): string =>
-  listing_item(listing)?.name ?? listing.name
+  (listing.item_type ? items_by_type[listing.item_type]?.name : undefined) ?? listing.name
 
 /** The listing art: the item picture, a character's class initials, or a neutral mark. */
 export const listing_art = (listing: Readonly<Pick<ListingRow, 'item_type' | 'kind' | 'classe'>>): MarketArt => ({
@@ -47,9 +43,6 @@ export const CategoryName = ({ category }: Readonly<{ category: string | null }>
 
 export const short_address = (address: string | null): string =>
   address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '—'
-
-/** Compact Sui currency mark from the official droplet geometry; color follows its price label. */
-export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => <MarketCurrency size={size} />
 
 export const MarketVolumeBadge = ({
   window,

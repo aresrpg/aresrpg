@@ -27,25 +27,6 @@ const LINE_WIDTH = 2
 /** A full line keeps this share of the surface colour: a dark shade of itself, never flat black. */
 const INK = 0.3
 
-const smooth = (low: number, high: number, value: number): number => {
-  const progress = Math.min(1, Math.max(0, (value - low) / (high - low)))
-  return progress * progress * (3 - 2 * progress)
-}
-
-/** CPU twin of the shader test over one pixel and its four neighbours, all as inverse view depth. */
-export const outline_strength = ({
-  centre,
-  left,
-  right,
-  up,
-  down,
-}: Readonly<{ centre: number; left: number; right: number; up: number; down: number }>): number => {
-  const nearer = Math.max(centre * 2 - left - right, centre * 2 - up - down)
-  const step = nearer / Math.max(centre * centre, 1e-12)
-  const fade = 1 - smooth(FADE_START, FADE_END, 1 / Math.max(centre, 1e-6))
-  return smooth(STEP_START, STEP_FULL, step) * fade
-}
-
 /** Depth texels a line spans. Whole texels only — the depth buffer is point-sampled, and an uneven pair of taps reads a flat
  * face as bent. */
 export const outline_width_texels = (texels_per_css_pixel: number): number =>

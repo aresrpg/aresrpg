@@ -70,6 +70,3 @@ export const complete_quests = (state: JourneyState, ids: readonly string[], cel
         : state.celebrations,
   })
 }
-
-export const journey_complete = (journey: JourneyState): boolean =>
-  journey.identity !== null && journey.ready && !journey.saving && next_quest(journey.completed) === null

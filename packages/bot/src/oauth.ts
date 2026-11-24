@@ -3,6 +3,11 @@
 import type { ControlStore } from './store.ts'
 import {
   assert_live_grant,
+  hash_secret,
+  opaque_parts,
+  random_secret,
+  require_string,
+  secret_matches,
   type AuthorizationRequest,
   type Bot,
   type BotConfig,
@@ -10,7 +15,6 @@ import {
   type OAuthClient,
 } from './model.ts'
 import { index_owner_grant } from './owner_status.ts'
-import { hash_secret, opaque_parts, random_secret, require_string, secret_matches } from './security.ts'
 
 const valid_redirect = (value: unknown): boolean => {
   if (typeof value !== 'string') return false
@@ -108,8 +112,8 @@ export const create_oauth_service = (store: ControlStore, config: BotConfig, now
       expires_at: now() + config.request_ttl_ms,
     }
     await store.transaction([`request:${request.id}`], (tx) => tx.put(`request:${request.id}`, request))
-    const location = new URL('/world', config.web_origin)
-    location.searchParams.set('intent', 'connect-agent')
+    // The site's AI page (`SITE_ADDRESSES.agent` in the frontend) asks the owner for consent.
+    const location = new URL('/agent', config.web_origin)
     location.searchParams.set('authorization_id', request.id)
     return { location: location.href, session, authorization_id: request.id, expires_at: request.expires_at }
   }

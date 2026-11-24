@@ -6,7 +6,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { FEEDBACK_ANSWERS, feedback_target } from './feedback.ts'
 
 export const OnboardingFeedback = () => {
-  const feedback = useAppStore((state) => state.analytics.feedback)
+  const feedback = useAppStore((state) => state.gameplay_analytics.feedback)
   const target = useAppStore(feedback_target)
   const copy = useAppStore((state) => state.copy?.ui)
   if (!copy || typeof feedback !== 'object' || feedback.answer !== null || target !== feedback.stage) return null

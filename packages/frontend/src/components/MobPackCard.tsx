@@ -9,6 +9,7 @@ import type { WorldMobGroup } from '../game/core/spawn_residency.ts'
 import { dispatch_app } from '../store.ts'
 
 import { PromptText } from './PromptChip.tsx'
+import './inspection.css'
 
 const catalog_mob = (type: string) => content_catalog.mob(type)?.mob
 

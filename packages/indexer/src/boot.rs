@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-//! Boot derivation — TWO configured ids, everything else from chain state
-//! (owner ruling 2026-08-11: hand-pasted allowlists and hand-anchored start
-//! checkpoints are the disease the rewrite removes).
+//! Boot derivation — TWO configured ids, everything else from chain state: no hand-pasted
+//! allowlist or hand-anchored start checkpoint.
 //!
 //! At boot, against the official GraphQL endpoint:
 //!
@@ -140,19 +139,6 @@ async fn complete_lineage(url: &str, original: &str) -> Result<Vec<String>> {
     Ok(lineage)
 }
 
-/// Pure read of the lineage response: is `latest` among the versions published
-/// after `original`? (Querying from the ORIGINAL, "after" is every upgrade.)
-#[cfg(test)]
-fn lineage_contains(data: &Value, original: &str, latest: &str) -> Result<bool> {
-    let versions = data["object"]["asMovePackage"]["packageVersionsAfter"]["nodes"]
-        .as_array()
-        .ok_or_else(|| anyhow!("{original} is not a package on this network"))?;
-    Ok(versions
-        .iter()
-        .filter_map(|node| node["address"].as_str())
-        .any(|address| address == latest))
-}
-
 fn lineage_ids(data: &Value, original: &str) -> Result<Vec<String>> {
     let versions = data["object"]["asMovePackage"]["packageVersionsAfter"]["nodes"]
         .as_array()
@@ -213,6 +199,30 @@ pub async fn bind_projection(
     }
 }
 
+/// Mark a fresh store with the numeric analytics format, and refuse any store that holds
+/// another one: the writer never runs on an unknown format.
+pub async fn bind_analytics_schema(conn: &mut MultiplexedConnection) -> Result<()> {
+    use crate::analytics_totals::{SCHEMA, SCHEMA_KEY};
+    let _: Option<String> = redis::cmd("SET")
+        .arg(SCHEMA_KEY)
+        .arg(SCHEMA)
+        .arg("NX")
+        .query_async(conn)
+        .await
+        .context("writing the analytics schema")?;
+    let stored: Option<String> = redis::cmd("GET")
+        .arg(SCHEMA_KEY)
+        .query_async(conn)
+        .await
+        .context("reading the analytics schema")?;
+    match stored.as_deref() {
+        Some(SCHEMA) => Ok(()),
+        other => Err(anyhow!(
+            "this store holds analytics format {other:?}, not {SCHEMA}; rebuild the disposable store"
+        )),
+    }
+}
+
 /// Declare every index the README schema names. Idempotent: an
 /// "already indexed" error IS the success state; anything else aborts boot.
 pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
@@ -233,7 +243,6 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
         "CREATE INDEX FOR (n:TournamentMatch) ON (n.fight_id)",
         "CREATE INDEX FOR (n:Giftcard) ON (n.id)",
         "CREATE INDEX FOR (n:Zone) ON (n.world, n.zx, n.zz)",
-        "CREATE INDEX FOR (n:Market) ON (n.item_type)",
         "CREATE INDEX FOR (n:Meta) ON (n.id)",
     ];
     for statement in indexes {
@@ -251,70 +260,4 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
     }
     info!(count = indexes.len(), "graph indexes declared");
     Ok(())
-}
-
-#[cfg(test)]
-#[path = "../test/boot.rs"]
-mod lineage_tests;
-
-#[cfg(test)]
-mod tests {
-    use super::{lineage_contains, projection_identity, publish_checkpoint_from};
-    use serde_json::json;
-
-    #[test]
-    fn projection_identity_changes_with_either_original_package() {
-        assert_ne!(
-            projection_identity("0xgame", "0xseed-a"),
-            projection_identity("0xgame", "0xseed-b")
-        );
-        assert_ne!(
-            projection_identity("0xgame-a", "0xseed"),
-            projection_identity("0xgame-b", "0xseed")
-        );
-    }
-
-    #[test]
-    fn decodes_the_current_sui_graphql_package_versions_after_shape() {
-        // Captured from the official testnet GraphQL endpoint for package
-        // 0xff31200a…0baa on 2026-08-22 — the schema that renamed
-        // `packageVersions` to `packageVersionsAfter`/`Before` and broke boot.
-        let data = json!({
-            "object": {
-                "asMovePackage": {
-                    "packageVersionsAfter": {
-                        "nodes": [{
-                            "address": "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
-                        }]
-                    }
-                }
-            }
-        });
-
-        assert!(lineage_contains(
-            &data,
-            "0xff31200a",
-            "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
-        )
-        .expect("lineage"));
-        assert!(!lineage_contains(&data, "0xff31200a", "0xdead").expect("lineage"));
-    }
-
-    #[test]
-    fn decodes_the_current_sui_graphql_previous_transaction_shape() {
-        // Captured from the official testnet GraphQL endpoint for package
-        // 0xb68b4685…2387 on 2026-08-17.
-        let data = json!({
-            "object": {
-                "previousTransaction": {
-                    "effects": { "checkpoint": { "sequenceNumber": 372_762_581 } }
-                }
-            }
-        });
-
-        assert_eq!(
-            publish_checkpoint_from(&data, "0xb68b4685").expect("checkpoint"),
-            372_762_581
-        );
-    }
 }

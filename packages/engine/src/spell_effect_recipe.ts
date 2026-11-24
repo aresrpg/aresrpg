@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Context for the original author program. Art and its timeline have no second implementation.
-import catalog from './generated/claude_spell_catalog.json'
 import { create_source, type ClaudeSpell } from './generated/claude_spell_source.js'
 
-const EFFECT_TAIL_SECONDS = create_source().hold
+const SOURCE = create_source()
+const EFFECT_TAIL_SECONDS = SOURCE.hold
 
-export type SpellEffectClass = keyof typeof catalog
-export const SPELL_EFFECT_CLASSES = Object.freeze(Object.keys(catalog) as SpellEffectClass[])
+export const SPELL_EFFECT_CLASSES: readonly string[] = Object.freeze(Object.keys(SOURCE.catalog))
 export type SpellEffectArea = Readonly<{
   kind: string
   element: string

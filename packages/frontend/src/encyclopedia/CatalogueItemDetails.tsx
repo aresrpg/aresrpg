@@ -13,6 +13,7 @@ import { ConsumableEffectSection } from './ConsumableEffectSection.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
 import { loot_box_is_random } from './loot_box.ts'
+import './catalogue.css'
 
 const item_display_category = (item_type: string, category: string): string =>
   item_is_pet_food(item_type) ? 'pet_food' : category

@@ -128,17 +128,6 @@
     inset 0 -3px color-mix(in srgb, var(--aui-brass-lo) 53%, transparent),
     0 2px 3px #0005;
 }
-.aui-combat-utilities {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-.aui-combat-utilities .aui-button {
-  min-height: 23px;
-  min-width: 23px;
-  padding: 2px;
-  font-size: 10px;
-}
 .aui-mob {
   display: flex;
   flex-direction: column;
@@ -219,24 +208,6 @@
   color: var(--aui-ink);
   text-shadow: 0 1px var(--aui-surface);
 }
-.aui-mob-section {
-  padding: 10px 14px;
-  border-top: 1px solid var(--aui-peak);
-}
-.aui-mob-section h3 {
-  font-size: 13px;
-  margin: 0 0 8px;
-  color: var(--aui-soft);
-}
-.aui-mob-section p {
-  font-size: 12px;
-  margin: 0;
-  line-height: 1.4;
-}
-.aui-mob-spells {
-  display: flex;
-  gap: 6px;
-}
 .aui-mob > footer {
   display: flex;
   justify-content: flex-end;
@@ -244,11 +215,6 @@
   border-top: 1px solid var(--aui-sunk);
   background: var(--aui-lifted);
 }
-
-.aui-combat-utilities .aui-button--danger svg {
-  fill: currentColor;
-}
-
 .aui-mob > header,
 .aui-mob > footer {
   flex-shrink: 0;

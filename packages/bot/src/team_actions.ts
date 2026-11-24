@@ -3,7 +3,6 @@
 import { worlds_source } from '@aresrpg/engine/data'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { CharacterRow, FightStateRow } from '@aresrpg/protocol'
-import type { create_agent_actions } from '@aresrpg/sdk/agent-actions'
 
 import dungeons from '../../../seed/content/dungeons.json'
 
@@ -11,20 +10,14 @@ import { profession_inventory } from './actor_inventory.ts'
 import {
   assert_travel,
   custody_of,
+  gameplay_action,
+  observed_fight,
   owned_character,
   travel_destination,
   type GameplayContext,
 } from './gameplay_context.ts'
 import { decode, identifier, nonempty, object_schema } from './gameplay_schema.ts'
 
-type AgentActions = ReturnType<typeof create_agent_actions>
-type Digest = Promise<Readonly<{ digest: string }>>
-/** Optional so a caller that never joins or raids supplies nothing; an unsupplied door refuses. */
-export type TeamExecutor = Partial<
-  Pick<AgentActions['fight'], 'join' | 'forfeit'> & Readonly<{ dungeon: AgentActions['dungeon'] }>
->
-type Settle = Parameters<AgentActions['fight']['settle']>[0]
-export type SettlePlan = Readonly<{ kind: 'fight_settle'; input: Settle & Readonly<{ dungeon: string | null }> }>
 type Contract = HydratedFightCheckpoint['contract']
 type JoinPayload = Readonly<{ character_id: string; fight: string; checkpoint_id: string; dungeon?: string }>
 type RunPayload = Readonly<{ character_id: string; world: string; dungeon: string }>
@@ -39,33 +32,12 @@ const join_schema = {
 const enter_schema = object_schema({ ...run_properties, key_id: identifier })
 const room_schema = object_schema(run_properties)
 const leave_schema = object_schema({ character_id: identifier, dungeon: nonempty })
-const action = <T>(description: string, input_schema: ReturnType<typeof object_schema>) => ({
-  description,
-  input_schema,
-  parse: (value: unknown) => decode<T>(input_schema, value),
-})
-export const TEAM_ACTIONS = {
-  fight_join: action<JoinPayload>(
-    'Join the placement of a supported PvE fight that already seats a character of this wallet, on that side. Name the dungeon to join a room fight of the same dungeon run and room.',
-    join_schema
-  ),
-  dungeon_enter: action<EnterPayload>(
-    'Walk to the dungeon portal of its city, burn one exact owned key and start a run at room 1. The key is never returned.',
-    enter_schema
-  ),
-  dungeon_fight: action<RunPayload>(
-    'Open the current room fight of an entered dungeon run with its authored mobs, public to the same room.',
-    room_schema
-  ),
-  dungeon_leave: action<LeavePayload>(
-    'End a dungeon run as a loss: abandon it while staged between rooms, or give up its current room fight.',
-    leave_schema
-  ),
-  fight_forfeit: action<ForfeitPayload>(
-    'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. Use it for a fight that cannot be finished.',
-    object_schema({ character_id: identifier })
-  ),
-}
+const parse_join = (value: unknown) => decode<JoinPayload>(join_schema, value)
+const parse_enter = (value: unknown) => decode<EnterPayload>(enter_schema, value)
+const parse_room = (value: unknown) => decode<RunPayload>(room_schema, value)
+const parse_leave = (value: unknown) => decode<LeavePayload>(leave_schema, value)
+const forfeit_schema = object_schema({ character_id: identifier })
+const parse_forfeit = (value: unknown) => decode<ForfeitPayload>(forfeit_schema, value)
 export const dungeon_content = (slug: string) => {
   const dungeon = dungeons.find((row) => row.dungeon === slug)
   if (!dungeon) throw new Error('dungeon_unavailable')
@@ -77,7 +49,7 @@ const dungeon_portal = (world: string, dungeon: string) => {
   return city
 }
 /** A hero between rooms of this dungeon: entered, rooted at the portal and held by its kiosk. */
-export const staged_run = (character: CharacterRow, dungeon: string) => {
+const staged_run = (character: CharacterRow, dungeon: string) => {
   const run = character.dungeon_run
   const staged = [run?.dungeon === dungeon, character.custody === 'kiosk', !character.active_fight].every(Boolean)
   if (!staged) throw new Error('character_not_available')
@@ -114,13 +86,10 @@ export const joinable_team = (contract: Contract, address: string, character_id:
   ]
   return open.every(Boolean) ? team : null
 }
-export const validate_fight_join = (
-  context: GameplayContext,
-  observed: (payload: JoinPayload) => Readonly<{ row: FightStateRow; checkpoint: HydratedFightCheckpoint }>
-) => {
-  const payload = TEAM_ACTIONS.fight_join.parse(context.command.payload)
+const validate_fight_join = (context: GameplayContext) => {
+  const payload = parse_join(context.command.payload)
   const character = owned_character(context, payload.character_id)
-  const { row, checkpoint } = observed(payload)
+  const { row, checkpoint } = observed_fight(payload, context)
   const { contract } = checkpoint
   assert_supported_fight(row, contract, payload.dungeon)
   const team = joinable_team(contract, context.address, character.id)
@@ -129,36 +98,30 @@ export const validate_fight_join = (
   if (payload.dungeon) {
     if (staged_run(character, payload.dungeon).room !== Number(contract.dungeon_room))
       throw new Error('fight_not_joinable')
-    return { kind: 'fight_join' as const, input: { ...input, team: null } }
+    return { input: { ...input, team: null as number | null } }
   }
   const [x, z] = [Number(contract.x), Number(contract.z)]
   assert_travel(character, contract, x, z, context.snapshot.clock!.chain_ms)
-  return {
-    kind: 'fight_join' as const,
-    travel: travel_destination(character, x, z),
-    input: { ...input, team: Number(team) },
-  }
+  return { travel: travel_destination(character, x, z), input: { ...input, team: Number(team) as number | null } }
 }
-export const validate_dungeon_enter = (context: GameplayContext) => {
-  const payload = TEAM_ACTIONS.dungeon_enter.parse(context.command.payload)
+const validate_dungeon_enter = (context: GameplayContext) => {
+  const payload = parse_enter(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const portal = dungeon_portal(payload.world, payload.dungeon)
   const key = profession_inventory(context.snapshot.inventory, character.kiosk).find(({ id }) => id === payload.key_id)
   if (!key?.version || key.item_type !== dungeon_content(payload.dungeon).key) throw new Error('item_unavailable')
   assert_travel(character, payload, portal.x, portal.z, context.snapshot.clock!.chain_ms)
   return {
-    kind: 'dungeon_enter' as const,
     travel: travel_destination(character, portal.x, portal.z),
     input: { ...payload, custody: custody_of(character) },
   }
 }
-export const validate_dungeon_fight = (context: GameplayContext) => {
-  const payload = TEAM_ACTIONS.dungeon_fight.parse(context.command.payload)
+const validate_dungeon_fight = (context: GameplayContext) => {
+  const payload = parse_room(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const room = dungeon_content(payload.dungeon).rooms[staged_run(character, payload.dungeon).room - 1]
   if (!room || character.world !== payload.world) throw new Error('dungeon_unavailable')
   return {
-    kind: 'dungeon_fight' as const,
     input: {
       ...payload,
       custody: custody_of(character),
@@ -167,13 +130,12 @@ export const validate_dungeon_fight = (context: GameplayContext) => {
     },
   }
 }
-export const validate_dungeon_leave = (context: GameplayContext) => {
-  const payload = TEAM_ACTIONS.dungeon_leave.parse(context.command.payload)
+const validate_dungeon_leave = (context: GameplayContext) => {
+  const payload = parse_leave(context.command.payload)
   const character = owned_character(context, payload.character_id)
   if (character.dungeon_run?.dungeon !== payload.dungeon) throw new Error('character_not_available')
   const seat = character.active_fight
   return {
-    kind: 'dungeon_leave' as const,
     input: {
       character_id: character.id,
       custody: custody_of(character),
@@ -182,13 +144,12 @@ export const validate_dungeon_leave = (context: GameplayContext) => {
   }
 }
 /** The door follows the fight: a room is given up through its dungeon, which also ends the run. */
-export const validate_fight_forfeit = (context: GameplayContext) => {
-  const payload = TEAM_ACTIONS.fight_forfeit.parse(context.command.payload)
+const validate_fight_forfeit = (context: GameplayContext) => {
+  const payload = parse_forfeit(context.command.payload)
   const character = owned_character(context, payload.character_id)
   const seat = character.active_fight
   if (!seat) throw new Error('fight_unavailable')
   return {
-    kind: 'fight_forfeit' as const,
     input: {
       fight: seat.id,
       fighter_idx: BigInt(seat.seat),
@@ -197,34 +158,51 @@ export const validate_fight_forfeit = (context: GameplayContext) => {
     },
   }
 }
-export type TeamActionPlan =
-  | ReturnType<typeof validate_fight_join>
-  | ReturnType<typeof validate_dungeon_enter>
-  | ReturnType<typeof validate_dungeon_fight>
-  | ReturnType<typeof validate_dungeon_leave>
-  | ReturnType<typeof validate_fight_forfeit>
-const required = <T>(executor: T | undefined): T => {
-  if (!executor) throw new Error('team_executor_unavailable')
-  return executor
+/** A room fight is joined, given up and left through its dungeon, which also ends the run. */
+export const TEAM_ACTIONS = {
+  fight_join: gameplay_action({
+    description:
+      'Join the placement of a supported PvE fight that already seats a character of this wallet, on that side. Name the dungeon to join a room fight of the same dungeon run and room.',
+    input_schema: join_schema,
+    parse: parse_join,
+    validate: validate_fight_join,
+    execute: (sdk, { team, ...input }) =>
+      team === null ? sdk.dungeon.join_fight(input) : sdk.join({ ...input, team }),
+  }),
+  dungeon_enter: gameplay_action({
+    description:
+      'Walk to the dungeon portal of its city, burn one exact owned key and start a run at room 1. The key is never returned.',
+    input_schema: enter_schema,
+    parse: parse_enter,
+    validate: validate_dungeon_enter,
+    execute: (sdk, input) => sdk.dungeon.enter(input),
+  }),
+  dungeon_fight: gameplay_action({
+    description:
+      'Open the current room fight of an entered dungeon run with its authored mobs, public to the same room.',
+    input_schema: room_schema,
+    parse: parse_room,
+    validate: validate_dungeon_fight,
+    execute: (sdk, input) => sdk.dungeon.start_fight(input),
+  }),
+  dungeon_leave: gameplay_action({
+    description:
+      'End a dungeon run as a loss: abandon it while staged between rooms, or give up its current room fight.',
+    input_schema: leave_schema,
+    parse: parse_leave,
+    validate: validate_dungeon_leave,
+    execute: (sdk, { room, custody, character_id }) =>
+      room ? sdk.dungeon.give_up_fight({ ...room, custody }) : sdk.dungeon.abandon({ character_id, custody }),
+  }),
+  fight_forfeit: gameplay_action({
+    description:
+      'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. Use it for a fight that cannot be finished.',
+    input_schema: forfeit_schema,
+    parse: parse_forfeit,
+    validate: validate_fight_forfeit,
+    execute: (sdk, { dungeon, ...seat }) => (dungeon ? sdk.dungeon.give_up_fight(seat) : sdk.forfeit(seat)),
+  }),
 }
-type Input<Kind extends TeamActionPlan['kind']> = Extract<TeamActionPlan, { kind: Kind }>['input']
-export const team_executors = (actions: TeamExecutor) => ({
-  fight_join: ({ team, ...input }: Input<'fight_join'>): Digest =>
-    team === null ? required(actions.dungeon).join_fight(input) : required(actions.join)({ ...input, team }),
-  dungeon_enter: (input: Input<'dungeon_enter'>): Digest => required(actions.dungeon).enter(input),
-  dungeon_fight: (input: Input<'dungeon_fight'>): Digest => required(actions.dungeon).start_fight(input),
-  dungeon_leave: ({ room, custody, character_id }: Input<'dungeon_leave'>): Digest =>
-    room
-      ? required(actions.dungeon).give_up_fight({ ...room, custody })
-      : required(actions.dungeon).abandon({ character_id, custody }),
-  fight_forfeit: ({ dungeon, ...seat }: Input<'fight_forfeit'>): Digest =>
-    dungeon ? required(actions.dungeon).give_up_fight(seat) : required(actions.forfeit)(seat),
-})
-/** A room settles through its dungeon door, which also advances or ends the run. */
-export const settle_executor =
-  (actions: TeamExecutor & Pick<AgentActions['fight'], 'settle'>) =>
-  ({ dungeon, ...input }: SettlePlan['input']): Digest =>
-    dungeon ? required(actions.dungeon).settle({ ...input, dungeon }) : actions.settle(input)
 /** The observed state that proves a certified team action took effect. */
 export const team_projected = (
   kind: string,

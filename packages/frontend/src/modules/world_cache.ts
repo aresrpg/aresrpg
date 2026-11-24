@@ -74,6 +74,7 @@ export const project_world_window = (world: WorldState, character: WorldCharacte
       spawns: {},
       fights: {},
       pending_engages: {},
+      pending_zone_searches: {},
       player_menu: null,
     })
   const wanted = tracked_zone_keys([window])
@@ -106,6 +107,8 @@ export const project_world_window = (world: WorldState, character: WorldCharacte
     pending_engages: Object.freeze(
       Object.fromEntries(Object.entries(world.pending_engages).filter(([, pending]) => wanted.has(pending.key)))
     ),
+    // A zone outside the window can no longer show its search: the press re-arms when the zone is tracked again.
+    pending_zone_searches: keep(world.pending_zone_searches),
     player_menu: world.player_menu && players[world.player_menu.character_id] ? world.player_menu : null,
   })
 }

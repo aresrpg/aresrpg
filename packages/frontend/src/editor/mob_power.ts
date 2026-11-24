@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { dofus_mob_power_envelope, item_stat_center } from '@aresrpg/immutable'
 import {
+  dofus_mob_power_envelope,
+  item_stat_center,
   mob_band_scaled,
   mob_centered_band_scaled,
   mob_effect_value_scaled,
   mob_loot_chance_scaled,
   mob_pool_scaled,
-  point_removal_chance,
-  tackle_contest,
-} from '@aresrpg/fight'
+} from '@aresrpg/immutable'
+import { point_removal_chance, tackle_contest } from '@aresrpg/fight'
 
 import type { JsonValue } from './seed_editor.ts'
 

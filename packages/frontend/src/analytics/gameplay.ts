@@ -77,8 +77,8 @@ const gathering_events = (state: AppState, previous: AppState): readonly Analyti
 }
 
 const movement_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => {
-  const next = state.analytics
-  const before = previous.analytics
+  const next = state.gameplay_analytics
+  const before = previous.gameplay_analytics
   return [
     ...(next.moved_at !== null && next.moved_at !== before.moved_at
       ? [{ name: 'movement_active', properties: { control: 'manual' } }]
@@ -90,8 +90,8 @@ const movement_events = (state: AppState, previous: AppState): readonly Analytic
 }
 
 const loading_events = (state: AppState, previous: AppState): readonly AnalyticsEvent[] => {
-  const next = state.analytics.loading
-  const before = previous.analytics.loading
+  const next = state.gameplay_analytics.loading
+  const before = previous.gameplay_analytics.loading
   if (!next || next === before) return []
   return [
     ...(next.world !== before?.world ? [{ name: 'world_load_started' }] : []),

@@ -112,7 +112,7 @@ const valid_consent = (value: unknown): boolean => {
     ['generation', 'policy_revision'].every((key) => Number.isSafeInteger(data[key]) && Number(data[key]) > 0),
   ].every(Boolean)
 }
-export const parse_hosted_challenge = (message: string): HostedChallengeEnvelope => {
+const parse_hosted_challenge = (message: string): HostedChallengeEnvelope => {
   const separator = message.indexOf('\n')
   const value: unknown = JSON.parse(message.slice(separator + 1))
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_hosted_challenge')

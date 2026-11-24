@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Transaction, TransactionDataBuilder } from '@mysten/sui/transactions'
+import { TransactionDataBuilder } from '@mysten/sui/transactions'
 import { isValidTransactionDigest } from '@mysten/sui/utils'
-import { verifyTransactionSignature } from '@mysten/sui/verify'
 
 import { receipt_digest, type Receipt } from './cache.ts'
 import { read_transaction_conflict, type ConflictReader } from './transaction_conflict.ts'
@@ -39,6 +38,13 @@ export type TransactionJournal = Readonly<{
 }>
 export type { Receipt } from './cache.ts'
 export type TransactionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+/** Runs `task` while holding the exclusive lock `name` and settles as `task` settles. The holder releases
+ * the lock on every settlement; a browser also releases it when the tab that holds it closes.
+ * It protects one account's gas and owned-object selection, through signing and submission, across the
+ * tabs of one origin: two tabs never resolve and sign at once. It does not protect against another tab's
+ * uncertain submission (each tab keeps its own record), another device, or another origin. An external
+ * wallet's signing prompt holds the lock until the player answers it. */
+export type TransactionLock = <T>(name: string, task: () => Promise<T>) => Promise<T>
 export type ExecutionCore = ConflictReader &
   Readonly<{
     executeTransaction: (input: {
@@ -60,10 +66,32 @@ export type ExecutionCore = ConflictReader &
 export const browser_transaction_storage = (): TransactionStorage | null =>
   typeof window === 'undefined' ? null : window.sessionStorage
 
-export const bounded_request = async <T>(
-  request: (signal: AbortSignal) => Promise<T>,
-  milliseconds: number
-): Promise<T> => {
+/** The browser's Web Locks order this account's lane across tabs; null on a host without them. */
+export const browser_transaction_lock = (): TransactionLock | null => {
+  if (typeof window === 'undefined' || !('locks' in window.navigator)) return null
+  const { locks } = window.navigator
+  return (name, task) => locks.request(name, () => task())
+}
+
+/** The lock of a host without Web Locks: exclusive per name inside this process, granted in request
+ * order, released when the task settles. A failed task never blocks the next one. */
+const fifo_lock = (): TransactionLock => {
+  const tails = new Map<string, Promise<void>>()
+  return (name, task) => {
+    const result = (tails.get(name) ?? Promise.resolve()).then(task)
+    const tail = result.then(
+      () => undefined,
+      () => undefined
+    )
+    tails.set(name, tail)
+    void tail.then(() => {
+      if (tails.get(name) === tail) tails.delete(name)
+    })
+    return result
+  }
+}
+
+const bounded_request = async <T>(request: (signal: AbortSignal) => Promise<T>, milliseconds: number): Promise<T> => {
   const signal = AbortSignal.timeout(milliseconds)
   let stop = (): void => {}
   const aborted = new Promise<never>((_, reject) => {
@@ -106,30 +134,12 @@ const verify_receipt = (receipt: Receipt, record: PendingTransaction): Receipt =
   return receipt
 }
 
-/** Resume only the exact ordinary-member envelope for this execution lane. No key or rebuild is involved. */
-const verify_signed_envelope = async (record: SignedTransaction, address: string | null | undefined): Promise<void> => {
-  const transaction = Transaction.from(record.bytes).getData()
-  const valid = [
-    !!address,
-    transaction.sender === address,
-    TransactionDataBuilder.getDigestFromBytes(record.bytes) === record.digest,
-    String(transaction.gasData.budget) === record.gas_budget_mist,
-    record.signatures.length > 0,
-  ].every(Boolean)
-  if (!valid) throw new Error('[sdk] invalid durable signed envelope')
-  const signers = await Promise.all(
-    record.signatures.map((signature) => verifyTransactionSignature(record.bytes, signature))
-  )
-  if (!signers.some((signer) => signer.verifyAddress(address!)))
-    throw new Error('[sdk] durable envelope signature does not authorize sender')
-}
-
 /** One execution boundary: submit once, recover by digest, then feed the ordinary receipt pipeline once. */
 export const create_transaction_execution = ({
   core,
   key,
-  address,
   storage = browser_transaction_storage(),
+  lock = browser_transaction_lock() ?? fifo_lock(),
   on_receipt,
   journal,
   response_timeout_ms = 15_000,
@@ -137,8 +147,8 @@ export const create_transaction_execution = ({
 }: Readonly<{
   core: ExecutionCore
   key: string
-  address?: string | null
   storage?: TransactionStorage | null
+  lock?: TransactionLock
   journal?: TransactionJournal
   on_receipt: (receipt: Receipt, gas_scope?: string, gas_payer?: string) => void
   response_timeout_ms?: number
@@ -148,7 +158,7 @@ export const create_transaction_execution = ({
   let prepared: PreparedTransaction | null = null
   let journal_loaded = !journal
   let queued = 0
-  let execution_tail: Promise<unknown> = Promise.resolve()
+  // The lane's one name: its per-tab record's storage key and the lock that orders its passes.
   const storage_key = key.toLowerCase()
   const read_pending = (): PendingTransaction | null => {
     const stored = storage?.getItem(storage_key)
@@ -239,43 +249,19 @@ export const create_transaction_execution = ({
     pending = { digest: record.digest, phase: 'recovered' }
     return true
   }
-  const resume_pending = async (): Promise<boolean> => {
-    const saved = await journal?.read()
-    if (!saved || saved.phase !== 'signed') return recover_pending()
-    // Copy before awaiting provider verification or admission so a mutable adapter cannot swap bytes.
-    const envelope = { ...saved, bytes: saved.bytes.slice(), signatures: [...saved.signatures] }
-    const record: PendingTransaction = {
-      digest: envelope.digest,
-      phase: 'submitted',
-      include: envelope.include,
-      gas_scope: envelope.gas_scope,
-      gas_payer: envelope.gas_payer,
-    }
-    pending = record
-    journal_loaded = true
-    await verify_signed_envelope(envelope, address)
-    await journal!.admit('submit')
-    await journal!.mark_submitting(envelope)
-    await send_envelope(envelope.bytes, envelope.signatures, record)
-    pending = { digest: record.digest, phase: 'recovered' }
-    return true
-  }
   return Object.freeze({
+    /** Reload safety for THIS tab only: none of its own passes is queued, waiting for the lock or running,
+     * and its own per-tab record holds no unresolved submission. Another tab's transaction never changes it. */
     is_transaction_idle: (): boolean => journal_loaded && queued === 0 && read_pending()?.phase !== 'submitted',
+    /** The lock orders every pass of this account, in this tab and in every other tab. Each pass reads this
+     * tab's record and resolves gas only after it holds the lock. The caller keeps the pass's own failure. */
     enqueue: <T>(action: () => Promise<T>): Promise<T> => {
       queued += 1
-      const result = execution_tail.then(action, action).finally(() => {
+      return lock(storage_key, action).finally(() => {
         queued -= 1
       })
-      // Only the queue tail absorbs rejection; the caller retains the original failing promise.
-      execution_tail = result.then(
-        () => undefined,
-        () => undefined
-      )
-      return result
     },
     recover_pending,
-    resume_pending,
     before_next: async (wait_for_visibility?: boolean): Promise<void> => {
       const record = await load_pending()
       await journal?.admit('prepare')

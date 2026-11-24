@@ -28,7 +28,6 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/ui/',
     'packages/journal/public/assets/jetbrains-mono.woff2',
     'packages/frontend/',
-    'packages/mobile/',
     'packages/engine/',
     'packages/sdk/',
     'packages/fight/',
@@ -51,18 +50,21 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/frontend/public/branding/kares/',
     'seed/icons/currency/kares.png',
     'packages/frontend/public/branding/helmet-favicon.png',
+    // A hero's share preview builds its poster address with the site's builder.
+    'packages/frontend/src/components/portrait_share.ts',
+    'packages/frontend/public/portrait-share/manifest.json',
+    'seed/portraits/manifest.json',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/bot/package.json',
-    'packages/telegram/package.json',
     'packages/engine/package.json',
     'packages/ui/package.json',
     'packages/discord/package.json',
     'packages/frontend/package.json',
-    'packages/mobile/package.json',
     'packages/journal/package.json',
     'packages/sdk/package.json',
     'packages/sdk/src/agent_pairing.ts',
     'packages/sdk/src/agent_multisig.ts',
+    'packages/engine/src/',
     'packages/fight/src/',
     'packages/fight/package.json',
     'packages/immutable/src/',
@@ -83,11 +85,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/server/package.json',
     'packages/immutable/',
     'packages/ui/package.json',
-    'packages/ui/src/base.css',
-    'packages/ui/src/art.ts',
-    'packages/ui/src/visual_identity.ts',
-    'packages/ui/src/sui.ts',
-    'packages/ui/src/assets/',
+    'packages/ui/src/',
     'packages/frontend/src/i18n/locales/',
     'seed/icons/items/',
     'seed/icons/mobs/',
@@ -102,10 +100,8 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/immutable/package.json',
     'packages/frontend/package.json',
     'packages/protocol/package.json',
-    'packages/mobile/package.json',
     'packages/sdk/package.json',
     'packages/bot/package.json',
-    'packages/telegram/package.json',
     'packages/engine/package.json',
   ]),
   bot: Object.freeze([
@@ -124,28 +120,9 @@ export const RELEASE_INPUTS = Object.freeze({
     'seed/content/pet_wings.json',
     'seed/content/mobs.json',
     'seed/content/spells.json',
-    'seed/content/strategies.json',
     'seed/content/dungeons.json',
     'seed/portraits/manifest.json',
     'pins.json',
-    'bun.lock',
-    'patches/',
-    'scripts/release_inputs.mjs',
-  ]),
-  // The Telegram companion runs from source: its image definition, its import closure and the
-  // locale documents it reads. Its tests and README are not in the image.
-  telegram: Object.freeze([
-    'packages/telegram/Dockerfile',
-    'packages/telegram/src/',
-    'packages/engine/src/',
-    'packages/protocol/src/',
-    'packages/immutable/src/',
-    'packages/frontend/src/i18n/locales/',
-    'seed/content/worlds.json',
-    'seed/content/structure_packs.json',
-    'seed/content/mobs.json',
-    'seed/content/strategies.json',
-    'seed/structures/',
     'bun.lock',
     'patches/',
     'scripts/release_inputs.mjs',
@@ -155,7 +132,7 @@ export const RELEASE_INPUTS = Object.freeze({
 
 // A dedicated image context admits every workspace manifest for its frozen install.
 export const component_owns_path = (component, path) =>
-  (['bot', 'telegram'].includes(component) && /^packages\/[^/]+\/package\.json$/.test(path)) ||
+  (component === 'bot' && /^packages\/[^/]+\/package\.json$/.test(path)) ||
   RELEASE_INPUTS[component].includes(path) ||
   (!JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
     RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix)))

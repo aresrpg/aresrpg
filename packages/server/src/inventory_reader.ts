@@ -8,7 +8,7 @@ import { create_watcher } from './pubsub_bus.ts'
 import { channels, type EventEnvelope } from './protocol.ts'
 import { get_items } from './reads/get_items.ts'
 
-/** Both account views subscribe before their indexed baseline and consume the same item deltas. */
+/** Every socket that proved its account subscribes before its indexed baseline and consumes the same item deltas. */
 export const create_inventory_reader = ({
   graph,
   pubsub,

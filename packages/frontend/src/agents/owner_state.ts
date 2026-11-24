@@ -110,13 +110,26 @@ export const owner_connected = (session: SessionState): boolean => {
   ].every(Boolean)
 }
 
+/** The assistant's consent request an address carries (`?authorization_id=`), or null. */
+export const agent_request_id = (search: string): string | null => new URLSearchParams(search).get('authorization_id')
+
+/** The same address without the assistant's consent request. */
+export const without_agent_request = ({
+  pathname,
+  search,
+  hash,
+}: Readonly<{ pathname: string; search: string; hash: string }>) => {
+  const params = new URLSearchParams(search)
+  params.delete('authorization_id')
+  const rest = params.toString()
+  return { pathname, search: rest ? `?${rest}` : '', hash }
+}
+
 /** Whether the owner check can run for this account on this page: the rule the check itself applies.
  * It never runs without the bot service, for an account that is not a Google account, or on a consent
- * link, whose `authorization_id` belongs to another request. */
+ * link, whose request belongs to another flow. */
 export const owner_checkable = (wallet: Pick<AuthSession, 'identity'> | null, service_url: string, search: string) =>
-  [Boolean(service_url), wallet?.identity === 'zklogin', !new URLSearchParams(search).has('authorization_id')].every(
-    Boolean
-  )
+  [Boolean(service_url), wallet?.identity === 'zklogin', agent_request_id(search) === null].every(Boolean)
 
 /** Whether anything can be asked about this account's agent. A Google account may have a hosted agent,
  * so a build with no bot service address cannot know: that is unreachable, never "not connected". */
@@ -132,10 +145,6 @@ export type OwnerAnswer = 'unknown' | 'connected' | 'not_connected' | 'unreachab
  * answer, so it reads `not_connected` at once and never waits. During a later re-check the previous
  * answer stands until the new one arrives.
  */
-/** A real answer exists: the bot said it, or no check can ever run. A failed check is not an answer. */
-export const owner_answered = (session: SessionState, checkable: boolean, reachable = true): boolean =>
-  reachable && (!checkable || session.agent_connection.response !== null)
-
 export const owner_answer = (session: SessionState, checkable: boolean, reachable = true): OwnerAnswer => {
   if (owner_connected(session)) return 'connected'
   if (!reachable) return 'unreachable'

@@ -1,13 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// C9 Hillaire sky — shared TSL physics consumed by all four LUT kernels and their samplers:
-// medium (Rayleigh/Mie/ozone) sampling, the Rayleigh + Henyey-Greenstein phase functions, ray↔sphere
-// geometry, and the transmittance + sky-view LUT parameterizations (both directions). Pure node-
-// returning functions (they INLINE into kernels/samplers like sky_node.js's mirror pattern) — no
-// texture reads here (those live in luts.js). Faithful to Hillaire's SkyAtmosphereCommon.hlsl.
-//
-// A `U` argument everywhere is the ATMOSPHERE UNIFORM BAG built by hillaire_sky.js (each field a
-// `uniform()` node in KM / per-KM units) so set_atmosphere_params(...) retunes every kernel live.
+// Shared TSL physics for the four Hillaire LUT kernels and their samplers: medium sampling, phase
+// functions, ray-sphere geometry and the LUT parameterizations, after Hillaire's SkyAtmosphereCommon.hlsl.
+// `U` is the kilometre-scale atmosphere uniform set built by hillaire_sky.ts.
 
 import { acos, clamp, cos, exp, float, max, pow, sqrt, sub, vec2 } from 'three/tsl'
 import type { Node } from 'three/webgpu'
@@ -33,25 +28,8 @@ export type AtmoUniforms = Readonly<{
 }>
 
 /**
- * @typedef {object} AtmoUniforms  (all TSL `uniform()` nodes; km / per-km)
- * @property {*} rayleigh_scattering vec3 @property {*} rayleigh_density_h float
- * @property {*} mie_scattering float @property {*} mie_absorption float @property {*} mie_g float
- * @property {*} mie_density_h float @property {*} ozone_absorption vec3 @property {*} ozone_center float
- * @property {*} ozone_width float @property {*} ground_radius float @property {*} top_radius float
- * @property {*} ground_albedo vec3 @property {*} sun_illuminance vec3 @property {*} exposure float
- */
-
-/**
- * @typedef {object} Medium  the local optical properties at an altitude (all vec3 nodes except mie_s).
- * @property {*} rayleigh_s vec3 — Rayleigh scattering σs (for the Rayleigh phase weight).
- * @property {*} mie_s float — Mie scattering σs (for the HG phase weight).
- * @property {*} scattering vec3 — total scattering (Rayleigh + Mie) — the multiple-scattering feed term.
- * @property {*} extinction vec3 — total extinction (scattering + Mie absorption + ozone absorption).
- */
-
-/**
  * Sample the atmosphere medium at altitude `h_km` above the ground (Rayleigh/Mie exponential layers +
- * the ozone tent). @param {AtmoUniforms} U @param {*} h_km float node @returns {Medium}
+ * the ozone tent).
  */
 export function sample_medium(U: AtmoUniforms, h_km: Node<'float'>) {
   const rayl_density = exp(h_km.div(U.rayleigh_density_h).negate())
@@ -68,7 +46,7 @@ export function sample_medium(U: AtmoUniforms, h_km: Node<'float'>) {
 }
 
 /**
- * Rayleigh phase: 3/(16π)·(1+cos²θ). @param {*} cos_theta float node @returns {*} float node
+ * Rayleigh phase: 3/(16π)·(1+cos²θ).
  */
 export function rayleigh_phase(cos_theta: Node<'float'>): Node<'float'> {
   return float(3 / (16 * PI)).mul(cos_theta.mul(cos_theta).add(1))
@@ -76,7 +54,6 @@ export function rayleigh_phase(cos_theta: Node<'float'>): Node<'float'> {
 
 /**
  * Henyey-Greenstein Mie phase: 1/(4π)·(1−g²)/(1+g²−2g·cosθ)^1.5.
- * @param {*} g float node @param {*} cos_theta float node @returns {*} float node
  */
 export function mie_phase_hg(g: Node<'float'>, cos_theta: Node<'float'>): Node<'float'> {
   const g2 = g.mul(g)
@@ -87,16 +64,15 @@ export function mie_phase_hg(g: Node<'float'>, cos_theta: Node<'float'>): Node<'
 /**
  * Distance from a point at radius `r` (km) along a ray whose cosine-to-zenith is `mu` to the sphere
  * of `radius` (km) — the FAR (exit) root, 0 if the ray never reaches it. Used for the top of atmosphere.
- * @param {*} r float @param {*} mu float @param {*} radius float @returns {*} float
  */
-export function dist_to_sphere_outer(r: Node<'float'>, mu: Node<'float'>, radius: Node<'float'>): Node<'float'> {
+function dist_to_sphere_outer(r: Node<'float'>, mu: Node<'float'>, radius: Node<'float'>): Node<'float'> {
   const disc = r.mul(r).mul(mu.mul(mu).sub(1)).add(radius.mul(radius))
   return max(float(0), sqrt(max(disc, float(0))).sub(r.mul(mu)))
 }
 
 /**
  * Boolean node: does a ray from radius `r` with zenith-cosine `mu` hit the ground sphere?
- * (mu < 0 AND the discriminant is non-negative.) @param {*} r @param {*} mu @param {*} ground @returns {*} bool
+ * (mu < 0 AND the discriminant is non-negative.)
  */
 export function ray_hits_ground(r: Node<'float'>, mu: Node<'float'>, ground: Node<'float'>): Node<'bool'> {
   const disc = r.mul(r).mul(mu.mul(mu).sub(1)).add(ground.mul(ground))
@@ -105,7 +81,7 @@ export function ray_hits_ground(r: Node<'float'>, mu: Node<'float'>, ground: Nod
 
 /**
  * March length along a view ray from radius `r`, zenith-cosine `mu`: to the ground if it is hit,
- * else to the top of atmosphere. @param {AtmoUniforms} U @param {*} r @param {*} mu @returns {*} float
+ * else to the top of atmosphere.
  */
 export function ray_march_length(U: AtmoUniforms, r: Node<'float'>, mu: Node<'float'>): Node<'float'> {
   const disc_g = r.mul(r).mul(mu.mul(mu).sub(1)).add(U.ground_radius.mul(U.ground_radius))
@@ -124,8 +100,7 @@ export function ray_march_length(U: AtmoUniforms, r: Node<'float'>, mu: Node<'fl
 // ── Transmittance LUT parameterization (256×64) — Bruneton/Hillaire (r, mu) ↔ (u, v) ────────────────
 
 /**
- * uv → (r, mu) for the transmittance LUT texel. @param {AtmoUniforms} U @param {*} uv vec2
- * @returns {{ r:*, mu:* }}
+ * uv → (r, mu) for the transmittance LUT texel.
  */
 export function uv_to_transmittance_params(U: AtmoUniforms, uv: Node<'vec2'>) {
   const ground = U.ground_radius
@@ -141,8 +116,7 @@ export function uv_to_transmittance_params(U: AtmoUniforms, uv: Node<'vec2'>) {
 }
 
 /**
- * (r, mu) → uv for sampling the transmittance LUT. @param {AtmoUniforms} U @param {*} r @param {*} mu
- * @returns {*} vec2
+ * (r, mu) → uv for sampling the transmittance LUT.
  */
 export function transmittance_params_to_uv(U: AtmoUniforms, r: Node<'float'>, mu: Node<'float'>): Node<'vec2'> {
   const ground = U.ground_radius
@@ -163,7 +137,6 @@ export function transmittance_params_to_uv(U: AtmoUniforms, r: Node<'float'>, mu
 /**
  * uv → (viewZenithCos, lightViewCos) for a sky-view texel at camera radius `r`. The v axis concentrates
  * texels at the horizon via the sqrt packing (split at the horizon line into above/below halves).
- * @param {AtmoUniforms} U @param {*} uv vec2 @param {*} r float @returns {{ view_zenith_cos:*, light_view_cos:* }}
  */
 export function uv_to_skyview_params(U: AtmoUniforms, uv: Node<'vec2'>, r: Node<'float'>) {
   const ground = U.ground_radius
@@ -186,8 +159,6 @@ export function uv_to_skyview_params(U: AtmoUniforms, uv: Node<'vec2'>, r: Node<
 
 /**
  * (viewZenithCos, lightViewCos) → uv for sampling the sky-view LUT (the inverse of the packing above).
- * @param {AtmoUniforms} U @param {*} intersect_ground bool node @param {*} view_zenith_cos @param {*} light_view_cos
- * @param {*} r @returns {*} vec2
  */
 export function skyview_params_to_uv(
   U: AtmoUniforms,

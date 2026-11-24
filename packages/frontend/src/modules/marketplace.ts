@@ -14,17 +14,15 @@ import {
   MAX_TRACKED_CHARACTERS,
   type ListingRow,
   type MarketType,
-  type MarketTypeCounts,
   type MarketQuery,
-  market_category,
   has_market_page,
   type MarketVolume,
   type MarketObservation,
   type MarketSaleRow,
+  type ClientPacket,
   type ServerPacket,
 } from '@aresrpg/protocol'
 
-import { reduce_market_floor, type MarketFloor, type MarketFloorInput } from '../marketplace/floor_state.ts'
 import { buyer_total, market_needs_funding } from '../marketplace/price.ts'
 import {
   current_offer,
@@ -35,17 +33,21 @@ import {
 import { localized_error } from '../i18n/error_text.ts'
 import {
   initial_price_history,
+  market_price_subscription,
   reduce_market_prices,
   type PriceHistoryState,
   type PriceHistoryInput,
 } from '../marketplace/price_history_state.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import { toast, type ToastPart } from '../toast.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
-import { play_audio } from '../game/audio/audio_registry.ts'
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { items_by_type } from '../content/items.ts'
+import { titleize } from '../content/titles.ts'
 import { format_sui } from '../wallet_amount.ts'
+import { link_accepted } from '../server_link.ts'
+
+import { observe_subscriptions } from './session.ts'
 
 export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'RESOURCES', 'CHARACTERS'] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
@@ -64,14 +66,17 @@ export const market_categories = (group: MarketGroup): readonly ItemCategory[] =
 
 export type MarketplaceState = CatalogueProjection &
   Readonly<{
-    floor: MarketFloor | null
     prices: PriceHistoryState
-    group: MarketGroup
-    types: readonly MarketType[]
-    type_counts: MarketTypeCounts | null
+    /** Every publicly listed type with its quote; null until the first list arrives. Public data: it stays
+     *  on screen across pages, reconnections and sign-ins, and each new list replaces it. */
+    types: readonly MarketType[] | null
     next_cursor: string | null
     page_cursors: readonly string[]
+    /** What the market view on screen observes; null while none is. */
     observation: MarketObservation | null
+    /** How many observations this store has made: each one, a page turn and a new viewer included, takes the next
+     *  number as its request, so a reply to an earlier one is never taken for the current page. */
+    requests: number
     ready_request: number | null
     recent_pages: readonly RecentOfferPage[]
     history: readonly MarketSaleRow[]
@@ -80,19 +85,16 @@ export type MarketplaceState = CatalogueProjection &
     history_total: number
     profits: readonly Readonly<{ kiosk: string; amount_mist: string }>[]
     pending: string | null
-    /** A market view is mounted, in the game or in the web dapp: the one fact the socket's market
-     * subscriptions follow. It is a fact of the page, not of the account, so a sign-in keeps it. */
-    open: boolean
   }>
 
+/** What one market view observes: the listed types alone, an item's offers or the listed heroes. */
+export type MarketSubject = MarketQuery | Readonly<{ kind: 'types' }>
+
 export type MarketplaceInput =
-  | MarketFloorInput
   | PriceHistoryInput
-  | Readonly<{ type: 'market/opened' }>
-  | Readonly<{ type: 'market/closed' }>
-  | Readonly<{ type: 'market/group_selected'; group: MarketGroup; category?: ItemCategory; item_type?: string }>
+  /** The market view on screen and what it shows; null when no market view is on screen. The socket follows it. */
+  | Readonly<{ type: 'market/observed'; query: MarketSubject | null }>
   | Readonly<{ type: 'market/page_requested'; direction: 'next' | 'previous' }>
-  | Readonly<{ type: 'market/characters_filtered'; classe?: string; min_level?: number; max_level?: number }>
   | Readonly<{
       type: 'market/list_requested'
       listing: Omit<ListingRow, 'version'>
@@ -113,14 +115,12 @@ export type MarketplaceInput =
 
 export const initial_marketplace_state = (): MarketplaceState =>
   Object.freeze({
-    floor: null,
     prices: initial_price_history(),
-    group: 'EQUIPMENT',
-    types: [],
-    type_counts: null,
+    types: null,
     next_cursor: null,
     page_cursors: [],
     observation: null,
+    requests: 0,
     listings: [],
     ready_request: null,
     recent_pages: [],
@@ -133,7 +133,6 @@ export const initial_marketplace_state = (): MarketplaceState =>
     history_total: 0,
     profits: [],
     pending: null,
-    open: false,
   })
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1_000
@@ -157,7 +156,7 @@ export const market_sale_notice = (
   template = 'Sold {{amount}} {{name}} for {{price}}',
   locale = 'en'
 ): Readonly<{ message: string; parts: readonly ToastPart[] }> => {
-  const catalog_name = sale.item_type ? content_catalog.item(sale.item_type)?.item.name : null
+  const catalog_name = sale.item_type ? items_by_type[sale.item_type]?.name : null
   const name = sale.name ?? catalog_name ?? (sale.item_type ? titleize(sale.item_type) : sale.object)
   const values: Readonly<Record<string, ToastPart>> = Object.freeze({
     amount: Object.freeze({ text: `×${sale.amount}`, tone: 'gold' }),
@@ -200,15 +199,12 @@ const fold_write = (
   return Object.freeze({ ...catalogue_departed({ ...market, catalogues }, listing, version), pending: null })
 }
 
-const BROWSE_PACKETS = ['packet/market_slice', 'packet/market_types', 'packet/market_counts'] as const
-type BrowsePacket = Readonly<Extract<ServerPacket, { type: (typeof BROWSE_PACKETS)[number] }>>
-const is_browse_packet = (packet: Readonly<ServerPacket>): packet is BrowsePacket =>
-  BROWSE_PACKETS.some((type) => type === packet.type)
-
-const fold_browse = (market: MarketplaceState, packet: BrowsePacket, address: string | null): MarketplaceState => {
+const fold_slice = (
+  market: MarketplaceState,
+  packet: Readonly<Extract<ServerPacket, { type: 'packet/market_slice' }>>,
+  address: string | null
+): MarketplaceState => {
   if (!same_observation(market.observation, packet.observation)) return market
-  if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, type_counts: packet.counts })
-  if (packet.type === 'packet/market_types') return Object.freeze({ ...market, types: packet.items })
   const folded = fold_catalogue(market, packet, false, address)
   return Object.freeze({
     ...folded,
@@ -226,7 +222,8 @@ const fold_packet = (
   if (packet.type === 'packet/server_info' && packet.market_volume !== undefined)
     return Object.freeze({ ...market, volume: packet.market_volume })
   if (packet.type === 'packet/listings') return fold_catalogue(market, packet, true, address)
-  if (is_browse_packet(packet)) return fold_browse(market, packet, address)
+  if (packet.type === 'packet/market_types') return Object.freeze({ ...market, types: packet.items })
+  if (packet.type === 'packet/market_slice') return fold_slice(market, packet, address)
   if (packet.type === 'packet/market_history')
     return Object.freeze({
       ...market,
@@ -239,21 +236,23 @@ const fold_packet = (
   return market
 }
 
-const observe_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
-  Object.freeze({
-    ...market,
-    group,
-    observation: { ...query, request: (market.observation?.request ?? 0) + 1 },
-    types: market_category(market.observation) === market_category(query) ? market.types : [],
-    listings: [],
-    ready_request: null,
-    next_cursor: null,
-    page_cursors: [],
-  })
-const select_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
-  market.observation && market_query_key(market.observation) === market_query_key(query)
-    ? market
-    : observe_query(market, query, group)
+/** Asks for a query under the next request number. */
+const request = (
+  market: MarketplaceState,
+  query: MarketSubject
+): Pick<MarketplaceState, 'observation' | 'requests'> => ({
+  observation: { ...query, request: market.requests + 1 },
+  requests: market.requests + 1,
+})
+const without_page = (market: MarketplaceState, asked: Pick<MarketplaceState, 'observation' | 'requests'>) =>
+  Object.freeze({ ...market, ...asked, listings: [], ready_request: null, next_cursor: null, page_cursors: [] })
+/** Showing the same query again keeps its page and its offers; another query starts on its first page. */
+const observe_subject = (market: MarketplaceState, query: MarketSubject | null): MarketplaceState => {
+  if (query === null)
+    return market.observation === null ? market : without_page(market, { observation: null, requests: market.requests })
+  if (market.observation && market_query_key(market.observation) === market_query_key(query)) return market
+  return without_page(market, request(market, query))
+}
 
 const turn_page = (market: MarketplaceState, direction: 'next' | 'previous'): MarketplaceState => {
   const { observation } = market
@@ -263,85 +262,78 @@ const turn_page = (market: MarketplaceState, direction: 'next' | 'previous'): Ma
   if (cursor === null || cursor === undefined) return market
   return Object.freeze({
     ...market,
-    observation: { ...observation, cursor, request: market.observation!.request + 1 },
+    ...request(market, { ...observation, cursor }),
     page_cursors: next ? [...market.page_cursors, observation.cursor ?? ''] : market.page_cursors.slice(0, -1),
     listings: [],
     ready_request: null,
     next_cursor: null,
   })
 }
-const group_query = (input: Extract<MarketplaceInput, { type: 'market/group_selected' }>): MarketQuery => {
-  if (input.group === 'CHARACTERS') return { kind: 'characters' }
-  const category = input.category ?? market_categories(input.group)[0]!
-  return input.item_type ? { kind: 'offers', category, item_type: input.item_type } : { kind: 'types', category }
-}
+/** A link that drops or restarts loses the live page: a buy waits for a fresh observation. */
+const lose_page_on_link_change = (market: MarketplaceState, input: AppInput): MarketplaceState =>
+  ['link/connecting', 'link/rejected', 'link/replaced', 'link/violation', 'link/failed'].includes(input.type)
+    ? Object.freeze({ ...market, ready_request: null, listings: [] })
+    : market
 const reduce_selection = (market: MarketplaceState, input: AppInput): MarketplaceState => {
-  switch (input.type) {
-    case 'market/opened':
-      return {
-        ...observe_query(market, market.observation ?? { kind: 'overview' }),
-        page_cursors: market.page_cursors,
-        open: true,
-      }
-    case 'market/closed':
-      return { ...market, open: false }
-    case 'market/group_selected':
-      return select_query(market, group_query(input), input.group)
-    case 'market/characters_filtered':
-      return select_query(market, {
-        kind: 'characters',
-        classe: input.classe,
-        min_level: input.min_level,
-        max_level: input.max_level,
-      })
-    case 'market/page_requested':
-      return turn_page(market, input.direction)
-    default:
-      return ['link/connecting', 'link/rejected', 'link/replaced', 'link/violation', 'link/failed'].includes(input.type)
-        ? Object.freeze({ ...market, ready_request: null, listings: [] })
-        : market
-  }
+  if (input.type === 'market/observed') return observe_subject(market, input.query)
+  if (input.type === 'market/page_requested') return turn_page(market, input.direction)
+  return lose_page_on_link_change(market, input)
 }
 
 const LISTING_REQUESTS = ['market/list_requested', 'market/delist_requested', 'market/buy_requested'] as const
+/** A listing request needs the account: signed out, nothing waits on it (a buy asks for the sign-in). */
 const accepted_listing_request = (
   market: MarketplaceState,
   input: AppInput,
-  balance: bigint | null
+  { wallet, sui_balance_mist }: SiteState['session']
 ): input is Extract<AppInput, { type: (typeof LISTING_REQUESTS)[number] }> =>
+  wallet !== null &&
   LISTING_REQUESTS.some((type) => type === input.type) &&
   'listing' in input &&
   (input.type !== 'market/buy_requested' ||
-    (current_offer(market, input.listing) && !market_needs_funding(input.listing.price_mist, balance)))
+    (current_offer(market, input.listing) && !market_needs_funding(input.listing.price_mist, sui_balance_mist)))
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+/** Another viewer: public data is the same for every viewer, so the listed types, the volume and the price
+ *  selection stay on screen. The view keeps its query and page under a new request, so the socket asks again. */
+const change_viewer = (market: MarketplaceState): MarketplaceState =>
+  Object.freeze({
+    ...initial_marketplace_state(),
+    prices: market.prices,
+    types: market.types,
+    volume: market.volume,
+    ...(market.observation ? request(market, market.observation) : { requests: market.requests }),
+    page_cursors: market.page_cursors,
+  })
+
+const identity_changed = (state: SiteState, input: AppInput): boolean =>
+  input.type === 'auth/disconnected' ||
+  input.type === 'auth/rejected' ||
+  (input.type === 'auth/connected' && state.session.wallet === input.session)
+
+/** The account's one write in flight: set when a write is accepted, cleared by its outcome. */
+const reduce_pending = (market: MarketplaceState, input: AppInput, session: SiteState['session']): MarketplaceState => {
+  if (accepted_listing_request(market, input, session)) return Object.freeze({ ...market, pending: input.listing.id })
+  if (input.type === 'market/collect_requested') return Object.freeze({ ...market, pending: 'collect' })
+  if (input.type === 'market/write_failed') return Object.freeze({ ...market, pending: null })
+  if (input.type === 'market/write_succeeded') return Object.freeze({ ...fold_write(market, input), recent_pages: [] })
+  return market
+}
+
+const reduce_market = (state: SiteState, input: AppInput): MarketplaceState => {
   const market = state.marketplace
-  if (
-    input.type === 'auth/disconnected' ||
-    input.type === 'auth/rejected' ||
-    (input.type === 'auth/connected' && state.session.wallet === input.session)
-  )
-    return Object.freeze({ ...state, marketplace: { ...initial_marketplace_state(), open: market.open } })
-  if (input.type === 'server/packet') {
-    const next = fold_packet(market, input.packet, state.session.wallet?.address ?? null)
-    return next === market ? state : Object.freeze({ ...state, marketplace: next })
-  }
+  if (identity_changed(state, input)) return change_viewer(market)
+  if (input.type === 'server/packet') return fold_packet(market, input.packet, state.session.wallet?.address ?? null)
   const selected = reduce_selection(market, input)
-  if (selected !== market) return Object.freeze({ ...state, marketplace: selected })
+  return selected === market ? reduce_pending(market, input, state.session) : selected
+}
 
-  if (accepted_listing_request(market, input, state.session.sui_balance_mist))
-    return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: input.listing.id }) })
-  if (input.type === 'market/collect_requested')
-    return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: 'collect' }) })
-  if (input.type === 'market/write_failed')
-    return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: null }) })
-  if (input.type === 'market/write_succeeded')
-    return Object.freeze({ ...state, marketplace: Object.freeze({ ...fold_write(market, input), recent_pages: [] }) })
-  return state
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
+  const marketplace = reduce_market(state, input)
+  return marketplace === state.marketplace ? state : Object.freeze({ ...state, marketplace })
 }
 
 const market_merge_target = (
-  state: Readonly<AppState>,
+  state: Readonly<SiteState>,
   operation: 'list' | 'delist' | 'buy',
   listing: Readonly<Omit<ListingRow, 'version'>>
 ) => {
@@ -354,8 +346,8 @@ const market_merge_target = (
   )
 }
 
-const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
-  const in_flight = new Set<NonNullable<AppState['session']['wallet']>>()
+const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<SiteModule['observe']>>[0]): void => {
+  const in_flight = new Set<NonNullable<SiteState['session']['wallet']>>()
   const notified_sales = new Set<string>()
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/listing_sold' || notified_sales.has(packet.sale.id)) return
@@ -367,7 +359,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const copy = get_state().copy?.marketplace_page.sold_toast
     const notice = market_sale_notice(packet.sale, typeof copy === 'string' ? copy : undefined, get_state().locale)
     toast.rich(notice.message, notice.parts, 'success')
-    play_audio('sale')
   })
   const execute = (
     operation: 'list' | 'delist' | 'buy',
@@ -434,6 +425,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   })
   events.on('market/buy_requested', ({ listing }) => {
     const state = get_state()
+    const { wallet } = state.session
+    if (!wallet) return dispatch({ type: 'auth/login_google' })
     // the roster caps at 6 playable characters — a 7th would land in the kiosk unseen
     if (listing.kind === 'character' && state.session.characters.length >= MAX_TRACKED_CHARACTERS) {
       const reason = copy_text(state.copy?.marketplace_page ?? {})('character_roster_full')
@@ -443,8 +436,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (!current_offer(state.marketplace, listing)) return
     if (market_needs_funding(listing.price_mist, state.session.sui_balance_mist))
       return dispatch({ type: 'funding/open', cost_mist: buyer_total(BigInt(listing.price_mist)) })
-    const action = state.session.wallet?.marketplace.buy
-    if (action) execute('buy', listing, action)
+    execute('buy', listing, wallet.marketplace.buy)
   })
   events.on('market/collect_requested', () => {
     const { wallet } = get_state().session
@@ -480,8 +472,22 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   )
 }
 
+/** The market view's one observation: sent when it changes, and again as soon as a new link is accepted. */
+export const market_subscription = (state: SiteState, previous: SiteState): ClientPacket | null => {
+  const { observation } = state.marketplace
+  if (!link_accepted(state.session.link_status)) return null
+  const unchanged = link_accepted(previous.session.link_status)
+    ? observation === previous.marketplace.observation
+    : observation === null
+  return unchanged ? null : { type: 'packet/market_observe', observation }
+}
+
 export default Object.freeze({
   name: 'marketplace',
-  reduce: (state, input) => reduce_market_floor(reduce_market_prices(reduce(state, input), input), input),
-  observe,
-}) satisfies AppModule
+  initial: () => ({ marketplace: initial_marketplace_state() }),
+  reduce: (state, input) => reduce_market_prices(reduce(state, input), input),
+  observe: (context) => {
+    observe(context)
+    observe_subscriptions(context, [market_subscription, market_price_subscription])
+  },
+}) satisfies SiteModule

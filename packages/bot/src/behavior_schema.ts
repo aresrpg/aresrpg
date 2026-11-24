@@ -4,14 +4,18 @@ import { PROFESSION_SELECTION_SCHEMA } from './behavior_profession.ts'
 import { target_schema } from './target_constraints.ts'
 import { ITEM_ACTION_SCHEMAS } from './behavior_items.ts'
 import { ALLIES_SCHEMA, TEAM_LEAF_SCHEMAS } from './behavior_team.ts'
-import { SPEND_ACTION_SCHEMA } from './behavior_growth.ts'
+import { SPEND_ACTION_SCHEMA } from './behavior_plan.ts'
 import { WORLD_ACTION_SCHEMAS, WORLD_REGION_SCHEMA } from './behavior_world.ts'
 import { MARKET_PRICE_CONDITION_SCHEMA, MARKET_PRICE_OBSERVATION_SCHEMA } from './market_prices.ts'
-import { OBJECTIVE_SCHEMA } from './objective.ts'
 import { COMBAT_PROFILE_SCHEMA } from './combat_profile.ts'
 import { GAMEPLAY_ACTIONS } from './gameplay.ts'
-import { identifier, nonempty, decimal, object_schema, type Schema } from './gameplay_schema.ts'
+import { identifier, nonempty, decimal, object_schema, comparison_schema, type Schema } from './gameplay_schema.ts'
 
+/** Optional display metadata travels with the accepted run and its idempotency fingerprint. */
+export const OBJECTIVE_SCHEMA: Schema = {
+  ...object_schema({ title: nonempty, description: nonempty, steps: { type: 'array', items: nonempty } }),
+  required: ['title'],
+}
 const literal = (value: string): Schema => ({ const: value })
 const amount: Schema = { type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER }
 const offer = object_schema({
@@ -91,6 +95,8 @@ const fact_types = {
   fight: { type: 'boolean' },
   dungeon_run: { type: 'boolean' },
 } satisfies Record<string, Schema>
+const ordered = comparison_schema()
+const equality = comparison_schema(['eq', 'ne'])
 const STATE_CONDITION_SCHEMA: Schema = {
   oneOf: Object.entries(fact_types).map(([type, value]) =>
     object_schema({
@@ -99,13 +105,12 @@ const STATE_CONDITION_SCHEMA: Schema = {
         character_id: identifier,
         ...(['job_level', 'quantity'].includes(type) ? { key: nonempty } : {}),
       }),
-      op: { oneOf: (value === numeric ? ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'] : ['eq', 'ne']).map(literal) },
+      op: value === numeric ? ordered : equality,
       value,
     })
   ),
 }
 const world_fields = { character_id: identifier, world: nonempty, region: WORLD_REGION_SCHEMA }
-const ordered: Schema = { oneOf: ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'].map(literal) }
 export const BEHAVIOR_CONDITION_SCHEMA: Schema = {
   oneOf: [
     STATE_CONDITION_SCHEMA,
@@ -126,7 +131,7 @@ export const BEHAVIOR_CONDITION_SCHEMA: Schema = {
           }),
         ],
       },
-      op: { oneOf: [literal('eq'), literal('ne')] },
+      op: equality,
       value: { type: 'boolean' },
     }),
   ],
@@ -138,7 +143,8 @@ const shape = (properties: Record<string, unknown>) => ({
   additionalProperties: false,
 })
 const node = { $ref: '#/properties/script/properties/tree' }
-const script = shape({
+/** A script nested as the `script` argument of a tool: its tree refers to itself by that path. */
+export const BEHAVIOR_SCRIPT_SCHEMA = shape({
   version: literal('1'),
   objective: OBJECTIVE_SCHEMA,
   tree: {
@@ -156,5 +162,3 @@ const script = shape({
     ],
   },
 })
-/** `strategy` is optional: a tree bound from the shared catalogue names its entry, an authored tree has none. */
-export const BEHAVIOR_SCRIPT_SCHEMA = { ...script, properties: { ...script.properties, strategy: nonempty } }

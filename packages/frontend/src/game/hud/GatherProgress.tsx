@@ -21,9 +21,7 @@ const PROGRESS_POSITION = {
 } as const
 
 export const BackgroundGatherProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const visible = useAppStore(
-    (state) => state.automation.run?.scope.type === 'pack' && state.navigation.page !== 'world'
-  )
+  const visible = useAppStore((state) => state.automation.run !== null && state.navigation.page !== 'world')
   return visible
     ? createPortal(
         <div className="fixed right-4 bottom-4 z-[150] font-mono">
@@ -90,7 +88,7 @@ export const GatherProgress = ({
             <button
               type="button"
               className="pointer-events-auto mt-3 cursor-pointer text-[9px] text-cyan"
-              onClick={() => dispatch_app({ type: 'automation/stop', reason: 'stopped' })}
+              onClick={() => dispatch_app({ type: 'automation/stop' })}
             >
               {text('resource_collect_all_stop')}
             </button>

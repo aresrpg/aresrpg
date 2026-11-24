@@ -14,15 +14,10 @@ export type FriendsState = Readonly<{ rows: readonly FriendRow[]; pending: strin
 
 export type FriendsInput =
   | Readonly<{ type: 'friends/add'; target: string }>
-  | Readonly<{ type: 'friends/remove'; address: string }>
   | Readonly<{ type: 'friends/pending'; operation: string | null }>
   | Readonly<{ type: 'friends/added'; address: string }>
-  | Readonly<{ type: 'friends/removed'; address: string }>
 
 export const initial_friends_state = (): FriendsState => Object.freeze({ rows: Object.freeze([]), pending: null })
-
-export const friend_name = (row: Readonly<FriendRow>): string =>
-  row.characters[0] ?? `${row.address.slice(0, 6)}…${row.address.slice(-4)}`
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (
@@ -41,14 +36,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       friends: Object.freeze({
         ...state.friends,
         rows: Object.freeze([...state.friends.rows, Object.freeze({ address: input.address, characters: [] })]),
-      }),
-    })
-  if (input.type === 'friends/removed')
-    return Object.freeze({
-      ...state,
-      friends: Object.freeze({
-        ...state.friends,
-        rows: Object.freeze(state.friends.rows.filter(({ address }) => address !== input.address)),
       }),
     })
   return state
@@ -110,16 +97,11 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       (address) => ({ type: 'friends/added', address })
     )
   )
-  events.on('friends/remove', ({ address }) =>
-    run(
-      `remove:${address}`,
-      async (wallet) => {
-        await wallet.friends.remove(address)
-        return address
-      },
-      (removed) => ({ type: 'friends/removed', address: removed })
-    )
-  )
 }
 
-export default Object.freeze({ name: 'friends', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'friends',
+  initial: () => ({ friends: initial_friends_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

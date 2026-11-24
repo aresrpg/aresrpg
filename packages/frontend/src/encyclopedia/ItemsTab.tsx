@@ -11,6 +11,7 @@ import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import { ItemFilters, type ItemFilterSelection } from './ItemFilters.tsx'
 import type { EncyclopediaText } from './copy.ts'
+import './catalogue.css'
 export const ItemsTab = ({
   selected_id,
   select_item,

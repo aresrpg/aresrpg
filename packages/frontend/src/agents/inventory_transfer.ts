@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { AgentItemReturnOffer, AgentReturnOffer } from '@aresrpg/sdk/agent-returns'
 import type { AgentInventoryItem } from '@aresrpg/sdk/agent-inventory'
-import type { AgentTransferIntent } from '@aresrpg/sdk/agent-transfer-actions'
 import type { AgentAssetIntent } from '@aresrpg/sdk/agent-asset-transfer'
 
 import { inventory_groups } from '../inventory_stacks.ts'
@@ -61,9 +60,6 @@ export const coin_transfer_intent = ({
     reserve_mist: String(retained),
   }
 }
-
-export const is_coin_transfer = (intent: AgentTransferIntent): boolean =>
-  intent.kind === 'asset_offer' && intent.items.length === 0
 
 export const agent_item_available = (row: AgentInventoryItem): boolean => row.status !== 'listed' && !row.exclusive
 

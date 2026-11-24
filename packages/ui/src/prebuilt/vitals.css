@@ -112,7 +112,6 @@
     font-size: 14px;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .aui-health-fill {
     transition: none;

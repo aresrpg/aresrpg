@@ -571,7 +571,7 @@
   font-size: 14px;
   line-height: 1.45;
 }
-/* Ways to play: one card per interface, in its home page hue. */
+/* Ways to play: one card per interface, in its own hue. */
 .docs-ways {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -590,14 +590,8 @@
 .docs-way[data-hue='green'] {
   --hue: var(--aui-hue-green);
 }
-.docs-way[data-hue='gold'] {
-  --hue: var(--aui-hue-gold);
-}
 .docs-way[data-hue='clay'] {
   --hue: var(--aui-hue-clay);
-}
-.docs-way[data-hue='sky'] {
-  --hue: var(--aui-hue-sky);
 }
 .docs-way[data-hue='lilac'] {
   --hue: var(--aui-hue-lilac);

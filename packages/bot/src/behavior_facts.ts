@@ -5,12 +5,17 @@ import type { CharacterRow } from '@aresrpg/protocol'
 
 import type { BehaviorCondition, BehaviorFact, BehaviorRun, StateCondition, TallyCondition } from './behavior_script.ts'
 import { run_tally } from './behavior_tally.ts'
-import { hydrate_gameplay_fight } from './gameplay.ts'
-import { gameplay_observation_ready, gameplay_observed_ms, type GameplayContext } from './gameplay_context.ts'
+import {
+  gameplay_observation_ready,
+  gameplay_observed_ms,
+  type GameplayContext,
+  hydrate_gameplay_fight,
+} from './gameplay_context.ts'
 import { market_price_condition } from './market_prices.ts'
 import { world_available } from './behavior_world.ts'
 import { character_health, observed_balance } from './character_observability.ts'
 import { profession_inventory } from './actor_inventory.ts'
+import { compare } from './gameplay_schema.ts'
 
 /** Whole minutes of the chain clock since the hero's current fight started: zero while it is still
  * being placed, and unknown (null) for a hero in no fight or while the clock is not observed. */
@@ -45,15 +50,6 @@ const fact_value = (fact: BehaviorFact, context: GameplayContext): string | numb
   }
   return readers[fact.type]()
 }
-const compare = (op: StateCondition['op'], value: bigint, threshold: bigint): boolean =>
-  ({
-    eq: value === threshold,
-    ne: value !== threshold,
-    lt: value < threshold,
-    lte: value <= threshold,
-    gt: value > threshold,
-    gte: value >= threshold,
-  })[op]
 /** A run's own tally is always known: it never waits for an observation. */
 const tally_condition = (condition: TallyCondition, run: Pick<BehaviorRun, 'tally'>): boolean => {
   const { fees_mist, dungeon_runs } = run_tally(run)
@@ -72,8 +68,7 @@ const special_condition = (
   }
   if (condition.type === 'market_price') return market_price_condition(condition, context)
   const value = world_available(condition.fact, context)
-  if (value === null) return null
-  return condition.op === 'eq' ? value === condition.value : value !== condition.value
+  return value === null ? null : compare(condition.op, value, condition.value)
 }
 /** `run` is the run whose tree asks: its tally answers the conditions on fees and dungeon runs. */
 export const behavior_condition = (
@@ -89,14 +84,5 @@ export const behavior_condition = (
     if (error instanceof Error && error.message === 'inventory_unavailable') return null
     throw error
   }
-  if (value === null) return null
-  const comparisons: Record<BehaviorCondition['op'], () => boolean> = {
-    eq: () => value === condition.value,
-    ne: () => value !== condition.value,
-    lt: () => value! < condition.value,
-    lte: () => value! <= condition.value,
-    gt: () => value! > condition.value,
-    gte: () => value! >= condition.value,
-  }
-  return comparisons[condition.op]()
+  return value === null ? null : compare(condition.op, value, condition.value)
 }

@@ -17,6 +17,7 @@ import { holds_character_seat } from './fight_identity.ts'
 import { fight_latch } from './fight_latch.ts'
 import { end_turn_submission_after_reconcile, same_fight_turn } from './fight_lifecycle.ts'
 import { observe_fights } from './fight_observer.ts'
+import { observe_fight_link } from './fight_link.ts'
 export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 export { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
 export { initial_fight_session_state } from './fight_state.ts'
@@ -503,6 +504,10 @@ const retain_fight_entry = (state: AppState): AppState => {
 
 export default Object.freeze({
   name: 'fight',
+  initial: () => ({ fight: initial_fight_session_state() }),
   reduce: (state, input) => retain_fight_entry(reduce(state, input)),
-  observe: observe_fights,
+  observe: (context) => {
+    observe_fights(context)
+    observe_fight_link(context)
+  },
 }) satisfies AppModule

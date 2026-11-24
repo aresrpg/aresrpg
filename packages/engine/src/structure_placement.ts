@@ -6,8 +6,7 @@ import { create_bounded_memo, type BoundedMemo } from './bounded_memo.ts'
 import type { CompiledStructurePack, CompiledStructureType } from './structures.ts'
 import { compile_type } from './structures.ts'
 import { compile_city_structure } from './cities/city_structure.ts'
-import { compile_city_placements, map_city } from './cities/index.ts'
-import { generated_city_land_use } from './cities/generated_city.ts'
+import { generated_city_land_use, generated_city_map, generated_city_placements } from './cities/generated_city.ts'
 import { field_value, hash_position } from './world_noise.ts'
 import { sample_world_column, WORLD_HEIGHT, type CompiledWorld } from './world_recipe.ts'
 
@@ -68,7 +67,7 @@ export const placement_bounds = (
 const city_placements = (world: CompiledWorld, area: StructureArea): readonly StructurePlacement[] =>
   Object.freeze(
     world.structures.cities
-      .flatMap((city) => compile_city_placements(world, city, area))
+      .flatMap((city) => generated_city_placements(world, city, area))
       .map((placement) => ({ ...placement, portal_clearance: world.recipe.portal !== false }))
   )
 
@@ -155,7 +154,7 @@ export const city_map_overlays = (world: CompiledWorld): readonly CityMapOverlay
           max_z: city.area.anchor_z + city.clear_radius,
         }),
         structures: Object.freeze(
-          map_city(world, city).map(({ id, type, min_x, max_x, min_z, max_z }) =>
+          generated_city_map(city).map(({ id, type, min_x, max_x, min_z, max_z }) =>
             Object.freeze({ id, type, bounds: Object.freeze({ min_x, max_x, min_z, max_z }) })
           )
         ),

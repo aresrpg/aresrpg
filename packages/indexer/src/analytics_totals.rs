@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use redis::aio::MultiplexedConnection;
 use serde::{Deserialize, Serialize};
 
-use crate::analytics::{self, MoneyFact};
+use crate::analytics::{self, MoneyDelta};
 
 pub const SCHEMA_KEY: &str = "idx:analytics_schema";
 pub const SCHEMA: &str = "compact-v1";
@@ -55,7 +55,7 @@ pub fn checkpoint_totals(
     checkpoint: u64,
     transactions: u64,
     gas_mist: i64,
-    money: &[MoneyFact],
+    money: &[MoneyDelta],
 ) -> Result<Totals> {
     let mut totals = Totals {
         checkpoint,
@@ -63,26 +63,26 @@ pub fn checkpoint_totals(
         gas_mist: gas_mist.into(),
         ..Totals::default()
     };
-    for fact in money {
+    for delta in money {
         totals.item_royalty_mist = totals
             .item_royalty_mist
-            .checked_add(fact.delta.item_royalty_mist.into())
+            .checked_add(delta.item_royalty_mist.into())
             .context("item royalty overflow")?;
         totals.character_royalty_mist = totals
             .character_royalty_mist
-            .checked_add(fact.delta.character_royalty_mist.into())
+            .checked_add(delta.character_royalty_mist.into())
             .context("character royalty overflow")?;
         totals.character_creation_mist = totals
             .character_creation_mist
-            .checked_add(fact.delta.character_creation_mist.into())
+            .checked_add(delta.character_creation_mist.into())
             .context("creation revenue overflow")?;
         totals.kolizeum_mist = totals
             .kolizeum_mist
-            .checked_add(fact.delta.kolizeum_mist.into())
+            .checked_add(delta.kolizeum_mist.into())
             .context("kolizeum revenue overflow")?;
         totals.tournament_mist = totals
             .tournament_mist
-            .checked_add(fact.delta.tournament_mist.into())
+            .checked_add(delta.tournament_mist.into())
             .context("tournament revenue overflow")?;
     }
     Ok(totals)
@@ -98,7 +98,7 @@ fn add(previous: Option<&str>, delta: &Totals) -> Result<Totals> {
     combine(&previous.unwrap_or_default(), delta)
 }
 
-pub(super) fn combine(previous: &Totals, delta: &Totals) -> Result<Totals> {
+fn combine(previous: &Totals, delta: &Totals) -> Result<Totals> {
     Ok(Totals {
         checkpoint: delta.checkpoint,
         transactions: previous
@@ -135,11 +135,6 @@ pub(super) fn combine(previous: &Totals, delta: &Totals) -> Result<Totals> {
 pub(super) fn keys(ts_ms: u64) -> Vec<(String, Option<u64>)> {
     let mut keys = vec![(ALL_KEY.into(), None)];
     for (tier, bucket, width, retention) in analytics::activity_buckets(ts_ms) {
-        let retention = if matches!(tier, "day" | "week" | "month") {
-            analytics::DAILY_ACTIVITY_RETENTION_MS
-        } else {
-            retention
-        };
         keys.push((
             analytics::series_key("totals", tier, bucket),
             Some(analytics::expiry_seconds(bucket, width, retention)),
@@ -173,7 +168,3 @@ pub async fn commit(conn: &mut MultiplexedConnection, ts_ms: u64, delta: &Totals
     writes.query_async::<()>(conn).await?;
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../tests/analytics/totals.rs"]
-mod tests;

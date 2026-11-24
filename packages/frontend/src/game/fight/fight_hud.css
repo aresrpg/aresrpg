@@ -1,5 +1,21 @@
 /* The established fight chrome, detached from the legacy stores: opaque obsidian cards,
    gold active state, red enemy/destructive state, and the gem/socket command bar. */
+
+.aui-combat-utilities {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.aui-combat-utilities .aui-button {
+  min-height: 23px;
+  min-width: 23px;
+  padding: 2px;
+  font-size: 10px;
+}
+.aui-combat-utilities .aui-button--danger svg {
+  fill: currentColor;
+}
+
 .fight-hud {
   container: aui-viewport / size;
   --fh-gold: var(--aui-brass);
@@ -557,45 +573,6 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   box-shadow: 0 8px 22px color-mix(in srgb, var(--aui-brass) 25%, transparent);
-}
-
-.fight-hud__end-turn {
-  min-height: 48px;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.fight-hud__end-turn:not(:disabled):hover {
-  transform: translateY(-1px);
-  filter: brightness(1.14);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--aui-brass) 46%, transparent);
-}
-
-.fight-hud__end-turn.queued {
-  animation: fight-hud-pulse 1s steps(2, jump-none) infinite;
-}
-
-.fight-hud__secondary-controls {
-  display: flex;
-  height: 24px;
-  gap: 4px;
-}
-
-.fight-hud__secondary-controls button {
-  height: 24px;
-  flex: 1;
-  border-color: color-mix(in srgb, var(--aui-blue) 42%, transparent);
-  background: linear-gradient(165deg, var(--color-surface), var(--color-bg));
-  padding: 0 5px;
-  border-radius: 3px;
-  color: var(--aui-blue);
-  font-size: 8px;
-  font-weight: 600;
-}
-
-.fight-hud__secondary-controls .fight-hud__forfeit {
-  border-color: rgba(248, 113, 113, 0.5);
-  color: #f87171;
 }
 
 .fight-hud__controls button:disabled {

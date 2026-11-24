@@ -27,7 +27,7 @@ const reduce_slots = (state: Slots, action: SlotAction): Slots => {
   if (unchanged) return state
   return { ...state, [action.slot]: release ? null : { owner: action.owner, packet: action.packet } }
 }
-export type ActorOptions = Readonly<{
+type ActorOptions = Readonly<{
   connection: Omit<AgentConnectionOptions, 'authorize'>
   // Owner must check current durable lane fence, lease expiry, restore epoch and grant here.
   authorize: (stage: 'connect' | 'sign' | 'send' | 'heartbeat') => Promise<void>

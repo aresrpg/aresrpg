@@ -54,7 +54,6 @@ export type AgentStatus = Readonly<{
     character_id: string
     status: string
     issue?: string
-    strategy?: string
     /** The AI-authored presentation of the run's goal; absent for a run of a retired shape. */
     objective?: HostedObjective
     /** Net network fees this run paid since its tree was started or replaced, in MIST. */
@@ -102,7 +101,6 @@ const valid_run = (value: unknown): boolean =>
     text(value.character_id),
     text(value.status),
     optional_text(value.issue),
-    optional_text(value.strategy),
     valid_objective(value.objective),
     optional_mist(value.fees_mist),
     optional_count(value.dungeon_runs),

@@ -6,6 +6,7 @@ import { Loader2, WalletCards, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { ModalFrame } from './ModalFrame.tsx'
+import '../funding/funding.css'
 
 export const WalletConnectButton = ({
   label,
@@ -148,7 +149,7 @@ export const WalletPickerModal = ({
   close_label: string
   children: ReactNode
 }>) => (
-  <ModalFrame close={close} close_label={close_label} label={title} max_width="max-w-sm" soft>
+  <ModalFrame close={close} close_label={close_label} label={title} max_width="max-w-sm">
     <div className="flex flex-col gap-5 p-6 text-text" data-wallet-picker="">
       {subtitle && <p className="text-[13px] leading-relaxed text-muted">{subtitle}</p>}
       {children}

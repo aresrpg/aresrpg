@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE MARKET STREAM. Two independent stakes on the ONE evt:economy channel (watched standing):
-//   yours — a MarketPurchased whose indexed kiosk owner is YOU is money arriving: always forwarded;
-//   browse — packet/market_observe folds the exact category window DIRECTLY;
-//            the delta pushes its graph slice + retained history, then deltas stream while observed.
-// A listed event names an id; the row the client renders is enriched from the graph.
+// THE PUBLIC MARKET STREAM (every stage), on the ONE evt:economy channel (watched standing):
+//   catalogue — while any market observation is open, the pod's sampled listed types push when
+//               they change, checked on every market event and every sample interval;
+//   page      — an `offers` or `characters` observation pushes its graph slice, then its deltas.
+// A listed event names an id; the row the client renders is enriched from the graph. The page
+// arrives as this socket's viewer sees it (an address leaves its own listings out); the seller's
+// own stream (listings, sales, history) is in `account_streams`.
 
-import { market_category } from '@aresrpg/protocol'
+import { has_market_page, type MarketType } from '@aresrpg/protocol'
 
-import { market_change_matches } from '../public_market.ts'
+import { is_market_change, market_change_matches, MARKET_TYPES_SAMPLE_MS } from '../public_market.ts'
 import { channels, type EventEnvelope } from '../protocol.ts'
-import { get_market_history } from '../reads/get_market_history.ts'
-import { get_market_slice } from '../reads/get_market_slice.ts'
 import { create_watcher } from '../pubsub_bus.ts'
-import { observe_market_counts } from '../market_counts_observer.ts'
 import { observe_market_prices } from '../market_prices_observer.ts'
 import { coalesced_reader } from '../latest_read.ts'
+import { get_market_slice } from '../reads/get_market_slice.ts'
 import logger from '../logger.ts'
-import type { PlayerModule, PlayerState } from '../player.ts'
+import type { PublicModule, PlayerState } from '../player.ts'
 
 const log = logger(import.meta)
 
@@ -33,51 +33,39 @@ export default {
   },
 
   observe: (context) => {
-    const { pubsub, graph, events, send, address, get_state, signal, dispatch, public_market, drop } = context
+    const { pubsub, graph, events, send, get_state, signal, public_market, viewer } = context
     const price_event = observe_market_prices(context)
-    observe_market_counts(context)
-    let stop_types: (() => void) | null = null
-    const watch_types = (): void => {
-      stop_types?.()
-      const observed = get_state().market_observation
-      if (!observed || observed.kind === 'characters' || observed.kind === 'overview') return
-      stop_types = public_market.watch(
-        observed.category,
-        (items) => {
-          const observation = get_state().market_observation
-          if (
-            !signal.aborted &&
-            observation &&
-            observation.kind !== 'characters' &&
-            observation.kind !== 'overview' &&
-            observation.category === observed.category
-          )
-            send({ type: 'packet/market_types', observation, items })
-        },
-        (error) => {
-          log.warn({ err: error }, 'market type discovery failed')
-          drop('SNAPSHOT_FAILED')
-        }
-      )
+
+    let sent_types: readonly MarketType[] | null = null
+    let types_timer: ReturnType<typeof setInterval> | null = null
+    const push_types = (): void => {
+      if (!get_state().market_observation) return
+      void public_market()
+        .then((items) => {
+          if (signal.aborted || !get_state().market_observation || items === sent_types) return
+          sent_types = items
+          send({ type: 'packet/market_types', items })
+        })
+        .catch((error: Error) => log.warn({ error: error.message }, 'market types read failed'))
     }
-    signal.addEventListener('abort', () => stop_types?.(), { once: true })
-    const read_latest_history = coalesced_reader(
-      () => get_market_history(graph, pubsub.graph, { address }),
-      (history) => send({ type: 'packet/market_history', ...history }),
-      signal
-    )
-    const push_history = (): void => {
-      void read_latest_history().catch((error: Error) =>
-        log.warn({ address, error: error.message }, 'market history refresh failed')
-      )
+    /** The catalogue follows whether a market surface is open, not which page it shows. */
+    const follow_types = (open: boolean): void => {
+      if (types_timer) clearInterval(types_timer)
+      types_timer = open ? setInterval(push_types, MARKET_TYPES_SAMPLE_MS) : null
+      sent_types = null
+      push_types()
     }
+    signal.addEventListener('abort', () => follow_types(false), { once: true })
 
     let previous_kiosks: readonly string[] = []
     const read_slice = coalesced_reader(
       async () => {
         const observation = get_state().market_observation
-        return observation && observation.kind !== 'types' && observation.kind !== 'overview'
-          ? { observation, ...(await get_market_slice(graph, { observation, address, kiosks: previous_kiosks })) }
+        return has_market_page(observation)
+          ? {
+              observation,
+              ...(await get_market_slice(graph, { observation, address: viewer, kiosks: previous_kiosks })),
+            }
           : null
       },
       (result) => {
@@ -95,43 +83,9 @@ export default {
 
     const forward_economy = (payload: EventEnvelope) => {
       price_event(payload)
+      if (is_market_change(payload)) push_types()
       const observed = get_state().market_observation
-      if (payload.data.seller === address && ['MarketListed', 'MarketDelisted'].includes(payload.type))
-        dispatch({ type: 'action/refresh_account', domain: 'listings' })
-      if (observed && market_change_matches(payload, observed)) {
-        push_slice()
-      }
-      if (payload.type === 'MarketPurchased') {
-        const { seller, object, buyer, kind, name, item_type, amount, price_mist } = payload.data as {
-          seller: string | null
-          object: string
-          buyer: string
-          kind: 'item' | 'character'
-          name: string
-          item_type: string | null
-          amount: number
-          price_mist: string
-        }
-        if (seller === address) {
-          send({
-            type: 'packet/listing_sold',
-            sale: {
-              id: `${payload.ckpt}:${payload.tx}:${payload.evt}`,
-              object,
-              kind,
-              name,
-              item_type,
-              amount,
-              price_mist,
-              counterparty: buyer,
-              ts_ms: payload.ts_ms,
-            },
-          })
-          push_history()
-          dispatch({ type: 'action/refresh_account', domain: 'listings' })
-        }
-        return
-      }
+      if (has_market_page(observed) && market_change_matches(payload, observed)) push_slice()
     }
 
     void watch(channels.economy, forward_economy as (payload: never) => void).catch((error: Error) =>
@@ -141,10 +95,9 @@ export default {
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       if (state.market_observation === previous.market_observation) return
       previous_kiosks = []
-      if (market_category(state.market_observation) !== market_category(previous.market_observation)) watch_types()
+      const open = state.market_observation !== null
+      if (open !== (previous.market_observation !== null)) follow_types(open)
       push_slice()
-      if (!state.market_observation) return
-      push_history()
     })
   },
-} satisfies PlayerModule
+} satisfies PublicModule

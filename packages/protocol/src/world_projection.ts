@@ -3,7 +3,7 @@
 import type { ZoneRow } from './packets.ts'
 
 export const zone_key = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
-export type WorldWindow = Readonly<{ world: string; zones: readonly Readonly<{ zx: number; zz: number }>[] }>
+type WorldWindow = Readonly<{ world: string; zones: readonly Readonly<{ zx: number; zz: number }>[] }>
 export const tracked_zone_keys = (windows: readonly WorldWindow[]): ReadonlySet<string> =>
   new Set(windows.flatMap(({ world, zones }) => zones.map(({ zx, zz }) => zone_key(world, zx, zz))))
 

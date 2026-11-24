@@ -17,7 +17,7 @@ import type { AuthSession } from '../auth.ts'
 import { funding_shortfall } from '../funding/near.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteModule, SiteState } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 import { sui_session } from '../wallet/external_session.ts'
 
@@ -27,33 +27,41 @@ export type WalletImportFailure =
   /** `resumable`: the source wallet already offered; the next import finishes it without a new offer. */
   | Readonly<{ kind: 'failed'; message: string; resumable: boolean }>
 
+/** Where the window is. Only `loading` and `importing` wait on an operation; its results name it by `sequence`. */
+export type WalletImportStep =
+  | Readonly<{ kind: 'idle' }>
+  | Readonly<{ kind: 'loading' }>
+  | Readonly<{ kind: 'ready'; plan: WalletImportPlan }>
+  | Readonly<{ kind: 'importing'; plan: WalletImportPlan; progress: WalletImportProgress | null }>
+  | Readonly<{ kind: 'done'; moved: number; left: WalletImportPlan['left'] }>
+  | Readonly<{ kind: 'failed'; error: WalletImportFailure }>
+
 export type WalletImportState = Readonly<{
   open: boolean
   /** The connected wallet this window state describes. Another wallet starts from a clean state. */
   source: AuthSession | null
-  pending: 'load' | 'import' | null
-  plan: WalletImportPlan | null
-  progress: WalletImportProgress | null
-  done: Readonly<{ moved: number; left: WalletImportPlan['left'] }> | null
-  error: WalletImportFailure | null
+  /** Counts the reads and imports this window started. It never resets, so a late result cannot match a newer one. */
+  sequence: number
+  step: WalletImportStep
 }>
 
 export type WalletImportInput =
   | Readonly<{ type: 'wallet_import/open' }>
   | Readonly<{ type: 'wallet_import/close' }>
   | Readonly<{ type: 'wallet_import/refresh' }>
-  | Readonly<{ type: 'wallet_import/loaded'; source: AuthSession; plan: WalletImportPlan }>
+  | Readonly<{ type: 'wallet_import/loaded'; sequence: number; plan: WalletImportPlan }>
   | Readonly<{ type: 'wallet_import/start' }>
-  | Readonly<{ type: 'wallet_import/running' }>
-  | Readonly<{ type: 'wallet_import/progress'; progress: WalletImportProgress }>
-  | Readonly<{ type: 'wallet_import/finished'; plan: WalletImportPlan }>
-  | Readonly<{ type: 'wallet_import/failed'; error: WalletImportFailure }>
+  | Readonly<{ type: 'wallet_import/progress'; sequence: number; progress: WalletImportProgress }>
+  | Readonly<{ type: 'wallet_import/finished'; sequence: number; plan: WalletImportPlan }>
+  | Readonly<{ type: 'wallet_import/failed'; sequence: number; error: WalletImportFailure }>
 
-export const initial_wallet_import_state = (): WalletImportState =>
-  Object.freeze({ open: false, source: null, pending: null, plan: null, progress: null, done: null, error: null })
+const IDLE: WalletImportStep = Object.freeze({ kind: 'idle' })
+
+export const initial_wallet_import_state = (sequence = 0): WalletImportState =>
+  Object.freeze({ open: false, source: null, sequence, step: IDLE })
 
 /** Characters the game roster can still receive. */
-export const free_character_slots = (state: AppState): number =>
+export const free_character_slots = (state: SiteState): number =>
   Math.max(0, MAX_TRACKED_CHARACTERS - state.session.characters.length)
 
 type Step<Type extends WalletImportInput['type']> = (
@@ -61,41 +69,44 @@ type Step<Type extends WalletImportInput['type']> = (
   input: Extract<WalletImportInput, { type: Type }>
 ) => WalletImportState
 
-const reading = (state: WalletImportState): WalletImportState =>
-  Object.freeze({ ...state, pending: 'load', plan: null, done: null, error: null })
+const with_step = (state: WalletImportState, step: WalletImportStep): WalletImportState =>
+  Object.freeze({ ...state, step })
+const begin = (state: WalletImportState, step: WalletImportStep): WalletImportState =>
+  with_step({ ...state, sequence: state.sequence + 1 }, step)
+const waiting = ({ step }: WalletImportState): boolean => step.kind === 'loading' || step.kind === 'importing'
+/** The result answers the operation the window waits on now. */
+const answers = (state: WalletImportState, sequence: number): boolean => waiting(state) && state.sequence === sequence
 
 const STEPS: { [Type in WalletImportInput['type']]: Step<Type> } = {
   'wallet_import/open': (state) =>
-    state.open ? state : Object.freeze({ ...initial_wallet_import_state(), open: true }),
+    state.open ? state : Object.freeze({ ...initial_wallet_import_state(state.sequence), open: true }),
   // A running import keeps signing; closing the window cannot hide it.
-  'wallet_import/close': (state) => (state.pending === 'import' ? state : initial_wallet_import_state()),
-  'wallet_import/refresh': (state) => (state.source && !state.pending ? reading(state) : state),
+  'wallet_import/close': (state) =>
+    state.step.kind === 'importing' ? state : initial_wallet_import_state(state.sequence),
+  'wallet_import/refresh': (state) => (state.source && !waiting(state) ? begin(state, { kind: 'loading' }) : state),
   'wallet_import/loaded': (state, input) =>
-    state.pending === 'load' && input.source === state.source
-      ? Object.freeze({ ...state, pending: null, plan: input.plan })
+    answers(state, input.sequence) && state.step.kind === 'loading'
+      ? with_step(state, { kind: 'ready', plan: input.plan })
       : state,
-  'wallet_import/start': (state) => state,
-  'wallet_import/running': (state) =>
-    state.plan && !state.pending ? Object.freeze({ ...state, pending: 'import', progress: null, error: null }) : state,
+  'wallet_import/start': (state) =>
+    state.step.kind === 'ready' ? begin(state, { kind: 'importing', plan: state.step.plan, progress: null }) : state,
   'wallet_import/progress': (state, input) =>
-    state.pending === 'import' ? Object.freeze({ ...state, progress: input.progress }) : state,
+    answers(state, input.sequence) && state.step.kind === 'importing'
+      ? with_step(state, { ...state.step, progress: input.progress })
+      : state,
   'wallet_import/finished': (state, input) =>
-    Object.freeze({
-      ...state,
-      pending: null,
-      plan: null,
-      progress: null,
-      done: Object.freeze({ moved: input.plan.assets, left: input.plan.left }),
-    }),
+    answers(state, input.sequence) && state.step.kind === 'importing'
+      ? with_step(state, { kind: 'done', moved: input.plan.assets, left: input.plan.left })
+      : state,
   'wallet_import/failed': (state, input) =>
-    Object.freeze({ ...state, pending: null, progress: null, error: input.error }),
+    answers(state, input.sequence) ? with_step(state, { kind: 'failed', error: input.error }) : state,
 }
 
 /** An open window reads each newly connected wallet once. A running import keeps its own wallet. */
 const follow_source = (state: WalletImportState, source: AuthSession | null): WalletImportState => {
-  if (!state.open || state.pending === 'import' || state.source === source) return state
-  const clean = Object.freeze({ ...initial_wallet_import_state(), open: true, source })
-  return source ? reading(clean) : clean
+  if (!state.open || state.step.kind === 'importing' || state.source === source) return state
+  const clean = Object.freeze({ ...initial_wallet_import_state(state.sequence), open: true, source })
+  return source ? begin(clean, { kind: 'loading' }) : clean
 }
 
 export const reduce_wallet_import = (
@@ -107,9 +118,13 @@ export const reduce_wallet_import = (
   return follow_source(step ? step(state, input as WalletImportInput) : state, source)
 }
 
-const reduce = (state: AppState, input: AppInput): AppState => {
+/** The import signs with the connected wallets: while it runs, the wallet selection must not change. */
+export const wallet_import_operation = ({ step }: WalletImportState): 'import' | null =>
+  step.kind === 'importing' ? 'import' : null
+
+const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
-    return { ...state, wallet_import: initial_wallet_import_state() }
+    return { ...state, wallet_import: initial_wallet_import_state(state.wallet_import.sequence) }
   const next = reduce_wallet_import(state.wallet_import, input, sui_session(state.external_wallet.session))
   return next === state.wallet_import ? state : { ...state, wallet_import: next }
 }
@@ -126,52 +141,37 @@ export const import_failure = (error: unknown, copy: AppCopy | null): WalletImpo
   }
 }
 
-type ImportRequest = Readonly<{ wallet: AuthSession; source: AuthSession; plan: WalletImportPlan }>
-
-const import_request = (state: AppState): ImportRequest | null => {
-  const { wallet } = state.session
-  const { source, plan, pending } = state.wallet_import
-  return wallet && source && plan && !pending ? { wallet, source, plan } : null
-}
-
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
-  const current = (source: AuthSession): boolean => !signal.aborted && get_state().wallet_import.source === source
-  const fail = (error: unknown): void => {
+const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_state, signal }) => {
+  const fail = (sequence: number, error: unknown): void => {
+    if (signal.aborted) return
     const failure = import_failure(error, get_state().copy)
-    dispatch({ type: 'wallet_import/failed', error: failure })
+    dispatch({ type: 'wallet_import/failed', sequence, error: failure })
     // Only the game wallet uses the game's funding window. The source wallet is funded by its owner.
     if (failure.kind === 'funding' && failure.payer === 'owner')
       dispatch({ type: 'funding/open', cost_mist: failure.required_mist })
   }
-  const read = (state: AppState): void => {
+  const read = (state: SiteState): void => {
     const { wallet } = state.session
-    const { source } = state.wallet_import
+    const { source, sequence } = state.wallet_import
     if (!wallet || !source) return dispatch({ type: 'wallet_import/close' })
     void wallet
       .read_wallet_import(source, free_character_slots(state))
       .then((plan) => {
-        if (current(source)) dispatch({ type: 'wallet_import/loaded', source, plan })
+        if (!signal.aborted) dispatch({ type: 'wallet_import/loaded', sequence, plan })
       })
       .catch((error: unknown) => {
         console.error('The source wallet could not be read.', error)
-        if (current(source)) fail(error)
+        fail(sequence, error)
       })
   }
-  // The read follows the observed state change, never the input that caused it.
-  events.on('STATE_UPDATED', (state, previous) => {
-    const before = previous.wallet_import
-    const now = state.wallet_import
-    if (now.pending === 'load' && (before.pending !== 'load' || before.source !== now.source)) read(state)
-  })
-  events.on('wallet_import/start', () => {
-    const state = get_state()
-    const request = import_request(state)
-    if (!request) return
-    const { wallet, source, plan } = request
+  const run_import = (state: SiteState, plan: WalletImportPlan): void => {
+    const { wallet } = state.session
+    const { source, sequence } = state.wallet_import
+    if (!wallet || !source) return fail(sequence, new Error('The connected wallet changed.'))
     // The game wallet pays the royalty of every asset. Fund it before the source wallet signs anything.
     // The window says so itself: the funding window alone leaves no reason behind once it is closed.
     if (funding_shortfall(plan.royalty_mist, state.session.sui_balance_mist ?? 0n) > 0n)
-      return fail(new WalletImportFundingRequired('owner', plan.royalty_mist))
+      return fail(sequence, new WalletImportFundingRequired('owner', plan.royalty_mist))
     // The live connections decide, not this window's memory of them: a wallet that disconnected
     // or changed account during the run must stop the next signature.
     const before_sign = (): void => {
@@ -180,22 +180,33 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         throw new Error('The connected wallet changed.')
     }
     const operation = run_direct_transaction(async () => {
-      dispatch({ type: 'wallet_import/running' })
       const moved = await wallet.import_wallet_assets(source, {
         character_slots: free_character_slots(get_state()),
         before_sign,
-        on_progress: (progress) => dispatch({ type: 'wallet_import/progress', progress }),
+        on_progress: (progress) => dispatch({ type: 'wallet_import/progress', sequence, progress }),
       })
-      dispatch({ type: 'wallet_import/finished', plan: moved })
+      if (!signal.aborted) dispatch({ type: 'wallet_import/finished', sequence, plan: moved })
     })
-    if (!operation) return dispatch({ type: 'wallet_import/failed', error: { kind: 'busy' } })
+    if (!operation) return dispatch({ type: 'wallet_import/failed', sequence, error: { kind: 'busy' } })
     void operation
       .catch((error: unknown) => {
         console.error('The wallet import stopped.', error)
-        fail(error)
+        fail(sequence, error)
       })
       .finally(() => dispatch({ type: 'wallet/refresh' }))
+  }
+  // A read or an import follows the observed state change, never the input that caused it.
+  events.on('STATE_UPDATED', (state, previous) => {
+    const { step, sequence } = state.wallet_import
+    if (sequence === previous.wallet_import.sequence) return
+    if (step.kind === 'loading') read(state)
+    if (step.kind === 'importing') run_import(state, step.plan)
   })
 }
 
-export default Object.freeze({ name: 'wallet_import', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'wallet_import',
+  initial: () => ({ wallet_import: initial_wallet_import_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

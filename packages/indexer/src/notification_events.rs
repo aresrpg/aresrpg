@@ -10,15 +10,11 @@ use crate::events;
 use crate::ownership::ObjView;
 use crate::publish::TxView;
 
-pub(crate) fn game_object(view: &ObjView<'_>, game: &str, module: &str, name: &str) -> bool {
-    view.type_key.package == game && view.type_key.module == module && view.type_key.name == name
-}
-
 pub(crate) fn fights(views: &[ObjView<'_>], game: &str) -> Result<Vec<Fight>> {
     views
         .iter()
-        .filter(|view| game_object(view, game, "fight", "Fight"))
-        .map(|view| decode::from_bytes(view.bytes))
+        .filter(|view| view.type_key.is(game, "fight", "Fight"))
+        .map(|view| view.decode())
         .collect()
 }
 
@@ -58,13 +54,7 @@ fn victory(tx: &TxView<'_>, game: &str, id: Id, winner: Option<u8>) -> Result<Op
     ))
 }
 
-pub fn extract(
-    checkpoint: u64,
-    timestamp: u64,
-    tx: &TxView<'_>,
-    digest: &str,
-    game: &str,
-) -> Result<Vec<Value>> {
+pub fn extract(checkpoint: u64, timestamp: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value>> {
     let mut result = Vec::new();
     for event in tx.events.iter().filter(|event| event.package == game) {
         let notification = match (event.module, event.name) {
@@ -91,12 +81,8 @@ pub fn extract(
     }
     result.extend(crate::notification_loot::extract(checkpoint, tx, game)?);
     for row in &mut result {
-        row["digest"] = json!(digest);
+        row["digest"] = json!(tx.digest);
         row["ts_ms"] = json!(timestamp);
     }
     Ok(result)
 }
-
-#[cfg(test)]
-#[path = "../tests/notifications/events.rs"]
-mod tests;

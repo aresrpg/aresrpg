@@ -5,12 +5,12 @@ import type { StructurePlacement } from '../structure_placement.ts'
 import type { CompiledStructureType } from '../structures.ts'
 import type { CompiledWorld } from '../world_recipe.ts'
 import type { CompiledMaterials } from '../world_materials.ts'
+import { CHUNK_EDGE } from '../voxel_data.ts'
 
 import { generated_city_surface_height } from './city_terrain.ts'
 import { CITY_DEFINITIONS, city_definition, read_city_artifact } from './registry.ts'
 import type { CityMapStructure, CompiledCity, GeneratedCityArtifact } from './types.ts'
 
-const CHUNK_EDGE = 32
 type GeneratedChunk = GeneratedCityArtifact['chunks'][number]
 const GENERATED_MAPS = Object.freeze(Object.fromEntries(CITY_DEFINITIONS.map(({ id, map }) => [id, map])))
 const GENERATED_SKY_CELL = 16
@@ -90,9 +90,6 @@ export const load_generated_city_artifacts = (): Promise<void> =>
 
 const overlaps_area = (left: HorizontalArea, right: HorizontalArea): boolean =>
   !(left.max_x < right.min_x || left.min_x > right.max_x || left.max_z < right.min_z || left.min_z > right.max_z)
-
-export const generated_city_intersects = (cities: readonly CompiledCity[], area: HorizontalArea): boolean =>
-  cities.some((city) => GENERATED_MAPS[city.id] !== undefined && overlaps_area(city.area, area))
 
 export const load_generated_city_artifacts_for = (
   cities: readonly CompiledCity[],

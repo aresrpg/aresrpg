@@ -3,11 +3,12 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { resolve_spell } from './effects.ts'
-import { is_mob, is_player, kill_fighter, living_count, players_ready_after } from './fighters.ts'
+import { is_mob, is_player, kill_fighter, living_count, player_source, players_ready_after } from './fighters.ts'
 import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { walk_path } from './movement.ts'
 import { placement_plan } from './placement.ts'
 import { emit, fail } from './runtime.ts'
+import { spell_level_of } from './spell_turn.ts'
 import { run_until_player, weave } from './turns.ts'
 import { tick_cooldowns, tick_turn_end } from './turn_effects.ts'
 import { on_enter } from './zones.ts'
@@ -23,7 +24,6 @@ import type {
   JoinAction,
   MoveAction,
   PlaceAction,
-  PlayerFighter,
   ReadyAction,
   StrikeAction,
 } from './types.ts'
@@ -144,7 +144,6 @@ const start = (runtime: FightRuntime, options: CommandOptions): FightRuntime => 
   return run_until_player({
     runtime,
     seed_for: options.seed_for!,
-    on_mob_turn: options.on_mob_turn,
     now,
     opening: true,
     reason: 'fight_start',
@@ -153,13 +152,7 @@ const start = (runtime: FightRuntime, options: CommandOptions): FightRuntime => 
 
 const cast = (runtime: FightRuntime, action: CastAction): FightRuntime => {
   if (!assert_actor(runtime, action.fighter)) return fail(runtime, 'not_your_fighter')
-  const fighter = runtime.contract.fighters[Number(action.fighter)] as PlayerFighter
-  const source = runtime.sources.players[fighter.kind.character]
-  const spell = runtime.sources.spells[action.spell]
-  if (!spell || source.classe !== spell.classe || source.level < spell.unlock_level)
-    return fail(runtime, 'not_your_spell')
-  const invested = source.spell_levels[action.spell] ?? 1n
-  const level = spell.levels[Number(invested - 1n)]
+  const level = spell_level_of(runtime, action.fighter, action.spell)
   if (!level) return fail(runtime, 'not_your_spell')
   return resolve_spell({
     runtime,
@@ -167,18 +160,17 @@ const cast = (runtime: FightRuntime, action: CastAction): FightRuntime => {
     level,
     name: action.spell,
     target_cell: action.target_cell,
-    cast_level: invested,
+    cast_level: player_source(runtime, action.fighter).spell_levels[action.spell] ?? 1n,
   })
 }
 
 const strike = (runtime: FightRuntime, action: StrikeAction): FightRuntime => {
   if (!assert_actor(runtime, action.fighter)) return fail(runtime, 'not_your_fighter')
-  const fighter = runtime.contract.fighters[Number(action.fighter)] as PlayerFighter
-  const source = runtime.sources.players[fighter.kind.character]
+  const { classe, weapon } = player_source(runtime, action.fighter)
   return resolve_spell({
     runtime,
     caster: action.fighter,
-    level: strike_of(source.classe, source.weapon),
+    level: strike_of(classe, weapon),
     name: 'strike',
     target_cell: action.target_cell,
     cast_level: 0n,
@@ -213,7 +205,6 @@ const boundary = (runtime: FightRuntime, action: BoundaryAction, options: Comman
   return run_until_player({
     runtime,
     seed_for: options.seed_for!,
-    on_mob_turn: options.on_mob_turn,
     now: options.observed_ms!,
     opening: false,
     reason: action.type,
@@ -244,7 +235,6 @@ const forfeit = (runtime: FightRuntime, action: ForfeitAction, options: CommandO
     return run_until_player({
       runtime,
       seed_for: options.seed_for!,
-      on_mob_turn: options.on_mob_turn,
       now: options.observed_ms!,
       opening: false,
       reason: 'forfeit',

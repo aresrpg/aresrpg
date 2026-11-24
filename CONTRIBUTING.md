@@ -4,7 +4,7 @@
 
 ```bash
 bun install
-bun run dev        # Vite frontend against live testnet (localhost:5173)
+bun run dev        # Vite dev server at 127.0.0.1:5173 (network from VITE_NETWORK)
 bun run test       # the one test truth — same command CI runs
 bun run lint       # eslint + prettier + the constraint gates
 ```
@@ -36,18 +36,17 @@ History is linear by law; nothing ever rewrites what landed.
 Every `edge` commit deploys to `edge.aresrpg.world`. Production changes only from an owner-created
 semver tag; a normal `edge` push never moves `aresrpg.world`.
 
-1. When Move changed, prepare compatible upgrades or a testnet republish first, then commit the
-   receipt-derived hardcoded `pins.json` values to `edge`.
-2. From a clean, current `edge`, run `bun pm version patch` (or `minor`/`major`). Its lifecycle
-   validates the branch, commits and tags the root version, then pushes `edge` and the tag with
-   `--follow-tags`.
-3. The tag triggers `release.yml`. It waits for the exact SHA's green gate, builds only changed
-   server/indexer images into public GHCR, and creates a production-variable Vercel deployment
-   with `--skip-domain`. The GitHub Release remains draft and production stays unchanged.
+1. When Move changed, the owner's release operator prepares the compatible upgrades first.
+2. From a clean, current `edge`, the release operator commits the root version (patch, minor or major)
+   with the receipt-derived `pins.json`, tags it, and pushes `edge` and the tag atomically.
+3. The release operator dispatches preparation (`release.yml`) on the tag. It certifies on the first
+   green `edge` gate of the tag commit or of its parent when the two trees differ only in the root
+   version line, builds only the changed server, bot, Discord and indexer images into public GHCR,
+   and stages a production Vercel deployment with `--skip-domain`. The GitHub Release stays a draft and production stays unchanged.
 4. During the maintenance window, the owner reconciles changed content. When Move, server, or
    indexer changed, review and apply the prepared backend changes through private operations procedures.
    The composite game+seed projection identity chooses a store-preserving roll or a fresh repin.
-5. The owner manually triggers `activate-production.yml` with the prepared version. It verifies the
+5. The release operator dispatches `activate-production.yml` with the prepared version. It verifies the
    retained manifest, promotes the staged Vercel deployment without rebuilding, checks production,
    and publishes the generated GitHub Release. Gameplay resumes only after these checks pass.
 6. Discord communication is separate from release mechanics. It happens only through the
@@ -62,20 +61,16 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 
 - `ARCHITECTURE.md` owns the system model; `AGENTS.md` owns the working agreement and explains
   the executable TypeScript law.
-- **RED-FIRST**: a bug fix's first artifact is a failing test reproducing it; the PR carries
-  both runs.
+- **RED-FIRST**: a bug fix starts with a failing scenario that reproduces it, kept in the package's
+  core suite as `AGENTS.md` "Definition of done" states; the PR carries both runs.
 - Every player-facing string ships in all supported locales in the same commit.
 - The gate (`.github/workflows/gate.yml`) is required. Remove superseded or redundant checks; preserve behavioral guarantees and coverage floors.
-- Coverage is language-native and aggregate: Bun JS/TS 60% lines + 75% functions; Rust indexer 65%
-  LLVM lines; Move package/module floors are declared only in `scripts/coverage_move.sh`. Tests and generated JS/TS
-  are excluded, but no authored module is hidden. CI routes each changed language through its gate;
-  `bun run coverage:all` runs the complete local set. Every production Move
-  module targets more than 98%; meaningful gains raise its package floor in the same change, and
-  floors never decrease. Math `characteristic_costs`/`prng` and game `zone` already carry 98.01%
-  per-module ratchets.
-- Cognitive/cyclomatic hotspots are exact-score ratchets. Run `bun run complexity:baseline` only
-  after reviewing a real reduction or accepting a new below-ceiling soft hotspot; it refuses score
-  increases and new functions above the 15/12 hard ceilings.
+- Coverage floors are stated once, in `AGENTS.md` "Commands and gates"; Move floors live only in
+  `scripts/coverage_move.sh`. `bun run coverage:all` runs the complete local set, and floors never
+  decrease.
+- No function exceeds cognitive complexity 15 or cyclomatic complexity 12 (stock ESLint rules).
+  Files that held a hotspot when the rules landed are listed in `INHERITED_COMPLEXITY_FILES`
+  (`scripts/eslint-rules/fp_law.config.mjs`); a file leaves that list when reduced and none is added.
 
 ## Scope
 

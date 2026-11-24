@@ -6,37 +6,21 @@ import { create_character_source, create_fight, type HydratedFightCheckpoint } f
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
-import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import type { AuthSession } from '../../src/auth.ts'
-import { fight_resource_loader, type FightResourceLoader } from '../../src/game/fight/fight_resources.ts'
+import type { FightResourceLoader } from '../../src/game/fight/fight_resources.ts'
 import { FightLayer } from '../../src/game/fight/FightLayer.tsx'
 import type { SceneHandle } from '../../src/game/core/scene_feed.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
-import { dispatch_app, observe_app, read_app_state, useAppStore, type AppInput } from '../../src/store.ts'
-import { tournament_fixture } from '../../test/helpers/tournament.ts'
+import { dispatch_app, useAppStore, type AppInput, start_app } from '../../src/store.ts'
+import { all_modules } from '../support/app.ts'
 import '../../src/tailwind.css'
 
+start_app(all_modules({ observe: ['fight', 'fight_chain'] }), { seat: true })
+
 // Real fight reducers, observers and React UI; GPU presentation and chain execution are isolated.
-const params = new URLSearchParams(location.search)
-const spell_probe = params.has('spell')
-const walkover = params.has('walkover')
-const phase = (value: string): void => {
-  document.body.dataset.preparation = value
-}
 const resource_loader: FightResourceLoader = {
-  characters: async (sources) => {
-    phase('characters')
-    return params.has('real_resources') ? fight_resource_loader.characters(sources) : []
-  },
-  prepare: async (checkpoint, scene, ambient) => {
-    phase('effects_and_audio')
-    if (params.has('hold_resources'))
-      await new Promise<void>((resolve) =>
-        window.addEventListener('release-resources', () => resolve(), { once: true })
-      )
-    if (params.has('real_resources')) await fight_resource_loader.prepare(checkpoint, scene, ambient)
-    phase('ready')
-  },
+  characters: async () => [],
+  prepare: async () => {},
 }
 const picking = { cell: null as number | null }
 const scene: SceneHandle = {
@@ -83,7 +67,7 @@ const row = (id: string, name: string): CharacterRow => ({
   kiosk: 'kiosk',
   world: 'nauvis',
   custody: 'fight',
-  active_fight: { id: 'placement-race', seat: id === 'alice' ? 0 : 2 },
+  active_fight: { id: 'placement-race', seat: 0 },
 })
 const push = (checkpoint: HydratedFightCheckpoint): void =>
   dispatch_app({
@@ -91,20 +75,10 @@ const push = (checkpoint: HydratedFightCheckpoint): void =>
     packet: {
       type: 'packet/fight_state',
       fight: checkpoint.contract.id,
-      state: {
-        contract: checkpoint.contract,
-        players: checkpoint.sources.players,
-        ...(walkover ? { tournament: { id: 'cup', index: 0 } } : {}),
-      },
+      state: { contract: checkpoint.contract, players: checkpoint.sources.players },
       seat: 0,
     },
   } as unknown as AppInput)
-
-const ActionPoints = () => (
-  <output aria-label="Action points">
-    {useAppStore((state) => state.fight.checkpoint?.contract.fighters[0]?.ap.toString())}
-  </output>
-)
 
 const RosterCount = () => (
   <output aria-label="Participants">
@@ -115,21 +89,12 @@ const RosterCount = () => (
 const boot = async (): Promise<void> => {
   const copy = await load_app_copy('en')
   dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
-  const character_source = (name: string) =>
-    create_character_source({
-      name,
-      classe: 'senshi',
-      level: spell_probe ? 200n : 1n,
-      spell_levels: spell_probe
-        ? Object.fromEntries(encyclopedia_catalog.class('senshi')!.spells.map((spell) => [spell.name, 1n]))
-        : {},
-    })
   const chain = create_fight({
     mode: 'local',
     seed: 17n,
     setup: {
       fight_id: 'placement-race',
-      world: walkover ? 'tournament' : 'nauvis',
+      world: 'nauvis',
       board_seed: 17n,
       spells: { ...catalog_spell_sources() },
       players: [
@@ -138,140 +103,44 @@ const boot = async (): Promise<void> => {
           owner: 'owner',
           team: 0n,
           hp: 55n,
-          ready: spell_probe,
-          source: character_source('Alice'),
+          ready: false,
+          source: create_character_source({ name: 'Alice', classe: 'senshi', level: 1n }),
         },
         {
           character: 'enemy',
           owner: 'other',
           team: 1n,
           hp: 55n,
-          ready: spell_probe,
-          source: character_source('Enemy'),
+          ready: false,
+          source: create_character_source({ name: 'Enemy', classe: 'senshi', level: 1n }),
         },
-      ].filter((player) => !walkover || player.team === 0n),
+      ],
       mobs: [],
     },
   })
   picking.cell = Number(chain.state().contract.board.start_cells_a[1]!)
   document.body.dataset.placement_calls = '0'
-  let refuse = (_error: Error): void => {}
+  // The chain hand counts each placement it is asked to sign and never answers.
   const wallet = {
     address: 'owner',
-    tournament: {
-      crank: async () => {
-        document.body.dataset.crank_calls = String(Number(document.body.dataset.crank_calls ?? 0) + 1)
-        await new Promise<void>((resolve) => window.addEventListener('release-crank', () => resolve(), { once: true }))
-        return { digest: 'walkover' }
-      },
-    },
     fight: {
       place: () =>
-        new Promise((_resolve, reject) => {
+        new Promise(() => {
           document.body.dataset.placement_calls = String(Number(document.body.dataset.placement_calls) + 1)
-          refuse = reject
         }),
     },
   } as unknown as AuthSession
   dispatch_app({ type: 'auth/connecting' })
   dispatch_app({ type: 'auth/connected', session: wallet })
-  dispatch_app({
-    type: 'server/packet',
-    packet: { type: 'packet/characters', characters: [row('alice', 'Alice'), row('ally', 'Ally')] },
-  })
+  dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [row('alice', 'Alice')] } })
   dispatch_app({ type: 'character/select', character_id: 'alice' })
-  if (params.has('agent')) {
-    dispatch_app({
-      type: 'agent/watch',
-      observation: {
-        pairing: { address: 'owner', multisig_public_key: 'public', signer_mode: 'disposable' },
-        public_identifier: 'google',
-        character_id: 'alice',
-      },
-    })
-    dispatch_app({
-      type: 'server/packet',
-      packet: {
-        type: 'packet/agent_observed',
-        id: read_app_state().session.agent_view.serial,
-        characters: [row('alice', 'Alice')],
-        selected_character_id: 'alice',
-        failed: false,
-      },
-    })
-  }
-  observe_app(['fight', 'fight_chain', 'tournament'])
-  const initial = spell_probe ? chain.apply({ type: 'start', observed_ms: 60_000n }).state : chain.state()
-  if (spell_probe) picking.cell = Number(initial.contract.fighters[0]!.cell)
-  push(walkover ? { ...initial, contract: { ...initial.contract, placement_ms: 1000n } } : initial)
-  if (walkover) {
-    const tournament = tournament_fixture()
-    dispatch_app({
-      type: 'server/packet',
-      packet: {
-        type: 'packet/tournaments',
-        tournaments: [{ ...tournament, matches: [{ ...tournament.matches[0]!, fight: 'placement-race' }] }],
-      },
-    })
-    dispatch_app({ type: 'clock/observed', chain_ms: 60_999, received_ms: performance.now() })
-    window.addEventListener('placement-expired', () =>
-      dispatch_app({ type: 'clock/observed', chain_ms: 61_000, received_ms: performance.now() })
-    )
-  }
-  const place_and_join = (): void => {
-    picking.cell = Number(chain.state().contract.board.start_cells_a[1]!)
-    dispatch_app({
-      type: 'fight/input',
-      fight: 'placement-race',
-      origin: 'local',
-      input: { type: 'place', fighter: 0n, cell: chain.state().contract.board.start_cells_a[1]! },
-    })
-    const joined = chain.apply({
-      type: 'join',
-      team: 0n,
-      hp: 55n,
-      character: 'ally',
-      owner: 'owner',
-      source: create_character_source({ name: 'Ally', classe: 'senshi', level: 1n }),
-    })
-    push(joined.state)
-  }
+  push(chain.state())
   createRoot(document.getElementById('root')!).render(
     <main className="fixed inset-0 bg-[#24202e] font-mono text-white">
       <canvas className="absolute inset-0 size-full" />
-      <canvas data-other-canvas className="absolute top-20 right-4 h-20 w-32 bg-black" />
       <FightLayer copy={copy} scene={scene} resource_loader={resource_loader} />
       <div className="absolute top-3 left-3 z-[200] flex gap-3">
         <RosterCount />
-        <ActionPoints />
-        <button onClick={place_and_join}>Place and join</button>
-        <button
-          onClick={() =>
-            push(
-              chain.apply({
-                type: 'join',
-                team: 0n,
-                hp: 55n,
-                character: 'ally',
-                owner: 'owner',
-                source: create_character_source({ name: 'Ally', classe: 'senshi', level: 1n }),
-              }).state
-            )
-          }
-        >
-          Join without placement
-        </button>
-        <button
-          onClick={() =>
-            refuse(
-              new Error(
-                "[sdk] transaction resolution failed — NOT submitted: MoveAbort, abort code: 1709, in '0xgame::combat::place'"
-              )
-            )
-          }
-        >
-          Reject placement
-        </button>
       </div>
     </main>
   )

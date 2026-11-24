@@ -298,10 +298,6 @@ export const observe_fights = ({
     session.apply(input)
     if (witness_key && session.state()?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
   })
-  events.on('fight/reset_turn', ({ fight }) => {
-    if (fight) sessions.get(fight)?.reset_turn()
-    else local_session?.reset_turn()
-  })
   events.on('fight/cancel_pending_turn', ({ fight }) => sessions.get(fight)?.cancel_pending_turn())
   events.on('server/packet', ({ packet }) => {
     if (packet.type === 'packet/characters') {
@@ -452,7 +448,6 @@ export const observe_fights = ({
   events.on('fight/spectating', ({ character_id, fight }) => {
     if (fight && get_state().session.selected_character_id === character_id) project_session(fight)
   })
-  events.on('fight/replaced', ({ checkpoint }) => sessions.get(checkpoint.contract.id)?.replace(checkpoint))
   events.on('fight/restored', ({ checkpoint }) => sessions.get(checkpoint.contract.id)?.restore(checkpoint))
   const close_local_session = (): void => {
     local_session?.close()

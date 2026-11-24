@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The hacker cool-off (owner 2026-08-19): an address the server DROPPED for cheating (speed,
-// flood) cannot reconnect for a while. Deliberately stateless beyond this pod's memory — an
+// An address the server dropped for cheating (speed, flood) cannot reconnect for a while. Deliberately stateless beyond this pod's memory — an
 // expiring LRU, no store, no cross-pod sync: a banned client that lands on another pod just
 // gets caught again by the same laws there.
 

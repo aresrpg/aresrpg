@@ -59,7 +59,7 @@ import {
 } from './dungeon_portal_feed.ts'
 import { publish_observed_pose, publish_pose, type WorldPose } from './pose_feed.ts'
 import { pet_animation, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
-import { run_to_mount, type RunTarget } from './run_to.ts'
+import type { RunTarget } from './run_to.ts'
 import { create_world_collision } from './world_collision.ts'
 import { walking_edge, type WalkPoint } from './walkable.ts'
 import { begin_walking, step_walking } from './walking.ts'
@@ -129,6 +129,11 @@ export const create_world = ({
 }>) => {
   const compiled = compile_runtime_world_recipe(world)
   const engine = create_engine({ canvas, quality, world: compiled, initial_focus, render_distance })
+  // Entity labels share the label namespace with world labels, so their ids carry a prefix.
+  const set_entity_label = (id: string, element: HTMLElement | null): void =>
+    engine.set_label(`entity:${id}`, element && { element, anchor: { kind: 'entity', id } })
+  const set_world_label = (id: string, element: HTMLElement | null, position: Vec3 | null): void =>
+    engine.set_label(id, element && position && { element, anchor: { kind: 'world', position } })
   const stop_reporting = observe_engine_reporting(engine)
   const stop_frame_rate = observe_frame_rate(engine)
   const scene_preparation = create_scene_preparation(engine)
@@ -297,14 +302,6 @@ export const create_world = ({
   }
   const apply_run_input = (position: Readonly<Vec3>, delta_seconds: number): void => {
     if (!run_target || !walking) return character.set_input({ yaw: director.active().get_yaw() })
-    const mounting = run_to_mount({
-      requested: run_target.ride_pet === true,
-      available: pet !== null,
-      riding,
-      nearby: pet_interactable(),
-    })
-    if (mounting === 'mount') set_riding(true)
-    if (mounting === 'wait') return character.set_input({ forward: 0, strafe: 0, phase_target: null })
     const step = step_walking(walking_world, walking, position, run_target, delta_seconds)
     walking = step.state
     run_route = { x: run_target.x, z: run_target.z, remaining: step.remaining }
@@ -345,7 +342,7 @@ export const create_world = ({
     },
     caption: engine.set_entity_caption,
     ground_height: surface_y,
-    set_label: engine.set_world_label,
+    set_label: set_world_label,
   })
 
   const set_mode = (next: typeof mode): void => {
@@ -484,7 +481,7 @@ export const create_world = ({
     let changed = targets.focused_id !== focused_fight_id
     for (const [id] of fight_labels) {
       if (visible.has(id)) continue
-      engine.set_fight_sword_label(id, null)
+      engine.set_label(`fight:${id}`, null)
       fight_labels.delete(id)
       changed = true
     }
@@ -492,7 +489,7 @@ export const create_world = ({
       if (fight_labels.has(id) || typeof document === 'undefined') continue
       const element = document.createElement('div')
       fight_labels.set(id, element)
-      engine.set_fight_sword_label(id, element)
+      engine.set_label(`fight:${id}`, { element, anchor: { kind: 'sword', id } })
       changed = true
     }
     focused_fight_id = targets.focused_id
@@ -505,7 +502,7 @@ export const create_world = ({
   }
 
   const clear_fight_labels = (): void => {
-    for (const id of fight_labels.keys()) engine.set_fight_sword_label(id, null)
+    for (const id of fight_labels.keys()) engine.set_label(`fight:${id}`, null)
     fight_labels.clear()
     focused_fight_id = null
     publish_fight_prompt({ roots: Object.freeze({}), focused_id: null })
@@ -525,7 +522,7 @@ export const create_world = ({
     let changed = targets.focused_id !== focused_dungeon_portal_id
     for (const [id] of dungeon_portal_labels) {
       if (visible.has(id)) continue
-      engine.set_world_label(id, null, null)
+      engine.set_label(id, null)
       dungeon_portal_labels.delete(id)
       changed = true
     }
@@ -534,21 +531,13 @@ export const create_world = ({
       if (!portal) continue
       const existing = dungeon_portal_labels.get(id)
       if (existing) {
-        engine.set_world_label(id, existing, [
-          portal.x,
-          surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
-          portal.z,
-        ])
+        set_world_label(id, existing, [portal.x, surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT, portal.z])
         continue
       }
       if (typeof document === 'undefined') continue
       const element = document.createElement('div')
       dungeon_portal_labels.set(id, element)
-      engine.set_world_label(id, element, [
-        portal.x,
-        surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
-        portal.z,
-      ])
+      set_world_label(id, element, [portal.x, surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT, portal.z])
       changed = true
     }
     focused_dungeon_portal_id = targets.focused_id
@@ -562,7 +551,7 @@ export const create_world = ({
   }
 
   const clear_dungeon_portal_labels = (): void => {
-    for (const id of dungeon_portal_labels.keys()) engine.set_world_label(id, null, null)
+    for (const id of dungeon_portal_labels.keys()) engine.set_label(id, null)
     dungeon_portal_labels.clear()
     focused_dungeon_portal_id = null
     clear_dungeon_portal_prompt()
@@ -626,8 +615,8 @@ export const create_world = ({
   let labeled_pet_id: string | null = null
   const label_pet = (pet_id: string | null): void => {
     if (pet_id === labeled_pet_id) return
-    if (labeled_pet_id) engine.set_entity_label(labeled_pet_id, null)
-    if (pet_id && mount_label) engine.set_entity_label(pet_id, mount_label)
+    if (labeled_pet_id) set_entity_label(labeled_pet_id, null)
+    if (pet_id && mount_label) set_entity_label(pet_id, mount_label)
     labeled_pet_id = pet_id && mount_label ? pet_id : null
     publish_mount_prompt(labeled_pet_id ? { root: mount_label!, riding, activate: toggle_mount } : null)
   }
@@ -639,7 +628,7 @@ export const create_world = ({
   const label_portal = (near: boolean): void => {
     const attach = near && !!portal_label
     if (attach === portal_labeled) return
-    engine.set_portal_label(attach && portal_label ? portal_label : null)
+    engine.set_label('portal', attach && portal_label ? { element: portal_label, anchor: { kind: 'portal' } } : null)
     portal_labeled = attach
     publish_portal_prompt(attach && portal_label ? { root: portal_label, activate: travel } : null)
   }
@@ -936,7 +925,8 @@ export const create_world = ({
       sync_dungeon_portal_labels()
     },
     set_dungeon_stage: engine.set_dungeon_stage,
-    set_resource_node_label: (id: string, element: HTMLElement | null) => engine.set_resource_node_label(id, element),
+    set_resource_node_label: (id: string, element: HTMLElement | null) =>
+      engine.set_label(`resource:${id}`, element && { element, anchor: { kind: 'resource', id } }),
     entity_height: engine.entity_height,
     set_pet: (
       next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion; wings: PetWingStyle }> | null
@@ -1019,9 +1009,8 @@ export const create_world = ({
     /// The last rendered camera frame — the screen-space pick (player right-click) reads it.
     camera_frame: (): CameraFrame | null => last_view,
     set_entity_caption: engine.set_entity_caption,
-    set_entity_label: (id: string, element: HTMLElement | null) => engine.set_entity_label(id, element),
-    set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) =>
-      engine.set_world_label(id, element, position),
+    set_entity_label,
+    set_world_label,
     state: (): WorldState => {
       const render = engine.render_state()
       return Object.freeze({

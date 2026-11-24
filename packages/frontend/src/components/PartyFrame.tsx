@@ -4,6 +4,7 @@
 import { Crown, Footprints, X } from 'lucide-react'
 import type { PartyRow } from '@aresrpg/protocol'
 import { useRef, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
+import { Button } from '@aresrpg/ui'
 
 import { useText } from '../i18n/useText.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
@@ -206,22 +207,19 @@ export const PartyInviteCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return invitation ? (
     <section className="party-invite-card">
       <span>{text('invited_by', { name: invitation.members[0]?.name ?? text('adventurer') })}</span>
-      <button
-        className="btn-gold"
+      <Button
+        tone="primary"
         disabled={!!pending || !can_answer || !!party}
         onClick={() => dispatch_app({ type: 'party/accept', party: invitation.id })}
-        type="button"
       >
         {text('accept')}
-      </button>
-      <button
-        className="btn-outline"
+      </Button>
+      <Button
         disabled={!!pending || !can_answer}
         onClick={() => dispatch_app({ type: 'party/decline', party: invitation.id })}
-        type="button"
       >
         {text('decline')}
-      </button>
+      </Button>
     </section>
   ) : null
 }

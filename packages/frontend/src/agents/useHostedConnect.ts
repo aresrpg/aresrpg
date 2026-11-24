@@ -18,18 +18,7 @@ import {
 import { setup_hosted, authorize_hosted, create_hosted_client, cancel_hosted_session } from './hosted_client.ts'
 
 /** An approved request returns through the redirect its client registered: the browser leaves for it. */
-const leave = (redirect: string): void => window.location.assign(redirect)
-
-/**
- * `arrive` receives the redirect of an approved request. The browser leaves for it unless the caller
- * is itself the page that redirect names and takes it in place.
- */
-export const useHostedConnect = (
-  wallet: AuthSession | null,
-  origin: string,
-  requested_id: string | null,
-  arrive: (redirect: string) => void = leave
-) => {
+export const useHostedConnect = (wallet: AuthSession | null, origin: string, requested_id: string | null) => {
   const [state, dispatch] = useReducer(reduce_hosted<HostedBotDescriptor>, undefined, empty_hosted<HostedBotDescriptor>)
   const eligible = [wallet?.identity === 'zklogin', !!origin].every(Boolean)
   const lifetime = useRef({ authorization_id: requested_id, completed: false, wallet })
@@ -91,7 +80,7 @@ export const useHostedConnect = (
         // eslint-disable-next-line functional/immutable-data -- Completed OAuth must not be cancelled when navigation disposes the modal.
         context.completed = true
         dispatch({ type: 'result', generation, values: { phase: 'complete' } })
-        arrive(redirect)
+        window.location.assign(redirect)
       },
     }
     void operations[state.phase as keyof typeof operations]().catch((error) => {

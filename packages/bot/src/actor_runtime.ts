@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { SDK } from '@aresrpg/sdk'
+import { SDK, type SdkOptions } from '@aresrpg/sdk'
 import { create_agent_multisig } from '@aresrpg/sdk/agent-multisig'
 import { create_agent_transaction_signer } from '@aresrpg/sdk/agent-transactions'
 import type { TransactionJournal } from '@aresrpg/sdk/transaction-execution'
@@ -8,14 +8,13 @@ import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 import type { ClientPacket } from '@aresrpg/protocol'
 import { fromBase64 } from '@mysten/sui/utils'
 import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
+import type { AgentTransport } from '@aresrpg/sdk/agent-connection'
 
 import { create_actor_locomotion } from './actor_locomotion.ts'
-import { read_actor_balance } from './actor_balance.ts'
 import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
-import { wait_for_contract, ready_gameplay_command } from './command_wait.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
-import { empty_snapshot, actor_snapshot_transition, type ActorSnapshot } from './actor_snapshot.ts'
+import { empty_snapshot, actor_snapshot_transition } from './actor_snapshot.ts'
 import { create_bot_actor, bun_transport } from './actor.ts'
 import {
   assert_lease,
@@ -27,11 +26,11 @@ import {
   type Lane,
   type Observe,
 } from './control.ts'
-import { assert_live_grant, type Bot, type Grant } from './model.ts'
+import { authority_fault, authorize, CONTROL_SCOPES, type Bot, type Scope, type BotConfig } from './model.ts'
 import { run_pairing_proof, run_provisioning, type ProvisionRequest } from './provisioning.ts'
-import { has_pending_work } from './store.ts'
+import { has_pending_work, type ControlStore } from './store.ts'
 import { abandon_unsubmitted, create_transaction_lifecycle } from './transaction_lifecycle.ts'
-import { stale_run_draft } from './run_refresh.ts'
+import { record_command_failure, ready_gameplay_command, wait_for_contract } from './run_runtime.ts'
 import { process_lane_runs, retire_run } from './run_actor.ts'
 import { retired_run } from './store_projection.ts'
 import { read_market_receipts, fold_market_receipts } from './market_recovery.ts'
@@ -41,9 +40,18 @@ import { apply_actor_watches, observation_reply, owned_run_observation } from '.
 import { create_status_sharer } from './status_sharer.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
 import { create_market_collector } from './market_collection.ts'
-export { reduce_actor_snapshot, type ActorSnapshot } from './actor_snapshot.ts'
-export type { ActorRuntimeOptions } from './actor_runtime_options.ts'
-import type { ActorRuntimeOptions } from './actor_runtime_options.ts'
+import { SLEEP_AFTER_IDLE_MS, wallet_idle } from './idle.ts'
+import { read_actor_balance } from './character_observability.ts'
+import type { ManagedProvider } from './managed_signer.ts'
+
+/** One run of a task at a time: a caller during a run joins it, and `idle` waits for it to end. */
+const one_at_a_time = (task: () => Promise<void>) => {
+  let current: Promise<void> | null = null
+  return {
+    run: () => (current ??= task().finally(() => (current = null))),
+    idle: async () => void (await current),
+  }
+}
 export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const { store, config } = options
   const now = options.now ?? Date.now
@@ -53,27 +61,19 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const sessions = new Map<string, Session>()
   let cursor = ''
   const opening = new Map<string, Promise<Session>>()
+  /** Process-local, like every session fact: when each open seat's wallet last had work, and when each
+   * seat this process closed for idleness did so. A restarted process knows neither. */
+  const idle_since = new Map<string, number>()
+  const asleep_since = new Map<string, number>()
   const work = new Map<string, Promise<void>>()
   let stopped = false
-  let ticking: Promise<void> | null = null
-  let renewing: Promise<void> | null = null
-  const live_bot = async (bot_id: string, grant_id: string, scope?: string) => {
-    const bot = await store.read<Bot>(`bot:${bot_id}`)
-    const grant = await store.read<Grant>(`grant:${grant_id}`)
-    if (!grant) throw new Error('invalid_token')
-    assert_live_grant(config, grant, bot, now())
-    if (scope && !grant.scopes.includes(scope)) throw new Error('insufficient_scope')
-    return bot!
-  }
-  const grant_is_live = async (bot_id: string, grant_id: string, scope?: string) => {
-    try {
-      await live_bot(bot_id, grant_id, scope)
-      return true
-    } catch (error) {
-      if (error instanceof Error && ['invalid_token', 'insufficient_scope'].includes(error.message)) return false
-      throw error
-    }
-  }
+  const live_bot = (bot: Bot, grant_id: string, scope: Scope | null = null) =>
+    authorize(store.read, config, { id: grant_id, bot_id: bot.id, address: bot.address }, scope, now())
+  const grant_is_live = (bot: Bot, grant_id: string, scope: Scope | null = null) =>
+    live_bot(bot, grant_id, scope).then(
+      () => true,
+      (error: unknown) => !authority_fault(error)
+    )
   const open_session = async (bot: Bot, first_command: Command) => {
     const lane_key = lane_key_for(bot)
     const lease = await control.acquire(bot, options.actor_id, options.lease_ms)
@@ -100,7 +100,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     })
     const authorize = async () => {
       assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
-      const valid = await Promise.all([...connector_grants].map((grant_id) => grant_is_live(bot.id, grant_id)))
+      const valid = await Promise.all([...connector_grants].map((grant_id) => grant_is_live(bot, grant_id)))
       if (!valid.some(Boolean)) throw new Error('invalid_token')
     }
     const lifecycle = create_transaction_lifecycle(
@@ -177,7 +177,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       },
       authorize,
       authorize_observation: async (owner) => {
-        await live_bot(bot.id, owner)
+        await live_bot(bot, owner)
       },
       needs_resync: () => control.observed(lane_key, options.actor_id, lease.fence, false),
       observe: async (state) => {
@@ -189,8 +189,6 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         const lane = assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
         snapshot = { ...snapshot, observation_revision: lane.observation_revision }
         await reconcile()
-        for (const character_id of transition.track_ids)
-          await actor.send({ type: 'packet/track_character', character_id, tracked: true })
         for (const fight of transition.resync_fights) await actor.send({ type: 'packet/fight_resync', fight })
         if (state.last_packet?.type === 'packet/characters' && snapshot.ready)
           await store.transaction([lane_key], async (tx) => {
@@ -218,7 +216,9 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       report_failure: options.report_failure,
       idle_lane: async () => {
         if (stopped || work.has(lane_key)) return null
-        const valid = await Promise.all([...connector_grants].map((id) => grant_is_live(bot.id, id, 'bot:play')))
+        const valid = await Promise.all(
+          [...connector_grants].map((id) => grant_is_live(bot, id, CONTROL_SCOPES.accept))
+        )
         if (!valid.some(Boolean)) return null
         return assert_lease(await store.read<Lane>(lane_key), options.actor_id, lease.fence, now())
       },
@@ -282,7 +282,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       if (session_reusable(existing, lane, command)) return existing
       const recovery = lane?.pending?.command_id === command.id
       if ([!recovery, command.kind !== 'observe'].every(Boolean)) return existing
-      if (!recovery) await live_bot(bot.id, command.grant_id)
+      if (!recovery) await live_bot(bot, command.grant_id)
       // Receipt reconciliation owns a lease even when gameplay/socket authority is revoked.
       // Only this process retains transaction evidence; new owners re-evaluate the saved tree.
       await existing.actor.stop()
@@ -292,6 +292,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (in_flight) return in_flight
     const pending = open_session(bot, command).then((session) => {
       sessions.set(key, session)
+      asleep_since.delete(key)
       return session
     })
     opening.set(key, pending)
@@ -304,26 +305,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const fail_command = async (session: Session, command: Command, error: unknown) => {
     const funding = transaction_failure_kind(error) === 'funding'
     const balance = funding ? await read_actor_balance(session.sdk, monotonic_now, options.report_failure) : null
-    await store.transaction([command.lane_key, `command:${command.id}`], async (tx) => {
-      const lane = assert_lease(await tx.get<Lane>(command.lane_key), options.actor_id, session.lease.fence, now())
-      const current = await tx.get<Command>(`command:${command.id}`)
-      if (!current || ['completed', 'failed', 'cancelled'].includes(current.status)) return
-      if (stale_run_draft(current, lane, error)) return
-      // A prepared command whose envelope is gone may still have executed.
-      const unknown = [lane.pending, current.status !== 'accepted'].some(Boolean)
-      await tx.put(`command:${command.id}`, {
-        ...current,
-        status: unknown ? 'uncertain' : 'failed',
-        error: String(error),
-        ...(balance ? { funding_balance_mist: balance.balance_mist } : {}),
-        ...(unknown ? {} : { refused_at: now() }),
-      })
-      await tx.put(command.lane_key, {
-        ...lane,
-        needs_resync: true,
-        active_command: lane.pending ? lane.active_command : null,
-      })
-    })
+    const binding = { command, actor_id: options.actor_id, fence: session.lease.fence }
+    await record_command_failure(store, binding, error, balance?.balance_mist, now())
   }
   const observe_session = async (session: Session, command: Command) => {
     await session.actor.connect()
@@ -396,7 +379,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         await recover_envelope(session, lane)
         return
       }
-      await live_bot(bot.id, command.grant_id)
+      await live_bot(bot, command.grant_id)
       await session.actor.connect()
       await session.actor.settle_observations()
       const binding = { command, actor_id: options.actor_id, fence: session.lease.fence }
@@ -483,16 +466,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       }
     }
   }
-  const renew = async () => {
-    if (stopped || config.recovery_mode) return
-    if (renewing) return renewing
-    renewing = renew_sessions()
-    try {
-      await renewing
-    } finally {
-      renewing = null
-    }
-  }
+  const renewal = one_at_a_time(renew_sessions)
+  const renew = () => (stopped || config.recovery_mode ? Promise.resolve() : renewal.run())
   /** What this process may do next for a lane: its in-flight command first, otherwise a queue pass. */
   const owned_work = async (lane_key: string) => {
     const owner = await store.read<Lane>(lane_key)
@@ -526,6 +501,21 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     if (record.lane_key) return schedule_lane(record.lane_key, wait)
     return enqueue(record.bot_id ?? key, key, wait ? () => schedule_key(key, true) : null)
   }
+  /** An idle seat wanders. One idle for SLEEP_AFTER_IDLE_MS leaves the game as any stop does: its socket
+   * closes and its lease lapses. Whatever next needs the seat, a read or pending work, opens it again. */
+  const rest = async (key: string, session: Session) => {
+    const lane = await store.read<Lane>(key)
+    const idle = [lane && wallet_idle(lane), !work.has(key), session.actor.state().status !== 'stopped'].every(Boolean)
+    if (!idle) return void idle_since.delete(key)
+    const since = idle_since.get(key) ?? now()
+    idle_since.set(key, since)
+    if (now() - since < SLEEP_AFTER_IDLE_MS) return session.idle()
+    idle_since.delete(key)
+    sessions.delete(key)
+    asleep_since.set(key, now())
+    await session.actor.stop()
+    await session.settle_idle()
+  }
   const run_tick = async () => {
     if (stopped || config.recovery_mode) return
     await renew()
@@ -539,14 +529,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         options.report_failure(error)
       }
     }
-    for (const session of sessions.values()) session.idle()
+    for (const [key, session] of sessions) await rest(key, session)
   }
+  const ticks = one_at_a_time(run_tick)
   const observe: Observe = async (grant, payload, expected) => {
     if ([stopped, config.recovery_mode].some(Boolean)) throw new Error('observation_unavailable')
-    const bot = await live_bot(grant.bot_id, grant.id)
+    const { bot, grant: current } = await authorize(store.read, config, grant, CONTROL_SCOPES.observe, now())
     if (expected) assert_lease(await store.read<Lane>(lane_key_for(bot)), expected.actor_id, expected.fence, now())
-    const current = await store.read<Grant>(`grant:${grant.id}`)
-    if (!current?.scopes.includes('bot:observe')) throw new Error('insufficient_scope')
     const command: Command = {
       id: 'observation',
       grant_id: current.id,
@@ -559,15 +548,17 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       observation_revision: 0,
       status: 'accepted',
     }
+    const slept = asleep_since.get(command.lane_key)
     const session = await session_for(bot, command)
     if (stopped) throw new Error('observation_unavailable')
     const binding = expected ?? session.lease
     session.add_grant(current.id)
     const result = await observe_session(session, command)
-    await live_bot(bot.id, current.id)
+    await authorize(store.read, config, current, CONTROL_SCOPES.observe, now())
     assert_lease(await store.read<Lane>(command.lane_key), binding.actor_id, binding.fence, now())
     if (stopped) throw new Error('observation_unavailable')
-    return result
+    // The first read after a sleep says when the wallet left the game.
+    return slept === undefined ? result : { ...result, asleep_since: new Date(slept).toISOString() }
   }
   return {
     observe,
@@ -577,19 +568,11 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       await Promise.all([...work.values()])
       await Promise.all([...sessions.values()].map((session) => session.actor.settle_observations()))
     },
-    tick: async () => {
-      if (ticking) return ticking
-      ticking = run_tick()
-      try {
-        await ticking
-      } finally {
-        ticking = null
-      }
-    },
+    tick: ticks.run,
     stop: async () => {
       stopped = true
-      if (renewing) await renewing
-      if (ticking) await ticking
+      await renewal.idle()
+      await ticks.idle()
       await Promise.all([...work.values()])
       await Promise.allSettled([...opening.values()])
       for (const session of sessions.values()) await session.actor.stop()
@@ -597,3 +580,19 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     },
   }
 }
+type ActorRuntimeOptions = Readonly<{
+  store: ControlStore
+  config: BotConfig
+  provider: ManagedProvider
+  endpoint: string
+  origin: string
+  actor_id: string
+  lease_ms: number
+  scan_limit: number
+  observation_freshness_ms: number
+  sdk_options: Pick<SdkOptions, 'client' | 'rpc_url' | 'pins'>
+  transport?: AgentTransport
+  monotonic_now?: () => number
+  now?: () => number
+  report_failure: (error: unknown) => void
+}>

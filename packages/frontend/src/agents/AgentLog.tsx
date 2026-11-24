@@ -5,9 +5,8 @@ import { SegmentedControl } from '@aresrpg/ui'
 import type { AgentStatus, CharacterRow } from '@aresrpg/protocol'
 
 import { character_icon } from '../content/assets.ts'
-import { dapp_text } from '../dapp/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
-import { subscribe_app, useAppStore } from '../store.ts'
+import { subscribe_app, useSiteStore } from '../store.ts'
 
 import {
   fold_hero_logs,
@@ -17,7 +16,7 @@ import {
   type LoggedEvent,
   type ObservedHeroes,
 } from './activity.ts'
-import { activity_text, current_text, pending_text, type ActivityText } from './activity_text.ts'
+import { activity_text, agent_text, current_text, type ActivityText } from './activity_text.ts'
 import type { AgentInventoryView } from './inventory_state.ts'
 import './agent_log.css'
 
@@ -104,26 +103,27 @@ const HeroLog = ({
   )
 }
 
-/** The account has no hero to show: the wait is named, a failure is said, an empty account says what to do. */
-const HeroesWait = ({ copy, phase }: Readonly<{ copy: AppCopy; phase: AgentInventoryView['phase'] }>) => {
-  if (phase === 'failed')
+/** The account has no hero to show, in the log's own box: an empty account says what to do, a failed read
+ * leaves the box empty (the page's last line says why), and a read in flight holds the hero row and the log. */
+const NoHeroes = ({ copy, phase }: Readonly<{ copy: AppCopy; phase: AgentInventoryView['phase'] }>) => {
+  if (phase === 'ready')
     return (
-      <p className="agent-log-wait" role="alert">
-        {dapp_text(copy, 'heroes_failed')}
-      </p>
+      <div className="agent-log agent-log-empty">
+        <p>{agent_text(copy, 'empty_title')}</p>
+        <p>{agent_text(copy, 'empty_body')}</p>
+      </div>
     )
-  if (phase !== 'ready')
-    return (
-      <p className="agent-log-wait" role="status" aria-busy="true">
-        <span className="aui-spinner" aria-hidden="true" />
-        {dapp_text(copy, 'reading_heroes')}
-      </p>
-    )
+  if (phase === 'failed') return <div className="agent-log" />
   return (
-    <div className="agent-log-empty">
-      <p>{dapp_text(copy, 'empty_title')}</p>
-      <p>{dapp_text(copy, 'empty_body')}</p>
-    </div>
+    <>
+      <div className="agent-log-heroes" aria-hidden="true">
+        <span className="aui-skeleton agent-log-heroes-wait" />
+      </div>
+      <div className="agent-log agent-log-skeleton" aria-busy="true">
+        <span className="aui-skeleton" />
+        <span className="aui-skeleton aui-skeleton--short" />
+      </div>
+    </>
   )
 }
 
@@ -132,7 +132,7 @@ const hero_option = (copy: AppCopy) => (hero: Readonly<CharacterRow>) => {
   const portrait = character_icon(hero.classe, hero.sex, { color_1, color_2, color_3 })
   return {
     value: hero.id,
-    label: `${hero.name} · ${dapp_text(copy, 'hero_level', { level: String(hero.level) })}`,
+    label: `${hero.name} · ${agent_text(copy, 'hero_level', { level: String(hero.level) })}`,
     icon: portrait ? <img src={portrait} alt="" /> : undefined,
   }
 }
@@ -155,7 +155,7 @@ export const AgentLogView = ({ copy, locale, account, logs, picked, pick }: LogP
         <>
           <div className="agent-log-heroes">
             <SegmentedControl<string>
-              label={dapp_text(copy, 'heroes_title')}
+              label={agent_text(copy, 'heroes_title')}
               value={hero.id}
               on_change={pick}
               options={heroes.map(hero_option(copy))}
@@ -164,22 +164,23 @@ export const AgentLogView = ({ copy, locale, account, logs, picked, pick }: LogP
           <HeroLog copy={copy} locale={locale} hero={hero} lines={logs[hero.id] ?? []} status={status} />
         </>
       ) : (
-        <HeroesWait copy={copy} phase={phase} />
+        <NoHeroes copy={copy} phase={phase} />
       )}
-      {hero && phase === 'failed' && (
-        <p className="agent-log-wait" role="alert">
-          {dapp_text(copy, 'heroes_failed')}
+      {phase === 'failed' ? (
+        <p className="agent-log-note" role="alert">
+          {agent_text(copy, 'heroes_failed')}
         </p>
+      ) : (
+        <p className="agent-log-note">{copy.ui.agent_log_read_only}</p>
       )}
-      <p className="agent-log-note">{pending_text(copy, 'agent_log_read_only')}</p>
     </>
   )
 }
 
 /** The connected page's content: the bot account's heroes and the log this open page has kept of each. */
 export const AgentLog = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const account = useAppStore(({ session }) => session.agent_inventory)
-  const locale = useAppStore((state) => state.locale)
+  const account = useSiteStore(({ session }) => session.agent_inventory)
+  const locale = useSiteStore((state) => state.locale)
   const logs = useHeroLogs()
   const [picked, pick] = useState<string | null>(null)
   return <AgentLogView copy={copy} locale={locale} account={account} logs={logs} picked={picked} pick={pick} />

@@ -112,7 +112,7 @@ const DEFAULT_MAX_COMMANDS = 1_024
 const TRANSACTION_DATA_HEADROOM = 1_024
 // Current testnet corpus consumed ~36 SUI during the 2026-08-17 full publish proof. This is
 // working capital, not a gas budget: the release PTB returns whatever the seed signer did not use.
-export const SEED_SESSION_GAS = 50_000_000_000n
+const SEED_SESSION_GAS = 50_000_000_000n
 
 export const apply_seed_update_batches = async (
   batches: readonly SeedUpdateBatch[],

@@ -1,0 +1,8 @@
+[package]
+name = "aresrpg_currency"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[addresses]
+aresrpg_currency = "0x0"

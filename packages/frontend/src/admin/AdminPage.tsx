@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { OverviewPage } from './OverviewPage.tsx'
+import './admin_window.css'
 
 const AdminPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
   return (

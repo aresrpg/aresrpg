@@ -7,16 +7,23 @@ import { create_character_source, player_max_hp, spell_target_cells, CONTRACT_CO
 import { encode_cell, mask_from_cells, empty_mask } from '../../../fight/src/combat_grid.ts'
 import { DemoPage } from '../../src/demo/DemoPage.tsx'
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
-import { initialize_app_store, dispatch_app, read_app_state, observe_app, DEMO_APP_MODULES } from '../../src/store.ts'
+import { dispatch_app, read_app_state, start_app } from '../../src/store.ts'
+import { all_modules } from '../support/app.ts'
+import { DEMO_MODULES } from '../../src/demo/modules.ts'
 import { load_game_settings } from '../../src/game/core/settings.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import '../../src/tailwind.css'
 
-initialize_app_store(load_game_settings('high', new URLSearchParams(location.search).get('quality')))
+start_app(
+  all_modules({
+    observe: DEMO_MODULES.flatMap(({ name, observe }) => (observe ? [name] : [])),
+    settings: load_game_settings('high', new URLSearchParams(location.search).get('quality')),
+  }),
+  { seat: true }
+)
 location.hash = 'fight'
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
-observe_app(DEMO_APP_MODULES)
 createRoot(document.getElementById('root')!).render(<DemoPage copy={copy} />)
 const settled = async () => {
   const deadline = performance.now() + 30000

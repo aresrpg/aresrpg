@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Button } from '@aresrpg/ui'
-import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/auth'
-import { Gift, PackageCheck } from 'lucide-react'
+import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/giftcard-batch'
+import { Gift } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
-import { content_catalog } from '../content/catalog.ts'
+import { items_by_type } from '../content/items.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
-import { rolled_item_types } from '../modules/claims.ts'
+import { rolled_item_types } from '../content/item_templates.ts'
 import type { DistributionState } from '../modules/distribution.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -19,7 +19,7 @@ import { group_giftcards, type GiftcardGroup } from './gift_rewards.ts'
 
 const reward_item = ({ template }: GiftcardGroup) => {
   const item_type = rolled_item_types().get(template)
-  return item_type ? content_catalog.item(item_type)?.item : null
+  return item_type ? items_by_type[item_type] : null
 }
 
 export const gift_funding_text = (
@@ -28,7 +28,7 @@ export const gift_funding_text = (
   session: SessionState
 ): string | undefined => {
   const { notice, error } = distribution
-  if (notice?.kind !== 'received' || !gas_empty_error(error)) return undefined
+  if (!notice || !gas_empty_error(error)) return undefined
   const held = notice.giftcards.filter((card) => session.giftcards.some(({ id }) => id === card.id))
   if (!held.length) return undefined
   const t = copy_text(copy.airdrop_page)
@@ -38,15 +38,17 @@ export const gift_funding_text = (
   return `${t('reward_received', { items: rewards })} ${t('reward_needs_sui')}`
 }
 
-const notice_status = (distribution: DistributionState, session: SessionState) => {
-  if (distribution.notice?.kind !== 'received') return 'used'
-  if (distribution.notice.giftcards.every(({ id }) => session.redeemed_giftcards.includes(id))) return 'complete'
+const notice_status = (
+  notice: NonNullable<DistributionState['notice']>,
+  distribution: DistributionState,
+  session: SessionState
+) => {
+  if (notice.giftcards.every(({ id }) => session.redeemed_giftcards.includes(id))) return 'complete'
   if (gas_empty_error(distribution.error)) return 'needs_sui'
   return distribution.pending === 'redeem' ? 'redeeming' : 'held'
 }
 
 const STATUS = {
-  used: { title: 'reward_used_title', body: 'reward_used_body', actions: [] },
   complete: { title: 'reward_title', body: 'reward_complete', actions: [] },
   needs_sui: { title: 'reward_title', body: 'reward_needs_sui', actions: ['fund', 'redeem'] },
   redeeming: { title: 'reward_title', body: 'reward_redeeming', actions: ['redeem'] },
@@ -90,16 +92,12 @@ export const GiftClaimNoticeView = ({
   const { notice, error } = distribution
   const t = copy_text(copy.airdrop_page)
   if (!notice) return null
-  const cards = notice.kind === 'received' ? group_giftcards(notice.giftcards) : []
-  const status = STATUS[notice_status(distribution, session)]
+  const cards = group_giftcards(notice.giftcards)
+  const status = STATUS[notice_status(notice, distribution, session)]
   const actions = { fund: { label: copy.wallet_add_funds, run: fund }, redeem: { label: t('claim_all'), run: redeem } }
   return (
-    <div className="flex flex-col items-center gap-5 p-6 text-center" data-gift-notice={notice.kind}>
-      {notice.kind === 'unavailable' ? (
-        <PackageCheck className="size-12 text-muted" />
-      ) : (
-        <Gift className="size-8 text-gold" />
-      )}
+    <div className="flex flex-col items-center gap-5 p-6 text-center">
+      <Gift className="size-8 text-gold" />
       <h2 className="text-xl font-semibold text-gold">{t(status.title)}</h2>
       <GiftRewards cards={cards} copy={copy} />
       <p className="text-sm leading-relaxed text-muted" role="status">
@@ -126,7 +124,7 @@ export const GiftClaimNotice = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const distribution = useAppStore((state) => state.distribution)
   const session = useAppStore((state) => state.session)
   // Add Funds is open while a funding cost is set; the notice steps aside for it.
-  const funding = useAppStore((state) => state.navigation.funding_cost_mist !== null)
+  const funding = useAppStore((state) => state.funding !== null)
   const { notice } = distribution
   if (!session.wallet || !notice || funding) return null
   const close = (): void => dispatch_app({ type: 'distribution/notice_dismissed' })
@@ -137,16 +135,15 @@ export const GiftClaimNotice = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         distribution={distribution}
         session={session}
         close={close}
-        fund={() => dispatch_app({ type: 'dialog/open', dialog: 'top_up' })}
-        redeem={() => {
-          if (notice.kind === 'received')
-            dispatch_app({
-              type: 'distribution/redeem',
-              giftcards: notice.giftcards
-                .filter((card) => session.giftcards.some(({ id }) => id === card.id))
-                .slice(0, MAX_GIFTCARDS_PER_TRANSACTION),
-            })
-        }}
+        fund={() => dispatch_app({ type: 'funding/open' })}
+        redeem={() =>
+          dispatch_app({
+            type: 'distribution/redeem',
+            giftcards: notice.giftcards
+              .filter((card) => session.giftcards.some(({ id }) => id === card.id))
+              .slice(0, MAX_GIFTCARDS_PER_TRANSACTION),
+          })
+        }
       />
     </ModalFrame>
   )

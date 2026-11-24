@@ -1,0 +1,366 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.aui-wallet-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.aui-wallet-amount input {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  font: 600 18px/1 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.aui-wallet-max {
+  justify-self: end;
+  gap: 10px;
+  min-height: 36px;
+}
+.aui-wallet-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--aui-muted);
+}
+.aui-wallet-note[role='alert'] {
+  color: var(--aui-danger);
+}
+
+.aui-funding-window {
+  width: min(512px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  height: auto;
+  --aui-ink: var(--aui-ink);
+}
+.aui-funding-address {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #aab98a4d;
+  border-radius: 5px;
+  background: var(--aui-surface);
+  color: var(--aui-brass);
+  text-align: left;
+}
+.aui-funding-address span {
+  font: 11px/1.5 monospace;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .aui-funding-window {
+    width: min(512px, calc(100vw - 20px));
+    max-height: calc(100dvh - 16px);
+  }
+  .aui-funding-address {
+    min-height: 60px;
+    padding: 8px;
+  }
+}
+.aui-send-window {
+  width: min(580px, calc(100cqw - 24px));
+  max-height: calc(100cqh - 24px);
+}
+.aui-send-body {
+  padding: 20px;
+  font-family: var(--aui-font);
+  min-height: 0;
+  overflow-y: auto;
+}
+.aui-send-window[data-tone='success'] .aui-window-title {
+  color: #9bceba;
+}
+.aui-send-window[data-tone='danger'] .aui-window-title {
+  color: #ed9e9e;
+}
+.aui-send-body input {
+  min-width: 0;
+  border-radius: 5px;
+  font-family: var(--aui-font);
+  font-size: 14px;
+}
+.aui-send-body input[inputmode='decimal'] {
+  padding: 12px;
+  background: var(--aui-bg);
+  border: 1px solid #ffffff18;
+}
+.aui-send-body .aui-button {
+  min-height: 36px;
+  font-size: 13px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+/* One wallet row serves the external-wallet picker and the funding source list. */
+.aui-wallet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff1a;
+  border-radius: 5px;
+  background: linear-gradient(160deg, var(--aui-raised), var(--aui-sunk));
+  color: var(--aui-ink);
+  font: 400 14px/1.35 var(--aui-font);
+  text-align: left;
+  transition: border-color 150ms;
+}
+.aui-wallet-row[data-selected] {
+  border-color: color-mix(in srgb, var(--aui-orange) 40%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--aui-orange) 7%, transparent), var(--aui-sunk) 70%);
+}
+.aui-wallet-row-pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  align-self: stretch;
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.aui-wallet-row-pick:focus-visible {
+  outline: none;
+}
+.aui-wallet-row:has(.aui-wallet-row-pick:hover:not(:disabled)),
+.aui-wallet-row:has(.aui-wallet-row-pick:focus-visible) {
+  border-color: color-mix(in srgb, var(--aui-blue) 60%, transparent);
+}
+.aui-wallet-row:has(.aui-wallet-row-pick:disabled) {
+  opacity: 0.5;
+}
+.aui-wallet-row-pick:disabled {
+  cursor: wait;
+}
+.aui-wallet-row-remove {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e9817c40;
+  border-radius: 5px;
+  background: #e9817c14;
+  color: var(--aui-danger);
+}
+.aui-wallet-row-remove:hover:not(:disabled),
+.aui-wallet-row-remove:focus-visible {
+  border-color: #e9817c99;
+  background: #e9817c29;
+  outline: none;
+}
+.aui-wallet-row-remove:disabled {
+  cursor: wait;
+}
+.aui-wallet-row-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--aui-blue) 12%, transparent);
+  color: var(--aui-blue);
+}
+.aui-wallet-row[data-selected] .aui-wallet-row-icon {
+  background: color-mix(in srgb, var(--aui-orange) 14%, transparent);
+  color: var(--aui-orange);
+}
+.aui-wallet-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.aui-wallet-row-text strong,
+.aui-wallet-row-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aui-wallet-row-text strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.aui-wallet-row-text small {
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.aui-wallet-row-action {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--aui-blue) 35%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--aui-blue) 6%, transparent);
+  color: #cfe3f2;
+  font: 600 13px/1 var(--aui-font);
+  white-space: nowrap;
+}
+button.aui-wallet-row-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--aui-blue) 14%, transparent);
+}
+button.aui-wallet-row-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.aui-funding-preset {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid #ffffff1a;
+  border-radius: 4px;
+  background: var(--aui-sunk);
+  color: var(--aui-muted);
+  font:
+    600 13px/1 ui-monospace,
+    monospace;
+}
+.aui-funding-preset[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--aui-orange) 55%, transparent);
+  color: var(--aui-orange);
+}
+.aui-funding-preset:hover:not(:disabled) {
+  color: var(--aui-ink);
+}
+.aui-funding-token {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.aui-funding-token:hover {
+  background: #ffffff09;
+}
+.aui-funding-token:has(input:checked) {
+  border-color: color-mix(in srgb, var(--aui-orange) 45%, transparent);
+  background: color-mix(in srgb, var(--aui-orange) 5%, transparent);
+}
+.aui-funding-token:has(input:focus-visible) {
+  border-color: color-mix(in srgb, var(--aui-blue) 60%, transparent);
+}
+.aui-funding-token:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.aui-funding-leader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.aui-funding-leader::after {
+  content: '';
+  order: 1;
+  flex: 1;
+  height: 2px;
+  background: radial-gradient(circle, #ffffff38 0.8px, transparent 1.2px) 0 0 / 6px 2px repeat-x;
+}
+.aui-funding-leader > :not(:first-child) {
+  order: 2;
+}
+.aui-funding-step {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #ffffff14;
+}
+.aui-funding-step::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--aui-orange);
+}
+.aui-funding-step[data-state='done']::before {
+  width: 100%;
+}
+.aui-funding-step[data-state='failed']::before {
+  width: 100%;
+  background: var(--aui-danger);
+}
+/* A live step creeps toward 90% over the quoted estimate; only provider status completes it. */
+.aui-funding-step[data-state='live']::before {
+  background: linear-gradient(90deg, #6f9fc2, var(--aui-blue));
+  animation: aui-funding-creep var(--aui-step-eta, 60s) cubic-bezier(0.2, 0.6, 0.35, 1) forwards;
+}
+.aui-funding-step[data-state='live']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, #ffffff59, transparent);
+  animation: aui-funding-sheen 1.6s ease-in-out infinite;
+}
+.aui-funding-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--aui-blue);
+  animation: aui-funding-breathe 2.5s ease-in-out infinite;
+}
+.aui-funding-autoclose {
+  position: relative;
+  overflow: hidden;
+}
+.aui-funding-autoclose::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: #ffffff38;
+  animation: aui-funding-creep-full var(--aui-autoclose, 5s) linear forwards;
+}
+.aui-funding-autoclose > * {
+  position: relative;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aui-funding-step[data-state='live']::after {
+    display: none;
+  }
+}
+.aui-funding-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--aui-faint) 33%, transparent);
+  border-radius: 6px;
+  background: var(--aui-surface);
+  color: var(--aui-soft);
+  font-size: 12px;
+}
+.aui-funding-card:hover,
+.aui-funding-card:focus-visible {
+  border-color: var(--aui-brass);
+  color: var(--aui-brass-hi);
+  outline: none;
+}
+.aui-funding-card[aria-disabled='true'] {
+  pointer-events: none;
+  opacity: 0.45;
+}

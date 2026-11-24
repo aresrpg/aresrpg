@@ -7,14 +7,15 @@ import { CircleAlert, CircleCheck, Download, Loader2 } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
-import type { WalletImportFailure, WalletImportState } from '../modules/wallet_import.ts'
+import type { WalletImportFailure, WalletImportState, WalletImportStep } from '../modules/wallet_import.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { WalletControl } from '../wallet/WalletControl.tsx'
 import { external_wallet_view } from '../wallet/view.ts'
 import { format_sui } from '../wallet_amount.ts'
 
-type Plan = NonNullable<WalletImportState['plan']>
-type Finished = NonNullable<WalletImportState['done']>
+type Plan = Extract<WalletImportStep, { kind: 'ready' }>['plan']
+type Finished = Extract<WalletImportStep, { kind: 'done' }>
+type Importing = Extract<WalletImportStep, { kind: 'importing' }>
 
 const Status = ({ children }: Readonly<{ children: ReactNode }>) => (
   <p className="flex items-center gap-3 text-xs leading-5 text-muted" role="status">
@@ -88,8 +89,8 @@ const Failure = ({
   </div>
 )
 
-const Running = ({ view, t, wallet }: Readonly<{ view: WalletImportState; t: CopyText; wallet: string }>) => {
-  const { progress } = view
+const Running = ({ step, t, wallet }: Readonly<{ step: Importing; t: CopyText; wallet: string }>) => {
+  const { progress } = step
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
       <Status>{progress?.signer === 'owner' ? t('import_sign_owner') : t('import_sign_source', { wallet })}</Status>
@@ -147,9 +148,9 @@ const Idle = ({ copy, view, t }: Readonly<{ copy: AppCopy; view: WalletImportSta
       <div className="w-fit max-w-full">
         <WalletControl copy={copy.kares_page} wallet={external_wallet_view(external)} />
       </div>
-      {view.pending === 'load' && <Status>{t('import_loading')}</Status>}
-      {view.error && <Failure error={view.error} t={t} wallet={wallet} locale={locale} />}
-      {view.plan && !view.error && <Ready plan={view.plan} t={t} locale={locale} />}
+      {view.step.kind === 'loading' && <Status>{t('import_loading')}</Status>}
+      {view.step.kind === 'failed' && <Failure error={view.step.error} t={t} wallet={wallet} locale={locale} />}
+      {view.step.kind === 'ready' && <Ready plan={view.step.plan} t={t} locale={locale} />}
     </>
   )
 }
@@ -157,8 +158,8 @@ const Idle = ({ copy, view, t }: Readonly<{ copy: AppCopy; view: WalletImportSta
 const ImportBody = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const view = useAppStore((state) => state.wallet_import)
   const t = copy_text(copy.settings_page)
-  if (view.pending === 'import') return <Running view={view} t={t} wallet={view.source?.wallet_name ?? ''} />
-  if (view.done) return <Done done={view.done} t={t} />
+  if (view.step.kind === 'importing') return <Running step={view.step} t={t} wallet={view.source?.wallet_name ?? ''} />
+  if (view.step.kind === 'done') return <Done done={view.step} t={t} />
   return <Idle copy={copy} view={view} t={t} />
 }
 
@@ -166,7 +167,7 @@ const ImportBody = ({ copy }: Readonly<{ copy: AppCopy }>) => {
  * and a running import keeps showing when its entry page closes. */
 export const WalletImportWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const open = useAppStore((state) => state.wallet_import.open)
-  const running = useAppStore((state) => state.wallet_import.pending === 'import')
+  const running = useAppStore((state) => state.wallet_import.step.kind === 'importing')
   const t = copy_text(copy.settings_page)
   if (!open) return null
   return (

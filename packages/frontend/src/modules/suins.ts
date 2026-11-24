@@ -5,7 +5,7 @@ import type { SuinsSnapshot, SuinsReview } from '@aresrpg/sdk/auth'
 import type { AgentPairingIdentity } from '@aresrpg/protocol'
 import { application_suins_name } from '@aresrpg/immutable'
 
-import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
+import type { AppInput, SiteContext, SiteModule } from '../store.ts'
 import type { AuthSession } from '../auth.ts'
 import { env } from '../env.ts'
 import { sui_session } from '../wallet/external_session.ts'
@@ -189,7 +189,7 @@ export const reduce_suins = (state: SuinsState, input: SuinsInput): SuinsState =
   return intents[input.type](state, input as never)
 }
 const is_suins_input = (input: AppInput): input is SuinsInput => input.type.startsWith('suins/')
-const reduce = (state: AppState, input: AppInput): AppState => {
+const reduce: NonNullable<SiteModule['reduce']> = (state, input) => {
   if (['auth/disconnected', 'auth/rejected'].includes(input.type)) return { ...state, suins: initial_suins_state() }
   if (!state.session.wallet || !is_suins_input(input)) return state
   if (!state.session.wallet.suins.managed && ['suins/use', 'suins/setup'].includes(input.type)) return state
@@ -198,7 +198,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 }
 
 const prepare = async (
-  context: AppContext,
+  context: SiteContext,
   wallet: AuthSession,
   parent_wallet: AuthSession,
   request: Extract<Request, { kind: 'set' }>,
@@ -223,7 +223,7 @@ const prepare = async (
     : { type: 'suins/reviewed', request, pairing, review }
 }
 const reconcile = async (
-  context: AppContext,
+  context: SiteContext,
   wallet: AuthSession,
   parent_wallet: AuthSession,
   request: Extract<Request, { kind: 'set' }>,
@@ -266,12 +266,10 @@ export const failure_reason = (error: unknown): Failure => {
   const failures = ['invalid_parent', 'collision', 'stale_review', 'unsupported', 'unavailable'] as const
   return failures.find((reason) => reason === cause) ?? 'write_failed'
 }
-const observe: NonNullable<AppModule['observe']> = (context) => {
+const observe: NonNullable<SiteModule['observe']> = (context) => {
   const { events, dispatch, get_state, signal } = context
   let controller = new AbortController()
   events.on('STATE_UPDATED', (state, previous) => {
-    if ([previous.navigation.page === 'settings', state.navigation.page !== 'settings'].every(Boolean))
-      dispatch({ type: 'suins/close' })
     const { wallet } = state.session
     if (!wallet) {
       controller.abort()
@@ -287,8 +285,6 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       dispatch({ type: 'suins/refresh' })
       return
     }
-    if ([state.navigation.page === 'settings', previous.navigation.page !== 'settings'].every(Boolean))
-      dispatch({ type: 'suins/refresh' })
     const parent_wallet = sui_session(state.external_wallet.session) ?? wallet
     const source = state.external_wallet
     const { request } = state.suins
@@ -341,4 +337,9 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
   signal.addEventListener('abort', () => controller.abort(), { once: true })
   if (get_state().session.wallet) dispatch({ type: 'suins/refresh' })
 }
-export default { name: 'suins', reduce, observe } satisfies AppModule
+export default Object.freeze({
+  name: 'suins',
+  initial: () => ({ suins: initial_suins_state() }),
+  reduce,
+  observe,
+}) satisfies SiteModule

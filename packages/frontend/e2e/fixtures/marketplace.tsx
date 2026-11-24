@@ -8,37 +8,26 @@ import { createRoot } from 'react-dom/client'
 
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
-import { BrowsePanel } from '../../src/marketplace/BrowsePanel.tsx'
-import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
-
-import { SellFixture } from './market_sell.tsx'
+import { MarketItem } from '../../src/marketplace/MarketItem.tsx'
+import { dispatch_app, read_app_state, useAppStore, start_app } from '../../src/store.ts'
+import { all_modules } from '../support/app.ts'
 
 import '../../src/tailwind.css'
 
+// The marketplace's own observer runs: a buy or a listing reaches the fixture's wallet hand below.
+start_app(all_modules({ observe: ['marketplace'] }), { seat: true })
+
 const copy = await load_app_copy('en')
-const bags = new URLSearchParams(location.search).has('bags')
-const pet = new URLSearchParams(location.search).has('pet')
-const pet_powers = pet ? [30, 60, 60] : []
-const stackable = bags || new URLSearchParams(location.search).has('stackable')
-const item = content_catalog.items.find((row) =>
-  bags ? row.item_type === 'bag_barley' : row.category === (stackable ? 'resource' : pet ? 'pet' : 'hat')
-)!
-const older_item = content_catalog.items.find((candidate) =>
-  bags
-    ? candidate.item_type === 'bag_quartz'
-    : candidate.category === item.category && candidate.item_type !== item.item_type
-)!
-const group = bags ? 'CONSUMABLE' : stackable ? 'RESOURCES' : 'EQUIPMENT'
+const item = content_catalog.items.find((row) => row.category === 'hat')!
 const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   ...item,
   kind: 'item',
   id: `0xitem${index}`,
   version: '1',
-  group_key: stackable ? 'lot:1' : index < 3 ? `roll:${index}` : `object:0xitem${index}`,
+  group_key: index < 3 ? `roll:${index}` : `object:0xitem${index}`,
   amount: 1,
-  stats: !stackable && index < 3 ? { strength: item_stat_center + (index === 1 ? 11 : 27) } : undefined,
-  damages: !stackable && index === 1 ? [{ element: 'fire', from: 3, to: 7, damage_type: 'damage' }] : undefined,
-  pet_power: pet_powers[index - 1],
+  stats: index < 3 ? { strength: item_stat_center + (index === 1 ? 11 : 27) } : undefined,
+  damages: index === 1 ? [{ element: 'fire', from: 3, to: 7, damage_type: 'damage' }] : undefined,
   price_mist: String(index * 1_000_000_000),
   kiosk: '0xkiosk',
   seller: '0xseller',
@@ -64,7 +53,7 @@ window.addEventListener('market-fixture-remove-cheapest', () => {
   })
 })
 
-// Synthetic session: no observers, wallet connection, network reads, or transaction execution.
+// Synthetic session: no link, network read or chain execution. A purchase never answers.
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 dispatch_app({ type: 'auth/connecting' })
 dispatch_app({
@@ -75,13 +64,22 @@ dispatch_app({
       document.body.dataset.readItem = id
       throw new Error('Marketplace hover must use its indexed listing')
     },
+    on_transaction: () => () => undefined,
+    marketplace: {
+      buy: () => new Promise(() => {}),
+    },
   } as never,
 })
-dispatch_app({ type: 'market/group_selected', group, category: item.category, item_type: item.item_type })
-dispatch_app({
-  type: 'server/packet',
-  packet: { type: 'packet/market_types', observation: read_app_state().marketplace.observation!, items: [item] },
-})
+dispatch_app({ type: 'market/observed', query: { kind: 'offers', category: item.category, item_type: item.item_type } })
+// The fixture item as the market lists it: its quote carries no paid standard lot.
+const listed = {
+  item_type: item.item_type,
+  category: item.category,
+  name: item.name,
+  level: item.level,
+  quote: { lots: {}, units: listings.length, change_bps: null },
+}
+dispatch_app({ type: 'server/packet', packet: { type: 'packet/market_types', items: [listed] } })
 dispatch_app({
   type: 'server/packet',
   packet: {
@@ -92,139 +90,41 @@ dispatch_app({
     kiosk_versions: { '0xkiosk': '1' },
   },
 })
-if (new URLSearchParams(location.search).has('all-types')) {
-  document.body.dataset.olderItem = older_item.name
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/market_types',
-      observation: read_app_state().marketplace.observation!,
-      items: [item, older_item],
-    },
-  })
-}
-// A certified projection refresh, injected only by this browser fixture.
-window.addEventListener('market-price-fixture-update', () => {
-  const { observation, history } = read_app_state().marketplace.prices
-  if (!observation || !history) return
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/market_prices',
-      observation,
-      total_units: read_app_state().marketplace.prices.total_units,
-      history: {
-        ...history,
-        sampled_at_ms: history.sampled_at_ms + 1,
-        buckets: history.buckets.map((bucket, index) =>
-          index === history.buckets.length - 1
-            ? { ...bucket, total_mist: String(BigInt(bucket.total_mist) + 1n), checkpoint: bucket.checkpoint + 1 }
-            : bucket
-        ),
-      },
-    },
-  })
-})
-
-const fixture_ohlc = (index: number, tiny: boolean) => {
-  const price = (delta: number) => ({ mist: tiny ? '1' : String(8_000_000 + index * 100_000 + delta), units: '1000' })
-  return { open: price(0), high: price(300_000), low: price(-200_000), close: price(index % 2 ? -100_000 : 200_000) }
-}
+// The site's item page of the fixture item: its offers, its sheet, its chart.
+const ItemView = () => (
+  <div className="min-w-0 flex-1 overflow-y-auto">
+    <MarketItem item={item} text={copy_text(copy.marketplace_page)} />
+  </div>
+)
 
 const Fixture = () => {
   const pending = useAppStore(({ marketplace }) => marketplace.pending)
-  const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
   const market_observed = useAppStore(({ marketplace }) => marketplace.observation)
   useEffect(() => {
-    if (market_observed)
-      dispatch_app({
-        type: 'server/packet',
-        packet: {
-          type: 'packet/market_counts',
-          observation: market_observed,
-          counts: { hat: 2, cloak: 1, resource: 4 },
-        },
-      })
-  }, [market_observed])
-  useEffect(() => {
-    if (!market_observed || market_observed.kind === 'characters' || market_observed.kind === 'overview') return
+    if (!market_observed || market_observed.kind === 'characters') return
     if (market_observed.kind === 'types') {
-      const candidates = new URLSearchParams(location.search).has('all-types') ? [item, older_item] : [item]
-      dispatch_app({
-        type: 'server/packet',
-        packet: {
-          type: 'packet/market_types',
-          observation: market_observed,
-          items: candidates.filter((entry) => entry.category === market_observed.category),
-        },
-      })
+      dispatch_app({ type: 'server/packet', packet: { type: 'packet/market_types', items: [listed] } })
       return
     }
-    document.body.dataset.marketRequest = String(market_observed.request)
-    const send_slice = () =>
-      dispatch_app({
-        type: 'server/packet',
-        packet: {
-          type: 'packet/market_slice',
-          next_cursor: null,
-          observation: market_observed,
-          listings:
-            market_observed.item_type === older_item.item_type
-              ? [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }]
-              : listings.filter(({ seller }) => seller !== '0xbuyer'),
-          kiosk_versions: { '0xkiosk': '2' },
-        },
-      })
-    if (new URLSearchParams(location.search).has('manual-slices')) {
-      window.addEventListener('market-fixture-release-slice', send_slice, { once: true })
-      return () => window.removeEventListener('market-fixture-release-slice', send_slice)
-    }
-    send_slice()
-  }, [market_observed])
-
-  useEffect(() => {
-    if (!observation) return
-    const query = new URLSearchParams(location.search)
-    const end = Date.UTC(2026, 8, 14)
-    const buckets = query.has('empty')
-      ? []
-      : Array.from({ length: 30 }, (_, index) => ({
-          at_ms: end - (29 - index) * 86_400_000,
-          total_mist: query.has('tiny') ? '1' : String(8_000_000 + index * 100_000),
-          units: '1000',
-          sales: '1',
-          checkpoint: index + 1,
-          ...(query.has('legacy') || (query.has('mixed-history') && index < 15)
-            ? {}
-            : { ohlc: fixture_ohlc(index, query.has('tiny')) }),
-        })).filter((_, index) => (query.has('sparse') ? [10, 20].includes(index) : index !== 10 && index !== 11))
     dispatch_app({
       type: 'server/packet',
       packet: {
-        type: 'packet/market_prices',
-        observation,
-        total_units: query.has('supply-unavailable') ? null : '1000000',
-        history: query.has('prices-unavailable')
-          ? null
-          : {
-              first_timestamp_ms: end - 29 * 86_400_000,
-              sampled_at_ms: end,
-              buckets,
-            },
+        type: 'packet/market_slice',
+        next_cursor: null,
+        observation: market_observed,
+        listings: listings.filter(({ seller }) => seller !== '0xbuyer'),
+        kiosk_versions: { '0xkiosk': '2' },
       },
     })
-  }, [observation])
+  }, [market_observed])
+
   return (
     <main
       className="market-page flex min-h-0 min-w-0 flex-1"
       style={{ containerType: 'inline-size', containerName: 'app-content' }}
       data-pending-listing={pending ?? ''}
     >
-      {new URLSearchParams(location.search).has('sell') ? (
-        <SellFixture copy={copy} />
-      ) : (
-        <BrowsePanel text={copy_text(copy.marketplace_page)} />
-      )}
+      <ItemView />
     </main>
   )
 }

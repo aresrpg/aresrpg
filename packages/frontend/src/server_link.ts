@@ -3,6 +3,7 @@
 
 import {
   parse_server_packet,
+  SEAT_FLAG,
   TAKEOVER_DROP_REASONS,
   VIOLATION_DROP_REASONS,
   type ClientPacket,
@@ -49,9 +50,24 @@ export type ServerLink = Readonly<{
 }>
 
 type ServerLinkOptions = Readonly<{
-  session: AuthSession
+  /** The signed-in account, or none: a link without one reads only the public stage (`open`). */
+  session: AuthSession | null
+  /** The game asks for the account's one seat; any other surface reads its account (`signed`). */
+  seat: boolean
   dispatch: (input: AppInput) => void
 }>
+
+/** The stage is fixed at upgrade: no address is `open`, an address is `signed`, with `seat=1` it is `seated`. */
+export const link_url = (base: string, address: string | null, seat: boolean): string => {
+  const url = new URL(base)
+  if (address) url.searchParams.set('address', address)
+  if (address && seat) url.searchParams.set(SEAT_FLAG.param, SEAT_FLAG.value)
+  return url.href
+}
+
+/** The server accepted the link, at any stage: an account's link stays `connected` until its roster makes it
+ *  `ready`, and public observations need no roster. */
+export const link_accepted = (status: string): boolean => status === 'connected' || status === 'ready'
 
 const AUTH_REJECTION_REASONS = new Set(['INVALID_SIGNATURE', 'INVALID_PACKET'])
 
@@ -67,7 +83,7 @@ export const is_session_takeover_close = (code: number, reason: string): boolean
 
 export { create_login_response }
 
-export const connect_server = ({ session, dispatch }: ServerLinkOptions): ServerLink => {
+export const connect_server = ({ session, seat, dispatch }: ServerLinkOptions): ServerLink => {
   let socket: WebSocket | null = null
   let accepted = false
   let retry_timer: ReturnType<typeof setTimeout> | null = null
@@ -102,16 +118,26 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
     latency_timer = setInterval(probe_latency, LATENCY_INTERVAL_MS)
   }
 
-  const connection_url = (): string => {
-    const url = new URL(env.server_ws_url)
-    url.searchParams.set('address', session.address)
-    return url.href
+  /** Only a link with an account is challenged; the server never challenges an open one. */
+  const answer_challenge = (target: Readonly<WebSocket>, payload: string): void => {
+    if (!session) return
+    void create_login_response(session, payload)
+      .then((response) => {
+        if (!disposed && socket === target && target.readyState === WebSocket.OPEN) send(target, response)
+      })
+      .catch((error) => {
+        console.error('Server identity proof failed.', error)
+        // A hidden/browser-switched tab may interrupt its local wallet signer. No proof
+        // reached the server, so this is reconnectable transport failure—not evidence
+        // that the remembered wallet is invalid.
+        if (!disposed && socket === target) target.close(1000, 'PROOF_INTERRUPTED')
+      })
   }
 
   const open = async (): Promise<void> => {
     dispatch({ type: 'link/connecting' })
     try {
-      const url = connection_url()
+      const url = link_url(env.server_ws_url, session?.address ?? null, seat)
       if (disposed) return
       const next = new WebSocket(url)
       socket = next
@@ -129,17 +155,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
             return
           }
           if (packet.type === 'packet/signature_request') {
-            void create_login_response(session, packet.payload)
-              .then((response) => {
-                if (!disposed && socket === next && next.readyState === WebSocket.OPEN) send(next, response)
-              })
-              .catch((error) => {
-                console.error('Server identity proof failed.', error)
-                // A hidden/browser-switched tab may interrupt its local wallet signer. No proof
-                // reached the server, so this is reconnectable transport failure—not evidence
-                // that the remembered wallet is invalid.
-                if (!disposed && socket === next) next.close(1000, 'PROOF_INTERRUPTED')
-              })
+            answer_challenge(next, packet.payload)
             return
           }
           if (packet.type === 'packet/connection_accepted') {

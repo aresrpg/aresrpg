@@ -4,7 +4,7 @@ import { characteristic_names } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 import { receipt_event, type Receipt } from '@aresrpg/sdk/cache'
 
-import { profession_item } from './profession_catalog.ts'
+import { profession_item } from './catalog.ts'
 import { owned_character, type GameplayContext } from './gameplay_context.ts'
 import { inventory_projected } from './actor_inventory.ts'
 

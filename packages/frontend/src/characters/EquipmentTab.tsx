@@ -14,8 +14,8 @@ import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { inventory_groups } from '../inventory_stacks.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { ObjectExplorerLink } from '../components/ObjectExplorerLink.tsx'
+import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
-import { titleize } from '../content/catalog.ts'
 import { stat_name, type AppCopy } from '../i18n/copy.ts'
 import { AgentKioskPanel } from '../agents/AgentKioskPanel.tsx'
 import { useAgentKiosk } from '../agents/useAgentKiosk.ts'
@@ -32,6 +32,7 @@ import { InventoryItemActions, primary_item_action } from './InventoryItemAction
 import { select_inventory_item } from './inventory_selection.ts'
 import { InventoryFilters } from './InventoryFilters.tsx'
 import { PendingClaims } from './PendingClaims.tsx'
+import './character_window.css'
 
 /**
  * What the tab offers beyond wearing gear: the agent panel with its toggle, the pending claims, and the
@@ -184,25 +185,12 @@ export default function EquipmentTab({
     >
       {extras.toggle}
       <div id={equipment_id} className="chr-equip__side" data-tutorial-target="character_equipment">
-        <div className="chr-equip__chip">
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[11px] font-semibold tracking-[0.14em] text-text uppercase">
-              {character.name}
-            </div>
-            <div className="text-[8px] tracking-[0.2em] text-muted uppercase">{titleize(character.classe)}</div>
-          </div>
-          <span className="text-[10px] text-gold tabular-nums">
-            {t('level').replaceAll('{{level}}', String(character.level))}
-          </span>
-        </div>
-
         <p
           className="border-l-2 border-gold/60 p-3 text-xs leading-relaxed text-text empty:hidden"
           data-equipment-quest=""
         >
           {session?.equipment_notice}
         </p>
-        <div className="chr-eyebrow">{t('equipment_head')}</div>
         <EquipmentDoll
           preview={preview(preview_source)}
           item_for={(slot) => equipment[slot] ?? null}
@@ -241,7 +229,6 @@ export default function EquipmentTab({
           }}
         />
 
-        <div className="chr-eyebrow">{t('equipped_totals')}</div>
         <div className="chr-equip__totals">
           {totals.length === 0 ? (
             <span className="text-[9px] tracking-[0.12em] text-muted uppercase">{t('no_gear_equipped')}</span>
@@ -272,6 +259,7 @@ export default function EquipmentTab({
               onClick={() => set_inspected_id(null)}
             />
             <OwnedItemDetail
+              Sheet={ItemDetailView}
               item={inspected}
               copy={copy}
               craft_session={{ character, inventory: inventory_override, craft }}

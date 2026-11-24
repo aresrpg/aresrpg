@@ -104,7 +104,7 @@ const AgentObjective = ({
 }: Readonly<{ copy: AppCopy; objective: HostedObjective; run: Pick<HeroActivity, 'notice' | 'issue'> }>) => (
   <div className="agent-activity-objective" data-issue={issue}>
     <strong>{objective.title}</strong>
-    {notice && <p className="agent-activity-now">{copy.dapp_page[`run_notice_${notice}`]}</p>}
+    {notice && <p className="agent-activity-now">{copy.agent_page[`run_notice_${notice}`]}</p>}
     {objective.description && <div>{objective.description}</div>}
     <ul>
       {objective.steps?.map((step, index) => (

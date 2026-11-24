@@ -214,17 +214,6 @@ const absorb_change = (cache: ResolutionCache, change: ChangedObject): void => {
   else absorb_owned(cache, object_id, outputVersion, outputDigest)
 }
 
-export const receipt_gas_ref = (receipt: Receipt | null | undefined): OwnedRef | null => {
-  const gas = effects_of(receipt)?.gasObject
-  return gas?.objectId && gas.outputVersion && gas.outputDigest
-    ? {
-        objectId: normalizeSuiObjectId(gas.objectId),
-        version: String(gas.outputVersion),
-        digest: gas.outputDigest,
-      }
-    : null
-}
-
 /** The one write door: fold a transaction result's changed objects into the cache. Stale
  *  versions never regress a newer entry (results can land out of order). Deleted objects
  *  leave. Returns the same cache (the cache IS the store; this is its only writer). */

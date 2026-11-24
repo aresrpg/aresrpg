@@ -63,26 +63,34 @@ jobs:
           gh release create "$TAG" --draft --title "$TAG" --generate-notes --target "$GITHUB_SHA"
           echo "created=true" >> "$GITHUB_OUTPUT"
 
-  # Preparation can build ahead; only a green verification can certify its manifest.
+  # Preparation can build ahead; only a green verification of this tree can certify its manifest.
+  # The first green gate among the certifying commits (the tag commit, and the parent of a version
+  # commit) certifies; a red gate on one never blocks the other.
   verify-gate:
-    needs: tag-and-release
+    needs: backend-plan
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
       actions: read
     env:
       GH_TOKEN: ${{ github.token }}
+      CERTIFIERS: ${{ needs.backend-plan.outputs.certifiers }}
     steps:
-      - name: require successful verification of the exact release source
+      - name: require successful verification of the release source tree
         run: |
           for i in $(seq 1 135); do
-            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?event=push&branch=edge&head_sha=${GITHUB_SHA}&per_page=1" \
-              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
-            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
-            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing release certification"; exit 1; fi
-            echo "gate still running ($i/135)…"; sleep 20
+            pending=false
+            for sha in $CERTIFIERS; do
+              state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?event=push&branch=edge&head_sha=${sha}&per_page=1" \
+                --jq '.workflow_runs[0] | if . == null then "absent" elif .status == "completed" then .conclusion else "running" end' \
+                2>/dev/null || echo unknown)
+              if [ "$state" = success ]; then echo "gate green on $sha certifies $GITHUB_SHA"; exit 0; fi
+              case "$state" in absent | running | unknown) pending=true ;; esac
+            done
+            [ "$pending" = true ] || { echo "::error::no certifying gate is green ($CERTIFIERS) — refusing release certification"; exit 1; }
+            echo "gates still running ($i/135)…"; sleep 20
           done
-          echo "::error::gate never concluded within 45 minutes"; exit 1
+          echo "::error::no certifying gate concluded green within 45 minutes"; exit 1
 
   # Stage production variables without moving domains; activation follows reviewed backend rollout.
   prepare-production:
@@ -114,34 +122,7 @@ jobs:
             !seed/icons
             !seed/models
           sparse-checkout-cone-mode: false
-      - name: art tree key
-        id: art
-        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
-      - name: cache the art tree
-        id: art_cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            seed/icons
-            seed/models
-          key: art-${{ steps.art.outputs.tree }}
-      - name: materialize the art tree (cache miss only)
-        if: steps.art_cache.outputs.cache-hit != 'true'
-        run: |
-          git sparse-checkout set --no-cone '/*'
-          git checkout HEAD -- seed/icons seed/models
-      - name: setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - name: cache bun downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - name: install
-        run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: pull the Vercel environment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -178,8 +159,7 @@ jobs:
       indexer: ${{ steps.plan.outputs.indexer }}
       indexer_digest: ${{ steps.plan.outputs.indexer_digest }}
       frontend: ${{ steps.plan.outputs.frontend }}
-      telegram: ${{ steps.plan.outputs.telegram }}
-      telegram_digest: ${{ steps.plan.outputs.telegram_digest }}
+      certifiers: ${{ steps.certifiers.outputs.shas }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -197,7 +177,21 @@ jobs:
             seed/content
             seed/structures
             scripts/release_inputs.mjs
+            scripts/ci_inputs.mjs
             package.json
+      - name: name the commits whose gate certifies this source tree
+        id: certifiers
+        # The tag commit always certifies itself. Its parent certifies too only when the trees differ at
+        # most in the root package.json "version" line; any other difference or any error excludes it.
+        run: |
+          shas=$(node --input-type=module -e "
+            import { execFileSync } from 'node:child_process'
+            import { certifying_commits } from './scripts/ci_inputs.mjs'
+            const git = (args) => execFileSync('git', args, { encoding: 'utf8' })
+            console.log(certifying_commits(process.env.GITHUB_SHA, git).join(' '))
+          ") || shas="$GITHUB_SHA"
+          echo "certifying gates: $shas"
+          echo "shas=$shas" >> "$GITHUB_OUTPUT"
       - name: setup the pinned locale parser
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
@@ -213,8 +207,6 @@ jobs:
           server=true
           indexer=true
           frontend=true
-          telegram=true
-          telegram_digest=""
           server_digest=""
           indexer_digest=""
           if [ -n "$previous_tag" ]; then
@@ -230,7 +222,6 @@ jobs:
             server=$(jq -r .server "$RUNNER_TEMP/runtime-plan.json")
             indexer=$(jq -r .indexer "$RUNNER_TEMP/runtime-plan.json")
             frontend=$(jq -r .frontend "$RUNNER_TEMP/runtime-plan.json")
-            telegram=$(jq -r .telegram "$RUNNER_TEMP/runtime-plan.json")
             # Build pins are runtime inputs; ledgers are not. A network switch also needs a new frontend.
             git show "$previous_tag:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/before-pins.json"
             git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/after-pins.json"
@@ -257,11 +248,6 @@ jobs:
               else
                 discord=true
               fi
-              if jq -e '.images.telegram.repository == "ghcr.io/aresrpg/telegram" and (.images.telegram.digest | type == "string" and test("^sha256:[0-9a-f]{64}$"))' "$previous_manifest" >/dev/null; then
-                telegram_digest=$(jq -r .images.telegram.digest "$previous_manifest")
-              else
-                telegram=true
-              fi
               server_digest=$(jq -r .images.server.digest "$previous_manifest")
               indexer_digest=$(jq -r .images.indexer.digest "$previous_manifest")
             else
@@ -271,7 +257,6 @@ jobs:
               server=true
               indexer=true
               frontend=true
-              telegram=true
             fi
           fi
           {
@@ -285,38 +270,80 @@ jobs:
             echo "indexer=$indexer"
             echo "indexer_digest=$indexer_digest"
             echo "frontend=$frontend"
-            echo "telegram=$telegram"
-            echo "telegram_digest=$telegram_digest"
           } >> "$GITHUB_OUTPUT"
-  build-server:
+  build:
     needs: backend-plan
+    name: build (${{ matrix.image }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeout }}
     permissions:
       artifact-metadata: write
       attestations: write
       contents: read
       id-token: write
       packages: write
+    strategy:
+      # Each image certifies on its own; a rerun reuses every semver an earlier attempt pushed.
+      fail-fast: false
+      matrix:
+        include:
+          - image: server
+            file: packages/server/Dockerfile
+            context: .
+            timeout: 30
+            sparse: |
+              /*
+              !seed/icons/*
+              /seed/icons/currency/
+              !seed/icons/currency/*
+              /seed/icons/currency/kares.png
+              !seed/models
+              !music
+          - image: bot
+            file: packages/bot/Dockerfile
+            context: .
+            timeout: 30
+            sparse: |
+              /*
+              !seed/icons
+              !seed/models
+              !music
+          - image: discord
+            file: packages/discord/Dockerfile
+            context: .
+            timeout: 30
+            sparse: |
+              /*
+              !seed/icons/*
+              /seed/icons/items/
+              !seed/icons/items/*_hd.*
+              /seed/icons/mobs/
+              !seed/icons/mobs/*_hd.*
+              !seed/models
+              !music
+          - image: indexer
+            file: packages/indexer/Dockerfile
+            context: packages/indexer
+            timeout: 45
+            sparse: |
+              /packages/indexer/
+              /scripts/release_image.sh
+    # Matrix legs share one outputs map: each leg writes only the digest named after its image.
     outputs:
-      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
+      server: ${{ steps.digest.outputs.server }}
+      bot: ${{ steps.digest.outputs.bot }}
+      discord: ${{ steps.digest.outputs.discord }}
+      indexer: ${{ steps.digest.outputs.indexer }}
     env:
-      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/server
+      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
       IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
-      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.server_digest }}
-      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.server }}
+      IMAGE_DIGEST: ${{ needs.backend-plan.outputs[format('{0}_digest', matrix.image)] }}
+      IMAGE_CHANGED: ${{ needs.backend-plan.outputs[matrix.image] }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
-          sparse-checkout: |
-            /*
-            !seed/icons/*
-            /seed/icons/currency/
-            !seed/icons/currency/*
-            /seed/icons/currency/kares.png
-            !seed/models
-            !music
+          sparse-checkout: ${{ matrix.sparse }}
           sparse-checkout-cone-mode: false
       - name: authenticate to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
@@ -326,338 +353,54 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: create Buildx builder
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - name: reuse this immutable server semver on a preparation rerun
+      - name: reuse this immutable ${{ matrix.image }} semver on a preparation rerun
         id: image
         run: bash scripts/release_image.sh inspect
-      - name: build and push server
+      - name: build and push ${{ matrix.image }}
         id: build
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.server == 'true'
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs[matrix.image] == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
-          context: .
-          file: packages/server/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/server:${{ needs.backend-plan.outputs.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.backend-plan.outputs.version }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
             org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/server:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/server:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache,mode=max
           provenance: false
           sbom: true
-      - name: alias unchanged server digest to this release
+      - name: alias unchanged ${{ matrix.image }} digest to this release
         id: alias
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.server != 'true'
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs[matrix.image] != 'true'
         run: bash scripts/release_image.sh alias
-      - name: attest server provenance
-        if: needs.backend-plan.outputs.server == 'true'
+      - name: attest ${{ matrix.image }} provenance
+        if: needs.backend-plan.outputs[matrix.image] == 'true'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/server
+          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
           push-to-registry: true
-  build-bot:
-    needs: backend-plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      artifact-metadata: write
-      attestations: write
-      contents: read
-      id-token: write
-      packages: write
-    outputs:
-      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
-    env:
-      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/bot
-      IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
-      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.bot_digest }}
-      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.bot }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          filter: blob:none
-          sparse-checkout: |
-            /*
-            !seed/icons
-            !seed/models
-            !music
-          sparse-checkout-cone-mode: false
-      - name: authenticate to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: create Buildx builder
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - name: reuse this immutable bot semver on a preparation rerun
-        id: image
-        run: bash scripts/release_image.sh inspect
-      - name: build and push bot
-        id: build
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.bot == 'true'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: .
-          file: packages/bot/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/bot:${{ needs.backend-plan.outputs.version }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
-            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/bot:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/bot:buildcache,mode=max
-          provenance: false
-          sbom: true
-      - name: alias unchanged bot digest to this release
-        id: alias
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.bot != 'true'
-        run: bash scripts/release_image.sh alias
-      - name: attest bot provenance
-        if: needs.backend-plan.outputs.bot == 'true'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/bot
-          subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
-          push-to-registry: true
-  build-telegram:
-    needs: backend-plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      artifact-metadata: write
-      attestations: write
-      contents: read
-      id-token: write
-      packages: write
-    outputs:
-      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
-    env:
-      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/telegram
-      IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
-      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.telegram_digest }}
-      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.telegram }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          filter: blob:none
-          sparse-checkout: |
-            /*
-            !seed/icons
-            !seed/models
-            !music
-          sparse-checkout-cone-mode: false
-      - name: authenticate to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: create Buildx builder
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - name: reuse this immutable telegram semver on a preparation rerun
-        id: image
-        run: bash scripts/release_image.sh inspect
-      - name: build and push telegram
-        id: build
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.telegram == 'true'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: .
-          file: packages/telegram/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/telegram:${{ needs.backend-plan.outputs.version }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
-            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/telegram:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/telegram:buildcache,mode=max
-          provenance: false
-          sbom: true
-      - name: alias unchanged telegram digest to this release
-        id: alias
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.telegram != 'true'
-        run: bash scripts/release_image.sh alias
-      - name: attest telegram provenance
-        if: needs.backend-plan.outputs.telegram == 'true'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/telegram
-          subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
-          push-to-registry: true
-  build-discord:
-    needs: backend-plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      artifact-metadata: write
-      attestations: write
-      contents: read
-      id-token: write
-      packages: write
-    outputs:
-      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
-    env:
-      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/discord
-      IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
-      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.discord_digest }}
-      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.discord }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          filter: blob:none
-          sparse-checkout: |
-            /*
-            !seed/icons/*
-            /seed/icons/items/
-            !seed/icons/items/*_hd.*
-            /seed/icons/mobs/
-            !seed/icons/mobs/*_hd.*
-            !seed/models
-            !music
-          sparse-checkout-cone-mode: false
-      - name: authenticate to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: create Buildx builder
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - name: reuse this immutable discord semver on a preparation rerun
-        id: image
-        run: bash scripts/release_image.sh inspect
-      - name: build and push discord
-        id: build
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.discord == 'true'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: .
-          file: packages/discord/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/discord:${{ needs.backend-plan.outputs.version }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
-            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/discord:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/discord:buildcache,mode=max
-          provenance: false
-          sbom: true
-      - name: alias unchanged discord digest to this release
-        id: alias
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.discord != 'true'
-        run: bash scripts/release_image.sh alias
-      - name: attest discord provenance
-        if: needs.backend-plan.outputs.discord == 'true'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/discord
-          subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
-          push-to-registry: true
-
-  build-indexer:
-    needs: backend-plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      artifact-metadata: write
-      attestations: write
-      contents: read
-      id-token: write
-      packages: write
-    outputs:
-      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
-    env:
-      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/indexer
-      IMAGE_VERSION: ${{ needs.backend-plan.outputs.version }}
-      IMAGE_DIGEST: ${{ needs.backend-plan.outputs.indexer_digest }}
-      IMAGE_CHANGED: ${{ needs.backend-plan.outputs.indexer }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          filter: blob:none
-          sparse-checkout: |
-            packages/indexer
-            scripts/release_image.sh
-      - name: authenticate to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: create Buildx builder
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - name: reuse this immutable indexer semver on a preparation rerun
-        id: image
-        run: bash scripts/release_image.sh inspect
-      - name: build and push indexer
-        id: build
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.indexer == 'true'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: packages/indexer
-          file: packages/indexer/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/indexer:${{ needs.backend-plan.outputs.version }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ needs.backend-plan.outputs.version }}
-            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/indexer:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/indexer:buildcache,mode=max
-          provenance: false
-          sbom: true
-      - name: alias unchanged indexer digest to this release
-        id: alias
-        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.indexer != 'true'
-        run: bash scripts/release_image.sh alias
-      - name: attest indexer provenance
-        if: needs.backend-plan.outputs.indexer == 'true'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/indexer
-          subject-digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
-          push-to-registry: true
+      - name: record the ${{ matrix.image }} digest
+        id: digest
+        env:
+          DIGEST: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
+        run: echo "${{ matrix.image }}=$DIGEST" >> "$GITHUB_OUTPUT"
 
   release-manifest:
-    needs:
-      [
-        tag-and-release,
-        verify-gate,
-        backend-plan,
-        build-server,
-        build-discord,
-        build-indexer,
-        build-bot,
-        build-telegram,
-        prepare-production,
-      ]
+    needs: [tag-and-release, verify-gate, backend-plan, build, prepare-production]
     if: >-
       always() &&
       needs.tag-and-release.outputs.prepare == 'true' &&
       needs.verify-gate.result == 'success' &&
       needs.backend-plan.result == 'success' &&
-      needs.build-bot.result == 'success' &&
-      needs.build-telegram.result == 'success' &&
-      (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped') &&
-      (needs.build-discord.result == 'success' || needs.build-discord.result == 'skipped') &&
-      (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&
-      (needs.build-indexer.result == 'success' || needs.build-indexer.result == 'skipped')
+      needs.build.result == 'success' &&
+      (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -674,15 +417,13 @@ jobs:
           VERSION: ${{ needs.tag-and-release.outputs.version }}
           PREVIOUS_TAG: ${{ needs.backend-plan.outputs.previous_tag }}
           BOT_BUILT: ${{ needs.backend-plan.outputs.bot }}
-          BOT_DIGEST: ${{ needs.build-bot.outputs.digest }}
-          TELEGRAM_BUILT: ${{ needs.backend-plan.outputs.telegram }}
-          TELEGRAM_DIGEST: ${{ needs.build-telegram.outputs.digest }}
+          BOT_DIGEST: ${{ needs.build.outputs.bot }}
           DISCORD_BUILT: ${{ needs.backend-plan.outputs.discord }}
-          DISCORD_DIGEST: ${{ needs.build-discord.outputs.digest }}
+          DISCORD_DIGEST: ${{ needs.build.outputs.discord }}
           SERVER_BUILT: ${{ needs.backend-plan.outputs.server }}
-          SERVER_DIGEST: ${{ needs.build-server.outputs.digest }}
+          SERVER_DIGEST: ${{ needs.build.outputs.server }}
           INDEXER_BUILT: ${{ needs.backend-plan.outputs.indexer }}
-          INDEXER_DIGEST: ${{ needs.build-indexer.outputs.digest }}
+          INDEXER_DIGEST: ${{ needs.build.outputs.indexer }}
           VERCEL_URL: ${{ needs.prepare-production.outputs.url }}
           FRONTEND_BUILT: ${{ needs.backend-plan.outputs.frontend }}
         run: bash scripts/release_manifest.sh

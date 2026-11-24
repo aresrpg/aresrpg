@@ -261,8 +261,9 @@ export default function RuneforgeTab({
                 {t('random_notice')}
               </div>
               <div className="w-full max-w-[340px]">
-                <button
-                  className="btn-gold flex w-full items-center justify-center gap-2 py-3 tracking-[0.22em] disabled:cursor-not-allowed disabled:opacity-40"
+                <Button
+                  tone="primary"
+                  className="w-full"
                   disabled={!can_apply}
                   onClick={apply}
                   title={
@@ -272,10 +273,9 @@ export default function RuneforgeTab({
                         ? t('stat_maxed')
                         : undefined
                   }
-                  type="button"
                 >
                   {busy ? t('scribing') : t('apply')}
-                </button>
+                </Button>
                 <div className="mt-2 text-center text-[9px] tracking-[0.1em] text-muted uppercase">
                   {job_short && forge_job
                     ? t('requires_job', { job: vocabulary.job(forge_job), level: RUNE_UNLOCK_LEVEL })

@@ -216,7 +216,3 @@ impl Connection for FalkorConnection {
 
 // Sequential pipelines only need the default helper; nothing more to implement.
 impl SequentialConnection for FalkorConnection {}
-
-#[cfg(test)]
-#[path = "../tests/store/connection.rs"]
-mod tests;

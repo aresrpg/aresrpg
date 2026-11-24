@@ -36,7 +36,7 @@ const PlacementGasWarning = ({
   set_checked: (checked: boolean) => void
   text: Readonly<Record<string, string>>
 }>) => (
-  <ModalFrame close={close} close_label={cancel} label={text.placement_gas_title ?? ''} max_width="max-w-sm" soft>
+  <ModalFrame close={close} close_label={cancel} label={text.placement_gas_title ?? ''} max_width="max-w-sm">
     <div className="p-7">
       <p className="mt-4 text-[11px] leading-6 text-soft">{text.placement_gas_body}</p>
       <label className="mt-5 flex cursor-pointer items-center gap-3 text-[9px] tracking-[0.1em] text-muted uppercase">

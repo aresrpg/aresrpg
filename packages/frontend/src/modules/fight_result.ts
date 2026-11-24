@@ -585,4 +585,9 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-export default Object.freeze({ name: 'fight_result', reduce, observe: observe_fight_results }) satisfies AppModule
+export default Object.freeze({
+  name: 'fight_result',
+  initial: () => ({ fight_result: initial_fight_result_state() }),
+  reduce,
+  observe: observe_fight_results,
+}) satisfies AppModule

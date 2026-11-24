@@ -92,7 +92,12 @@ export function useSpells({
     const pending = toast.loading(t('spells.upgrading'))
     void transaction
       .then(() => {
-        dispatch_app({ type: 'character/spell_raised', character_id: character.id, spell: selected.name })
+        dispatch_app({
+          type: 'character/spell_raised',
+          character_id: character.id,
+          spell: selected.name,
+          before: current,
+        })
         pending.success(t('spells.upgrade_success', { spell: display_name(selected.name) }))
       })
       .catch(pending.error)

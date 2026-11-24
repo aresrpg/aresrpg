@@ -2,9 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
+import { character_max_hp, projected_hp } from '@aresrpg/protocol/character-stats'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
-import { character_max_hp, projected_hp } from '../game/character_stats.ts'
 import { stack_merge_sources } from '../inventory_stacks.ts'
 
 export const consumable_plan = (

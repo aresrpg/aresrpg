@@ -1,5 +1,5 @@
 // THE SEED GATE — schema, referential closure, and every cap the chain would abort on.
-/* eslint-disable complexity, max-depth, max-lines -- the validator keeps cross-row diagnostics in one deterministic command boundary. */
+/* eslint-disable max-depth, max-lines -- the validator keeps cross-row diagnostics in one deterministic command boundary. */
 //
 // Run: `bun scripts/validate_seed.mjs`. Exit 0 means the content files could be walked into the seeding
 // without a single abort. Every RED fails the gate; WARNs remain diagnostic.

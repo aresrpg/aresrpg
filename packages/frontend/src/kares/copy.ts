@@ -66,7 +66,6 @@ export type KaresCopy = ErrorCopy &
     same_account: string
     close: string
     combat_rewards: string
-    combat_detail: string
     vested_five_years: string
     community_release_note: string
     community_detail: string
@@ -79,17 +78,12 @@ export type KaresCopy = ErrorCopy &
     refresh: string
     loading: string
     staking_unavailable: string
-    pending: string
     confirmed: string
-    confirmed_refresh: string
     amount: string
     balance: string
     amount_invalid: string
     insufficient: string
-    gas_note: string
     testnet: string
-    back_game: string
-    staking_title: string
     your_stake: string
     claimable: string
     stake: string
@@ -98,14 +92,13 @@ export type KaresCopy = ErrorCopy &
     claim_batch: string
     withdraw_batch: string
     inactive: string
-    position: string
-    token_sale: string
     locked_liquidity: string
     tokenomics: string
     tabs_label: string
     tab_tokenomics: string
     tab_staking: string
-    signin_title: string
+    staking_line: string
+    tokenomics_line: string
     signin_body: string
     community: string
     team: string

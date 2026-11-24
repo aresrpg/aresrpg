@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-export type Base = Readonly<{ id: string; digest: string; ts_ms: number }>
+type Base = Readonly<{ id: string; digest: string; ts_ms: number }>
 export type Sale = Base &
   Readonly<{
     kind: 'sale'
@@ -36,12 +36,12 @@ export type Loot = Base &
   }>
 export type Notification = Sale | Gathering | Victory | Loot
 
-export const integer = (value: unknown): number => {
+const integer = (value: unknown): number => {
   const parsed = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value
   if (typeof parsed !== 'number' || !Number.isSafeInteger(parsed) || parsed < 0) throw new Error('Invalid feed integer')
   return parsed
 }
-export const text = (value: unknown, pattern: RegExp): string => {
+const text = (value: unknown, pattern: RegExp): string => {
   if (typeof value !== 'string' || !pattern.test(value)) throw new Error('Invalid feed text')
   return value
 }

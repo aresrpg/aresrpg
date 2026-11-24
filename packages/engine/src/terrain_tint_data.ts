@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Macro ground-tint DATA + classification — LOSSLESS PORT of the legacy NG-TINT pure half
-// (deprecated/engine/src/render/terrain_tint_data.js), adapted to the color + appearance-preset
-// architecture. three-FREE on purpose — compiled tables remain testable without a renderer.
+// Macro ground-tint data and material classification. It imports no Three.js module.
 
 import type { CompiledMaterial, CompiledMaterials } from './world_materials.ts'
 
-/** Macro-tint amplitudes (periods in blocks) — the legacy calibrated field, made
- * material-agnostic. Two value-noise octaves drive: (a) a chromatic climate tint on natural
+/** Macro-tint amplitudes, periods in blocks. Two value-noise octaves drive: (a) a chromatic climate tint on natural
  * surfaces, (b) value variation, (c) sparse patches toward the authored subsurface color,
  * (d) a cool humid multiplier, and (e) the dedicated
  * long-period macro-gradient pair (P_MACRO_A/B — the veloren-style global gradient; two
@@ -30,8 +27,7 @@ export const NG_TINT = Object.freeze({
   MACRO_K: Object.freeze([-0.15, -0.04, 0.06] as const),
 })
 
-/** The macro-gradient ladder (legacy calibration: auto-exposure eats pure luminance, so hue
- * rides with value). `c` is the visible shipped surface gradient. */
+/** The macro-gradient ladder. Auto-exposure eats pure luminance, so hue rides with value. `c` is the visible shipped surface gradient. */
 export const SURFACE_GRADIENT_LEVELS = Object.freeze({
   a: Object.freeze({ val: 0, hue: 0 }),
   b: Object.freeze({ val: 0.35, hue: 0.35 }),

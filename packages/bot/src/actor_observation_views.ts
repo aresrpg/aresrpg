@@ -10,8 +10,8 @@ import { empty_inventory, inventory_read, type ActorInventory } from './actor_in
 import type { ActorSnapshot } from './actor_snapshot.ts'
 import { zone_key } from './actor_world.ts'
 import { item_bonuses } from './character_observability.ts'
-import { zone_checkpoint_id } from './gameplay.ts'
-import { zone_knowledge } from './profession_catalog.ts'
+import { zone_checkpoint_id } from './gameplay_context.ts'
+import { zone_knowledge } from './catalog.ts'
 
 /** A value without the keys that hold nothing: an absent fact is absent, never `null`. */
 export const without_nulls = (value: unknown): unknown => {

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { mob_band_scaled } from '@aresrpg/fight'
+import { mob_band_scaled } from '@aresrpg/immutable'
 import { live_resource_packs, live_mob_groups, type MobGroupRow } from '@aresrpg/protocol'
 
 import mobs from '../../../seed/content/mobs.json'
 
 import { area_contains, assert_area_position, group_matches, type TargetOptions } from './target_constraints.ts'
-import { owned_character, type GameplayContext } from './gameplay_context.ts'
-import { zone_checkpoint_id, type GameplayActionName } from './gameplay.ts'
+import { owned_character, type GameplayContext, zone_checkpoint_id } from './gameplay_context.ts'
+import { type GameplayActionName } from './gameplay.ts'
 import type { ZoneSnapshot } from './actor_world.ts'
 
 export type SelectedAction = Readonly<{ kind: GameplayActionName; payload: Readonly<Record<string, unknown>> }>

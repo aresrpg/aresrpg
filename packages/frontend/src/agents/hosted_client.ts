@@ -15,7 +15,7 @@ import { verify_agent_pairing, owner_agent_identity, type AgentPairingResponse }
 
 import type { AuthSession } from '../auth.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
-import type { AppContext } from '../store.ts'
+import type { SiteContext } from '../store.ts'
 
 import { hosted_consent_destination, hosted_owner_identity, sign_hosted_challenge_with } from './hosted_challenge.ts'
 import type { HostedStep } from './hosted_state.ts'
@@ -38,7 +38,7 @@ export type HostedClient = ReturnType<typeof create_hosted_client>
 export const create_hosted_client = (
   origin: string,
   signal: Readonly<AbortSignal>,
-  app: Pick<AppContext, 'get_state' | 'dispatch'>,
+  app: Pick<SiteContext, 'get_state' | 'dispatch'>,
   fetcher: typeof fetch = fetch
 ) => {
   const request = async <T>(path: string, body?: Readonly<unknown>): Promise<T> => {
@@ -116,7 +116,7 @@ const read_hosted_session = async (
  * The request an authorization id names, as the bot itself describes it: the one decoder of that
  * answer. The read signs nothing and needs no account, only the request's own cookie.
  */
-export const read_hosted_request = async (
+const read_hosted_request = async (
   client: Pick<HostedClient, 'request' | 'origin'>,
   authorization_id: string
 ): Promise<HostedConnectRequest> => {

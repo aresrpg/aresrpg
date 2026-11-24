@@ -440,14 +440,12 @@ export type RenderIdentityState = {
   zones: string[]
 }
 
-export type SeedWitness = { seed: MoveInteger; witnessed: boolean }
-export type SeedProvider = (actor: MoveInteger, mob: boolean) => SeedWitness | null
-export type MobTurnObserver = (seat: MoveInteger, seed: MoveInteger) => void
+/** The committed seed of the actor's turn: drawn locally, or a witness the chain already used. */
+export type SeedProvider = (actor: MoveInteger) => MoveInteger | null
 
 export type CommandOptions = {
   observed_ms?: MoveInteger | null
   seed_for?: SeedProvider
-  on_mob_turn?: MobTurnObserver | null
 }
 
 export type FightSheet = {

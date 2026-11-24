@@ -5,9 +5,11 @@ import { level_emblem } from '@aresrpg/ui/art'
 
 import stats_icon from '../../assets/quickslots/stats.png'
 import map_icon from '../../assets/quickslots/map.png'
-import { content_catalog, titleize } from '../../content/catalog.ts'
+import { content_catalog } from '../../content/catalog.ts'
+import { titleize } from '../../content/titles.ts'
 import { spell_icon } from '../../content/assets.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
+import '../jobs/progression.css'
 
 export const CharacterLevelUpView = ({
   copy,

@@ -2,33 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { init, type ErrorEvent } from '@sentry/bun'
 
-import { PLANNING_DIAGNOSTIC_PREFIX } from './planning_failure.ts'
+import { PLANNING_FAULT } from './planning_failure.ts'
 
 // Telemetry drain only; it never extends a gameplay lease or transaction admission.
 const REPORT_FLUSH_MS = 2000
-const safe_planning_context = (error: unknown): Record<string, string | number> => {
-  if (!(error instanceof Error) || !error.message.startsWith(PLANNING_DIAGNOSTIC_PREFIX)) return {}
-  try {
-    const value = JSON.parse(error.message.slice(PLANNING_DIAGNOSTIC_PREFIX.length)) as Record<string, unknown>
-    if (!value || typeof value !== 'object') return {}
-    return Object.fromEntries(
-      Object.entries(value).filter(([key, entry]) => {
-        const validators: Record<string, (candidate: unknown) => boolean> = {
-          kind: (candidate) =>
-            typeof candidate === 'string' && ['behavior', 'combat', 'profession'].includes(candidate),
-          type: (candidate) =>
-            typeof candidate === 'string' && ['Error', 'TypeError', 'RangeError', 'SyntaxError'].includes(candidate),
-          run_id: (candidate) => typeof candidate === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(candidate),
-          revision: (candidate) => typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate >= 0,
-        }
-        return validators[key]?.(entry) ?? false
-      })
-    ) as Record<string, string | number>
-    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Malformed diagnostic context is intentionally discarded; the fixed internal-error event still reports the failure.
-  } catch {
-    return {}
-  }
-}
+/** Only a planning fault carries an operation, and every value in it is ours. */
+const operation_of = (error: unknown): Readonly<Record<string, string | number>> =>
+  error instanceof Error && error.message === PLANNING_FAULT && 'operation' in error
+    ? (error.operation as Readonly<Record<string, string | number>>)
+    : {}
 const safe_stack = (error: unknown) => {
   if (!(error instanceof Error)) return []
   return (error.stack ?? '')
@@ -40,9 +22,9 @@ const safe_stack = (error: unknown) => {
     })
     .toReversed()
 }
-export const safe_failure_event = (error: unknown): ErrorEvent => {
-  const context = safe_planning_context(error)
-  const code = Object.keys(context).length ? 'run_planning_internal_error' : 'hosted_operation_internal_error'
+const safe_failure_event = (error: unknown): ErrorEvent => {
+  const context = operation_of(error)
+  const code = Object.keys(context).length ? PLANNING_FAULT : 'hosted_operation_internal_error'
   return {
     type: undefined,
     level: 'error',

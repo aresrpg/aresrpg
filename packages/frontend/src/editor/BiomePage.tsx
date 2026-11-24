@@ -2,25 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { BIOME_SLOTS, parse_world_recipe, type WorldRecipe } from '@aresrpg/engine'
-import {
-  Boxes,
-  ChevronDown,
-  ChevronUp,
-  Dna,
-  DoorOpen,
-  Globe2,
-  Layers3,
-  Map as MapIcon,
-  Mountain,
-  TreePine,
-} from 'lucide-react'
+import { Boxes, ChevronDown, ChevronUp, Dna, DoorOpen, Globe2, Layers3, Map as MapIcon, TreePine } from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { BiomeAtmosphere } from './BiomeAtmosphere.tsx'
 import { MaterialEditor, PopulationEditor, SplineEditor } from './BiomeControls.tsx'
-import { BiomeCoverage, BiomeMap, TerrainPreview } from './BiomePreviews.tsx'
+import { BiomeCoverage, BiomeMap } from './BiomePreviews.tsx'
 import { ClimateSlots, type LandscapeSelection } from './ClimateSlots.tsx'
 import { JsonEditor } from './JsonEditor.tsx'
 import { LiveTerrainPreview } from './LiveTerrainPreview.tsx'
@@ -46,7 +35,7 @@ const city_names = (world: Readonly<Record<string, JsonValue>>): readonly string
   })
 
 type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population' | 'cities'
-type PreviewMode = 'live' | 'height' | 'map'
+type PreviewMode = 'live' | 'map'
 const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon: ComponentType<{ size?: number }> }>[] =
   Object.freeze([
     { id: 'landscape', label: 'Landscape', help: 'Map nine climate slots, then shape one biome.', icon: Dna },
@@ -69,22 +58,16 @@ const PreviewSurface = ({
   mode,
   recipe,
   terrain,
-  sampled,
   cell,
   select_cell,
-  set_preview_busy,
 }: Readonly<{
   mode: PreviewMode
   recipe: WorldRecipe
   terrain: JsonValue | undefined
-  sampled: ReturnType<typeof sample_biome_cell> | null
   cell: readonly [number, number] | null
   select_cell: (cell: readonly [number, number]) => void
-  set_preview_busy: (busy: boolean) => void
 }>) => {
   if (mode === 'live' && terrain !== undefined) return <LiveTerrainPreview terrain={terrain} />
-  if (mode === 'height')
-    return <TerrainPreview on_rendering_change={set_preview_busy} recipe={recipe} selected={sampled} />
   if (mode === 'map') return <BiomeMap recipe={recipe} select={(x, y) => select_cell([x, y])} selected={cell} />
   return null
 }
@@ -92,13 +75,9 @@ const PreviewSurface = ({
 const LandscapeControls = ({
   recipe,
   replace,
-  preview_busy,
-  begin_preview_update,
 }: Readonly<{
   recipe: WorldRecipe
   replace: ReplaceTerrain
-  preview_busy: boolean
-  begin_preview_update: () => void
 }>) => {
   const [selected_slot, set_selected_slot] = useState<LandscapeSelection>('mid_mid')
   const [selected_point, set_selected_point] = useState(0)
@@ -116,7 +95,6 @@ const LandscapeControls = ({
   const numeric_knots = biome.landscape.map(({ x, y }) => [x, y] as const)
   const point_path = ['terrain', 'biomes', biome_index, 'landscape', point_index] as const
   const change_landscape = (next: readonly (readonly [number, number])[]): void => {
-    begin_preview_update()
     const same_length = next.length === biome.landscape.length
     const landscape = next.map(([x, y], index) => {
       const source = same_length
@@ -152,7 +130,6 @@ const LandscapeControls = ({
       <SplineEditor
         change={change_landscape}
         compact
-        disabled={preview_busy}
         fill
         key={biome.name}
         knots={numeric_knots}
@@ -174,7 +151,6 @@ const LandscapeControls = ({
               <span className={micro_label}>Threshold</span>
               <input
                 className={`${input_class} mt-1 w-16`}
-                disabled={preview_busy}
                 max={
                   point_index === biome.landscape.length - 1 ? undefined : biome.landscape[point_index + 1]!.x - 0.0001
                 }
@@ -191,7 +167,6 @@ const LandscapeControls = ({
               <span className={micro_label}>Height</span>
               <input
                 className={`${input_class} mt-1 w-16`}
-                disabled={preview_busy}
                 onChange={(event) =>
                   change_landscape(move_spline_knot(numeric_knots, point_index, [point.x, Number(event.target.value)]))
                 }
@@ -220,9 +195,8 @@ const LandscapeControls = ({
             </label>
             <button
               className="h-7 border border-white/10 px-2 text-[8px] text-faint hover:border-[#ff5a8b]/45 hover:text-[#ff8caa] disabled:opacity-25"
-              disabled={preview_busy || biome.landscape.length <= 2}
+              disabled={biome.landscape.length <= 2}
               onClick={() => {
-                begin_preview_update()
                 replace(
                   ['terrain', 'biomes', biome_index, 'landscape'],
                   biome.landscape.filter((_, index) => index !== point_index) as JsonValue
@@ -347,7 +321,6 @@ export const BiomePage = () => {
   const [tab, set_tab] = useState<BiomeTab>('landscape')
   const [mode, set_mode] = useState<PreviewMode>('live')
   const [panel_open, set_panel_open] = useState(true)
-  const [preview_busy, set_preview_busy] = useState(false)
   let recipe: WorldRecipe | null = null
   let recipe_error: string | null = null
   try {
@@ -389,17 +362,13 @@ export const BiomePage = () => {
             {(
               [
                 ['live', 'Live Engine', Globe2],
-                ['height', '3D Height', Mountain],
                 ['map', '2D Map', MapIcon],
               ] as const
             ).map(([id, label, Icon]) => (
               <button
                 className={`flex h-7 items-center gap-2 px-3 text-[8px] tracking-[0.12em] uppercase ${mode === id ? 'bg-cyan/14 text-cyan' : 'text-faint hover:text-soft'}`}
                 key={id}
-                onClick={() => {
-                  set_preview_busy(false)
-                  set_mode(id)
-                }}
+                onClick={() => set_mode(id)}
                 type="button"
               >
                 <Icon size={12} />
@@ -421,15 +390,7 @@ export const BiomePage = () => {
 
       <div className="absolute inset-0 pt-14">
         {recipe && (
-          <PreviewSurface
-            cell={cell}
-            mode={mode}
-            recipe={recipe}
-            sampled={sampled}
-            select_cell={set_cell}
-            set_preview_busy={set_preview_busy}
-            terrain={terrain_value}
-          />
+          <PreviewSurface cell={cell} mode={mode} recipe={recipe} select_cell={set_cell} terrain={terrain_value} />
         )}
       </div>
 
@@ -472,15 +433,8 @@ export const BiomePage = () => {
           <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-3 py-2">
             <div>
               <strong className="text-[9px] tracking-[0.15em] text-gold uppercase">World editor</strong>
-              <p className="mt-0.5 text-[7px] text-faint">
-                {active_tab.help} Live Engine is the real game renderer; 3D Height is the fast sampler.
-              </p>
+              <p className="mt-0.5 text-[7px] text-faint">{active_tab.help} Live Engine is the real game renderer.</p>
             </div>
-            {preview_busy && (
-              <span className="ml-auto mr-2 animate-pulse text-[7px] tracking-[0.12em] text-gold uppercase">
-                Rebuilding terrain…
-              </span>
-            )}
             <button
               aria-label="Collapse terrain editor"
               className="grid size-8 place-items-center border border-white/8 text-faint hover:text-white"
@@ -493,7 +447,7 @@ export const BiomePage = () => {
           <nav className="grid shrink-0 grid-cols-5 border-b border-white/8 bg-black/15">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
-                className={`aui-button h-10 gap-1.5 text-[9px] ${tab === id ? 'aui-button--primary' : 'aui-button--neutral'}`}
+                className={`aui-button h-10 ${tab === id ? 'aui-button--primary' : 'aui-button--neutral'}`}
                 key={id}
                 onClick={() => set_tab(id)}
                 type="button"
@@ -504,26 +458,9 @@ export const BiomePage = () => {
             ))}
           </nav>
           <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
-            {tab === 'landscape' && (
-              <LandscapeControls
-                begin_preview_update={() => {
-                  if (mode === 'height') set_preview_busy(true)
-                }}
-                preview_busy={preview_busy}
-                recipe={recipe}
-                replace={replace}
-              />
-            )}
+            {tab === 'landscape' && <LandscapeControls recipe={recipe} replace={replace} />}
             {tab === 'materials' && <WorldAndMaterials recipe={recipe} replace={replace} />}
-            {tab === 'atmosphere' && (
-              <BiomeAtmosphere
-                begin_preview_update={() => {
-                  if (mode === 'height') set_preview_busy(true)
-                }}
-                recipe={recipe}
-                replace={replace}
-              />
-            )}
+            {tab === 'atmosphere' && <BiomeAtmosphere recipe={recipe} replace={replace} />}
             {tab === 'population' && (
               <PopulationEditor
                 biome_names={recipe.biomes.map(({ name }) => name)}

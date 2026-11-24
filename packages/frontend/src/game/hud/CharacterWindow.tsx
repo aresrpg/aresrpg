@@ -5,6 +5,8 @@ import type { DetailTab } from '../../characters/character_navigation.ts'
 import type { CharacterSession } from '../../characters/character_session.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { EmptyEquipment } from '../../characters/EmptyEquipment.tsx'
+import '../../characters/character_window.css'
+import '../../components/game_page_window.css'
 import '../../characters/characters.css'
 import '../../components/character_surfaces.css'
 
@@ -17,8 +19,8 @@ export const CHARACTER_TABS = [
   { tab: 'equipment', icon: 'inventory', layout: '' },
   { tab: 'stats', icon: 'stats', layout: '' },
   { tab: 'spells', icon: 'spells', layout: '' },
-  { tab: 'jobs', icon: 'jobs', layout: 'aui-feature-port aui-jobs-port' },
-  { tab: 'runeforge', icon: 'runeforge', layout: 'aui-feature-port aui-forge-port' },
+  { tab: 'jobs', icon: 'jobs', layout: 'game-page-window' },
+  { tab: 'runeforge', icon: 'runeforge', layout: 'game-page-window' },
 ] as const
 const PanelBody = ({
   tab,
@@ -63,7 +65,6 @@ export const CharacterWindow = ({
         data-character-panel={tab}
         title={title}
         icon={<CarvedIcon name={tab_layout.icon} />}
-        meta={character ? `${character.name} · ${character.level}` : undefined}
         close={close}
         close_label={copy.wallet_close}
       >

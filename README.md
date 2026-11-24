@@ -20,17 +20,17 @@ twin, SDK, indexer, server, protocol, immutable rules, and the authored seed cor
 
 ```bash
 bun install
-bun run dev            # frontend at localhost:5173
+bun run dev            # the site and the game at 127.0.0.1:5173
 bun run lint           # eslint + prettier
-bun run test           # every package's unit tests — same command CI runs
+bun run test           # the canonical suite, the same command CI runs
 ```
 
 Committed `pins.json` describes mainnet. Local testnet uses ignored `.dev/pins.json`; it never
 falls back to mainnet. Run the frontend normally for the selected network.
 
-Blast hosts the standalone KARES presale. The in-game card links to Blast and reads its funding
-progress when a presale is configured. The app's `/kares` page hosts staking; the encyclopedia
-explains allocations, vesting and rewards.
+The project issues KARES itself (`packages/currency`) and locks its market liquidity in one Aftermath
+pool at launch. The site's `/staking` page hosts staking and shows the token's allocations in its
+Tokenomics section. The earlier Blast presale failed; its sale card and `/allocation` remain only for refunds.
 
 Solana bridge reads use the same-origin `/api/solana` function. `SOLANA_RPC_URL` is
 server-only configuration.

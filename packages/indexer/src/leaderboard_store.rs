@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::analytics::{bucket_month, DAY_MS};
 use crate::leaderboards::{Contribution, Metric, CHANNEL, META_KEY};
 
-const PENDING_KEY: &str = "leaderboards:pending";
+pub(crate) const PENDING_KEY: &str = "leaderboards:pending";
 const DUNGEONS_KEY: &str = "leaderboards:dungeons";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ struct Update {
 /// A bounded write-ahead batch retains absolute replacements until Redis confirms them.
 /// EXEC errors do not roll back Redis commands; retaining this batch makes that path replayable too.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Prepared {
+pub(crate) struct Prepared {
     meta: Meta,
     updates: Vec<Update>,
     #[serde(default)]
@@ -56,7 +56,7 @@ pub fn next_reset(ts_ms: u64) -> Result<u64> {
     Ok(bucket_month(next_month))
 }
 
-async fn ranking_keys(conn: &mut MultiplexedConnection) -> Result<Vec<String>> {
+pub(crate) async fn ranking_keys(conn: &mut MultiplexedConnection) -> Result<Vec<String>> {
     let mut cursor = 0u64;
     let mut keys = BTreeSet::new();
     loop {
@@ -111,7 +111,7 @@ async fn read_json<T: serde::de::DeserializeOwned>(
         .transpose()
 }
 
-async fn prepare(
+pub(crate) async fn prepare(
     conn: &mut MultiplexedConnection,
     meta: Meta,
     facts: &[Contribution],
@@ -182,7 +182,7 @@ async fn prepare(
     })
 }
 
-async fn apply(conn: &mut MultiplexedConnection, prepared: &Prepared) -> Result<()> {
+pub(crate) async fn apply(conn: &mut MultiplexedConnection, prepared: &Prepared) -> Result<()> {
     let mut writes = redis::pipe();
     writes.atomic();
     if !prepared.removals.is_empty() {
@@ -288,7 +288,3 @@ pub async fn commit(
     }
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../tests/leaderboards/store.rs"]
-mod tests;

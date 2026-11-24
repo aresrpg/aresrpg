@@ -14,6 +14,7 @@ import {
   type ChatMessagePart,
 } from '@aresrpg/protocol'
 import { useEffect, useState, type FormEvent } from 'react'
+import { Button } from '@aresrpg/ui'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text, format_text } from '../i18n/copy.ts'
@@ -121,7 +122,7 @@ const WhisperModal = ({
   }
   const title = format_text(copy.world_hud.message_title, { name: recipient.name })
   return (
-    <ModalFrame close={close} close_label={copy.world_hud.message_cancel} label={title} max_width="max-w-sm" soft>
+    <ModalFrame close={close} close_label={copy.world_hud.message_cancel} label={title} max_width="max-w-sm">
       <form className="grid gap-4 p-6" onSubmit={send}>
         <header className="pr-8 font-mono text-xs tracking-[0.12em] text-[#ff78b7] uppercase">{title}</header>
         <textarea
@@ -137,20 +138,10 @@ const WhisperModal = ({
           value={message}
         />
         <div className="grid grid-cols-2 gap-3 pt-1">
-          <button
-            className="btn-outline min-h-10 px-4 py-2.5 font-mono text-[9px] font-semibold tracking-[0.18em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff78b7]"
-            onClick={close}
-            type="button"
-          >
-            {copy.world_hud.message_cancel}
-          </button>
-          <button
-            className="btn-gold min-h-10 px-4 py-2.5 font-mono text-[9px] tracking-[0.18em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff78b7]"
-            disabled={!message.trim()}
-            type="submit"
-          >
+          <Button onClick={close}>{copy.world_hud.message_cancel}</Button>
+          <Button tone="primary" disabled={!message.trim()} type="submit">
             {copy.world_hud.message_send}
-          </button>
+          </Button>
         </div>
       </form>
     </ModalFrame>

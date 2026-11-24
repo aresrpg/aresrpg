@@ -9,6 +9,7 @@ import { Text } from '../i18n/Text.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { parse_kolizeum_pledge, type KolizeumInput } from '../modules/kolizeum.ts'
+import './arena.css'
 export type Format = 1 | 3 | 6
 const FORMATS = [1, 3, 6] as const
 export const FormatChips = ({

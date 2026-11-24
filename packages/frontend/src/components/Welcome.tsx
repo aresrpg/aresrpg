@@ -38,7 +38,7 @@ export const Welcome = ({
   return (
     <section className="absolute inset-0 z-[140] flex items-center justify-center bg-bg/50 p-3 backdrop-blur-sm sm:p-5">
       <div
-        className="aui-panel welcome-card flex max-h-full w-full max-w-md flex-col gap-4 overflow-y-auto border-t-gold p-5 shadow-2xl"
+        className="aui-panel welcome-card flex max-h-full w-full max-w-md flex-col gap-4 overflow-y-auto"
         data-welcome=""
       >
         <header>

@@ -3,7 +3,7 @@
 Hosted bot play is a work in progress. More features and improvements are planned over the coming months. For support, bug reports or feature requests, join the AresRPG Discord: https://discord.gg/aresrpg.
 
 Connect Your Agent is the single official supported bot onboarding flow.
-Use https://aresrpg.world/world?intent=connect-agent and the existing Google game login.
+Use https://aresrpg.world/agent and the existing Google game login.
 A hosted service operates the bot; your assistant supplies inference through authenticated MCP.
 No assistant-owned private key, local CLI, server installation or key upload is required.
 

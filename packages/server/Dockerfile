@@ -11,7 +11,7 @@
 # Env (see src/env.ts — every value has a working local default):
 #   GRAPH_URL       redis://indexing:6379   the bound indexer set (graph + evt:*)
 #   MESH_REDIS_URL  redis://mesh-redis:6379 the cluster mesh (player ephemera)
-#   PORT, SUI_NETWORK, SUI_RPC_URL, ALLOWED_ORIGINS, MAX_PLAYERS
+#   PORT, SUI_NETWORK, SUI_RPC_URL, ALLOWED_ORIGINS, MAX_PLAYERS, MAX_VIEWERS
 # =============================================================================
 
 FROM oven/bun:1.4.4-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS runtime
@@ -25,12 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 COPY package.json bun.lock ./
 COPY patches ./patches
 COPY packages/bot/package.json packages/bot/
-COPY packages/telegram/package.json packages/telegram/
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/
 COPY packages/frontend/package.json packages/frontend/
-COPY packages/mobile/package.json packages/mobile/
 COPY packages/journal/package.json packages/journal/
 COPY packages/immutable/package.json packages/immutable/
 COPY packages/protocol/package.json packages/protocol/
@@ -49,6 +47,10 @@ COPY packages/immutable packages/immutable
 # the zone-population twin: engine's pure recipe/biome sampling + the seed content it derives from
 COPY packages/engine/src packages/engine/src
 COPY packages/frontend/src/i18n/locales packages/frontend/src/i18n/locales
+# A hero's share preview builds its poster address with the site's one builder and its two manifests.
+COPY packages/frontend/src/components/portrait_share.ts packages/frontend/src/components/portrait_share.ts
+COPY packages/frontend/public/portrait-share/manifest.json packages/frontend/public/portrait-share/manifest.json
+COPY seed/portraits/manifest.json seed/portraits/manifest.json
 COPY seed/content seed/content
 COPY seed/structures seed/structures
 COPY packages/ui/src/assets/font packages/ui/src/assets/font
@@ -58,6 +60,6 @@ COPY packages/frontend/public/branding/kares/*.webp packages/frontend/public/bra
 USER bun
 # Execute the installed runtime graph, not the developer workspace's hoisted dependencies.
 # The lifecycle-free player owner covers normal observation and every player module without opening sockets.
-RUN bun -e "await import('./packages/server/src/player.ts')"
+RUN bun -e "await import('./packages/server/src/player.ts'); await import('./packages/server/src/share_preview.ts')"
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

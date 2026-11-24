@@ -1,43 +1,36 @@
-/* Foundation first; component rules refine it without specificity escalation. */
-@import './base.css';
-@import './prebuilt/game.css';
-@import './prebuilt/game_mobile.css';
-@import './prebuilt/inspection.css';
-@import './prebuilt/inventory.css';
-@import './prebuilt/inventory_mobile.css';
-@import './prebuilt/vitals.css';
-@import './prebuilt/staking_rewards.css';
-@import './prebuilt/wallet.css';
-@import './prebuilt/stats.css';
-@import './prebuilt/items.css';
-@import './prebuilt/progression.css';
-@import './components/materials.css';
-@import './components/carved_icons.css';
+/* Every ui rule lives in Tailwind's `components` layer: utilities and a feature's own (unlayered) rules override it.
+   This sheet can load before tailwind.css, so it opens with Tailwind's layer order (declared in tailwind.css). */
+@layer theme, base, components, utilities;
+@import './base.css' layer(components);
+@import './prebuilt/game.css' layer(components);
+@import './prebuilt/game_mobile.css' layer(components);
+@import './prebuilt/inspection.css' layer(components);
+@import './prebuilt/inventory.css' layer(components);
+@import './prebuilt/vitals.css' layer(components);
+@import './prebuilt/staking_rewards.css' layer(components);
+@import './prebuilt/wallet.css' layer(components);
+@import './prebuilt/items.css' layer(components);
+@import './prebuilt/progression.css' layer(components);
+@import './components/ground.css' layer(components);
+@import './components/materials.css' layer(components);
+@import './components/carved_icons.css' layer(components);
 
-@import './components/selection.css';
+@import './components/selection.css' layer(components);
 
-@import './prebuilt/spells.css';
-@import './prebuilt/spellbook.css';
+@import './prebuilt/spells.css' layer(components);
+@import './prebuilt/spellbook.css' layer(components);
 
-@import './components/workspaces.css';
+@import './components/workspaces.css' layer(components);
 
-@import './prebuilt/maps.css';
+@import './prebuilt/maps.css' layer(components);
 
-@import './prebuilt/account.css';
+@import './prebuilt/account.css' layer(components);
 
-@import './prebuilt/port_base.css';
-@import './prebuilt/port_professions.css';
-@import './prebuilt/port_admin.css';
-@import './prebuilt/port_arena.css';
+@import './components/collection.css' layer(components);
 
-@import './components/collection.css';
-@import './prebuilt/port_codex.css';
-
-@import './prebuilt/trade.css';
-
-@import './prebuilt/marketplace.css';
-@import './prebuilt/spell_card.css';
-@import './prebuilt/market_parts.css';
-@import './prebuilt/market_browse.css';
-@import './prebuilt/market_sell.css';
-@import './prebuilt/market_history.css';
+@import './prebuilt/marketplace.css' layer(components);
+@import './prebuilt/spell_card.css' layer(components);
+@import './prebuilt/market_parts.css' layer(components);
+@import './prebuilt/market_browse.css' layer(components);
+@import './prebuilt/market_sell.css' layer(components);
+@import './prebuilt/market_history.css' layer(components);

@@ -86,4 +86,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch }) => {
   })
 }
 
-export default Object.freeze({ name: 'job_level_up', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'job_level_up',
+  initial: () => ({ job_level_up: initial_job_level_up_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

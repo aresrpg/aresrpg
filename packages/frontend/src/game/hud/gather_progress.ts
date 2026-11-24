@@ -4,7 +4,7 @@
 import { gather_time_ms, job_level_from_xp } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import { gathering_resources } from '../../modules/automation_route.ts'
+import { gathering_resources } from '../../modules/automation_state.ts'
 import { selected_gathering } from '../../modules/world_gather.ts'
 import { selected_character } from '../../modules/session.ts'
 import type { PendingGather } from '../../modules/world.ts'
@@ -40,20 +40,20 @@ export const gather_progress_view = (state: AppState, now_ms: number) => {
   if (gathering?.ambushed) return null
   const current = gathering ? gather_progress(gathering, now_ms) : { percent: 0, remaining_seconds: 0 }
   const { run } = state.automation
-  if (run?.scope.type !== 'pack')
+  if (!run)
     return gathering ? { ...current, item_type: gathering.item_type, collect_all: false, completed: 0, total: 1 } : null
   const resource = gathering_resources(run.world).find(({ item_type }) => item_type === run.item_type)
   const character = selected_character(state.session)!
   const duration_ms = gather_time_ms(job_level_from_xp(Number(character.jobs[resource!.job] ?? 0)))
-  const remaining = resource_at(run.scope.target.node!, state)?.pack.nodes ?? 0
+  const remaining = resource_at(run.target.node, state)?.pack.nodes ?? 0
   const nodes = gathering && run.step.type === 'gathering' ? run.step.nodes_before : remaining
-  const completed = Math.max(0, run.scope.nodes - nodes)
+  const completed = Math.max(0, run.nodes - nodes)
   return {
     item_type: run.item_type,
     collect_all: true,
     completed,
-    total: run.scope.nodes,
-    percent: Math.min(100, Math.floor(((completed + current.percent / 100) * 100) / run.scope.nodes)),
+    total: run.nodes,
+    percent: Math.min(100, Math.floor(((completed + current.percent / 100) * 100) / run.nodes)),
     remaining_seconds:
       current.remaining_seconds + Math.ceil((Math.max(0, nodes - Number(gathering !== null)) * duration_ms) / 1_000),
   }

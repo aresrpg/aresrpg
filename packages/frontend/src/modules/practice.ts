@@ -117,4 +117,9 @@ const observe = ({ events, dispatch }: Parameters<NonNullable<AppModule['observe
   })
 }
 
-export default { name: 'practice', reduce, observe } as const satisfies AppModule
+export default Object.freeze({
+  name: 'practice',
+  initial: () => ({ practice: initial_practice_state() }),
+  reduce,
+  observe,
+}) satisfies AppModule

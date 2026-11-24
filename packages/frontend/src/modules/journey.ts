@@ -152,6 +152,7 @@ export const observe_journey = (context: AppContext, storage: JourneyStorage): v
 
 export default Object.freeze({
   name: 'journey',
+  initial: () => ({ journey: initial_journey_state() }),
   reduce,
   observe: (context: AppContext) => observe_journey(context, browser_journey_storage()),
 }) satisfies AppModule

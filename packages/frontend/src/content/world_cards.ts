@@ -4,7 +4,8 @@
 import nauvis_art from '../assets/worlds/nauvis.webp'
 import yakutia_art from '../assets/worlds/yakutia.webp'
 
-import { encyclopedia_catalog, titleize } from './catalog.ts'
+import { encyclopedia_catalog } from './catalog.ts'
+import { titleize } from './titles.ts'
 import { worlds_source } from './worlds.ts'
 
 const WORLD_ART = Object.freeze({ nauvis: nauvis_art, yakutia: yakutia_art })

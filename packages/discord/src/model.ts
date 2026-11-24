@@ -23,7 +23,7 @@ export type VisualCard = Readonly<{
   party: readonly string[]
   stats: readonly Readonly<{ key: string; value: number; label: string }>[]
 }>
-export type Announcement = Readonly<{ content: string; visual: VisualCard }>
+type Announcement = Readonly<{ content: string; visual: VisualCard }>
 const titleize = (value: string): string =>
   value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 const icon = (kind: 'items' | 'mobs', slug: string): string =>

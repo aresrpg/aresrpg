@@ -6,7 +6,6 @@
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress, normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 import { ZkSendClient } from '@mysten/zksend'
 
@@ -17,13 +16,15 @@ import { SDK, sui_transport } from './client.ts'
 import { delegate } from './delegated_admin.ts'
 import { create_seed_admin } from './seed_admin.ts'
 import type { SeedContent } from './seed.ts'
+import { create_kares_community_claim_transaction, kares_pins } from './kares_ptb.ts'
 import {
-  create_rewards_setup_transaction,
-  create_kares_community_claim_transaction,
-  kares_pins,
-  type RewardsSetup,
-} from './kares_ptb.ts'
-import { read_kares_metadata, update_kares_metadata_into, type KaresMetadataUpdate } from './kares_metadata.ts'
+  assert_launch_simulation,
+  create_currency_launch_transaction,
+  create_currency_publish_transaction,
+  create_currency_registration_transaction,
+  type CurrencyLaunch,
+  type CurrencyPublication,
+} from './kares_launch.ts'
 import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
@@ -45,10 +46,16 @@ export type AdminAuthSession = AuthSession &
       upgrade_cap: string
     ) => Promise<Readonly<{ package: string; version: number; policy: number }>>
     bootstrap_deployment: (deployment: GameDeployment) => Promise<Receipt>
-    setup_rewards: (terms: RewardsSetup) => Promise<Receipt>
+    /** The launch's three treasury transactions, in order. Each one is signed and certified alone. */
+    publish_currency: (
+      artifacts: Readonly<{ currency: ContractArtifact; liquidity_token: ContractArtifact }>
+    ) => Promise<Receipt>
+    register_currency: (
+      publication: Pick<CurrencyPublication, 'coin_type' | 'unregistered_currency'>
+    ) => Promise<Receipt>
+    launch_currency: (terms: CurrencyLaunch) => Promise<Receipt>
     freeze_project: (content: SeedContent) => Promise<Readonly<{ digest: string }>>
     claim_community_kares: () => Promise<Receipt>
-    update_kares_metadata: (update: KaresMetadataUpdate) => Promise<Receipt>
     create_giftcard_links: (
       cards: readonly Readonly<{ id: string; key: string }>[]
     ) => Promise<Readonly<{ digest: string; urls: readonly string[] }>>
@@ -189,14 +196,33 @@ export const as_admin_session = (session: AuthSession): AdminAuthSession => {
       return Object.freeze({ receipt })
     },
     read_package_upgrade,
-    setup_rewards: async (terms) => {
-      const upgrade = await read_package_upgrade(terms.upgrade_cap)
-      if (normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) || upgrade.policy !== 0)
+    publish_currency: (artifacts) =>
+      context.sdk.execute(create_currency_publish_transaction(artifacts), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      }),
+    register_currency: (publication) =>
+      context.sdk.execute(create_currency_registration_transaction(publication), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      }),
+    launch_currency: async (terms) => {
+      const { rewards, publication } = terms
+      const upgrade = await read_package_upgrade(rewards.upgrade_cap)
+      if (normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(rewards.package) || upgrade.policy !== 0)
         throw new Error(
-          'Reward setup requires the published rewards package capability with unrestricted upgrade authority'
+          'The launch requires the published rewards package capability with unrestricted upgrade authority'
         )
-      await context.sdk.hydrate([terms.setup, terms.upgrade_cap])
-      return context.sdk.execute(create_rewards_setup_transaction(context.sdk, terms), {
+      await context.sdk.hydrate([rewards.setup, rewards.upgrade_cap, publication.genesis, publication.pool_cap])
+      // The chain's own account of the launch is checked before the wallet is asked to sign it.
+      assert_launch_simulation(
+        await context.sdk.simulate(create_currency_launch_transaction(context.sdk, terms), {
+          budget: 'estimate',
+          include: { objectTypes: true, balanceChanges: true },
+        }),
+        terms
+      )
+      return context.sdk.execute(create_currency_launch_transaction(context.sdk, terms), {
         budget: 'estimate',
         include: { objectTypes: true },
       })
@@ -214,16 +240,6 @@ export const as_admin_session = (session: AuthSession): AdminAuthSession => {
         create_kares_community_claim_transaction(kares_pins(context.sdk.pins), context.account.address),
         { budget: 'estimate', include: { objectTypes: true } }
       ),
-    update_kares_metadata: async (update) => {
-      const pins = kares_pins(context.sdk.pins)
-      const metadata = await read_kares_metadata(context.resolution_client, pins.currency, pins.coin_type)
-      if (!metadata.metadata_cap || metadata.owner !== normalizeSuiObjectId(context.account.address))
-        throw new Error('Connect the cold wallet that owns the KARES metadata capability')
-      await context.sdk.hydrate([metadata.metadata_cap])
-      const transaction = new Transaction()
-      update_kares_metadata_into(transaction, context.sdk, pins, metadata.metadata_cap, update)
-      return context.sdk.execute(transaction, { budget: 'estimate', include: { objectTypes: true } })
-    },
     bootstrap_deployment: async (deployment) => {
       const sdk = SDK({
         client: sui_transport(context.resolution_client),
