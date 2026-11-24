@@ -5,6 +5,7 @@ import { mastery_reminder_visible } from '../../mastery/model.ts'
 import { CarvedIcon, IconButton } from '@aresrpg/ui'
 
 import { copy_text } from '../../i18n/copy.ts'
+import { SITE_ADDRESSES } from '../../site/routes.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 import { CHARACTER_TABS } from './CharacterWindow.tsx'
 import { HUD_PAGE_META } from './hud_pages.ts'
@@ -54,6 +55,13 @@ export const WorldQuickslots = () => {
         icon={<CarvedIcon name={mastery.icon} />}
         data-notification={mastery_notification || undefined}
         onClick={() => dispatch_app({ type: 'page/open', page: 'mastery' })}
+      />
+      {/* The encyclopedia is the docs: it opens beside the game, in a tab of its own. */}
+      <IconButton
+        title=""
+        label={copy.encyclopedia}
+        icon={<CarvedIcon name="encyclopedia" />}
+        onClick={() => globalThis.open(SITE_ADDRESSES.items, '_blank', 'noopener,noreferrer')}
       />
     </div>
   )

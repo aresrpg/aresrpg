@@ -14,6 +14,7 @@ import airdrop from '../assets/carved_airdrop.webp'
 import kolizeum from '../assets/carved_kolizeum.webp'
 import settings from '../assets/carved_settings.webp'
 import admin from '../assets/carved_admin.webp'
+import encyclopedia from '../assets/carved_encyclopedia.webp'
 
 const ART = {
   inventory,
@@ -30,6 +31,7 @@ const ART = {
   kolizeum,
   settings,
   admin,
+  encyclopedia,
 }
 export type CarvedSymbol = keyof typeof ART
 export const CarvedIcon = ({ name, className = '' }: Readonly<{ name: CarvedSymbol; className?: string }>) => (
