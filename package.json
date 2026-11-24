@@ -1,6 +1,6 @@
 {
   "name": "aresrpg",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.4",
