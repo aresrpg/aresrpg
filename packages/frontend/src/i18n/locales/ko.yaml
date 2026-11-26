@@ -822,6 +822,9 @@ admin_page:
   character_creation_revenue: 캐릭터 생성
   kolizeum_revenue: 콜리제움 수수료
   tournament_revenue: 기록된 토너먼트 수수료
+  market_fee_revenue: 'KARES 마켓 수수료(SUI 지급)'
+  kares_fees: '마켓 수수료(KARES 지급)'
+  kares_fees_30d: '최근 30일: {amount} KARES'
   game_transactions: 게임 거래
   game_gas_fees: 게임 가스비
   all_time: 전체 기간
@@ -2209,7 +2212,14 @@ kares_page:
   figures_ready: '온체인 데이터'
   current_supply: '현재 총공급량'
   circulating_supply: '유통량'
-  circulating_unknown: '확인 불가: 검증된 유통량 집계가 없습니다.'
+  circulating_note: '현재 공급량에서 보상 풀에 아직 남아 있는 KARES를 뺀 수량입니다. 스테이킹된 KARES는 유통량에 포함됩니다.'
+  market_heading: '마켓'
+  price: '가격'
+  price_note: 'Aftermath의 KARES/SUI 풀 현물 가격.'
+  fdv: '완전 희석 가치'
+  fdv_note: '가격 × 현재 총 공급량.'
+  market_cap: '유통 시가총액'
+  market_cap_note: '가격 × 유통 공급량.'
   total_staked: '총 스테이킹 수량'
   pool_held: '풀 보유량'
   pool_held_note: '획득했으나 아직 청구하지 않은 보상을 포함하며 스테이킹 원금은 제외합니다.'
@@ -2239,6 +2249,7 @@ kares_page:
   additional_daily: 하루 추가 보상
   max: 최대
   external_wallet_hint: 외부 지갑에서 KARES를 별도로 스테이킹하고 관리하세요.
+  game_account_hint: '게임 계정에서 스테이킹하려면 Google로 로그인하세요.'
   select_wallet: 선택
   staking_revenue: 스테이커는 AresRPG 거래소에서 거둔 로열티의 20%를 SUI로 나누고, 마련된 KARES 보상도 받습니다.
   game_account: AresRPG 계정
@@ -3302,12 +3313,6 @@ docs_page:
     lede: 'KARES는 아직 준비되지 않았습니다. 곧 추가될 예정입니다.'
     note: '토큰이 출시되면 이 페이지에서 토큰, 공급량, 보상 풀을 설명합니다. 그 전에는 잔액, 가격, 보상 수치를 공개하지 않습니다.'
     live_lede: 'KARES는 AresRPG의 토큰입니다. Aftermath에서 거래됩니다.'
-    points:
-      - '{{supply}} KARES가 단 한 번 발행되었습니다. 새로 발행할 수 없으며, 소각할 때마다 공급량이 줄어듭니다.'
-      - '{{liquidity}}%는 Aftermath의 단일 KARES/SUI 풀(KARES {{kares_weight}}%, SUI {{sui_weight}}%)에 영구히 잠겨 있습니다. 누구도 출금할 수 없습니다.'
-      - '{{reserves}}%는 보상에 쓰입니다. 스테이킹, 보스 보상, 커뮤니티 준비금으로 5년에 걸쳐 풀립니다.'
-      - '{{team}}%는 팀 물량입니다. 베스팅은 없습니다.'
-      - '모든 거래는 AresRPG 트레저리에 {{treasury_fee}}% 수수료를, 풀에 남는 {{pool_fee}}% 풀 수수료를 냅니다.'
   agents:
     lede: 'ChatGPT, Claude 또는 Grok을 호스팅된 AresRPG 봇에 연결하세요. 목표를 정하면 어시스턴트가 그 범위 안에서 캐릭터를 플레이합니다. 이 기능은 작업 중입니다.'
     steps:

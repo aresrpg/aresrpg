@@ -486,3 +486,131 @@ fn captured_tournament_fee_counts_treasury_cut_only() {
     assert_eq!(free.tournament_mist, 0);
     assert!(revenue(vec![fee(GAME, &capture[..7])]).is_err());
 }
+
+/// The KARES market's treasury fee, counted from what the treasury's coins gained.
+mod market_fee {
+    use super::*;
+    use crate::pipeline::MarketFees;
+    use sui_indexer_alt_framework::types::base_types::{ObjectID, SequenceNumber, SuiAddress};
+    use sui_indexer_alt_framework::types::digests::TransactionDigest;
+    use sui_indexer_alt_framework::types::object::{MoveObject, Object, Owner};
+    use sui_indexer_alt_framework::types::TypeTag;
+
+    // Mainnet, read 2026-11-26. Fee pool (DaoFeePool) object and treasury address of the KARES market.
+    const POOL: &str = "0x303f49180d7cab9ebcbd68361d98f4260b5c707b2d508b07eda5dd192ad486ba";
+    const TREASURY: &str = "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8";
+    const KARES: &str =
+        "0x079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2::kares::KARES";
+    const SUI: &str = "0x2::sui::SUI";
+    const TRADER: &str = "0x87b0e6c32204805dd4ea5b05800ff15bb405db00d4aa0d30a99f3aa9a3ac52ce";
+
+    fn coin(id: &str, coin_type: &str, owner: &str, balance: u64) -> Object {
+        let coin_type: TypeTag = coin_type.parse().unwrap();
+        Object::new_move(
+            MoveObject::new_coin(
+                coin_type,
+                SequenceNumber::from_u64(1),
+                ObjectID::from_hex_literal(id).unwrap(),
+                balance,
+            ),
+            Owner::AddressOwner(SuiAddress::from(ObjectID::from_hex_literal(owner).unwrap())),
+            TransactionDigest::ZERO,
+        )
+    }
+    fn market() -> MarketFees {
+        MarketFees::new(POOL, TREASURY, KARES).unwrap()
+    }
+    fn income(inputs: &[Object], outputs: &[Object]) -> Vec<(String, u64)> {
+        market().income(
+            &inputs.iter().collect::<Vec<_>>(),
+            &outputs.iter().collect::<Vec<_>>(),
+        )
+    }
+
+    #[test]
+    fn the_treasury_gain_in_a_pool_transaction_is_the_fee_in_the_coin_it_was_paid_in() {
+        // The pool object itself rides as a coin-shaped stand-in: only its id is read.
+        let pool = coin(POOL, SUI, TRADER, 0);
+        // Captured sell, mainnet transaction GtTyMT3cc2sfra1KbaNygN2KEUXSFkUVFRJNZvh22rgu
+        // (checkpoint 349400896, 2026-11-26): the trader's coin 0xa0adbb04… of 2218292366606250
+        // KARES goes in, the treasury receives the new coin 0xa4dcee79… of 44365847332125 KARES
+        // (2%), the trader receives 105094807503 MIST.
+        let fee_coin = "0xa4dcee79d9370f7bb8fb974e447bad945ad6262e1436d501d5b92784fabedbf3";
+        let sold = coin(
+            "0xa0adbb044aee40d1862f915bca5a7992eb34e8ced7dfe350069e40849f3fe1c3",
+            KARES,
+            TRADER,
+            2_218_292_366_606_250,
+        );
+        let paid_out = coin(
+            "0x4383653429ae325a75993a3a87f82599f21e3a90282717f959ead2ec7eb0957f",
+            SUI,
+            TRADER,
+            105_094_807_503,
+        );
+        let fee = coin(fee_coin, KARES, TREASURY, 44_365_847_332_125);
+        let sell = income(
+            std::slice::from_ref(&sold),
+            &[pool.clone(), fee.clone(), paid_out.clone()],
+        );
+        assert_eq!(sell.len(), 1);
+        assert!(sell[0].0.ends_with("::kares::KARES"));
+        assert_eq!(sell[0].1, 44_365_847_332_125);
+        // Captured buy, mainnet transaction ApVbXiAjFKePW4ikTsZXV7Y7QFmfpJwhv36aQkujjqhr
+        // (2026-11-26): the treasury's SUI balance grows by 1467642706 MIST. Its coin id was not
+        // captured; the amount is the chain's balance change.
+        let buy = income(
+            &[],
+            &[pool.clone(), coin("0x51", SUI, TREASURY, 1_467_642_706)],
+        );
+        assert!(buy[0].0.ends_with("::sui::SUI"));
+        assert_eq!(buy[0].1, 1_467_642_706);
+        // The same coins without the pool are not a fee; a treasury coin that only moved gained nothing.
+        assert!(income(&[sold], &[fee.clone(), paid_out]).is_empty());
+        assert!(income(std::slice::from_ref(&fee), &[pool.clone(), fee.clone()]).is_empty());
+        // A coin the treasury already held counts only for what it gained.
+        let grown = coin(fee_coin, KARES, TREASURY, 44_365_847_332_125 + 7);
+        assert_eq!(income(&[fee], &[pool, grown])[0].1, 7);
+    }
+
+    #[test]
+    fn market_fees_enter_the_totals_per_coin_and_never_from_the_treasury_itself() {
+        let kares = market().income(&[], &[]).len(); // no pool, no income
+        assert_eq!(kares, 0);
+        let canonical_kares: TypeTag = KARES.parse().unwrap();
+        let canonical_sui: TypeTag = SUI.parse().unwrap();
+        let paid = |sender: Addr, successful: bool| OwnedTx {
+            sender,
+            successful,
+            fee_income: vec![
+                (canonical_sui.to_canonical_string(true), 1_467_642_706),
+                (
+                    canonical_kares.to_canonical_string(true),
+                    44_365_847_332_125,
+                ),
+                (format!("{GAME}::other::OTHER"), 5),
+            ],
+            ..tx()
+        };
+        let treasury = Addr(ObjectID::from_hex_literal(TREASURY).unwrap().into_bytes());
+        let handler = AresHandler::new(GAME, GAME, &[GAME.to_string()])
+            .unwrap()
+            .with_market(Some(market()));
+        let run = |txs: &[OwnedTx]| totals(&handler.writes(CKPT, 9, TS, txs).unwrap());
+        let counted = run(&[paid(addr(7), true), paid(addr(8), true)]).unwrap();
+        assert_eq!(counted.market_fee_mist, 2 * 1_467_642_706);
+        assert_eq!(counted.market_fee_kares, 2 * 44_365_847_332_125);
+        let none = |totals: Option<crate::analytics_totals::Totals>| {
+            totals.is_none_or(|totals| totals.market_fee_mist == 0 && totals.market_fee_kares == 0)
+        };
+        assert!(none(run(&[paid(treasury, true), paid(addr(7), false)])));
+        // A network without the market counts nothing.
+        assert!(none(totals(&try_run(&[paid(addr(7), true)]).unwrap())));
+        // Totals written before the market existed still read.
+        let old: crate::analytics_totals::Totals = serde_json::from_str(
+            r#"{"checkpoint":1,"transactions":"0","gas_mist":"0","item_royalty_mist":"0","character_royalty_mist":"0","character_creation_mist":"0","kolizeum_mist":"0"}"#,
+        )
+        .unwrap();
+        assert_eq!((old.market_fee_mist, old.market_fee_kares), (0, 0));
+    }
+}

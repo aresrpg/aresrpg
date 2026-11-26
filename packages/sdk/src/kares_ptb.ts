@@ -17,6 +17,8 @@ export type KaresPins = Readonly<{
   pool: Readonly<{ id: string; shared_version: string }>
   combat_pot: Readonly<{ id: string; shared_version: string }>
   community: Readonly<{ id: string; shared_version: string }>
+  /** The Aftermath pool, pinned by the launch. Absent on a network that has no market. */
+  market: Readonly<{ id: string; shared_version: string }> | null
 }>
 
 const address = (value: unknown, name: string): string => {
@@ -48,6 +50,7 @@ export const kares_pins = (pins: Pins): KaresPins =>
     pool: rewards_shared_pin(pins.kares_staking_pool, 'staking pool'),
     combat_pot: rewards_shared_pin(pins.kares_combat_pot, 'combat pot'),
     community: rewards_shared_pin(pins.kares_community_pool, 'community pool'),
+    market: pins.kares_market_pool ? rewards_shared_pin(pins.kares_market_pool, 'market pool') : null,
   })
 
 export const kares_shared = (tx: Transaction, pin: KaresPins['pool'], mutable = true): TransactionObjectArgument =>

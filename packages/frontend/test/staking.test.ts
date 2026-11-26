@@ -27,8 +27,8 @@ import {
   type FinanceState,
 } from '../src/kares/model.ts'
 import { create_finance_runtime } from '../src/kares/runtime.ts'
-import { staking_gains, staking_preset } from '../src/kares/staking_model.ts'
-import { tokenomics_reading } from '../src/kares/tokenomics.ts'
+import { daily_usd, staking_gains, staking_preset } from '../src/kares/staking_model.ts'
+import { market_reading, tokenomics_reading } from '../src/kares/tokenomics.ts'
 import { encyclopedia_catalog } from '../src/content/catalog.ts'
 import { mastery_offers } from '../src/content/mastery.ts'
 import { docs_view } from '../src/docs/routes.ts'
@@ -51,6 +51,7 @@ const snapshot = (): FinanceSnapshot => ({
     spent: 0n,
   },
   coin_type: '0x99::token::TOKEN',
+  market: null,
   total_supply: KARES_SUPPLY,
   community: {
     id: '0xcommunity',
@@ -172,6 +173,28 @@ test('a certified payment keeps its digest, blocks another write until re-read, 
   ).toBe('pre_funding')
   expect(tokenomics_reading(loaded({ ...snapshot(), total_supply: KARES_SUPPLY - 7n })).burned).toBe(7n)
   expect(tokenomics_reading(loaded({ ...snapshot(), total_supply: KARES_SUPPLY + 1n })).burned).toBeNull()
+  // Circulating is what holders own: the supply minus what the reward pools still hold. Staked KARES counts.
+  const live = snapshot()
+  expect(tokenomics_reading(loaded(live)).circulating).toBe(
+    live.total_supply - live.pool.kares_rewards - live.combat_pot.balance - live.community.remaining
+  )
+  expect(tokenomics_reading(initial_finance()).circulating).toBeNull()
+  // The launch state of the real pool: 1,000 SUI and 540M KARES at 80/20 price one KARES at 0.0000074 SUI.
+  const market = { sui: 1_000n * KARES_UNIT, kares: 540_000_000n * KARES_UNIT }
+  const worth = daily_usd({ kares: 100_000n * KARES_UNIT, sui: 2n * KARES_UNIT }, market, 0.5)
+  expect([worth.kares!.toFixed(4), worth.sui]).toEqual(['0.3704', 1])
+  expect(daily_usd({ kares: 1n, sui: 1n }, null, 0.5)).toEqual({ kares: null, sui: 0.5e-9 })
+  expect(daily_usd({ kares: 1n, sui: 1n }, market, null)).toEqual({ kares: null, sui: null })
+  // At that price and SUI at $0.50, one billion KARES are worth $3,703.70 fully diluted.
+  const priced = market_reading({ snapshot: { ...live, market }, circulating: 590_000_000n * KARES_UNIT }, 0.5)
+  expect([priced.price!.toExponential(4), priced.fdv!.toFixed(2), priced.market_cap!.toFixed(2)]).toEqual([
+    '3.7037e-6',
+    '3703.70',
+    '2185.19',
+  ])
+  expect(market_reading({ snapshot: live, circulating: 1n }, 0.5)).toEqual({ price: null, fdv: null, market_cap: null })
+  expect(market_reading({ snapshot: { ...live, market }, circulating: null }, 0.5).market_cap).toBeNull()
+  expect(market_reading({ snapshot: { ...live, market }, circulating: 1n }, null).fdv).toBeNull()
 })
 
 test('amounts and gains are exact base units: parsing, presets and dilution', () => {

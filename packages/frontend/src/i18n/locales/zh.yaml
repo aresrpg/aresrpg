@@ -822,6 +822,9 @@ admin_page:
   character_creation_revenue: 角色创建
   kolizeum_revenue: 竞技场费用
   tournament_revenue: 已记录的锦标赛费用
+  market_fee_revenue: '以 SUI 支付的 KARES 市场手续费'
+  kares_fees: '以 KARES 支付的市场手续费'
+  kares_fees_30d: '近 30 天：{amount} KARES'
   game_transactions: 游戏交易
   game_gas_fees: 游戏Gas费用
   all_time: 全部时间
@@ -2209,7 +2212,14 @@ kares_page:
   figures_ready: '链上数据'
   current_supply: '当前总供应量'
   circulating_supply: '流通量'
-  circulating_unknown: '暂无数据：尚无经过验证的流通量统计。'
+  circulating_note: '当前供应量减去奖励池中尚未发放的 KARES。已质押的 KARES 计入流通量。'
+  market_heading: '市场'
+  price: '价格'
+  price_note: 'Aftermath 上 KARES/SUI 池的现货价格。'
+  fdv: '完全稀释估值'
+  fdv_note: '价格 × 当前总供应量。'
+  market_cap: '流通市值'
+  market_cap_note: '价格 × 流通供应量。'
   total_staked: '质押总量'
   pool_held: '池中余额'
   pool_held_note: '包含已赚取但尚未领取的奖励，不包含质押本金。'
@@ -2239,6 +2249,7 @@ kares_page:
   additional_daily: 每日新增
   max: 最大
   external_wallet_hint: 使用外部钱包单独质押和管理KARES。
+  game_account_hint: '使用 Google 登录，即可从游戏账户质押。'
   select_wallet: 选择
   staking_revenue: 质押者分享AresRPG市场已收取版税的20%（以SUI支付），以及已注资的KARES奖励。
   game_account: AresRPG账户
@@ -3300,12 +3311,6 @@ docs_page:
     lede: 'KARES尚未就绪。它很快就会加入。'
     note: '代币上线后，本页将介绍代币、供应量和奖励池。在此之前，不公布任何余额、价格或奖励数字。'
     live_lede: 'KARES 是 AresRPG 的代币，在 Aftermath 上交易。'
-    points:
-      - '{{supply}} KARES 仅发行一次。无法再铸造新的代币，每次销毁都会减少供应量。'
-      - '{{liquidity}}% 永久锁定在 Aftermath 上唯一的 KARES/SUI 池中，KARES 占 {{kares_weight}}%，SUI 占 {{sui_weight}}%。任何人都无法提取。'
-      - '{{reserves}}% 用于奖励：质押、首领奖励和社区储备，在五年内释放。'
-      - '{{team}}% 为团队份额，没有归属期。'
-      - '每笔交易向 AresRPG 金库支付 {{treasury_fee}}% 的费用，并支付 {{pool_fee}}% 的池费用，后者留在池中。'
   agents:
     lede: '将ChatGPT、Claude或Grok连接到托管的AresRPG机器人。你们商定一个目标，助手就在目标范围内操作你的角色。此功能仍在开发中。'
     steps:

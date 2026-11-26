@@ -5,6 +5,7 @@ import { COMBAT_DAILY_BUDGET, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 
 import kares_logo from '../../../../seed/icons/currency/kares.png'
 import { env } from '../env.ts'
+import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { SITE_ADDRESSES } from '../site/routes.ts'
@@ -12,14 +13,15 @@ import { SITE_ADDRESSES } from '../site/routes.ts'
 import type { KaresCopy } from './copy.ts'
 import type { FinanceState } from './model.ts'
 import { useFinance } from './useFinance.ts'
-import { tokenomics_reading } from './tokenomics.ts'
+import { market_reading, tokenomics_reading } from './tokenomics.ts'
 /** The ledger paints no frame of its own: its host supplies the surface it sits on. */
 export const LEDGER = 'grid w-full grid-cols-1 gap-7 leading-normal text-text'
 export const SECTION = 'grid grid-cols-1 gap-3'
 export const HEADING = 'font-mono text-[10px]/none font-bold tracking-[0.12em] text-muted uppercase'
 /** A figure, a pool or a use: a sunken tile. */
 const TILE = 'min-w-0 rounded-ui border border-line bg-surface-low/70 p-4'
-const TILES = 'grid grid-cols-3 gap-3'
+/** As many columns as fit the host: three on the staking page, two in the narrower docs column, one on a phone. */
+const TILES = 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-3'
 const METRIC = `${TILE} grid content-start gap-2`
 const METRIC_LABEL = 'text-[13px] font-bold text-muted'
 const METRIC_VALUE =
@@ -50,7 +52,7 @@ const LedgerAmount = ({ value }: Readonly<{ value: bigint | null | undefined }>)
   ) : (
     <>
       <span title={`${amount(value, 9)} KARES`} aria-label={`${amount(value, 9)} KARES`}>
-        {amount(value, 2)}
+        {amount(value, 0)}
       </span>
       <small className="ml-[0.4em] font-mono text-[11px]/none font-bold tracking-[0.08em] whitespace-nowrap text-hue-gold">
         KARES
@@ -154,8 +156,10 @@ const TokenomicsPanel = ({
 }>) => {
   const title_id = useId()
   const locale = useLocale()
-  const { amount } = useNumbers()
-  const { phase, snapshot, burned } = tokenomics_reading(state)
+  const { amount, number } = useNumbers()
+  const reading = tokenomics_reading(state)
+  const { phase, snapshot, burned, circulating } = reading
+  const market = market_reading(reading, useSuiUsd(env.network === 'mainnet'))
   const status = {
     loading: copy.loading,
     unavailable: copy.figures_unconfigured,
@@ -219,7 +223,7 @@ const TokenomicsPanel = ({
       </div>
       <section className={SECTION}>
         <h3 className={HEADING}>{copy.supply_heading}</h3>
-        <div className={`${TILES} max-[599px]:grid-cols-1`}>
+        <div className={TILES}>
           <div className={METRIC}>
             <span className={METRIC_LABEL}>{copy.current_supply}</span>
             <b className={METRIC_VALUE} data-empty={values.total_supply === null || undefined}>
@@ -236,12 +240,31 @@ const TokenomicsPanel = ({
           </div>
           <div className={METRIC}>
             <span className={METRIC_LABEL}>{copy.circulating_supply}</span>
-            {/* No verified circulation accounting exists, so the figure is always unknown. */}
-            <b className={METRIC_VALUE} data-empty>
-              —
+            <b className={METRIC_VALUE} data-empty={circulating === null || undefined}>
+              <LedgerAmount value={circulating} />
             </b>
-            <small className={METRIC_NOTE}>{copy.circulating_unknown}</small>
+            <small className={METRIC_NOTE}>{copy.circulating_note}</small>
           </div>
+        </div>
+      </section>
+      <section className={SECTION}>
+        <h3 className={HEADING}>{copy.market_heading}</h3>
+        <div className={TILES}>
+          {(
+            [
+              [copy.price, market.price, { maximumSignificantDigits: 3 }, copy.price_note],
+              [copy.fdv, market.fdv, { maximumFractionDigits: 0 }, copy.fdv_note],
+              [copy.market_cap, market.market_cap, { maximumFractionDigits: 0 }, copy.market_cap_note],
+            ] as const
+          ).map(([label, value, digits, note]) => (
+            <div className={METRIC} key={label}>
+              <span className={METRIC_LABEL}>{label}</span>
+              <b className={METRIC_VALUE} data-empty={value === null || undefined}>
+                {value === null ? '—' : number(value, { style: 'currency', currency: 'USD', ...digits })}
+              </b>
+              <small className={METRIC_NOTE}>{note}</small>
+            </div>
+          ))}
         </div>
       </section>
       <section className={SECTION}>

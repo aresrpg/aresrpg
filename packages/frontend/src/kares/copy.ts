@@ -28,7 +28,14 @@ export type KaresCopy = ErrorCopy &
     figures_ready: string
     current_supply: string
     circulating_supply: string
-    circulating_unknown: string
+    circulating_note: string
+    market_heading: string
+    price: string
+    price_note: string
+    fdv: string
+    fdv_note: string
+    market_cap: string
+    market_cap_note: string
     total_staked: string
     pool_held: string
     pool_held_note: string
@@ -55,6 +62,7 @@ export type KaresCopy = ErrorCopy &
     additional_daily: string
     max: string
     external_wallet_hint: string
+    game_account_hint: string
     select_wallet: string
     staking_revenue: string
     game_account: string

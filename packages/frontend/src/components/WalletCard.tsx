@@ -23,6 +23,11 @@ const wallet_identity = (address: string | null, name: string | null, fallback: 
 }
 const balance_label = (value: bigint | null, format: (value: bigint) => string): string =>
   value === null ? '—' : format(value)
+/** KARES is shown in whole tokens: a wallet holds thousands, and the fraction is noise. */
+const whole_kares =
+  (numbers: Readonly<{ amount: (value: bigint, decimals?: number) => string }>) =>
+  (value: bigint): string =>
+    numbers.amount(value, 0)
 
 export type WalletShown = 'game' | 'bot'
 type WalletModal = 'send' | 'transfer' | null
@@ -250,7 +255,7 @@ export const WalletCard = ({
           address={<AddressLine copy={copy} address={account.address} text={account.text} />}
           main={{ value: balance_label(account.sui, numbers.sui), unit: 'SUI' }}
           main_icon={<SuiLogo size={30} />}
-          second={{ value: balance_label(account.kares, numbers.amount), unit: 'KARES' }}
+          second={{ value: balance_label(account.kares, whole_kares(numbers)), unit: 'KARES' }}
           second_icon={<KaresLogo size={18} />}
           actions={
             <WalletActions copy={copy} open={open} enabled={!!session.wallet} transfer={!!pairing} send={!on_bot} />
@@ -315,7 +320,7 @@ const WalletTrigger = ({
 }>) => {
   const numbers = useNumbers()
   const sui = balance_label(sui_balance_mist, numbers.sui)
-  const kares = balance_label(kares_balance, numbers.amount)
+  const kares = balance_label(kares_balance, whole_kares(numbers))
   return (
     <button
       type="button"

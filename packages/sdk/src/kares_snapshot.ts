@@ -8,6 +8,7 @@ import { decode_rewards_economy, read_rewards_economy } from './kares_economy.ts
 import { resolve_pins } from './pins.ts'
 import type { Pins, SdkNetwork } from './client.ts'
 import { absorb_object, absorb_receipt, type Receipt, type ResolutionCache } from './cache.ts'
+import { decode_market_pool, market_pool_id, type KaresMarket } from './kares_market.ts'
 import { kares_pins, type KaresPins } from './kares_ptb.ts'
 import {
   CLOCK_BCS,
@@ -68,6 +69,8 @@ export type KaresStakingSnapshot = Readonly<{
   positions: readonly KaresPositionSnapshot[]
   total_supply: bigint
   coin_type: string
+  /** The market pool's reserves; null when the network has no market or the read failed. */
+  market: KaresMarket | null
 }>
 
 export type KaresBalances = Readonly<{ kares_balance: bigint; sui_balance: bigint }>
@@ -166,7 +169,7 @@ const decode_snapshot = (
   pins: KaresPins,
   shared: readonly FinanceObject[],
   wallet: Awaited<ReturnType<typeof wallet_objects>>
-): KaresStakingSnapshot => {
+): Omit<KaresStakingSnapshot, 'market'> => {
   const [economy_object, pool_object, currency_object, clock_object, combat_object, community_object] = shared
   const economy = decode_rewards_economy(economy_object.json!)
   const community = COMMUNITY_POOL_BCS.parse(community_object.content)
@@ -335,6 +338,25 @@ export const create_kares_snapshot_reader = (
       if (cache) absorb_object(cache, object)
     }
   }
+  // The wrapper's pool never changes, so its id is read once.
+  const market = { pool: null as string | null }
+  const market_json = async (id: string) => {
+    const { objects } = await client.core.getObjects({ objectIds: [id], include: { json: true } })
+    const [object] = objects
+    if (!object || object instanceof Error || !object.json) throw new Error(`Market object ${id} is unavailable`)
+    return object.json as Readonly<Record<string, unknown>>
+  }
+  /** The price is a display aid: a failed read leaves it unknown and never blocks staking. */
+  const read_market = async (pins: KaresPins): Promise<KaresMarket | null> => {
+    if (!pins.market) return null
+    try {
+      market.pool ??= market_pool_id(await market_json(pins.market.id))
+      return decode_market_pool(await market_json(market.pool), pins.coin_type)
+    } catch (error) {
+      console.warn('[sdk] the KARES market read failed; its price stays unknown.', error)
+      return null
+    }
+  }
   const read_snapshot = async (address: string | undefined, include_balances: boolean) => {
     if (client.network !== network) throw new Error('KARES reader belongs to a different network')
     const pins = kares_pins(raw_pins)
@@ -343,7 +365,10 @@ export const create_kares_snapshot_reader = (
     const wallet = await wallet_objects(client, pins, owner)
     const balances = include_balances ? await wallet_balances(client, pins, owner) : null
     const shared = await shared_objects(client, pins)
-    const snapshot = decode_snapshot(network, owner, pins, shared, wallet)
+    const snapshot = Object.freeze({
+      ...decode_snapshot(network, owner, pins, shared, wallet),
+      market: await read_market(pins),
+    })
     retain_snapshot([...shared, ...wallet.positions], owner)
     return { snapshot, balances }
   }

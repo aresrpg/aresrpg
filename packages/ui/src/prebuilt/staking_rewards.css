@@ -63,6 +63,12 @@
   color: var(--aui-muted);
   font-style: normal;
 }
+.aui-stake-row-figure small {
+  margin-left: 6px;
+  color: var(--aui-faint);
+  font: 500 10.5px/1 var(--aui-font-mono);
+  font-variant-numeric: tabular-nums;
+}
 .aui-stake-row-figure[data-hue='gold'] b,
 .aui-reward-lane[data-hue='gold'] small {
   color: var(--aui-hue-gold);

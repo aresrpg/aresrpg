@@ -12,6 +12,7 @@
     "./fight-doors": "./src/fight_doors.ts",
     "./kares": "./src/kares.ts",
     "./kares-economics": "./src/kares_economics.ts",
+    "./kares-market": "./src/kares_market.ts",
     "./kares-launch": "./src/kares_launch.ts",
     "./admin-auth": "./src/admin_auth.ts",
     "./seed": "./src/seed.ts",

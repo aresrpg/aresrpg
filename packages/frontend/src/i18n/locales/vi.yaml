@@ -822,6 +822,9 @@ admin_page:
   character_creation_revenue: Tạo nhân vật
   kolizeum_revenue: Phí đấu trường
   tournament_revenue: Phí giải đấu đã ghi nhận
+  market_fee_revenue: 'Phí thị trường KARES trả bằng SUI'
+  kares_fees: 'Phí thị trường trả bằng KARES'
+  kares_fees_30d: '30 ngày qua: {amount} KARES'
   game_transactions: Giao dịch trò chơi
   game_gas_fees: Phí gas trò chơi
   all_time: Toàn thời gian
@@ -2209,7 +2212,14 @@ kares_page:
   figures_ready: 'Dữ liệu trên chuỗi'
   current_supply: 'Tổng cung hiện tại'
   circulating_supply: 'Nguồn cung lưu hành'
-  circulating_unknown: 'Chưa có: chưa có số liệu lưu hành được xác minh.'
+  circulating_note: 'Nguồn cung hiện tại trừ đi KARES còn nằm trong các pool phần thưởng. KARES đang stake vẫn tính là lưu hành.'
+  market_heading: 'Thị trường'
+  price: 'Giá'
+  price_note: 'Giá giao ngay của pool KARES/SUI trên Aftermath.'
+  fdv: 'Định giá pha loãng hoàn toàn'
+  fdv_note: 'Giá × tổng cung hiện tại.'
+  market_cap: 'Vốn hóa lưu hành'
+  market_cap_note: 'Giá × nguồn cung lưu hành.'
   total_staked: 'Tổng đã stake'
   pool_held: 'Số dư trong quỹ'
   pool_held_note: 'Gồm phần thưởng đã kiếm nhưng chưa nhận; không gồm vốn stake.'
@@ -2239,6 +2249,7 @@ kares_page:
   additional_daily: Thêm mỗi ngày
   max: Tối đa
   external_wallet_hint: Stake và quản lý KARES riêng từ ví bên ngoài.
+  game_account_hint: 'Đăng nhập bằng Google để stake từ tài khoản game của bạn.'
   select_wallet: Chọn
   staking_revenue: Người stake chia 20% tiền bản quyền chợ AresRPG đã thu bằng SUI, cùng thưởng KARES đã được tài trợ.
   game_account: Tài khoản AresRPG
@@ -3304,12 +3315,6 @@ docs_page:
     lede: 'KARES chưa sẵn sàng. Token sẽ sớm được bổ sung.'
     note: 'Trang này sẽ mô tả token, nguồn cung và các quỹ thưởng khi token ra mắt. Trước đó, không có số dư, giá hay con số phần thưởng nào được công bố.'
     live_lede: 'KARES là token của AresRPG. Token được giao dịch trên Aftermath.'
-    points:
-      - '{{supply}} KARES được phát hành một lần duy nhất. Không thể tạo thêm, và mỗi lần đốt làm giảm nguồn cung.'
-      - '{{liquidity}}% được khóa vĩnh viễn trong một pool KARES/SUI duy nhất trên Aftermath, {{kares_weight}}% KARES và {{sui_weight}}% SUI. Không ai có thể rút.'
-      - '{{reserves}}% dành cho phần thưởng: staking, phần thưởng boss và quỹ cộng đồng, được mở dần trong năm năm.'
-      - '{{team}}% là phần của đội ngũ. Không có vesting.'
-      - 'Mỗi giao dịch trả phí {{treasury_fee}}% cho kho bạc AresRPG và phí pool {{pool_fee}}% được giữ lại trong pool.'
   agents:
     lede: 'Kết nối ChatGPT, Claude hoặc Grok với một bot AresRPG chạy trên máy chủ. Bạn thống nhất một mục tiêu, và trợ lý điều khiển nhân vật của bạn trong phạm vi đó. Tính năng này đang được hoàn thiện.'
     steps:

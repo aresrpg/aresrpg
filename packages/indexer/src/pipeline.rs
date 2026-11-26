@@ -15,6 +15,7 @@ use anyhow::{ensure, Result};
 use async_trait::async_trait;
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
+use sui_indexer_alt_framework::types::coin::Coin;
 use sui_indexer_alt_framework::types::effects::TransactionEffectsAPI;
 use sui_indexer_alt_framework::types::execution_status::ExecutionStatus;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
@@ -22,7 +23,7 @@ use sui_indexer_alt_framework::types::object::{Object, Owner};
 use sui_indexer_alt_framework::types::transaction::{Command, TransactionData, TransactionKind};
 use sui_indexer_alt_framework::types::TypeTag;
 
-use crate::analytics::{self, ActivityFact, CharacterFact};
+use crate::analytics::{self, ActivityFact, CharacterFact, MoneyDelta};
 use crate::decode::{Addr, Id};
 use crate::graph::{self, CheckpointView};
 use crate::ownership::{self, ObjView, OwnerKind, TypeKey};
@@ -95,6 +96,90 @@ pub struct AresHandler {
     package_original: String,
     /// Every certified version is both an activity target and a possible defining type origin.
     game_packages: std::collections::HashSet<String>,
+    /// The KARES market, once it exists on this network.
+    market: Option<MarketFees>,
+}
+
+/// The treasury's fee on the KARES market. Aftermath's fee wrapper emits no fee event: in every
+/// transaction that touches the fee pool it hands the treasury a coin, in the coin the trade paid in.
+/// What the treasury's coins gained in such a transaction is the fee, exactly.
+#[derive(Debug, Clone)]
+pub struct MarketFees {
+    pool: [u8; 32],
+    treasury: Addr,
+    kares: String,
+}
+
+const SUI_COIN: &str =
+    "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI";
+
+impl MarketFees {
+    pub fn new(pool: &str, treasury: &str, kares_coin_type: &str) -> Result<Self> {
+        let bytes =
+            |id: &str| -> Result<[u8; 32]> { Ok(addr32(&hex::decode(&canonical(id)?[2..])?)) };
+        let kares: TypeTag = kares_coin_type
+            .parse()
+            .map_err(|error| anyhow::anyhow!("not a coin type: {kares_coin_type}: {error}"))?;
+        Ok(Self {
+            pool: bytes(pool)?,
+            treasury: Addr(bytes(treasury)?),
+            kares: kares.to_canonical_string(true),
+        })
+    }
+
+    /// What the treasury's coins gained per coin type, when the transaction touched the fee pool.
+    pub(crate) fn income(&self, inputs: &[&Object], outputs: &[&Object]) -> Vec<(String, u64)> {
+        if !outputs
+            .iter()
+            .any(|object| object.id().as_ref() == self.pool)
+        {
+            return vec![];
+        }
+        let held = |objects: &[&Object]| {
+            let mut totals = std::collections::BTreeMap::<String, u128>::new();
+            for object in objects {
+                let Owner::AddressOwner(owner) = object.owner() else {
+                    continue;
+                };
+                if owner.as_ref() != self.treasury.0 {
+                    continue;
+                }
+                if let Ok(Some((coin, balance))) = Coin::extract_balance_if_coin(object) {
+                    *totals.entry(coin.to_canonical_string(true)).or_default() +=
+                        u128::from(balance);
+                }
+            }
+            totals
+        };
+        let before = held(inputs);
+        held(outputs)
+            .into_iter()
+            .filter_map(|(coin, after)| {
+                let gained = after.saturating_sub(before.get(&coin).copied().unwrap_or(0));
+                (gained > 0).then(|| (coin, u64::try_from(gained).unwrap_or(u64::MAX)))
+            })
+            .collect()
+    }
+
+    /// One revenue delta per coin the treasury was paid in. The treasury's own transactions are not
+    /// revenue: there its coins change because it trades.
+    pub(crate) fn deltas(&self, txs: &[OwnedTx]) -> Vec<MoneyDelta> {
+        txs.iter()
+            .filter(|tx| tx.successful && tx.sender != self.treasury)
+            .flat_map(|tx| &tx.fee_income)
+            .filter_map(|(coin, amount)| match coin.as_str() {
+                SUI_COIN => Some(MoneyDelta {
+                    market_fee_mist: *amount,
+                    ..MoneyDelta::default()
+                }),
+                coin if coin == self.kares => Some(MoneyDelta {
+                    market_fee_kares: *amount,
+                    ..MoneyDelta::default()
+                }),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 impl AresHandler {
@@ -116,7 +201,12 @@ impl AresHandler {
         Ok(Self {
             game_packages,
             package_original,
+            market: None,
         })
+    }
+
+    pub fn with_market(self, market: Option<MarketFees>) -> Self {
+        Self { market, ..self }
     }
 }
 
@@ -172,6 +262,9 @@ pub struct OwnedTx {
     pub outputs: Vec<OwnedObj>,
     /// Certified deletions, as their pre-state input views.
     pub deleted: Vec<OwnedObj>,
+    /// What the treasury's coins gained in a transaction that touched the KARES fee pool: coin type
+    /// and amount. Empty everywhere else.
+    pub fee_income: Vec<(String, u64)>,
 }
 
 fn addr32(bytes: &[u8]) -> [u8; 32] {
@@ -361,6 +454,7 @@ fn lift(
     checkpoint: &Checkpoint,
     game: &str,
     versions: &std::collections::HashSet<String>,
+    market: Option<&MarketFees>,
 ) -> Vec<OwnedTx> {
     let mut event_ordinal = 0u64;
     checkpoint
@@ -421,6 +515,15 @@ fn lift(
                 gas_mist: tx.effects.gas_cost_summary().net_gas_usage(),
                 move_calls: move_calls(&tx.transaction),
                 events,
+                fee_income: market
+                    .map(|market| {
+                        market.income(
+                            &tx.input_objects(&checkpoint.object_set).collect::<Vec<_>>(),
+                            &tx.output_objects(&checkpoint.object_set)
+                                .collect::<Vec<_>>(),
+                        )
+                    })
+                    .unwrap_or_default(),
                 inputs,
                 outputs,
                 deleted,
@@ -451,7 +554,12 @@ impl Processor for AresHandler {
 
     async fn process(&self, checkpoint: &Arc<Checkpoint>) -> Result<Vec<Self::Value>> {
         let summary = &checkpoint.summary;
-        let txs = lift(checkpoint, &self.package_original, &self.game_packages);
+        let txs = lift(
+            checkpoint,
+            &self.package_original,
+            &self.game_packages,
+            self.market.as_ref(),
+        );
         Ok(vec![CheckpointWrites {
             sequence_number: summary.sequence_number,
             writes: self.writes(
@@ -504,6 +612,9 @@ impl AresHandler {
             })
             .collect();
         let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game, &self.game_packages)?;
+        if let Some(market) = &self.market {
+            wire.money.extend(market.deltas(txs));
+        }
         // A transaction's outputs are its final state, while inputs only resolve unchanged
         // parents. Retired wrappers must never reassert pre-transaction custody.
         let mut cypher = vec![];

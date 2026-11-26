@@ -56,7 +56,7 @@ const StakingAmount = ({
         <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-[12px] text-muted">
           <span className="font-mono text-[10px]/none font-bold tracking-[0.12em] uppercase">{copy.amount}</span>
           <span>
-            {copy.balance}: {balance === null ? '—' : format_amount(balance, 9)}
+            {copy.balance}: {balance === null ? '—' : format_amount(balance, 0)}
           </span>
         </span>
         <span className="flex items-center gap-2.5 rounded-ui border border-line-strong bg-surface-low pr-3 focus-within:border-gold-light">
@@ -82,7 +82,7 @@ const StakingAmount = ({
           <>
             <span>{copy.additional_daily}</span>
             <b className="font-mono text-xs/normal font-semibold text-hue-gold">
-              +{daily_amount(estimate.additional_kares)} KARES
+              +{format_amount(estimate.additional_kares, 0)} KARES
             </b>
             <b className="font-mono text-xs/normal font-semibold text-hue-sky">
               +{daily_amount(estimate.additional_sui)} SUI

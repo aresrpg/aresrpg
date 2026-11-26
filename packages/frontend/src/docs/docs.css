@@ -263,17 +263,17 @@
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
-.docs-article h2 {
+.docs-article h2:not(.docs-embed *) {
   margin-top: 40px;
   padding-top: 18px;
   border-top: 1px solid var(--aui-hair);
   font: 800 22px/1.2 var(--aui-font);
 }
-.docs-article h3 {
+.docs-article h3:not(.docs-embed *) {
   margin-top: 22px;
   font: 800 16.5px/1.3 var(--aui-font);
 }
-.docs-article p {
+.docs-article p:not(.docs-embed *) {
   max-width: 68ch;
   margin-top: 12px;
   color: var(--aui-soft);
@@ -292,6 +292,13 @@
   background: var(--aui-surface);
   color: var(--aui-muted);
   font-size: 14.5px;
+}
+/* A site view shown inside a guide keeps its own type scale: the article rules above skip it. */
+.docs-embed {
+  margin-top: 24px;
+  border: 1px solid var(--aui-line);
+  border-radius: var(--aui-radius);
+  background: var(--aui-surface);
 }
 .docs-points {
   display: grid;

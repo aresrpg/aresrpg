@@ -821,6 +821,9 @@ admin_page:
   character_creation_revenue: キャラクター作成
   kolizeum_revenue: コロシアム手数料
   tournament_revenue: 記録済み大会手数料
+  market_fee_revenue: 'KARES市場手数料（SUI払い）'
+  kares_fees: '市場手数料（KARES払い）'
+  kares_fees_30d: '過去30日: {amount} KARES'
   game_transactions: ゲームトランザクション
   game_gas_fees: ゲームガス代
   all_time: 累計
@@ -2212,7 +2215,14 @@ kares_page:
   figures_ready: 'オンチェーンデータ'
   current_supply: '現在の総供給量'
   circulating_supply: '流通量'
-  circulating_unknown: '取得不可：検証済みの流通量集計はありません。'
+  circulating_note: '現在の供給量から、報酬プールにまだ残っているKARESを差し引いた量です。ステーキング中のKARESは流通量に含まれます。'
+  market_heading: 'マーケット'
+  price: '価格'
+  price_note: 'Aftermath上のKARES/SUIプールのスポット価格。'
+  fdv: '完全希薄化後評価額'
+  fdv_note: '価格 × 現在の総供給量。'
+  market_cap: '流通時価総額'
+  market_cap_note: '価格 × 流通供給量。'
   total_staked: 'ステーキング総額'
   pool_held: 'プール保有額'
   pool_held_note: '獲得済みで未請求の報酬を含みます。預け入れ元本は含みません。'
@@ -2242,6 +2252,7 @@ kares_page:
   additional_daily: '追加 / 日'
   max: '最大'
   external_wallet_hint: '外部ウォレットのKARESを個別にステーク・管理します。'
+  game_account_hint: 'ゲームアカウントからステーキングするには、Googleでログインしてください。'
   select_wallet: 選択
   staking_revenue: 'ステーカーは、AresRPGマーケットで回収されたロイヤリティの20%をSUIで分配され、資金提供済みのKARES報酬も受け取ります。'
   game_account: 'AresRPGアカウント'
@@ -3312,12 +3323,6 @@ docs_page:
     lede: 'KARESはまだ準備中です。近日追加予定です。'
     note: 'このページでは、ローンチ時にトークン、供給量、報酬プールについて説明します。それまで残高、価格、報酬の数値は公開しません。'
     live_lede: 'KARESはAresRPGのトークンです。Aftermathで取引できます。'
-    points:
-      - '{{supply}} KARESが一度だけ発行されました。新規発行はできず、バーンのたびに供給量が減ります。'
-      - '{{liquidity}}%は、Aftermath上の1つのKARES/SUIプール（KARES {{kares_weight}}%、SUI {{sui_weight}}%）に永久にロックされています。誰も引き出せません。'
-      - '{{reserves}}%は報酬に充てられます。ステーキング、ボス報酬、コミュニティ準備金として5年かけて放出されます。'
-      - '{{team}}%はチームの割り当てです。ベスティングはありません。'
-      - 'すべての取引で、AresRPGトレジャリーへの{{treasury_fee}}%の手数料と、プールに残る{{pool_fee}}%のプール手数料が発生します。'
   agents:
     lede: 'ChatGPT、Claude、GrokをホストされたAresRPGボットに接続します。目標を決めると、アシスタントがその範囲でキャラクターをプレイします。この機能は制作中です。'
     steps:

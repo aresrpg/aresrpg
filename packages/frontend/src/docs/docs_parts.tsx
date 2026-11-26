@@ -77,12 +77,7 @@ export type DocsCopy = Readonly<{
     lot_sizes: string
     points: readonly [string, string, string]
   }>
-  kares: Readonly<{
-    lede: string
-    note: string
-    live_lede: string
-    points: readonly [string, string, string, string, string]
-  }>
+  kares: Readonly<{ lede: string; note: string; live_lede: string }>
   agents: Readonly<{
     lede: string
     steps: readonly [string, string, string]

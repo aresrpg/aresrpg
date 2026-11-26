@@ -49,6 +49,10 @@ pub struct Totals {
     pub kolizeum_mist: u128,
     #[serde(default, with = "decimal")]
     pub tournament_mist: u128,
+    #[serde(default, with = "decimal")]
+    pub market_fee_mist: u128,
+    #[serde(default, with = "decimal")]
+    pub market_fee_kares: u128,
 }
 
 pub fn checkpoint_totals(
@@ -84,6 +88,14 @@ pub fn checkpoint_totals(
             .tournament_mist
             .checked_add(delta.tournament_mist.into())
             .context("tournament revenue overflow")?;
+        totals.market_fee_mist = totals
+            .market_fee_mist
+            .checked_add(delta.market_fee_mist.into())
+            .context("market fee overflow")?;
+        totals.market_fee_kares = totals
+            .market_fee_kares
+            .checked_add(delta.market_fee_kares.into())
+            .context("market fee overflow")?;
     }
     Ok(totals)
 }
@@ -129,6 +141,14 @@ fn combine(previous: &Totals, delta: &Totals) -> Result<Totals> {
             .tournament_mist
             .checked_add(delta.tournament_mist)
             .context("tournament revenue overflow")?,
+        market_fee_mist: previous
+            .market_fee_mist
+            .checked_add(delta.market_fee_mist)
+            .context("market fee overflow")?,
+        market_fee_kares: previous
+            .market_fee_kares
+            .checked_add(delta.market_fee_kares)
+            .context("market fee overflow")?,
     })
 }
 

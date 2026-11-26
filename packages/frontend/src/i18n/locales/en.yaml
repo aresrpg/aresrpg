@@ -821,6 +821,9 @@ admin_page:
   character_creation_revenue: Character creation
   kolizeum_revenue: Kolizeum fees
   tournament_revenue: Recorded tournament fees
+  market_fee_revenue: 'KARES market fees paid in SUI'
+  kares_fees: 'Market fees paid in KARES'
+  kares_fees_30d: 'Last 30 days: {amount} KARES'
   game_transactions: Game transactions
   game_gas_fees: Game gas fees
   all_time: All time
@@ -2218,7 +2221,14 @@ kares_page:
   figures_ready: 'On-chain reading'
   current_supply: 'Current total supply'
   circulating_supply: 'Circulating supply'
-  circulating_unknown: 'Unavailable: no verified circulation accounting is available.'
+  circulating_note: 'Current supply minus the KARES still held by the reward pools. Staked KARES counts as circulating.'
+  market_heading: 'Market'
+  price: 'Price'
+  price_note: 'Spot price of the KARES/SUI pool on Aftermath.'
+  fdv: 'Fully diluted valuation'
+  fdv_note: 'Price × current total supply.'
+  market_cap: 'Circulating market cap'
+  market_cap_note: 'Price × circulating supply.'
   total_staked: 'Total staked'
   pool_held: 'Held in the pool'
   pool_held_note: 'Includes earned rewards not yet claimed; excludes staked principal.'
@@ -2248,6 +2258,7 @@ kares_page:
   additional_daily: 'Additional / day'
   max: 'Max'
   external_wallet_hint: 'Stake and manage KARES from an external wallet separately.'
+  game_account_hint: 'Sign in with Google to stake from your game account.'
   select_wallet: Select
   staking_revenue: 'Stakers share 20% of collected AresRPG marketplace royalties in SUI, plus funded KARES rewards.'
   game_account: 'AresRPG account'
@@ -3327,12 +3338,6 @@ docs_page:
     note: This page will describe the token, its supply and its reward pools when it launches. No
       balance, price or reward figure is published before then.
     live_lede: 'KARES is the AresRPG token. It trades on Aftermath.'
-    points:
-      - '{{supply}} KARES were issued once. Nothing new can be minted, and every burn lowers the supply.'
-      - '{{liquidity}}% is locked forever in one KARES/SUI pool on Aftermath, {{kares_weight}}% KARES and {{sui_weight}}% SUI. Nobody can withdraw it.'
-      - '{{reserves}}% funds rewards: staking, boss rewards and the community reserve, released over five years.'
-      - '{{team}}% is the team share. It is not vested.'
-      - 'Every trade pays a {{treasury_fee}}% fee to the AresRPG treasury and a {{pool_fee}}% pool fee that stays in the pool.'
   agents:
     lede: Connect ChatGPT, Claude or Grok to a hosted AresRPG bot. You agree on an objective, and
       the assistant plays your character within it. This feature is a work in progress.

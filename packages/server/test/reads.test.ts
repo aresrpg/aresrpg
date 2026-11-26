@@ -351,7 +351,12 @@ test('tournament recovery: a missing pool never becomes a false zero; token clai
 test('admin analytics keep large signed values exactly, default only the missing tournament field, and refuse malformed rows', async () => {
   const value = { ...ZERO_TOTALS, checkpoint: 10, transactions: '9007199254740993', gas_mist: '-9007199254740993' }
   expect(parse_analytics_totals(JSON.stringify(value))).toEqual(value)
-  const { tournament_mist: _tournament_mist, ...legacy } = ZERO_TOTALS
+  const {
+    tournament_mist: _tournament_mist,
+    market_fee_mist: _market_fee_mist,
+    market_fee_kares: _market_fee_kares,
+    ...legacy
+  } = ZERO_TOTALS
   expect(parse_analytics_totals(JSON.stringify(legacy))).toEqual(ZERO_TOTALS)
   for (const broken of [
     {},
@@ -360,7 +365,14 @@ test('admin analytics keep large signed values exactly, default only the missing
     { ...value, gas_mist: String(1n << 127n) },
   ])
     expect(() => parse_analytics_totals(JSON.stringify(broken))).toThrow()
-  const totals = { ...ZERO_TOTALS, item_royalty_mist: '9007199254740993', character_creation_mist: '1000' }
+  // The market fee paid in SUI is SUI revenue; the fee paid in KARES is reported apart and never converted.
+  const totals = {
+    ...ZERO_TOTALS,
+    item_royalty_mist: '9007199254740993',
+    character_creation_mist: '1000',
+    market_fee_mist: '500',
+    market_fee_kares: '44365847332125',
+  }
   const publisher = fake_redis({
     get: async () => 'compact-v1',
     mget: async (...keys: string[]) => keys.flat().map(() => JSON.stringify(totals)),
@@ -374,7 +386,10 @@ test('admin analytics keep large signed values exactly, default only the missing
     'revenue',
     1
   )
-  expect(revenue).toMatchObject({ section: 'revenue', data: { all_time_revenue_mist: '9007199254741993' } })
+  expect(revenue).toMatchObject({
+    section: 'revenue',
+    data: { all_time_revenue_mist: '9007199254742493', all_time_market_fee_kares: '44365847332125' },
+  })
   const uninitialized = create_graph_bus({
     subscriber: fake_redis().redis,
     publisher: fake_redis({ mget: async () => [] }).redis,

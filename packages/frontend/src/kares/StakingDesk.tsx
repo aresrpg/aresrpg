@@ -8,6 +8,7 @@ import { StakingWalletRow, type StakingRowFigure } from '@aresrpg/ui'
 import { external_wallet_view } from '../wallet/view.ts'
 import { sui_session } from '../wallet/external_session.ts'
 import { env } from '../env.ts'
+import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { dispatch_app, useSiteStore } from '../store.ts'
@@ -15,7 +16,7 @@ import { WalletControl } from '../wallet/WalletControl.tsx'
 import type { WalletView } from '../wallet/model.ts'
 
 import type { FinanceSession, FinanceState } from './model.ts'
-import { staking_gains } from './staking_model.ts'
+import { daily_usd, staking_gains } from './staking_model.ts'
 import { StakingAccount } from './StakingAccount.tsx'
 import { useFinance } from './useFinance.ts'
 
@@ -24,14 +25,19 @@ type Source = 'game' | 'external'
 
 /** A wallet's stake and daily rates as row figures; null while it has no snapshot. */
 const useRowFigures = (copy: AppCopy['kares_page']) => {
-  const { amount, daily } = useNumbers()
+  const { amount, daily, number } = useNumbers()
+  const sui_usd = useSuiUsd(env.network === 'mainnet')
+  // A dollar reading below one cent says nothing, so it is left out.
+  const usd = (value: number | null): string | undefined =>
+    value === null || value < 0.005 ? undefined : `≈ ${number(value, { style: 'currency', currency: 'USD' })}`
   return ({ snapshot }: FinanceState): readonly StakingRowFigure[] | null => {
     if (!snapshot) return null
     const gains = staking_gains(snapshot)
+    const worth = daily_usd(gains, snapshot.market, sui_usd)
     return [
-      { value: amount(gains.stake), label: 'KARES' },
-      { value: daily(gains.kares), label: copy.daily_kares, hue: 'gold' },
-      { value: daily(gains.sui), label: copy.daily_sui, hue: 'sky' },
+      { value: amount(gains.stake, 0), label: 'KARES' },
+      { value: amount(gains.kares, 0), label: copy.daily_kares, hue: 'gold', note: usd(worth.kares) },
+      { value: daily(gains.sui), label: copy.daily_sui, hue: 'sky', note: usd(worth.sui) },
     ]
   }
 }
@@ -49,6 +55,7 @@ const WalletRows = ({
   external,
   wallet,
   source,
+  signed_in,
   connected,
   same_account,
   pick,
@@ -58,6 +65,7 @@ const WalletRows = ({
   external: Finance
   wallet: WalletView
   source: Source
+  signed_in: boolean
   connected: boolean
   same_account: boolean
   pick: (source: Source) => void
@@ -69,8 +77,9 @@ const WalletRows = ({
         icon={<Gamepad2 size={15} />}
         name={text.game_account}
         selected={source === 'game'}
-        on_select={() => pick('game')}
-        figures={figures(account.state)}
+        on_select={signed_in ? () => pick('game') : undefined}
+        figures={signed_in ? figures(account.state) : null}
+        status={signed_in ? null : text.game_account_hint}
       />
       <StakingWalletRow
         icon={<WalletCards size={15} />}
@@ -107,7 +116,13 @@ export const StakingDeskView = ({
   const [picked, set_picked] = useState<Source>('game')
   const same_account = wallet.state.session?.address === account.state.address
   const connected = external.state.address !== null && !same_account
-  const source: Source = picked === 'external' && connected ? 'external' : 'game'
+  // A visitor with no game account works from the connected wallet; nobody has to sign in to stake.
+  const signed_in = account.state.address !== null
+  const source: Source = connected && (picked === 'external' || !signed_in) ? 'external' : 'game'
+  // Connecting a wallet is a choice of that wallet: its line is selected when the connection lands.
+  useEffect(() => {
+    if (connected) set_picked('external')
+  }, [connected])
   const desks = {
     game: { finance: account, balance: account_balance },
     external: { finance: external, balance: external.state.balances?.kares_balance ?? null },
@@ -122,6 +137,7 @@ export const StakingDeskView = ({
         external={external}
         wallet={wallet}
         source={source}
+        signed_in={signed_in}
         connected={connected}
         same_account={same_account}
         pick={set_picked}
@@ -135,7 +151,8 @@ export const StakingDeskView = ({
 /** The staking desk of the signed-in account. Its finance reader follows the account's session. */
 const StakingDesk = ({ copy, session }: Readonly<{ copy: AppCopy; session: FinanceSession | null }>) => {
   const account = useFinance(
-    { network: env.network, rpc_url: env.sui_rpc_url, managed: true },
+    // Without a game account the desk still reads the public pool, so an external wallet can stake.
+    { network: env.network, rpc_url: env.sui_rpc_url, managed: session !== null },
     session,
     copy.kares_page.confirmed
   )

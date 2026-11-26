@@ -344,6 +344,9 @@ export type AdminMoneyPoint = Readonly<{
   character_creation_mist: string
   kolizeum_mist: string
   tournament_mist: string
+  /** The treasury's fee on the KARES market: paid in SUI on a buy, in KARES on a sell. */
+  market_fee_mist: string
+  market_fee_kares: string
 }>
 
 export type AdminActivityPoint = Readonly<{
@@ -365,6 +368,11 @@ export type AdminRevenueOverview = Readonly<{
   character_creation_mist: string
   kolizeum_mist: string
   tournament_mist: string
+  market_fee_mist: string
+  /** KARES is never converted to SUI: a price-based total would change after the fact. */
+  market_fee_kares: string
+  last_30d_market_fee_kares: string
+  all_time_market_fee_kares: string
   last_30d_revenue_mist: string
   month_to_date_revenue_mist: string
   all_time_revenue_mist: string

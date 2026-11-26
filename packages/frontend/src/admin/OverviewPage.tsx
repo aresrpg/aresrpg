@@ -14,6 +14,7 @@ import type {
 import type { ReactNode } from 'react'
 
 import { PANEL } from '../encyclopedia/components.tsx'
+import { format_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
@@ -220,6 +221,7 @@ const revenue_series = (
         ['character_creation_revenue', 'Character creation', COLORS.cyan, 'character_creation_mist'],
         ['kolizeum_revenue', 'Kolizeum fees', COLORS.orange, 'kolizeum_mist'],
         ['tournament_revenue', 'Recorded tournament fees', COLORS.gold, 'tournament_mist'],
+        ['market_fee_revenue', 'KARES market fees paid in SUI', COLORS.blue, 'market_fee_mist'],
       ] as const
     ).map(([key, fallback, color, field]) =>
       Object.freeze({
@@ -430,6 +432,14 @@ export const OverviewPageView = ({
             label={text(copy, 'revenue_total', 'Total revenue')}
             tone="gold"
             value={display_sui(revenue.all_time_revenue_mist)}
+          />
+          <KpiCard
+            detail={format_text(text(copy, 'kares_fees_30d', 'Last 30 days: {amount} KARES'), {
+              amount: format_sui(BigInt(revenue.last_30d_market_fee_kares), 2),
+            })}
+            label={text(copy, 'kares_fees', 'Market fees paid in KARES')}
+            tone="gold"
+            value={`${format_sui(BigInt(revenue.all_time_market_fee_kares), 2)} KARES`}
           />
         </KpiGroup>
         <KpiGroup label={text(copy, 'player_activity', 'Player activity')} tone="activity">

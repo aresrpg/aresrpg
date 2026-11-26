@@ -216,6 +216,7 @@ export const DocsPage = ({
                 guide={view.section}
                 links={links}
                 new_tab={copy.site.new_tab}
+                kares={copy.kares_page}
                 text={encyclopedia_text(copy)}
               />
               <Neighbours copy={docs} current={view.section} titles={titles} />

@@ -13,7 +13,8 @@ export type StakingRewardLane = Readonly<{
 }>
 
 /** One figure of a wallet row: an amount and what it counts, already formatted. */
-export type StakingRowFigure = Readonly<{ value: string; label: string; hue?: 'gold' | 'sky' }>
+/** `note` is a small secondary reading of the same figure, such as its value in dollars. */
+export type StakingRowFigure = Readonly<{ value: string; label: string; hue?: 'gold' | 'sky'; note?: string }>
 
 /**
  * One wallet as a single line: its name, then its stake and daily rates, so two wallets compare at a
@@ -52,6 +53,7 @@ export const StakingWalletRow = ({
       {figures?.map((figure) => (
         <span className="aui-stake-row-figure" data-hue={figure.hue} key={figure.label}>
           <b>{figure.value}</b> <i>{figure.label}</i>
+          {figure.note && <small>{figure.note}</small>}
         </span>
       ))}
       {!figures && status && <span className="aui-stake-row-status">{status}</span>}

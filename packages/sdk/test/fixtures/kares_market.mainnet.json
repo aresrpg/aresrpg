@@ -1,0 +1,68 @@
+{
+  "provenance": {
+    "network": "mainnet",
+    "captured": "2026-11-26",
+    "source": "Sui GraphQL object read",
+    "wrapper": {
+      "id": "0x303f49180d7cab9ebcbd68361d98f4260b5c707b2d508b07eda5dd192ad486ba",
+      "version": 1112236122,
+      "type": "0x6f60a091637054e23915b8745c0c0d47b1d49618ee3435b5f68eccf6a44fb53d::pool::DaoFeePool<0xc95501f00517f24f1210b91d607fab55294a80e7b287e8c29992bca791ca1204::af_lp::AF_LP>"
+    },
+    "pool": {
+      "id": "0x47da45ec9d61955f1375fbeba7306987339da06f335133f8b9d0bef89b057a7e",
+      "version": 1112236122,
+      "type": "0xefe170ec0be4d762196bedecd7a065816576198a6527c99282a2551aaa7da38c::pool::Pool<0xc95501f00517f24f1210b91d607fab55294a80e7b287e8c29992bca791ca1204::af_lp::AF_LP>"
+    }
+  },
+  "wrapper": {
+    "id": "0x303f49180d7cab9ebcbd68361d98f4260b5c707b2d508b07eda5dd192ad486ba",
+    "pool_id": "0x47da45ec9d61955f1375fbeba7306987339da06f335133f8b9d0bef89b057a7e",
+    "fee_bps": 200,
+    "fee_recipient": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+  },
+  "pool": {
+    "id": "0x47da45ec9d61955f1375fbeba7306987339da06f335133f8b9d0bef89b057a7e",
+    "name": "KARES/SUI",
+    "creator": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+    "lp_supply": {
+      "value": "38540292630090214"
+    },
+    "illiquid_lp_supply": "1000",
+    "type_names": [
+      "0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+      "079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2::kares::KARES"
+    ],
+    "normalized_balances": [
+      "4554028853260000000000000000000",
+      "370057485541218925000000000000000000"
+    ],
+    "weights": [
+      "200000000000000000",
+      "800000000000000000"
+    ],
+    "flatness": "0",
+    "fees_swap_in": [
+      "3000000000000000",
+      "3000000000000000"
+    ],
+    "fees_swap_out": [
+      "0",
+      "0"
+    ],
+    "fees_deposit": [
+      "0",
+      "0"
+    ],
+    "fees_withdraw": [
+      "0",
+      "0"
+    ],
+    "coin_decimals": "CQk=",
+    "decimal_scalars": [
+      "1000000000000000000",
+      "1000000000000000000"
+    ],
+    "lp_decimals": 9,
+    "lp_decimal_scalar": "999999999999989990"
+  }
+}

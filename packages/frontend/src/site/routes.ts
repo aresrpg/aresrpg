@@ -67,8 +67,11 @@ export type StakingSection = (typeof STAKING_SECTIONS)[number]
 export const staking_section_of = (hash: string): StakingSection =>
   STAKING_SECTIONS.find((section) => hash === `#${section}`) ?? 'staking'
 export const staking_section_href = (section: StakingSection): string => `${SITE_ADDRESSES.staking}#${section}`
-/** The staking sections that sign as the game account. Tokenomics reads public figures only. */
-const STAKING_ACCOUNT_SECTIONS: ReadonlySet<StakingSection> = new Set(['staking', 'mastery', 'airdrop'])
+/**
+ * The staking sections that need the game account. Tokenomics reads public figures only, and the staking
+ * desk also serves an external wallet, so a visitor may stake without a game account.
+ */
+const STAKING_ACCOUNT_SECTIONS: ReadonlySet<StakingSection> = new Set(['mastery', 'airdrop'])
 
 /** Whether an address shows a view about the account: the portfolio, the AI page and the staking sections that sign. */
 export const is_account_view = ({ pathname, hash }: Readonly<{ pathname: string; hash: string }>): boolean => {

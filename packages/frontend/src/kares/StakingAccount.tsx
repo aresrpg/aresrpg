@@ -38,7 +38,7 @@ export const StakingContent = ({
       <StakingRewards
         icon={<KaresLogo size={32} />}
         stake_label={copy.your_stake}
-        stake={format_amount(stats.stake)}
+        stake={format_amount(stats.stake, 0)}
         unit="KARES"
         notice={snapshot.pool.active ? null : copy.inactive}
         accrued_label={copy.claimable}
@@ -47,7 +47,7 @@ export const StakingContent = ({
             asset: 'KARES',
             hue: 'gold',
             icon: <KaresLogo size={16} />,
-            accrued: format_amount(stats.accrued_kares, 3),
+            accrued: format_amount(stats.accrued_kares, 0),
           },
           { asset: 'SUI', hue: 'sky', icon: <SuiLogo size={16} />, accrued: format_amount(stats.accrued_sui, 3) },
         ]}

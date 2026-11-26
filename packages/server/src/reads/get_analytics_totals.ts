@@ -10,6 +10,8 @@ const FIELDS = [
   'character_creation_mist',
   'kolizeum_mist',
   'tournament_mist',
+  'market_fee_mist',
+  'market_fee_kares',
 ] as const
 export type AnalyticsTotals = Readonly<Record<(typeof FIELDS)[number], string> & { checkpoint: number }>
 export const ZERO_TOTALS: AnalyticsTotals = Object.freeze({
@@ -21,6 +23,8 @@ export const ZERO_TOTALS: AnalyticsTotals = Object.freeze({
   character_creation_mist: '0',
   kolizeum_mist: '0',
   tournament_mist: '0',
+  market_fee_mist: '0',
+  market_fee_kares: '0',
 })
 
 const valid_decimal = (value: unknown, signed: boolean): boolean => {
@@ -32,7 +36,13 @@ const valid_decimal = (value: unknown, signed: boolean): boolean => {
 export const parse_analytics_totals = (value: string | null): AnalyticsTotals => {
   if (value === null) return ZERO_TOTALS
   const parsed = JSON.parse(value) as Record<string, unknown> | null
-  const row: Record<string, unknown> | null = parsed && { tournament_mist: '0', ...parsed }
+  // Rows written before a source existed carry no field for it: that source earned nothing then.
+  const row: Record<string, unknown> | null = parsed && {
+    tournament_mist: '0',
+    market_fee_mist: '0',
+    market_fee_kares: '0',
+    ...parsed,
+  }
   if (
     !row ||
     !Number.isSafeInteger(row.checkpoint) ||

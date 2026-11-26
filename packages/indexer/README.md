@@ -25,6 +25,9 @@ resumes without a network-dependent boot query.
 | `PACKAGE_ORIGINAL` | Original game package ID; required |
 | `PACKAGE_LATEST` | Latest game package upgrade ID; required |
 | `SEED_PACKAGE_ORIGINAL` | Original living-content package ID; required |
+| `KARES_MARKET_POOL` | The KARES market's fee pool object (`pins.json` `kares_market_pool.id`). Optional; set with the two below or not at all |
+| `KARES_TREASURY` | The address that fee pool pays (`kares_treasury`) |
+| `KARES_COIN_TYPE` | The KARES coin type (`kares_coin_type`) |
 | `REDIS_URL` | FalkorDB connection; defaults to local Redis |
 | `REMOTE_STORE_URL` | HTTP historical backfill and streaming-failure fallback |
 | `STREAMING_URL` | Live gRPC checkpoint source |

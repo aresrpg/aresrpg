@@ -88,6 +88,15 @@ struct Args {
     #[arg(long, env = "SEED_PACKAGE_ORIGINAL")]
     seed_package_original: String,
 
+    /// The KARES market's fee pool, the treasury it pays and the KARES coin type. All three or none:
+    /// a network without the market counts no market fee.
+    #[arg(long, env = "KARES_MARKET_POOL", requires_all = ["kares_treasury", "kares_coin_type"])]
+    kares_market_pool: Option<String>,
+    #[arg(long, env = "KARES_TREASURY", requires = "kares_market_pool")]
+    kares_treasury: Option<String>,
+    #[arg(long, env = "KARES_COIN_TYPE", requires = "kares_market_pool")]
+    kares_coin_type: Option<String>,
+
     /// Official GraphQL endpoint for boot derivation (lineage + publish
     /// checkpoint). Mainnet: https://sui-mainnet.mystenlabs.com/graphql
     #[arg(
@@ -227,10 +236,21 @@ async fn main() -> Result<()> {
     .await
     .context("creating indexer")?;
 
+    let market = match (
+        &args.kares_market_pool,
+        &args.kares_treasury,
+        &args.kares_coin_type,
+    ) {
+        (Some(pool), Some(treasury), Some(coin)) => {
+            Some(pipeline::MarketFees::new(pool, treasury, coin)?)
+        }
+        _ => None,
+    };
     // The ONE pipeline: objects → graph; transactions/events → analytics, sales, and pub/sub.
     indexer
         .sequential_pipeline(
-            AresHandler::new(&package_original, &package_latest, &activity_lineage)?,
+            AresHandler::new(&package_original, &package_latest, &activity_lineage)?
+                .with_market(market),
             // Explicit channel sizes: the framework defaults derive them from num_cpus/2,
             // which is 0 under a 1-CPU container limit, and mpsc::channel(0) panics at boot.
             // Sized for one sequential pipeline, not cores.

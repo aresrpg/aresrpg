@@ -123,7 +123,7 @@ test('a visitor reads the open stage, signs in, proves the address, loads the ro
   }
   expect(
     [...SITE_PAGES.map(({ path }) => path), ...STAKING_SECTIONS.map(staking_section_href)].filter(holds_sign_in)
-  ).toEqual(['/agent', '/staking', '/portfolio', '/staking#staking', '/staking#mastery', '/staking#airdrop'])
+  ).toEqual(['/agent', '/portfolio', '/staking#mastery', '/staking#airdrop'])
 })
 
 test('the site opens one open link at start, and a sign-in replaces that one link', async () => {

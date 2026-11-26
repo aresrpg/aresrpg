@@ -86,6 +86,9 @@ pub struct MoneyDelta {
     pub character_creation_mist: u64,
     pub kolizeum_mist: u64,
     pub tournament_mist: u64,
+    /// The treasury's fee on the KARES market, in the coin a trade paid it in: SUI or KARES.
+    pub market_fee_mist: u64,
+    pub market_fee_kares: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

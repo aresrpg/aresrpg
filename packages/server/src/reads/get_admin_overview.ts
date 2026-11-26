@@ -81,15 +81,28 @@ const numeric_rows = async (
   return new Map(unique.map((key, index) => [key, rows[index]!]))
 }
 
+/** Every revenue source. All are SUI except the KARES half of the market fee. */
+const MONEY_FIELDS = [
+  'item_royalty_mist',
+  'character_royalty_mist',
+  'character_creation_mist',
+  'kolizeum_mist',
+  'tournament_mist',
+  'market_fee_mist',
+  'market_fee_kares',
+] as const
+type MoneyField = (typeof MONEY_FIELDS)[number]
+/** What sums into SUI revenue: KARES is never converted, a price-based total would change after the fact. */
+const SUI_FIELDS = MONEY_FIELDS.filter((field) => field !== 'market_fee_kares')
+const sum_fields = (rows: readonly Readonly<Record<MoneyField, string>>[]) =>
+  Object.fromEntries(
+    MONEY_FIELDS.map((field) => [field, rows.reduce((sum, row) => sum + bigint(row[field]), 0n)])
+  ) as Record<MoneyField, bigint>
+const as_text = (sums: Readonly<Record<MoneyField, bigint>>) =>
+  Object.fromEntries(MONEY_FIELDS.map((field) => [field, sums[field].toString()])) as Record<MoneyField, string>
+
 const money_point = (at_ms: number, rows: readonly AnalyticsTotals[]): AdminMoneyPoint =>
-  Object.freeze({
-    at_ms,
-    item_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.item_royalty_mist), 0n).toString(),
-    character_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.character_royalty_mist), 0n).toString(),
-    character_creation_mist: rows.reduce((sum, row) => sum + bigint(row.character_creation_mist), 0n).toString(),
-    kolizeum_mist: rows.reduce((sum, row) => sum + bigint(row.kolizeum_mist), 0n).toString(),
-    tournament_mist: rows.reduce((sum, row) => sum + bigint(row.tournament_mist), 0n).toString(),
-  })
+  Object.freeze({ at_ms, ...as_text(sum_fields(rows)) })
 
 type OnlineSamples = Readonly<{ online: readonly number[]; players: readonly number[]; agents: readonly number[] }>
 /** A bucket sampled before the split existed counts everyone as a player, as the chart did then. */
@@ -103,24 +116,6 @@ const online_point = (at_ms: number, { online, players, agents }: OnlineSamples)
   })
 }
 
-const sum_money = (rows: readonly AdminMoneyPoint[]) =>
-  rows.reduce(
-    (total, row) => ({
-      item_royalty_mist: total.item_royalty_mist + bigint(row.item_royalty_mist),
-      character_royalty_mist: total.character_royalty_mist + bigint(row.character_royalty_mist),
-      character_creation_mist: total.character_creation_mist + bigint(row.character_creation_mist),
-      kolizeum_mist: total.kolizeum_mist + bigint(row.kolizeum_mist),
-      tournament_mist: total.tournament_mist + bigint(row.tournament_mist),
-    }),
-    {
-      item_royalty_mist: 0n,
-      character_royalty_mist: 0n,
-      character_creation_mist: 0n,
-      kolizeum_mist: 0n,
-      tournament_mist: 0n,
-    }
-  )
-
 const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: number): Promise<AdminRevenueOverview> => {
   const buckets = range_buckets(days, now_ms)
   const selected_keys = buckets.values.map((at_ms) => `analytics:totals:${buckets.tier}:${at_ms}`)
@@ -132,9 +127,9 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
   const money = buckets.values.map((at_ms, index) =>
     money_point(at_ms, [rows.get(selected_keys[index]!) ?? ZERO_TOTALS])
   )
-  const selected = sum_money(money)
+  const selected = sum_fields(money)
   const total_since = (start: number) =>
-    sum_money([
+    sum_fields([
       money_point(
         0,
         daily.filter((at_ms) => at_ms >= start).map((at_ms) => rows.get(day_key(at_ms)) ?? ZERO_TOTALS)
@@ -142,23 +137,15 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     ])
   const last_30d = total_since(last_30d_start)
   const month_to_date = total_since(mtd_start)
-  const all_time = sum_money([money_point(0, [rows.get(ALL_TOTALS_KEY) ?? ZERO_TOTALS])])
-  const revenue_total = (row: ReturnType<typeof sum_money>): string =>
-    (
-      row.item_royalty_mist +
-      row.character_royalty_mist +
-      row.character_creation_mist +
-      row.kolizeum_mist +
-      row.tournament_mist
-    ).toString()
+  const all_time = sum_fields([money_point(0, [rows.get(ALL_TOTALS_KEY) ?? ZERO_TOTALS])])
+  const revenue_total = (row: ReturnType<typeof sum_fields>): string =>
+    SUI_FIELDS.reduce((sum, field) => sum + row[field], 0n).toString()
   return Object.freeze({
     days,
     bucket: buckets.tier,
-    item_royalty_mist: selected.item_royalty_mist.toString(),
-    character_royalty_mist: selected.character_royalty_mist.toString(),
-    character_creation_mist: selected.character_creation_mist.toString(),
-    kolizeum_mist: selected.kolizeum_mist.toString(),
-    tournament_mist: selected.tournament_mist.toString(),
+    ...as_text(selected),
+    last_30d_market_fee_kares: last_30d.market_fee_kares.toString(),
+    all_time_market_fee_kares: all_time.market_fee_kares.toString(),
     last_30d_revenue_mist: revenue_total(last_30d),
     month_to_date_revenue_mist: revenue_total(month_to_date),
     all_time_revenue_mist: revenue_total(all_time),

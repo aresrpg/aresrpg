@@ -35,6 +35,7 @@ import {
   KARES_UNIT,
 } from '../src/kares_economics.ts'
 import { create_kares_community_claim_transaction, kares_pins } from '../src/kares_ptb.ts'
+import { decode_market_pool, kares_price_sui, market_pool_id } from '../src/kares_market.ts'
 import { create_kares_snapshot_reader } from '../src/kares_snapshot.ts'
 
 import { digest, fake_client, id, signer } from './helpers/transport.ts'
@@ -277,6 +278,26 @@ const finance_chain = () => {
   }
   return { state, client }
 }
+
+test('the market pool decodes from its captured mainnet object and prices KARES at the 80/20 spot', () => {
+  // Captured: mainnet DaoFeePool 0x303f4918…86ba and its Pool 0x47da45ec…7a7e at version 1112236122, read 2026-11-26.
+  const captured = JSON.parse(
+    readFileSync(new URL('./fixtures/kares_market.mainnet.json', import.meta.url), 'utf8')
+  ) as Readonly<{
+    provenance: { pool: { id: string } }
+    wrapper: Record<string, unknown>
+    pool: Record<string, unknown>
+  }>
+  const coin = '0x079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2::kares::KARES'
+  expect(market_pool_id(captured.wrapper)).toBe(captured.provenance.pool.id)
+  const market = decode_market_pool(captured.pool, coin)
+  expect(market).toEqual({ sui: 4_554_028_853_260n, kares: 370_057_485_541_218_925n })
+  expect(kares_price_sui(market)!.toFixed(10)).toBe('0.0000492251')
+  expect(kares_price_sui({ sui: 1n, kares: 0n })).toBeNull()
+  expect(() => decode_market_pool(captured.pool, '0x1::other::OTHER')).toThrow('expected coins')
+  expect(() => decode_market_pool({ ...captured.pool, normalized_balances: null }, coin)).toThrow('balances')
+  expect(() => market_pool_id({})).toThrow('names no pool')
+})
 
 test('a snapshot verifies every linked reserve and fails closed behind any certified write', async () => {
   const { state, client } = finance_chain()

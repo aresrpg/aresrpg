@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The written guides. Prose comes from the locale documents; every number and object comes from guide_facts.ts.
-import { KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 import { resolve_pins } from '@aresrpg/sdk/pins'
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 
 import { NewTabLink } from '../components/links.tsx'
 import { env } from '../env.ts'
@@ -11,7 +10,7 @@ import { format_text } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import type { EncyclopediaText } from '../encyclopedia/copy.ts'
-import { kares_market_values } from '../kares/distribution.ts'
+import type { KaresCopy } from '../kares/copy.ts'
 
 import { ItemChip, MobChip, type DocsCopy } from './docs_parts.tsx'
 import { MechanicBody } from './DocsMechanics.tsx'
@@ -179,25 +178,28 @@ const Market = ({ copy }: Copy) => {
 }
 
 const KARES_LIVE = Boolean(resolve_pins(env.network).kares_coin_type)
+// The token's ledger reads the chain; only the token guide pays for that code.
+const TokenomicsSection = lazy(async () => ({
+  default: (await import('../kares/TokenomicsSection.tsx')).TokenomicsSection,
+}))
 
-/** Before the launch the page states no figure. After it, every figure comes from the SDK's constants. */
-const Kares = ({ copy }: Copy) => {
-  const { amount, decimal } = useNumbers()
-  if (!KARES_LIVE)
-    return (
-      <>
-        <p className="docs-lede">{copy.kares.lede}</p>
-        <p className="docs-note">{copy.kares.note}</p>
-      </>
-    )
-  const values = { ...kares_market_values(decimal), supply: amount(KARES_SUPPLY) }
-  return (
+/** Before the launch the page states no figure. After it, it shows the site's one tokenomics view. */
+const Kares = ({ copy, kares }: Copy & Readonly<{ kares: KaresCopy }>) =>
+  KARES_LIVE ? (
     <>
       <p className="docs-lede">{copy.kares.live_lede}</p>
-      <Points points={copy.kares.points.map((point) => format_text(point, values))} />
+      <div className="docs-embed">
+        <Suspense fallback={null}>
+          <TokenomicsSection copy={kares} />
+        </Suspense>
+      </div>
+    </>
+  ) : (
+    <>
+      <p className="docs-lede">{copy.kares.lede}</p>
+      <p className="docs-note">{copy.kares.note}</p>
     </>
   )
-}
 
 const Agents = ({ copy, links, new_tab }: Copy & Readonly<{ links: GuideLinks; new_tab: string }>) => {
   const { agents } = copy
@@ -256,7 +258,7 @@ const Build = ({ copy, links, new_tab }: Copy & Readonly<{ links: GuideLinks; ne
   )
 }
 
-type GuideProps = Readonly<{ links: GuideLinks; text: EncyclopediaText; new_tab: string }> & Copy
+type GuideProps = Readonly<{ links: GuideLinks; text: EncyclopediaText; new_tab: string; kares: KaresCopy }> & Copy
 /** One renderer per written guide. A mechanics page is rendered by its own module. */
 const GUIDES: Readonly<Record<Exclude<DocsGuide, DocsMechanic>, (props: GuideProps) => ReactNode>> = {
   overview: ({ copy }) => <Overview copy={copy} />,
@@ -264,7 +266,7 @@ const GUIDES: Readonly<Record<Exclude<DocsGuide, DocsMechanic>, (props: GuidePro
   'first-hour': ({ copy }) => <FirstHour copy={copy} />,
   bots: ({ copy }) => <Bots copy={copy} />,
   market: ({ copy }) => <Market copy={copy} />,
-  kares: ({ copy }) => <Kares copy={copy} />,
+  kares: ({ copy, kares }) => <Kares copy={copy} kares={kares} />,
   agents: ({ copy, links, new_tab }) => <Agents copy={copy} links={links} new_tab={new_tab} />,
   build: ({ copy, links, new_tab }) => <Build copy={copy} links={links} new_tab={new_tab} />,
 }

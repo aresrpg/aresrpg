@@ -126,6 +126,7 @@ pub fn tx() -> OwnedTx {
         inputs: vec![],
         outputs: vec![],
         deleted: vec![],
+        fee_income: vec![],
     }
 }
 
