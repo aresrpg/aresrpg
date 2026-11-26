@@ -5,7 +5,13 @@
 import { afterEach, expect, jest, test } from 'bun:test'
 
 import { GAME_MODULES } from '../src/game/game_modules.ts'
-import { is_account_view, SITE_PAGES, STAKING_SECTIONS, staking_section_href } from '../src/site/routes.ts'
+import {
+  is_account_view,
+  kares_trade_href,
+  SITE_PAGES,
+  STAKING_SECTIONS,
+  staking_section_href,
+} from '../src/site/routes.ts'
 import { SITE_MODULES } from '../src/site_modules.ts'
 
 import { character_row, fake_wallet, settle, start_surface, type Started } from './harness.ts'
@@ -124,6 +130,14 @@ test('a visitor reads the open stage, signs in, proves the address, loads the ro
   expect(
     [...SITE_PAGES.map(({ path }) => path), ...STAKING_SECTIONS.map(staking_section_href)].filter(holds_sign_in)
   ).toEqual(['/agent', '/portfolio', '/staking#mastery', '/staking#airdrop'])
+  // The buy link names KARES by its full type; a name alone would also match the dead sale coin.
+  expect(kares_trade_href('0x079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2::kares::KARES')).toBe(
+    'https://aftermath.finance/trade?from=SUI&to=0x079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2%3A%3Akares%3A%3AKARES'
+  )
+  expect([kares_trade_href(undefined), kares_trade_href('')]).toEqual([
+    'https://aftermath.finance/trade',
+    'https://aftermath.finance/trade',
+  ])
 })
 
 test('the site opens one open link at start, and a sign-in replaces that one link', async () => {

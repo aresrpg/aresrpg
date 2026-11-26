@@ -38,7 +38,7 @@ export const tokenomics_reading = (state: FinanceState) => {
  * the market cap counts only what circulates. Null while a price is unknown. Display only.
  */
 export const market_reading = (
-  reading: Pick<ReturnType<typeof tokenomics_reading>, 'snapshot' | 'circulating'>,
+  reading: Readonly<Pick<ReturnType<typeof tokenomics_reading>, 'snapshot' | 'circulating'>>,
   sui_usd: number | null
 ): Readonly<{ price: number | null; fdv: number | null; market_cap: number | null }> => {
   const { snapshot, circulating } = reading

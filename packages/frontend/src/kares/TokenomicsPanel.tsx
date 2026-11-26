@@ -2,13 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useId, useState } from 'react'
 import { COMBAT_DAILY_BUDGET, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
+import { resolve_pins } from '@aresrpg/sdk/pins'
 
 import kares_logo from '../../../../seed/icons/currency/kares.png'
 import { env } from '../env.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useLocale } from '../i18n/LocaleScope.tsx'
-import { SITE_ADDRESSES } from '../site/routes.ts'
+import { kares_trade_href } from '../site/routes.ts'
 
 import type { KaresCopy } from './copy.ts'
 import type { FinanceState } from './model.ts'
@@ -197,7 +198,7 @@ const TokenomicsPanel = ({
         <div className="col-3 row-[1/3] grid justify-items-end gap-2 self-center text-right max-[599px]:col-span-full max-[599px]:row-3 max-[599px]:justify-items-start max-[599px]:text-left">
           <a
             className="aui-button aui-button--primary min-h-10.5 px-4.5 no-underline"
-            href={SITE_ADDRESSES.aftermath}
+            href={kares_trade_href(resolve_pins(env.network).kares_coin_type)}
             target="_blank"
             rel="noopener noreferrer"
           >

@@ -41,10 +41,19 @@ export const SITE_ADDRESSES = Object.freeze({
   discord: 'https://discord.gg/aresrpg',
   telegram: 'https://t.me/aresrpg',
   x: 'https://x.com/AresRPG',
-  /** Where KARES trades. */
-  aftermath: 'https://aftermath.finance/trade',
   source: 'https://github.com/aresrpg/aresrpg',
 })
+
+/**
+ * Where KARES trades: Aftermath's swap page, opened with KARES as the coin to buy. The coin is named by
+ * its full type, because other coins carry the same name, and paid in SUI, the pool's other coin, so the
+ * swap is direct. Before the launch there is no type, and the
+ * address is the plain swap page.
+ */
+export const kares_trade_href = (coin_type: unknown): string => {
+  const swap = 'https://aftermath.finance/trade'
+  return typeof coin_type === 'string' && coin_type ? `${swap}?from=SUI&to=${encodeURIComponent(coin_type)}` : swap
+}
 
 /** An item's own page on the market. */
 export const market_item_href = (item_type: string): string =>

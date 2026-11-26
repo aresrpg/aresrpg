@@ -29,7 +29,7 @@ import { LocaleScope } from '../i18n/LocaleScope.tsx'
 import { signed_out } from '../modules/session.ts'
 import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { has_left_lane, SITE_ADDRESSES, SITE_PAGES, site_page_of, type SitePage } from './routes.ts'
+import { has_left_lane, kares_trade_href, SITE_ADDRESSES, SITE_PAGES, site_page_of, type SitePage } from './routes.ts'
 import { SignIn, useSignInStage } from './SignIn.tsx'
 import { Burger, useSiteMenu, type SiteMenu } from './SiteMenu.tsx'
 import './site_shell.css'
@@ -246,7 +246,7 @@ const BuyKares = ({ copy }: Readonly<{ copy: AppCopy | null }>) => {
   return (
     <NewTabLink
       className={`site-buy-kares ${refusal ? 'site-buy-kares--refused' : ''}`}
-      href={SITE_ADDRESSES.aftermath}
+      href={kares_trade_href(resolve_pins(env.network).kares_coin_type)}
       new_tab={copy?.site.new_tab ?? ''}
       on_click={refuse}
     >
