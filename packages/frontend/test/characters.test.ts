@@ -380,6 +380,18 @@ test('equipment and stacks predict the chain: slots, guards, change sets and mer
     { item_type: 'wool', target_id: 'large', source_ids: ['small'], amount: 8, total_amount: 9, kiosk: '0xk' },
   ])
   expect(craft_stack_plan({ wool: 5 }, 2, [wool('short', 9)], new Set(), '0xk')).toBeNull()
+  // A craft merges only the piles it needs: hundreds of small piles must not all enter one transaction.
+  const piles = [wool('a', 6), wool('b', 5), ...Array.from({ length: 300 }, (_, index) => wool(`dust${index}`, 1))]
+  expect(craft_stack_plan({ wool: 5 }, 1, piles, new Set(), '0xk')![0]).toMatchObject({
+    source_ids: [],
+    total_amount: 6,
+  })
+  expect(craft_stack_plan({ wool: 5 }, 2, piles, new Set(), '0xk')![0]).toMatchObject({
+    target_id: 'a',
+    source_ids: ['b'],
+    total_amount: 11,
+  })
+  expect(craft_stack_plan({ wool: 400 }, 1, piles, new Set(), '0xk')).toBeNull()
   // A trade settles only the incoming stacks that fit: an overflow would abort the whole exchange.
   const first = { ...wool('first', 6), object: 'first' }
   const second = { ...wool('second', 6), object: 'second' }

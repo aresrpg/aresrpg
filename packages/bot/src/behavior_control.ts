@@ -100,8 +100,9 @@ export const create_behavior_control = (store: ControlStore, config: BotConfig, 
       const prior = await tx.get<BehaviorRun>(tree_keys[3]!)
       if (prior?.fingerprint === fingerprint) return prior
       const retained = await tx.get<Lane>(tree_keys[2]!)
-      // A playing hero keeps its tree until it is stopped or explicitly replaced at its revision.
-      if (prior && run_live(prior) && retained?.runs?.[prior.character_id]) throw new Error('bot_busy_or_paused')
+      // A playing hero keeps its tree until it is stopped or explicitly replaced at its revision. The
+      // refusal names that: the wallet is neither busy nor paused, and waiting would never lift it.
+      if (prior && run_live(prior) && retained?.runs?.[prior.character_id]) throw new Error('behavior_running')
       const accepted = { ...accept(current, tree_keys[2]!, script, prior), fingerprint }
       const lane = host(retained, accepted, prior, input)
       const run = { ...accepted, execution_fence: lane.fence }

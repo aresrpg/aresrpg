@@ -500,7 +500,7 @@ burn-only and holds it in a non-transferable Genesis object that opens only into
 liquidity, 410 million reserves and 50 million team. The launch is three treasury transactions (`kares_launch.ts`):
 publish the currency and the pool's liquidity token as immutable packages, register the currency, then one atomic
 transaction that creates the market and funds the Economy. The market is one Aftermath pool, 80% KARES and 20% SUI,
-with a 0.1% pool fee that stays in the pool, behind Aftermath's DAO-fee wrapper that pays 2% of every swap, deposit
+with a 0.3% pool fee that stays in the pool, behind Aftermath's DAO-fee wrapper that pays 2% of every swap, deposit
 and withdrawal to the treasury. Every liquidity token goes to address `0x0`, so the pool can never be withdrawn. The
 treasury keeps the team share, the fee authority and the metadata authority. No contract of ours holds market logic:
 weights and the pool fee are permanent Aftermath facts, and only the treasury fee rate can change.

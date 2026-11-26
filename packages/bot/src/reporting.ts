@@ -88,7 +88,11 @@ export const create_reporting = (
     if (error instanceof Error && reported.has(error)) return
     if (error instanceof Error) reported.add(error)
     const event = safe_failure_event(error)
-    log(JSON.stringify({ code: event.message, context: event.contexts?.operation }))
+    // The same sanitized frames the report carries: without them a log line cannot be told from the next.
+    const at = safe_stack(error)
+      .toReversed()
+      .map(({ filename, lineno }) => `${filename}:${lineno}`)
+    log(JSON.stringify({ code: event.message, context: event.contexts?.operation, at }))
     client?.captureEvent(event)
   }
   return {

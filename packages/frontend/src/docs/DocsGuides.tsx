@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The written guides. Prose comes from the locale documents; every number and object comes from guide_facts.ts.
+import { KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
+import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { ReactNode } from 'react'
 
 import { NewTabLink } from '../components/links.tsx'
+import { env } from '../env.ts'
 import { format_text } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import type { EncyclopediaText } from '../encyclopedia/copy.ts'
+import { kares_market_values } from '../kares/distribution.ts'
 
 import { ItemChip, MobChip, type DocsCopy } from './docs_parts.tsx'
 import { MechanicBody } from './DocsMechanics.tsx'
@@ -174,13 +178,26 @@ const Market = ({ copy }: Copy) => {
   )
 }
 
-/** The token is not launched: the page says so and states no figure. */
-const Kares = ({ copy }: Copy) => (
-  <>
-    <p className="docs-lede">{copy.kares.lede}</p>
-    <p className="docs-note">{copy.kares.note}</p>
-  </>
-)
+const KARES_LIVE = Boolean(resolve_pins(env.network).kares_coin_type)
+
+/** Before the launch the page states no figure. After it, every figure comes from the SDK's constants. */
+const Kares = ({ copy }: Copy) => {
+  const { amount, decimal } = useNumbers()
+  if (!KARES_LIVE)
+    return (
+      <>
+        <p className="docs-lede">{copy.kares.lede}</p>
+        <p className="docs-note">{copy.kares.note}</p>
+      </>
+    )
+  const values = { ...kares_market_values(decimal), supply: amount(KARES_SUPPLY) }
+  return (
+    <>
+      <p className="docs-lede">{copy.kares.live_lede}</p>
+      <Points points={copy.kares.points.map((point) => format_text(point, values))} />
+    </>
+  )
+}
 
 const Agents = ({ copy, links, new_tab }: Copy & Readonly<{ links: GuideLinks; new_tab: string }>) => {
   const { agents } = copy

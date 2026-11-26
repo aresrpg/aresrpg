@@ -203,7 +203,7 @@ export const TEAM_ACTIONS = {
   }),
   fight_forfeit: gameplay_action({
     description:
-      'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. In an arena the pledge is lost once the fight has started, and returned before. Use it for a fight that cannot be finished.',
+      'Give up the fight an owned hero is seated in: the hero loses it and is free again. In a dungeon room this also ends the run, and its key is not returned. In an arena the pledge is lost once the fight has started, and returned before. Use it for a fight that cannot be finished. The wallet sends it by itself for an unstaked fight not won 15 minutes after it started.',
     input_schema: forfeit_schema,
     parse: parse_forfeit,
     validate: validate_fight_forfeit,

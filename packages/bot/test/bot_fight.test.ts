@@ -242,6 +242,13 @@ describe('gameplay lifecycle', () => {
     expect(() => plan_of(patch_payload(context, { zone_checkpoint_id: 'stale' }))).toThrow('needs_resync')
     expect(() => plan_of(patch_payload(context, { group_index: '1' }))).toThrow('mob_group_unavailable')
     expect(() => plan_of({ ...context, snapshot: { ...context.snapshot, tracked_zones: {} } })).toThrow('needs_resync')
+    // A current view that does not hold the zone is not stale: the refusal says the zone is out of view.
+    const elsewhere = Object.fromEntries(
+      Object.entries(context.snapshot.tracked_zones).map(([id, window]) => [id, { ...window, zones: [] }])
+    )
+    expect(() => plan_of({ ...context, snapshot: { ...context.snapshot, tracked_zones: elsewhere } })).toThrow(
+      'zone_outside_view'
+    )
     const consumed = { ...zone, zone: { ...zone.zone, mob_taken: '1' } }
     expect(() =>
       plan_of({

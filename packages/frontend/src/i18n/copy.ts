@@ -100,6 +100,7 @@ export type AppCopy = Readonly<{
       | 'new_tab'
       | 'log_in_first'
       | 'buy_kares'
+      | 'not_ready_yet'
       | 'docs'
       | 'encyclopedia'
       | 'journal'

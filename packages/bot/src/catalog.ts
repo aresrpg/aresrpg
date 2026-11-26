@@ -51,6 +51,17 @@ export const learned_spell_rank = (
     ? rank
     : null
 }
+/** Every spell a hero knows with its rank. The chain row holds only the raised ones: a spell unlocked
+ * and never raised is known at rank 1, and a reader of the row alone would take it for unknown. */
+export const learned_spells = (character: Readonly<Pick<CharacterRow, 'classe' | 'level' | 'spells'>>) =>
+  Object.fromEntries(
+    spells
+      .flatMap(({ name }) => {
+        const rank = learned_spell_rank(name, character)
+        return rank === null ? [] : [[name, rank] as const]
+      })
+      .toSorted(([left], [right]) => left.localeCompare(right))
+  )
 /** Mirrors progression::raise_spell: one rank costs the current rank; authored levels own the cap. */
 export const spell_upgrade_quote = (name: string, character: Readonly<CharacterRow>) => {
   const rank = learned_spell_rank(name, character)
@@ -99,7 +110,6 @@ const acquisition_sources = (item_type: string) => ({
   ),
 })
 const profession_knowledge = (snapshot: ActorSnapshot, requested?: readonly string[]) => ({
-  ...(requested?.length === 0 ? { recipe_outputs: profession_recipes.map(({ output_type }) => output_type) } : {}),
   source: 'seed/content plus immutable game rules; live Move validation remains authoritative',
   inventory_ready: Boolean(snapshot.inventory?.loaded && snapshot.inventory.listings && snapshot.inventory.trades),
   characters: snapshot.characters.map((character) => ({
@@ -111,24 +121,29 @@ const profession_knowledge = (snapshot: ActorSnapshot, requested?: readonly stri
     }),
     equipped_tool: character.equipment.find(({ slot }) => slot === 'tool') ?? null,
   })),
+  // An empty request lists every recipe in one light line; a named recipe comes with its details.
   recipes: profession_recipes
-    .filter(({ output_type }) => requested?.includes(output_type))
+    .filter(({ output_type }) => requested?.length === 0 || requested?.includes(output_type))
     .map((recipe) => ({
-      ...recipe,
+      output_type: recipe.output_type,
       job: recipe_job(recipe.output_type),
       required_level: craft_required_level(Object.keys(recipe.inputs).length),
-      xp_at_level: job_slugs.includes(recipe_job(recipe.output_type)!)
-        ? snapshot.characters.map((character) => {
-            const level = job_level_from_xp(Number(character.jobs[recipe_job(recipe.output_type)!] ?? '0'))
-            return {
-              character_id: character.id,
-              xp_per_attempt: craft_xp_at_level(Object.keys(recipe.inputs).length, level),
-              success_percent: craft_success_percent(level),
-            }
-          })
-        : [],
-      ingredients: Object.keys(recipe.inputs).map((item_type) => ({ item_type, ...acquisition_sources(item_type) })),
+      ...(requested?.length === 0 ? {} : recipe_details(recipe, snapshot)),
     })),
+})
+const recipe_details = (recipe: SeedRecipe, snapshot: ActorSnapshot) => ({
+  ...recipe,
+  xp_at_level: job_slugs.includes(recipe_job(recipe.output_type)!)
+    ? snapshot.characters.map((character) => {
+        const level = job_level_from_xp(Number(character.jobs[recipe_job(recipe.output_type)!] ?? '0'))
+        return {
+          character_id: character.id,
+          xp_per_attempt: craft_xp_at_level(Object.keys(recipe.inputs).length, level),
+          success_percent: craft_success_percent(level),
+        }
+      })
+    : [],
+  ingredients: Object.keys(recipe.inputs).map((item_type) => ({ item_type, ...acquisition_sources(item_type) })),
 })
 /** One zone as a planner reads it: where it is, and its live resource packs and monster groups. */
 export const zone_knowledge = ({ zone, spawns }: ActorSnapshot['zones'][string]) => ({

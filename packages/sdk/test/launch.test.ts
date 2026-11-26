@@ -11,6 +11,7 @@ import { fromBase64, normalizeStructTag, normalizeSuiObjectId } from '@mysten/su
 import { SDK } from '../src/client.ts'
 import {
   AFTERMATH_MAINNET,
+  COIN_REGISTRY,
   LAUNCH_DAO_FEE_BPS,
   LAUNCH_KARES_WEIGHT,
   LAUNCH_POOL_FEE,
@@ -84,7 +85,8 @@ test('the launch gives each coin its own weight, locks all liquidity and keeps a
   expect(u64s(pool.arguments[3])).toEqual([200_000_000_000_000_000n, 800_000_000_000_000_000n])
   expect(LAUNCH_SUI_WEIGHT + LAUNCH_KARES_WEIGHT).toBe(1_000_000_000_000_000_000n)
   expect(bcs.u64().parse(pure(pool.arguments[4]))).toBe('0')
-  expect(u64s(pool.arguments[5])).toEqual([1_000_000_000_000_000n, LAUNCH_POOL_FEE])
+  // 0.3% on the coin going in, kept by the pool.
+  expect(u64s(pool.arguments[5])).toEqual([3_000_000_000_000_000n, LAUNCH_POOL_FEE])
   expect([6, 7, 8].flatMap((index) => u64s(pool.arguments[index]))).toEqual([0n, 0n, 0n, 0n, 0n, 0n])
   expect(bcs.option(bcs.vector(bcs.u8())).parse(pure(pool.arguments[11]))).toEqual([9, 9])
   expect(bcs.bool().parse(pure(pool.arguments[12]))).toBe(false)
@@ -132,6 +134,15 @@ test('a coin type that sorts before SUI swaps every per-coin vector together', (
     LAUNCH_SUI_WEIGHT,
   ])
   expect(pool.arguments[9]).toMatchObject({ $kind: 'NestedResult', NestedResult: [0, 0] })
+})
+
+test('every shared object the launch names carries its real mainnet shared version', () => {
+  // Read from the objects' owners on mainnet, 2026-11-26. A wrong version makes the chain refuse the transaction.
+  expect([COIN_REGISTRY, AFTERMATH_MAINNET.pool_registry, AFTERMATH_MAINNET.dao_fee_version]).toEqual([
+    { id: normalizeSuiObjectId('0xc'), shared_version: '646801004' },
+    { id: '0xfcc774493db2c45c79f688f88d28023a3e7d98e4ee9f48bbf5c7990f651577ae', shared_version: '6808332' },
+    { id: '0xb4bfb0f917f12ad2a772bea9b4f22431f6f5f9653162c3ae6fae5b99b21392b7', shared_version: '293243902' },
+  ])
 })
 
 test('the launch refuses an empty seed or a reward setup for another currency', () => {

@@ -466,6 +466,8 @@ marketplace_page:
   subtitle: Sui上的玩家挂单
   browse: 浏览
   group_equipment: 装备
+  group_cosmetics: 外观
+  group_titles: 称号
   group_pets: 宠物
   group_runes: 符文
   group_consumable: 消耗品
@@ -2281,6 +2283,8 @@ kares_page:
   mastery_note: '在质押页面的精通板块使用KARES购买宝箱。KARES在购买时永久销毁，而非开箱时。'
   rewards_note: '质押奖励在 1,825 个活跃日内释放。任何人都可捐赠 KARES 或 SUI，从下一个活跃日边界起在 30 个活跃日内分配，不延长旧计划。捐赠不可撤回。无人质押时计时暂停；已获得的奖励仍可领取。'
   revenue_note: 市场已收取版税的20%用于SUI质押奖励。奖励随收入和参与质押量变化。
+  market_note: '流动性份额锁定在 Aftermath 上唯一的 KARES/SUI 池中，KARES 占 {{kares_weight}}%，SUI 占 {{sui_weight}}%。任何人都无法提取。'
+  fee_note: '每笔交易向 AresRPG 金库支付 {{treasury_fee}}% 的费用，并支付 {{pool_fee}}% 的池费用，后者留在池中。'
   points: 精通点
   buy_kares: '购买 - {{cost}} KARES'
   kares_missing: KARES不足
@@ -3295,6 +3299,13 @@ docs_page:
   kares:
     lede: 'KARES尚未就绪。它很快就会加入。'
     note: '代币上线后，本页将介绍代币、供应量和奖励池。在此之前，不公布任何余额、价格或奖励数字。'
+    live_lede: 'KARES 是 AresRPG 的代币，在 Aftermath 上交易。'
+    points:
+      - '{{supply}} KARES 仅发行一次。无法再铸造新的代币，每次销毁都会减少供应量。'
+      - '{{liquidity}}% 永久锁定在 Aftermath 上唯一的 KARES/SUI 池中，KARES 占 {{kares_weight}}%，SUI 占 {{sui_weight}}%。任何人都无法提取。'
+      - '{{reserves}}% 用于奖励：质押、首领奖励和社区储备，在五年内释放。'
+      - '{{team}}% 为团队份额，没有归属期。'
+      - '每笔交易向 AresRPG 金库支付 {{treasury_fee}}% 的费用，并支付 {{pool_fee}}% 的池费用，后者留在池中。'
   agents:
     lede: '将ChatGPT、Claude或Grok连接到托管的AresRPG机器人。你们商定一个目标，助手就在目标范围内操作你的角色。此功能仍在开发中。'
     steps:
@@ -3381,6 +3392,7 @@ agent_page:
   run_ended_completed: '已完成计划。'
   error_unknown: '出了点问题。请重试。'
   error_bot_busy_or_paused: '机器人已暂停，或仍在完成这位英雄的上一个动作。请稍后再试。'
+  error_behavior_running: '这位英雄已在执行计划。请替换其计划，而不是启动新计划。'
   error_run_limit_reached: '机器人能同时操控的英雄已达上限。请先停止一位再试。'
   error_needs_resync: '机器人仍在同步。请几秒后再试。'
   error_unavailable: '机器人没有响应。请稍后再试。'
@@ -3428,6 +3440,7 @@ portfolio_page:
   tab_heroes: '英雄'
   tab_bag: '背包'
   tab_for_sale: '出售中'
+  tab_sales: '销售记录'
   failed: '游戏服务器没有发送此账户。请刷新页面重试。'
   heroes_empty: '此账户没有英雄。'
   bag_empty: '这里还没有东西。去市场购买，或在游戏中寻找物品。'
@@ -3457,6 +3470,7 @@ site:
   new_tab: ' (在新标签页中打开)'
   log_in_first: '请先登录'
   buy_kares: '购买 KARES'
+  not_ready_yet: '尚未就绪'
   docs: 文档
   encyclopedia: 物品百科
   journal: 日志

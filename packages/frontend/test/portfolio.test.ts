@@ -90,6 +90,8 @@ test('the bag shows one cell per stackable type and every action on a cell reach
   const by_group = ITEM_GROUPS.map((group) => [group, cells.filter(in_group(group)).length])
   expect(by_group).toEqual([
     ['EQUIPMENT', 2],
+    ['COSMETICS', 0],
+    ['TITLES', 0],
     ['PETS', 0],
     ['RUNES', 0],
     ['CONSUMABLE', 1],

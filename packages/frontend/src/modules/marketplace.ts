@@ -9,7 +9,7 @@ import {
   without_relation,
   type CatalogueProjection,
 } from '@aresrpg/protocol/inventory'
-import { equipment_categories, type ItemCategory } from '@aresrpg/immutable'
+import { equipment_categories, is_cosmetic_category, type ItemCategory } from '@aresrpg/immutable'
 import {
   MAX_TRACKED_CHARACTERS,
   type ListingRow,
@@ -49,13 +49,28 @@ import { link_accepted } from '../server_link.ts'
 
 import { observe_subscriptions } from './session.ts'
 
-export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'KEYS', 'RESOURCES', 'CHARACTERS'] as const
+export const MARKET_GROUPS = [
+  'EQUIPMENT',
+  'COSMETICS',
+  'TITLES',
+  'PETS',
+  'RUNES',
+  'CONSUMABLE',
+  'KEYS',
+  'RESOURCES',
+  'CHARACTERS',
+] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
 
-const equipment = Object.freeze(equipment_categories.filter((category) => category !== 'pet'))
+const cosmetic_categories = Object.freeze(equipment_categories.filter(is_cosmetic_category))
+/** What a hero wears to fight. Cosmetics, titles and pets are groups of their own. */
+const SET_APART: ReadonlySet<string> = new Set(['pet', 'title', ...cosmetic_categories])
+const equipment = Object.freeze(equipment_categories.filter((category) => !SET_APART.has(category)))
 
 const MARKET_CATEGORIES: Readonly<Record<MarketGroup, readonly ItemCategory[]>> = Object.freeze({
   EQUIPMENT: equipment,
+  COSMETICS: cosmetic_categories,
+  TITLES: ['title'],
   PETS: ['pet'],
   RUNES: ['rune'],
   CONSUMABLE: ['consumable'],

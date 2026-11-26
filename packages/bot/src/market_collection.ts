@@ -4,15 +4,12 @@
 // notification for an event for a sale, just auto collect the kiosk to the multisig wallet").
 // The fact is the bot's own game socket: the server pushes the seller its kiosk balances
 // (`packet/market_history` `profits`) after each sale, and the sale itself (`packet/listing_sold`).
-// The effect is the existing `market_collect` direct command, accepted through the existing door, so it
-// waits its turn in the wallet's one signing queue. There is no timer, no chain read and no second queue.
+// The effect is the existing `market_collect` direct command, sent as every command the wallet sends by
+// itself (`own_commands.ts`).
 import type { ServerPacket } from '@aresrpg/protocol'
 
-import { lane_key_for } from './command_admission.ts'
-import type { Command, Lane, create_control_service } from './control.ts'
 import { identifier, matches } from './gameplay_schema.ts'
-import type { Bot, Grant } from './model.ts'
-import type { ControlStore } from './store.ts'
+import { refused_for_now, type OwnSender } from './own_commands.ts'
 
 /** Proceeds below this stay in the kiosk: collecting dust costs more gas than it brings (owner, 2026-11-21:
  * "auto collect from 0.1 SUI"). It counts everything the wallet's kiosks hold together. A player's own
@@ -42,68 +39,27 @@ export const fold_proceeds = (state: Proceeds, packet: ServerPacket | null | und
 /** Proceeds are held, and no collection was sent for this observed change yet. */
 export const collection_due = (state: Proceeds) => state.kiosks.length > 0 && state.change !== state.issued
 
-/** Refusals that say "not now" or "not this grant": the collection stays due for a later observation. */
-const NOT_NOW = new Set(['bot_busy_or_paused', 'needs_resync', 'service_unavailable'])
-const NOT_THIS_GRANT = new Set(['invalid_token', 'insufficient_scope'])
-const refusal = (error: unknown) => (error instanceof Error ? error.message : '')
-/** A player's direct command is replaced only once its outcome is final: an unknown one stays visible. */
-const FINAL: readonly string[] = ['completed', 'failed', 'cancelled']
-
-type Control = Pick<ReturnType<typeof create_control_service>, 'accept'>
 /**
  * One collector per wallet session, fed by every packet of the bot's own socket in arrival order.
- * It sends at most one `market_collect` per observed change, under a live play grant of the owner,
- * and only into a free direct slot. `grants` are the connector grants of the session; `share` pushes
- * the wallet status first, so the owner's clients see the previous direct command's outcome.
+ * It sends at most one `market_collect` per observed change, through the wallet's own-command sender.
  */
-export const create_market_collector = (
-  store: ControlStore,
-  control: Control,
-  bot: Pick<Bot, 'network' | 'address'>,
-  grants: ReadonlySet<string>,
-  share: () => Promise<void>,
-  report_failure: (error: unknown) => void
-) => {
+export const create_market_collector = (send: OwnSender, report_failure: (error: unknown) => void) => {
   let state = empty_proceeds()
-  const free_lane = async () => {
-    const lane = await store.read<Lane>(lane_key_for(bot))
-    const held = lane?.direct ? await store.read<Command>(`command:${lane.direct}`) : null
-    return lane && !lane.paused && (!held || FINAL.includes(held.status)) ? lane : null
-  }
-  const accept = (grant: Grant, lane: Lane, { kiosks, change }: Proceeds) =>
-    control.accept(grant, {
+  const collect = ({ kiosks, change }: Proceeds) =>
+    send((lane) => ({
       idempotency_key: `market_collect:${lane.fence}:${change}`,
       kind: 'market_collect',
       payload: { kiosks },
-      decision_revision: lane.decision_revision,
-      observation_revision: lane.observation_revision,
-    })
-  /** True once a command is accepted; false while nothing may be sent yet. */
-  const send = async (due: Proceeds) => {
-    const lane = await free_lane()
-    if (!lane) return false
-    const rows = await Promise.all([...grants].map((id) => store.read<Grant>(`grant:${id}`)))
-    const players = rows.filter((row): row is Grant => Boolean(row?.scopes.includes('bot:play')))
-    if (players.length) await share()
-    for (const grant of players) {
-      try {
-        await accept(grant, lane, due)
-        return true
-      } catch (error) {
-        if (!NOT_THIS_GRANT.has(refusal(error))) throw error
-      }
-    }
-    return false
-  }
+    }))
   /** Fed with every packet, in order. Never throws: a failure here must not close the bot's socket. */
   return async (packet: ServerPacket | null | undefined) => {
     state = fold_proceeds(state, packet)
     if (!collection_due(state)) return
     const due = state
     try {
-      if (await send(due)) state = { ...state, issued: due.change }
+      if (await collect(due)) state = { ...state, issued: due.change }
     } catch (error) {
-      if (NOT_NOW.has(refusal(error))) return
+      if (refused_for_now(error)) return
       // An unexpected refusal is reported once: this change is given up, the next one is tried again.
       state = { ...state, issued: due.change }
       report_failure(error)

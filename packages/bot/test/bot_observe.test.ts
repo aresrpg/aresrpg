@@ -68,6 +68,17 @@ describe('actor observation views', () => {
     const status = actor_observation({ ...context, snapshot: crowded() })
     expect(status).toMatchObject({ inventory: { loaded: true, stacks: 300, item_types: 1 } })
     expect(status).not.toHaveProperty('zones')
+    // The chain stores only the spells a hero raised. The status says every spell it knows, rank 1 included.
+    const raised = { ...character, spells: { Jump: 3 } }
+    const known = actor_observation({ ...context, snapshot: { ...context.snapshot, characters: [raised] } })
+    expect((known.characters as readonly { spells: unknown }[])[0]!.spells).toEqual({
+      Compulsion: 1,
+      'Divine Sword': 1,
+      Intimidation: 1,
+      Jump: 3,
+      Pressure: 1,
+      'Sword of Fate': 1,
+    })
     const wire = JSON.stringify(status)
     expect(wire).not.toContain('null')
     expect(wire.length).toBeLessThan(20_000)
@@ -318,6 +329,17 @@ describe('actor runtime', () => {
       await f.observe()
       await f.admit()
       expect(await f.observe()).not.toHaveProperty('planning_context.spells')
+      // The recipe list is in `recipes`, where a recipe's details are: one light line per recipe.
+      const listed = (await f.observe({ recipes: [] })) as {
+        planning_context: { professions: { recipes: readonly Record<string, unknown>[] } }
+      }
+      const [first] = listed.planning_context.professions.recipes
+      expect(Object.keys(first!).toSorted()).toEqual(['job', 'output_type', 'required_level'])
+      expect(listed.planning_context.professions).not.toHaveProperty('recipe_outputs')
+      const detailed = (await f.observe({ recipes: [first!.output_type as string] })) as typeof listed
+      expect(detailed.planning_context.professions.recipes).toMatchObject([
+        { output_type: first!.output_type, inputs: expect.any(Object), ingredients: expect.any(Array) },
+      ])
       const catalog = await f.observe({ spells: [] })
       expect(catalog).toHaveProperty('planning_context.spells.catalog')
       expect(catalog).toMatchObject({

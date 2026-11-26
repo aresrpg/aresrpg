@@ -11,7 +11,7 @@ import { ZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
 import type { AgentTransport } from '@aresrpg/sdk/agent-connection'
 
 import { create_actor_locomotion } from './actor_locomotion.ts'
-import { gameplay_observation_ready, type GameplayContext } from './gameplay_context.ts'
+import { gameplay_observation_ready, pending_observation, type GameplayContext } from './gameplay_context.ts'
 import { bind_action_baseline, reconcile_action } from './action_reconciliation.ts'
 import { assert_fight_reconciled, retire_fight_replays } from './fight_runtime.ts'
 import { empty_snapshot, actor_snapshot_transition } from './actor_snapshot.ts'
@@ -39,7 +39,7 @@ import { run_keys } from './run_ref.ts'
 import { apply_actor_watches, observation_reply, owned_run_observation } from './actor_observation.ts'
 import { create_status_sharer } from './status_sharer.ts'
 import { execute_gameplay, validate_gameplay } from './gameplay.ts'
-import { create_market_collector } from './market_collection.ts'
+import { create_wallet_duties } from './wallet_duties.ts'
 import { SLEEP_AFTER_IDLE_MS, wallet_idle } from './idle.ts'
 import { read_actor_balance } from './character_observability.ts'
 import type { ManagedProvider } from './managed_signer.ts'
@@ -231,7 +231,8 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         ),
     })
     const status = create_status_sharer(store, bot, lease.fence, () => snapshot.ready, now, monotonic_now, actor.send)
-    const collect = create_market_collector(store, control, bot, connector_grants, status.share, options.report_failure)
+    const duties = { store, control, bot, grants: connector_grants, share: status.share, snapshot: () => snapshot }
+    const collect = create_wallet_duties({ ...duties, report_failure: options.report_failure })
     return {
       bot,
       lease,
@@ -311,10 +312,12 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const observe_session = async (session: Session, command: Command) => {
     await session.actor.connect()
     await session.actor.settle_observations()
-    if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' }
+    if (!gameplay_observation_ready(session_context(session, command)))
+      return pending_observation(session_context(session, command))
     const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
     const snapshot = session.snapshot()
-    if (!gameplay_observation_ready(session_context(session, command))) return { status: 'pending' } // Wait for the authenticated baseline, never fabricate one.
+    if (!gameplay_observation_ready(session_context(session, command)))
+      return pending_observation(session_context(session, command)) // Wait for the authenticated baseline, never fabricate one.
     const [sampled_at, lane] = [monotonic_now(), await store.read<Lane>(command.lane_key)] // Stamped before its reads.
     return observation_reply({ ...session_context(session, command), snapshot, balance }, session.actor, async () => ({
       ...(await owned_run_observation(store, lane, command)),

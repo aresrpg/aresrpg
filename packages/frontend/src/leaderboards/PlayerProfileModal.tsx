@@ -9,7 +9,8 @@ import { InventoryItemCell } from '../characters/InventoryItemCell.tsx'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { player_name } from './presentation.ts'
+import { AgentBadge } from './AgentBadge.tsx'
+import { is_agent_entry, player_name } from './presentation.ts'
 import '../characters/characters.css'
 
 /** A section's caption: its name in small caps, its count in brass. */
@@ -146,6 +147,7 @@ export const PlayerProfileWindow = () => {
   return (
     <GameWindow
       title={player_name(target)}
+      icon={is_agent_entry(target) ? <AgentBadge /> : undefined}
       className="w-[min(820px,100%)] max-h-[calc(100cqh-24px)] text-text [&_.aui-window-header]:justify-start [&_.aui-window-header]:pr-25 [&_.aui-window-header]:pl-5 [&_.aui-window-meta]:right-10 [&_.aui-window-meta]:bottom-[5px] [&_.aui-window-meta]:left-auto [&_.aui-window-meta]:flex [&_.aui-window-meta]:gap-1"
       aria-label={text('profile_title')}
       close={() => dispatch_app({ type: 'leaderboards/inspect_close' })}

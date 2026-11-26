@@ -2,17 +2,19 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 
+import { format_text } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 
 import type { KaresCopy } from './copy.ts'
-import { kares_distribution } from './distribution.ts'
+import { kares_distribution, kares_market_values } from './distribution.ts'
 import { HEADING, LEDGER, SECTION, Tokenomics } from './TokenomicsPanel.tsx'
 
 const SHARE = 'text-right font-mono text-[13px]/none font-semibold tabular-nums'
 
 /** The token's live ledger, then its fixed distribution. The staking page supplies the panel it sits on. */
 export const TokenomicsSection = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
-  const { amount: format_amount } = useNumbers()
+  const { amount: format_amount, decimal } = useNumbers()
+  const market = kares_market_values(decimal)
   const allocations = kares_distribution(copy)
   return (
     <div className="grid grid-cols-1 gap-7 p-5.5 max-[760px]:p-4">
@@ -46,6 +48,8 @@ export const TokenomicsSection = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
         <div className="grid grid-cols-2 gap-x-7 gap-y-3 *:text-[13px]/[1.55] *:text-muted max-[899px]:grid-cols-1">
           <p>{copy.rewards_note}</p>
           <p>{copy.revenue_note}</p>
+          <p>{format_text(copy.market_note, market)}</p>
+          <p>{format_text(copy.fee_note, market)}</p>
           <p>{copy.emissions_detail}</p>
           <p>{copy.upgradeability_note}</p>
         </div>

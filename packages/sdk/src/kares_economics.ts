@@ -12,6 +12,8 @@ export const KARES_ALLOCATION = Object.freeze({
   community: 110_000_000n * KARES_UNIT,
   liquidity: 540_000_000n * KARES_UNIT,
 })
+/** The market pool's permanent terms and the treasury's trade fee, in basis points. The launch builds from these. */
+export const KARES_MARKET = Object.freeze({ kares_weight_bps: 8_000n, pool_fee_bps: 30n, treasury_fee_bps: 200n })
 export const COMBAT_DAILY_BUDGET = KARES_ALLOCATION.combat / 1_825n
 export const KARES_RESERVE_SUPPLY = KARES_ALLOCATION.rewards + KARES_ALLOCATION.combat + KARES_ALLOCATION.community
 export const mastery_kares_price = (points: bigint): bigint => points * KARES_PER_MASTERY_POINT * KARES_UNIT

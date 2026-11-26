@@ -19,23 +19,24 @@ import {
 
 import type { Sdk } from './client.ts'
 import type { ContractArtifact, DeploymentReceipt, SharedDeploymentPin } from './deployment_admin.ts'
-import { KARES_ALLOCATION } from './kares_economics.ts'
+import { KARES_ALLOCATION, KARES_MARKET } from './kares_economics.ts'
 import { add_rewards_setup, kares_coin_type, type RewardsSetup } from './kares_ptb.ts'
 
 /** Aftermath's 18-decimal fixed point: 1e18 is 100%. */
 const AFTERMATH_ONE = 1_000_000_000_000_000_000n
-export const LAUNCH_KARES_WEIGHT = (AFTERMATH_ONE * 80n) / 100n
+export const LAUNCH_KARES_WEIGHT = (AFTERMATH_ONE * KARES_MARKET.kares_weight_bps) / 10_000n
 export const LAUNCH_SUI_WEIGHT = AFTERMATH_ONE - LAUNCH_KARES_WEIGHT
 /** Charged on the coin going in and kept by the pool, so it deepens the locked liquidity. */
-export const LAUNCH_POOL_FEE = AFTERMATH_ONE / 1_000n
+export const LAUNCH_POOL_FEE = (AFTERMATH_ONE * KARES_MARKET.pool_fee_bps) / 10_000n
 /** Paid to the treasury on every swap, deposit and withdrawal. */
-export const LAUNCH_DAO_FEE_BPS = 200
+export const LAUNCH_DAO_FEE_BPS = Number(KARES_MARKET.treasury_fee_bps)
 export const LAUNCH_POOL_NAME = 'KARES/SUI'
 /** Both coins have nine decimals. Aftermath records them; the currency contract enforces KARES's nine. */
 export const LAUNCH_COIN_DECIMALS = 9
 /** Nobody can sign for this address: liquidity tokens sent here can never withdraw the pool. */
 export const LIQUIDITY_LOCK_ADDRESS = normalizeSuiAddress('0x0')
-const COIN_REGISTRY = Object.freeze({ id: normalizeSuiObjectId('0xc'), shared_version: '1' })
+/** Sui's coin registry. Its shared version is the mainnet one, read from the object on 2026-11-26. */
+export const COIN_REGISTRY = Object.freeze({ id: normalizeSuiObjectId('0xc'), shared_version: '646801004' })
 
 export type AftermathDeployment = Readonly<{
   amm: string
@@ -48,7 +49,7 @@ export type AftermathDeployment = Readonly<{
 }>
 
 /**
- * Aftermath's mainnet deployment. Source: Aftermath `/api/addresses` (2026-11-24), each package checked
+ * Aftermath's mainnet deployment. Source: Aftermath `/api/addresses` (2026-11-26), each package checked
  * against its on-chain lineage. `amm_types`, `amm_v2_types` and `dao_fee_types` are the ids their struct types carry.
  */
 export const AFTERMATH_MAINNET: AftermathDeployment = Object.freeze({
@@ -58,13 +59,13 @@ export const AFTERMATH_MAINNET: AftermathDeployment = Object.freeze({
   amm_v2_types: '0xf948935b111990c2b604900c9b2eeb8f24dcf9868a45d1ea1653a5f282c10e29',
   pool_registry: Object.freeze({
     id: '0xfcc774493db2c45c79f688f88d28023a3e7d98e4ee9f48bbf5c7990f651577ae',
-    shared_version: '1',
+    shared_version: '6808332',
   }),
   dao_fee: '0x3654c4a2d0956cb8ccd35c436a9c623512644689c46412f5f5d5447e321718ce',
   dao_fee_types: '0x6f60a091637054e23915b8745c0c0d47b1d49618ee3435b5f68eccf6a44fb53d',
   dao_fee_version: Object.freeze({
     id: '0xb4bfb0f917f12ad2a772bea9b4f22431f6f5f9653162c3ae6fae5b99b21392b7',
-    shared_version: '1',
+    shared_version: '293243902',
   }),
 })
 

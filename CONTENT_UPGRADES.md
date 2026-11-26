@@ -228,7 +228,7 @@ The launch, signed by the treasury, one transaction at a time:
    authority and Aftermath's pool-creation cap. Nothing is tradable yet.
 7. **Register.** One transaction promotes the currency to its shared registry object.
 8. **Launch.** One atomic transaction: open Genesis into 540M liquidity, 410M reserves and 50M team;
-   create the Aftermath pool (80% KARES, 20% SUI, 0.1% pool fee) with the liquidity share and the SUI
+   create the Aftermath pool (80% KARES, 20% SUI, 0.3% pool fee) with the liquidity share and the SUI
    seed; wrap it in the 2% DAO fee paid to the treasury; send every liquidity token to `0x0`; fund
    the Economy with the reserve share; send the team share and the fee authority to the treasury.
    Before the wallet opens, the SDK simulates the launch and refuses it unsigned unless the pool is
@@ -242,7 +242,7 @@ The launch, signed by the treasury, one transaction at a time:
 
 After the launch:
 
-- The pool's weights and its 0.1% fee are permanent. Only the DAO fee rate and recipient can change,
+- The pool's weights and its 0.3% fee are permanent. Only the DAO fee rate and recipient can change,
   through the treasury-held fee authority. Announce any change first; never raise it silently.
 - SUI returned to the pool is a deposit that mints new liquidity tokens. Send them to `0x0` in the
   same transaction, or that liquidity is not locked.

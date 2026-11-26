@@ -463,6 +463,8 @@ marketplace_page:
   subtitle: Player listings on Sui
   browse: Browse
   group_equipment: Equipment
+  group_cosmetics: Cosmetics
+  group_titles: Titles
   group_pets: Pets
   group_runes: Runes
   group_consumable: Consumables
@@ -2290,6 +2292,8 @@ kares_page:
   mastery_note: 'Buy crates with KARES in the Mastery section of the Staking page. Payment burns KARES permanently when you purchase, not when you open the crate.'
   rewards_note: 'Staking rewards release over 1,825 active days. Anyone can donate KARES or SUI: deposits start at the next active-day boundary and release over 30 active days without extending older schedules. Donations cannot be withdrawn. The clock pauses when nobody stakes; earned rewards remain claimable.'
   revenue_note: '20% of collected marketplace royalties goes to SUI staking rewards. Rewards vary with revenue and participating stake.'
+  market_note: 'The liquidity share is locked in one KARES/SUI pool on Aftermath, {{kares_weight}}% KARES and {{sui_weight}}% SUI. Nobody can withdraw it.'
+  fee_note: 'Every trade pays a {{treasury_fee}}% fee to the AresRPG treasury and a {{pool_fee}}% pool fee that stays in the pool.'
   points: 'Mastery points'
   buy_kares: 'Buy - {{cost}} KARES'
   kares_missing: 'Not enough KARES'
@@ -3322,6 +3326,13 @@ docs_page:
     lede: KARES is not ready yet. It will be added soon.
     note: This page will describe the token, its supply and its reward pools when it launches. No
       balance, price or reward figure is published before then.
+    live_lede: 'KARES is the AresRPG token. It trades on Aftermath.'
+    points:
+      - '{{supply}} KARES were issued once. Nothing new can be minted, and every burn lowers the supply.'
+      - '{{liquidity}}% is locked forever in one KARES/SUI pool on Aftermath, {{kares_weight}}% KARES and {{sui_weight}}% SUI. Nobody can withdraw it.'
+      - '{{reserves}}% funds rewards: staking, boss rewards and the community reserve, released over five years.'
+      - '{{team}}% is the team share. It is not vested.'
+      - 'Every trade pays a {{treasury_fee}}% fee to the AresRPG treasury and a {{pool_fee}}% pool fee that stays in the pool.'
   agents:
     lede: Connect ChatGPT, Claude or Grok to a hosted AresRPG bot. You agree on an objective, and
       the assistant plays your character within it. This feature is a work in progress.
@@ -3412,6 +3423,7 @@ agent_page:
   run_ended_completed: 'It finished its plan.'
   error_unknown: 'Something went wrong. Try again.'
   error_bot_busy_or_paused: "Your bot is paused or still finishing this hero's last action. Try again in a moment."
+  error_behavior_running: 'This hero already follows a plan. Replace its plan instead of starting a new one.'
   error_run_limit_reached: 'Your bot is already playing as many heroes as it can. Stop one, then try again.'
   error_needs_resync: 'Your bot was still catching up. Try again in a few seconds.'
   error_unavailable: 'Your bot is not answering. Try again in a moment.'
@@ -3459,6 +3471,7 @@ portfolio_page:
   tab_heroes: 'Heroes'
   tab_bag: 'Bag'
   tab_for_sale: 'For sale'
+  tab_sales: 'Sales'
   failed: 'The game server did not send this account. Reload the page to try again.'
   heroes_empty: 'No hero on this account.'
   bag_empty: 'Nothing here yet. Buy on the market or play to find items.'
@@ -3488,6 +3501,7 @@ site:
   new_tab: ' (opens a new tab)'
   log_in_first: 'Log in first'
   buy_kares: 'Buy KARES'
+  not_ready_yet: 'Not ready yet'
   docs: Docs
   encyclopedia: Item encyclopedia
   journal: Journal

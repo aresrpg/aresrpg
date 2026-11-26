@@ -28,7 +28,7 @@ import { bag_account, bag_cells, bag_items } from './bag.ts'
 import { HeroCard, HEROES, HeroSkeleton, type HeroMove } from './HeroCard.tsx'
 import './portfolio.css'
 
-type Tab = 'heroes' | 'bag' | 'for_sale'
+type Tab = 'heroes' | 'bag' | 'for_sale' | 'sales'
 /** A sentence in place of a tab's content. */
 const NOTE = 'py-6 leading-normal'
 type Phase = 'loading' | 'ready' | 'failed'
@@ -67,14 +67,14 @@ const AccountNote = ({ copy, phase, empty }: Readonly<{ copy: AppCopy; phase: Ph
   </p>
 )
 
-/** The game account's listings with their delist and its sales with the proceeds to collect, across the page. */
-const ForSale = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+/** One part of the game account's market side, across the page: its listings with their delist, or its sales with
+ *  the proceeds to collect. */
+const MarketSide = ({ copy, part }: Readonly<{ copy: AppCopy; part: 'for_sale' | 'sales' }>) => {
   const locale = useSiteStore((state) => state.locale)
   const text = copy_text(copy.marketplace_page)
   return (
     <div className="aui-market-port grid min-w-0 gap-4">
-      <OwnListings text={text} />
-      <HistoryPanel locale={locale} text={text} />
+      {part === 'for_sale' ? <OwnListings text={text} /> : <HistoryPanel locale={locale} text={text} />}
     </div>
   )
 }
@@ -148,6 +148,9 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   // What a tab shows before it has content: its boxes while the account loads, else a sentence.
   const empty = (tab: keyof typeof WAITING, sentence: string) =>
     phase === 'loading' ? WAITING[tab]() : <AccountNote copy={copy} phase={phase} empty={sentence} />
+  // The bot sells by itself: its account shows a sentence where the game account shows its market side.
+  const market_side = (part: 'for_sale' | 'sales') =>
+    on_bot ? <p className={`${NOTE} text-soft`}>{text('bot_sells')}</p> : <MarketSide copy={copy} part={part} />
   const panels: Readonly<Record<Tab, () => ReactNode>> = {
     heroes: () =>
       shown_heroes.length ? (
@@ -176,7 +179,8 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         waiting={empty('bag', text('bag_empty'))}
       />
     ),
-    for_sale: () => (on_bot ? <p className={`${NOTE} text-soft`}>{text('bot_sells')}</p> : <ForSale copy={copy} />),
+    for_sale: () => market_side('for_sale'),
+    sales: () => market_side('sales'),
   }
   return (
     <div
@@ -196,6 +200,7 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               { value: 'heroes', label: text('tab_heroes'), count: count(shown_heroes) },
               { value: 'bag', label: text('tab_bag'), count: count(cells) },
               { value: 'for_sale', label: text('tab_for_sale') },
+              { value: 'sales', label: text('tab_sales') },
             ]}
           />
           <div className="ml-auto" data-portfolio-agent="">

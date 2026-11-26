@@ -6,6 +6,7 @@ import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 /** Facts not observed yet: the leaf waits instead of failing. */
 const waiting = new Set([
   'needs_resync',
+  'zone_outside_view',
   'inventory_unavailable',
   'travel_not_ready',
   'needs_custody_resync',

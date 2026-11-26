@@ -94,7 +94,7 @@ describe('behavior runtime', () => {
         decision_revision: 2,
         observation_revision: 1,
       })
-    ).rejects.toThrow('bot_busy_or_paused')
+    ).rejects.toThrow('behavior_running')
     // A direct command no longer needs an idle wallet: it queues behind the tree's admitted command.
     const lane = (await f.store.read<Lane>(f.key))!
     const direct = await f.control.accept(f.grant, {
@@ -278,7 +278,7 @@ describe('behavior runtime', () => {
     expect((await f.control.start_behavior(f.grant, input)).id).toBe((await f.get_run()).id)
     await expect(
       f.control.start_behavior(f.grant, { ...input, script: { ...script, objective: { title: 'Different' } } })
-    ).rejects.toThrow('bot_busy_or_paused')
+    ).rejects.toThrow('behavior_running')
     await expect(
       f.control.replace_behavior(f.grant, {
         character_id: character.id,

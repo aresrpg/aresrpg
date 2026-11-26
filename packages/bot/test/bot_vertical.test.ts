@@ -187,7 +187,11 @@ describe('vertical', () => {
         if (response.result.isError) throw new Error(JSON.stringify(response.result.structuredContent))
         return response.result.structuredContent
       }
-      expect(await call('bot_observe', {})).toEqual({ status: 'pending' })
+      // A wallet that has not joined the game yet says so: a bare pending cannot be told from a stuck one.
+      expect(await call('bot_observe', {})).toEqual({
+        status: 'pending',
+        waiting_for: expect.arrayContaining(['game_connection']),
+      })
       await runtime.tick()
       await runtime.settle()
       const fight = fight_fixture(created.bot.address)
@@ -208,6 +212,7 @@ describe('vertical', () => {
         characters: [
           {
             jobs: {},
+            spells: {},
             equipment: [],
             id: fight.character_id,
             custody: 'fight',

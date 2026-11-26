@@ -42,7 +42,8 @@ type Bus = Readonly<{
   unsubscribe: (channel: string) => Promise<unknown>
 }>
 const topic = (actor: string) => `bot:observations:${actor}`
-const pending_read = () => ({ status: 'pending' })
+/** The wallet is changing hands between two processes: the next read reaches its new owner. */
+const pending_read = () => ({ status: 'pending', waiting_for: ['wallet_handover'] })
 const stale_owner = (control?: Request['control']) => {
   if (control) throw new Error('actor_fenced')
   return pending_read()

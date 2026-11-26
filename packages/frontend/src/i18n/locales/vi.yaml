@@ -466,6 +466,8 @@ marketplace_page:
   subtitle: Gian hàng người chơi trên Sui
   browse: Duyệt
   group_equipment: Trang bị
+  group_cosmetics: Trang trí
+  group_titles: Danh hiệu
   group_pets: Thú cưng
   group_runes: Ngọc khắc
   group_consumable: Vật phẩm tiêu hao
@@ -2281,6 +2283,8 @@ kares_page:
   mastery_note: 'Mua rương bằng KARES trong mục Tinh thông của trang Staking. KARES thanh toán bị đốt vĩnh viễn khi mua, không phải khi mở rương.'
   rewards_note: 'Phần thưởng được phân phối trong 1.825 ngày hoạt động. Ai cũng có thể đóng góp KARES hoặc SUI: bắt đầu ở mốc ngày hoạt động tiếp theo và kéo dài 30 ngày hoạt động, không kéo dài lịch cũ. Khoản đóng góp không thể rút lại. Đồng hồ dừng khi không ai staking; phần thưởng đã kiếm được vẫn có thể nhận.'
   revenue_note: 20% tiền bản quyền chợ đã thu dùng thưởng SUI cho staking. Thưởng tùy doanh thu và lượng stake tham gia.
+  market_note: 'Phần thanh khoản được khóa trong một pool KARES/SUI duy nhất trên Aftermath, {{kares_weight}}% KARES và {{sui_weight}}% SUI. Không ai có thể rút.'
+  fee_note: 'Mỗi giao dịch trả phí {{treasury_fee}}% cho kho bạc AresRPG và phí pool {{pool_fee}}% được giữ lại trong pool.'
   points: Điểm Tinh thông
   buy_kares: 'Mua - {{cost}} KARES'
   kares_missing: Không đủ KARES
@@ -3299,6 +3303,13 @@ docs_page:
   kares:
     lede: 'KARES chưa sẵn sàng. Token sẽ sớm được bổ sung.'
     note: 'Trang này sẽ mô tả token, nguồn cung và các quỹ thưởng khi token ra mắt. Trước đó, không có số dư, giá hay con số phần thưởng nào được công bố.'
+    live_lede: 'KARES là token của AresRPG. Token được giao dịch trên Aftermath.'
+    points:
+      - '{{supply}} KARES được phát hành một lần duy nhất. Không thể tạo thêm, và mỗi lần đốt làm giảm nguồn cung.'
+      - '{{liquidity}}% được khóa vĩnh viễn trong một pool KARES/SUI duy nhất trên Aftermath, {{kares_weight}}% KARES và {{sui_weight}}% SUI. Không ai có thể rút.'
+      - '{{reserves}}% dành cho phần thưởng: staking, phần thưởng boss và quỹ cộng đồng, được mở dần trong năm năm.'
+      - '{{team}}% là phần của đội ngũ. Không có vesting.'
+      - 'Mỗi giao dịch trả phí {{treasury_fee}}% cho kho bạc AresRPG và phí pool {{pool_fee}}% được giữ lại trong pool.'
   agents:
     lede: 'Kết nối ChatGPT, Claude hoặc Grok với một bot AresRPG chạy trên máy chủ. Bạn thống nhất một mục tiêu, và trợ lý điều khiển nhân vật của bạn trong phạm vi đó. Tính năng này đang được hoàn thiện.'
     steps:
@@ -3385,6 +3396,7 @@ agent_page:
   run_ended_completed: 'Đã hoàn thành kế hoạch.'
   error_unknown: 'Đã có lỗi. Hãy thử lại.'
   error_bot_busy_or_paused: 'Bot đang tạm dừng hoặc vẫn đang hoàn tất hành động cuối của anh hùng này. Hãy thử lại sau giây lát.'
+  error_behavior_running: 'Anh hùng này đã có kế hoạch. Hãy thay kế hoạch đó thay vì bắt đầu kế hoạch mới.'
   error_run_limit_reached: 'Bot đã điều khiển số anh hùng tối đa có thể. Hãy dừng một anh hùng rồi thử lại.'
   error_needs_resync: 'Bot vẫn đang bắt kịp. Hãy thử lại sau vài giây.'
   error_unavailable: 'Bot không phản hồi. Hãy thử lại sau giây lát.'
@@ -3432,6 +3444,7 @@ portfolio_page:
   tab_heroes: 'Anh hùng'
   tab_bag: 'Túi'
   tab_for_sale: 'Đang bán'
+  tab_sales: 'Đã bán'
   failed: 'Máy chủ trò chơi chưa gửi tài khoản này. Hãy tải lại trang để thử lại.'
   heroes_empty: 'Tài khoản này chưa có anh hùng nào.'
   bag_empty: 'Chưa có gì ở đây. Mua ở chợ hoặc chơi để tìm vật phẩm.'
@@ -3461,6 +3474,7 @@ site:
   new_tab: ' (mở trong tab mới)'
   log_in_first: 'Hãy đăng nhập trước'
   buy_kares: 'Mua KARES'
+  not_ready_yet: 'Chưa sẵn sàng'
   docs: Tài liệu
   encyclopedia: Bách khoa vật phẩm
   journal: Nhật ký

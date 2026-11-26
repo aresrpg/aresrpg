@@ -324,7 +324,7 @@ const validate_engage = (context: GameplayContext) => {
 const FIGHT_ACTIONS = {
   world_search: gameplay_action({
     description:
-      "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody.",
+      "Discover or refresh a zone in an owned character's observed world window, using canonical chain travel and exact kiosk custody. A zone outside that window answers zone_outside_view: walk the hero closer first, reading again does not help.",
     input_schema: search_schema,
     parse: parse_search,
     validate: validate_search,

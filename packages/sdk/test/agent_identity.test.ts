@@ -135,6 +135,31 @@ test('an agent identity is the fixed 1-of-2 multisig and pairing refuses a forei
   )
   expect(ordinary.read_agent_pairing_request(crypto.randomUUID())).toBeNull()
   ordinary.dispose()
+  // A wallet prepares its proof on the first signature and does not share one in flight: two
+  // signatures asked at once (the game login and the agent check, at sign-in) run one after the other.
+  let signing_now = 0
+  let overlapped = false
+  const slow_sign = async ({ message }: Readonly<{ message: Uint8Array }>) => {
+    signing_now += 1
+    overlapped ||= signing_now > 1
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    signing_now -= 1
+    if (message[0] === 0) throw new Error('refused')
+    return { bytes: toBase64(message), signature: 'signed' }
+  }
+  const queued = create_wallet_binding(
+    {
+      features: { ...ordinary_features, 'sui:signPersonalMessage': { signPersonalMessage: slow_sign } },
+    } as unknown as Wallet,
+    { address: id(1), publicKey: new Uint8Array(32), chains: ['sui:mainnet'], features: [] } as WalletAccount,
+    'mainnet'
+  )
+  const [refused_first, second, third] = await Promise.allSettled(
+    [0, 1, 2].map((byte) => queued.sign_personal_message(new Uint8Array([byte])))
+  )
+  expect([refused_first.status, second.status, third.status]).toEqual(['rejected', 'fulfilled', 'fulfilled'])
+  expect(overlapped).toBe(false)
+  queued.dispose()
   const other = toZkLoginPublicIdentifier(1n, 'https://example.com', { legacyAddress: false })
   for (const [address, public_key] of [
     [`0x${'ab'.repeat(32)}`, google.toSuiBytes()],

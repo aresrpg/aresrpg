@@ -75,7 +75,7 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
   const pairing_public_key = account.publicKey?.slice()
   const pairing_owner = account.address
   const session_feature = wallet.features['enoki:getSession'] as EnokiWallet['features']['enoki:getSession'] | undefined
-  const with_active_session = <T>(operation: () => Promise<T>): Promise<T> => {
+  const signed = <T>(operation: () => Promise<T>): Promise<T> => {
     require_active()
     if (!session_feature) return operation()
     return session_feature.getSession({ network }).then((session) => {
@@ -87,6 +87,23 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
       }
       return operation()
     })
+  }
+  /**
+   * One signature at a time for this account. A wallet prepares what its first signature needs (a
+   * zkLogin proof) and does not share a preparation in flight: two signatures asked at once, as the
+   * game login and the agent check are at sign-in, would each ask for it and one is refused.
+   */
+  let in_flight: Promise<unknown> | null = null
+  const with_active_session = <T>(operation: () => Promise<T>): Promise<T> => {
+    const start = () => signed(operation)
+    // An idle account signs at once, as before; only a signature asked during another one waits.
+    const next = in_flight ? in_flight.then(start, start) : start()
+    in_flight = next
+    const release = () => {
+      if (in_flight === next) in_flight = null
+    }
+    void next.then(release, release)
+    return next
   }
   return Object.freeze({
     // Enoki exposes the stable public identifier on WalletAccount; never read its secret session.

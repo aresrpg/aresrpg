@@ -107,6 +107,8 @@ export type KaresCopy = ErrorCopy &
     mastery_note: string
     rewards_note: string
     revenue_note: string
+    market_note: string
+    fee_note: string
     points: string
     buy_kares: string
     kares_missing: string

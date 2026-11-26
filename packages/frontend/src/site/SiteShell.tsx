@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The site's shell. It mounts once per visit: the bar, the page of the current address, the footer and the
 // account's dialogs. A bar link swaps the page inside it; the connection and the sign-in survive every swap.
+import { resolve_pins } from '@aresrpg/sdk/pins'
 import { Ground } from '@aresrpg/ui'
 import {
   ArrowUpRight,
@@ -22,6 +23,7 @@ import { LanguageCard } from '../components/AccountControls.tsx'
 import { connection_label, indexing_health_tone, status_tone } from '../components/connection_status.ts'
 import { is_plain_click, NewTabLink } from '../components/links.tsx'
 import { Toasts } from '../components/Toasts.tsx'
+import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
 import { signed_out } from '../modules/session.ts'
@@ -162,12 +164,8 @@ const SiteNav = ({ copy, page, menu }: Readonly<{ copy: AppCopy | null; page: Si
   )
 }
 
-/**
- * Play opens the game in a tab of its own: the game takes the account's one seat, so this page keeps its connection.
- * The game has no sign-in, so a visitor known to be signed out stays here and the key says to log in first.
- */
-const PlayKey = ({ copy, label }: Readonly<{ copy: AppCopy | null; label: ReactNode }>) => {
-  const refuses = useSiteStore(({ session }) => signed_out(session))
+/** A key that refuses a click says why under itself, then forgets: each refusal replays the hint. */
+const useRefusal = (refuses: boolean) => {
   const [refusal, set_refusal] = useState(0)
   const refuse = (event: Readonly<MouseEvent<HTMLAnchorElement>>): void => {
     if (!refuses) return
@@ -175,6 +173,21 @@ const PlayKey = ({ copy, label }: Readonly<{ copy: AppCopy | null; label: ReactN
     event.stopPropagation()
     set_refusal((count) => count + 1)
   }
+  const hint = (words: string | undefined) =>
+    refusal > 0 && (
+      <span className="site-refusal-hint" key={`hint-${refusal}`} role="status" onAnimationEnd={() => set_refusal(0)}>
+        {words}
+      </span>
+    )
+  return { refusal, refuse, hint }
+}
+
+/**
+ * Play opens the game in a tab of its own: the game takes the account's one seat, so this page keeps its connection.
+ * The game has no sign-in, so a visitor known to be signed out stays here and the key says to log in first.
+ */
+const PlayKey = ({ copy, label }: Readonly<{ copy: AppCopy | null; label: ReactNode }>) => {
+  const { refusal, refuse, hint } = useRefusal(useSiteStore(({ session }) => signed_out(session)))
   return (
     <NewTabLink className="site-play" href={SITE_ADDRESSES.world} new_tab={copy?.site.new_tab ?? ''} on_click={refuse}>
       {/* The key remounts on each refusal, so its nudge and the hint replay. */}
@@ -183,11 +196,7 @@ const PlayKey = ({ copy, label }: Readonly<{ copy: AppCopy | null; label: ReactN
         {label}
       </span>
       <ArrowUpRight className="site-play-ext" size={14} aria-hidden="true" />
-      {refusal > 0 && (
-        <span className="site-play-hint" key={`hint-${refusal}`} role="status" onAnimationEnd={() => set_refusal(0)}>
-          {copy?.site.log_in_first}
-        </span>
-      )}
+      {hint(copy?.site.log_in_first)}
     </NewTabLink>
   )
 }
@@ -225,13 +234,28 @@ const DocsMark = ({ copy }: Readonly<{ copy: AppCopy | null }>) => (
   </a>
 )
 
-/** KARES trades on Aftermath: one small gold key outside the bar, at its right, on wide windows. */
-const BuyKares = ({ copy }: Readonly<{ copy: AppCopy | null }>) => (
-  <NewTabLink className="site-buy-kares" href={SITE_ADDRESSES.aftermath} new_tab={copy?.site.new_tab ?? ''}>
-    <Coins size={15} strokeWidth={1.8} aria-hidden="true" />
-    {copy?.site.buy_kares ?? <span className="aui-skeleton site-stub" />}
-  </NewTabLink>
-)
+/** Whether KARES trades yet: its coin type is pinned once the token is launched. */
+const KARES_TRADES = Boolean(resolve_pins(env.network).kares_coin_type)
+
+/**
+ * KARES trades on Aftermath: one small gold key outside the bar, at its right, on wide windows. Until the token is
+ * launched there is nothing to buy, so the key stays here and says so.
+ */
+const BuyKares = ({ copy }: Readonly<{ copy: AppCopy | null }>) => {
+  const { refusal, refuse, hint } = useRefusal(!KARES_TRADES)
+  return (
+    <NewTabLink
+      className={`site-buy-kares ${refusal ? 'site-buy-kares--refused' : ''}`}
+      href={SITE_ADDRESSES.aftermath}
+      new_tab={copy?.site.new_tab ?? ''}
+      on_click={refuse}
+    >
+      <Coins size={15} strokeWidth={1.8} aria-hidden="true" />
+      {copy?.site.buy_kares ?? <span className="aui-skeleton site-stub" />}
+      {hint(copy?.site.not_ready_yet)}
+    </NewTabLink>
+  )
+}
 
 const SALE_LINE_KEY = 'aresrpg:sale-line'
 

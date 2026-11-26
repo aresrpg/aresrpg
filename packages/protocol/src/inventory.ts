@@ -159,11 +159,17 @@ export const craft_stack_plan = (
   const groups = Object.entries(inputs).map(([item_type, per_attempt]) => {
     const stacks = available_item_stacks(inventory, encumbered, item_type, kiosk)
     const [target] = stacks
-    const sources = target ? stack_merge_sources(inventory, encumbered, target) : []
     const amount = per_attempt * attempts
-    const total_amount = stacks
-      .filter(({ id }) => id === target?.id || sources.includes(id))
-      .reduce((total, stack) => total + stack.amount, 0)
+    // Only the piles the craft needs, largest first: a bag of hundreds of small piles would otherwise
+    // put every one of them in the transaction and exceed what one transaction may hold.
+    const needed = (target ? stack_merge_sources(inventory, encumbered, target) : []).reduce(
+      (taken, id) => {
+        if (taken.total >= amount) return taken
+        return { ids: [...taken.ids, id], total: taken.total + stacks.find((stack) => stack.id === id)!.amount }
+      },
+      { ids: [] as readonly string[], total: target?.amount ?? 0 }
+    )
+    const { ids: sources, total: total_amount } = needed
     if (!target || !item_is_stackable(target.category) || total_amount < amount || total_amount > 4_294_967_295)
       return null
     return Object.freeze({

@@ -28,7 +28,10 @@ export const compact_leaderboard_score = (score: string, metric: LeaderboardMetr
   return `${formatted}${money ? ' SUI' : ''}`
 }
 
+/** Whether a ranked account is a hosted bot: its name is in the bots' own name space. */
+export const is_agent_entry = (entry: Pick<LeaderboardEntry, 'name'>): boolean =>
+  !!entry.name && application_suins_name(entry.name)?.kind === 'agent'
+
+/** The name a ranked account goes by. What kind of account it is is a badge beside it, not part of the name. */
 export const player_name = (entry: Pick<LeaderboardEntry, 'address' | 'name'>): string =>
-  entry.name
-    ? `${application_suins_name(entry.name)?.kind === 'agent' ? '[AI] ' : ''}${display_suins_name(entry.name)}`
-    : display_address(entry.address)
+  entry.name ? display_suins_name(entry.name) : display_address(entry.address)

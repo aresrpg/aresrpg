@@ -10,16 +10,13 @@ import type { ControlStore } from '../src/store.ts'
 import { fold_actor_market } from '../src/actor_market.ts'
 import { id } from '../../sdk/test/helpers/transport.ts'
 import { type Command, type Lane, lane_key_for, empty_lane } from '../src/control.ts'
-import {
-  AUTO_COLLECT_MIN_MIST,
-  collection_due,
-  create_market_collector,
-  empty_proceeds,
-  fold_proceeds,
-} from '../src/market_collection.ts'
+import { AUTO_COLLECT_MIN_MIST, collection_due, empty_proceeds, fold_proceeds } from '../src/market_collection.ts'
+import { create_wallet_duties, FORFEIT_AFTER_MS, overdue_fights, unsettled_fights } from '../src/wallet_duties.ts'
+import { empty_snapshot, type ActorSnapshot } from '../src/actor_snapshot.ts'
 import { settled_market_receipts, read_market_receipts, fold_market_receipts } from '../src/market_recovery.ts'
 
 import { character, profession_context, resource, hero_runs as fixture } from './fixture_game.ts'
+import { fight_character_id, fight_context, fight_id, fighter, placement, started_fight } from './fixture_fight.ts'
 import { put, runtime_fixture, fixture_bot, memory_store } from './fixture.ts'
 
 describe('market collection', () => {
@@ -54,27 +51,29 @@ describe('market collection', () => {
   const collecting = async (grants?: readonly string[]) => {
     const f = await fixture()
     const shared: (string | null | undefined)[] = []
-    const collect = create_market_collector(
-      f.store,
-      f.control,
-      f.bot,
-      new Set(grants ?? [f.grant.id]),
-      async () => {
+    const seen: { snapshot: ActorSnapshot } = { snapshot: empty_snapshot() }
+    const collect = create_wallet_duties({
+      store: f.store,
+      control: f.control,
+      bot: f.bot,
+      grants: new Set(grants ?? [f.grant.id]),
+      share: async () => {
         shared[shared.length] = (await f.lane()).direct
       },
-      f.options.report_failure
-    )
-    const commands = async () => {
+      snapshot: () => seen.snapshot,
+      report_failure: f.options.report_failure,
+    })
+    const commands = async (kind = 'market_collect') => {
       const keys = await f.store.scan_keys('command:', 100)
       const rows = await Promise.all(keys.map((key) => f.store.read<Command>(key)))
-      return rows.filter((row) => row?.kind === 'market_collect')
+      return rows.filter((row) => row?.kind === kind)
     }
     const direct = async () => (await f.store.read<Command>(`command:${(await f.lane()).direct}`))!
     const finish = async (command: Command, status: Command['status']) => {
       await put(f.store, `command:${command.id}`, { ...command, status, result: { digest: 'fixture' } })
       await put(f.store, f.key, { ...(await f.lane()), active_command: null })
     }
-    return { ...f, collect, commands, direct, finish, shared }
+    return { ...f, collect, commands, direct, finish, shared, seen }
   }
 
   test('one collection per observed change, to the observed kiosks, and none for a state already served', async () => {
@@ -197,6 +196,73 @@ describe('market collection', () => {
   })
 
   // Owner, 2026-11-21: "auto collect from 0.1 SUI". Dust costs more gas to collect than it brings.
+  test('a fight not won 15 minutes after it opened is given up once; a staked or ended fight never is', async () => {
+    const opened = Number(placement().contract.placement_ms)
+    const at = (chain_ms: number, checkpoint = placement()) =>
+      fight_context(checkpoint, [fighter()], 1, chain_ms).snapshot
+    const due = [{ character_id: fight_character_id, fight: fight_id }]
+    expect(overdue_fights(at(opened + FORFEIT_AFTER_MS - 1))).toEqual([])
+    expect(overdue_fights(at(opened + FORFEIT_AFTER_MS))).toEqual(due)
+    // A started fight is counted from its start, not from its opening; an ended one is settled, not given up.
+    const started = opened + 59_000
+    const live = () => {
+      const fight = started_fight()
+      fight.contract.started_ms = BigInt(started)
+      return fight
+    }
+    expect(overdue_fights(at(started + FORFEIT_AFTER_MS - 1, live()))).toEqual([])
+    expect(overdue_fights(at(started + FORFEIT_AFTER_MS, live()))).toEqual(due)
+    const ended = live()
+    ended.contract.ended = true
+    expect(overdue_fights(at(started + FORFEIT_AFTER_MS, ended))).toEqual([])
+    // A pledge or a tournament match is the owner's money: the wallet never gives it up by itself.
+    const late = at(opened + FORFEIT_AFTER_MS)
+    const staked = { ...late.fights[fight_id]!, kolizeum: { id: id(50), pledge_mist: '1' } }
+    expect(overdue_fights({ ...late, fights: { [fight_id]: staked } })).toEqual([])
+    expect(overdue_fights({ ...late, clock: null })).toEqual([])
+    expect(overdue_fights({ ...late, fights: {} })).toEqual([])
+
+    const f = await collecting()
+    f.seen.snapshot = late
+    for (const packet of [null, null, held('1')]) await f.collect(packet)
+    const sent = await f.commands('fight_forfeit')
+    expect(sent.map((command) => command!.payload)).toEqual([{ character_id: fight_character_id }])
+    // A paused wallet sends nothing, and sends it once the pause lifts.
+    const paused = await collecting()
+    paused.seen.snapshot = late
+    await put(paused.store, paused.key, { ...(await paused.lane()), paused: true })
+    await paused.collect(null)
+    expect(await paused.commands('fight_forfeit')).toEqual([])
+    await put(paused.store, paused.key, { ...(await paused.lane()), paused: false })
+    await paused.collect(null)
+    expect(await paused.commands('fight_forfeit')).toHaveLength(1)
+  })
+
+  test('an ended fight no run plays is settled once by the wallet; a hero a run holds is left to its run', async () => {
+    const ended = started_fight()
+    ended.contract.ended = true
+    const { snapshot } = fight_context(ended, [fighter()], 1)
+    expect(unsettled_fights(fight_context(started_fight(), [fighter()], 1).snapshot)).toEqual([])
+    expect(unsettled_fights({ ...snapshot, fights: {} })).toEqual([])
+    const [due] = unsettled_fights(snapshot)
+    expect(due!.payload).toMatchObject({ character_id: fight_character_id, fight: fight_id, fighter_idx: '0' })
+
+    const held_by_run = await collecting()
+    held_by_run.seen.snapshot = snapshot
+    await put(held_by_run.store, held_by_run.key, {
+      ...(await held_by_run.lane()),
+      runs: { [fight_character_id]: 'run' },
+    })
+    await held_by_run.collect(null)
+    expect(await held_by_run.commands('fight_settle')).toEqual([])
+    // The run ended without settling: the hero is the wallet's to free.
+    await put(held_by_run.store, held_by_run.key, { ...(await held_by_run.lane()), runs: {} })
+    for (const packet of [null, null]) await held_by_run.collect(packet)
+    const sent = await held_by_run.commands('fight_settle')
+    expect(sent.map((command) => command!.payload)).toEqual([due!.payload])
+    expect(await held_by_run.commands('fight_forfeit')).toEqual([])
+  })
+
   test('proceeds under 0.1 SUI are left in the kiosk; the push that reaches it is collected', () => {
     const dust = fold(held('99999999'))
     expect(collection_due(dust)).toBe(false)

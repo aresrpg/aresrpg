@@ -203,7 +203,7 @@
     inset 0 -1px 0 var(--aui-void),
     0 0 0 1px var(--aui-danger);
 }
-.site-play-hint {
+.site-refusal-hint {
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
@@ -217,7 +217,7 @@
   white-space: nowrap;
   pointer-events: none;
   translate: -50% 0;
-  animation: site-play-hint 2.4s ease-out forwards;
+  animation: site-refusal-hint 2.4s ease-out forwards;
 }
 @keyframes site-play-refused {
   25% {
@@ -227,7 +227,7 @@
     translate: 3px 0;
   }
 }
-@keyframes site-play-hint {
+@keyframes site-refusal-hint {
   0% {
     opacity: 0;
     translate: -50% -4px;
@@ -322,6 +322,10 @@
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease;
+}
+/* A refused click: the frame turns to the danger tone while the hint under it says why. */
+.site-buy-kares--refused {
+  border-color: var(--aui-danger);
 }
 .site-buy-kares:hover {
   border-color: color-mix(in srgb, var(--aui-hue-gold) 75%, transparent);

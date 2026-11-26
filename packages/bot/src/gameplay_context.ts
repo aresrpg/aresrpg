@@ -87,6 +87,38 @@ export const gameplay_observed_ms = ({
   return BigInt(Math.floor(chain_ms))
 }
 
+/**
+ * What a read is waiting for, in the order a wallet gets ready: its game connection, the game's own
+ * state, the chain clock, then each fight a hero sits in. A caller told only "pending" cannot tell a
+ * slow start from a wallet that will never answer; these names say which fact is missing.
+ */
+export const observation_blockers = ({
+  snapshot,
+  now,
+  freshness_ms,
+}: Pick<GameplayContext, 'snapshot' | 'now' | 'freshness_ms'>): readonly string[] => {
+  const fresh = (at: number) => Number.isFinite(at) && at <= now && at + freshness_ms > now
+  const seated = snapshot.characters.flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : []))
+  const facts: readonly (readonly [boolean, string])[] = [
+    [snapshot.characters.length === 0 && snapshot.observed_at === 0, 'game_connection'],
+    [snapshot.frozen === true, 'game_paused'],
+    [snapshot.frozen === null, 'game_state'],
+    [snapshot.indexing_lag === null || Number(snapshot.indexing_lag) > PLAYABLE_INDEXING_LAG, 'indexer_behind'],
+    [!snapshot.clock || !fresh(snapshot.clock.observed_at), 'chain_clock'],
+    [snapshot.observed_at !== 0 && !fresh(snapshot.observed_at), 'stale_game_state'],
+    ...seated.map((id) => [!snapshot.fights[id], `fight_state:${id}`] as const),
+  ]
+  const missing = facts.flatMap(([absent, name]) => (absent ? [name] : []))
+  // Every named fact holds and the wallet is still not ready: a fight row older than what the game announced.
+  return missing.length || snapshot.ready ? missing : ['fight_resync']
+}
+
+/** A read the wallet cannot answer yet says what it waits for. */
+export const pending_observation = (context: Pick<GameplayContext, 'snapshot' | 'now' | 'freshness_ms'>) => ({
+  status: 'pending',
+  waiting_for: observation_blockers(context),
+})
+
 export const gameplay_observation_ready = (context: Pick<GameplayContext, 'snapshot' | 'now' | 'freshness_ms'>) => {
   try {
     gameplay_observed_ms(context)
@@ -149,8 +181,9 @@ export const assert_tracked_zone = (
   zz: number
 ) => {
   const window = context.snapshot.tracked_zones[character_id]
-  if (window?.world !== world || !window.zones.some((zone) => zone.zx === zx && zone.zz === zz))
-    throw new Error('needs_resync')
+  if (window?.world !== world) throw new Error('needs_resync')
+  // The view is current and the zone is simply not in it: reading again changes nothing, walking does.
+  if (!window.zones.some((zone) => zone.zx === zx && zone.zz === zz)) throw new Error('zone_outside_view')
 }
 
 export const travel_destination = (character: CharacterRow, x: number, z: number): Travel => {

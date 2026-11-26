@@ -463,6 +463,8 @@ marketplace_page:
   subtitle: Sui上のプレイヤー出品
   browse: 閲覧
   group_equipment: 装備
+  group_cosmetics: コスメティック
+  group_titles: 称号
   group_pets: ペット
   group_runes: ルーン
   group_consumable: 消耗品
@@ -2284,6 +2286,8 @@ kares_page:
   mastery_note: 'ステーキングページのマスタリーセクションでKARESを使ってクレートを購入できます。KARESは開封時ではなく購入時に永久にバーンされます。'
   rewards_note: '報酬は1,825稼働日で配布されます。誰でもKARESやSUIを寄付でき、次の稼働日の境界から30稼働日で配布されます。既存の配布期間は延びず、寄付は取り戻せません。ステークがゼロなら時計は停止し、獲得済み報酬は請求できます。'
   revenue_note: '回収したマーケットロイヤリティの20%をSUIステーキング報酬へ。報酬は収益と参加ステーク量に応じて変動します。'
+  market_note: '流動性の割り当ては、Aftermath上の1つのKARES/SUIプール（KARES {{kares_weight}}%、SUI {{sui_weight}}%）にロックされています。誰も引き出せません。'
+  fee_note: 'すべての取引で、AresRPGトレジャリーへの{{treasury_fee}}%の手数料と、プールに残る{{pool_fee}}%のプール手数料が発生します。'
   points: 'マスタリーポイント'
   buy_kares: '購入 - {{cost}} KARES'
   kares_missing: 'KARESが不足しています'
@@ -3307,6 +3311,13 @@ docs_page:
   kares:
     lede: 'KARESはまだ準備中です。近日追加予定です。'
     note: 'このページでは、ローンチ時にトークン、供給量、報酬プールについて説明します。それまで残高、価格、報酬の数値は公開しません。'
+    live_lede: 'KARESはAresRPGのトークンです。Aftermathで取引できます。'
+    points:
+      - '{{supply}} KARESが一度だけ発行されました。新規発行はできず、バーンのたびに供給量が減ります。'
+      - '{{liquidity}}%は、Aftermath上の1つのKARES/SUIプール（KARES {{kares_weight}}%、SUI {{sui_weight}}%）に永久にロックされています。誰も引き出せません。'
+      - '{{reserves}}%は報酬に充てられます。ステーキング、ボス報酬、コミュニティ準備金として5年かけて放出されます。'
+      - '{{team}}%はチームの割り当てです。ベスティングはありません。'
+      - 'すべての取引で、AresRPGトレジャリーへの{{treasury_fee}}%の手数料と、プールに残る{{pool_fee}}%のプール手数料が発生します。'
   agents:
     lede: 'ChatGPT、Claude、GrokをホストされたAresRPGボットに接続します。目標を決めると、アシスタントがその範囲でキャラクターをプレイします。この機能は制作中です。'
     steps:
@@ -3393,6 +3404,7 @@ agent_page:
   run_ended_completed: 'プランを完了しました。'
   error_unknown: '問題が発生しました。もう一度お試しください。'
   error_bot_busy_or_paused: 'ボットは一時停止中か、このヒーローの最後の行動をまだ処理しています。少し待ってから再試行してください。'
+  error_behavior_running: 'このヒーローはすでにプランを実行中です。新しく開始せず、プランを置き換えてください。'
   error_run_limit_reached: 'ボットはすでに動かせる上限までヒーローを動かしています。一人止めてから再試行してください。'
   error_needs_resync: 'ボットはまだ同期中でした。数秒後にもう一度お試しください。'
   error_unavailable: 'ボットが応答しません。少し待ってから再試行してください。'
@@ -3440,6 +3452,7 @@ portfolio_page:
   tab_heroes: 'ヒーロー'
   tab_bag: 'バッグ'
   tab_for_sale: '出品中'
+  tab_sales: '売上'
   failed: 'ゲームサーバーからこのアカウントが届きませんでした。ページを再読み込みしてもう一度お試しください。'
   heroes_empty: 'このアカウントにヒーローはいません。'
   bag_empty: 'まだ何もありません。マーケットで購入するか、プレイしてアイテムを見つけましょう。'
@@ -3469,6 +3482,7 @@ site:
   new_tab: ' (新しいタブで開きます)'
   log_in_first: '先にログインしてください'
   buy_kares: 'KARESを購入'
+  not_ready_yet: 'まだ準備中です'
   docs: ドキュメント
   encyclopedia: アイテム図鑑
   journal: ジャーナル

@@ -73,6 +73,7 @@ describe('fight planning', () => {
             custody: 'fight',
             equipment: [],
             jobs: {},
+            spells: {},
             active_fight: { id: fight_id, seat: 0 },
           } as unknown as CharacterRow,
         ],

@@ -109,7 +109,7 @@ describe('hero runs', () => {
         decision_revision: 0,
         observation_revision: 1,
       })
-    ).rejects.toThrow('bot_busy_or_paused')
+    ).rejects.toThrow('behavior_running')
     const two_heroes = {
       ...tree(character.id),
       tree: { type: 'sequence' as const, children: [tree(character.id).tree, tree(ally.id).tree] },

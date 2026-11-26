@@ -5,8 +5,6 @@
 // Every place is there at once and the board fills it; a board the server refuses is a toast with a retry, never a
 // line in the page.
 import { useEffect } from 'react'
-import { Bot } from 'lucide-react'
-import { application_suins_name } from '@aresrpg/immutable'
 import {
   LEADERBOARD_LIMIT,
   LEADERBOARD_METRICS,
@@ -22,7 +20,8 @@ import { Choice } from '../marketplace/MarketParts.tsx'
 import { board_metric, FIRST_BOARD, shown_snapshot } from '../modules/leaderboards.ts'
 import { dispatch_app, useSiteStore } from '../store.ts'
 
-import { player_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
+import { AgentBadge } from './AgentBadge.tsx'
+import { is_agent_entry, player_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
 import { PlayerProfileModal } from './PlayerProfileModal.tsx'
 import { BadgeRow } from './BadgeRow.tsx'
 import './leaderboards.css'
@@ -54,13 +53,12 @@ const EntryBadges = ({ entry, copy }: Readonly<{ entry: LeaderboardEntry; copy: 
   return <BadgeRow badges={badges} total={total} title={text(characters ? 'current_characters' : 'current_jobs')} />
 }
 
+/** A ranked account's name. A hosted bot carries its badge before it. */
 const LeaderboardName = ({ entry, fallback = '' }: Readonly<{ entry?: LeaderboardEntry; fallback?: string }>) => {
   if (!entry) return fallback
   return (
     <>
-      {entry.name && application_suins_name(entry.name)?.kind === 'agent' && (
-        <Bot aria-hidden size={13} className="mr-1 inline" />
-      )}
+      {is_agent_entry(entry) && <AgentBadge />}
       {player_name(entry)}
     </>
   )

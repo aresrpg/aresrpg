@@ -151,7 +151,7 @@ describe('observation router', () => {
       expect(JSON.parse(f.messages.at(-1)!.raw)).toMatchObject({
         type: 'reply',
         fence: 0,
-        outcome: { ok: true, value: { status: 'pending' } },
+        outcome: { ok: true, value: { status: 'pending', waiting_for: ['wallet_handover'] } },
       })
     } finally {
       await f.close()

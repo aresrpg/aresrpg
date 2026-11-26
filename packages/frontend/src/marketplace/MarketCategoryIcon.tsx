@@ -4,10 +4,12 @@
 import { is_weapon_category, is_tool_category } from '@aresrpg/immutable'
 import { MarketCategoryGlyph } from '@aresrpg/ui'
 import { slot_art } from '@aresrpg/ui/art'
-import { Gem, KeyRound, Package, PawPrint, FlaskConical, Sword, Users } from 'lucide-react'
+import { Award, Gem, KeyRound, Package, PawPrint, FlaskConical, Sword, Users, Shirt } from 'lucide-react'
 
 const symbols = {
   EQUIPMENT: Sword,
+  COSMETICS: Shirt,
+  TITLES: Award,
   PETS: PawPrint,
   RUNES: Gem,
   CONSUMABLE: FlaskConical,

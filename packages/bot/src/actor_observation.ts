@@ -21,7 +21,7 @@ import {
 } from './actor_observation_views.ts'
 import { fight_planning } from './fight_planning.ts'
 import { character_observability } from './character_observability.ts'
-import { gameplay_knowledge } from './catalog.ts'
+import { gameplay_knowledge, learned_spells } from './catalog.ts'
 import { arenas_view } from './arena_actions.ts'
 import { fight_checkpoint_id, zone_checkpoint_id, gameplay_json, type GameplayContext } from './gameplay_context.ts'
 
@@ -36,6 +36,7 @@ const status_view = (context: GameplayContext) => {
   const { health, equipment_bonuses, balance } = character_observability(context)
   return {
     ...live,
+    characters: live.characters.map((character) => ({ ...character, spells: learned_spells(character) })),
     health,
     equipment_bonuses,
     balance,

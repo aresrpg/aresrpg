@@ -463,6 +463,8 @@ marketplace_page:
   subtitle: Ofertas de jogadores na Sui
   browse: Explorar
   group_equipment: Equipamento
+  group_cosmetics: Cosméticos
+  group_titles: Títulos
   group_pets: Mascotes
   group_runes: Runas
   group_consumable: Consumíveis
@@ -2278,6 +2280,8 @@ kares_page:
   mastery_note: 'Compre caixas com KARES na seção Maestria da página Staking. O pagamento queima KARES permanentemente na compra, não na abertura.'
   rewards_note: 'As recompensas são libertadas ao longo de 1.825 dias ativos. Qualquer pessoa pode doar KARES ou SUI: a distribuição começa no próximo dia ativo e dura 30 dias ativos, sem prolongar os calendários anteriores. As doações não podem ser recuperadas. O relógio pausa sem participantes; as recompensas ganhas continuam disponíveis.'
   revenue_note: 20% dos royalties coletados no mercado vão para recompensas de staking em SUI. As recompensas variam com a receita e a participação no staking.
+  market_note: 'A parte de liquidez está bloqueada em um único pool KARES/SUI na Aftermath, {{kares_weight}}% KARES e {{sui_weight}}% SUI. Ninguém pode retirá-la.'
+  fee_note: 'Cada negociação paga uma taxa de {{treasury_fee}}% à tesouraria da AresRPG e uma taxa do pool de {{pool_fee}}% que permanece no pool.'
   points: Pontos de Maestria
   buy_kares: 'Comprar - {{cost}} KARES'
   kares_missing: KARES insuficientes
@@ -3303,6 +3307,13 @@ docs_page:
     lede: O KARES ainda não está pronto. Ele será adicionado em breve.
     note: Esta página vai descrever o token, sua oferta e seus fundos de recompensas quando ele for
       lançado. Nenhum saldo, preço ou valor de recompensa é publicado antes disso.
+    live_lede: 'KARES é o token da AresRPG. Ele é negociado na Aftermath.'
+    points:
+      - '{{supply}} KARES foram emitidos uma única vez. Nenhum novo pode ser criado, e cada queima reduz a oferta.'
+      - '{{liquidity}}% está bloqueado para sempre em um único pool KARES/SUI na Aftermath, {{kares_weight}}% KARES e {{sui_weight}}% SUI. Ninguém pode retirá-lo.'
+      - '{{reserves}}% financia as recompensas: staking, recompensas de chefes e a reserva da comunidade, liberadas ao longo de cinco anos.'
+      - '{{team}}% é a parte da equipe. Não tem vesting.'
+      - 'Cada negociação paga uma taxa de {{treasury_fee}}% à tesouraria da AresRPG e uma taxa do pool de {{pool_fee}}% que permanece no pool.'
   agents:
     lede: Conecte ChatGPT, Claude ou Grok a um bot hospedado do AresRPG. Você combina um objetivo, e o
       assistente joga com seu personagem dentro dele. Este recurso está em desenvolvimento.
@@ -3395,6 +3406,7 @@ agent_page:
   run_ended_completed: 'Concluiu o plano.'
   error_unknown: 'Algo deu errado. Tente de novo.'
   error_bot_busy_or_paused: 'Seu bot está pausado ou ainda termina a última ação deste herói. Tente de novo em instantes.'
+  error_behavior_running: 'Este herói já segue um plano. Substitua o plano dele em vez de iniciar um novo.'
   error_run_limit_reached: 'Seu bot já joga com todos os heróis que consegue. Pare um e tente de novo.'
   error_needs_resync: 'Seu bot ainda estava se atualizando. Tente de novo em alguns segundos.'
   error_unavailable: 'Seu bot não está respondendo. Tente de novo em instantes.'
@@ -3442,6 +3454,7 @@ portfolio_page:
   tab_heroes: 'Heróis'
   tab_bag: 'Bolsa'
   tab_for_sale: 'À venda'
+  tab_sales: 'Vendas'
   failed: 'O servidor do jogo não enviou esta conta. Recarregue a página para tentar de novo.'
   heroes_empty: 'Nenhum herói nesta conta.'
   bag_empty: 'Nada aqui ainda. Compre no mercado ou jogue para encontrar itens.'
@@ -3471,6 +3484,7 @@ site:
   new_tab: ' (abre em uma nova aba)'
   log_in_first: 'Entre primeiro'
   buy_kares: 'Comprar KARES'
+  not_ready_yet: 'Ainda não está pronto'
   docs: Docs
   encyclopedia: Enciclopédia de itens
   journal: Diário
