@@ -77,16 +77,8 @@ const DASHBOARD_TONES = Object.freeze({
       'border-cyan/22 bg-[radial-gradient(circle_at_8%_0%,rgba(112,189,242,0.08),transparent_42%),rgba(18,18,26,0.96)]',
   }),
 })
-const kpi_value_color = (tone?: KpiTone): string =>
-  tone === 'gold'
-    ? 'text-gold'
-    : tone === 'blue'
-      ? 'text-cyan'
-      : tone === 'green'
-        ? 'text-[#77d99a]'
-        : tone === 'violet'
-          ? 'text-[#bd9ee9]'
-          : 'text-text'
+const KPI_COLORS = { gold: 'text-gold', blue: 'text-cyan', green: 'text-[#77d99a]', violet: 'text-[#bd9ee9]' } as const
+const kpi_value_color = (tone?: KpiTone): string => (tone ? KPI_COLORS[tone] : 'text-text')
 
 const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; label: string; tone: DashboardTone }>) => {
   const colors = DASHBOARD_TONES[tone]
@@ -95,11 +87,7 @@ const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; lab
       className={`flex min-h-32 w-max max-w-full flex-col overflow-hidden border ${colors.group}`}
       data-kpi-group={tone}
     >
-      <h2
-        className={`border-b bg-black/12 px-4 py-2 text-[12px] font-semibold tracking-[0.18em] uppercase ${colors.heading}`}
-      >
-        {label}
-      </h2>
+      <h2 className={`border-b bg-black/12 px-4 py-2 text-[13px] font-semibold ${colors.heading}`}>{label}</h2>
       <div className="flex min-h-0 max-w-full flex-1 flex-wrap items-stretch divide-x divide-white/[0.07]">
         {children}
       </div>
@@ -109,7 +97,7 @@ const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; lab
 
 const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
   <div className="min-w-0 border-r border-border px-3 last:border-r-0">
-    <span className="block truncate text-[11px] tracking-[0.14em] text-faint uppercase">{label}</span>
+    <span className="block truncate text-[11px] text-faint">{label}</span>
     <strong className="mt-1 block truncate text-[14px] font-medium text-text tabular-nums">{value}</strong>
   </div>
 )
@@ -121,7 +109,7 @@ const KpiCard = ({
   value,
 }: Readonly<{ detail: string; label: string; tone?: KpiTone; value: string }>) => (
   <article className="flex w-max max-w-full min-w-40 shrink-0 grow flex-col justify-between bg-black/10 px-4 py-3.5">
-    <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{label}</span>
+    <span className="text-[12px] text-faint">{label}</span>
     <strong className={`mt-2 text-3xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
       {value}
     </strong>
@@ -139,13 +127,11 @@ export const TimelineKpiCard = ({
   tone?: KpiTone
 }>) => (
   <article className="flex w-max max-w-full shrink-0 grow flex-col bg-black/10 px-4 py-3.5">
-    <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{label}</span>
+    <span className="text-[12px] text-faint">{label}</span>
     <div className="mt-2 grid flex-1 grid-cols-[repeat(3,max-content)] items-end">
       {entries.map((row, index) => (
         <div className={index === 0 ? 'pr-3' : 'border-l border-white/[0.07] px-3'} key={row.label}>
-          <span className="block text-[12px] tracking-[0.12em] whitespace-nowrap text-faint uppercase">
-            {row.label}
-          </span>
+          <span className="block text-[12px] whitespace-nowrap text-faint">{row.label}</span>
           <strong
             className={`mt-1 block text-xl font-semibold whitespace-nowrap tabular-nums ${kpi_value_color(tone)}`}
           >
@@ -187,13 +173,13 @@ const ChartPanel = ({
   >
     <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
       <div className="min-w-0">
-        <h2 className="truncate text-[13px] font-semibold tracking-[0.16em] text-soft uppercase">{title}</h2>
+        <h2 className="truncate text-[15px] font-semibold text-soft">{title}</h2>
         <p className="mt-1 truncate text-[12px] text-faint">{subtitle}</p>
       </div>
       <AdminRangeSelector change={change} copy={copy} days={days} />
     </header>
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3">
-      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] tracking-[0.08em] text-faint uppercase">
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-faint">
         {series.map((row) => (
           <span className="inline-flex items-center gap-1" key={row.label}>
             <i className="size-1.5" style={{ background: row.color }} />
@@ -201,7 +187,7 @@ const ChartPanel = ({
           </span>
         ))}
       </span>
-      <span className="text-[11px] tracking-[0.12em] text-faint uppercase">
+      <span className="text-[11px] text-faint">
         {loading ? text(copy, 'loading', 'Loading…') : bucket_label(copy, bucket)}
       </span>
     </div>
@@ -320,7 +306,7 @@ export const TreasuryStrip = ({
   return (
     <section className={`${PANEL} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
       <div className="mr-auto min-w-0">
-        <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{text(copy, 'treasury', 'Treasury')}</span>
+        <span className="text-[12px] text-faint">{text(copy, 'treasury', 'Treasury')}</span>
         <strong className="ml-3 text-[15px] font-medium text-gold tabular-nums">{treasury_value(revenue)}</strong>
       </div>
       <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 2)} SUI`} />
@@ -329,7 +315,7 @@ export const TreasuryStrip = ({
         value={`${format_sui(character, 2)} SUI`}
       />
       <button
-        className="h-10 shrink-0 border border-gold/40 bg-gold/8 px-4 text-[12px] tracking-[0.12em] text-gold uppercase disabled:opacity-30"
+        className="h-10 shrink-0 border border-gold/40 bg-gold/8 px-4 text-[12px] text-gold disabled:opacity-30"
         disabled={claim_disabled(revenue)}
         onClick={revenue.claim}
         type="button"
@@ -344,7 +330,7 @@ const LoadingOverview = ({
   copy,
   overview,
 }: Readonly<{ copy: Readonly<Record<string, string>>; overview: AdminOverviewState }>) => (
-  <div className="grid min-h-[50vh] place-items-center text-[12px] tracking-[0.14em] text-faint uppercase">
+  <div className="grid min-h-[50vh] place-items-center text-[12px] text-faint">
     <div className="text-center">
       <p>
         {overview.status === 'failed'
@@ -402,7 +388,7 @@ export const OverviewPageView = ({
   const { revenue, players, transactions, online, addresses, characters } = result
   return (
     <div className="admin-overview">
-      <div className="flex items-center gap-3 px-1 text-[12px] tracking-[0.12em] text-faint uppercase">
+      <div className="flex items-center gap-3 px-1 text-[12px] text-faint">
         <span className="text-[#77d99a]">● {text(copy, 'all_systems_current', 'All systems current')}</span>
         <span>
           {text(copy, 'checkpoint', 'Checkpoint')} {result.as_of_checkpoint?.toLocaleString() ?? '—'}
@@ -435,14 +421,27 @@ export const OverviewPageView = ({
             tone="gold"
             value={display_sui(revenue.all_time_revenue_mist)}
           />
-          <KpiCard
-            detail={format_text(text(copy, 'kares_fees_30d', 'Last 30 days: {amount} KARES'), {
-              amount: format_sui(BigInt(revenue.last_30d_market_fee_kares), 2),
-            })}
-            label={text(copy, 'kares_fees', 'Market fees paid in KARES')}
-            tone="gold"
-            value={`${format_sui(BigInt(revenue.all_time_market_fee_kares), 2)} KARES`}
-          />
+        </KpiGroup>
+        <KpiGroup label={text(copy, 'market_fees', 'KARES market fees')} tone="revenue">
+          {(
+            [
+              ['mist', 'SUI', 'fees_from_buys'],
+              ['kares', 'KARES', 'fees_from_sells'],
+            ] as const
+          ).map(([side, unit, label]) => {
+            const amount = (value: string) => `${format_sui(BigInt(value), 2)} ${unit}`
+            return (
+              <KpiCard
+                detail={format_text(text(copy, 'fees_30d', 'Last 30 days: {amount}'), {
+                  amount: amount(revenue[`last_30d_market_fee_${side}`]),
+                })}
+                key={side}
+                label={text(copy, label, unit)}
+                tone="gold"
+                value={amount(revenue[`all_time_market_fee_${side}`])}
+              />
+            )
+          })}
         </KpiGroup>
         <KpiGroup label={text(copy, 'player_activity', 'Player activity')} tone="activity">
           <KpiCard

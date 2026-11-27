@@ -369,6 +369,9 @@ export type AdminRevenueOverview = Readonly<{
   market_fee_mist: string
   /** KARES is never converted to SUI: a price-based total would change after the fact. */
   market_fee_kares: string
+  /** The fee's two sides apart: SUI from buys, KARES from sells. */
+  last_30d_market_fee_mist: string
+  all_time_market_fee_mist: string
   last_30d_market_fee_kares: string
   all_time_market_fee_kares: string
   last_30d_revenue_mist: string

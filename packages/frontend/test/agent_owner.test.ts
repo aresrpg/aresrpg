@@ -186,12 +186,18 @@ test("the inventory target is the current wallet's explicit choice, and the agen
   const live = { id: 'run', title: 'Farm', phase: 'working' } as const
   expect(log_groups(lines.slice(0, 3), live)).toEqual([{ run: live, lines: lines.slice(0, 3) }])
   expect(log_groups([], live)).toEqual([{ run: live, lines: [] }])
+  // A hero on its way to the bot is named once while it travels; a new target forgets the earlier one's.
+  site.dispatch({ type: 'agent/character_sending', character_id: 'hero', sending: true })
+  site.dispatch({ type: 'agent/character_sending', character_id: 'hero', sending: true })
+  site.dispatch({ type: 'agent/character_sending', character_id: 'other', sending: true })
+  site.dispatch({ type: 'agent/character_sending', character_id: 'other', sending: false })
+  expect(session().agent_inventory.sending).toEqual(['hero'])
   // A replaced target refuses the earlier target's late bag and balances.
   const earlier = session().agent_inventory.serial
   site.dispatch({ type: 'agent/inventory_target', wallet, pairing: { ...pairing, address: 'second' } })
   observed({ type: 'packet/inventory', items: [ore] }, earlier)
   site.dispatch({ type: 'agent/inventory_balances', wallet, pairing, sui_balance_mist: 10n, kares_balance: 20n })
-  expect(session().agent_inventory).toMatchObject({ inventory: [], sui_balance_mist: null })
+  expect(session().agent_inventory).toMatchObject({ inventory: [], sui_balance_mist: null, sending: [] })
   // A disposable pairing stays disposable; signing out clears the target and the candidate.
   site.dispatch({ type: 'agent/inventory_target', wallet, pairing: { ...pairing, signer_mode: 'disposable' } })
   expect(session().inventory_pairing?.signer_mode).toBe('disposable')

@@ -825,8 +825,10 @@ admin_page:
   kolizeum_revenue: Комісії Колізеуму
   tournament_revenue: Враховані комісії турнірів
   market_fee_revenue: 'Комісії ринку KARES, сплачені в SUI'
-  kares_fees: 'Комісії ринку, сплачені в KARES'
-  kares_fees_30d: 'За 30 днів: {amount} KARES'
+  market_fees: 'Комісії ринку KARES'
+  fees_from_buys: 'З купівель, у SUI'
+  fees_from_sells: 'З продажів, у KARES'
+  fees_30d: 'За 30 днів: {amount}'
   game_transactions: Ігрові транзакції
   game_gas_fees: Ігрові витрати газу
   all_time: За весь час
@@ -2252,6 +2254,7 @@ kares_page:
   external_wallet: 'Зовнішній гаманець'
   daily_kares: 'KARES / день · оц.'
   daily_sui: 'SUI / день · оц.'
+  apr: 'APR · оц.'
   daily_estimate_note: 'Оцінки охоплюють наступні 24 години за поточної частки стейку та профінансованих винагород. Вони можуть змінюватися.'
   manage_stake: 'Керування стейком'
   same_account: 'Цей гаманець уже є вашим акаунтом AresRPG. Керуйте його стейком у розділі акаунта.'

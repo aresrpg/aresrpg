@@ -5,6 +5,7 @@
 import { afterEach, expect, test } from 'bun:test'
 import { KaresSnapshotPending } from '@aresrpg/sdk/kares'
 import { KARES_SUPPLY, KARES_UNIT } from '@aresrpg/sdk/kares-economics'
+import { kares_price_sui } from '@aresrpg/sdk/kares-market'
 
 import type { AuthSession } from '../src/auth.ts'
 import {
@@ -18,7 +19,7 @@ import {
   type FinanceState,
 } from '../src/kares/model.ts'
 import { create_finance_runtime } from '../src/kares/runtime.ts'
-import { daily_usd, staking_gains, staking_preset } from '../src/kares/staking_model.ts'
+import { daily_usd, staking_apr, staking_gains, staking_preset } from '../src/kares/staking_model.ts'
 import { market_reading, tokenomics_reading } from '../src/kares/tokenomics.ts'
 import { encyclopedia_catalog } from '../src/content/catalog.ts'
 import { mastery_offers } from '../src/content/mastery.ts'
@@ -215,6 +216,14 @@ test('amounts and gains are exact base units: parsing, presets and dilution', ()
   expect(staking_gains({ ...pool, pool: { ...pool.pool, total_staked: 0n }, positions: [] }, 1n)).toMatchObject({
     additional_kares: 1_000n,
   })
+  // A year at today's rates, both rewards valued in SUI: 1,000 KARES a day on 100,000 staked is 3.65 a year, and
+  // SUI rewards worth as much again double it. No price, or an empty pool, has no rate.
+  const staked = { total_staked: 100_000n * KARES_UNIT, daily_kares: 1_000n * KARES_UNIT, daily_sui: 0n }
+  const market = { sui: 1_000n * SUI, kares: 400_000n * KARES_UNIT }
+  const price = kares_price_sui(market)!
+  expect(staking_apr(staked, market)).toBeCloseTo(3.65, 9)
+  expect(staking_apr({ ...staked, daily_sui: BigInt(Math.round(1_000 * price * 1e9)) }, market)).toBeCloseTo(7.3, 6)
+  expect([staking_apr(staked, null), staking_apr({ ...staked, total_staked: 0n }, market)]).toEqual([null, null])
 })
 
 const running: Started[] = []

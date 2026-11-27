@@ -826,8 +826,10 @@ admin_page:
   kolizeum_revenue: Phí đấu trường
   tournament_revenue: Phí giải đấu đã ghi nhận
   market_fee_revenue: 'Phí thị trường KARES trả bằng SUI'
-  kares_fees: 'Phí thị trường trả bằng KARES'
-  kares_fees_30d: '30 ngày qua: {amount} KARES'
+  market_fees: 'Phí thị trường KARES'
+  fees_from_buys: 'Từ lệnh mua, bằng SUI'
+  fees_from_sells: 'Từ lệnh bán, bằng KARES'
+  fees_30d: '30 ngày qua: {amount}'
   game_transactions: Giao dịch trò chơi
   game_gas_fees: Phí gas trò chơi
   all_time: Toàn thời gian
@@ -2248,6 +2250,7 @@ kares_page:
   external_wallet: Ví bên ngoài
   daily_kares: KARES / ngày · dự kiến
   daily_sui: SUI / ngày · dự kiến
+  apr: 'APR · dự kiến'
   daily_estimate_note: Ước tính cho 24 giờ tới theo tỷ trọng stake hiện tại và lịch thưởng đã tài trợ. Số liệu có thể thay đổi.
   manage_stake: Quản lý stake
   same_account: Ví này đã là tài khoản AresRPG của bạn. Quản lý stake trong phần tài khoản.

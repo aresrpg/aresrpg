@@ -826,8 +826,10 @@ admin_page:
   kolizeum_revenue: 竞技场费用
   tournament_revenue: 已记录的锦标赛费用
   market_fee_revenue: '以 SUI 支付的 KARES 市场手续费'
-  kares_fees: '以 KARES 支付的市场手续费'
-  kares_fees_30d: '近 30 天：{amount} KARES'
+  market_fees: 'KARES 市场手续费'
+  fees_from_buys: '来自买入（SUI）'
+  fees_from_sells: '来自卖出（KARES）'
+  fees_30d: '近 30 天：{amount}'
   game_transactions: 游戏交易
   game_gas_fees: 游戏Gas费用
   all_time: 全部时间
@@ -2248,6 +2250,7 @@ kares_page:
   external_wallet: 外部钱包
   daily_kares: KARES/天 · 预计
   daily_sui: SUI/天 · 预计
+  apr: 'APR · 预计'
   daily_estimate_note: 每日估算基于当前质押占比和已注资奖励计划，覆盖未来24小时，数值可能变化。
   manage_stake: 管理质押
   same_account: 此钱包已是你的AresRPG账户。请在账户区域管理质押。

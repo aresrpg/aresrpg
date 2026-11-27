@@ -825,8 +825,10 @@ admin_page:
   kolizeum_revenue: コロシアム手数料
   tournament_revenue: 記録済み大会手数料
   market_fee_revenue: 'KARES市場手数料（SUI払い）'
-  kares_fees: '市場手数料（KARES払い）'
-  kares_fees_30d: '過去30日: {amount} KARES'
+  market_fees: 'KARES市場手数料'
+  fees_from_buys: '購入分（SUI）'
+  fees_from_sells: '売却分（KARES）'
+  fees_30d: '過去30日: {amount}'
   game_transactions: ゲームトランザクション
   game_gas_fees: ゲームガス代
   all_time: 累計
@@ -2251,6 +2253,7 @@ kares_page:
   external_wallet: '外部ウォレット'
   daily_kares: 'KARES / 日・推定'
   daily_sui: 'SUI / 日・推定'
+  apr: 'APR・推定'
   daily_estimate_note: '現在のステーク比率と資金提供済み報酬に基づく、今後24時間の推定です。変動する場合があります。'
   manage_stake: 'ステーク管理'
   same_account: 'このウォレットはAresRPGアカウントと同じです。アカウント欄でステークを管理してください。'

@@ -111,6 +111,9 @@ export default {
       if (signal.aborted || !fights_of(get_state()).has(fight_id)) return
       const projected = project_authority(fight_id, state)
       if (projected) send({ type: 'packet/fight_state', fight: fight_id, ...projected })
+      // A watched fight the index does not hold answers nothing: say so, or the client waits in silence. The
+      // fight's next event, or the client's resync, reads it again.
+      else log.warn({ fight: fight_id, address }, 'watched fight has no state in the index')
     })
     const push_state = (fight_id: string, event?: EventEnvelope) =>
       read_latest_state(fight_id, event).catch((error: Error) =>

@@ -76,6 +76,9 @@ export const send_character_to_agent = (character_id: string, copy: AppCopy): vo
   })
   if (!pending) return
   const notification = toast.loading(copy.ui.agent_sending)
+  dispatch_app({ type: 'agent/character_sending', character_id, sending: true })
+  const ended = (): void => dispatch_app({ type: 'agent/character_sending', character_id, sending: false })
+  void pending.then(ended, ended)
   void pending.then(
     () => {
       notification.success(send_text(copy, 'success_title'))

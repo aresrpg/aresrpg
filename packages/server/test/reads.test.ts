@@ -386,7 +386,11 @@ test('admin analytics keep large signed values exactly, default only the missing
   )
   expect(revenue).toMatchObject({
     section: 'revenue',
-    data: { all_time_revenue_mist: '9007199254742493', all_time_market_fee_kares: '44365847332125' },
+    data: {
+      all_time_revenue_mist: '9007199254742493',
+      all_time_market_fee_mist: '500',
+      all_time_market_fee_kares: '44365847332125',
+    },
   })
   const uninitialized = create_graph_bus({
     subscriber: fake_redis().redis,

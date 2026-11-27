@@ -826,8 +826,10 @@ admin_page:
   kolizeum_revenue: 콜리제움 수수료
   tournament_revenue: 기록된 토너먼트 수수료
   market_fee_revenue: 'KARES 마켓 수수료(SUI 지급)'
-  kares_fees: '마켓 수수료(KARES 지급)'
-  kares_fees_30d: '최근 30일: {amount} KARES'
+  market_fees: 'KARES 마켓 수수료'
+  fees_from_buys: '매수분(SUI)'
+  fees_from_sells: '매도분(KARES)'
+  fees_30d: '최근 30일: {amount}'
   game_transactions: 게임 거래
   game_gas_fees: 게임 가스비
   all_time: 전체 기간
@@ -2248,6 +2250,7 @@ kares_page:
   external_wallet: 외부 지갑
   daily_kares: KARES/일 · 예상
   daily_sui: SUI/일 · 예상
+  apr: 'APR · 예상'
   daily_estimate_note: 현재 스테이킹 비중과 마련된 보상 일정으로 향후 24시간을 추정합니다. 수치는 달라질 수 있습니다.
   manage_stake: 스테이킹 관리
   same_account: 이 지갑은 이미 AresRPG 계정입니다. 계정 영역에서 스테이킹을 관리하세요.

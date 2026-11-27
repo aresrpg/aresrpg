@@ -58,6 +58,7 @@ export type KaresCopy = ErrorCopy &
     external_wallet: string
     daily_kares: string
     daily_sui: string
+    apr: string
     daily_estimate_note: string
     manage_stake: string
     same_account: string

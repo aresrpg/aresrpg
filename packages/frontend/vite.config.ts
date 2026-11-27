@@ -96,6 +96,10 @@ const yaml_plugin = (): Plugin => ({
 
 export default defineConfig(({ mode, command }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
+  // The site shows its release: the repository's one version, which the release operator bumps.
+  process.env.VITE_APP_VERSION = (
+    JSON.parse(readFileSync(resolve(frontend_dir, '../../package.json'), 'utf8')) as { version: string }
+  ).version
   const loaded_env = loadEnv(mode, frontend_dir, '')
   const deployment = deployment_build_config(loaded_env)
   if (mode === 'production') require_reporting_dsn(loaded_env)

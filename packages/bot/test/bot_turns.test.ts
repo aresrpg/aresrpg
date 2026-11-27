@@ -18,6 +18,7 @@ import { execute_gameplay_actions, type FightTurnPayload, GAMEPLAY_ACTIONS, pars
 import type { Lane } from '../src/control.ts'
 import { encode_cell, mask_from_cells } from '../../fight/src/combat_grid.ts'
 import { actor_observation } from '../src/actor_observation.ts'
+import { actor_snapshot_transition, empty_snapshot } from '../src/actor_snapshot.ts'
 import { fight_planning } from '../src/fight_planning.ts'
 
 import { put } from './fixture.ts'
@@ -456,5 +457,34 @@ describe('gameplay', () => {
     ).rejects.toBe(failure)
     expect(submissions).toBe(1)
     expect(packets.at(-1)).toEqual({ type: 'packet/fight_resync', fight: fight_id })
+  })
+
+  // Production, 2026-11-27: a wallet stayed unreadable for hours, waiting on the state of a fight in placement
+  // that never changed again. Two orders must both end readable: the state before the hero list that seats the
+  // hero (it is kept), and a seat with no state at all (it is asked for once, as a stale state already was).
+  test('a seated fight ends with its state whichever packet comes first, and a missing one is asked for once', () => {
+    const step = (previous: ReturnType<typeof empty_snapshot>, packet: unknown) =>
+      actor_snapshot_transition(
+        previous,
+        { status: 'ready', characters: [], last_packet: packet, error: null } as never,
+        100
+      )
+    const state = { type: 'packet/fight_state', fight: fight_id, state: { contract: { round: 0 } }, seats: {} }
+    const seat = (fight: string | null) => ({
+      type: 'packet/characters',
+      characters: [{ id: '0xhero', active_fight: fight ? { id: fight } : null }],
+    })
+    const early = step(step(empty_snapshot(), state).snapshot, seat(fight_id))
+    expect([fight_id in early.snapshot.fights, early.resync_fights]).toEqual([true, []])
+    const late = step(empty_snapshot(), seat(fight_id))
+    expect([fight_id in late.snapshot.fights, late.resync_fights]).toEqual([false, [fight_id]])
+    expect(step(late.snapshot, seat(fight_id)).resync_fights).toEqual([])
+    const answered = step(late.snapshot, state)
+    expect([fight_id in answered.snapshot.fights, answered.resync_fights]).toEqual([true, []])
+    // The hero leaves the fight: its state goes with it.
+    expect(fight_id in step(answered.snapshot, seat(null)).snapshot.fights).toBe(false)
+    // A last state that arrives after the hero left shows an ended fight: it is not kept either.
+    const ended = { ...state, state: { contract: { ended: true } } }
+    expect(fight_id in step(step(answered.snapshot, seat(null)).snapshot, ended).snapshot.fights).toBe(false)
   })
 })

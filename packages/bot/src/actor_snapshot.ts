@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { observe_chain_clock, type ChainClock } from '@aresrpg/protocol/chain-clock'
-import { fight_packet_phase, fight_state_regresses, type FightPhaseRank } from '@aresrpg/protocol/fight-phase'
+import {
+  fight_checkpoint_phase_rank,
+  fight_packet_phase,
+  fight_state_regresses,
+  type FightPhaseRank,
+} from '@aresrpg/protocol/fight-phase'
 import type { AgentConnectionState } from '@aresrpg/sdk/agent-connection'
 import {
   PLAYABLE_INDEXING_LAG,
@@ -174,10 +179,15 @@ export const reduce_actor_snapshot = (
   const active_fights = new Set(
     next.characters.flatMap((character) => (character.active_fight ? [character.active_fight.id] : []))
   )
-  const fights =
-    state.status === 'ready'
-      ? Object.fromEntries(Object.entries(next.fights).filter(([id]) => active_fights.has(id)))
-      : next.fights
+  // A state goes when its hero leaves the fight, or when it shows an ended fight no hero is seated in. It is never
+  // dropped because the hero list has not caught up: the server may send a fight's state before the list that
+  // seats the hero in it.
+  const left = snapshot.characters.flatMap(({ active_fight }) =>
+    active_fight && !active_fights.has(active_fight.id) ? [active_fight.id] : []
+  )
+  const kept = ([id, row]: readonly [string, FightStateRow]): boolean =>
+    active_fights.has(id) || (!left.includes(id) && fight_checkpoint_phase_rank(row.contract) < 2)
+  const fights = Object.fromEntries(Object.entries(next.fights).filter(kept))
   const ready = [
     state.status === 'ready',
     next.frozen === false,
@@ -209,16 +219,22 @@ const semantic_snapshot = (value: ActorSnapshot) =>
     value.frozen,
     value.ready,
   ])
+/**
+ * The fights a hero is seated in whose state the wallet cannot use: none arrived, or the one it holds is older than
+ * what the game announced. The server sends a state when a fight changes, and an idle fight does not change, so
+ * each such fight is asked for once, when its wait begins.
+ */
+const awaited_fights = ({ characters, fights, fight_phases }: ActorSnapshot): readonly string[] =>
+  characters
+    .flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : []))
+    .filter((id) => !fights[id] || fight_state_regresses(fight_phases[id] ?? 0, fights[id].contract))
+
 export const actor_snapshot_transition = (previous: ActorSnapshot, state: AgentConnectionState, now: number) => {
   const snapshot = reduce_actor_snapshot(previous, state, now)
   return {
     snapshot,
     changed: semantic_snapshot(previous) !== semantic_snapshot(snapshot),
-    resync_fights: Object.keys(snapshot.fight_phases).filter(
-      (id) =>
-        fight_state_regresses(snapshot.fight_phases[id] ?? 0, snapshot.fights[id]?.contract) &&
-        !fight_state_regresses(previous.fight_phases[id] ?? 0, previous.fights[id]?.contract)
-    ),
+    resync_fights: awaited_fights(snapshot).filter((id) => !awaited_fights(previous).includes(id)),
     became_ready: snapshot.ready && !previous.ready,
   }
 }

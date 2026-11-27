@@ -36,9 +36,12 @@ export type AgentInventoryView = InventoryProjection &
     status: AgentStatus | null
     sui_balance_mist: bigint | null
     kares_balance: bigint | null
+    /** The game account's heroes on their way to this bot: each one's card waits and offers no other action. */
+    sending: readonly string[]
   }>
 export type AgentInventoryViewInput = Readonly<
   | { type: 'agent/inventory_refresh' }
+  | { type: 'agent/character_sending'; character_id: string; sending: boolean }
   | {
       type: 'agent/inventory_balances'
       wallet: AuthSession
@@ -60,6 +63,7 @@ export const initial_agent_inventory = (serial = 0): AgentInventoryView => ({
   status: null,
   sui_balance_mist: null,
   kares_balance: null,
+  sending: [],
 })
 const inventory_identity = (pairing: AgentPairingIdentity | null) =>
   pairing && [pairing.address, pairing.multisig_public_key, pairing.signer_mode]
@@ -117,6 +121,10 @@ const fold_inventory_input = (
   switch (input.type) {
     case 'agent/inventory_refresh':
       return { ...view, serial: view.serial + 1, phase: 'loading' }
+    case 'agent/character_sending': {
+      const others = view.sending.filter((id) => id !== input.character_id)
+      return { ...view, sending: input.sending ? [...others, input.character_id] : others }
+    }
     case 'agent/inventory_balances':
       if (![input.wallet === session.wallet, same_inventory_pairing(input.pairing, pairing)].every(Boolean)) return view
       return { ...view, sui_balance_mist: input.sui_balance_mist, kares_balance: input.kares_balance }

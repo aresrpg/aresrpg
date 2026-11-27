@@ -241,6 +241,8 @@ test('the build bakes complete public defaults and the chain pins of its own net
     network: 'mainnet',
     server_ws_url: 'ws://localhost:9800/',
   })
+  // The build names its release; outside a build there is none to show.
+  expect([env.version, resolve_env({ VITE_APP_VERSION: '3.0.4' }).version]).toEqual(['', '3.0.4'])
   expect(() => resolve_env({ VITE_NETWORK: 'devnet' })).toThrow('Unsupported VITE_NETWORK: devnet')
   expect(() => resolve_env({ VITE_BOT_SERVICE_URL: 'http://bot.example' })).toThrow()
   // A testnet browser reads the local deployment pins and never falls back to mainnet's.

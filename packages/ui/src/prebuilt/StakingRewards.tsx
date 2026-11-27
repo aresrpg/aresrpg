@@ -14,7 +14,7 @@ export type StakingRewardLane = Readonly<{
 
 /** One figure of a wallet row: an amount and what it counts, already formatted. */
 /** `note` is a small secondary reading of the same figure, such as its value in dollars. */
-export type StakingRowFigure = Readonly<{ value: string; label: string; hue?: 'gold' | 'sky'; note?: string }>
+export type StakingRowFigure = Readonly<{ value: string; label: string; hue?: 'gold' | 'sky' | 'green'; note?: string }>
 
 /**
  * One wallet as a single line: its name, then its stake and daily rates, so two wallets compare at a

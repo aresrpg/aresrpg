@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { experience_progress, hero_power } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 import { Button, ProgressBar } from '@aresrpg/ui'
-import { ArrowLeftRight, Share2, Tag } from 'lucide-react'
+import { ArrowLeftRight, Loader2, Share2, Tag } from 'lucide-react'
 
 import { character_icon, item_icon } from '../content/assets.ts'
 import { titleize } from '../content/titles.ts'
@@ -15,7 +15,7 @@ import { HeroShare } from './HeroShare.tsx'
 
 /** A hero card's box: the art column beside the body. */
 const HERO =
-  'grid grid-cols-[148px_minmax(0,1fr)] overflow-hidden rounded-ui border border-line bg-surface max-[560px]:grid-cols-[104px_minmax(0,1fr)]'
+  'relative grid grid-cols-[148px_minmax(0,1fr)] overflow-hidden rounded-ui border border-line bg-surface max-[560px]:grid-cols-[104px_minmax(0,1fr)]'
 const BODY = 'flex min-w-0 flex-col gap-2.5 px-4 py-3.5 max-[560px]:p-3'
 /** The hero cards' grid. */
 export const HEROES = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,420px),1fr))] gap-3.5'
@@ -39,13 +39,21 @@ export const HeroSkeleton = () => (
 export type HeroMove = Readonly<{ label: string; run: () => void; disabled: boolean }>
 
 /** A hero the account holds: who it is, how far it is, how strong its gear makes it, its one move, and its
- *  listing when the market takes it (`sell`: a bare hero of the game account, out of a fight). */
+ *  listing when the market takes it (`sell`: a bare hero of the game account, out of a fight). While it moves
+ *  between the accounts (`moving`: what to say), the whole card waits and offers no action. */
 export const HeroCard = ({
   copy,
   hero,
   move,
   sell,
-}: Readonly<{ copy: AppCopy; hero: CharacterRow; move: HeroMove | null; sell: (() => void) | null }>) => {
+  moving = null,
+}: Readonly<{
+  copy: AppCopy
+  hero: CharacterRow
+  move: HeroMove | null
+  sell: (() => void) | null
+  moving?: string | null
+}>) => {
   const numbers = useNumbers()
   const [sharing, set_sharing] = useState(false)
   const text = copy_text(copy.portfolio_page)
@@ -57,7 +65,7 @@ export const HeroCard = ({
   const power = hero_power(hero.equipment)
   const classe = titleize(hero.classe)
   return (
-    <article className={HERO} data-portfolio-hero={hero.id}>
+    <article className={HERO} data-portfolio-hero={hero.id} aria-busy={moving !== null}>
       <div className="portfolio-hero-art relative grid place-items-center p-3">
         {art && <img className="h-auto w-full [image-rendering:pixelated]" src={art} alt="" />}
         <span className="absolute top-2 left-2 rounded-ui border border-line-strong bg-void px-1.5 py-0.5 font-mono text-xs leading-[normal] font-bold tabular-nums">
@@ -107,25 +115,36 @@ export const HeroCard = ({
             })}
           </ul>
         )}
-        <div className={ACTIONS}>
-          {sell && (
-            <Button onClick={sell}>
-              <Tag size={16} aria-hidden="true" />
-              {copy_text(copy.marketplace_page)('list_for_sale')}
+        {moving === null && (
+          <div className={ACTIONS}>
+            {sell && (
+              <Button onClick={sell}>
+                <Tag size={16} aria-hidden="true" />
+                {copy_text(copy.marketplace_page)('list_for_sale')}
+              </Button>
+            )}
+            {move && (
+              <Button disabled={move.disabled} onClick={move.run}>
+                <ArrowLeftRight size={16} aria-hidden="true" />
+                {move.label}
+              </Button>
+            )}
+            <Button onClick={() => set_sharing(true)}>
+              <Share2 size={16} aria-hidden="true" />
+              {text('share')}
             </Button>
-          )}
-          {move && (
-            <Button disabled={move.disabled} onClick={move.run}>
-              <ArrowLeftRight size={16} aria-hidden="true" />
-              {move.label}
-            </Button>
-          )}
-          <Button onClick={() => set_sharing(true)}>
-            <Share2 size={16} aria-hidden="true" />
-            {text('share')}
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
+      {moving !== null && (
+        <div
+          className="absolute inset-0 grid place-content-center justify-items-center gap-2 bg-void/75 text-sm font-semibold text-soft"
+          role="status"
+        >
+          <Loader2 className="animate-spin text-orange" size={26} aria-hidden="true" />
+          {moving}
+        </div>
+      )}
       {sharing && <HeroShare copy={copy} hero={hero} close={() => set_sharing(false)} />}
     </article>
   )

@@ -6,6 +6,7 @@ import { kares_price_sui, type KaresMarket } from '@aresrpg/sdk/kares-market'
 import type { FinanceSnapshot } from './model.ts'
 
 const UNIT = 1_000_000_000n
+const tokens = (amount: bigint): number => Number(amount) / Number(UNIT)
 
 /** Keep amount presets exact, including balances above Number.MAX_SAFE_INTEGER. */
 export const staking_preset = (balance: bigint, percent: 25 | 50 | 100): string => {
@@ -39,9 +40,23 @@ export const daily_usd = (
   sui_usd: number | null
 ): Readonly<{ kares: number | null; sui: number | null }> => {
   const kares_sui = market ? kares_price_sui(market) : null
-  const tokens = (amount: bigint) => Number(amount) / Number(UNIT)
   return {
     kares: sui_usd === null || kares_sui === null ? null : tokens(gains.kares) * kares_sui * sui_usd,
     sui: sui_usd === null ? null : tokens(gains.sui) * sui_usd,
   }
+}
+
+/**
+ * The pool's yearly return at today's funded rates, as a fraction of what is staked. Both rewards are valued in
+ * SUI at the pool's spot price, and nothing compounds: a claimed reward is not staked again. Null while the price
+ * is unknown or nobody stakes. A display aid: the rates change as the schedule and the stake move.
+ */
+export const staking_apr = (
+  pool: Readonly<Pick<FinanceSnapshot['pool'], 'total_staked' | 'daily_kares' | 'daily_sui'>>,
+  market: KaresMarket | null
+): number | null => {
+  const price = market ? kares_price_sui(market) : null
+  if (price === null || price <= 0 || pool.total_staked <= 0n) return null
+  const yearly_sui = 365 * (tokens(pool.daily_kares) * price + tokens(pool.daily_sui))
+  return yearly_sui / (tokens(pool.total_staked) * price)
 }

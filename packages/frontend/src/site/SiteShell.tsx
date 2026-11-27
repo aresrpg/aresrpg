@@ -323,6 +323,7 @@ export const SiteShell = () => {
               <img src="/logo-192.png" alt="" width={84} height={84} />
             </span>
             <span className="site-brand">AresRPG</span>
+            {env.version && <span className="site-version">v{env.version}</span>}
           </SiteLink>
           <SiteNav copy={copy} page={admin ? 'admin' : key} menu={menu} />
           <DocsMark copy={copy} />

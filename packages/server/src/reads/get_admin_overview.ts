@@ -144,6 +144,8 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     days,
     bucket: buckets.tier,
     ...as_text(selected),
+    last_30d_market_fee_mist: last_30d.market_fee_mist.toString(),
+    all_time_market_fee_mist: all_time.market_fee_mist.toString(),
     last_30d_market_fee_kares: last_30d.market_fee_kares.toString(),
     all_time_market_fee_kares: all_time.market_fee_kares.toString(),
     last_30d_revenue_mist: revenue_total(last_30d),

@@ -16,7 +16,7 @@ import { WalletControl } from '../wallet/WalletControl.tsx'
 import type { WalletView } from '../wallet/model.ts'
 
 import type { FinanceSession, FinanceState } from './model.ts'
-import { daily_usd, staking_gains } from './staking_model.ts'
+import { daily_usd, staking_apr, staking_gains } from './staking_model.ts'
 import { StakingAccount } from './StakingAccount.tsx'
 import { useFinance } from './useFinance.ts'
 
@@ -34,10 +34,16 @@ const useRowFigures = (copy: AppCopy['kares_page']) => {
     if (!snapshot) return null
     const gains = staking_gains(snapshot)
     const worth = daily_usd(gains, snapshot.market, sui_usd)
+    const apr = staking_apr(snapshot.pool, snapshot.market)
+    const yearly: readonly StakingRowFigure[] =
+      apr === null
+        ? []
+        : [{ value: number(apr, { style: 'percent', maximumFractionDigits: 1 }), label: copy.apr, hue: 'green' }]
     return [
       { value: amount(gains.stake, 0), label: 'KARES' },
       { value: amount(gains.kares, 0), label: copy.daily_kares, hue: 'gold', note: usd(worth.kares) },
       { value: daily(gains.sui), label: copy.daily_sui, hue: 'sky', note: usd(worth.sui) },
+      ...yearly,
     ]
   }
 }

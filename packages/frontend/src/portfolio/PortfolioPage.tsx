@@ -132,6 +132,7 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [chosen, choose] = useState<WalletShown>('game')
   const [tab, set_tab] = useState<Tab>('heroes')
   const shown = shown_wallet(session, chosen)
+  const { sending } = session.agent_inventory
   const on_bot = shown === 'bot'
   const kiosk = useAgentKiosk(copy, false)
   const sale = useMarketSell()
@@ -161,6 +162,7 @@ const PortfolioAccount = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               copy={copy}
               hero={hero}
               move={heroes.move(hero)}
+              moving={!on_bot && sending.includes(hero.id) ? copy.ui.agent_sending : null}
               sell={!on_bot && sellable.has(hero.id) ? () => sale.choose({ kind: 'character', row: hero }) : null}
             />
           ))}

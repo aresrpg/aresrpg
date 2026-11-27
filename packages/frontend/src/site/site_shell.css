@@ -76,6 +76,18 @@
 .site-home .site-brand {
   font-size: 22px;
 }
+/* The release, small beside the name. */
+.site-version {
+  align-self: center;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--aui-hue-green) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--aui-hue-green) 12%, transparent);
+  color: var(--aui-hue-green);
+  font: 600 10px/1.2 var(--aui-font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 /* The bar's lower edge crops the helmet; its crest passes over the upper edge. */
 .site-helmet {
   position: relative;

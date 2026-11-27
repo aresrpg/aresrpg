@@ -112,11 +112,13 @@ const CharacterAgentAction = ({
   open: (dialog: CharacterTabDialogState) => void
 }>) => {
   const paired = useAppStore((state) => state.session.inventory_pairing?.signer_mode === 'host-persistent')
+  const sending = useAppStore((state) => state.session.agent_inventory.sending.includes(character_id))
   return (
     <button
       type="button"
       role="menuitem"
-      className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5"
+      disabled={sending}
+      className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-text hover:bg-white/5 disabled:cursor-default disabled:text-muted"
       onClick={() => {
         if (paired) {
           open(null)
@@ -124,7 +126,7 @@ const CharacterAgentAction = ({
         } else open({ kind: 'agent' })
       }}
     >
-      {paired ? copy.ui.agent_send : copy.ui.agent_setup}
+      {sending ? copy.ui.agent_sending : paired ? copy.ui.agent_send : copy.ui.agent_setup}
     </button>
   )
 }

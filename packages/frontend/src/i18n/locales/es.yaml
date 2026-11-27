@@ -825,8 +825,10 @@ admin_page:
   kolizeum_revenue: Comisiones del Koliseo
   tournament_revenue: Comisiones de torneo registradas
   market_fee_revenue: 'Comisiones del mercado KARES pagadas en SUI'
-  kares_fees: 'Comisiones de mercado pagadas en KARES'
-  kares_fees_30d: 'Últimos 30 días: {amount} KARES'
+  market_fees: 'Comisiones del mercado KARES'
+  fees_from_buys: 'De las compras, en SUI'
+  fees_from_sells: 'De las ventas, en KARES'
+  fees_30d: 'Últimos 30 días: {amount}'
   game_transactions: Transacciones del juego
   game_gas_fees: Gas del juego
   all_time: Histórico
@@ -2252,6 +2254,7 @@ kares_page:
   external_wallet: 'Billetera externa'
   daily_kares: 'KARES / día · est.'
   daily_sui: 'SUI / día · est.'
+  apr: 'APR · est.'
   daily_estimate_note: 'Las estimaciones cubren las próximas 24 horas según tu participación actual y las recompensas financiadas. Pueden cambiar.'
   manage_stake: 'Gestionar stake'
   same_account: 'Esta billetera ya es tu cuenta AresRPG. Gestiona su stake en la sección de la cuenta.'

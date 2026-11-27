@@ -167,7 +167,8 @@ const ResetCountdown = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   )
 }
 
-/** The ranks under the podium, to the last place, then the player's own row when it ranks lower. */
+/** Every rank under the podium, the first three included: a row shows what a podium card has no room for. Then
+ *  the player's own row when it ranks lower. */
 const Rankings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const snapshot = shown_snapshot(useSiteStore((state) => state.leaderboards))
   const metric = useMetric()
@@ -182,9 +183,9 @@ const Rankings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <span role="columnheader">{text('user')}</span>
           <span role="columnheader">{text('score')}</span>
         </div>
-        {Array.from({ length: LEADERBOARD_LIMIT - 3 }, (_, index) => {
-          const entry = snapshot?.entries[index + 3]
-          return entry ? <EntryRow key={index} entry={entry} copy={copy} /> : <EmptyRow key={index} rank={index + 4} />
+        {Array.from({ length: LEADERBOARD_LIMIT }, (_, index) => {
+          const entry = snapshot?.entries[index]
+          return entry ? <EntryRow key={index} entry={entry} copy={copy} /> : <EmptyRow key={index} rank={index + 1} />
         })}
       </div>
       {outside && (

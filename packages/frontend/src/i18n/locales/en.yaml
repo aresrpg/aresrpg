@@ -825,8 +825,10 @@ admin_page:
   kolizeum_revenue: Kolizeum fees
   tournament_revenue: Recorded tournament fees
   market_fee_revenue: 'KARES market fees paid in SUI'
-  kares_fees: 'Market fees paid in KARES'
-  kares_fees_30d: 'Last 30 days: {amount} KARES'
+  market_fees: 'KARES market fees'
+  fees_from_buys: 'From buys, in SUI'
+  fees_from_sells: 'From sells, in KARES'
+  fees_30d: 'Last 30 days: {amount}'
   game_transactions: Game transactions
   game_gas_fees: Game gas fees
   all_time: All time
@@ -2257,6 +2259,7 @@ kares_page:
   external_wallet: 'External wallet'
   daily_kares: 'KARES / day · est.'
   daily_sui: 'SUI / day · est.'
+  apr: 'APR · est.'
   daily_estimate_note: 'Daily estimates cover the next 24 hours at your current stake share and funded reward schedule. They can change.'
   manage_stake: 'Manage stake'
   same_account: 'This wallet is already your AresRPG account. Manage its stake in the account section.'

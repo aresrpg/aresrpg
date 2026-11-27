@@ -826,8 +826,10 @@ admin_page:
   kolizeum_revenue: Комиссии Колизея
   tournament_revenue: Учтённые комиссии турниров
   market_fee_revenue: 'Комиссии рынка KARES, уплаченные в SUI'
-  kares_fees: 'Комиссии рынка, уплаченные в KARES'
-  kares_fees_30d: 'За 30 дней: {amount} KARES'
+  market_fees: 'Комиссии рынка KARES'
+  fees_from_buys: 'С покупок, в SUI'
+  fees_from_sells: 'С продаж, в KARES'
+  fees_30d: 'За 30 дней: {amount}'
   game_transactions: Игровые транзакции
   game_gas_fees: Комиссии газа игры
   all_time: За всё время
@@ -2248,6 +2250,7 @@ kares_page:
   external_wallet: Внешний кошелёк
   daily_kares: KARES в день · оценка
   daily_sui: SUI в день · оценка
+  apr: 'APR · оценка'
   daily_estimate_note: Оценка охватывает следующие 24 часа при вашей текущей доле и обеспеченном графике наград. Она может измениться.
   manage_stake: Управлять стейкингом
   same_account: Этот кошелёк уже является вашим аккаунтом AresRPG. Управляйте стейкингом в разделе аккаунта.

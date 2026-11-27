@@ -73,6 +73,9 @@
 .aui-reward-lane[data-hue='gold'] small {
   color: var(--aui-hue-gold);
 }
+.aui-stake-row-figure[data-hue='green'] b {
+  color: var(--aui-hue-green);
+}
 .aui-stake-row-figure[data-hue='sky'] b,
 .aui-reward-lane[data-hue='sky'] small {
   color: var(--aui-hue-sky);

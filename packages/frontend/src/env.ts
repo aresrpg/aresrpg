@@ -23,6 +23,8 @@ export type PublicEnv = Readonly<{
   sui_rpc_url: string
   server_ws_url: string
   theme_color: string
+  /** The release this build belongs to, from the repository's version. Empty outside a build. */
+  version: string
 }>
 
 const normalize_url = (value: string): string => {
@@ -65,6 +67,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     VITE_GRAPHQL_URL = `https://graphql.${VITE_NETWORK}.sui.io/graphql`,
     VITE_SUI_RPC_URL = `https://fullnode.${VITE_NETWORK}.sui.io:443`,
     VITE_SERVER_WS_URL = 'ws://localhost:9800/',
+    VITE_APP_VERSION = '',
   } = source
   const network = VITE_NETWORK
   if (network !== 'mainnet' && network !== 'testnet') throw new Error(`Unsupported VITE_NETWORK: ${network}`)
@@ -88,6 +91,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     sui_rpc_url: VITE_SUI_RPC_URL,
     server_ws_url: normalize_ws_url(VITE_SERVER_WS_URL),
     theme_color: '#070707',
+    version: VITE_APP_VERSION,
   })
 }
 
