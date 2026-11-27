@@ -22,7 +22,11 @@ export type TargetOptions = Readonly<{
   mob_types?: readonly string[]
   area?: WorldArea
 }>
-const distance_band = { min_distance: world_coordinate, max_distance: world_coordinate } as const
+const from_centre = (bound: string): Schema => ({
+  ...world_coordinate,
+  description: `${bound} distance in blocks from the centre of the WORLD (its portal), never from the city or biome named beside it. Groups grow with it: six mobs at top level far out. A city already fixes its own distance, so a band that misses it leaves no zone and is refused.`,
+})
+const distance_band = { min_distance: from_centre('Smallest'), max_distance: from_centre('Largest') } as const
 /** One place of a world; the distance band is optional on each. */
 const area_schema = (place: Readonly<Record<string, Schema>>): Schema => ({
   ...object_schema({ world: nonempty, ...place, ...distance_band }),
@@ -69,6 +73,7 @@ const validate_world_area = (area: WorldArea) => {
       ? source.cities.some(({ city }) => city === area.city)
       : !area.biome || source.terrain?.biomes.some(({ name }) => name === area.biome))
   if (!exists || !band_ordered(area)) throw new Error('invalid_target_options')
+  if (!area_has_zone(area)) throw new Error('area_has_no_zone')
 }
 const band_ordered = ({ min_distance = 0, max_distance = world_size }: WorldArea) => min_distance <= max_distance
 /** A zone belongs to a distance band by its centre, as the population rule sizes its groups. */
@@ -97,6 +102,20 @@ export const area_contains = (area: WorldArea, world: string, x: number, z: numb
   if (!area.biome) return true
   if (city_of((zone_x + 0.5) * ZONE_SIZE, (zone_z + 0.5) * ZONE_SIZE)) return false
   return world_biome_at_zone(world, zone_x, zone_z) === area.biome
+}
+const GRID_SIDE = Math.ceil(world_size / ZONE_SIZE)
+const zone_exists = new Map<string, boolean>()
+/** Whether any zone of its world belongs to an area. A place nothing belongs to is a mistake of its
+ * author: it is refused when the tree is checked, instead of holding a run that can never move. */
+const area_has_zone = (area: WorldArea): boolean => {
+  const key = JSON.stringify([area.world, area.city, area.biome, area.min_distance, area.max_distance])
+  const known = zone_exists.get(key)
+  if (known !== undefined) return known
+  const centre = (index: number) => (index + 0.5) * ZONE_SIZE
+  const side = Array.from({ length: GRID_SIDE }, (_, index) => index)
+  const found = side.some((zx) => side.some((zz) => area_contains(area, area.world, centre(zx), centre(zz))))
+  zone_exists.set(key, found)
+  return found
 }
 export const assert_area_position = (area: WorldArea | undefined, world: string, x: number, z: number) => {
   if (area && !area_contains(area, world, x, z)) throw new Error('target_outside_area')

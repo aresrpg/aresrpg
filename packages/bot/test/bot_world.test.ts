@@ -83,6 +83,59 @@ describe('idle', () => {
     expect(first_active.at(-1)!.x).toBeCloseTo(last.x + 2, 0)
   })
 
+  // Owner 2026-11-27: a journey is presence only. It runs beside the signing queue and signs nothing.
+  test('a journey walks straight to its target in the background, and a busy wallet moves only its travellers', async () => {
+    let time = 0
+    const packets: { x: number; z: number }[] = []
+    const movement = create_locomotion({
+      now: () => time,
+      wait: async (ms) => {
+        time += ms
+      },
+      world_for: () => ({
+        solid_at: (_x, y) => y < 0,
+        liquid_at: () => false,
+        ready: () => true,
+        ground_height: () => 0,
+      }),
+    })
+    const journey = {
+      character_id: 'c',
+      checkpoint: 'cp',
+      world: 'world',
+      x: 50000,
+      z: 50000,
+      target_x: 50120,
+      target_z: 50000,
+      journey: true,
+    }
+    await movement.idle(
+      async () => (time < 60000 ? [journey] : null),
+      async (packet) => {
+        if (packet.type === 'packet/position') packets.push(packet)
+        return true
+      }
+    )
+    // Straight to the target at walking pace, never past it and never wandering off the line.
+    expect(packets.at(-1)!.x).toBeCloseTo(50120, 0)
+    expect(packets.every((p, index) => index === 0 || p.x >= packets[index - 1]!.x - 0.001)).toBe(true)
+    expect(packets.every((p) => Math.abs(p.z - 50000) < 1)).toBe(true)
+    expect(movement.positions().c).toMatchObject({ checkpoint: 'cp' })
+    expect(movement.positions().c!.x).toBeCloseTo(50120, 0)
+    const context = profession_context()
+    const [hero] = context.snapshot.characters
+    const lane = { ...empty_lane({ network: 'mainnet', address: context.address }), needs_resync: false }
+    const busy = { ...lane, runs: { [hero!.id]: 'run' }, active_command: 'work' }
+    const target = { world: hero!.world!, x: hero!.x! + 4000, z: hero!.z! }
+    expect(idle_travels(context, busy)).toBeNull()
+    expect(idle_travels(context, busy, new Map([[hero!.id, target]]))).toMatchObject([
+      { character_id: hero!.id, journey: true, x: hero!.x, target_x: target.x, target_z: target.z },
+    ])
+    // A journey of a hero whose run is gone, or to another world, moves nobody.
+    expect(idle_travels(context, { ...busy, runs: {} }, new Map([[hero!.id, target]]))).toBeNull()
+    expect(idle_travels(context, busy, new Map([[hero!.id, { ...target, world: 'elsewhere' }]]))).toBeNull()
+  })
+
   test('idle requires a free lane, fresh contract and an unrooted owned overworld character', () => {
     const context = profession_context()
     const lane = { ...empty_lane({ network: 'mainnet', address: context.address }), needs_resync: false }

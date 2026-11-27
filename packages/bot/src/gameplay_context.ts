@@ -26,6 +26,8 @@ export type GameplayContext = Readonly<{
   pins?: import('@aresrpg/sdk/pins').Pins
   command: Command
   snapshot: ActorSnapshot
+  /** Where each hero's feet stand after its background walk, with the checkpoint that walk began from. */
+  presence?: Readonly<Record<string, Readonly<{ x: number; z: number; checkpoint: string }>>>
   now: number
   freshness_ms: number
 }>

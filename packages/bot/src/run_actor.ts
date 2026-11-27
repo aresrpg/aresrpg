@@ -3,6 +3,7 @@
 import { parse_market_observation, type MarketObservation } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 
+import type { Journey } from './idle.ts'
 import { observation_slot_busy } from './actor.ts'
 import type { Command, Lane } from './control.ts'
 import type { ControlStore } from './store.ts'
@@ -82,6 +83,7 @@ type RunOptions = Readonly<{
     Readonly<{
       context: GameplayContext
       fence: number
+      journey: (character_id: string, journey: Journey | null) => void
       connect: () => Promise<void>
     }>
   >
@@ -101,6 +103,7 @@ const process_bot_run = async (run: Run | null, watches: boolean, options: RunOp
     report_failure: options.report_failure,
     context: session.context,
     fence: session.fence,
+    journey: session.journey,
     now: options.now(),
   }
   const status = await run_tick({ ...input, run })

@@ -260,9 +260,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         if (packet.type !== 'packet/fight_resync') await journal.admit('prepare')
         return actor.send(packet)
       },
-      walk: locomotion.walk,
-      idle: locomotion.idle,
-      settle_idle: locomotion.settle_idle,
+      ...locomotion,
       snapshot: () => snapshot,
     }
   }
@@ -331,6 +329,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
     pins: session.sdk.pins,
     command,
     snapshot: session.snapshot(),
+    presence: session.positions(),
     now: monotonic_now(),
     freshness_ms: options.observation_freshness_ms,
   })
@@ -417,6 +416,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
         const balance = await read_actor_balance(session.sdk, monotonic_now, options.report_failure)
         return {
           fence: session.lease.fence,
+          journey: session.journey,
           connect: async () => {
             await session.actor.connect()
             if (session.actor.state().status === 'ready') await apply_actor_watches(session.actor, command)
@@ -508,7 +508,7 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
   const rest = async (key: string, session: Session) => {
     const lane = await store.read<Lane>(key)
     const idle = [lane && wallet_idle(lane), !work.has(key), session.actor.state().status !== 'stopped'].every(Boolean)
-    if (!idle) return void idle_since.delete(key)
+    if (!idle) return void [idle_since.delete(key), session.stride(!work.has(key))]
     const since = idle_since.get(key) ?? now()
     idle_since.set(key, since)
     if (now() - since < SLEEP_AFTER_IDLE_MS) return session.idle()

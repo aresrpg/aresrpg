@@ -14,7 +14,7 @@ const waiting = new Set([
 ])
 /** What only the player can change: the leaf holds its run, pays nothing and reads the fact again each
  * tick. A blocker is reported as the run's issue, so it waits where a refusal would fall through. */
-const blocked = new Set(['area_unreachable'])
+const blocked = new Set(['area_unreachable', 'area_has_no_zone'])
 /** What the game refuses right now: the leaf fails, and later ticks evaluate the tree again. */
 const refused = new Set([
   'invalid_target_options',

@@ -11,6 +11,7 @@ import { observed_balance } from './character_observability.ts'
 import { run_hosted, run_key, ended_run, run_keys } from './run_ref.ts'
 import { next_behavior_action, retain_behavior_draft } from './behavior_plan.ts'
 import type { BehaviorRun } from './behavior_script.ts'
+import type { Journey } from './idle.ts'
 import { assert_run_admission } from './behavior_control.ts'
 import type { JournalBinding } from './transaction_lifecycle.ts'
 
@@ -21,6 +22,8 @@ type RunInput = Readonly<{
   actor_id: string
   fence: number
   context: GameplayContext
+  /** Tells the wallet's background walk where this run sends its hero, or that it sends it nowhere. */
+  journey?: (character_id: string, journey: Journey | null) => void
   now: number
   report_failure?: (error: unknown) => void
 }>
@@ -199,6 +202,7 @@ export const run_tick = async (input: RunInput) => {
     const blocked = gate(input, lane, previous, context, issue)
     if (blocked) return finish(blocked.status, blocked.issue)
     const next = next_behavior_action(run, previous, context)
+    input.journey?.(run.character_id, next.journey ?? null)
     if (next.state !== 'action') {
       const status = await finish(next.state, next.issue, next.record)
       // A planning fault re-evaluates every tick; it is reported when it starts, not on every pass.

@@ -13,6 +13,8 @@ import { begin_idle, step_idle, type IdleState } from './idle.ts'
 export type Travel = Readonly<{
   area?: WorldArea
   riding?: boolean
+  /** A journey: the background loop walks the hero to its target instead of letting it wander. */
+  journey?: boolean
   character_id: string
   checkpoint: string
   world: string
@@ -148,6 +150,18 @@ export const create_locomotion = ({
   ) => {
     const epoch = generation
     let at = now()
+    /** One step of a journey: real walking toward the target, by position packets alone. Nothing is
+     * signed, so a long trip never holds the wallet's signing slot. An arrived hero stands still. */
+    const journey_step = async (travel: Travel, world: WalkWorld, pose: Pose, next_at: number) => {
+      const target = { x: chain_to_client_coordinate(travel.target_x), z: chain_to_client_coordinate(travel.target_z) }
+      const step = step_walking_follower(world, pose.motion, pose.position, target, next_at - at)
+      await publish(
+        travel,
+        { checkpoint: travel.checkpoint, position: step.position, motion: step.motion, riding: travel.riding },
+        send,
+        epoch
+      )
+    }
     const advance = async (travel: Travel, next_at: number) => {
       const world = world_of(travel.world)
       const previous = poses.get(travel.character_id)
@@ -157,6 +171,7 @@ export const create_locomotion = ({
         : [chain_to_client_coordinate(travel.x), 0, chain_to_client_coordinate(travel.z)]
       if (!world.ready({ min_x: x - 2, max_x: x + 2, min_z: z - 2, max_z: z + 2 })) return
       const pose = retained ?? initial_pose(world, travel)
+      if (travel.journey) return journey_step(travel, world, pose, next_at)
       const step = step_idle(
         world,
         pose.motion?.body,
@@ -203,6 +218,18 @@ export const create_locomotion = ({
   return {
     walk,
     idle,
+    /** Where each hero's feet stand, in chain coordinates, with the checkpoint the walk began from. */
+    positions: (): Readonly<Record<string, Readonly<{ x: number; z: number; checkpoint: string }>>> =>
+      Object.fromEntries(
+        [...poses].map(([character_id, pose]) => [
+          character_id,
+          {
+            x: client_to_chain_coordinate(pose.position[0]),
+            z: client_to_chain_coordinate(pose.position[2]),
+            checkpoint: pose.checkpoint,
+          },
+        ])
+      ),
     rest: async (send: (packet: ClientPacket) => Promise<boolean>) => {
       const epoch = generation
       for (const [character_id, pose] of poses) {

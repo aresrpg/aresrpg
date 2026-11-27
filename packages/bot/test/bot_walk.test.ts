@@ -2,13 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Walking: discovery routes, place fences on the way, and the socket position packets before signing.
 import { expect, test, describe } from 'bun:test'
-import { type ClientPacket, ZONE_SIZE, ZONE_RESEARCH_TTL_MS } from '@aresrpg/protocol'
+import { type ClientPacket, ZONE_SIZE, ZONE_RESEARCH_TTL_MS, character_checkpoint } from '@aresrpg/protocol'
 import { world_city_areas, worlds_source } from '@aresrpg/engine/data'
 import { world_center } from '@aresrpg/immutable'
 
 import { create_locomotion } from '../src/locomotion.ts'
 import { type Lane, type Command, create_control_service, lane_key_for } from '../src/control.ts'
-import { area_contains } from '../src/target_constraints.ts'
+import { area_contains, parse_world_area } from '../src/target_constraints.ts'
 import { select_discovery, type DiscoverAction } from '../src/behavior_world.ts'
 import { create_actor_runtime } from '../src/actor_runtime.ts'
 import { fake_client, pins } from '../../sdk/test/helpers/transport.ts'
@@ -70,63 +70,81 @@ describe('behavior world', () => {
     expect(select_discovery({ ...discovery, world: 'other' }, wider)).toMatchObject({ status: 'waiting' })
   })
 
-  const toward = (area: Extract<DiscoverAction, { order: 'toward' }>['area']): DiscoverAction => ({
+  const toward = (area: NonNullable<DiscoverAction['area']>): DiscoverAction => ({
     type: 'discover',
     character_id: character.id,
     world: WORLD,
     area,
     order: 'toward',
   })
-  const zone_of = (payload: Readonly<Record<string, unknown>>) => ({
-    zx: Math.floor(Number(payload.x) / ZONE_SIZE),
-    zz: Math.floor(Number(payload.z) / ZONE_SIZE),
-  })
-  /** Follow the leaf until it has nothing left to walk; each step moves the hero's checkpoint and window. */
-  const walk = (action: DiscoverAction, from: Readonly<{ zx: number; zz: number }>) => {
-    const path = [from]
-    for (;;) {
-      const step = select_discovery(action, world_context(hero_in(path.at(-1)!)))
-      if (step.status !== 'action') return { path, end: step }
-      expect(step.action).toMatchObject({ kind: 'world_search', payload: { character_id: character.id, world: WORLD } })
-      expect(step.action.payload).not.toHaveProperty('area')
-      const next = zone_of(step.action.payload)
-      // One adjacent zone per step: the server tracks no further.
-      expect(Math.max(Math.abs(next.zx - path.at(-1)!.zx), Math.abs(next.zz - path.at(-1)!.zz))).toBe(1)
-      path.push(next)
-      expect(path.length).toBeLessThan(400)
-    }
+  const centre = (index: number) => (index + 0.5) * ZONE_SIZE
+  /** The hero's feet after a background walk that began from its current checkpoint. */
+  const standing_at = (context: ReturnType<typeof world_context>, x: number, z: number) => {
+    const [hero] = context.snapshot.characters
+    return { ...context, presence: { [hero!.id]: { x, z, checkpoint: character_checkpoint(hero!)! } } }
   }
-  test('a walk toward a city crosses the world one zone at a time and ends inside it', () => {
-    // The Ruins stand west of Thebes: 27 searches reach the nearest corner of the city, one adjacent zone each.
-    const { path, end } = walk(toward({ world: WORLD, city: 'the_ruins' }), { zx: 98, zz: 97 })
-    expect(end).toEqual({ status: 'failure', code: 'area_reached' })
-    expect(path).toHaveLength(28)
-    expect(path.at(-1)).toEqual({ zx: 71, zz: 96 })
-    // A hero already inside has nothing to walk.
-    expect(walk(toward({ world: WORLD, city: 'thebes' }), { zx: 98, zz: 97 }).path).toHaveLength(1)
-  })
-  test('a walk waits for facts it lacks and names the area it can never reach', () => {
+  // Owner 2026-11-27: moving is presence, not chain state. A walk signs nothing on the way.
+  test('a walk toward a place is a journey: it signs nothing and ends when the feet stand there', () => {
     const action = toward({ world: WORLD, city: 'the_ruins' })
     const context = world_context(hero_in({ zx: 98, zz: 97 }))
-    const untracked = {
-      ...context,
-      snapshot: {
-        ...context.snapshot,
-        tracked_zones: {
-          [character.id]: { ...context.snapshot.tracked_zones[character.id]!, zones: [{ zx: 98, zz: 97 }] },
-        },
-      },
+    // The Ruins stand west of Thebes: the nearest corner of the city is the whole target, 27 zones away.
+    const journey = { world: WORLD, x: centre(71), z: centre(96) }
+    expect(select_discovery(action, context)).toEqual({ status: 'waiting', code: 'travelling', journey })
+    // The checkpoint never moved: only the feet did. Half way, the same journey goes on.
+    expect(select_discovery(action, standing_at(context, centre(85), centre(96)))).toMatchObject({ journey })
+    expect(select_discovery(action, standing_at(context, journey.x, journey.z))).toEqual({
+      status: 'failure',
+      code: 'area_reached',
+    })
+    // Feet that belong to an older checkpoint are forgotten: the hero is where the chain says.
+    const stale = { ...context, presence: { [character.id]: { x: journey.x, z: journey.z, checkpoint: 'older' } } }
+    expect(select_discovery(action, stale)).toMatchObject({ status: 'waiting', journey })
+    // A hero already inside has nothing to walk, and a seated one cannot leave its fight.
+    expect(select_discovery(toward({ world: WORLD, city: 'thebes' }), context)).toEqual({
+      status: 'failure',
+      code: 'area_reached',
+    })
+    const seated = world_context(hero_in({ zx: 98, zz: 97 }, { custody: 'fight' }))
+    expect(select_discovery(action, seated)).toEqual({ status: 'failure', code: 'character_not_available' })
+  })
+  test('a walk toward a teammate follows it and stops beside it', () => {
+    const hero = hero_in({ zx: 98, zz: 97 })
+    const ally = { ...hero_in({ zx: 30, zz: 46 }), id: `0x${'a'.repeat(64)}` }
+    const base = world_context(hero)
+    const context = { ...base, snapshot: { ...base.snapshot, characters: [hero, ally] } }
+    const follow: DiscoverAction = {
+      type: 'discover',
+      character_id: hero.id,
+      world: WORLD,
+      ally: ally.id,
+      order: 'toward',
     }
-    expect(select_discovery(action, untracked)).toEqual({ status: 'waiting', code: 'needs_resync' })
+    expect(select_discovery(follow, context)).toEqual({
+      status: 'waiting',
+      code: 'travelling',
+      journey: { world: WORLD, x: ally.x!, z: ally.z! },
+    })
+    expect(select_discovery(follow, standing_at(context, ally.x! + 20, ally.z!))).toEqual({
+      status: 'failure',
+      code: 'area_reached',
+    })
+    const away = { ...context, snapshot: { ...context.snapshot, characters: [hero, { ...ally, world: 'yakutia' }] } }
+    expect(() => select_discovery(follow, away)).toThrow('area_unreachable')
+  })
+  test('a walk waits for facts it lacks, and a place nothing belongs to is refused when the tree is checked', () => {
+    const action = toward({ world: WORLD, city: 'the_ruins' })
     const unknown = world_context(hero_in({ zx: 98, zz: 97 }, { world: undefined }))
     expect(select_discovery(action, unknown)).toEqual({ status: 'waiting', code: 'needs_resync' })
     const moving = world_context(hero_in({ zx: 98, zz: 97 }, { checkpoint_world: 'yakutia' }))
     expect(select_discovery(action, moving)).toEqual({ status: 'waiting', code: 'needs_resync' })
     const elsewhere = world_context(hero_in({ zx: 98, zz: 97 }, { world: 'yakutia', checkpoint_world: 'yakutia' }))
     expect(() => select_discovery(action, elsewhere)).toThrow('area_unreachable')
-    // No zone of Thebes lies ten thousand blocks from the centre.
-    const nowhere = toward({ world: WORLD, city: 'thebes', min_distance: 10_000, max_distance: 50_000 })
-    expect(() => select_discovery(nowhere, world_context(hero_in({ zx: 110, zz: 97 })))).toThrow('area_unreachable')
+    // A distance band is measured from the centre of the world: no zone of Thebes lies ten thousand
+    // blocks from it. The mistake live trees made on 2026-11-27 with Fuwage is told to the author.
+    const nowhere = { world: WORLD, city: 'thebes', min_distance: 10_000, max_distance: 50_000 }
+    expect(() => parse_world_area(nowhere)).toThrow('area_has_no_zone')
+    expect(parse_world_area({ world: WORLD, city: 'thebes' })).toEqual({ world: WORLD, city: 'thebes' })
+    expect(parse_world_area({ world: WORLD, min_distance: 38_000 })).toEqual({ world: WORLD, min_distance: 38_000 })
   })
 })
 

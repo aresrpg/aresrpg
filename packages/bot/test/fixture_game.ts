@@ -277,7 +277,7 @@ export const hero_runs = async () => {
       snapshot: () => observed,
       session: async (_bot, command) => {
         asked[asked.length] = command
-        return { context: context((await lane()).observation_revision), fence: first_fence, connect }
+        return { context: context((await lane()).observation_revision), fence: first_fence, connect, journey: () => {} }
       },
     })
   return { ...f, control, key, first_fence, lease, start, run, lane, tick, command_of, settle, pass, asked }

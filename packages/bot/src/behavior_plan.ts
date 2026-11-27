@@ -9,6 +9,7 @@ import {
   type ClassName,
 } from '@aresrpg/immutable'
 
+import type { Journey } from './idle.ts'
 import { select_profession } from './behavior_profession.ts'
 import { planning_issue, planning_blocker } from './planning_failure.ts'
 import { select_owned_item } from './behavior_items.ts'
@@ -80,6 +81,8 @@ type Resolution = Readonly<{
   fight?: string
   issue?: string
   observation?: MarketObservation
+  /** Where a walking leaf sends the hero: the background loop goes there and nothing is signed. */
+  journey?: Journey
   prices?: MarketPriceObservation
 }>
 type CombatLeaf = Pick<Extract<BehaviorAction, { type: 'combat' }>, 'profiles' | 'target_options' | 'allies'> &
@@ -136,7 +139,11 @@ const dungeon_resolution = (
 }
 const world_resolution = (selection: WorldSelection, context: GameplayContext): Resolution => {
   if (selection.status !== 'action')
-    return { status: selection.status, issue: 'code' in selection ? selection.code : undefined }
+    return {
+      status: selection.status,
+      issue: 'code' in selection ? selection.code : undefined,
+      journey: 'journey' in selection ? selection.journey : undefined,
+    }
   validate_gameplay({ ...context, command: { ...context.command, ...selection.action } })
   return selection
 }
@@ -253,6 +260,7 @@ const evaluate_behavior_action = (run: BehaviorRun, previous: Command | null, co
     record: continuation(consumed, result, selected, observation, prices),
     issue: result.blocked ? 'observation_unavailable' : (result.reason ?? selected.issue),
     node: result.node,
+    journey: selected.journey,
   }
 }
 
@@ -261,7 +269,7 @@ export const next_behavior_action = (run: BehaviorRun, previous: Command | null,
     return { ...evaluate_behavior_action(run, previous, context), diagnostic: undefined as Error | undefined }
     // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Persist a safe blocker; caller reports the diagnostic only after commit.
   } catch (error) {
-    return { ...planning_blocker(error, run), action: undefined, node: undefined }
+    return { ...planning_blocker(error, run), action: undefined, node: undefined, journey: undefined }
   }
 }
 const action_characters = (action: BehaviorAction): readonly string[] => {

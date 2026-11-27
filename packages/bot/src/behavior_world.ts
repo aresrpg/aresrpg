@@ -5,7 +5,8 @@ import { ZONE_SIZE, ZONE_RESEARCH_TTL_MS, live_resource_packs, live_mob_groups }
 
 import { area_contains, assert_area_position, WORLD_AREA_SCHEMA, type WorldArea } from './target_constraints.ts'
 import { zone_key } from './actor_world.ts'
-import { gameplay_observed_ms, owned_character, type GameplayContext } from './gameplay_context.ts'
+import { gameplay_observed_ms, owned_character, travel_destination, type GameplayContext } from './gameplay_context.ts'
+import type { Journey } from './idle.ts'
 import { coordinate, identifier, nonempty, object_schema } from './gameplay_schema.ts'
 import type { SelectedAction } from './behavior_targets.ts'
 
@@ -20,12 +21,13 @@ export type DiscoverAction = Readonly<{
     | Readonly<{ region: WorldRegion; order: 'nearest' }>
     | Readonly<{ region?: never; area: WorldArea; order: 'nearest' }>
     | Readonly<{ order: 'onward' }>
-    | Readonly<{ region?: never; area: WorldArea; order: 'toward' }>
+    | Readonly<{ region?: never; area: WorldArea; ally?: never; order: 'toward' }>
+    | Readonly<{ region?: never; area?: never; ally: string; order: 'toward' }>
   )
 export type WorldSelection =
   | Readonly<{ status: 'action'; action: SelectedAction }>
   | Readonly<{ status: 'success' }>
-  | Readonly<{ status: 'waiting'; code: string; wake_at?: number }>
+  | Readonly<{ status: 'waiting'; code: string; wake_at?: number; journey?: Journey }>
   | Readonly<{ status: 'failure'; code: string }>
 export const WORLD_REGION_SCHEMA = object_schema({
   min_zx: coordinate,
@@ -46,7 +48,16 @@ export const WORLD_ACTION_SCHEMAS = [
   },
   object_schema({ ...discovery_properties, order: { const: 'nearest' }, area: WORLD_AREA_SCHEMA }),
   object_schema({ ...discovery_properties, order: { const: 'onward' } }),
-  object_schema({ ...discovery_properties, order: { const: 'toward' }, area: WORLD_AREA_SCHEMA }),
+  {
+    ...object_schema({ ...discovery_properties, order: { const: 'toward' }, area: WORLD_AREA_SCHEMA }),
+    description:
+      'Walk to a place. The hero moves by itself in the background and signs nothing on the way; the leaf waits (issue travelling) until its feet stand in the area, then fails with area_reached so the tree goes on to its next leaf. The walk takes real time: 11.5 blocks per second.',
+  },
+  {
+    ...object_schema({ ...discovery_properties, order: { const: 'toward' }, ally: identifier }),
+    description:
+      'Walk to a hero of the same wallet, wherever it goes, signing nothing on the way. The leaf waits (issue travelling) until this hero stands beside it, then fails with area_reached. Put it after a join leaf: the hero joins the teammate fights once it is close.',
+  },
 ] as const
 
 /** Adjacent Hamiltonian cycle of the world's even-sized zone grid; the first column closes the route.
@@ -124,8 +135,38 @@ const standing = (character: Readonly<{ world?: string; checkpoint_world?: strin
   if (character.world !== world) return 'elsewhere'
   return character.checkpoint_world === world ? 'here' : 'unknown'
 }
-/** Walk toward the leaf's area: one zone of the tracked window per search, the one nearest to the area.
- * A hero inside its area has nothing to walk; a hero that cannot reach it holds its run. */
+/** Where the hero's feet stand: its background walk when that walk began from the current checkpoint,
+ * the checkpoint itself otherwise. */
+const feet = (context: GameplayContext, character: Readonly<{ id: string; x?: number | null; z?: number | null }>) => {
+  const row = context.snapshot.characters.find(({ id }) => id === character.id)
+  const presence = context.presence?.[character.id]
+  const walked = row && presence?.checkpoint === travel_destination(row, row.x!, row.z!).checkpoint
+  return walked ? { x: presence.x, z: presence.z } : { x: character.x!, z: character.z! }
+}
+/** A hero this close to its teammate has arrived: one short step covers the rest inside a join. */
+const ARRIVAL_BLOCKS = 32
+/** Where a walk heads: the teammate's feet, or the centre of the area's zone nearest to the hero.
+ * Null once the hero stands there. */
+const walk_goal = (
+  action: Extract<DiscoverAction, { order: 'toward' }>,
+  context: GameplayContext,
+  at: Readonly<{ x: number; z: number }>
+): Readonly<{ x: number; z: number }> | null => {
+  if (action.ally) {
+    const ally = owned_character(context, action.ally)
+    if (standing(ally, action.world) !== 'here') throw new Error('area_unreachable')
+    const goal = feet(context, ally)
+    return Math.hypot(goal.x - at.x, goal.z - at.z) <= ARRIVAL_BLOCKS ? null : goal
+  }
+  if (area_contains(action.area!, action.world, at.x, at.z)) return null
+  const zone = area_zone(action.area!, { zx: Math.floor(at.x / ZONE_SIZE), zz: Math.floor(at.z / ZONE_SIZE) })
+  if (!zone) throw new Error('area_unreachable')
+  return { x: zone_center(zone.zx), z: zone_center(zone.zz) }
+}
+/** Walk toward the leaf's area or teammate. Moving is presence, not chain state: the background loop
+ * sends position packets and nothing is signed on the way. The chain checkpoint stays where the last
+ * action left it, and the next action there proves the time the walk took. A hero that stands in its
+ * area has nothing to walk; one that cannot reach it holds its run. */
 const select_toward = (
   action: Extract<DiscoverAction, { order: 'toward' }>,
   context: GameplayContext
@@ -134,16 +175,12 @@ const select_toward = (
   const place = standing(character, action.world)
   if (place === 'elsewhere') throw new Error('area_unreachable')
   if (place === 'unknown') return { status: 'waiting', code: 'needs_resync' }
-  if (area_contains(action.area, action.world, character.x!, character.z!))
-    return { status: 'failure', code: 'area_reached' }
-  const here = { zx: Math.floor(character.x! / ZONE_SIZE), zz: Math.floor(character.z! / ZONE_SIZE) }
-  const goal = area_zone(action.area, here)
-  if (!goal) throw new Error('area_unreachable')
-  const step = nearest_zone(goal, zone_ring(here, 1))!
-  if (!tracks(context, character.id, action.world, step)) return { status: 'waiting', code: 'needs_resync' }
-  return discover_target(action, zone_center(step.zx), zone_center(step.zz))
+  const free = [character.custody === 'kiosk', !character.active_fight, !character.ambush, !character.dungeon_run]
+  if (!free.every(Boolean)) return { status: 'failure', code: 'character_not_available' }
+  const goal = walk_goal(action, context, feet(context, character))
+  if (!goal) return { status: 'failure', code: 'area_reached' }
+  return { status: 'waiting', code: 'travelling', journey: { world: action.world, x: goal.x, z: goal.z } }
 }
-
 const within = ({ zx, zz }: Readonly<{ zx: number; zz: number }>, region: WorldRegion) =>
   zx >= region.min_zx && zx <= region.max_zx && zz >= region.min_zz && zz <= region.max_zz
 const region_valid = (region: WorldRegion) => region.min_zx <= region.max_zx && region.min_zz <= region.max_zz

@@ -39,10 +39,23 @@ export const SLEEP_AFTER_IDLE_MS = 20 * 60_000
  * envelope and no receipt to reconcile. The seat is the wallet's, so idle is the wallet's too. */
 export const wallet_idle = (lane: Lane) =>
   ![run_keys(lane).length, lane.direct, lane.active_command, lane.pending, lane.reconciliation_command].some(Boolean)
-export const idle_travels = (context: GameplayContext, lane: Lane) => {
-  if (lane.paused || lane.needs_resync || !wallet_idle(lane)) return null
+/** A place a hosted hero walks to in the background. */
+export type Journey = Readonly<{ world: string; x: number; z: number }>
+/** The heroes the background loop moves: every free hero of an idle wallet wanders, and a free hero
+ * whose own run sent it on a journey walks there, whatever else the wallet is doing. */
+export const idle_travels = (
+  context: GameplayContext,
+  lane: Lane,
+  journeys: ReadonlyMap<string, Journey> = new Map()
+) => {
+  if (lane.paused || lane.needs_resync) return null
+  const wandering = wallet_idle(lane)
+  const journey_of = (character: Readonly<{ id: string; world?: string | null }>) => {
+    const journey = lane.runs?.[character.id] ? journeys.get(character.id) : undefined
+    return journey?.world === character.world ? journey : undefined
+  }
   const chain_ms = gameplay_observed_ms(context)
-  return context.snapshot.characters
+  const travels = context.snapshot.characters
     .filter((character) =>
       [
         character.custody === 'kiosk',
@@ -53,10 +66,16 @@ export const idle_travels = (context: GameplayContext, lane: Lane) => {
         character.x != null,
         character.z != null,
         character.at_ms != null && BigInt(character.at_ms) <= chain_ms,
+        wandering || journey_of(character),
       ].every(Boolean)
     )
     .map((character) => ({
-      ...travel_destination(character, character.x!, character.z!),
+      ...travel_destination(
+        character,
+        journey_of(character)?.x ?? character.x!,
+        journey_of(character)?.z ?? character.z!
+      ),
+      journey: Boolean(journey_of(character)),
       riding: character.equipment.some(
         (item) =>
           item.slot === 'pet' &&
@@ -64,6 +83,8 @@ export const idle_travels = (context: GameplayContext, lane: Lane) => {
           Object.hasOwn(pet_wings, item.item_type)
       ),
     }))
+  // A busy wallet moves only its travellers; with none there is nothing to authorize.
+  return wandering || travels.length ? travels : null
 }
 
 export type IdleState = Readonly<{
