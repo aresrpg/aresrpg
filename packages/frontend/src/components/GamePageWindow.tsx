@@ -3,6 +3,7 @@
 import { lazy, memo, Suspense, type ReactNode } from 'react'
 import { CarvedIcon, GameWindow, NativeModal } from '@aresrpg/ui'
 
+import { is_admin_address } from '../admin_access.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Page } from '../modules/navigation.ts'
 import type { GameSettings } from '../game/core/settings.ts'
@@ -10,8 +11,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { HUD_PAGE_META } from '../game/hud/hud_pages.ts'
 import './game_page_window.css'
 
-const AdminControls = lazy(() => import('../admin/AdminControls.tsx'))
-const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
+const TournamentAdminControls = lazy(() => import('../tournament/TournamentAdminControls.tsx'))
 const MasteryPage = lazy(() => import('../mastery/MasteryPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
 const KolizeumPage = lazy(() => import('../kolizeum/KolizeumPage.tsx'))
@@ -37,7 +37,6 @@ export const RoutedPage = memo(
   }>) => {
     const views: Record<Page, ReactNode> = {
       world: <></>,
-      admin: <AdminPage copy={copy.admin_page} />,
       mastery: <MasteryPage copy={copy} />,
       settings: <SettingsPage copy={copy} settings={settings} />,
       kolizeum: <KolizeumPage copy={copy} fight_mounted={fight_mounted} />,
@@ -50,6 +49,8 @@ export const GamePageWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const page = useAppStore((state) => state.navigation.page)
   const settings = useAppStore((state) => state.settings)
   const fight_mounted = useAppStore((state) => state.fight.mounted)
+  // Tournaments are created and started from their own window, by the admin address alone.
+  const admin = useAppStore((state) => is_admin_address(state.session.wallet?.address ?? null))
   if (page === 'world') return null
   const close = () => dispatch_app({ type: 'page/open', page: 'world' })
   const content = <RoutedPage copy={copy} settings={settings} page={page} fight_mounted={fight_mounted} />
@@ -60,9 +61,9 @@ export const GamePageWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <GameWindow
         title={copy[meta.label]}
         meta={
-          page === 'admin' ? (
+          page === 'kolizeum' && admin ? (
             <Suspense fallback={null}>
-              <AdminControls />
+              <TournamentAdminControls />
             </Suspense>
           ) : undefined
         }

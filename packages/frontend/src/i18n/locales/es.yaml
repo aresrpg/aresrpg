@@ -553,7 +553,10 @@ mastery_page:
   points_missing: Faltan {{points}} puntos
   buy: Comprar · {{cost}} pts
   quest_started: Misión diaria asignada.
-  offer_purchased: Recompensa de maestría comprada.
+  offer_purchased: '¡Compra realizada!'
+  purchase_inventory: 'Ver en el inventario'
+  purchase_open: 'Abrir ahora'
+  purchase_arriving: 'Tu compra está llegando…'
 
 airdrop_page:
   reward_title: '¡Has recibido un regalo!'
@@ -2234,17 +2237,6 @@ kares_page:
   daily_cap_note: 'Máximo de recompensas de jefes por día desde la configuración, no emisiones reales. El saldo diario no usado no se acumula.'
   other_networks: 'Otras redes · EVM / Solana'
   sui_wallet_required: 'Selecciona una cartera Sui para usar esta función.'
-  blast_soon: 'Venta de tokens pronto en Blast'
-  blast_live: 'La venta de KARES está abierta'
-  blast_closing: 'Venta finalizada · liquidación pendiente'
-  blast_funded: 'Venta financiada · lanzamiento pendiente'
-  blast_complete: 'KARES ya está en Blast'
-  blast_cancelled: 'Venta cancelada · reembolsos disponibles'
-  blast_loading: 'Consultando la venta de Blast…'
-  blast_unavailable: 'Estado de la venta no disponible'
-  blast_note: 'Ayuda a crear el próximo capítulo de AresRPG.'
-  blast_action: 'Ver en Blast'
-  blast_progress: 'Progreso de la financiación'
   upgradeability_note: 'Los contratos de recompensas podrán actualizarse hasta la congelación definitiva del proyecto. La emisión de tokens seguirá desactivada.'
   claim_batch: 'Reclamar {{count}} de {{total}} posiciones'
   withdraw_batch: 'Hasta {{count}} posiciones por retiro. Repite para retirar el saldo restante.'
@@ -2305,7 +2297,6 @@ kares_page:
   kares_missing: 'KARES insuficientes'
   language: 'Idioma'
   community_detail: 'Esta reserva financia competiciones PvP y premios de las clasificaciones de temporada. La tesorería distribuye manualmente los tokens liberados.'
-  supply_detail: 'Emitido una sola vez. No se crean más tokens. Las quemas reducen el suministro.'
   emissions_detail: 'Todas las recompensas usan tokens existentes. Los pagos nunca crean nuevo suministro.'
   staking_unavailable: 'El staking aún no está disponible en esta red.'
   combat_rewards: 'Recompensas de jefes'
@@ -2832,128 +2823,6 @@ loading_screen:
   final_checks: 'Últimos preparativos'
   ready: 'Tu aventura está lista.'
 
-allocation_page:
-  error_connection_timeout: 'El servidor no respondió a tiempo. Reconecta.'
-  error_connection_failed: 'Se perdió la conexión con el servidor. Reconecta.'
-  error_connection_replaced: 'Esta cartera se conectó en otra pestaña. Reconecta aquí cuando quieras continuar.'
-  error_restore_timeout: 'La restauración tardó demasiado. Conecta tu cartera de nuevo.'
-  connecting: 'Conectando y verificando cartera'
-  restoring: 'Restaurando cartera'
-  reconnect: 'Reconectar'
-  error_title: 'No se pudo completar la acción'
-  share_post: 'Tengo una plaza {{tier}} en la whitelist para la venta de KARES en @blastdotfun. Consulta la tuya:'
-  menu_title: 'Consulta tu plaza en la whitelist'
-  menu_note: 'Asignaciones de Veterano y Miembro para la venta de KARES.'
-  menu_action: 'Ver asignaciones'
-  before: Antes de la sobresuscripción
-  buy_up_to: Comprar hasta
-  no_spot: Sin spot esta vez
-  source_reserved: Spot reservado
-  source_pending: Selección pendiente
-  link_wallets: Vincula tus wallets
-  wallet_rule: Firma con cada wallet para demostrar que es tuya.
-  wallet_rule_sale: 'Vincula la billetera que tiene tu plaza y compra desde su tarjeta.'
-  verified: Verificada
-  remove_wallet: Quitar {{wallet}}
-  add_wallet: Vincular wallet Sui
-  wallet_count: '{{count}} / {{max}} wallets'
-  close: Cerrar
-  signature_note: Firma un mensaje gratuito. No se envían transacciones ni pagos.
-  no_wallet_app: Instala una wallet Sui para continuar.
-  wallet_failed: Error de conexión. Inténtalo de nuevo.
-  edit: Editar
-  cancel: Cancelar
-  save: Guardar
-  board_legend: 'Spots por clasificación: Veteran / Member'
-  play: Jugar AresRPG
-  sale_title: La venta se realiza en Blast
-  sale_time: 'La fecha y hora de la venta se anunciarán más adelante.'
-  sale_public: '¿Sin plaza? Sigue la venta pública en Blast.'
-  results_title: 'Resultados de la campaña'
-  results_note: Tus tarjetas revelan los resultados antes de la venta.
-  results_note_sale: 'La whitelist es definitiva. Las billeteras en whitelist compran en esta página, hasta su límite.'
-  spot_gives: Qué ofrece un spot
-  signing: Confirma la firma en tu wallet…
-  no_spot_yet: Aún sin spot
-  your_allocation: Tu asignación
-  total_cap: Hasta {{sui}} SUI en {{count}} spots
-  allocation_note: Inicia sesión y vincula wallets para ver tus spots.
-  footer: Un spot fija el límite de contribución, no una cantidad fija de tokens.
-  error_wallet_limit: Hasta diez wallets, incluida tu wallet Google.
-  title: Lista de acceso KARES
-  veteran: Veteran
-  member: Member
-  public_note: El acceso público sigue las condiciones de Blast. Los resultados pueden estar pendientes.
-  recipient: Billetera receptora
-  preview: Vista previa
-  share: Compartir
-  dilution: Los límites no garantizan tokens. Si hay sobresuscripción, todos los compradores se diluyen proporcionalmente.
-  sale_soon: 'Venta pronto'
-  sale_live: 'Venta activa'
-  sale_closing: 'Venta terminada'
-  sale_funded: 'Lanzamiento pendiente'
-  sale_complete: 'KARES lanzado'
-  sale_cancelled: 'Venta cancelada'
-  sale_spots_open: 'Tus plazas están abiertas'
-  sale_ends_in: 'Termina en {{time}}'
-  sale_public_in: 'Abierta a todos en {{time}}'
-  sale_public_now: 'Abierta a todos ahora'
-  sale_opens_in: 'Abre en {{time}}'
-  sale_opens_soon: 'Abre pronto'
-  sale_countdown: '{{days}} d {{hours}} h {{minutes}} min'
-  sale_raised: 'Recaudado'
-  sale_bought: 'Comprado'
-  sale_in_wallet: 'En esta billetera'
-  sale_receive: 'Recibes'
-  sale_spot_after: 'Plaza tras esta compra'
-  sale_left_in_wallet: 'Queda en la billetera'
-  sale_refund: 'SUI devueltos'
-  sale_signed: 'Sesión iniciada'
-  sale_not_connected: 'No conectada'
-  sale_buy: 'Comprar KARES'
-  sale_buy_amount: 'Comprar KARES por {{sui}} SUI'
-  sale_not_ready: 'Plaza aún no lista'
-  sale_connect_buy: 'Conecta {{wallet}} para comprar'
-  sale_connect_claim: 'Conecta {{wallet}} para reclamar'
-  sale_claim: 'Reclamar KARES'
-  sale_claim_refund: 'Reclamar reembolso de {{sui}} SUI'
-  sale_claim_after: 'Reclama tras el lanzamiento'
-  sale_waiting: 'Esperando a que Blast lance KARES'
-  sale_settled: 'Nada que reclamar'
-  sale_checking: 'Comprobando tu plaza…'
-  sale_committed: '+{{sui}} SUI aportados'
-  sale_claimed: 'Reclamado'
-  sale_receipt: 'Recibo'
-  sale_failed: 'La transacción no se completó. Revisa tu billetera e inténtalo de nuevo.'
-  sale_amount: 'Cantidad'
-  sale_amount_sui: 'Cantidad en SUI'
-  sale_wallet_max: 'Esta billetera puede comprar hasta {{sui}} SUI.'
-  sale_spot_left: 'A tu plaza le quedan {{sui}} SUI.'
-  sale_max: 'Máx. {{sui}}'
-  sale_terms: 'Menos KARES si la venta se sobresuscribe; el SUI sobrante vuelve al reclamar. El SUI queda bloqueado hasta que Blast lance o cancele la venta.'
-  sale_add_sui: 'Añadir {{sui}} SUI'
-  sale_signing: 'Confirma en tu billetera…'
-  sale_dilution: 'Si la venta supera su objetivo, cada comprador recibe menos KARES y recupera el SUI sobrante al reclamar.'
-  google_wallet: Billetera de juego Google
-  loading: Cargando campaña
-  final: Lista final · pendiente de importar a Blast
-  wallet: Wallet
-  error_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.
-  error_wallet_taken: Esta billetera ya está vinculada a otra cuenta X.
-  error_invalid_address: Introduce una dirección Sui válida que empiece por 0x.
-  board_xp: XP de combate · Clasificación
-  board_kills: Monstruos derrotados · Clasificación
-  board_dungeons: Mazmorras · Clasificación
-  board_jobs: XP de oficios · Clasificación
-  board_marketplace: Mercado · Clasificación
-  board_kolizeum: Kolizeum · Clasificación
-  board_zones: Descubrimientos · Clasificación
-  board_feeding: Alimentación de mascotas · Clasificación
-  board_gathering: Recolección · Clasificación
-  source_leaderboard: Sube en las clasificaciones
-  source_social: Publica en X
-  error_unauthorized: Conecta y verifica primero la wallet receptora.
-  error_rate_limited: Demasiadas solicitudes. Inténtalo en un momento.
 tournament_page:
   level_limit_label: 'Nivel máximo al inscribirse'
   level_unrestricted: 'Sin límite'

@@ -9,8 +9,8 @@ const {
   GRAPH_URL = 'redis://localhost:6379',
   /** the ONE cluster redis — player-published ephemera + server heartbeats */
   MESH_REDIS_URL = 'redis://localhost:6379',
-  ALLOCATION_REDIS_URL,
-  ALLOCATION_ORIGIN = 'https://aresrpg.world',
+  /** the site's public origin: share previews build their addresses on it */
+  SITE_ORIGIN = 'https://aresrpg.world',
   GRAPH_NAME = 'aresrpg',
   PORT: RAW_PORT = '9800',
   SUI_NETWORK = 'testnet',
@@ -21,7 +21,7 @@ const {
   ALLOWED_ORIGINS: RAW_ALLOWED_ORIGINS = 'http://localhost:5173,https://aresrpg.world',
 } = process.env
 
-export { GRAPH_URL, MESH_REDIS_URL, GRAPH_NAME, SUI_NETWORK, SUI_RPC_URL }
+export { GRAPH_URL, MESH_REDIS_URL, GRAPH_NAME, SUI_NETWORK, SUI_RPC_URL, SITE_ORIGIN }
 
 export const PORT = Number(RAW_PORT)
 /** Live game seats per pod. */
@@ -44,9 +44,3 @@ export const ADMIN_ADDRESSES = new Set(
     .map((address) => address.trim().toLowerCase())
     .filter(Boolean)
 )
-
-/** Optional temporary campaign configuration; no Redis connection is opened by reading it. */
-export const ALLOCATION_OPTIONS = Object.freeze({
-  origin: ALLOCATION_ORIGIN,
-  redis_url: ALLOCATION_REDIS_URL,
-})

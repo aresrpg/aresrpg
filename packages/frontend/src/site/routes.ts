@@ -29,12 +29,12 @@ export const SITE_ADDRESSES = Object.freeze({
   staking: path_of('staking'),
   leaderboards: path_of('leaderboards'),
   portfolio: path_of('portfolio'),
+  /** The dashboard, shown to the admin address alone. It is no page of the bar's list: it has no link card. */
+  admin: '/admin',
   /** The game is a document of its own; the site opens it in a new tab. */
   world: '/world',
   docs: DOCS_ROOT,
   items: `${DOCS_ROOT}/items`,
-  /** The KARES sale's page: a standalone design of its own. */
-  allocation: '/allocation',
   playbook: '/agents',
   agent_guide: '/agents/client.txt',
   journal: 'https://journal.aresrpg.world',

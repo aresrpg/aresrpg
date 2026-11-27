@@ -199,6 +199,7 @@ const finance_chain = () => {
   const coin = kares_test_pins.kares_coin_type
   const state = {
     balance_reads: 0,
+    sent_to_zero: 0n,
     positions: [position_object()],
     objects: [
       shared_object(id(102), `${id(100)}::economy::Economy`, new Uint8Array(), {
@@ -270,7 +271,8 @@ const finance_chain = () => {
         ),
       }),
       listOwnedObjects: async () => ({ objects: state.positions, hasNextPage: false, cursor: null }),
-      getBalance: async () => {
+      getBalance: async ({ owner: holder }: { owner: string }) => {
+        if (BigInt(holder) === 0n) return { balance: { balance: `${state.sent_to_zero}` } }
         state.balance_reads += 1
         return { balance: { balance: '12345678901' } }
       },
@@ -312,6 +314,10 @@ test('a snapshot verifies every linked reserve and fails closed behind any certi
   expect([snapshot.positions[0]?.amount, snapshot.kares_balance]).toEqual([10n, 12_345_678_901n])
   expect('kares_balance' in (await reader.staking_snapshot(owner))).toBe(false)
   expect((await reader.public_snapshot())?.coin_type).toBe(kares_test_pins.kares_coin_type)
+  // KARES sent to the zero address can never move again: it leaves the supply like a burn.
+  state.sent_to_zero = 2_500_000n * KARES_UNIT
+  expect((await reader.public_snapshot())?.total_supply).toBe(KARES_SUPPLY - 2_500_000n * KARES_UNIT)
+  state.sent_to_zero = 0n
   const [position] = state.positions
   state.positions = []
   await expect(reader.snapshot(owner)).rejects.toThrow('behind a certified transaction')

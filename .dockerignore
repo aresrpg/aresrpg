@@ -87,9 +87,6 @@ packages/frontend/public/*
 !packages/frontend/public/branding
 packages/frontend/public/branding/*
 !packages/frontend/public/branding/helmet-favicon.png
-!packages/frontend/public/branding/kares
-packages/frontend/public/branding/kares/*
-!packages/frontend/public/branding/kares/*.webp
 !packages/frontend/public/portrait-share
 packages/frontend/public/portrait-share/*
 !packages/frontend/public/portrait-share/manifest.json

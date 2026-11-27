@@ -21,6 +21,7 @@ const SITE_ROOTS = [
   'src/kares/StakingPage.tsx',
   'src/portfolio/PortfolioPage.tsx',
   'src/agents/AgentPage.tsx',
+  'src/admin/AdminPage.tsx',
 ].map((path) => resolve(FRONTEND, path))
 
 /** The content tables the site reads, each for one reason. */

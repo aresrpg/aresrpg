@@ -553,7 +553,10 @@ mastery_page:
   points_missing: '{{points}} points missing'
   buy: Buy · {{cost}} pts
   quest_started: Daily quest assigned.
-  offer_purchased: Mastery reward purchased.
+  offer_purchased: 'You bought it!'
+  purchase_inventory: 'See in inventory'
+  purchase_open: 'Open now'
+  purchase_arriving: 'Your purchase is arriving…'
 
 airdrop_page:
   reward_title: 'You got a gift!'
@@ -2239,17 +2242,6 @@ kares_page:
   daily_cap_note: 'Maximum boss payouts per day measured from setup, not actual emissions. Unused allowance does not carry over.'
   other_networks: 'Other networks · EVM / Solana'
   sui_wallet_required: 'Select a Sui wallet to use this feature.'
-  blast_soon: 'Token sale soon on Blast'
-  blast_live: 'The KARES sale is live'
-  blast_closing: 'Sale ended · awaiting settlement'
-  blast_funded: 'Sale funded · launch pending'
-  blast_complete: 'KARES is live on Blast'
-  blast_cancelled: 'Sale cancelled · refunds available'
-  blast_loading: 'Checking the Blast sale…'
-  blast_unavailable: 'Sale status unavailable'
-  blast_note: 'Help build the next chapter of AresRPG.'
-  blast_action: 'Explore on Blast'
-  blast_progress: 'Sale funding progress'
   upgradeability_note: 'Reward contracts remain upgradeable until the final project freeze. Token minting stays disabled.'
   claim_batch: 'Claim {{count}} of {{total}} positions'
   withdraw_batch: 'Up to {{count}} positions per withdrawal. Repeat to withdraw the remaining stake.'
@@ -2310,7 +2302,6 @@ kares_page:
   kares_missing: 'Not enough KARES'
   language: 'Language'
   community_detail: 'This reserve funds PvP competitions and seasonal leaderboard prizes. The treasury distributes vested tokens manually.'
-  supply_detail: 'Issued once. No new minting. Burning tokens reduces supply.'
   emissions_detail: 'All rewards use existing tokens. Reward payouts never mint new supply.'
   staking_unavailable: 'Staking is not available on this network yet.'
   combat_rewards: 'Boss rewards'
@@ -2837,128 +2828,6 @@ loading_screen:
   final_checks: 'Final checks'
   ready: 'Your adventure is ready.'
 
-allocation_page:
-  error_connection_timeout: 'The server did not respond in time. Reconnect to try again.'
-  error_connection_failed: 'The server connection was lost. Reconnect to try again.'
-  error_connection_replaced: 'This wallet connected in another tab. Reconnect here when you are ready.'
-  error_restore_timeout: 'Wallet restoration took too long. Connect your wallet again.'
-  connecting: 'Connecting and verifying wallet'
-  restoring: 'Restoring wallet'
-  reconnect: 'Reconnect'
-  error_title: 'Could not complete this action'
-  share_post: 'I have a {{tier}} whitelist spot for the KARES sale on @blastdotfun. Check yours:'
-  menu_title: 'Check your whitelist spot'
-  menu_note: 'Veteran and Member allocations for the KARES sale.'
-  menu_action: 'View allocations'
-  before: Before oversubscription
-  buy_up_to: Buy up to
-  no_spot: No spot this time
-  source_reserved: Reserved spot
-  source_pending: Selection pending
-  link_wallets: Link your wallets
-  wallet_rule: Sign with each wallet to prove it’s yours.
-  wallet_rule_sale: 'Link the wallet that holds your spot, then buy from its card.'
-  verified: Verified
-  remove_wallet: Remove {{wallet}}
-  add_wallet: Link a Sui wallet
-  wallet_count: '{{count}} / {{max}} wallets'
-  close: Close
-  signature_note: Sign a free message. No transaction or payment is sent.
-  no_wallet_app: Install a Sui wallet to continue.
-  wallet_failed: Wallet connection failed. Try again.
-  edit: Edit
-  cancel: Cancel
-  save: Save
-  board_legend: 'Spots per board: Veteran / Member'
-  play: Play AresRPG
-  sale_title: The sale happens on Blast
-  sale_time: 'Sale date and time to be announced.'
-  sale_public: 'No spot? Follow the public sale on Blast.'
-  results_title: 'Campaign results'
-  results_note: Your cards reveal the results before the sale.
-  results_note_sale: 'The whitelist is final. Whitelisted wallets buy on this page, up to their cap.'
-  spot_gives: What a spot gives
-  signing: Confirm the signature in your wallet…
-  no_spot_yet: No spot yet
-  your_allocation: Your allocation
-  total_cap: Buy up to {{sui}} SUI across {{count}} spots
-  allocation_note: Sign in and link your wallets to check your spots.
-  footer: A spot sets your contribution cap, not a fixed number of tokens.
-  error_wallet_limit: You can link up to ten wallets, including your Google wallet.
-  title: KARES whitelist
-  veteran: Veteran
-  member: Member
-  public_note: Public access follows Blast’s sale terms. Results may still be pending.
-  recipient: Receiving wallet
-  preview: Preview link
-  share: Share
-  dilution: Caps are not guaranteed tokens. Every buyer is diluted proportionally if the sale is oversubscribed.
-  sale_soon: 'Sale soon'
-  sale_live: 'Sale live'
-  sale_closing: 'Sale ended'
-  sale_funded: 'Launch pending'
-  sale_complete: 'KARES launched'
-  sale_cancelled: 'Sale cancelled'
-  sale_spots_open: 'Your spots are open'
-  sale_ends_in: 'Ends in {{time}}'
-  sale_public_in: 'Open to everyone in {{time}}'
-  sale_public_now: 'Open to everyone now'
-  sale_opens_in: 'Opens in {{time}}'
-  sale_opens_soon: 'Opens soon'
-  sale_countdown: '{{days}}d {{hours}}h {{minutes}}m'
-  sale_raised: 'Raised'
-  sale_bought: 'Bought'
-  sale_in_wallet: 'In this wallet'
-  sale_receive: 'You receive'
-  sale_spot_after: 'Spot after this'
-  sale_left_in_wallet: 'Left in wallet'
-  sale_refund: 'SUI back'
-  sale_signed: 'Signed in'
-  sale_not_connected: 'Not connected'
-  sale_buy: 'Buy KARES'
-  sale_buy_amount: 'Buy {{sui}} SUI of KARES'
-  sale_not_ready: 'Spot not ready yet'
-  sale_connect_buy: 'Connect {{wallet}} to buy'
-  sale_connect_claim: 'Connect {{wallet}} to claim'
-  sale_claim: 'Claim KARES'
-  sale_claim_refund: 'Claim {{sui}} SUI refund'
-  sale_claim_after: 'Claim opens after launch'
-  sale_waiting: 'Waiting for Blast to launch KARES'
-  sale_settled: 'Nothing left to claim'
-  sale_checking: 'Checking your spot…'
-  sale_committed: '+{{sui}} SUI committed'
-  sale_claimed: 'Claimed'
-  sale_receipt: 'Receipt'
-  sale_failed: 'The transaction did not complete. Check your wallet, then try again.'
-  sale_amount: 'Amount'
-  sale_amount_sui: 'Amount in SUI'
-  sale_wallet_max: 'This wallet can buy up to {{sui}} SUI.'
-  sale_spot_left: 'Your spot has {{sui}} SUI left.'
-  sale_max: 'Max {{sui}}'
-  sale_terms: 'Fewer KARES if the sale is oversubscribed; the extra SUI comes back when you claim. SUI stays locked until Blast launches or cancels the sale.'
-  sale_add_sui: 'Add {{sui}} SUI'
-  sale_signing: 'Confirm in your wallet…'
-  sale_dilution: 'If the sale raises more than its target, every buyer receives fewer KARES and gets the extra SUI back when claiming.'
-  google_wallet: Google game wallet
-  loading: Loading campaign
-  final: Final whitelist · pending Blast import
-  wallet: Wallet
-  error_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
-  error_wallet_taken: This wallet is already linked to another X account.
-  error_invalid_address: Enter a valid Sui address beginning with 0x.
-  board_xp: Combat XP · Leaderboard
-  board_kills: Mob kills · Leaderboard
-  board_dungeons: Dungeons · Leaderboard
-  board_jobs: Job XP · Leaderboard
-  board_marketplace: Marketplace · Leaderboard
-  board_kolizeum: Kolizeum · Leaderboard
-  board_zones: Discoveries · Leaderboard
-  board_feeding: Pet feeding · Leaderboard
-  board_gathering: Gathering · Leaderboard
-  source_leaderboard: Climb a leaderboard
-  source_social: Post on X
-  error_unauthorized: Connect and verify the receiving wallet first.
-  error_rate_limited: Too many requests. Try again shortly.
 tournament_page:
   level_limit_label: 'Maximum registration level'
   level_unrestricted: 'Unrestricted'

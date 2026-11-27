@@ -6,7 +6,6 @@ import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { TournamentRow } from '@aresrpg/protocol'
 import { tournament_owned_match, tournament_registration, tournament_rounds } from '@aresrpg/protocol/tournament-rules'
 
-import { BlastSaleCard } from '../kares/BlastSaleCard.tsx'
 import { dispatch_app } from '../store.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
@@ -21,7 +20,7 @@ import './tournament.css'
 const HudCards = ({ children }: Readonly<{ children: ReactNode }>) => {
   const root = useHudPlacement()
   return (
-    <aside ref={root} className="blast-sale-hud tourney-hud-desktop tourney-hud-stack">
+    <aside ref={root} className="tourney-hud-desktop tourney-hud-stack">
       {children}
     </aside>
   )
@@ -219,7 +218,6 @@ export const TournamentHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <>
       <HudCards>
         <TournamentResultsCard row={results} t={t} />
-        <BlastSaleCard copy={copy} />
       </HudCards>
       {results && (
         <button

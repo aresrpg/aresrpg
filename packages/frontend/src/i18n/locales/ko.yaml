@@ -556,7 +556,10 @@ mastery_page:
   points_missing: '{{points}}포인트 부족'
   buy: 구매 · {{cost}}포인트
   quest_started: 일일 퀘스트가 배정되었습니다.
-  offer_purchased: 숙련 보상을 구매했습니다.
+  offer_purchased: '구매 완료!'
+  purchase_inventory: '인벤토리에서 보기'
+  purchase_open: '지금 열기'
+  purchase_arriving: '구매한 아이템이 도착하는 중…'
 airdrop_page:
   reward_title: '선물을 받았어요!'
   reward_received: '{items}을(를) 받았어요!'
@@ -2230,17 +2233,6 @@ kares_page:
   daily_cap_note: '설정 시점부터 계산한 일일 보스 보상 상한이며 실제 지급량이 아닙니다. 미사용 한도는 이월되지 않습니다.'
   other_networks: '다른 네트워크 · EVM / Solana'
   sui_wallet_required: '이 기능을 사용하려면 Sui 지갑을 선택하세요.'
-  blast_soon: '곧 Blast에서 토큰 판매 시작'
-  blast_live: 'KARES 판매 진행 중'
-  blast_closing: '판매 종료 · 정산 대기'
-  blast_funded: '모금 완료 · 출시 대기'
-  blast_complete: 'Blast에서 KARES를 만나보세요'
-  blast_cancelled: '판매 취소 · 환불 가능'
-  blast_loading: 'Blast 판매 상태 확인 중…'
-  blast_unavailable: '판매 상태를 확인할 수 없습니다'
-  blast_note: 'AresRPG의 다음 장을 함께 만들어 주세요.'
-  blast_action: 'Blast에서 보기'
-  blast_progress: '모금 진행률'
   upgradeability_note: '보상 계약은 프로젝트의 최종 동결까지 업그레이드할 수 있습니다. 신규 토큰 발행은 계속 비활성화됩니다.'
   claim_batch: '{{total}}개 중 {{count}}개 포지션 보상 받기'
   withdraw_batch: '한 번에 최대 {{count}}개 포지션을 출금합니다. 남은 스테이크는 다시 출금하세요.'
@@ -2301,7 +2293,6 @@ kares_page:
   kares_missing: KARES 부족
   language: 언어
   community_detail: '이 준비금은 PvP 대회와 시즌 순위표 보상에 사용됩니다. 재무 담당자가 해제된 토큰을 수동으로 분배합니다.'
-  supply_detail: '한 번만 발행됩니다. 추가 발행은 없습니다. 소각하면 공급량이 줄어듭니다.'
   emissions_detail: '모든 보상은 기존 토큰을 사용합니다. 보상 지급으로 새 토큰을 발행하지 않습니다.'
   staking_unavailable: 이 네트워크에서는 아직 스테이킹을 이용할 수 없습니다.
   combat_rewards: 보스 보상
@@ -2821,128 +2812,6 @@ loading_screen:
   final_checks: '마지막 준비'
   ready: '모험 준비가 끝났어요.'
 
-allocation_page:
-  error_connection_timeout: '서버 응답 시간이 초과되었습니다. 다시 연결하세요.'
-  error_connection_failed: '서버 연결이 끊겼습니다. 다시 연결하세요.'
-  error_connection_replaced: '이 지갑이 다른 탭에서 연결되었습니다. 준비되면 여기에서 다시 연결하세요.'
-  error_restore_timeout: '지갑 복원 시간이 초과되었습니다. 지갑을 다시 연결하세요.'
-  connecting: '지갑 연결 및 확인 중'
-  restoring: '지갑 복원 중'
-  reconnect: '다시 연결'
-  error_title: '작업을 완료하지 못했습니다'
-  share_post: '@blastdotfun의 KARES 판매에서 {{tier}} 화이트리스트 자리를 받았어요. 여러분의 자리도 확인하세요:'
-  menu_title: '화이트리스트 자리 확인'
-  menu_note: 'KARES 판매의 베테랑 및 멤버 배정 물량.'
-  menu_action: '배정 물량 보기'
-  before: 초과 청약 조정 전
-  buy_up_to: 구매 한도
-  no_spot: 이번에는 슬롯 없음
-  source_reserved: 예약된 슬롯
-  source_pending: 선정 대기 중
-  link_wallets: 지갑 연결
-  wallet_rule: 각 지갑으로 서명하여 소유권을 확인하세요.
-  wallet_rule_sale: '자리를 보유한 지갑을 연결한 뒤 해당 카드에서 구매하세요.'
-  verified: 확인됨
-  remove_wallet: '{{wallet}} 제거'
-  add_wallet: Sui 지갑 연결
-  wallet_count: 지갑 {{count}} / {{max}}
-  close: 닫기
-  signature_note: 무료 메시지에 서명합니다. 거래나 결제는 발생하지 않습니다.
-  no_wallet_app: Sui 지갑을 설치하세요.
-  wallet_failed: 지갑 연결 실패. 다시 시도하세요.
-  edit: 수정
-  cancel: 취소
-  save: 저장
-  board_legend: '순위표별 슬롯: Veteran / Member'
-  play: AresRPG 플레이
-  sale_title: 판매는 Blast에서 진행
-  sale_time: '판매 날짜와 시간은 추후 발표됩니다.'
-  sale_public: '자리가 없나요? Blast의 공개 판매를 확인하세요.'
-  results_title: '캠페인 결과'
-  results_note: 판매 전에 카드에서 결과를 확인하세요.
-  results_note_sale: '화이트리스트가 확정되었습니다. 화이트리스트 지갑은 한도까지 이 페이지에서 구매합니다.'
-  spot_gives: 슬롯 혜택
-  signing: 지갑에서 서명을 확인하세요…
-  no_spot_yet: 아직 슬롯 없음
-  your_allocation: 내 할당량
-  total_cap: '{{count}}개 슬롯에서 최대 {{sui}} SUI'
-  allocation_note: 로그인하고 지갑을 연결하여 슬롯을 확인하세요.
-  footer: 슬롯은 고정 토큰 수가 아닌 기여 한도입니다.
-  error_wallet_limit: Google 지갑을 포함하여 최대 10개입니다.
-  title: KARES 화이트리스트
-  veteran: Veteran
-  member: Member
-  public_note: 공개 참여는 Blast 판매 조건을 따릅니다. 결과가 아직 대기 중일 수 있습니다.
-  recipient: 수령 지갑
-  preview: 링크 미리보기
-  share: 공유
-  dilution: 한도는 토큰 수량을 보장하지 않습니다. 초과 청약 시 모든 구매자의 배정이 같은 비율로 줄어듭니다.
-  sale_soon: '세일 예정'
-  sale_live: '세일 진행 중'
-  sale_closing: '세일 종료'
-  sale_funded: '출시 대기'
-  sale_complete: 'KARES 출시됨'
-  sale_cancelled: '세일 취소됨'
-  sale_spots_open: '구매 자리가 열렸습니다'
-  sale_ends_in: '{{time}} 후 종료'
-  sale_public_in: '{{time}} 후 누구나 참여 가능'
-  sale_public_now: '지금 누구나 참여할 수 있습니다'
-  sale_opens_in: '{{time}} 후 시작'
-  sale_opens_soon: '곧 시작'
-  sale_countdown: '{{days}}일 {{hours}}시간 {{minutes}}분'
-  sale_raised: '모금액'
-  sale_bought: '구매함'
-  sale_in_wallet: '이 지갑 잔액'
-  sale_receive: '받는 양'
-  sale_spot_after: '구매 후 자리'
-  sale_left_in_wallet: '지갑에 남는 금액'
-  sale_refund: 'SUI 환불'
-  sale_signed: '로그인됨'
-  sale_not_connected: '연결 안 됨'
-  sale_buy: 'KARES 구매'
-  sale_buy_amount: '{{sui}} SUI로 KARES 구매'
-  sale_not_ready: '자리가 아직 준비되지 않음'
-  sale_connect_buy: '{{wallet}} 연결 후 구매'
-  sale_connect_claim: '{{wallet}} 연결 후 받기'
-  sale_claim: 'KARES 받기'
-  sale_claim_refund: '{{sui}} SUI 환불 받기'
-  sale_claim_after: '출시 후 받을 수 있습니다'
-  sale_waiting: 'Blast의 KARES 출시 대기 중'
-  sale_settled: '받을 항목 없음'
-  sale_checking: '자리 확인 중…'
-  sale_committed: '+{{sui}} SUI 투입'
-  sale_claimed: '받음'
-  sale_receipt: '영수증'
-  sale_failed: '거래가 완료되지 않았습니다. 지갑을 확인한 뒤 다시 시도하세요.'
-  sale_amount: '금액'
-  sale_amount_sui: 'SUI 금액'
-  sale_wallet_max: '이 지갑은 최대 {{sui}} SUI까지 구매할 수 있습니다.'
-  sale_spot_left: '남은 자리 한도는 {{sui}} SUI입니다.'
-  sale_max: '최대 {{sui}}'
-  sale_terms: '초과 청약 시 KARES가 줄고, 남는 SUI는 받을 때 돌려받습니다. Blast가 출시하거나 취소할 때까지 SUI는 잠깁니다.'
-  sale_add_sui: '{{sui}} SUI 추가'
-  sale_signing: '지갑에서 승인하세요…'
-  sale_dilution: '세일이 목표를 넘으면 모든 구매자의 KARES가 줄고, 남는 SUI는 받을 때 돌려받습니다.'
-  google_wallet: Google 게임 지갑
-  loading: 캠페인 로딩 중
-  final: 최종 명단 · Blast 등록 대기
-  wallet: 지갑
-  error_unavailable: 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요. X 또는 캠페인 서비스가 일시 중단되었을 수 있습니다.
-  error_wallet_taken: 이 지갑은 다른 X 계정에 연결되어 있습니다.
-  error_invalid_address: 0x로 시작하는 올바른 Sui 주소를 입력하세요.
-  board_xp: 전투 경험치 · 순위표
-  board_kills: 몬스터 처치 · 순위표
-  board_dungeons: 던전 · 순위표
-  board_jobs: 생산 직업 경험치 · 순위표
-  board_marketplace: 거래소 · 순위표
-  board_kolizeum: 콜리제움 · 순위표
-  board_zones: 발견 · 순위표
-  board_feeding: 펫 먹이 주기 · 순위표
-  board_gathering: 채집 · 순위표
-  source_leaderboard: 순위 올리기
-  source_social: X에 게시
-  error_unauthorized: 먼저 수령 지갑을 연결하고 확인하세요.
-  error_rate_limited: 요청이 너무 많습니다. 잠시 후 다시 시도하세요.
 tournament_page:
   level_limit_label: '등록 시 최대 레벨'
   level_unrestricted: '제한 없음'

@@ -556,7 +556,10 @@ mastery_page:
   points_missing: Thiếu {{points}} điểm
   buy: Mua · {{cost}} điểm
   quest_started: Đã giao nhiệm vụ hằng ngày.
-  offer_purchased: Đã mua phần thưởng Tinh thông.
+  offer_purchased: 'Mua thành công!'
+  purchase_inventory: 'Xem trong túi đồ'
+  purchase_open: 'Mở ngay'
+  purchase_arriving: 'Món đồ đang đến…'
 airdrop_page:
   reward_title: 'Bạn đã nhận được quà!'
   reward_received: 'Bạn đã nhận được {items}!'
@@ -2230,17 +2233,6 @@ kares_page:
   daily_cap_note: 'Mức chi trả thưởng boss tối đa mỗi ngày tính từ lúc thiết lập, không phải lượng thực trả. Hạn mức chưa dùng không được cộng dồn.'
   other_networks: 'Mạng khác · EVM / Solana'
   sui_wallet_required: 'Chọn ví Sui để sử dụng tính năng này.'
-  blast_soon: 'Sắp mở bán token trên Blast'
-  blast_live: 'Đợt bán KARES đang diễn ra'
-  blast_closing: 'Đã kết thúc · chờ quyết toán'
-  blast_funded: 'Đã đủ vốn · chờ ra mắt'
-  blast_complete: 'KARES đã có trên Blast'
-  blast_cancelled: 'Đã hủy bán · có thể hoàn tiền'
-  blast_loading: 'Đang kiểm tra đợt bán trên Blast…'
-  blast_unavailable: 'Không thể xem trạng thái đợt bán'
-  blast_note: 'Cùng xây dựng chương tiếp theo của AresRPG.'
-  blast_action: 'Khám phá trên Blast'
-  blast_progress: 'Tiến độ huy động vốn'
   upgradeability_note: 'Hợp đồng phần thưởng vẫn có thể nâng cấp cho đến khi dự án đóng băng vĩnh viễn. Việc phát hành token mới vẫn bị vô hiệu hóa.'
   claim_batch: 'Nhận từ {{count}} trên {{total}} vị thế'
   withdraw_batch: 'Tối đa {{count}} vị thế mỗi lần rút. Lặp lại để rút số đã stake còn lại.'
@@ -2301,7 +2293,6 @@ kares_page:
   kares_missing: Không đủ KARES
   language: Ngôn ngữ
   community_detail: 'Quỹ này tài trợ các cuộc thi PvP và phần thưởng bảng xếp hạng theo mùa. Ngân quỹ phân phối thủ công số token đã được mở khóa.'
-  supply_detail: 'Chỉ phát hành một lần. Không đúc thêm. Đốt token làm giảm nguồn cung.'
   emissions_detail: 'Mọi phần thưởng dùng token hiện có. Chi trả thưởng không tạo thêm nguồn cung.'
   staking_unavailable: Staking chưa có trên mạng này.
   combat_rewards: Thưởng trùm
@@ -2821,128 +2812,6 @@ loading_screen:
   final_checks: 'Chuẩn bị cuối cùng'
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
-allocation_page:
-  error_connection_timeout: 'Máy chủ không phản hồi kịp. Hãy kết nối lại.'
-  error_connection_failed: 'Mất kết nối máy chủ. Hãy kết nối lại.'
-  error_connection_replaced: 'Ví này đã kết nối ở tab khác. Kết nối lại ở đây khi bạn sẵn sàng.'
-  error_restore_timeout: 'Khôi phục ví quá lâu. Hãy kết nối ví lại.'
-  connecting: 'Đang kết nối và xác minh ví'
-  restoring: 'Đang khôi phục ví'
-  reconnect: 'Kết nối lại'
-  error_title: 'Không thể hoàn tất thao tác'
-  share_post: 'Tôi có suất whitelist {{tier}} cho đợt bán KARES trên @blastdotfun. Kiểm tra suất của bạn:'
-  menu_title: 'Kiểm tra suất whitelist của bạn'
-  menu_note: 'Phân bổ hạng Kỳ cựu và Thành viên cho đợt bán KARES.'
-  menu_action: 'Xem phân bổ'
-  before: Trước khi điều chỉnh do đăng ký vượt mức
-  buy_up_to: Mua tối đa
-  no_spot: Lần này không có suất
-  source_reserved: Suất đặt trước
-  source_pending: Đang chờ xét chọn
-  link_wallets: Liên kết ví
-  wallet_rule: Ký bằng từng ví để xác minh quyền sở hữu.
-  wallet_rule_sale: 'Liên kết ví có suất của bạn, rồi mua từ thẻ của ví đó.'
-  verified: Đã xác minh
-  remove_wallet: Xóa {{wallet}}
-  add_wallet: Liên kết ví Sui
-  wallet_count: '{{count}} / {{max}} ví'
-  close: Đóng
-  signature_note: Ký thông điệp miễn phí. Không gửi giao dịch hay thanh toán.
-  no_wallet_app: Cài ví Sui để tiếp tục.
-  wallet_failed: Kết nối ví thất bại. Hãy thử lại.
-  edit: Sửa
-  cancel: Hủy
-  save: Lưu
-  board_legend: 'Suất mỗi bảng: Veteran / Member'
-  play: Chơi AresRPG
-  sale_title: Đợt bán diễn ra trên Blast
-  sale_time: 'Ngày và giờ mở bán sẽ được thông báo sau.'
-  sale_public: 'Chưa có suất? Theo dõi đợt bán công khai trên Blast.'
-  results_title: 'Kết quả chiến dịch'
-  results_note: Thẻ hiện kết quả trước đợt bán.
-  results_note_sale: 'Whitelist đã chốt. Ví trong whitelist mua ngay trên trang này, trong giới hạn của mình.'
-  spot_gives: Quyền lợi của suất
-  signing: Xác nhận chữ ký trong ví…
-  no_spot_yet: Chưa có suất
-  your_allocation: Phân bổ của bạn
-  total_cap: Tối đa {{sui}} SUI qua {{count}} suất
-  allocation_note: Đăng nhập và liên kết ví để xem suất.
-  footer: Suất xác định giới hạn đóng góp, không phải số token cố định.
-  error_wallet_limit: Tối đa mười ví, gồm cả ví Google.
-  title: Danh sách ưu tiên KARES
-  veteran: Veteran
-  member: Member
-  public_note: Quyền tham gia công khai theo điều khoản Blast. Kết quả có thể vẫn đang chờ.
-  recipient: Ví nhận
-  preview: Xem trước liên kết
-  share: Chia sẻ
-  dilution: Hạn mức không bảo đảm số token. Khi đăng ký vượt mức, mọi người mua đều bị pha loãng theo cùng tỷ lệ.
-  sale_soon: 'Sắp mở bán'
-  sale_live: 'Đang mở bán'
-  sale_closing: 'Đã kết thúc bán'
-  sale_funded: 'Chờ ra mắt'
-  sale_complete: 'KARES đã ra mắt'
-  sale_cancelled: 'Đã hủy bán'
-  sale_spots_open: 'Suất của bạn đã mở'
-  sale_ends_in: 'Kết thúc sau {{time}}'
-  sale_public_in: 'Mở cho mọi người sau {{time}}'
-  sale_public_now: 'Hiện đã mở cho mọi người'
-  sale_opens_in: 'Mở sau {{time}}'
-  sale_opens_soon: 'Sắp mở'
-  sale_countdown: '{{days}} ngày {{hours}} giờ {{minutes}} phút'
-  sale_raised: 'Đã huy động'
-  sale_bought: 'Đã mua'
-  sale_in_wallet: 'Trong ví này'
-  sale_receive: 'Bạn nhận'
-  sale_spot_after: 'Suất sau lần mua'
-  sale_left_in_wallet: 'Còn lại trong ví'
-  sale_refund: 'SUI hoàn lại'
-  sale_signed: 'Đã đăng nhập'
-  sale_not_connected: 'Chưa kết nối'
-  sale_buy: 'Mua KARES'
-  sale_buy_amount: 'Mua KARES bằng {{sui}} SUI'
-  sale_not_ready: 'Suất chưa sẵn sàng'
-  sale_connect_buy: 'Kết nối {{wallet}} để mua'
-  sale_connect_claim: 'Kết nối {{wallet}} để nhận'
-  sale_claim: 'Nhận KARES'
-  sale_claim_refund: 'Nhận hoàn {{sui}} SUI'
-  sale_claim_after: 'Nhận sau khi ra mắt'
-  sale_waiting: 'Đang chờ Blast ra mắt KARES'
-  sale_settled: 'Không còn gì để nhận'
-  sale_checking: 'Đang kiểm tra suất của bạn…'
-  sale_committed: '+{{sui}} SUI đã góp'
-  sale_claimed: 'Đã nhận'
-  sale_receipt: 'Biên nhận'
-  sale_failed: 'Giao dịch chưa hoàn tất. Hãy kiểm tra ví rồi thử lại.'
-  sale_amount: 'Số lượng'
-  sale_amount_sui: 'Số lượng SUI'
-  sale_wallet_max: 'Ví này có thể mua tối đa {{sui}} SUI.'
-  sale_spot_left: 'Suất của bạn còn {{sui}} SUI.'
-  sale_max: 'Tối đa {{sui}}'
-  sale_terms: 'Ít KARES hơn nếu bán vượt mức; SUI dư được trả lại khi nhận. SUI bị khóa đến khi Blast ra mắt hoặc hủy đợt bán.'
-  sale_add_sui: 'Nạp {{sui}} SUI'
-  sale_signing: 'Xác nhận trong ví…'
-  sale_dilution: 'Nếu đợt bán vượt mục tiêu, mỗi người mua nhận ít KARES hơn và được trả lại SUI dư khi nhận.'
-  google_wallet: Ví game Google
-  loading: Đang tải chiến dịch
-  final: Danh sách cuối · chờ nhập vào Blast
-  wallet: Ví
-  error_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
-  error_wallet_taken: Ví này đã liên kết với tài khoản X khác.
-  error_invalid_address: Nhập địa chỉ Sui hợp lệ bắt đầu bằng 0x.
-  board_xp: Kinh nghiệm chiến đấu · Bảng xếp hạng
-  board_kills: Hạ quái · Bảng xếp hạng
-  board_dungeons: Ngục tối · Bảng xếp hạng
-  board_jobs: Kinh nghiệm nghề · Bảng xếp hạng
-  board_marketplace: Chợ · Bảng xếp hạng
-  board_kolizeum: Đấu trường · Bảng xếp hạng
-  board_zones: Khám phá · Bảng xếp hạng
-  board_feeding: Cho thú ăn · Bảng xếp hạng
-  board_gathering: Thu thập · Bảng xếp hạng
-  source_leaderboard: Tăng hạng
-  source_social: Đăng trên X
-  error_unauthorized: Hãy kết nối và xác minh ví nhận trước.
-  error_rate_limited: Quá nhiều yêu cầu. Hãy thử lại sau ít phút.
 tournament_page:
   level_limit_label: 'Cấp tối đa khi đăng ký'
   level_unrestricted: 'Không giới hạn'

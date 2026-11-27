@@ -252,7 +252,22 @@
   animation: boxreveal-spin 0.9s linear infinite;
 }
 
+/* The reel. One crate gives it the whole stage; a batch keeps one small reel per cell. Every size derives from the
+   card's height, so the gift page and the game window scale it with one variable. */
+.boxreveal__grid[data-single] {
+  --cell: min(340px, 100cqw, 100cqh);
+}
+.boxreveal__grid[data-single] .boxreveal__reel {
+  --reel-h: calc(var(--cell) * 0.72);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 100cqw;
+  translate: -50% 0;
+}
 .boxreveal__reel {
+  --reel-h: calc(var(--cell) * 0.5);
+  --reel-w: calc(var(--reel-h) * 0.76);
   position: relative;
   display: flex;
   align-items: center;
@@ -260,12 +275,14 @@
   height: 100%;
   overflow: hidden;
   isolation: isolate;
-  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  animation: boxreveal-reel-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .boxreveal__reel-track {
   position: relative;
+  z-index: 0;
   display: flex;
-  gap: clamp(3px, calc(var(--cell) / 35), 8px);
+  gap: calc(var(--reel-h) * 0.07);
   width: max-content;
   align-items: center;
   will-change: transform;
@@ -276,46 +293,124 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: calc(var(--cell) * 0.34);
-  height: calc(var(--cell) * 0.44);
-  padding: calc(var(--cell) * 0.018);
-  border-color: color-mix(in srgb, var(--aui-muted) 22%, transparent);
-  transition:
-    scale 180ms,
-    border-color 180ms;
+  gap: calc(var(--reel-h) * 0.03);
+  width: var(--reel-w);
+  height: var(--reel-h);
+  padding: calc(var(--reel-h) * 0.05);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 22%, var(--color-border));
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse at 50% 20%, color-mix(in srgb, var(--color-gold) 9%, transparent), transparent 70%),
+    var(--color-surface-high);
 }
 .boxreveal__reel-card img {
-  width: 90%;
-  height: 72%;
+  width: 88%;
+  height: 68%;
   object-fit: contain;
-  filter: drop-shadow(0 4px 4px #0005);
+  filter: drop-shadow(0 4px 6px #0006);
 }
 .boxreveal__reel-card span {
+  display: -webkit-box;
   width: 100%;
-  color: var(--aui-ink);
-  font-size: clamp(6px, calc(var(--cell) / 30), 12px);
-  line-height: 1.1;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--color-text);
+  font-size: clamp(7px, calc(var(--reel-h) / 15), 15px);
+  font-weight: 700;
+  line-height: 1.15;
   text-align: center;
 }
-.boxreveal__reel-card--landed {
-  border-color: var(--aui-orange);
-  scale: 1.06;
-  box-shadow: inset 0 0 25px color-mix(in srgb, var(--aui-orange) 12%, transparent);
+/* While the reel turns, the script sets each card's scale every frame. Only the landing eases. */
+.boxreveal__reel--landed .boxreveal__reel-card {
+  transition:
+    scale 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 220ms ease-out,
+    border-color 220ms ease-out;
 }
-.boxreveal__reel-pointer {
+/* The reward: it takes the reward card's own gold frame, and the rest of the reel steps back. */
+.boxreveal__reel-card--landed {
+  border-color: color-mix(in srgb, var(--color-gold) 75%, var(--color-border));
+  scale: 1.12;
+}
+.boxreveal__reel--landed .boxreveal__reel-card:not(.boxreveal__reel-card--landed) {
+  opacity: 0.28;
+}
+/* The centre: the opening's aura behind the cards, the focus frame over them, and the landing's flash and sparks. */
+.boxreveal__reel-centre {
   position: absolute;
-  top: calc(50% - var(--cell) * 0.27);
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  width: calc(var(--reel-h) * 1.3);
+  height: calc(var(--reel-h) * 1.3);
+  translate: -50% -50%;
+  pointer-events: none;
+}
+.boxreveal__reel-centre .boxreveal__aura {
+  z-index: -1;
+  inset: -22%;
+}
+.boxreveal__reel-focus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--reel-w) * 1.12 + 10px);
+  height: calc(var(--reel-h) * 1.12 + 10px);
+  translate: -50% -50%;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 70%, transparent);
+  border-radius: 9px;
+}
+.boxreveal__reel-focus::before,
+.boxreveal__reel-focus::after {
+  content: '';
+  position: absolute;
+  left: 50%;
   width: 0;
   height: 0;
-  border-left: clamp(3px, calc(var(--cell) / 55), 7px) solid transparent;
-  border-right: clamp(3px, calc(var(--cell) / 55), 7px) solid transparent;
-  border-top: clamp(5px, calc(var(--cell) / 40), 10px) solid var(--aui-orange);
-  filter: drop-shadow(0 2px 2px #0008);
+  translate: -50% 0;
+  border-right: calc(var(--reel-h) * 0.04) solid transparent;
+  border-left: calc(var(--reel-h) * 0.04) solid transparent;
+}
+.boxreveal__reel-focus::before {
+  top: calc(var(--reel-h) * -0.05);
+  border-top: calc(var(--reel-h) * 0.055) solid var(--color-gold-light);
+}
+.boxreveal__reel-focus::after {
+  bottom: calc(var(--reel-h) * -0.05);
+  border-bottom: calc(var(--reel-h) * 0.055) solid var(--color-gold-light);
 }
 .boxreveal__reel--landed {
   animation: boxreveal-impact 450ms ease-out;
+}
+.boxreveal__reel--landed .boxreveal__flash {
+  animation: boxreveal-flash 0.6s ease-out forwards;
+}
+.boxreveal__reel--landed .boxreveal__spark {
+  animation: boxreveal-scatter 0.6s ease-out forwards;
+}
+.boxreveal__reel--landed .boxreveal__reel-focus {
+  animation: boxreveal-lock 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes boxreveal-reel-in {
+  from {
+    opacity: 0;
+    scale: 0.55;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes boxreveal-lock {
+  0% {
+    scale: 1.18;
+    opacity: 0.4;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+    border-color: var(--color-gold-light);
+  }
 }
 @keyframes boxreveal-impact {
   20% {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The one owner of the remembered sign-in lifecycle: restore it, sign in, sign out, forget it.
-// Every surface (game, site pages, gift, allocation) keeps its own state and consumes this service, so the
+// Every surface (game, site pages, gift) keeps its own state and consumes this service, so the
 // rules "remember on success" and "forget a wallet that no longer restores" exist once.
 import type { AuthSession } from './auth.ts'
 import {

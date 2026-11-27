@@ -67,6 +67,7 @@ export type KaresStakingSnapshot = Readonly<{
     authorized: string
   }>
   positions: readonly KaresPositionSnapshot[]
+  /** What can still exist in a wallet: the currency's supply minus the KARES stranded at the zero address. */
   total_supply: bigint
   coin_type: string
   /** The market pool's reserves; null when the network has no market or the read failed. */
@@ -119,6 +120,12 @@ const wallet_balances = async (
   return { kares_balance: BigInt(kares.balance.balance), sui_balance: BigInt(sui.balance.balance) }
 }
 
+/** Nobody holds the zero address's key, so KARES sent there is gone as surely as a burn. */
+const stranded_supply = async (client: SuiGrpcClient, pins: KaresPins): Promise<bigint> => {
+  const { balance } = await client.core.getBalance({ owner: normalizeSuiObjectId('0x0'), coinType: pins.coin_type })
+  return BigInt(balance.balance)
+}
+
 const shared_objects = async (client: SuiGrpcClient, pins: KaresPins) => {
   const ids = [
     pins.economy.id,
@@ -168,7 +175,8 @@ const decode_snapshot = (
   address: string | null,
   pins: KaresPins,
   shared: readonly FinanceObject[],
-  wallet: Awaited<ReturnType<typeof wallet_objects>>
+  wallet: Awaited<ReturnType<typeof wallet_objects>>,
+  stranded: bigint
 ): Omit<KaresStakingSnapshot, 'market'> => {
   const [economy_object, pool_object, currency_object, clock_object, combat_object, community_object] = shared
   const economy = decode_rewards_economy(economy_object.json!)
@@ -217,7 +225,7 @@ const decode_snapshot = (
       spent: combat.spent,
       authorized: normalizeStructTag(combat.authorized.name),
     }),
-    total_supply: currency.supply!.BurnOnly!,
+    total_supply: currency.supply!.BurnOnly! - stranded,
     coin_type: pins.coin_type,
     positions: Object.freeze(positions),
     community: Object.freeze({
@@ -364,9 +372,9 @@ export const create_kares_snapshot_reader = (
     // Positions precede shared indexes. The game session owns its balances independently.
     const wallet = await wallet_objects(client, pins, owner)
     const balances = include_balances ? await wallet_balances(client, pins, owner) : null
-    const shared = await shared_objects(client, pins)
+    const [shared, stranded] = await Promise.all([shared_objects(client, pins), stranded_supply(client, pins)])
     const snapshot = Object.freeze({
-      ...decode_snapshot(network, owner, pins, shared, wallet),
+      ...decode_snapshot(network, owner, pins, shared, wallet, stranded),
       market: await read_market(pins),
     })
     retain_snapshot([...shared, ...wallet.positions], owner)

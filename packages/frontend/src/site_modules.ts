@@ -4,7 +4,9 @@
 // module never appears here, and the boundary test walks this file's imports to prove it.
 import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
+import admin, { type AdminInput, type AdminState } from './modules/admin.ts'
 import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
+import claims, { type ClaimsInput } from './modules/claims.ts'
 import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
 import distribution, { type DistributionInput, type DistributionState } from './modules/distribution.ts'
 import external_wallet, { type ExternalWalletInput, type ExternalWalletState } from './modules/external_wallet.ts'
@@ -37,6 +39,8 @@ export type SiteState = Readonly<{
   mastery: MasteryState
   distribution: DistributionState
   wallet_import: WalletImportState
+  claim_failures: readonly string[]
+  admin: AdminState
 }>
 
 export type SiteInput =
@@ -54,6 +58,8 @@ export type SiteInput =
   | MasteryInput
   | DistributionInput
   | WalletImportInput
+  | ClaimsInput
+  | AdminInput
 
 /** Reducers fold in this order: the session first, so every other module reads the account it ends on. */
 export const SITE_MODULES: readonly SiteModule[] = Object.freeze([
@@ -73,7 +79,11 @@ export const SITE_MODULES: readonly SiteModule[] = Object.freeze([
   trade,
   // The staking page sells the Mastery shop and collects giftcards: chain writes, no world.
   mastery,
+  // A crate bought in the shop opens on the page: the same collector settles its roll.
+  claims,
   distribution,
   // The portfolio offers the one import window too: the account's chain writes, no world.
   wallet_import,
+  // The admin page: dashboard reads over the same socket, answered for the admin address alone.
+  admin,
 ])

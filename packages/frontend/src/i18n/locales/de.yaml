@@ -553,7 +553,10 @@ mastery_page:
   points_missing: '{{points}} Punkte fehlen'
   buy: Kaufen · {{cost}} Pkt.
   quest_started: Tägliche Quest zugewiesen.
-  offer_purchased: Meisterschaftsbelohnung gekauft.
+  offer_purchased: 'Gekauft!'
+  purchase_inventory: 'Im Inventar ansehen'
+  purchase_open: 'Jetzt öffnen'
+  purchase_arriving: 'Dein Kauf kommt an…'
 
 airdrop_page:
   reward_title: 'Du hast ein Geschenk erhalten!'
@@ -2235,17 +2238,6 @@ kares_page:
   daily_cap_note: 'Maximale Boss-Auszahlungen pro Tag seit Einrichtung, keine tatsächlichen Emissionen. Ungenutztes Budget verfällt.'
   other_networks: 'Andere Netzwerke · EVM / Solana'
   sui_wallet_required: 'Wähle für diese Funktion ein Sui-Wallet.'
-  blast_soon: 'Tokenverkauf bald auf Blast'
-  blast_live: 'Der KARES-Verkauf ist eröffnet'
-  blast_closing: 'Verkauf beendet · Abwicklung ausstehend'
-  blast_funded: 'Verkauf finanziert · Start ausstehend'
-  blast_complete: 'KARES ist auf Blast verfügbar'
-  blast_cancelled: 'Verkauf abgesagt · Rückzahlungen verfügbar'
-  blast_loading: 'Blast-Verkauf wird geprüft…'
-  blast_unavailable: 'Verkaufsstatus nicht verfügbar'
-  blast_note: 'Gestalte das nächste Kapitel von AresRPG mit.'
-  blast_action: 'Auf Blast ansehen'
-  blast_progress: 'Finanzierungsfortschritt'
   upgradeability_note: 'Die Belohnungsverträge bleiben bis zur endgültigen Sperrung des Projekts aktualisierbar. Neue Token können weiterhin nicht geprägt werden.'
   claim_batch: '{{count}} von {{total}} Positionen beanspruchen'
   withdraw_batch: 'Bis zu {{count}} Positionen pro Auszahlung. Wiederholen, um den restlichen Einsatz abzuheben.'
@@ -2306,7 +2298,6 @@ kares_page:
   kares_missing: 'Nicht genug KARES'
   language: 'Sprache'
   community_detail: 'Diese Reserve finanziert PvP-Wettbewerbe und Preise für saisonale Ranglisten. Die Schatzkammer verteilt freigegebene Token manuell.'
-  supply_detail: 'Einmal ausgegeben. Keine weitere Prägung. Verbrennen verringert das Angebot.'
   emissions_detail: 'Alle Belohnungen verwenden vorhandene Token. Auszahlungen prägen keine neuen Token.'
   staking_unavailable: 'Staking ist in diesem Netzwerk noch nicht verfügbar.'
   combat_rewards: 'Bossbelohnungen'
@@ -2833,128 +2824,6 @@ loading_screen:
   final_checks: 'Letzte Vorbereitungen'
   ready: 'Dein Abenteuer ist bereit.'
 
-allocation_page:
-  error_connection_timeout: 'Der Server hat nicht rechtzeitig geantwortet. Verbinde dich erneut.'
-  error_connection_failed: 'Die Serververbindung wurde unterbrochen. Verbinde dich erneut.'
-  error_connection_replaced: 'Diese Wallet wurde in einem anderen Tab verbunden. Verbinde sie hier erneut, wenn du bereit bist.'
-  error_restore_timeout: 'Die Wallet-Wiederherstellung dauerte zu lange. Verbinde deine Wallet erneut.'
-  connecting: 'Wallet verbinden und prüfen'
-  restoring: 'Wallet wiederherstellen'
-  reconnect: 'Neu verbinden'
-  error_title: 'Aktion nicht abgeschlossen'
-  share_post: 'Ich habe einen {{tier}}-Whitelist-Platz für den KARES-Verkauf auf @blastdotfun. Prüfe deinen:'
-  menu_title: 'Prüfe deinen Whitelist-Platz'
-  menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
-  menu_action: 'Zuteilungen ansehen'
-  before: Vor Überzeichnung
-  buy_up_to: Kaufen bis zu
-  no_spot: Diesmal kein Spot
-  source_reserved: Reservierter Spot
-  source_pending: Auswahl ausstehend
-  link_wallets: Wallets verknüpfen
-  wallet_rule: Signiere mit jedem Wallet als Eigentumsnachweis.
-  wallet_rule_sale: 'Verknüpfe die Wallet mit deinem Platz und kaufe dann über ihre Karte.'
-  verified: Verifiziert
-  remove_wallet: '{{wallet}} entfernen'
-  add_wallet: Sui-Wallet verknüpfen
-  wallet_count: '{{count}} / {{max}} Wallets'
-  close: Schließen
-  signature_note: Signiere eine kostenlose Nachricht. Keine Transaktion oder Zahlung.
-  no_wallet_app: Installiere ein Sui-Wallet.
-  wallet_failed: Wallet-Verbindung fehlgeschlagen. Erneut versuchen.
-  edit: Bearbeiten
-  cancel: Abbrechen
-  save: Speichern
-  board_legend: 'Spots pro Rangliste: Veteran / Member'
-  play: AresRPG spielen
-  sale_title: Der Verkauf findet auf Blast statt
-  sale_time: 'Datum und Uhrzeit des Verkaufs werden noch bekannt gegeben.'
-  sale_public: 'Kein Platz? Verfolge den öffentlichen Verkauf auf Blast.'
-  results_title: 'Kampagnenergebnisse'
-  results_note: Deine Karten zeigen die Ergebnisse vor dem Verkauf.
-  results_note_sale: 'Die Whitelist ist endgültig. Wallets auf der Whitelist kaufen auf dieser Seite, bis zu ihrem Limit.'
-  spot_gives: Was ein Spot bietet
-  signing: Bestätige die Signatur in deinem Wallet…
-  no_spot_yet: Noch kein Spot
-  your_allocation: Deine Zuteilung
-  total_cap: Bis zu {{sui}} SUI für {{count}} Spots
-  allocation_note: Melde dich an und verknüpfe Wallets, um deine Spots zu prüfen.
-  footer: Ein Spot begrenzt deinen Beitrag, nicht eine feste Tokenmenge.
-  error_wallet_limit: Bis zu zehn Wallets einschließlich Google-Wallet.
-  title: KARES-Whitelist
-  veteran: Veteran
-  member: Member
-  public_note: Der öffentliche Zugang folgt den Blast-Bedingungen. Ergebnisse können noch ausstehen.
-  recipient: Empfangs-Wallet
-  preview: Linkvorschau
-  share: Teilen
-  dilution: Limits garantieren keine Token. Bei Überzeichnung werden alle Käufer proportional verwässert.
-  sale_soon: 'Verkauf bald'
-  sale_live: 'Verkauf läuft'
-  sale_closing: 'Verkauf beendet'
-  sale_funded: 'Start ausstehend'
-  sale_complete: 'KARES gestartet'
-  sale_cancelled: 'Verkauf abgebrochen'
-  sale_spots_open: 'Deine Plätze sind offen'
-  sale_ends_in: 'Endet in {{time}}'
-  sale_public_in: 'Für alle offen in {{time}}'
-  sale_public_now: 'Jetzt für alle offen'
-  sale_opens_in: 'Öffnet in {{time}}'
-  sale_opens_soon: 'Öffnet bald'
-  sale_countdown: '{{days}} T {{hours}} Std {{minutes}} Min'
-  sale_raised: 'Gesammelt'
-  sale_bought: 'Gekauft'
-  sale_in_wallet: 'In diesem Wallet'
-  sale_receive: 'Du erhältst'
-  sale_spot_after: 'Platz danach'
-  sale_left_in_wallet: 'Rest im Wallet'
-  sale_refund: 'SUI zurück'
-  sale_signed: 'Angemeldet'
-  sale_not_connected: 'Nicht verbunden'
-  sale_buy: 'KARES kaufen'
-  sale_buy_amount: 'KARES für {{sui}} SUI kaufen'
-  sale_not_ready: 'Platz noch nicht bereit'
-  sale_connect_buy: '{{wallet}} verbinden, um zu kaufen'
-  sale_connect_claim: '{{wallet}} verbinden, um abzuholen'
-  sale_claim: 'KARES abholen'
-  sale_claim_refund: '{{sui}} SUI Erstattung abholen'
-  sale_claim_after: 'Abholen nach dem Start'
-  sale_waiting: 'Warten auf den KARES-Start durch Blast'
-  sale_settled: 'Nichts mehr abzuholen'
-  sale_checking: 'Dein Platz wird geprüft…'
-  sale_committed: '+{{sui}} SUI eingezahlt'
-  sale_claimed: 'Abgeholt'
-  sale_receipt: 'Beleg'
-  sale_failed: 'Die Transaktion wurde nicht abgeschlossen. Prüfe dein Wallet und versuche es erneut.'
-  sale_amount: 'Betrag'
-  sale_amount_sui: 'Betrag in SUI'
-  sale_wallet_max: 'Dieses Wallet kann bis zu {{sui}} SUI kaufen.'
-  sale_spot_left: 'Auf deinem Platz sind noch {{sui}} SUI frei.'
-  sale_max: 'Max. {{sui}}'
-  sale_terms: 'Weniger KARES bei Überzeichnung; die überschüssigen SUI erhältst du beim Abholen zurück. SUI bleiben gesperrt, bis Blast den Verkauf startet oder abbricht.'
-  sale_add_sui: '{{sui}} SUI hinzufügen'
-  sale_signing: 'Bestätige in deinem Wallet…'
-  sale_dilution: 'Sammelt der Verkauf mehr als sein Ziel, erhält jeder Käufer weniger KARES und bekommt die überschüssigen SUI beim Abholen zurück.'
-  google_wallet: Google-Spielwallet
-  loading: Kampagne wird geladen
-  final: Endgültige Liste · Blast-Import ausstehend
-  wallet: Wallet
-  error_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
-  error_wallet_taken: Diese Wallet ist bereits mit einem anderen X-Konto verbunden.
-  error_invalid_address: Gib eine gültige Sui-Adresse mit 0x ein.
-  board_xp: Kampf-EP · Rangliste
-  board_kills: Besiegte Monster · Rangliste
-  board_dungeons: Dungeons · Rangliste
-  board_jobs: Berufs-EP · Rangliste
-  board_marketplace: Marktplatz · Rangliste
-  board_kolizeum: Kolizeum · Rangliste
-  board_zones: Entdeckungen · Rangliste
-  board_feeding: Tierfütterung · Rangliste
-  board_gathering: Sammeln · Rangliste
-  source_leaderboard: In Ranglisten aufsteigen
-  source_social: Auf X posten
-  error_unauthorized: Verbinde und verifiziere zuerst das Empfänger-Wallet.
-  error_rate_limited: Zu viele Anfragen. Versuche es gleich erneut.
 tournament_page:
   level_limit_label: 'Höchstlevel bei Anmeldung'
   level_unrestricted: 'Unbegrenzt'

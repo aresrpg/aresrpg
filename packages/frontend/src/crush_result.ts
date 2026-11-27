@@ -3,7 +3,12 @@
 // Crush presentation bridge: the receipt names exactly which rune stacks changed; the item
 // stream supplies their contents. The modal itself keeps presentation state locally.
 
+import { rune_effect } from '@aresrpg/immutable'
 import type { ItemRow } from '@aresrpg/protocol'
+
+/** A rune the forge can apply: what a crush pays out and what its runes stack onto. */
+export const is_rune = (item: Readonly<ItemRow>): boolean =>
+  item.category === 'rune' && rune_effect(item.item_type) !== null
 
 export type CrushResult = Readonly<{
   digest: string

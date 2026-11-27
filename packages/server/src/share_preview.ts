@@ -3,20 +3,15 @@
 // Link previews for shared posts. A crawler (X, Discord, Telegram) never runs the site and cannot hold the realtime
 // socket, so each shared subject gets this one noindex page: its card tags point at the subject's image and its body
 // links to the site. It is a thin wrapper over existing reads and owns no state, cache or limit; the HTTP door's
-// per-visitor allowance admits every request first. Two subjects share it: an allocation card, by its opaque share
-// token, and a hero, by character id. An unknown or malformed subject is a plain 404 for both.
+// per-visitor allowance admits every request first. Its subject is a hero, by character id. An unknown or malformed
+// subject is a plain 404.
 import { readFile, readdir } from 'node:fs/promises'
 
-import type { Redis } from 'ioredis'
 import { hero_power } from '@aresrpg/immutable'
-import { allocation_locale } from '@aresrpg/immutable/locale'
-import { cap_mist, sui_amount, nominal_tokens, share_version } from '@aresrpg/immutable/allocation'
+import { share_locale } from '@aresrpg/immutable/locale'
 
 import { HERO_SHARE_PATH, hero_share_path, portrait_poster_url } from '../../frontend/src/components/portrait_share.ts'
 
-import { read_awards } from './allocation/store.ts'
-import { shared_address } from './allocation/wallets.ts'
-import { render_card } from './allocation/share_image.ts'
 import type { Graph } from './graph.ts'
 import { get_hero_card } from './reads/get_player_profile.ts'
 
@@ -37,10 +32,7 @@ const escape = (value: string): string =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
-type Copy = Readonly<{
-  allocation_page: Readonly<Record<string, string>>
-  portfolio_page: Readonly<Record<string, string>>
-}>
+type Copy = Parameters<typeof share_locale>[0]
 /** The page's language: an authored locale, else English. */
 const read_copy = async (requested: string | null): Promise<Readonly<{ locale: string; copy: Copy }>> => {
   const files = await readdir(LOCALES)
@@ -66,40 +58,6 @@ const page = ({ locale, title, summary, canonical, image, home }: Card): Respons
   )
 }
 const not_found = (): Response => new Response('not found', { status: 404, headers: HEADERS })
-
-/** An allocation card, by the token its verified owner issued: the page, or with `action=image` its image. */
-export const allocation_preview = async (request: Request, redis: Redis, origin: string): Promise<Response> => {
-  const params = new URL(request.url).searchParams
-  const address = await shared_address(redis, params.get('token')).catch((error: Error) => {
-    if (error.message === 'unauthorized') return null
-    throw error
-  })
-  if (!address) return not_found()
-  const { locale, copy: document } = await read_copy(params.get('locale'))
-  const copy = allocation_locale(document)
-  const award = (await read_awards(redis)).find((row) => row.address === address)
-  const tier = award?.tier ?? 'no_spot'
-  const amount = award
-    ? `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`
-    : ''
-  const cap = award ? `${sui_amount(cap_mist(award.tier))} SUI` : ''
-  if (params.get('action') === 'image')
-    return new Response(
-      await render_card({ tier, title: copy[tier]!, amount, cap, before: copy.before!, buy_up_to: copy.buy_up_to! }),
-      { headers: { ...HEADERS, 'content-type': 'image/png' } }
-    )
-  const query = new URLSearchParams({ action: 'preview', token: params.get('token')!, locale, v: share_version(award) })
-  const canonical = `${origin}/api/allocation?${query}`
-  query.set('action', 'image')
-  return page({
-    locale,
-    title: `${copy[tier]} · KARES · AresRPG`,
-    summary: award ? `${amount} · ${copy.before} · ${copy.buy_up_to} ${cap}` : copy[tier]!,
-    canonical,
-    image: `${origin}/api/allocation?${query}`,
-    home: { href: `${origin}/allocation`, label: copy.title! },
-  })
-}
 
 /** A hero, by character id, from the index the socket reads: its poster is drawn by the site's portrait service. */
 export const hero_preview = async (request: Request, graph: Graph, origin: string): Promise<Response> => {
@@ -128,7 +86,7 @@ export const hero_preview = async (request: Request, graph: Graph, origin: strin
   return page({
     locale,
     title: `${hero.name} · AresRPG`,
-    summary: fill(copy.portfolio_page.share_text!, { classe, level: hero.level, power }),
+    summary: fill(share_locale(copy).share_text, { classe, level: hero.level, power }),
     canonical: `${origin}${hero_share_path(id, locale)}`,
     image: `${origin}${poster}`,
     home: { href: origin, label: 'AresRPG' },

@@ -13,11 +13,6 @@ import { Transaction } from '@mysten/sui/transactions'
 import { fromBase64, normalizeStructTag, SUI_TYPE_ARG } from '@mysten/sui/utils'
 
 import {
-  blast_purchase_actions,
-  create_blast_claim_transaction,
-  create_blast_purchase_transaction,
-} from '../src/blast_purchase.ts'
-import {
   CHARACTER_NAME_MAX_LENGTH,
   CHARACTER_NAME_MIN_LENGTH,
   CHARACTER_PRICE_MIST,
@@ -34,8 +29,6 @@ import { item_template_id, recipe_id } from '../src/seed_ids.ts'
 import { sui_transfer_actions, sui_transfer_ptb } from '../src/sui_transfer.ts'
 import { trade_actions, trade_create, trade_is_drained } from '../src/trade.ts'
 
-import captured_sale from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
-import blast_live from './fixtures/blast_presale_live.mainnet.json' with { type: 'json' }
 import { digest, fake_client, id, pins, sample_gas, signer, type FakeClient } from './helpers/transport.ts'
 
 const game_pins = {
@@ -309,129 +302,6 @@ test('a SUI transfer moves the exact amount to the exact recipient, MAX moves th
   current = false
   await expect(actions.send_sui(id(4), 123n, false)).rejects.toThrow('changed')
   expect(client.calls.executions).toBe(1)
-})
-
-test('a Blast commitment carries its proof and version guard; a claim is refused before the sale ends', async () => {
-  const config = {
-    id: id(1),
-    package: id(2),
-    package_original: id(2),
-    package_version: id(3),
-    coin_type: `${id(4)}::kares::KARES`,
-    url: 'https://www.blast.fun/',
-  }
-  for (const method of ['open', 'uncapped', 'allowlisted'] as const) {
-    const intent =
-      method === 'allowlisted'
-        ? { method, amount: 125n, proof: { index: '0', cap_mist: '125', siblings: [] } }
-        : { method, amount: 125n }
-    const data = create_blast_purchase_transaction(config, id(5), intent).getData()
-    const call = data.commands.find(({ MoveCall }) => MoveCall)!.MoveCall!
-    expect([data.sender, call.function, call.arguments.length, data.commands.at(-1)?.$kind]).toEqual([
-      id(5),
-      `commit_${method}`,
-      method === 'allowlisted' ? 7 : 4,
-      'TransferObjects',
-    ])
-    expect(call.typeArguments.map(normalizeStructTag)).toEqual([
-      normalizeStructTag(config.coin_type),
-      normalizeStructTag(SUI_TYPE_ARG),
-    ])
-  }
-  expect(() => create_blast_purchase_transaction(config, id(5), { method: 'open', amount: 0n })).toThrow('positive')
-  expect(() =>
-    create_blast_purchase_transaction(config, id(5), {
-      method: 'allowlisted',
-      amount: 1n,
-      proof: { index: '65536', cap_mist: '10', siblings: [] },
-    })
-  ).toThrow('proof index')
-  expect(create_blast_claim_transaction(config, id(5)).getData().commands).toHaveLength(1)
-  const sale = {
-    ...captured_sale.objects[0],
-    objectId: config.id,
-    type: normalizeStructTag(`${config.package_original}::blast_presale::Presale<${config.coin_type},${SUI_TYPE_ARG}>`),
-    json: { ...captured_sale.objects[0].json, lifecycle: { '@variant': 'Open' }, start_ms: '0', duration_ms: '10000' },
-  }
-  const client = {
-    network: 'mainnet',
-    core: {
-      getObjects: async () => ({
-        objects: [
-          sale,
-          { objectId: id(6), owner: { $kind: 'Shared' }, type: '0x2::clock::Clock', json: { timestamp_ms: '1' } },
-        ],
-      }),
-      getObject: async () => ({
-        object: {
-          owner: { $kind: 'Shared' },
-          type: `${id(9)}::package_version::PackageVersion<${config.package_original}::blast_presale_package::BLAST_PRESALE_PACKAGE>`,
-        },
-      }),
-    },
-  }
-  const executed: string[] = []
-  const receipt = {
-    $kind: 'Transaction',
-    Transaction: {
-      digest: 'certified',
-      effects: { status: { success: true }, gasUsed: { computationCost: '10', storageCost: '20', storageRebate: '5' } },
-    },
-  }
-  const sdk = {
-    pins: { network: 'mainnet', kares_coin_type: config.coin_type, blast_presale: config },
-    simulate: async () => receipt,
-    execute: async (tx: Transaction) => {
-      executed.push(tx.getData().commands.find(({ MoveCall }) => MoveCall)!.MoveCall!.function)
-      return receipt
-    },
-  }
-  const actions = blast_purchase_actions({ sdk, client, address: id(5) } as never)
-  expect((await actions.simulate({ method: 'open', amount: 10n })).amount_mist).toBe(10n)
-  await actions.purchase({ method: 'open', amount: 10n })
-  await expect(actions.claim()).rejects.toThrow('claims are not open')
-  sale.json.lifecycle = { '@variant': 'Migrated' }
-  await expect(actions.purchase({ method: 'open', amount: 10n })).rejects.toThrow('not open')
-  await actions.claim()
-  expect(executed).toEqual(['commit_open', 'claim'])
-
-  // Mainnet objects 0x247165…2b57e (version 1099635701) and 0xd9523c…3ba7 (version 1063892806), captured
-  // 2026-11-20: Blast's live deployment shares a generic PackageVersion<…BLAST_PRESALE_PACKAGE>.
-  const [live_sale, live_version] = blast_live.objects
-  const blast_package = live_sale!.type.split('::')[0]!
-  const live_type = normalizeStructTag(`${blast_package}::blast_presale::Presale<${config.coin_type},${SUI_TYPE_ARG}>`)
-  const versioned = (version: unknown, package_original = blast_package) =>
-    blast_purchase_actions({
-      sdk: { ...sdk, pins: { ...sdk.pins, blast_presale: { ...config, package: blast_package, package_original } } },
-      client: {
-        network: 'mainnet',
-        core: {
-          getObjects: async () => ({
-            objects: [
-              {
-                ...live_sale,
-                objectId: config.id,
-                type: live_type.replace(blast_package, package_original),
-                json: { ...live_sale!.json, lifecycle: { '@variant': 'Open' }, start_ms: '0', duration_ms: '10000' },
-              },
-              { objectId: id(6), owner: { $kind: 'Shared' }, type: '0x2::clock::Clock', json: { timestamp_ms: '1' } },
-            ],
-          }),
-          getObject: async () => ({ object: version }),
-        },
-      },
-      address: id(5),
-    } as never)
-  expect((await versioned(live_version).simulate({ method: 'open', amount: 10n })).amount_mist).toBe(10n)
-  await expect(versioned(live_version, id(2)).simulate({ method: 'open', amount: 10n })).rejects.toThrow(
-    'another package'
-  )
-  await expect(
-    versioned({ ...live_version, owner: { $kind: 'AddressOwner', AddressOwner: id(5) } }).simulate({
-      method: 'open',
-      amount: 10n,
-    })
-  ).rejects.toThrow('another package')
 })
 
 test('a hero costs its price plus the gas reserve and a craft receipt must match the submitted batch', async () => {

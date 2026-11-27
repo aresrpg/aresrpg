@@ -6,7 +6,7 @@ import { defineConfig } from '@playwright/test'
 
 const hardware = process.env.REQUIRE_HARDWARE === '1'
 const mobile_viewport = process.env.PERF_VIEWPORT === 'mobile'
-// The blocking smoke set: sign-in, wallets, market buy and sell, one fight, practice, the allocation sale and the
+// The blocking smoke set: sign-in, wallets, market buy and sell, one fight, practice and the
 // release paths. A new browser scenario is a manual diagnostic unless it protects a critical interaction here.
 const CRITICAL_TESTS = [
   'auth_callback',
@@ -15,7 +15,6 @@ const CRITICAL_TESTS = [
   'marketplace_sell',
   'fight_touch',
   'practice',
-  'allocation_sale',
   'deployment_assets',
   'boot_recovery',
 ].map((name) => `**/${name}.pw.ts`)

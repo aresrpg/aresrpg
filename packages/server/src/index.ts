@@ -10,18 +10,9 @@ import type { ServerWebSocket } from 'bun'
 import type { Claim } from '@aresrpg/protocol'
 import { HTTP_DOOR, admit_visitor, create_request_limiter, visitor_of } from '@aresrpg/protocol/request-limiter'
 
-import { create_allocation } from './allocation/runtime.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
-import {
-  PORT,
-  ADMIN_ADDRESSES,
-  ALLOWED_ORIGINS,
-  MAX_PLAYERS,
-  MAX_VIEWERS,
-  SERVER_ID,
-  ALLOCATION_OPTIONS,
-} from './env.ts'
+import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, MAX_VIEWERS, SERVER_ID, SITE_ORIGIN } from './env.ts'
 import { create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
 import { create_connection, read_claim, type Connection } from './connection.ts'
@@ -52,7 +43,6 @@ const pending = create_admission_slots()
 /** live open and signed sockets: MAX_VIEWERS per pod, VIEWS_PER_VISITOR per visitor */
 const views = create_admission_slots(MAX_VIEWERS, VIEWS_PER_VISITOR)
 const handlers = new Map<Socket, Connection>()
-const allocation = create_allocation(ALLOCATION_OPTIONS)
 const http_limiter = create_request_limiter(HTTP_DOOR)
 /** An address dropped for cheating cools off before the door opens again. */
 const bans = create_ban_list()
@@ -88,7 +78,6 @@ pubsub.mesh.emitter.on(mesh.player_connect, (payload) => {
 void pubsub.mesh.subscribe(mesh.player_connect)
 
 const wires = {
-  allocation,
   graph,
   pubsub,
   public_world,
@@ -122,8 +111,7 @@ const http_routes = new Map<
   (request: Request, server: Readonly<import('bun').Server<SocketData>>) => Response | Promise<Response>
 >([
   ['/health', () => new Response('ok')],
-  ['/api/allocation', (request) => allocation.http(request)],
-  [HERO_SHARE_PATH, (request) => hero_preview(request, graph, ALLOCATION_OPTIONS.origin)],
+  [HERO_SHARE_PATH, (request) => hero_preview(request, graph, SITE_ORIGIN)],
 ])
 const rate_limited = () => new Response('rate limited', { status: 429 })
 /** The public door: every request, the socket upgrade included, takes the visitor's own allowance

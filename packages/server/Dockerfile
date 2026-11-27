@@ -3,7 +3,7 @@
 # =============================================================================
 # AresRPG server — the one realtime door.
 # zkLogin-verified websocket serving the bound indexer set's graph and relaying
-# player ephemera over the cluster mesh redis. Owns the temporary off-chain allocation module.
+# player ephemera over the cluster mesh redis.
 #
 # Build from the REPO ROOT (the workspace lockfile + sibling packages are the
 # build context): docker build -f packages/server/Dockerfile .
@@ -16,8 +16,6 @@
 
 FROM oven/bun:1.4.4-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS runtime
 WORKDIR /app
-# CJK fallback for localized campaign OG cards.
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 
 # The frozen lockfile spans the whole workspace, so every member's manifest must be
 # present for the install to resolve; only the server's own dependency closure is
@@ -53,10 +51,6 @@ COPY packages/frontend/public/portrait-share/manifest.json packages/frontend/pub
 COPY seed/portraits/manifest.json seed/portraits/manifest.json
 COPY seed/content seed/content
 COPY seed/structures seed/structures
-COPY packages/ui/src/assets/font packages/ui/src/assets/font
-COPY seed/icons/currency/kares.png seed/icons/currency/kares.png
-COPY packages/frontend/public/branding/helmet-favicon.png packages/frontend/public/branding/helmet-favicon.png
-COPY packages/frontend/public/branding/kares/*.webp packages/frontend/public/branding/kares/
 USER bun
 # Execute the installed runtime graph, not the developer workspace's hoisted dependencies.
 # The lifecycle-free player owner covers normal observation and every player module without opening sockets.

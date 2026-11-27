@@ -126,8 +126,7 @@ export default defineConfig(({ mode, command }) => {
     // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
     server: {
       proxy: {
-        '/api/allocation': { target: loaded_env.ALLOCATION_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
-        '/api/share': { target: loaded_env.ALLOCATION_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
+        '/api/share': { target: loaded_env.SHARE_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
         '/__game_server': {
           target: 'wss://server.aresrpg.world',
           ws: true,

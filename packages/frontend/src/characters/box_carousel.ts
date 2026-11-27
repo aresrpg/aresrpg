@@ -3,6 +3,8 @@
 export const BOX_CHARGE_MS = 1_200
 export const BOX_BURST_MS = 500
 export const BOX_SPIN_MS = 4_700
+/** How long the landed reward holds the stage before its card takes over. */
+export const BOX_LAND_MS = 900
 
 // One continuous speed curve owns both pixels and the inverse audio crossing schedule.
 const RAMP = 0.12

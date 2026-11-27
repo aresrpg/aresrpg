@@ -46,10 +46,6 @@ export const RELEASE_INPUTS = Object.freeze({
   server: Object.freeze([
     'packages/server/',
     'packages/frontend/src/i18n/locales/',
-    'packages/ui/src/assets/font/',
-    'packages/frontend/public/branding/kares/',
-    'seed/icons/currency/kares.png',
-    'packages/frontend/public/branding/helmet-favicon.png',
     // A hero's share preview builds its poster address with the site's builder.
     'packages/frontend/src/components/portrait_share.ts',
     'packages/frontend/public/portrait-share/manifest.json',
@@ -189,12 +185,12 @@ const locale_inputs = (sources) =>
   new Promise((resolve_inputs, reject) => {
     const module_url = new URL('../packages/immutable/src/locale.ts', import.meta.url).href
     const program = `
-    import { allocation_locale, notification_locale } from ${JSON.stringify(module_url)}
+    import { share_locale, notification_locale } from ${JSON.stringify(module_url)}
     if (!Bun.YAML?.parse) throw new Error('Release locale inspection requires Bun with YAML support')
     const sources = await Bun.stdin.json()
     console.log(JSON.stringify(Object.fromEntries(Object.entries(sources).map(([path, source]) => {
       const document = Bun.YAML.parse(source)
-      const server = allocation_locale(document)
+      const server = share_locale(document)
       const discord = notification_locale(document)
       if (!server || typeof server !== 'object' || Array.isArray(server) || !discord.copy)
         throw new Error('Missing backend locale sections: ' + path)

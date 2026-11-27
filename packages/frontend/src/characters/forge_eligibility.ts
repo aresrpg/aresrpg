@@ -12,9 +12,6 @@ export const RUNE_UNLOCK_LEVEL = Number(CONTRACT_CONSTANTS.rune_unlock_level)
 export const is_forge_gear = (item: Readonly<ItemRow>): boolean =>
   !!item.stats && item.category !== 'key' && craft_job_of(item.category) !== null
 
-export const is_rune = (item: Readonly<ItemRow>): boolean =>
-  item.category === 'rune' && rune_effect(item.item_type) !== null
-
 export const has_runeforge_job_level = (
   category: string,
   jobs: Readonly<CharacterRow['jobs']>,

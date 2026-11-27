@@ -47,17 +47,6 @@ export type KaresCopy = ErrorCopy &
     other_networks: string
     sui_wallet_required: string
     upgradeability_note: string
-    blast_soon: string
-    blast_live: string
-    blast_closing: string
-    blast_funded: string
-    blast_complete: string
-    blast_cancelled: string
-    blast_loading: string
-    blast_unavailable: string
-    blast_note: string
-    blast_action: string
-    blast_progress: string
     stake_more: string
     additional_daily: string
     max: string
@@ -77,7 +66,6 @@ export type KaresCopy = ErrorCopy &
     vested_five_years: string
     community_release_note: string
     community_detail: string
-    supply_detail: string
     emissions_detail: string
     fixed_supply: string
     connect: string

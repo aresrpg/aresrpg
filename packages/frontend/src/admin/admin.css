@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* The admin page takes the window's whole width: it leaves the site's page column and scrolls with the page. */
+.admin-page {
+  --admin-gutter: clamp(16px, 2.5vw, 40px);
+  box-sizing: border-box;
+  width: calc(100vw - 2 * var(--admin-gutter));
+  max-width: 2200px;
+  margin-inline: calc(50% - 50vw + var(--admin-gutter));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  padding-bottom: 32px;
+}
+@media (min-width: 2240px) {
+  .admin-page {
+    margin-inline: auto;
+    translate: calc((var(--site-page-width) - 2200px) / 2) 0;
+  }
+}
+.admin-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.admin-page-head h1 {
+  margin: 0 auto 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.admin-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+/* Each group takes the width of its own cards; groups wrap as the window narrows. */
+.admin-page [data-admin-kpis] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.admin-page [data-kpi-group] {
+  flex: 1 1 auto;
+  border-radius: 6px;
+}
+.admin-page [data-admin-charts] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(560px, 100%), 1fr));
+  gap: 16px;
+}
+.admin-page [data-admin-charts] section {
+  min-width: 0;
+  border-radius: 6px;
+}

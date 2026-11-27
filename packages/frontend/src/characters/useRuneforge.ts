@@ -6,6 +6,7 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { useMemo, useState } from 'react'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
+import { is_rune } from '../crush_result.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { localized_error } from '../i18n/error_text.ts'
@@ -16,7 +17,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
-import { has_runeforge_job_level, is_forge_gear, is_rune, RUNE_UNLOCK_LEVEL } from './forge_eligibility.ts'
+import { has_runeforge_job_level, is_forge_gear, RUNE_UNLOCK_LEVEL } from './forge_eligibility.ts'
 
 const EMPTY_HISTORY = Object.freeze([]) as readonly ScribeHistoryEntry[]
 export const OUTCOME_COPY_KEY: Readonly<Record<ScribeOutcomeKind, string>> = Object.freeze({

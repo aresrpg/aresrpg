@@ -7,10 +7,8 @@ import { EventEmitter } from 'node:events'
 
 import { expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import { MARKET_PRICE_DAY_MS, tournament_coin_claims, type AllocationResult } from '@aresrpg/protocol'
+import { MARKET_PRICE_DAY_MS, tournament_coin_claims } from '@aresrpg/protocol'
 
-import { blast_leaf, blast_proof_root } from '../src/allocation/blast_allowlist.ts'
-import { verify_wallet_message } from '../src/auth.ts'
 import type { Graph } from '../src/graph.ts'
 import { channels } from '../src/protocol.ts'
 import {
@@ -26,7 +24,7 @@ import { rank_member } from '../src/reads/get_leaderboard.ts'
 import { get_market_history } from '../src/reads/get_market_history.ts'
 import { get_market_prices, parse_price_bucket } from '../src/reads/get_market_prices.ts'
 import { get_tournaments } from '../src/reads/get_tournaments.ts'
-import { allocation_preview, hero_preview } from '../src/share_preview.ts'
+import { hero_preview } from '../src/share_preview.ts'
 import { create_suins_resolver } from '../src/suins.ts'
 import { portrait_poster_url } from '../../frontend/src/components/portrait_share.ts'
 
@@ -438,109 +436,10 @@ test('SuiNS shows a reverse name only when it resolves forward to the same addre
   expect(await resolve(address(0))).toBeNull()
 })
 
-test('the campaign uses the admitted identity, binds wallet and intent, and folds a Blast proof to the Move root', async () => {
-  const requests: string[] = []
-  const pending = Promise.withResolvers<AllocationResult>()
-  const f = wire({ owns: false })
-  const allocation = {
-    request: async (owner: string) => {
-      requests.push(owner)
-      return pending.promise
-    },
-  } as never
-  const player = create_player({ ...f, claim: { stage: 'signed', address: '0xadmitted' }, allocation })
-  const ask = (id: number) =>
-    JSON.stringify({
-      type: 'packet/allocation_request',
-      id,
-      request: { action: 'wallet_remove', address: '0x1', owner: 'forged' },
-    })
-  player.on_message(ask(1))
-  player.on_message(ask(2))
-  expect(f.sent).toContainEqual({
-    type: 'packet/allocation_response',
-    id: 2,
-    result: { action: 'error', error: 'rate_limited' },
-  })
-  pending.resolve({ action: 'wallet_remove' })
-  await settle()
-  expect(requests).toEqual(['0xadmitted'])
-  expect(f.sent).toContainEqual({ type: 'packet/allocation_response', id: 1, result: { action: 'wallet_remove' } })
-  player.on_close()
-  const signer = Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(7))
-  const message = JSON.stringify({
-    domain: 'https://aresrpg.world',
-    action: 'submit_posts',
-    nonce: 'one-use',
-    posts: ['1'],
-  })
-  const { signature } = await signer.signPersonalMessage(new TextEncoder().encode(message))
-  expect(await verify_wallet_message(message, signature, signer.toSuiAddress())).toBe(true)
-  expect(
-    await verify_wallet_message(
-      message,
-      signature,
-      Ed25519Keypair.fromSecretKey(new Uint8Array(32).fill(8)).toSuiAddress()
-    )
-  ).toBe(false)
-  await expect(verify_wallet_message(`${message}changed`, signature, signer.toSuiAddress())).rejects.toThrow()
-  // Provenance: `sui move test` (sui 1.82.3, 2026-10-29) accepted these digests with Blast's
-  // allowlist_leaf/node/verify; the same fold reproduced the KARES sale's on-chain root on 2026-11-21.
-  const rows = [
-    { address: `0x${'a1'.repeat(32)}`, cap_mist: 125_000_000_000n },
-    { address: `0x${'c3'.repeat(32)}`, cap_mist: 70_000_000_000n },
-  ]
-  const ROOT = '988d8aad84154dcbbc19e6d239cfe1e752fc19c37936ade66cf04aed92ab6630'
-  const first = {
-    index: '0',
-    cap_mist: '125000000000',
-    siblings: [
-      'af90e4171e97990b4cac6b346fb43baead82ef402f8c01ac21560a68fa9cb46d',
-      '42d86783f8ead225d19a0c8c09a65a32c3eae317787ac8d0a85fca28046e0172',
-    ],
-  }
-  const last = {
-    index: '2',
-    cap_mist: '70000000000',
-    siblings: [
-      '43b770ab1ae0caab611e596e1b613c16051b70aa73af6dfcf323ed58581a2e6e',
-      '90c46005628b318a489371dad9fb8cc652b3382f655cc32fa6ea543243abb4c3',
-    ],
-  }
-  expect(Buffer.from(blast_leaf(0, rows[0]!)).toString('hex')).toBe(
-    '675cbf0651a61089a3389243351a70e2c3f03143b93f908cd575cb3449d73bc0'
-  )
-  expect([blast_proof_root(rows[0]!.address, first), blast_proof_root(rows[1]!.address, last)]).toEqual([ROOT, ROOT])
-  for (const forged of [
-    { ...last, cap_mist: '125000000000' },
-    { ...first, index: '1' },
-    { ...first, siblings: [...first.siblings].reverse() },
-  ])
-    expect(blast_proof_root(rows[0]!.address, forged)).not.toBe(ROOT)
-  // Shared posts: one preview page for both subjects, built from what the index holds; any other subject is a
-  // plain 404 that never reaches a read.
+// A shared hero: one preview page built from what the index holds; any other subject is a plain 404 that never
+// reaches a read.
+test('a hero preview escapes what it shows, refuses every other subject, and says when the index is down', async () => {
   const SITE = 'https://aresrpg.world'
-  const token = 'ab'.repeat(32)
-  const campaign_store = {
-    get: async (name: string) => (name.endsWith(`:share:${token}`) ? address(9) : null),
-  } as never
-  const campaign_page = await allocation_preview(
-    new Request(`${SITE}/api/allocation?action=preview&token=${token}&locale=fr`),
-    campaign_store,
-    SITE
-  )
-  expect(campaign_page.status).toBe(200)
-  const campaign_html = await campaign_page.text()
-  expect(campaign_html).toContain('<html lang="fr">')
-  expect(campaign_html).toContain(
-    `<meta property="og:image" content="${SITE}/api/allocation?action=image&amp;token=${token}`
-  )
-  const unknown_token = await allocation_preview(
-    new Request(`${SITE}/api/allocation?action=preview&token=${'cd'.repeat(32)}`),
-    campaign_store,
-    SITE
-  )
-  expect([unknown_token.status, await unknown_token.text()]).toEqual([404, 'not found'])
   const hero_id = address(42)
   const reads: unknown[] = []
   const hero_row = {

@@ -9,11 +9,10 @@ import { LOOT_BOX_BATCH_LIMIT } from '@aresrpg/sdk/character'
 import { items } from '../content/items.ts'
 import { rolled_item_types } from '../content/item_templates.ts'
 import { env } from '../env.ts'
-import { crush_results, projected_crush_items, type PendingCrushResult } from '../crush_result.ts'
+import { crush_results, is_rune, projected_crush_items, type PendingCrushResult } from '../crush_result.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
 import { toast } from '../toast.ts'
-import type { AppModule } from '../store.ts'
-import { is_rune } from '../characters/forge_eligibility.ts'
+import type { SiteModule } from '../store.ts'
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 
 import { create_claim_attempts } from './giftcard_attempts.ts'
@@ -29,7 +28,7 @@ export type ClaimsInput =
 export const claim_is_settleable = (claim: Readonly<ClaimRow>): boolean =>
   claim.kind !== 'box' || !!claim.rolled_template
 
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
+const observe: NonNullable<SiteModule['observe']> = ({ events, dispatch, get_state, signal }) => {
   const attempts = create_claim_attempts(browser_auth_storage(), env.network, 'claim')
   const pending_crush_results = new Map<string, PendingCrushResult>()
   let active_claim_id: string | null = null
@@ -161,7 +160,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
 }
 
-const reduce: NonNullable<AppModule['reduce']> = (state, input) => {
+const reduce: NonNullable<SiteModule['reduce']> = (state, input) => {
   if (input.type === 'auth/disconnected') return { ...state, claim_failures: [] }
   if (input.type === 'claims/failed') {
     const failed = [...new Set([...state.claim_failures, ...input.claim_ids])]
@@ -178,4 +177,4 @@ export default Object.freeze({
   initial: () => ({ claim_failures: [] }),
   reduce,
   observe,
-}) satisfies AppModule
+}) satisfies SiteModule

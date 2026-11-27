@@ -155,7 +155,7 @@ test('runtime fingerprints ignore the version, browser-only copy and pin ledgers
   try {
     const locale = join(directory, 'packages/frontend/src/i18n/locales/en.yaml')
     const copy =
-      'allocation_page:\n  title: Allocation\ndiscord_marketplace:\n  title: Market\nsimulator_page:\n  stat_health: Health\n  unused_label: Browser only\n'
+      'portfolio_page:\n  share_text: My hero\n  tab_bag: Bag\ndiscord_marketplace:\n  title: Market\nsimulator_page:\n  stat_health: Health\n  unused_label: Browser only\n'
     const pins = (pkg, ledger) => JSON.stringify({ network: 'mainnet', package: pkg, seed_ledger: { a: ledger } })
     mkdirSync(dirname(locale), { recursive: true })
     writeFileSync(join(directory, 'package.json'), '{"version":"1.0.0"}')
@@ -181,7 +181,8 @@ test('runtime fingerprints ignore the version, browser-only copy and pin ledgers
     rmSync(join(directory, 'packages/frontend/src/app.tsx'))
     for (const [from, to, expected] of [
       ['unused_label: Browser only', 'unused_label: New browser copy', ['frontend']],
-      ['title: Allocation', 'title: New allocation', ['frontend', 'server']],
+      ['tab_bag: Bag', 'tab_bag: Sack', ['frontend']],
+      ['share_text: My hero', 'share_text: Our hero', ['frontend', 'server']],
       ['title: Market', 'title: New notification', ['frontend', 'discord']],
       ['stat_health: Health', 'stat_health: Hit points', ['frontend', 'discord']],
     ]) {
@@ -191,7 +192,7 @@ test('runtime fingerprints ignore the version, browser-only copy and pin ledgers
     writeFileSync(locale, copy)
     writeFileSync(join(directory, 'pins.json'), pins('0x2', 2))
     expect(await changed()).toEqual(['bot'])
-    writeFileSync(locale, 'allocation_page: [unterminated')
+    writeFileSync(locale, 'portfolio_page: [unterminated')
     await expect(runtime_fingerprints(directory)).rejects.toThrow()
   } finally {
     rmSync(directory, { recursive: true, force: true })

@@ -2,13 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The game's modules: the site's account modules it shares, then every module of the world.
 import type { JourneyState } from '../journey/model.ts'
-import admin, { type AdminInput, type AdminState } from '../modules/admin.ts'
+import admin from '../modules/admin.ts'
 import analytics from '../modules/analytics.ts'
 import audio from '../modules/audio.ts'
 import automation, { type AutomationInput, type AutomationState } from '../modules/automation.ts'
 import chain_clock from '../modules/chain_clock.ts'
 import chat, { type ChatInput, type ChatState } from '../modules/chat.ts'
-import claims, { type ClaimsInput } from '../modules/claims.ts'
+import claims from '../modules/claims.ts'
 import craft_lock from '../modules/craft_character_lock.ts'
 import distribution from '../modules/distribution.ts'
 import duel, { type DuelInput } from '../modules/duel.ts'
@@ -58,7 +58,6 @@ import type { GameSettings } from './core/settings.ts'
 export type GameState = Readonly<{
   practice: PracticeState
   gameplay_analytics: GameplayAnalyticsState
-  claim_failures: readonly string[]
   journey: JourneyState
   navigation: NavigationState
   settings: GameSettings
@@ -66,7 +65,6 @@ export type GameState = Readonly<{
   fight: FightSessionState
   fight_result: FightResultState
   simulator: SimulatorState
-  admin: AdminState
   editor: SeedEditorState
   chat: ChatState
   world: WorldState
@@ -91,7 +89,6 @@ export type GameInput =
   | SimulatorInput
   | FightSessionInput
   | FightResultInput
-  | AdminInput
   | EditorInput
   | ChatInput
   | WorldInput
@@ -104,7 +101,6 @@ export type GameInput =
   | RunToInput
   | AutomationInput
   | RuneforgeInput
-  | ClaimsInput
   | JobLevelUpInput
 
 /** Every module the game's slices need, each with its observer: the game, the practice and the demo pages each

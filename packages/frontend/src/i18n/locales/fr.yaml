@@ -553,7 +553,10 @@ mastery_page:
   points_missing: Il manque {{points}} points
   buy: Acheter · {{cost}} pts
   quest_started: Quête quotidienne attribuée.
-  offer_purchased: Récompense de maîtrise achetée.
+  offer_purchased: 'Achat réussi !'
+  purchase_inventory: "Voir dans l'inventaire"
+  purchase_open: 'Ouvrir maintenant'
+  purchase_arriving: 'Votre achat arrive…'
 
 airdrop_page:
   reward_title: 'Vous avez reçu un cadeau !'
@@ -2236,17 +2239,6 @@ kares_page:
   daily_cap_note: 'Maximum des primes de boss par jour depuis le financement, pas les émissions réelles. Le quota inutilisé n’est pas reporté.'
   other_networks: 'Autres réseaux · EVM / Solana'
   sui_wallet_required: 'Sélectionnez un portefeuille Sui pour utiliser cette fonction.'
-  blast_soon: 'La vente arrive sur Blast'
-  blast_live: 'La vente KARES est ouverte'
-  blast_closing: 'Vente terminée · règlement en attente'
-  blast_funded: 'Vente financée · lancement en attente'
-  blast_complete: 'KARES est disponible sur Blast'
-  blast_cancelled: 'Vente annulée · remboursements disponibles'
-  blast_loading: 'Vérification de la vente Blast…'
-  blast_unavailable: 'État de la vente indisponible'
-  blast_note: 'Contribuez au prochain chapitre d’AresRPG.'
-  blast_action: 'Découvrir sur Blast'
-  blast_progress: 'Progression du financement'
   upgradeability_note: 'Les contrats de récompenses restent modifiables jusqu’au gel définitif du projet. La création de jetons reste désactivée.'
   claim_batch: 'Réclamer {{count}} positions sur {{total}}'
   withdraw_batch: 'Jusqu’à {{count}} positions par retrait. Répétez pour retirer le solde staké.'
@@ -2307,7 +2299,6 @@ kares_page:
   kares_missing: 'KARES insuffisants'
   language: 'Langue'
   community_detail: 'Cette réserve finance les compétitions PvP et les récompenses des classements saisonniers. La trésorerie distribue manuellement les tokens acquis.'
-  supply_detail: 'Émis une seule fois. Aucune nouvelle émission. Brûler des jetons réduit l’offre.'
   emissions_detail: 'Toutes les récompenses utilisent des jetons existants. Aucun nouveau jeton n’est créé.'
   staking_unavailable: 'Le staking n’est pas encore disponible sur ce réseau.'
   combat_rewards: 'Récompenses de boss'
@@ -2834,128 +2825,6 @@ loading_screen:
   final_checks: 'Derniers préparatifs'
   ready: 'Votre aventure est prête.'
 
-allocation_page:
-  error_connection_timeout: 'Le serveur n’a pas répondu à temps. Reconnectez-vous.'
-  error_connection_failed: 'La connexion au serveur a été perdue. Reconnectez-vous.'
-  error_connection_replaced: 'Ce portefeuille est connecté dans un autre onglet. Reconnectez-vous ici lorsque vous êtes prêt.'
-  error_restore_timeout: 'La restauration du portefeuille a pris trop de temps. Reconnectez-le.'
-  connecting: 'Connexion et vérification du portefeuille'
-  restoring: 'Restauration du portefeuille'
-  reconnect: 'Reconnecter'
-  error_title: 'Action impossible'
-  share_post: 'J’ai une place {{tier}} en whitelist pour la vente KARES sur @blastdotfun. Vérifiez la vôtre :'
-  menu_title: 'Vérifiez votre place en whitelist'
-  menu_note: 'Allocations Vétéran et Membre pour la vente KARES.'
-  menu_action: 'Voir les allocations'
-  before: Avant sursouscription
-  buy_up_to: Acheter jusqu’à
-  no_spot: Aucun spot cette fois
-  source_reserved: Spot réservé
-  source_pending: Sélection en attente
-  link_wallets: Liez vos portefeuilles
-  wallet_rule: Signez avec chaque portefeuille pour prouver qu’il vous appartient.
-  wallet_rule_sale: 'Liez le portefeuille qui détient votre place, puis achetez depuis sa carte.'
-  verified: Vérifié
-  remove_wallet: Retirer {{wallet}}
-  add_wallet: Lier un portefeuille Sui
-  wallet_count: '{{count}} / {{max}} portefeuilles'
-  close: Fermer
-  signature_note: Signez un message gratuit. Aucune transaction ni aucun paiement.
-  no_wallet_app: Installez un portefeuille Sui pour continuer.
-  wallet_failed: Connexion échouée. Réessayez.
-  edit: Modifier
-  cancel: Annuler
-  save: Enregistrer
-  board_legend: 'Spots par classement : Veteran / Member'
-  play: Jouer à AresRPG
-  sale_title: La vente se déroule sur Blast
-  sale_time: 'La date et l’heure de la vente seront annoncées ultérieurement.'
-  sale_public: 'Pas de place ? Suivez la vente publique sur Blast.'
-  results_title: 'Résultats de la campagne'
-  results_note: Vos cartes révèlent les résultats avant la vente.
-  results_note_sale: 'La whitelist est définitive. Les portefeuilles whitelistés achètent sur cette page, dans la limite de leur plafond.'
-  spot_gives: Ce qu’offre un spot
-  signing: Confirmez la signature dans votre portefeuille…
-  no_spot_yet: Pas encore de spot
-  your_allocation: Votre allocation
-  total_cap: Jusqu’à {{sui}} SUI pour {{count}} spots
-  allocation_note: Connectez-vous et liez vos portefeuilles pour voir vos spots.
-  footer: Un spot fixe votre plafond de contribution, pas un nombre de tokens.
-  error_wallet_limit: Dix portefeuilles maximum, portefeuille Google compris.
-  title: Whitelist KARES
-  veteran: Veteran
-  member: Member
-  public_note: L’accès public suit les conditions de Blast. Les résultats peuvent être en attente.
-  recipient: Portefeuille bénéficiaire
-  preview: Aperçu du lien
-  share: Partager
-  dilution: Les plafonds ne garantissent pas de jetons. En cas de sursouscription, tous les acheteurs sont dilués proportionnellement.
-  sale_soon: 'Vente bientôt'
-  sale_live: 'Vente en cours'
-  sale_closing: 'Vente terminée'
-  sale_funded: 'Lancement en attente'
-  sale_complete: 'KARES lancé'
-  sale_cancelled: 'Vente annulée'
-  sale_spots_open: 'Vos places sont ouvertes'
-  sale_ends_in: 'Fin dans {{time}}'
-  sale_public_in: 'Ouverte à tous dans {{time}}'
-  sale_public_now: 'Ouverte à tous maintenant'
-  sale_opens_in: 'Ouverture dans {{time}}'
-  sale_opens_soon: 'Ouverture prochaine'
-  sale_countdown: '{{days}} j {{hours}} h {{minutes}} min'
-  sale_raised: 'Collecté'
-  sale_bought: 'Acheté'
-  sale_in_wallet: 'Dans ce portefeuille'
-  sale_receive: 'Vous recevez'
-  sale_spot_after: 'Place après cet achat'
-  sale_left_in_wallet: 'Reste dans le portefeuille'
-  sale_refund: 'SUI rendus'
-  sale_signed: 'Connecté'
-  sale_not_connected: 'Non connecté'
-  sale_buy: 'Acheter des KARES'
-  sale_buy_amount: 'Acheter des KARES pour {{sui}} SUI'
-  sale_not_ready: 'Place pas encore prête'
-  sale_connect_buy: 'Connecter {{wallet}} pour acheter'
-  sale_connect_claim: 'Connecter {{wallet}} pour réclamer'
-  sale_claim: 'Réclamer les KARES'
-  sale_claim_refund: 'Récupérer {{sui}} SUI'
-  sale_claim_after: 'Réclamation après le lancement'
-  sale_waiting: 'En attente du lancement de KARES par Blast'
-  sale_settled: 'Rien à réclamer'
-  sale_checking: 'Vérification de votre place…'
-  sale_committed: '+{{sui}} SUI engagés'
-  sale_claimed: 'Réclamé'
-  sale_receipt: 'Reçu'
-  sale_failed: 'La transaction n’a pas abouti. Vérifiez votre portefeuille, puis réessayez.'
-  sale_amount: 'Montant'
-  sale_amount_sui: 'Montant en SUI'
-  sale_wallet_max: 'Ce portefeuille peut acheter jusqu’à {{sui}} SUI.'
-  sale_spot_left: 'Il reste {{sui}} SUI sur votre place.'
-  sale_max: 'Max {{sui}}'
-  sale_terms: 'Moins de KARES si la vente est sursouscrite ; le surplus de SUI revient lors de la réclamation. Les SUI restent bloqués jusqu’au lancement ou à l’annulation par Blast.'
-  sale_add_sui: 'Ajouter {{sui}} SUI'
-  sale_signing: 'Confirmez dans votre portefeuille…'
-  sale_dilution: 'Si la vente dépasse son objectif, chaque acheteur reçoit moins de KARES et récupère le surplus de SUI lors de la réclamation.'
-  google_wallet: Portefeuille de jeu Google
-  loading: Chargement de la campagne
-  final: Liste finale · import Blast en attente
-  wallet: Portefeuille
-  error_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
-  error_wallet_taken: Ce portefeuille est déjà lié à un autre compte X.
-  error_invalid_address: Saisissez une adresse Sui valide commençant par 0x.
-  board_xp: XP de combat · Classement
-  board_kills: Monstres vaincus · Classement
-  board_dungeons: Donjons · Classement
-  board_jobs: XP métiers · Classement
-  board_marketplace: Marché · Classement
-  board_kolizeum: Kolizéum · Classement
-  board_zones: Découvertes · Classement
-  board_feeding: Repas des familiers · Classement
-  board_gathering: Récolte · Classement
-  source_leaderboard: Progressez au classement
-  source_social: Publiez sur X
-  error_unauthorized: Connectez et vérifiez d’abord le portefeuille destinataire.
-  error_rate_limited: Trop de requêtes. Réessayez dans un instant.
 tournament_page:
   level_limit_label: 'Niveau maximal à l’inscription'
   level_unrestricted: 'Sans limite'

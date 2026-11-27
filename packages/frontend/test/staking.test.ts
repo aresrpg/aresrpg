@@ -1,21 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// KARES money on the staking page: stakes and payments through the finance runtime, the allocation sale through
-// its runtime, the public sale reader, and the exact amounts and gains they show.
+// KARES money on the staking page: stakes and payments through the finance runtime, the Mastery shop, and the exact
+// amounts and gains they show.
 import { afterEach, expect, test } from 'bun:test'
 import { KaresSnapshotPending } from '@aresrpg/sdk/kares'
 import { KARES_SUPPLY, KARES_UNIT } from '@aresrpg/sdk/kares-economics'
 
-import {
-  buy_check,
-  buy_limits,
-  create_sale_runtime,
-  initial_sale,
-  reduce_sale,
-  spot_stage,
-} from '../src/allocation/sale.ts'
 import type { AuthSession } from '../src/auth.ts'
-import { blast_phase, create_blast_runtime, initial_blast_state, reduce_blast } from '../src/kares/blast.ts'
 import {
   failed_transaction,
   initial_finance,
@@ -226,122 +217,6 @@ test('amounts and gains are exact base units: parsing, presets and dilution', ()
   })
 })
 
-test('the allocation sale buys once with the allowlist proof, inside the spot and the wallet, then re-reads it', async () => {
-  const cap = 125n * SUI
-  const proof = { index: '3', cap_mist: String(cap), siblings: ['ab'.repeat(32)] }
-  expect(spot_stage('live', { quote: 40n * SUI, wallet_cap: cap }, cap)).toBe('live')
-  expect(spot_stage('live', { quote: cap, wallet_cap: cap }, cap)).toBe('full')
-  expect(spot_stage('complete', undefined, cap)).toBe('checking')
-  expect(spot_stage('cancelled', { quote: 1n, wallet_cap: cap }, cap)).toBe('claim')
-  // Max stays inside both the spot and the wallet after its gas cushion; a short amount names what is missing.
-  const limits = buy_limits(cap, 40n * SUI, (2040n * SUI) / 100n)
-  expect(limits.max).toBe((2020n * SUI) / 100n)
-  expect(buy_limits(cap, 40n * SUI, (21240n * SUI) / 100n)).toMatchObject({
-    max: 85n * SUI,
-    presets: [10n * SUI, 25n * SUI, 50n * SUI],
-  })
-  expect(buy_check(86n * SUI, limits)).toEqual({ kind: 'over_cap' })
-  expect(buy_check(85n * SUI, limits)).toEqual({ kind: 'short', missing: 85n * SUI - (2020n * SUI) / 100n })
-  expect(buy_check(20n * SUI, limits)).toEqual({ kind: 'ready' })
-
-  const purchases: unknown[] = []
-  const reads: string[] = []
-  const wallet = {
-    address: '0xa1',
-    read_sui_balance: async () => 7n * SUI,
-    blast: {
-      purchase: async (input: unknown) => {
-        purchases.push(input)
-        return { digest: 'buy-digest' }
-      },
-      claim: async () => ({ digest: 'claim' }),
-    },
-  } as unknown as AuthSession
-  // One task at a time, and a stale result cannot overwrite the current one.
-  const busy = reduce_sale(initial_sale(), { type: 'request', task: { kind: 'buy', wallet, amount: SUI, proof } })
-  expect(reduce_sale(busy, { type: 'request', task: { kind: 'claim', wallet } })).toBe(busy)
-  expect(
-    reduce_sale(busy, { type: 'result', sequence: 0, receipt: null, error: { address: '0xa1', message: 'x' } })
-  ).toBe(busy)
-  const runtime = create_sale_runtime({
-    commitment: async (address) => {
-      reads.push(address)
-      return { quote: 45n * SUI, wallet_cap: cap }
-    },
-  })
-  const stop = runtime.start()
-  runtime.dispatch({ type: 'request', task: { kind: 'buy', wallet, amount: 45n * SUI, proof } })
-  await Bun.sleep(0)
-  await Bun.sleep(0)
-  stop()
-  expect(purchases).toEqual([{ method: 'allowlisted', amount: 45n * SUI, proof }])
-  expect(runtime.store.getState()).toMatchObject({
-    receipt: { kind: 'buy', address: '0xa1', amount: 45n * SUI, digest: 'buy-digest' },
-    commitments: { '0xa1': { quote: 45n * SUI, wallet_cap: cap } },
-    balances: { '0xa1': 7n * SUI },
-  })
-  expect(reads).toEqual(['0xa1'])
-  // A failed read stays unknown, never zero bought.
-  const offline = create_sale_runtime({ commitment: async () => Promise.reject(new Error('rpc down')) })
-  await offline.refresh(['0xa1'], [])
-  expect(offline.store.getState().commitments).toEqual({})
-})
-
-test('the public sale reader never rewinds certified progress and hides it when a read fails', async () => {
-  const live = {
-    version: '5',
-    clock_ms: 100n,
-    phase: 'live' as const,
-    committed: 75n,
-    target: 100n,
-    progress_bps: 7500,
-    start_ms: 0n,
-    end_ms: 200n,
-    token_allocation: 1000n,
-  }
-  const url = 'https://www.blast.fun/'
-  const state = reduce_blast(initial_blast_state(), { type: 'snapshot', url, snapshot: live })
-  expect(
-    reduce_blast(state, { type: 'snapshot', url, snapshot: { ...live, version: '4', committed: 0n } }).snapshot
-  ).toEqual(live)
-  const failed = reduce_blast(state, { type: 'failed', url })
-  expect(blast_phase(failed)).toBe('unavailable')
-  expect(blast_phase(reduce_blast(failed, { type: 'snapshot', url, snapshot: { ...live, version: '4' } }))).toBe(
-    'unavailable'
-  )
-  const ended = reduce_blast(initial_blast_state(), {
-    type: 'snapshot',
-    url,
-    snapshot: { ...live, phase: 'closing', clock_ms: 200n },
-  })
-  expect(reduce_blast(ended, { type: 'snapshot', url, snapshot: live }).snapshot?.phase).toBe('closing')
-  // Two consumers share one reader; a stopped reader drops its late result.
-  let reads = 0
-  let finish: (value: typeof live) => void = () => undefined
-  const runtime = create_blast_runtime({ network: 'testnet' }, () => ({
-    configured: true,
-    url,
-    read: () => {
-      reads += 1
-      return new Promise((resolve) => {
-        finish = resolve
-      })
-    },
-  }))
-  const card = runtime.start()
-  const dialog = runtime.start()
-  card()
-  finish(live)
-  await Promise.resolve()
-  expect(reads).toBe(1)
-  expect(runtime.store.getState().snapshot).toEqual(live)
-  dialog()
-  const before = runtime.store.getState()
-  finish({ ...live, version: '9' })
-  await Promise.resolve()
-  expect(runtime.store.getState()).toBe(before)
-})
-
 const running: Started[] = []
 afterEach(() => running.splice(0).forEach(({ stop }) => stop()))
 
@@ -353,7 +228,8 @@ test('the Mastery shop redeems once per gesture, says the outcome, and an old ac
       redeem: async (args: unknown) => {
         redeemed.push(args)
         await gate.promise
-        throw new Error('Purchase rejected')
+        if (redeemed.length === 1) throw new Error('Purchase rejected')
+        return { mastery: null }
       },
     },
   })
@@ -374,6 +250,12 @@ test('the Mastery shop redeems once per gesture, says the outcome, and an old ac
   await settle(5)
   expect(site.state().mastery.pending).toBeNull()
   expect(site.toasts().at(-1)).toMatchObject({ type: 'error' })
+  // A purchase that lands opens the shop's window on what was bought, and closing it forgets the purchase.
+  site.dispatch({ type: 'mastery/redeem', item_type: 'reward', payment: 'kares', count: 3 })
+  await settle(5)
+  expect(site.state().mastery).toMatchObject({ pending: null, purchased: { item_type: 'reward', count: 3 } })
+  site.dispatch({ type: 'mastery/purchase_closed' })
+  expect(site.state().mastery.purchased).toBeNull()
   // A purchase still running when the account signs out never writes into the next session.
   const late = Promise.withResolvers<void>()
   const next = fake_wallet({ mastery: { redeem: async () => (await late.promise, { mastery: { points: '9' } }) } })
@@ -412,16 +294,4 @@ test('every Mastery offer opens its docs page, and a crate lists what it holds, 
     expect(contents.reduce((sum, { percent }) => sum + percent, 0)).toBeCloseTo(100)
   }
   expect(offer_view('scroll_of_oblivion').contents).toBeNull()
-})
-
-test('an older sale read never replaces a newer one', async () => {
-  const answers: ((value: Readonly<{ quote: bigint; wallet_cap: bigint }> | null) => void)[] = []
-  const runtime = create_sale_runtime({ commitment: () => new Promise((resolve) => void answers.push(resolve)) })
-  const older = runtime.refresh(['0xa1'], [])
-  const newer = runtime.refresh(['0xa1'], [])
-  answers[1]!({ quote: 45n * SUI, wallet_cap: 125n * SUI })
-  await newer
-  answers[0]!({ quote: 10n * SUI, wallet_cap: 125n * SUI })
-  await older
-  expect(runtime.store.getState().commitments['0xa1']?.quote).toBe(45n * SUI)
 })

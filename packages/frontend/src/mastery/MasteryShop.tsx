@@ -14,6 +14,7 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 import { CrateContents } from './CrateContents.tsx'
 import { MasteryKaresPurchase } from './MasteryKaresPurchase.tsx'
+import { PurchasedOffer } from './PurchasedOffer.tsx'
 import { useMasterySource } from './MasterySource.tsx'
 import { effective_mastery_points, offer_view } from './model.ts'
 
@@ -173,6 +174,7 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </div>
       )}
       {crate && <CrateContents copy={copy} item_type={crate} close={() => show_crate(null)} />}
+      <PurchasedOffer copy={copy} />
     </section>
   )
 }

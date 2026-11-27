@@ -19,8 +19,6 @@ const pathname = location.pathname.replace(/\/+$/, '')
 
 /** Pages with a design and a runtime of their own. Each paints itself and never mounts the shell. */
 const standalone = (): (() => Promise<void>) | null => {
-  if (pathname === SITE_ADDRESSES.allocation)
-    return async () => (await import('../allocation/entry.tsx')).boot_allocation()
   if (is_docs_path(pathname)) return async () => (await import('../docs/entry.tsx')).boot_docs()
   if (is_gift_entry(pathname, location.hash, saved_gift_route()))
     return async () => (await import('../airdrop/gift_entry.tsx')).boot_gift()
@@ -31,7 +29,7 @@ const start_site = (): void => {
   void SITE_PAGE_LOADERS[site_page_of(pathname).key]()
   start_app(SITE_MODULES, { seat: false })
   // The site's home has one address. Any address the site does not know is corrected to it.
-  if (!SITE_PAGES.some(({ path }) => path === pathname))
+  if (pathname !== SITE_ADDRESSES.admin && !SITE_PAGES.some(({ path }) => path === pathname))
     dispatch_app({ type: 'location/open', href: `${SITE_ADDRESSES.market}${location.search}`, replace: true })
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

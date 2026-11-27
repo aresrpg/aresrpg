@@ -20,7 +20,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     dispatch({ type: 'mastery/pending', operation: 'start' })
     void wallet.mastery
       .start({ world: world.world, character_id: witness.id, custody: character_custody(witness) })
-      .then(({ mastery }) => finish(wallet, mastery, 'quest_started'))
+      .then(({ mastery }) => finish(wallet, mastery))
       .catch((error: unknown) => fail(wallet, error))
   })
 }

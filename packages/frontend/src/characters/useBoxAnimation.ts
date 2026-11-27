@@ -7,7 +7,7 @@ import { box_rewards } from '../content/items.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { report_error } from '../reporting.ts'
 
-import { BOX_CHARGE_MS, BOX_BURST_MS, BOX_SPIN_MS } from './box_carousel.ts'
+import { BOX_CHARGE_MS, BOX_BURST_MS, BOX_LAND_MS, BOX_SPIN_MS } from './box_carousel.ts'
 
 export type BoxPhase = 'pending' | 'charging' | 'burst' | 'spinning' | 'reveal'
 
@@ -68,7 +68,7 @@ export const useBoxAnimation = (identity: string | null, box: string) => {
         timers.push(setTimeout(() => set_phase('spinning'), BOX_CHARGE_MS + BOX_BURST_MS))
       }
       // eslint-disable-next-line functional/immutable-data -- These timers belong only to this effect and are all cleared on teardown.
-      timers.push(setTimeout(finish, BOX_CHARGE_MS + BOX_BURST_MS + (spinning ? BOX_SPIN_MS + 450 : 0)))
+      timers.push(setTimeout(finish, BOX_CHARGE_MS + BOX_BURST_MS + (spinning ? BOX_SPIN_MS + BOX_LAND_MS : 0)))
     }
     const change = (): void => {
       if (motion.matches) finish()

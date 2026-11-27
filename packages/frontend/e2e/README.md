@@ -2,7 +2,7 @@
 
 Run `bun run test:regression` from the repository root for the blocking browser smoke set, listed in
 `playwright.config.ts`: the OAuth callback, the wallet switch, a market buy and a market sell, one touch fight,
-practice, the allocation sale, deployment assets after a promotion, the game document's boot recovery, and one
+practice, deployment assets after a promotion, the game document's boot recovery, and one
 WebGPU renderer smoke check. A new browser scenario lands in the `diagnostics` project, which never blocks CI,
 unless it protects a critical interaction and joins the explicit list. Builds, lint, types, native coverage and
 Move/indexer checks remain required.

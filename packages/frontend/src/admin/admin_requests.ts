@@ -5,11 +5,12 @@
 
 import type { AdminOverviewSection, ClientPacket } from '@aresrpg/protocol'
 
-import type { AppInput, AppState } from '../store.ts'
+import type { SiteState } from '../site_modules.ts'
+import type { AppInput } from '../store.ts'
 
 type DashboardRequestWires = Readonly<{
-  state: AppState
-  previous: AppState
+  state: SiteState
+  previous: SiteState
   send: (packet: Readonly<ClientPacket>) => boolean
   dispatch: (input: AppInput) => void
   next_id: () => number

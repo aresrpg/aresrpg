@@ -553,7 +553,10 @@ mastery_page:
   points_missing: Бракує {{points}} очок
   buy: Купити · {{cost}} оч.
   quest_started: Щоденне завдання призначено.
-  offer_purchased: Нагороду майстерності придбано.
+  offer_purchased: 'Покупку здійснено!'
+  purchase_inventory: 'Переглянути в інвентарі'
+  purchase_open: 'Відкрити зараз'
+  purchase_arriving: 'Покупка в дорозі…'
 
 airdrop_page:
   reward_title: 'Ви отримали подарунок!'
@@ -2234,17 +2237,6 @@ kares_page:
   daily_cap_note: 'Максимальні виплати за босів за добу від моменту налаштування, не фактична емісія. Невикористаний ліміт не переноситься.'
   other_networks: 'Інші мережі · EVM / Solana'
   sui_wallet_required: 'Виберіть гаманець Sui для цієї функції.'
-  blast_soon: 'Продаж токенів незабаром на Blast'
-  blast_live: 'Продаж KARES відкрито'
-  blast_closing: 'Продаж завершено · очікується розрахунок'
-  blast_funded: 'Кошти зібрано · очікується запуск'
-  blast_complete: 'KARES уже на Blast'
-  blast_cancelled: 'Продаж скасовано · доступне повернення'
-  blast_loading: 'Перевіряємо продаж на Blast…'
-  blast_unavailable: 'Статус продажу недоступний'
-  blast_note: 'Допоможіть створити наступну главу AresRPG.'
-  blast_action: 'Відкрити Blast'
-  blast_progress: 'Прогрес збору коштів'
   upgradeability_note: 'Контракти нагород можна оновлювати до остаточного замороження проєкту. Випуск нових токенів залишається вимкненим.'
   claim_batch: 'Отримати винагороди з {{count}} із {{total}} позицій'
   withdraw_batch: 'До {{count}} позицій за виведення. Повторіть, щоб вивести решту стейку.'
@@ -2305,7 +2297,6 @@ kares_page:
   kares_missing: 'Недостатньо KARES'
   language: 'Мова'
   community_detail: 'Цей резерв фінансує PvP-змагання та нагороди сезонних рейтингів. Казначейство вручну розподіляє розблоковані токени.'
-  supply_detail: 'Випускається один раз. Додаткової емісії немає. Спалювання зменшує пропозицію.'
   emissions_detail: 'Усі нагороди використовують наявні токени. Виплати не створюють нових токенів.'
   staking_unavailable: 'Стейкінг ще недоступний у цій мережі.'
   combat_rewards: 'Нагороди за босів'
@@ -2832,128 +2823,6 @@ loading_screen:
   final_checks: 'Останні приготування'
   ready: 'Усе готово до пригоди.'
 
-allocation_page:
-  error_connection_timeout: 'Сервер не відповів вчасно. Перепідключіться.'
-  error_connection_failed: 'З’єднання із сервером втрачено. Перепідключіться.'
-  error_connection_replaced: 'Гаманець підключено в іншій вкладці. Перепідключіться тут, коли будете готові.'
-  error_restore_timeout: 'Відновлення гаманця тривало надто довго. Підключіть його знову.'
-  connecting: 'Підключення та перевірка гаманця'
-  restoring: 'Відновлення гаманця'
-  reconnect: 'Перепідключити'
-  error_title: 'Не вдалося виконати дію'
-  share_post: 'У мене місце {{tier}} у білому списку на продаж KARES на @blastdotfun. Перевірте своє:'
-  menu_title: 'Перевірте місце в білому списку'
-  menu_note: 'Квоти ветеранів та учасників для продажу KARES.'
-  menu_action: 'Переглянути квоти'
-  before: До перепідписки
-  buy_up_to: Купити на суму до
-  no_spot: Цього разу без слота
-  source_reserved: Зарезервований слот
-  source_pending: Очікується відбір
-  link_wallets: Підключіть гаманці
-  wallet_rule: Підпишіть повідомлення кожним гаманцем для підтвердження власності.
-  wallet_rule_sale: 'Прив’яжіть гаманець із вашим місцем і купуйте з його картки.'
-  verified: Підтверджено
-  remove_wallet: Видалити {{wallet}}
-  add_wallet: Підключити гаманець Sui
-  wallet_count: 'Гаманці: {{count}} / {{max}}'
-  close: Закрити
-  signature_note: Підпишіть безкоштовне повідомлення. Транзакцій і платежів немає.
-  no_wallet_app: Установіть гаманець Sui.
-  wallet_failed: Не вдалося підключити гаманець. Спробуйте ще раз.
-  edit: Змінити
-  cancel: Скасувати
-  save: Зберегти
-  board_legend: 'Слоти рейтингу: Veteran / Member'
-  play: Грати в AresRPG
-  sale_title: Продаж відбувається на Blast
-  sale_time: 'Дату й час продажу оголосять пізніше.'
-  sale_public: 'Немає місця? Стежте за публічним продажем на Blast.'
-  results_title: 'Результати кампанії'
-  results_note: Карти покажуть результати до продажу.
-  results_note_sale: 'Вайтліст остаточний. Гаманці з вайтлісту купують на цій сторінці в межах свого ліміту.'
-  spot_gives: Що дає слот
-  signing: Підтвердьте підпис у гаманці…
-  no_spot_yet: Слота ще немає
-  your_allocation: Ваш розподіл
-  total_cap: До {{sui}} SUI на {{count}} слотів
-  allocation_note: Увійдіть і підключіть гаманці для перевірки слотів.
-  footer: Слот визначає ліміт внеску, а не фіксовану кількість токенів.
-  error_wallet_limit: До десяти гаманців, включно з Google-гаманцем.
-  title: Білий список KARES
-  veteran: Veteran
-  member: Member
-  public_note: Публічна участь регулюється умовами Blast. Результати можуть ще очікувати перевірки.
-  recipient: Гаманець отримувача
-  preview: Перегляд посилання
-  share: Поділитися
-  dilution: Ліміти не гарантують токенів. За надмірного попиту частка кожного покупця зменшується пропорційно.
-  sale_soon: 'Продаж незабаром'
-  sale_live: 'Продаж триває'
-  sale_closing: 'Продаж завершено'
-  sale_funded: 'Очікування запуску'
-  sale_complete: 'KARES запущено'
-  sale_cancelled: 'Продаж скасовано'
-  sale_spots_open: 'Ваші місця відкриті'
-  sale_ends_in: 'Завершиться через {{time}}'
-  sale_public_in: 'Відкриється для всіх через {{time}}'
-  sale_public_now: 'Зараз відкрита для всіх'
-  sale_opens_in: 'Відкриється через {{time}}'
-  sale_opens_soon: 'Незабаром відкриється'
-  sale_countdown: '{{days}} д {{hours}} год {{minutes}} хв'
-  sale_raised: 'Зібрано'
-  sale_bought: 'Куплено'
-  sale_in_wallet: 'У цьому гаманці'
-  sale_receive: 'Ви отримаєте'
-  sale_spot_after: 'Місце після покупки'
-  sale_left_in_wallet: 'Залишиться в гаманці'
-  sale_refund: 'Повернення SUI'
-  sale_signed: 'Вхід виконано'
-  sale_not_connected: 'Не підключено'
-  sale_buy: 'Купити KARES'
-  sale_buy_amount: 'Купити KARES на {{sui}} SUI'
-  sale_not_ready: 'Місце ще не готове'
-  sale_connect_buy: 'Підключіть {{wallet}}, щоб купити'
-  sale_connect_claim: 'Підключіть {{wallet}}, щоб отримати'
-  sale_claim: 'Отримати KARES'
-  sale_claim_refund: 'Повернути {{sui}} SUI'
-  sale_claim_after: 'Отримання після запуску'
-  sale_waiting: 'Чекаємо запуску KARES на Blast'
-  sale_settled: 'Нічого отримувати'
-  sale_checking: 'Перевіряємо ваше місце…'
-  sale_committed: '+{{sui}} SUI внесено'
-  sale_claimed: 'Отримано'
-  sale_receipt: 'Квитанція'
-  sale_failed: 'Транзакцію не завершено. Перевірте гаманець і спробуйте ще раз.'
-  sale_amount: 'Сума'
-  sale_amount_sui: 'Сума в SUI'
-  sale_wallet_max: 'Цей гаманець може купити до {{sui}} SUI.'
-  sale_spot_left: 'На вашому місці лишилося {{sui}} SUI.'
-  sale_max: 'Макс. {{sui}}'
-  sale_terms: 'Менше KARES у разі перепідписки; зайві SUI повернуться під час отримання. SUI заблоковані, доки Blast не запустить або не скасує продаж.'
-  sale_add_sui: 'Додати {{sui}} SUI'
-  sale_signing: 'Підтвердьте в гаманці…'
-  sale_dilution: 'Якщо продаж збере більше за ціль, кожен покупець отримає менше KARES і поверне зайві SUI під час отримання.'
-  google_wallet: Ігровий гаманець Google
-  loading: Завантаження кампанії
-  final: Остаточний список · очікує імпорту в Blast
-  wallet: Гаманець
-  error_unavailable: Не вдалося виконати запит. Перевірте з’єднання й повторіть. X або сервіс кампанії може бути недоступний.
-  error_wallet_taken: Цей гаманець уже пов’язаний з іншим акаунтом X.
-  error_invalid_address: Введіть коректну адресу Sui, що починається з 0x.
-  board_xp: Бойовий досвід · Рейтинг
-  board_kills: Переможені монстри · Рейтинг
-  board_dungeons: Підземелля · Рейтинг
-  board_jobs: Досвід професій · Рейтинг
-  board_marketplace: Ринок · Рейтинг
-  board_kolizeum: Колізей · Рейтинг
-  board_zones: Відкриття · Рейтинг
-  board_feeding: Годування улюбленців · Рейтинг
-  board_gathering: Збирання · Рейтинг
-  source_leaderboard: Піднімайтеся в рейтингах
-  source_social: Публікуйте в X
-  error_unauthorized: Спочатку підключіть і підтвердьте гаманець одержувача.
-  error_rate_limited: Забагато запитів. Повторіть трохи пізніше.
 tournament_page:
   level_limit_label: 'Максимальний рівень під час реєстрації'
   level_unrestricted: 'Без обмежень'

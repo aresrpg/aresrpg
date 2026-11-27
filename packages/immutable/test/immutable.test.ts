@@ -75,8 +75,7 @@ import {
   worn_appearance,
   xp_for_level,
 } from '../src/index.ts'
-import { blast_csv, cap_mist, normalize_address, public_award, share_version, sui_amount } from '../src/allocation.ts'
-import { allocation_locale, notification_locale } from '../src/locale.ts'
+import { share_locale, notification_locale } from '../src/locale.ts'
 import { rune_max_weight, rune_unit_weight, rune_weight_scale } from '../src/rune.ts'
 
 const move_source = (path: string): string => readFileSync(resolve(import.meta.dir, '../../', path), 'utf8')
@@ -428,58 +427,24 @@ describe('chain vocabularies', () => {
 
   test('backend locale projections keep only the fields their consumers read, merge aliases included', () => {
     const document = {
-      allocation_page: { title: 'Allocation' },
+      portfolio_page: { share_text: 'My hero', tab_bag: 'Browser only' },
       discord_marketplace: { title: 'Market' },
       simulator_page: { stat_health: 'Health', unused_label: 'Browser only' },
       ui: { agent_pair_no_assets: 'Browser only' },
     }
-    expect(allocation_locale(document)).toEqual({ title: 'Allocation' })
+    expect(share_locale(document)).toEqual({ share_text: 'My hero' })
     expect(notification_locale(document)).toEqual({ copy: { title: 'Market' }, stats: { health: 'Health' } })
     const yaml = Bun.YAML.parse(`copy: &copy
-  title: Original
-allocation_page:
+  share_text: Original
+portfolio_page:
   <<: *copy
 discord_marketplace:
   title: Shadowed
   title: Actual
 simulator_page:
   stat_health: Health
-`) as Parameters<typeof notification_locale>[0] & { allocation_page: { title: string } }
-    expect(allocation_locale(yaml)).toEqual({ title: 'Original' })
+`) as Parameters<typeof notification_locale>[0] & Parameters<typeof share_locale>[0]
+    expect(share_locale(yaml)).toEqual({ share_text: 'Original' })
     expect(notification_locale(yaml)).toEqual({ copy: { title: 'Actual' }, stats: { health: 'Health' } })
-  })
-})
-
-describe('published allocations', () => {
-  test('awards publish only public fields, caps are exact, and the CSV and share links stay stable', () => {
-    const address = (value: number): string => normalize_address(`0x${value.toString(16)}`)
-    const private_row = {
-      address: address(1),
-      tier: 'veteran',
-      source: 'manual',
-      evidence: 'private operator note',
-    } as const
-    expect(public_award(private_row)).toEqual({ address: address(1), tier: 'veteran', source: 'reserved' })
-    expect(public_award({ ...private_row, source: 'leaderboard', evidence: 'xp:12' })).toEqual({
-      address: address(1),
-      tier: 'veteran',
-      source: 'leaderboard',
-      board: 'xp',
-    })
-    expect([cap_mist('veteran'), cap_mist('member')]).toEqual([125_000_000_000n, 70_000_000_000n])
-    expect(sui_amount(cap_mist('member'))).toBe('70')
-    expect(blast_csv([{ address: '0x1', tier: 'veteran', source: 'manual', evidence: '=unsafe' }])).toBe(
-      `address,cap_sui,cap_mist\n${address(1)},125,125000000000\n`
-    )
-    expect(() => blast_csv([{ address: '=unsafe', tier: 'member', source: 'social', evidence: '' }])).toThrow(
-      'invalid_address'
-    )
-    const twice = { address: '0x1', tier: 'member', source: 'social', evidence: '' } as const
-    expect(() => blast_csv([twice, { ...twice, address: '0x01' }])).toThrow('duplicate_address')
-    expect(share_version({ tier: 'veteran' })).toBe(
-      'voxel-bank-v2-2026-10-28T15:00:00Z-final-veteran-125000000000-833333'
-    )
-    expect(share_version({ tier: 'member' })).toBe('voxel-bank-v2-2026-10-28T15:00:00Z-final-member-70000000000-466667')
-    expect(share_version()).toBe('voxel-bank-v2-2026-10-28T15:00:00Z-final-pending-0-0')
   })
 })

@@ -13,7 +13,6 @@ import type {
 } from '@aresrpg/protocol'
 import type { ReactNode } from 'react'
 
-import { PANEL } from '../encyclopedia/components.tsx'
 import { format_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
@@ -24,6 +23,7 @@ import type { AdminRevenue } from './useAdminRevenue.ts'
 import type { AdminOverviewState } from './admin_state.ts'
 import { MetricChart, type MetricSeries, type MetricValueKind } from './MetricChart.tsx'
 
+const PANEL = 'border border-border bg-surface/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
 const COLORS = Object.freeze({
   gold: '#c8963c',
   blue: '#70bdf2',
@@ -92,11 +92,11 @@ const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; lab
   const colors = DASHBOARD_TONES[tone]
   return (
     <section
-      className={`flex h-32 w-max max-w-full flex-col overflow-hidden border ${colors.group}`}
+      className={`flex min-h-32 w-max max-w-full flex-col overflow-hidden border ${colors.group}`}
       data-kpi-group={tone}
     >
       <h2
-        className={`border-b bg-black/12 px-4 py-2 text-[8px] font-semibold tracking-[0.18em] uppercase ${colors.heading}`}
+        className={`border-b bg-black/12 px-4 py-2 text-[12px] font-semibold tracking-[0.18em] uppercase ${colors.heading}`}
       >
         {label}
       </h2>
@@ -109,8 +109,8 @@ const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; lab
 
 const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
   <div className="min-w-0 border-r border-border px-3 last:border-r-0">
-    <span className="block truncate text-[7px] tracking-[0.14em] text-faint uppercase">{label}</span>
-    <strong className="mt-1 block truncate text-[11px] font-medium text-text tabular-nums">{value}</strong>
+    <span className="block truncate text-[11px] tracking-[0.14em] text-faint uppercase">{label}</span>
+    <strong className="mt-1 block truncate text-[14px] font-medium text-text tabular-nums">{value}</strong>
   </div>
 )
 
@@ -120,12 +120,12 @@ const KpiCard = ({
   tone,
   value,
 }: Readonly<{ detail: string; label: string; tone?: KpiTone; value: string }>) => (
-  <article className="flex h-full w-max max-w-64 min-w-40 flex-col justify-between bg-black/10 px-4 py-3.5">
-    <span className="truncate text-[8px] tracking-[0.15em] text-faint uppercase">{label}</span>
-    <strong className={`mt-2 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
+  <article className="flex w-max max-w-full min-w-40 shrink-0 grow flex-col justify-between bg-black/10 px-4 py-3.5">
+    <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{label}</span>
+    <strong className={`mt-2 text-3xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
       {value}
     </strong>
-    <span className="mt-0.5 truncate text-[8px] text-faint">{detail}</span>
+    <span className="mt-0.5 text-[12px] text-faint">{detail}</span>
   </article>
 )
 
@@ -138,14 +138,16 @@ export const TimelineKpiCard = ({
   label: string
   tone?: KpiTone
 }>) => (
-  <article className="flex h-full w-max max-w-full flex-col bg-black/10 px-4 py-3.5">
-    <span className="text-[8px] tracking-[0.15em] text-faint uppercase">{label}</span>
+  <article className="flex w-max max-w-full shrink-0 grow flex-col bg-black/10 px-4 py-3.5">
+    <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{label}</span>
     <div className="mt-2 grid flex-1 grid-cols-[repeat(3,max-content)] items-end">
       {entries.map((row, index) => (
         <div className={index === 0 ? 'pr-3' : 'border-l border-white/[0.07] px-3'} key={row.label}>
-          <span className="block text-[8px] tracking-[0.12em] whitespace-nowrap text-faint uppercase">{row.label}</span>
+          <span className="block text-[12px] tracking-[0.12em] whitespace-nowrap text-faint uppercase">
+            {row.label}
+          </span>
           <strong
-            className={`mt-1 block text-base font-semibold whitespace-nowrap tabular-nums ${kpi_value_color(tone)}`}
+            className={`mt-1 block text-xl font-semibold whitespace-nowrap tabular-nums ${kpi_value_color(tone)}`}
           >
             {row.value}
           </strong>
@@ -185,13 +187,13 @@ const ChartPanel = ({
   >
     <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
       <div className="min-w-0">
-        <h2 className="truncate text-[10px] font-semibold tracking-[0.16em] text-soft uppercase">{title}</h2>
-        <p className="mt-1 truncate text-[8px] text-faint">{subtitle}</p>
+        <h2 className="truncate text-[13px] font-semibold tracking-[0.16em] text-soft uppercase">{title}</h2>
+        <p className="mt-1 truncate text-[12px] text-faint">{subtitle}</p>
       </div>
       <AdminRangeSelector change={change} copy={copy} days={days} />
     </header>
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3">
-      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[7px] tracking-[0.08em] text-faint uppercase">
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] tracking-[0.08em] text-faint uppercase">
         {series.map((row) => (
           <span className="inline-flex items-center gap-1" key={row.label}>
             <i className="size-1.5" style={{ background: row.color }} />
@@ -199,12 +201,12 @@ const ChartPanel = ({
           </span>
         ))}
       </span>
-      <span className="text-[7px] tracking-[0.12em] text-faint uppercase">
+      <span className="text-[11px] tracking-[0.12em] text-faint uppercase">
         {loading ? text(copy, 'loading', 'Loading…') : bucket_label(copy, bucket)}
       </span>
     </div>
     <div className="px-4 py-3">
-      <MetricChart className="h-44" label={title} series={series} timestamps={timestamps} value_kind={value_kind} />
+      <MetricChart className="h-72" label={title} series={series} timestamps={timestamps} value_kind={value_kind} />
     </div>
   </section>
 )
@@ -318,8 +320,8 @@ export const TreasuryStrip = ({
   return (
     <section className={`${PANEL} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
       <div className="mr-auto min-w-0">
-        <span className="text-[8px] tracking-[0.15em] text-faint uppercase">{text(copy, 'treasury', 'Treasury')}</span>
-        <strong className="ml-3 text-[12px] font-medium text-gold tabular-nums">{treasury_value(revenue)}</strong>
+        <span className="text-[12px] tracking-[0.15em] text-faint uppercase">{text(copy, 'treasury', 'Treasury')}</span>
+        <strong className="ml-3 text-[15px] font-medium text-gold tabular-nums">{treasury_value(revenue)}</strong>
       </div>
       <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 2)} SUI`} />
       <Stat
@@ -327,7 +329,7 @@ export const TreasuryStrip = ({
         value={`${format_sui(character, 2)} SUI`}
       />
       <button
-        className="h-8 shrink-0 border border-gold/40 bg-gold/8 px-4 text-[8px] tracking-[0.12em] text-gold uppercase disabled:opacity-30"
+        className="h-10 shrink-0 border border-gold/40 bg-gold/8 px-4 text-[12px] tracking-[0.12em] text-gold uppercase disabled:opacity-30"
         disabled={claim_disabled(revenue)}
         onClick={revenue.claim}
         type="button"
@@ -342,7 +344,7 @@ const LoadingOverview = ({
   copy,
   overview,
 }: Readonly<{ copy: Readonly<Record<string, string>>; overview: AdminOverviewState }>) => (
-  <div className="grid min-h-0 flex-1 place-items-center bg-surface/50 text-[9px] tracking-[0.14em] text-faint uppercase">
+  <div className="grid min-h-[50vh] place-items-center text-[12px] tracking-[0.14em] text-faint uppercase">
     <div className="text-center">
       <p>
         {overview.status === 'failed'
@@ -399,8 +401,8 @@ export const OverviewPageView = ({
   if (!result) return <LoadingOverview copy={copy} overview={overview} />
   const { revenue, players, transactions, online, addresses, characters } = result
   return (
-    <div className="admin-overview min-h-0 flex-1 bg-surface/50">
-      <div className="flex items-center gap-3 px-1 text-[8px] tracking-[0.12em] text-faint uppercase">
+    <div className="admin-overview">
+      <div className="flex items-center gap-3 px-1 text-[12px] tracking-[0.12em] text-faint uppercase">
         <span className="text-[#77d99a]">● {text(copy, 'all_systems_current', 'All systems current')}</span>
         <span>
           {text(copy, 'checkpoint', 'Checkpoint')} {result.as_of_checkpoint?.toLocaleString() ?? '—'}
@@ -413,7 +415,7 @@ export const OverviewPageView = ({
           ↻ {text(copy, 'refresh', 'Refresh')}
         </button>
       </div>
-      <div className="mt-3 flex flex-wrap items-stretch gap-3" data-admin-kpis="">
+      <div data-admin-kpis="">
         <KpiGroup label={text(copy, 'revenue', 'Revenue')} tone="revenue">
           <KpiCard
             detail={text(copy, 'last_30_days', 'Last 30 days')}
@@ -506,94 +508,86 @@ export const OverviewPageView = ({
           />
         </KpiGroup>
       </div>
-      <div className="mt-3">
-        <TreasuryStrip copy={copy} revenue={revenue_wallet} />
-      </div>
-      <div className="mt-3 flex flex-col gap-3" data-admin-charts="">
-        <div className="grid gap-3 xl:grid-cols-2">
-          <ChartPanel
-            bucket={revenue.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'revenue', days })}
-            copy={copy}
-            days={overview.ranges.revenue}
-            loading={!!overview.pending.revenue}
-            series={revenue_series(copy, revenue)}
-            subtitle={text(copy, 'revenue_over_time_body', 'All protocol revenue by source')}
-            timestamps={revenue.money.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'revenue_over_time', 'Revenue over time')}
-            tone="revenue"
-            value_kind="continuous"
-          />
-          <ChartPanel
-            bucket={transactions.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'transactions', days })}
-            copy={copy}
-            days={overview.ranges.transactions}
-            loading={!!overview.pending.transactions}
-            series={transaction_series(copy, transactions)}
-            subtitle={text(copy, 'game_transactions_body', 'Successful AresRPG transactions, counted once per PTB')}
-            timestamps={transactions.transactions.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'game_transactions_over_time', 'Transactions over time')}
-            tone="transactions"
-            value_kind="count"
-          />
-        </div>
-        <div className="grid gap-3 xl:grid-cols-2">
-          <ChartPanel
-            bucket={players.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'players', days })}
-            copy={copy}
-            days={overview.ranges.players}
-            loading={!!overview.pending.players}
-            series={player_series(copy, players)}
-            subtitle={text(copy, 'player_activity_body', 'Daily activity and rolling 30-day reach')}
-            timestamps={players.activity.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'player_activity', 'Player activity')}
-            tone="activity"
-            value_kind="count"
-          />
-          <ChartPanel
-            bucket={online.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'online', days })}
-            copy={copy}
-            days={overview.ranges.online}
-            loading={!!overview.pending.online}
-            series={online_series(copy, online)}
-            subtitle={text(copy, 'online_players_body', 'Most players and most hosted bots online at once, per bucket')}
-            timestamps={online.online.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'online_players', 'Online players')}
-            tone="activity"
-            value_kind="count"
-          />
-        </div>
-        <div className="grid gap-3 xl:grid-cols-2">
-          <ChartPanel
-            bucket={addresses.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'addresses', days })}
-            copy={copy}
-            days={overview.ranges.addresses}
-            loading={!!overview.pending.addresses}
-            series={address_series(copy, addresses)}
-            subtitle={text(copy, 'unique_addresses_body', 'Addresses with successful AresRPG module calls')}
-            timestamps={addresses.addresses.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'unique_addresses_over_time', 'Unique addresses over time')}
-            tone="population"
-            value_kind="count"
-          />
-          <ChartPanel
-            bucket={characters.bucket}
-            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'characters', days })}
-            copy={copy}
-            days={overview.ranges.characters}
-            loading={!!overview.pending.characters}
-            series={character_series(copy, characters)}
-            subtitle={text(copy, 'total_characters_body', 'Current on-chain Character objects')}
-            timestamps={characters.characters.map(({ at_ms }) => at_ms)}
-            title={text(copy, 'characters_over_time', 'Characters over time')}
-            tone="population"
-            value_kind="count"
-          />
-        </div>
+      <TreasuryStrip copy={copy} revenue={revenue_wallet} />
+      <div data-admin-charts="">
+        <ChartPanel
+          bucket={revenue.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'revenue', days })}
+          copy={copy}
+          days={overview.ranges.revenue}
+          loading={!!overview.pending.revenue}
+          series={revenue_series(copy, revenue)}
+          subtitle={text(copy, 'revenue_over_time_body', 'All protocol revenue by source')}
+          timestamps={revenue.money.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'revenue_over_time', 'Revenue over time')}
+          tone="revenue"
+          value_kind="continuous"
+        />
+        <ChartPanel
+          bucket={transactions.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'transactions', days })}
+          copy={copy}
+          days={overview.ranges.transactions}
+          loading={!!overview.pending.transactions}
+          series={transaction_series(copy, transactions)}
+          subtitle={text(copy, 'game_transactions_body', 'Successful AresRPG transactions, counted once per PTB')}
+          timestamps={transactions.transactions.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'game_transactions_over_time', 'Transactions over time')}
+          tone="transactions"
+          value_kind="count"
+        />
+        <ChartPanel
+          bucket={players.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'players', days })}
+          copy={copy}
+          days={overview.ranges.players}
+          loading={!!overview.pending.players}
+          series={player_series(copy, players)}
+          subtitle={text(copy, 'player_activity_body', 'Daily activity and rolling 30-day reach')}
+          timestamps={players.activity.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'player_activity', 'Player activity')}
+          tone="activity"
+          value_kind="count"
+        />
+        <ChartPanel
+          bucket={online.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'online', days })}
+          copy={copy}
+          days={overview.ranges.online}
+          loading={!!overview.pending.online}
+          series={online_series(copy, online)}
+          subtitle={text(copy, 'online_players_body', 'Most players and most hosted bots online at once, per bucket')}
+          timestamps={online.online.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'online_players', 'Online players')}
+          tone="activity"
+          value_kind="count"
+        />
+        <ChartPanel
+          bucket={addresses.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'addresses', days })}
+          copy={copy}
+          days={overview.ranges.addresses}
+          loading={!!overview.pending.addresses}
+          series={address_series(copy, addresses)}
+          subtitle={text(copy, 'unique_addresses_body', 'Addresses with successful AresRPG module calls')}
+          timestamps={addresses.addresses.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'unique_addresses_over_time', 'Unique addresses over time')}
+          tone="population"
+          value_kind="count"
+        />
+        <ChartPanel
+          bucket={characters.bucket}
+          change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'characters', days })}
+          copy={copy}
+          days={overview.ranges.characters}
+          loading={!!overview.pending.characters}
+          series={character_series(copy, characters)}
+          subtitle={text(copy, 'total_characters_body', 'Current on-chain Character objects')}
+          timestamps={characters.characters.map(({ at_ms }) => at_ms)}
+          title={text(copy, 'characters_over_time', 'Characters over time')}
+          tone="population"
+          value_kind="count"
+        />
       </div>
     </div>
   )

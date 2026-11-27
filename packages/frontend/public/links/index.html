@@ -8,7 +8,7 @@
     <title>AresRPG · Every way in</title>
     <meta
       name="description"
-      content="Play the fully on-chain voxel MMORPG in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale on Blast."
+      content="Play the fully on-chain voxel MMORPG in your browser, join the Discord and Telegram, and read the Journal."
     />
     <link rel="canonical" href="https://aresrpg.world/links" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -16,7 +16,7 @@
     <meta property="og:title" content="AresRPG · Every way in" />
     <meta
       property="og:description"
-      content="Play in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale."
+      content="Play in your browser, join the Discord and Telegram, and read the Journal."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://aresrpg.world/links" />
@@ -25,15 +25,15 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:alt" content="AresRPG: play, Discord, Telegram, Journal and the KARES sale" />
+    <meta property="og:image:alt" content="AresRPG: play, Discord, Telegram and Journal" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="AresRPG · Every way in" />
     <meta
       name="twitter:description"
-      content="Play in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale."
+      content="Play in your browser, join the Discord and Telegram, and read the Journal."
     />
     <meta name="twitter:image" content="https://aresrpg.world/social/links.jpg" />
-    <meta name="twitter:image:alt" content="AresRPG: play, Discord, Telegram, Journal and the KARES sale" />
+    <meta name="twitter:image:alt" content="AresRPG: play, Discord, Telegram and Journal" />
     <style>
       @font-face {
         font-family: 'JetBrains Mono';
@@ -278,65 +278,6 @@
         color: var(--tint);
       }
 
-      /* Blast owns the pink pilot identity, exactly as on the in-game sale card. */
-      .sale {
-        position: relative;
-        display: grid;
-        gap: 6px;
-        overflow: hidden;
-        padding: 16px 124px 16px 16px;
-        color: #fff0f8;
-        border: 1px solid #ff419361;
-        border-radius: 3px;
-        background:
-          radial-gradient(ellipse at 100% 20%, #75315888, transparent 65%), linear-gradient(110deg, #201322, #17111e);
-        transition: border-color 200ms var(--ease);
-      }
-      .sale:hover {
-        border-color: #ff64ac;
-      }
-      .sale__brand {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--blast);
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-      }
-      .sale__brand span {
-        opacity: 0.5;
-      }
-      .sale__title {
-        font-size: 19px;
-        font-weight: 700;
-        line-height: 1.25;
-      }
-      .sale__note {
-        color: #be9bb2;
-        font-size: 13px;
-      }
-      .sale__action {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 6px;
-        color: #ff9bca;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-      .sale__pilot {
-        position: absolute;
-        right: 2px;
-        top: 50%;
-        width: 124px;
-        height: 124px;
-        object-fit: contain;
-        image-rendering: pixelated;
-        transform: translateY(-50%);
-      }
       .repo {
         display: grid;
         gap: 6px;
@@ -487,21 +428,6 @@
             </a>
           </li>
         </ul>
-
-        <h2 class="micro label rise" style="--i: 7">Token sale</h2>
-        <a class="sale rise" style="--i: 8" href="/allocation" rel="noopener">
-          <img class="sale__pilot" src="/links/blast_pilot.png" alt="" width="124" height="124" />
-          <span class="sale__brand">
-            <img src="/links/blast_helmet.svg" alt="" width="23" height="16" /> KARES <span>×</span>
-            <img src="/links/blast_wordmark.svg" alt="Blast" width="56" height="16" />
-          </span>
-          <strong class="sale__title">KARES allocation campaign</strong>
-          <span class="sale__note">Help build the next chapter of AresRPG.</span>
-          <span class="sale__action">
-            Check your allocation
-            <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
-          </span>
-        </a>
 
         <h2 class="micro label rise" style="--i: 9">Source</h2>
         <a class="repo rise" style="--i: 10" href="https://github.com/aresrpg/aresrpg" rel="noopener">

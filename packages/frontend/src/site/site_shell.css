@@ -23,13 +23,6 @@
   /* The page's ground (`Ground` from the ui package) is a fixed layer behind everything the shell draws. */
   isolation: isolate;
 }
-/* The sale line's row: one fixed height while it is held, none otherwise. */
-.site-sale {
-  height: 0;
-}
-.site-sale[data-held] {
-  height: 36px;
-}
 
 /* The bar: its own width, centred, a carbon strip over the page. Its height never changes. */
 .site-bar {

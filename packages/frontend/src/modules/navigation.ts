@@ -5,10 +5,9 @@ import type { ServerPacket } from '@aresrpg/protocol'
 
 import { agent_tab_source } from '../agents/character_tabs.ts'
 import type { DetailTab } from '../characters/character_navigation.ts'
-import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
-export const pages = ['world', 'mastery', 'kolizeum', 'settings', 'admin'] as const
+export const pages = ['world', 'mastery', 'kolizeum', 'settings'] as const
 
 export type Page = (typeof pages)[number]
 export type AppDialog =
@@ -63,22 +62,15 @@ export const pathname_for_page = (page: Page): string => `/${page}`
 
 export const is_world_page = (page: Page): boolean => page === 'world'
 
-const open_page = (state: AppState, page: Page): AppState => {
-  if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state
-  return Object.freeze({
+const open_page = (state: AppState, page: Page): AppState =>
+  Object.freeze({
     ...state,
     navigation: Object.freeze({ ...state.navigation, page, pathname: pathname_for_page(page) }),
   })
-}
 
 const open_path = (state: AppState, requested_pathname: string): AppState => {
   const pathname = normalize_pathname(requested_pathname)
   const page = page_from_pathname(pathname)
-  if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null))
-    return Object.freeze({
-      ...state,
-      navigation: Object.freeze({ ...state.navigation, page: 'world', pathname: pathname_for_page('world') }),
-    })
   return Object.freeze({
     ...state,
     navigation: Object.freeze({ ...state.navigation, page, pathname }),

@@ -553,7 +553,10 @@ mastery_page:
   points_missing: あと{{points}}ポイント
   buy: 購入 · {{cost}} pts
   quest_started: デイリークエストを割り当てました。
-  offer_purchased: マスタリー報酬を購入しました。
+  offer_purchased: '購入しました！'
+  purchase_inventory: 'インベントリで見る'
+  purchase_open: '今すぐ開ける'
+  purchase_arriving: '購入品が届いています…'
 
 airdrop_page:
   reward_title: 'ギフトを受け取りました！'
@@ -2233,17 +2236,6 @@ kares_page:
   daily_cap_note: '設定時点から数えた1日あたりのボス報酬上限で、実際の放出量ではありません。未使用枠は繰り越されません。'
   other_networks: '他のネットワーク · EVM / Solana'
   sui_wallet_required: 'この機能には Sui ウォレットを選択してください。'
-  blast_soon: 'トークン販売がまもなくBlastで開始'
-  blast_live: 'KARES販売中'
-  blast_closing: '販売終了・精算待ち'
-  blast_funded: '資金調達完了・ローンチ待ち'
-  blast_complete: 'KARESがBlastに登場'
-  blast_cancelled: '販売中止・払い戻し受付中'
-  blast_loading: 'Blastの販売状況を確認中…'
-  blast_unavailable: '販売状況を取得できません'
-  blast_note: 'AresRPGの新たな章を共に作りましょう。'
-  blast_action: 'Blastで見る'
-  blast_progress: '資金調達の進捗'
   upgradeability_note: '報酬コントラクトはプロジェクトの最終凍結まで更新できます。新規トークン発行は引き続き無効です。'
   claim_batch: '{{total}}件中{{count}}件の報酬を受け取る'
   withdraw_batch: '1回につき最大{{count}}件を引き出せます。残りのステークは再度引き出してください。'
@@ -2304,7 +2296,6 @@ kares_page:
   kares_missing: 'KARESが不足しています'
   language: '言語'
   community_detail: 'この準備金はPvP大会とシーズンランキングの賞品に充てられます。解除済みトークンは財務管理者が手動で配布します。'
-  supply_detail: '一度だけ発行されます。追加発行はありません。バーンにより供給量が減少します。'
   emissions_detail: '報酬には既存のトークンを使用します。報酬支払いで新規発行は行いません。'
   staking_unavailable: 'このネットワークではステーキングはまだ利用できません。'
   combat_rewards: 'ボス報酬'
@@ -2831,128 +2822,6 @@ loading_screen:
   final_checks: '最終確認'
   ready: '冒険の準備ができました。'
 
-allocation_page:
-  error_connection_timeout: 'サーバーの応答がタイムアウトしました。再接続してください。'
-  error_connection_failed: 'サーバー接続が切れました。再接続してください。'
-  error_connection_replaced: 'このウォレットは別のタブで接続されました。準備ができたらここで再接続してください。'
-  error_restore_timeout: 'ウォレットの復元がタイムアウトしました。再接続してください。'
-  connecting: 'ウォレットの接続と確認中'
-  restoring: 'ウォレットを復元中'
-  reconnect: '再接続'
-  error_title: '操作を完了できませんでした'
-  share_post: '@blastdotfun のKARES販売で{{tier}}のホワイトリスト枠を獲得しました。あなたの枠も確認：'
-  menu_title: 'ホワイトリストの枠を確認'
-  menu_note: 'KARES販売のベテラン・メンバー向け割当。'
-  menu_action: '割当を確認'
-  before: 超過申込による調整前
-  buy_up_to: 購入上限
-  no_spot: 今回は枠なし
-  source_reserved: 予約済み枠
-  source_pending: 選考待ち
-  link_wallets: ウォレットを連携
-  wallet_rule: 各ウォレットで署名して所有権を確認します。
-  wallet_rule_sale: '枠を持つウォレットを連携し、そのカードから購入してください。'
-  verified: 確認済み
-  remove_wallet: '{{wallet}}を削除'
-  add_wallet: Suiウォレットを連携
-  wallet_count: '{{count}} / {{max}} ウォレット'
-  close: 閉じる
-  signature_note: 無料のメッセージに署名します。取引や支払いは行いません。
-  no_wallet_app: Suiウォレットをインストールしてください。
-  wallet_failed: 接続に失敗しました。再試行してください。
-  edit: 編集
-  cancel: キャンセル
-  save: 保存
-  board_legend: 各ランキングの枠：Veteran / Member
-  play: AresRPGをプレイ
-  sale_title: 販売はBlastで実施
-  sale_time: '販売日時は後日発表します。'
-  sale_public: '枠がない場合は、Blastの公開セールをご覧ください。'
-  results_title: 'キャンペーン結果'
-  results_note: 販売前にカードで結果を確認できます。
-  results_note_sale: 'ホワイトリストは確定しました。対象ウォレットは上限まで、このページで購入できます。'
-  spot_gives: 枠で得られるもの
-  signing: ウォレットで署名を確認してください…
-  no_spot_yet: まだ枠はありません
-  your_allocation: あなたの割当
-  total_cap: '{{count}}枠で最大{{sui}} SUI'
-  allocation_note: ログインしてウォレットを連携し、枠を確認してください。
-  footer: 枠は拠出上限であり、固定のトークン数ではありません。
-  error_wallet_limit: Googleウォレットを含め最大10個です。
-  title: KARES ホワイトリスト
-  veteran: Veteran
-  member: Member
-  public_note: 一般参加は Blast の販売条件に従います。結果は審査待ちの場合があります。
-  recipient: 受取ウォレット
-  preview: リンクをプレビュー
-  share: 共有
-  dilution: 上限はトークンの保証ではありません。申込超過時は全購入者が同じ割合で希薄化されます。
-  sale_soon: 'セール開始前'
-  sale_live: 'セール開催中'
-  sale_closing: 'セール終了'
-  sale_funded: 'ローンチ待ち'
-  sale_complete: 'KARES ローンチ済み'
-  sale_cancelled: 'セール中止'
-  sale_spots_open: '購入枠がオープンしました'
-  sale_ends_in: '終了まで {{time}}'
-  sale_public_in: '{{time}}後に誰でも参加可能'
-  sale_public_now: '現在、誰でも参加できます'
-  sale_opens_in: '開始まで {{time}}'
-  sale_opens_soon: 'まもなく開始'
-  sale_countdown: '{{days}}日 {{hours}}時間 {{minutes}}分'
-  sale_raised: '調達額'
-  sale_bought: '購入済み'
-  sale_in_wallet: 'このウォレット'
-  sale_receive: '受け取り'
-  sale_spot_after: '購入後の枠'
-  sale_left_in_wallet: 'ウォレット残高'
-  sale_refund: 'SUI 返金'
-  sale_signed: 'サインイン済み'
-  sale_not_connected: '未接続'
-  sale_buy: 'KARES を購入'
-  sale_buy_amount: '{{sui}} SUI 分の KARES を購入'
-  sale_not_ready: '枠の準備中'
-  sale_connect_buy: '{{wallet}} を接続して購入'
-  sale_connect_claim: '{{wallet}} を接続して受け取る'
-  sale_claim: 'KARES を受け取る'
-  sale_claim_refund: '{{sui}} SUI の返金を受け取る'
-  sale_claim_after: 'ローンチ後に受け取れます'
-  sale_waiting: 'Blast による KARES ローンチ待ち'
-  sale_settled: '受け取るものはありません'
-  sale_checking: '枠を確認中…'
-  sale_committed: '+{{sui}} SUI を拠出'
-  sale_claimed: '受け取り済み'
-  sale_receipt: 'レシート'
-  sale_failed: '取引が完了しませんでした。ウォレットを確認して、もう一度お試しください。'
-  sale_amount: '金額'
-  sale_amount_sui: 'SUI 建ての金額'
-  sale_wallet_max: 'このウォレットで購入できるのは最大 {{sui}} SUI です。'
-  sale_spot_left: '枠の残りは {{sui}} SUI です。'
-  sale_max: '最大 {{sui}}'
-  sale_terms: '申込超過時は KARES が減り、超過分の SUI は受け取り時に返金されます。Blast がローンチまたは中止するまで SUI はロックされます。'
-  sale_add_sui: '{{sui}} SUI を追加'
-  sale_signing: 'ウォレットで承認してください…'
-  sale_dilution: 'セールが目標を超えた場合、各購入者の KARES は減り、超過分の SUI は受け取り時に返金されます。'
-  google_wallet: Google ゲームウォレット
-  loading: 読み込み中
-  final: 最終リスト · Blast への取込待ち
-  wallet: ウォレット
-  error_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
-  error_wallet_taken: このウォレットは別の X アカウントに紐付いています。
-  error_invalid_address: 0x で始まる有効な Sui アドレスを入力してください。
-  board_xp: 戦闘経験値 · ランキング
-  board_kills: モンスター討伐 · ランキング
-  board_dungeons: ダンジョン · ランキング
-  board_jobs: 職業経験値 · ランキング
-  board_marketplace: マーケット · ランキング
-  board_kolizeum: コロシアム · ランキング
-  board_zones: 発見 · ランキング
-  board_feeding: ペットの餌やり · ランキング
-  board_gathering: 採集 · ランキング
-  source_leaderboard: ランキングを上げる
-  source_social: Xに投稿
-  error_unauthorized: 先に受取ウォレットを接続して確認してください。
-  error_rate_limited: リクエストが多すぎます。少し待って再試行してください。
 tournament_page:
   level_limit_label: '登録時のレベル上限'
   level_unrestricted: '制限なし'

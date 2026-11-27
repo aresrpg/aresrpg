@@ -16,6 +16,8 @@ export type MasteryState = Readonly<{
   offers: readonly MasteryOfferRow[]
   pending: string | null
   error: string | null
+  /** The purchase the shop is showing: set when it lands, cleared when its window closes. */
+  purchased: Readonly<{ item_type: string; count: number }> | null
 }>
 
 export type MasteryInput =
@@ -24,9 +26,11 @@ export type MasteryInput =
   | Readonly<{ type: 'mastery/pending'; operation: string | null }>
   | Readonly<{ type: 'mastery/reconciled'; mastery: MasteryRow | null }>
   | Readonly<{ type: 'mastery/failed'; error: string }>
+  | Readonly<{ type: 'mastery/purchased'; item_type: string; count: number }>
+  | Readonly<{ type: 'mastery/purchase_closed' }>
 
 export const initial_mastery_state = (): MasteryState =>
-  Object.freeze({ loaded: false, row: null, offers: Object.freeze([]), pending: null, error: null })
+  Object.freeze({ loaded: false, row: null, offers: Object.freeze([]), pending: null, error: null, purchased: null })
 
 const with_mastery = <S extends SiteState>(state: S, mastery: MasteryState): S => Object.freeze({ ...state, mastery })
 
@@ -43,6 +47,7 @@ const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
         offers: Object.freeze(input.packet.offers),
         pending: state.mastery.pending,
         error: null,
+        purchased: state.mastery.purchased,
       })
     )
   if (input.type === 'mastery/pending')
@@ -50,24 +55,33 @@ const reduce = <S extends SiteState>(state: S, input: AppInput): S => {
   if (input.type === 'mastery/reconciled') return with_mastery(state, reconciled_mastery(state.mastery, input.mastery))
   if (input.type === 'mastery/failed')
     return with_mastery(state, Object.freeze({ ...state.mastery, pending: null, error: input.error }))
+  if (input.type === 'mastery/purchased')
+    return with_mastery(
+      state,
+      Object.freeze({ ...state.mastery, purchased: Object.freeze({ item_type: input.item_type, count: input.count }) })
+    )
+  if (input.type === 'mastery/purchase_closed')
+    return with_mastery(state, Object.freeze({ ...state.mastery, purchased: null }))
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
     return with_mastery(state, initial_mastery_state())
   return state
 }
 
 type Wallet = NonNullable<SiteState['session']['wallet']>
-/** How a Mastery write ends: only the account that started it learns the row, and the player reads a toast. */
+/** How a Mastery write ends: only the account that started it learns the row. A quest says so in a toast; a
+ *  purchase opens the shop's window on what was bought. */
 export const mastery_outcomes = ({
   dispatch,
   get_state,
   signal,
 }: Pick<SiteContext, 'dispatch' | 'get_state' | 'signal'>) => {
   const current = (wallet: Wallet): boolean => !signal.aborted && get_state().session.wallet === wallet
-  const finish = (wallet: Wallet, mastery: MasteryRow | null, message: 'quest_started' | 'offer_purchased'): void => {
+  const finish = (wallet: Wallet, mastery: MasteryRow | null, purchased?: MasteryState['purchased']): void => {
     if (!current(wallet)) return
     dispatch({ type: 'mastery/reconciled', mastery })
+    if (purchased) return dispatch({ type: 'mastery/purchased', ...purchased })
     const { copy } = get_state()
-    toast.add(copy ? copy_text(copy.mastery_page)(message) : message, 'success')
+    toast.add(copy ? copy_text(copy.mastery_page)('quest_started') : 'quest_started', 'success')
   }
   const fail = (wallet: Wallet, error: unknown): void => {
     console.error('Mastery operation failed.', error)
@@ -103,7 +117,7 @@ const observe: NonNullable<SiteModule['observe']> = (context) => {
         existing: existing?.id ?? null,
         custody: custody_character ? character_custody(custody_character) : undefined,
       })
-      .then(({ mastery }) => finish(wallet, mastery, 'offer_purchased'))
+      .then(({ mastery }) => finish(wallet, mastery, { item_type, count: count ?? 1 }))
       .catch((error: unknown) => fail(wallet, error))
   })
 }

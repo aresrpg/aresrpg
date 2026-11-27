@@ -156,3 +156,23 @@
   width: min(1080px, calc(100cqw - 24px));
   max-height: calc(100cqh - 24px);
 }
+
+/* The admin's controls in the tournament window's header: the treasury wallet, then the event button. */
+.aui-admin-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.aui-admin-controls > .aui-button {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .aui-admin-controls > .aui-button {
+    min-height: 44px;
+  }
+}

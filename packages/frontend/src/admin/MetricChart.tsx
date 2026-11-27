@@ -139,7 +139,7 @@ export const MetricChart = ({
     <div aria-label={label} className={`grid min-w-0 grid-cols-[42px_minmax(0,1fr)] gap-2 ${className}`} role="img">
       <div
         aria-hidden="true"
-        className="flex flex-col justify-between py-1 text-right text-[8px] text-faint tabular-nums"
+        className="flex flex-col justify-between py-1 text-right text-[12px] text-faint tabular-nums"
       >
         {visible_ticks.map((value, index) => (
           <span key={index}>{value === null ? '' : metric_number(value, value_kind)}</span>
@@ -204,7 +204,7 @@ export const MetricChart = ({
         </svg>
         {hovered.x !== null && hovered.at_ms !== null && hovered.values.length > 0 && (
           <div
-            className="pointer-events-none absolute top-2 z-10 min-w-28 border border-white/12 bg-bg/95 px-2.5 py-2 text-[8px] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+            className="pointer-events-none absolute top-2 z-10 min-w-28 border border-white/12 bg-bg/95 px-2.5 py-2 text-[12px] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
             data-chart-tooltip=""
             style={{
               left: `${(hovered.x / WIDTH) * 100}%`,

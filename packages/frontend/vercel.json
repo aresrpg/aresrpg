@@ -6,10 +6,6 @@
   },
   "rewrites": [
     {
-      "source": "/api/allocation",
-      "destination": "https://server.aresrpg.world/api/allocation"
-    },
-    {
       "source": "/api/share",
       "destination": "https://server.aresrpg.world/api/share"
     },

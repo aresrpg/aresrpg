@@ -140,7 +140,7 @@ change closes it.
 `src/site/routes.ts` owns the site's addresses: the pages in bar order (`/market`, `/agent`, `/staking`,
 `/leaderboards`, `/portfolio`), the game (`/world`), the docs, the agent guides and the outside links. An address the
 site does not know is corrected to `/market` with its query kept. `src/modules/location.ts` is the one owner of the
-address bar: views read `state.location` and ask for a change with `location/open`. Only `/allocation`, `/docs` and the
+address bar: views read `state.location` and ask for a change with `location/open`. Only `/docs` and the
 gift links (`/gift`, `/claim` with a bearer fragment) boot their own standalone entries. `/enoki` is the OAuth
 callback; nothing runs there.
 
@@ -207,7 +207,7 @@ The generated door table (`packages/sdk/src/doors.gen.ts`) is data: one line per
 
 The SDK reads the chain for transaction inputs. Its other reads are named one-shot exceptions that never become a
 gameplay fallback: a Party run-to checkpoint snapshot, a linked item tooltip (one session-bounded LRU), wallet finance
-(Economy, reserves, positions, balances, clock), the Blast sale reader, gift status and custody preflight before a
+(Economy, reserves, positions, balances, clock), gift status and custody preflight before a
 handover or an import. Everything else a player sees comes from the indexer through the server.
 
 ## Projection law
@@ -512,9 +512,7 @@ UpgradeCaps with the content freeze in one cold-wallet transaction.
 
 `/staking` is the token's one page, with four sections behind its hash (`#staking`, `#tokenomics`, `#mastery`,
 `#airdrop`). Its finance reads are the SDK's wallet-finance exception. The game's token features stay off until the
-launch pins `kares_coin_type` and `kares_currency`. The failed Blast sale keeps its own pinned `coin_type`, a different
-coin: `/allocation` and the sale card remain only so its buyers can take their refund, and are removed once every
-commitment is claimed.
+launch pins `kares_coin_type` and `kares_currency`.
 
 ### Wallet card and portfolio
 
@@ -536,7 +534,7 @@ Portraits render from `seed/icons/characters` masters and `seed/portraits` masks
 it also carries a hero's name, level, power and worn items, and draws the 1200 × 630 share card with the site's one
 link-card painter (`packages/frontend/social_card_render.ts`), which the build also uses for every page and docs
 card. A shared hero post links `/api/share?hero=<id>`, which the site rewrites to the game server's one share page
-(`packages/server/src/share_preview.ts`, also the allocation card's preview): a crawler cannot hold the socket, so
+(`packages/server/src/share_preview.ts`): a crawler cannot hold the socket, so
 that page reads the hero from the index and points its card tags at the poster.
 
 ## Presentation

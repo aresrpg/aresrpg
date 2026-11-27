@@ -162,6 +162,9 @@
   height: 225px;
   margin-left: -26px;
 }
+.gift-art--carousel .boxreveal__reel {
+  --reel-h: 186px;
+}
 .gift-art .boxreveal__reward-name {
   font-size: 20px;
 }

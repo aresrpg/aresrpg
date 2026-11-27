@@ -52,8 +52,6 @@ import type { ResolveName } from './suins.ts'
 import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
-import player_allocation from './modules/player_allocation.ts'
-import type { Allocation } from './allocation/runtime.ts'
 
 const log = logger(import.meta)
 // Preserve the six-character traffic floor; larger authenticated tracking sets receive
@@ -140,7 +138,6 @@ export type PlayerState = {
 
 /** What every stage's modules receive. It names no account: a public module reads public data. */
 export type PublicContext = {
-  allocation?: Allocation
   public_world: PublicWorld
   public_market: PublicMarket
   leaderboards: Leaderboards
@@ -208,9 +205,9 @@ const MODULES: readonly Mount[] = [
   { from: 'signed', module: player_inventory_observation },
   { from: 'seated', module: player_agent_status },
   { from: 'open', module: player_requests },
-  { from: 'signed', module: player_allocation },
   { from: 'open', module: player_inspection },
-  { from: 'seated', module: player_admin },
+  // The dashboard is a site page: its owner holds a signed socket, never a seat.
+  { from: 'signed', module: player_admin },
 ]
 const STAGE_RANK: Readonly<Record<Stage, number>> = Object.freeze({ open: 0, signed: 1, seated: 2 })
 
@@ -223,7 +220,6 @@ const modules_of = (stage: Stage): readonly Mount[] => MODULES.filter(({ from })
 const READ_PACKETS = new Set<string>([
   'packet/agent_observe',
   'packet/inventory_observe',
-  'packet/allocation_request',
   'packet/spectate',
   'packet/fight_preview',
   'packet/fight_nearby',
@@ -285,7 +281,6 @@ type PlayerWires = Pick<
   | 'public_market'
   | 'leaderboards'
   | 'admin'
-  | 'allocation'
   | 'game_state'
   | 'indexing_health'
 > & {
@@ -312,7 +307,7 @@ const observe = (claim: Claim, mounts: readonly Mount[], context: PublicContext)
 
 /** Mount one admitted connection — returns the ws handler's whole surface. */
 export function create_player(wires: PlayerWires): Player {
-  const { ws, claim, allocation, resolve_name, graph, pubsub, public_world, public_market, leaderboards } = wires
+  const { ws, claim, resolve_name, graph, pubsub, public_world, public_market, leaderboards } = wires
   const mounts = modules_of(claim.stage)
   const viewer = claim.stage === 'open' ? null : claim.address
   // 60 graph reads a minute (the limiter's default), held by this socket alone.
@@ -335,7 +330,6 @@ export function create_player(wires: PlayerWires): Player {
   const events = new EventEmitter()
   events.setMaxListeners(0)
   const context: PublicContext = {
-    allocation,
     resolve_name,
     admin: wires.admin,
     graph,

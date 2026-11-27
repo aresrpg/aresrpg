@@ -214,11 +214,9 @@ Before the launch:
    Compatible upgrades may precede funding. Keep Setup and UpgradeCap; funding verifies their original rewards lineage.
 2. Compile and deploy the game with both the compatibility ABI and active rewards dependency.
    Record the unfunded Economy pin. Boss settlement pays zero KARES while that Economy is unfunded.
-3. Confirm the failed Blast sale is `Cancelled` on-chain. Its buyers refund on `/allocation`. Never
-   launch while that sale can still take commitments: two KARES coins would be on sale at once.
-4. Fund the treasury wallet with the SUI seed plus gas. The seed is the only SUI the pool starts with
+3. Fund the treasury wallet with the SUI seed plus gas. The seed is the only SUI the pool starts with
    and can never be withdrawn. State the seed in `.operator/networks/<network>/launch.json`.
-5. Compare `AFTERMATH_MAINNET` in `packages/sdk/src/kares_launch.ts` with Aftermath's live
+4. Compare `AFTERMATH_MAINNET` in `packages/sdk/src/kares_launch.ts` with Aftermath's live
    `/api/addresses`. Aftermath upgrades its packages; a stale id fails the simulation, never silently.
 
 The launch, signed by the treasury, one transaction at a time:
@@ -247,7 +245,6 @@ After the launch:
 - SUI returned to the pool is a deposit that mints new liquidity tokens. Send them to `0x0` in the
   same transaction, or that liquidity is not locked.
 - The metadata authority can change the name, description and icon. Supply can only fall, by burns.
-- Delete the Blast sale pin, reader and `/allocation` once the sale holds no commitment.
 
 Rewards upgrades retain their own treasury-held UpgradeCap. A future migration must preserve
 staking principal and accrued rewards; no withdrawal or witness-rotation door is currently exposed.

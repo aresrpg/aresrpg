@@ -12,12 +12,13 @@ import {
   Check,
   Coins,
   Layers,
+  ShieldCheck,
   Sparkles,
   Store,
   Swords,
   type LucideIcon,
 } from 'lucide-react'
-import { lazy, Suspense, useCallback, useState, type ComponentType, type MouseEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ComponentType, type MouseEvent, type ReactNode } from 'react'
 
 import { LanguageCard } from '../components/AccountControls.tsx'
 import { connection_label, indexing_health_tone, status_tone } from '../components/connection_status.ts'
@@ -26,6 +27,8 @@ import { Toasts } from '../components/Toasts.tsx'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
+import { is_admin_address } from '../admin_access.ts'
+import { admin_page_open } from '../modules/admin.ts'
 import { signed_out } from '../modules/session.ts'
 import { dispatch_app, useSiteStore } from '../store.ts'
 
@@ -52,10 +55,12 @@ const PAGES: Readonly<Record<SitePage, ComponentType<{ copy: AppCopy }>>> = {
   portfolio: lazy(SITE_PAGE_LOADERS.portfolio),
 }
 
+// The admin page is no page of the bar's list: it loads for the admin address alone.
+const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
+
 // The account's surfaces load when an account exists or a dialog opens, never for a visitor who only reads.
 const WalletCard = lazy(() => import('../components/WalletCard.tsx').then((module) => ({ default: module.WalletCard })))
 const AccountDialogs = lazy(() => import('./AccountDialogs.tsx'))
-const BlastSaleBar = lazy(() => import('../kares/BlastSaleBar.tsx'))
 
 const open = (href: string) => (event: Readonly<MouseEvent>) => {
   if (!is_plain_click(event)) return
@@ -135,7 +140,12 @@ const PAGE_ICONS: Readonly<Record<SitePage, LucideIcon>> = {
  * The bar's links. Before the copy has loaded, each label holds its place. On a narrow screen the same navigation is
  * the menu's sheet, with the status card at its foot.
  */
-const SiteNav = ({ copy, page, menu }: Readonly<{ copy: AppCopy | null; page: SitePage; menu: SiteMenu }>) => {
+const SiteNav = ({
+  copy,
+  page,
+  menu,
+}: Readonly<{ copy: AppCopy | null; page: SitePage | 'admin'; menu: SiteMenu }>) => {
+  const admin = useSiteStore(({ session }) => is_admin_address(session.wallet?.address ?? null))
   const label = (key: SitePage | 'play'): ReactNode => copy?.site[key] ?? <span className="aui-skeleton site-stub" />
   const [home, ...others] = SITE_PAGES
   const link = ({ key, path }: (typeof SITE_PAGES)[number]): ReactNode => {
@@ -159,6 +169,13 @@ const SiteNav = ({ copy, page, menu }: Readonly<{ copy: AppCopy | null; page: Si
       {link(home)}
       <PlayKey copy={copy} label={label('play')} />
       {others.map(link)}
+      {admin && (
+        <SiteLink href={SITE_ADDRESSES.admin} current={page === 'admin'}>
+          <ShieldCheck className="site-nav-icon" size={19} strokeWidth={1.8} aria-hidden="true" />
+          <span>{copy?.admin}</span>
+          <Check className="site-nav-check" size={16} aria-hidden="true" />
+        </SiteLink>
+      )}
       {copy && <SiteStatus copy={copy} />}
     </nav>
   )
@@ -257,29 +274,6 @@ const BuyKares = ({ copy }: Readonly<{ copy: AppCopy | null }>) => {
   )
 }
 
-const SALE_LINE_KEY = 'aresrpg:sale-line'
-
-/**
- * The sale line's row, above the bar. The row is held from the first paint, so the page does not move when the
- * sale's state arrives; a browser that last saw no sale starts without it.
- */
-const SaleLine = ({ copy }: Readonly<{ copy: AppCopy | null }>) => {
-  const [held, hold] = useState(() => globalThis.localStorage?.getItem(SALE_LINE_KEY) !== 'off')
-  const settle = useCallback((live: boolean): void => {
-    globalThis.localStorage?.setItem(SALE_LINE_KEY, live ? 'on' : 'off')
-    hold(live)
-  }, [])
-  return (
-    <div className="site-sale" data-held={held ? '' : undefined}>
-      {copy && (
-        <Suspense fallback={null}>
-          <BlastSaleBar copy={copy} settle={settle} />
-        </Suspense>
-      )}
-    </div>
-  )
-}
-
 const SiteFooter = ({ copy: { site } }: Readonly<{ copy: AppCopy }>) => (
   <footer className="site-footer">
     <div className="site-footer-brand">
@@ -310,13 +304,13 @@ export const SiteShell = () => {
   const locale = useSiteStore((state) => state.locale)
   const pathname = useSiteStore((state) => state.location.pathname)
   const { key } = site_page_of(pathname)
-  const Page = PAGES[key]
+  const admin = useSiteStore(admin_page_open)
+  const Page = admin ? AdminPage : PAGES[key]
   const menu = useSiteMenu(pathname)
   return (
     <LocaleScope locale={locale}>
       <div className="site">
         <Ground />
-        <SaleLine copy={copy} />
         <header
           className="site-bar"
           data-menu-open={menu.open ? '' : undefined}
@@ -330,7 +324,7 @@ export const SiteShell = () => {
             </span>
             <span className="site-brand">AresRPG</span>
           </SiteLink>
-          <SiteNav copy={copy} page={key} menu={menu} />
+          <SiteNav copy={copy} page={admin ? 'admin' : key} menu={menu} />
           <DocsMark copy={copy} />
           {copy && (
             <LanguageCard

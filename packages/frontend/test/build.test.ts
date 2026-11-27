@@ -70,15 +70,14 @@ test('every shareable route has one preview card, and a page shell that lost a p
     const docs = view.kind === 'reference' ? docs_path(view.section, view.id, view.place) : docs_path(view.section)
     return (
       SITE_PAGES.some(({ path }) => path === route) ||
-      [SITE_ADDRESSES.world, SITE_ADDRESSES.allocation].includes(route as '/world') ||
+      route === SITE_ADDRESSES.world ||
       is_gift_entry(route, '#$key') ||
       (is_docs_path(route) && docs === route)
     )
   }
   expect(SITE_PAGES.map(({ path }) => path).filter((path) => !routes.includes(path))).toEqual([])
   expect(routes.filter((route) => !served(route))).toEqual([])
-  for (const route of ['/world', '/docs', '/docs/items', '/gift', '/claim', '/allocation'])
-    expect(routes).toContain(route)
+  for (const route of ['/world', '/docs', '/docs/items', '/gift', '/claim']) expect(routes).toContain(route)
   // Entity cards are the docs reference pages that resolve their object; every class shows its own portrait.
   const entities = catalog.cards.filter(({ route }) => route.split('/').length === 4)
   expect(entities.map(({ route }) => docs_view(route))).toEqual(

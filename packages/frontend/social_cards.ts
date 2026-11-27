@@ -53,7 +53,6 @@ type Spell = Readonly<{ classe: string; name: string; unlock_level: number }>
 type Words = Readonly<Record<string, string>>
 type Copy = Readonly<{
   agent_page: Words
-  allocation_page: Words
   characters_page: Readonly<{ stat: Words }>
   docs_page: Readonly<{ title: string; overview: Readonly<{ counts: Words }> }>
   encyclopedia_page: Readonly<{
@@ -231,24 +230,6 @@ const PAGE_CARDS: readonly PageSpec[] = Object.freeze([
     show: ({ copy, mosaic, counts }) => ({
       bar: { crumb: [copy.docs_page.title] },
       object: { kind: 'mosaic', arts: mosaic, counts },
-    }),
-  },
-  {
-    image: 'allocation',
-    routes: [SITE_ADDRESSES.allocation],
-    tone: 'sky',
-    headline: 'Earn a spot in the KARES sale.',
-    sub: 'Climb a leaderboard or post on X to get a Veteran or Member spot for the KARES sale on Blast.',
-    show: ({ copy }) => ({
-      bar: { crumb: ['KARES sale'] },
-      object: {
-        kind: 'sale',
-        mark: 'KARES',
-        cards: (['member', 'veteran'] as const).map(
-          (tier) =>
-            [frontend_file(`./public/branding/kares/card-${tier}.webp`), word(copy.allocation_page, tier)] as const
-        ),
-      },
     }),
   },
 ] satisfies readonly PageSpec[])

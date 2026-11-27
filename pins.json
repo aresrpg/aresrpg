@@ -12274,14 +12274,6 @@
     "shared_version": "1"
   },
   "kares_treasury": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
-  "blast_presale": {
-    "id": "0x2d8a594aa263e02eba9049f7f37be4fe8a7309a2635a05165b2df7a7455f9b7b",
-    "package_original": "0x1f44a8e9fab4380228fe9c1bcc27d99b7f6ea76a8e18b5c178ca18cd46fb33c4",
-    "package": "0x1f44a8e9fab4380228fe9c1bcc27d99b7f6ea76a8e18b5c178ca18cd46fb33c4",
-    "package_version": "0xd9523cb850fac1d2ac84a31dbc1335e412e1b778d409b091c5eefec3f6133ba7",
-    "url": "https://www.blast.fun/presale/0x2d8a594aa263e02eba9049f7f37be4fe8a7309a2635a05165b2df7a7455f9b7b",
-    "coin_type": "0x8a24551ca06b0688a1127ad0651a9dc89bce3a1899e492228169f083a84c5047::kares::KARES"
-  },
   "kares_coin_type": "0x079e59bdc768130c8c5f0f4e1f4ce33380960af0699b1281ffbf52aedbcf20e2::kares::KARES",
   "kares_currency": {
     "id": "0x7d4182b4484ba3964e9c674b5f46b7d57e84b12159f788cc75298f76f77f0667",

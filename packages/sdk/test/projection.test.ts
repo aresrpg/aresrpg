@@ -32,15 +32,6 @@ import {
   generate_seed_doors,
   seed_doors,
 } from '../scripts/generate_seed_doors.mjs'
-import {
-  blast_claim_preview,
-  blast_tokens_for,
-  create_blast_reader,
-  decode_blast_commitment,
-  decode_blast_presale,
-  project_blast_presale,
-} from '../src/blast.ts'
-import { blast_purchase_config } from '../src/blast_purchase.ts'
 import { SDK, absorb_receipt } from '../src/client.ts'
 import { DOORS } from '../src/doors.gen.ts'
 import { fight_actions } from '../src/fight.ts'
@@ -63,10 +54,7 @@ import { name_record_bytes } from '../src/suins_record.ts'
 import rolled from '../../indexer/tests/rolled_stats.localnet.json'
 
 import { changed, fake_client, id, pins as base_pins, sample_gas, shared_row, signer } from './helpers/transport.ts'
-import blast_capture from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
-import blast_live from './fixtures/blast_presale_live.mainnet.json' with { type: 'json' }
 import pet from './fixtures/item_snapshot_pet.mainnet.json'
-import kares_sale from './fixtures/kares_presale.mainnet.json' with { type: 'json' }
 import policies from './fixtures/marketplace_policies.mainnet.json'
 import mushroom from './fixtures/mainnet_mushroom_lacquer.json'
 import rewards from './fixtures/rewards.testnet.json'
@@ -249,84 +237,6 @@ test('captured KARES rewards objects decode with their pinned supply, reserves a
     KARES_ALLOCATION.rewards - 191_251_902_586n,
     31,
   ])
-})
-
-test('captured Blast presales decode: commitments, the live deployment and the KARES sale schedule', async () => {
-  const bytes = new Uint8Array(16)
-  bytes.set([0x00, 0xe8, 0x76, 0x48, 0x17], 0)
-  bytes.set([0x00, 0x74, 0x3b, 0xa4, 0x0b], 8)
-  expect(decode_blast_commitment(bytes)).toEqual({ quote: 100000000000n, wallet_cap: 50000000000n })
-  let failure: Error | null = null
-  const test_pins = {
-    network: 'testnet' as const,
-    kares_coin_type: `${id(3)}::token::TOKEN`,
-    blast_presale: { id: id(1), package_original: id(2), url: 'https://www.blast.fun/' },
-  }
-  const commitments = create_blast_reader({ network: 'testnet', pins: test_pins }, {
-    network: 'testnet',
-    core: {
-      getDynamicField: async () => {
-        if (failure) throw failure
-        return { dynamicField: { value: { bcs: bytes } } }
-      },
-    },
-  } as never)
-  expect(await commitments.commitment(id(5))).toEqual({ quote: 100000000000n, wallet_cap: 50000000000n })
-  failure = new ObjectError('notExists', 'missing', { reason: 'notFound' })
-  expect(await commitments.commitment(id(5))).toBeNull()
-  failure = new Error('rpc down')
-  await expect(commitments.commitment(id(5))).rejects.toThrow('rpc down')
-  // Mainnet object 0x247165…2b57e, version 1099635701, captured 2026-11-20: Blast's live deployment.
-  const live = decode_blast_presale(blast_live.objects[0]!.json)
-  expect(live).toMatchObject({ lifecycle: 'Migrated', total_commitments: 3000000000000n, public_ms: null })
-  expect(project_blast_presale(live, 1795164432939n, '1099635701').phase).toBe('complete')
-  // Mainnet object 0x091759…facba, version 1056407653, captured 2026-10-21: no uncapped phase.
-  expect(decode_blast_presale(blast_capture.objects[0].json).public_ms).toBeNull()
-  // Mainnet object 0x2d8a59…f9b7b, version 1101083029, captured 2026-11-21: the KARES sale.
-  const [sale] = kares_sale.objects
-  const fields = sale!.json
-  expect(decode_blast_presale(fields).public_ms).toBe(1795205043334n + 345600000n)
-  for (const none of [
-    { ...fields, uncapped: { ...fields.uncapped, access: { '@variant': 'Eligible' } } },
-    { ...fields, uncapped: { ...fields.uncapped, starts_after_ms: fields.duration_ms } },
-  ])
-    expect(decode_blast_presale(none).public_ms).toBeNull()
-  const sale_package = sale!.type.slice(0, 66)
-  const sale_pins = {
-    network: 'mainnet' as const,
-    kares_coin_type: sale!.type.slice(sale!.type.indexOf('<') + 1).split(',')[0],
-    blast_presale: {
-      id: sale!.objectId,
-      package_original: sale_package,
-      package: sale_package,
-      package_version: blast_live.objects[1]!.objectId,
-      url: `https://www.blast.fun/presale/${sale!.objectId}`,
-    },
-  }
-  const clock = {
-    objectId: id(6),
-    owner: { $kind: 'Shared' },
-    type: '0x2::clock::Clock',
-    json: { timestamp_ms: '1795300000000' },
-  }
-  const reader = create_blast_reader({ network: 'mainnet', pins: sale_pins }, {
-    network: 'mainnet',
-    core: { getObjects: async () => ({ objects: [sale, clock] }) },
-  } as never)
-  const progress = await reader.read()
-  expect(progress).toMatchObject({
-    phase: 'live',
-    committed: 1075033011533n,
-    target: 60_000_000_000_000n,
-    token_allocation: 400_000_000_000_000_000n,
-  })
-  expect(blast_purchase_config(sale_pins)).toMatchObject({ id: sale!.objectId, package: sale_package })
-  expect(blast_tokens_for(progress!, 60_000_000_000n)).toBe(400_000_000_000_000n)
-  expect(blast_claim_preview(progress!, 1n)).toBeNull()
-  expect(blast_claim_preview({ ...progress!, phase: 'complete', committed: 2n, target: 1n }, 1n)).toEqual({
-    tokens: 200_000_000_000_000_000n,
-    refund: 0n,
-  })
 })
 
 test('captured item snapshots: rolled stats decode exactly and a never-fed mainnet pet has zero power', async () => {

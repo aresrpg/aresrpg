@@ -64,7 +64,6 @@ test('declared intents parse to their exact shape', () => {
       characters_days: 90,
     },
     { type: 'packet/fight_action', fight: '0xf', action: { type: 'move_to', fighter: '1', path: ['2', '3'] } },
-    { type: 'packet/allocation_request', id: 1, request: { action: 'status' } },
   ])
     expect(parse(packet)).toEqual(packet as never)
   // the server stream is trusted: the client decodes JSON syntax only
@@ -91,14 +90,9 @@ test('malformed intents throw, never coerce', () => {
   refused({ type: 'packet/fight_action', fight: '0xf', action: nested }, /nested too deeply/)
 })
 
-test('undeclared surfaces are refused and the campaign request stays bounded', () => {
-  for (const type of ['packet/duel', 'packet/agent_setup_request', 'request', 'subscribe'])
+test('undeclared surfaces are refused', () => {
+  for (const type of ['packet/duel', 'packet/agent_setup_request', 'packet/allocation_request', 'request', 'subscribe'])
     refused({ type, id: 1, channel: 'evt:fight:0x1' }, /unknown packet type/)
-  const allocation = (request: unknown) => ({ type: 'packet/allocation_request', id: 1, request })
-  refused(allocation({ action: 'wallet_remove', address: 'a'.repeat(67) }))
-  refused(allocation({ action: 'wallet_verify', nonce: 'a'.repeat(64), signature: 's'.repeat(12001) }))
-  for (const action of ['submit', 'link_x', '__proto__', 'constructor']) refused(allocation({ action, address: '0x1' }))
-  refused(allocation(null))
 })
 
 test('the chat door bounds parts and length, refuses emptiness, and macros become structured parts', () => {

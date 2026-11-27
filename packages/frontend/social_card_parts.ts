@@ -349,7 +349,6 @@ export type PageObject =
   | Readonly<{ kind: 'podium'; arts: readonly [first: string, second: string, third: string] }>
   | Readonly<{ kind: 'bag'; tabs: readonly string[]; lit: number; arts: readonly string[] }>
   | Readonly<{ kind: 'mosaic'; arts: readonly string[]; counts: readonly (readonly [count: number, label: string])[] }>
-  | Readonly<{ kind: 'sale'; cards: readonly (readonly [art: string, tier: string])[]; mark: string }>
 
 const AREA = Object.freeze({ left: 640, top: 152, right: 1160, bottom: 588 })
 const WHOLE: Box = [AREA.left, AREA.top, AREA.right - AREA.left, AREA.bottom - AREA.top]
@@ -490,39 +489,6 @@ const mosaic = async (kit: Kit, arts: readonly string[]): Promise<void> => {
     contain(kit.ctx, image, x + 14, y + 14, size - 28, size - 28)
   })
 }
-/** A tilted sale card: its authored art, its tier top left, the helmet and the mark bottom left. */
-const sale_card = async (kit: Kit, [art, tier]: readonly [string, string], mark: string, place: Box): Promise<void> => {
-  const { ctx, colors, helmet } = kit
-  const [x, y, width, degrees] = place
-  const image = await load_art(art)
-  const height = (width * image.height) / image.width
-  const [left, top] = [-width / 2, -height / 2]
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate((degrees * Math.PI) / 180)
-  ctx.save()
-  rrect(ctx, left, top, width, height, 7)
-  ctx.clip()
-  ctx.drawImage(image, left, top, width, height)
-  say(ctx, tier, left + width * 0.06, top + height * 0.27, { weight: 800, size: height * 0.17, color: colors.ink })
-  const helmet_height = height * 0.13
-  const helmet_width = (helmet_height * helmet.width) / helmet.height
-  ctx.drawImage(helmet, left + width * 0.06, height / 2 - height * 0.21, helmet_width, helmet_height)
-  say(ctx, mark, left + width * 0.085 + helmet_width, height / 2 - height * 0.11, {
-    weight: 800,
-    size: height * 0.085,
-    color: colors.ink,
-    track: 0.08,
-  })
-  ctx.restore()
-  frame(ctx, [left, top, width, height], 7, colors.ink, 0.16)
-  ctx.restore()
-}
-const SALE_PLACES: readonly Box[] = Object.freeze([
-  [820, 292, 360, -6],
-  [990, 452, 360, 5],
-])
-
 /** Paints a page card's object. The world capture is the card's backdrop, so it has nothing to add here. */
 export const paint_object = async (kit: Kit, object: PageObject): Promise<void> => {
   switch (object.kind) {
@@ -540,9 +506,5 @@ export const paint_object = async (kit: Kit, object: PageObject): Promise<void> 
       return bag(kit, object)
     case 'mosaic':
       return mosaic(kit, object.arts)
-    case 'sale':
-      for (const [index, card] of object.cards.slice(0, 2).entries())
-        await sale_card(kit, card, object.mark, SALE_PLACES[index]!)
-      return undefined
   }
 }

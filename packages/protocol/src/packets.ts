@@ -11,7 +11,6 @@ import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 import type { TournamentLink, TournamentRow } from './tournament.ts'
-import { valid_allocation_request, type AllocationRequest, type AllocationResult } from './allocation.ts'
 import {
   valid_agent_observation,
   valid_agent_status,
@@ -29,7 +28,6 @@ export type {
 export { DIRECT_UNSETTLED, RUN_ENDINGS, run_ending } from './agent_identity.ts'
 export type { TournamentLink, TournamentRow, TournamentTeam, TournamentSeat, TournamentMatch } from './tournament.ts'
 export { coin_share, tournament_coin_claims, TOURNAMENT_RESULTS_MS, recent_tournament_result } from './tournament.ts'
-export type { AllocationRequest, AllocationResult } from './allocation.ts'
 import { parse_inspection_request, type InspectionQuery, type InspectionResult } from './inspection.ts'
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
 import {
@@ -731,7 +729,6 @@ export type ClientPackets = {
   'packet/inventory_observe': { id: number; observation: AgentObservation | null }
   /** A hosted bot's own status, relayed to the owner observing its account. Never stored. */
   'packet/agent_status': { status: AgentStatus }
-  'packet/allocation_request': { id: number; request: AllocationRequest }
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
   'packet/position': {
@@ -809,7 +806,6 @@ export type ServerPackets = {
     selected_character_id: string | null
     failed: boolean
   }
-  'packet/allocation_response': { id: number; result: AllocationResult }
   'packet/signature_request': { payload: string }
   'packet/connection_accepted': Claim
   'packet/pong': { id: number }
@@ -1172,14 +1168,6 @@ const REQUEST_PARSERS = new Map<string, (packet: Record<string, unknown>) => Cli
     'packet/ping',
     (packet) => {
       if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')
-      return packet as ClientPacket
-    },
-  ],
-  [
-    'packet/allocation_request',
-    (packet) => {
-      if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0 || !valid_allocation_request(packet.request))
-        throw new Error('invalid allocation request')
       return packet as ClientPacket
     },
   ],

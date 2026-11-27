@@ -556,7 +556,10 @@ mastery_page:
   points_missing: 还差{{points}}点
   buy: 购买 · {{cost}}点
   quest_started: 每日任务已分配。
-  offer_purchased: 已购买精通奖励。
+  offer_purchased: '购买成功！'
+  purchase_inventory: '在背包中查看'
+  purchase_open: '立即打开'
+  purchase_arriving: '购买的物品正在送达…'
 airdrop_page:
   reward_title: '你收到了礼物！'
   reward_received: '你收到了{items}！'
@@ -2230,17 +2233,6 @@ kares_page:
   daily_cap_note: '从设置时刻起计算的每日首领奖励支付上限，并非实际释放量。未使用额度不累积。'
   other_networks: '其他网络 · EVM / Solana'
   sui_wallet_required: '请选择 Sui 钱包以使用此功能。'
-  blast_soon: '代币即将在 Blast 发售'
-  blast_live: 'KARES 正在发售'
-  blast_closing: '销售结束 · 等待结算'
-  blast_funded: '筹款完成 · 等待上线'
-  blast_complete: 'KARES 已在 Blast 上线'
-  blast_cancelled: '销售取消 · 可申请退款'
-  blast_loading: '正在查询 Blast 销售状态…'
-  blast_unavailable: '暂时无法获取销售状态'
-  blast_note: '一起创造 AresRPG 的新篇章。'
-  blast_action: '前往 Blast'
-  blast_progress: '筹款进度'
   upgradeability_note: '奖励合约在项目最终冻结前仍可升级。新增代币铸造始终禁用。'
   claim_batch: '领取 {{total}} 个仓位中的 {{count}} 个'
   withdraw_batch: '每次最多提取 {{count}} 个仓位。重复操作可提取剩余质押。'
@@ -2301,7 +2293,6 @@ kares_page:
   kares_missing: KARES不足
   language: 语言
   community_detail: '该储备为 PvP 竞赛和赛季排行榜奖励提供资金。国库手动分配已解锁的代币。'
-  supply_detail: '仅发行一次，不再增发。销毁代币会减少供应量。'
   emissions_detail: '所有奖励均使用已有代币。发放奖励不会增发代币。'
   staking_unavailable: 此网络尚未开放质押。
   combat_rewards: 首领奖励
@@ -2821,128 +2812,6 @@ loading_screen:
   final_checks: '最后准备'
   ready: '冒险已准备就绪。'
 
-allocation_page:
-  error_connection_timeout: '服务器响应超时。请重新连接。'
-  error_connection_failed: '与服务器的连接已断开。请重新连接。'
-  error_connection_replaced: '该钱包已在其他标签页连接。准备好后可在此重新连接。'
-  error_restore_timeout: '钱包恢复超时。请重新连接钱包。'
-  connecting: '正在连接并验证钱包'
-  restoring: '正在恢复钱包'
-  reconnect: '重新连接'
-  error_title: '无法完成操作'
-  share_post: '我获得了 @blastdotfun 上 KARES 发售的 {{tier}} 白名单名额。查看你的名额：'
-  menu_title: '查看你的白名单名额'
-  menu_note: 'KARES 发售的资深玩家与成员配额。'
-  menu_action: '查看配额'
-  before: 超额认购调整前
-  buy_up_to: 最高可购买
-  no_spot: 本次未获得名额
-  source_reserved: 预留名额
-  source_pending: 等待评选
-  link_wallets: 关联钱包
-  wallet_rule: 使用每个钱包签名以验证所有权。
-  wallet_rule_sale: '关联拥有名额的钱包，然后在它的卡片上购买。'
-  verified: 已验证
-  remove_wallet: 移除{{wallet}}
-  add_wallet: 关联 Sui 钱包
-  wallet_count: '{{count}} / {{max}} 个钱包'
-  close: 关闭
-  signature_note: 签署免费消息，不会发起交易或付款。
-  no_wallet_app: 请安装 Sui 钱包。
-  wallet_failed: 钱包连接失败，请重试。
-  edit: 编辑
-  cancel: 取消
-  save: 保存
-  board_legend: 各榜单名额：Veteran / Member
-  play: 游玩 AresRPG
-  sale_title: 发售将在 Blast 进行
-  sale_time: '发售日期和时间将另行公布。'
-  sale_public: '没有名额？请关注 Blast 上的公开销售。'
-  results_title: '活动结果'
-  results_note: 发售前在卡片上查看结果。
-  results_note_sale: '白名单已确定。白名单钱包在本页面购买，以其上限为准。'
-  spot_gives: 名额权益
-  signing: 请在钱包中确认签名…
-  no_spot_yet: 尚未获得名额
-  your_allocation: 你的分配
-  total_cap: '{{count}} 个名额合计最高 {{sui}} SUI'
-  allocation_note: 登录并关联钱包以查看名额。
-  footer: 名额规定的是出资上限，而非固定代币数量。
-  error_wallet_limit: 最多关联十个钱包，包含 Google 钱包。
-  title: KARES 白名单
-  veteran: Veteran
-  member: Member
-  public_note: 公开参与遵循 Blast 的销售条款。结果可能仍在等待审核。
-  recipient: 接收钱包
-  preview: 预览链接
-  share: 分享
-  dilution: 认购上限不代表保证获得的代币数量。超额认购时，所有买家按相同比例稀释。
-  sale_soon: '即将开售'
-  sale_live: '正在发售'
-  sale_closing: '发售已结束'
-  sale_funded: '等待上线'
-  sale_complete: 'KARES 已上线'
-  sale_cancelled: '发售已取消'
-  sale_spots_open: '你的名额已开放'
-  sale_ends_in: '{{time}} 后结束'
-  sale_public_in: '{{time}}后向所有人开放'
-  sale_public_now: '现已向所有人开放'
-  sale_opens_in: '{{time}} 后开放'
-  sale_opens_soon: '即将开放'
-  sale_countdown: '{{days}}天 {{hours}}小时 {{minutes}}分'
-  sale_raised: '已募集'
-  sale_bought: '已购买'
-  sale_in_wallet: '此钱包余额'
-  sale_receive: '你将获得'
-  sale_spot_after: '购买后名额'
-  sale_left_in_wallet: '钱包剩余'
-  sale_refund: '退回 SUI'
-  sale_signed: '已登录'
-  sale_not_connected: '未连接'
-  sale_buy: '购买 KARES'
-  sale_buy_amount: '用 {{sui}} SUI 购买 KARES'
-  sale_not_ready: '名额尚未就绪'
-  sale_connect_buy: '连接 {{wallet}} 以购买'
-  sale_connect_claim: '连接 {{wallet}} 以领取'
-  sale_claim: '领取 KARES'
-  sale_claim_refund: '领取 {{sui}} SUI 退款'
-  sale_claim_after: '上线后可领取'
-  sale_waiting: '等待 Blast 上线 KARES'
-  sale_settled: '没有可领取的内容'
-  sale_checking: '正在检查你的名额…'
-  sale_committed: '已投入 +{{sui}} SUI'
-  sale_claimed: '已领取'
-  sale_receipt: '交易记录'
-  sale_failed: '交易未完成。请检查钱包后重试。'
-  sale_amount: '金额'
-  sale_amount_sui: 'SUI 金额'
-  sale_wallet_max: '此钱包最多可购买 {{sui}} SUI。'
-  sale_spot_left: '你的名额还剩 {{sui}} SUI。'
-  sale_max: '最多 {{sui}}'
-  sale_terms: '超额认购时 KARES 会减少，多余的 SUI 在领取时退回。在 Blast 上线或取消发售前，SUI 保持锁定。'
-  sale_add_sui: '充值 {{sui}} SUI'
-  sale_signing: '请在钱包中确认…'
-  sale_dilution: '如果发售超过目标，每位买家获得的 KARES 会减少，多余的 SUI 在领取时退回。'
-  google_wallet: Google 游戏钱包
-  loading: 正在加载活动
-  final: 最终名单 · 等待 Blast 导入
-  wallet: 钱包
-  error_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
-  error_wallet_taken: 此钱包已绑定其他 X 账号。
-  error_invalid_address: 请输入以 0x 开头的有效 Sui 地址。
-  board_xp: 战斗经验 · 排行榜
-  board_kills: 击杀怪物 · 排行榜
-  board_dungeons: 地下城 · 排行榜
-  board_jobs: 专业经验 · 排行榜
-  board_marketplace: 市场 · 排行榜
-  board_kolizeum: 竞技场 · 排行榜
-  board_zones: 发现区域 · 排行榜
-  board_feeding: 宠物喂养 · 排行榜
-  board_gathering: 采集 · 排行榜
-  source_leaderboard: 提升排行榜名次
-  source_social: 在 X 发帖
-  error_unauthorized: 请先连接并验证接收钱包。
-  error_rate_limited: 请求过多，请稍后重试。
 tournament_page:
   level_limit_label: '报名等级上限'
   level_unrestricted: '不限'

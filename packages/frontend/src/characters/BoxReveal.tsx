@@ -158,7 +158,7 @@ export const BoxReveal = ({
             <h2>{t(PHASE_TITLE[phase])}</h2>
           </header>
           <div className="boxreveal__body">
-            <div className="boxreveal__grid">
+            <div className="boxreveal__grid" data-single={count === 1 ? '' : undefined}>
               {Array.from({ length: count }, (_, index) => (
                 <div
                   key={index}

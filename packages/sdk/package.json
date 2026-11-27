@@ -33,7 +33,6 @@
     "./admin-overview": "./src/admin_overview.ts",
     "./deployment-admin": "./src/deployment_admin.ts",
     "./seed-ids": "./src/seed_ids.ts",
-    "./blast": "./src/blast.ts",
     "./freeze-targets": "./src/freeze_targets.ts",
     "./gift": "./src/gift_contract.ts",
     "./giftcard-batch": "./src/giftcard_batch.ts",

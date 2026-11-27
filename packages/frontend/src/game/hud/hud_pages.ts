@@ -12,5 +12,4 @@ export const HUD_PAGE_META: Readonly<
 > = {
   mastery: { label: 'mastery', icon: 'mastery', class_name: 'mastery-window' },
   kolizeum: { label: 'kolizeum', icon: 'kolizeum', class_name: 'arena-window' },
-  admin: { label: 'admin', icon: 'admin', class_name: 'admin-window' },
 }

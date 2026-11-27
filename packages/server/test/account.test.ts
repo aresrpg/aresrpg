@@ -96,8 +96,6 @@ test('an open socket reads the market, rankings and profiles anonymously; accoun
       { type: 'packet/spectate', character_id: '0xabc', fight: '0xf1' },
       { type: 'packet/agent_observe', id: 1, observation },
       { type: 'packet/inventory_observe', id: 2, observation },
-      { type: 'packet/allocation_request', id: 3, request: { action: 'status' } },
-      { type: 'packet/admin_request', id: 4, kind: 'overview_section', section: 'revenue', days: 1 },
       {
         type: 'packet/agent_status',
         status: { ready: true, event_fence: 1, sampled_at: 1, state: 'idle', runs: [], direct: null },

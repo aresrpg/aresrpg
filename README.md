@@ -30,7 +30,7 @@ falls back to mainnet. Run the frontend normally for the selected network.
 
 The project issues KARES itself (`packages/currency`) and locks its market liquidity in one Aftermath
 pool at launch. The site's `/staking` page hosts staking and shows the token's allocations in its
-Tokenomics section. The earlier Blast presale failed; its sale card and `/allocation` remain only for refunds.
+Tokenomics section. The earlier Blast presale failed.
 
 Solana bridge reads use the same-origin `/api/solana` function. `SOLANA_RPC_URL` is
 server-only configuration.

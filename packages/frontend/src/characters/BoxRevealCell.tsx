@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { CSSProperties } from 'react'
-
 import { items_by_type } from '../content/items.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import type { CopyText } from '../i18n/copy.ts'
 
-import { BoxCarousel } from './BoxCarousel.tsx'
+import { BoxCarousel, BoxSparks } from './BoxCarousel.tsx'
 import type { BoxPhase } from './useBoxAnimation.ts'
 export type { BoxPhase } from './useBoxAnimation.ts'
 export type BoxResult = Readonly<{ claim_id: string; item_type: string; amount: number }>
@@ -18,15 +16,7 @@ const OpeningBox = ({ item_type }: Readonly<{ item_type: string }>) => (
     <div className="boxreveal__box">
       <img alt="" className="boxreveal__box-art" draggable={false} src={item_detail_icon(item_type) ?? undefined} />
     </div>
-    <div aria-hidden="true" className="boxreveal__sparks">
-      {Array.from({ length: 10 }, (_, index) => (
-        <span
-          className={`boxreveal__spark boxreveal__spark--${index % 2 ? 'cyan' : 'gold'}`}
-          key={index}
-          style={{ '--i': index } as CSSProperties}
-        />
-      ))}
-    </div>
+    <BoxSparks />
     <div aria-hidden="true" className="boxreveal__flash" />
   </div>
 )
