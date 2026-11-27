@@ -17,14 +17,14 @@
     "@aresrpg/protocol": "workspace:*",
     "@aresrpg/sdk": "workspace:*",
     "@mysten/sui": "2.39.1",
-    "falkordb": "^7.0.0",
-    "ioredis": "^6.0.0",
+    "falkordb": "^7.0.1",
+    "ioredis": "^6.1.0",
     "pino": "^10.4.0",
     "yaml": "^2.9.1"
   },
   "devDependencies": {
     "typescript": "~6.0.3",
-    "@types/bun": "^1.4.4"
+    "@types/bun": "^1.4.5"
   },
   "exports": {
     "./suins": "./src/suins.ts",
