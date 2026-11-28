@@ -308,6 +308,37 @@ describe('planning failure', () => {
       expect(command_issue('failed', `Error: ${code}`)).toBe(code)
       expect(public_command_error('failed', code)).toBe(code)
     }
+    // A failure names what happened, in words made only of our own Move names and codes: the chain refused it
+    // before signing (nothing spent), it ran and failed (gas spent), or its outcome is not known.
+    const abort =
+      "abort code: 1712, in '0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::fight::close'"
+    for (const [stored, code] of [
+      [
+        `Error: [sdk] dry run failed — transaction NOT submitted (zero gas): ${abort}`,
+        'chain_refused:fight_close_1712',
+      ],
+      [
+        `Error: [sdk] transaction 6ccMkZqMcNBX8JLVKA55j38QooMgVCxxvztgYxQbsY3e failed on-chain: ${abort}`,
+        'chain_failed:fight_close_1712',
+      ],
+      [
+        'Error: [sdk] transaction outcome unknown: 6ccMkZ; check this transaction before trying again',
+        'outcome_unknown',
+      ],
+      // A settled receipt keeps the chain's own words, with no SDK prefix: it ran, so its gas was spent.
+      [abort, 'chain_failed:fight_close_1712'],
+      // An earlier submission is still being settled: this command was never sent.
+      [
+        'Error: [sdk] previous transaction recovered: 6ccMkZ; refresh your game state before trying again',
+        'command_failed',
+      ],
+      ['Error: something private about redis://user:secret@host', 'command_failed'],
+      ['localhost:6379', 'command_failed'],
+    ] as const) {
+      expect(command_issue('failed', stored)).toBe(code)
+      expect(public_command_error('failed', stored)).toBe(code)
+      expect(public_command_error('failed', code)).toBe(code)
+    }
   })
   test('unexpected planning failure waits visibly, re-evaluates, and reports once after commit', async () => {
     const f = await fixture()

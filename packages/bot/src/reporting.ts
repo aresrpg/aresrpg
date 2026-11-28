@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { init, type ErrorEvent } from '@sentry/bun'
 
-import { PLANNING_FAULT } from './planning_failure.ts'
+import { command_issue, PLANNING_FAULT } from './planning_failure.ts'
 
 // Telemetry drain only; it never extends a gameplay lease or transaction admission.
 const REPORT_FLUSH_MS = 2000
@@ -92,7 +92,10 @@ export const create_reporting = (
     const at = safe_stack(error)
       .toReversed()
       .map(({ filename, lineno }) => `${filename}:${lineno}`)
-    log(JSON.stringify({ code: event.message, context: event.contexts?.operation, at }))
+    // The failure's public name, built only from fixed words and our own Move names: what the player's
+    // client is told, so a log line can be matched to a report without the private message.
+    const issue = command_issue('failed', error)
+    log(JSON.stringify({ code: event.message, issue, context: event.contexts?.operation, at }))
     client?.captureEvent(event)
   }
   return {

@@ -10,6 +10,7 @@ import {
   is_item_packet,
   fold_catalogue,
   packet_rows_merged,
+  stack_merge_target,
   close_trade_projection,
   type CatalogueProjection,
 } from '@aresrpg/protocol/inventory'
@@ -111,6 +112,13 @@ export const profession_inventory = (state: ActorInventory | undefined, kiosk: s
   if (!inventory_read(state)) throw new Error('inventory_unavailable')
   return available_inventory_items(state.items, encumbered_asset_ids(state.listings, state.trades), kiosk)
 }
+
+/** The pile that new units of a type join: the largest free one in the kiosk. Null mints a new pile,
+ * which an inventory not read yet also does, because loot and a harvest never wait for a bag. */
+export const pile_of = (state: ActorInventory | undefined, kiosk: string, item_type: string): string | null =>
+  inventory_read(state)
+    ? stack_merge_target(state.items, encumbered_asset_ids(state.listings, state.trades), item_type, kiosk)
+    : null
 
 export const inventory_projected = (receipt: Receipt, inventory: ActorInventory | undefined) => {
   const version = receipt_version(receipt)

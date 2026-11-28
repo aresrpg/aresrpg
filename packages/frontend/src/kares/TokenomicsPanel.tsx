@@ -65,10 +65,12 @@ const LedgerAmount = ({ value }: Readonly<{ value: bigint | null | undefined }>)
 const LedgerRow = ({
   label,
   value,
+  share,
   note,
 }: Readonly<{
   label: string
   value: bigint | null | undefined
+  share?: string | null
   note?: string
 }>) => (
   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5 border-t border-line py-2.25">
@@ -78,6 +80,7 @@ const LedgerRow = ({
       data-empty={value == null || undefined}
     >
       <LedgerAmount value={value} />
+      {share && <small className="ml-[0.5em] text-xs font-normal whitespace-nowrap text-muted">({share})</small>}
     </dd>
     {note && <dd className="col-span-full text-left font-ui text-xs/[1.4] text-faint">{note}</dd>}
   </div>
@@ -159,7 +162,7 @@ const TokenomicsPanel = ({
   const locale = useLocale()
   const { amount, number } = useNumbers()
   const reading = tokenomics_reading(state)
-  const { phase, snapshot, burned, circulating } = reading
+  const { phase, snapshot, burned, circulating, staked_share } = reading
   const market = market_reading(reading, useSuiUsd(env.network === 'mainnet'))
   const status = {
     loading: copy.loading,
@@ -280,7 +283,13 @@ const TokenomicsPanel = ({
             <dl>
               <LedgerRow label={copy.pool_held} value={values.pool.kares_rewards} note={copy.pool_held_note} />
               <LedgerRow label={copy.pool_forecast} value={values.pool.daily_kares} note={copy.pool_forecast_note} />
-              <LedgerRow label={copy.total_staked} value={values.pool.total_staked} />
+              <LedgerRow
+                label={copy.total_staked}
+                value={values.pool.total_staked}
+                share={
+                  staked_share === null ? null : number(staked_share, { style: 'percent', maximumFractionDigits: 1 })
+                }
+              />
             </dl>
           </article>
           <article className={POOL}>

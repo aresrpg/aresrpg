@@ -30,6 +30,11 @@ export const tokenomics_reading = (state: FinanceState) => {
     circulating: snapshot
       ? snapshot.total_supply - snapshot.pool.kares_rewards - snapshot.combat_pot.balance - snapshot.community.remaining
       : null,
+    // The part of the current supply that is staked, as a fraction. Display only.
+    staked_share:
+      snapshot && snapshot.total_supply > 0n
+        ? Number((snapshot.pool.total_staked * 1_000_000n) / snapshot.total_supply) / 1_000_000
+        : null,
   }
 }
 

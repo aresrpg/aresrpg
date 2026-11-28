@@ -29,11 +29,18 @@ const submitting = (f: Signed, patch: Partial<Lane> = {}) =>
     const lane = (await tx.get<Lane>(f.lane_key))!
     await tx.put(f.lane_key, { ...lane, ...patch, pending: { ...lane.pending!, phase: 'submitting' } })
   })
-/** The receipt stays invisible until the test shows it; every poll is counted. */
+/** The network answers nothing about the transaction until the test shows it: no receipt by digest, and no
+ * reply to the same bytes sent again. Every poll is counted. */
 const late_receipt = (f: Signed) => {
   const receipt = f.client.core.waitForTransaction
+  const send = f.client.core.executeTransaction
   const state = { visible: false, polls: 0 }
   Object.assign(f.client.core, {
+    executeTransaction: async (input: Parameters<typeof send>[0]) => {
+      const sent = await send(input)
+      if (!state.visible) throw new Error('fixture network silent')
+      return sent
+    },
     waitForTransaction: async (input: Parameters<typeof receipt>[0]) => {
       state.polls += 1
       if (!state.visible) throw new Error('fixture receipt unavailable')
@@ -46,6 +53,8 @@ const pass = async (f: Signed) => {
   await f.runtime.tick()
   await f.runtime.settle()
 }
+/** Recovery may send the held envelope again, as the same signed bytes only: one digest runs at most once. */
+const only_own_bytes = (f: Signed) => f.submissions.every((sent) => Buffer.from(sent).equals(Buffer.from(f.bytes)))
 const status = async (f: Signed) => (await f.store.read<Command>('command:signed'))!.status
 const lane_of = async (f: Signed) => (await f.store.read<Lane>(f.lane_key))!
 
@@ -81,7 +90,7 @@ test('S22 interrupted local prepared or signed work is discarded without signing
   }
 })
 
-test('S21 a submitting envelope is never resent: it waits for its exact receipt through revocation, pause, a failed heartbeat and more than one lease', async () => {
+test('S21 a submitting envelope is only ever sent again as its own signed bytes: it waits for its exact receipt through revocation, pause, a failed heartbeat and more than one lease', async () => {
   const outlive_lease = async (f: Signed) => {
     for (const _ of [1, 2, 3, 4]) {
       f.clock.now += Math.floor(f.options.lease_ms / 3)
@@ -108,13 +117,13 @@ test('S21 a submitting envelope is never resent: it waits for its exact receipt 
     if (stopped === 'revoked') await put(f.store, 'grant:grant', { ...f.grant, revoked: true })
     try {
       await pass(f)
-      expect([f.submissions, (await lane_of(f)).pending?.digest]).toEqual([[], f.digest])
+      expect([only_own_bytes(f), (await lane_of(f)).pending?.digest]).toEqual([true, f.digest])
       const { fence } = await lane_of(f)
       failure.armed = stopped === 'heartbeat'
       await outlive_lease(f)
       receipt.visible = true
       await pass(f)
-      expect([stopped, f.submissions, await status(f)]).toEqual([stopped, [], 'completed'])
+      expect([stopped, only_own_bytes(f), await status(f)]).toEqual([stopped, true, 'completed'])
       expect((await f.store.read<Command>('command:signed'))?.receipt).toBeDefined()
       expect(await lane_of(f)).toMatchObject({ pending: null, fence })
     } finally {
@@ -133,7 +142,7 @@ test('S21 a lost lease reports its submitted command uncertain once; a server ta
     await pass(lost)
     const reported = lost.errors.length
     await pass(lost)
-    expect([await status(lost), lost.errors.length, lost.submissions]).toEqual(['uncertain', reported, []])
+    expect([await status(lost), lost.errors.length, only_own_bytes(lost)]).toEqual(['uncertain', reported, true])
   } finally {
     await lost.runtime.stop()
   }
@@ -207,6 +216,12 @@ test('S25 the submitted-turn latch survives serialization and unrelated metadata
   expect(() => assert_fight_reconciled(restarted, { ...row, players: { ...row.players } })).toThrow(
     'fight_turn_already_submitted'
   )
+  // The chain certified the turn. A twin that cannot replay it must not stop its settlement: the latch
+  // stands on the submitted turn alone, and the result is read from the game.
+  const refused = { ...command, payload: { ...command.payload, actions: [{ type: 'move', path: ['999'] }] } }
+  const certified = replay_fight_receipt(refused as Command, { Transaction: { digest: 'test', events: [] } })!
+  expect(certified).toMatchObject({ submitted_turn: restarted.submitted_turn, awaiting_witness: false })
+  expect(() => assert_fight_reconciled(certified, row)).toThrow('fight_turn_already_submitted')
   const seed = (mix(91n, 2n) << 32n) | mix(91n, 3n)
   const replay = replay_fight_receipt(command, {
     Transaction: {

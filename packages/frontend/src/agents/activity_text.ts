@@ -61,9 +61,12 @@ const ui_text = (copy: AppCopy, key: string): string => copy.ui[key] ?? ''
 /** One sentence of the hosted-bot pages' own copy. */
 export const agent_text = (copy: AppCopy, key: string, values: Readonly<Record<string, string>> = {}): string =>
   copy_text(copy.agent_page)(key, values)
-/** Refusal codes become one plain sentence; an unexpected code never reaches the player raw. */
+/** Refusal codes become one plain sentence; an unexpected code never reaches the player raw. A code may
+ * carry a detail after a colon (which rule refused): the sentence belongs to the part before it. */
 const agent_error = (copy: AppCopy, code: string): string =>
-  copy.agent_page[`error_${code}`] ?? agent_text(copy, 'error_unknown')
+  copy.agent_page[`error_${code}`] ??
+  copy.agent_page[`error_${code.split(':')[0]}`] ??
+  agent_text(copy, 'error_unknown')
 export const item_name = (item_type: string): string => items_by_type[item_type]?.name ?? item_type
 const said =
   (key: string, look: Look): Told<HeroEvent['kind']> =>

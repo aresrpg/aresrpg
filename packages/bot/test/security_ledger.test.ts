@@ -313,6 +313,27 @@ test('S24 a certified conflict (captured mainnet receipt) fails the exact comman
   await expect(f.journal.conflicted!(captured, { ...f.record, digest: captured.Transaction.digest })).rejects.toThrow()
   await put(f.store, f.lane_key, { ...(await f.lane()), fence: 2 })
   await expect(f.journal.conflicted!(captured, f.record)).rejects.toThrow('actor_fenced')
+  // The gas coin last written by this very transaction proves it ran: the command ends without a receipt
+  // and the wallet is free to read the game and act again. Any other last writer proves nothing.
+  const ran = await conflicted()
+  const before = await ran.lane()
+  await expect(
+    ran.journal.executed!({ ...gas, previousTransaction: captured.Transaction.digest }, ran.record)
+  ).rejects.toThrow('transaction_execution_unproven')
+  expect((await ran.lane()).pending).not.toBeNull()
+  await ran.journal.executed!({ ...gas, previousTransaction: ran.prepared.digest }, ran.record)
+  await ran.journal.executed!({ ...gas, previousTransaction: ran.prepared.digest }, ran.record)
+  expect(await ran.stored()).toMatchObject({
+    status: 'failed',
+    error: 'executed_without_receipt',
+    result: { digest: ran.prepared.digest, executed: true },
+  })
+  expect(await ran.lane()).toMatchObject({
+    needs_resync: true,
+    pending: null,
+    active_command: null,
+    decision_revision: before.decision_revision + 1,
+  })
   for (const mismatch of ['fence', 'lease', 'phase', 'command', 'grant', 'digest', 'active', 'proof'] as const) {
     const g = await conflicted()
     const current = await g.lane()

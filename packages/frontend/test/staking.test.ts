@@ -171,6 +171,12 @@ test('a certified payment keeps its digest, blocks another write until re-read, 
     live.total_supply - live.pool.kares_rewards - live.combat_pot.balance - live.community.remaining
   )
   expect(tokenomics_reading(initial_finance()).circulating).toBeNull()
+  // The staked share is a fraction of the current supply.
+  expect(
+    tokenomics_reading(loaded({ ...live, total_supply: 1_000n, pool: { ...live.pool, total_staked: 125n } }))
+      .staked_share
+  ).toBe(0.125)
+  expect(tokenomics_reading(initial_finance()).staked_share).toBeNull()
   // The launch state of the real pool: 1,000 SUI and 540M KARES at 80/20 price one KARES at 0.0000074 SUI.
   const market = { sui: 1_000n * KARES_UNIT, kares: 540_000_000n * KARES_UNIT }
   const worth = daily_usd({ kares: 100_000n * KARES_UNIT, sui: 2n * KARES_UNIT }, market, 0.5)

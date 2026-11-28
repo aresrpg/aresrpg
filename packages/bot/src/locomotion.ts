@@ -5,6 +5,7 @@ import { POSITION_INTERVAL_MS, type ClientPacket } from '@aresrpg/protocol'
 import { compile_runtime_world_recipe, world_terrain } from '@aresrpg/engine/data'
 import { create_world_collision } from '@aresrpg/engine/locomotion/world_collision'
 import { step_walking_follower } from '@aresrpg/engine/locomotion/walking_follower'
+import { MOUNT_SPEED_SCALE } from '@aresrpg/engine/locomotion/controller'
 import type { WalkWorld, WalkPoint } from '@aresrpg/engine/locomotion/walkable'
 
 import { area_allows_segment, assert_area_position, type WorldArea } from './target_constraints.ts'
@@ -154,7 +155,9 @@ export const create_locomotion = ({
      * signed, so a long trip never holds the wallet's signing slot. An arrived hero stands still. */
     const journey_step = async (travel: Travel, world: WalkWorld, pose: Pose, next_at: number) => {
       const target = { x: chain_to_client_coordinate(travel.target_x), z: chain_to_client_coordinate(travel.target_z) }
-      const step = step_walking_follower(world, pose.motion, pose.position, target, next_at - at)
+      // A hero with a mount keeps its pace, which the server's speed rule allows for an equipped pet.
+      const pace = travel.riding ? MOUNT_SPEED_SCALE : 1
+      const step = step_walking_follower(world, pose.motion, pose.position, target, next_at - at, undefined, pace)
       await publish(
         travel,
         { checkpoint: travel.checkpoint, position: step.position, motion: step.motion, riding: travel.riding },

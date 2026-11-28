@@ -106,7 +106,16 @@ describe('behavior profession', () => {
         action: { kind: 'gather', payload: { item_type: resource.item_type } },
       })
       if (gather.status !== 'action') throw new Error('expected gather')
-      expect(plan_of({ ...equipped, command: { ...equipped.command, ...gather.action } }).kind).toBe('gather')
+      const harvest = (held: readonly ReturnType<typeof item>[]) =>
+        plan_of({
+          ...equipped,
+          snapshot: { ...equipped.snapshot, inventory: { ...equipped.snapshot.inventory, items: held } },
+          command: { ...equipped.command, ...gather.action },
+        })
+      expect(harvest([])).toMatchObject({ kind: 'gather', input: { existing: null } })
+      // A harvest adds to the largest pile the hero holds: a pile per harvest fills the bag with objects.
+      const piles = [item(resource.item_type, 1, 40), item(resource.item_type, 7, 41), item('other', 9, 42)]
+      expect(harvest(piles)).toMatchObject({ kind: 'gather', input: { existing: piles[1]!.id } })
       expect(() =>
         select_profession(action, {
           ...ready,
@@ -193,6 +202,12 @@ describe('profession', () => {
     const validated = plan_of({ ...context, snapshot, command: { ...context.command, ...action } })
     expect(validated.kind).toBe('craft')
     if (validated.kind === 'craft') expect(validated.input.input_item_ids).toEqual(inputs.map(({ id }) => id))
+    expect(validated).toMatchObject({ input: { existing: null } })
+    const made = item(recipe.output_type, 3, 50)
+    const holding = { ...snapshot, inventory: { ...snapshot.inventory, items: [...inputs, made] } }
+    expect(plan_of({ ...context, snapshot: holding, command: { ...context.command, ...action } })).toMatchObject({
+      input: { existing: made.id },
+    })
     expect(() =>
       plan_of({
         ...context,

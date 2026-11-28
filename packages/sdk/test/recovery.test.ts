@@ -427,6 +427,9 @@ const conflict_fixture = async () => {
     available: true,
     original_available: false,
     commits: 0,
+    ran: 0,
+    gas_previous: conflict_digest,
+    resend_lands: false,
     executions: 0,
     receipts: 0,
   }
@@ -441,13 +444,20 @@ const conflict_fixture = async () => {
       state.commits += 1
       state.saved = null
     },
+    executed: async () => {
+      state.ran += 1
+      state.saved = null
+    },
   }
   const create = () =>
     create_transaction_execution({
       core: {
         executeTransaction: async () => {
           state.executions += 1
-          throw new Error('response unavailable')
+          if (!state.resend_lands) throw new Error('response unavailable')
+          return {
+            Transaction: { digest: own_digest, effects: { status: { success: true }, changedObjects: [] }, events: [] },
+          }
         },
         waitForTransaction: async () => {
           if (!state.original_available) throw new Error('not found')
@@ -456,7 +466,7 @@ const conflict_fixture = async () => {
           }
         },
         getObjects: async () => ({
-          objects: [{ ...gas, version: '1068218221', previousTransaction: conflict_digest }],
+          objects: [{ ...gas, version: '1068218221', previousTransaction: state.gas_previous }],
         }),
         getTransaction: async () => {
           if (!state.available) throw new Error('receipt unavailable')
@@ -483,6 +493,37 @@ test('only another checkpointed transaction consuming the exact gas ref settles 
   original.state.original_available = true
   expect(await original.create().recover_pending()).toBe(true)
   expect([original.state.commits, original.state.receipts]).toEqual([0, 1])
+
+  // The reply and the receipt are both lost, but the gas coin was last written by this transaction: it ran.
+  // The lane is released with no receipt and the caller reads the game again.
+  const ran = await conflict_fixture()
+  ran.state.gas_previous = ran.own_digest
+  const lane_r = ran.create()
+  expect(await lane_r.recover_pending()).toBe(true)
+  expect([ran.state.saved, ran.state.ran, ran.state.commits, ran.state.receipts]).toEqual([null, 1, 0, 0])
+  await expect(lane_r.before_next()).rejects.toThrow('refresh')
+  // Its receipt is asked for once more with the same bytes: a node that still holds it settles the lane in full.
+  const kept = await conflict_fixture()
+  kept.state.gas_previous = kept.own_digest
+  kept.state.resend_lands = true
+  expect(await kept.create().recover_pending()).toBe(true)
+  expect([kept.state.saved, kept.state.ran, kept.state.receipts]).toEqual([null, 0, 1])
+
+  // Nothing shows that the transaction ran and nothing took its gas coin. The same signed bytes are sent
+  // again: one digest runs at most once, so this ends the wait and never repeats an action.
+  const unseen = await conflict_fixture()
+  unseen.state.gas_previous = '11111111111111111111111111111111'
+  await expect(unseen.create().recover_pending()).rejects.toThrow('outcome unknown')
+  expect([unseen.state.saved?.phase, unseen.state.executions, unseen.state.receipts]).toEqual(['submitting', 1, 0])
+  unseen.state.resend_lands = true
+  expect(await unseen.create().recover_pending()).toBe(true)
+  expect([unseen.state.saved, unseen.state.executions, unseen.state.receipts]).toEqual([null, 2, 1])
+  // An envelope that never crossed the submission gate is never sent by recovery.
+  const unsent = await conflict_fixture()
+  unsent.state.gas_previous = '11111111111111111111111111111111'
+  unsent.state.saved = { ...unsent.state.saved!, phase: 'signed' } as never
+  await expect(unsent.create().recover_pending()).rejects.toThrow('outcome unknown')
+  expect(unsent.state.executions).toBe(0)
 
   const unavailable = await conflict_fixture()
   unavailable.state.available = false
@@ -535,7 +576,8 @@ test('any mismatch in the conflict proof keeps the submission pending', async ()
     const f = await conflict_fixture()
     corrupt(f.state.proof.Transaction.effects.changedObjects[0]!, f.state.proof.Transaction, f.own_digest)
     await expect(f.create().recover_pending()).rejects.toThrow('outcome unknown')
-    expect([f.state.saved?.phase, f.state.commits, f.state.executions]).toEqual(['submitting', 0, 0])
+    // An unproven conflict settles nothing; the same bytes are sent again and the silent network keeps it held.
+    expect([f.state.saved?.phase, f.state.commits, f.state.executions]).toEqual(['submitting', 0, 1])
   }
   const envelope = await conflict_fixture()
   envelope.state.saved = { ...envelope.state.saved!, digest: conflict_digest }

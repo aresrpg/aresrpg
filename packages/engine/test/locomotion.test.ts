@@ -28,6 +28,7 @@ import { run_to_mount, run_to_remaining_seconds } from '../src/locomotion/run_to
 import { walking_edge, type WalkPoint, type WalkWorld } from '../src/locomotion/walkable.ts'
 import { begin_walking, step_walking } from '../src/locomotion/walking.ts'
 import { step_walking_follower } from '../src/locomotion/walking_follower.ts'
+import { MOUNT_SPEED_SCALE } from '../src/locomotion/controller.ts'
 import { advance_walking_search, begin_walking_search, WALKING_SEARCH_LIMIT } from '../src/locomotion/walking_route.ts'
 import { city_collision_readiness, create_world_collision } from '../src/locomotion/world_collision.ts'
 
@@ -189,6 +190,24 @@ test('followers approach their leader through local clearance without adopting a
   let reads = 0
   const columns = new Set<number>()
   const counted: WalkWorld = { ...floor, solid_at: (x, y) => (reads++, columns.add(Math.floor(x)), y < 0) }
+  // A mounted follower keeps the mount's pace: the same second covers clearly more ground.
+  const paced = (speed_scale?: number) => {
+    let walk = step_walking_follower(floor, null, start, { x: 100.5, z: 0.5 }, 0)
+    for (let tick = 0; tick < 60; tick += 1)
+      walk = step_walking_follower(
+        floor,
+        walk.motion,
+        walk.position,
+        { x: 100.5, z: 0.5 },
+        1000 / 60,
+        undefined,
+        speed_scale
+      )
+    return walk.position[0] - start[0]
+  }
+  // The first second includes the start from rest, so the gain is a little under the full pace.
+  const gain = paced(MOUNT_SPEED_SCALE) / paced()
+  expect([gain > 1.3, gain <= MOUNT_SPEED_SCALE]).toEqual([true, true])
   const near = step_walking_follower(counted, null, start, { x: 100.5, z: 0.5 }, 1000 / 60)
   expect([reads < 1000, Math.max(...columns) <= 2, near.position[0] > start[0]]).toEqual([true, true, true])
   const blocked: WalkWorld = { ...floor, solid_at: (x, y) => y < 0 || (x === 3 && y < 4) }

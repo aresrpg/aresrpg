@@ -230,7 +230,7 @@ test('S12 S13 only public codes leave the service: command errors, reports and t
   // The log names where our own code failed, as the report does: file and line, never the message or a foreign path.
   expect([envelopes, logs]).toEqual([
     [],
-    ['{"code":"hosted_operation_internal_error","context":{},"at":["bot/actor.ts:12"]}'],
+    ['{"code":"hosted_operation_internal_error","issue":"command_failed","context":{},"at":["bot/actor.ts:12"]}'],
   ])
   const sent = create_reporting(
     { BOT_SENTRY_DSN: 'https://public@example.com/1', BOT_DEPLOY_ENV: 'test', BOT_RELEASE: 'fixture' },

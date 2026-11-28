@@ -8,7 +8,7 @@ import type {
   JournalTransaction,
 } from '@aresrpg/sdk/transaction-execution'
 import { receipt_digest } from '@aresrpg/sdk/cache'
-import { proves_transaction_conflict } from '@aresrpg/sdk/transaction-execution'
+import { proves_transaction_conflict, proves_transaction_executed } from '@aresrpg/sdk/transaction-execution'
 import { gas_mist_from_receipt } from '@aresrpg/sdk'
 
 import { assert_run_admission } from './behavior_control.ts'
@@ -41,6 +41,7 @@ export const create_transaction_lifecycle = (
     signed: (record) => current().signed(record),
     mark_submitting: (record) => current().mark_submitting(record),
     conflicted: (proof, record) => current().conflicted!(proof, record),
+    executed: (written, record) => current().executed!(written, record),
     settled: (receipt, record) => current().settled(receipt, record),
   }
 }
@@ -195,6 +196,49 @@ const bound_transaction_lifecycle = (
           status: 'failed',
           error: 'transaction_input_consumed',
           result: { digest: pending.digest, executed: false, conflicting_receipt: JSON.parse(as_json(proof)) },
+        })
+        await tx.put(command.lane_key, {
+          ...lane,
+          pending: null,
+          active_command: null,
+          needs_resync: true,
+          decision_revision: lane.decision_revision + 1,
+        })
+      }),
+    /** The transaction ran and its receipt is lost. The command ends with that fact and no result, and
+     * the wallet reads the game again: what the action changed is observed, never assumed. */
+    executed: async (written, record) =>
+      store.transaction(keys, async (tx) => {
+        const lane = await lane_for(tx)
+        const current = await tx.get<Command>(`command:${command.id}`)
+        if (!current) throw new Error('envelope_transition_conflict')
+        const done = [
+          !lane.pending,
+          current.error === 'executed_without_receipt',
+          (current.result as { digest?: string } | undefined)?.digest === record.digest,
+        ]
+        if (done.every(Boolean)) return
+        const { pending } = lane
+        if (
+          !pending ||
+          ![
+            pending.phase === 'submitting',
+            pending.digest === record.digest,
+            pending.command_id === command.id,
+            pending.grant_id === command.grant_id,
+            current.grant_id === command.grant_id,
+            lane.active_command === command.id,
+            ['executing', 'uncertain'].includes(current.status),
+          ].every(Boolean)
+        )
+          throw new Error('envelope_transition_conflict')
+        const envelope = { digest: pending.digest, bytes: new Uint8Array(Buffer.from(pending.bytes, 'base64')) }
+        if (!proves_transaction_executed(envelope, written)) throw new Error('transaction_execution_unproven')
+        await tx.put(`command:${command.id}`, {
+          ...current,
+          status: 'failed',
+          error: 'executed_without_receipt',
+          result: { digest: pending.digest, executed: true },
         })
         await tx.put(command.lane_key, {
           ...lane,

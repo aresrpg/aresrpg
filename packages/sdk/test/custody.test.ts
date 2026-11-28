@@ -449,6 +449,23 @@ test('an executed offer is never repeated: a failed claim keeps its digest and a
   partial.state.offered = true
   await expect(complete_agent_handover(partial.options)).rejects.toThrow('does not match')
   expect(partial.calls).toEqual([])
+  // A claim costs several commands per pile: a group one transaction cannot hold is claimed in several.
+  const piles = { ...items, items: ['a', 'b', 'c'].map((item_id) => ({ ...items.items[0]!, item_id })) }
+  const many = handover(piles)
+  const offers = ['a', 'b', 'c'].map((item_id) => ({ ...wheat, item_id, purchase_cap: `${item_id}-cap` }))
+  const fits: AgentTransferActions['fits'] = async (input) => input.kind !== 'asset_claim' || input.items.length <= 2
+  const read = { ...many.options.read, items: async () => (many.state.offered ? offers : []) }
+  await complete_agent_handover({ ...many.options, claim: { ...many.options.claim, fits }, read })
+  expect(
+    many.calls.map((call) => (call.kind === 'asset_claim' ? call.items.map((row) => row.item_id) : call.kind))
+  ).toEqual(['asset_offer', ['a', 'b'], ['c']])
+  // After a claim that landed in part, the retry holds the certified offer and claims what is still offered.
+  const left = offers.slice(2)
+  const resumed = handover(piles)
+  resumed.state.offered = true
+  const still_offered = { ...resumed.options.read, items: async () => left }
+  await complete_agent_handover({ ...resumed.options, confirmed_offer: 'owner-receipt', read: still_offered })
+  expect(resumed.calls).toMatchObject([{ kind: 'asset_claim', items: [{ item_id: 'c' }] }])
 })
 
 test('return funding quotes policy spending and moves only the quoted shortfall through the ordinary signer', async () => {

@@ -63,7 +63,8 @@ const character_claim = (
 const item_claim = (
   intent: Extract<AgentHandoverIntent, { kind: 'asset_offer' }>,
   offers: readonly AgentItemReturnOffer[],
-  sender: string
+  sender: string,
+  resumed = false
 ): Claim | null => {
   const selected = new Map(intent.items.map((item) => [item.item_id, item]))
   const valid_intent = [
@@ -75,9 +76,11 @@ const item_claim = (
   if (!valid_intent.every(Boolean)) throw new Error('Automatic item handover requires an exact item set without coins.')
   const matching = offers.filter(({ item_id }) => selected.has(item_id))
   if (!matching.length) return null
+  // A resumed gesture holds its certified offer: a claim split across transactions may have landed in
+  // part, so what is still offered is a part of the selection. Any other gesture needs the exact set.
   const exact = [
-    matching.length === selected.size,
-    new Set(matching.map(({ item_id }) => item_id)).size === selected.size,
+    resumed || matching.length === selected.size,
+    new Set(matching.map(({ item_id }) => item_id)).size === matching.length,
     matching.every((offer) => {
       const item = selected.get(offer.item_id)!
       return (
@@ -133,7 +136,7 @@ export const complete_agent_handover = async ({
   const pending = async () =>
     snapshot.kind === 'offer'
       ? character_claim(snapshot, await read.characters(), offer.sender)
-      : item_claim(snapshot, await read.items(), offer.sender)
+      : item_claim(snapshot, await read.items(), offer.sender, confirmed_offer !== null)
   const execute = async (actions: AgentTransferActions, input: AgentTransferIntent) => {
     before_sign()
     await before_step?.(actions, input)

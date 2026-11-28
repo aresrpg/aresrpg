@@ -21,10 +21,10 @@ export type FightReplay = Readonly<{
   submitted_turn: string
   awaiting_witness: boolean
 }>
-export const replay_fight_receipt = (command: Command, receipt: Receipt): FightReplay | null => {
-  if (command.kind !== 'fight_turn' || !command.fight_baseline) return null
-  const payload = parse_fight_turn(command.payload)
-  const checkpoint = hydrate_gameplay_fight(command.fight_baseline)
+/** The fight as the twin predicts it after a certified turn: its actions, the end of turn and each
+ * turn seed the receipt carries. */
+const predicted_turn = (command: Command, receipt: Receipt, payload: FightTurnPayload) => {
+  const checkpoint = hydrate_gameplay_fight(command.fight_baseline!)
   const session = create_fight_session({ now: () => checkpoint.contract.turn_started_ms, reconcile: () => {} })
   session.open({ mode: 'remote', state: checkpoint })
   const fighter = BigInt(payload.fighter_idx)
@@ -38,9 +38,27 @@ export const replay_fight_receipt = (command: Command, receipt: Receipt): FightR
     apply({ type: 'turn_seed', fighter, seed })
   const result = session.state()!
   return {
-    row: JSON.parse(gameplay_json({ ...command.fight_baseline, contract: result.checkpoint.contract })),
-    submitted_turn: fight_turn_identity(checkpoint.contract),
+    row: JSON.parse(
+      gameplay_json({ ...command.fight_baseline, contract: result.checkpoint.contract })
+    ) as FightStateRow,
     awaiting_witness: result.awaiting_turn_witness,
+  }
+}
+export const replay_fight_receipt = (command: Command, receipt: Receipt): FightReplay | null => {
+  if (command.kind !== 'fight_turn' || !command.fight_baseline) return null
+  const submitted_turn = fight_turn_identity(hydrate_gameplay_fight(command.fight_baseline).contract)
+  try {
+    return { ...predicted_turn(command, receipt, parse_fight_turn(command.payload)), submitted_turn }
+  } catch (error) {
+    // The chain certified this turn, so its settlement never depends on the twin. A twin that cannot follow
+    // it keeps only the latch on the submitted turn, and the result is read from the game. The fight is a
+    // public object id: the line names it so the divergence can be reproduced.
+    console.error(
+      '[bot] fight receipt replay diverged',
+      command.payload.fight,
+      error instanceof Error ? error.message : ''
+    )
+    return { row: command.fight_baseline, submitted_turn, awaiting_witness: false }
   }
 }
 

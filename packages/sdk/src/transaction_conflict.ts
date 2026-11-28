@@ -21,6 +21,28 @@ const gas_inputs = (envelope: ConflictEnvelope) => {
   return { owner: transaction.gasData.owner ?? transaction.sender, refs: transaction.gasData.payment ?? [] }
 }
 
+/** An object names the last transaction that wrote it, and only an executed transaction can be that one.
+ * A gas coin this envelope pays with, last written by this digest, proves the envelope ran. This is
+ * current state, so it stays readable where a provider no longer serves the transaction itself. */
+export const proves_transaction_executed = (envelope: ConflictEnvelope, object: FetchedObject): boolean =>
+  object.previousTransaction === envelope.digest &&
+  gas_inputs(envelope).refs.some((ref) => ref.objectId === normalizeSuiObjectId(object.objectId ?? ''))
+
+export const read_transaction_executed = async (
+  reader: ConflictReader,
+  envelope: ConflictEnvelope,
+  signal: AbortSignal
+): Promise<FetchedObject | null> => {
+  const { refs } = gas_inputs(envelope)
+  if (!reader.getObjects || !refs.length) return null
+  const { objects } = await reader.getObjects({
+    objectIds: refs.map((ref) => ref.objectId),
+    include: { previousTransaction: true },
+    signal,
+  })
+  return objects.find((row) => proves_transaction_executed(envelope, row)) ?? null
+}
+
 /** Only a different checkpointed transaction consuming an EXACT owned gas ref proves exclusion.
  * A newer object, missing original receipt, read-only/shared input or error text proves nothing. */
 export const proves_transaction_conflict = (envelope: ConflictEnvelope, receipt: Receipt): boolean => {

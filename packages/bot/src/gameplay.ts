@@ -28,6 +28,7 @@ import { LOOT_BOX_ACTIONS } from './loot_boxes.ts'
 import { RAISE_SPELL_ACTION } from './spell_allocation.ts'
 import { RAISE_STATS_ACTION } from './stat_allocation.ts'
 import { zone_key } from './actor_world.ts'
+import { pile_of } from './actor_inventory.ts'
 import {
   object_schema,
   identifier,
@@ -255,7 +256,10 @@ const validate_settle = (context: GameplayContext) => {
   const { checkpoint, character, seat, mode } = owned_fight(payload, context)
   const { contract } = checkpoint
   if (!contract.ended) throw new Error('fight_not_ended')
-  const loot = fight_loot_types(checkpoint, Number(seat)).map((item_type) => ({ item_type, existing: null }))
+  const loot = fight_loot_types(checkpoint, Number(seat)).map((item_type) => ({
+    item_type,
+    existing: pile_of(context.snapshot.inventory, character.kiosk, item_type),
+  }))
   const last = contract.fighters.every(
     (fighter, index) => fighter.kind.type !== 'player' || fighter.settled || fighter.forfeited || BigInt(index) === seat
   )

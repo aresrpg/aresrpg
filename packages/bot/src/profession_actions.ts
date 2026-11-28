@@ -9,7 +9,7 @@ import {
   craft_batch_limit,
 } from '@aresrpg/immutable'
 import { live_resource_packs } from '@aresrpg/protocol'
-import { craft_stack_plan, encumbered_asset_ids } from '@aresrpg/protocol/inventory'
+import { craft_output_stack_plan, craft_stack_plan, encumbered_asset_ids } from '@aresrpg/protocol/inventory'
 
 import { object_schema, identifier, nonempty, coordinate, decode } from './gameplay_schema.ts'
 import {
@@ -24,7 +24,7 @@ import {
 } from './gameplay_context.ts'
 import { zone_key } from './actor_world.ts'
 import { profession_recipe, profession_item, recipe_job } from './catalog.ts'
-import { profession_inventory } from './actor_inventory.ts'
+import { pile_of, profession_inventory } from './actor_inventory.ts'
 
 const gather_schema = object_schema({
   character_id: identifier,
@@ -96,8 +96,10 @@ const gather_plan = (context: GameplayContext) => {
     input: {
       ...payload,
       rare_item_type: resource!.rare_item_type,
-      existing: null,
-      existing_rare: null,
+      existing: pile_of(context.snapshot.inventory, character.kiosk, payload.item_type),
+      existing_rare: resource!.rare_item_type
+        ? pile_of(context.snapshot.inventory, character.kiosk, resource!.rare_item_type)
+        : null,
       custody: custody_of(character),
     },
   }
@@ -117,20 +119,24 @@ const craft_plan = (context: GameplayContext) => {
   const inventory = profession_inventory(context.snapshot.inventory, character.kiosk)
   if (inventory.some((row) => !row.version)) throw new Error('inventory_unavailable')
   const state = context.snapshot.inventory!
-  const plan = craft_stack_plan(
-    recipe!.inputs,
-    payload.attempts,
-    inventory,
-    encumbered_asset_ids(state.listings!, state.trades!),
-    character.kiosk
-  )
+  const encumbered = encumbered_asset_ids(state.listings!, state.trades!)
+  const plan = craft_stack_plan(recipe!.inputs, payload.attempts, inventory, encumbered, character.kiosk)
   if (!plan) throw new Error('ingredients_required')
+  const spent = new Set(plan.flatMap(({ target_id, source_ids }) => [target_id, ...source_ids]))
+  const output = craft_output_stack_plan(
+    inventory,
+    encumbered,
+    payload.output_type,
+    character.kiosk,
+    payload.attempts,
+    spent
+  )
   return {
     input: {
       ...payload,
       input_item_ids: plan.map(({ target_id }) => target_id),
       merges: plan,
-      existing: null,
+      existing: output?.target_id ?? null,
       custody: custody_of(character),
     },
   }

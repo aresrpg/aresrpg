@@ -3,6 +3,7 @@
 
 import { captureException as capture_exception, init, type ErrorEvent, type EventHint } from '@sentry/react'
 import type { ErrorInfo } from 'react'
+import { move_abort } from '@aresrpg/sdk/transaction-error'
 import type { create_engine, EngineStatus } from '@aresrpg/engine'
 
 import { reporting_config } from './reporting_config.ts'
@@ -44,11 +45,12 @@ export const before_send = (event: Readonly<ErrorEvent>, hint: Readonly<EventHin
   if (original instanceof Error && original.name === 'AbortError') return null
   const messages = exception_message(event)
   if (/user rejected|user denied|user cancel(?:l)?ed|ResizeObserver loop/i.test(messages)) return null
-  const abort = /abort code:\s*(\d+),\s*in\s*['"](0x[a-f0-9]+)::([a-z0-9_]+)::([a-z0-9_]+)/i.exec(messages)
+  const abort = move_abort(messages)
   const scrubbed = scrub_report(event) as ErrorEvent
   const headers = browser_header(event)
   const clean = headers ? { ...scrubbed, request: { ...scrubbed.request, headers } } : scrubbed
-  return abort ? { ...clean, fingerprint: ['move-abort', abort[2]!, abort[3]!, abort[4]!, abort[1]!] } : clean
+  const { package_id, module, function: raised, code } = abort ?? {}
+  return abort ? { ...clean, fingerprint: ['move-abort', package_id!, module!, raised!, code!] } : clean
 }
 
 export const init_reporting = (

@@ -110,15 +110,13 @@ export const create_actor_runtime = (options: ActorRuntimeOptions) => {
       now
     )
     const journal: TransactionJournal = {
-      read: () => lifecycle.read(),
+      ...lifecycle,
       admit: async (stage) => {
         await lifecycle.admit(stage)
         if (stage !== 'prepare') validate_gameplay(gameplay_context())
       },
-      prepared: (record) => lifecycle.prepared(record),
-      signed: (record) => lifecycle.signed(record),
-      mark_submitting: (record) => lifecycle.mark_submitting(record),
       conflicted: (proof, record) => lifecycle.conflicted!(proof, record).finally(invalidate_execution),
+      executed: (written, record) => lifecycle.executed!(written, record).finally(invalidate_execution),
       settled: async (receipt, record) => {
         await lifecycle.settled(receipt, record)
         await reconcile()

@@ -9,6 +9,17 @@ export const readable_transaction_error = (error: unknown): string => {
   })
 }
 
+/** The Move abort a node reports, in its own words: the code, and the module and function that raised it.
+ * One reader for the whole product; every part is a public on-chain name, never player text. */
+export const move_abort = (
+  error: unknown
+): Readonly<{ code: string; package_id: string; module: string; function: string }> | null => {
+  const found = /abort code:\s*(\d+),\s*in\s*['"](0x[a-f0-9]+)::([a-z0-9_]+)::([a-z0-9_]+)/i.exec(
+    readable_transaction_error(error)
+  )
+  return found ? { code: found[1]!, package_id: found[2]!, module: found[3]!, function: found[4]! } : null
+}
+
 /** The SDK's executed-failure envelope. A digest means the transaction is terminal even when
  * its game effects rolled back; operational callers must journal it instead of retrying. */
 export const executed_transaction_digest = (error: unknown): string | null =>

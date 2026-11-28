@@ -16,6 +16,7 @@ import {
 } from '../src/gameplay_context.ts'
 import { execute_gameplay_actions, parse_gameplay_action, type GameplayActionName } from '../src/gameplay.ts'
 import type { ZoneSnapshot } from '../src/actor_world.ts'
+import { empty_inventory } from '../src/actor_inventory.ts'
 
 import { plan_of } from './fixture_game.ts'
 
@@ -293,6 +294,14 @@ describe('gameplay lifecycle', () => {
         boss_rewards: true,
         mode: { type: 'ordinary' },
       },
+    })
+    // Loot adds to the pile the hero already holds.
+    const won = context_for('fight_settle', ended())
+    const pile = { id: `0x${'7'.repeat(64)}`, item_type: 'silk', name: 'silk', category: 'resource', level: 1 }
+    const held = { ...empty_inventory(), loaded: true, listings: [], trades: [] }
+    const inventory = { ...held, items: [{ ...pile, amount: 4, kiosk, version: '1' }] }
+    expect(plan_of({ ...won, snapshot: { ...won.snapshot, inventory } })).toMatchObject({
+      input: { settlements: [{ loot: [{ item_type: 'silk', existing: pile.id }] }] },
     })
     expect(() => plan_of(context_for('fight_settle', started()))).toThrow('fight_not_ended')
     const lost = ended()

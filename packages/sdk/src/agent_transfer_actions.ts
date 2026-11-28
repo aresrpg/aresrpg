@@ -18,7 +18,12 @@ import {
 } from './agent_asset_transfer.ts'
 import { quote_return_transaction } from './agent_return_funding.ts'
 import { compose_agent_batch, is_agent_batch, type AgentBatchIntent } from './agent_batch.ts'
-import { agent_batch_fits, type AgentBatchLimits } from './agent_batch_limits.ts'
+import {
+  agent_batch_fits,
+  read_agent_batch_limits,
+  submit_agent_batches,
+  type AgentBatchLimits,
+} from './agent_batch_limits.ts'
 import { agent_character_transfer } from './agent_transactions.ts'
 
 type CharacterTransferIntent =
@@ -101,13 +106,19 @@ export const agent_transfer_actions = (
     return builders.offer({ ...intent, sender: context.address, kiosk_cap })
   }
   const simulate = (tx: Transaction) => sdk.simulate(tx, { budget: context.budget ?? 'estimate' })
+  let limits = context.batch_limits && Promise.resolve(context.batch_limits)
   return Object.freeze({
     sender: context.address,
     synchronize: () => sdk.synchronize_transactions(),
     fits: async (input: AgentTransferIntent) => {
       await sdk.synchronize_transactions()
-      if (!assets || !context.batch_limits) throw new Error('Batch transaction limits are unavailable.')
-      return agent_batch_fits(assets.client, await compose(snapshot_intent(input)), context.batch_limits)
+      if (!assets) throw new Error('Batch transaction limits are unavailable.')
+      // A session that was given no limits reads the network's own, once.
+      limits ??= read_agent_batch_limits(assets.client).catch((error: unknown) => {
+        limits = undefined
+        throw error
+      })
+      return agent_batch_fits(assets.client, await compose(snapshot_intent(input)), await limits)
     },
     quote: async (input: AgentTransferIntent) => {
       if (!assets) throw new Error('Return quoting is unavailable for this session.')
@@ -192,18 +203,33 @@ const snapshot_intent = (input: AgentTransferIntent): AgentTransferIntent => {
   })
 }
 
-/** One explicit gesture prepares and submits one transaction, retaining the wallet's signature approval. */
-export const execute_agent_transfer = async ({
-  actions,
-  intent,
-  is_current,
-  prepared,
-}: Readonly<{
+type TransferGesture = Readonly<{
   actions: AgentTransferActions
   intent: AgentTransferIntent
   is_current: () => boolean
   prepared?: () => void
-}>) => {
+}>
+/** One explicit gesture prepares and submits its transaction, retaining the wallet's signature approval.
+ * An item claim costs several commands per pile, so a group that one transaction cannot hold is claimed in
+ * several: an executed offer of many piles is never left without a claim that fits. */
+export const execute_agent_transfer = async (gesture: TransferGesture) => {
+  const { actions, intent } = gesture
+  if (intent.kind !== 'asset_claim' || intent.items.length < 2) return submit_agent_transfer(gesture)
+  let last: Awaited<ReturnType<typeof submit_agent_transfer>> | undefined
+  await submit_agent_batches(
+    intent.items,
+    // A fit check signs nothing: its failure is a refusal before submission, like a failed preparation.
+    (items) =>
+      actions.fits({ ...intent, items }).catch((error: unknown) => {
+        throw transaction_resolution_error(error)
+      }),
+    async (items) => {
+      last = await submit_agent_transfer({ ...gesture, intent: { ...intent, items } })
+    }
+  )
+  return last!
+}
+const submit_agent_transfer = async ({ actions, intent, is_current, prepared }: TransferGesture) => {
   const assert_current = () => {
     if (!is_current()) throw new Error('The confirmed wallet or agent changed.')
   }

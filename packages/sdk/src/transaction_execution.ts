@@ -4,15 +4,16 @@
 import { TransactionDataBuilder } from '@mysten/sui/transactions'
 import { isValidTransactionDigest } from '@mysten/sui/utils'
 
-import { receipt_digest, type Receipt } from './cache.ts'
-import { read_transaction_conflict, type ConflictReader } from './transaction_conflict.ts'
+import { receipt_digest, type FetchedObject, type Receipt } from './cache.ts'
+import { read_transaction_conflict, read_transaction_executed, type ConflictReader } from './transaction_conflict.ts'
 
-export { proves_transaction_conflict } from './transaction_conflict.ts'
+export { proves_transaction_conflict, proves_transaction_executed } from './transaction_conflict.ts'
 
 export type ReceiptOptions = Readonly<{ include?: object; gas_scope?: string; gas_payer?: string }>
 export type PendingTransaction = ReceiptOptions &
   Readonly<{ digest: string; phase: 'submitted' | 'visible' | 'recovered' }>
-type ExecutionPending = PendingTransaction & Readonly<{ bytes?: Uint8Array }>
+/** `signatures` are held only for an envelope that crossed the submission gate. */
+type ExecutionPending = PendingTransaction & Readonly<{ bytes?: Uint8Array; signatures?: readonly string[] }>
 export type PreparedTransaction = ReceiptOptions &
   Readonly<{
     digest: string
@@ -35,6 +36,8 @@ export type TransactionJournal = Readonly<{
   mark_submitting: (record: SignedTransaction) => Promise<void>
   settled: (receipt: Receipt, record: PendingTransaction) => Promise<void>
   conflicted?: (proof: Receipt, record: PendingTransaction) => Promise<void>
+  /** The transaction ran but its receipt cannot be read: `written` is a gas coin it wrote last. */
+  executed?: (written: FetchedObject, record: PendingTransaction) => Promise<void>
 }>
 export type { Receipt } from './cache.ts'
 export type TransactionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -171,22 +174,51 @@ export const create_transaction_execution = ({
     if (record) {
       if (!isValidTransactionDigest(record.digest) || !['prepared', 'signed', 'submitting'].includes(record.phase))
         throw new Error('[sdk] invalid durable pending transaction')
-      pending = { ...record, phase: 'submitted' }
+      const { bytes, digest, include, gas_scope, gas_payer } = record
+      const signatures = record.phase === 'submitting' ? record.signatures : undefined
+      pending = { bytes, digest, include, gas_scope, gas_payer, signatures, phase: 'submitted' }
     }
     return pending
   }
-  const resolve_conflict = async (record: ExecutionPending): Promise<boolean> => {
-    if (!journal?.conflicted || !record.bytes) return false
-    const envelope = { digest: record.digest, bytes: record.bytes }
-    const proof = await bounded_request(
-      (signal) => read_transaction_conflict(core, envelope, signal),
-      recovery_timeout_ms
+  /** One digest runs at most once, so sending the same signed bytes again never repeats an action: the
+   * chain runs them now, returns what it already ran, or says why it will not. A rebuilt transaction is
+   * never sent here. */
+  const resend = async (record: ExecutionPending): Promise<Receipt | null> => {
+    const { bytes, signatures } = record
+    if (!bytes || !signatures) return null
+    const receipt = await bounded_request(
+      (signal) =>
+        core.executeTransaction({ transaction: bytes, signatures: [...signatures], include: record.include, signal }),
+      response_timeout_ms
     )
-    if (!proof) return false
-    await journal.conflicted(proof, record)
+    return verify_receipt(receipt, record)
+  }
+  /** A lost receipt is settled from current state, which stays readable where the transaction itself is
+   * not. The gas coin shows that it ran: its receipt is asked for once more, and without one the lane is
+   * released with that fact alone. Another certified transaction took the coin: this one never can. Neither
+   * is shown: the same bytes are sent again. Null leaves the outcome unknown. */
+  const resolve_lost = async (record: ExecutionPending): Promise<Readonly<{ receipt: Receipt | null }> | null> => {
+    if (!journal || !record.bytes) return null
+    const envelope = { digest: record.digest, bytes: record.bytes }
+    const read = <T>(reader: (signal: AbortSignal) => Promise<T>) => bounded_request(reader, recovery_timeout_ms)
+    const written = journal.executed ? await read((signal) => read_transaction_executed(core, envelope, signal)) : null
+    if (written) {
+      const receipt = await resend(record).catch((error: unknown) => {
+        console.warn('[sdk] the transaction ran; its receipt is unavailable', record.digest, error)
+        return null
+      })
+      if (receipt) return { receipt }
+      await journal.executed!(written, record)
+    } else {
+      const proof = journal.conflicted
+        ? await read((signal) => read_transaction_conflict(core, envelope, signal))
+        : null
+      if (!proof) return resend(record).then((receipt) => receipt && { receipt })
+      await journal.conflicted!(proof, record)
+    }
     pending = { digest: record.digest, phase: 'recovered' }
     storage?.removeItem(storage_key)
-    return true
+    return { receipt: null }
   }
   const recover = async (record: ExecutionPending): Promise<Receipt | null> => {
     try {
@@ -204,7 +236,8 @@ export const create_transaction_execution = ({
     } catch (cause) {
       const message = `[sdk] transaction outcome unknown: ${record.digest}; check this transaction before trying again`
       try {
-        if (await resolve_conflict(record)) return null
+        const lost = await resolve_lost(record)
+        if (lost) return lost.receipt
       } catch (failure) {
         throw new AggregateError([cause, failure], message, { cause: failure })
       }
@@ -225,7 +258,7 @@ export const create_transaction_execution = ({
   ): Promise<Receipt> => {
     // Storage failure is a pre-submission refusal, never a reason to send without recovery evidence.
     storage?.setItem(storage_key, JSON.stringify(record))
-    const retained: ExecutionPending = journal ? { ...record, bytes: raw.slice() } : record
+    const retained: ExecutionPending = journal ? { ...record, bytes: raw.slice(), signatures } : record
     pending = retained
     const receipt = await bounded_request(
       (signal) =>

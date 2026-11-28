@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
+import { move_abort, transaction_failure_kind } from '@aresrpg/sdk/transaction-error'
 
 /** Facts not observed yet: the leaf waits instead of failing. */
 const waiting = new Set([
@@ -64,6 +64,8 @@ const refused = new Set([
   'invalid_character_name',
   'listing_gone',
   'nothing_to_collect',
+  // The transaction ran but its receipt was lost: the leaf reads the game and selects again.
+  'executed_without_receipt',
 ])
 /** Only explicit domain errors are user-facing; implementation messages may contain secrets. */
 export const planning_issue = (error: unknown) => {
@@ -103,7 +105,17 @@ export const command_issue = (status: string, error: unknown): string => {
   const failure = new Error(String(error).replace(/^Error: /, ''))
   const known = planning_issue(failure)
   if (known) return known.issue
-  return transaction_failure_kind(failure) === 'funding' ? 'funding_required' : 'command_failed'
+  const kind = transaction_failure_kind(failure)
+  if (kind === 'funding') return 'funding_required'
+  // Only a submission whose own result is not known: a command refused because an earlier one is still
+  // being settled was never sent.
+  if (kind === 'uncertain' && failure.message.includes('transaction outcome unknown')) return 'outcome_unknown'
+  // The chain's own refusal, named by our Move module, function and abort code: refused before signing
+  // spent nothing, a transaction that ran and failed spent its gas.
+  const abort = move_abort(failure)
+  if (!abort) return 'command_failed'
+  const spent = failure.message.includes('NOT submitted') ? 'chain_refused' : 'chain_failed'
+  return `${spent}:${abort.module}_${abort.function}_${abort.code}`.toLowerCase()
 }
 
 /**
@@ -112,5 +124,8 @@ export const command_issue = (status: string, error: unknown): string => {
  */
 export const public_command_error = (status: string, error: string | undefined): string | undefined => {
   if (error === undefined) return undefined
-  return /^[a-z_]+(:[a-z_]+)?$/.test(error) ? error : command_issue(status, error)
+  // Digits follow a colon only in the chain's own refusal, whose detail is a Move name and an abort code.
+  return /^(?:[a-z_]+(?::[a-z_]+)?|chain_(?:refused|failed):[a-z0-9_]+)$/.test(error)
+    ? error
+    : command_issue(status, error)
 }

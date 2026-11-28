@@ -3318,7 +3318,11 @@ agent_page:
   error_invalid_character_name: 'Un nom compte 4 à 19 lettres, chiffres ou symboles, sans espace.'
   error_character_name_taken: 'Ce nom est déjà pris. Choisissez-en un autre.'
   error_funding_required: "Votre bot n'a pas assez de SUI pour cela. Ajoutez des SUI à votre bot, puis réessayez."
-  error_command_failed: "Le jeu a refusé cette action. Rien n'a été dépensé. Vérifiez puis réessayez."
+  error_command_failed: "L'action n'a pas abouti. Regardez votre héros, puis réessayez."
+  error_outcome_unknown: "Nous n'avons pas pu confirmer si l'action a abouti. Regardez votre héros avant de réessayer."
+  error_chain_refused: "Les règles du jeu ont refusé l'action, et rien n'a été dépensé. Regardez votre héros, puis réessayez."
+  error_chain_failed: "L'action a été exécutée, mais les règles du jeu l'ont arrêtée. Seuls les frais de réseau ont été dépensés."
+  error_executed_without_receipt: "L'action a été envoyée, mais son résultat n'est pas revenu. Regardez votre héros avant de réessayer."
   error_invalid_gameplay_payload: "Cette demande n'était pas valide. Rien n'a été envoyé."
   error_slot_empty: 'Cet emplacement est déjà vide.'
   error_listing_gone: "Cette annonce n'existe plus : elle a été vendue ou déjà retirée."

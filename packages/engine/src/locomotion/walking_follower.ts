@@ -18,7 +18,9 @@ export const step_walking_follower = (
   position: WalkPoint,
   target: RunTarget,
   elapsed_ms: number,
-  allows_segment?: (from: WalkPoint, to: WalkPoint) => boolean
+  allows_segment?: (from: WalkPoint, to: WalkPoint) => boolean,
+  /** The mount's pace for a follower that rides; one on foot. */
+  speed_scale = 1
 ): Readonly<{ motion: FollowerMotion; position: WalkPoint; arrived: boolean; blocked?: boolean }> => {
   const body = previous
     ? {
@@ -52,7 +54,7 @@ export const step_walking_follower = (
         jump: false,
         glide: false,
         walk: false,
-        speed_scale: 1,
+        speed_scale,
       },
       world,
       dt
