@@ -15,10 +15,10 @@
     "@aresrpg/protocol": "workspace:*",
     "@aresrpg/sdk": "workspace:*",
     "@mysten/sui": "2.39.1",
-    "@sentry/bun": "11.11.0"
+    "@sentry/bun": "11.17.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.4",
+    "@types/bun": "^1.4.5",
     "typescript": "~6.0.3"
   }
 }
